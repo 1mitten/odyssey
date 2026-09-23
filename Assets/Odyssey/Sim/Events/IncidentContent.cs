@@ -102,6 +102,7 @@ namespace Odyssey.Sim.Events
         public static readonly string[] Order =
         {
             "Incident_SupplyDrop",
+            "Incident_ScrapDrop",
         };
 
         public IncidentDef[] Defs = System.Array.Empty<IncidentDef>();

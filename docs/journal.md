@@ -11133,3 +11133,121 @@ editor log's project path is the first thing to read before chasing a second cau
 
 The owner's interview added an outline round the zone's outer edge, baked into the chunk: one bucket
 per chunk with a store, nothing per frame.
+
+## 2026-09-23 — Power: a generator, the lines, a heater
+
+The owner asked for power in the RimWorld mould — a wood generator, lines to what needs
+electricity, the lines hidden except while being worked on — and was interviewed before anything
+was built (design 32 §2 holds the eleven answers). A clean-room research pass (a-07) backed all of
+them and supplied the reference's numbers: 1,000 W, a 75-wood hopper, 22 wood a day, 175 W heaters.
+Built on `origin/claude/temperature-core`, because the local checkout was 115 commits behind its
+own remote — found by the design agent reading the wrong tree, which is this project's standing
+lesson about checkouts arriving at the next session unannounced.
+
+**A line is not an edifice, and that decision shaped everything after it.** "Anywhere, under
+anything" means a cell holds a wall and a line at once, and the edifice slot holds one thing. So
+lines live in their own layer (`PowerGrid`, a bitset and a sorted list), with their own order lane
+— a wall order and a line order share a cell — and their own claim kind, so a builder on the wall
+does not lock out the colonist laying the line. The order still arrives as `PlaceBuilding`, and the
+construction grid's `Allows`, `WhereItWouldLand` and `RunLayerFor` all delegate to one rule, so the
+cursor and the order cannot drift: the P1 lesson taken before the fault rather than after.
+
+**Deconstruct does not take lines**, and that was a default taken without asking (§2a). It takes
+one thing a cell — the building, then our floor — so folding lines in would make rerouting a wire
+under a floor cost the floor. Lines get their own *Remove conduit* tool instead. The playtest row
+asks whether a player looks for it there.
+
+**The net solve was measured seven times too slow and rewritten before merge.** The first cut
+flooded outward with a binary search per face: 3.1 ms for one edit at 10,000 lines, the audit's
+`NavGraph.Rebuild` fault in a new costume. A union-find over the sorted list, each face found from
+its lower side by a pointer that only ever moves forward, is linear with no search: 0.43 ms at
+10,000, 0.08 ms at 2,000. The measurement was the only thing that could have said so; the code
+read as linear both times.
+
+**Whole-net-dark needs demand to count what is switched on, not what is powered** — a-07's
+observation, and the reason the reference's shedding flickers. Counting only the powered would let
+a dark net drop its demand, relight, and go dark again every solve.
+
+**The goldens moved once, and the proof was sharper than the census.** Three job defs add three
+counter pairs to the job system's hash. Rather than compare colony censuses, the hash was cut back
+(uncommitted) to the first twelve defs, and all three boards then matched the *previous* goldens
+exactly — so the new givers never fired and the new scan order changed no job anywhere. And
+`JobSystem.Load` stopped refusing a save with fewer job defs than the build: defs are append-only,
+so a shorter list is simply an older save, and the refusal had made every save older than the last
+new job unloadable for a reason that was never true.
+
+**Two side-findings.** `WorkGiverRegistrationTests` walked every permutation of the givers; eleven
+givers made that 11! and two minutes for one test, and a twelfth would have made it twenty. It
+samples orders now — every rotation, every reversal, five thousand seeded shuffles — which is the
+same question at a fixed price, with `NoTwoGiversCanTieInTheSort` still guarding the total order
+that makes the answer true. And a line in open air two storeys above anything standable is accepted
+and never laid, the same answer a slab in mid-air gets; recorded in design 32 §3 rather than guarded.
+
+## 2026-09-23 — Power, second round: scrap metal, and a line you can click again
+
+The owner's first look found an ordered line could not be selected again — so there was no way
+back to it to cancel it — and asked for lines to be built of scrap metal. Interviewed again (design
+32 §14): the existing *Scrap* item, relabelled *Scrap metal*; wreckage on the board and a scrap
+drop for more; a line 1, a generator 20 beside its 30 wood or stone, a heater 5 beside its 10; and
+a Cancel on the selected line's pane.
+
+**Why the click missed** is the picker's own rule meeting a second channel: a waiting order is a
+pointer target because `WorldRenderModel` is told the frame's building sites, and a line order is
+not a building site — it is in the power grid's own channel. The click fell through to the grass
+under it. Lines now go into the same answer (`SetLines`, `HasLine`), which is the fix and not a
+workaround: the picker's argument for sites — a waiting order has a cell, an order and a pane — is
+word for word true of a line.
+
+**A building paid for twice** is the one real mechanism in the round. `partItem`/`partCount` sit
+beside the chosen material, a site banks them apart, the delivery giver carries the material first
+and then the parts, a site is a frame only when both are in, and cancel, botch and deconstruct give
+each back by its own rule. The count is saved in a section of its own, so there is still no
+save-format bump. The pane's Cancel for a line got a narrow intent (`CancelConduit`) of its own:
+the cancel drag's `CancelBuilding` rightly takes every order in a cell, and a button that names one
+line must not also take the wall order standing beside it.
+
+**The first run moved every golden, and it was a real change, not a hash change.** Scrap metal
+stacking to fifty let the bare scenario's starting scatter drop a second piece on to an earlier
+one's cell — "room" had quietly become a different question — so the starting kit itself differed.
+The scatter asks for an empty cell with room now, which is what it always placed, and every golden
+and the scenario placement signature came back exactly. The wreckage goes through the Playtest
+scenario only, for the reason the stone and wood piles do: the bare scenario is what the goldens
+stand on.
+
+One Long-tier run failed `ATickThatDoesNothingAllocatesNextToNothing` once and passed three times
+after it, at the documented 1.6 and 3.3 bytes a tick. Recorded rather than retried away: a
+GC-sensitive figure on a machine running several editors is exactly where a one-off lives, and if
+it comes back, the per-tick allocations of the new power paths are the place to look first.
+
+## 2026-09-23 — Power, third look: the machines stand flush
+
+The owner found the generator and heater standing off their walls "with spacing that is awkward",
+and that neither would turn. Measured rather than reasoned: the two FBX files were read for their
+vertex bounds (0.61 x 0.58 x 0.91 m and 0.94 x 0.70 x 0.64 m), which showed the uniform fit had left
+the generator 3.1 m long in 5 m of footprint and the heater centred. The heater also did not rotate
+at all — `rotates` was false in the content — and the generator does, so "doesn't rotate" was
+probably the heater.
+
+The generator now fills its footprint (a stretch along its length), and the heater stands with its
+back on the back edge of its cell and faces away from a wall where there is one, R choosing among
+walls rather than being overruled by them — the ladder's rule would have left "doesn't rotate" true
+against every wall. Which way the air-conditioner's front looks was read off the mesh (its detail is
+at +Z, the pivot on the plain back face), not seen, and is the first thing to look at. Design 32 §14c.
+
+## 2026-09-24 — Power merged with main
+
+Temperature (#164) merged, and main had taken combat's draft, wildlife and the stockpile outline
+meanwhile: 77 commits, nineteen files in conflict. **The only real collision was the job table.**
+The draft appended `DraftHold` and `Goto` at 12 and 13, and power had appended its three at the same
+slots. A job def's number is a save contract and main's is already shipped to anyone playing `main`,
+so the draft keeps 12 and 13 and power moves to 14–16, in `JobHandle`, `Jobs.xml`, the driver list
+and the name list alike. Both sides had independently relaxed `JobSystem.Load` to accept a shorter
+job list, for the same reason and in almost the same words; main's copy was kept. The intents, the
+job labels, the bootstrap's draw passes and the catalogue's new fields were side-by-side additions,
+kept whole. Every other handle was checked for a silent collision — anything main numbered since
+the fork — and there was none.
+
+The content fingerprint and all three goldens were re-taken rather than adopted, since neither
+side's numbers came from the merged code. `GoldenColonyProbe` on the merge and on `origin/main`
+diffs clean on every board. The wiki and label registry were regenerated from the merged CSVs, not
+merged by hand.

@@ -385,7 +385,9 @@ namespace Odyssey.Presentation.CameraRig
             // — which is the case that had the owner's whole layer answering nothing on 2026-09-18.
             // The floor plane of this cell is the surface the ray meets either way; all that was
             // missing was somebody to own it.
-            if (model.HasSite(index))
+            // And a power line, the same argument (design 32 §14): an ordered line has a cell, an
+            // order and a pane, and a player pointing at one is pointing at the order they gave.
+            if (model.HasSite(index) || model.HasLine(index))
             {
                 cell = size.FromIndex(index);
                 thing = true;

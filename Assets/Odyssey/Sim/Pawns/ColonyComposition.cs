@@ -123,6 +123,12 @@ namespace Odyssey.Sim.Pawns
             // colony that forgot it would be a colony where nothing is ever cold.
             var temperature = new Temperature.TemperatureSystem(pawns, edifices, Worldgen.WorldContent.Climate);
             pawns.Temperature = temperature;
+            // Power (design 32). Built here for the same argument again, and handed to the
+            // construction grid because that is where a line order arrives: a colony that forgot
+            // it would have a Power category whose every tool silently did nothing.
+            var power = new Power.PowerGrid(pawns.Cells, edifices);
+            pawns.Power = power;
+            construction.Power = power;
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
             builder
                 // The world itself, first: it is what everything below reads, and it ticks
@@ -162,6 +168,10 @@ namespace Odyssey.Sim.Pawns
                 // The thermal pass, beside the other world systems: Order 50 puts it after the
                 // enclosure solve (30) whatever line of this chain it sits on.
                 .AddSystem(_ => temperature)
+                // The burn, and the lazy solve behind it. Order 45 puts it before the thermal pass
+                // (50), which asks it for heat on the same tick.
+                .AddSystem(_ => power)
+                .AddSnapshotContributor(power)
                 .AddTickable(_ => new SkillSystem(pawns))
                 .AddTickable(_ => pawns.Pawns)
                 .AddSnapshotContributor(pawns.Pawns)
@@ -190,7 +200,22 @@ namespace Odyssey.Sim.Pawns
                 // the intents themselves — so both live beside the ordinary handlers rather than in
                 // a debug-only wiring path a real colony would not otherwise get.
                 .AddIntentHandler(IntentKind.SpawnPawn, pawns.Pawns.HandleSpawnPawn)
-                .AddIntentHandler(IntentKind.GiveResource, intent => pawns.Items.HandleGiveResource(intent, pawns.Cells));
+                .AddIntentHandler(IntentKind.GiveResource, intent => pawns.Items.HandleGiveResource(intent, pawns.Cells))
+                // The two power commands that are not a build (design 32): taking a line up, and
+                // throwing a building's switch. Both belong to the power grid, the one owner of both.
+                .AddIntentHandler(IntentKind.RemoveConduit, intent =>
+                    pawns.Cells.Size.Contains(intent.Cell)
+                        ? power.MarkRemoval(pawns.Cells.Size.Index(intent.Cell))
+                        : IntentRejection.OutOfBounds)
+                .AddIntentHandler(IntentKind.CancelConduit, intent =>
+                    pawns.Cells.Size.Contains(intent.Cell)
+                        ? (power.CancelAt(pawns.Cells.Size.Index(intent.Cell))
+                            ? IntentRejection.None : IntentRejection.AlreadyInThatState)
+                        : IntentRejection.OutOfBounds)
+                .AddIntentHandler(IntentKind.SetPowerSwitch, intent =>
+                    pawns.Cells.Size.Contains(intent.Cell)
+                        ? power.SetSwitch(pawns.Cells.Size.Index(intent.Cell), intent.A != 0)
+                        : IntentRejection.OutOfBounds);
             designations.Attach(builder);
             construction.Attach(builder);
 

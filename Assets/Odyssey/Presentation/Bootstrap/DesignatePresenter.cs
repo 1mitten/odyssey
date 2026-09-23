@@ -378,6 +378,16 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            // Taking lines up (design 32 §2a): its own intent, never a designation, because a cell
+            // with a line in it very often has a wall or a floor the deconstruct order would name
+            // instead. Cells with no line in them are refused, silently and correctly.
+            if (tool == DesignateTool.RemoveConduit)
+            {
+                for (int i = 0; i < cells.Count; i++)
+                    world.Intents.Submit(new Intent(IntentKind.RemoveConduit, cells[i]));
+                return;
+            }
+
             int a = tool == DesignateTool.Mine ? (int)DesignationKind.Mine
                   : tool == DesignateTool.Fell ? (int)DesignationKind.Fell
                   : tool == DesignateTool.Deconstruct ? (int)DesignationKind.Deconstruct

@@ -39,6 +39,9 @@ namespace Odyssey.Hud
             // drafted, because what the player needs from the line is that this colonist is
             // theirs to command and not the work list's.
             "ui.status.drafted", "ui.status.drafted",
+            // Power (design 32): laying a line is building, taking one up is deconstructing, and
+            // feeding a generator has a word of its own.
+            "ui.status.building", "ui.status.deconstructing", "ui.status.refuelling",
         };
 
         public static string IconKey(int jobDef) =>

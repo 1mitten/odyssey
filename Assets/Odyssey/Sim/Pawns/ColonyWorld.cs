@@ -164,6 +164,14 @@ namespace Odyssey.Sim.Pawns
                 // every room at the outdoor curve — which is what it was, in a world where
                 // nothing was ever cold (design 28 §9).
                 pawns.Temperature!,
+                // Appended, as every section since the first has been: the lines, their orders,
+                // and the switch and hopper of every power building (design 32 §8). A save from
+                // before power has no section and loads with no lines — which is what it had.
+                pawns.Power!,
+                // The parts delivered to building sites (design 32 §14), after the construction
+                // section whose sites they name. A save from before has none, and loads with every
+                // site's parts at nought — which is what every site then had.
+                construction.Parts,
             };
         }
 
@@ -267,6 +275,10 @@ namespace Odyssey.Sim.Pawns
             // and items disagree is a file, and a stack that is in a container nothing can open is
             // worse than one on the floor.
             Pawns.StorageUnits?.AdoptContents(Pawns);
+
+            // The power records against what is standing: the repair for a file where the two
+            // disagree, and nothing at all on every file this build wrote (design 32 §8).
+            Pawns.Power?.Reconcile();
 
             _nav.Rebuild();
         }

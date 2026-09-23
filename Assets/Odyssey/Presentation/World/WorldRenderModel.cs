@@ -60,6 +60,9 @@ namespace Odyssey.Presentation.World
         readonly byte[] _edificeFacing;
         readonly bool[] _bedHead;
 
+        /// <summary>Whether this cell is its record's head — the one a building drawn once is drawn from (design 32 §14).</summary>
+        readonly bool[] _edificeHead;
+
 
         /// <summary>The crop standing in each cell as <c>plant handle + 1</c>, or 0 for fallow. A crop is not in the grid — it lives in zone state — so this mirror is fed from the published snapshot, not from a contributor.</summary>
         readonly byte[] _cropPlant;
@@ -149,6 +152,8 @@ namespace Odyssey.Presentation.World
         readonly int _waterFallModule;
         readonly int _bedModule;
         readonly int _campfireModule;
+        readonly int _generatorModule;
+        readonly int _heaterModule;
         readonly int _bedPillowModule;
         readonly int _shelfModule;
         readonly int _storeEdgeModule;
@@ -174,6 +179,7 @@ namespace Odyssey.Presentation.World
             _slot = new ushort[count];
             _edificeFacing = new byte[count];
             _bedHead = new bool[count];
+            _edificeHead = new bool[count];
             _cropPlant = new byte[count];
             _cropStage = new byte[count];
             _zoned = new bool[count];
@@ -213,6 +219,8 @@ namespace Odyssey.Presentation.World
             // with no code change — the same deal every other module id already offers.
             _bedModule = library.Resolve(ModuleIds.Bed, ModuleShape.SolidBlock);
             _campfireModule = library.Resolve(ModuleIds.Campfire, ModuleShape.SolidBlock);
+            _generatorModule = library.Resolve(ModuleIds.Generator, ModuleShape.SolidBlock);
+            _heaterModule = library.Resolve(ModuleIds.Heater, ModuleShape.SolidBlock);
 
             // The pillow is a module of its own so it can be a rounded shape and a linen colour
             // whatever the bed's frame is made of (BedShape, PillowMesh).
@@ -649,6 +657,23 @@ namespace Odyssey.Presentation.World
         /// <summary>Whether an order is waiting to be built in this cell.</summary>
         public bool HasSite(int index) => _sites.ContainsKey(index);
 
+        readonly HashSet<int> _lines = new HashSet<int>();
+
+        /// <summary>
+        /// The power lines published this frame (design 32 §14): every order and removal mark, and
+        /// the laid lines while they are shown. A line is a thing the player can point at exactly
+        /// as a building site is — it has a cell, an order and a pane — so the picker asks here
+        /// beside <see cref="HasSite"/>.
+        /// </summary>
+        public void SetLines(ReadOnlySpan<ConduitView> lines)
+        {
+            _lines.Clear();
+            for (int i = 0; i < lines.Length; i++) _lines.Add(lines[i].CellIndex);
+        }
+
+        /// <summary>Whether a line — ordered, marked, or laid and shown — is in this cell.</summary>
+        public bool HasLine(int index) => _lines.Contains(index);
+
         /// <summary>
         /// What is going up in this cell, as a <c>BuildingHandle</c>, or 0 where nothing is.
         /// </summary>
@@ -702,6 +727,35 @@ namespace Odyssey.Presentation.World
             // only case where the player could see it was arbitrary. A ladder rotates now, and the
             // rotation is read here rather than everywhere, so the wall still wins wherever there
             // is one: which side of a wall a ladder is bolted to is physics, not preference.
+            return chosen & 3;
+        }
+
+        /// <summary>
+        /// Which way a one-cell machine that stands against a wall faces, 0–3 — the heater today
+        /// (design 32 §14c). The mesher and the build cursor both ask here, for the reason
+        /// <see cref="LadderFacing(int, int)"/> is one method rather than two.
+        ///
+        /// <para><b>Its back to a wall when there is one.</b> The player's facing is kept when the
+        /// cell behind it is a wall; otherwise the rotate key's next quarter turn that backs on to
+        /// one is taken, so in a corner R chooses which wall and in the open R chooses freely. The
+        /// ladder's rule lets the wall win outright, which is right for a thing bolted to rock and
+        /// wrong here: the owner reported the heater "doesn't rotate", and a rule that ignored R
+        /// against every wall would have kept that true.</para>
+        /// </summary>
+        public int BackedFacing(int index) => BackedFacing(index, _edificeFacing[index] & 3);
+
+        /// <summary>The same for a machine not built yet, with <paramref name="chosen"/> the cursor's facing.</summary>
+        public int BackedFacing(int index, int chosen)
+        {
+            CellRef cell = Size.FromIndex(index);
+            for (int turn = 0; turn < Directions.Count; turn++)
+            {
+                int facing = (chosen + turn) & 3;
+                int back = Directions.Opposite(facing);
+                int nx = cell.X + Directions.DeltaX[back], nz = cell.Z + Directions.DeltaZ[back];
+                if (Size.Contains(nx, nz, cell.Y) && OccludesFace(Size.Index(nx, nz, cell.Y)))
+                    return facing;
+            }
             return chosen & 3;
         }
 
@@ -802,6 +856,9 @@ namespace Odyssey.Presentation.World
 
         /// <summary>Whether this cell is the head of the bed that stands in it — the half that draws.</summary>
         public bool BedHead(int index) => _bedHead[index];
+
+        /// <summary>Is this cell the head of the record standing in it? True for every one-cell thing.</summary>
+        public bool EdificeHead(int index) => _edificeHead[index];
 
         /// <summary>
         /// The head cell of the bed occupying this one, or -1 where there is no bed.
@@ -919,6 +976,9 @@ namespace Odyssey.Presentation.World
             // itself and every shelf in the colony draws as a conifer.
             if (def == CoreContent.EdificeShelf) return _shelfModule;
             if (def == CoreContent.EdificeCampfire) return _campfireModule;
+            // The generator and the heater, above the trees' range for the same reason (design 32).
+            if (def == CoreContent.EdificeGenerator) return _generatorModule;
+            if (def == CoreContent.EdificeHeater) return _heaterModule;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below
             // to the wall module and the woodland rendered as a grid of grey boxes.
@@ -1370,6 +1430,7 @@ namespace Odyssey.Presentation.World
                 bool bed = placed.Def == CoreContent.EdificeBed && !placed.Removed;
                 _edificeFacing[index] = placed.Removed ? (byte)0 : placed.Facing;
                 _bedHead[index] = bed && placed.CellIndex == index;
+                _edificeHead[index] = !placed.Removed && placed.CellIndex == index;
             }
             else
             {
@@ -1377,6 +1438,7 @@ namespace Odyssey.Presentation.World
                 _edificeStuff[index] = CoreContent.StuffNone;
                 _edificeFacing[index] = 0;
                 _bedHead[index] = false;
+                _edificeHead[index] = false;
             }
 
             // Anything at all here means this layer is worth drawing, and so is the one above it —
