@@ -691,11 +691,35 @@ namespace Odyssey.Tests.Presentation
             Assert.That(CombatMarks.Fraction(50_000, 100_000), Is.EqualTo(0.5f));
             Assert.That(CombatMarks.Fraction(-10_000, 100_000), Is.Zero, "a downed pawn's bar is empty, not negative");
             Assert.That(CombatMarks.Fraction(5, 0), Is.Zero);
+        }
 
-            CombatMarks.Bar(Vector3.zero, Vector3.right, 0.25f, out Vector3 start, out Vector3 end, out Vector3 fill);
-            Assert.That((end - start).magnitude, Is.EqualTo(CombatMarks.BarWidth).Within(1e-5f));
-            Assert.That((fill - start).magnitude, Is.EqualTo(CombatMarks.BarWidth * 0.25f).Within(1e-5f));
+        /// <summary>
+        /// Design 33 §8a: every piece of a bar lies in the one plane that faces the camera, at its
+        /// place along the screen's right and up, so the pieces the layout keeps apart stay apart
+        /// on the screen — which is what makes the transparent sort's order not matter.
+        /// </summary>
+        [Test]
+        public void EveryPieceOfABarLiesInThePlaneFacingTheCamera()
+        {
+            var pieces = new HealthBarPiece[HealthBarLayout.MaxPieces];
+            int n = HealthBarLayout.Pieces(0.4f, pieces);
+            Quaternion facing = Quaternion.Euler(48f, 30f, 0f);
+            Vector3 centre = new Vector3(12f, 3f, -7f);
+            Vector3 forward = facing * Vector3.forward, right = facing * Vector3.right, up = facing * Vector3.up;
 
+            for (int i = 0; i < n; i++)
+            {
+                Matrix4x4 m = CombatMarks.Place(in pieces[i], centre, facing);
+                Vector3 at = m.GetColumn(3);
+                Assert.That(Vector3.Dot(at - centre, forward), Is.EqualTo(0f).Within(1e-5f), $"piece {i} out of the plane");
+                Assert.That(Vector3.Dot(at - centre, right), Is.EqualTo(pieces[i].CentreU).Within(1e-5f), $"piece {i} across");
+                Assert.That(Vector3.Dot(at - centre, up), Is.EqualTo(pieces[i].CentreV).Within(1e-5f), $"piece {i} up");
+                Assert.That(((Vector3)m.GetColumn(0)).magnitude, Is.EqualTo(pieces[i].Width).Within(1e-5f));
+                Assert.That(((Vector3)m.GetColumn(1)).magnitude, Is.EqualTo(pieces[i].Height).Within(1e-5f));
+                Assert.That(((Vector3)m.GetColumn(2)).magnitude, Is.EqualTo(CombatMarks.PieceDepth).Within(1e-6f));
+                Assert.That(Vector3.Dot(((Vector3)m.GetColumn(2)).normalized, forward), Is.EqualTo(1f).Within(1e-5f),
+                    $"piece {i} is not square to the camera");
+            }
         }
 
         // ---- The review's corpse and floater faults (2026-09-23) -----------------------------------

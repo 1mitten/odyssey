@@ -2664,10 +2664,17 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>
         /// The fight's marks over the pawns (design 33 §1): a health bar where
         /// <see cref="CombatFeedbackModel.HealthBar"/> owes one — the hurt, the downed and the
-        /// drafted — and the red marker over a hostile. What is owed is the model's; where it
-        /// stands is <see cref="CombatMarks"/>'. Two or three submissions per marked pawn, and a
-        /// walk of the pawns on the drawn layers: it scales with the pawns in view, never with the
-        /// board.
+        /// drafted — and the red marker over a hostile. What is owed is the model's, the bar's
+        /// pieces are <see cref="HealthBarLayout"/>'s and where they stand is
+        /// <see cref="CombatMarks"/>'. The bars' pieces are gathered by ink and go out together at
+        /// the end, one instanced call per ink (at most five, whatever the number of bars); the
+        /// hostile marker is one submission each. A walk of the pawns on the drawn layers: it
+        /// scales with the pawns in view, never with the board, and allocates nothing.
+        ///
+        /// <para><b>The bar faces the camera and is laid as pieces that never overlap</b> (design
+        /// 33 §8a). It was a translucent fill box inside a translucent track box, and the
+        /// transparent sort decided which covered the other — a tie on every frame of a full bar,
+        /// which is what the owner saw flicker.</para>
         /// </summary>
         void DrawCombatMarks(WorldSnapshot snapshot, int movePerTick, int activeLayer, SliceSettings slice)
         {
@@ -2675,8 +2682,9 @@ namespace Odyssey.Presentation.Bootstrap
 
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model.LowestOutdoorLayer));
             int highest = slice.HighestVisibleLayer(activeLayer, snapshot.Size.SizeY);
-            Vector3 across = cameraRig != null ? cameraRig.transform.right : Vector3.right;
-            Color track = Ui.HudTokens.Convert(CombatMarks.TrackInk);
+            Quaternion facing = cameraRig != null ? cameraRig.transform.rotation : Quaternion.identity;
+            Color outline = Ui.HudTokens.Convert(CombatFeedbackModel.HealthBarOutline);
+            Color plate = Ui.HudTokens.Convert(CombatFeedbackModel.HealthBarPlate);
             Color hostileInk = Ui.HudTokens.Convert(CombatMarks.HostileInk);
 
             var pawns = snapshot.Pawns;
@@ -2701,18 +2709,27 @@ namespace Odyssey.Presentation.Bootstrap
 
                 if (bar)
                 {
-                    float fraction = CombatMarks.Fraction(hp, hpMax);
                     Vector3 centre = feet + Vector3.up * (top + CombatMarks.BarLift);
-                    CombatMarks.Bar(centre, across, fraction, out Vector3 start, out Vector3 end, out Vector3 fillEnd);
-                    _renderer.DrawSegment(start, end, CombatMarks.BarThickness, track);
-                    _renderer.DrawSegment(start, fillEnd, CombatMarks.FillThickness,
-                        Ui.HudTokens.Convert(CombatFeedbackModel.HealthBarColour(hp, hpMax)));
+                    Color fill = Ui.HudTokens.Convert(HealthBarLayout.InkOf(HealthBarInk.Fill,
+                        CombatFeedbackModel.HealthBarColour(hp, hpMax)));
+                    int pieces = HealthBarLayout.Pieces(CombatMarks.Fraction(hp, hpMax), _barPieces);
+                    for (int p = 0; p < pieces; p++)
+                    {
+                        HealthBarInk ink = _barPieces[p].Ink;
+                        Color colour = ink == HealthBarInk.Fill ? fill : ink == HealthBarInk.Plate ? plate : outline;
+                        _renderer.GatherBarPiece(colour, CombatMarks.Place(in _barPieces[p], centre, facing));
+                    }
                 }
 
                 if (hostile)
                     _renderer.DrawMarker(feet + Vector3.up * (top + DraftMarkerLift), DraftMarkerSize, hostileInk);
             }
+
+            _renderer.FlushBarPieces();
         }
+
+        /// <summary>One bar's pieces, reused for every bar every frame.</summary>
+        readonly HealthBarPiece[] _barPieces = new HealthBarPiece[HealthBarLayout.MaxPieces];
 
         /// <summary>
         /// The lock-on ring (design 33 §7b; owner, 2026-09-23: <i>"paints a red transparent circle
