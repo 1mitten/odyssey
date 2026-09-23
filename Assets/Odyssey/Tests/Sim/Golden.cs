@@ -347,6 +347,14 @@ namespace Odyssey.Tests.Sim
         /// are identical in every one of those numbers. The hash sees one more zero and the
         /// colonies do not know it. Earlier re-bakes used a throwaway probe and had to describe it
         /// afterwards; this one leaves the probe behind so the next re-bake starts with it.</para>
+        ///
+        /// <para><b>Re-baked a seventh time, 2026-09-23, by the draft (design 33 §2c) — the first
+        /// kind again.</b> Two jobs joined the job table, and <c>JobSystem</c> hashes a completed
+        /// and a failed counter per job def, so every board in the game contributes four more
+        /// zeros before a tick runs: all six numbers move, the three here included. The drafted
+        /// flag itself is hashed only while it is set, so it moved nothing. Measured with
+        /// <c>GoldenColonyProbe</c> run on <c>claude/wildlife</c> and on this branch: the two
+        /// outputs diff clean for all three colonies.</para>
         /// </remarks>
         public static readonly Case Meadow = new Case
         {
@@ -356,8 +364,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 16291183492068493670UL,
-            Simulated = 1835418700386341276UL,
+            Generated = 11435578929042502374UL,
+            Simulated = 6849796621813291164UL,
         };
 
         /// <summary>
@@ -378,8 +386,10 @@ namespace Odyssey.Tests.Sim
             // colonists' economy is identical — the difference is the animals and nothing else.
             // And again the same afternoon for the scatter (design 30 §2: sounders apart and
             // loose); the probe read the same as the first time — the animals' cells, nothing else.
-            Generated = 2109589659602140647UL,
-            Simulated = 18378665299313331303UL,
+            // 2026-09-23 again, the draft's two job defs (see the meadow's remarks): four more
+            // zeros in the job counters; the probe diffs clean.
+            Generated = 14177109647017402279UL,
+            Simulated = 11101947533371264551UL,
         };
 
         /// <summary>
@@ -416,8 +426,9 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             // 2026-09-23, wildlife (design 30): the ruin is seeded with its rats and hogs.
-            Generated = 255372930664749575UL,
-            Simulated = 11917729900064897620UL,
+            // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
+            Generated = 16760212594496635847UL,
+            Simulated = 17350012236707786580UL,
         };
     }
 }

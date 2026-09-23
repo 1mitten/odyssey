@@ -160,4 +160,22 @@
     <settleTicks>30</settleTicks>
   </JobDef>
 
+  <!--
+    The draft (design 33 section 2c). A drafted colonist is always doing one of these two: standing
+    where it was put, or walking to where it was sent. Neither expires - the hold ends when the
+    draft's quiet hours run out, the move when it arrives - and neither may be taken away by a
+    casual think, because the player put them there.
+  -->
+  <JobDef>
+    <defName>Job_DraftHold</defName>
+    <driver>12</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Goto</defName>
+    <driver>13</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+  </JobDef>
+
 </Defs>

@@ -162,7 +162,30 @@ namespace Odyssey.Presentation.Ui
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Almanac))
                 ToggleAlmanac();
+
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Draft))
+                ToggleDraft();
         }
+
+        /// <summary>
+        /// Draft or release the selection (design 33 §2f): the key and the pane's button both come
+        /// here, and <see cref="OrderModel.ToggleDraft"/> is the rule. Submitted rather than
+        /// applied, and the bootstrap lands a paused world's orders the same frame, so a fight can
+        /// be set up with the clock stopped.
+        /// </summary>
+        void ToggleDraft()
+        {
+            var world = _boot?.World;
+            if (world == null || _directors == null) return;
+
+            _draftOrders.Clear();
+            OrderModel.ToggleDraft(_directors.Selection.Pawns, world.Views.Current, _draftOrders);
+            for (int i = 0; i < _draftOrders.Count; i++) world.Intents.Submit(_draftOrders[i]);
+            _draftOrders.Clear();
+        }
+
+        // Scratch for ToggleDraft, emptied inside the call.
+        readonly System.Collections.Generic.List<Intent> _draftOrders = new System.Collections.Generic.List<Intent>();
 
         /// <summary>
         /// Fit the bar to the width it has, and put whatever does not fit into Menu.
@@ -869,6 +892,7 @@ namespace Odyssey.Presentation.Ui
             ("Tools", new[]
             {
                 HotkeyAction.ToolMine, HotkeyAction.ToolFell, HotkeyAction.ToolCancel,
+                HotkeyAction.Draft,
             }),
             ("Interface", new[]
             {

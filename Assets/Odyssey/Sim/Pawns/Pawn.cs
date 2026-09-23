@@ -118,6 +118,35 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public bool Leaving { get; internal set; }
 
+        /// <summary>
+        /// Under the player's hand (design 33 §2): work stops, the colonist holds its position or
+        /// walks where it is sent, and it neither eats nor sleeps. Set only through
+        /// <see cref="JobSystem.SetDrafted"/>, which ends the job in hand as it changes. Saved in
+        /// <c>CombatSection</c> and folded into the hash beside the kind, so a colony nobody
+        /// drafts hashes as it did before drafting existed.
+        /// </summary>
+        public bool Drafted { get; internal set; }
+
+        /// <summary>
+        /// The tick the draft last had something to do — the draft itself or the latest order. Four
+        /// quiet hours after it the colonist undrafts itself (<see cref="PawnContent.DraftQuietTicks"/>).
+        /// Meaningless, unsaved and unhashed while <see cref="Drafted"/> is false.
+        /// </summary>
+        public int DraftQuietSinceTick { get; internal set; }
+
+        /// <summary>
+        /// The cell an interrupted colonist is still stepping into, or -1 (design 33 §2d).
+        ///
+        /// <para>An order given mid-step used to end the job, and ending a job drops the step in
+        /// progress: the pawn stayed on the cell it was leaving while its figure had been drawn
+        /// most of the way into the next, so every draft and every re-aimed right-click snapped
+        /// the figure back by up to a cell. <see cref="JobSystem.Interrupt"/> keeps that one step
+        /// instead, and the next job's walk waits for it to land (<see cref="JobDriver"/>'s
+        /// <c>GotoCell</c>). Saved and hashed while set, because it is a path the world cannot
+        /// re-derive: its destination is gone with the job that chose it.</para>
+        /// </summary>
+        public int FinishingStepTo { get; internal set; } = -1;
+
         /// <summary>The species this pawn's kind spawns as: what walks. See <see cref="SpeciesDef"/>.</summary>
         public SpeciesDef Species => Content.SpeciesOf(Kind);
 
@@ -721,7 +750,13 @@ namespace Odyssey.Sim.Pawns
             // more zero per colonist — measured to be that and nothing else.
             // Leaving rides in the kind's word: a colonist never leaves, so a board with no
             // animals hashes exactly as it did before wildlife (design 30 §3).
-            hash.Add(Kind | (Leaving ? 1 << 16 : 0));
+            // The draft rides in the same word, and its clock only while it is set (design 33
+            // §2a): a colony nobody drafts hashes exactly as it did before drafting existed.
+            // A finishing step (design 33 §2d) is flagged in the same word for the same reason.
+            hash.Add(Kind | (Leaving ? 1 << 16 : 0) | (Drafted ? 1 << 17 : 0)
+                | (FinishingStepTo >= 0 ? 1 << 18 : 0));
+            if (Drafted) hash.Add(DraftQuietSinceTick);
+            if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             for (int i = 0; i < Needs.Length; i++) hash.Add(Needs[i]);
             hash.Add(Mood);
             hash.Add(MoodTarget);

@@ -198,6 +198,8 @@ namespace Odyssey.Sim.Pawns
             new DeconstructJobDriver(),
             new SowJobDriver(),
             new HarvestJobDriver(),
+            new DraftHoldJobDriver(),
+            new GotoJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------
@@ -359,6 +361,15 @@ namespace Odyssey.Sim.Pawns
                 // publishes for every colonist and not only a working one: whatever draws a
                 // colonist's pace wants to be able to ask it of an idle one.
                 writer.AddPawnAspect(pawn.Id, RateAspects.Move, pawn.MoveRatePerMille());
+
+                // The draft (design 33 §2e), sparse: a colony nobody drafts publishes nothing
+                // new. The order cell only while a move is being walked.
+                if (pawn.Drafted)
+                {
+                    writer.AddPawnAspect(pawn.Id, CombatAspects.Drafted, 1);
+                    if (pawn.CurrentJob != null && pawn.CurrentJob.DefIndex == JobIndex.Goto)
+                        writer.AddPawnAspect(pawn.Id, CombatAspects.OrderCell, pawn.CurrentJob.TargetCell);
+                }
 
                 // What she has in her arms (design 24 §5b). Two rows, and only while there is
                 // something to publish — a carried thing has no cell, so it is delisted from the

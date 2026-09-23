@@ -270,6 +270,7 @@ namespace Odyssey.Hud
             { "ui.keys.cancel", "Cancel tool" },
             { "ui.keys.cycleabove", "Cycle above-slice view" },
             { "ui.keys.debugmenu", "Debug menu" },
+            { "ui.keys.draft", "Draft" },
             { "ui.keys.fell", "Chop tool" },
             { "ui.keys.forward", "Camera forward" },
             { "ui.keys.frame", "Frame the map" },

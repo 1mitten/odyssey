@@ -2404,6 +2404,50 @@ namespace Odyssey.Presentation.Rendering
             InstancesDrawn += n;
         }
 
+        /// <summary>
+        /// A straight bar from one point to another in the bracket's lit, translucent material — the
+        /// line from a drafted colonist to where it has been sent (design 33 §2g). One submission.
+        /// </summary>
+        public void DrawSegment(Vector3 from, Vector3 to, float thickness, Color colour)
+        {
+            Vector3 along = to - from;
+            float length = along.magnitude;
+            if (length < 0.01f) return;
+
+            var rp = new RenderParams(BracketMaterial(colour))
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+            Matrix4x4 bar = Matrix4x4.TRS((from + to) * 0.5f, Quaternion.LookRotation(along / length),
+                new Vector3(thickness, thickness, length));
+            if (SubmitToGpu) Graphics.RenderMesh(rp, PrimitiveMeshes.UnitCube, 0, bar);
+            DrawCalls++;
+            InstancesDrawn++;
+        }
+
+        /// <summary>
+        /// A small cube stood on its corner — a diamond — in the bracket's material: the drafted
+        /// marker over a colonist's head (design 33 §2g). One submission.
+        /// </summary>
+        public void DrawMarker(Vector3 centre, float size, Color colour)
+        {
+            var rp = new RenderParams(BracketMaterial(colour))
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+            Matrix4x4 diamond = Matrix4x4.TRS(centre, MarkerTurn, Vector3.one * size);
+            if (SubmitToGpu) Graphics.RenderMesh(rp, PrimitiveMeshes.UnitCube, 0, diamond);
+            DrawCalls++;
+            InstancesDrawn++;
+        }
+
+        /// <summary>Turned 45 degrees about the vertical, then tipped on to a corner.</summary>
+        static readonly Quaternion MarkerTurn = Quaternion.Euler(0f, 45f, 0f) * Quaternion.Euler(35.264f, 0f, 45f);
+
         public void Dispose()
         {
             Skirt.Dispose();

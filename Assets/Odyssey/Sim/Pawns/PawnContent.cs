@@ -138,6 +138,8 @@ namespace Odyssey.Sim.Pawns
         public const int Deconstruct = JobHandle.Deconstruct;
         public const int Sow = JobHandle.Sow;
         public const int Harvest = JobHandle.Harvest;
+        public const int DraftHold = JobHandle.DraftHold;
+        public const int Goto = JobHandle.Goto;
         public const int Count = JobHandle.Count;
     }
 
@@ -717,6 +719,7 @@ namespace Odyssey.Sim.Pawns
         public int orePerCell = 15;
         public int liftTicks = 48;
         public int liftGraspTicks = 24;
+        public int draftQuietTicks = 10_000;
     }
 
     /// <summary>
@@ -874,6 +877,13 @@ namespace Odyssey.Sim.Pawns
         public int LiftGraspTicks = 24;
 
         /// <summary>
+        /// How long a drafted colonist with nothing to do stays drafted: 10,000 ticks, four
+        /// in-game hours, the reference's figure (a-10). Counted from the draft or the last order,
+        /// whichever is later (design 33 §2b).
+        /// </summary>
+        public int DraftQuietTicks = 10_000;
+
+        /// <summary>
         /// The Def types this content is made of, registered on a loader in one place so that a
         /// caller cannot load half of it. Adding a pawn Def type and forgetting to register it
         /// gives "unknown Def type" at load, which is the right failure but the wrong place to
@@ -920,7 +930,9 @@ namespace Odyssey.Sim.Pawns
                 "Job_Deliver", "Job_Build", "Job_Deconstruct",
                 // Appended, never inserted: a job def index rides every pawn's current job and
                 // every save taken with one running, so its number is a save contract.
-                "Job_Sow", "Job_Harvest");
+                "Job_Sow", "Job_Harvest",
+                // The draft (design 33 §2c).
+                "Job_DraftHold", "Job_Goto");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing");
@@ -973,6 +985,7 @@ namespace Odyssey.Sim.Pawns
             content.OrePerCell = tuning.orePerCell;
             content.LiftTicks = tuning.liftTicks;
             content.LiftGraspTicks = tuning.liftGraspTicks;
+            content.DraftQuietTicks = tuning.draftQuietTicks;
 
             return content;
         }

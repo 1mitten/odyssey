@@ -68,6 +68,14 @@ namespace Odyssey.Hud
         public static readonly HudColour StoreHue = new HudColour(0x7f, 0x96, 0xa8);
 
         /// <summary>
+        /// A drafted colonist's hue (design 33 §2g): the marker over its head and the line to where
+        /// it has been sent. A hot orange-red, and deliberately not <see cref="HudTheme.Bad"/> — that
+        /// is the Cancel tool's, and a drafted colonist is under orders, not being undone. It sits
+        /// 79 channel-points from it, mostly in blue, and far from every tool hue in hue itself.
+        /// </summary>
+        public static readonly HudColour Draft = new HudColour(0xff, 0x5a, 0x3c);
+
+        /// <summary>
         /// The hue of an order, opaque — the chip's colour, and the colour every mark and cursor
         /// below is a transparency of.
         ///

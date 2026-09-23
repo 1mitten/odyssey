@@ -98,6 +98,13 @@ namespace Odyssey.Hud
         /// Open or close the Almanac reference browser. F9 on the command bar.
         /// </summary>
         Almanac,
+
+        /// <summary>
+        /// Draft or release the selected colonists (design 33 §2f). <b>T, not the reference's R</b>
+        /// — R is slice-up here, and the owner kept it (2026-09-23). Appended, so no stored binding
+        /// shifts.
+        /// </summary>
+        Draft,
     }
 
     /// <summary>What came of offering a key to a listening slot.</summary>
@@ -179,6 +186,7 @@ namespace Odyssey.Hud
             (HotkeyAction.ToolFell,   HudKey.C, HudKey.None),
             (HotkeyAction.ToolCancel, HudKey.X, HudKey.None),
             (HotkeyAction.ToolGrowZone, HudKey.G, HudKey.None),
+            (HotkeyAction.Draft,        HudKey.T, HudKey.None),
 
             (HotkeyAction.BuildPalette,     HudKey.B,         HudKey.None),
             (HotkeyAction.DebugMenu,        HudKey.Backquote, HudKey.None),
@@ -367,6 +375,7 @@ namespace Odyssey.Hud
             HotkeyAction.WorkTab => "ui.keys.worktab",
             HotkeyAction.AnimalsTab => "ui.keys.animals",
             HotkeyAction.Almanac => "ui.keys.almanac",
+            HotkeyAction.Draft => "ui.keys.draft",
             _ => KeysKey,
         };
 

@@ -34,7 +34,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Cut a ripe crop and gather what it yields.</summary>
         public const int Harvest = 11;
 
-        public const int Count = 12;
+        /// <summary>A drafted colonist standing where it was put (design 33 §2c).</summary>
+        public const int DraftHold = 12;
+
+        /// <summary>A drafted colonist walking to the cell the player named (design 33 §2c).</summary>
+        public const int Goto = 13;
+
+        public const int Count = 14;
     }
 
     /// <summary>

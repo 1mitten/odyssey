@@ -156,6 +156,9 @@ namespace Odyssey.Sim.Pawns
                 // Which animals have decided to leave (design 30 §3). Absent from an older save,
                 // which loads with nobody leaving.
                 new WildlifeSection(pawns.Pawns),
+                // Who is drafted, and a step an order interrupted (design 33 §2a). Absent from an
+                // older save, which loads with nobody drafted.
+                new CombatSection(pawns.Pawns),
             };
         }
 

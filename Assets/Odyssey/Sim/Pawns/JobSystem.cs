@@ -53,7 +53,7 @@ namespace Odyssey.Sim.Pawns
     /// before the next think runs. That single rule is what a reservation leak is the absence of,
     /// and it is the fault a ten-day unattended run surfaces and a two-minute test does not.
     /// </summary>
-    public sealed class JobSystem : IWorldSystem, IStateHashable, ISaveable
+    public sealed partial class JobSystem : IWorldSystem, IStateHashable, ISaveable
     {
         readonly PawnContext _ctx;
         readonly ThinkNode[] _tree;
@@ -178,6 +178,8 @@ namespace Odyssey.Sim.Pawns
         public static ThinkNode[] DefaultTree() => new ThinkNode[]
         {
             new MentalStateThinkNode(),
+            // Above the needs branch, or a drafted colonist wanders off to eat (design 33 §2b).
+            new DraftedThinkNode(),
             new CriticalNeedsThinkNode(),
             new WorkThinkNode(),
             new IdleThinkNode(),
@@ -291,6 +293,9 @@ namespace Odyssey.Sim.Pawns
         {
             if (pawn.BreakTicksLeft > 0)
             {
+                // A break is the one state the player may not command through (design 33 §2b).
+                // The draft's own job is ended as a failure a few lines down, like any other.
+                if (pawn.Drafted) pawn.Drafted = false;
                 pawn.BreakTicksLeft--;
                 if (pawn.BreakTicksLeft == 0)
                 {
@@ -382,17 +387,21 @@ namespace Odyssey.Sim.Pawns
             JobsStarted = reader.ReadInt();
             JobsFailed = reader.ReadInt();
 
+            // Fewer is an older save and is fine: the job table is append-only, so the defs the
+            // save does not know are exactly the newest ones, and nothing ever ran them (design 33
+            // §5). It refused any difference until the draft's two jobs arrived, which would have
+            // made every earlier save unloadable. More is a save from a newer build, and guessing
+            // at that mapping would silently attribute one job's history to another.
             int count = reader.ReadInt();
-            if (count != _completed.Length)
+            if (count > _completed.Length)
                 throw new SaveLoadException(
-                    $"The save has {count} job defs and this build has {_completed.Length}. Def " +
-                    "migration is not written yet, and guessing at the mapping would silently " +
-                    "attribute one job's history to another.");
+                    $"The save has {count} job defs and this build has {_completed.Length}. A save " +
+                    "from a newer build cannot be read by an older one.");
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < _completed.Length; i++)
             {
-                _completed[i] = reader.ReadInt();
-                _failed[i] = reader.ReadInt();
+                _completed[i] = i < count ? reader.ReadInt() : 0;
+                _failed[i] = i < count ? reader.ReadInt() : 0;
             }
         }
 
