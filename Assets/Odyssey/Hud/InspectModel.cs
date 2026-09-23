@@ -211,7 +211,7 @@ namespace Odyssey.Hud
         public int HealthPerMille;
 
         /// <summary>The bar's ink, from <see cref="CombatFeedbackModel.HealthBarColour"/>.</summary>
-        public HudColour HealthInk = HudTheme.Good;
+        public HudColour HealthInk = CombatFeedbackModel.HealthGood;
 
         /// <summary>The Health tab's row labels, by key.</summary>
         public const string HealthKey = "ui.combat.health", ConditionKey = "ui.combat.condition",

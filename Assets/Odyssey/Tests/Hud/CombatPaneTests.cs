@@ -249,7 +249,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.HealthPerMille, Is.EqualTo(1000));
             Assert.That(Row(pane, "ui.combat.condition"), Is.EqualTo(Registry.Label("ui.combat.unhurt")));
             Assert.That(Row(pane, "ui.combat.weapon"), Is.EqualTo(Registry.Label("ui.combat.barehands")));
-            Assert.That(pane.HealthInk, Is.EqualTo(HudTheme.Good));
+            Assert.That(pane.HealthInk, Is.EqualTo(CombatFeedbackModel.HealthGood));
         }
 
         [Test]
@@ -265,7 +265,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.HealthPerMille, Is.EqualTo(372));
             Assert.That(Row(pane, "ui.combat.condition"), Is.EqualTo(Registry.Label("ui.combat.hurt")));
             Assert.That(Row(pane, "ui.combat.weapon"), Is.EqualTo(Registry.Label("ui.item.machete")));
-            Assert.That(pane.HealthInk, Is.EqualTo(HudTheme.Bad));
+            Assert.That(pane.HealthInk, Is.EqualTo(CombatFeedbackModel.HealthBad));
         }
 
         [Test]
