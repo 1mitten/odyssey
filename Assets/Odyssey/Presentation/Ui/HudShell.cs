@@ -631,6 +631,7 @@ namespace Odyssey.Presentation.Ui
             BuildSettings();
             BuildDebug();
             BuildWork();
+            BuildAnimals();
             BuildInventory();
             BuildResearch();
             BuildAlmanac();
@@ -701,6 +702,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Debug.TabChanged += OnDebugTabChanged;
             _directors.Work.Changed += OnWorkChanged;
             _directors.Work.ModeChanged += OnWorkModeChanged;
+            _directors.Animals.Changed += OnAnimalsChanged;
             _directors.Inventory.Changed += OnInventoryChanged;
             _directors.Research.Changed += OnResearchChanged;
             _directors.Research.StateChanged += OnResearchStateChanged;
@@ -885,6 +887,7 @@ namespace Odyssey.Presentation.Ui
                 RefreshSpeed();
                 RefreshBuildPalette();
                 RefreshWork();
+                RefreshAnimals();
                 RefreshInventory();
             }
             if (_slow >= SlowBucketSeconds)
@@ -1136,11 +1139,14 @@ namespace Odyssey.Presentation.Ui
 
             SelectionDirector selection = _directors.Selection;
 
-            // The Inventory and Research tabs never show beside the inspect pane (designs 35 and
-            // 34): a selection - including the one Go makes - puts them away and gives the corner
-            // to the pane.
+            // The Animals tab and the inspect pane never show together (design 30 §6): a
+            // selection — including the one a row of the tab makes — puts the tab away and
+            // gives the corner to the pane.
+            // The Inventory and Research tabs share that corner and that rule (designs 35 and 34),
+            // and Inventory's Go is one of the selections that puts it away.
             if (!selection.IsEmpty)
             {
+                _directors.Animals.SetOpen(false);
                 _directors.Inventory.SetOpen(false);
                 _directors.Research.SetOpen(false);
             }

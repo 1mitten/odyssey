@@ -102,6 +102,11 @@ namespace Odyssey.Hud
 
         /// <summary>Opens the Research tab (design 34). F3, which the bar has advertised since M1.</summary>
         public const string ResearchKey = "ui.tab.research";
+        /// <summary>
+        /// F5 became real with design 30: one tab, Animals, listing the wild animals now and the
+        /// tamed ones when taming exists (owner, 2026-09-23). Wildlife on F6 is a dead item again.
+        /// </summary>
+        public const string AnimalsKey = "ui.tab.animals";
 
         static readonly (string Key, string Hotkey, string Reason)[] Order =
         {
@@ -110,8 +115,10 @@ namespace Odyssey.Hud
             (InventoryKey, "F2", ""),
             (ResearchKey, "F3", ""),
             ("ui.tab.colonists", "F4", "the roster strip is the colonist list for now"),
-            ("ui.tab.animals", "F5", "animals arrive with M5"),
-            ("ui.tab.wildlife", "F6", "wildlife arrives with M5"),
+            (AnimalsKey, "F5", ""),
+            // Wildlife left the bar on 2026-09-23 (owner: "remove Wildlife bottom bar"): what is
+            // out there is the Animals tab. The key stays in the registry for the day the tamed
+            // half arrives and the two halves want naming apart.
             ("ui.tab.bills", "F7", "bills arrive with M5"),
             ("ui.tab.factions", "F8", "factions arrive with M7"),
             (AlmanacKey, "F9", ""),

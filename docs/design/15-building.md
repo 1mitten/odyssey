@@ -448,7 +448,13 @@ What it will need, in the order it should be built. **Steps 1 and 2 landed on 20
    left button already separates a pick from a box. *(Half of this shipped with the cancel tool:
    right-click puts an armed tool down. The click/drag split is what is left, and with nothing armed
    right-click is deliberately inert, reserved for this menu — see
-   `16-cancel-and-deconstruct.md`.)*
+   `16-cancel-and-deconstruct.md`.)* **Superseded in part, 2026-09-23 (design 33 §2f):** the split
+   is built — the rig raises `WorldRightClicked` only for a press that never travelled, carrying
+   the pick — and with nothing armed a right-click is now an order to the selected *drafted*
+   colonists (move, and in later units attack and rescue). That is the same act this menu is — the
+   player overruling the scan for a colonist — so the reservation was spent on what it was kept
+   for. With no drafted colonist selected a right-click is still inert, so the menu for an
+   undrafted colonist ("build this now") has that gesture free when it comes.
 4. **The menu itself**, which is a HUD panel and should be a director plus a presenter like every
    other region (09 §3). Its model asks `JobSystem.CanForce` once per command it is about to draw
    and submits a `ForceJob` intent when one is picked; nothing else in the simulation is needed.

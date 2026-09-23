@@ -111,6 +111,7 @@ namespace Odyssey.Tests.Hud
             (HudCommands.WorkKey, HotkeyAction.WorkTab),
             (HudCommands.InventoryKey, HotkeyAction.InventoryTab),
             (HudCommands.ResearchKey, HotkeyAction.ResearchTab),
+            (HudCommands.AnimalsKey, HotkeyAction.AnimalsTab),
             (HudCommands.AlmanacKey, HotkeyAction.Almanac),
         };
 

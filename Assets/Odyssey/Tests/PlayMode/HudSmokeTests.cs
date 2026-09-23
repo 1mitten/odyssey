@@ -72,6 +72,8 @@ namespace Odyssey.Tests.PlayMode
                 // "settings" is, so it too is a framed region whatever the colony is doing.
                 // "work" is the Work tab (design 27, 2026-09-20): docked bottom-left over the
                 // command bar, built and hidden at startup exactly as "settings" and "debug" are.
+                // "animals" is the Animals tab (design 30, 2026-09-23): the same corner, the
+                // same rule, built and hidden at startup and raised by F5 or the bar.
                 // "bulletins" is the Events panel (design 23, 2026-09-20): under the alerts in
                 // their column, hidden until something has happened, a framed region all the same.
                 // "toasts" is the transient stack (SK4), at the foot of that same column. Like
@@ -87,7 +89,7 @@ namespace Odyssey.Tests.PlayMode
                 string[] expected =
                 {
                     "stores", "clock", "alerts", "bulletins", "toasts", "rail", "orders", "inspect",
-                    "build", "menu", "settings", "debug", "work", "inventory", "research", "start", "saveprompt",
+                    "build", "menu", "settings", "debug", "work", "inventory", "research", "animals", "start", "saveprompt",
                     "leaveprompt", "almanac-panel",
                 };
                 var regions = doc.rootVisualElement.Query(className: "region").ToList();
@@ -100,8 +102,11 @@ namespace Odyssey.Tests.PlayMode
 
                 // The roster is bound to the frame: one card per published pawn.
                 int cards = doc.rootVisualElement.Query(className: "card").ToList().Count;
-                Assert.That(cards, Is.EqualTo(boot.World!.Views.Current.PawnCount),
-                    "the roster bar does not match the published pawn count");
+                // The roster is the colony's people (design 29 §2); the world's own animals are
+                // in the frame too (design 30) and get no card.
+                int people = People(boot.World!.Views.Current);
+                Assert.That(cards, Is.EqualTo(people),
+                    "the roster bar does not match the published colonist count");
 
                 // The ruler covers every layer.
                 Assert.That(doc.rootVisualElement.Query(className: "ruler__tick").ToList().Count,
@@ -318,6 +323,14 @@ namespace Odyssey.Tests.PlayMode
         const int PlayHeight = 1080;
 
         /// <summary>The layer count the game ships, read off a bootstrap rather than typed.</summary>
+        /// <summary>The colonists in a frame: a span cannot be walked inside an iterator, so it is walked here.</summary>
+        static int People(Odyssey.Sim.Contracts.WorldSnapshot frame)
+        {
+            int people = 0;
+            foreach (Odyssey.Sim.Contracts.PawnView view in frame.Pawns) if (view.Kind == 0) people++;
+            return people;
+        }
+
         static int ShippedLayerCount()
         {
             var probe = new GameObject("LayerProbe");

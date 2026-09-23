@@ -99,6 +99,9 @@ namespace Odyssey.Presentation.Ui
 
             // Build is the one cap on the bar that names a binding rather than a promise: it
             // follows the binding map when the player moves the key.
+            // The Animals item is washed while its tab is open, as Build is while the palette is.
+            if (command.Key == HudCommands.AnimalsKey) _animalsItem = item;
+
             if (command.Key == HudCommands.BuildKey)
             {
                 _buildCap = capLabel;
@@ -131,6 +134,7 @@ namespace Odyssey.Presentation.Ui
             else if (key == HudCommands.WorkKey) _directors?.Work.Toggle();
             else if (key == HudCommands.InventoryKey) _directors?.Inventory.Toggle();
             else if (key == HudCommands.ResearchKey) _directors?.Research.Toggle();
+            else if (key == HudCommands.AnimalsKey) _directors?.Animals.Toggle();
             else if (key == HudCommands.AlmanacKey) ToggleAlmanac();
             else if (key == HudCommands.MenuKey) ToggleMenu();
         }
@@ -160,6 +164,8 @@ namespace Odyssey.Presentation.Ui
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.WorkTab))
                 _directors?.Work.Toggle();
 
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.AnimalsTab))
+                _directors?.Animals.Toggle();
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.InventoryTab))
                 _directors?.Inventory.Toggle();
 
@@ -168,7 +174,30 @@ namespace Odyssey.Presentation.Ui
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Almanac))
                 ToggleAlmanac();
+
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Draft))
+                ToggleDraft();
         }
+
+        /// <summary>
+        /// Draft or release the selection (design 33 §2f): the key and the pane's button both come
+        /// here, and <see cref="OrderModel.ToggleDraft"/> is the rule. Submitted rather than
+        /// applied, and the bootstrap lands a paused world's orders the same frame, so a fight can
+        /// be set up with the clock stopped.
+        /// </summary>
+        void ToggleDraft()
+        {
+            var world = _boot?.World;
+            if (world == null || _directors == null) return;
+
+            _draftOrders.Clear();
+            OrderModel.ToggleDraft(_directors.Selection.Pawns, world.Views.Current, _draftOrders);
+            for (int i = 0; i < _draftOrders.Count; i++) world.Intents.Submit(_draftOrders[i]);
+            _draftOrders.Clear();
+        }
+
+        // Scratch for ToggleDraft, emptied inside the call.
+        readonly System.Collections.Generic.List<Intent> _draftOrders = new System.Collections.Generic.List<Intent>();
 
         /// <summary>
         /// Fit the bar to the width it has, and put whatever does not fit into Menu.
@@ -875,11 +904,12 @@ namespace Odyssey.Presentation.Ui
             ("Tools", new[]
             {
                 HotkeyAction.ToolMine, HotkeyAction.ToolFell, HotkeyAction.ToolCancel,
+                HotkeyAction.Draft,
             }),
             ("Interface", new[]
             {
                 HotkeyAction.BuildPalette, HotkeyAction.WorkTab, HotkeyAction.InventoryTab,
-                HotkeyAction.ResearchTab, HotkeyAction.DebugMenu,
+                HotkeyAction.ResearchTab, HotkeyAction.AnimalsTab, HotkeyAction.DebugMenu,
             }),
         };
 

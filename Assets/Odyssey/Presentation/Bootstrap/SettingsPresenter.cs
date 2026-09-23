@@ -132,6 +132,7 @@ namespace Odyssey.Presentation.Bootstrap
                         _shell != null && _shell.MenuOpen,
                         _bootstrap?.Directors?.Work.Open == true,
                         _bootstrap?.Directors?.Almanac.Open == true,
+                        _bootstrap?.Directors?.Animals.Open == true,
                         _bootstrap?.Directors?.Inventory.Open == true,
                         _bootstrap?.Directors?.Research.Open == true,
                         // Null while a colony is running: the main screen and the game are the two
@@ -159,6 +160,9 @@ namespace Odyssey.Presentation.Bootstrap
                     // so it unwinds at the same rung. Without this it was the one panel in the
                     // game with no key that shut it — the X and F1 again, and nothing else.
                     _bootstrap?.Directors?.Work.SetOpen(false);
+                    break;
+                case EscapeAction.CloseAnimals:
+                    _bootstrap?.Directors?.Animals.SetOpen(false);
                     break;
                 case EscapeAction.CloseAlmanac:
                     _bootstrap?.Directors?.Almanac.SetOpen(false);

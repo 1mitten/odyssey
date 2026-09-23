@@ -170,6 +170,9 @@ namespace Odyssey.Sim.Pawns
                 // second path into `StartJob` would be a second path out of it — which is where a
                 // reservation leak comes from.
                 .AddIntentHandler(IntentKind.ForceJob, pipeline.HandleForceJob)
+                // The draft and its orders (design 33 §2d), on the pipeline for the same reason.
+                .AddIntentHandler(IntentKind.SetDrafted, pipeline.HandleSetDrafted)
+                .AddIntentHandler(IntentKind.OrderMove, pipeline.HandleOrderMove)
                 // The Work tab's one command (design 27). It belongs to the registry because a
                 // priority is a field on a pawn and the registry is the one owner of those; the
                 // job pipeline only ever reads it.

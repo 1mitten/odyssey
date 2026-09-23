@@ -110,6 +110,36 @@ namespace Odyssey.Presentation.Bootstrap
             directors.Selection.Pick(picked, under, world.Views.Current, additive: shift);
         }
 
+        /// <summary>
+        /// A right-click with no tool armed (design 33 §2f), handed on by
+        /// <see cref="DesignatePresenter"/>. <see cref="OrderModel.RightClick"/> decides; this only
+        /// supplies the two things a Unity-free model cannot find for itself — who is under the
+        /// pointer, by the same hit-test a left click uses, and whether Ctrl is held — and carries
+        /// the answer to the world. A selection with nobody drafted in it is not asked at all, so
+        /// a right-click that is not an order costs nothing.
+        /// </summary>
+        public void Order(CellRef? cell, Ray ray)
+        {
+            var world = _bootstrap?.World;
+            var directors = _bootstrap?.Directors;
+            if (world == null || directors == null) return;
+
+            WorldSnapshot snapshot = world.Views.Current;
+            IReadOnlyList<PawnId> selection = directors.Selection.Pawns;
+            if (!OrderModel.AnyDrafted(selection, snapshot)) return;
+
+            PawnId under = cell.HasValue ? PawnUnderRay(snapshot, ray, cell.Value.Y) : PawnId.None;
+            bool ctrl = Keyboard.current?.ctrlKey.isPressed == true;
+
+            _orders.Clear();
+            OrderModel.RightClick(selection, snapshot, cell, under, ctrl, _orders);
+            for (int i = 0; i < _orders.Count; i++) world.Intents.Submit(_orders[i]);
+            _orders.Clear();
+        }
+
+        // Scratch for Order: filled and emptied inside one call, never state.
+        readonly List<Intent> _orders = new List<Intent>();
+
         void OnBoxSelected(Rect screenRect, bool additive)
         {
             var world = _bootstrap?.World;

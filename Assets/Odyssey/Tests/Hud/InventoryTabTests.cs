@@ -236,11 +236,11 @@ namespace Odyssey.Tests.Hud
         public void EscapeClosesTheTabsAtTheWorkTabsRung()
         {
             var settings = new SettingsDirector();
-            Assert.That(settings.Escape(false, false, false, false, false, inventoryOpen: true, researchOpen: false, null),
+            Assert.That(settings.Escape(false, false, false, false, false, false, inventoryOpen: true, researchOpen: false, null),
                 Is.EqualTo(EscapeAction.CloseInventory));
-            Assert.That(settings.Escape(false, false, false, false, false, inventoryOpen: false, researchOpen: true, null),
+            Assert.That(settings.Escape(false, false, false, false, false, false, inventoryOpen: false, researchOpen: true, null),
                 Is.EqualTo(EscapeAction.CloseResearch));
-            Assert.That(settings.Escape(false, false, false, true, false, inventoryOpen: true, researchOpen: true, null),
+            Assert.That(settings.Escape(false, false, false, true, false, false, inventoryOpen: true, researchOpen: true, null),
                 Is.EqualTo(EscapeAction.CloseWork));
         }
 
