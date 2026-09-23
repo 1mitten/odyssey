@@ -1004,6 +1004,9 @@ namespace Odyssey.Presentation.Bootstrap
             if (_figures != null && _pawns != null)
                 _figures.WeaponStyles = CombatPose.StylesOf(_pawns.Content.Items);
 
+            // Which blows cut (design 33 §7d), read once off the same content, for the blood seam.
+            _combatFeedback.BloodSides = CombatFeedback.BloodSidesOf(_pawns?.Content);
+
             // The fight's floating words, beneath the HUD's own tree (design 33 §1).
             UnityEngine.UIElements.VisualElement? hudRoot =
                 GetComponent<UnityEngine.UIElements.UIDocument>()?.rootVisualElement;
@@ -3512,6 +3515,7 @@ namespace Odyssey.Presentation.Bootstrap
             _doors?.Dispose();
             _floaterView?.Dispose();
             _combatFeedback.Floaters.Clear();
+            _combatFeedback.Blood.Clear();
 
             // The pictures go with the materials that painted them — a portrait outlives a colony
             // but not the materials it was rendered through, and a cached texture whose shader is

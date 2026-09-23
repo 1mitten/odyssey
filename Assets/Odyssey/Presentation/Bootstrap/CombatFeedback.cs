@@ -5,6 +5,7 @@ using Odyssey.Presentation.Audio;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pawns;
 using UnityEngine;
 
 namespace Odyssey.Presentation.Bootstrap
@@ -30,6 +31,11 @@ namespace Odyssey.Presentation.Bootstrap
     /// so a fight in a cave below or above the cut-away would otherwise float its words over
     /// whatever hides it (review, 2026-09-23). The figures and the sound take every event.</para>
     ///
+    /// <para><b>And to the blood seam</b> (design 33 §7d): a landed hit is a spurt, sharp or blunt by
+    /// the weapon (<see cref="Odyssey.Hud.BloodSides"/>), and a down or a death a pool, handed to
+    /// <see cref="Blood"/> — a no-op until the blood unit fills it. Blood takes every event, on
+    /// every layer, as the figures do: a mark on the ground must be there when the player looks.</para>
+    ///
     /// <para><b>Per-frame cost scales with the events since the last frame</b>, at most the
     /// published tail of <see cref="CombatEventView.PublishedTail"/>, and never with the colony.</para>
     /// </summary>
@@ -53,6 +59,22 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>The floating words in the air, for the view to draw.</summary>
         public CombatFloaters Floaters { get; } = new CombatFloaters();
 
+        /// <summary>
+        /// Where blood goes (design 33 §7d): <see cref="NoBloodEffects"/> until the blood unit
+        /// sets its own. Cleared with the world.
+        /// </summary>
+        public IBloodEffects Blood { get; set; } = NoBloodEffects.Instance;
+
+        /// <summary>Which blows cut, read once off the content (<see cref="BloodSidesOf"/>); all blunt until it is.</summary>
+        public BloodSides BloodSides { get; set; } = BloodSides.AllBlunt;
+
+        /// <summary>
+        /// How high on a standing person a blow lands, and on one lying down, in metres: the chest,
+        /// and just off the ground. INVENTED, for the spurt's origin; an animal's is 0.6 of its
+        /// drawn box.
+        /// </summary>
+        public const float PersonWoundHeight = 1.3f, DownedWoundHeight = 0.25f;
+
         /// <summary>Raised once for every event handed on, after it has been routed. For tests and diagnostics.</summary>
         public event Action<CombatEventView>? Handed;
 
@@ -68,6 +90,7 @@ namespace Odyssey.Presentation.Bootstrap
                 _watermark = events.Length > 0 ? events[events.Length - 1].Id : 0;
                 Handled = 0;
                 Floaters.Clear();
+                Blood.Clear();
                 return;
             }
 
@@ -87,6 +110,7 @@ namespace Odyssey.Presentation.Bootstrap
             figures?.OnCombatEvent(combatEvent);
 
             Vector3 at = WhereOf(combatEvent, snapshot, figures, out float height, out int layer);
+            Bleed(combatEvent, snapshot, figures, at);
 
             string? sound = SoundIds.ForCombat(combatEvent.Kind);
             if (sound != null) audio?.PlayOneShot(sound, at + Vector3.up * (height * 0.5f));
@@ -97,6 +121,78 @@ namespace Odyssey.Presentation.Bootstrap
                     CombatFeedbackModel.FloatingSeconds(combatEvent));
 
             Handed?.Invoke(combatEvent);
+        }
+
+        /// <summary>
+        /// The blood seam (design 33 §7d): a landed hit spurts from the wound along the blow, a
+        /// down or a death pools under the body, and nothing else bleeds
+        /// (<see cref="BloodModel.For"/>). <paramref name="at"/> is the struck pawn's feet.
+        /// </summary>
+        void Bleed(in CombatEventView combatEvent, WorldSnapshot snapshot, PawnFigureDirector? figures, Vector3 at)
+        {
+            switch (BloodModel.For(combatEvent.Kind))
+            {
+                case BloodMark.Spurt:
+                {
+                    int attackerKind = -1;
+                    Vector3 direction = Vector3.zero;
+                    if (combatEvent.Attacker.IsValid && snapshot.TryGetPawn(combatEvent.Attacker, out PawnView attacker))
+                    {
+                        attackerKind = attacker.Kind;
+                        Vector3 from = figures != null && figures.TryGetFeet(attacker.Id, out Vector3 feet)
+                            ? feet
+                            : GroundRelief.Lift(CellMetrics.FloorCentre(attacker.Cell));
+                        direction = at - from;
+                        direction.y = 0f;
+                        direction = direction.sqrMagnitude > 1e-6f ? direction.normalized : Vector3.zero;
+                    }
+
+                    bool sharp = BloodSides.IsSharp(combatEvent.Weapon, attackerKind);
+                    Vector3 wound = at + Vector3.up * WoundHeight(combatEvent.Target, snapshot, figures);
+                    Blood.Spurt(wound, direction, combatEvent.Amount / 1000f, sharp);
+                    break;
+                }
+                case BloodMark.Pool:
+                    Blood.Pool(at, BloodModel.PoolSize(combatEvent.Kind));
+                    break;
+            }
+        }
+
+        /// <summary>How high on the struck body a blow lands: a person's chest, low on one lying down, an animal's flank.</summary>
+        static float WoundHeight(PawnId who, WorldSnapshot snapshot, PawnFigureDirector? figures)
+        {
+            if (!who.IsValid || !snapshot.TryGetPawn(who, out PawnView pawn)) return PersonWoundHeight;
+            if (pawn.IsDowned) return DownedWoundHeight;
+            if (pawn.IsAnimal)
+                return figures != null && figures.TryGetAnimalBox(who, out _, out Vector3 box) ? box.y * 0.6f : 0.4f;
+            return PersonWoundHeight;
+        }
+
+        /// <summary>
+        /// Which blows cut, by item def and by pawn kind, read once off the content — the Defs are
+        /// the one owner of which weapon is sharp (<c>Items.xml</c>, <c>Species.xml</c>,
+        /// <c>Combat.xml</c>'s fists). Resolved in <see cref="Odyssey.Hud.BloodSides.IsSharp"/> in the order
+        /// <c>WeaponRules.ArmamentOf</c> arms a pawn.
+        /// </summary>
+        public static BloodSides BloodSidesOf(PawnContent? content)
+        {
+            if (content == null) return BloodSides.AllBlunt;
+
+            var weapons = new bool?[content.Items.Length];
+            for (int i = 0; i < weapons.Length; i++)
+            {
+                AttackDef? attack = content.Items[i]?.weapon;
+                weapons[i] = attack == null ? (bool?)null : attack.damageKind == DamageKind.Sharp;
+            }
+
+            var naturals = new bool?[content.Kinds.Length];
+            for (int kind = 0; kind < naturals.Length; kind++)
+            {
+                AttackDef? natural = content.SpeciesOf(kind).naturalAttack;
+                naturals[kind] = natural == null ? (bool?)null : natural.damageKind == DamageKind.Sharp;
+            }
+
+            return new BloodSides(weapons, naturals, content.Combat.fists.damageKind == DamageKind.Sharp);
         }
 
         /// <summary>
