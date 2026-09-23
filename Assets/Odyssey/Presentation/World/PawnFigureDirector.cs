@@ -678,6 +678,14 @@ namespace Odyssey.Presentation.World
         public bool Enabled => _usableLooks > 0 || _usableAnimalLooks > 0;
 
         /// <summary>
+        /// True when a colonist can be drawn at all: at least one colonist row resolved to art.
+        /// The question a colonist test must ask, and not <see cref="Enabled"/>, since the animal
+        /// rows are the project's own art and make the director able to draw on the machine
+        /// with no licensed packs (2026-09-23, the runner's PlayMode tier).
+        /// </summary>
+        public bool CanDrawColonists => _usableLooks > 0;
+
+        /// <summary>
         /// The size of the face lottery: every colonist row the catalogue has, holes included.
         ///
         /// Not the number of *usable* faces. This is the index space the appearance book deals in
