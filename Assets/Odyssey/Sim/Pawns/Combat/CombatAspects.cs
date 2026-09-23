@@ -27,7 +27,9 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// The cell index a drafted colonist is walking to, or the building it is ordered to
-        /// strike (C6); absent while it holds.
+        /// strike (C6); absent while it holds. Also the cell of a weapon a colonist was sent for
+        /// from the context menu, <b>drafted or not</b> (design 33 §7a), so an undrafted colonist
+        /// publishes it with no drafted row before it.
         /// </summary>
         public const string OrderCellName = "odyssey.pawn.order.cell";
 

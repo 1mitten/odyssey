@@ -127,6 +127,7 @@ namespace Odyssey.Presentation.Bootstrap
             // One key, one rule, one place. The order itself is the director's and is tested
             // without an engine; all that happens here is the doing of it.
             switch (_director.Escape(
+                        _shell != null && _shell.ContextMenuOpen,
                         _designate != null && _designate.ToolArmed,
                         _shell != null && _shell.BuildPaletteOpen,
                         _shell != null && _shell.MenuOpen,
@@ -137,6 +138,11 @@ namespace Odyssey.Presentation.Bootstrap
                         // halves of a session's life and only one of them is ever up.
                         _shell != null && _shell.Menu.Showing ? _shell.Menu.Screen : null))
             {
+                case EscapeAction.CloseContextMenu:
+                    // The menu a right-click raised at the pointer (design 33 §7a): the last thing
+                    // raised, so the first thing Escape puts away.
+                    _shell?.CloseContextMenu();
+                    break;
                 case EscapeAction.DisarmTool:
                     _designate?.PutToolAway();
                     break;

@@ -3131,3 +3131,44 @@
     margin-left: 6px;
 }
 
+
+/* ---------------------------------------------------------------- The context menu (design 33 §7a)
+
+   A small panel at the pointer, raised by a right-click on a thing with more than one answer: a
+   weapon's "Equip machete" and "Cancel" today. Its width is set here and never from code, so the
+   border-box trap a panel that writes its own width falls into cannot happen (CLAUDE.md); its left
+   and top are written from code, because only the pointer knows them. Tighter than a board panel:
+   it is a list of two or three rows, not a readout. */
+.ctxmenu {
+    min-width: 168px;
+    padding: 4px;
+    background-color: rgba(12, 16, 20, 0.96);
+}
+
+.ctxmenu__row {
+    flex-direction: row;
+    align-items: center;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 3px;
+}
+.ctxmenu__row:hover { background-color: rgba(255, 255, 255, 0.07); }
+.ctxmenu__row--off:hover { background-color: rgba(0, 0, 0, 0); }
+
+/* Cancel sits under a hairline, apart from the orders above it. */
+.ctxmenu__row--cancel {
+    margin-top: 3px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.09);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.ctxmenu__label { color: rgb(238, 243, 246); }
+.ctxmenu__row--off .ctxmenu__label { color: rgba(255, 255, 255, 0.35); }
+
+/* Why a row cannot be chosen, after its words: "Equip machete  Downed". */
+.ctxmenu__reason {
+    color: rgba(255, 255, 255, 0.50);
+    margin-left: 10px;
+}

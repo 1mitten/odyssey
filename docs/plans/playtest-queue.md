@@ -33,6 +33,17 @@ the next session learns to ignore.
   draft's dark red over their heads or the salmon diamond over the marauder, or a ring sunk into a
   slope or floating on a terrace step.
 
+- **Does the context menu make taking up a weapon clear?** (design 33 §7a, `claude/combat-menu`).
+  Select a colonist, undrafted, and right-click the machete: a small menu opens at the pointer with
+  *Equip machete* and *Cancel*, and nothing happens until a row is picked. Pick Equip: a line runs
+  from her feet to the weapon with a bracket on it, her activity line says *Equipping*, and the line
+  goes when it is in her hand. Then check the closes — Escape, a click elsewhere, an orbit, clicking
+  another colonist — and that right-click on bare ground (drafted) still moves at once, and on a hog
+  still attacks at once, with no menu. Select only a downed colonist and right-click a weapon:
+  *Equip* is dim with *Downed* beside it. A wrong answer is a menu that opens under the pointer's
+  arrow or off the screen edge, one that will not close, a move or attack that now asks, or Equip
+  still unclear — in which case say what would make it clear (the colonist's name on the row?).
+
 - **Does a fight read, and does it end the way it should?** (checkpoint 2, C2 —
   `claude/combat-c2`, `docs/plans/combat-c2-handover.md`, design 33 §3, §6A–§6C, §6E). Spawn a
   marauder (backtick → Spawn) beside two colonists and do not draft: it should walk to the nearer,

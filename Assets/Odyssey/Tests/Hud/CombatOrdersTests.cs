@@ -55,7 +55,9 @@ namespace Odyssey.Tests.Hud
             PawnId under, bool ctrl = false)
         {
             var sent = new List<Intent>();
-            OrderModel.RightClick(selection, frame, cell, under, ctrl, sent);
+            var menu = new List<ContextMenuRow>();
+            OrderModel.RightClick(selection, frame, cell, under, ctrl, sent, menu);
+            Assert.That(menu, Is.Empty, "a click that acts at once opened a menu as well");
             return sent;
         }
 
@@ -138,53 +140,15 @@ namespace Odyssey.Tests.Hud
             AssertAttacks(RightClick(new[] { Ada }, frame, new CellRef(8, 4, 1), Cy, ctrl: true), Cy, Ada);
         }
 
-        /// <summary>
-        /// A weapon is a fetch, not a fight (design 33 §5j): the primary colonist is sent for it
-        /// whether drafted or not, and only the primary — one weapon fills one hand.
-        /// </summary>
-        [Test]
-        public void RightClickOnAWeaponEquipsThePrimaryColonistDraftedOrNot()
-        {
-            foreach (WorldSnapshot frame in new[] { Board(), Board(Ada, Bo) })
-            {
-                List<Intent> sent = RightClick(Both, frame, MacheteCell, PawnId.None);
-                Assert.That(sent.Count, Is.EqualTo(1), "one equip, and no move");
-                Assert.That(sent[0].Kind, Is.EqualTo(IntentKind.OrderEquip));
-                Assert.That(sent[0].A, Is.EqualTo(Ada.Value), "not the primary");
-                Assert.That(sent[0].B, Is.EqualTo(Machete.Value));
-                Assert.That(sent[0].Cell, Is.EqualTo(MacheteCell));
-            }
-        }
-
-        /// <summary>
-        /// The pick names the block a thing lies on as often as the air it lies in, so a click on
-        /// the ground under the machete finds it one cell up — the rule a left click already uses
-        /// to select a pile (<c>SelectionDirector.ThingAt</c>).
-        /// </summary>
-        [Test]
-        public void AWeaponIsFoundOnTheBlockUnderItToo()
-        {
-            List<Intent> sent = RightClick(Both, Board(), MacheteCell.Below, PawnId.None);
-            Assert.That(sent.Count, Is.EqualTo(1));
-            Assert.That(sent[0].Kind, Is.EqualTo(IntentKind.OrderEquip));
-            Assert.That(sent[0].B, Is.EqualTo(Machete.Value));
-        }
-
-        [Test]
-        public void TheFirstColonistInTheSelectionIsTheOneSentForAWeapon()
-        {
-            // An animal first in the selection is passed over; the colonist after it is sent.
-            List<Intent> sent = RightClick(new[] { Hog, Bo, Ada }, Board(), MacheteCell, PawnId.None);
-            Assert.That(sent.Count, Is.EqualTo(1));
-            Assert.That(sent[0].A, Is.EqualTo(Bo.Value));
-        }
+        // The weapon's right-click opens the context menu now (design 33 §7a): ContextMenuModelTests.
 
         // ---- what stays a move -----------------------------------------------------------------
 
         /// <summary>
         /// The undrafted: no attack and no rescue (design 33 §5j), whatever is clicked, and the
         /// move after it sends nothing either, because the move is for the drafted too. The equip
-        /// above is the one gesture that does not need a draft.
+        /// is the one order that does not need a draft, and it is the context menu's
+        /// (<c>ContextMenuModelTests</c>).
         /// </summary>
         [Test]
         public void AnUndraftedSelectionSendsNoAttackAndNoRescue()

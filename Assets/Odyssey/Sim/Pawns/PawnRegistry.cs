@@ -419,13 +419,13 @@ namespace Odyssey.Sim.Pawns
                 writer.AddPawnAspect(pawn.Id, RateAspects.Move, pawn.MoveRatePerMille());
 
                 // The draft (design 33 §2e), sparse: a colony nobody drafts publishes nothing
-                // new. The order cell only while a move is being walked.
-                if (pawn.Drafted)
-                {
-                    writer.AddPawnAspect(pawn.Id, CombatAspects.Drafted, 1);
-                    if (pawn.CurrentJob != null && pawn.CurrentJob.DefIndex == JobIndex.Goto)
-                        writer.AddPawnAspect(pawn.Id, CombatAspects.OrderCell, pawn.CurrentJob.TargetCell);
-                }
+                // new. The order cell only while an order is being walked: a drafted move, or a
+                // weapon fetched from the context menu, drafted or not (§7a) — the board draws the
+                // same order line to both. Straight after the drafted row, which is what lets the
+                // interface attach one to the other without a search.
+                if (pawn.Drafted) writer.AddPawnAspect(pawn.Id, CombatAspects.Drafted, 1);
+                int orderCell = OrderCellOf(pawn);
+                if (orderCell >= 0) writer.AddPawnAspect(pawn.Id, CombatAspects.OrderCell, orderCell);
 
                 // What she has in her arms (design 24 §5b). Two rows, and only while there is
                 // something to publish — a carried thing has no cell, so it is delisted from the
@@ -487,6 +487,21 @@ namespace Odyssey.Sim.Pawns
                 writer.AddThing(new ThingView(item.Id, size.FromIndex(where), item.DefIndex, 0,
                     item.Stack, item.ContainerId, (byte)slot));
             }
+        }
+
+        /// <summary>
+        /// Where the pawn is walking under the player's orders, or -1 (design 33 §2e, §7a): a
+        /// drafted colonist's move, or a weapon she was sent for — the only equip there is comes
+        /// from an order, drafted or not. An attack or a rescue is drawn to its target, not a cell
+        /// (<see cref="CombatAspects.OrderTarget"/>).
+        /// </summary>
+        static int OrderCellOf(Pawn pawn)
+        {
+            Job? job = pawn.CurrentJob;
+            if (job == null) return -1;
+            if (job.DefIndex == JobIndex.Goto && pawn.Drafted) return job.TargetCell;
+            if (job.DefIndex == JobIndex.Equip && job.PlayerForced) return job.TargetCell;
+            return -1;
         }
 
         // ---- saving ------------------------------------------------------------------------

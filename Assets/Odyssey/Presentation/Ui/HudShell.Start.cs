@@ -805,6 +805,9 @@ namespace Odyssey.Presentation.Ui
             // against the last one's and announces a level she arrived with.
             _toasts.Clear();
 
+            // A menu raised in the last colony names its colonists and things (design 33 §7a).
+            CloseContextMenu();
+
             if (!ReferenceEquals(_directors, live ?? _screenDirectors))
             {
                 Detach();

@@ -82,7 +82,7 @@ namespace Odyssey.Tests.Hud
         public void ARightClickOnTheGroundMovesOnlyTheDrafted()
         {
             var sent = new List<Intent>();
-            OrderModel.RightClick(Everyone, Frame(adaDrafted: true, boDrafted: false), Ground, PawnId.None, false, sent);
+            OrderModel.RightClick(Everyone, Frame(adaDrafted: true, boDrafted: false), Ground, PawnId.None, false, sent, new List<ContextMenuRow>());
 
             Assert.That(sent.Count, Is.EqualTo(1));
             Assert.That(sent[0].Kind, Is.EqualTo(IntentKind.OrderMove));
@@ -99,12 +99,12 @@ namespace Odyssey.Tests.Hud
         public void ARightClickThatTouchesAPawnStillMovesAndTheSkyMovesNobody()
         {
             var sent = new List<Intent>();
-            OrderModel.RightClick(Everyone, Frame(true, false), Ground, Bo, false, sent);
+            OrderModel.RightClick(Everyone, Frame(true, false), Ground, Bo, false, sent, new List<ContextMenuRow>());
             Assert.That(sent.Count, Is.EqualTo(1), "a click near the squad was swallowed");
             Assert.That(sent[0].Cell, Is.EqualTo(Ground));
 
             sent.Clear();
-            OrderModel.RightClick(Everyone, Frame(true, true), null, PawnId.None, false, sent);
+            OrderModel.RightClick(Everyone, Frame(true, true), null, PawnId.None, false, sent, new List<ContextMenuRow>());
             Assert.That(sent, Is.Empty);
         }
 
@@ -126,6 +126,30 @@ namespace Odyssey.Tests.Hud
             Assert.That(marks[0].OrderCell, Is.EqualTo(777));
             Assert.That(marks[1].Pawn, Is.EqualTo(Bo));
             Assert.That(marks[1].OrderCell, Is.EqualTo(-1));
+        }
+
+        /// <summary>
+        /// An undrafted colonist sent for a weapon from the context menu publishes an order cell
+        /// with no drafted row before it (design 33 §7a); she is collected for her order line, in
+        /// the same walk as the drafted. A drafted colonist's order cell belongs to her drafted
+        /// mark and is not collected twice.
+        /// </summary>
+        [Test]
+        public void AnUndraftedColonistsOrderIsCollectedForItsLineAndADraftedOneIsNot()
+        {
+            WorldSnapshot frame = Frame(adaDrafted: true, boDrafted: false, adaOrderCell: 777);
+            frame.AddPawnAspect(new PawnAspect(Bo, AspectKey.Of(OrderModel.OrderCellAspect), 555));
+
+            var marks = new List<OrderModel.DraftedMark>();
+            var lines = new List<OrderModel.DraftedMark>();
+            OrderModel.CollectDrafted(frame, marks, lines);
+            Assert.That(lines.Count, Is.EqualTo(1), "the drafted order was collected twice, or Bo's not at all");
+            Assert.That(lines[0].Pawn, Is.EqualTo(Bo));
+            Assert.That(lines[0].OrderCell, Is.EqualTo(555));
+
+            Assert.That(marks.Count, Is.EqualTo(1), "an undrafted colonist was given the draft's diamond");
+            Assert.That(marks[0].Pawn, Is.EqualTo(Ada));
+            Assert.That(marks[0].OrderCell, Is.EqualTo(777));
         }
 
         [Test]

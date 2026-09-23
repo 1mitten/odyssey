@@ -868,7 +868,8 @@ says "hit this one of ours" outright. A downed colonist is rescued by the **near
 drafted colonist only (*our call*: one body, one carrier; sending all of them is a walk the
 reservation would refuse at the end of). A weapon in the clicked cell **or the one above it** (the
 rule a left click selects a pile by) is fetched by the first colonist in the selection, drafted or
-not. Everything else is the move, a floored or walled cell included. A downed, hostile or animal
+not. *(Superseded 2026-09-23: a weapon now opens the context menu, whose Equip row sends the same
+order for the same colonist, §7a.)* Everything else is the move, a floored or walled cell included. A downed, hostile or animal
 pawn in a stale selection is never an attacker.
 
 **A missed seam: the presenter's gate.** `SelectionPresenter.Order` (lane B's file) returns before
@@ -1105,89 +1106,97 @@ settled each one. They are built on `claude/combat-c2-polish` from `50ced466`.
 | *"2 colonists attacking within the same tile ... should position themselves side by side"* | **Each takes the nearest free side.** Every attacker claims a different cell next to the target, the free one nearest to it, so two arriving from the west stand side by side on the west flank. If all eight cells are taken, the extra waits one ring back. No two attackers ever share a tile. | §7c |
 | *"We also need a blood effect ... even better blood splatter"* | **The seam is cut now; blood is built as the next unit.** Every landed hit spurts, scaled: sharp hits (machete, arc blade, bites) spurt more and leave a splatter, blunt hits (bat, crowbar, fists) a smaller puff and a smaller mark. Misses and dodges draw nothing. Downs and deaths leave a pool under the body. Ground marks fade over about one in-game day, capped (around 200, oldest first). They are **presentation only**: not saved, not simulated, nothing to clean. | §7d |
 
-### 7c. Side by side (built 2026-09-23, `claude/combat-pos`)
+### 7a. The context menu
 
-Simulation only, fast and Long tiers, no Unity. **No golden moved, no save format changed, no new
-state**: no golden window fights, and a side is read off fields every pawn already saves and hashes.
+Built 2026-09-23 on `claude/combat-menu` from `claude/combat-c2-polish` (`10a61b00`). The owner's
+report was that picking up a weapon "wasn't clear": a right-click on a machete sent the colonist
+for it at once, and nothing said that was what the click had done. The decision: **a right-click
+on a thing with more than one sensible answer opens a small menu at the pointer**, and a thing with
+one answer keeps acting at once.
 
-**What an attacker does.** Every `Job_AttackMelee` — a drafted colonist under orders, the
-self-defence, the hunt, an animal's revenge — walks to a **side** of its target rather than to its
-cell. `Melee.ChooseSide` picks it:
+**What opens it and what does not.** `OrderModel.RightClick` asks three questions in order and
+answers with **either** orders **or** menu rows, never both:
 
-1. Of the eight cells beside the target on its layer that she could strike it from (`IsLegalStep`
-   into the target — `Melee.InReach`'s own test, so no blow through a wall's corner) and can reach,
-   the one **no other attacker holds, nearest her**. Nearest is the squared distance in cells from
-   where she stands; a tie goes to the first in a fixed scan, −Z to +Z then −X to +X. So two
-   arriving from the west stand on the west flank, side by side.
-2. All eight held: the nearest free cell **one ring back** (Chebyshev distance 2) that she can stand
-   on and reach. She waits there, out of reach, and looks again every `chaseRepathTicks` (60), so a
-   side that frees up is taken within 60 ticks.
-3. That ring full too (24 attackers on one target, or a corridor): she waits where she is and looks
-   again at the same cadence.
+1. **The pawn under the pointer** (`CombatOrders.Route`, unchanged): an animal or a hostile is an
+   instant attack by every selected drafted colonist; Ctrl on a colonist is an attack; a downed
+   colonist is an instant rescue by the nearest. An enemy standing on a weapon is still attacked —
+   the pawn wins over the cell, as it always has.
+2. **A thing with a choice** (`ContextMenuModel.Build`): a weapon lying in the clicked cell or the
+   one above it (the pick's rule for piles), **or held in a store there**, offers one
+   *Equip &lt;weapon&gt;* row per kind of weapon — a shelf of two bats and an arc blade is "Equip bat",
+   "Equip arc blade" — and *Cancel* last.
+3. **Everything else** is the move it was in C1, for the drafted only: bare ground, a pile of wood,
+   a floor, a wall. No menu.
 
-**A side is held by walking to it or standing on it** — `Melee.SideOf`: the pawn's `Destination`,
-else its `Cell`. Only a pawn in an attack on its feet holds one (`Melee.IsInAnAttack`), on **any**
-target, so a scrum of two fights does not stack either. Nothing new is saved, and a load holds every
-claim it saved. The claims are read in the order the pawns tick — by id — and never out of a
-dictionary; the mask round the target is a 5 × 5 `int`.
+**The rows** (`ContextMenuRow`): the registry key of the verb, the whole line ("Equip machete" —
+`ui.command.equip` and the item's own name lower-cased, the pane's "Corpse of a midden hog" rule),
+whether it can be chosen, why not, and the intents it sends. Equip sends `OrderEquip` for the
+**primary colonist** — the first *standing* colonist in the selection, drafted or not (§5j), passing
+over an animal, a marauder or a downed colonist ahead of her — aimed at the weapon's own cell.
+A selection whose every colonist is down gets the row **disabled, reason "Downed"**
+(`ui.status.downed`), so the player sees why. A selection with **no colonist at all** — an animal, a
+marauder — gets **no menu**: they take no orders (the presenter's gate, `HearsRightClick`, never
+asks), and a menu of one Cancel says nothing. `ContextMenuModel.Choose` is the one door from a row to
+the world and sends nothing for Cancel or a disabled row, whatever the row carries — so a view that
+forgets to look at `Enabled` still cannot send one. One new key: `ui.menu.cancel`, in a new
+`ui.menu` namespace listed on the wiki's Commands page.
 
-**Where she stops.** In reach at a step boundary she stops and swings only on a side of her own
-(`AttackMeleeJobDriver.MayFightFrom`): never on the target's own cell, never on a side another
-attacker holds. So walking past a side somebody else is making for, she walks on. In reach on an
-unheld cell she stops there, as she always did — for her it is the nearest free side.
+**Closing** (owner): Escape — the new top rung of `SettingsDirector.Escape`, `CloseContextMenu`,
+appended to the enum so no value moved — any mouse press outside the menu, the camera turning more
+than 5° (a click that did not travel can add a degree or so of yaw while the button is down), and a
+change of selection, since the rows name that selection's primary. Also a new session, and
+`CloseMenusOverTheBoard`, so the rule "one panel over the board" holds for it too. A right-click
+elsewhere is a press outside, so it closes this menu and opens its own on the release. A disabled
+row, clicked, does nothing and leaves the menu up so its reason can still be read.
 
-**When she chooses again** — the chase's own re-plan (§6A.2), same cadence. `Job.TargetCell` now
-also means, while approaching, *the target's cell the side was chosen against*:
+**The view** (`HudShell.ContextMenu.cs`): a `.panel` built on first use — like the bed picker, so the
+smoke test's list of regions the shell builds at start is unchanged — in `_worldUi`, so it goes with
+the colony. **Its width is the stylesheet's** (`.ctxmenu { min-width: 168px }`), never written from
+code, so the border-box trap (CLAUDE.md, "A panel that sets its own width") cannot happen here; its
+left and top are written from code, because only the pointer knows them, and
+`HudLayout.ContextMenuLeft`/`Top` turn it to the pointer's other side at the right and bottom edges.
+It is placed again on `GeometryChangedEvent`, the bed picker's lesson that a panel shown this frame
+has no size. Rows are text only, in the `Row` role; the reason is `Meta` in the dim ink after a
+disabled row's words; Cancel sits under a divider. No glyph and no non-ASCII character.
 
-- walking: at a step boundary, once the target has left that cell, no oftener than 60 ticks;
-- not walking: at once when the target has left it or the attack is new (`Job.WorkTicks == 0`),
-  else every 60 ticks — which is the waiter's look for a freed side.
+**Feedback after ordering.** The equipping colonist shows **the drafted order line to the weapon**
+and *Equipping* on her activity line. The line needed one simulation change: the order cell
+(`odyssey.pawn.order.cell`) was published only for a drafted colonist's move, and is now published
+for a forced `Job_Equip` too, **drafted or not**, still straight after the drafted row when there is
+one (`PawnRegistry.OrderCellOf`). `OrderModel.CollectDrafted` gained an overload that, in the same
+single walk of the aspects, collects an order cell with no drafted row before it; `DrawDraftMarks`
+draws those with the same line and bracket, without the diamond, which says "drafted". An aspect is
+neither saved nor hashed, so **no golden moved**. *Equipping* was already there: `JobLabels` has
+mapped `Job_Equip` to `ui.status.equipping` since the contracts step (§6D).
 
-**The drafted hold is exempt.** Her blow at an adjacent threat still strikes from wherever she
-stands and never chases (§6A.2); her cell is her side, so others avoid it. Two drafted colonists
-*ordered* onto one target are forced attacks and spread like anybody.
+**What stayed where it was, and why.** Ctrl + right-click on a colonist and the rescue are
+**unchanged** (instant, `CombatOrders.Route`). Moving the rescue into the menu is one `Offer…`
+method and one key, but it turns a played one-click order into two, which is a decision for the
+keyboard and not for tidying. *Build this now* on a site is also one method, with one catch: the
+legality it needs is `JobSystem.CanForce`, a simulation query the Hud assembly cannot call, so it
+will need that answer published (or asked through an intent with a reply) before the row can be
+honest about being disabled. `15-building.md` §8 step 4 is otherwise built by this.
 
-**What it costs.** `ChooseSide` is one pass over the pawns (an integer comparison each for those
-not fighting) plus the 24 cells within two of the target — never the board — and is asked at the
-chase cadence, not per tick. `MayFightFrom`'s pass over the pawns is asked at a step boundary in
-reach while walking, and before each swing; one standing on her side waiting out her swing clock is
-not asked. `TickBenchmarkTests.TwentyAgainstTwenty`, one session, Windows dev machine, before and
-after:
+**Tests** (fast tier, each seen to fail with the thing it guards removed): `ContextMenuModelTests`
+(13) — the menu for an undrafted and a drafted selection, Equip's intent for the primary, a stale
+selection's primary, Cancel sends nothing, the downed selection's disabled row and its reason, no
+menu for an animal or a marauder, the block under a weapon, a store's one row per kind, ground is a
+move with no menu, an enemy is an attack with no menu even standing on a weapon, `Choose` refusing a
+disabled row that carries orders, Escape's top rung, and the label's two registry words;
+`HudLayoutTests.TheContextMenuOpensAtThePointerAndTurnsAtTheEdges`;
+`OrderModelTests.AnUndraftedColonistsOrderIsCollectedForItsLineAndADraftedOneIsNot`;
+`EquipTests.TheWeaponsCellIsPublishedAsTheOrderCellWhileSheFetchesIt` (drafted and not); and five
+colour rows in `HudStyleSheetTests`. The weapon cases in `CombatOrdersTests` moved here, and its
+helper now asserts that a click which acts opens no menu.
 
-| | Tick, mean | Pawns phase, mean | Swings in the window |
-|---|---|---|---|
-| Before §7c | 0.069 ms | 0.013 ms | 203 |
-| After §7c | 0.070–0.073 ms | 0.018–0.019 ms | 208 |
+**Never compiled** (the fast tier does not build Presentation, and Unity was not run):
+`HudShell.ContextMenu.cs`, and the edits to `HudShell.cs`, `HudShell.Panels.cs`,
+`HudShell.Start.cs`, `SelectionPresenter.cs`, `SettingsPresenter.cs` and `OdysseyBootstrap.cs`.
 
-About 5 µs a tick on the pawns phase for forty pawns fighting; the tick is inside its own noise.
-
-**Tests** (`SideBySideTests`, fast tier). Every one failed with the driver withheld (measured, with
-the per-tick check both on and off, so the end-state assertions were seen to fail on their own):
-two from one side end side by side on that flank (before: one tile); nine on one fill the eight
-sides and the ninth waits at distance 2 (before: three tiles among nine); the waiter takes a side
-that frees up; a target sent ten cells away is surrounded again where it stops (before: all four on
-one tile); three marauders hunting one colonist stand on three sides of her; a save taken while
-five close resumes on an equal hash 600 ticks on. Every tick of every fight asserts no two attackers
-standing on one tile and no two holding one side. Sim fast tier 1,170 (from 1,164), Hud 797, Long 39,
-all green; `GoldenMasterTests` green without a re-bake.
-
-**Do not undo by tidying:**
-
-- **The side is `Destination`, else `Cell`.** A reservation or a claim table would be new saved,
-  hashed state for something the pawn already carries; a claim on the job alone would miss the
-  hold, whose side is simply where she stands.
-- **"Nearest" is to the attacker, not to the target.** Nearest the target puts the second arrival on
-  whichever orthogonal comes first in the scan, not on the flank she came from.
-- **Not asking `MayFightFrom` per tick of a standing attacker.** Nobody else ever chooses a cell
-  somebody stands on, so her side stays hers; asking again each tick would be a pass over the pawns
-  per attacker per tick for an answer that cannot change.
-- **The hold stays exempt.** A drafted colonist who stepped off her cell to find a side would be
-  chasing, and the hold never chases.
-
-**Open.** A pawn landing the step an order interrupted (`FinishingStepTo`) runs no job until it
-lands, so for those few ticks it holds no side and may pass over one; nothing stops on it. A pawn
-walking to a side does not notice another taking it until she arrives, where she chooses again —
-which only the hold can cause, by striking from a cell someone was making for.
+**Open:** a weapon taken by somebody else while the menu is up leaves the row in place (the
+simulation refuses the order quietly); a colonist in a mental break is offered Equip enabled and
+refused by the simulation, because the break is not in the view's flags; an unreachable weapon is
+offered and refused the same way. Nobody has seen the menu.
 
 ### 7b. The lock-on ring
 
@@ -1274,6 +1283,90 @@ middle. On a terrace ramp the ring lies at the figure's height with the relief's
 ramp's, so half of it may sink into the slope; in water it floats at the swimmer's feet. **Never
 compiled here**: `OdysseyBootstrap.cs`, `ChunkRenderer.cs`, `PrimitiveMeshes.cs`,
 `PrimitiveMeshTests.cs` — the integrator compiles.
+
+### 7c. Side by side (built 2026-09-23, `claude/combat-pos`)
+
+Simulation only, fast and Long tiers, no Unity. **No golden moved, no save format changed, no new
+state**: no golden window fights, and a side is read off fields every pawn already saves and hashes.
+
+**What an attacker does.** Every `Job_AttackMelee` — a drafted colonist under orders, the
+self-defence, the hunt, an animal's revenge — walks to a **side** of its target rather than to its
+cell. `Melee.ChooseSide` picks it:
+
+1. Of the eight cells beside the target on its layer that she could strike it from (`IsLegalStep`
+   into the target — `Melee.InReach`'s own test, so no blow through a wall's corner) and can reach,
+   the one **no other attacker holds, nearest her**. Nearest is the squared distance in cells from
+   where she stands; a tie goes to the first in a fixed scan, −Z to +Z then −X to +X. So two
+   arriving from the west stand on the west flank, side by side.
+2. All eight held: the nearest free cell **one ring back** (Chebyshev distance 2) that she can stand
+   on and reach. She waits there, out of reach, and looks again every `chaseRepathTicks` (60), so a
+   side that frees up is taken within 60 ticks.
+3. That ring full too (24 attackers on one target, or a corridor): she waits where she is and looks
+   again at the same cadence.
+
+**A side is held by walking to it or standing on it** — `Melee.SideOf`: the pawn's `Destination`,
+else its `Cell`. Only a pawn in an attack on its feet holds one (`Melee.IsInAnAttack`), on **any**
+target, so a scrum of two fights does not stack either. Nothing new is saved, and a load holds every
+claim it saved. The claims are read in the order the pawns tick — by id — and never out of a
+dictionary; the mask round the target is a 5 × 5 `int`.
+
+**Where she stops.** In reach at a step boundary she stops and swings only on a side of her own
+(`AttackMeleeJobDriver.MayFightFrom`): never on the target's own cell, never on a side another
+attacker holds. So walking past a side somebody else is making for, she walks on. In reach on an
+unheld cell she stops there, as she always did — for her it is the nearest free side.
+
+**When she chooses again** — the chase's own re-plan (§6A.2), same cadence. `Job.TargetCell` now
+also means, while approaching, *the target's cell the side was chosen against*:
+
+- walking: at a step boundary, once the target has left that cell, no oftener than 60 ticks;
+- not walking: at once when the target has left it or the attack is new (`Job.WorkTicks == 0`),
+  else every 60 ticks — which is the waiter's look for a freed side.
+
+**The drafted hold is exempt.** Her blow at an adjacent threat still strikes from wherever she
+stands and never chases (§6A.2); her cell is her side, so others avoid it. Two drafted colonists
+*ordered* onto one target are forced attacks and spread like anybody.
+
+**What it costs.** `ChooseSide` is one pass over the pawns (an integer comparison each for those
+not fighting) plus the 24 cells within two of the target — never the board — and is asked at the
+chase cadence, not per tick. `MayFightFrom`'s pass over the pawns is asked at a step boundary in
+reach while walking, and before each swing; one standing on her side waiting out her swing clock is
+not asked. `TickBenchmarkTests.TwentyAgainstTwenty`, one session, Windows dev machine, before and
+after:
+
+| | Tick, mean | Pawns phase, mean | Swings in the window |
+|---|---|---|---|
+| Before §7c | 0.069 ms | 0.013 ms | 203 |
+| After §7c | 0.070–0.073 ms | 0.018–0.019 ms | 208 |
+
+About 5 µs a tick on the pawns phase for forty pawns fighting; the tick is inside its own noise.
+
+**Tests** (`SideBySideTests`, fast tier). Every one failed with the driver withheld (measured, with
+the per-tick check both on and off, so the end-state assertions were seen to fail on their own):
+two from one side end side by side on that flank (before: one tile); nine on one fill the eight
+sides and the ninth waits at distance 2 (before: three tiles among nine); the waiter takes a side
+that frees up; a target sent ten cells away is surrounded again where it stops (before: all four on
+one tile); three marauders hunting one colonist stand on three sides of her; a save taken while
+five close resumes on an equal hash 600 ticks on. Every tick of every fight asserts no two attackers
+standing on one tile and no two holding one side. Sim fast tier 1,170 (from 1,164), Hud 797, Long 39,
+all green; `GoldenMasterTests` green without a re-bake.
+
+**Do not undo by tidying:**
+
+- **The side is `Destination`, else `Cell`.** A reservation or a claim table would be new saved,
+  hashed state for something the pawn already carries; a claim on the job alone would miss the
+  hold, whose side is simply where she stands.
+- **"Nearest" is to the attacker, not to the target.** Nearest the target puts the second arrival on
+  whichever orthogonal comes first in the scan, not on the flank she came from.
+- **Not asking `MayFightFrom` per tick of a standing attacker.** Nobody else ever chooses a cell
+  somebody stands on, so her side stays hers; asking again each tick would be a pass over the pawns
+  per attacker per tick for an answer that cannot change.
+- **The hold stays exempt.** A drafted colonist who stepped off her cell to find a side would be
+  chasing, and the hold never chases.
+
+**Open.** A pawn landing the step an order interrupted (`FinishingStepTo`) runs no job until it
+lands, so for those few ticks it holds no side and may pass over one; nothing stops on it. A pawn
+walking to a side does not notice another taking it until she arrives, where she chooses again —
+which only the hold can cause, by striking from a cell someone was making for.
 
 ### 7d. The blood seam
 

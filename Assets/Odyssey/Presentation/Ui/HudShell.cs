@@ -890,6 +890,7 @@ namespace Odyssey.Presentation.Ui
             UpdateArmedBanner();
             MarkOrders();
             ReadBarKeys();
+            UpdateContextMenu();
 
             // The roster sweep ends when the button does, wherever the pointer happens to be when
             // it ends — a card's own PointerUp never arrives if the release landed off the strip.
@@ -1123,6 +1124,10 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void OnSelectionChanged(SelectionChange reason)
         {
+            // The context menu was raised for the selection there was (design 33 §7a): its Equip
+            // row names that selection's primary colonist, so a new selection puts it away.
+            CloseContextMenu();
+
             var world = _boot!.World;
             if (world == null || _directors == null) return;
 

@@ -2584,14 +2584,19 @@ namespace Odyssey.Presentation.Bootstrap
         /// being commanded are signal. One walk of the aspects finds them all
         /// (<see cref="OrderModel.CollectDrafted"/>), and the cost is a submission or three per
         /// drafted colonist — it scales with the draft, never with the board.
+        ///
+        /// <para><b>An undrafted colonist sent for a weapon gets the same line</b> (design 33 §7a,
+        /// the context menu's Equip): the simulation publishes the weapon's cell as her order cell,
+        /// the same walk of <c>OrderModel.CollectDrafted</c> finds it, and the line and bracket are
+        /// drawn exactly as a drafted move's — without the diamond, which says "drafted".</para>
         /// </summary>
         void DrawDraftMarks(WorldSnapshot snapshot, int movePerTick)
         {
             if (_renderer == null || _model == null || _world == null) return;
 
-            OrderModel.CollectDrafted(snapshot, _draftMarks);
+            OrderModel.CollectDrafted(snapshot, _draftMarks, _undraftedOrders);
             SoundTheDraft();
-            if (_draftMarks.Count == 0) return;
+            if (_draftMarks.Count == 0 && _undraftedOrders.Count == 0) return;
 
             Color hue = Ui.HudTokens.Convert(OrderColours.Draft.WithAlpha(OrderColours.DraftAlpha));
             Color line = Ui.HudTokens.Convert(OrderColours.Draft.WithAlpha(OrderColours.DraftAlpha * 0.75f));
@@ -2607,11 +2612,28 @@ namespace Odyssey.Presentation.Bootstrap
                 _renderer.DrawMarker(feet + Vector3.up * (colonistCursor.y + DraftMarkerLift), DraftMarkerSize, hue);
 
                 if (mark.OrderCell < 0 || selection == null || !IsSelected(selection, pawn.Id)) continue;
-                CellRef dest = _world.Size.FromIndex(mark.OrderCell);
-                Vector3 to = GroundRelief.Drape(CellMetrics.FloorCentre(dest)).GetPosition() + Vector3.up * 0.12f;
-                _renderer.DrawSegment(feet + Vector3.up * 0.12f, to, DraftLineThickness, line);
-                _renderer.DrawFloorBracket(dest, hue);
+                DrawOrderLine(feet, mark.OrderCell, hue, line);
             }
+
+            for (int i = 0; i < _undraftedOrders.Count; i++)
+            {
+                OrderModel.DraftedMark order = _undraftedOrders[i];
+                if (selection == null || !IsSelected(selection, order.Pawn)) continue;
+                if (!snapshot.TryGetPawn(order.Pawn, out PawnView pawn)) continue;
+
+                if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+                DrawOrderLine(feet, order.OrderCell, hue, line);
+            }
+        }
+
+        /// <summary>The order line from a colonist's feet to the cell she was sent to, and a bracket on it.</summary>
+        void DrawOrderLine(Vector3 feet, int orderCell, Color bracket, Color line)
+        {
+            CellRef dest = _world!.Size.FromIndex(orderCell);
+            Vector3 to = GroundRelief.Drape(CellMetrics.FloorCentre(dest)).GetPosition() + Vector3.up * 0.12f;
+            _renderer!.DrawSegment(feet + Vector3.up * 0.12f, to, DraftLineThickness, line);
+            _renderer.DrawFloorBracket(dest, bracket);
         }
 
         /// <summary>
@@ -2815,6 +2837,7 @@ namespace Odyssey.Presentation.Bootstrap
 
         // Scratch for DrawDraftMarks, refilled every frame.
         readonly List<OrderModel.DraftedMark> _draftMarks = new List<OrderModel.DraftedMark>();
+        readonly List<OrderModel.DraftedMark> _undraftedOrders = new List<OrderModel.DraftedMark>();
 
         /// <summary>How far above the cursor box's top the drafted diamond floats, and how big it is, in metres.</summary>
         const float DraftMarkerLift = 0.35f, DraftMarkerSize = 0.28f;
