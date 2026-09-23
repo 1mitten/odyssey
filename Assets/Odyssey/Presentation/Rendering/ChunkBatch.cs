@@ -191,6 +191,18 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The same code, marked as a store's ground.</summary>
         public static int Stored(int code) => code | StoredBase;
 
+        /// <summary>
+        /// The line round a stockpile's outer edge, drawn in the store's own hue at full strength
+        /// where the ground under it is only washed a third of the way (owner, 2026-09-23). Bit 28,
+        /// above the twelve bits a tree's species is packed into from <see cref="TreeShift"/>, and
+        /// asked with <see cref="IsTree"/> excluded all the same.
+        /// </summary>
+        public const int StoreEdgeBase = 1 << 28;
+
+        public static bool IsStoreEdge(int code) => (code & StoreEdgeBase) != 0 && (code & TreeBase) == 0;
+
+        public static int StoreEdge() => StoreEdgeBase;
+
         public static int Stuff(int stuff) => stuff;
 
         /// <summary>Bedding: one fixed colour, ignoring whatever material is passed beside it.</summary>

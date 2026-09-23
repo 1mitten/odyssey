@@ -23,6 +23,13 @@ the next session learns to ignore.
 
 ## Open
 
+- **Can you see a stockpile, and does its outline read?** (`claude/stockpile-drawn`,
+  `docs/design/26-storage.md` §13.) Paint a stockpile on grass and one on a built floor, and two
+  at once. It had been created and not drawn since 2026-09-21 unless something else re-meshed its
+  chunk; now it should wash the ground and carry a line in the store's hue round its outer edge
+  only, within a couple of frames. A wrong answer is no wash, a delay, a line between its own
+  cells, a line lost under grass tufts, or one too heavy for a big warehouse floor.
+
 - **Does a drafted colonist's run read as urgency, and is the deeper red findable?**
   (`claude/combat-mvp`, design 33 §2g–§2h). Draft a colonist and right-click across the board: she
   should visibly **run** — about twice her walking speed, the run clip, not a sped-up walk. The

@@ -211,7 +211,7 @@ this file.
 | What a frame costs at 4K, the GPU readout, vsync | `docs/design/06-rendering-and-camera.md` §6c.5 |
 | The performance trace, what a row carries, reading one | `docs/design/29-perf-tracing.md` |
 | **Board sizes, what a bigger map costs, the ceiling** | `docs/design/28-map-size.md` |
-| Storage zones, what a store accepts, where a load goes, what it does with what it refuses | `docs/design/26-storage.md` (§11 for the refusal rule) |
+| Storage zones, what a store accepts, where a load goes, what it does with what it refuses | `docs/design/26-storage.md` (§11 for the refusal rule, §13 for the wash and the outline, and why a store marks the chunk below it) |
 | **Shelves, containers, what is in one, and how its goods are drawn** | `docs/design/30-shelves.md` |
 | Falling items, mid-air drops, landing motion | `docs/design/26-falling-items.md` |
 | The Work tab, priorities, the rotated headers | `docs/design/27-work-tab.md` |
