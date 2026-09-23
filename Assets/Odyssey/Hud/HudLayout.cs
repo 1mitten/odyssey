@@ -296,9 +296,43 @@ namespace Odyssey.Hud
         public const int CardNameBudget = CardWidth - 2 * CardPad;
 
         /// <summary>
-        /// How tall a roster card is: top padding, the 52 px avatar, name gap, 19 px name row, bottom padding.
+        /// How tall a roster card is: top padding, the 52 px avatar, name gap, 19 px name row, the
+        /// health bar and its gap, bottom padding.
+        ///
+        /// <para><b>89 until 2026-09-23, 94 since</b> (design 33 §9f, owner: <i>"Their health needs
+        /// to be also displayed on their colony stats as it appears above them"</i>). The card grew
+        /// by exactly <see cref="CardHealthGap"/> and <see cref="CardHealthBar"/> and by nothing
+        /// else, and is written as its parts so the next row added to it moves this number rather
+        /// than being squeezed into it.</para>
+        ///
+        /// <para><b>Five pixels is what the coverage ceiling had left.</b> A full one-row strip at
+        /// 1280 x 720 is 480.7 px wide, and the resting HUD there was 19.69% with 89 px cards
+        /// against <see cref="CoverageCeiling"/>'s 20%: 0.31% of that canvas is 2,857 px², which is
+        /// 5.9 px of card height. A first cut at 102 (a 10 px bar under a 3 px gap) measured
+        /// <b>20.37%</b> and failed <c>TheStripIsAlwaysOneRowAndNoFurther</c>; the owner declined
+        /// raising the ceiling for the name pool on 2026-09-18, so the bar took the room there was
+        /// rather than the room it wanted. At 94 the same HUD is <b>19.95%</b>, so <b>the roster
+        /// card now spends the last of the ceiling</b> and the next pixel added to any resting
+        /// region has to be paid for.</para>
         /// </summary>
-        public const int CardHeight = 89;
+        public const int CardHeight = CardPad + CardAvatar + CardNameGap + CardNameRow + CardHealthGap + CardHealthBar + CardPad;
+
+        /// <summary>Portrait to name on a card.</summary>
+        public const int CardNameGap = 2;
+
+        /// <summary>The name's line on a card: the 14 px row face with its leading.</summary>
+        public const int CardNameRow = 19;
+
+        /// <summary>Name to health bar on a card: one pixel, because the name's line already ends in its own leading.</summary>
+        public const int CardHealthGap = 1;
+
+        /// <summary>
+        /// The health bar on a card (design 33 §9f): the full width inside the padding and 4 px
+        /// tall, the inspect pane's need bar's thickness — as thick as the coverage ceiling allows
+        /// (<see cref="CardHeight"/>). Its colour is the reading; "Downed" is written across the
+        /// foot of the portrait rather than over a bar this thin.
+        /// </summary>
+        public const int CardHealthBar = 4;
 
         public const int CardGap = 7;
 

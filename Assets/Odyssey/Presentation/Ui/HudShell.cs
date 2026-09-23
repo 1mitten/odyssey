@@ -347,6 +347,17 @@ namespace Odyssey.Presentation.Ui
             public Label Name = null!;
             public IconBadge JobIcon = null!;
 
+            /// <summary>The health bar (design 33 §9f): the track, its fill, and "Downed" across the portrait's foot.</summary>
+            public VisualElement Health = null!;
+            public VisualElement HealthFill = null!;
+            public Label HealthWord = null!;
+
+            /// <summary>
+            /// What the bar was last drawn from: the fill per mille, or <see cref="DownedHealth"/>.
+            /// The ink and the word are functions of it, so one int says whether anything moved.
+            /// </summary>
+            public int LastHealth = int.MinValue;
+
             public PawnId LastId;
             /// <summary>
             /// The seed the colonist in this slot was rolled from, beside their id.

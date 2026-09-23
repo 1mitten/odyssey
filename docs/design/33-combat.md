@@ -1755,3 +1755,75 @@ Played on `claude/combat-c2-polish`. The owner's asks and the interview's answer
 | *"We'll make an entry for gear later to include equipped weapon (seam for later)"* | A **seam only**: a Unity-free `GearModel` that lists what the colonist holds (the equipped weapon, drawn or at the hip). The Gear tab stays disabled; later work fills it. | §9d |
 | *"You could still attack a pig after it died — make a guard for this — check marauder does this"* | **A dead pawn is never a target.** The attack order is refused on a dead pawn or a corpse, an attack job ends the tick its target dies or leaves the board, and hostile, animal and drafted target choice never picks the dead. A guard test runs every tick of mixed fights to the death and fails if anybody swings at, walks to, or keeps a job against a dead pawn. The same guard covers marauders. | §9e |
 | *"Their health needs to be also displayed on their colony stats"* | **The colonist cards along the top get a fourth bar, health, always shown**, in the overhead bar's colours (green, amber below 60%, red below 40%). A downed colonist's card shows it empty and red, with *Downed*. | §9f |
+
+### 9f. Health on the cards
+
+Built 2026-09-23 on `claude/combat-cards` (from `claude/combat-c2-r3`). The owner's words:
+*"Their health needs to be also displayed on their colony stats as it appears above them"*.
+
+**It is the card's only bar, not its fourth.** The interview recorded "a fourth bar", but the roster
+card has carried no need bars since 2026-09-17, when the owner took mood, food and rest off it to
+fit more colonists in the strip (`HudLayout.CardWidth`). So a card is now the face, the name and
+one health bar under the name. Putting the three need bars back is a separate decision for the owner.
+
+**What it reads** (`RosterModel.Health`, `RosterCard.Health` / `HealthInk` / `Downed` /
+`HealthWord`). The bar is always drawn. The bar over a colonist's head is drawn only while
+`odyssey.pawn.hp` is published, so the card cannot use that rule. It uses the Health tab's rule
+instead: `odyssey.pawn.hp.max` is published for every person always, and a pool with no hit points
+beside it is a whole colonist (§5d). The fill is the hit points over the pool, clamped, in
+thousandths. The ink is `CombatFeedbackModel.HealthBarColour`, the one owner of the bar's colours,
+so the card and the bar over her head change colour on the same hit: green, amber below 60 %, red
+below 40 %. **Downed is read from the flag, not from the hit points.** The bar is empty and red,
+whatever is left of the −50 % a downed pawn may sink to, and the word is `ui.status.downed`. A frame
+with no pool (from before combat, or built by hand) reads −1: the track with no fill, never a guess
+at whole. Each card costs two O(1) aspect lookups and a flag test per refresh, with no allocation.
+
+**Where it is drawn, and why so thin.** It is a 4 px bar the full width inside the padding, one
+pixel under the name (`HudLayout.CardHealthGap`, `CardHealthBar`). The card went from **89 to 94**,
+and `CardHeight` is now written as the sum of its parts. **Five pixels was all the coverage ceiling
+had left.** A full one-row strip at 1280 × 720 is 480.7 px wide, and the resting HUD there was
+19.69 % against the 20 % `CoverageCeiling`. The first cut, a 10 px bar under a 3 px gap (card 102),
+measured **20.37 %** and failed `TheStripIsAlwaysOneRowAndNoFurther`. The owner had already
+declined raising the ceiling for the name pool (2026-09-18), so the bar took the room there was. At
+94 the same HUD is **19.95 %**. **The roster card now spends the last of the ceiling**, so the next
+pixel any resting region gains has to be paid for. A 4 px bar is too thin to hold a word, so
+**"Downed" goes across the foot of the portrait**, on a plate in the bar's red at 85 %. The job
+badge is added after the plate, so it still sits on top at the right. The downed card's track is
+tinted the same red at 35 %.
+
+The drag ghost (`.card-drag-ghost`) keeps 89 and no bar. It is a picture of who is being moved, not
+a card, and it is still centred on `CardHeight`, so it rides 2.5 px higher than it did.
+
+**Tests.** Fast tier: `RosterHealthTests` (14 cases) covers a whole colonist being full and green,
+the fill and each of the three bands at their edges, the card agreeing with the overhead bar at every
+hit point from −50 % to past the pool, a downed colonist at −20 %, 0 and a stale +35 % (empty, red,
+"Downed") against the same numbers without the flag, no pool reading −1, and each card on a page
+reading its own colonist. The stylesheet now pins `.card__name`'s gap and line and `.card__health`'s
+gap and height to the model (`HudStyleSheetTests`). Negative controls, each seen to fail and then
+restored:
+
+- a pool with no `hp` read as nought, not whole (2 failures);
+- the downed flag ignored (4);
+- the stat green `HudTheme.Good` in place of `HealthBarColour` (9);
+- `.card__health` set to 10 px in the sheet (`EveryAnchorInTheSheetIsTheNumberTheLayoutModelUses`).
+
+**Do not undo by tidying.**
+- **Never draw the card's bar only where the overhead bar is owed.** The card is always shown, and
+  the absent `hp` beside a pool is *whole*, not missing.
+- **The ink is `HealthBarColour`**, never `HudTokens.NeedBand` and never a colour in the sheet. The
+  need bars and this bar share thresholds, not inks (§8a).
+- **Downed is the flag.** A frame can carry a positive `hp` on the tick a pawn goes down.
+- **Growing the card is a coverage decision**, not a styling one. Read `HudLayout.CardHeight`
+  before adding a pixel.
+
+**Where.** `Hud/RosterModel.cs`, `Hud/HudLayout.cs` (`CardHeight` and its parts),
+`Presentation/Ui/HudShell.Panels.cs` (`SyncCardHealth`, `NewCard`), `Presentation/Ui/HudShell.cs`
+(`CardView`), `Presentation/Ui/Hud.uss` (`.card`, `.card__health`, `.card__health-fill`,
+`.card__downed`). **Never compiled here**: `HudShell.Panels.cs`, `HudShell.cs`, and the sheet has
+not been loaded by Unity.
+
+**Open, for the playtest.**
+- Whether a 4 px bar reads at a glance across the strip, or whether the owner would rather spend
+  more of the ceiling (a 6 px bar is card 96, about 20.06 %, and needs `CoverageCeiling` moved).
+- Whether "Downed" across the face reads as a state or hides who it is.
+- Whether the owner wants the need bars back on the card now that it has a bar again.
