@@ -33,7 +33,7 @@ namespace Odyssey.Sim.Power
     /// §11) — and happens only after a line, a power building, a switch or an empty hopper
     /// changed: never per tick, never over the board (process §3).</para>
     /// </summary>
-    public sealed class PowerGrid : IWorldSystem, IStateHashable, ISaveable
+    public sealed class PowerGrid : IWorldSystem, IStateHashable, ISaveable, ISnapshotContributor
     {
         /// <summary>How often the generators burn: the thermal pass's own cadence, so a heater's
         /// power and its heat are judged on the same tick.</summary>
@@ -892,6 +892,94 @@ namespace Odyssey.Sim.Power
             // An empty hopper stops a generator, and its net may go dark: solved again the next
             // time anything asks, which is the thermal pass later this same tick.
             if (emptied) MarkDirty();
+        }
+
+        // ---- ISnapshotContributor (§9, §10) ------------------------------------------------------
+
+        /// <summary>The built lines' rows, rebuilt only when <see cref="Version"/> moves, so a
+        /// frame spent watching copies a list rather than walking the net.</summary>
+        readonly List<ConduitView> _lineViews = new List<ConduitView>();
+        int _lineViewsVersion = -1;
+
+        /// <summary>
+        /// Every power building and every net, always — a handful of each. Every ordered line and
+        /// every removal mark, always, as every other standing order is. And the built lines
+        /// <b>only while the interface is watching</b> (<see cref="WorldViewStore.WatchPower"/>,
+        /// process §3), from a cache the walk of the net fills once per change.
+        /// </summary>
+        public void Contribute(SimWorld world, SnapshotWriter writer)
+        {
+            if (IsEmpty) return;
+            EnsureSolved();
+            writer.SetPowerVersion(Version);
+
+            for (int i = 0; i < _nets.Count; i++)
+                writer.AddPowerNet(new PowerNetView(_nets[i].Key, _nets[i].SupplyW, _nets[i].DemandW, _nets[i].State));
+
+            for (int i = 0; i < _devices.Count; i++)
+            {
+                BuildingDef? def = DefOfDevice(i);
+                if (def == null) continue;
+                PlacedEdifice placed = _edifices[_devices[i].Edifice];
+                int net = _deviceNet[i];
+                bool generator = def.powerOutputW > 0;
+                writer.AddPowerDevice(new PowerDeviceView(
+                    placed.CellIndex,
+                    EdificeFootprint.SecondCell(placed.CellIndex, placed.Def, placed.Facing, _size),
+                    (byte)ConstructionContent.BuildingForEdifice(placed.Def),
+                    generator ? PowerRole.Generator : PowerRole.Consumer,
+                    _devices[i].On,
+                    _devicePowered[i],
+                    net >= 0 ? _nets[net].Key : -1,
+                    generator ? def.powerOutputW : def.powerDrawW,
+                    _deviceLoad[i],
+                    _devices[i].FuelMilli,
+                    def.fuelItem >= 0 ? def.fuelCapacity * Milli : 0));
+            }
+
+            for (int i = 0; i < _sites.Count; i++)
+                writer.AddConduit(new ConduitView(_sites[i], ConduitKind.Ordered, PowerNetState.Idle,
+                    LinksOf(_sites[i], orders: true), -1));
+
+            // A mark is an order too, and drawn like one whether the lines are shown or not.
+            // While they are shown it rides with its line below instead, so it is not drawn twice.
+            if (!world.Views.WatchPower)
+            {
+                for (int i = 0; i < _marks.Count; i++)
+                {
+                    Net? n = NetAtLine(_marks[i]);
+                    writer.AddConduit(new ConduitView(_marks[i], ConduitKind.Marked,
+                        n?.State ?? PowerNetState.Idle, LinksOf(_marks[i]), n?.Key ?? -1));
+                }
+                return;
+            }
+
+            if (_lineViewsVersion != Version)
+            {
+                _lineViews.Clear();
+                for (int i = 0; i < _lines.Count; i++)
+                {
+                    int cell = _lines[i];
+                    Net n = _nets[_lineNet[i]];
+                    ConduitKind kind = _marks.BinarySearch(cell) >= 0 ? ConduitKind.Marked : ConduitKind.Built;
+                    _lineViews.Add(new ConduitView(cell, kind, n.State, LinksOf(cell), n.Key));
+                }
+                _lineViewsVersion = Version;
+            }
+            for (int i = 0; i < _lineViews.Count; i++) writer.AddConduit(_lineViews[i]);
+        }
+
+        /// <summary>The links of an order: to lines and to other orders, so a planned run draws joined.</summary>
+        byte LinksOf(int cell, bool orders)
+        {
+            CellRef c = _size.FromIndex(cell);
+            byte links = 0;
+            for (int face = 0; face < 6; face++)
+            {
+                int n = Neighbour(c, face);
+                if (n >= 0 && (IsLine(n) || HasSite(n))) links |= (byte)(1 << face);
+            }
+            return links;
         }
 
         // ---- IStateHashable ---------------------------------------------------------------------

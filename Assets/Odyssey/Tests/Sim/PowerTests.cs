@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Sim;
@@ -445,6 +446,114 @@ namespace Odyssey.Tests.Sim
             loaded.World.Tick(1_000);
             Assert.That(loaded.World.ComputeStateHash().Value, Is.EqualTo(played.World.ComputeStateHash().Value));
             Assert.That(PowerOf(played).FuelMilli(playedGen), Is.LessThan(40_000), "it did burn");
+        }
+
+        // ---- what is published (§9, §10) ----------------------------------------------------------
+
+        static int Count(ReadOnlySpan<ConduitView> rows, ConduitKind kind)
+        {
+            int n = 0;
+            foreach (var row in rows) if (row.Kind == kind) n++;
+            return n;
+        }
+
+        /// <summary>
+        /// Built lines are published only while the interface watches (process §3), and an order
+        /// is published always — the control that the channel is alive while built lines are not.
+        /// </summary>
+        [Test]
+        public void BuiltLinesArePublishedOnlyWhileWatchedAndOrdersAlways()
+        {
+            ColonyWorld colony = Board();
+            PowerGrid power = PowerOf(colony);
+            for (int x = 3; x <= 5; x++) power.AddLine(Open(colony, x, 3));
+            Assert.That(power.PlaceLine(Open(colony, 6, 3)), Is.EqualTo(IntentRejection.None));
+            colony.World.Tick();
+
+            var frame = colony.World.Views.Current;
+            Assert.That(Count(frame.Conduits, ConduitKind.Ordered), Is.EqualTo(1), "an order is always drawn");
+            Assert.That(Count(frame.Conduits, ConduitKind.Built), Is.Zero, "nobody is watching");
+
+            Assert.That(Send(colony, IntentKind.WatchPower, Open(colony, 3, 3), a: 1), Is.EqualTo(IntentRejection.None));
+            frame = colony.World.Views.Current;
+            Assert.That(Count(frame.Conduits, ConduitKind.Built), Is.EqualTo(3));
+
+            Send(colony, IntentKind.WatchPower, Open(colony, 3, 3), a: 0);
+            Assert.That(Count(colony.World.Views.Current.Conduits, ConduitKind.Built), Is.Zero);
+        }
+
+        /// <summary>
+        /// A paused world answers the watch without spending a tick, so the lines appear the moment
+        /// a power tool is armed, paused or not.
+        /// </summary>
+        [Test]
+        public void APausedWorldStartsShowingTheLinesAtOnce()
+        {
+            ColonyWorld colony = Board();
+            PowerOf(colony).AddLine(Open(colony, 3, 3));
+            colony.World.Tick();
+            int tick = colony.World.CurrentTick;
+
+            colony.World.Intents.Submit(new Intent(IntentKind.WatchPower, colony.Start, 1));
+            colony.World.RepublishViews();
+
+            Assert.That(colony.World.CurrentTick, Is.EqualTo(tick), "no tick was spent");
+            Assert.That(Count(colony.World.Views.Current.Conduits, ConduitKind.Built), Is.EqualTo(1));
+        }
+
+        /// <summary>The links are the simulation's: the middle of a run joins east and west, and a riser joins up.</summary>
+        [Test]
+        public void EachLineCarriesItsOwnLinks()
+        {
+            ColonyWorld colony = Board();
+            PowerGrid power = PowerOf(colony);
+            int west = Open(colony, 3, 3), middle = Open(colony, 4, 3), east = Open(colony, 5, 3);
+            power.AddLine(west);
+            power.AddLine(middle);
+            power.AddLine(east);
+            power.AddLine(middle + BoardSize.LayerStride);
+            Send(colony, IntentKind.WatchPower, middle, a: 1);
+
+            byte links = 0;
+            foreach (var row in colony.World.Views.Current.Conduits)
+                if (row.CellIndex == middle) links = row.Links;
+            Assert.That(links, Is.EqualTo((byte)((1 << 1) | (1 << 3) | (1 << 4))), "east, west and up");
+        }
+
+        /// <summary>
+        /// Every power building is published with what the pane and the alerts need — whether it
+        /// is running, its net, its fuel — and every net with its balance.
+        /// </summary>
+        [Test]
+        public void TheBuildingsAndNetsArePublished()
+        {
+            ColonyWorld colony = Board();
+            PowerGrid power = PowerOf(colony);
+            for (int x = 2; x <= 7; x++) power.AddLine(Open(colony, x, 2));
+            int genHead = Open(colony, 2, 3);
+            int gen = RaiseNow(colony, genHead, BuildingHandle.Generator, facing: 1);
+            power.SetFuelMilli(gen, 20_000);
+            int heaterCell = Open(colony, 6, 3);
+            RaiseNow(colony, heaterCell, BuildingHandle.Heater);
+            colony.World.Tick();
+
+            var frame = colony.World.Views.Current;
+            Assert.That(frame.TryGetPowerDevice(genHead + 1, out PowerDeviceView g), Is.True, "the far cell names it too");
+            Assert.That(g.Role, Is.EqualTo(PowerRole.Generator));
+            Assert.That(g.Powered && g.On, Is.True);
+            Assert.That(g.LoadW, Is.EqualTo(175));
+            Assert.That(g.FuelCapacityMilli, Is.EqualTo(75_000));
+            Assert.That(g.FuelMilli, Is.LessThanOrEqualTo(20_000));
+
+            Assert.That(frame.TryGetPowerDevice(heaterCell, out PowerDeviceView h), Is.True);
+            Assert.That(h.Role, Is.EqualTo(PowerRole.Consumer));
+            Assert.That(h.Powered, Is.True);
+            Assert.That(h.NetKey, Is.EqualTo(g.NetKey));
+
+            Assert.That(frame.TryGetPowerNet(g.NetKey, out PowerNetView net), Is.True);
+            Assert.That(net.SupplyW, Is.EqualTo(1_000));
+            Assert.That(net.DemandW, Is.EqualTo(175));
+            Assert.That(net.State, Is.EqualTo(PowerNetState.Live));
         }
 
         // ---- nets (§4) --------------------------------------------------------------------------

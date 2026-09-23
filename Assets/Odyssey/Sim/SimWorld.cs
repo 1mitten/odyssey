@@ -214,6 +214,11 @@ namespace Odyssey.Sim
                     GameSpeed = intent.A;
                     return IntentRejection.None;
 
+                case IntentKind.WatchPower:
+                    // A question, like QueryCell below: whether the built lines are published.
+                    Views.WatchPower = intent.A != 0;
+                    return IntentRejection.None;
+
                 case IntentKind.QueryCell:
                     // A question, not a command: it touches nothing but the view, so it has no
                     // state worth rejecting against. Re-asking the cell already asked, and asking

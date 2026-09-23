@@ -215,6 +215,14 @@ namespace Odyssey.Sim.Contracts
         /// colonist sent to do it (design 32 §5).
         /// </summary>
         SetPowerSwitch,
+
+        /// <summary>
+        /// Start (<c>A</c> = 1) or stop (<c>A</c> = 0) publishing the built power lines — the
+        /// interface is showing them (design 32 §9). <b>A question, not a command</b>, exactly as
+        /// <see cref="QueryCell"/> is: it changes no state the simulation owns, nothing saved and
+        /// nothing hashed, so a paused world answers it at once.
+        /// </summary>
+        WatchPower,
     }
 
     /// <summary>
@@ -284,6 +292,9 @@ namespace Odyssey.Sim.Contracts
             // player authored them and nothing needs to run to make them true (design 32).
             IntentKind.RemoveConduit => true,
             IntentKind.SetPowerSwitch => true,
+            // A view question, like QueryCell: the lines appear the moment the tool is armed,
+            // paused or not.
+            IntentKind.WatchPower => true,
             _ => false,
         };
     }

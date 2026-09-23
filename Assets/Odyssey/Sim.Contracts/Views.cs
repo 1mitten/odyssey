@@ -975,6 +975,9 @@ namespace Odyssey.Sim.Contracts
         CellDetail[] _cellDetails = Array.Empty<CellDetail>();
         BulletinView[] _bulletins = Array.Empty<BulletinView>();
         FallingView[] _falling = Array.Empty<FallingView>();
+        ConduitView[] _conduits = Array.Empty<ConduitView>();
+        PowerDeviceView[] _powerDevices = Array.Empty<PowerDeviceView>();
+        PowerNetView[] _powerNets = Array.Empty<PowerNetView>();
 
         public int Tick { get; private set; }
         public int SliceLayer { get; private set; }
@@ -1050,6 +1053,58 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>How many things are in the air right now. Nearly always zero.</summary>
         public int FallingCount { get; private set; }
+
+        /// <summary>How many line cells this frame carries — see <see cref="ConduitView"/> for which.</summary>
+        public int ConduitCount { get; private set; }
+
+        /// <summary>How many power buildings this frame carries.</summary>
+        public int PowerDeviceCount { get; private set; }
+
+        /// <summary>How many power nets this frame carries.</summary>
+        public int PowerNetCount { get; private set; }
+
+        /// <summary>
+        /// Moves whenever anything a drawing of the lines shows has changed — a line, an order, a
+        /// mark, a net going live or dark (design 32 §9). A reader that caches what it built from
+        /// <see cref="Conduits"/> rebuilds only when this differs from what it built against.
+        /// </summary>
+        public int PowerVersion { get; private set; }
+
+        /// <summary>Line cells, in cell-index order within each kind. See <see cref="ConduitView"/>.</summary>
+        public ReadOnlySpan<ConduitView> Conduits => new ReadOnlySpan<ConduitView>(_conduits, 0, ConduitCount);
+
+        /// <summary>Every power building, in edifice order. See <see cref="PowerDeviceView"/>.</summary>
+        public ReadOnlySpan<PowerDeviceView> PowerDevices =>
+            new ReadOnlySpan<PowerDeviceView>(_powerDevices, 0, PowerDeviceCount);
+
+        /// <summary>Every power net, in key order. See <see cref="PowerNetView"/>.</summary>
+        public ReadOnlySpan<PowerNetView> PowerNets => new ReadOnlySpan<PowerNetView>(_powerNets, 0, PowerNetCount);
+
+        /// <summary>The power building standing in this cell, either of its cells. A scan of a handful.</summary>
+        public bool TryGetPowerDevice(int cell, out PowerDeviceView view)
+        {
+            for (int i = 0; i < PowerDeviceCount; i++)
+            {
+                if (!_powerDevices[i].Covers(cell)) continue;
+                view = _powerDevices[i];
+                return true;
+            }
+            view = default;
+            return false;
+        }
+
+        /// <summary>The net with this key.</summary>
+        public bool TryGetPowerNet(int key, out PowerNetView view)
+        {
+            for (int i = 0; i < PowerNetCount; i++)
+            {
+                if (_powerNets[i].Key != key) continue;
+                view = _powerNets[i];
+                return true;
+            }
+            view = default;
+            return false;
+        }
 
         /// <summary>
         /// The newest incidents, oldest first, so a reader walking forward meets ids in ascending
@@ -1191,7 +1246,31 @@ namespace Odyssey.Sim.Contracts
             CellDetailCount = 0;
             BulletinCount = 0;
             FallingCount = 0;
+            ConduitCount = 0;
+            PowerDeviceCount = 0;
+            PowerNetCount = 0;
+            PowerVersion = 0;
         }
+
+        internal void AddConduit(in ConduitView view)
+        {
+            Grow(ref _conduits, ConduitCount + 1);
+            _conduits[ConduitCount++] = view;
+        }
+
+        internal void AddPowerDevice(in PowerDeviceView view)
+        {
+            Grow(ref _powerDevices, PowerDeviceCount + 1);
+            _powerDevices[PowerDeviceCount++] = view;
+        }
+
+        internal void AddPowerNet(in PowerNetView view)
+        {
+            Grow(ref _powerNets, PowerNetCount + 1);
+            _powerNets[PowerNetCount++] = view;
+        }
+
+        internal void SetPowerVersion(int version) => PowerVersion = version;
 
         internal void AddBulletin(in BulletinView view)
         {

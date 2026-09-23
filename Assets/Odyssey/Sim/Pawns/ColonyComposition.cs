@@ -171,6 +171,7 @@ namespace Odyssey.Sim.Pawns
                 // The burn, and the lazy solve behind it. Order 45 puts it before the thermal pass
                 // (50), which asks it for heat on the same tick.
                 .AddSystem(_ => power)
+                .AddSnapshotContributor(power)
                 .AddTickable(_ => new SkillSystem(pawns))
                 .AddTickable(_ => pawns.Pawns)
                 .AddSnapshotContributor(pawns.Pawns)
