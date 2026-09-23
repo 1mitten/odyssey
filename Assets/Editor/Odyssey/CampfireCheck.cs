@@ -13,6 +13,10 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.CameraRig;
+using Odyssey.Sim.Contracts;
+using Odyssey.Sim.World;
+using Odyssey.Sim.Worldgen;
 
 namespace Odyssey.EditorTools
 {
@@ -84,6 +88,8 @@ namespace Odyssey.EditorTools
                 Shot(centre, 7f, "Logs/campfire-close.png");
                 Shot(centre, 14f, "Logs/campfire-wide.png");
 
+                Burning(root.transform, owned, centre);
+
                 Debug.Log("[Campfire] wrote Logs/campfire-close.png and Logs/campfire-wide.png. " +
                           "The red box is one whole cell (2.5 x 3.0 x 2.5 m); the blue post is " +
                           "1.8 m, about a colonist. The ring must sit inside the red box's " +
@@ -101,6 +107,66 @@ namespace Odyssey.EditorTools
                     if (owned[i] != null && owned[i] != root) UnityEngine.Object.DestroyImmediate(owned[i]);
                 if (exitWhenDone) EditorApplication.Exit(exitCode);
             }
+        }
+
+        /// <summary>
+        /// The fire lit, at night, through the real <see cref="FireDirector"/>.
+        ///
+        /// <para>Built the way <c>RenderBench</c> builds one — a grid, a chunk grid and a
+        /// <c>WorldRenderModel</c> — because the director finds its fires by asking the model
+        /// which cells hold <c>EdificeCampfire</c>, and a probe that fed it a position by hand
+        /// would be testing the probe. The lights it makes are real point lights, so the ambient
+        /// is dropped to night here: a warm pool on the ground is invisible at noon and that is
+        /// the whole point of §8.</para>
+        /// </summary>
+        static void Burning(Transform parent, List<UnityEngine.Object> owned, Vector3 at)
+        {
+            var size = new GridSize(8, 8, 3);
+            var grid = new CellGrid(size);
+            var chunks = new ChunkGrid(size);
+
+            var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(
+                "Assets/Odyssey/Presentation/ModuleCatalogue.asset");
+            using var library = new ModuleLibrary(catalogue);
+            var model = new Odyssey.Presentation.World.WorldRenderModel(size, chunks, library);
+
+            // One campfire in the middle of the little board, at the cell the pictures above use.
+            int cell = size.Index(new CellRef(0, 0, 0));
+            var edifices = new List<PlacedEdifice>
+            {
+                new PlacedEdifice { CellIndex = cell, Def = CoreContent.EdificeCampfire, Stuff = 0 },
+            };
+            grid.Edifice[cell] = 0;
+            model.RefreshAll(grid, edifices);
+
+            using var fires = new Odyssey.Presentation.World.FireDirector(model, parent, parent.gameObject.layer);
+
+            var slice = new SliceSettings();
+            for (int step = 0; step < 90; step++)
+            {
+                fires.Sync(0, slice, 1f / 60f);
+                fires.Evaluate(1f / 60f);
+            }
+
+            Debug.Log($"[Campfire] FireDirector warmed={fires.Warmed} litFires={fires.LitFires} " +
+                      "(1 is the board's one campfire; 0 means the director never found it)");
+
+            Vector3 fireAt = CellMetrics.FloorCentre(0, 0, 0);
+
+            AmbientNight();
+            Shot(fireAt, 7f, "Logs/campfire-burning-night.png");
+            Shot(fireAt, 14f, "Logs/campfire-burning-night-wide.png");
+        }
+
+        /// <summary>Drop the environment to night so a point light has something to show against.
+        /// The studio's own rule — a render that is kept is a render of what was true — does not
+        /// apply here because this tool owns the scene and is thrown away with it.</summary>
+        static void AmbientNight()
+        {
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.05f, 0.06f, 0.09f);
+            foreach (Light light in UnityEngine.Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+                if (light.type == LightType.Directional) light.intensity = 0.04f;
         }
 
         static Vector3 Cell(int x, int z) =>

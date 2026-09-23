@@ -186,6 +186,7 @@ namespace Odyssey.Presentation.Bootstrap
         DesignatePresenter? _designate;
         AudioDirector? _audio;
         DoorDirector? _doors;
+        FireDirector? _fires;
 
         /// <summary>
         /// The title screen's bed. Owned by the root rather than by the session, because it is
@@ -255,6 +256,9 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         public PawnFigureDirector? Figures => _figures;
         public DoorDirector? Doors => _doors;
+
+        /// <summary>The flame, smoke and light on every drawn campfire (design 31).</summary>
+        public FireDirector? Fires => _fires;
         readonly Stopwatch _frameTimer = new Stopwatch();
         double _renderMs;
         double _tickMs;
@@ -958,6 +962,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (_model != null)
             {
                 _doors = new DoorDirector(_model, moduleCatalogue, transform, gameObject.layer);
+                _fires = new FireDirector(_model, transform, gameObject.layer);
             }
 
             // The light through the day. It finds the scene's own sun rather than making one,
@@ -1355,6 +1360,15 @@ namespace Odyssey.Presentation.Bootstrap
 
             _doors?.Sync(_world.Views.Current, activeLayer, slice, Time.deltaTime, _audio);
             MarkSection(FrameSection.Doors);
+
+            // The campfires burn after the doors and before the marks, with the figures'
+            // own reading of whether the world is advancing: a paused game holds the flame
+            // and the flicker where they are rather than burning on (design 31 §8).
+            if (_fires != null)
+            {
+                _fires.Running = _figures?.Running ?? true;
+                _fires.Sync(activeLayer, slice, Time.deltaTime);
+            }
 
             DrawStandingOrders(_world.Views.Current);
             DrawZones(_world.Views.Current);
@@ -3165,6 +3179,7 @@ namespace Odyssey.Presentation.Bootstrap
             _daylight?.Dispose();
             _figures?.Dispose();
             _doors?.Dispose();
+            _fires?.Dispose();
 
             // The pictures go with the materials that painted them — a portrait outlives a colony
             // but not the materials it was rendered through, and a cached texture whose shader is
@@ -3190,6 +3205,7 @@ namespace Odyssey.Presentation.Bootstrap
             _daylight = null;
             _figures = null;
             _doors = null;
+            _fires = null;
             _colonistMaterials = null;
             _renderer = null;
             _actorMaterial = null;
