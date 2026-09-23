@@ -664,6 +664,27 @@ namespace Odyssey.Tests.Presentation
             Assert.That(floaters.Alive.Count, Is.EqualTo(CombatFloaters.Capacity), "a paused frame ages nothing");
         }
 
+        /// <summary>
+        /// A word stays up as long as the interface says (<c>CombatFeedbackModel.FloatingSeconds</c>):
+        /// "downed" outlives a number. Lane B floated every word for the same 1.2 s; the integration
+        /// passes the model's lifetime through (2026-09-23).
+        /// </summary>
+        [Test]
+        public void AWordStaysUpAsLongAsTheInterfaceSays()
+        {
+            var floaters = new CombatFloaters();
+            var downed = new CombatEventView(1, 0, CombatEventKind.Downed, new PawnId(2), new PawnId(1), default, 0, -1);
+            var hit = new CombatEventView(2, 0, CombatEventKind.Hit, new PawnId(2), new PawnId(1), default, 7_000, -1);
+            floaters.Add("Downed", HudTheme.Bad, Vector3.zero, CombatFeedbackModel.FloatingSeconds(downed));
+            floaters.Add("-7", HudTheme.Bad, Vector3.zero, CombatFeedbackModel.FloatingSeconds(hit));
+            Assume.That(CombatFeedbackModel.FloatingSeconds(downed), Is.GreaterThan(CombatFeedbackModel.FloatingSeconds(hit)));
+
+            floaters.Step(CombatFeedbackModel.FloatingSeconds(hit) + 0.05f);
+
+            Assert.That(floaters.Alive.Count, Is.EqualTo(1), "the number outlived its time, or \"downed\" went with it");
+            Assert.That(floaters.Alive[0].Text, Is.EqualTo("Downed"));
+        }
+
         [Test]
         public void AHealthBarFillsFromTheLeftInTheHudsInks()
         {
@@ -675,9 +696,6 @@ namespace Odyssey.Tests.Presentation
             Assert.That((end - start).magnitude, Is.EqualTo(CombatMarks.BarWidth).Within(1e-5f));
             Assert.That((fill - start).magnitude, Is.EqualTo(CombatMarks.BarWidth * 0.25f).Within(1e-5f));
 
-            Assert.That(CombatMarks.BarInk(0.9f).Hex, Is.EqualTo(HudTheme.Good.Hex));
-            Assert.That(CombatMarks.BarInk(0.5f).Hex, Is.EqualTo(HudTheme.Warn.Hex));
-            Assert.That(CombatMarks.BarInk(0.1f).Hex, Is.EqualTo(HudTheme.Bad.Hex));
         }
     }
 }

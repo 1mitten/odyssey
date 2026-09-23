@@ -87,7 +87,8 @@ namespace Odyssey.Presentation.Bootstrap
 
             string text = CombatFeedbackModel.FloatingText(combatEvent);
             if (text.Length > 0)
-                Floaters.Add(text, CombatFeedbackModel.FloatingColour(combatEvent), at + Vector3.up * height);
+                Floaters.Add(text, CombatFeedbackModel.FloatingColour(combatEvent), at + Vector3.up * height,
+                    CombatFeedbackModel.FloatingSeconds(combatEvent));
 
             Handed?.Invoke(combatEvent);
         }

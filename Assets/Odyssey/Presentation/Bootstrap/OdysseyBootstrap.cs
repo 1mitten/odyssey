@@ -2677,7 +2677,7 @@ namespace Odyssey.Presentation.Bootstrap
                     CombatMarks.Bar(centre, across, fraction, out Vector3 start, out Vector3 end, out Vector3 fillEnd);
                     _renderer.DrawSegment(start, end, CombatMarks.BarThickness, track);
                     _renderer.DrawSegment(start, fillEnd, CombatMarks.FillThickness,
-                        Ui.HudTokens.Convert(CombatMarks.BarInk(fraction)));
+                        Ui.HudTokens.Convert(CombatFeedbackModel.HealthBarColour(hp, hpMax)));
                 }
 
                 if (hostile)

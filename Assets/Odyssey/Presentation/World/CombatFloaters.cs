@@ -20,7 +20,12 @@ namespace Odyssey.Presentation.World
     /// </summary>
     public sealed class CombatFloaters
     {
-        /// <summary>How long a word stays up, in seconds.</summary>
+        /// <summary>
+        /// How long a word stays up, in seconds, when nobody says otherwise. The fight's own words
+        /// are given theirs by <see cref="CombatFeedbackModel.FloatingSeconds"/> — a number is brief,
+        /// "downed" and "dead" linger — so this is the fallback, not the rule (integration,
+        /// 2026-09-23: lane B floated every word for this long and lane C had written the table).
+        /// </summary>
         public const float Seconds = 1.2f;
 
         /// <summary>How far it rises over that time, in metres.</summary>
@@ -39,12 +44,17 @@ namespace Odyssey.Presentation.World
             public Vector3 From;
             public float Age;
 
+            /// <summary>How long this word stays up, in seconds.</summary>
+            public float Life;
+
+            float T => Mathf.Clamp01(Age / (Life > 0f ? Life : Seconds));
+
             /// <summary>Where it is drawn now: risen from where it started, easing to a stop.</summary>
             public Vector3 At
             {
                 get
                 {
-                    float t = Mathf.Clamp01(Age / Seconds);
+                    float t = T;
                     return From + Vector3.up * (Rise * (1f - (1f - t) * (1f - t)));
                 }
             }
@@ -54,7 +64,7 @@ namespace Odyssey.Presentation.World
             {
                 get
                 {
-                    float t = Mathf.Clamp01(Age / Seconds);
+                    float t = T;
                     return t <= FadeFrom ? 1f : 1f - (t - FadeFrom) / (1f - FadeFrom);
                 }
             }
@@ -65,12 +75,15 @@ namespace Odyssey.Presentation.World
         /// <summary>The words alive now, oldest first.</summary>
         public IReadOnlyList<Floater> Alive => _alive;
 
-        /// <summary>Put a word up at a point. An empty word floats nothing.</summary>
-        public void Add(string text, HudColour ink, Vector3 from)
+        /// <summary>
+        /// Put a word up at a point for <paramref name="seconds"/> (<see cref="Seconds"/> when
+        /// nought or less). An empty word floats nothing.
+        /// </summary>
+        public void Add(string text, HudColour ink, Vector3 from, float seconds = Seconds)
         {
             if (string.IsNullOrEmpty(text)) return;
             if (_alive.Count >= Capacity) _alive.RemoveAt(0);
-            _alive.Add(new Floater { Text = text, Ink = ink, From = from, Age = 0f });
+            _alive.Add(new Floater { Text = text, Ink = ink, From = from, Age = 0f, Life = seconds > 0f ? seconds : Seconds });
         }
 
         /// <summary>Age every word by the frame's time and let go of the ones that are done.</summary>
@@ -80,7 +93,7 @@ namespace Odyssey.Presentation.World
             {
                 Floater floater = _alive[i];
                 floater.Age += deltaTime;
-                if (floater.Age >= Seconds) _alive.RemoveAt(i);
+                if (floater.Age >= floater.Life) _alive.RemoveAt(i);
                 else _alive[i] = floater;
             }
         }

@@ -35,9 +35,10 @@ namespace Odyssey.Presentation.World
         public static float Fraction(int hpMilli, int hpMaxMilli) =>
             hpMaxMilli > 0 ? Mathf.Clamp01((float)hpMilli / hpMaxMilli) : 0f;
 
-        /// <summary>The fill's ink: good above three fifths, a warning above three tenths, bad below.</summary>
-        public static HudColour BarInk(float fraction) =>
-            fraction > 0.6f ? HudTheme.Good : fraction > 0.3f ? HudTheme.Warn : HudTheme.Bad;
+        // The fill's ink is not here. It is CombatFeedbackModel.HealthBarColour, the need bar's
+        // thresholds (60 / 40 per cent), so the bar over a colonist and the bars on her pane speak
+        // one scale. Lane B had its own ladder here (60 / 30) while lane C wrote that one: one rule,
+        // two owners, disagreeing at 35 per cent (integration, 2026-09-23; bug-patterns P1).
 
         /// <summary>The track's ink: the panel's own fill, so a bar reads as a small HUD element.</summary>
         public static HudColour TrackInk => HudTheme.PanelFill.WithAlpha(0.85f);
