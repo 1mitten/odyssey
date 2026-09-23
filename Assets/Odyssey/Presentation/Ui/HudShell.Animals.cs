@@ -395,13 +395,13 @@ namespace Odyssey.Presentation.Ui
             view.DoingSquare.style.backgroundColor = on ? HudTokens.OnAccent : HudTokens.TextDim;
         }
 
-        /// <summary>The roster path: layer, selection, camera. The selection then closes the tab and the pane shows the animal.</summary>
+        /// <summary>Selection and camera, and the depth left alone. The selection then closes the tab and the pane shows the animal.</summary>
         void OnAnimalRowClicked(AnimalRowView view)
         {
             if (_directors == null || !view.Id.IsValid) return;
             var world = _boot?.World;
             if (world == null) return;
-            _directors.ChooseColonist(view.Id, world.Views.Current);
+            _directors.ChooseAnimal(view.Id, world.Views.Current);
         }
     }
 }

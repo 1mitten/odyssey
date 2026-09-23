@@ -51,9 +51,10 @@ the next session learns to ignore.
   *Midden hog · Wandering* or *Resting*. Then **F5**, or the Animals item on the bar: the count
   strip should say how many of each kind are out there and the rows should list them nearest
   first with the KIND heading marked; click DOING and the resting ones should gather; click a
-  row and the tab should close, the camera land on that animal and the pane show it — a wrong
-  answer is a jump to the right cell on the wrong layer, or the tab and the pane both on
-  screen. Whether the tab **needs the distance back** (the brief dropped it; the rows are still
+  row and the tab should close, the camera land on that animal and the pane show it, with the
+  depth where you had it (owner, 2026-09-23) — a wrong answer is the view lurching to another
+  layer, or the tab and the pane both on screen; an animal in a cavern below the slice is
+  selected without being shown, which is the price of the depth staying put. Whether the tab **needs the distance back** (the brief dropped it; the rows are still
   ordered by it) is the question only you can answer, and whether 560 wide reads as a tab or
   as a card. After the third look (2026-09-23): whether two sounders now land in different
   parts of the meadow and each reads as a loose family rather than a knot — a wrong answer is
