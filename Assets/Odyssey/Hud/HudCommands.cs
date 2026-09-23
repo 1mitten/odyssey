@@ -97,6 +97,9 @@ namespace Odyssey.Hud
         /// <summary>Opens the Almanac in-game reference wiki (F9).</summary>
         public const string AlmanacKey = "ui.tab.almanac";
 
+        /// <summary>F6 became real with design 30: what is out there, one row per animal.</summary>
+        public const string WildlifeKey = "ui.tab.wildlife";
+
         static readonly (string Key, string Hotkey, string Reason)[] Order =
         {
             (BuildKey, "B", ""),
@@ -104,7 +107,7 @@ namespace Odyssey.Hud
             ("ui.tab.research", "F3", "research arrives with M7"),
             ("ui.tab.colonists", "F4", "the roster strip is the colonist list for now"),
             ("ui.tab.animals", "F5", "animals arrive with M5"),
-            ("ui.tab.wildlife", "F6", "wildlife arrives with M5"),
+            (WildlifeKey, "F6", ""),
             ("ui.tab.bills", "F7", "bills arrive with M5"),
             ("ui.tab.factions", "F8", "factions arrive with M7"),
             (AlmanacKey, "F9", ""),

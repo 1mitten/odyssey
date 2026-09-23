@@ -10712,3 +10712,12 @@ Two goldens moved and the bare meadow did not. The colony probe on both branches
 identical, and the food and rest sums differ by exactly the animals' own untouched needs — ten
 at 800 on the meadow, four then three on the city, one of which decided to go inside the
 ten-thousand-tick run. The colonists did the same things.
+
+**The panel, the same day.** The interview had said an *Animals* panel on F2. The registry
+said otherwise and had since M1: it carries both an Animals tab ("tame beasts and their
+training") and a Wildlife tab ("what is out there"), and the command bar has drawn Wildlife on
+F6 as a dead item with the reason "wildlife arrives with M5" since the bar was first laid out.
+So the panel is Wildlife, on F6, and the placeholder became real the way Work made F1 real — the
+tuple's reason emptied, the key added to the binding map, the clash tests told. The one design
+question in it was what "how far away" is measured from; the frame carries no start cell, and
+the mean of the colonists' cells is the colony as it is now rather than as it was placed.

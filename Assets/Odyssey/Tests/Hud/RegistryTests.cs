@@ -80,6 +80,8 @@ namespace Odyssey.Tests.Hud
                 Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
             foreach (string key in WorkDirector.IconKeys)
                 Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+            foreach (string key in WildlifeDirector.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
 
             // And the two lists are the ones the panel actually draws from, not copies of them:
             // an entry added to a catalogue and forgotten in its IconKeys would pass the loops

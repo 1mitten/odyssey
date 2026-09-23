@@ -124,6 +124,7 @@ namespace Odyssey.Presentation.Ui
         {
             if (key == HudCommands.BuildKey) SetBuildPalette(!BuildPaletteOpen);
             else if (key == HudCommands.WorkKey) _directors?.Work.Toggle();
+            else if (key == HudCommands.WildlifeKey) _directors?.Wildlife.Toggle();
             else if (key == HudCommands.AlmanacKey) ToggleAlmanac();
             else if (key == HudCommands.MenuKey) ToggleMenu();
         }
@@ -152,6 +153,9 @@ namespace Odyssey.Presentation.Ui
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.WorkTab))
                 _directors?.Work.Toggle();
+
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.WildlifeTab))
+                _directors?.Wildlife.Toggle();
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Almanac))
                 ToggleAlmanac();
@@ -865,7 +869,7 @@ namespace Odyssey.Presentation.Ui
             }),
             ("Interface", new[]
             {
-                HotkeyAction.BuildPalette, HotkeyAction.WorkTab, HotkeyAction.DebugMenu,
+                HotkeyAction.BuildPalette, HotkeyAction.WorkTab, HotkeyAction.WildlifeTab, HotkeyAction.DebugMenu,
             }),
         };
 

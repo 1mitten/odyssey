@@ -37,7 +37,12 @@ the next session learns to ignore.
   tick, so it appears; the honest fix is a walk-in from off-board); whether a rat by day and a
   hog by night, resting three times as long, read as *asleep* or as *stuck*; and whether the
   city's rats in the rubble are visible from the play camera at all. Click one: still
-  *Midden hog · Wandering* or *Resting*.
+  *Midden hog · Wandering* or *Resting*. Then **F6**, or the Wildlife item on the bar: the count
+  strip should say how many of each kind are out there and the rows should list them nearest
+  first; click a row and the camera should land on that animal with it selected — a wrong answer
+  is a jump to the right cell on the wrong layer, or a row whose *Away* number does not fall as
+  the animal walks towards the colony. Whether *Away* in cells means anything to you, or should
+  be a word ("near", "far") or nothing, is the question only you can answer.
 - **Do the two animals read as animals, and does the hog's computed walk read as a walk?**
   (`claude/animals`, `docs/design/29-animals.md`, plan `docs/plans/animals.md`.) Debug menu →
   *Spawn midden hog* and *Spawn duct rat*, several of each, near the camera; then watch. Five

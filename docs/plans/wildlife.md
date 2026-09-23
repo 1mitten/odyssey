@@ -14,12 +14,12 @@ the next together). Interview: `docs/research/animal-generation-interview.md`. D
 | **WL3** the level | `WildlifeSystem` on the rare tick: below target, a group arrives at the board edge; each animal has a small chance per check of deciding to leave, walks to the nearest reachable edge cell and is removed there. `PawnRegistry.Despawn` is new. `Pawn.Leaving` is hashed and saved in its own section, so no format bump. | §3 |
 | **WL4** night | `SpeciesDef.nocturnal`: a rat is out at night and rests by day; a hog the other way round. Off-hours legs are a quarter as frequent and rests three times as long. | §4 |
 | **WL5** proof | Fast tests for the census, habitats, the clearing, reachability, determinism, departure, arrival, the ceiling and the save; a Long ten-day run; the goldens re-baked with the probe's justification; CLAUDE.md, journal, playtest row. | §5 |
-| **WL6** the Animals panel | Second PR. F2: one row per animal (kind, status, layer, distance), per-kind counts, click selects and jumps; hunt and tame columns reserved. `AnimalsModel` in `Odyssey.Hud`, Unity-free; the panel pooled and paged like the roster. | §6 |
+| **WL6** the Wildlife panel | Same PR in the end. **F6**, not F2, and **Wildlife**, not Animals: the registry and the bar have carried both tabs since M1 and F6 has been Wildlife's placeholder all along. One row per animal (kind, doing, layer, cells from the colony), per-kind counts, a click is the roster path. `WildlifeModel` in `Odyssey.Hud`, Unity-free; the panel pooled and paged like the roster. | §6 |
 
 ## Order and branches
 
-`claude/wildlife` is stacked on `claude/animals` (PR #167); the PR targets that branch until it
-merges, then `main`. WL1–WL5 are one PR; WL6 is the next.
+`claude/wildlife` is stacked on `claude/animals` (PR #167); PR #169 targets that branch until it
+merges, then `main`. WL1–WL6 landed as two commits on the one PR.
 
 ## Numbers, all playtest numbers
 

@@ -25,6 +25,9 @@ namespace Odyssey.Hud
         /// for the reason <see cref="Debug"/> is.</summary>
         public WorkDirector Work { get; } = new WorkDirector();
 
+        /// <summary>Whether the Wildlife panel is open (design 30 §6). Session state, likewise.</summary>
+        public WildlifeDirector Wildlife { get; } = new WildlifeDirector();
+
         /// <summary>Whether the Almanac reference browser is open, and what entry it shows.</summary>
         public AlmanacDirector Almanac { get; } = new AlmanacDirector();
 

@@ -2,12 +2,12 @@
 
 **Status:** built 2026-09-23 on `claude/wildlife`, stacked on the animals unit (design 29,
 PR #167). Interview: `docs/research/animal-generation-interview.md`; plan:
-`docs/plans/wildlife.md`. The Animals panel (§6) is the next PR.
+`docs/plans/wildlife.md`. The Wildlife panel (§6) is the same PR's second commit.
 
 Design 29 put a hog and a rat in the game and a debug button to spawn them. Nothing generated
 them. This document is what does: a **table** per world (§1), a **seeding** at tick zero (§2), a
 **level** the board holds through arrivals and departures (§3), the **night** (§4), what was
-measured (§5), and the panel that will show it (§6).
+measured (§5), and the panel that shows it (§6).
 
 ## 1. The table: what lives where
 
@@ -117,12 +117,38 @@ hook — is a diet model that belongs with the health unit.
 The seeded animal that stands on the ring when it decides to go vanishes on the next rare tick.
 That is the rule working — it was at the edge — and the save test had to pick one that was not.
 
-## 6. The Animals panel (next PR)
+## 6. The Wildlife panel
 
-F2. One row per animal — kind, status, layer, distance from the colony — under a per-kind
-count header; a click selects and jumps the camera; the hunt and tame columns are reserved, so
-the tamed half of the tab lands in the same panel later. `AnimalsModel` in `Odyssey.Hud`,
-Unity-free; the panel pooled and paged like the roster.
+**F6, and Wildlife rather than Animals.** The interview recommended an *Animals* panel on F2
+with the tamed half reserved. The registry and the command bar disagreed, and were right: they
+have carried both tabs since M1 — `ui.tab.animals` is "tame beasts and their training" and
+`ui.tab.wildlife` is "what is out there" — and the bar has advertised Wildlife on F6 as a
+placeholder since the day it was drawn. With no taming there is nothing for Animals to show, so
+this is Wildlife on the F6 the bar promised, the placeholder made real the way Work made F1
+real (design 27), and the Animals tab arrives with taming.
+
+**What it shows.** A count per kind across the top ("Midden hog 4  Duct rat 3"), then one row
+per animal: kind, what it is doing (wandering or resting, the inspect pane's own words), the
+layer it stands on, and how far it is from the colony, in cells. Rows are sorted by kind and
+then by distance, twelve to a page with the roster's pager, and **a click on a row is the
+roster path** (`HudDirectors.ChooseColonist`, which was never only for colonists): the layer
+first, then the selection, then a camera jump. Hunting and taming are not columns yet because
+there is nothing to put in them; the panel is one table and they are two more columns when
+they come.
+
+**The colony is where its people stand.** "How far away" has to be from something the frame
+carries, and the mean of the colonists' cells is; the start cell is not, and a colony that has
+moved house has moved its animals' distances with it. With no colonists the distance is from
+the board's origin, a number rather than a lie.
+
+**Built the way the Work tab is built** (design 27 §16–17): one window docked bottom-left on
+the command bar at a constant width — `WildlifeLayout.PanelOuterWidth`, the content plus the
+panel's own padding and border, which UI Toolkit puts *inside* a width — rows pooled once at
+build and retexted on refresh, the count strip rebuilt only when the number of kinds changes,
+nothing rebuilt per frame, and the refresh in the same half-second bucket the Work tab's is.
+It docks where the palette, the menu and the Work tab dock, so opening any of the four puts
+the others away, and Escape closes it at the Work tab's rung. `WildlifeModel` is Unity-free
+and runs in the fast tier; `WildlifeDirector` is session state beside the Work tab's.
 
 ## 7. Open
 

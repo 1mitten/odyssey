@@ -631,6 +631,7 @@ namespace Odyssey.Presentation.Ui
             BuildSettings();
             BuildDebug();
             BuildWork();
+            BuildWildlife();
             BuildAlmanac();
 
             // B18, last, so it is the top-most element in the tree and its scrim covers everything
@@ -699,6 +700,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Debug.TabChanged += OnDebugTabChanged;
             _directors.Work.Changed += OnWorkChanged;
             _directors.Work.ModeChanged += OnWorkModeChanged;
+            _directors.Wildlife.Changed += OnWildlifeChanged;
             _directors.Almanac.Changed += OnAlmanacChanged;
             _directors.Almanac.Navigated += OnAlmanacNavigated;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
@@ -875,6 +877,7 @@ namespace Odyssey.Presentation.Ui
                 RefreshSpeed();
                 RefreshBuildPalette();
                 RefreshWork();
+                RefreshWildlife();
             }
             if (_slow >= SlowBucketSeconds)
             {
