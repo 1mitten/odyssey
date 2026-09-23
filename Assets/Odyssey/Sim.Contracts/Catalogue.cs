@@ -281,7 +281,15 @@ namespace Odyssey.Sim.Contracts
         /// the literal beside the ones it must not collide with (design 28 §7).</summary>
         public const int Campfire = 14;
 
-        public const int Count = 15;
+        /// <summary>The wood-fired generator (design 32 §6): two cells, the first thing that makes
+        /// power. 15, after the campfire; see <c>CoreContent.EdificeGenerator</c>.</summary>
+        public const int Generator = 15;
+
+        /// <summary>The electric heater (design 32 §7): one cell, the first thing that spends
+        /// power. See <c>CoreContent.EdificeHeater</c>.</summary>
+        public const int Heater = 16;
+
+        public const int Count = 17;
     }
 
     /// <summary>
@@ -353,7 +361,22 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Campfire = 8;
 
-        public const int Count = 9;
+        /// <summary>
+        /// A power line (design 32 §3). <b>Not an edifice</b>: a line lives in its own per-cell
+        /// layer, so it can run through a wall or under a floor, and the order for one is handed
+        /// to the power grid rather than taking a construction site of its own. It is a building
+        /// handle all the same because it is armed, ghosted, dragged and ordered exactly as a wall
+        /// is — one intent, one cursor, one palette row.
+        /// </summary>
+        public const int Conduit = 9;
+
+        /// <summary>The wood-fired generator (design 32 §6).</summary>
+        public const int Generator = 10;
+
+        /// <summary>The electric heater (design 32 §7).</summary>
+        public const int Heater = 11;
+
+        public const int Count = 12;
     }
 
     /// <summary>

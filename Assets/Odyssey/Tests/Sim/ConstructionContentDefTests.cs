@@ -75,7 +75,15 @@ namespace Odyssey.Tests.Sim
         // here on the merge with main: the shelf reached main first and both numbers are contracts,
         // so the later branch is the one that moves — the same rule Building_Bed records at 5.
         // The same merge added `heatPerPass` to BuildingDef, which is nought on every other row.
-        const ulong BuildingFingerprint = 11920351214251548753UL;
+        // 2026-09-23: Appended Building_Conduit, Building_Generator and Building_Heater at handles
+        // 9, 10 and 11 (design 32, power). The conduit is edifice 0 and `conduit`: a line in its
+        // own layer, always wood (`fixedStuff` 4), 1 a cell, 40 ticks. The generator is edifice 15,
+        // two cells, rotatable, 1,000 W, a 75-wood hopper burning 22 a day at full load, 400 heat
+        // at full load, 30 stuff and 600 ticks. The heater is edifice 16, 175 W, 1,000 heat while
+        // powered, 10 stuff and 240 ticks. BuildingDef gained `conduit`, `fixedStuff`,
+        // `powerOutputW`, `powerDrawW`, `fuelItem`, `fuelCapacity` and `fuelPerDay`, nought or -1
+        // on every other row.
+        const ulong BuildingFingerprint = 15407323078921201971UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

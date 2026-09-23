@@ -112,8 +112,12 @@ namespace Odyssey.Sim.Temperature
             for (int i = 1; i < table.Count; i++)
                 if (table[i].edifice > widest) widest = table[i].edifice;
             _heatByEdificeDef = new int[widest + 1];
+            // A power building's heat is not in this table: it is gated on the building being
+            // powered, or burning, and the power grid owns that answer (design 32 §7). Its row
+            // stays zero here so an unpowered heater never warms a room through the back door.
             for (int i = 1; i < table.Count; i++)
-                if (table[i].heatPerPass != 0) _heatByEdificeDef[table[i].edifice] = table[i].heatPerPass;
+                if (table[i].heatPerPass != 0 && !table[i].IsPowered)
+                    _heatByEdificeDef[table[i].edifice] = table[i].heatPerPass;
 
             // Rooms resolve their starting temperature the moment they are built, not at the
             // next pass, while the ledger of what their cells used to be is fresh. A room from

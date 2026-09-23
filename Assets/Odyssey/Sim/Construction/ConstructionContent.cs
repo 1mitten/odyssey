@@ -132,6 +132,46 @@ namespace Odyssey.Sim.Construction
         /// </summary>
         public int heatPerPass;
 
+        /// <summary>
+        /// Is this a <b>power line</b> rather than a thing standing in the cell (design 32 §3)?
+        ///
+        /// <para>A line lives in its own per-cell layer, owned by <c>PowerGrid</c>, so it can run
+        /// through a wall or under a floor without taking the cell's one edifice slot. Everything a
+        /// player does to order one — arm, ghost, drag, place — is a build like any other, which is
+        /// why it is a row here at all; <c>ConstructionGrid.Place</c> is the one place that reads
+        /// this and hands the order on.</para>
+        /// </summary>
+        public bool conduit;
+
+        /// <summary>
+        /// The <see cref="StuffHandle"/> this is always made of, or 0 where the player chooses.
+        /// A line is copper and insulation the colony does not have yet, so it is priced in wood
+        /// and offered in nothing else — a material picker with one entry is a question with one
+        /// answer (design 32 §2, decision 10).
+        /// </summary>
+        public int fixedStuff;
+
+        /// <summary>Watts this makes while it runs, or 0 for anything that is not a generator (design 32 §5).</summary>
+        public int powerOutputW;
+
+        /// <summary>Watts this wants while it is switched on, or 0 for anything that is not a consumer.</summary>
+        public int powerDrawW;
+
+        /// <summary>The <see cref="ItemHandle"/> this burns, or -1 for anything that burns nothing.</summary>
+        public int fuelItem = -1;
+
+        /// <summary>How many of <see cref="fuelItem"/> the hopper holds, in whole units.</summary>
+        public int fuelCapacity;
+
+        /// <summary>
+        /// Units of fuel a day <b>at full load</b>. The burn is in proportion to the load carried,
+        /// so this is the ceiling, not the rate (design 32 §6, decision 8).
+        /// </summary>
+        public int fuelPerDay;
+
+        /// <summary>Does a power net care about this — does it make power or spend it?</summary>
+        public bool IsPowered => powerOutputW > 0 || powerDrawW > 0;
+
         /// <summary>The registry key the interface names it by. Never a label, never a filename.</summary>
         public string iconKey = "";
     }
@@ -375,6 +415,7 @@ namespace Odyssey.Sim.Construction
         {
             "Building_None", "Building_Wall", "Building_Floor", "Building_DeckPlate", "Building_Ladder",
             "Building_Bed", "Building_Door", "Building_Shelf", "Building_Campfire",
+            "Building_Conduit", "Building_Generator", "Building_Heater",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -507,6 +548,45 @@ namespace Odyssey.Sim.Construction
                     blocking = true, needsClearCell = true, heatPerPass = 1_200,
                     costCount = 3, workToBuild = 60, minSkill = 0,
                     iconKey = "ui.arch.tool.campfire",
+                },
+
+                // A power line (design 32 §3). Not an edifice — `conduit` sends the order to the
+                // power grid and the line into a layer of its own — and always wood, one a cell:
+                // cheap, but hauled like anything else, so a long run is a real cost. 40 ticks of
+                // work, a-07's 35 rounded to the table's tens.
+                new BuildingDef
+                {
+                    defName = "Building_Conduit", label = "conduit", edifice = CoreContent.EdificeNone,
+                    conduit = true, blocking = false, fixedStuff = StuffHandle.Wood,
+                    costCount = 1, workToBuild = 40, minSkill = 0,
+                    iconKey = "ui.arch.tool.conduit",
+                },
+
+                // The wood-fired generator (design 32 §6). a-07's output, hopper and full-load burn
+                // — 1,000 W, 75 wood (exactly one stack, so one trip fills it), 22 a day — with the
+                // burn in proportion to load, which is the owner's departure. Two cells because the
+                // footprint allows no more; blocking and wanting a clear cell like the campfire.
+                // heatPerPass is the heat at full load and scales with the load like the burn: the
+                // power grid owns it, never the thermal pass's per-def table. 30 stuff and 600
+                // ticks: the first expensive thing in the table.
+                new BuildingDef
+                {
+                    defName = "Building_Generator", label = "generator", edifice = CoreContent.EdificeGenerator,
+                    blocking = true, footprint = 2, rotates = true, needsClearCell = true,
+                    powerOutputW = 1_000, fuelItem = ItemHandle.Wood, fuelCapacity = 75, fuelPerDay = 22,
+                    heatPerPass = 400, costCount = 30, workToBuild = 600, minSkill = 0,
+                    iconKey = "ui.arch.tool.generator",
+                },
+
+                // The electric heater (design 32 §7): a-07's 175 W, and 1,000 heat a pass into its
+                // room only while powered and switched on — the campfire's shape behind a gate.
+                // One cell, blocking, wanting a clear cell; 10 stuff and 240 ticks.
+                new BuildingDef
+                {
+                    defName = "Building_Heater", label = "heater", edifice = CoreContent.EdificeHeater,
+                    blocking = true, needsClearCell = true, powerDrawW = 175, heatPerPass = 1_000,
+                    costCount = 10, workToBuild = 240, minSkill = 0,
+                    iconKey = "ui.arch.tool.heater",
                 },
             };
         }

@@ -164,6 +164,11 @@ namespace Odyssey.Sim.Construction
 
             BuildingDef def = ConstructionContent.BuildingAt(building);
 
+            // A line is not a site of this grid: it lives in the power grid's own layer (design 32
+            // §3). Refused here until that grid takes it, rather than built as a wall with no
+            // edifice.
+            if (def.conduit) return IntentRejection.NotPermitted;
+
             // A thing that does not rotate never carries one, even if the interface sent a stale
             // number: a site's facing is hashed, and two identical wall orders that arrived with
             // different leftovers would have to hash apart for no reason a player can see.

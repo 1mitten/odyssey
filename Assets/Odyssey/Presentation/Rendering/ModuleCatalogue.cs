@@ -500,6 +500,17 @@ namespace Odyssey.Presentation.Rendering
         public const string Campfire = Prefix + "campfire";
 
         /// <summary>
+        /// The wood-fired generator and the heater (design 32). The campfire's deal: no catalogue
+        /// row owed yet, the plain block in the stuff's tint until the owner picks art — whether a
+        /// generator is running is a colour on the lines and a row on the pane, not a thing the
+        /// mesh does. One row on either id upgrades every one of them when the art arrives.
+        /// </summary>
+        public const string Generator = Prefix + "generator";
+
+        /// <summary>See <see cref="Generator"/>.</summary>
+        public const string Heater = Prefix + "heater";
+
+        /// <summary>
         /// The bed's pillow, which is a module of its own so it can be a different shape and a
         /// different colour from the rest of the bed. Bedding is linen whatever the frame is made
         /// of: a stone bed has a white pillow, exactly as a wooden one does.
