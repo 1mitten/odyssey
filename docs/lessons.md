@@ -628,6 +628,17 @@ answered within one row, never for absolutes. And a milestone report stated a re
 harness before the harness had been checked against an empty render placed last — the control that
 should have been the first row written, not the last.
 
+**"Is the machine clear?" needs three answers, not one** (2026-09-23). A frame number is only
+comparable with one from the same run, so a measurement waits for every other Unity batch run to
+finish — and a single sample of the process list is not enough to know that it has. A batch run
+that has already printed `total=… passed=…` can still be shutting down for another minute
+(the run that finishes without exiting, above), and a sibling worktree can start one in the gap.
+Three attempts were needed for the crowd-scan measurement: the first raced the session's *own*
+EditMode run, the second refused correctly and reported "still busy", and only the third had the
+machine. **Poll until it has been quiet on three consecutive checks**, and have the script exit
+non-zero rather than measure a contended machine — a refusal costs a retry, a contended number
+costs a wrong conclusion and is indistinguishable from a real regression.
+
 **A profiler recorder is not free to start.** Merely creating `ProfilerRecorder`s for the render
 statistics made every row of the same benchmark ten times slower. Counters that change the thing
 they count are worse than none; the editor's own `UnityStats` (what the Stats overlay reads) costs

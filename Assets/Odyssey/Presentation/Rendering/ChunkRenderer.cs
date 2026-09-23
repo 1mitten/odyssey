@@ -89,6 +89,15 @@ namespace Odyssey.Presentation.Rendering
         /// everything, which is what a headless measurement wants.
         /// </summary>
         public Vector3? ViewerPosition { get; set; }
+        /// <summary>
+        /// This frame's crowd buckets, or null for the plain scan.
+        ///
+        /// <para>Set once a frame by the composition root, which rebuilds one index and hands the
+        /// same one to every pass that poses a pawn — see <c>OdysseyBootstrap</c> and
+        /// <see cref="Odyssey.Presentation.Rendering.PawnCrowdIndex"/>. Null is correct and merely
+        /// slow, which is what a harness or an editor tool with no bootstrap gets.</para>
+        /// </summary>
+        public Odyssey.Presentation.Rendering.PawnCrowdIndex? Crowd { get; set; }
 
         /// <summary>Tracks loose items falling between layers and provides their drop offset.</summary>
         public ItemFallingTracker FallingItems { get; } = new ItemFallingTracker();
@@ -915,7 +924,7 @@ namespace Odyssey.Presentation.Rendering
                 // Glide between cells rather than snapping. The simulation is discrete and
                 // integer, which determinism requires; this is a presentation facade over it,
                 // and it is shared with the animated figures so the two cannot disagree.
-                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading, _model, pawns);
+                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading, _model, pawns, Crowd);
 
                 // The same face the live figures would have given this pawn, so a colonist does
                 // not change identity on crossing the figure cap. Same object, same answer.
@@ -1300,7 +1309,7 @@ namespace Odyssey.Presentation.Rendering
                 else
                 {
                     Vector3 body = PawnPose.Of(pawn, tickAlpha, movePerTick,
-                        out Vector3 heading, _model, snapshot.Pawns);
+                        out Vector3 heading, _model, snapshot.Pawns, Crowd);
                     if (heading.sqrMagnitude < 1e-6f) heading = Vector3.forward;
                     yaw = FacingOf(pawnId, heading);
                     at = body

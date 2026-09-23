@@ -1032,7 +1032,7 @@ namespace Odyssey.Presentation.World
             {
                 int i = _eligible[n];
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading,
-                    World, pawns, out Vector3 steer);
+                    World, pawns, Crowd, out Vector3 steer);
                 Figure figure = Lease(pawns[i].Id, position);
                 Pose(figure, in pawns[i], position, heading, steer, deltaTime, running);
                 if (figure.Speed > FastestSpeed) FastestSpeed = figure.Speed;
@@ -1124,6 +1124,15 @@ namespace Odyssey.Presentation.World
         /// director's own root, which is what a harness with no camera gets.
         /// </summary>
         public Vector3? ViewerPosition { get; set; }
+        /// <summary>
+        /// This frame's crowd buckets, or null for the plain scan.
+        ///
+        /// <para>Set once a frame by the composition root, which rebuilds one index and hands the
+        /// same one to every pass that poses a pawn — see <c>OdysseyBootstrap</c> and
+        /// <see cref="Odyssey.Presentation.Rendering.PawnCrowdIndex"/>. Null is correct and merely
+        /// slow, which is what a harness or an editor tool with no bootstrap gets.</para>
+        /// </summary>
+        public Odyssey.Presentation.Rendering.PawnCrowdIndex? Crowd { get; set; }
 
         /// <summary>Advance every live figure's animation. Separate from posing so an editor
         /// tool can step the clock deliberately rather than relying on a running player.</summary>

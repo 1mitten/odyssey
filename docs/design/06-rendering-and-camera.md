@@ -1283,6 +1283,10 @@ not done: it is the next unit, and the sweep above is its before.
 whole frame is about 3.5 ms. This is a ceiling on how big a colony may get, discovered four years
 before it binds, and worth fixing because the fix is cheap and provably invisible.
 
+> **Fixed 2026-09-23 — §6c.9 below, and `docs/design/25-pawn-steering.md` §9.** The sweep in this
+> table stands as the before it was taken as, but note it was measured beside two other editors;
+> §9a is the same sweep on a clear machine and is the number to quote.
+
 ### 6c.3 The decoration, measured — the surround is 45 per cent of the meadow and the tufts are 7
 
 **2026-09-21.** The owner, watching the game rather than a test: *"it seems that grass tufts and
@@ -1780,6 +1784,30 @@ compiles shader variants asynchronously (`ProjectSettings/EditorSettings.asset`,
 A batch run cannot reproduce it — `ShaderUtil.allowAsyncCompilation` is false in batch mode, and the
 probe recorded zero frames of compilation — so the next move is the owner flipping that one toggle
 in a real editor session and saying whether the delay becomes a brief hitch.
+
+### 6c.9 The crowd scan, fixed — and what the control says
+
+**2026-09-23.** The O(N squared) above is closed. `PawnCrowdIndex` buckets every pawn's position
+once a frame on a 3 m grid and `PawnPose.Of` asks the neighbourhood instead of the colony; the cull
+is exact, so no drawn position moved and the sidestep the owner judged is untouched. The shape, the
+alternatives and what not to undo are `docs/design/25-pawn-steering.md` §9; the pattern is P12 in
+`docs/bug-patterns.md`, now marked fixed, and the testing lesson that fell out of it is the new P16.
+
+**Two things in the measurement are worth carrying beyond this unit.**
+
+**The control was three-valued, not a bool.** The plan (`docs/plans/pf-crowd-scan.md`) named two
+candidates — hoisting `SteeringCurve.WhereItIsNow` out of the inner loop, and a spatial index — and
+warned against building the second on top of an unmeasured first. Building the index subsumes the
+hoist, so after the fact the two cannot be told apart. `CrowdScan.Cached` exists purely to keep them
+apart in one run: it is the hoist alone. That is the shape to copy whenever an optimisation contains
+a cheaper one.
+
+**And the numbers here were taken on a clear machine, which took three attempts to get.** The first
+queue raced its own EditMode run — a batch run that has printed its results can still be shutting
+down (`docs/lessons.md`) — and the sweep quoted in §6c.2 above was taken beside two other editors.
+The `Actors` figure at 384 moved from 13.3 ms (that sweep) to 15.8 ms (clear machine, unmodified
+code, same commit family). **Neither is a baseline for the other**, and the only reason the two can
+be read together at all is that the per-pair cost they imply — ~117 ns and ~128 ns — agrees.
 
 ## 7. Presentation is a reader
 
