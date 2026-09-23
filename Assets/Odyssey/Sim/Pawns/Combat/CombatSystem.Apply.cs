@@ -133,6 +133,26 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// Every attack on <paramref name="gone"/> ends now (design 33 §9e): it is dead, or leaving
+        /// the board. Called by <see cref="PawnRegistry.Despawn"/>, the one way off the board — the
+        /// deferred removal of the dead and a wild animal walking off an edge alike — so no attacker
+        /// ends a tick still carrying an attack on a pawn that is not there. Before this each one
+        /// carried it to its own next tick, which is the window the §9e guard first caught
+        /// (measured: every brawl to the death on six seeds). Through
+        /// <see cref="JobSystem.Interrupt"/>, keeping the step in hand, as the order that ends an
+        /// attack does. <b>Scales with the pawns on the board</b>, once per pawn that leaves it.
+        /// </summary>
+        public void EndAttacksOn(Pawn gone)
+        {
+            var pawns = _ctx.Pawns.All;
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                Pawn other = pawns[i];
+                if (other != gone && Melee.IsAttacking(other, gone)) _jobs.Interrupt(other, JobStatus.Succeeded);
+            }
+        }
+
+        /// <summary>
         /// A pawn struck and still standing answers (design 33 §1). An animal rolls its species'
         /// revenge on every blow: turning, it hunts the attacker for
         /// <see cref="CombatDef.revengeTicks"/>; not turning, it runs — unless it had already
