@@ -441,6 +441,27 @@ and both were believed; one of them was decorative. A test for an exactness clai
 deliberate break costs it and nothing more — the same lesson as *"A test that could not fail for the
 reason it named"* in the register below, reached from the opposite direction.
 
+### P17 — Two translucent draws that cover each other, ordered by a key that cannot tell them apart
+
+A translucent material writes no depth, so where two translucent draws cover the same pixels, the
+picture is whatever was drawn **last**. Unity picks that order by the distance from the camera to
+each draw's bounds centre. Two things built around one centre (a fill inside its track, a glow
+inside its core, a plate behind its label) tie on that key **exactly**. The sort then breaks the
+tie differently from frame to frame, depending on everything else in the translucent list. Two
+things whose centres differ only across the screen trade places when the object crosses the
+middle.
+
+**Measured, 2026-09-23** (design 33 §8a). The health bar's fill was a translucent box inside a
+translucent track. For a full bar the two centres tied on 480 frames out of 480 of a walk across
+the screen, and the fill showed at 0.62 of its colour one way round and 0.29 the other. The owner
+reported it as *"the bar above their heads flicker"*.
+
+**The check:** for any mark made of more than one translucent draw, ask *do any two of them cover
+the same pixels?* If they do, the look depends on the sort. Lay the pieces so they meet on edges and
+never overlap (`HealthBarLayout`, held by `NoTwoPiecesOfABarOverlapAtAnyFraction`), or merge them
+into one draw. Nudging one "a little nearer the camera" is not a fix: the lateral term in the
+distance is worth tens of centimetres at the play camera.
+
 ---
 
 ---
@@ -448,6 +469,19 @@ reason it named"* in the register below, reached from the opposite direction.
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-23 — The bar over their heads flickers (P17)
+
+Owner: *"The bar above their heads flicker."* One candidate on each side of the seam was measured
+before anything was changed. On the simulation side the bar is owed exactly when the pawn's state
+says, tick after tick: `HealthBarPublishingTests` fought 3,000 ticks, and no bar changed on a tick
+its state did not. On the drawing side the fill was a translucent box inside a translucent track,
+and the sort key that orders them was an exact tie on every frame of a full bar, which is every
+drafted colonist nobody has hurt. The bar is now nine camera-facing pieces that never overlap.
+
+**What now stops it:** `HealthBarLayoutTests.NoTwoPiecesOfABarOverlapAtAnyFraction` and
+`ThePiecesTileTheWholeBar`. Both failed on the plate laid behind the fill as one rectangle.
+Design 33 §8a.
 
 ### 2026-09-22 — A hog walks past a tree, snaps back a cell, walks past it again
 

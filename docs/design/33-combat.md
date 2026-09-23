@@ -1446,3 +1446,120 @@ tiles. Neither was a fault in §7a or §7c. The asks that stand on their own:
 | *"The bar above their heads flicker ... use a green like the one used in the colony stats — more greener — deeper colours please and more prominent"* | Find and fix the flicker, measured rather than guessed. The bar's green is the colony-stat green, deeper and more saturated, as are the amber and red. The bar is thicker and has a dark backing, so it reads at the play camera. | §8a |
 | *"The weapon is not drawn until the attack is about to happen ... marauders always have their weapons drawn ... we need a good mechanism"* | **Sheathed at the left hip**, where it can be seen. **Drawn** when a colonist is drafted, when its attack target is within 2 tiles, or when it is struck and fights back. The pack's *Draw* clip moves the weapon to the right hand. About 2 s after the fight ends, or on release from the draft, the *Sheathe* clip puts it back. Without the pack it snaps between the two. **Marauders always have theirs drawn.** A tool (axe, pick, hammer) still takes the right hand while a colonist works, and the weapon stays at the hip. | §8b |
 | *"Make it a guard that enemies when sharing tiles going side by side as well or handled uniformly"* | One rule for every pawn in a fight: nobody fighting shares a tile. There is a test that walks every tick of mixed brawls (colonists, marauders, hogs, rats, any side) and fails on a shared tile. The drawn crowd sidestep reads the published *person* flag, not "kind 0", so marauders step round each other and round colonists as colonists do. Animals stay outside it (design 29). | §8c |
+
+### 8a. The bar
+
+**Built 2026-09-23 on `claude/combat-bar`**, from `claude/combat-c2-polish`. The owner's words:
+*"The bar above their heads flicker ... use a green like the one used in the colony stats — more
+greener — deeper colours please and more prominent"*.
+
+**The flicker's cause: two translucent boxes in one place, ordered by the sort.** The bar was a
+fill box (0.11 m) drawn *inside* a track box (0.09 m), both in the bracket's translucent material,
+which writes no depth. So which one covered the other depended only on the order they were drawn
+in, and Unity orders translucent draws by the distance from the camera to each one's bounds
+centre. That key cannot order these two:
+
+- **A full bar puts both centres on the same point.** That covers every drafted colonist nobody has
+  hurt, which is the commonest bar there is. The key is an exact tie, and the sort breaks it
+  differently from frame to frame, depending on everything else translucent in the list (brackets,
+  rings, diamonds, other bars, ghosted storeys).
+- **A part-full bar puts the fill's centre to the left of the track's**, so which is nearer
+  depends on which side of the screen's middle the pawn stands. The order turns over as a pawn
+  walks across the middle, and near that line it rides on a millimetre of the figure's motion.
+
+The two orders do not look alike. Fill last: the fill shows at 0.62 of its colour. Track last: the
+track's 0.53 of panel ink lies over it and the fill shows at 0.29. So the bar jumped between bright
+and dull.
+
+**The measurement.** Two candidates, one each side of the seam.
+
+1. *The bar is owed on some publishes and not others.* **Ruled out.**
+   `HealthBarPublishingTests.ABarIsOwedOnEveryTickItsStateSaysAndBlinksOnNone` fights two drafted
+   colonists against two marauders for 3,000 ticks with the shipped rules and reads every tick's
+   frame: 11,444 pawn-ticks owed a bar, 9,262 hurt. The drafted colonists' bars changed **0** times,
+   and each marauder's changed **once** (on being hurt), exactly as their state did. Its negative
+   control, `hp` published only on even ticks, failed on tick 5.
+2. *The draw order of the track and the fill.* **The cause.** A probe (a scratch test, not kept)
+   ran the old `CombatMarks.Bar` arithmetic in single precision for a colonist walking 8 m across
+   the middle of the screen at 60 frames a second, at the play camera's 48° and 48 m, at three
+   yaws, and compared the two centres' squared distances to the camera, which is the key the sort
+   uses. At full health: **480 exact ties in 480 frames** at every yaw. At 0.8 and 0.5: the order
+   **turned over once**, at the middle of the screen (fill last on 232–237 frames, track last on
+   243–248). Nobody has watched Unity break the tie. This is the key it was handed, not a capture
+   of the frame. The integrator's playtest settles whether the flicker is gone.
+
+Also checked and not the cause: the material cache (the bar's inks are constants, so no material
+is minted per frame) and the bar's place. `TryGetFeet` is a figure's own transform, and the pose
+fallback is used only for a pawn that has no figure, so the two do not alternate.
+
+**The fix: pieces that never overlap, in a plane facing the camera.** `HealthBarLayout` (Hud,
+Unity-free) lays the bar as nine rectangles: a thin outline all round (4), a dark plate inside it
+(3 round the channel), the fill from the left, and the plate behind whatever is lost, run on into
+the right margin so the fill and the plate meet on one edge. No two cover each other at any
+fraction, and together they tile the bar exactly, so no gap lets the ground through as a hairline.
+`CombatMarks.Place` sets each piece 4 mm deep in the plane the camera's own rotation faces, so
+neighbouring pieces meet edge-on. **Any order the sort picks now draws the same picture.**
+
+**More prominent.** The channel is 0.13 m tall (the old fill was a 0.11 m box), with 0.03 m of dark
+plate round it and a 0.018 m outline: 1.096 × 0.226 m in all, centred 0.02 m above the cursor
+box's top, under the draft diamond. The fill is 92 % opaque. The plate is the panel's ink at 72 %,
+so a figure behind it can still be seen. The outline is near-black at 85 %, so the bar has an edge
+on dark rock and at night. All INVENTED, to be judged at the play camera.
+
+**The colours.** `CombatFeedbackModel` owns them, as before, and the Health tab's fill follows:
+
+| Band | Was (the stat ink) | Is | Hue | Saturation | Value |
+|---|---|---|---|---|---|
+| well (60 % and up) | `HudTheme.Good` `#7fc98c` | `HealthGood` `#32b349` | 130.5° held | 0.37 → 0.72 | 0.79 → 0.70 |
+| hurt (40–59 %) | `HudTheme.Warn` `#e8b55c` | `HealthWarn` `#d99827` | 38.1° held | 0.60 → 0.82 | 0.91 → 0.85 |
+| low (under 40 %) | `HudTheme.Bad` `#e06a5c` | `HealthBad` `#cc3a29` | 6.4° held | 0.59 → 0.80 | 0.88 → 0.80 |
+
+The green in "the colony stats" is the need bars' `HudTheme.Good`, so the bar keeps that hue and
+becomes more saturated and deeper. It is deeper as well as greener because the bar is drawn over a
+sunlit board through a lit, glowing, translucent material that lifts every colour towards white,
+and the stat tints were chosen for a dark panel. `HealthBarLayoutTests.TheBarsInksAreTheStatInksDeeper`
+holds each one to its stat ink's hue within 3°, at least 0.15 more saturation and a lower value, so
+a retune stays a deeper stat colour. The thresholds are unchanged.
+
+**Cost.** Each bar is nine pieces, gathered by ink and flushed once at the end of the marks. That
+is at most **five instanced calls for every bar in view** (outline, plate and the three fill
+colours), against two submissions a bar before. One bar alone costs three calls where it cost two.
+Per frame it walks the pawns on the drawn layers as before, lays nine rectangles into one reused
+array for each hurt or drafted pawn, and allocates nothing once the buckets have grown. The
+material is the bracket's (lit, translucent, glowing, the same cache) with the ink's own opacity
+rather than 0.62 of it, so no new shader or variant has to survive the player build's stripping.
+
+**Tests.** Fast tier: `HealthBarLayoutTests` (7) and `HealthBarPublishingTests` (1). The colour
+assertions in `CombatFeedbackModelTests` and `CombatPaneTests` moved to the new inks. EditMode:
+`CombatDrawnTests.EveryPieceOfABarLiesInThePlaneFacingTheCamera`, **never run**. Negative controls,
+each seen to fail and then restored:
+
+- the plate laid behind the fill as one rectangle (`NoTwoPiecesOfABarOverlapAtAnyFraction`,
+  `ThePiecesTileTheWholeBar`);
+- the green set back to `HudTheme.Good` (`TheBarsInksAreTheStatInksDeeper`);
+- `hp` published on even ticks only (the publishing test).
+
+**Do not undo by tidying.**
+- **Never lay the plate behind the fill as one rectangle**, and never draw the track and then the
+  fill over it. That is the obvious way to draw a bar and it is the flicker: two translucent draws
+  that cover each other are ordered by the sort, and the sort cannot order a full bar.
+- **The pieces meet on shared edges and tile the bar.** Shrinking one to leave a "safe" gap puts
+  a hairline of ground through the bar; growing one to "make sure" is the overlap back.
+- **The bar faces the camera's rotation.** A bar that lies along the camera's right but is square
+  to the world shows its top face too, and its pieces then overlap on screen even though they do
+  not in the world.
+- **The fill's colour is `CombatFeedbackModel.HealthBarColour`**, never a colour in Presentation.
+
+**Where.** `Hud/HealthBarLayout.cs`, `Hud/CombatFeedbackModel.cs` (the inks), `World/CombatMarks.cs`
+(`Place`), `ChunkRenderer.GatherBarPiece` / `FlushBarPieces`, `OdysseyBootstrap.DrawCombatMarks`.
+**Never compiled here**: `OdysseyBootstrap.cs`, `ChunkRenderer.cs`, `CombatDrawnTests.cs`
+(`CombatMarks.cs` was compiled on its own against `UnityEngine.CoreModule`).
+
+**Open, for the playtest.**
+- Whether the flicker is gone. The tie was computed, not watched.
+- Every size and opacity.
+- Whether the draft diamond sitting just above the bar reads as one mark or two.
+- Whether the deeper green, seen through the lit material, is the owner's green or needs darkening
+  again.
+- The Health tab's fill is now deeper than the need bars beside it on the pane. Keeping one owner
+  for the colour costs the two bars on the pane their match.
