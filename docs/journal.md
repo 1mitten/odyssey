@@ -10677,6 +10677,77 @@ and nobody, the owner included, could say what was wrong beyond "odd" — which 
 running backwards under a body moving forwards looks like. The sign is one named constant now
 and a test measures the sole.
 
+## 2026-09-23 — Wildlife: a world generates its animals, and keeps them
+
+The owner took the interview's recommendations whole and asked for the plan and the build in
+one go, so the plan is a page (`docs/plans/wildlife.md`) and the reasoning is here and in
+design 30.
+
+The shape is RimWorld's, by mechanics only: a world carries a wildlife table and a density, the
+map is seeded to it, and a spawner holds the level afterwards with arrivals at the edge and
+animals wandering off it. Three of ours are worth writing down.
+
+**The target is a census.** The density is per ten thousand *reachable* surface columns, and
+the first run of the seeder put four hogs on the whole meadow at the number the interview had
+in mind, because an animal hops only where a ramp is drawn and so can walk to 6,354 of the
+meadow's 14,391 columns. The density went from seven to fifteen and the count came to the nine
+or ten asked for. A number typed against the board's area would have been wrong by half and
+looked right in every test.
+
+**Removal is new.** Nothing had ever left the pawn registry — no health, no death — so a leaver
+walking off the edge is the first thing that has. The registry removes in place and renumbers
+its index, which is O(n) on an event that happens a few times a day; the figure director and
+the interface already coped with a pawn on another layer, which is the same absence from the
+snapshot. `Leaving` rides in the kind's hash word so the bare board hashes as it did, and lives
+in its own save section so no format was bumped — the temperature branch holds the next
+number and two branches taking it would collide at the merge.
+
+**The first leaver walked the ring for ever.** On the edge, the think node handed it another
+leg to the next edge cell along, since the one it stood on was excluded; the level-keeper only
+looks every 250 ticks and never caught it standing. A leaver on the ring now waits one rare
+tick. The test that found it also holds that a leaver moves one cell a tick — the same snap
+guard the animals unit needed — and that the registry's order and index survive the removal.
+
+Two goldens moved and the bare meadow did not. The colony probe on both branches: item counts
+identical, and the food and rest sums differ by exactly the animals' own untouched needs — ten
+at 800 on the meadow, four then three on the city, one of which decided to go inside the
+ten-thousand-tick run. The colonists did the same things.
+
+**The panel, the same day.** The interview had said an *Animals* panel on F2. The registry
+said otherwise and had since M1: it carries both an Animals tab ("tame beasts and their
+training") and a Wildlife tab ("what is out there"), and the command bar has drawn Wildlife on
+F6 as a dead item with the reason "wildlife arrives with M5" since the bar was first laid out.
+So the panel is Wildlife, on F6, and the placeholder became real the way Work made F1 real — the
+tuple's reason emptied, the key added to the binding map, the clash tests told. The one design
+question in it was what "how far away" is measured from; the frame carries no start cell, and
+the mean of the colonists' cells is the colony as it is now rather than as it was placed.
+
+**And then the Animals tab, from the brief.** The interview's answer was one tab called
+Animals with the tamed half deferred; the brief went to Claude Design and came back as a
+specification with numbers — a 560 window, 32 + 250 + 252 columns, 30 px rows, a 7 × 5 sort
+mark, 22 px pager buttons — and the day's second panel was built to it, replacing the day's
+first. Two things in the specification are worth writing down. It **drops the distance and the
+layer columns** the Wildlife panel had drawn, while keeping distance as the sort order, which
+is a cleaner table and a question for the playtest. And it says twice that **the tab and the
+inspect pane never show together** while also specifying a selected-row style; the rule wins,
+the style is built and unseen, and the note is in §6 so nobody spends an afternoon looking for
+the row that never highlights. The arithmetic in the brief was right: 560 less the panel's own
+padding and border is exactly the three columns, which is the border-box lesson of design 27
+§17 arriving from the design side for once.
+
+**The third look, the same afternoon.** Three small things and one that was not: Wildlife off
+the bar, the Esc cap off the tab's header, sounders spread — a centre drawn up to twelve times
+for one twenty-four cells from the others, members scattered over a four-cell square instead of
+filling a spiral from the centre outward, which is what had put five hogs on six adjacent cells
+— and the Almanac. The Almanac's Fauna turned out to be two invented entries, a "Scraphound"
+and a rat with bite damage and tame chances, written before there were animals; they are the
+two real animals now, saying only what the simulation does, and the inspect pane's info button
+opens them, which it had declined to do for an animal because there was nothing to open. The
+goldens moved for the scatter and the probe read the same as the first time. The level-keeper
+also stopped allocating on its arrival check — the census refills one kept instance — after
+the idle-tick allocation test failed once in the Long tier and passed alone; that was collector
+noise from a neighbour, since the test builds a world with no wildlife system in it, but a
+system that allocates tens of thousands of ints six times a minute is not one to leave.
 ## 2026-09-22 — Modular colonists, and four caches that were right until something moved
 
 `docs/design/29-modular-colonists.md`, `docs/research/e-06-modular-colonists.md`, PR #168.

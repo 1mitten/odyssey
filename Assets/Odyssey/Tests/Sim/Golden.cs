@@ -373,8 +373,13 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 16544611470612847695UL,
-            Simulated = 15965256675088450335UL,
+            // 2026-09-23, wildlife (design 30): the meadow is seeded with nine animals at tick
+            // zero, so both values move; the bare meadow did not, and the colony probe says the
+            // colonists' economy is identical — the difference is the animals and nothing else.
+            // And again the same afternoon for the scatter (design 30 §2: sounders apart and
+            // loose); the probe read the same as the first time — the animals' cells, nothing else.
+            Generated = 2109589659602140647UL,
+            Simulated = 18378665299313331303UL,
         };
 
         /// <summary>
@@ -410,8 +415,9 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 5027966950043598296UL,
-            Simulated = 3947823172848803435UL,
+            // 2026-09-23, wildlife (design 30): the ruin is seeded with its rats and hogs.
+            Generated = 255372930664749575UL,
+            Simulated = 11917729900064897620UL,
         };
     }
 }

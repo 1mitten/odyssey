@@ -94,6 +94,9 @@ namespace Odyssey.Presentation.Ui
 
             // Build is the one cap on the bar that names a binding rather than a promise: it
             // follows the binding map when the player moves the key.
+            // The Animals item is washed while its tab is open, as Build is while the palette is.
+            if (command.Key == HudCommands.AnimalsKey) _animalsItem = item;
+
             if (command.Key == HudCommands.BuildKey)
             {
                 _buildCap = capLabel;
@@ -124,6 +127,7 @@ namespace Odyssey.Presentation.Ui
         {
             if (key == HudCommands.BuildKey) SetBuildPalette(!BuildPaletteOpen);
             else if (key == HudCommands.WorkKey) _directors?.Work.Toggle();
+            else if (key == HudCommands.AnimalsKey) _directors?.Animals.Toggle();
             else if (key == HudCommands.AlmanacKey) ToggleAlmanac();
             else if (key == HudCommands.MenuKey) ToggleMenu();
         }
@@ -152,6 +156,9 @@ namespace Odyssey.Presentation.Ui
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.WorkTab))
                 _directors?.Work.Toggle();
+
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.AnimalsTab))
+                _directors?.Animals.Toggle();
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Almanac))
                 ToggleAlmanac();
@@ -865,7 +872,7 @@ namespace Odyssey.Presentation.Ui
             }),
             ("Interface", new[]
             {
-                HotkeyAction.BuildPalette, HotkeyAction.WorkTab, HotkeyAction.DebugMenu,
+                HotkeyAction.BuildPalette, HotkeyAction.WorkTab, HotkeyAction.AnimalsTab, HotkeyAction.DebugMenu,
             }),
         };
 
