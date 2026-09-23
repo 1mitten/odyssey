@@ -282,6 +282,21 @@ namespace Odyssey.Presentation.Rendering
                 // through it (`PavingProbe`, 2026-09-17, U42). The kind is not examined, because a
                 // built floor, a stamped deck and a deck plate all equally hide what is beneath.
                 if (_model.Floor(above) != CoreContent.SlabNone) return;
+
+                // Or something the colony BUILT standing in it (owner, 2026-09-23: "make sure the
+                // grass tufts are removed when campfire is placed down"). Same argument a third
+                // time, and the same picture: a campfire drew correctly with grass growing up
+                // through the middle of it.
+                //
+                // **Built, and not a tree, which is the whole of the rule.** A tree is an edifice
+                // in this cell too, and a woodland floor with no grass under the canopy would be
+                // a bald patch around every trunk — trees are exactly what the tufts are *for*
+                // standing among. Anything a colonist raised is different: it sits on the ground
+                // rather than growing out of it, and the ground under it is not somewhere grass
+                // still is. That covers the campfire the owner asked about and the bed and the
+                // shelf, which have had the same fault since they landed and nobody had looked.
+                ushort built = _model.EdificeDef(above);
+                if (built != CoreContent.EdificeNone && !NaturalContent.IsTree(built)) return;
             }
 
             EnsureScatterModules();
