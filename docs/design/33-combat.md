@@ -1756,6 +1756,60 @@ Played on `claude/combat-c2-polish`. The owner's asks and the interview's answer
 | *"You could still attack a pig after it died — make a guard for this — check marauder does this"* | **A dead pawn is never a target.** The attack order is refused on a dead pawn or a corpse, an attack job ends the tick its target dies or leaves the board, and hostile, animal and drafted target choice never picks the dead. A guard test runs every tick of mixed fights to the death and fails if anybody swings at, walks to, or keeps a job against a dead pawn. The same guard covers marauders. | §9e |
 | *"Their health needs to be also displayed on their colony stats"* | **The colonist cards along the top get a fourth bar, health, always shown**, in the overhead bar's colours (green, amber below 60%, red below 40%). A downed colonist's card shows it empty and red, with *Downed*. | §9f |
 
+### 9d. The gear seam
+
+Built 2026-09-23 on `claude/combat-cards`. The owner's words: *"We'll make a entry for gear later to
+include equipped weapon (seam for later)"*. **This is a seam only.** The Gear tab stays disabled
+with its reason (`InspectModel.AddColonistTabs`: *"equipment arrives with the inventory"*), and
+nothing draws the model yet.
+
+**`Odyssey.Hud.GearModel`** is Unity-free. `Refresh(snapshot, pawn)` fills `Rows`, a reused list of
+`GearRow`, and allocates nothing. It returns false with no rows for a pawn the frame no longer
+carries. It returns true with no rows for an animal. For a person, colonist or marauder, it returns
+true with one row today:
+
+| Field | Today | From |
+|---|---|---|
+| `Slot` / `SlotName` | `GearSlot.Weapon`, "Weapon" | `ui.combat.weapon` |
+| `ItemDef` / `Name` / `IconKey` | the weapon in the hand, or −1, "Bare hands", no icon | `odyssey.pawn.weapon` through `ItemLabels`; `ui.combat.barehands` |
+| `Carry` / `CarryWord` | `Drawn` "Drawn", `AtHip` "At the hip", or `None` for the bare hands | `PawnFlags.Drawn` (§8b), never the draft; `ui.combat.drawn`, `ui.combat.athip` (new keys, wiki rebuilt) |
+
+**What the Gear tab will be built from**, when it is built:
+
+- **The model: `GearModel.Rows`, and nothing else.** `InspectModel` owns one and refreshes it for the
+  pane's pawn on the pane's cadence, exactly as it refreshes `HealthRows`, and it sets the Gear
+  tab's `Enabled` when the subject is a person. The words and the carry come from the model, so
+  the view never reads an aspect.
+- **The view: a partial of `HudShell` shaped like `HudShell.Combat.cs`.** Build the body once per
+  subject into the pane's fixed-height tab box, forget it on rebuild, show it with the tab strip, and
+  sync it 15 times a second, writing an element only when its value moved. Each row is the item's
+  icon (`IconKey`), its name, and the carry word dimmed. The bare hands row has no icon.
+- **The rows it grows.** A `GearSlot` per new place something is held: apparel by body part when
+  clothing exists, then the pack when an inventory exists (the carried stack is
+  `JobLabels.CarryingAspect` today, a load in the arms and not gear). Each new slot is an enum value,
+  a published aspect, a registry key and a test. It is never a second reading in the view.
+- **The commands it will carry.** Drop, and equip from the stockpile. Equipping is already an order
+  (§6C, the context menu's Equip row, §7a), so the tab's button sends the same intent and adds no
+  new path.
+- **The Health tab's weapon row stays until the Gear tab ships.** Then the owner decides whether it
+  moves. Until then, `GearModelTests.TheGearRowNamesWhatTheHealthTabNames` holds the two to one name
+  across every weapon and the bare hands.
+
+**Tests** (fast tier, `GearModelTests`, 12 cases): the bare hands; a weapon at the hip; the drawn
+flag; drafted without the flag still at the hip; the flag over empty hands still the bare hands; a
+marauder read the same way; an animal and a pawn that has gone; and the gear row agreeing with the
+Health tab for each of the four weapons and the bare hands. Negative controls, each seen to fail and
+then restored:
+
+- the drawn flag ignored (2 failures);
+- drawn read from the draft instead (2);
+- the bare hands named by a literal rather than the registry (3).
+
+**Open.** The tab names on the pane ("Needs", "Skills", "Gear", …) and their disabled reasons are
+C# literals and not registry keys. That is older than this seam and outside
+`RegistryTests.NoPlayerFacingNameIsWrittenInCSharp`'s six namespaces. Whoever enables the Gear tab
+should move the tab names into the registry in the same commit.
+
 ### 9f. Health on the cards
 
 Built 2026-09-23 on `claude/combat-cards` (from `claude/combat-c2-r3`). The owner's words:

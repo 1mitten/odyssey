@@ -123,6 +123,8 @@ ui.combat.hurt,Hurt,ui.combat,CB,"Wounded. A colonist heals only in a bed"
 ui.combat.condition,Condition,ui.combat,CB,"Standing, hurt, stunned or down"
 ui.combat.weapon,Weapon,ui.combat,CB,What is in the hand
 ui.combat.barehands,Bare hands,ui.combat,CB,No weapon held: fists
+ui.combat.drawn,Drawn,ui.combat,CB,"Out and in the right hand, ready to swing"
+ui.combat.athip,At the hip,ui.combat,CB,"Sheathed at the left hip until there is a fight"
 ui.work.firefighting,Firefighting,ui.work,M7,Put out fires. Always first
 ui.work.patient,Patient,ui.work,M7,Accept treatment when hurt
 ui.work.bedrest,Bed rest,ui.work,M7,Stay in bed while recovering
