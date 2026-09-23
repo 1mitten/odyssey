@@ -259,6 +259,10 @@ namespace Odyssey.Tests.Hud
             (".card__badge", "width", () => HudLayout.CardJobRow, "card badge width"),
             (".card__badge", "height", () => HudLayout.CardJobRow, "card badge height"),
             (".card", "padding", () => HudLayout.CardPad, "card padding"),
+            (".card__name", "margin-top", () => HudLayout.CardNameGap, "portrait to name"),
+            (".card__name", "height", () => HudLayout.CardNameRow, "the name's line"),
+            (".card__health", "margin-top", () => HudLayout.CardHealthGap, "name to health bar"),
+            (".card__health", "height", () => HudLayout.CardHealthBar, "the card's health bar"),
 
             (".bar-row", "bottom", () => HudLayout.BarBottom, "the command bar docked to the bottom"),
             (".commandbar", "padding", () => HudCommands.BarPad, "command bar padding"),

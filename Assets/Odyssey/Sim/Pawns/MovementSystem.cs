@@ -99,6 +99,11 @@ namespace Odyssey.Sim.Pawns
         {
             if (pawn.Asleep) return;
 
+            // Knocked down (design 33 §9b): lying where the blow put it, it takes no step at all.
+            // The knockback cleared its path, so this is the backstop for an order given while it
+            // lies there.
+            if (pawn.KnockedDownAt(_ctx.CurrentTick)) return;
+
             if (!pawn.HasPath)
             {
                 // A pawn with no path stands still, and there is nowhere it can be standing where

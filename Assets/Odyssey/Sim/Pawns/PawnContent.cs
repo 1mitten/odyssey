@@ -1292,5 +1292,20 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Whether a blunt blow stuns (<see cref="AttackDef.stunPerMille"/>).</summary>
         public const uint Stun = 0xAB1C_5ED5;
+
+        /// <summary>
+        /// Whether a landing blow is critical (<see cref="CombatDef.critChancePerMille"/>, design 33
+        /// §9b). SHA-256's ninth round constant, next after <see cref="Stun"/>.
+        /// </summary>
+        public const uint MeleeCritical = 0xD807_AA98;
+
+        /// <summary>The debug menu's "Arm every colonist" (design 33 §9i): which weapon each colonist is dealt.</summary>
+        public const uint DebugArm = 0x243F_6A88;
+
+        /// <summary>
+        /// Whether a critical blow knocks its target back (<see cref="CombatDef.knockbackPerMille"/>).
+        /// SHA-256's tenth round constant.
+        /// </summary>
+        public const uint Knockback = 0x1283_5B01;
     }
 }

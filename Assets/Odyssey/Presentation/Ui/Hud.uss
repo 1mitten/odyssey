@@ -251,7 +251,9 @@
    giving names 80 px of width (a 60% increase over the old 50 px budget). */
 .card {
     width: 96px;
-    height: 89px;
+    /* 89 until 2026-09-23; the health bar and its gap added 5, which is all the coverage ceiling
+       had left (design 33 §9f, HudLayout.CardHeight). */
+    height: 94px;
     /* Half the gap on each side horizontally, the whole of it below — so the gap between two
        rows is one CardGap and the first row still starts exactly at the strip's top edge, which
        is what lets the layout model state the strip's height as rows and gaps and be right. */
@@ -318,6 +320,41 @@
     width: 100%;
     margin-top: 2px;
     -unity-text-align: middle-center;
+}
+
+/* The health bar (design 33 §9f): always shown, the full width inside the padding, the need bar's
+   4px. The fill's width and colour are set from code - the colour is
+   CombatFeedbackModel.HealthBarColour, the one owner of the bar over a colonist's head, so no
+   colour for the fill is written here. A downed colonist's track is tinted red from code too. */
+.card__health {
+    height: 4px;
+    width: 100%;
+    margin-top: 1px;
+    flex-shrink: 0;
+    background-color: rgba(255, 255, 255, 0.09);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.card__health-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 2px;
+}
+
+/* "Downed", across the foot of the portrait: a 4px bar is too thin to carry a word, and the card
+   has no pixel of height left to give one a line (HudLayout.CardHeight). The plate is set from
+   code in the bar's red; the job badge is added after it and so sits on top at the right. */
+.card__downed {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 15px;
+    padding-left: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    color: #eef3f6;
+    -unity-text-align: middle-left;
+    white-space: nowrap;
 }
 
 /* Drag and drop slot swapping feedback */
@@ -1816,7 +1853,9 @@
     top: 50%;
     left: 50%;
     translate: -50% -50%;
-    width: 280px;
+    /* 280 until 2026-09-24 (owner: "make the debug menu bigger"): wide enough now for the Spawn
+       tab's two columns of headed rows (design 33 §9i). */
+    width: 460px;
 }
 
 .settings__tabs {

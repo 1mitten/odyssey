@@ -109,10 +109,91 @@ namespace Odyssey.Sim.Pawns
             if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
             int index = _ctx.Cells.NearestWalkableInColumn(cell.X, cell.Z, cell.Y);
             if (index < 0) return IntentRejection.NotPermitted;
+            index = FreeSpawnCell(index);
             Pawn pawn = Spawn(index, kind);
             // An animal has no skills to be passionate about (design 29 §2).
             if (pawn.IsPerson) pawn.RollPassions();
             return IntentRejection.None;
+        }
+
+        /// <summary>
+        /// <c>DebugArmColonists</c> (design 33 §9i; owner, 2026-09-24: "an option to wield every colonist
+        /// with a random melee weapon ... for testing"). Every colonist who is standing and holds
+        /// nothing is dealt one of the content's melee weapons — a roll on her own stream, so a seed
+        /// deals the same arms every time — made on the nearest cell that can take it and taken
+        /// straight up (<see cref="WeaponHand.TakeUp"/>), exactly as <see cref="IWeaponRules.ArmOnSpawn"/>
+        /// arms a marauder. A colonist already holding a weapon keeps it; a downed one is skipped.
+        /// <c>AlreadyInThatState</c> when there was nobody to arm.
+        /// </summary>
+        public IntentRejection HandleDebugArmColonists(Intent intent)
+        {
+            var weapons = new List<int>();
+            ItemDef[] items = _ctx.Content.Items;
+            for (int i = 0; i < items.Length; i++) if (items[i].weapon != null) weapons.Add(i);
+            if (weapons.Count == 0) return IntentRejection.NotPermitted;
+
+            int tick = _ctx.World?.CurrentTick ?? _ctx.CurrentTick;
+            int armed = 0;
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                Pawn pawn = _pawns[i];
+                if (!pawn.IsColonist || pawn.Downed || pawn.EquippedItem != 0) continue;
+
+                var rng = DeterministicRandom.ForTick(_ctx.Seed, tick, PawnPurpose.DebugArm ^ (uint)pawn.Id.Value);
+                int def = weapons[rng.NextInt(weapons.Count)];
+                int cell = _ctx.Items.NearestCellWithSpace(_ctx.Cells, pawn.Cell, def, 1, JobDriver.DropSearchRadius);
+                if (cell < 0) continue;
+
+                ThingId id = _ctx.Items.Spawn(def, cell);
+                WeaponHand.TakeUp(pawn, _ctx.Items.Get(id)!, _ctx);
+                armed++;
+            }
+            return armed > 0 ? IntentRejection.None : IntentRejection.AlreadyInThatState;
+        }
+
+        /// <summary>How far round the spawn point a debug spawn looks for a free tile, in rings.</summary>
+        public const int SpawnSpreadRings = 4;
+
+        /// <summary>
+        /// The spawn cell if nobody stands on it, else the nearest free tile round it (owner,
+        /// 2026-09-24: marauders spawned in quick succession must not pile on one tile; design 33
+        /// §9h). Rings outward from the spawn point, in a fixed scan order so the answer is a
+        /// function of the world; each column is tried on the spawn layer, then one up, then one
+        /// down — the same lift a move order uses — and a tile must be standable, unoccupied and
+        /// reachable from the spawn point, so a pawn never arrives walled into a pocket. Falls back
+        /// to the spawn cell itself if every ring is full. Every kind, not only marauders: a
+        /// shared tile is the same fault whoever stands on it. A debug command, so it costs a scan
+        /// of the pawns per candidate and nothing per tick.
+        /// </summary>
+        int FreeSpawnCell(int anchor)
+        {
+            if (!Occupied(anchor)) return anchor;
+
+            GridSize size = _ctx.Size;
+            CellRef at = size.FromIndex(anchor);
+            for (int ring = 1; ring <= SpawnSpreadRings; ring++)
+            for (int dz = -ring; dz <= ring; dz++)
+            for (int dx = -ring; dx <= ring; dx++)
+            {
+                if (System.Math.Abs(dx) != ring && System.Math.Abs(dz) != ring) continue;
+                int x = at.X + dx, z = at.Z + dz;
+                for (int dy = 0; dy <= 2; dy++)
+                {
+                    int y = at.Y + (dy == 0 ? 0 : dy == 1 ? 1 : -1);
+                    if (!size.Contains(x, z, y)) continue;
+                    int c = size.Index(x, z, y);
+                    if (!_ctx.Cells.IsWalkable(c) || Occupied(c)) continue;
+                    if (!_ctx.Nav.Reachable(anchor, c, TraverseMode.Colonist)) continue;
+                    return c;
+                }
+            }
+            return anchor;
+        }
+
+        bool Occupied(int cell)
+        {
+            for (int i = 0; i < _pawns.Count; i++) if (_pawns[i].Cell == cell) return true;
+            return false;
         }
 
         /// <summary>
@@ -178,6 +259,9 @@ namespace Odyssey.Sim.Pawns
         {
             if (pawn == null) throw new System.ArgumentNullException(nameof(pawn));
             if (!_byId.TryGetValue(pawn.Id.Value, out int index) || !ReferenceEquals(_pawns[index], pawn)) return;
+            // Nobody fights a pawn that is gone (design 33 §9e): every attack on it ends now, on the
+            // tick it dies or leaves the board, rather than on each attacker's next tick.
+            _ctx.Combat?.EndAttacksOn(pawn);
             _ctx.Reservations.ReleaseAll(pawn);
             _ctx.Construction?.ReleaseBedsOf(pawn.Id.Value);
             // A weapon in the hand goes down where the pawn stood, or it would stay carried by an
@@ -304,6 +388,7 @@ namespace Odyssey.Sim.Pawns
                 if (pawn.Drafted) flags |= PawnFlags.Drafted;
                 if (pawn.Downed) flags |= PawnFlags.Downed;
                 if (pawn.StunnedAt(world.CurrentTick)) flags |= PawnFlags.Stunned;
+                if (pawn.KnockedDownAt(world.CurrentTick)) flags |= PawnFlags.KnockedDown;
                 if (pawn.CarriedBy != 0) flags |= PawnFlags.Carried;
                 // Drawn or sheathed (design 33 §8b): a report derived here from saved state, so
                 // it is neither saved nor hashed and no golden can move with it.

@@ -131,6 +131,41 @@ namespace Odyssey.Sim.Pawns
         public int fleeCells = 12;
 
         /// <summary>
+        /// The chance that a blow which lands is critical, per mille, before the attacker's level
+        /// adds to it (owner, 2026-09-23: 10 %; design 33 §9b).
+        /// </summary>
+        public int critChancePerMille = 100;
+
+        /// <summary>
+        /// What every four whole melee levels of the attacker add to <see cref="critChancePerMille"/>,
+        /// per mille (owner: 1 % per 4 levels). An animal counts its species' meleeSkill.
+        /// </summary>
+        public int critPerMillePerFourLevels = 10;
+
+        /// <summary>A critical blow's damage, per mille of the blow it would have been (owner: ×1.5).</summary>
+        public int critDamagePerMille = 1_500;
+
+        /// <summary>The chance a critical blow knocks its target back a tile, per mille (owner: 50 %).</summary>
+        public int knockbackPerMille = 500;
+
+        /// <summary>The same chance for a blunt weapon's critical, per mille (owner: 75 %).</summary>
+        public int knockbackBluntPerMille = 750;
+
+        /// <summary>
+        /// How long a pawn knocked back lies where it landed before it stands, in ticks (owner:
+        /// about a second and a half).
+        /// </summary>
+        public int knockedDownTicks = 90;
+
+        /// <summary>
+        /// The chance of a critical for an attacker at <paramref name="level"/>, per mille:
+        /// <see cref="critChancePerMille"/> plus <see cref="critPerMillePerFourLevels"/> for every
+        /// four whole levels. Integer, so it replays exactly.
+        /// </summary>
+        public int CritChancePerMille(int level) =>
+            critChancePerMille + critPerMillePerFourLevels * (level > 0 ? level / 4 : 0);
+
+        /// <summary>
         /// The curve's value at a level: linear between the two points either side, flat beyond
         /// the ends, and a flat 0 for an empty curve. Integer throughout, so it hashes and replays
         /// exactly. Content arithmetic, not a rule: what to do with the chance is the rules'.

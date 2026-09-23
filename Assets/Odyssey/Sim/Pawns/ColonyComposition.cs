@@ -206,6 +206,7 @@ namespace Odyssey.Sim.Pawns
                 // the intents themselves — so both live beside the ordinary handlers rather than in
                 // a debug-only wiring path a real colony would not otherwise get.
                 .AddIntentHandler(IntentKind.SpawnPawn, pawns.Pawns.HandleSpawnPawn)
+                .AddIntentHandler(IntentKind.DebugArmColonists, pawns.Pawns.HandleDebugArmColonists)
                 .AddIntentHandler(IntentKind.GiveResource, intent => pawns.Items.HandleGiveResource(intent, pawns.Cells));
             designations.Attach(builder);
             construction.Attach(builder);

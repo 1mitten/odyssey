@@ -15,9 +15,11 @@ namespace Odyssey.Sim.Pawns
         /// <item>the attacker's melee experience for the swing, landed or not (a person only);</item>
         /// <item>the moment reported — <c>Hit</c>, <c>Miss</c> or <c>Dodge</c> — with the
         /// armament's item def, −1 for fists or teeth;</item>
-        /// <item>for a hit: the hit points, <see cref="CombatHooks.RaiseDamageApplied"/>, then
-        /// death (deferred), going down, or — for a pawn still on its feet — the stun and the
-        /// reaction: an animal's revenge roll, a colonist's retaliation.</item>
+        /// <item>for a hit: the hit points, the <c>Critical</c> moment straight after the
+        /// <c>Hit</c> for a critical, <see cref="CombatHooks.RaiseDamageApplied"/>, then death
+        /// (deferred), going down, or — for a pawn still on its feet — the stun, the knockback a
+        /// critical rolled (design 33 §9b), and the reaction: an animal's revenge roll, a
+        /// colonist's retaliation.</item>
         /// </list>
         /// <para>Public so a test can land an exact blow; the only caller in the game is the
         /// resolver, inside <see cref="Tick"/>.</para>
@@ -40,6 +42,9 @@ namespace Odyssey.Sim.Pawns
             int before = target.HpMilli;
             target.HpMilli = before - outcome.DamageMilli;
             _ctx.CombatLog.Report(CombatEventKind.Hit, attacker.Id, target.Id, at, tick, outcome.DamageMilli, weapon);
+            // Straight after the Hit it qualifies (design 33 §9b): same tick, same pair, no amount.
+            if (outcome.Critical)
+                _ctx.CombatLog.Report(CombatEventKind.Critical, attacker.Id, target.Id, at, tick, 0, weapon);
             _ctx.CombatHooks.RaiseDamageApplied(new DamageReport(target, attacker, outcome.DamageMilli, weapon, tick));
 
             // Past the death line with this blow: dead now, gone at the end of the tick. Only the
@@ -65,6 +70,11 @@ namespace Odyssey.Sim.Pawns
                 _ctx.CombatLog.Report(CombatEventKind.Stun, attacker.Id, target.Id, at, tick, outcome.StunTicks, weapon);
             }
 
+            // A critical that rolled its knockback, on a target still on its feet: death and the
+            // fall were resolved first and returned above (design 33 §9b). Before the reaction, so
+            // an animal that runs runs from where it landed.
+            if (outcome.Knockback) KnockBack(target, attacker, weapon, tick);
+
             React(target, attacker, tick);
         }
 
@@ -82,6 +92,9 @@ namespace Odyssey.Sim.Pawns
             pawn.BreakTicksLeft = 0;
             pawn.Downed = true;
             pawn.CombatTarget = 0;
+            // Down outranks knocked down: it lies where it is either way, and the knock-down's clock
+            // would only stand it up again in the flags (design 33 §9b).
+            pawn.KnockedDownUntilTick = 0;
 
             Job job = pawn.JobBuffer;
             job.Reset(JobIndex.Downed);
@@ -130,6 +143,26 @@ namespace Odyssey.Sim.Pawns
             _ctx.CombatHooks.RaiseDied(pawn, by, corpse, tick);
             _jobs.EndJob(pawn, JobStatus.Failed);
             _ctx.Pawns.Despawn(pawn);
+        }
+
+        /// <summary>
+        /// Every attack on <paramref name="gone"/> ends now (design 33 §9e): it is dead, or leaving
+        /// the board. Called by <see cref="PawnRegistry.Despawn"/>, the one way off the board — the
+        /// deferred removal of the dead and a wild animal walking off an edge alike — so no attacker
+        /// ends a tick still carrying an attack on a pawn that is not there. Before this each one
+        /// carried it to its own next tick, which is the window the §9e guard first caught
+        /// (measured: every brawl to the death on six seeds). Through
+        /// <see cref="JobSystem.Interrupt"/>, keeping the step in hand, as the order that ends an
+        /// attack does. <b>Scales with the pawns on the board</b>, once per pawn that leaves it.
+        /// </summary>
+        public void EndAttacksOn(Pawn gone)
+        {
+            var pawns = _ctx.Pawns.All;
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                Pawn other = pawns[i];
+                if (other != gone && Melee.IsAttacking(other, gone)) _jobs.Interrupt(other, JobStatus.Succeeded);
+            }
         }
 
         /// <summary>

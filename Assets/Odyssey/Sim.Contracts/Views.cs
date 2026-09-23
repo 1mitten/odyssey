@@ -507,6 +507,13 @@ namespace Odyssey.Sim.Contracts
         /// from, so presentation can slide it along the line of the blow.
         /// </summary>
         KnockedBack = 10,
+
+        /// <summary>
+        /// A swing's wind-up began and the blow will land as a critical (design 33 §9g). Published
+        /// INSTEAD of <see cref="Swing"/>; <see cref="CombatEventView.Amount"/> is the wind-up in
+        /// ticks. Presentation plays the critical slice for a sharp weapon, the whoosh otherwise.
+        /// </summary>
+        SwingCritical = 11,
     }
 
     /// <summary>

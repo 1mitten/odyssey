@@ -780,7 +780,8 @@ figure leased mid-fight shows them — with no begin clip, because it did not se
 
 **A react never cuts off the figure's own swing**, which the simulation will still land on its tick;
 a stagger does, because a stunned attacker's wound-up swing does not land (§5j). Going down or
-getting up ends any one-shot.
+getting up ends any one-shot. *Superseded by §9a (2026-09-24): this rule is why the owner saw no
+reaction to most blows. A reaction now runs beside the swing and every landed blow is drawn.*
 
 **The work stroke never plays for `Job_AttackMelee`** (`PawnFigureDirector.PlaysWorkStroke`): the
 attack driver's work focus during the wind-up turns the figure to its target and does nothing else.
@@ -1756,6 +1757,291 @@ Played on `claude/combat-c2-polish`. The owner's asks and the interview's answer
 | *"You could still attack a pig after it died — make a guard for this — check marauder does this"* | **A dead pawn is never a target.** The attack order is refused on a dead pawn or a corpse, an attack job ends the tick its target dies or leaves the board, and hostile, animal and drafted target choice never picks the dead. A guard test runs every tick of mixed fights to the death and fails if anybody swings at, walks to, or keeps a job against a dead pawn. The same guard covers marauders. | §9e |
 | *"Their health needs to be also displayed on their colony stats"* | **The colonist cards along the top get a fourth bar, health, always shown**, in the overhead bar's colours (green, amber below 60%, red below 40%). A downed colonist's card shows it empty and red, with *Downed*. | §9f |
 
+### 9a. Reactions (built 2026-09-24, `claude/combat-react`)
+
+Owner: *"When a person is hit — there should be a reaction ... there needs to be visual reactions to
+hits."* Presentation only, against the contracts cut at `29864457` with a scripted event feed; the
+simulation half of §9b is another lane's. No simulation, save, hash or golden changed.
+
+**Why the owner saw no reaction.** Lane B had built hit-react and stagger rows (§6B), and they were
+routed to the struck figure, not the attacker. They were refused. Measured, not read:
+
+- **`React` returned without drawing anything while the struck figure's own swing was showing**
+  (§6B: "a react never cuts off the figure's own swing"), and a `Strike` started a swing over
+  whatever was showing, so the next swing cut a react off.
+- **In a fight the struck body is nearly always in its own swing.** Both fighters swing at each other
+  on cooldowns of 96–150 ticks, and a drawn swing is long, because the pack's clip is timed so its
+  impact lands on the wind-up tick: a light swing is drawn for 2.0–4.0 times its wind-up, a heavy
+  one 1.6–2.1 times, a computed punch 1.8 times. A machete (22 / 96) is drawn for about 64 % of its
+  cycle, and equal cooldowns lock the two fighters in phase.
+- **On real fights.** A probe on the fast tier (a drafted colonist ordered on to a marauder with the
+  machete, eight fights over three seeds and every weapon, the published tape with lane B's rule
+  applied to it; not committed): of **193 landed blows, 86 fell inside the target's own drawn swing
+  and drew nothing** (30–70 % per fight), and of the 99 that did start, the target's next swing began
+  within 20 ticks (a third of a second at speed one) for 47. **52 of 193 blows (27 %) drew a reaction
+  that lasted a third of a second at speed one.** At speed three, where a reaction runs on the
+  frame's seconds and a swing on ticks, almost none did.
+- **The stagger, which did cut through a swing, almost never fired**: its threshold was 10 points
+  and only the arc blade reaches it (bat 7, crowbar 8, machete 8, each ± 20 %).
+- **Not the cause:** subtlety (the pack's react is a whole-body clip), and the attacker taking the
+  reaction (the target's figure was the one asked).
+- **The same rule in the duel harness** (`CombatReactionsTests.LaneBsRuleLeftMostBlowsUnseen`, every
+  weapon pairing and phase offset in the content's numbers): **1,512 of 2,274 blows drew under
+  0.3 s of reaction at speed one, and 2,034 of 2,195 at speed three.**
+
+**What plays when** (`Odyssey.Hud.CombatReactions`, Unity-free; the figure only asks):
+
+| Event | The struck figure draws |
+|---|---|
+| `Hit` under 12 points | A **flinch**: the pack's `A_Hit_{F,B,L,R}_React` (0.87 s) on the clip layer, or computed for an animal and without the pack — the chest folded and the head snapped away from the blow, pushed 6 cm, over 0.4 s, peaking at 0.06 s |
+| `Hit` of 12 points or more (`Amount >= 12000`), any `Critical` | A **stagger**: `A_Hit_{side}_Stagger` (1.1 s), or computed over 0.9 s, rocked back 0.35 m (half a step) and recovered. Drawn only: the pawn stays on its tile. A critical arrives on the tick of its hit and upgrades that hit's flinch |
+| `Stun` | A stagger that ends the figure's own swing, which a stunned pawn does not land (§5j). With the pack, the stun's own begin clip, started by the flag, still wins |
+| `KnockedBack` | A **slide** from the cell in `Amount` to `Cell`, along the line of the blow, over 0.25 s: thrown and slowing along the ground, falling (t²) if it lands a layer down, so it goes over the lip before it drops. The frame the event is read was already posed on the landing tile, so the figure is put back where the blow found it that frame, and the speed that one-frame jump measured is forgotten |
+| `PawnFlags.KnockedDown` | Drawn as down (`CombatReactions.Floored`): the knock-down row's `Begin`, its `Loop` while the flag is up, its `End` as it stands. Without the pack, and for an animal, the sleeper's lie eased over 0.45 s is the computed topple and rise |
+
+The side is `CombatReactions.SideOf` — quarters at 45°, from the attacker's figure where it has one,
+else its cell, else the front. `CombatPose.SideOf` now answers through it.
+
+**Who has the clip layer.** A reaction is no longer a one-shot. It runs on its own track beside the
+figure's swing (`ReactionTrack`), and each frame `ReactionTrack.Show` decides between them:
+
+- **The strongest reaction wins**: knock-down, then stagger, then flinch. One as strong or stronger
+  restarts it from its own side, and a weaker one is let go while it runs.
+- **With the figure's own swing live, the swing has the layer from 0.35 of its wind-up before its
+  impact to 0.25 after, and the reaction has it the rest of the time.** A blow taken early in the
+  wind-up interrupts it, and the swing comes back in time to be seen landing. A blow taken in the
+  follow-through cuts the follow-through short.
+- **Once the swing takes the layer back, the reaction does not return to it.** There is one
+  hand-over per blow, not a flicker between two clips. From then on the reaction is laid on as the
+  computed flinch, over the swing and over the idle if it outlives the swing. So every blow is seen
+  for its whole flinch, whatever took the layer.
+- **A swing may cut a get-up short**, and so may a blow. The simulation has the pawn on its feet and
+  swinging while the pack's two-second get-up would still be playing.
+
+`TryGetFight`'s role now reports **what the layer shows** (`CombatState.Shown`), not the one-shot
+underneath. `TryGetReaction` reports the track, whether the flinch is laid over this frame, and
+whether a slide is running.
+
+**Tests.** Fast tier, `CombatReactionsTests` (14; Hud 865, Sim 1,196, all green). They cover:
+
+- which reaction each event asks for, and the 12-point line;
+- floored;
+- the four sides and their boundaries;
+- every computed shape moving away from the blow and settling;
+- the track's strongest-wins rule and a pause;
+- the arbitration window;
+- the one hand-over;
+- the slide's endpoints, monotony and drop over the lip.
+
+The main test is **`InADuelEveryLandedBlowIsSeen`**. It steps duels on the content's numbers frame
+by frame, in the director's order (pose, then the frame's events). It covers five weapon pairings,
+every 5-tick phase offset and speeds one and three, with the pack and without it. **Every one of the
+2,195–2,274 blows is seen for at least 0.3 s of its first 0.4 s.**
+
+Six mutations were each seen to fail the test that owns them:
+
+- the swing always keeps the layer;
+- no computed shape, so no overlay: the duel fails;
+- an equal reaction not restarting: the duel at speed three fails;
+- lane B's 10-point threshold;
+- a linear drop;
+- the overlay only over the swing. This was the first version of the hand-over rule, and the duel
+  caught it: 537 of 2,195 blows at speed three were under 0.3 s.
+
+EditMode, **written without a Unity run**, compiled with `dotnet` against the editor's module DLLs:
+`CombatReactionDrawnTests` (6). Each drives `CombatFeedback.Consume` with a scripted
+`CombatEventView` stream, as the bootstrap does:
+
+- struck early in her own wind-up, she flinches on the Hit frame, and the next frame shows
+  `HitReact` over the swing: the clip easing in, or the computed flinch;
+- struck round her own impact, her punch keeps the layer and the flinch is laid over it;
+- a critical staggers;
+- a knock-back is drawn at the from-cell on the frame it is read, between the cells seven frames on,
+  and on the landing tile after the slide;
+- knocked down, the head is on the ground, and a swing cuts the get-up short;
+- a hog flinches, computed.
+
+The negative control for the first is lane B's `React` and is **named, not yet seen to fail** there.
+Its fast-tier twin is.
+
+**Do not undo by tidying.**
+- **A reaction is not a one-shot.** Put it back in `CombatState.Action` and it is refused by, or cut
+  off by, the figure's own swing — which in a fight is always there. That is the bug the owner
+  reported.
+- **The swing's window round its impact stays the swing's.** The simulation lands that blow whatever
+  is drawn. A reaction drawn over it shows a hit landing out of no swing.
+- **The flinch laid over is what makes "every blow" true.** The window alone leaves a blow taken
+  inside it unseen, and so does the hand-over without the overlay.
+- **One hand-over per blow.** A reaction that takes the layer back after the swing's window pops
+  into the tail of its own clip.
+- **The slide is drawing only.** The pawn is on the landing tile from the blow's tick. Nothing may
+  read the drawn position back.
+
+**Open, for the integrator and the playtest.**
+- Every number here is INVENTED and unseen:
+  - the window, 0.35 before and 0.25 after;
+  - the flinch, 14° chest, 20° head and 6 cm;
+  - the stagger, 26°, 14° and 0.35 m;
+  - the slide, 0.25 s.
+- The pack's stagger plays at its authored 1.1 s, not the 0.9 s asked for.
+- At speed three the knock-down's ~1.5 s flag lasts half a second of real time. That is shorter
+  than the pack's 0.73 s `Begin`, so the get-up starts before the fall has finished. Every held
+  clip runs on the frame's seconds (§6B).
+- A knocked-down colonist keeps her weapon in her hand. `ShowWeapon` hides it for `IsDowned` and for
+  sleep, not for `KnockedDown`. `PawnFigureDirector.Weapons.cs` is not this lane's.
+- A knocked-down pawn past the figure cap is drawn standing by the instanced pass, as a downed one is.
+- The flinch over a pack swing folds the chest and head after the clip. The arms are counter-turned
+  by the chest's fold, as the computed swings do, so the blade stays where the clip put it.
+- Unity has compiled none of it. PlayMode, the frame budget in a fight and the player build have not
+  been run.
+
+### 9b. Criticals and knockback (built 2026-09-24, `claude/combat-crit`)
+
+Simulation, the fast and Long tiers, no Unity. **No golden moved**: no golden window fights, so no
+swing is ever decided in one, and every new field is saved and hashed only while it is set. **The
+content fingerprint moved once**, for the six `CombatDef` numbers below
+(`PawnContentDefTests`, the twentieth move).
+
+**The numbers** are the owner's and live in `Combat.xml`:
+
+| `CombatDef` field | Value | Means |
+|---|---|---|
+| `critChancePerMille` | 100 | a blow that lands is critical one time in ten… |
+| `critPerMillePerFourLevels` | 10 | …plus 1 % for every four whole Melee levels of the attacker. An animal counts its species' `meleeSkill` |
+| `critDamagePerMille` | 1,500 | a critical does half as much again. The `Hit` carries the multiplied damage |
+| `knockbackPerMille` | 500 | a critical knocks its target back half the time… |
+| `knockbackBluntPerMille` | 750 | …three times in four with a blunt weapon. Fists count as blunt |
+| `knockedDownTicks` | 90 | a target knocked back lies where it landed for about 1.5 s |
+
+**The rolls.** `MeleeRules.Resolve` rolls the critical after hit, dodge, damage and stun, on its own
+stream, `PawnPurpose.MeleeCritical`. A critical then rolls its knockback on `PawnPurpose.Knockback`.
+Both salts are SHA-256's ninth and tenth round constants, which carry on the family the combat salts
+began. A miss or a dodge is never critical.
+
+- **The critical is its own stream.** On the hit roll's stream the critical share of landed blows at
+  level 0 read 208 in a thousand, not 100: the two rolls agree, and only low rolls land. Measured with
+  `CriticalsLandAtTheirRate`.
+- **A critical moves nothing else.** `ACriticalIsTheSameBlowHalfAsMuchAgain` resolves 20,000 swings
+  with and without criticals and finds the same hit, dodge, stun and damage every time, times 1.5
+  where it was critical.
+
+**The blow is decided when the swing begins (the §9g contract).** Owner, 2026-09-23: a sharp
+critical plays a sword-slice sound *during* the swing. So the outcome has to be known when the
+wind-up starts.
+
+- **When it is rolled.** `AttackMeleeJobDriver.StartSwing` asks `IMeleeRules.Resolve` on the tick
+  the wind-up begins. The odds and the salts are the same as before; only the tick moved.
+- **Where it is kept.** The answer stays on the pawn through the wind-up: `Pawn.HoldSwing` and
+  `HeldSwing`, three ints.
+- **What is published.** A critical that will land is published as **`SwingCritical`** (11) *in
+  place of* `Swing`. Its amount is the wind-up in ticks.
+- **What lands.** At the impact, `CombatSystem.LandOrLose` applies exactly the kept outcome. If
+  the target has since stepped out of reach, died, or gone down on a job that stops at down, the blow
+  is a `Miss`. So an announced critical can fall on air, but nothing is reported that did not happen.
+- **When it is let go.** The kept outcome is dropped when the swing lands, when it is lost (the
+  attacker stunned, down or dead) and when the job ends (the driver's cleanup).
+- **An old save.** A swing in the air in a save older than layout 3 has no kept outcome. It is
+  decided at the impact, as every swing was before.
+
+**Order of events at the impact:** `Hit` (the multiplied damage), then `Critical` (amount 0, same
+tick, same pair), then death, the fall, the stun, then `KnockedBack` if it went, then the
+reaction. A blow that kills or downs is never a knockback, because death and the fall return first.
+The stagger in place is presentation's, off `Critical`, when no `KnockedBack` follows it.
+
+**Where it may land** (`CombatSystem.KnockbackCell`):
+
+- **Directly away**: the step from the attacker's cell to the target's, continued one more cell,
+  diagonals included. Only from a neighbouring cell on the same layer.
+- **On the same layer**, by a step the target itself could take (`NavGraph.IsLegalStep`), so never
+  through a wall or its corner.
+- **Or one terrace step down**: the cell beyond is open air and the cell under it is ground the target
+  can stand on. On a diagonal, neither corner may be a wall.
+- **Never two layers or more down, never up.** A rise behind the target, or a wall, is simply no
+  knockback.
+- **Never water.** The cell beyond, and where it would land, must not be water, a wade, or the top
+  of water.
+- **Never on to a tile another fighter holds**: `Melee.Holds`, §8c's one rule. This is what keeps
+  a knockback from standing two fighters on one tile.
+
+When a knockback is not allowed, the target stays where it is and nothing more happens in the
+simulation.
+
+**What a knockback does** (`CombatSystem.KnockBack`), all in the blow's own call:
+
+1. The job ends through `JobSystem.EndJob`, the one release path. A carried load is put down by the
+   driver's cleanup where the blow found her, claims are let go, a swing in the air is lost, and the
+   path is cleared.
+2. The pawn is moved to the landing cell.
+3. It is knocked down for 90 ticks: `Pawn.KnockedDownUntilTick`.
+4. `KnockedBack` is reported, with the landing cell in `Cell` and the cell it came from in `Amount`.
+
+**The knock-down is the stun's hold.** `JobSystem.TickPawn` returns before the job and the tree while
+`KnockedDownAt(tick)`, and `MovementSystem.Advance` takes no step. So the pawn does nothing: no job
+ticks and no step. It is published as `PawnFlags.KnockedDown` until it stands, and the combat pass
+puts the clock back to nought once past. **Going down clears it**, because down outranks knocked
+down. An animal is knocked back the same way.
+
+**The player's attack order outlives the fall.** Ending the job ended the order too, and a drafted
+colonist then stood idle one tile off while the foe she was sent at walked up to her. The ordered
+duel in `EveryReportCarriesTheWeapon` fell from 23 swings in 3,000 ticks to 12. So a forced
+`Job_AttackMelee` is given again in the same call, with the same target and the same end. It is held
+with the rest of her until she stands (`AnAttackOrderOutlivesTheFall`). Everything else that was
+ended stays ended: a hold comes back from the draft, a hunt and a revenge from the mind, and a haul
+from the work scan.
+
+**Saved and hashed only while set.**
+
+- **Saved.** `CombatSection` is **layout 3**, which appends four ints to every record: the
+  knock-down clock and the kept swing (result word, damage, stun). Layouts 1 and 2 still load, with
+  nobody knocked down and no swing in the air (`AnOlderCombatSectionLoadsWithNobodyKnockedDown`).
+- **Hashed.** Each has a bit in the pawn's kind word (20 and 21) and is hashed only while set. A
+  pawn with neither hashes exactly as before.
+- **Round trips.** A save taken mid-knock-down resumes on an equal hash 300 ticks on. A save taken
+  mid-swing resumes on an equal hash 600 ticks on. Each was seen to fail with its field left out of
+  the load.
+
+**What it costs.** One integer comparison a pawn a tick in the combat pass (the clock), one in the job
+pipeline and one in the mover. `KnockbackCell` is one `Melee.Holds` pass over the pawns, asked only
+for a critical that rolled its knockback. `TickBenchmarkTests.TwentyAgainstTwenty`, one run: tick
+0.077 ms mean, Pawns phase 0.016 ms, 283 swings. That is inside §8c's band of 0.070–0.087 and
+0.014–0.020.
+
+**Tests** (fast tier unless marked). Each was seen to fail with its rule withheld:
+
+| Test | Covers |
+|---|---|
+| `CriticalTests` | the owner's chance by level (an animal at its `meleeSkill`); the rate over 20,000 rolls at levels 0 and 20 (208 ‰ on the hit's stream); ×1.5 of the same blow with nothing else moved; knockback 500 ‰ sharp and 750 ‰ blunt, and never without a critical; a critical announced at the swing's start lands as announced (with the outcome rolled again at the impact: *"the blow was not the one decided"*) |
+| `KnockbackTests` | one tile straight back in six directions, with `Hit`, `Critical` and `KnockedBack` in that order and the cells in the event; a critical with no knockback stays put; 90 ticks lying with no job and the flag published every frame, then standing (with the job pipeline's hold withheld it was given a job at once); one terrace step down; never two down; never up; never into water, level or below a step (both failed with the water check withheld); never on to a fighter's tile, with a non-fighter's as the control (failed with `Holds` withheld); the downed and the dead not knocked back; a hog knocked back; the order outliving the fall (withheld: *"the order was lost with the fall"*); the mid-knock-down save; layouts 2 and 3; a hauler's load put down where she was struck |
+| `FightGuardTests.KnockbacksNeverStackFighters` | four brawl shapes with every landed blow a knockback critical, §8c's guard after every tick. `Guard.Stands` counts a knocked-down pawn as standing from the tick it lands. With `Holds` withheld, three of the four shapes failed (10, 67 and 42 pair-ticks) |
+
+Three older tests read *when a swing landed* off the rules' own record, which now sees the swing
+start. They read the published impact instead (`Tape.Landed`): `ARepeatedAttackOrderIsQuiet…`,
+`AStunnedAttackersSwingDoesNotLand` and `AMarauderInAFightKeepsItsSwing…`. The damage-spread test
+skips criticals, which are 1.5 times the spread by design.
+
+**Do not undo by tidying:**
+
+- **The outcome lives on the pawn, not in the driver.** The driver pool is not saved; the pawn's
+  combat record is, and the mid-swing round trip needs it.
+- **`SwingCritical` replaces `Swing` rather than following it.** One swing, one start event. A reader
+  counting swings counts both kinds.
+- **The knockback ends the job.** A pause would keep a hauler's load in her arms across a tile she
+  never walked, and a path from a cell she is no longer on. Only the player's attack order is given
+  back.
+
+**Open.**
+
+- **Presentation does not yet read `SwingCritical`.** `PawnFigureDirector.OnCombatEvent` times a
+  swing on `case CombatEventKind.Swing`, and `CombatFeedback.WhereOf` places a swing's word at the
+  swinger for `Swing` only. Until both also take `SwingCritical`, a critical's wind-up plays at the
+  default timing and its moment is placed at the target. That is lane B's, and it could not be
+  compiled here (the fast tier does not build Presentation).
+- **A knocked-down pawn still dodges** at its level. "A pawn lying down does not dodge" is the
+  downed rule; whether it extends to the knock-down is a feel question for the playtest.
+- **A knocked-down pawn with nobody attacking it holds no tile.** A drafted hold's blow ends when
+  its target is out of reach, so a marauder knocked back by the hold lies on a tile no fighter
+  claims. It is in nobody's fight until it stands, so §8c's rule does not count it.
+
 ### 9c. At the hip (built 2026-09-23, `claude/combat-c2-r3`)
 
 Owner, playtest: *"Baseball bat wasn't close enough to hips/waist when not drawn. Same goes for
@@ -1883,3 +2169,370 @@ tried at 11 splays and up to 13 depths. Nothing is per frame. Not measured in a 
   or one idle phase in six. This is the price of an envelope that forbids intersection.
 - The draw's hand-on-hilt sampling still aims at the hip's surface beside the joint, not at the
   fitted weapon's grip.
+
+### 9d. The gear seam
+
+Built 2026-09-23 on `claude/combat-cards`. The owner's words: *"We'll make a entry for gear later to
+include equipped weapon (seam for later)"*. **This is a seam only.** The Gear tab stays disabled
+with its reason (`InspectModel.AddColonistTabs`: *"equipment arrives with the inventory"*), and
+nothing draws the model yet.
+
+**`Odyssey.Hud.GearModel`** is Unity-free. `Refresh(snapshot, pawn)` fills `Rows`, a reused list of
+`GearRow`, and allocates nothing. It returns false with no rows for a pawn the frame no longer
+carries. It returns true with no rows for an animal. For a person, colonist or marauder, it returns
+true with one row today:
+
+| Field | Today | From |
+|---|---|---|
+| `Slot` / `SlotName` | `GearSlot.Weapon`, "Weapon" | `ui.combat.weapon` |
+| `ItemDef` / `Name` / `IconKey` | the weapon in the hand, or −1, "Bare hands", no icon | `odyssey.pawn.weapon` through `ItemLabels`; `ui.combat.barehands` |
+| `Carry` / `CarryWord` | `Drawn` "Drawn", `AtHip` "At the hip", or `None` for the bare hands | `PawnFlags.Drawn` (§8b), never the draft; `ui.combat.drawn`, `ui.combat.athip` (new keys, wiki rebuilt) |
+
+**What the Gear tab will be built from**, when it is built:
+
+- **The model: `GearModel.Rows`, and nothing else.** `InspectModel` owns one and refreshes it for the
+  pane's pawn on the pane's cadence, exactly as it refreshes `HealthRows`, and it sets the Gear
+  tab's `Enabled` when the subject is a person. The words and the carry come from the model, so
+  the view never reads an aspect.
+- **The view: a partial of `HudShell` shaped like `HudShell.Combat.cs`.** Build the body once per
+  subject into the pane's fixed-height tab box, forget it on rebuild, show it with the tab strip, and
+  sync it 15 times a second, writing an element only when its value moved. Each row is the item's
+  icon (`IconKey`), its name, and the carry word dimmed. The bare hands row has no icon.
+- **The rows it grows.** A `GearSlot` per new place something is held: apparel by body part when
+  clothing exists, then the pack when an inventory exists (the carried stack is
+  `JobLabels.CarryingAspect` today, a load in the arms and not gear). Each new slot is an enum value,
+  a published aspect, a registry key and a test. It is never a second reading in the view.
+- **The commands it will carry.** Drop, and equip from the stockpile. Equipping is already an order
+  (§6C, the context menu's Equip row, §7a), so the tab's button sends the same intent and adds no
+  new path.
+- **The Health tab's weapon row stays until the Gear tab ships.** Then the owner decides whether it
+  moves. Until then, `GearModelTests.TheGearRowNamesWhatTheHealthTabNames` holds the two to one name
+  across every weapon and the bare hands.
+
+**Tests** (fast tier, `GearModelTests`, 12 cases): the bare hands; a weapon at the hip; the drawn
+flag; drafted without the flag still at the hip; the flag over empty hands still the bare hands; a
+marauder read the same way; an animal and a pawn that has gone; and the gear row agreeing with the
+Health tab for each of the four weapons and the bare hands. Negative controls, each seen to fail and
+then restored:
+
+- the drawn flag ignored (2 failures);
+- drawn read from the draft instead (2);
+- the bare hands named by a literal rather than the registry (3).
+
+**Open.** The tab names on the pane ("Needs", "Skills", "Gear", …) and their disabled reasons are
+C# literals and not registry keys. That is older than this seam and outside
+`RegistryTests.NoPlayerFacingNameIsWrittenInCSharp`'s six namespaces. Whoever enables the Gear tab
+should move the tab names into the registry in the same commit.
+
+### 9e. The dead are not targets (built 2026-09-24, `claude/combat-crit`)
+
+Owner: *"You could still attack a pig after it died — make a guard for this for now — check marauder
+does this."*
+
+**What let the owner attack the dead pig.** Reproduced before anything was changed. The
+simulation never let anybody order or choose an attack on a pawn that had left the board: the order
+is refused on a missing or dead pawn, and every automatic choice asks `Melee.IsStanding`. What
+there was:
+
+1. **A downed pig reads as a dead one, and attacking it is an order to the death.** A hog goes down
+   at nought and dies only at −30, half its pool again. Lying down, it looks like the corpse it will
+   become: the corpse director even finds a pawn killed where it lay already lying rather than
+   falling. A right-click on it is accepted as `ToTheDeath` (§6A.8), by design. That is the one way
+   a corpse is made, and it takes three or four more machete blows. **This is almost certainly what
+   the owner did**: the pig "died", and the colonist went on hitting it.
+2. **Every attacker carried its job on the dead for a tick.** The guard below caught it on every
+   brawl before any fix: *"keeps an attack job on 5, who is gone (dead)"*, on six of six seeds. The
+   pawn is removed at the end of the tick it dies, and each attacker only noticed on its own next
+   tick. A strike clip begun before the death also plays through over the body; that is
+   presentation, and short.
+3. **A swing in the air on the killing tick** falls on the dead pawn's cell as a `Miss`. It began
+   against the living, so it is kept, as §9b's "no event lies" puts it.
+
+**What is guarded:**
+
+- **The order.** `OrderAttack` is refused (`NotPermitted`) on a dead pawn still on the board — killed
+  between ticks, which is when an order can meet one — on a pawn gone from the board, and on a
+  corpse, which is not a pawn and names nobody. The rule was already there; it is now pinned
+  (`TheOrderIsRefusedOnTheDeadAndTheGone`, which failed with the `IsDead` check withheld).
+- **The job ends the tick its target goes.** `PawnRegistry.Despawn`, the one way off the board, now
+  calls `CombatSystem.EndAttacksOn`. That ends every attack on the pawn through `JobSystem.Interrupt`
+  (keeping the step in hand) on the tick it dies, becomes a corpse, or walks off an edge
+  (`AnAttackEndsTheTickItsTargetLeavesTheBoard`). It scales with the pawns on the board, once per
+  pawn that leaves.
+- **Every automatic choice skips the dead**: the hunt, self-defence and the threat beside her, an
+  animal's revenge, and the drafted hold. `EveryAutomaticChoiceSkipsTheDead` asks each with a dead
+  pawn still on the board, with the living as the control. It failed on each check withheld in
+  turn: `IsThreatTo`, self-defence's retaliation, the animal's revenge, and the hunt.
+
+**The guard** is `DeadTargetGuardTests.NobodyFightsTheDead`, fast tier, six cases, plus
+`NobodyFightsTheDeadOnManySeeds` in the Long tier (24 more). Each case is a fight to the death:
+
+- colonists with machetes against marauders, and colonists against hogs, with a player who keeps
+  ordering every drafted colonist on to the nearest foe, standing or down, and who right-clicks every
+  body the moment it dies;
+- marauders and hogs, with no player: the hogs are set on the marauders and the marauders hunt a
+  colonist. This is the "check marauder" case.
+
+Half the fights land blows at ten times the damage, so pawns die from standing with several
+attackers on them.
+
+After every tick the guard fails if anybody holds an attack job on a pawn that is dead or gone. It
+also fails if any swing, blow, dodge, stun, critical or knockback is published against a pawn after
+its death was. The one exception is the same-tick `Miss` above. It also checks that every attack
+order sent on a body was refused.
+
+With `EndAttacksOn` withheld, all six fast cases failed (two to six violations each), and so did
+the Long sweep. **Marauders did it too**: on seeds 2, 5 and 6, marauders kept their attack on the
+colonist they had just killed. No hog dies in the marauders-and-hogs mix, because a marauder never
+answers a hog (§6A.6). What that mix guards is the hogs' revenge and the marauders' hunt.
+
+**Open.** Whether a downed animal should look different from a dead one, or whether a right-click on
+a downed animal should ask before finishing it, is the owner's call. The simulation's rule, that a
+corpse is made by an order on a downed pawn, is unchanged.
+
+### 9f. Health on the cards
+
+Built 2026-09-23 on `claude/combat-cards` (from `claude/combat-c2-r3`). The owner's words:
+*"Their health needs to be also displayed on their colony stats as it appears above them"*.
+
+**It is the card's only bar, not its fourth.** The interview recorded "a fourth bar", but the roster
+card has carried no need bars since 2026-09-17, when the owner took mood, food and rest off it to
+fit more colonists in the strip (`HudLayout.CardWidth`). So a card is now the face, the name and
+one health bar under the name. Putting the three need bars back is a separate decision for the owner.
+
+**What it reads** (`RosterModel.Health`, `RosterCard.Health` / `HealthInk` / `Downed` /
+`HealthWord`). The bar is always drawn. The bar over a colonist's head is drawn only while
+`odyssey.pawn.hp` is published, so the card cannot use that rule. It uses the Health tab's rule
+instead: `odyssey.pawn.hp.max` is published for every person always, and a pool with no hit points
+beside it is a whole colonist (§5d). The fill is the hit points over the pool, clamped, in
+thousandths. The ink is `CombatFeedbackModel.HealthBarColour`, the one owner of the bar's colours,
+so the card and the bar over her head change colour on the same hit: green, amber below 60 %, red
+below 40 %. **Downed is read from the flag, not from the hit points.** The bar is empty and red,
+whatever is left of the −50 % a downed pawn may sink to, and the word is `ui.status.downed`. A frame
+with no pool (from before combat, or built by hand) reads −1: the track with no fill, never a guess
+at whole. Each card costs two O(1) aspect lookups and a flag test per refresh, with no allocation.
+
+**Where it is drawn, and why so thin.** It is a 4 px bar the full width inside the padding, one
+pixel under the name (`HudLayout.CardHealthGap`, `CardHealthBar`). The card went from **89 to 94**,
+and `CardHeight` is now written as the sum of its parts. **Five pixels was all the coverage ceiling
+had left.** A full one-row strip at 1280 × 720 is 480.7 px wide, and the resting HUD there was
+19.69 % against the 20 % `CoverageCeiling`. The first cut, a 10 px bar under a 3 px gap (card 102),
+measured **20.37 %** and failed `TheStripIsAlwaysOneRowAndNoFurther`. The owner had already
+declined raising the ceiling for the name pool (2026-09-18), so the bar took the room there was. At
+94 the same HUD is **19.95 %**. **The roster card now spends the last of the ceiling**, so the next
+pixel any resting region gains has to be paid for. A 4 px bar is too thin to hold a word, so
+**"Downed" goes across the foot of the portrait**, on a plate in the bar's red at 85 %. The job
+badge is added after the plate, so it still sits on top at the right. The downed card's track is
+tinted the same red at 35 %.
+
+The drag ghost (`.card-drag-ghost`) keeps 89 and no bar. It is a picture of who is being moved, not
+a card, and it is still centred on `CardHeight`, so it rides 2.5 px higher than it did.
+
+**Tests.** Fast tier: `RosterHealthTests` (14 cases) covers a whole colonist being full and green,
+the fill and each of the three bands at their edges, the card agreeing with the overhead bar at every
+hit point from −50 % to past the pool, a downed colonist at −20 %, 0 and a stale +35 % (empty, red,
+"Downed") against the same numbers without the flag, no pool reading −1, and each card on a page
+reading its own colonist. The stylesheet now pins `.card__name`'s gap and line and `.card__health`'s
+gap and height to the model (`HudStyleSheetTests`). Negative controls, each seen to fail and then
+restored:
+
+- a pool with no `hp` read as nought, not whole (2 failures);
+- the downed flag ignored (4);
+- the stat green `HudTheme.Good` in place of `HealthBarColour` (9);
+- `.card__health` set to 10 px in the sheet (`EveryAnchorInTheSheetIsTheNumberTheLayoutModelUses`).
+
+**Do not undo by tidying.**
+- **Never draw the card's bar only where the overhead bar is owed.** The card is always shown, and
+  the absent `hp` beside a pool is *whole*, not missing.
+- **The ink is `HealthBarColour`**, never `HudTokens.NeedBand` and never a colour in the sheet. The
+  need bars and this bar share thresholds, not inks (§8a).
+- **Downed is the flag.** A frame can carry a positive `hp` on the tick a pawn goes down.
+- **Growing the card is a coverage decision**, not a styling one. Read `HudLayout.CardHeight`
+  before adding a pixel.
+
+**Where.** `Hud/RosterModel.cs`, `Hud/HudLayout.cs` (`CardHeight` and its parts),
+`Presentation/Ui/HudShell.Panels.cs` (`SyncCardHealth`, `NewCard`), `Presentation/Ui/HudShell.cs`
+(`CardView`), `Presentation/Ui/Hud.uss` (`.card`, `.card__health`, `.card__health-fill`,
+`.card__downed`). **Never compiled here**: `HudShell.Panels.cs`, `HudShell.cs`, and the sheet has
+not been loaded by Unity.
+
+**Open, for the playtest.**
+- Whether a 4 px bar reads at a glance across the strip, or whether the owner would rather spend
+  more of the ceiling (a 6 px bar is card 96, about 20.06 %, and needs `CoverageCeiling` moved).
+- Whether "Downed" across the face reads as a state or hides who it is.
+- Whether the owner wants the need bars back on the card now that it has a bar again.
+
+### 9g. The sound of a blow
+
+**Owner, 2026-09-23**, supplying four recordings from Pixabay: a violent sword slice — *"critical
+hits with a sword. To be played as sword is swinging"*; two swing whooshes — *"sword variation
+sounds to be played during the relevant moment of the swoosh (not too early). 2 variations"*; and a
+cinematic thud — *"use this for someone get hit melee (default for now). Play it as the weapon
+connects."* And: *"This all needs to be coordinated at the right times for effect."*
+
+**The interview's answers (owner):**
+
+1. **Whoosh: every swing with a weapon** — bat, crowbar, machete, arc blade — hit or miss. **Fists
+   and animal bites are silent.** Two takes, one picked at random per swing. **Its loudest moment
+   lands about 0.1 s before the blow connects**: never early, never on top of the thud.
+2. **Critical slice: the blow's outcome is settled when the swing's wind-up starts.** The simulation
+   publishes `CombatEventKind.SwingCritical` (11) **instead of** `Swing` when the blow it has rolled
+   will land critical; `Amount` is the wind-up, as a swing's is. With a **sharp** weapon (machete,
+   arc blade) the slice plays **instead of** the whoosh, timed so its biggest moment lands on the
+   impact. A **blunt** critical (bat, crowbar) keeps the whoosh.
+3. **Thud: every landed hit**, any weapon, fists and bites too, and under the slice on a critical;
+   its transient exactly on the impact. **Misses and dodges are the whoosh alone.**
+4. **Placed in the world like the axe**: 3D, fading with distance, so every master is mono.
+
+**The one timing fact everything rests on: the impact is known when the swing starts.** A swing is
+published at the tick its wind-up begins with the wind-up in ticks, and the blow lands at the one
+plus the other — the arithmetic the drawn swing times its contact by (§6B). So a whoosh can start
+*before* the blow, which is the only way its peak can come before the thud. The thud cannot be
+scheduled the same way, because whether a blow lands is not published until it does; it plays on
+the `Hit` event's frame, and the file is cut so that frame is its transient.
+
+**The bake** (`tools/audio/bake_combat.sh`, its header holds every measurement). Each source is cut
+at a fixed head time — not a silence threshold, because the offset of the loudest moment is a timing
+constant and a threshold moves it — downmixed to mono **first** (a limiter ahead of the downmix held
+each channel to −3 and the sum then peaked 3 dB over it), tail-trimmed with a fade, and levelled on
+the loudest 400 ms momentary loudness against a −3 dBFS ceiling measured with astats. The two
+whooshes are cut so their peaks line up, so one constant times both.
+
+| File | Length | Loudest 10 ms, middle | Peak | Max M | Note |
+|---|---|---|---|---|---|
+| `combat-whoosh.wav` | 0.200 s | **0.041 s** | −5.1 dBFS | −21.0 LUFS | the swing, take one |
+| `combat-whoosh_01.wav` | 0.180 s | **0.041 s** | −4.5 dBFS | −21.0 LUFS | take two, lined up with one |
+| `combat-crit-slice.wav` | 1.100 s | **0.065 s** | −3.0 dBFS | −16.8 LUFS | the ceiling binds; the 2.2 s ring cut to 1.1 s |
+| `combat-hit.wav` | 0.750 s | **0.013 s** | −3.0 dBFS | −18.5 LUFS | lifted 7.5 dB into a limiter: −23.5 → −18.5 to the ear |
+
+The slice's loudest *sample* is later (0.24 s, the body of the cut), but its loudest 10 ms is the
+edge meeting the target, which is the moment the owner means. The balance against the axe is baked:
+at one catalogue Volume (0.65) the thud sits about 6 dB over a felling blow at the same distance
+and the whoosh about 4 dB over — a fight is heard over woodcutting, not under it.
+
+**The timing model** is `Hud/CombatSoundTiming.cs`, Unity-free, with the schedule beside it
+(`CombatSoundSchedule`):
+
+- `WhooshPeakSeconds = 0.040`, `SlicePeakSeconds = 0.065`, `ThudPeakSeconds = 0.013` — the bake's
+  numbers. **A re-bake that moves them changes them in the same commit**; the EditMode
+  `CombatSoundTests.EachClipIsLoudestWhereTheTimingSaysItIs` reads the imported clips and fails
+  otherwise.
+- **Real time at the current speed.** The clock is the last tick run plus the frame's fraction
+  towards the next (the bootstrap's `_tickAlpha`), and a tick is `1 / (60 × speed)` s: at ×3 the
+  impact is three times nearer. Paused, the rate is 0 and nothing waiting starts, or is let go.
+- **Never early, at most a frame late.** Each frame a waiting cue starts if starting it now lands
+  its peak no earlier than it belongs — 0.1 s before the impact for the whoosh, on it for the slice.
+  The frame before, it would have been early. So a whoosh peaks between 0.1 s and 0.1 s less a frame
+  before the blow, and a slice between the impact and a frame after.
+- **Seen too late.** A whoosh whose peak would land within **0.04 s** of the blow is let go rather
+  than smeared into the thud (`WhooshClearanceSeconds`, INVENTED — about where two onsets stop
+  fusing). A slice is played up to **0.1 s** late (`SliceLateSeconds`, INVENTED), because a critical
+  is the headline and a little late beats silent. **The quickest swing at the top speed cannot be on
+  time and is still heard**: the machete's 22 ticks at ×3 is 0.122 s, less than the whoosh's 0.14 s
+  to its lead, so it starts on the frame it is read and peaks about 0.07 s before the blow.
+- **A swing replaces its swinger's last**, and a swinger **downed, killed or knocked back** loses the
+  swing in the air and its sound. The last is an assumption about round 3's knock-down (that it
+  interrupts a wind-up); if it does not, drop `KnockedBack` from `CombatSoundSchedule.Hear`.
+- **Held weapon or not** is `BloodSides.IsHeldWeapon`, and **sharp or blunt** `BloodSides.IsSharp` —
+  the blood seam's table, read once off the content, so the Defs stay the one owner of which weapon
+  is which (§7d). An event's weapon is an item def with an attack, or −1 for fists and bites.
+
+**Presentation.** `CombatFeedback` asks the schedule about every event it hands on
+(`Sounds.Hear`): a swing is scheduled and makes no sound on its own frame, a hit returns the thud,
+anything else plays its named sound as before (`SoundIds.ForCombat`, where a swing is now null).
+After the frame's events it starts every cue that is due (`SoundTheDue`), from the swinger's drawn
+feet — or, if the swinger has left the frame, the cell the blow was aimed at. The thud plays from
+the struck. The schedule is a fixed array of 64, one per fighter at most, so nothing allocates and
+the cost is the fighters swinging, never the colony; it is cleared on a world change and at
+teardown. `PawnFigureDirector.OnCombatEvent` draws a `SwingCritical` as a `Swing`, and
+`CombatFeedback.WhereOf` hears it from the swinger.
+
+**The catalogue** (`AudioSetup`): three rows on the Effects bus, placed at the axe's 20–200 m.
+**No cooldown on any of them**: the director's cooldown is per sound, so any cooldown swallows a
+second fighter's blow read in the same frame, which at ×3 in a group fight is most of them. The
+bound is the voice budget, and the priorities say who yields — a whoosh (140) gives its voice to a
+thud (110) or a slice (100). The whoosh gets 6% pitch and 12% level variance on its two takes, the
+thud the axe's 7% and 15% on its one, the slice none: a pitched slice moves its peak off the impact.
+
+**`SwingCritical` was added to `Sim.Contracts/Views.cs` here, ahead of the simulation change that
+publishes it** (another lane). A merge keeps exactly one copy. Until the simulation publishes it,
+nothing slices: every critical is a `Swing` and whooshes.
+
+**Tests.** Fast tier `CombatSoundTimingTests` (17): the whoosh peaks a tenth before the blow and
+never earlier at ×1, ×2 and ×3 and at 60 and 144 frames a second; the slice on the impact; the same
+swing heard three times sooner at ×3; paused nothing starts and nothing is let go, resumed it starts
+on time; a whoosh seen too late is let go and one merely late plays at once; the quickest swing at
+the top speed is still heard clear of the blow; fists and bites silent, critical or not; a sharp
+critical slices and a blunt one whooshes; every landed hit thuds and a miss or a dodge does not; a
+downed, dead or knocked-back swinger loses its sound; a new swing replaces the last; the schedule
+overflows and clears. **Negative controls seen to fail** (each broken alone, then restored): a cue
+played the moment it is seen (10 fail); the speed ignored (7); the pause ignored (1); a sharp
+critical that whooshes (5); fists that whoosh (1); a late whoosh played on the thud (1); a
+knocked-back swinger that keeps its whoosh (1). EditMode `CombatSoundTests` (2) holds the shipped
+rows — placed, Effects, mono, no cooldown, two whooshes, an unpitched slice — and reads each
+imported clip's loudest 10 ms against the constants, to 5 ms. **Red until `AudioSetup.Build` has
+run**, because that writes the rows. `CombatDrawnTests.EveryMomentOfAFightHasItsSoundOrNone` now
+says a swing is null on its frame and names the three cues.
+
+**Never compiled here:** `CombatFeedback.cs`, `SoundIds.cs`, `OdysseyBootstrap.cs`,
+`PawnFigureDirector.Combat.cs`, `AudioSetup.cs`, `CombatSoundTests.cs`, `CombatDrawnTests.cs`. The
+new WAVs have no `.meta` until Unity imports them; the integrator runs
+`Odyssey.EditorTools.AudioSetup.Build` and commits the metas and the rewritten
+`AudioCatalogue.asset`.
+
+**Licence:** all four are Pixabay, under the Pixabay Content License — use in a product without
+attribution, modification allowed, no redistribution on their own — committed with the game as §2i's
+draft is. **The owner to confirm the sources.**
+
+**Open.** Whether 0.1 s is the lead the ear wants at ×1 (it is a number the owner gave, and a
+playtest settles it); whether the thud's lift is enough beside the axe; the misses', downs' and
+deaths' named sounds (`CombatMiss`, `CombatDown`, `CombatDeath`) are still in no catalogue; a swing
+abandoned mid-wind-up by anything but a fall (its target dying, say) still whooshes (or slices), which is
+honest — the arm was already moving.
+
+### 9h. Spawns spread (built 2026-09-24, `claude/combat-spawn`)
+
+**Owner, 2026-09-24:** *"when you spawn a marauder they don't spawn from same tile so quickly — spawn
+on free tiles around if quick succession."* A debug spawn used to land on the walkable cell nearest
+the camera's column, whoever already stood there, so marauders spawned in quick succession stacked
+on one tile. `PawnRegistry.FreeSpawnCell` keeps that cell when nobody stands on it. So the first
+spawn lands exactly where it always did, and `SixMaraudersSentInOneTickStandOnSixTiles` pins that.
+Otherwise it takes the nearest free tile in rings of up to 4 cells round it, in a fixed scan order.
+Each column is tried on the spawn layer, then one up, then one down, the same lift a move order
+uses. The tile must be standable, unoccupied, and reachable from the spawn point, so nobody arrives
+walled into a pocket. It applies to **every kind**, not only marauders, because a shared tile is the
+same fault whoever stands on it.
+
+It is a debug command, so it costs a scan of the pawns per candidate tile and nothing per tick. All
+three `SpawnSpreadTests` fail with the spread withheld. `DebugIntentTests`' fall-down-the-column test
+now aims three columns away from its own colonist, because the column it used was hers and is now
+spread off.
+
+| *"This all needs to be coordinated at the right times for effect"* — four recordings: a critical sword slice, two whooshes, a thud | **Whoosh** on every swing with a weapon, hit or miss, peaking about 0.1 s before the blow; fists and bites silent. **Slice** instead of the whoosh on a sharp weapon's critical, peaking on the impact; a blunt critical keeps the whoosh. **Thud** on every landed hit, fists and bites too, crits under the slice. Placed in the world like the axe. | §9g |
+
+### 9i. The debug menu for testing a fight (built 2026-09-24)
+
+**Owner, 2026-09-24:** *"make the debug menu bigger, make a category for each type of spawn —
+items, enemies ... also include an option to wield every colonist with a random melee weapon."*
+
+- **Wider:** 280 px to 460 px (`.debug` in `Hud.uss`).
+- **The Spawn tab is grouped under headings**, in two columns:
+  - on the left, who: **Colonists** (Spawn colonist, **Arm every colonist**), **Hostiles** (Spawn marauder, **Spawn 3 marauders**), **Animals** (midden hog, duct rat);
+  - on the right, what: **Weapons** (the four) and **Items** (50 wood, stone, meals).
+
+  The Items rows moved here from the Cheats tab, which keeps the clock, the crops, the overlay and
+  the trace. The headings are the Keys tab's `.settings__section`, so nothing is new in the
+  stylesheet but the width.
+- **`DebugDirector.SpawnRow`** gained `Group` and `Repeat`. The table is the fast tier's
+  (`TheSpawnTabIsGroupedUnderNamedHeadings`, `TheNewRowsSendWhatTheySay`), and the shell only lays it
+  out. *Spawn 3 marauders* is one intent sent three times at one column, and the simulation spreads
+  each onto its own tile (§9h).
+- **`IntentKind.DebugArmColonists`** (`PawnRegistry.HandleDebugArmColonists`) gives every colonist
+  who is standing and holds nothing one of the content's melee weapons.
+  - The weapon is rolled on her own stream (`PawnPurpose.DebugArm`), so a seed deals the same arms
+    every time.
+  - It is made beside her and taken straight into her hand, as a marauder is armed at spawn. Being
+    undrafted, it then hangs at her hip (§8b).
+  - A colonist who already holds a weapon keeps it, a downed one and animals are skipped, and a
+    second click arms nobody (`AlreadyInThatState`).
+  - `DebugArmColonistsTests` fail with the handler unregistered.

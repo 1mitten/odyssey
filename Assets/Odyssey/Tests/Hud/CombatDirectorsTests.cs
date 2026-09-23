@@ -102,8 +102,56 @@ namespace Odyssey.Tests.Hud
                 Assert.That(keys, Does.Contain(row.Key), $"{row.Key} is not in DebugDirector.IconKeys");
                 Assert.That(row.Tooltip, Is.Not.Empty, row.Key);
             }
-            Assert.That(DebugDirector.SpawnRows.Length, Is.EqualTo(8), "colonist, two animals, marauder, four weapons");
+            Assert.That(DebugDirector.SpawnRows.Length, Is.EqualTo(13),
+                "colonist, arm-all, marauder, three marauders, two animals, four weapons, three resources");
             Assert.That(DebugDirector.SpawnRows[0].Key, Is.EqualTo(DebugDirector.SpawnPawnKey), "the colonist first");
+        }
+
+        /// <summary>
+        /// The Spawn tab in headed groups (design 33 §9i; owner, 2026-09-24): every row sits under a
+        /// heading the tab draws, every heading has rows under it and a registry name, and the rows
+        /// run in the headings' order so the table reads top to bottom as the tab does.
+        /// </summary>
+        [Test]
+        public void TheSpawnTabIsGroupedUnderNamedHeadings()
+        {
+            var groups = new List<string>(DebugDirector.SpawnGroups);
+            var keys = new HashSet<string>(DebugDirector.IconKeys);
+            int last = -1;
+            foreach (DebugDirector.SpawnRow row in DebugDirector.SpawnRows)
+            {
+                int at = groups.IndexOf(row.Group);
+                Assert.That(at, Is.GreaterThanOrEqualTo(0), $"{row.Key} sits under no heading the tab draws");
+                Assert.That(at, Is.GreaterThanOrEqualTo(last), $"{row.Key} is out of its heading's order");
+                last = at;
+            }
+            foreach (string group in groups)
+            {
+                Assert.That(Registry.Label(group), Is.Not.EqualTo(group), $"{group} is not in the registry");
+                Assert.That(keys, Does.Contain(group));
+                Assert.That(System.Array.Exists(DebugDirector.SpawnRows, r => r.Group == group), Is.True, $"{group} is empty");
+            }
+        }
+
+        [Test]
+        public void TheNewRowsSendWhatTheySay()
+        {
+            DebugDirector.SpawnRow band = RowFor(DebugDirector.SpawnMaraudersKey);
+            Assert.That(band.Kind, Is.EqualTo(IntentKind.SpawnPawn));
+            Assert.That(band.A, Is.EqualTo(PawnKindLabels.Marauder));
+            Assert.That(band.Repeat, Is.EqualTo(3));
+            Assert.That(band.Group, Is.EqualTo(DebugDirector.GroupHostilesKey));
+
+            DebugDirector.SpawnRow arm = RowFor(DebugDirector.ArmColonistsKey);
+            Assert.That(arm.Kind, Is.EqualTo(IntentKind.DebugArmColonists));
+            Assert.That(arm.Group, Is.EqualTo(DebugDirector.GroupColonistsKey));
+
+            DebugDirector.SpawnRow wood = RowFor(DebugDirector.GiveWoodKey);
+            Assert.That(wood.Kind, Is.EqualTo(IntentKind.GiveResource));
+            Assert.That(wood.A, Is.EqualTo(ItemHandle.Wood));
+            Assert.That(wood.B, Is.EqualTo(DebugDirector.GiveAmount));
+            Assert.That(wood.Group, Is.EqualTo(DebugDirector.GroupItemsKey));
+            Assert.That(RowFor(DebugDirector.SpawnBatKey).Repeat, Is.EqualTo(1));
         }
 
         // ---- alerts, the Work tab, the Almanac ------------------------------------------------------

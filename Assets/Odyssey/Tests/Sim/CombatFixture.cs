@@ -105,9 +105,28 @@ namespace Odyssey.Tests.Sim
                 Events.FindAll(e => e.Attacker == attacker.Id && e.Kind == kind);
 
             public List<CombatEventView> Of(CombatEventKind kind) => Events.FindAll(e => e.Kind == kind);
+
+            /// <summary>
+            /// The ticks <paramref name="attacker"/>'s blows reached their impact — a Hit, a Miss or a
+            /// Dodge. Since design 33 §9g a swing is decided when its wind-up begins, so the rules
+            /// below see its first tick; this is its last.
+            /// </summary>
+            public List<int> Landed(Pawn attacker) =>
+                Events.FindAll(e => e.Attacker == attacker.Id
+                        && (e.Kind == CombatEventKind.Hit || e.Kind == CombatEventKind.Miss || e.Kind == CombatEventKind.Dodge))
+                    .ConvertAll(e => e.Tick);
+
+            /// <summary>Every swing <paramref name="attacker"/> began, critical or not (design 33 §9g).</summary>
+            public List<CombatEventView> Swings(Pawn attacker) =>
+                Events.FindAll(e => e.Attacker == attacker.Id
+                    && (e.Kind == CombatEventKind.Swing || e.Kind == CombatEventKind.SwingCritical));
         }
 
-        /// <summary>The shipped rules, writing down every swing they decide: when, who, and what came of it.</summary>
+        /// <summary>
+        /// The shipped rules, writing down every swing they decide: when, who, and what came of it.
+        /// Since design 33 §9g a swing is decided on the tick its wind-up <b>begins</b>, so these are
+        /// swing starts; <see cref="Tape.Landed"/> has the impacts.
+        /// </summary>
         public sealed class RecordingRules : MeleeRules
         {
             public readonly List<(int Tick, int Attacker, int Target, CombatEventKind Result)> Swings =

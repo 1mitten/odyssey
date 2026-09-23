@@ -6,7 +6,8 @@ namespace Odyssey.Sim.Pawns
 {
     /// <summary>
     /// <c>Job_AttackMelee</c> (design 33 §3, §6A): close on the target and swing at it on
-    /// <see cref="Pawn.NextSwingTick"/>. The target is <see cref="Pawn.CombatTarget"/> — set by the
+    /// <see cref="Pawn.NextSwingTick"/>. The blow is decided when its wind-up begins and kept on the
+    /// pawn until it lands (design 33 §9g). The target is <see cref="Pawn.CombatTarget"/> — set by the
     /// order, the hunt, the revenge or the self-defence that started the job, and cleared when it
     /// ends. <b>Lane A's file</b> (<c>docs/plans/combat-contracts.md</c>).
     ///
@@ -68,11 +69,15 @@ namespace Odyssey.Sim.Pawns
         public bool WindupDone(in Armament armament) =>
             ToilIndex == Windup && ToilProgress >= armament.Attack.windupTicks * Rates.Scale;
 
-        /// <summary>The swing in the air landed, or was lost: back to standing ready. Called by the resolver.</summary>
+        /// <summary>
+        /// The swing in the air landed, or was lost: back to standing ready, and the outcome decided
+        /// at its start let go. Called by the resolver.
+        /// </summary>
         public void EndSwing()
         {
             ToilIndex = Approach;
             ToilProgress = 0;
+            Pawn.ClearSwing();
         }
 
         public override JobStatus Tick(PawnContext ctx)
@@ -180,22 +185,37 @@ namespace Odyssey.Sim.Pawns
             return !Melee.Holds(ctx, Pawn, Pawn.Cell);
         }
 
+        /// <summary>
+        /// The wind-up begins, and <b>the blow is decided now</b> (design 33 §9g; owner, 2026-09-23:
+        /// a sharp critical's slice is heard during the swing): hit, dodge, damage, stun, critical
+        /// and knockback, on the rules' own streams at this tick, kept on the pawn
+        /// (<see cref="Pawn.HeldSwing"/>) until the impact applies exactly that. A critical that will
+        /// land is published as <see cref="CombatEventKind.SwingCritical"/> in place of
+        /// <see cref="CombatEventKind.Swing"/>.
+        /// </summary>
         void StartSwing(PawnContext ctx, Pawn target, int tick)
         {
             Armament armament = ctx.WeaponRules.ArmamentOf(Pawn, ctx);
             Pawn.NextSwingTick = tick + armament.Attack.cooldownTicks;
             Pawn.BeginGesture(PawnGesture.Strike);
-            ctx.CombatLog.Report(CombatEventKind.Swing, Pawn.Id, target.Id, ctx.Size.FromIndex(target.Cell), tick,
+            SwingOutcome outcome = ctx.MeleeRules.Resolve(Pawn, target, armament, ctx, tick);
+            Pawn.HoldSwing(outcome);
+            CombatEventKind kind = outcome.Landed && outcome.Critical ? CombatEventKind.SwingCritical : CombatEventKind.Swing;
+            ctx.CombatLog.Report(kind, Pawn.Id, target.Id, ctx.Size.FromIndex(target.Cell), tick,
                 armament.Attack.windupTicks, armament.ItemDef);
             Job.TargetCell = target.Cell;
             ToilIndex = Windup;
             ToilProgress = 0;
         }
 
-        /// <summary>The order, the hunt or the revenge is over: the pawn is nobody's attacker.</summary>
+        /// <summary>
+        /// The order, the hunt or the revenge is over: the pawn is nobody's attacker, and a swing
+        /// still in the air is lost with its decided outcome.
+        /// </summary>
         public override void Cleanup(PawnContext ctx, JobStatus status)
         {
             Pawn.CombatTarget = 0;
+            Pawn.ClearSwing();
         }
     }
 }

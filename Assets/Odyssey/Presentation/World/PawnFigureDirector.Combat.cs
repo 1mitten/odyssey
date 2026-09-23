@@ -32,6 +32,13 @@ namespace Odyssey.Presentation.World
     /// the same terms. The punch and the bite are always computed; a downed pawn with no clip lies
     /// down as a sleeper does.</para>
     ///
+    /// <para><b>A blow taken is a reaction beside the one-shot, not instead of it</b> (design 33
+    /// §9a). The struck body's flinch or stagger runs on its own track
+    /// (<see cref="ReactionTrack"/>), and <see cref="CombatReactions.Arbitrate"/> decides each frame
+    /// whether the layer shows it or the body's own swing; while the swing has the layer, round its
+    /// impact, the computed flinch is laid over it. Lane B refused a react during the body's own
+    /// swing and let the next swing cut one off, which in a fight drew nothing for most blows.</para>
+    ///
     /// <para><b>Per-frame cost scales with the live figures</b> (<c>docs/process.md</c> §3), which
     /// the ceiling holds at 64, plus the corpses being laid down; nothing here walks the board.</para>
     /// </summary>
@@ -129,7 +136,7 @@ namespace Odyssey.Presentation.World
         {
             if (_byPawn.TryGetValue(pawn.Value, out Figure? figure))
             {
-                action = figure.Fight.Action;
+                action = figure.Fight.Shown;
                 clipWeight = figure.Fight.HasLayer ? figure.Fight.Weight : 0f;
                 workWeight = figure.WorkWeight;
                 computed = !figure.Fight.Computed.IsRest || figure.Fight.Lying;
@@ -139,6 +146,31 @@ namespace Odyssey.Presentation.World
             clipWeight = 0f;
             workWeight = 0f;
             computed = false;
+            return false;
+        }
+
+        /// <summary>
+        /// The reaction a pawn's figure is drawing to the last blow it took (design 33 §9a): what it
+        /// is, how far in, whether it is laid over the figure's own swing as the computed flinch
+        /// this frame, and whether the figure is sliding from a knock-back. False for a pawn with no
+        /// figure. Diagnostic — a test asks it.
+        /// </summary>
+        public bool TryGetReaction(PawnId pawn, out HitReaction reaction, out float seconds, out bool overlaid,
+            out bool sliding)
+        {
+            if (_byPawn.TryGetValue(pawn.Value, out Figure? figure))
+            {
+                CombatState fight = figure.Fight;
+                reaction = fight.Reaction.Live ? fight.Reaction.Kind : HitReaction.None;
+                seconds = fight.Reaction.Seconds;
+                overlaid = fight.Overlaid;
+                sliding = fight.Sliding;
+                return true;
+            }
+            reaction = HitReaction.None;
+            seconds = 0f;
+            overlaid = false;
+            sliding = false;
             return false;
         }
 
@@ -225,6 +257,30 @@ namespace Odyssey.Presentation.World
             public float Unplanted;
 
             /// <summary>
+            /// The reaction to the last blow taken (design 33 §9a), beside the one-shot in
+            /// <see cref="Action"/>: a swing and a reaction are live at once, and
+            /// <see cref="CombatReactions.Arbitrate"/> says which has the layer.
+            /// </summary>
+            public ReactionTrack Reaction;
+
+            /// <summary>The pack's hit react or stagger for it, from its side, or null to compute it.</summary>
+            public CombatClipEntry? ReactionClip;
+
+            /// <summary>What the layer shows this frame: a swing's role, a reaction's, a held state's, or none. Diagnostic.</summary>
+            public CombatRole Shown;
+
+            /// <summary>Whether the computed flinch is laid over a swing this frame. Diagnostic.</summary>
+            public bool Overlaid;
+
+            /// <summary>
+            /// A knock-back's slide (design 33 §9a): the from-position's offset from the landing
+            /// position, and seconds into the slide. Drawn only; the pawn is on the landing tile.
+            /// </summary>
+            public bool Sliding;
+            public Vector3 SlideFrom;
+            public float SlideSeconds;
+
+            /// <summary>
             /// The draw and the sheathe's layer (design 33 §8b): input 2 of <see cref="Layer"/>,
             /// masked to the upper body so the legs keep walking, with one clip slot. Absent where
             /// the pack's sheath rows did not resolve, and the weapon then snaps between hip and hand.
@@ -247,6 +303,11 @@ namespace Odyssey.Presentation.World
                 Computed = CombatShape.Rest;
                 Lying = false;
                 Unplanted = 0f;
+                Reaction.Clear();
+                ReactionClip = null;
+                Shown = CombatRole.None;
+                Overlaid = false;
+                Sliding = false;
                 Weight = 0f;
                 if (HasLayer) Layer.SetInputWeight(1, 0f);
             }
@@ -294,30 +355,36 @@ namespace Odyssey.Presentation.World
             switch (combatEvent.Kind)
             {
                 case CombatEventKind.Swing:
+                case CombatEventKind.SwingCritical: // a swing whose blow will be critical: drawn alike (design 33 §9g)
                     if (_byPawn.TryGetValue(combatEvent.Attacker.Value, out Figure? attacker))
                         TimeSwing(attacker, combatEvent);
                     return;
 
+                // Every landed blow flinches; a heavy one, a critical and a stun stagger (design 33
+                // §9a). Which, and whether it ends the struck body's own swing, is the model's.
                 case CombatEventKind.Hit:
+                case CombatEventKind.Critical:
+                case CombatEventKind.Stun:
                     if (_byPawn.TryGetValue(combatEvent.Target.Value, out Figure? struck))
-                        React(struck, combatEvent.Amount >= CombatPose.StaggerDamageMilli
-                            ? CombatRole.Stagger : CombatRole.HitReact, combatEvent.Attacker);
+                        React(struck, CombatReactions.For(combatEvent.Kind, combatEvent.Amount), combatEvent.Attacker,
+                            CombatReactions.CancelsSwing(combatEvent.Kind));
                     return;
 
-                case CombatEventKind.Stun:
-                    if (_byPawn.TryGetValue(combatEvent.Target.Value, out Figure? stunned))
-                        React(stunned, CombatRole.Stagger, combatEvent.Attacker);
+                case CombatEventKind.KnockedBack:
+                    if (_byPawn.TryGetValue(combatEvent.Target.Value, out Figure? knocked))
+                        KnockBack(knocked, combatEvent);
                     return;
 
                 case CombatEventKind.Dodge:
                     if (_byPawn.TryGetValue(combatEvent.Target.Value, out Figure? dodger))
-                        React(dodger, CombatRole.Dodge, combatEvent.Attacker);
+                        Dodge(dodger, combatEvent.Attacker);
                     return;
             }
 
             // Miss draws nothing on either figure: the swing already followed through. Downed and
             // Recovered are drawn off the pawn's own flag, so a figure lent mid-fight shows them
-            // too; Died is the corpse's, and the pawn is already gone from the frame.
+            // too, and so is the knock-down (PawnFlags.KnockedDown); Died is the corpse's, and the
+            // pawn is already gone from the frame.
         }
 
         /// <summary>
@@ -360,8 +427,9 @@ namespace Odyssey.Presentation.World
         {
             CombatState fight = figure.Fight;
             // A swing is the figure's own and nothing interrupts it but going down; nor does a
-            // downed figure begin one.
-            if (fight.Downed || IsHeldPhase(fight.Action)) return;
+            // downed figure begin one. Getting up does give way: the simulation has the pawn on its
+            // feet and swinging while the pack's two-second get-up would still be playing.
+            if (fight.Downed || (IsHeldPhase(fight.Action) && fight.Variant != CombatVariant.End)) return;
 
             CombatRole role = CombatPose.SwingRole(style);
             int steps = role == CombatRole.SwingHeavy ? 2 : 3;
@@ -377,30 +445,90 @@ namespace Odyssey.Presentation.World
         }
 
         /// <summary>
-        /// A blow taken, or dodged. Drawn away from the attacker's side. <b>A react never cuts off
-        /// the figure's own swing</b>, which the simulation will still land on its tick; a stagger
-        /// does, because a stunned attacker's wound-up swing does not land (design 33 §5j).
+        /// A blow taken (design 33 §9a): a flinch or a stagger, from the side it came, on the
+        /// figure's reaction track — <b>whatever the figure is doing</b>. It does not replace the
+        /// figure's own swing, which the simulation will still land on its tick; each frame
+        /// <see cref="CombatReactions.Arbitrate"/> decides which of the two the layer shows. A stun
+        /// does end the swing, because a stunned attacker's wound-up swing does not land (§5j).
+        /// On the ground the held clips draw the body and a blow adds nothing; getting up is cut
+        /// short by one.
         /// </summary>
-        void React(Figure figure, CombatRole role, PawnId attacker)
+        void React(Figure figure, HitReaction reaction, PawnId attacker, bool cancelsSwing)
         {
             CombatState fight = figure.Fight;
-            if (fight.Downed || IsHeldPhase(fight.Action)) return;
-            if (IsSwing(fight.Action) && role != CombatRole.Stagger) return;
+            if (fight.Downed || (IsHeldPhase(fight.Action) && fight.Variant != CombatVariant.End)) return;
+            if (!fight.Reaction.Accepts(reaction)) return;
 
+            BlowSide side = SideOfBlow(figure, attacker);
+            CombatClipEntry? clip = fight.HasLayer ? CombatClip(CombatPose.RoleOf(reaction), CombatPose.VariantOf(side)) : null;
+            float span = clip != null && clip.clip != null ? clip.clip.length : CombatReactions.ComputedSeconds(reaction);
+            if (!fight.Reaction.Take(reaction, (HitSide)side, span, cancelsSwing)) return;
+            fight.ReactionClip = clip;
+
+            // A stun ends the swing; a get-up is cut short; a dodge gives way to the blow that landed.
+            if ((cancelsSwing && IsSwing(fight.Action)) || IsHeldPhase(fight.Action) || fight.Action == CombatRole.Dodge)
+                fight.Action = CombatRole.None;
+        }
+
+        /// <summary>A blow dodged: a step away from it, never cutting off the figure's own swing.</summary>
+        void Dodge(Figure figure, PawnId attacker)
+        {
+            CombatState fight = figure.Fight;
+            if (fight.Downed || IsHeldPhase(fight.Action) || IsSwing(fight.Action)) return;
+
+            BlowSide side = SideOfBlow(figure, attacker);
+            string variant = CombatPose.DodgeVariant(side);
+            fight.Action = CombatRole.Dodge;
+            fight.Side = side;
+            fight.Variant = variant;
+            fight.Clip = !fight.HasLayer ? null : CombatClip(CombatRole.Dodge, variant);
+            fight.Seconds = 0f;
+        }
+
+        /// <summary>Which side of the figure the attacker is on: its figure where it has one, else its cell.</summary>
+        BlowSide SideOfBlow(Figure figure, PawnId attacker)
+        {
             Vector3 from = figure.Transform.position;
             if (_byPawn.TryGetValue(attacker.Value, out Figure? other) && other.Transform != null)
                 from = other.Transform.position;
             else if (_frame != null && _frame.TryGetPawn(attacker, out PawnView them))
                 from = GroundRelief.Lift(CellMetrics.FloorCentre(them.Cell));
+            return CombatPose.SideOf(figure.Transform.forward, from - figure.Transform.position);
+        }
 
-            BlowSide side = CombatPose.SideOf(figure.Transform.forward, from - figure.Transform.position);
-            string variant = role == CombatRole.Dodge ? CombatPose.DodgeVariant(side) : CombatPose.VariantOf(side);
+        /// <summary>
+        /// Knocked back a tile (design 33 §9a, §9b): slid from where the blow found it
+        /// (<see cref="CombatEventView.Amount"/>, a cell index) to where it landed
+        /// (<see cref="CombatEventView.Cell"/>) along the line of the blow, over
+        /// <see cref="KnockbackSlide.Seconds"/>, dropping if it went a layer down. The knock-down
+        /// clip is the flag's (<see cref="PawnFlags.KnockedDown"/>), drawn by the held states. The
+        /// pawn is on the landing tile from the tick of the blow; this is only the drawing, and a
+        /// knock-back from further than a tile and a step is not drawn as one.
+        /// </summary>
+        void KnockBack(Figure figure, in CombatEventView knock)
+        {
+            CombatState fight = figure.Fight;
+            fight.Reaction.Clear();
+            fight.ReactionClip = null;
+            if (_frame == null) return;
 
-            fight.Action = role;
-            fight.Side = side;
-            fight.Variant = variant;
-            fight.Clip = !fight.HasLayer ? null : CombatClip(role, variant);
-            fight.Seconds = 0f;
+            GridSize size = _frame.Size;
+            if (knock.Amount < 0 || knock.Amount >= size.SizeX * size.SizeZ * size.SizeY) return;
+            Vector3 offset = GroundRelief.Lift(CellMetrics.FloorCentre(size.FromIndex(knock.Amount)))
+                             - GroundRelief.Lift(CellMetrics.FloorCentre(knock.Cell));
+            if (new Vector2(offset.x, offset.z).magnitude > CellMetrics.SizeXZ * 1.5f
+                || Mathf.Abs(offset.y) > CellMetrics.SizeY * 1.5f)
+                return;
+
+            fight.SlideFrom = offset;
+            fight.SlideSeconds = 0f;
+            fight.Sliding = true;
+
+            // This frame was posed on the landing tile before its events were read: put it back
+            // where the blow found it, and forget the speed that one-frame jump measured, or the
+            // legs would break into a run under the fall.
+            figure.Transform.position += offset;
+            figure.Speed = 0f;
         }
 
         static bool IsSwing(CombatRole role) =>
@@ -423,15 +551,19 @@ namespace Odyssey.Presentation.World
             // The held states' edges. A figure seeing a pawn for the first time takes it as it is,
             // with no begin: somebody scrolled to a colonist who has been down for an hour, not
             // watched her fall.
-            bool downed = pawn.IsDowned;
+            // Knocked down is on the ground as downed is, and drawn by the same clips (design 33 §9a):
+            // the knock-down's begin, its loop while the flag is up, and its get-up.
+            bool downed = CombatReactions.Floored(pawn.Flags);
             bool stunned = pawn.IsStunned && !downed;
             bool first = !figure.Settled;
             if (downed != fight.Downed)
             {
                 // Going down or getting up ends whatever one-shot was playing: a swing does not
-                // follow through on the ground.
+                // follow through on the ground, nor a flinch.
                 fight.HeldSeconds = 0f;
                 fight.Action = CombatRole.None;
+                fight.Reaction.Clear();
+                fight.ReactionClip = null;
                 if (!first) StartHeldPhase(fight, CombatRole.Downed, downed ? CombatVariant.Begin : CombatVariant.End);
                 fight.Downed = downed;
             }
@@ -439,11 +571,20 @@ namespace Odyssey.Presentation.World
             {
                 fight.HeldSeconds = 0f;
                 // A stun opens with the stagger its blow already started, where there was one.
-                if (!first && !downed && fight.Action != CombatRole.Stagger)
+                if (!first && !downed && !(fight.Reaction.Live && fight.Reaction.Kind == HitReaction.Stagger))
                     StartHeldPhase(fight, CombatRole.Stun, stunned ? CombatVariant.Begin : CombatVariant.End);
                 fight.Stunned = stunned;
             }
             if (downed || stunned) fight.HeldSeconds += dt;
+
+            // The reaction's clock and the slide's, on the frame's seconds like every ease here.
+            fight.Reaction.Step(dt);
+            if (!fight.Reaction.Live) fight.ReactionClip = null;
+            if (fight.Sliding)
+            {
+                fight.SlideSeconds += dt;
+                if (KnockbackSlide.Finished(fight.SlideSeconds)) fight.Sliding = false;
+            }
 
             // The one-shot: advanced, and let go when it is over.
             float clipTime = 0f;
@@ -470,15 +611,36 @@ namespace Odyssey.Presentation.World
                 }
             }
 
-            // What shows. A one-shot first; then the held loop; then nothing.
+            // Who has the layer: the swing or the reaction, when both are live (design 33 §9a).
+            bool swinging = IsSwing(fight.Action);
+            bool reacting = fight.Reaction.Live;
+            float swingPhase = swinging
+                ? CombatPose.Phase(Mathf.Max(0f, _frameTicks - fight.StartTick), fight.Windup)
+                : 0f;
+            ActionShown shown = fight.Reaction.Show(swinging, swingPhase);
+
+            // What shows. The reaction or a one-shot first; then the held loop; then nothing.
             CombatClipEntry? showing = null;
             float showingTime = 0f;
             fight.Computed = CombatShape.Rest;
             fight.Lying = false;
             fight.Unplanted = 0f;
+            fight.Shown = CombatRole.None;
+            fight.Overlaid = false;
 
-            if (fight.Action != CombatRole.None)
+            if (shown == ActionShown.Reaction)
             {
+                fight.Shown = CombatPose.RoleOf(fight.Reaction.Kind);
+                if (fight.ReactionClip != null && fight.HasLayer)
+                {
+                    showing = fight.ReactionClip;
+                    showingTime = fight.Reaction.Seconds;
+                }
+                else fight.Computed = CombatPose.Reaction(fight.Reaction);
+            }
+            else if (fight.Action != CombatRole.None)
+            {
+                fight.Shown = fight.Action;
                 if (fight.Clip != null && fight.HasLayer)
                 {
                     showing = fight.Clip;
@@ -496,8 +658,10 @@ namespace Odyssey.Presentation.World
                 if (fight.Action == CombatRole.Downed && showing != null) fight.Unplanted = 1f;
             }
 
-            if (fight.Action == CombatRole.None || (IsHeldPhase(fight.Action) && showing == null))
+            if (shown != ActionShown.Reaction
+                && (fight.Action == CombatRole.None || (IsHeldPhase(fight.Action) && showing == null)))
             {
+                if (downed || stunned) fight.Shown = downed ? CombatRole.Downed : CombatRole.Stun;
                 if (downed)
                 {
                     CombatClipEntry? loop = fight.HasLayer ? ExactClip(CombatRole.Downed, CombatVariant.Loop) : null;
@@ -518,6 +682,19 @@ namespace Odyssey.Presentation.World
                         showingTime = Mathf.Repeat(fight.HeldSeconds, Mathf.Max(1e-3f, loop.clip!.length));
                     }
                     else fight.Computed = CombatPose.Stunned(fight.HeldSeconds);
+                }
+            }
+
+            // A blow the layer is not showing as a reaction — taken round the figure's own impact,
+            // or outliving the swing it yielded to — is laid on as the computed flinch, over the
+            // swing or the idle, so every landed blow is seen (design 33 §9a).
+            if (reacting)
+            {
+                CombatShape flinch = CombatShape.Of(fight.Reaction.Overlay(shown));
+                if (!flinch.IsRest)
+                {
+                    fight.Overlaid = true;
+                    fight.Computed = fight.Computed.Plus(flinch);
                 }
             }
 
@@ -602,9 +779,19 @@ namespace Odyssey.Presentation.World
         /// </summary>
         Vector3 CombatOffset(Figure figure)
         {
-            CombatShape shape = figure.Fight.Computed;
-            if (shape.IsRest) return Vector3.zero;
-            return Quaternion.Euler(0f, figure.Yaw, 0f) * new Vector3(shape.Side, 0f, shape.Lunge);
+            CombatState fight = figure.Fight;
+            Vector3 offset = Vector3.zero;
+            // A knock-back's slide from where the blow found it (design 33 §9a), in the world's frame.
+            if (fight.Sliding)
+            {
+                KnockbackSlide.Offset(fight.SlideFrom.x, fight.SlideFrom.y, fight.SlideFrom.z, fight.SlideSeconds,
+                    out float x, out float y, out float z);
+                offset = new Vector3(x, y, z);
+            }
+
+            CombatShape shape = fight.Computed;
+            if (shape.IsRest) return offset;
+            return offset + Quaternion.Euler(0f, figure.Yaw, 0f) * new Vector3(shape.Side, 0f, shape.Lunge);
         }
 
         /// <summary>
@@ -637,6 +824,8 @@ namespace Odyssey.Presentation.World
 
             Pitch(figure.Spine, up, shape.Twist);
             Pitch(figure.Spine, right, shape.Spine);
+            // The flinch's snap of the head on top of the chest (design 33 §9a).
+            if (Mathf.Abs(shape.Head) > 1e-3f) Pitch(figure.Head, right, shape.Head);
 
             // An arm hangs down, so a negative pitch carries it forward and up; and it rides the
             // spine, so the spine's own fold is taken back out of it (WorkSwing's convention).

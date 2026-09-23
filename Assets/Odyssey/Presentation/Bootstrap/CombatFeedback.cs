@@ -36,8 +36,16 @@ namespace Odyssey.Presentation.Bootstrap
     /// <see cref="Blood"/> — a no-op until the blood unit fills it. Blood takes every event, on
     /// every layer, as the figures do: a mark on the ground must be there when the player looks.</para>
     ///
+    /// <para><b>And the sound of a blow is timed, not merely played</b> (design 33 §9g). A swing
+    /// with a weapon schedules its whoosh — or, for a sharp weapon's critical, the slice — in
+    /// <see cref="Sounds"/>, and every frame starts whichever are due, heard from the swinger, so
+    /// the whoosh peaks a tenth of a second before the blow and the slice on it
+    /// (<see cref="CombatSoundTiming"/>). The thud plays on the hit's own frame, from the struck.
+    /// Paused, nothing waiting starts; the world changing forgets it all.</para>
+    ///
     /// <para><b>Per-frame cost scales with the events since the last frame</b>, at most the
-    /// published tail of <see cref="CombatEventView.PublishedTail"/>, and never with the colony.</para>
+    /// published tail of <see cref="CombatEventView.PublishedTail"/>, and the swings waiting to be
+    /// heard, at most one per fighter — never with the colony. Nothing allocates.</para>
     /// </summary>
     public sealed class CombatFeedback
     {
@@ -75,13 +83,26 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         public const float PersonWoundHeight = 1.3f, DownedWoundHeight = 0.25f;
 
+        /// <summary>
+        /// The whooshes and slices waiting for their moment (design 33 §9g). Cleared with the
+        /// world; the bootstrap clears it at teardown with the floaters and the blood.
+        /// </summary>
+        public CombatSoundSchedule Sounds { get; } = new CombatSoundSchedule();
+
         /// <summary>Raised once for every event handed on, after it has been routed. For tests and diagnostics.</summary>
         public event Action<CombatEventView>? Handed;
 
         /// <param name="lowestLayer">The lowest layer drawn; a word below it is not floated.</param>
         /// <param name="highestLayer">The highest layer drawn; a word above it is not floated.</param>
+        /// <param name="tickAlpha">How far this frame sits between the last tick run and the next, 0 to 1.</param>
+        /// <param name="nominalTicksPerSecond">
+        /// Ticks a real second at speed one (the bootstrap's <c>ticksPerSecond</c>); the snapshot's
+        /// speed multiplies it. 0 — the default, and every test that does not time sound — starts
+        /// no whoosh or slice at all.
+        /// </param>
         public void Consume(WorldSnapshot snapshot, object? world, PawnFigureDirector? figures, AudioDirector? audio,
-            int lowestLayer = int.MinValue, int highestLayer = int.MaxValue)
+            int lowestLayer = int.MinValue, int highestLayer = int.MaxValue,
+            float tickAlpha = 0f, float nominalTicksPerSecond = 0f)
         {
             var events = snapshot.CombatEvents;
             if (!ReferenceEquals(world, _world))
@@ -91,6 +112,7 @@ namespace Odyssey.Presentation.Bootstrap
                 Handled = 0;
                 Floaters.Clear();
                 Blood.Clear();
+                Sounds.Clear();
                 return;
             }
 
@@ -100,6 +122,31 @@ namespace Odyssey.Presentation.Bootstrap
                 Handle(events[i], snapshot, figures, audio, lowestLayer, highestLayer);
                 _watermark = events[i].Id;
                 Handled++;
+            }
+
+            SoundTheDue(snapshot, figures, audio, tickAlpha, nominalTicksPerSecond);
+        }
+
+        /// <summary>
+        /// Starts every whoosh and slice whose moment has come (design 33 §9g), heard from the
+        /// swinger where the swinger is now — else where the blow was aimed. After the frame's new
+        /// events, so a swing first read late can still start on the frame it is read.
+        /// </summary>
+        void SoundTheDue(WorldSnapshot snapshot, PawnFigureDirector? figures, AudioDirector? audio,
+            float tickAlpha, float nominalTicksPerSecond)
+        {
+            if (Sounds.Count == 0) return;
+
+            double now = snapshot.Tick + (double)Mathf.Clamp01(tickAlpha);
+            float ticksPerSecond = CombatSoundTiming.TicksPerRealSecond(snapshot.GameSpeed, nominalTicksPerSecond);
+            while (Sounds.TryTakeDue(now, ticksPerSecond, out PendingCue due))
+            {
+                string? sound = SoundIds.ForCue(due.Cue);
+                if (sound == null || audio == null) continue;
+
+                var swing = new CombatEventView(0, 0, CombatEventKind.Swing, due.Attacker, default, due.Cell);
+                Vector3 at = WhereOf(swing, snapshot, figures, out float height, out _);
+                audio.PlayOneShot(sound, at + Vector3.up * (height * 0.5f));
             }
         }
 
@@ -112,7 +159,13 @@ namespace Odyssey.Presentation.Bootstrap
             Vector3 at = WhereOf(combatEvent, snapshot, figures, out float height, out int layer);
             Bleed(combatEvent, snapshot, figures, at);
 
-            string? sound = SoundIds.ForCombat(combatEvent.Kind);
+            // The sound of a blow (design 33 §9g): a swing schedules its whoosh or slice against the
+            // impact, and this frame plays only what belongs to it — the thud of a landed hit, or a
+            // moment's own named sound. The attacker's kind decides a natural attack's edge.
+            int attackerKind = combatEvent.Attacker.IsValid && snapshot.TryGetPawn(combatEvent.Attacker, out PawnView swinger)
+                ? swinger.Kind : -1;
+            CombatCue now = Sounds.Hear(combatEvent, BloodSides, attackerKind);
+            string? sound = now != CombatCue.None ? SoundIds.ForCue(now) : SoundIds.ForCombat(combatEvent.Kind);
             if (sound != null) audio?.PlayOneShot(sound, at + Vector3.up * (height * 0.5f));
 
             string text = CombatFeedbackModel.FloatingText(combatEvent);
@@ -204,7 +257,9 @@ namespace Odyssey.Presentation.Bootstrap
         static Vector3 WhereOf(in CombatEventView combatEvent, WorldSnapshot snapshot, PawnFigureDirector? figures,
             out float height, out int layer)
         {
-            PawnId who = combatEvent.Kind == CombatEventKind.Swing ? combatEvent.Attacker : combatEvent.Target;
+            PawnId who = combatEvent.Kind == CombatEventKind.Swing || combatEvent.Kind == CombatEventKind.SwingCritical
+                ? combatEvent.Attacker
+                : combatEvent.Target;
             height = WordLift;
             layer = combatEvent.Cell.Y;
 

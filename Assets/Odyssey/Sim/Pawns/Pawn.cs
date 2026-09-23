@@ -260,12 +260,68 @@ namespace Odyssey.Sim.Pawns
         public bool StunnedAt(int tick) => StunnedUntilTick > tick;
 
         /// <summary>
+        /// Knocked off its feet by a critical blow until this tick (design 33 §9b): lying on the
+        /// tile it was knocked to, doing nothing — no job ticks, no step — and published as
+        /// <see cref="PawnFlags.KnockedDown"/>. Nought when not; the combat pass puts it back to
+        /// nought once past, so a pawn over its fall hashes as it did before. Saved (layout 3) and
+        /// hashed only while set.
+        /// </summary>
+        public int KnockedDownUntilTick { get; internal set; }
+
+        /// <summary>Knocked down right now, at <paramref name="tick"/>.</summary>
+        public bool KnockedDownAt(int tick) => KnockedDownUntilTick > tick;
+
+        // The swing in the air, decided when its wind-up began (design 33 §9g) and applied at its
+        // impact: what the rules rolled, kept here through the wind-up so a save taken mid-swing
+        // lands the same blow. Set only while an attack driver is in its wind-up, cleared when
+        // the swing lands or is lost and when the job ends, so saved (layout 3) and hashed only
+        // while set. The word packs the result, the critical and the knockback, with a bit that
+        // says it is set at all — a miss is a pending swing too.
+        const int SwingSet = 1 << 16, SwingCrit = 1 << 8, SwingKnock = 1 << 9;
+
+        /// <summary>The pending swing's result word: nought when no swing is in the air.</summary>
+        public int PendingSwing { get; internal set; }
+
+        /// <summary>The pending swing's damage in thousandths, multiplier included.</summary>
+        public int PendingDamageMilli { get; internal set; }
+
+        /// <summary>The pending swing's stun in ticks.</summary>
+        public int PendingStunTicks { get; internal set; }
+
+        /// <summary>Is a swing in the air, its outcome already decided?</summary>
+        public bool HasPendingSwing => PendingSwing != 0;
+
+        /// <summary>Keep a decided swing through its wind-up.</summary>
+        internal void HoldSwing(in SwingOutcome outcome)
+        {
+            PendingSwing = SwingSet | (byte)outcome.Result
+                | (outcome.Critical ? SwingCrit : 0) | (outcome.Knockback ? SwingKnock : 0);
+            PendingDamageMilli = outcome.DamageMilli;
+            PendingStunTicks = outcome.StunTicks;
+        }
+
+        /// <summary>The swing in the air, as it was decided; a miss when none is.</summary>
+        public SwingOutcome HeldSwing => PendingSwing == 0
+            ? new SwingOutcome(CombatEventKind.Miss)
+            : new SwingOutcome((CombatEventKind)(PendingSwing & 0xFF), PendingDamageMilli, PendingStunTicks,
+                (PendingSwing & SwingCrit) != 0, (PendingSwing & SwingKnock) != 0);
+
+        /// <summary>The swing landed, was lost, or its job ended.</summary>
+        internal void ClearSwing()
+        {
+            PendingSwing = 0;
+            PendingDamageMilli = 0;
+            PendingStunTicks = 0;
+        }
+
+        /// <summary>
         /// Does this pawn have any combat state to save and hash? False for every pawn in a colony
         /// that has never fought, which is what keeps its save and its hash exactly as they were.
         /// </summary>
         public bool HasCombatState =>
             HpMilli != HpMaxMilli || Downed || NextSwingTick != 0 || StunnedUntilTick != 0
-            || RetaliateAgainst != 0 || EquippedItem != 0 || CombatTarget != 0 || CarriedBy != 0;
+            || RetaliateAgainst != 0 || EquippedItem != 0 || CombatTarget != 0 || CarriedBy != 0
+            || KnockedDownUntilTick != 0 || PendingSwing != 0;
 
         /// <summary>Cell index, layer included. Always layer-aware; there is no 2D form of this.</summary>
         public int Cell { get; set; }
@@ -888,9 +944,13 @@ namespace Odyssey.Sim.Pawns
             // A finishing step (design 33 §2d) is flagged in the same word for the same reason.
             // And the fight's state (design 33 §5), flagged in the same word and walked only while
             // there is any, so a colony that has never fought hashes exactly as before combat.
+            // The knock-down and the swing in the air (design 33 §9b, §9g) have a bit each in it
+            // too, so a pawn with neither hashes as it did before them.
             bool combat = HasCombatState;
+            bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
             hash.Add(Kind | (Leaving ? 1 << 16 : 0) | (Drafted ? 1 << 17 : 0)
-                | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0));
+                | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0)
+                | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0));
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             if (combat)
@@ -904,6 +964,13 @@ namespace Odyssey.Sim.Pawns
                 hash.Add(EquippedItem);
                 hash.Add(CombatTarget);
                 hash.Add(CarriedBy);
+                if (knocked) hash.Add(KnockedDownUntilTick);
+                if (swinging)
+                {
+                    hash.Add(PendingSwing);
+                    hash.Add(PendingDamageMilli);
+                    hash.Add(PendingStunTicks);
+                }
             }
             for (int i = 0; i < Needs.Length; i++) hash.Add(Needs[i]);
             hash.Add(Mood);
