@@ -3,7 +3,14 @@
 **Status: plan, not built.** Written 2026-09-23 on the owner's report — *"the campfire is a block.
 We have campfire assets available using the western frontier synty pack and using an appropriate
 smoke and fire shader."* Nothing here is implemented. It is grounded in what is actually on this
-disk, and section 9 is the ordered work with its gates.
+disk, and section 10 is the ordered work with its gates.
+
+**Two decisions taken by the owner the same day, and both moved the plan.** *"campfire"* settles
+the naming (§9) — `icon-map.csv`'s sheet-03 cell now points at `ui.arch.tool.campfire`, and the
+brazier stays an unbuilt M3 idea with no art. And *"the fire lights the surroundings at night —
+happy to use or create our own shaders if it's problematic"* pulls **light into scope**, where the
+first draft had deferred it, and settles the shader question in favour of writing our own where the
+pack's are awkward. Light is now §8, and it is the section with the good news in it.
 
 Design 28 is the campfire's mechanics — heat, fuel, what it feeds. This is only its look.
 
@@ -166,7 +173,18 @@ smoke that drifts and disperses is much harder as a single card than as particle
 common.** The tie-breaker is not the look, it is this: options A and B produce a screenshot in
 about the same time once the URP render check in section 6 has run, and B is the only one of the two
 that leaves nothing licensed in the player build. The `SyntyInstancingKeepAlive` history says that
-bill is paid late and painfully, and a campfire is not worth re-opening it.
+bill is paid late and painfully, and a campfire is not worth re-opening it. The owner has settled
+the licence half of that directly — *"happy to use or create our own shaders if it's problematic"* —
+so the fallback is not merely available, it is sanctioned.
+
+**One argument against B got weaker when light came into scope, and it is worth being honest about
+that.** The objection to option A was a GameObject per cell. But a light *is* a positional object:
+§8 puts one on every drawn campfire whatever else happens, so the director is keeping a pooled
+per-fire object either way and A's cost in objects is no longer the thing that separates them. What
+still separates them is the **draw calls** — shared emitters submit once for the whole colony where
+per-campfire prefabs submit per campfire — and the licensed Shader Graph, which is the one that has
+already cost this project three passes. B still wins, on narrower ground than the first draft
+claimed.
 
 C is genuinely better on cost and is the *right* answer at "a hundred burning cells", which is where
 this goes the day fire spreads (design 28 §10 lists fire as a deferred seam). It is not the right
@@ -202,7 +220,7 @@ work, because three of them can change the plan.
 | Do the pack's FX prefabs render under URP 17.3 at all? | `e-03` is at **medium** confidence, 58 materials are legacy-shader, and the FX demo scene logs 2 load errors. If they render magenta, option A is dead outright | Drop `FX_Fire_Small_01` and `FX_Smoke_White_Small_01` into the play scene in the editor and look. Fifteen minutes, and it is the gate on everything else |
 | Does `SM_Prop_Campfire_01` at 0.70 read as a campfire or as a toy? | Decides §3, and whether part-exclusion code is needed | Place one in the editor beside a bed and a colonist. A screenshot answers it |
 | What does one fire cost, and what do twenty? | `P10`: a pass priced per thing, invisible to review | `FrameTimeTests` arm with 0, 1 and 20 campfires on the played board, draw calls and ms, **one run** — the frame numbers on this machine are only comparable within a run |
-| Does the flame need a light? | A fire that does not light anything at night is half a fire, and a light per campfire is a real cost | Deferred on purpose — see §8. Ask it of the playtest, not of the code |
+| What do twenty **lit** fires cost? | Forward+ says they should cluster cheaply (§8), but "should" is not a measurement and this is `P10`'s family | The same `FrameTimeTests` arm, with the light on and off, so the light's share is separated from the particles' |
 | Does the player build keep whatever material the fire uses? | Two green tiers say nothing about whether the game runs; this is the exact family `ShaderInclusion`/`InstancingKeepAlive` live in | `scripts/unity.sh build` then `Build/Win64/Odyssey.exe -odyssey-newgame -logFile …`, and **look at a campfire** — a clean log from the main menu proves nothing |
 
 ## 7. The sound is already there
@@ -214,24 +232,87 @@ the audio framework has no other example of yet, so it is its own small unit rat
 and the listener is still on the camera 32–160 m up while the catalogue authors ranges as ground
 distances (`playtest-queue.md`), which this will walk straight into.
 
-## 8. Deliberately not in scope
+## 8. The light
 
-- **Light from the fire.** It is the obvious next thing and it is a different problem: a real-time
-  point light per campfire against a daylight cycle that owns the global ambient, plus
-  `PortraitStudio` which takes over the whole environment for the instant of its render. Worth
-  doing, worth doing on its own, and worth asking the playtest about first.
+Owner, 2026-09-23: *"the fire lights the surroundings at night."* The first draft deferred this as
+"a different problem". Having gone and looked, that was too cautious, and the reason is one line in
+a settings file.
+
+### The finding that makes it affordable
+
+`Assets/Settings/PC_Renderer.asset` has **`m_RenderingMode: 2` — Forward+**.
+
+`PC_RPAsset.asset` carries `m_AdditionalLightsPerObjectLimit: 4`, which reads alarming and is the
+classic Forward-path ceiling: any one renderer lit by at most four local lights, and the symptom
+when you exceed it is lights **popping** in and out per object as the camera moves. In Forward+
+that limit is **not used**. URP 17.3 clusters local lights against the frustum instead, and the
+practical ceiling becomes the per-frame visible-light budget rather than anything per object.
+
+So "a point light on every campfire" is an ordinary thing to do here, not an extravagance. That is
+the single fact that turns this section from a deferral into a unit of work — and it is a fact
+about a committed asset, which means **it can be changed by somebody tuning graphics settings**.
+`27-graphics-settings.md` is the document that now owns a lever that would break this, and a note
+belongs there rather than only here.
+
+### What the light is
+
+One **point light per drawn campfire**, pooled on the same director and retired against the same
+`Drawn` set as everything else in §5. Positional, so unlike the particles it cannot be shared.
+
+- **Shadows off.** This is the decision that keeps it affordable and it should never be quietly
+  reverted. `m_AdditionalLightShadowsSupported: 1` and the additional-light shadow atlas is a
+  single 2048 map. A *point* light's shadow is **six** faces, so ten shadow-casting campfires ask
+  for sixty faces out of one atlas — either tier resolutions collapse to nothing or the atlas
+  thrashes, and every one of those faces re-renders the geometry around it. A campfire is a soft
+  warm pool on the ground, which is what it looks like anyway; it is not a thing that should cast
+  the walls of a hut across the floor.
+- **A flicker, and this is the part that sells it.** A point light at a constant intensity reads as
+  a lamp, not a fire. A small pseudo-random wobble on intensity with a slight warm-to-orange shift
+  is a handful of lines and is the difference between "there is a light here" and "something is
+  burning here". It must be driven off the *presentation* clock and must hold when the game is
+  paused, exactly as the particles do — a fire flickering merrily in a paused game is the same
+  fault `ChipDirector.Running` was written for.
+- **No modulation by time of day.** A fire emits the same at noon as at midnight; what changes is
+  how much it matters, and the daylight cycle already owns that by writing the global ambient. Two
+  systems dimming the same thing is two owners for one rule, and the standing rules in CLAUDE.md
+  are mostly scars from exactly that. The knob is there if the playtest wants it.
+- **Range in metres, against a 2.5 m cell.** "Lights the surroundings" is two to four cells, so
+  something like 6–10 m. Tuned against a screenshot, not guessed at here.
+
+### The two constraints it must respect
+
+**The slice, and this one is a bug waiting to happen.** Hiding a fire on a hidden layer is not
+enough: a light does not know what the slice camera is doing, so a campfire three layers down would
+go on lighting the floor above it from underneath. The light must be **disabled**, not merely the
+flame hidden — and because those are two different operations on the same object it is exactly the
+sort of pair where one gets done and the other does not.
+
+**Portraits, which are safe by geometry rather than by a mask — so keep them that way.**
+`PortraitStudio` renders on a rig at `Underworld = -5000f` with a 6 m far clip, and
+`TakeOverEnvironment` switches off every other **directional** light, because a directional light
+is global. It does *not* switch off point lights, and it does not need to: a finite-range light
+attached to a cell on the board is five kilometres away. The rule that falls out, and the reason to
+write it down, is that **the fire's light must stay attached to a board cell and must never be
+directional** — the day one of those stops being true, portraits start being lit by a campfire and
+the result is cached for the session (`20-avatars.md` §10.7).
+
+## 9. Deliberately not in scope
+
 - **Fuel.** Design 28 records it as a hook; v1 burns steadily and the art should not imply
   otherwise (no dying-down).
 - **Fire as a hazard, spreading, burning buildings.** Design 28 §10's deferred seam. This document
   is about one building's appearance, and building the general case now would be inventing a
   mechanic.
 - **Cooking.** No stove exists in any owned pack; the pot is one row away on the day it does.
-- **The brazier.** `docs/design/28-temperature.md` §13a-iii: the naming registry has two heat
-  sources and the pixel art is mapped to the wrong one. That is an open owner decision and this
-  plan does not depend on which way it goes — but if the answer is "it was always a brazier", the
-  prop choice in §3 should be re-read first.
+- **The brazier — settled, 2026-09-23.** `docs/design/28-temperature.md` §13a-iii found the naming
+  registry holding two heat sources with the pixel art mapped to the wrong one. The owner's answer
+  is *"campfire"*: `icon-map.csv`'s sheet-03 cell (whose own description was always the word
+  "campfire") now points at `ui.arch.tool.campfire`, and `ui.arch.tool.brazier` stays in
+  `icon-keys.csv` as an unbuilt M3 idea with no art — a fuelled, indoor, riskier thing that can
+  have its own cell the day it exists. Nothing in §3 needs re-reading.
+- **Shadows from the fire**, for the reason §8 gives. Not a deferral so much as a decision.
 
-## 9. The work, in order
+## 10. The work, in order
 
 Each unit ends where it can be judged. The first is a gate on the rest and is mostly looking.
 
@@ -241,18 +322,23 @@ Each unit ends where it can be judged. The first is a gate on the rest and is mo
 | **C2** | The prop: one `ModuleEntry` row on `ModuleIds.Campfire`, prefab `SM_Prop_Campfire_01`, `scale` from C1, `baseAtY`. Plus the test that asks whether the art *resolved* | A campfire in the meadow is a ring of logs, and is still a tinted block on a clone with no pack |
 | **C3** | `FireDirector`: the flame, one shared world-space system in the `ChipDirector` mould — material in code, `Warm()`, `Running`, retired against `HighestVisibleLayer` | A built campfire burns, holds still when paused, and vanishes when the slice goes below it |
 | **C4** | The smoke: a second system on the same director, slower, fewer, rising | Smoke reads as a column at the play camera's 48° rather than as a grey smudge |
-| **C5** | Cost: the `FrameTimeTests` arm from §6 at 0, 1 and 20 fires, one run, numbers into this document | Measured, and the draw calls are counted rather than reasoned about |
-| **C6** | The looping sound on `SoundIds.Campfire` | A fire is audible near it and not across the map |
-| **C7** | Player build smoke test, §6's last row | `Odyssey.exe -odyssey-newgame` draws a burning campfire |
+| **C5** | **The light** (§8): a pooled point light per drawn fire, shadows off, flickering, disabled with the slice | A campfire at night throws a warm pool a few cells wide; a fire below the visible slice lights nothing through the floor; a paused game stops the flicker |
+| **C6** | Cost: the `FrameTimeTests` arm from §6 at 0, 1 and 20 fires, **light on and off**, one run, numbers into this document | Measured, the draw calls counted rather than reasoned about, and the light's share separated from the particles' |
+| **C7** | The looping sound on `SoundIds.Campfire` | A fire is audible near it and not across the map |
+| **C8** | Player build smoke test, §6's last row, **at night** | `Odyssey.exe -odyssey-newgame` draws a burning, lighting campfire |
+| **C9** | A note in `27-graphics-settings.md`: the render path is load-bearing for §8 | Somebody tuning graphics settings can see what a Forward+ → Forward change would cost |
 
 **C1 is a hard stop.** It is cheap, it is mostly looking at things, and two of its three answers can
 send §4 a different way. Nothing after it should start before it has been reported.
 
 ---
 
-## 10. What this changes if it lands
+## 11. What this changes if it lands
 
 Nothing in `Odyssey.Sim`. No save format, no state hash, no golden. `Building_Campfire`'s Def,
 its heat, its cost and everything design 28 tuned are untouched — this is entirely
 `Odyssey.Presentation`, one catalogue row, one new director and one test file, which is why it can
 run beside anything else in flight.
+
+The one thing that reaches outside presentation is the naming fix in §9, which is a content change:
+`icon-map.csv` plus a wiki rebuild, both gates green, in the same commit as the rule requires.
