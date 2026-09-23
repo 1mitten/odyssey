@@ -523,10 +523,20 @@ both directions on the same day — 0.005 passed the isolated run and failed the
 
 ### What it is worth, measured on `main` 2026-09-23
 
-| Board | Chunks culled | Frame | Draw calls | `World` |
-|---|---|---|---|---|
-| Standard 120 x 120 x 16 | 33 of 104 (31.7%) | 3.43 -> **2.86 ms** | 1,360 -> 996 | 1.353 -> 0.931 |
-| Huge 240 x 240 x 16 | 317 of 443 (71.6%) | 8.89 -> **3.84 ms** | 5,083 -> 1,744 | 5.613 -> 1.687 |
+| Board | Chunks culled | Frame | Draw calls |
+|---|---|---|---|
+| Standard 120 x 120 x 16 | 33 of 104 (31.7%) | 2.53 -> **2.19 ms** | 1,360 -> 996 |
+| Huge 240 x 240 x 16 | 317 of 443 (71.6%) | 6.63 -> **2.95 ms** | 5,083 -> 1,744 |
+
+> **Re-taken after merging `main`, and the movement is worth reading.** The first measurement on
+> this branch gave Standard 3.43 -> 2.86 and Huge 8.89 -> 3.84, so the *saving* has shrunk — Huge
+> from 5.06 ms to 3.68. Nothing about the cull changed: **the chunk counts and the draw calls are
+> identical to the digit**. What moved is everything else in the frame, because `main` now carries
+> the crowd index and the aspect index (`25-pawn-steering.md` §9, `31-aspect-lookup.md`). A pass
+> that removes a fixed amount of submission is worth proportionally less of a frame the faster the
+> rest of it gets, and quoting the older, larger figure would be quoting a frame that no longer
+> exists. **The deterministic half is the half to compare across runs**; the milliseconds are only
+> comparable within one.
 
 **The saving follows the player's shadow distance and is not a promise on every setting.**
 `ShadowCasterMarginMetres` *is* the shadow distance, because a caster nearer than it may cast into
