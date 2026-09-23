@@ -270,6 +270,13 @@ tests with the quadratic term is smaller than the noise.
 | The pass | What it consults | What it cost | State |
 |---|---|---|---|
 | `PawnPose.Of` crowd sidestep | every other pawn, per posed pawn, per frame | **15.8 ms of a 27.8 ms frame at 384 colonists** in `Actors` alone, 0.02 ms at 64 (2026-09-23, clear machine) | **fixed** — `PawnCrowdIndex`, a 3 m bucket index built once a frame; `docs/design/25-pawn-steering.md` §9 |
+| `WorldSnapshot.TryGetPawnAspect` | every published aspect row, per lookup — and a colonist publishes **57 rows a tick**, so the set is 57 × colonists | **4.59 ms in `Actors` and 6.39 ms in `Figures` at 384 colonists**, hidden underneath the crowd scan until that was fixed | **fixed** — a lazy index built on the first lookup of each frame; `docs/design/31-aspect-lookup.md` |
+
+**And one pass can hold two of them, which is the lesson from the second row.** The crowd scan was
+3.5× the aspect scan, so until it was removed the aspect scan looked like a constant — the bend was
+attributed entirely to the larger term, and the smaller one only became visible, and obviously
+quadratic, once the larger had gone. **After fixing a quadratic, measure the same pass again rather
+than declaring it linear.**
 
 **The tell:** a cost that is flat while the count is small and then bends upward, with **draw
 calls and tick time both flat through the bend**. If neither the submissions nor the simulation
