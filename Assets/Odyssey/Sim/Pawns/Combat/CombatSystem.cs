@@ -25,9 +25,20 @@ namespace Odyssey.Sim.Pawns
     public class CombatSystem : IWorldSystem
     {
         readonly PawnContext _ctx;
+        readonly JobSystem _jobs;
 
-        public CombatSystem(PawnContext ctx) =>
+        /// <param name="jobs">The job pipeline, because going down and dying end a job and start
+        /// another — <c>Job_Downed</c> — and every job starts and ends through the pipeline's one
+        /// funnel (<see cref="JobSystem.StartJob"/>, <see cref="JobSystem.EndJob"/>,
+        /// <c>JobSystem.Interrupt</c>), or a reservation leaks.</param>
+        public CombatSystem(PawnContext ctx, JobSystem jobs)
+        {
             _ctx = ctx ?? throw new System.ArgumentNullException(nameof(ctx));
+            _jobs = jobs ?? throw new System.ArgumentNullException(nameof(jobs));
+        }
+
+        /// <summary>The pipeline the fight starts and ends jobs through.</summary>
+        public JobSystem Jobs => _jobs;
 
         public string Name => "Combat";
 

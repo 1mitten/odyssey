@@ -2,7 +2,8 @@
 
 **Status: C1 (draft and move) built and played 2026-09-23 — the owner's verdict: drafting, T,
 moving onto surfaces, the diamond and the four hours all work; the run (§2h) and the deeper red
-(§2g) came out of that playtest. C2–C7 designed, not built.** The line's plan and
+(§2g) came out of that playtest. C2–C7 designed, not built; their contracts — every handle,
+field and seam — cut on 2026-09-23 (§5), so four lanes can fill them at once.** The line's plan and
 its unit status are `docs/plans/combat.md`. Research: `docs/research/a-10-melee-combat.md` (the
 reference's rules, clean room) and `docs/research/synty-sword-combat.md` (the animation pack).
 Branch `claude/combat-mvp`, worktree `D:\code\odyssey-combat`, based on `claude/wildlife`
@@ -269,7 +270,169 @@ peak: 0.66 s, 58 KB.
   refund.
 - **C7, the gate:** the ten-day run with and without hostiles, benchmark rows, the records.
 
-## 5. Do not undo by tidying
+## 5. Contracts (the Phase 1 step, 2026-09-23)
+
+`docs/plans/combat.md` runs C2–C7 as four parallel lanes, and a lane may only fill a seam; it may
+not edit the shared spine. This section is **exactly what each seam is for**, so a lane can build
+from it alone. The lane-by-lane brief — which files each owns, which tests it writes, which files
+it must not touch — is `docs/plans/combat-contracts.md`. Branch `claude/combat-c2`.
+
+**Nothing here fights.** Every new driver fails on its first tick, every new order is refused
+(`NotPermitted`), every new think node declines. A colony that has never fought saves and hashes
+exactly as it did before combat; the goldens moved once, in this step, for the new handles alone,
+and the colony probe diffs clean (§5h). **From here no lane moves a golden.**
+
+### 5a. Handles, claimed once
+
+Every table below is append-only and a save contract, so all of them were extended in one commit:
+
+| Table | New | Where |
+|---|---|---|
+| `JobHandle` / `JobIndex` / `Jobs.xml` / `BuildDrivers` | 14 `AttackMelee`, 15 `Flee`, 16 `Downed`, 17 `Equip`, 18 `Rescue` | `Catalogue.cs`, `PawnContent.cs`, `PawnRegistry.cs` |
+| `SkillIndex` | 5 `Melee` (`Skill_Melee`), live in the Skills tab | `PawnContent.cs`, `Skills.xml`, `SkillCatalogue` |
+| `WorkHandle` / `WorkTypeIndex` | 5 `Rescue` (`Work_Rescue`), live Work-tab column | `Catalogue.cs`, `WorkTypes.xml`, `WorkCatalogue` |
+| `PawnKindIndex` | 3 `Marauder` (a person, faction `Hostile`) | `Species.xml`, `PawnKindLabels` |
+| `ItemHandle` | 7 bat, 8 crowbar, 9 machete, 10 arc blade (category `Weapons`, stack 1) | `Items.xml`, `ItemLabels`, `ModuleIds` |
+| `IntentKind` | `OrderAttack`, `OrderEquip`, `OrderRescue` — all apply while paused | `Intents.cs` |
+| `PawnGesture` | 4 `Strike` | `Views.cs` |
+| `PawnPurpose` | `MeleeHit`, `MeleeDodge`, `MeleeDamage`, `Revenge`, `Stun` | `PawnContent.cs` |
+| `icon-keys.csv` | `ui.pawn.marauder`, `ui.status.{fighting,fleeing,equipping,rescuing}`, `ui.item.{bat,crowbar,machete,arcblade}`, `ui.combat.{miss,dodge,stunned,health,dead}`, `ui.debug.spawn{marauder,bat,crowbar,machete,arcblade}` | wiki rebuilt |
+
+**The weapon names are ours**: bat, crowbar, machete and *arc blade* for the owner's "sci-fi
+blade". The job words: Fighting, Fleeing, Downed (already in the registry), Equipping, Rescuing.
+
+### 5b. Defs and every number
+
+| Def | Field | Value (owner's, or INVENTED) |
+|---|---|---|
+| `SpeciesDef` | `healthPoints` | person 100, hog 60, rat 15 (owner) |
+| | `deathAtPerMille` | −500 for all three (owner: dead at −50 %) |
+| | `revengePerMille` | hog 700, rat 50 (owner: a hog turns, a rat runs); unread for a person |
+| | `naturalAttack` | hog 6 dmg / 150 ticks / wind-up 30, blunt; rat 2 / 90 / 15, sharp (INVENTED); a person has none |
+| | `meleeSkill` | hog 6, rat 3 (INVENTED); animals have no skills to train |
+| `PawnKindDef` | `faction` | `Colony` (default), `Wild` for both animals, `Hostile` for the marauder |
+| `ItemDef` | `weapon` (an `AttackDef`) | bat 7 / 120 / 30 blunt, stun 200 ‰ 60 ticks, heavy; crowbar 8 / 132 / 36 blunt, stun 250 ‰ 90 ticks, heavy; machete 8 / 96 / 22 sharp, light; arc blade 10 / 114 / 26 sharp, light; 50 points a swing (all inside the owner's 7–10 per 1.6–2.4 s, the split INVENTED) |
+| `BuildingDef` | `maxHitPoints` | wall 300, floor 250, deck plate 150, ladder 80, bed 120, door 160, shelf 100 (INVENTED, C6's to tune) |
+| `CombatDef` (`Combat.xml`) | `hitCurve` | 0 → 500, 10 → 800, 20 → 900 ‰ (owner) |
+| | `dodgeCurve` | 0 → 0, 10 → 100, 20 → 300 ‰, by the **defender's** level (owner) |
+| | `fists` | 4 damage every 120 ticks (owner), wind-up 18, 50 points a swing |
+| | `damageSpreadPerMille` | 200 (±20 %, §3) |
+| | `bedHealPerDay`, `animalHealPerDay` | 20,000 and 12,000 thousandths a day (INVENTED) |
+| | `downedRecoverAtPerMille` | 150 (INVENTED) |
+| | `chaseRepathTicks`, `retaliationTicks`, `revengeTicks`, `fleeCells` | 60, 1,200, 10,000 (the reference's floor), 12 |
+
+`AttackDef` is one shape for a weapon, a natural attack and bare hands: `damage` (whole points),
+`cooldownTicks`, `windupTicks`, `damageKind` (Blunt/Sharp), `stunPerMille`, `stunTicks`,
+`experiencePerSwing` (thousandths of a point), `style` (Fists/Light/Heavy/Bite — the clip family,
+never a clip). `CombatDef.Evaluate` is the curve arithmetic: linear between points, flat past the
+ends, integer.
+
+### 5c. State on the pawn, saved and hashed only while set
+
+`Pawn` gained `HpMilli` (full at spawn: the pool × 1,000), `Downed`, `NextSwingTick`,
+`StunnedUntilTick`, `RetaliateAgainst` / `RetaliateUntilTick`, `EquippedItem` (a `ThingId` value, 0
+for bare hands), `CombatTarget` (the `PawnId` an order attacks or rescues — on the pawn because a
+field on the job record would be a save-format bump) and `CarriedBy`. Derived: `HpMaxMilli`,
+`DeathAtMilli`, `Faction`, `IsHostile`, `IsColonist`, `StunnedAt(tick)` and `HasCombatState`.
+
+- **`CombatSection` layout 2** writes C1's four fields and then these eight, only for a pawn with
+  `Drafted`, a finishing step or `HasCombatState`. Layout 1 still loads, its pawns whole.
+- **Hashed as a block behind bit 19 of the kind word**, and only while `HasCombatState`.
+- **`Pawn.Kind`'s setter keeps a whole pawn whole.** The loader builds every pawn as a colonist
+  (pool 100) and only then reads its kind; a reloaded hog carried 100 of 60 hit points, which is
+  combat state, and every round trip of a board with an animal disagreed with itself.
+  `AnAnimalReloadedIsWhole` failed with the setter withheld (measured).
+- **`Pawn.NeedsTick`** = a colonist who is not downed. A marauder has no needs (it is spawned to
+  fight, and a raider that went for the pantry would be a second design); a downed pawn's needs
+  pause (the C2 default). `NeedsSystem` asks it and nothing else.
+- **A marauder is nobody's to draft**: `SetDrafted` and `OrderMove` ask `IsColonist`, and a downed
+  colonist cannot be drafted.
+
+### 5d. What presentation reads
+
+- **`PawnView.Flags`**, a trailing byte: `Person`, `Hostile`, `Drafted`, `Downed`, `Stunned`,
+  `Carried`, with `IsPerson` / `IsAnimal` / `IsColonist` and the rest as helpers. The six places that
+  read "kind ≠ 0 means animal" read the flags now (`OrderModel`, `RosterModel`, `AnimalsModel`,
+  `InspectModel` through `PawnKindLabels.IsAnimal(view)`, `PawnFigureDirector`, `ChunkRenderer`,
+  `SelectionPresenter`, `OdysseyBootstrap`, `PawnPose` twice). A view built by hand without flags
+  reads its kind the old way, so no existing test changed.
+- **`CombatEventView`** (`WorldSnapshot.CombatEvents`): a ring of the last 32 moments —
+  `Swing` (amount = wind-up ticks), `Hit` (amount = damage in thousandths), `Miss`, `Dodge`, `Stun`
+  (ticks), `Downed`, `Died`, `Recovered` — with attacker, target, cell and weapon. **Never saved,
+  never hashed; ids are per world instance**, so a reader resets its watermark when the world
+  changes. Written only through `CombatLog.Report`.
+- **`CorpseView`** (`WorldSnapshot.Corpses`): id, the dead pawn's id, kind, roll seed, cell, tick,
+  facing (eight ways) and its person and hostile flags — enough to draw the same face and name it.
+- **Aspects**, sparse: `odyssey.pawn.hp` and `odyssey.pawn.hp.max` (thousandths, while hurt, downed
+  or drafted — animals too), `odyssey.pawn.weapon` (item def, while armed), `odyssey.pawn.order.target`
+  (pawn id, while under orders). Minted in `CombatAspects` (moved out of `Draft.cs`), copied as
+  literals in `Hud.CombatAspectNames`, held together by a test on each side. A building target
+  rides the existing `odyssey.pawn.order.cell`.
+- **`PawnGesture.Strike`** on the existing serial, reported when a swing's wind-up starts.
+
+### 5e. Seams in the simulation
+
+| Seam | For | Owner |
+|---|---|---|
+| `IMeleeRules` / `MeleeRules` | melee level, hit and dodge chance, `Resolve` a swing (hit → dodge → damage in the spread → stun), deciding and never applying. `Resolve` throws until written | lane A |
+| `IWeaponRules` / `WeaponRules` | `ArmamentOf(pawn)` — equipped weapon, else natural attack, else fists (the last two already true); `CanEquip` (no until written) | lane D |
+| `CombatSystem` | Pawns phase, order 25 (after jobs, before movement), holding the context and the job pipeline; resolves swings on their wind-up tick, applies damage, stun, downing, deferred death, healing, retaliation expiry. Empty tick | lane A |
+| `CombatHooks` / `ICombatListener` | `DamageApplied`, `Downed`, `Died`, raised by `CombatSystem` only, listeners called in registration order | raised by A; heard by C3 (drop on death), C4, C5 |
+| `CombatListeners.Register` | the one place listeners are added, called by the composition; empty | lane D in Phase 2, then C4 and C5 in turn |
+| `CombatLog` | the event ring; `Report(...)` | written by A (and D, C6), read by B |
+| `CorpseRegistry` (`odyssey.corpses`) | `Add(pawn, tick, facing)` → id; saved, hashed while non-empty, published | A decides when |
+| `EdificeDamage` (`odyssey.edificedamage`) | sorted sparse hit points by cell: `TryGet`, `Set`, `Clear` | C6 |
+| Think nodes | `DownedThinkNode` first in all three trees; `SelfDefenceThinkNode` between the draft and the needs; `HostileThinkNode` in the new hostile tree (Downed, Hostile, Idle); `AnimalCombatThinkNode` ahead of the animal's idle | lane A |
+| Drivers | `AttackMeleeJobDriver`, `FleeJobDriver`, `DownedJobDriver` (A); `EquipJobDriver` (D); `RescueJobDriver` (C4) — each in its own file | as named |
+| Order handlers | `JobSystem.Attack.cs` (A), `JobSystem.Equip.cs` (D), `JobSystem.Rescue.cs` (C4), partial files, registered in `ColonyComposition` | as named |
+| `RescueWorkGiver` | `Work_Rescue`'s emergency giver, answers no | C4 |
+| `Draft.cs` | the hold's adjacent auto-attack goes in `DraftHoldJobDriver` | lane A |
+
+`PawnContext` carries `MeleeRules`, `WeaponRules`, `CombatHooks`, `CombatLog`, `Corpses`,
+`EdificeDamage` and `Combat`, built in its constructor (the rules settable) so a bare fixture has
+them. The composition registers the corpse registry and the damage store as hashables and the
+corpse registry and the log as snapshot contributors; `ColonyWorld.SaveComponents` appends the two
+sections after `odyssey.combat`.
+
+### 5f. Seams in presentation and the interface
+
+| Seam | For | Owner |
+|---|---|---|
+| `PawnFigureDirector.Combat.cs` | a partial with `OnCombatEvent(in CombatEventView)`: swings off `Strike`, reactions, downed and stunned loops off the flags | lane B |
+| `CombatPose.cs` | the computed fallback for every role, and the punch and bite the pack lacks | lane B |
+| `CorpseDirector` | built, synced after the doors and disposed with them by the bootstrap; draws every corpse | lane B |
+| `CombatFeedback` | the one reader of `CombatEvents`; the watermark rule is written; `Handle` calls nothing | lane B |
+| `ModuleIds.Combat*` | nine clip rows by role — light and heavy swing, hit react, stagger, dodge, stun, downed, death, death pose — and four weapon item ids | lane B fills the catalogue |
+| `CombatFeedbackModel` | `HealthBar`, `FloatingText`, `FloatingColour`, `HostileMarker`: fixed signatures, each answering "draw nothing" | lane C writes; lane B calls |
+| `CombatOrders.Route` | the right-click's fight half, called first by `OrderModel.RightClick`; claims nothing yet | lane C |
+| `HudDirectors.ChooseCorpse(corpseId, snapshot)` | the click on a corpse: lane B's hit-test calls it, lane C selects the corpse and gives the pane its subject; answers false | lane C writes; lane B calls |
+| `HudShell.Combat.cs` | the Health tab's body (build, forget, show, sync — all called by `HudShell.Inspect`), the corpse pane, the Spawn rows | lane C |
+| Health tab | enabled in `InspectModel`, empty | lane C |
+
+### 5g. Why the rules are two interfaces
+
+Lane A (the fight) and lane D (weapons) both need "the rules". One `ICombatRules` would be one file
+both edit. So what a pawn **holds** (`IWeaponRules`, never rolls) is split from what a swing **does**
+(`IMeleeRules`, never asks where the armament came from), and `Armament` is the one value between
+them. Lane A fights with fists and teeth — already correct — while lane D teaches the lookup about
+the hand.
+
+### 5h. The goldens, once
+
+All six moved, because the hash sees more zeros: ten job counters, a sixth skill, passion and daily
+slot, a sixth priority, four allow-list slots. Nothing new is hashed while unset. `GoldenColonyProbe`
+was widened to print mood, step progress, the first five skills' experience and passions, jobs
+started and failed and each of the first fourteen job defs' counts, and run on `origin/main`
+(33525521) and on this branch: **the outputs diff clean for all three colonies.** Recorded in
+`Golden.cs` and the journal.
+
+### 5i. Recorded, not fixed
+
+`PawnPurpose.AnimalMind` is `0x165667B1`, the same value as `DeconstructRefund`. It predates combat;
+changing either moves a golden, and the two streams are keyed differently. Noted beside the new
+salts.
+
+## 6. Do not undo by tidying
 
 - **The Drafted node must stay above `CriticalNeeds`.** Moved below it, a drafted colonist wanders
   off to eat, and the draft means nothing.
@@ -278,6 +441,10 @@ peak: 0.66 s, 58 KB.
 - **An order is a forced job, not a new queue.** A second path into `StartJob` is a second path out
   of it, and a second path out is where a reservation leak comes from. That is the argument
   `HandleForceJob` was written on.
+- **Combat state is hashed only while set** (§5c), and the corpse registry and the damage store
+  contribute nothing while empty. That is what lets every combat lane assert the goldens unchanged.
+- **`PawnView.Flags`, never the kind, says what a pawn is.** A marauder is kind 3 and a person.
+- **`Pawn.Kind`'s setter re-fills a whole pawn's hit points.** Without it a reloaded animal is hurt.
 - **`JobSystem.Load` accepts a save with fewer job defs than the build.** The job table is
   append-only, so the missing ones are the new ones, and their counters start at zero. It used to
   refuse any difference, which would have made every save from before C1 unloadable.

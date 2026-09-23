@@ -153,8 +153,11 @@ namespace Odyssey.Sim.Pawns
                 // doors, so the job drivers reach it through ctx.Combat.
                 .AddSystem(_ =>
                 {
-                    var combat = new CombatSystem(pawns);
+                    var combat = new CombatSystem(pawns, pipeline);
                     pawns.Combat = combat;
+                    // Whoever listens to the fight's hooks (design 33 §5), registered in one fixed
+                    // order in one lane-owned file so a lane adding a listener edits no spine.
+                    CombatListeners.Register(pawns, pipeline);
                     return combat;
                 })
                 .AddSystem(_ => new MovementSystem(pawns))

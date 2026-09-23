@@ -10945,3 +10945,45 @@ drafted colonist should run. That was the first reason to run the game has had s
 rate, `Pawn.UrgencyPerMille`: 2,000 while drafted and 1,000 otherwise. It needs no animation work,
 because the gait blend already draws the run clip in above 2 m/s. No golden moved, since nobody in
 a golden window is drafted. The second ask was a deeper, translucent red for the draft's marks.
+
+## 2026-09-23 — Combat: the contracts, cut once so four lanes can build at once
+
+The owner said "run the combat workflow", and this is its Phase 1: the one step that edits the
+shared spine, so that the four lanes after it (the fight in the simulation, the fight drawn, the
+interface, the weapons) only fill seams. Every handle the line needs was appended in one commit —
+five jobs, the melee skill, the rescue work type, the marauder, the four weapons, three orders — with
+every number from the owner's table in XML, and nothing yet fights. `docs/design/33-combat.md` §5
+says what each seam is for, and `docs/plans/combat-contracts.md` says who owns which file.
+
+**The shape that made it possible is a rule C1 had already set: combat state is hashed only while
+it is set.** Eight fields on the pawn, the corpse registry and the struck-building store all
+contribute nothing to a colony that has never fought, so the goldens moved once, here, for the new
+handles alone — ten job counters, a sixth skill, a sixth priority and four allow-list slots, all
+zeros — and every lane after this can assert them unchanged. The colony probe says so: widened to
+print mood, step progress, the first five skills' experience and passions and the per-job counts,
+it diffs clean against `origin/main` for all three golden colonies.
+
+**One bug came out of the contracts themselves, and it is the kind that only a round trip finds.**
+A pawn's hit points are full at spawn, and "full" depends on the species. The loader builds every
+pawn as a colonist — pool 100 — and only then reads that it is a hog, whose pool is 60. So a reloaded
+hog carried 100 of 60 hit points; that is combat state, which is saved and hashed, and every board
+with an animal on it would have disagreed with itself across a save. `Pawn.Kind`'s setter now keeps
+a whole pawn whole when its kind changes. `AnAnimalReloadedIsWhole` failed with the setter withheld
+(100,000 against 60,000), which is the control.
+
+**The plan's table had one seam in the wrong place.** "One `ICombatRules`" would have been one file
+that the fight and the weapons both edit, so it is two interfaces: what a pawn *holds*
+(`IWeaponRules`, which never rolls) and what a swing *does* (`IMeleeRules`, which never asks where
+the armament came from), with one value, `Armament`, between them. The fight lane can fight with
+fists and teeth from day one, because that is already the whole truth of a colony with no weapons.
+Two smaller moves: the stun is rolled where every other roll is, in the fight's lane; and the debug
+Spawn rows went to the interface lane, because `GiveResource` already places any item.
+
+**The kind was carrying a meaning it could not hold.** Six places in the interface and the renderer
+read "kind is not 0" as "an animal". A marauder is kind 3 and a person. `PawnView` now carries a
+flags byte — person, hostile, drafted, downed, stunned, carried — and every one of those places asks
+it. A view built by hand without flags still reads its kind the old way, so no existing test had to
+change for it.
+
+Recorded rather than fixed: `PawnPurpose.AnimalMind` and `DeconstructRefund` share a salt. It
+predates combat, and fixing it moves a golden.

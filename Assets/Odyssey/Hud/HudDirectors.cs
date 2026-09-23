@@ -116,6 +116,16 @@ namespace Odyssey.Hud
             return true;
         }
 
+        /// <summary>
+        /// A corpse was clicked (design 33 §1: clickable as "Corpse of X"). The seam between the
+        /// two combat lanes that meet here (design 33 §5): lane B's hit-test finds the corpse under
+        /// the pointer (<c>CorpseDirector</c>) and calls this; lane C selects it and gives the pane
+        /// its corpse subject. <b>Answers false until lane C writes it</b>, so a click on a corpse
+        /// falls through to whatever is under it, as it does today.
+        /// </summary>
+        /// <param name="corpseId">A <see cref="CorpseView.Id"/>, never a pawn id: the pawn is gone.</param>
+        public bool ChooseCorpse(int corpseId, WorldSnapshot snapshot) => false;
+
         /// <summary>Once per interface frame, before anything reads the selection.</summary>
         public void Refresh(WorldSnapshot snapshot) => Selection.Refresh(snapshot);
     }

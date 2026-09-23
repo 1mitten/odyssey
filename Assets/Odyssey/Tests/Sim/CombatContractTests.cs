@@ -195,6 +195,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(combat.Order, Is.GreaterThan(colony.Jobs.Order));
             Assert.That(combat.Order, Is.LessThan(new MovementSystem(colony.Pawns).Order));
             Assert.That(colony.World.Systems.PawnSystems, Has.Member(combat));
+            Assert.That(combat.Jobs, Is.SameAs(colony.Jobs), "a fight starts and ends jobs through the colony's own pipeline");
         }
 
         [Test]

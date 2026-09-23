@@ -1,0 +1,20 @@
+#nullable enable
+
+namespace Odyssey.Sim.Pawns
+{
+    /// <summary>
+    /// Who hears the fight's hooks (<see cref="CombatHooks"/>), registered once per colony by
+    /// <c>ColonyComposition</c>, in the order written here — which is the order they are called in.
+    ///
+    /// <para><b>One file, so a lane adding a listener edits no spine.</b> In Phase 2 of
+    /// <c>docs/plans/combat.md</c> this is <b>lane D's</b> (drop the weapon on a death); in Phase 4
+    /// the C4 and C5 lanes append theirs after it, one at a time, in that order
+    /// (<c>docs/plans/combat-contracts.md</c>). Empty from the contracts step.</para>
+    /// </summary>
+    public static class CombatListeners
+    {
+        public static void Register(PawnContext ctx, JobSystem jobs)
+        {
+        }
+    }
+}

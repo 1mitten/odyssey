@@ -59,8 +59,14 @@ single-threaded:
 
 ### The plan: four phases, at most four agents at once
 
-**Phase 1 — contracts (one agent, sequential, about a unit's work).** This is the only phase that
-edits the spine for everyone. It delivers:
+**Phase 1 — contracts (one agent, sequential, about a unit's work).** **Done 2026-09-23 on
+`claude/combat-c2`**: what each seam is for is `docs/design/33-combat.md` §5, and the lane-by-lane
+brief — files owned, seams to fill, tests to add, files not to touch — is
+`docs/plans/combat-contracts.md`. Two refinements of the table below came out of cutting the seams:
+lane D's "stun from blunt" is rolled and applied by lane A from the armament lane D supplies, and the
+debug Spawn rows (the marauder and the four weapons) are lane C's, because they are interface and
+`GiveResource` already places any item. This is the only phase that edits the spine for everyone.
+It delivers:
 
 - **Every handle the line needs, appended once.** No behaviour yet; stub drivers return `Failed`.
   - Jobs: `AttackMelee`, `Flee`, `Downed`, `Equip`, `Rescue`.
