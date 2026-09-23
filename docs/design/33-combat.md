@@ -1089,3 +1089,15 @@ a load never plays. `CorpseDirector` reads it off the frame before — one flag 
 **`RegistryTests` polices six namespaces, case-sensitively, and still does.** Extending it to
 `ui.pawn.*` would have missed the pane's lower-cased words and caught a GameObject named "Corpse"
 and a USS class "colonist". The new test reads `InspectModel.cs` alone, ignoring case.
+
+## 7. The C2+C3 playtest, and the round after it (2026-09-23)
+
+**The owner's verdict:** *"It's mostly pretty decent."* Four asks came back, and a second interview
+settled each one. They are built on `claude/combat-c2-polish` from `50ced466`.
+
+| Ask | Decision (owner) | Section |
+|---|---|---|
+| *"When picking up the weapon it wasn't clear"* | **A context menu on things.** Right-click a weapon opens a small menu at the pointer: *Equip <weapon>* and *Cancel*. It is the forced-order menu `15-building.md` §8 reserved the gesture for, and later *Rescue*, *Build this now* and the like join it on their own targets. Right-click on bare ground stays an instant move, with no menu. Once ordered, the colonist shows the order line to the weapon, and *Equipping* on the activity line. | §7a |
+| *"When I right click to attack an enemy it wasn't clear"* | **Right-clicking an enemy attacks at once, with a lock-on ring.** An enemy has one sensible order, so it takes one click, and the menu is for things with several. A translucent red ring appears at 1.6× the target's footprint and snaps onto its feet in about 0.2 s (ease-out). It flashes once as it lands, then stays as a faint ring under the target while the attack order holds. It fades when the target goes down or dies, or the order changes. | §7b |
+| *"2 colonists attacking within the same tile ... should position themselves side by side"* | **Each takes the nearest free side.** Every attacker claims a different cell next to the target, the free one nearest to it, so two arriving from the west stand side by side on the west flank. If all eight cells are taken, the extra waits one ring back. No two attackers ever share a tile. | §7c |
+| *"We also need a blood effect ... even better blood splatter"* | **The seam is cut now; blood is built as the next unit.** Every landed hit spurts, scaled: sharp hits (machete, arc blade, bites) spurt more and leave a splatter, blunt hits (bat, crowbar, fists) a smaller puff and a smaller mark. Misses and dodges draw nothing. Downs and deaths leave a pool under the body. Ground marks fade over about one in-game day, capped (around 200, oldest first). They are **presentation only**: not saved, not simulated, nothing to clean. | §7d |
