@@ -187,6 +187,52 @@ namespace Odyssey.Presentation.World
         public CombatClipEntry? SheathClipOf(PawnId pawn) =>
             _byPawn.TryGetValue(pawn.Value, out Figure? figure) ? figure.SheathClip : null;
 
+        /// <summary>
+        /// How a pawn's sheathed weapon sits against its body as drawn this frame (design 33 §9c):
+        /// false when the figure has no weapon at the hip. Bakes the skin; a diagnostic, never a
+        /// per-frame call.
+        /// </summary>
+        public bool TryMeasureSheath(PawnId pawn, out SheathGap gap)
+        {
+            gap = default;
+            if (!_byPawn.TryGetValue(pawn.Value, out Figure? figure) || figure.Weapon == null || !figure.WeaponAtHip
+                || !TryGaugeBones(figure, out SheathGauge.Bones bones))
+                return false;
+            float height = figure.StandingHeight > 0.01f ? figure.StandingHeight : FigureBuild.FallbackHeight;
+            gap = SheathGauge.Measure(figure.Skins, bones, figure.Weapon.transform, Vector3.up,
+                figure.LeftUpperLeg!.position.y, figure.Pelvis!.position.y, height);
+            return true;
+        }
+
+        /// <summary>The bones a body's skin is split into arms and the rest by, as the figure stands now.</summary>
+        static bool TryGaugeBones(Figure figure, out SheathGauge.Bones bones)
+        {
+            bones = default;
+            if (figure.Pelvis == null || figure.LeftUpperLeg == null || figure.LeftLowerLeg == null) return false;
+            Vector3 Of(Transform? bone, Vector3 fallback) => bone != null ? bone.position : fallback;
+            Vector3 pelvis = figure.Pelvis.position;
+            Vector3 spine = Of(figure.Spine, pelvis + figure.Transform.up * 0.2f);
+            bones = new SheathGauge.Bones
+            {
+                LeftThigh = figure.LeftUpperLeg.position,
+                LeftKnee = figure.LeftLowerLeg.position,
+                LeftFoot = Of(figure.LeftFoot, figure.LeftLowerLeg.position),
+                RightThigh = Of(figure.RightUpperLeg, figure.LeftUpperLeg.position),
+                RightKnee = Of(figure.RightLowerLeg, figure.LeftLowerLeg.position),
+                RightFoot = Of(figure.RightFoot, Of(figure.LeftFoot, figure.LeftLowerLeg.position)),
+                Pelvis = pelvis,
+                Spine = spine,
+                Chest = Of(figure.Chest, spine),
+                LeftShoulder = Of(figure.LeftUpperArm, spine),
+                LeftElbow = Of(figure.LeftLowerArm, Of(figure.LeftUpperArm, spine)),
+                LeftWrist = Of(figure.LeftHand, Of(figure.LeftLowerArm, Of(figure.LeftUpperArm, spine))),
+                RightShoulder = Of(figure.RightUpperArm, spine),
+                RightElbow = Of(figure.RightLowerArm, Of(figure.RightUpperArm, spine)),
+                RightWrist = Of(figure.RightHand, Of(figure.RightLowerArm, Of(figure.RightUpperArm, spine))),
+            };
+            return true;
+        }
+
         // ---- Bind: the stow point, and the clips' moments ------------------------------------------
 
         /// <summary>
