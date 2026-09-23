@@ -118,6 +118,11 @@ ui.combat.dodge,Dodge,ui.combat,CB,A swing the target stepped out of
 ui.combat.stunned,Stunned,ui.combat,CB,"Knocked senseless by a blunt blow, for a moment"
 ui.combat.health,Health,ui.combat,CB,"Hit points left, out of the whole"
 ui.combat.dead,Dead,ui.combat,CB,"Gone. Lies where it fell"
+ui.combat.unhurt,Unhurt,ui.combat,CB,Not a mark on them
+ui.combat.hurt,Hurt,ui.combat,CB,"Wounded. A colonist heals only in a bed"
+ui.combat.condition,Condition,ui.combat,CB,"Standing, hurt, stunned or down"
+ui.combat.weapon,Weapon,ui.combat,CB,What is in the hand
+ui.combat.barehands,Bare hands,ui.combat,CB,No weapon held: fists
 ui.work.firefighting,Firefighting,ui.work,M7,Put out fires. Always first
 ui.work.patient,Patient,ui.work,M7,Accept treatment when hurt
 ui.work.bedrest,Bed rest,ui.work,M7,Stay in bed while recovering

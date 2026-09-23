@@ -17,6 +17,13 @@ namespace Odyssey.Hud
     public static class PawnKindLabels
     {
         public const string Colonist = "ui.pawn.colonist";
+
+        /// <summary>
+        /// The kind indices, parallel to the simulation's <c>PawnKindIndex</c> (which this assembly
+        /// cannot see) as <see cref="IconKeys"/> is. What the debug Spawn tab sends
+        /// (<see cref="DebugDirector.SpawnRows"/>); the icon table's order is what a test holds.
+        /// </summary>
+        public const int ColonistKind = 0, MiddenHogKind = 1, DuctRatKind = 2, Marauder = 3;
         const string Animal = "ui.pawn.animal";
 
         public static readonly string[] IconKeys =

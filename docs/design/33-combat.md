@@ -791,3 +791,61 @@ to make false; it now asserts the machete. Nothing else in the file moved.
   board, and no animal is armed), but a marauder that flees off the edge would. The fix is one line
   in `PawnRegistry.Despawn` (put the hand down, as it already releases beds), which is spine.
 - `Job_Equip` has no status word wired in the interface yet (`ui.status.equipping` exists); lane C.
+
+### 6C. Lane C — the interface
+
+Built 2026-09-23 on `claude/combat-hud` (from `229b00a0`). Everything below is in `Odyssey.Hud`
+and runs in the fast tier except the two Presentation files, which **have never been compiled**
+(`HudShell.Combat.cs`, `HudShell.Debug.cs`).
+
+**The right-click** (`CombatOrders.Route`, `CombatOrdersTests`). A pawn under the pointer wins over
+the cell it stands in. An animal or a hostile is attacked by every selected drafted colonist, a
+downed one included (a marauder stays down until killed). Ctrl on a colonist is an attack by every
+selected drafted colonist but her — and **Ctrl wins over the rescue**, being the one gesture that
+says "hit this one of ours" outright. A downed colonist is rescued by the **nearest** selected
+drafted colonist only (*our call*: one body, one carrier; sending all of them is a walk the
+reservation would refuse at the end of). A weapon in the clicked cell **or the one above it** (the
+rule a left click selects a pile by) is fetched by the first colonist in the selection, drafted or
+not. Everything else is the move, a floored or walled cell included. A downed, hostile or animal
+pawn in a stale selection is never an attacker.
+
+**A missed seam: the presenter's gate.** `SelectionPresenter.Order` (lane B's file) returns before
+the hit-test unless `OrderModel.AnyDrafted`, so an equip for an undrafted colonist never reaches
+the model. `OrderModel.HearsRightClick` (any colonist, drafted or not) is the gate it needs; the
+one-line change in the presenter is the integrator's. Until it is made, equipping needs a draft.
+
+**What the fight says** (`CombatFeedbackModel`, `CombatFeedbackModelTests`). A bar is owed exactly
+where the simulation publishes `hp` (hurt, downed or drafted), clamped to 0..pool, never without a
+pool. Floating words: Miss, Dodge, Stunned, Downed, Dead from the registry, and a hit as "-7" —
+the nearest whole point, never "-0", from a table built once so a brawl allocates nothing. Ink:
+damage and the two ends of a fight in `HudTheme.Bad`, a miss dim, a dodge `Info`, a stun `Warn`.
+**Two answers added beside the fixed four** for lane B: `FloatingSeconds` (0.9 s for a miss or a
+dodge, 1.2 for damage, 1.4 for a stun, 2.2 for downed and dead — the ones a player looking
+elsewhere most needs to catch) and `HealthBarColour` (the need bar's 600/400 thresholds). All
+INVENTED, to be tuned after the first play. The marker is `IsHostile` and nothing else: a wild
+animal fights back but is not an enemy.
+
+**The pane** (`InspectModel`, `CombatPaneTests`).
+
+- **A marauder** has no face, no colonist body, no tab box, no tabs, no skills and no commands,
+  and wears `ui.pawn.marauder`; its line is its job in a person's words ("Fighting"). *Our call*:
+  no Health tab means its health is the bar over its head and nowhere else.
+- **A corpse** is "Corpse of Wrenn" — the name she wore alive, `ColonistNames.Of` over the seed
+  and id the corpse kept, so a player's own name outlives her — or "Corpse of a midden hog" /
+  "Corpse of a marauder". The line under it is "Dead · since 07h, day 3 of Larkspur", composed
+  once per corpse. A corpse the frame no longer carries says only "Corpse".
+- **A pawn that leaves the frame keeps its shape.** An animal (since #167) or a marauder that died
+  fell to the colonist's tombstone and grew a Health tab and a Draft button for the grace frames.
+- **The Health tab**: "73 / 100" from `hp.max` and `hp` (no `hp` is whole), rounded **up** so a
+  colonist on her feet never reads nought; a fill in the bar's colours; then condition (Unhurt,
+  Hurt, Stunned, Downed — the flags first) and weapon (the held item, or Bare hands). Five keys
+  were added for it: `ui.combat.{unhurt,hurt,condition,weapon,barehands}`.
+
+**Elsewhere.** `HudDirectors.ChooseCorpse` selects only a corpse the frame carries and leaves the
+selection alone otherwise. The Spawn tab is `DebugDirector.SpawnRows`, a table the fast tier holds
+(the marauder is `SpawnPawn` with kind 3, each weapon `GiveResource` with one item). Alerts and the
+Work tab read colonists by the flags; alerts had counted animals toward "is the colony idle" since
+#167, which a wandering hog always defeated. The Almanac opens an animal's corpse on its Fauna
+entry, and nothing for a person's corpse, a marauder (it opened a colonist's Skills page) or a
+weapon (it opened the Ration Pack). No attack colour was added to `OrderColours`: nothing draws an
+attack order in a colour of its own yet.

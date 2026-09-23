@@ -60,8 +60,8 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// A corpse is its own subject: the corpse badge, the registry's word until lane C names it,
-        /// where it lies, and nothing a living pawn has. The control is the colonist's pane on the
+        /// A corpse is its own subject: the corpse badge, its name, where it lies, and nothing a
+        /// living pawn has. The control is the colonist's pane on the
         /// same frame, which has all of it.
         /// </summary>
         [Test]
@@ -80,7 +80,9 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.Corpse, Is.EqualTo(7));
             Assert.That(pane.Pawn, Is.EqualTo(PawnId.None));
             Assert.That(pane.AvatarKey, Is.EqualTo(InspectModel.CorpseKey), "a corpse wore another badge");
-            Assert.That(pane.Title, Is.EqualTo(Registry.Label(InspectModel.CorpseKey)));
+            // Named by lane C (CombatPaneTests holds the three kinds): "Corpse of X".
+            Assert.That(pane.Title, Is.EqualTo(Registry.Label(InspectModel.CorpseKey) + " of "
+                + ColonistNames.Of(42u, new PawnId(9))));
             Assert.That(pane.Layer, Is.EqualTo(2), "not where it lies");
             Assert.That(pane.ShowsFace || pane.ShowsColonistBody || pane.ShowsTabBox, Is.False);
             Assert.That(pane.Tabs, Is.Empty);
