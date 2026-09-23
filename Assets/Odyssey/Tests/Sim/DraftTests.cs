@@ -313,6 +313,31 @@ namespace Odyssey.Tests.Sim
             Assert.That(pawn.CurrentJob!.TargetCell, Is.EqualTo(surface), "sent somewhere other than the surface clicked");
         }
 
+        /// <summary>
+        /// Sent back to the cell she is stepping off, she lands the step and walks back — she does
+        /// not hold one cell away from where she was told to stand. Found in review: the handler
+        /// compared the order with the cell she was leaving and gave her the hold.
+        /// </summary>
+        [Test]
+        public void SentBackToTheCellSheIsLeavingSheReturnsToIt()
+        {
+            var colony = Board();
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            Draft(colony, pawn);
+            colony.World.Tick(60);
+            Move(colony, pawn, CellEast(colony, pawn, 8));
+            for (int t = 0; t < 400 && !(pawn.HasPath && pawn.MoveProgress > 0); t++) colony.World.Tick();
+            Assume.That(pawn.HasPath && pawn.MoveProgress > 0, "never caught her mid-step");
+
+            int leaving = pawn.Cell;
+            Assert.That(Move(colony, pawn, leaving), Is.EqualTo(IntentRejection.None));
+            for (int t = 0; t < 800 && !(pawn.Cell == leaving && !pawn.HasPath); t++) colony.World.Tick();
+            colony.World.Tick(5);
+
+            Assert.That(pawn.Cell, Is.EqualTo(leaving), "held a cell away from where she was sent");
+            Assert.That(JobOf(pawn), Is.EqualTo(JobIndex.DraftHold));
+        }
+
         [Test]
         public void AColonistWithNoRestLeftCannotBeDrafted()
         {

@@ -428,7 +428,11 @@ namespace Odyssey.Sim.Pawns
                 pawn.JobStartsInWindow = 0;
             }
 
-            if (pawn.JobStartsInWindow >= _ctx.Content.ThinkLoopLimit)
+            // A drafted colonist is exempt (design 33 §2b): her own tree gives only the hold, which
+            // cannot loop, and every other start is an order the player clicked — ten brisk
+            // right-clicks are a player, not a fault, and parking her in a plain wait for them
+            // would drop the draft's hold.
+            if (pawn.JobStartsInWindow >= _ctx.Content.ThinkLoopLimit && !pawn.Drafted)
             {
                 var standDown = pawn.JobBuffer;
                 standDown.Reset(JobIndex.Wait);

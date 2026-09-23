@@ -141,8 +141,8 @@ namespace Odyssey.Sim.Pawns
         /// progress: the pawn stayed on the cell it was leaving while its figure had been drawn
         /// most of the way into the next, so every draft and every re-aimed right-click snapped
         /// the figure back by up to a cell. <see cref="JobSystem.Interrupt"/> keeps that one step
-        /// instead, and the next job's walk waits for it to land (<see cref="JobDriver"/>'s
-        /// <c>GotoCell</c>). Saved and hashed while set, because it is a path the world cannot
+        /// instead, and the job loop holds every driver until it lands. Cleared by
+        /// <see cref="ClearPath"/>, so whatever drops the step drops the mark. Saved and hashed while set, because it is a path the world cannot
         /// re-derive: its destination is gone with the job that chose it.</para>
         /// </summary>
         public int FinishingStepTo { get; internal set; } = -1;
@@ -717,6 +717,13 @@ namespace Odyssey.Sim.Pawns
             MoveProgress = 0;
             PathPending = false;
             PathFailed = false;
+
+            // A kept step is a path (design 33 §2d): whatever drops the path — arrival, a step
+            // that stopped being legal, a fall, an eviction, a job ending — drops the mark with it,
+            // or it would stay saved and hashed and a load would rebuild a step that no longer
+            // exists. JobSystem.Interrupt sets it after its own clear, which is the one place it
+            // is ever set.
+            FinishingStepTo = -1;
         }
 
         internal void AdoptPath(int[] cells, int length)

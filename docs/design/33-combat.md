@@ -39,7 +39,8 @@ Every decision below was the owner's in the interview of 2026-09-23 unless it sa
 `Pawn.Drafted` and `Pawn.DraftQuietSinceTick`: whether the colonist is under the player's hand,
 and the tick the draft last had anything to do (the draft itself, or the last order). Both live in
 a save section of their own, `odyssey.combat` (`CombatSection`), which writes **only the pawns
-that are drafted** — so a colony that has never fought writes an empty section, and a save from
+with something to say** — drafted, or part way through a kept step (§2d) — so a colony that has
+never fought writes an empty section, and a save from
 before the section existed loads with nobody drafted. **No save-format bump**: the section is
 keyed and skipped when absent, the same terms as the kind and wildlife sections.
 
@@ -48,7 +49,9 @@ touching the world's format number either.
 
 **Hashed conditionally.** The drafted flag rides in bit 17 of the pawn's kind word (bit 16 is
 wildlife's `Leaving`), and the quiet tick is added only while the colonist is drafted. A colony
-nobody drafts hashes exactly as it did before combat existed. That is the precedent `Leaving` set,
+nobody drafts hashes its **pawns** exactly as it did before combat existed. (The goldens moved all
+the same, for a different reason: the job table gained two defs and `JobSystem` hashes a counter
+pair per def. The colony probe diffs clean.) That is the precedent `Leaving` set,
 and it matters twice: it keeps the combat-free goldens honest about what moved, and it is what lets
 C5 and C6 assert that no golden moves at all.
 
@@ -58,6 +61,11 @@ C5 and C6 assert that no golden moves at all.
 `CriticalNeeds`**. It always returns a job for a drafted colonist — the hold, or a move — so the
 needs branch is never reached, which is the whole of "a drafted colonist does not eat or sleep".
 Nothing is gated in `NeedsSystem`: the needs keep falling, exactly as the reference does it.
+
+**A drafted colonist is exempt from the think-loop breaker** (`JobSystem.Think`). Her own tree
+gives only the hold, which cannot loop, and every other start is an order the player clicked; ten
+brisk right-clicks tripped the breaker in review, which parked her in a plain 120-tick wait instead
+of the hold.
 
 Three things end a draft without the player:
 
@@ -99,17 +107,26 @@ which is the thing a player pauses to give.
   carried load, frees a bed and wakes a sleeper through the drivers' own cleanup. Then the hold
   starts *in the same call*, so the pane reads "Drafted" while the game is still paused.
   Undrafting ends the hold and leaves the colonist between jobs; the next tick's think gives it
-  work. Refused (`NotPermitted`) for a pawn that does not exist, is not a person, or is broken.
+  work. Refused (`NotPermitted`) for a pawn that does not exist, is not a person, is broken, or
+  has no rest left — the hold would let go on its first tick and she would lie down again.
   `AlreadyInThatState` for a no-op.
-- **Moving** lifts the clicked cell to where a colonist would stand
-  (`CellGrid.NearestWalkableInColumn`, the debug spawn's rule), and requires it reachable.
+- **Moving** lifts the clicked cell to where a colonist would stand on it, and requires it
+  reachable. `JobSystem.StandAt` takes the cell itself, then the one above (the click named the
+  block and she stands on top of it), then the one below (a click on the air over a lower
+  terrace), and otherwise refuses. **It is deliberately not the debug spawn's column search**,
+  which C1 first used: that looks down before up, so a click on the ground over a cavern found the
+  cavern, found it unreachable and refused the order (review, 2026-09-23;
+  `AClickOnGroundOverACavernSendsHerToTheSurface`).
   Refused for a colonist who is not drafted: the reference moves only drafted pawns, and a
   right-click on an undrafted colonist's behalf is not a gesture this build gives a meaning.
 - **An order given mid-step keeps the step.** Ending a job clears the path and with it the step
   in progress, so the figure — drawn most of the way into the next cell — snapped back by up to a
   cell on every draft and every re-aimed right-click. `JobSystem.Interrupt` ends the job and then
-  re-adopts that one step as a path of its own, marking the pawn `FinishingStepTo`; the next job's
-  walk (`JobDriver.GotoCell`) waits for it to land, and the mover clears the mark on arrival. The
+  re-adopts that one step as a path of its own, marking the pawn `FinishingStepTo`; **the job loop
+  holds every driver until it lands** (`JobSystem.TickPawn`), and the mover clears the mark on
+  arrival. The hold was first in the walk toil alone, which a job whose first toil is not a walk —
+  a collapse where she stands, work on the stance she is on — never reaches (review, 2026-09-23;
+  `ReleasedMidStepSheLandsTheStepBeforeTheNextJobActs`). The
   mark is saved in `odyssey.combat` and hashed while set, because it is a path the world cannot
   re-derive — its destination went with the job that chose it — and without it a save taken
   mid-step resumed on a different trajectory. `AnOrderGivenMidStepLandsTheStepBeforeTurning`
@@ -136,7 +153,12 @@ the carry aspects, the two spellings are held together by a test on each side.
 ### 2f. Controls
 
 - **T** (`HotkeyAction.Draft`, rebindable) drafts every selected colonist if any of them is
-  undrafted, and undrafts them all otherwise. The rule is the reference's for a mixed selection.
+  undrafted, and undrafts them all otherwise. Bindings are stored by the action's key name, so
+  adding the action shifted nobody's rebinds. **One edge case is real:** a player who had
+  already rebound **T** to another action loses that rebind on the next load — the new default owns
+  T before the stored line is read, the stored line is refused into `LoadConflicts`, and that
+  action falls back to its own default. It is how every new default has behaved since the map was
+  written (the Animals tab's F5 did the same), so it is recorded rather than special-cased. The rule is the reference's for a mixed selection.
 - **The pane's Draft button** is live, and reads Undraft on a drafted colonist.
 - **A right-click on the world with no tool armed** is an order.
   - `SliceCameraRig.WorldRightClicked` now carries the pick, the cell and the ray, as `Picked`

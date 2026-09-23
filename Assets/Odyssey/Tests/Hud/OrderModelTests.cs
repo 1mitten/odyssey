@@ -90,13 +90,20 @@ namespace Odyssey.Tests.Hud
             Assert.That(sent[0].Cell, Is.EqualTo(Ground));
         }
 
+        /// <summary>
+        /// A colonist's hit box covers most of the cell behind her at the play camera, so a click
+        /// that touched a pawn is still a move in C1 — the review found every order just behind
+        /// the squad doing nothing. The sky is still nothing.
+        /// </summary>
         [Test]
-        public void ARightClickOnAPawnOrTheSkyMovesNobody()
+        public void ARightClickThatTouchesAPawnStillMovesAndTheSkyMovesNobody()
         {
             var sent = new List<Intent>();
-            OrderModel.RightClick(Everyone, Frame(true, true), Ground, Hog, false, sent);
-            Assert.That(sent, Is.Empty, "a click on a pawn is the attack's, not a move on to it");
+            OrderModel.RightClick(Everyone, Frame(true, false), Ground, Bo, false, sent);
+            Assert.That(sent.Count, Is.EqualTo(1), "a click near the squad was swallowed");
+            Assert.That(sent[0].Cell, Is.EqualTo(Ground));
 
+            sent.Clear();
             OrderModel.RightClick(Everyone, Frame(true, true), null, PawnId.None, false, sent);
             Assert.That(sent, Is.Empty);
         }

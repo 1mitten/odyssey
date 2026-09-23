@@ -162,10 +162,8 @@ namespace Odyssey.Sim.Pawns
 
             // Arrived. Anything left over is discarded rather than banked toward the next walk,
             // so a pawn cannot accumulate free movement by taking short journeys.
+            // This also retires an interrupted step's mark (design 33 §2d): see Pawn.ClearPath.
             pawn.ClearPath();
-
-            // An interrupted step has landed (design 33 §2d), whatever job is running now.
-            pawn.FinishingStepTo = -1;
         }
 
         /// <summary>

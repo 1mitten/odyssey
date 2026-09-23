@@ -83,9 +83,14 @@ namespace Odyssey.Sim.Pawns
             pawn.DraftQuietSinceTick = tick;
 
             Interrupt(pawn, JobStatus.Failed);
+
+            // Where she will be standing: a colonist part way through a kept step is, for an
+            // order's purposes, on the cell she is stepping into. Sent back to the cell she is
+            // leaving, she lands the step and walks back, rather than holding one cell away.
+            int standing = pawn.FinishingStepTo >= 0 ? pawn.FinishingStepTo : pawn.Cell;
             Job job = pawn.JobBuffer;
-            job.Reset(dest == pawn.Cell ? JobIndex.DraftHold : JobIndex.Goto);
-            job.TargetCell = dest == pawn.Cell ? -1 : dest;
+            job.Reset(dest == standing ? JobIndex.DraftHold : JobIndex.Goto);
+            job.TargetCell = dest == standing ? -1 : dest;
             job.PlayerForced = true;
             return StartJob(pawn, job, tick) ? IntentRejection.None : IntentRejection.NotPermitted;
         }

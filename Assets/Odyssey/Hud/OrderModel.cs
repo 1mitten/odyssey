@@ -68,14 +68,18 @@ namespace Odyssey.Hud
         /// <summary>
         /// A right-click on the world with no tool in hand. <paramref name="cell"/> is the cell the
         /// pick resolved to, or null for sky; <paramref name="under"/> is the pawn under the
-        /// pointer, if any. In C1 a click on the ground sends every selected drafted colonist
-        /// there; a click on a pawn is left for the attack and rescue orders to come, and says
-        /// nothing rather than moving everybody on to it.
+        /// pointer, if any. In C1 every click on the world is a move to the cell it resolved to,
+        /// <b>a pawn under the pointer included</b>: a colonist's hit box is 1.15 by 2.7 metres,
+        /// which at the play camera covers most of the cell behind her, so ignoring a click that
+        /// touched a pawn made every order just behind your own squad do nothing (review,
+        /// 2026-09-23). The attack and rescue orders will claim the pawns they are about — an
+        /// animal, a hostile, a downed colonist, a colonist under Ctrl — and leave the rest as
+        /// moves.
         /// </summary>
         public static void RightClick(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot,
             CellRef? cell, PawnId under, bool ctrl, List<Intent> into)
         {
-            if (cell == null || under.IsValid) return;
+            if (cell == null) return;
 
             for (int i = 0; i < selection.Count; i++)
             {
