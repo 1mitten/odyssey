@@ -137,9 +137,8 @@ namespace Odyssey.Sim.Pawns
         /// revenge on every blow: turning, it hunts the attacker for
         /// <see cref="CombatDef.revengeTicks"/>; not turning, it runs — unless it had already
         /// turned on this attacker, which a failed roll does not undo. A colonist not under the
-        /// player's hand stops what she is doing: struck by a colonist she fights back for
-        /// <see cref="CombatDef.retaliationTicks"/>; struck by anything, her self-defence finds it
-        /// beside her on her next think. A marauder is already fighting.
+        /// player's hand stops what she is doing and fights back against whoever struck her for
+        /// <see cref="CombatDef.retaliationTicks"/>. A marauder turns on a colonist hitting it.
         /// </summary>
         void React(Pawn target, Pawn attacker, int tick)
         {
@@ -174,11 +173,12 @@ namespace Odyssey.Sim.Pawns
 
             if (!target.IsColonist || target.Drafted || target.IsBroken) return;
 
-            if (attacker.IsColonist)
-            {
-                target.RetaliateAgainst = attacker.Id.Value;
-                target.RetaliateUntilTick = tick + combat.retaliationTicks;
-            }
+            // Whoever struck her, for the window: a colonist (the owner's rule), a marauder or a
+            // hog alike. Remembering only the colonist was tried first and a struck colonist
+            // stepped out of reach landing the step she was on, found nobody beside her, and went
+            // back to wandering while the marauder beat her down (measured).
+            target.RetaliateAgainst = attacker.Id.Value;
+            target.RetaliateUntilTick = tick + combat.retaliationTicks;
 
             if (!Melee.IsAttacking(target, attacker)) _jobs.Interrupt(target, JobStatus.Failed);
         }

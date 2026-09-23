@@ -221,6 +221,19 @@ namespace Odyssey.Tests.Sim
             int home = a.Cell;
             Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 1, 0));
 
+            // The moment she takes it on, it is carried off — so her blow is a young job, which
+            // the hunt's re-choosing would not yet end, and only the hold's own rule keeps her.
+            TickUntil(colony, () => a.CurrentJob?.DefIndex == JobIndex.AttackMelee, 10, "she never took the marauder on");
+            Assert.That(a.CurrentJob!.PlayerForced, Is.False, "nobody ordered it");
+            Stand(colony, marauder, Near(colony, 10, 10));
+            marauder.StunnedUntilTick = colony.World.CurrentTick + 400;
+            colony.World.Tick(200);
+            Assert.That(a.Cell, Is.EqualTo(home), "she chased a threat nobody ordered her at");
+            Assert.That(a.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.DraftHold));
+
+            // Back beside her: she strikes from where she stands.
+            marauder.StunnedUntilTick = 0;
+            Stand(colony, marauder, Near(colony, 1, 0));
             for (int t = 0; t < 600; t++)
             {
                 colony.World.Tick();
@@ -229,13 +242,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(rules.TicksOf(a).Count, Is.GreaterThan(0), "she never struck the marauder beside her");
             Assert.That(a.Drafted, Is.True);
 
-            // Carried off: she holds.
+            // The control: ordered, she follows.
             Stand(colony, marauder, Near(colony, 10, 10));
             marauder.StunnedUntilTick = colony.World.CurrentTick + 400;
-            colony.World.Tick(200);
-            Assert.That(a.Cell, Is.EqualTo(home), "she chased a threat nobody ordered her at");
-            Assert.That(a.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.DraftHold));
-
             Assert.That(Attack(colony, a, marauder), Is.EqualTo(IntentRejection.None));
             colony.World.Tick(200);
             Assert.That(a.Cell, Is.Not.EqualTo(home), "the control: ordered, she follows");
