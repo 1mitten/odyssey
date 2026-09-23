@@ -345,7 +345,12 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void EveryMomentOfAFightHasItsSoundOrNone()
         {
-            Assert.That(SoundIds.ForCombat(CombatEventKind.Swing), Is.EqualTo(SoundIds.CombatSwing));
+            // A swing's sound is scheduled against its blow, not played on its frame (design 33 §9g).
+            Assert.That(SoundIds.ForCombat(CombatEventKind.Swing), Is.Null, "a swing is timed, not played on its frame");
+            Assert.That(SoundIds.ForCombat(CombatEventKind.SwingCritical), Is.Null);
+            Assert.That(SoundIds.ForCue(Odyssey.Hud.CombatCue.Whoosh), Is.EqualTo(SoundIds.CombatSwing));
+            Assert.That(SoundIds.ForCue(Odyssey.Hud.CombatCue.Slice), Is.EqualTo(SoundIds.CombatCritSlice));
+            Assert.That(SoundIds.ForCue(Odyssey.Hud.CombatCue.Thud), Is.EqualTo(SoundIds.CombatHit));
             Assert.That(SoundIds.ForCombat(CombatEventKind.Hit), Is.EqualTo(SoundIds.CombatHit));
             Assert.That(SoundIds.ForCombat(CombatEventKind.Miss), Is.EqualTo(SoundIds.CombatMiss));
             Assert.That(SoundIds.ForCombat(CombatEventKind.Dodge), Is.EqualTo(SoundIds.CombatMiss));
