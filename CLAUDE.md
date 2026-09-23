@@ -409,8 +409,10 @@ invisible where the game is played.
   `List<>` went in without its `using` — the fast tier was green in twenty seconds both times and
   the second one put the editor into Safe Mode.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-23 on
-  `claude/research-tab` (off `origin/main`): EditMode **2,597 total, 2,572 passed, 0 failed**;
-  PlayMode **105 total, 100 passed, 0 failed**, the new one `DockedTabGeometryTests`, which lays
+  `claude/research-tab` after merging `main` (#176): EditMode **2,657 total, 2,631 passed,
+  0 failed**; PlayMode **108 total, 103 passed, 0 failed**, the new ones `StockpileDragTests` (a
+  stockpile drag and a click-move-click, from the presenter to a published zone) and
+  `DockedTabGeometryTests`, which lays
   both new windows out at 1920 x 1080 (at the runner's own small game view the panel scales to
   0.39 and every border rounds up to a physical pixel — design 34 §5b). The run before, on
   `claude/pf-crowd-scan` (off `origin/main`): EditMode **2,527 total, 2,503 passed, 0 failed**;
