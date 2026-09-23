@@ -11025,3 +11025,51 @@ became a subject and a selection in the same move.
 
 Every spine fix has its negative control seen to fail with the fix withheld (six in the simulation,
 three in the interface). No golden moved; the content fingerprint moved once, for the machete.
+
+## 2026-09-23 — Combat: C2 and C3 integrated, and the prop nobody owned
+
+The four lanes (`claude/combat-fight`, `-weapons`, `-hud`, `-drawn`) were merged on to
+`claude/combat-c2` in the plan's order — simulation first — and the only conflicts were their own
+subsections of design 33, each appended at the end of the same file. That is the contracts step
+paying for itself: four branches built in parallel against one spine and nobody's code touched
+anybody else's. The fast tier was green after every merge.
+
+**What the merge could not see was what lay between the lanes.** Three things did, and one was a
+missing owner rather than a missing wire:
+
+- **The equip click never arrived.** Lane C's model sends `OrderEquip` for an undrafted colonist
+  (the seam review's rule), but lane B's presenter still asked `AnyDrafted` before asking the model,
+  so the rule was true in a test and false at the keyboard. P1 again: who hears a right-click had
+  two owners, the model and a gate upstream of it that still answered in C1's words.
+- **The health bar had two colour ladders.** Lane B coloured it 60/30 %, lane C had written the
+  need bar's 60/40 % for lane B to call. P1, one rule with two owners, caught before anyone saw
+  them disagree at 35 %. The bar asks the model now, and the floating words take their lifetimes
+  from it too.
+- **Nobody drew the weapon.** Lane D put it in the simulation's hand and published it; lane B picked
+  the swing's clip family from it; the brief gave the held prop to no lane at all, and the ground
+  rows the contracts step claimed said "until lane B's catalogue build gives it a prop", which lane
+  B's brief never asked for. So a marauder would have swung a sword clip with an empty fist, and a
+  dropped machete would have been the orange stand-in box. The plan's split listed files, and a
+  thing that lives in no file of its own fell between them. It is one piece of art now — the
+  weapon's ground row, laid flat on the ground and seated under the right hand by measurement.
+
+**Two lane reports were stale by the time they merged**, which is worth knowing about lane
+hand-overs: lane D recorded that `Job_Equip` had no status word, but the contracts step had mapped
+it all along; and lane C said its two Presentation files had never been compiled, which was true
+and turned out not to matter — they compiled first time. The one Unity failure was elsewhere:
+a lane D assertion used an overload only the fast tier's NUnit has, and the editor refused the
+whole test assembly over it.
+
+**Decided rather than left:** `OrderAttack` carries no Ctrl flag. The right-click is the only thing
+that sends it, and the gesture belongs where the gesture is read. `rechooseTicks` went into
+`CombatDef`. A pawn despawned while holding a weapon puts it down.
+
+**One finding for the owner rather than a fix:** the Long soak, rerun with machetes, made nine downs
+and no deaths. Only a blow that crosses −50 % kills, nothing strikes a body on the ground unless
+ordered to, and so an unattended fight never kills anyone. That is the owner's rules working as
+written; whether it is what they meant is a playtest question, and it is in the hand-over as one.
+
+Measured, alone on the machine: EditMode 2,823 / 2,797 / 0 failed, PlayMode 106 / 101 / 0, fast
+1,161 + 795, Long 39. No golden moved and the colony probe is identical to the contracts commit's.
+A fight in view costs 2.29 ms against 2.06 at peace, in one run. The player build boots into a colony
+clean. Design 33 §6E has the rest.

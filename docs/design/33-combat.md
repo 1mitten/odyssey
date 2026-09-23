@@ -2,12 +2,15 @@
 
 **Status: C1 (draft and move) built and played 2026-09-23 — the owner's verdict: drafting, T,
 moving onto surfaces, the diamond and the four hours all work; the run (§2h) and the deeper red
-(§2g) came out of that playtest. C2–C7 designed, not built; their contracts — every handle,
-field and seam — cut on 2026-09-23 (§5), so four lanes can fill them at once.** The line's plan and
-its unit status are `docs/plans/combat.md`. Research: `docs/research/a-10-melee-combat.md` (the
+(§2g) came out of that playtest. C2 (health and melee) and C3 (weapons) built 2026-09-23 by four
+parallel lanes on the contracts of §5 (§6A–§6D) and integrated on `claude/combat-c2` (§6E): every
+tier green, no golden moved, the frame with a fight in view measured and the player build
+smoke-tested. Awaiting the owner's playtest of checkpoints 2 and 3 together. C4–C7 designed, not
+built.** The line's plan and its unit status are `docs/plans/combat.md`; the owner's hand-over is
+`docs/plans/combat-c2-handover.md`. Research: `docs/research/a-10-melee-combat.md` (the
 reference's rules, clean room) and `docs/research/synty-sword-combat.md` (the animation pack).
-Branch `claude/combat-mvp`, worktree `D:\code\odyssey-combat`, based on `claude/wildlife`
-(PR #169, which contains the animals of PR #167) because animals are targets.
+C1 was branch `claude/combat-mvp` (PR #176, merged); C2 and C3 are branch `claude/combat-c2`,
+worktree `D:\code\odyssey-combat`.
 
 ## 1. What is being built
 
@@ -231,7 +234,11 @@ peak: 0.66 s, 58 KB.
   as `docs/reference/audio-sourcing.md` requires the licence to be noted. **The owner to confirm the
   source.**
 
-## 3. Health and melee (C2, designed)
+## 3. Health and melee (C2, built)
+
+*Built 2026-09-23. This section is the shape; the lane's detail — the rolls, the chase, down and
+dead, healing, the minds and the order — is §6A, what is drawn §6B, what the interface says §6C,
+and what changed when the four were put together §6E.*
 
 - **Hit points** are integers in thousandths (`HpMilli`, the `Rates` convention), so a slow heal is
   exact without a float. A species' pool is `SpeciesDef.healthPoints`. **Downed** at ≤ 0. **Dead**
@@ -259,10 +266,26 @@ peak: 0.66 s, 58 KB.
 - **`PawnView` gains a trailing flags byte** (person, hostile, drafted, downed, stunned, carried).
   The six places that read "kind ≠ 0" as "animal" move to it. A hostile person is not an animal.
 
+**As built, three things this section did not say** (§6A):
+
+- **A fight runs.** `Pawn.UrgencyPerMille` answers the draft's pace for `Job_AttackMelee` and
+  `Job_Flee`; at a walk a hunt never caught a colonist walking away from it.
+- **A struck colonist fights back against whoever struck her**, colonist or not, for
+  `retaliationTicks`; a colonist-only memory let her wander off while being beaten.
+- **Death takes the player.** Only the blow that crosses −50 % of the pool kills, a marauder hunts
+  only colonists who are standing, and nobody's self-defence strikes a body on the ground — so an
+  unordered fight ends in downs, never in corpses. The Long soak, now with a machete in every
+  marauder's hand: 241 swings, 122 hits, nine downs, no deaths. A corpse is made by an order on a
+  downed pawn (`ToTheDeath`, §6A.8). Recorded for the playtest rather than changed: it follows the
+  owner's rules, and whether it feels right is the owner's to say.
+
 ## 4. Later units, named
 
-- **C3, weapons:** an `ItemDef.weapon` block, four weapon items, `Pawn.Equipped`, the equip job,
-  and blunt stun. The held prop is fitted by the tool code's `GripTool`.
+- **C3, weapons (built 2026-09-23, §6D):** an `ItemDef.weapon` block, four weapon items,
+  `Pawn.EquippedItem`, the equip job and order, blunt stun (rolled by lane A from lane D's
+  armament), drop on death, the Playtest kit (a bat and a machete). **The held prop is not the tool
+  code's `GripTool`**: no lane owned it, and the integration drew it as the weapon's own ground row
+  under the right hand, seated once by measurement (§6E).
 - **C4, rescue:** `Work_Rescue`, a pawn reservation kind, and carrying a body. A downed colonist
   heals only in a bed.
 - **C5, friendly fire:** Ctrl-attack, self-defence, and the two memories.
@@ -704,153 +727,13 @@ Each claim was seen to fail with its rule withheld.
 
 ### 6A.11 Open
 
-- **Proposed for `CombatDef` at the integrator's Def pass:** `rechooseTicks` = 300.
-- **The Ctrl flag on `OrderAttack`** — see §6A.8.
+- ~~**Proposed for `CombatDef` at the integrator's Def pass:** `rechooseTicks` = 300.~~ Done at the
+  integration (§6E).
+- ~~**The Ctrl flag on `OrderAttack`** — see §6A.8.~~ Decided at the integration: no flag (§6E).
 - **A downed body slides the rest of its step.** The price of keeping the step (§2d): the figure
   lands where it is drawn, rather than snapping back.
 
-### 6D. Lane D — weapons (C3 simulation)
-
-Built 2026-09-23 on `claude/combat-weapons` from the contracts commit `229b00a0`. Fast tier only;
-nothing here touches presentation.
-
-**The hand.** `WeaponHand` is the only code that puts a weapon in a hand or takes one out. A held
-weapon stays an ordinary `ColonyItem` with **no cell**, `CarriedBy` its holder, named by
-`Pawn.EquippedItem`. It goes up through `ColonyItems.PickUp` — the door every lift uses — and down
-through `ColonyItems.Drop`, so it leaves and rejoins the listers exactly as a hauled load does.
-**Held is one fact with one owner, the item's carrier**: `WeaponHand.Held` believes the pawn's field
-only while that thing is carried by that pawn, with no cell and in no store, so a field naming a
-thing on the ground arms nobody (`AWeaponLyingOnTheGroundArmsNobody`, which fails with the check
-loosened — measured). The hand is **not** the job's `CarriedItem`: that is the load a job is moving
-and `DropCarried` puts it down when the job ends, and a weapon has to outlast every job, a haul
-included. A colonist can hold a machete and carry a log at once, and neither field reads the other.
-
-**What reads a carried thing** (the audit the brief asked for). `ColonyItem.CarriedBy` is read only by
-the item section's hash and save. Every scan that looks for something to fetch — haul, eat, deliver,
-the storage re-bucketing — asks `PawnContext.WhereIs`, which answers -1 for a thing in a pair of
-hands, so a held weapon is invisible to all of them; the snapshot's thing list skips it for the same
-reason, and the carry aspects publish only `Job.CarriedItem`. `Falling.DropFloatingItems` skips a
-thing with no cell. Nothing needed changing. `AHeldWeaponStaysInTheHandWhileTheColonyWorks` runs a
-working colony round an armed colonist for 2,000 ticks. (`Pawn.CarriedBy` is a different field — a
-carried *patient*, C4's — and nothing here touches it.)
-
-**Rules** (`WeaponRules`):
-
-- `ArmamentOf`: the held weapon's `ItemDef.weapon` and its def index, else the species' natural
-  attack, else `CombatDef.fists`. It never rolls: a bat's or a crowbar's stun rides in the
-  `Armament`, and lane A rolls it.
-- `CanEquip`: a standing colonist of ours (not an animal, not a hostile, not downed), a thing whose
-  def has a `weapon` block, not forbidden, and lying somewhere a colonist can take it from — a cell
-  or a store, never somebody's hands. Reachability is the order's question, not this one's.
-- `ArmOnSpawn`: the kind's weapon is made on the nearest cell to the spawn that can take it and
-  taken straight up through `WeaponHand.TakeUp`, the same door the equip job uses. A marauder spawned
-  on a pile is still armed and the pile is undisturbed. A board with nowhere within
-  `JobDriver.DropSearchRadius` leaves it bare-handed.
-
-**The order and the job.** `OrderEquip(cell, A = colonist, B = thing)` is accepted **drafted or
-not** (§5j). Every question is asked before anything is interrupted, so a refusal claims nothing:
-`NotPermitted` for a pawn that does not exist, an animal, a hostile, a downed colonist and — *our
-call, the draft's rule* — a colonist in a mental break; and for a thing that does not exist, is not a
-weapon, is forbidden, is in somebody's hands, cannot be reached, or is already claimed by somebody
-else's fetch. `AlreadyInThatState` for the weapon already in the hand. The cell is not read; the
-thing's own record says where it is. Then the job in hand ends through `Interrupt` (the kept step,
-§2d), a drafted colonist's quiet clock resets, and a **forced** `Job_Equip` starts. `EquipJobDriver`
-claims the weapon (an item reservation, as a haul or a meal does), walks to it, and runs
-`LiftToil` — the one stoop every lift uses. **It changes hands at the grasp**: the lift puts it in
-her arms as a job's load and on that same tick it moves to the hand and the old weapon goes down, on
-the cell the new one just left if it is free, else the nearest that can take it. No stow is reported
-for the old one, because a second gesture would cut the stoop off halfway down. A drafted colonist
-returns to the hold when the job ends; an undrafted one to her work.
-
-**Death.** `WeaponDropListener`, the first listener `CombatListeners.Register` adds: on `Died` the
-weapon goes down at the corpse's cell, or the nearest cell that can take it; on `Downed` nothing
-happens (the C2 default: a downed pawn keeps its weapon). **A dropped weapon is not forbidden** —
-*our call*: a marauder's machete is the colony's the moment it falls, and a line in the listener is
-where a forbid would go.
-
-**The starting kit.** `ScenarioDef.startingWeapons`, item defs, **empty by default**, so `Bare` and
-every golden are untouched (an empty kit asks the storey search for no more spots). `Playtest` lays a
-**bat and a machete** on the ground beside the food, one a cell, in nobody's hand — a blunt and a
-sharp, so the first fight shows both a stun and the quicker blade (*INVENTED* inside the owner's "one
-or two"). Placement reports them as `Result.Weapons`. A debug-spawned weapon needs nothing here:
-`GiveResource` already places any item (lane C's row).
-
-**Scales with** nothing per tick: the equip driver is one pawn and one thing; the listener runs on a
-death; the rules are constant-time lookups. No sweep was added.
-
-**Goldens: unchanged** — no golden builds on `Playtest`, spawns a marauder or equips anything.
-
-**One spine edit**: `CombatContractTests.AMarauderIsSpawnedThroughTheArmingSeamAndAnAnimalIsNot`
-ended by asserting that the stub rules arm nobody. That assertion is exactly what this lane exists
-to make false; it now asserts the machete. Nothing else in the file moved.
-
-**Recorded, not fixed:**
-
-- A pawn **despawned without dying** while holding a weapon would leave it held by an id that no
-  longer exists — carried, with no cell, for ever. Nothing does that today (only animals leave the
-  board, and no animal is armed), but a marauder that flees off the edge would. The fix is one line
-  in `PawnRegistry.Despawn` (put the hand down, as it already releases beds), which is spine.
-- `Job_Equip` has no status word wired in the interface yet (`ui.status.equipping` exists); lane C.
-
-### 6C. Lane C — the interface
-
-Built 2026-09-23 on `claude/combat-hud` (from `229b00a0`). Everything below is in `Odyssey.Hud`
-and runs in the fast tier except the two Presentation files, which **have never been compiled**
-(`HudShell.Combat.cs`, `HudShell.Debug.cs`).
-
-**The right-click** (`CombatOrders.Route`, `CombatOrdersTests`). A pawn under the pointer wins over
-the cell it stands in. An animal or a hostile is attacked by every selected drafted colonist, a
-downed one included (a marauder stays down until killed). Ctrl on a colonist is an attack by every
-selected drafted colonist but her — and **Ctrl wins over the rescue**, being the one gesture that
-says "hit this one of ours" outright. A downed colonist is rescued by the **nearest** selected
-drafted colonist only (*our call*: one body, one carrier; sending all of them is a walk the
-reservation would refuse at the end of). A weapon in the clicked cell **or the one above it** (the
-rule a left click selects a pile by) is fetched by the first colonist in the selection, drafted or
-not. Everything else is the move, a floored or walled cell included. A downed, hostile or animal
-pawn in a stale selection is never an attacker.
-
-**A missed seam: the presenter's gate.** `SelectionPresenter.Order` (lane B's file) returns before
-the hit-test unless `OrderModel.AnyDrafted`, so an equip for an undrafted colonist never reaches
-the model. `OrderModel.HearsRightClick` (any colonist, drafted or not) is the gate it needs; the
-one-line change in the presenter is the integrator's. Until it is made, equipping needs a draft.
-
-**What the fight says** (`CombatFeedbackModel`, `CombatFeedbackModelTests`). A bar is owed exactly
-where the simulation publishes `hp` (hurt, downed or drafted), clamped to 0..pool, never without a
-pool. Floating words: Miss, Dodge, Stunned, Downed, Dead from the registry, and a hit as "-7" —
-the nearest whole point, never "-0", from a table built once so a brawl allocates nothing. Ink:
-damage and the two ends of a fight in `HudTheme.Bad`, a miss dim, a dodge `Info`, a stun `Warn`.
-**Two answers added beside the fixed four** for lane B: `FloatingSeconds` (0.9 s for a miss or a
-dodge, 1.2 for damage, 1.4 for a stun, 2.2 for downed and dead — the ones a player looking
-elsewhere most needs to catch) and `HealthBarColour` (the need bar's 600/400 thresholds). All
-INVENTED, to be tuned after the first play. The marker is `IsHostile` and nothing else: a wild
-animal fights back but is not an enemy.
-
-**The pane** (`InspectModel`, `CombatPaneTests`).
-
-- **A marauder** has no face, no colonist body, no tab box, no tabs, no skills and no commands,
-  and wears `ui.pawn.marauder`; its line is its job in a person's words ("Fighting"). *Our call*:
-  no Health tab means its health is the bar over its head and nowhere else.
-- **A corpse** is "Corpse of Wrenn" — the name she wore alive, `ColonistNames.Of` over the seed
-  and id the corpse kept, so a player's own name outlives her — or "Corpse of a midden hog" /
-  "Corpse of a marauder". The line under it is "Dead · since 07h, day 3 of Larkspur", composed
-  once per corpse. A corpse the frame no longer carries says only "Corpse".
-- **A pawn that leaves the frame keeps its shape.** An animal (since #167) or a marauder that died
-  fell to the colonist's tombstone and grew a Health tab and a Draft button for the grace frames.
-- **The Health tab**: "73 / 100" from `hp.max` and `hp` (no `hp` is whole), rounded **up** so a
-  colonist on her feet never reads nought; a fill in the bar's colours; then condition (Unhurt,
-  Hurt, Stunned, Downed — the flags first) and weapon (the held item, or Bare hands). Five keys
-  were added for it: `ui.combat.{unhurt,hurt,condition,weapon,barehands}`.
-
-**Elsewhere.** `HudDirectors.ChooseCorpse` selects only a corpse the frame carries and leaves the
-selection alone otherwise. The Spawn tab is `DebugDirector.SpawnRows`, a table the fast tier holds
-(the marauder is `SpawnPawn` with kind 3, each weapon `GiveResource` with one item). Alerts and the
-Work tab read colonists by the flags; alerts had counted animals toward "is the colony idle" since
-#167, which a wandering hog always defeated. The Almanac opens an animal's corpse on its Fauna
-entry, and nothing for a person's corpse, a marauder (it opened a colonist's Skills page) or a
-weapon (it opened the Ration Pack). No attack colour was added to `OrderColours`: nothing draws an
-attack order in a colour of its own yet.
-
-### 6B. Lane B — the fight (drawn)
+## 6B. Lane B — the fight (drawn)
 
 **Built 2026-09-23 on `claude/combat-drawn`** (worktree `D:\code\odyssey-combat-drawn`, from the
 contracts head `229b00a0`), against the `CombatEventView` contract with a scripted event feed, not
@@ -961,3 +844,209 @@ always asked for the front variant); a downed pawn past the figure cap is still 
 instanced pass; a downed colonist's click box is still the standing one; the pack-present tests ran
 here only, and PlayMode, the frame budget with a fight in view and the player build have not been
 run.
+
+## 6C. Lane C — the interface
+
+Built 2026-09-23 on `claude/combat-hud` (from `229b00a0`). Everything below is in `Odyssey.Hud`
+and runs in the fast tier except the two Presentation files, which **have never been compiled**
+(`HudShell.Combat.cs`, `HudShell.Debug.cs`).
+
+**The right-click** (`CombatOrders.Route`, `CombatOrdersTests`). A pawn under the pointer wins over
+the cell it stands in. An animal or a hostile is attacked by every selected drafted colonist, a
+downed one included (a marauder stays down until killed). Ctrl on a colonist is an attack by every
+selected drafted colonist but her — and **Ctrl wins over the rescue**, being the one gesture that
+says "hit this one of ours" outright. A downed colonist is rescued by the **nearest** selected
+drafted colonist only (*our call*: one body, one carrier; sending all of them is a walk the
+reservation would refuse at the end of). A weapon in the clicked cell **or the one above it** (the
+rule a left click selects a pile by) is fetched by the first colonist in the selection, drafted or
+not. Everything else is the move, a floored or walled cell included. A downed, hostile or animal
+pawn in a stale selection is never an attacker.
+
+**A missed seam: the presenter's gate.** `SelectionPresenter.Order` (lane B's file) returns before
+the hit-test unless `OrderModel.AnyDrafted`, so an equip for an undrafted colonist never reaches
+the model. `OrderModel.HearsRightClick` (any colonist, drafted or not) is the gate it needs; the
+one-line change in the presenter is the integrator's. Until it is made, equipping needs a draft.
+
+**What the fight says** (`CombatFeedbackModel`, `CombatFeedbackModelTests`). A bar is owed exactly
+where the simulation publishes `hp` (hurt, downed or drafted), clamped to 0..pool, never without a
+pool. Floating words: Miss, Dodge, Stunned, Downed, Dead from the registry, and a hit as "-7" —
+the nearest whole point, never "-0", from a table built once so a brawl allocates nothing. Ink:
+damage and the two ends of a fight in `HudTheme.Bad`, a miss dim, a dodge `Info`, a stun `Warn`.
+**Two answers added beside the fixed four** for lane B: `FloatingSeconds` (0.9 s for a miss or a
+dodge, 1.2 for damage, 1.4 for a stun, 2.2 for downed and dead — the ones a player looking
+elsewhere most needs to catch) and `HealthBarColour` (the need bar's 600/400 thresholds). All
+INVENTED, to be tuned after the first play. The marker is `IsHostile` and nothing else: a wild
+animal fights back but is not an enemy.
+
+**The pane** (`InspectModel`, `CombatPaneTests`).
+
+- **A marauder** has no face, no colonist body, no tab box, no tabs, no skills and no commands,
+  and wears `ui.pawn.marauder`; its line is its job in a person's words ("Fighting"). *Our call*:
+  no Health tab means its health is the bar over its head and nowhere else.
+- **A corpse** is "Corpse of Wrenn" — the name she wore alive, `ColonistNames.Of` over the seed
+  and id the corpse kept, so a player's own name outlives her — or "Corpse of a midden hog" /
+  "Corpse of a marauder". The line under it is "Dead · since 07h, day 3 of Larkspur", composed
+  once per corpse. A corpse the frame no longer carries says only "Corpse".
+- **A pawn that leaves the frame keeps its shape.** An animal (since #167) or a marauder that died
+  fell to the colonist's tombstone and grew a Health tab and a Draft button for the grace frames.
+- **The Health tab**: "73 / 100" from `hp.max` and `hp` (no `hp` is whole), rounded **up** so a
+  colonist on her feet never reads nought; a fill in the bar's colours; then condition (Unhurt,
+  Hurt, Stunned, Downed — the flags first) and weapon (the held item, or Bare hands). Five keys
+  were added for it: `ui.combat.{unhurt,hurt,condition,weapon,barehands}`.
+
+**Elsewhere.** `HudDirectors.ChooseCorpse` selects only a corpse the frame carries and leaves the
+selection alone otherwise. The Spawn tab is `DebugDirector.SpawnRows`, a table the fast tier holds
+(the marauder is `SpawnPawn` with kind 3, each weapon `GiveResource` with one item). Alerts and the
+Work tab read colonists by the flags; alerts had counted animals toward "is the colony idle" since
+#167, which a wandering hog always defeated. The Almanac opens an animal's corpse on its Fauna
+entry, and nothing for a person's corpse, a marauder (it opened a colonist's Skills page) or a
+weapon (it opened the Ration Pack). No attack colour was added to `OrderColours`: nothing draws an
+attack order in a colour of its own yet.
+
+## 6D. Lane D — weapons (C3 simulation)
+
+Built 2026-09-23 on `claude/combat-weapons` from the contracts commit `229b00a0`. Fast tier only;
+nothing here touches presentation.
+
+**The hand.** `WeaponHand` is the only code that puts a weapon in a hand or takes one out. A held
+weapon stays an ordinary `ColonyItem` with **no cell**, `CarriedBy` its holder, named by
+`Pawn.EquippedItem`. It goes up through `ColonyItems.PickUp` — the door every lift uses — and down
+through `ColonyItems.Drop`, so it leaves and rejoins the listers exactly as a hauled load does.
+**Held is one fact with one owner, the item's carrier**: `WeaponHand.Held` believes the pawn's field
+only while that thing is carried by that pawn, with no cell and in no store, so a field naming a
+thing on the ground arms nobody (`AWeaponLyingOnTheGroundArmsNobody`, which fails with the check
+loosened — measured). The hand is **not** the job's `CarriedItem`: that is the load a job is moving
+and `DropCarried` puts it down when the job ends, and a weapon has to outlast every job, a haul
+included. A colonist can hold a machete and carry a log at once, and neither field reads the other.
+
+**What reads a carried thing** (the audit the brief asked for). `ColonyItem.CarriedBy` is read only by
+the item section's hash and save. Every scan that looks for something to fetch — haul, eat, deliver,
+the storage re-bucketing — asks `PawnContext.WhereIs`, which answers -1 for a thing in a pair of
+hands, so a held weapon is invisible to all of them; the snapshot's thing list skips it for the same
+reason, and the carry aspects publish only `Job.CarriedItem`. `Falling.DropFloatingItems` skips a
+thing with no cell. Nothing needed changing. `AHeldWeaponStaysInTheHandWhileTheColonyWorks` runs a
+working colony round an armed colonist for 2,000 ticks. (`Pawn.CarriedBy` is a different field — a
+carried *patient*, C4's — and nothing here touches it.)
+
+**Rules** (`WeaponRules`):
+
+- `ArmamentOf`: the held weapon's `ItemDef.weapon` and its def index, else the species' natural
+  attack, else `CombatDef.fists`. It never rolls: a bat's or a crowbar's stun rides in the
+  `Armament`, and lane A rolls it.
+- `CanEquip`: a standing colonist of ours (not an animal, not a hostile, not downed), a thing whose
+  def has a `weapon` block, not forbidden, and lying somewhere a colonist can take it from — a cell
+  or a store, never somebody's hands. Reachability is the order's question, not this one's.
+- `ArmOnSpawn`: the kind's weapon is made on the nearest cell to the spawn that can take it and
+  taken straight up through `WeaponHand.TakeUp`, the same door the equip job uses. A marauder spawned
+  on a pile is still armed and the pile is undisturbed. A board with nowhere within
+  `JobDriver.DropSearchRadius` leaves it bare-handed.
+
+**The order and the job.** `OrderEquip(cell, A = colonist, B = thing)` is accepted **drafted or
+not** (§5j). Every question is asked before anything is interrupted, so a refusal claims nothing:
+`NotPermitted` for a pawn that does not exist, an animal, a hostile, a downed colonist and — *our
+call, the draft's rule* — a colonist in a mental break; and for a thing that does not exist, is not a
+weapon, is forbidden, is in somebody's hands, cannot be reached, or is already claimed by somebody
+else's fetch. `AlreadyInThatState` for the weapon already in the hand. The cell is not read; the
+thing's own record says where it is. Then the job in hand ends through `Interrupt` (the kept step,
+§2d), a drafted colonist's quiet clock resets, and a **forced** `Job_Equip` starts. `EquipJobDriver`
+claims the weapon (an item reservation, as a haul or a meal does), walks to it, and runs
+`LiftToil` — the one stoop every lift uses. **It changes hands at the grasp**: the lift puts it in
+her arms as a job's load and on that same tick it moves to the hand and the old weapon goes down, on
+the cell the new one just left if it is free, else the nearest that can take it. No stow is reported
+for the old one, because a second gesture would cut the stoop off halfway down. A drafted colonist
+returns to the hold when the job ends; an undrafted one to her work.
+
+**Death.** `WeaponDropListener`, the first listener `CombatListeners.Register` adds: on `Died` the
+weapon goes down at the corpse's cell, or the nearest cell that can take it; on `Downed` nothing
+happens (the C2 default: a downed pawn keeps its weapon). **A dropped weapon is not forbidden** —
+*our call*: a marauder's machete is the colony's the moment it falls, and a line in the listener is
+where a forbid would go.
+
+**The starting kit.** `ScenarioDef.startingWeapons`, item defs, **empty by default**, so `Bare` and
+every golden are untouched (an empty kit asks the storey search for no more spots). `Playtest` lays a
+**bat and a machete** on the ground beside the food, one a cell, in nobody's hand — a blunt and a
+sharp, so the first fight shows both a stun and the quicker blade (*INVENTED* inside the owner's "one
+or two"). Placement reports them as `Result.Weapons`. A debug-spawned weapon needs nothing here:
+`GiveResource` already places any item (lane C's row).
+
+**Scales with** nothing per tick: the equip driver is one pawn and one thing; the listener runs on a
+death; the rules are constant-time lookups. No sweep was added.
+
+**Goldens: unchanged** — no golden builds on `Playtest`, spawns a marauder or equips anything.
+
+**One spine edit**: `CombatContractTests.AMarauderIsSpawnedThroughTheArmingSeamAndAnAnimalIsNot`
+ended by asserting that the stub rules arm nobody. That assertion is exactly what this lane exists
+to make false; it now asserts the machete. Nothing else in the file moved.
+
+**Recorded, not fixed:**
+
+- ~~A pawn **despawned without dying** while holding a weapon would leave it held by an id that no
+  longer exists.~~ Fixed at the integration: `PawnRegistry.Despawn` puts the hand down (§6E).
+- ~~`Job_Equip` has no status word wired in the interface yet.~~ It had one all along:
+  `JobLabels.IconKeys` maps job 17 to `ui.status.equipping` since the contracts step.
+
+## 6E. The integration (Phase 3, 2026-09-23)
+
+**Merged in the plan's order** — A (`claude/combat-fight`), D (`claude/combat-weapons`), C
+(`claude/combat-hud`), B (`claude/combat-drawn`) — on to `claude/combat-c2` at `229b00a0`. The only
+conflicts were the four lanes' subsections of this file, all appended at the end; each is kept
+whole and they now read A, B, C, D. The fast tier was green after every merge (Sim 1,118 → 1,159,
+Hud 751 → 795), so nothing one lane built broke another.
+
+**What was dangling across the lanes, and is wired now:**
+
+| Seam | Was | Is |
+|---|---|---|
+| An undrafted colonist's right-click on a weapon | lane C's model sent `OrderEquip` for her (§5j), but lane B's `SelectionPresenter.Order` returned first unless somebody was drafted | the presenter's gate is `OrderModel.HearsRightClick`; everything else still needs a draft inside the model |
+| How long a floating word stays up | lane B floated every word 1.2 s; lane C had written `FloatingSeconds` | each floater carries its own life from the model: a number 1.2 s, "Downed" and "Dead" 2.2 s |
+| The health bar's colour | two ladders — lane B's 60/30 % and lane C's 60/40 % (the need bar's) — one rule, two owners (`bug-patterns.md` P1) | the bar asks `CombatFeedbackModel.HealthBarColour`; `CombatMarks.BarInk` is gone |
+| The weapon in the hand, and on the ground | **nobody's**: lane D published `odyssey.pawn.weapon`, lane B chose the swing's clip family from it, nothing drew it; a dropped machete was the orange stand-in box | four catalogue rows (Battle Royale's bat, crowbar and machete; Sci-Fi City's sword for the arc blade), `ModuleEntry.lieFlat` to lay a prop modelled standing on its broadest face, and `PawnFigureDirector.Weapons.cs`, which puts the same row under the right hand, seated once and shown only while the hand is free |
+| A pawn leaving the board holding a weapon | recorded by lane D, not fixed (spine) | `PawnRegistry.Despawn` puts the hand down beside the beds it already releases |
+| `rechooseTicks` | a constant on the attack driver, proposed for the Def | `CombatDef.rechooseTicks` = 300 in `Combat.xml`; fingerprint moved (nineteenth), `AHuntThinksAgainAfterTheContentsRechooseTicks` pins it |
+
+**The Ctrl flag on `OrderAttack`: decided, no flag.** Lane A accepts an attack on a colonist
+without one; lane C sends one only when Ctrl is held. The order is the player's act either way —
+nothing but the interface sends it — so the gesture belongs where the gesture is read, and a `C`
+argument would be a second copy of a rule the right-click already owns. A future caller that is not
+the right-click (a context menu, C5) goes through `CombatOrders.Route` or states its own reason.
+
+**The weapon's grip is measured, not authored**, the tool code's approach cut down: the long axis
+is the haft, the end the mass leans to is the business end (every Synty weapon pivots at the grip),
+the haft continues the forearm, the flat of the blade turns to the figure's front, and the butt
+sits a tenth of the length into the palm (`WeaponGripFraction`, INVENTED). It is fitted once, when
+the pawn's weapon changes, and rides the hand bone as a child after that — nothing re-seats it per
+frame, so nothing can wind (`PlaceTool`'s lesson). It is hidden while a tool is in the hand, a load
+in the arms, or the body is lying down; a downed pawn keeps its weapon in the simulation but is
+drawn without it. **Nobody has looked at it**: whether the grip, the blade's turn and the size read
+right is a contact sheet or the playtest.
+
+**Unity's NUnit refused one of lane D's asserts.** `Does.Not.Contain(int)` compiles only against
+the fast tier's newer NUnit; the editor rejected the whole test assembly. `Has.No.Member` says the
+same in both (`docs/lessons.md`, the two NUnits).
+
+**Measured:**
+
+- **Tiers.** Fast: Sim 1,161, Hud 795, 0 failed. Long: 39, 0 failed. EditMode: 2,823 total,
+  2,797 passed, 0 failed (17 skipped, 9 inconclusive) — lane C's two never-compiled files compiled
+  first time. PlayMode, alone on the machine: 106 total, 101 passed, 0 failed, 5 skipped. Both
+  content gates pass.
+- **Goldens: none moved.** `Golden.cs` is byte-identical to `229b00a0`, and `GoldenColonyProbe` run
+  on `229b00a0` and on this branch prints the same nine lines for all three colonies. Lane D's
+  starting kit did not need its exception: no golden builds on `Playtest`.
+- **The frame with a fight in view** (`FrameTimeTests.TheFrameWithAFightInView`, one run, RTX 5070
+  Ti at 640 × 480): fifteen colonists at peace **2.06 ms** (1,127 draw calls), the same with ten
+  marauders among them **2.29 ms** (1,139); the figures section 0.101 → 0.191 ms, the overlays 0.007
+  → 0.016. The fight costs about a tenth of a millisecond of figures and a dozen draws. Not at a
+  play resolution and not on the target laptop, like every number in this project.
+- **The player build** (`scripts/unity.sh build`, then `Odyssey.exe -odyssey-newgame`): built, booted
+  into a colony and ran 45 s with no error or exception in the log. The only warnings are the
+  stylesheet's three unknown pseudo-classes, which predate combat. A new game has no hostile in it,
+  so the smoke did not play a clip; the clips ship because the catalogue references them.
+- **The Long soak with weapons**: 241 swings, 122 hits, nine downs, no deaths (see §3).
+
+**Still open:** the combat sounds have no clips (five named ids, no catalogue rows, so a fight is
+silent); every computed pose angle, the floating words' lifetimes and colours, and the weapon's
+grip are INVENTED and unseen; a downed pawn past the 64-figure cap is drawn standing, and a downed
+colonist's click box is the standing one; a corpse always falls through the front death variant;
+swapping weapons draws no put-down of the old one; `PawnKindLabels.Marauder = 3` is a Hud copy of
+`PawnKindIndex.Marauder` with nothing holding the two together.

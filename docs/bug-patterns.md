@@ -2277,3 +2277,22 @@ that invalidates over a comment asking callers to remember.
 Its sibling is the same day's `ColonistAppearance.Equals`, which kept its old idea of "the same
 person" after two fields were added, so a portrait cache handed fifteen different hairstyles the
 same picture. Both are caches that were right until something underneath them moved.
+
+### 2026-09-23 — Two lanes, one health bar, two ladders; and a gate that still spoke C1 (P1)
+
+**Symptom, caught at the integration before anyone played.** Lane B coloured the health bar green,
+amber and red at 60 and 30 per cent; lane C had written `CombatFeedbackModel.HealthBarColour` at the
+need bar's 60 and 40 for lane B to call. And lane C's model sent an undrafted colonist for a weapon,
+while lane B's presenter returned before asking the model unless someone was drafted.
+
+**Cause.** Both are one rule with two owners, split across two lanes that each built their half in
+a separate worktree: what colour a bar is, and who hears a right-click. Each lane's tests were
+green, because each tested its own copy.
+
+**Fix.** The bar asks the model (`CombatMarks.BarInk` deleted); the presenter's gate is
+`OrderModel.HearsRightClick`. `docs/design/33-combat.md` §6E.
+
+**The check this earns.** *When lanes split a feature, list every question both sides answer, and
+give each one owner in the brief.* The contracts named which lane "writes" and which "calls" for the
+four fixed answers, and those four did not diverge. The bar colour was an answer lane C offered as
+optional, so lane B wrote its own; the gate was a rule the brief gave lane C in a file it gave lane B.

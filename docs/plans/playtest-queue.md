@@ -23,6 +23,27 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does a fight read, and does it end the way it should?** (checkpoint 2, C2 —
+  `claude/combat-c2`, `docs/plans/combat-c2-handover.md`, design 33 §3, §6A–§6C, §6E). Spawn a
+  marauder (backtick → Spawn) beside two colonists and do not draft: it should walk to the nearer,
+  swing, and she should stop work and fight back, numbers floating off both. Then watch a swing
+  land: the blade should reach the target on the instant the number floats. Fight until someone is
+  down — she lies on the ground, *Downed* lingers, the marauder turns to the next colonist standing
+  — then draft a colonist and right-click the downed marauder to finish it; the corpse stays lying
+  and a click says *Corpse of a marauder*. A wrong answer is a marauder that idles, a swing into the
+  air beside its target, a number well off the blow, a heavy swing that reads as a twitch, or a
+  body that vanishes. **And decide one rule:** an unattended fight ends in downs, never deaths,
+  because only an order strikes a body on the ground — say if that is wrong. Silent by design for
+  now: the five combat sounds have no clips.
+
+- **Is a weapon held and dropped where it should be?** (checkpoint 3, C3 — `claude/combat-c2`,
+  design 33 §6D–§6E). A new game lays a bat and a machete beside the food: they should lie flat and
+  be recognisable. Select a colonist, undrafted, and right-click the bat: she walks over, stoops and
+  stands with it in her right hand, gripped at the handle. Swap it for the machete: the bat is put
+  down where she stands. A wrong answer is a weapon standing on end, hovering off the hand, held by
+  its head, through the forearm, far too big or small — the grip is measured from the mesh and
+  nobody has seen it — or a right-click on a weapon that does nothing without a draft.
+
 - **Does a drafted colonist's run read as urgency, and is the deeper red findable?**
   (`claude/combat-mvp`, design 33 §2g–§2h). Draft a colonist and right-click across the board: she
   should visibly **run** — about twice her walking speed, the run clip, not a sped-up walk. The
