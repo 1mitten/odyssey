@@ -132,7 +132,7 @@ namespace Odyssey.Presentation.Bootstrap
                         _shell != null && _shell.MenuOpen,
                         _bootstrap?.Directors?.Work.Open == true,
                         _bootstrap?.Directors?.Almanac.Open == true,
-                        _bootstrap?.Directors?.Wildlife.Open == true,
+                        _bootstrap?.Directors?.Animals.Open == true,
                         // Null while a colony is running: the main screen and the game are the two
                         // halves of a session's life and only one of them is ever up.
                         _shell != null && _shell.Menu.Showing ? _shell.Menu.Screen : null))
@@ -159,8 +159,8 @@ namespace Odyssey.Presentation.Bootstrap
                     // game with no key that shut it — the X and F1 again, and nothing else.
                     _bootstrap?.Directors?.Work.SetOpen(false);
                     break;
-                case EscapeAction.CloseWildlife:
-                    _bootstrap?.Directors?.Wildlife.SetOpen(false);
+                case EscapeAction.CloseAnimals:
+                    _bootstrap?.Directors?.Animals.SetOpen(false);
                     break;
                 case EscapeAction.CloseAlmanac:
                     _bootstrap?.Directors?.Almanac.SetOpen(false);

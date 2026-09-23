@@ -72,8 +72,8 @@ namespace Odyssey.Tests.PlayMode
                 // "settings" is, so it too is a framed region whatever the colony is doing.
                 // "work" is the Work tab (design 27, 2026-09-20): docked bottom-left over the
                 // command bar, built and hidden at startup exactly as "settings" and "debug" are.
-                // "wildlife" is the Wildlife panel (design 30, 2026-09-23): the same corner, the
-                // same rule, built and hidden at startup and raised by F6 or the bar.
+                // "animals" is the Animals tab (design 30, 2026-09-23): the same corner, the
+                // same rule, built and hidden at startup and raised by F5 or the bar.
                 // "bulletins" is the Events panel (design 23, 2026-09-20): under the alerts in
                 // their column, hidden until something has happened, a framed region all the same.
                 // "toasts" is the transient stack (SK4), at the foot of that same column. Like
@@ -89,7 +89,7 @@ namespace Odyssey.Tests.PlayMode
                 string[] expected =
                 {
                     "stores", "clock", "alerts", "bulletins", "toasts", "rail", "orders", "inspect",
-                    "build", "menu", "settings", "debug", "work", "wildlife", "start", "saveprompt",
+                    "build", "menu", "settings", "debug", "work", "animals", "start", "saveprompt",
                     "leaveprompt", "almanac-panel",
                 };
                 var regions = doc.rootVisualElement.Query(className: "region").ToList();

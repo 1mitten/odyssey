@@ -109,7 +109,7 @@ namespace Odyssey.Tests.Hud
         {
             (HudCommands.BuildKey, HotkeyAction.BuildPalette),
             (HudCommands.WorkKey, HotkeyAction.WorkTab),
-            (HudCommands.WildlifeKey, HotkeyAction.WildlifeTab),
+            (HudCommands.AnimalsKey, HotkeyAction.AnimalsTab),
             (HudCommands.AlmanacKey, HotkeyAction.Almanac),
         };
 

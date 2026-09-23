@@ -80,7 +80,7 @@ namespace Odyssey.Tests.Hud
                 Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
             foreach (string key in WorkDirector.IconKeys)
                 Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
-            foreach (string key in WildlifeDirector.IconKeys)
+            foreach (string key in AnimalsDirector.IconKeys)
                 Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
 
             // And the two lists are the ones the panel actually draws from, not copies of them:

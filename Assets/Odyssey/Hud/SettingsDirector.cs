@@ -99,8 +99,8 @@ namespace Odyssey.Hud
         /// </summary>
         CloseWork,
 
-        /// <summary>Close the Wildlife panel, which docks where the Work tab docks and unwinds at its rung.</summary>
-        CloseWildlife,
+        /// <summary>Close the Animals tab, which docks where the Work tab docks and unwinds at its rung.</summary>
+        CloseAnimals,
 
         /// <summary>
         /// Close the Almanac reference browser (F9), which fills the screen above the bar.
@@ -1314,16 +1314,16 @@ namespace Odyssey.Hud
         /// </summary>
         public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen,
             bool almanacOpen, MenuScreen? startScreen) =>
-            Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, wildlifeOpen: false, startScreen);
+            Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen: false, startScreen);
 
         public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen,
-            bool almanacOpen, bool wildlifeOpen, MenuScreen? startScreen)
+            bool almanacOpen, bool animalsOpen, MenuScreen? startScreen)
         {
             if (toolArmed) return EscapeAction.DisarmTool;
             if (menuOpen) return EscapeAction.CloseMenu;
             if (paletteOpen) return EscapeAction.ClosePalette;
             if (workOpen) return EscapeAction.CloseWork;
-            if (wildlifeOpen) return EscapeAction.CloseWildlife;
+            if (animalsOpen) return EscapeAction.CloseAnimals;
             if (almanacOpen) return EscapeAction.CloseAlmanac;
             if (Open) return EscapeAction.ClosePanel;
 

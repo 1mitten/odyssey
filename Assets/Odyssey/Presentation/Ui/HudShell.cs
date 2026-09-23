@@ -631,7 +631,7 @@ namespace Odyssey.Presentation.Ui
             BuildSettings();
             BuildDebug();
             BuildWork();
-            BuildWildlife();
+            BuildAnimals();
             BuildAlmanac();
 
             // B18, last, so it is the top-most element in the tree and its scrim covers everything
@@ -700,7 +700,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Debug.TabChanged += OnDebugTabChanged;
             _directors.Work.Changed += OnWorkChanged;
             _directors.Work.ModeChanged += OnWorkModeChanged;
-            _directors.Wildlife.Changed += OnWildlifeChanged;
+            _directors.Animals.Changed += OnAnimalsChanged;
             _directors.Almanac.Changed += OnAlmanacChanged;
             _directors.Almanac.Navigated += OnAlmanacNavigated;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
@@ -877,7 +877,7 @@ namespace Odyssey.Presentation.Ui
                 RefreshSpeed();
                 RefreshBuildPalette();
                 RefreshWork();
-                RefreshWildlife();
+                RefreshAnimals();
             }
             if (_slow >= SlowBucketSeconds)
             {
@@ -1127,6 +1127,11 @@ namespace Odyssey.Presentation.Ui
             if (world == null || _directors == null) return;
 
             SelectionDirector selection = _directors.Selection;
+
+            // The Animals tab and the inspect pane never show together (design 30 §6): a
+            // selection — including the one a row of the tab makes — puts the tab away and
+            // gives the corner to the pane.
+            if (_directors.Animals.Open && !selection.IsEmpty) _directors.Animals.SetOpen(false);
 
             // The pane and the palette dock into the same bottom-left corner, so the corner holds
             // one of them. Opening the palette has cleared the selection since 2026-09-17; this is

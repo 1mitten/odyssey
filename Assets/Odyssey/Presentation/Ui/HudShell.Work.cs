@@ -1273,7 +1273,7 @@ namespace Odyssey.Presentation.Ui
             // things docked bottom-left would draw over each other.
             SetBuildPalette(false);
             ToggleMenu(false);
-            _directors?.Wildlife.SetOpen(false);
+            _directors?.Animals.SetOpen(false);
             RefreshWork();
         }
 

@@ -174,7 +174,9 @@ Owner, 2026-09-23: *"Lets have animals/wildlife under one tab - for now - just c
 Defer tamed animals for now"* (questions 2–5); the Work tab's shape (6) and the inspect pane
 (7): yes; the recommendations for inputs (8) and deliverables (9).
 
-## Follow-up code unit, once the design is agreed
+## Built
 
-Move the built Wildlife panel to **F5**, name it *Animals* (`ui.tab.animals`), and return F6
-to a dead item or retire it; rebuild it to the agreed table. Not started.
+The brief came back from Claude Design as a specification (owner, 2026-09-23: "remove the
+wildlife tab and make this animal tab and hook up what is necessary") and was built the same
+day: `AnimalsDirector`, `AnimalsModel`, `AnimalsLayout`, `HudShell.Animals.cs`; F5 in the
+binding map; Wildlife on F6 a dead item; design 30 §6 rewritten to it.

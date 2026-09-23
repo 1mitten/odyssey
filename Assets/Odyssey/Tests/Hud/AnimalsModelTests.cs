@@ -6,8 +6,8 @@ using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Tests.Hud
 {
-    /// <summary>The Wildlife panel's model (design 30 §6): what is out there, by kind and by distance.</summary>
-    public class WildlifeModelTests
+    /// <summary>The Animals tab's model (design 30 §6): what is out there, by kind and by distance.</summary>
+    public class AnimalsModelTests
     {
         static WorldSnapshot Board()
         {
@@ -27,19 +27,23 @@ namespace Odyssey.Tests.Hud
 
         static readonly IReadOnlyList<PawnId> Nobody = new List<PawnId>();
 
+        static List<int> Ids(AnimalsModel model)
+        {
+            var ids = new List<int>();
+            foreach (AnimalRow row in model.All) ids.Add(row.Id.Value);
+            return ids;
+        }
+
         [Test]
         public void RowsAreTheAnimalsByKindThenByDistanceFromWhereThePeopleStand()
         {
-            var model = new WildlifeModel();
+            var model = new AnimalsModel();
             model.Refresh(Board(), Nobody);
 
             Assert.That(model.HomeX, Is.EqualTo(12));
             Assert.That(model.HomeZ, Is.EqualTo(10));
             Assert.That(model.TotalCount, Is.EqualTo(4), "four animals; the two people are not rows");
-
-            var ids = new List<int>();
-            foreach (WildlifeRow row in model.All) ids.Add(row.Id.Value);
-            Assert.That(ids, Is.EqualTo(new[] { 5, 4, 3, 6 }), "hogs first (kind 1), nearer first; then the rats");
+            Assert.That(Ids(model), Is.EqualTo(new[] { 5, 4, 3, 6 }), "hogs first (kind 1), nearer first; then the rats");
 
             Assert.That(model.All[0].Away, Is.EqualTo(8), "the near hog is eight cells out");
             Assert.That(model.All[1].Away, Is.EqualTo(20));
@@ -51,9 +55,27 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void TheHeaderCountsEachKind()
+        public void SortingByDoingGroupsTheStatesAndDistanceStillBreaksTies()
         {
-            var model = new WildlifeModel();
+            var model = new AnimalsModel();
+            model.Refresh(Board(), Nobody);
+            Assert.That(model.Sort, Is.EqualTo(AnimalsSort.Kind), "the default");
+            Assert.That(model.SortBy(AnimalsSort.Kind), Is.False, "the sort it already has says nothing");
+
+            Assert.That(model.SortBy(AnimalsSort.Doing), Is.True);
+            // The resting ones together, then the wandering ones; within a state, kind then distance.
+            Assert.That(Ids(model), Is.EqualTo(new[] { 4, 6, 5, 3 }));
+            Assert.That(model.Rows.Count, Is.EqualTo(4), "and the page follows the new order");
+
+            model.Refresh(Board(), Nobody);
+            Assert.That(model.Sort, Is.EqualTo(AnimalsSort.Doing), "a refresh keeps the sort");
+            Assert.That(Ids(model), Is.EqualTo(new[] { 4, 6, 5, 3 }));
+        }
+
+        [Test]
+        public void TheCountStripCountsEachKind()
+        {
+            var model = new AnimalsModel();
             model.Refresh(Board(), Nobody);
 
             Assert.That(model.Counts.Count, Is.EqualTo(2));
@@ -62,12 +84,16 @@ namespace Odyssey.Tests.Hud
             Assert.That(model.Counts[0].KindKey, Is.EqualTo("ui.pawn.hog"));
             Assert.That(model.Counts[1].Kind, Is.EqualTo(2));
             Assert.That(model.Counts[1].Count, Is.EqualTo(2));
+
+            model.SortBy(AnimalsSort.Doing);
+            model.Refresh(Board(), Nobody);
+            Assert.That(model.Counts[0].Kind, Is.EqualTo(1), "the strip is by kind whatever the rows are sorted by");
         }
 
         [Test]
         public void TheSelectionIsMarkedAndItsPageIsFound()
         {
-            var model = new WildlifeModel { PageCapacity = 2 };
+            var model = new AnimalsModel { PageCapacity = 2 };
             model.Refresh(Board(), new List<PawnId> { new PawnId(6) });
 
             Assert.That(model.PageCount, Is.EqualTo(2));
@@ -85,12 +111,29 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
+        public void ThePagerAppearsAtThirteenAndNotAtTwelve()
+        {
+            var size = new GridSize(60, 60, 2);
+            for (int n = 12; n <= 13; n++)
+            {
+                var snapshot = new WorldSnapshot();
+                snapshot.BeginWrite(0, size, 0);
+                for (int i = 1; i <= n; i++)
+                    snapshot.AddPawn(new PawnView(new PawnId(i), new CellRef(i, 0, 0), 800, 800, 800, JobHandle.Wait, kind: 1));
+                var model = new AnimalsModel();
+                model.Refresh(snapshot, Nobody);
+                Assert.That(model.PageCount, Is.EqualTo(n == 12 ? 1 : 2), $"{n} animals");
+                Assert.That(model.Rows.Count, Is.EqualTo(12));
+            }
+        }
+
+        [Test]
         public void AnEmptyBoardIsOnePageOfNothingAndNoColonyIsTheOrigin()
         {
             var snapshot = new WorldSnapshot();
             snapshot.BeginWrite(0, new GridSize(10, 10, 2), 0);
             snapshot.AddPawn(new PawnView(new PawnId(7), new CellRef(4, 6, 0), 800, 800, 800, JobHandle.Wait, kind: 1));
-            var model = new WildlifeModel();
+            var model = new AnimalsModel();
             model.Refresh(snapshot, Nobody);
             Assert.That(model.HomeX, Is.Zero);
             Assert.That(model.All[0].Away, Is.EqualTo(6), "from the origin, a number rather than a lie");
@@ -107,35 +150,54 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void TheDirectorOpensClosesAndSaysSoOnce()
         {
-            var wildlife = new WildlifeDirector();
+            var animals = new AnimalsDirector();
             int changed = 0;
-            wildlife.Changed += () => changed++;
-            Assert.That(wildlife.Open, Is.False);
-            wildlife.Toggle();
-            Assert.That(wildlife.Open, Is.True);
-            wildlife.SetOpen(true);
+            animals.Changed += () => changed++;
+            Assert.That(animals.Open, Is.False);
+            animals.Toggle();
+            Assert.That(animals.Open, Is.True);
+            animals.SetOpen(true);
             Assert.That(changed, Is.EqualTo(1), "setting what is already set says nothing");
-            wildlife.Toggle();
+            animals.Toggle();
             Assert.That(changed, Is.EqualTo(2));
         }
 
+        /// <summary>The brief's arithmetic: 560 less the panel's padding and border is the three columns.</summary>
         [Test]
-        public void ThePanelIsWideEnoughForItsOwnPaddingAndBorder()
+        public void TheWindowIsTheGridPlusItsOwnPaddingAndBorder()
         {
-            Assert.That(WildlifeLayout.PanelOuterWidth,
-                Is.EqualTo(WildlifeLayout.PanelWidth + 2 * (HudLayout.Pad + HudTheme.BorderWidth)));
+            Assert.That(AnimalsLayout.GridWidth, Is.EqualTo(534));
+            Assert.That(AnimalsLayout.ExpectedGridWidth, Is.EqualTo(AnimalsLayout.GridWidth),
+                "a UI Toolkit width is a border box; the columns must add up to the window less its chrome");
+            Assert.That(AnimalsLayout.TabWidth, Is.EqualTo(560));
         }
 
         [Test]
-        public void EscapeClosesTheWildlifePanelAtTheWorkTabsRung()
+        public void EscapeClosesTheAnimalsTabAtTheWorkTabsRung()
         {
             var settings = new SettingsDirector();
-            Assert.That(settings.Escape(false, false, false, false, false, wildlifeOpen: true, null),
-                Is.EqualTo(EscapeAction.CloseWildlife));
-            Assert.That(settings.Escape(false, false, false, true, false, wildlifeOpen: true, null),
+            Assert.That(settings.Escape(false, false, false, false, false, animalsOpen: true, null),
+                Is.EqualTo(EscapeAction.CloseAnimals));
+            Assert.That(settings.Escape(false, false, false, true, false, animalsOpen: true, null),
                 Is.EqualTo(EscapeAction.CloseWork), "Work first, as the two never share the corner");
-            Assert.That(settings.Escape(false, false, false, false, true, wildlifeOpen: true, null),
-                Is.EqualTo(EscapeAction.CloseWildlife), "before the Almanac, which floats");
+            Assert.That(settings.Escape(false, false, false, false, true, animalsOpen: true, null),
+                Is.EqualTo(EscapeAction.CloseAnimals), "before the Almanac, which floats");
+        }
+
+        [Test]
+        public void TheBarsAnimalsItemIsLiveOnF5AndWildlifeIsDead()
+        {
+            HudCommand? animals = null, wildlife = null;
+            foreach (HudCommand command in HudCommands.All)
+            {
+                if (command.Key == HudCommands.AnimalsKey) animals = command;
+                if (command.Key == "ui.tab.wildlife") wildlife = command;
+            }
+            Assert.That(animals, Is.Not.Null);
+            Assert.That(animals!.Value.Live, Is.True);
+            Assert.That(animals.Value.Hotkey, Is.EqualTo("F5"));
+            Assert.That(wildlife, Is.Not.Null);
+            Assert.That(wildlife!.Value.Live, Is.False, "wildlife is listed under Animals for now");
         }
     }
 }

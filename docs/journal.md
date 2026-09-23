@@ -10721,3 +10721,16 @@ So the panel is Wildlife, on F6, and the placeholder became real the way Work ma
 tuple's reason emptied, the key added to the binding map, the clash tests told. The one design
 question in it was what "how far away" is measured from; the frame carries no start cell, and
 the mean of the colonists' cells is the colony as it is now rather than as it was placed.
+
+**And then the Animals tab, from the brief.** The interview's answer was one tab called
+Animals with the tamed half deferred; the brief went to Claude Design and came back as a
+specification with numbers — a 560 window, 32 + 250 + 252 columns, 30 px rows, a 7 × 5 sort
+mark, 22 px pager buttons — and the day's second panel was built to it, replacing the day's
+first. Two things in the specification are worth writing down. It **drops the distance and the
+layer columns** the Wildlife panel had drawn, while keeping distance as the sort order, which
+is a cleaner table and a question for the playtest. And it says twice that **the tab and the
+inspect pane never show together** while also specifying a selected-row style; the rule wins,
+the style is built and unseen, and the note is in §6 so nobody spends an afternoon looking for
+the row that never highlights. The arithmetic in the brief was right: 560 less the panel's own
+padding and border is exactly the three columns, which is the border-box lesson of design 27
+§17 arriving from the design side for once.

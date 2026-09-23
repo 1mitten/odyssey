@@ -117,38 +117,53 @@ hook — is a diet model that belongs with the health unit.
 The seeded animal that stands on the ring when it decides to go vanishes on the next rare tick.
 That is the rule working — it was at the edge — and the save test had to pick one that was not.
 
-## 6. The Wildlife panel
+## 6. The Animals tab
 
-**F6, and Wildlife rather than Animals.** The interview recommended an *Animals* panel on F2
-with the tamed half reserved. The registry and the command bar disagreed, and were right: they
-have carried both tabs since M1 — `ui.tab.animals` is "tame beasts and their training" and
-`ui.tab.wildlife` is "what is out there" — and the bar has advertised Wildlife on F6 as a
-placeholder since the day it was drawn. With no taming there is nothing for Animals to show, so
-this is Wildlife on the F6 the bar promised, the placeholder made real the way Work made F1
-real (design 27), and the Animals tab arrives with taming.
+**One tab, called Animals, on F5** (owner, 2026-09-23: *"animals/wildlife under one tab - for
+now - just call it animals"*; the tamed half deferred entirely). It was the Wildlife panel on F6
+for a day — the registry has carried both tabs since M1, and F6 was the one whose placeholder
+said "what is out there" — and it is the Animals tab now, rebuilt to a design brief
+(`docs/reference/mockups/animals-tab-brief.md`, answered through Claude Design) with the
+Wildlife item on F6 a dead item again ("wildlife is listed under Animals for now").
 
-**What it shows.** A count per kind across the top ("Midden hog 4  Duct rat 3"), then one row
-per animal: kind, what it is doing (wandering or resting, the inspect pane's own words), the
-layer it stands on, and how far it is from the colony, in cells. Rows are sorted by kind and
-then by distance, twelve to a page with the roster's pager, and **a click on a row is the
-roster path** (`HudDirectors.ChooseColonist`, which was never only for colonists): the layer
-first, then the selection, then a camera jump. Hunting and taming are not columns yet because
-there is nothing to put in them; the panel is one table and they are two more columns when
-they come.
+**What it shows.** A count strip across the top, one entry per kind present — the word at the
+meta step, the figure in mono beside it — then one row per animal: a 22 px portrait tile
+(where the pixel icon goes), the kind, and what it is doing (wandering or resting, with a 12 px
+state square). Rows are sorted by kind and then by distance from the colony, nearest first, and
+either heading sorts on a click: the sorted heading turns accent and carries a drawn 7 × 5
+triangle, because no shipped font has one. Twelve rows a page, a pager of two 22 px chevron
+buttons and "1 / 2" in mono only when there is a second page, and one quiet meta line —
+`ui.animals.empty`, "No animals on the board" — when there is nothing to list. **Distance is not
+drawn**; it orders the rows, and it is the one column the earlier panel had that the brief took
+away, along with the layer.
 
-**The colony is where its people stand.** "How far away" has to be from something the frame
-carries, and the mean of the colonists' cells is; the start cell is not, and a colony that has
-moved house has moved its animals' distances with it. With no colonists the distance is from
-the board's origin, a number rather than a lie.
+**The geometry is the brief's, one owner** (`AnimalsLayout`): the window is **560** wide and a
+UI Toolkit width is a border box, so the panel's 12 px padding and 1 px border leave 534 for
+the grid of 32 + 250 + 252; rows, the count strip and the pager are 30 high; the header 34.
+`TheWindowIsTheGridPlusItsOwnPaddingAndBorder` holds the arithmetic and the PlayMode test
+measures the built window. Tamed-animal columns are appended to the right of Doing later and
+widen the window; nothing is drawn for them, not even greyed.
+
+**The tab and the inspect pane never show together.** Opening the tab clears the selection, as
+opening Build does; any selection — including the one a row click makes through the roster
+path (`HudDirectors.ChooseColonist`: layer, selection, camera) — closes the tab, so the pane
+that then shows the animal has the corner to itself. The brief also specifies a selected-row
+style, accent fill with on-accent ink; it is built, and under this rule it is never seen,
+because no selection survives the tab being open. Kept because it is cheap and the rule may
+move when the tamed half arrives.
 
 **Built the way the Work tab is built** (design 27 §16–17): one window docked bottom-left on
-the command bar at a constant width — `WildlifeLayout.PanelOuterWidth`, the content plus the
-panel's own padding and border, which UI Toolkit puts *inside* a width — rows pooled once at
-build and retexted on refresh, the count strip rebuilt only when the number of kinds changes,
-nothing rebuilt per frame, and the refresh in the same half-second bucket the Work tab's is.
-It docks where the palette, the menu and the Work tab dock, so opening any of the four puts
-the others away, and Escape closes it at the Work tab's rung. `WildlifeModel` is Unity-free
-and runs in the fast tier; `WildlifeDirector` is session state beside the Work tab's.
+the command bar, the Animals item on the bar washed while it is open (`cmd--on`, as Build is),
+rows pooled once at build and retexted on refresh, the count strip rebuilt only when the
+number of kinds changes, nothing rebuilt per frame, the refresh in the Work tab's half-second
+bucket. Opening any of Build, Work, the menu or this tab puts the others away; Escape closes it
+at the Work tab's rung. `AnimalsModel` is Unity-free and runs in the fast tier; every rendered
+string is ASCII, which `HudFontTests` and the PlayMode test both hold.
+
+**The colony is where its people stand.** "How far" has to be from something the frame carries,
+and the mean of the colonists' cells is; the start cell is not, and a colony that has moved
+house has moved its animals' distances with it. With no colonists the distance is from the
+board's origin, a number rather than a lie.
 
 ## 7. Open
 

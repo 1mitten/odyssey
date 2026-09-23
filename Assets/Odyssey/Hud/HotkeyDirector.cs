@@ -40,6 +40,7 @@ namespace Odyssey.Hud
         /// always one with nothing behind it.
         /// </summary>
         F1,
+        F5,
         F6,
         F9,
     }
@@ -90,8 +91,8 @@ namespace Odyssey.Hud
         /// </summary>
         WorkTab,
 
-        /// <summary>Open or close the Wildlife panel (design 30 §6), on the F6 the bar has advertised for it since M1.</summary>
-        WildlifeTab,
+        /// <summary>Open or close the Animals tab (design 30 §6), on the F5 the bar has advertised for it since M1.</summary>
+        AnimalsTab,
 
         /// <summary>
         /// Open or close the Almanac reference browser. F9 on the command bar.
@@ -182,7 +183,7 @@ namespace Odyssey.Hud
             (HotkeyAction.BuildPalette,     HudKey.B,         HudKey.None),
             (HotkeyAction.DebugMenu,        HudKey.Backquote, HudKey.None),
             (HotkeyAction.WorkTab,          HudKey.F1,        HudKey.None),
-            (HotkeyAction.WildlifeTab,      HudKey.F6,        HudKey.None),
+            (HotkeyAction.AnimalsTab,       HudKey.F5,        HudKey.None),
             (HotkeyAction.Almanac,          HudKey.F9,        HudKey.None),
         };
 
@@ -364,7 +365,7 @@ namespace Odyssey.Hud
             HotkeyAction.BuildPalette => "ui.keys.build",
             HotkeyAction.DebugMenu => "ui.keys.debugmenu",
             HotkeyAction.WorkTab => "ui.keys.worktab",
-            HotkeyAction.WildlifeTab => "ui.keys.wildlife",
+            HotkeyAction.AnimalsTab => "ui.keys.animals",
             HotkeyAction.Almanac => "ui.keys.almanac",
             _ => KeysKey,
         };
