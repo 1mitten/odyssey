@@ -168,6 +168,18 @@ namespace Odyssey.Presentation.Rendering
         public Vector3 scale = Vector3.one;
 
         /// <summary>
+        /// Fit the model into this rectangle, in metres — <c>x</c> across, <c>y</c> along the
+        /// facing — scaled uniformly and turned a quarter if its own long side runs the other way
+        /// (design 32 §14). Zero is off, which every row before power is. It exists because a pack
+        /// prop is modelled at whatever size its artist chose, and a row that had to carry a
+        /// measured scale would be a number nobody could check without opening the editor.
+        /// </summary>
+        public Vector2 fitFootprint;
+
+        /// <summary>With <see cref="fitFootprint"/>: never taller than this, in metres. Zero is no ceiling.</summary>
+        public float fitHeight;
+
+        /// <summary>
         /// Take only the *material* from the prefab and keep the primitive box for the mesh.
         ///
         /// Solid ground needs this. A terrain cell is meshed as a body filling the cell, so

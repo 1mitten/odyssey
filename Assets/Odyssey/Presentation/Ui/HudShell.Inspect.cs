@@ -893,16 +893,26 @@ namespace Odyssey.Presentation.Ui
                     view.LastTint = null;
                 }
 
-                // The value's colour, where the fact carries one — a quality tier, and nothing
-                // else so far. Null means the row keeps the colour the stylesheet gives it, which
-                // is what "Normal: no change" asks for, so the style is cleared rather than set to
-                // a colour of our own.
-                if (view.LastTint?.Hex != row.Tint?.Hex)
+                // An order's action is a button in its own colours (design 32 §14): Cancel filled
+                // red with white ink, taking a line up filled amber. The stylesheet owns both, so
+                // the row's tint is not written inline over it — an inline colour would win.
+                bool actionRow = row.Name == InspectModel.OrderActionRow && _inspect.OrderActionUnderPane;
+                bool danger = actionRow && row.Tint != null && _inspect.OrderAction != IntentKind.RemoveConduit;
+                bool warn = actionRow && row.Tint != null && _inspect.OrderAction == IntentKind.RemoveConduit;
+                HudColour? tintNow = actionRow ? null : row.Tint;
+
+                // The value's colour, where the fact carries one — a quality tier, a power state.
+                // Null means the row keeps the colour the stylesheet gives it, which is what
+                // "Normal: no change" asks for, so the style is cleared rather than set to a colour
+                // of our own.
+                if (view.LastTint?.Hex != tintNow?.Hex)
                 {
-                    view.LastTint = row.Tint;
-                    if (row.Tint is HudColour tint) view.Value.style.color = HudTokens.Convert(tint);
+                    view.LastTint = tintNow;
+                    if (tintNow is HudColour tint) view.Value.style.color = HudTokens.Convert(tint);
                     else view.Value.style.color = StyleKeyword.Null;
                 }
+                view.Root.EnableInClassList("inspect__row--danger", danger);
+                view.Root.EnableInClassList("inspect__row--warn", warn);
 
                 if (view.IsPick != pick || view.IsSwitch != switchPick || view.IsOrderAction != linePick)
                 {

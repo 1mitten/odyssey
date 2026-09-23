@@ -266,6 +266,7 @@ namespace Odyssey.Presentation.Ui
                         if (_directors == null) return;
                         _directors.Overlays.TogglePower();
                         overlay.EnableInClassList("menu__row--on", _directors.Overlays.PowerVisible);
+                        MarkViews();
                     });
                 }
                 else

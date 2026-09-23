@@ -54,6 +54,29 @@ namespace Odyssey.Tests.Hud
             Assert.That(overlay.PowerVisible, Is.False);
         }
 
+        /// <summary>
+        /// The views strip's Power switch is the overlay's own: pressing it keeps the lines shown
+        /// whatever is armed, and pressing again hands them back to the tools (design 32 §14).
+        /// </summary>
+        [Test]
+        public void ThePowerViewIsTheOverlaysSwitch()
+        {
+            var overlays = new OverlayDirector();
+            Assert.That(HudViews.Keys, Does.Contain(HudViews.Power));
+            Assert.That(HudViews.IsOn(overlays, HudViews.Power), Is.False);
+
+            HudViews.Toggle(overlays, HudViews.Power);
+            Assert.That(overlays.PowerVisible, Is.True);
+            Assert.That(PowerLinesVisibility.Visible(DesignateTool.None, BuildingHandle.Wall, false, overlays.PowerVisible),
+                Is.True, "on with nothing armed");
+
+            HudViews.Toggle(overlays, HudViews.Power);
+            Assert.That(PowerLinesVisibility.Visible(DesignateTool.Build, BuildingHandle.Conduit, false, overlays.PowerVisible),
+                Is.True, "off, a power tool still shows them");
+            Assert.That(PowerLinesVisibility.Visible(DesignateTool.None, BuildingHandle.Wall, false, overlays.PowerVisible),
+                Is.False, "and putting the tool down hides them");
+        }
+
         // ---- the drag (§10) -------------------------------------------------------------------------
 
         /// <summary>A line drag stays one row however far it wanders — and the control, a wall, widens.</summary>

@@ -416,7 +416,23 @@ namespace Odyssey.Presentation.Rendering
             // rule rather than to each row, or every future walked-on piece has to remember it.
             else if (entry.topAtY) normalise.y = bounds.max.y - CellMetrics.SlabLift;
 
-            Matrix4x4 place = Matrix4x4.TRS(entry.offset, Quaternion.Euler(0f, entry.yaw, 0f), SafeScale(entry))
+            // A prop fitted to a footprint (design 32 §14): scaled uniformly into the rectangle and
+            // turned a quarter when its own long side is its X, so the long side runs along the
+            // facing — which is +Z, the way the second cell of a two-cell record lies.
+            float yaw = entry.yaw;
+            Vector3 scale = SafeScale(entry);
+            if (entry.fitFootprint.x > 0f && entry.fitFootprint.y > 0f && bounds.size.x > 0f && bounds.size.z > 0f)
+            {
+                bool turn = bounds.size.x > bounds.size.z;
+                float along = turn ? bounds.size.x : bounds.size.z;
+                float across = turn ? bounds.size.z : bounds.size.x;
+                float fit = Mathf.Min(entry.fitFootprint.y / along, entry.fitFootprint.x / across);
+                if (entry.fitHeight > 0f && bounds.size.y > 0f) fit = Mathf.Min(fit, entry.fitHeight / bounds.size.y);
+                scale = new Vector3(fit, fit, fit);
+                if (turn) yaw += 90f;
+            }
+
+            Matrix4x4 place = Matrix4x4.TRS(entry.offset, Quaternion.Euler(0f, yaw, 0f), scale)
                               * Matrix4x4.Translate(-normalise);
 
             var parts = new ModulePart[merged.Count];

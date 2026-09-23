@@ -29,7 +29,9 @@ the next session learns to ignore.
   Events tab has a **Scrap drop**. Grant wood too, then open Build → **Power**. Drag a **Conduit**
   run from open ground *through a wall* into a room; put a **Heater** beside the run inside and a
   **Generator** beside it outside. Click an ordered line: the pane should title it *Conduit* and
-  offer **Cancel**; a laid one, while the lines are shown, **Remove conduit**. Watch the lines appear the moment the tool is armed and vanish when it is put
+  offer **Cancel**; a laid one, while the lines are shown, **Remove conduit**. The **Power** button
+  under the orders strip keeps the lines shown whatever is armed. Run *Odyssey → Presentation →
+  Rebuild module catalogue* once first, or the generator and heater are still blocks. Watch the lines appear the moment the tool is armed and vanish when it is put
   down; a hauler should fill the generator unasked; the heater's pane should go from *not
   connected* to *powered*, and the room should warm. Then build a sixth heater on the same net and
   watch the whole net go dark and the *Power failure* alert rise.

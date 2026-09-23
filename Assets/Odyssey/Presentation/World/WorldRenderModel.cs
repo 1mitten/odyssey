@@ -60,6 +60,9 @@ namespace Odyssey.Presentation.World
         readonly byte[] _edificeFacing;
         readonly bool[] _bedHead;
 
+        /// <summary>Whether this cell is its record's head — the one a building drawn once is drawn from (design 32 §14).</summary>
+        readonly bool[] _edificeHead;
+
 
         /// <summary>The crop standing in each cell as <c>plant handle + 1</c>, or 0 for fallow. A crop is not in the grid — it lives in zone state — so this mirror is fed from the published snapshot, not from a contributor.</summary>
         readonly byte[] _cropPlant;
@@ -172,6 +175,7 @@ namespace Odyssey.Presentation.World
             _slot = new ushort[count];
             _edificeFacing = new byte[count];
             _bedHead = new bool[count];
+            _edificeHead = new bool[count];
             _cropPlant = new byte[count];
             _cropStage = new byte[count];
             _zoned = new bool[count];
@@ -819,6 +823,9 @@ namespace Odyssey.Presentation.World
         /// <summary>Whether this cell is the head of the bed that stands in it — the half that draws.</summary>
         public bool BedHead(int index) => _bedHead[index];
 
+        /// <summary>Is this cell the head of the record standing in it? True for every one-cell thing.</summary>
+        public bool EdificeHead(int index) => _edificeHead[index];
+
         /// <summary>
         /// The head cell of the bed occupying this one, or -1 where there is no bed.
         ///
@@ -1389,6 +1396,7 @@ namespace Odyssey.Presentation.World
                 bool bed = placed.Def == CoreContent.EdificeBed && !placed.Removed;
                 _edificeFacing[index] = placed.Removed ? (byte)0 : placed.Facing;
                 _bedHead[index] = bed && placed.CellIndex == index;
+                _edificeHead[index] = !placed.Removed && placed.CellIndex == index;
             }
             else
             {
@@ -1396,6 +1404,7 @@ namespace Odyssey.Presentation.World
                 _edificeStuff[index] = CoreContent.StuffNone;
                 _edificeFacing[index] = 0;
                 _bedHead[index] = false;
+                _edificeHead[index] = false;
             }
 
             // Anything at all here means this layer is worth drawing, and so is the one above it —

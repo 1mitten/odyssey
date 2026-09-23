@@ -1252,6 +1252,22 @@ namespace Odyssey.EditorTools
                 moduleId = ModuleIds.UtilityTap, shape = ModuleShape.Pillar, prefabName = string.Empty,
             });
 
+            // Power (design 32 §14, the owner's picks of 2026-09-23). Pack props fitted to their
+            // footprint rather than given a measured scale: the generator into its two cells, the
+            // air-conditioning unit — a heat pump in all but name — into its one, each standing on
+            // the floor with a little clearance to the cell's edge. A clone without the packs
+            // resolves them to nothing and draws the tinted block per cell, as it always did.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.Generator, shape = ModuleShape.Pillar, prefabName = "SM_Prop_Generator_01",
+                centreXZ = true, baseAtY = true, fitFootprint = new Vector2(2.1f, 4.4f), fitHeight = 2.4f,
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.Heater, shape = ModuleShape.Pillar, prefabName = "SM_Prop_AirConditioningUnit_01",
+                centreXZ = true, baseAtY = true, fitFootprint = new Vector2(2.0f, 2.0f), fitHeight = 2.2f,
+            });
+
             // Street surfaces: the half tiles are exactly one cell square.
             Slab(ModuleIds.Terrain("Pavement"), "SM_Env_Ground_Tile_Half_01");
             Slab(ModuleIds.Terrain("CrackedPavement"), "SM_Env_Ground_Tile_Half_02");

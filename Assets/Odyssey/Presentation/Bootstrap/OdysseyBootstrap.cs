@@ -1954,6 +1954,15 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            // Power's machines, when their art resolved: once, at the middle of the footprint,
+            // turned — PropShape, the mesher's own answer (design 32 §14).
+            if ((what.edifice == CoreContent.EdificeGenerator || what.edifice == CoreContent.EdificeHeater)
+                && _model != null && _model.Library[module].Shape == ModuleShape.Pillar)
+            {
+                _renderer.DrawGhost(module, tint, PropShape.Root(cell.X, cell.Z, cell.Y, facing, what.footprint));
+                return;
+            }
+
             // The shelf's ghost, from the shelf's own shape — the same three boxes the mesher
             // draws, so the thing under the pointer and the thing on the board cannot disagree
             // about where a shelf stands in its cell. It stands against the back of the cell, so

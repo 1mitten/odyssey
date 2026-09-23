@@ -279,4 +279,21 @@ way back to it to cancel it; and a line made of wood read wrong. The owner's ans
   of an order's hue), sending `CancelBuilding` with `A` = 1 — the building order alone, never a line
   ordered through the same cell. A line's Cancel is the same red; *Remove conduit* wears the remove
   tool's amber, because taking a laid line up is not a cancel.
+- **The Cancel is a button, not red text** (owner, the same day: *"a red theme with white text"*):
+  filled #a8352b with white ink — 6.6:1, where the cancel tool's own #e06a5c would be 3.2 and fail
+  small text — and the tool's red kept for its border. Remove conduit is filled amber with dark ink.
+  The stylesheet owns both (`inspect__row--danger`, `--warn`); the shell no longer writes the row's
+  tint inline over them.
+- **The views strip**: under the orders in the right-hand gutter, the orders strip's own box and
+  buttons, each a switch that stays where it is put (`HudViews`, `HudRegion.ViewsStrip`). Power is
+  the first: on, the lines show whatever is armed — to deconstruct around a wired room, or just to
+  look; off, they are the tools' again, shown while power work is in hand. The Menu's overlay row is
+  the same switch. The rail's squeeze gives up the strip's room as it does the orders'.
+- **Art** (the owner's picks): the generator is Battle Royale's `SM_Prop_Generator_01`, the heater
+  Sci-Fi City's `SM_Prop_AirConditioningUnit_01`, fitted into their footprints at bake time
+  (`ModuleEntry.fitFootprint` / `fitHeight`, scaled uniformly and turned so the long side runs along
+  the facing) and drawn once from the head at the middle of the footprint (`PropShape`, shared by the
+  mesher and the cursor). Without the packs they are the tinted block per cell, as before. The rows
+  live in `PlayScene`, so the committed catalogue gains them when *Odyssey → Presentation → Rebuild
+  module catalogue* is run.
 
