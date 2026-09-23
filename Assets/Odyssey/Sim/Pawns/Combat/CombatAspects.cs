@@ -37,7 +37,11 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const string HpName = "odyssey.pawn.hp";
 
-        /// <summary>The pool, in thousandths, published beside <see cref="HpName"/> whenever it is.</summary>
+        /// <summary>
+        /// The pool, in thousandths: for <b>every person</b>, always (the Health tab reads "x / 100"
+        /// for a whole colonist), and for an animal beside <see cref="HpName"/> whenever that is.
+        /// A person with this and no <see cref="HpName"/> is whole.
+        /// </summary>
         public const string HpMaxName = "odyssey.pawn.hp.max";
 
         /// <summary>The item def index of the weapon in the hand (C3); absent for bare hands.</summary>

@@ -178,7 +178,12 @@ namespace Odyssey.Tests.Sim
         // revenge (hog 700, rat 50) and the two natural attacks, and a new CombatDef carrying the
         // owner's hit and dodge curves and fists. Taken from a freshly loaded pack. The goldens
         // moved in the same commit, and not for any of the numbers: see Golden.cs.
-        const ulong ContentFingerprint = 14184824215602652456UL;
+        //
+        // Moved an eighteenth time, 2026-09-23, by the seam review of the same step: PawnKindDef
+        // gained `weapon` and PawnKind_Marauder names Item_Machete (design 33 §1: "debug-spawned,
+        // armed"; IWeaponRules.ArmOnSpawn puts it in the hand). No golden moved: no golden spawns
+        // a marauder.
+        const ulong ContentFingerprint = 3115960914970437026UL;
 
 
         [Test]

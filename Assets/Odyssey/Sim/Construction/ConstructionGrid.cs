@@ -1668,6 +1668,29 @@ namespace Odyssey.Sim.Construction
         public int BedOwnerAt(CellRef cell) =>
             _grid.Contains(cell.X, cell.Z, cell.Y) ? BedOwnerAt(_grid.Index(cell)) : 0;
 
+        /// <summary>
+        /// Every bed this pawn owns goes back to nobody: the pawn is leaving the board
+        /// (<c>PawnRegistry.Despawn</c>, design 33 §5c). Returns how many were released.
+        ///
+        /// <para><b>Does not raise <see cref="BedOwnershipChanged"/>.</b> That flag asks the job
+        /// system to move sleepers out of beds that are no longer theirs, and a bed going to nobody
+        /// takes nobody out of it — so raising it would only be a flag that can outlive its tick.</para>
+        /// </summary>
+        public int ReleaseBedsOf(int pawnId)
+        {
+            if (pawnId <= 0) return 0;
+            int released = 0;
+            for (int i = 0; i < _edifices.Count; i++)
+            {
+                PlacedEdifice bed = _edifices[i];
+                if (bed.Def != CoreContent.EdificeBed || bed.Removed || bed.Owner != pawnId) continue;
+                bed.Owner = 0;
+                _edifices[i] = bed;
+                released++;
+            }
+            return released;
+        }
+
         /// <summary>Whether this colonist already has a bed of her own somewhere on the map.</summary>
         public bool PawnOwnsABed(int pawnId)
         {

@@ -24,5 +24,13 @@ namespace Odyssey.Sim.Pawns
         }
 
         public virtual bool CanEquip(Pawn pawn, ColonyItem item, PawnContext ctx) => false;
+
+        /// <summary>
+        /// Nothing until lane D writes it: the marauder's machete (<see cref="PawnContent.WeaponOf"/>)
+        /// is named in content and put in the hand here. See <see cref="IWeaponRules.ArmOnSpawn"/>.
+        /// </summary>
+        public virtual void ArmOnSpawn(Pawn pawn, PawnContext ctx)
+        {
+        }
     }
 }

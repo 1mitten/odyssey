@@ -71,6 +71,10 @@ namespace Odyssey.Sim.Pawns
             // own, so no scenario, headless run or fixture had to change.
             pawn.RollSeed = _ctx.Seed;
             Adopt(pawn);
+            // What the kind arrives holding (design 33 §1: the marauder is armed). After the
+            // adoption, so the rules see a pawn the registry knows; a kind naming no weapon is one
+            // comparison. The loader never comes here — it restores the hand from the save.
+            if (_ctx.Content.WeaponOf(kind) >= 0) _ctx.WeaponRules.ArmOnSpawn(pawn, _ctx);
             return pawn;
         }
 
@@ -162,12 +166,20 @@ namespace Odyssey.Sim.Pawns
         /// because the registry does not know the job system. Iteration order — ascending id — is
         /// kept by removing in place and renumbering the index after it, which is O(n) on an
         /// event that happens a few times a day.
+        ///
+        /// <para><b>And any bed the pawn owned goes back to nobody</b> (design 33 §5c). Until death
+        /// only animals were ever despawned and they own no beds, so nothing needed it; a dead
+        /// colonist would otherwise keep her bed for ever under an id that no longer exists. Here
+        /// rather than in the fight's death so that every way off the board — death, a leaving
+        /// animal, whatever comes next — releases the same things. One scan of the edifice list,
+        /// on an event that happens a few times a day.</para>
         /// </summary>
         public void Despawn(Pawn pawn)
         {
             if (pawn == null) throw new System.ArgumentNullException(nameof(pawn));
             if (!_byId.TryGetValue(pawn.Id.Value, out int index) || !ReferenceEquals(_pawns[index], pawn)) return;
             _ctx.Reservations.ReleaseAll(pawn);
+            _ctx.Construction?.ReleaseBedsOf(pawn.Id.Value);
             _pawns.RemoveAt(index);
             _byId.Remove(pawn.Id.Value);
             for (int i = index; i < _pawns.Count; i++) _byId[_pawns[i].Id.Value] = i;
@@ -310,12 +322,16 @@ namespace Odyssey.Sim.Pawns
 
                 // The fight (design 33 §5), sparse, and for animals as much as people: the health
                 // bar is drawn over the hurt, the downed and the drafted, and a hog can be all
-                // three but the last. A colony nobody has hurt publishes none of it.
-                if (pawn.HpMilli < pawn.HpMaxMilli || pawn.Downed || pawn.Drafted)
-                {
-                    writer.AddPawnAspect(pawn.Id, CombatAspects.Hp, pawn.HpMilli);
-                    writer.AddPawnAspect(pawn.Id, CombatAspects.HpMax, pawn.HpMaxMilli);
-                }
+                // three but the last. A colony nobody has hurt publishes no hit points — the
+                // presence of hp is what says a bar is owed.
+                //
+                // The pool goes out for every person, hurt or whole, because the Health tab says
+                // "x / 100" for a colonist nobody has touched; an absent hp.max would leave it
+                // nothing to divide by. An absent hp with a published hp.max reads as whole. An
+                // animal has no Health tab, so its pool goes out only beside its hit points.
+                bool hurt = pawn.HpMilli < pawn.HpMaxMilli || pawn.Downed || pawn.Drafted;
+                if (hurt) writer.AddPawnAspect(pawn.Id, CombatAspects.Hp, pawn.HpMilli);
+                if (hurt || pawn.IsPerson) writer.AddPawnAspect(pawn.Id, CombatAspects.HpMax, pawn.HpMaxMilli);
                 if (pawn.CombatTarget != 0)
                     writer.AddPawnAspect(pawn.Id, CombatAspects.OrderTarget, pawn.CombatTarget);
                 if (pawn.EquippedItem != 0)

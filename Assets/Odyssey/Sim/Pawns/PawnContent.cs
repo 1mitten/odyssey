@@ -731,6 +731,16 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Whose side it is on (design 33 §3). See <see cref="Faction"/>.</summary>
         public Faction faction = Faction.Colony;
 
+        /// <summary>
+        /// The weapon this kind arrives holding, by item defName, or empty for bare hands (design
+        /// 33 §1: the marauder is "debug-spawned, armed"). Resolved once, by name, into
+        /// <see cref="PawnContent.KindWeapon"/>; a kind naming an item the content does not have,
+        /// or one with no <see cref="ItemDef.weapon"/> block, fails the load. What puts it in the
+        /// hand is <see cref="IWeaponRules.ArmOnSpawn"/>, which the registry calls for every pawn it
+        /// spawns whose kind names one — so the colonist and the two animals cost one comparison.
+        /// </summary>
+        public string weapon = string.Empty;
+
         public int startingMood = 600;
         public int[] startingNeeds = { 800, 800, 800 };
 
@@ -870,6 +880,16 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>The species each kind spawns as, by index into <see cref="Species"/>.</summary>
         public int[] KindSpecies = System.Array.Empty<int>();
+
+        /// <summary>
+        /// The item def each kind arrives holding (<see cref="PawnKindDef.weapon"/>), or -1 for
+        /// bare hands. Read through <see cref="WeaponOf"/>.
+        /// </summary>
+        public int[] KindWeapon = System.Array.Empty<int>();
+
+        /// <summary>The item def a pawn of this kind is spawned holding, or -1 — and -1 for a content set with no table.</summary>
+        public int WeaponOf(int kind) =>
+            (uint)kind < (uint)KindWeapon.Length ? KindWeapon[kind] : -1;
 
         /// <summary>
         /// The one species a content set built in code has: a person. Content from Defs always
@@ -1078,6 +1098,25 @@ namespace Odyssey.Sim.Pawns
                     throw new DefLoadException(
                         $"PawnKindDef '{content.Kinds[k].defName}' names species '{wanted}', which the content does not have.");
                 content.KindSpecies[k] = found;
+            }
+
+            // The weapon a kind arrives holding (design 33 §1), by name, once — after the items,
+            // which this reads. A name the content does not have, or an item that is not a weapon,
+            // fails the load rather than a spawn.
+            content.KindWeapon = new int[content.Kinds.Length];
+            for (int k = 0; k < content.Kinds.Length; k++)
+            {
+                string wanted = content.Kinds[k].weapon;
+                content.KindWeapon[k] = -1;
+                if (string.IsNullOrEmpty(wanted)) continue;
+                for (int i = 0; i < content.Items.Length; i++)
+                    if (content.Items[i].defName == wanted) { content.KindWeapon[k] = i; break; }
+                if (content.KindWeapon[k] < 0)
+                    throw new DefLoadException(
+                        $"PawnKindDef '{content.Kinds[k].defName}' names weapon '{wanted}', which the content does not have.");
+                if (content.Items[content.KindWeapon[k]].weapon == null)
+                    throw new DefLoadException(
+                        $"PawnKindDef '{content.Kinds[k].defName}' names weapon '{wanted}', which has no weapon block.");
             }
             if (!content.SpeciesOf(0).person)
                 throw new DefLoadException("kind 0 must be a person: it is what every pawn from before the kind table reads as.");

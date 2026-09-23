@@ -329,6 +329,13 @@ namespace Odyssey.Sim.Pawns
                 pawn.FinishingStepTo = -1;
             }
 
+            // A stun holds the pawn where it is (design 33 §4 C3, §5c): its job neither ticks nor
+            // ends, and it does not think. So a stunned hauler keeps her load, a sleeper his bed and
+            // a drafted colonist the player's order, and each carries on when the stun wears off —
+            // a stun is a pause, not an interrupt. The mover's half is MovementSystem.Advance.
+            // Nought in every golden window, so no golden moves.
+            if (pawn.StunnedAt(tick)) return;
+
             if (pawn.CurrentJob != null)
             {
                 var def = _ctx.Content.Jobs[pawn.CurrentJob.DefIndex];
@@ -560,6 +567,11 @@ namespace Odyssey.Sim.Pawns
         {
             stand = -1;
             if (pawn == null || ctx == null) return false;
+
+            // Only one of ours, and only standing (design 33 §5c): a marauder is nobody's to
+            // command, and a downed colonist's Job_Downed is never interruptible — a forced build
+            // would otherwise end it and walk her to the site.
+            if (!pawn.IsColonist || pawn.Downed) return false;
 
             switch (jobDefIndex)
             {

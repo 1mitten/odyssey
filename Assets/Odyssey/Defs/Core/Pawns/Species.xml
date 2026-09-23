@@ -138,6 +138,9 @@
     <defName>PawnKind_Marauder</defName>
     <species>Species_Person</species>
     <faction>Hostile</faction>
+    <!-- Armed from the moment it arrives (design 33 section 1). The hand is filled by
+         IWeaponRules.ArmOnSpawn, lane D's; until that is written the marauder fights with fists. -->
+    <weapon>Item_Machete</weapon>
   </PawnKindDef>
 
 </Defs>

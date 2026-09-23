@@ -43,5 +43,18 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Could this pawn take this item into its hand? A weapon, not forbidden, and a colonist able to.</summary>
         bool CanEquip(Pawn pawn, ColonyItem item, PawnContext ctx);
+
+        /// <summary>
+        /// Put the weapon a pawn's kind arrives holding (<see cref="PawnContent.WeaponOf"/>) into
+        /// its hand. Called by <see cref="PawnRegistry.Spawn(int, int)"/> — the one way a pawn is
+        /// built, the debug menu's included — for every pawn whose kind names a weapon, after the
+        /// pawn is adopted, with <see cref="Pawn.Cell"/> already set. Never called by the loader,
+        /// which restores <see cref="Pawn.EquippedItem"/> from the save.
+        ///
+        /// <para>Lane D's to write (C3): make the item through <c>ColonyItems</c>, take it off the
+        /// ground the way the equip job does, and set <see cref="Pawn.EquippedItem"/>. No golden
+        /// spawns a kind that names a weapon, so no golden moves.</para>
+        /// </summary>
+        void ArmOnSpawn(Pawn pawn, PawnContext ctx);
     }
 }

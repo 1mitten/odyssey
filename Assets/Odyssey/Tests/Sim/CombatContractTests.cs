@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Odyssey.Sim;
+using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pawns;
@@ -485,6 +486,226 @@ namespace Odyssey.Tests.Sim
             Assert.That(after.TryGetPawnAspect(a.Id, CombatAspects.OrderTarget, out int target) && target == b.Id.Value, Is.True);
             Assert.That(after.TryGetPawnAspect(a.Id, CombatAspects.Weapon, out int weapon) && weapon == ItemIndex.ArcBlade, Is.True);
             Assert.That(after.TryGetPawnAspect(b.Id, CombatAspects.Hp, out _), Is.False, "the whole one said something");
+        }
+
+        /// <summary>
+        /// The pool is published for every person, hurt or whole, so the Health tab can say
+        /// "100 / 100" of a colonist nobody has touched — and for an animal only beside its hit
+        /// points, because an animal has no Health tab. An absent hp with a pool reads as whole.
+        /// </summary>
+        [Test]
+        public void EveryPersonPublishesItsPoolAndAWholeAnimalDoesNot()
+        {
+            var colony = Board();
+            Pawn colonist = colony.Pawns.Pawns.All[0];
+            Pawn marauder = SpawnKind(colony, PawnKindIndex.Marauder);
+            Pawn hog = SpawnKind(colony, PawnKindIndex.MiddenHog);
+            colony.World.Tick();
+            WorldSnapshot whole = colony.World.Views.Current;
+
+            Assert.That(whole.TryGetPawnAspect(colonist.Id, CombatAspects.HpMax, out int max) && max == 100_000, Is.True,
+                "a whole colonist's pool was not published");
+            Assert.That(whole.TryGetPawnAspect(colonist.Id, CombatAspects.Hp, out _), Is.False,
+                "a whole colonist published hit points, which is what says a bar is owed");
+            Assert.That(whole.TryGetPawnAspect(marauder.Id, CombatAspects.HpMax, out _), Is.True);
+            Assert.That(whole.TryGetPawnAspect(hog.Id, CombatAspects.HpMax, out _), Is.False,
+                "a whole animal published a pool nothing reads");
+
+            hog.HpMilli = 30_000;
+            colony.World.Tick();
+            Assert.That(colony.World.Views.Current.TryGetPawnAspect(hog.Id, CombatAspects.HpMax, out int hogMax)
+                && hogMax == 60_000, Is.True, "a hurt animal's pool goes out beside its hit points");
+        }
+
+        // ---- seams the seam review found (2026-09-23) -------------------------------------------
+
+        /// <summary>
+        /// The marauder is armed (design 33 §1), and the content says with what: the kind names a
+        /// weapon, and every spawn of a kind that names one passes through
+        /// <see cref="IWeaponRules.ArmOnSpawn"/> — lane D's seam, which puts it in the hand. The
+        /// control is the hog spawned the same way, whose kind names nothing and never reaches it.
+        /// </summary>
+        [Test]
+        public void AMarauderIsSpawnedThroughTheArmingSeamAndAnAnimalIsNot()
+        {
+            var colony = Board();
+            PawnContent content = colony.Pawns.Content;
+            Assert.That(content.WeaponOf(PawnKindIndex.Marauder), Is.EqualTo(ItemIndex.Machete));
+            Assert.That(content.WeaponOf(0), Is.EqualTo(-1), "a colonist arrives bare-handed");
+            Assert.That(content.WeaponOf(PawnKindIndex.MiddenHog), Is.EqualTo(-1));
+            Assert.That(content.Items[content.WeaponOf(PawnKindIndex.Marauder)].weapon, Is.Not.Null,
+                "the marauder's weapon is a weapon");
+
+            var arming = new ArmingRecorder();
+            colony.Pawns.WeaponRules = arming;
+            Pawn hog = SpawnKind(colony, PawnKindIndex.MiddenHog);
+            Assert.That(arming.Armed, Is.Empty, "a kind that names no weapon was armed");
+
+            Pawn marauder = SpawnKind(colony, PawnKindIndex.Marauder);
+            Assert.That(arming.Armed, Is.EqualTo(new[] { marauder.Id.Value }));
+            Assert.That(arming.KnownWhenArmed, Is.True, "armed before the registry knew the pawn");
+            Assert.That(hog.EquippedItem, Is.EqualTo(0));
+
+            // The stub from the contracts step arms nobody; the hand is lane D's to fill.
+            colony.Pawns.WeaponRules = new WeaponRules();
+            Assert.That(SpawnKind(colony, PawnKindIndex.Marauder).EquippedItem, Is.EqualTo(0));
+        }
+
+        sealed class ArmingRecorder : WeaponRules
+        {
+            public readonly System.Collections.Generic.List<int> Armed = new System.Collections.Generic.List<int>();
+            public bool KnownWhenArmed = true;
+
+            public override void ArmOnSpawn(Pawn pawn, PawnContext ctx)
+            {
+                Armed.Add(pawn.Id.Value);
+                if (ctx.Pawns.Get(pawn.Id) != pawn || pawn.Cell < 0) KnownWhenArmed = false;
+            }
+        }
+
+        static bool OneStepApart(int a, int b)
+        {
+            CellRef p = Size.FromIndex(a), q = Size.FromIndex(b);
+            return System.Math.Abs(p.X - q.X) <= 1 && System.Math.Abs(p.Z - q.Z) <= 1 && System.Math.Abs(p.Y - q.Y) <= 1;
+        }
+
+        /// <summary>A drafted colonist walking a long order east, part way along it.</summary>
+        static Pawn Walking(ColonyWorld colony)
+        {
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            colony.World.Tick(60);
+            Assert.That(Send(colony, new Intent(IntentKind.SetDrafted, default, pawn.Id.Value, 1)), Is.EqualTo(IntentRejection.None));
+            for (int t = 0; t < 400 && pawn.HasPath; t++) colony.World.Tick();
+            CellRef at = Size.FromIndex(pawn.Cell);
+            int goal = colony.Pawns.Cells.NearestWalkableInColumn(System.Math.Min(at.X + 20, Size.SizeX - 2), at.Z, at.Y);
+            Assume.That(goal, Is.GreaterThanOrEqualTo(0), "nowhere east to walk to");
+            Assert.That(Send(colony, new Intent(IntentKind.OrderMove, Size.FromIndex(goal), pawn.Id.Value)), Is.EqualTo(IntentRejection.None));
+            colony.World.Tick(30);
+            Assume.That(pawn.HasPath, Is.True, "the order is not being walked");
+            return pawn;
+        }
+
+        /// <summary>
+        /// A stun is a pause, not an interrupt (design 33 §4 C3, §5c): the colonist lands the step
+        /// she was part way through and takes no other, her job is neither ticked nor ended, and
+        /// she carries on when it wears off. The control is the same colonist on the same seed,
+        /// unstunned, who walks several cells over the same ticks.
+        /// </summary>
+        [Test]
+        public void AStunHoldsTheStepAndTheJobAndLetsGo()
+        {
+            var control = Board();
+            Pawn free = Walking(control);
+            int freeFrom = free.Cell;
+            control.World.Tick(300);
+            Assert.That(OneStepApart(freeFrom, free.Cell), Is.False, "the control did not walk, so the hold would prove nothing");
+
+            var colony = Board();
+            Pawn pawn = Walking(colony);
+            int from = pawn.Cell;
+            Job job = pawn.CurrentJob!;
+            int started = pawn.JobStartTick;
+            pawn.StunnedUntilTick = colony.World.CurrentTick + 300;
+            colony.World.Tick(300);
+
+            Assert.That(OneStepApart(from, pawn.Cell), Is.True, "a stunned colonist took more than the step in hand");
+            Assert.That(pawn.CurrentJob, Is.SameAs(job), "the stun ended her job");
+            Assert.That(pawn.CurrentJob!.DefIndex, Is.EqualTo(JobIndex.Goto));
+            Assert.That(pawn.JobStartTick, Is.EqualTo(started));
+
+            int held = pawn.Cell;
+            colony.World.Tick(300);
+            Assert.That(pawn.Cell, Is.Not.EqualTo(held), "she did not carry on when the stun wore off");
+        }
+
+        /// <summary>
+        /// A stunned pawn does not think either: one between jobs stays between them until the stun
+        /// wears off. The control is the same undraft without the stun, which gives her work on the
+        /// same tick.
+        /// </summary>
+        [Test]
+        public void AStunnedColonistTakesNoNewJob()
+        {
+            foreach (bool stunned in new[] { false, true })
+            {
+                var colony = Board();
+                Pawn pawn = colony.Pawns.Pawns.All[0];
+                colony.World.Tick(60);
+                Assert.That(Send(colony, new Intent(IntentKind.SetDrafted, default, pawn.Id.Value, 1)), Is.EqualTo(IntentRejection.None));
+                for (int t = 0; t < 400 && pawn.HasPath; t++) colony.World.Tick();
+
+                if (stunned) pawn.StunnedUntilTick = colony.World.CurrentTick + 200;
+                Assert.That(Send(colony, new Intent(IntentKind.SetDrafted, default, pawn.Id.Value, 0)), Is.EqualTo(IntentRejection.None));
+
+                if (!stunned)
+                {
+                    Assert.That(pawn.CurrentJob, Is.Not.Null, "the control: an undrafted colonist thinks on the same tick");
+                    continue;
+                }
+                Assert.That(pawn.CurrentJob, Is.Null, "a stunned colonist thought");
+                colony.World.Tick(100);
+                Assert.That(pawn.CurrentJob, Is.Null, "a stunned colonist thought");
+                colony.World.Tick(150);
+                Assert.That(pawn.CurrentJob, Is.Not.Null, "she never thought again after the stun");
+            }
+        }
+
+        /// <summary>
+        /// A pawn leaving the board leaves its bed to nobody (design 33 §5c) — until death, only
+        /// animals were ever despawned, and a dead colonist would have kept hers for ever under an
+        /// id that no longer exists.
+        /// </summary>
+        [Test]
+        public void ADespawnedColonistOwnsNoBed()
+        {
+            var colony = Board();
+            Pawn gone = colony.Pawns.Pawns.All[0];
+            Pawn stays = colony.Pawns.Pawns.All[1];
+            int bed = -1;
+            for (int cell = 0; cell < Size.CellCount && bed < 0; cell++)
+                if (colony.Construction.AssignOwnerAt(cell, gone.Id.Value) == IntentRejection.None) bed = cell;
+            Assume.That(bed, Is.GreaterThanOrEqualTo(0), "the board has no bed to own");
+            Assert.That(colony.Construction.PawnOwnsABed(gone.Id.Value), Is.True, "the control: she owned it");
+
+            colony.Pawns.Pawns.Despawn(gone);
+
+            Assert.That(colony.Construction.PawnOwnsABed(gone.Id.Value), Is.False, "the dead keep their beds");
+            Assert.That(colony.Construction.BedOwnerAt(bed), Is.EqualTo(0));
+            Assert.That(colony.Construction.AssignOwnerAt(bed, stays.Id.Value), Is.EqualTo(IntentRejection.None),
+                "the bed could not be given to the living");
+        }
+
+        /// <summary>
+        /// A forced order is for a standing colonist of ours (design 33 §5c): a downed colonist's
+        /// Job_Downed is never interruptible, and a marauder is nobody's to command. The control is
+        /// the same colonist, standing, who can be sent to the same frame.
+        /// </summary>
+        [Test]
+        public void OnlyAStandingColonistCanBeForced()
+        {
+            var colony = Board();
+            Pawn colonist = colony.Pawns.Pawns.All[0];
+            Pawn marauder = SpawnKind(colony, PawnKindIndex.Marauder);
+
+            int site = -1;
+            CellRef at = Size.FromIndex(colonist.Cell);
+            for (int dx = -2; dx <= 2 && site < 0; dx++)
+            for (int dz = -2; dz <= 2 && site < 0; dz++)
+            {
+                if (System.Math.Abs(dx) != 2 && System.Math.Abs(dz) != 2) continue;
+                int cell = Size.Index(at.X + dx, at.Z + dz, at.Y);
+                if (!colony.Construction.Allows(cell)) continue;
+                if (FellJobDriver.StandBeside(colony.Pawns, colonist, cell) < 0) continue;
+                site = cell;
+            }
+            Assume.That(site, Is.GreaterThanOrEqualTo(0), "nowhere to put a frame");
+            Assert.That(colony.Construction.Place(Size.FromIndex(site), BuildingHandle.Wall, StuffHandle.Wood), Is.EqualTo(IntentRejection.None));
+            colony.Construction.Deliver(site, 5);
+
+            Assert.That(JobSystem.CanForce(colonist, colony.Pawns, JobIndex.Build, site), Is.True, "the control");
+            Assert.That(JobSystem.CanForce(marauder, colony.Pawns, JobIndex.Build, site), Is.False, "a marauder took an order");
+            colonist.Downed = true;
+            Assert.That(JobSystem.CanForce(colonist, colony.Pawns, JobIndex.Build, site), Is.False, "a downed colonist took an order");
         }
 
         [Test]
