@@ -460,6 +460,15 @@ namespace Odyssey.Hud
         int _corpseFor;
 
         /// <summary>
+        /// What the corpse on the pane was, as its kind's registry key, and whether it was an
+        /// animal — for the Almanac, which opens an animal's corpse on its Fauna entry. Empty and
+        /// false for anything else.
+        /// </summary>
+        public string CorpseKindKey { get; private set; } = string.Empty;
+
+        public bool CorpseWasAnimal { get; private set; }
+
+        /// <summary>
         /// "Corpse of Wrenn" — "Corpse of a midden hog" — what it was, and when it died (design 33
         /// §1). A colonist is named as she was named alive: <see cref="ColonistNames.Of(uint, PawnId)"/>
         /// over the seed and id the corpse kept, which answers a player's own name first, so the
@@ -473,6 +482,8 @@ namespace Odyssey.Hud
 
             bool colonist = (corpse.Flags & (PawnFlags.Person | PawnFlags.Hostile)) == PawnFlags.Person;
             bool hostile = (corpse.Flags & PawnFlags.Hostile) != 0;
+            CorpseKindKey = PawnKindLabels.IconKey(corpse.Kind);
+            CorpseWasAnimal = (corpse.Flags & PawnFlags.Person) == 0;
             string of = colonist
                 ? ColonistNames.Of(corpse.RollSeed, corpse.Pawn)
                 : WithArticle(PawnKindLabels.Label(corpse.Kind).ToLowerInvariant());
@@ -663,6 +674,8 @@ namespace Odyssey.Hud
                 // Not in this frame (a load, or a later cleanup): the word alone, rather than the
                 // last corpse's name.
                 _corpseFor = 0;
+                CorpseKindKey = string.Empty;
+                CorpseWasAnimal = false;
                 Title = Registry.Label(CorpseKey);
                 Subtitle = string.Empty;
                 Job = string.Empty;

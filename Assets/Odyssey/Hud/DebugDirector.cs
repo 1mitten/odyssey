@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
 {
@@ -12,7 +13,7 @@ namespace Odyssey.Hud
         /// <summary>One row per incident the content declares, each fired on click (design 23 §3).</summary>
         Events,
 
-        /// <summary>Colonists and animals, placed near the camera (owner, 2026-09-22: a tab of its own).</summary>
+        /// <summary>Colonists, animals, the marauder and the weapons, placed near the camera (owner, 2026-09-22: a tab of its own).</summary>
         Spawn,
     }
 
@@ -87,8 +88,76 @@ namespace Odyssey.Hud
         public static readonly string[] IconKeys =
         {
             PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey,
+            SpawnMarauderKey, SpawnBatKey, SpawnCrowbarKey, SpawnMacheteKey, SpawnArcBladeKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey,
             SkipDayKey, SkipMorningKey, RipenCropsKey, MarkTraceKey, TraceKey,
+        };
+
+        /// <summary>The marauder (design 33 §1): a hostile person, the same intent as the colonist's with a kind.</summary>
+        public const string SpawnMarauderKey = "ui.debug.spawnmarauder";
+
+        /// <summary>The four weapons (design 33 §1, C3): one item each, granted as wood is.</summary>
+        public const string SpawnBatKey = "ui.debug.spawnbat", SpawnCrowbarKey = "ui.debug.spawncrowbar",
+            SpawnMacheteKey = "ui.debug.spawnmachete", SpawnArcBladeKey = "ui.debug.spawnarcblade";
+
+        /// <summary>
+        /// One row of the Spawn tab: its name, what its tooltip says, and the intent a click sends
+        /// at the column the shell aims it at. <b>A table here rather than eight calls in the
+        /// shell</b>, so what each row sends is held by the fast tier — the shell only lays the
+        /// rows out and supplies the anchor (<c>HudShell.DebugAnchorCell</c>), which needs Unity.
+        /// </summary>
+        public readonly struct SpawnRow
+        {
+            public readonly string Key;
+            public readonly string Tooltip;
+
+            /// <summary><see cref="IntentKind.SpawnPawn"/> with a kind, or <see cref="IntentKind.GiveResource"/> with an item and a count.</summary>
+            public readonly IntentKind Kind;
+
+            public readonly int A;
+            public readonly int B;
+
+            public SpawnRow(string key, string tooltip, IntentKind kind, int a, int b = 0)
+            {
+                Key = key;
+                Tooltip = tooltip;
+                Kind = kind;
+                A = a;
+                B = b;
+            }
+
+            /// <summary>The intent a click on this row sends, aimed at <paramref name="anchor"/>'s column.</summary>
+            public Intent ToIntent(CellRef anchor) => new Intent(Kind, anchor, A, B);
+        }
+
+        static SpawnRow Pawn(string key, string tooltip, int kind) =>
+            new SpawnRow(key, tooltip, IntentKind.SpawnPawn, kind);
+
+        static SpawnRow Weapon(string key, string tooltip, int item) =>
+            new SpawnRow(key, tooltip, IntentKind.GiveResource, item, 1);
+
+        /// <summary>
+        /// The Spawn tab, top to bottom: who can be put on the board (owner, 2026-09-22: the
+        /// colonist first, then the animals), then the marauder, then one of each weapon (design
+        /// 33 §1: "any from the debug Spawn tab"). A weapon is one to a stack, so it is granted one
+        /// at a time — fifty machetes would be fifty piles.
+        /// </summary>
+        public static readonly SpawnRow[] SpawnRows =
+        {
+            Pawn(SpawnPawnKey, "Adds a colonist near the camera, with no scenario and no starting kit",
+                PawnKindLabels.ColonistKind),
+            Pawn(SpawnHogKey, "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
+                PawnKindLabels.MiddenHogKind),
+            Pawn(SpawnRatKey, "Adds a duct rat near the camera. It wanders and rests, and climbs anything",
+                PawnKindLabels.DuctRatKind),
+            Pawn(SpawnMarauderKey, "Adds a hostile marauder near the camera, armed. It hunts whoever is still standing",
+                PawnKindLabels.Marauder),
+            Weapon(SpawnBatKey, "Adds a bat near the camera. Blunt, and now and then it stuns", ItemHandle.Bat),
+            Weapon(SpawnCrowbarKey, "Adds a crowbar near the camera. Heavier and slower than a bat, and stuns more often",
+                ItemHandle.Crowbar),
+            Weapon(SpawnMacheteKey, "Adds a machete near the camera. Sharp and quick", ItemHandle.Machete),
+            Weapon(SpawnArcBladeKey, "Adds an arc blade near the camera. The best thing a colonist can hold",
+                ItemHandle.ArcBlade),
         };
 
         public static string TabKey(DebugTab tab) =>
