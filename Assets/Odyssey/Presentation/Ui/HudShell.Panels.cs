@@ -220,6 +220,7 @@ namespace Odyssey.Presentation.Ui
             if (BuildPaletteOpen) SetBuildPalette(false);
             if (MenuOpen) ToggleMenu(false);
             CloseBedPicker();
+            CloseContextMenu();
         }
 
         /// <summary>

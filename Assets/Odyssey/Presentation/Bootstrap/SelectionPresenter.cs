@@ -135,6 +135,11 @@ namespace Odyssey.Presentation.Bootstrap
         /// undrafted colonist could not be sent for a weapon at all — the model said yes and the
         /// click never reached it (integration, 2026-09-23). Everything else still needs a draft
         /// inside the model, so the wider gate sends nothing new.</para>
+        ///
+        /// <para><b>A thing with several answers asks instead of acting</b> (design 33 §7a): when
+        /// the model answers with menu rows — a weapon's <i>Equip</i> and <i>Cancel</i> — the HUD
+        /// raises them at the pointer and nothing is sent until a row is chosen. The model fills
+        /// one list or the other, never both.</para>
         /// </summary>
         public void Order(CellRef? cell, Ray ray)
         {
@@ -150,13 +155,23 @@ namespace Odyssey.Presentation.Bootstrap
             bool ctrl = Keyboard.current?.ctrlKey.isPressed == true;
 
             _orders.Clear();
-            OrderModel.RightClick(selection, snapshot, cell, under, ctrl, _orders);
+            OrderModel.RightClick(selection, snapshot, cell, under, ctrl, _orders, _menu);
+            if (_menu.Count > 0)
+            {
+                if (_shell == null) _shell = GetComponent<Ui.HudShell>();
+                Mouse? mouse = Mouse.current;
+                if (_shell != null && mouse != null) _shell.OpenContextMenu(_menu, mouse.position.ReadValue());
+            }
             for (int i = 0; i < _orders.Count; i++) world.Intents.Submit(_orders[i]);
             _orders.Clear();
+            _menu.Clear();
         }
 
-        // Scratch for Order: filled and emptied inside one call, never state.
+        // Scratch for Order: filled and emptied inside one call, never state. The shell copies
+        // the rows it is handed, so the list can be emptied as soon as the menu is up.
         readonly List<Intent> _orders = new List<Intent>();
+        readonly List<ContextMenuRow> _menu = new List<ContextMenuRow>();
+        Ui.HudShell? _shell;
 
         void OnBoxSelected(Rect screenRect, bool additive)
         {

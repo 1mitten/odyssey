@@ -315,6 +315,7 @@ namespace Odyssey.Hud
             { "ui.layer.policy.xray", "X-ray, all layers" },
             { "ui.layer.policy.xraymin", "X-ray, one layer" },
             { "ui.layer.up", "Layer up" },
+            { "ui.menu.cancel", "Cancel" },
             { "ui.mood.breaking", "Breaking" },
             { "ui.mood.broken", "Breaking down" },
             { "ui.mood.content", "Content" },

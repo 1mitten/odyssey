@@ -1760,6 +1760,37 @@ namespace Odyssey.Hud
             return Math.Max(0f, Math.Min(wanted, highest));
         }
 
+        /// <summary>
+        /// How far the context menu's corner stands off the pointer (design 33 §7a), in panel
+        /// pixels: enough that the pointer's own arrow does not sit on the first row's text, and
+        /// no more, so the menu still reads as raised by the click.
+        /// </summary>
+        public const int ContextMenuNudge = 2;
+
+        /// <summary>
+        /// Where the context menu's left edge goes: just right of the pointer, or — when that
+        /// would run off the right of the screen — just left of it, the way a desktop's menus
+        /// turn; and never off either edge. Measured in panel pixels, like everything here.
+        /// </summary>
+        public static float ContextMenuLeft(float pointerX, float menuWidth, float screenWidth) =>
+            ContextMenuEdge(pointerX, menuWidth, screenWidth);
+
+        /// <summary>
+        /// Where the context menu's top edge goes: just below the pointer, or just above it when
+        /// the rows would run off the bottom — a right-click low on the board opens upward, over
+        /// the board rather than under the command bar. Measured down from the top.
+        /// </summary>
+        public static float ContextMenuTop(float pointerY, float menuHeight, float screenHeight) =>
+            ContextMenuEdge(pointerY, menuHeight, screenHeight);
+
+        static float ContextMenuEdge(float pointer, float size, float screen)
+        {
+            float edge = pointer + ContextMenuNudge;
+            if (edge + size > screen) edge = pointer - ContextMenuNudge - size;
+            float widest = Math.Max(0f, screen - size);
+            return Math.Max(0f, Math.Min(edge, widest));
+        }
+
         // ---------------------------------------------------------------- acceptance
 
         /// <summary>
