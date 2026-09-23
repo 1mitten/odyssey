@@ -5,6 +5,7 @@ using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
+using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.Ui;
 using Odyssey.Sim.Contracts;
 using UnityEngine;
@@ -136,7 +137,180 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
-        static GameObject Build()
+        /// <summary>
+        /// Owner, 2026-09-23, after the wash came back: <i>"it's not rendering the stockpile graphic
+        /// immediately - big delay and in another case didn't appear"</i>, and <i>"having more than
+        /// one stockpile - seemed to not draw the other one"</i>. Two stockpiles are painted and the
+        /// renderer's own chunk batches — what is actually submitted — are read every frame until
+        /// both the wash (the ground chunk) and the outline (the store's chunk) are in them.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TwoStockpilesAreBothDrawnPromptly()
+        {
+            GameObject root = Build();
+            try
+            {
+                yield return new WaitForSecondsRealtime(0.3f);
+                for (int i = 0; i < 30; i++) yield return null;
+
+                var boot = root.GetComponentInChildren<OdysseyBootstrap>();
+                var presenter = root.GetComponentInChildren<DesignatePresenter>();
+                var model = boot.Model!;
+                var renderer = boot.Renderer!;
+                var batches = (ChunkBatch?[])typeof(ChunkRenderer)
+                    .GetField("_batches", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(renderer)!;
+                WorldSnapshot frame = boot.World!.Views.Current;
+                CellRef at = frame.Pawns[0].Cell;
+
+                var boxes = new[]
+                {
+                    (new CellRef(at.X + 1, at.Z + 1, at.Y), new CellRef(at.X + 3, at.Z + 3, at.Y)),
+                    (new CellRef(at.X - 6, at.Z - 2, at.Y), new CellRef(at.X - 4, at.Z, at.Y)),
+                };
+
+                presenter!.Director.Tool = DesignateTool.Stockpile;
+                MethodInfo drag = typeof(DesignatePresenter).GetMethod("OnToolDrag",
+                    BindingFlags.Instance | BindingFlags.NonPublic)!;
+                long tick0 = boot.World.Views.Current.Tick;
+                foreach (var (a, h) in boxes)
+                {
+                    drag.Invoke(presenter, new object[] { a, h });
+                    presenter.Director.Tool = DesignateTool.Stockpile;
+                }
+
+                var seen = new int[boxes.Length];
+                for (int i = 0; i < seen.Length; i++) seen[i] = -1;
+                int frames = 0;
+                float until = Time.realtimeSinceStartup + 6f;
+                while (Time.realtimeSinceStartup < until && System.Array.IndexOf(seen, -1) >= 0)
+                {
+                    yield return null;
+                    frames++;
+                    for (int b = 0; b < boxes.Length; b++)
+                    {
+                        if (seen[b] >= 0) continue;
+                        CellRef a = boxes[b].Item1;
+                        int ground = model.Chunks.ChunkIndexOfCell(new CellRef(a.X, a.Z, a.Y - 1));
+                        int store = model.Chunks.ChunkIndexOfCell(a);
+                        if (Has(batches[ground], model, TintCode.IsStored) && Has(batches[store], model, TintCode.IsStoreEdge))
+                            seen[b] = frames;
+                    }
+                }
+
+                long ticks = boot.World.Views.Current.Tick - tick0;
+                Debug.Log($"[StockpileDrag] drawn after frames [{string.Join(", ", seen)}], {ticks} ticks, " +
+                          $"{boot.World.Views.Current.Stores.Length} store cells published, " +
+                          $"speed {boot.World.Views.Current.Tick}");
+                for (int b = 0; b < boxes.Length; b++)
+                    Assert.That(seen[b], Is.InRange(0, 10),
+                        $"stockpile {b + 1} of {boxes.Length} was not in the drawn batches within ten frames " +
+                        $"(-1 is never, in six seconds)");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        static bool Has(ChunkBatch? batch, Odyssey.Presentation.World.WorldRenderModel model, System.Func<int, bool> tint)
+        {
+            if (batch == null) return false;
+            foreach (InstanceBucket bucket in batch.Body)
+                if (bucket.Count > 0 && tint(bucket.Tint) && !TintCode.IsTree(bucket.Tint)) return true;
+            foreach (InstanceBucket bucket in batch.Roof)
+                if (bucket.Count > 0 && tint(bucket.Tint) && !TintCode.IsTree(bucket.Tint)) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// The same question on the board the owner plays: the wooded meadow at 120 x 120 x 16,
+        /// where the meshing budget (11 chunks a frame, taken in walk order) has real competition.
+        /// Logs how much re-meshing an idle colony asks for each frame, then how long two
+        /// stockpiles take to reach the drawn batches.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TwoStockpilesAreDrawnPromptlyOnTheGameBoard()
+        {
+            GameObject root = Build(wooded: true);
+            try
+            {
+                yield return new WaitForSecondsRealtime(0.5f);
+                for (int i = 0; i < 60; i++) yield return null;
+
+                var boot = root.GetComponentInChildren<OdysseyBootstrap>();
+                var presenter = root.GetComponentInChildren<DesignatePresenter>();
+                var model = boot.Model!;
+                var renderer = boot.Renderer!;
+                var batches = (ChunkBatch?[])typeof(ChunkRenderer)
+                    .GetField("_batches", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(renderer)!;
+
+                // Idle pressure first: how much does a colony doing nothing in particular ask of
+                // the budget, frame by frame?
+                int idleMeshed = 0, idleDeferredMax = 0, idleFramesDeferring = 0;
+                for (int i = 0; i < 120; i++)
+                {
+                    yield return null;
+                    idleMeshed += renderer.ChunksMeshedThisFrame;
+                    if (renderer.ChunksMeshDeferred > 0) idleFramesDeferring++;
+                    idleDeferredMax = System.Math.Max(idleDeferredMax, renderer.ChunksMeshDeferred);
+                }
+
+                WorldSnapshot frame = boot.World!.Views.Current;
+                CellRef at = frame.Pawns[0].Cell;
+                presenter!.Director.Tool = DesignateTool.Stockpile;
+                MethodInfo drag = typeof(DesignatePresenter).GetMethod("OnToolDrag",
+                    BindingFlags.Instance | BindingFlags.NonPublic)!;
+                drag.Invoke(presenter, new object[] { new CellRef(at.X + 1, at.Z + 1, at.Y), new CellRef(at.X + 3, at.Z + 3, at.Y) });
+                presenter.Director.Tool = DesignateTool.Stockpile;
+                drag.Invoke(presenter, new object[] { new CellRef(at.X - 6, at.Z - 2, at.Y), new CellRef(at.X - 4, at.Z, at.Y) });
+
+                int frames = 0, meshed = 0, deferredMax = 0;
+                int[] seen = { -1, -1 };
+                int[] firstCell = { -1, -1 };
+                float until = Time.realtimeSinceStartup + 10f;
+                int stride = boot.World.Size.LayerStride;
+                while (Time.realtimeSinceStartup < until && (seen[0] < 0 || seen[1] < 0))
+                {
+                    yield return null;
+                    frames++;
+                    meshed += renderer.ChunksMeshedThisFrame;
+                    deferredMax = System.Math.Max(deferredMax, renderer.ChunksMeshDeferred);
+
+                    // One cell per zone, off what was actually published: a tree in the box
+                    // refuses its cell, so the anchor is not to be trusted.
+                    var stores = boot.World.Views.Current.Stores;
+                    for (int s = 0; s < stores.Length; s++)
+                    {
+                        int zone = stores[s].Zone;
+                        if (zone < 2 && firstCell[zone] < 0) firstCell[zone] = stores[s].CellIndex;
+                    }
+                    for (int z = 0; z < 2; z++)
+                    {
+                        if (seen[z] >= 0 || firstCell[z] < 0) continue;
+                        CellRef cell = boot.World.Size.FromIndex(firstCell[z]);
+                        CellRef below = boot.World.Size.FromIndex(firstCell[z] - stride);
+                        if (Has(batches[model.Chunks.ChunkIndexOfCell(below)], model, TintCode.IsStored)
+                            && Has(batches[model.Chunks.ChunkIndexOfCell(cell)], model, TintCode.IsStoreEdge))
+                            seen[z] = frames;
+                    }
+                }
+
+                Debug.Log($"[StockpileDrag] game board: idle {idleMeshed} chunks meshed over 120 frames, " +
+                          $"{idleFramesDeferring} frames deferring (max {idleDeferredMax}); after the drags " +
+                          $"drawn at frames [{seen[0]}, {seen[1]}], {meshed} meshed over {frames} frames, " +
+                          $"max deferred {deferredMax}, cells {firstCell[0]} / {firstCell[1]}, " +
+                          $"{boot.World.Views.Current.Stores.Length} store cells");
+                for (int z = 0; z < 2; z++)
+                    Assert.That(seen[z], Is.InRange(0, 10),
+                        $"stockpile {z + 1} was not in the drawn batches within ten frames (-1: never, in ten seconds)");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        static GameObject Build(bool wooded = false)
         {
             var root = new GameObject("StockpileDrag");
 
@@ -154,11 +328,11 @@ namespace Odyssey.Tests.PlayMode
             bootObject.SetActive(false);
             var boot = bootObject.AddComponent<OdysseyBootstrap>();
             boot.buildOnPlay = true;
-            boot.sizeX = 60;
-            boot.sizeZ = 60;
-            boot.layers = 8;
+            boot.sizeX = wooded ? 120 : 60;
+            boot.sizeZ = wooded ? 120 : 60;
+            boot.layers = wooded ? 16 : 8;
             boot.seed = 1;
-            boot.barrenMap = true;
+            boot.barrenMap = !wooded;
             boot.grassScatter = 0;
             boot.cameraRig = rig;
             bootObject.AddComponent<SelectionPresenter>();
