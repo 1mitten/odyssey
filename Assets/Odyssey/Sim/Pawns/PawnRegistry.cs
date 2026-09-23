@@ -180,6 +180,11 @@ namespace Odyssey.Sim.Pawns
             if (!_byId.TryGetValue(pawn.Id.Value, out int index) || !ReferenceEquals(_pawns[index], pawn)) return;
             _ctx.Reservations.ReleaseAll(pawn);
             _ctx.Construction?.ReleaseBedsOf(pawn.Id.Value);
+            // A weapon in the hand goes down where the pawn stood, or it would stay carried by an
+            // id that no longer exists, with no cell, for ever (design 33 §6D). A death has already
+            // let go of it through the drop listener, so this is a no-op there; it is for every
+            // other way off the board — a marauder that flees off the edge (integration, 2026-09-23).
+            if (pawn.EquippedItem != 0) WeaponHand.PutDown(pawn, _ctx, pawn.Cell);
             _pawns.RemoveAt(index);
             _byId.Remove(pawn.Id.Value);
             for (int i = index; i < _pawns.Count; i++) _byId[_pawns[i].Id.Value] = i;

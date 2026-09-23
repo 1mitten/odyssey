@@ -105,5 +105,33 @@ namespace Odyssey.Tests.Sim
             Assert.That(marauder.EquippedItem, Is.Not.Zero);
             Assert.That(ctx.Items.ItemAt(cell)!.DefIndex, Is.EqualTo(pile), "the pile was disturbed");
         }
+
+        /// <summary>
+        /// A pawn that leaves the board <b>without dying</b> puts its weapon down first (lane D's
+        /// open issue, closed at the integration, 2026-09-23). Otherwise the machete stays carried by
+        /// an id that no longer exists, with no cell, for ever — no lister holds it and nothing can
+        /// fetch it. Nothing leaves armed today, but a marauder that flees off the edge would. The
+        /// rule is in <c>PawnRegistry.Despawn</c>, beside the beds it already releases, so every way
+        /// off the board lets go of the same things.
+        /// </summary>
+        [Test]
+        public void AMarauderDespawnedWithoutDyingPutsItsMacheteDown()
+        {
+            var colony = Board();
+            colony.World.Tick(30);
+            PawnContext ctx = colony.Pawns;
+            Pawn marauder = SpawnKind(colony, PawnKindIndex.Marauder);
+            ColonyItem machete = ctx.Items.Get(new ThingId(marauder.EquippedItem))!;
+            Assume.That(machete, Is.Not.Null);
+            Assume.That(machete.Cell, Is.EqualTo(-1));
+
+            ctx.Pawns.Despawn(marauder);
+
+            Assert.That(machete.Despawned, Is.False, "the machete went with the marauder");
+            Assert.That(machete.CarriedBy, Is.Zero, "the machete is still held by a pawn that is gone");
+            Assert.That(machete.Cell, Is.GreaterThanOrEqualTo(0), "the machete has no cell");
+            Assert.That(ctx.Items.ItemAt(machete.Cell), Is.SameAs(machete));
+            Assert.That(marauder.EquippedItem, Is.Zero);
+        }
     }
 }
