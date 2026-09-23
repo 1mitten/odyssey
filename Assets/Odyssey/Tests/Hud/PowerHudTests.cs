@@ -205,6 +205,71 @@ namespace Odyssey.Tests.Hud
             Assert.That(Rows(model), Does.Not.Contain("conduit="), "a hidden line is not announced");
         }
 
+        /// <summary>A frame holding one line in the pane's cell and nothing else — an order over open ground.</summary>
+        static WorldSnapshot LineFrame(ConduitKind kind)
+        {
+            var frame = new WorldSnapshot();
+            frame.BeginWrite(tick: 0, Size, sliceLayer: 1);
+            frame.AddCellDetail(new CellDetail(Size.Index(At), TerrainHandle.Air, EdificeHandle.None,
+                StuffHandle.None, 0, 1000, 0));
+            frame.AddConduit(new ConduitView(Size.Index(At), kind,
+                kind == ConduitKind.Built ? PowerNetState.Idle : PowerNetState.Idle, 0, kind == ConduitKind.Ordered ? -1 : 9));
+            return frame;
+        }
+
+        /// <summary>
+        /// The owner's report (2026-09-23): an ordered line could not be selected again to cancel
+        /// it. Selected, it is titled a conduit and offers its own Cancel — and a laid one offers
+        /// Remove conduit, a marked one Keep it.
+        /// </summary>
+        [TestCase(ConduitKind.Ordered, IntentKind.CancelConduit)]
+        [TestCase(ConduitKind.Built, IntentKind.RemoveConduit)]
+        [TestCase(ConduitKind.Marked, IntentKind.CancelConduit)]
+        public void ASelectedLineIsTitledAndOffersItsAction(ConduitKind kind, IntentKind action)
+        {
+            InspectModel model = Looking(LineFrame(kind));
+
+            Assert.That(model.Title, Is.EqualTo(Registry.Label(PaletteTools.Conduit)));
+            Assert.That(model.LineActionUnderPane, Is.True);
+            Assert.That(model.LineAction, Is.EqualTo(action));
+            Assert.That(Rows(model), Does.Contain(InspectModel.LineActionRow + "="));
+        }
+
+        [Test]
+        public void TheLineActionStaysPressableAfterTheRowsHaveSettled()
+        {
+            WorldSnapshot frame = LineFrame(ConduitKind.Ordered);
+            var model = new InspectModel();
+            model.SetCell(At);
+            model.Refresh(frame);
+            model.Refresh(frame);
+            Assert.That(model.LineActionUnderPane, Is.True, "the bed's fault, not repeated a third time");
+
+            var empty = new WorldSnapshot();
+            empty.BeginWrite(tick: 0, Size, sliceLayer: 1);
+            empty.AddCellDetail(new CellDetail(Size.Index(At), TerrainHandle.Grass, EdificeHandle.None,
+                StuffHandle.None, 0, 1000, 0));
+            model.Refresh(empty);
+            Assert.That(model.LineActionUnderPane, Is.False, "the control: with the line gone the row is dead");
+        }
+
+        /// <summary>
+        /// A generator's order says what it is waiting for: its wood while that is the stuck half,
+        /// then its scrap metal (design 32 §14).
+        /// </summary>
+        [TestCase(12, 0, "12 of 30 wood delivered")]
+        [TestCase(30, 4, "4 of 20 scrap metal delivered")]
+        public void AGeneratorsOrderSaysWhichMaterialItIsWaitingFor(int wood, int scrap, string says)
+        {
+            var frame = new WorldSnapshot();
+            frame.BeginWrite(tick: 0, Size, sliceLayer: 1);
+            frame.AddSite(new SiteView(Size.Index(At), (byte)BuildingHandle.Generator, (byte)StuffHandle.Wood,
+                (ushort)wood, 30, 0, 600, 1, 2, (ushort)scrap, 20, (short)ItemHandle.Salvage));
+
+            InspectModel model = Looking(frame);
+            Assert.That(model.Site, Is.EqualTo(says));
+        }
+
         // ---- the alerts (§10) -----------------------------------------------------------------------
 
         static WorldSnapshot AlertFrame(PowerNetView net, params PowerDeviceView[] devices)

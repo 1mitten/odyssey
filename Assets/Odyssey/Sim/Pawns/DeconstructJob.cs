@@ -184,15 +184,36 @@ namespace Odyssey.Sim.Pawns
 
             // Where the wall or floor stood, or as near as will take it on a real floor below.
             // Slabs and open-air cuts resolve to FirstFloorAtOrBelow so refunds never hang in mid-air.
-            int refund = Refund(ctx, cell, building, stuff, tick);
-            if (refund <= 0) return;
-
-            int item = ConstructionContent.StuffAt(stuff).item;
-            if (item < 0) return;
-
             int landing = ctx.Cells.FirstFloorAtOrBelow(cell);
-            int at = ctx.Items.NearestCellWithSpace(ctx.Cells, landing, item, refund, maxRadius: 3);
-            if (at >= 0) ctx.Items.Spawn(item, at, refund);
+
+            // The parts come back by the same half-and-a-flip, beside the material (design 32 §14).
+            BuildingDef def = ConstructionContent.BuildingAt(building);
+            if (def.HasParts) Drop(ctx, landing, def.partItem, RefundParts(ctx, cell, building, tick));
+
+            Drop(ctx, landing, ConstructionContent.StuffAt(stuff).item, Refund(ctx, cell, building, stuff, tick));
+        }
+
+        static void Drop(PawnContext ctx, int landing, int item, int count)
+        {
+            if (item < 0 || count <= 0) return;
+            int at = ctx.Items.NearestCellWithSpace(ctx.Cells, landing, item, count, maxRadius: 3);
+            if (at >= 0) ctx.Items.Spawn(item, at, count);
+        }
+
+        /// <summary>
+        /// Half of a building's parts, with the odd unit by a seeded coin flip drawn apart from the
+        /// material's, so asking one does not move the other (design 32 §14). For a power line —
+        /// one scrap metal — that is nothing or one.
+        /// </summary>
+        public static int RefundParts(PawnContext ctx, int cell, int building, int tick)
+        {
+            BuildingDef def = ConstructionContent.BuildingAt(building);
+            if (!def.HasParts) return 0;
+            int half = def.partCount / 2;
+            if (def.partCount % 2 == 0) return half;
+
+            var rng = DeterministicRandom.ForTick(ctx.Seed, (cell ^ tick) + 7919, PawnPurpose.DeconstructRefund);
+            return half + (rng.NextInt(2) == 0 ? 0 : 1);
         }
 
         /// <summary>

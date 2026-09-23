@@ -10670,3 +10670,39 @@ samples orders now — every rotation, every reversal, five thousand seeded shuf
 same question at a fixed price, with `NoTwoGiversCanTieInTheSort` still guarding the total order
 that makes the answer true. And a line in open air two storeys above anything standable is accepted
 and never laid, the same answer a slab in mid-air gets; recorded in design 32 §3 rather than guarded.
+
+## 2026-09-23 — Power, second round: scrap metal, and a line you can click again
+
+The owner's first look found an ordered line could not be selected again — so there was no way
+back to it to cancel it — and asked for lines to be built of scrap metal. Interviewed again (design
+32 §14): the existing *Scrap* item, relabelled *Scrap metal*; wreckage on the board and a scrap
+drop for more; a line 1, a generator 20 beside its 30 wood or stone, a heater 5 beside its 10; and
+a Cancel on the selected line's pane.
+
+**Why the click missed** is the picker's own rule meeting a second channel: a waiting order is a
+pointer target because `WorldRenderModel` is told the frame's building sites, and a line order is
+not a building site — it is in the power grid's own channel. The click fell through to the grass
+under it. Lines now go into the same answer (`SetLines`, `HasLine`), which is the fix and not a
+workaround: the picker's argument for sites — a waiting order has a cell, an order and a pane — is
+word for word true of a line.
+
+**A building paid for twice** is the one real mechanism in the round. `partItem`/`partCount` sit
+beside the chosen material, a site banks them apart, the delivery giver carries the material first
+and then the parts, a site is a frame only when both are in, and cancel, botch and deconstruct give
+each back by its own rule. The count is saved in a section of its own, so there is still no
+save-format bump. The pane's Cancel for a line got a narrow intent (`CancelConduit`) of its own:
+the cancel drag's `CancelBuilding` rightly takes every order in a cell, and a button that names one
+line must not also take the wall order standing beside it.
+
+**The first run moved every golden, and it was a real change, not a hash change.** Scrap metal
+stacking to fifty let the bare scenario's starting scatter drop a second piece on to an earlier
+one's cell — "room" had quietly become a different question — so the starting kit itself differed.
+The scatter asks for an empty cell with room now, which is what it always placed, and every golden
+and the scenario placement signature came back exactly. The wreckage goes through the Playtest
+scenario only, for the reason the stone and wood piles do: the bare scenario is what the goldens
+stand on.
+
+One Long-tier run failed `ATickThatDoesNothingAllocatesNextToNothing` once and passed three times
+after it, at the documented 1.6 and 3.3 bytes a tick. Recorded rather than retried away: a
+GC-sensitive figure on a machine running several editors is exactly where a one-off lives, and if
+it comes back, the per-tick allocations of the new power paths are the place to look first.

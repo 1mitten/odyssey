@@ -240,3 +240,37 @@ Not yet measured: the drawing of the lines (§9), which is the next number owed.
 - **The balance is derived.** Saving the powered flags would put a second copy of the net in the
   file, one the next solve could contradict.
 - **Deconstruct does not take lines** (§2a).
+
+## 14. Scrap metal, and selecting a line (second interview, 2026-09-23)
+
+The first playtest found two things: an ordered line could not be clicked again, so there was no
+way back to it to cancel it; and a line made of wood read wrong. The owner's answers:
+
+| # | Decision |
+|---|---|
+| 12 | Lines are built from **scrap metal** — the existing *Scrap* item (`Item_Salvage`), relabelled. |
+| 13 | More scrap metal comes from **wreckage scattered over the board** and from **supply drops**. |
+| 14 | A line costs **1** scrap metal; the generator **30 wood or stone + 20**; the heater **10 + 5**. |
+| 15 | Selecting an ordered line opens the **pane with a Cancel** — and a laid line, while shown, a **Remove**. |
+
+- **One material becomes two.** A building's `costCount` is paid in the material the player
+  chose; `partItem` and `partCount` are a second payment in one fixed item, whatever the building
+  is made of. A site banks the two separately, the delivery job carries whichever is outstanding
+  (the chosen material first), a site is a frame only when both are in, and a botch, a cancel and
+  a deconstruct give back each by its own rule. The part count is saved in a section of its own
+  (`odyssey.construction.parts`), so there is still no save-format bump. A line is all part:
+  `costCount` 0, one scrap metal.
+- **Scrap metal stacks to 50**, so a hauler carries a run's worth; it used to lie one piece to a
+  cell. The starting kit still scatters its pieces one to an empty cell, so no golden moves.
+- **Wreckage** is spawned with the colony, through the scenario the game loads (Playtest) rather
+  than the bare one the goldens and tests stand on — the same place every other starting item
+  comes from. Piles land on the topmost walkable cell of random columns at least 15 cells from the
+  start: 7 per 10,000 columns (10 on the played 120 × 120 board), 10 to 25 scrap metal each. Every
+  number here is a keyboard number.
+- **The scrap drop** is a second incident on the supply drop's own worker: 15 to 30 scrap metal,
+  on the debug menu's Events tab beside the meals.
+- **Selecting**: line orders, and laid lines while they are shown, are pointer targets exactly as a
+  building site is (`WorldRenderModel`'s site set, the picker's "a waiting order is a thing"). The
+  pane titles the cell *Conduit* and carries a pickable row — *Cancel order*, *Take it up*, or for
+  a line already marked, *Keep it* — which is the switch row's mechanism reused.
+

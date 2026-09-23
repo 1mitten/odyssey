@@ -848,6 +848,7 @@ namespace Odyssey.Presentation.Ui
                 {
                     if (!captured.IsPick) return;
                     if (captured.IsSwitch) ThrowPowerSwitch();
+                    else if (captured.IsLineAction) ActOnLine();
                     else ToggleBedPicker(captured.Root);
                 });
 
@@ -876,7 +877,8 @@ namespace Odyssey.Presentation.Ui
                 // own now, so a row that opened a popover would be a second way in to the same
                 // thing and the one a player found by accident.
                 bool switchPick = row.Name == InspectModel.PowerSwitchRow && _inspect.PowerSwitchUnderPane;
-                bool pick = (row.Name == "owner" && _inspect.BedUnderPane) || switchPick;
+                bool linePick = row.Name == InspectModel.LineActionRow && _inspect.LineActionUnderPane;
+                bool pick = (row.Name == "owner" && _inspect.BedUnderPane) || switchPick || linePick;
                 // The pickable row's value is set in the heavier Row role, which is where weight
                 // lives: the stylesheet may not set type (TheSheetSetsNoTypeAtAll), so "make the
                 // assign button bolder" is a role here rather than a font-style there.
@@ -902,18 +904,29 @@ namespace Odyssey.Presentation.Ui
                     else view.Value.style.color = StyleKeyword.Null;
                 }
 
-                if (view.IsPick != pick || view.IsSwitch != switchPick)
+                if (view.IsPick != pick || view.IsSwitch != switchPick || view.IsLineAction != linePick)
                 {
                     view.IsPick = pick;
                     view.IsSwitch = switchPick;
+                    view.IsLineAction = linePick;
                     view.Root.EnableInClassList("inspect__row--pick", pick);
                     view.Chevron.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
-                    // The bed's glyph is a bed: the switch row wears the chevron alone.
-                    view.Glyph.style.display = pick && !switchPick ? DisplayStyle.Flex : DisplayStyle.None;
+                    // The bed's glyph is a bed: the switch and line rows wear the chevron alone.
+                    view.Glyph.style.display = pick && !switchPick && !linePick ? DisplayStyle.Flex : DisplayStyle.None;
                     view.Root.tooltip = switchPick ? "Switch it on or off — at once, nobody is sent"
+                        : linePick ? "Press to do it"
                         : pick ? "Choose whose bed this is" : null;
                 }
             }
+        }
+
+        /// <summary>
+        /// The line under the pane's own action (design 32 §14): cancel its order or its removal
+        /// mark, or mark it to come up. An intent like every command, applied while paused.
+        /// </summary>
+        void ActOnLine()
+        {
+            _boot?.World?.Intents.Submit(new Intent(_inspect.LineAction, _inspect.Cell));
         }
 
         /// <summary>

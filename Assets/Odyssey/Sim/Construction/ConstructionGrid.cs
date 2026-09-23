@@ -47,6 +47,13 @@ namespace Odyssey.Sim.Construction
         readonly byte[] _stuff;
         readonly byte[] _facing;
         readonly int[] _delivered;
+
+        /// <summary>
+        /// Units of the building's <c>partItem</c> that have arrived — the second payment, banked
+        /// apart from the material (design 32 §14). Zero for everything with no parts.
+        /// </summary>
+        readonly int[] _parts;
+        readonly PartsSection _partsSection;
         readonly int[] _work;
         readonly List<int> _sites = new List<int>();
 
@@ -74,6 +81,8 @@ namespace Odyssey.Sim.Construction
             _stuff = new byte[grid.Size.CellCount];
             _facing = new byte[grid.Size.CellCount];
             _delivered = new int[grid.Size.CellCount];
+            _parts = new int[grid.Size.CellCount];
+            _partsSection = new PartsSection(this);
             _work = new int[grid.Size.CellCount];
         }
 
@@ -135,8 +144,39 @@ namespace Odyssey.Sim.Construction
             return wanted < 0 ? 0 : wanted;
         }
 
-        /// <summary>Has every unit of material arrived, so that the thing can be worked on?</summary>
-        public bool IsFrame(int index) => _building[index] != 0 && Outstanding(index) == 0;
+        /// <summary>Units of the site's part item that have arrived (design 32 §14).</summary>
+        public int PartsDelivered(int index) => _parts[index];
+
+        /// <summary>Units of the site's part item still wanted; 0 for a site with no parts, or once they are in.</summary>
+        public int OutstandingParts(int index)
+        {
+            if (_building[index] == 0) return 0;
+            BuildingDef def = ConstructionContent.BuildingAt(_building[index]);
+            if (!def.HasParts) return 0;
+            int wanted = def.partCount - _parts[index];
+            return wanted < 0 ? 0 : wanted;
+        }
+
+        /// <summary>
+        /// Has everything arrived — the material <b>and</b> the parts — so the thing can be worked
+        /// on? A generator with its thirty wood in and its scrap metal still out is a blueprint.
+        /// </summary>
+        public bool IsFrame(int index) =>
+            _building[index] != 0 && Outstanding(index) == 0 && OutstandingParts(index) == 0;
+
+        /// <summary>The site's second payment arrived. Returns what the site now holds of it.</summary>
+        public int DeliverParts(int index, int count)
+        {
+            _parts[index] += count;
+            return _parts[index];
+        }
+
+        /// <summary>
+        /// The save section that carries the parts delivered to sites (design 32 §14). A section of
+        /// its own rather than a field in the site record, so the site layout — and the save format
+        /// — is untouched; whoever assembles the save takes it from here, as it does the edifices.
+        /// </summary>
+        public ISaveable Parts => _partsSection;
 
         /// <summary>What this site costs in ticks of work, or 0 where there is no site.</summary>
         public int WorkFor(int index) =>
@@ -835,6 +875,10 @@ namespace Odyssey.Sim.Construction
             if (_building[index] == 0) return;
             _work[index] = 0;
             _delivered[index] = keepDelivered;
+            // The parts go the same way, half kept, rounded up: the part is a handful of pieces
+            // and a botch that took the last one of an odd count would be a harsher rule than the
+            // material's own coin flip for no reason a player could see (design 32 §14).
+            _parts[index] = (_parts[index] + 1) / 2;
         }
 
         /// <summary>
@@ -850,19 +894,27 @@ namespace Odyssey.Sim.Construction
         /// </summary>
         void Refund(int index)
         {
+            // The parts first, and whatever was delivered of them, in full: a cancelled order gives
+            // back everything carried to it, material and parts alike (design 32 §14).
+            if (_parts[index] > 0 && _building[index] != 0)
+                GiveBack(index, ConstructionContent.BuildingAt(_building[index]).partItem, _parts[index]);
+
             int delivered = _delivered[index];
             if (delivered <= 0) return;
+            GiveBack(index, ConstructionContent.StuffAt(_stuff[index]).item, delivered);
+        }
 
-            int item = ConstructionContent.StuffAt(_stuff[index]).item;
-            if (item < 0) return;
+        void GiveBack(int index, int item, int count)
+        {
+            if (item < 0 || count <= 0) return;
 
             int at = _items.NearestCellWithSpace(
-                _grid, index, item, delivered, JobDriver.DropSearchRadius);
+                _grid, index, item, count, JobDriver.DropSearchRadius);
 
             // A board with no room within that radius is packed solid with things, which nothing in
             // the game can produce. Losing the load is the least bad answer; the alternative is
             // refusing to let the player cancel an order, which is worse.
-            if (at >= 0) _items.Spawn(item, at, delivered);
+            if (at >= 0) _items.Spawn(item, at, count);
         }
 
         void Set(int index, int building, int stuff, int facing = 0)
@@ -889,6 +941,7 @@ namespace Odyssey.Sim.Construction
             _facing[index] = building != BuildingHandle.None ? (byte)(facing & 3) : (byte)0;
             // A new site, a cancelled one and a finished one all start the next from nothing.
             _delivered[index] = 0;
+            _parts[index] = 0;
             _work[index] = 0;
             if (building != BuildingHandle.None)
             {
@@ -1817,6 +1870,7 @@ namespace Odyssey.Sim.Construction
                 hash.Add(_stuff[index]);
                 hash.Add(_facing[index]);
                 hash.Add(_delivered[index]);
+                hash.Add(_parts[index]);
                 // Milliwork, whole, for the reason DesignationGrid's own ledger states: the hash
                 // is kept at the resolution the ledger is.
                 hash.Add(_work[index]);
@@ -1896,7 +1950,50 @@ namespace Odyssey.Sim.Construction
                     // The contract is ticks: the ledger is divided back where it is published,
                     // and the price was never scaled (§2bb — the scale stops at the contract).
                     _work[index] / Rates.Scale, WorkFor(index),
-                    _facing[index], (byte)def.footprint));
+                    _facing[index], (byte)def.footprint,
+                    (ushort)_parts[index], (ushort)(def.HasParts ? def.partCount : 0),
+                    (short)(def.HasParts ? def.partItem : -1)));
+            }
+        }
+
+        /// <summary>
+        /// The parts delivered to sites, saved apart from the sites themselves (design 32 §14):
+        /// <c>(cell, parts)</c> for every site holding any. Appended after the construction section,
+        /// so the sites it names already exist when it is read; one naming a cell with no site is a
+        /// file that disagrees with itself and is skipped. Hashed by the grid, not here.
+        /// </summary>
+        sealed class PartsSection : ISaveable
+        {
+            readonly ConstructionGrid _grid;
+
+            public PartsSection(ConstructionGrid grid) { _grid = grid; }
+
+            public string SaveKey => "odyssey.construction.parts";
+
+            public void Save(SaveWriter writer)
+            {
+                int count = 0;
+                for (int i = 0; i < _grid._sites.Count; i++) if (_grid._parts[_grid._sites[i]] > 0) count++;
+                writer.Write(count);
+                for (int i = 0; i < _grid._sites.Count; i++)
+                {
+                    int index = _grid._sites[i];
+                    if (_grid._parts[index] <= 0) continue;
+                    writer.Write(index);
+                    writer.Write(_grid._parts[index]);
+                }
+            }
+
+            public void Load(SaveReader reader)
+            {
+                int count = reader.ReadInt();
+                for (int i = 0; i < count; i++)
+                {
+                    int index = reader.ReadInt();
+                    int parts = reader.ReadInt();
+                    if ((uint)index >= (uint)_grid._parts.Length || _grid._building[index] == 0) continue;
+                    _grid._parts[index] = parts;
+                }
             }
         }
     }

@@ -57,7 +57,8 @@ namespace Odyssey.Tests.Hud
         {
             InspectModel model = LookingAt(FrameWithPile(ItemHandle.Salvage, 1), new ThingId(7));
 
-            Assert.That(model.Title, Is.EqualTo("Scrap"));
+            // "Scrap metal" since power made it the stuff lines are built from (design 32 §14).
+            Assert.That(model.Title, Is.EqualTo("Scrap metal"));
         }
 
         [Test]

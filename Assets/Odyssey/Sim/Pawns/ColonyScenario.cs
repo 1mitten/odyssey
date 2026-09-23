@@ -88,6 +88,23 @@ namespace Odyssey.Sim.Pawns
         public int woodPerPile = 75;
 
         /// <summary>
+        /// Piles of scrap metal left lying about the board — old wreckage — per ten thousand
+        /// columns (design 32 §14). Zero by default, so <see cref="Bare"/> and every golden built
+        /// on it are untouched; <see cref="Playtest"/> sets it.
+        /// </summary>
+        public int wreckagePer10kColumns;
+
+        /// <summary>The fewest and most scrap metal in one pile of wreckage.</summary>
+        public int wreckageMin = 10;
+        public int wreckageMax = 25;
+
+        /// <summary>
+        /// How far from the start, in cells either way, the nearest wreckage may lie: the scrap is
+        /// out in the world to be fetched, not a starting kit under the colonists' feet.
+        /// </summary>
+        public int wreckageClearance = 15;
+
+        /// <summary>
         /// Every tree within this many cells of the start is marked for felling before the first
         /// tick, on the start layer. Zero marks nothing.
         /// </summary>
@@ -182,6 +199,10 @@ namespace Odyssey.Sim.Pawns
                 startingFellRadius = 0, startingMineRadius = 0, startingMineOutcrops = 0,
                 mealPiles = 3, salvage = 0,
                 stonePiles = 2, woodPiles = 2,
+                // Old wreckage scattered over the board, the colony's first scrap metal and the
+                // only source of it until a scrap drop falls (design 32 §14). Seven piles per ten
+                // thousand columns is ten on the played 120 x 120 board.
+                wreckagePer10kColumns = 7,
                 // No beds (owner, 2026-09-20: "beds should never be given on startup / new
                 // game"). The colony sleeps on the ground until it builds some, which is what
                 // makes a bed the first thing worth building. Bare keeps its five: the tests
@@ -812,15 +833,58 @@ namespace Odyssey.Sim.Pawns
                 for (int attempt = 0; attempt < home.Count; attempt++)
                 {
                     int spot = home[rng.NextInt(home.Count)];
-                    if (!pawns.Items.CellHasSpace(spot, ItemIndex.Salvage, 1)) continue;
+                    // An empty cell, not merely one with room: scrap metal stacks since power
+                    // (design 32 §14), and "room" would now let a second piece join the first
+                    // where it used to be drawn again — a different starting kit, and every
+                    // golden moved to say so. One piece to a cell is what the scatter has always
+                    // placed, so it is what it places.
+                    if (pawns.Items.ItemAt(spot) != null
+                        || !pawns.Items.CellHasSpace(spot, ItemIndex.Salvage, 1)) continue;
                     pawns.Items.Spawn(ItemIndex.Salvage, spot);
                     placedSalvage++;
                     break;
                 }
             }
 
+            // Wreckage last, so a scenario that has none draws nothing from the stream and every
+            // placement above is exactly what it was (design 32 §14).
+            PlaceWreckage(grid, pawns, start, scenario, ref rng);
+
             return new Result(placedColonists, placedMeals, placedBeds, stockpile.Count, placedSalvage,
                 placedMaterials, storeys.Found);
+        }
+
+        /// <summary>
+        /// Scatter piles of scrap metal over the whole board: each on the topmost walkable cell of
+        /// a random column, clear of the start by <see cref="ScenarioDef.wreckageClearance"/>, out
+        /// of the water, on a cell with room. A column that fails is drawn again, up to a budget,
+        /// and a pile that finds nowhere is simply not placed.
+        /// </summary>
+        static void PlaceWreckage(CellGrid grid, PawnContext pawns, CellRef start, ScenarioDef scenario,
+            ref DeterministicRandom rng)
+        {
+            GridSize size = grid.Size;
+            int piles = scenario.wreckagePer10kColumns * size.SizeX * size.SizeZ / 10_000;
+            int span = scenario.wreckageMax - scenario.wreckageMin + 1;
+            if (piles <= 0 || span <= 0) return;
+
+            for (int p = 0; p < piles; p++)
+            {
+                int stack = scenario.wreckageMin + rng.NextInt(span);
+                for (int attempt = 0; attempt < 64; attempt++)
+                {
+                    int x = rng.NextInt(size.SizeX), z = rng.NextInt(size.SizeZ);
+                    if (System.Math.Abs(x - start.X) < scenario.wreckageClearance
+                        && System.Math.Abs(z - start.Z) < scenario.wreckageClearance) continue;
+
+                    int cell = grid.SkyLanding(x, z);
+                    if (cell < 0 || NaturalContent.IsWater(grid.Terrain[cell])) continue;
+                    if (pawns.Items.ItemAt(cell) != null) continue;
+
+                    pawns.Items.Spawn(ItemIndex.Salvage, cell, stack);
+                    break;
+                }
+            }
         }
 
         /// <summary>

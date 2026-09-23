@@ -144,12 +144,21 @@ namespace Odyssey.Sim.Construction
         public bool conduit;
 
         /// <summary>
-        /// The <see cref="StuffHandle"/> this is always made of, or 0 where the player chooses.
-        /// A line is copper and insulation the colony does not have yet, so it is priced in wood
-        /// and offered in nothing else — a material picker with one entry is a question with one
-        /// answer (design 32 §2, decision 10).
+        /// A second payment, in one fixed item whatever the thing is made of — the scrap metal in a
+        /// generator's workings, or the whole of a power line (design 32 §14). -1 for anything
+        /// that is paid for in its material alone, which is everything before power.
+        ///
+        /// <para>Kept apart from <see cref="costCount"/> because the two answer different
+        /// questions: the material is the player's choice and the part is not. A site banks them
+        /// separately, is a frame only when both are in, and gives each back by its own rule.</para>
         /// </summary>
-        public int fixedStuff;
+        public int partItem = -1;
+
+        /// <summary>Units of <see cref="partItem"/> a site swallows before work can start.</summary>
+        public int partCount;
+
+        /// <summary>Does this thing take a second, fixed payment besides its material?</summary>
+        public bool HasParts => partItem >= 0 && partCount > 0;
 
         /// <summary>Watts this makes while it runs, or 0 for anything that is not a generator (design 32 §5).</summary>
         public int powerOutputW;
@@ -550,15 +559,15 @@ namespace Odyssey.Sim.Construction
                     iconKey = "ui.arch.tool.campfire",
                 },
 
-                // A power line (design 32 §3). Not an edifice — `conduit` sends the order to the
-                // power grid and the line into a layer of its own — and always wood, one a cell:
-                // cheap, but hauled like anything else, so a long run is a real cost. 40 ticks of
-                // work, a-07's 35 rounded to the table's tens.
+                // A power line (design 32 §3, §14). Not an edifice — `conduit` sends the order to
+                // the power grid and the line into a layer of its own — and all part: no material
+                // to choose, one scrap metal a cell, fetched and spent by the colonist who lays it.
+                // 40 ticks of work, a-07's 35 rounded to the table's tens.
                 new BuildingDef
                 {
                     defName = "Building_Conduit", label = "conduit", edifice = CoreContent.EdificeNone,
-                    conduit = true, blocking = false, fixedStuff = StuffHandle.Wood,
-                    costCount = 1, workToBuild = 40, minSkill = 0,
+                    conduit = true, blocking = false, costCount = 0,
+                    partItem = ItemHandle.Salvage, partCount = 1, workToBuild = 40, minSkill = 0,
                     iconKey = "ui.arch.tool.conduit",
                 },
 
@@ -574,7 +583,8 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Generator", label = "generator", edifice = CoreContent.EdificeGenerator,
                     blocking = true, footprint = 2, rotates = true, needsClearCell = true,
                     powerOutputW = 1_000, fuelItem = ItemHandle.Wood, fuelCapacity = 75, fuelPerDay = 22,
-                    heatPerPass = 400, costCount = 30, workToBuild = 600, minSkill = 0,
+                    heatPerPass = 400, costCount = 30, partItem = ItemHandle.Salvage, partCount = 20,
+                    workToBuild = 600, minSkill = 0,
                     iconKey = "ui.arch.tool.generator",
                 },
 
@@ -585,7 +595,8 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Heater", label = "heater", edifice = CoreContent.EdificeHeater,
                     blocking = true, needsClearCell = true, powerDrawW = 175, heatPerPass = 1_000,
-                    costCount = 10, workToBuild = 240, minSkill = 0,
+                    costCount = 10, partItem = ItemHandle.Salvage, partCount = 5,
+                    workToBuild = 240, minSkill = 0,
                     iconKey = "ui.arch.tool.heater",
                 },
             };

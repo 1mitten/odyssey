@@ -37,4 +37,29 @@
     <fallTicks>360</fallTicks>
   </IncidentDef>
 
+  <!--
+    Scrap metal from the sky (design 32 §14): the supply drop's own worker with another cargo, so a
+    storyteller that can fire one can fire the other. Fifteen to thirty is under a stack of fifty,
+    one haul, and enough for a generator's parts or a run of line. The owner's second source of
+    scrap metal beside the wreckage; every gate is the supply drop's and every one is tuning.
+  -->
+  <IncidentDef>
+    <defName>Incident_ScrapDrop</defName>
+    <label>scrap drop</label>
+    <description>Drops a stack of scrap metal from the sky somewhere on the board. Lands on the next tick, so unpause to see it</description>
+    <bulletinKey>ui.bulletin.scrapdrop</bulletinKey>
+    <favourability>Good</favourability>
+    <category>Misc</category>
+    <worker>SupplyDrop</worker>
+    <earliestDay>1</earliestDay>
+    <minRefireDays>2</minRefireDays>
+    <weight>60</weight>
+    <minColonists>1</minColonists>
+    <maxFires>0</maxFires>
+    <item>Item_Salvage</item>
+    <stackMin>15</stackMin>
+    <stackMax>30</stackMax>
+    <fallTicks>360</fallTicks>
+  </IncidentDef>
+
 </Defs>

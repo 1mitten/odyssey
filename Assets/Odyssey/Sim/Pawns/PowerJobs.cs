@@ -8,9 +8,9 @@ namespace Odyssey.Sim.Pawns
     /// <summary>
     /// Hand a colonist an ordered line to lay (design 32 §3).
     ///
-    /// <para><b>One job fetches the wood and lays the line</b>, where a wall is two — a delivery
-    /// and a build. A line costs one wood and nothing waits for it, so a separate delivery would
-    /// be a second walk to put one plank down beside the cell the same colonist then walks back
+    /// <para><b>One job fetches the scrap metal and lays the line</b>, where a wall is two — a
+    /// delivery and a build. A line costs one scrap metal and nothing waits for it, so a separate
+    /// delivery would be a second walk to put one piece down beside the cell the same colonist then walks back
     /// to. The carry is the delivery's (fetch, lift, carry) and the work is the build's (swing at
     /// the site, bank the work on it), in one driver.</para>
     ///
@@ -33,10 +33,10 @@ namespace Odyssey.Sim.Pawns
             var sites = power.Sites;
             if (sites.Count == 0) return false;
 
-            // The wood is the nearest to the colonist whichever line she lays, so it is found once:
-            // no wood anywhere reachable is no line anywhere, and the scan stops before it starts.
+            // The scrap metal is the nearest to the colonist whichever line she lays, so it is found
+            // once: none anywhere reachable is no line anywhere, and the scan stops before it starts.
             ColonyItem? load = DeliverWorkGiver.NearestLoad(
-                pawn, ctx, ConstructionContent.StuffAt(StuffHandle.Wood).item);
+                pawn, ctx, ConstructionContent.BuildingAt(BuildingHandle.Conduit).partItem);
             if (load == null) return false;
 
             int bestSite = -1, bestStand = -1, bestDistance = int.MaxValue;
@@ -75,10 +75,10 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// Fetch one wood, carry it to an ordered line, and work until the line is in.
+    /// Fetch the line's scrap metal, carry it to an ordered line, and work until the line is in.
     ///
-    /// <para>Toils: walk to the wood, take it up, carry it to the stance, work, settle. Whatever is
-    /// left of the stack after the one wood the line takes is put down by <see cref="Cleanup"/>
+    /// <para>Toils: walk to the scrap metal, take it up, carry it to the stance, work, settle. Whatever is
+    /// left of the stack after the one piece the line takes is put down by <see cref="Cleanup"/>
     /// near the site — which is where the next line of the run wants it.</para>
     /// </summary>
     public class LayConduitJobDriver : JobDriver
@@ -149,7 +149,7 @@ namespace Odyssey.Sim.Pawns
                     if (Job.CarriedItem < 0) return JobStatus.Failed;
                     if (!StillInReach(ctx, Pawn, site, layersAbove: 0, layersBelow: 1))
                     {
-                        // Moved off the stance: walk back to it, the wood still in hand.
+                        // Moved off the stance: walk back to it, the scrap metal still in hand.
                         ToilIndex = 2;
                         ToilProgress = 0;
                         return JobStatus.Ongoing;
@@ -161,8 +161,8 @@ namespace Odyssey.Sim.Pawns
                     int price = ConstructionContent.WorkFor(BuildingHandle.Conduit, StuffHandle.Wood) * Rates.Scale;
                     if (power.AddSiteWork(site, rate) < price) return JobStatus.Ongoing;
 
-                    // The one wood goes into the line as it goes in.
-                    item.Stack -= 1;
+                    // The line's scrap metal goes into it as it goes in.
+                    item.Stack -= ConstructionContent.BuildingAt(BuildingHandle.Conduit).partCount;
                     if (item.Stack <= 0)
                     {
                         ctx.Items.Despawn(item);
@@ -225,7 +225,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// Walk to a marked line and take it up, leaving the reference's half of its one wood — which,
+    /// Walk to a marked line and take it up, leaving the reference's half of its one scrap metal — which,
     /// by the seeded coin flip every refund uses, is nothing or one (design 32 §3).
     /// </summary>
     public class RemoveConduitJobDriver : JobDriver
@@ -283,10 +283,10 @@ namespace Odyssey.Sim.Pawns
         {
             if (!power.TakeUp(cell)) return;
 
-            int refund = DeconstructJobDriver.Refund(ctx, cell, BuildingHandle.Conduit, StuffHandle.Wood, tick);
+            int refund = DeconstructJobDriver.RefundParts(ctx, cell, BuildingHandle.Conduit, tick);
             if (refund <= 0) return;
 
-            int item = ConstructionContent.StuffAt(StuffHandle.Wood).item;
+            int item = ConstructionContent.BuildingAt(BuildingHandle.Conduit).partItem;
             int landing = ctx.Cells.FirstFloorAtOrBelow(cell);
             int at = ctx.Items.NearestCellWithSpace(ctx.Cells, landing, item, refund, maxRadius: 3);
             if (at >= 0) ctx.Items.Spawn(item, at, refund);

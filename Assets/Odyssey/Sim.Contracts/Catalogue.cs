@@ -210,7 +210,10 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A stack of meals falling out of the sky on to whatever is under it.</summary>
         public const int SupplyDrop = 0;
 
-        public const int Count = 1;
+        /// <summary>A stack of scrap metal falling out of the sky (design 32 §14): the supply drop's worker, another cargo.</summary>
+        public const int ScrapDrop = 1;
+
+        public const int Count = 2;
     }
 
     /// <summary>

@@ -256,10 +256,10 @@
   </BuildingDef>
 
   <!--
-    A POWER LINE (design 32 §3). conduit true: not an edifice, so the order goes to the power grid
-    and the line into a layer of its own, where it can run through a wall or under a floor.
-    fixedStuff 4 is Stuff_Wood: one wood a cell, offered in nothing else (decision 10). workToBuild
-    40 is a-07's 35 rounded to the table's tens.
+    A POWER LINE (design 32 §3, §14). conduit true: not an edifice, so the order goes to the power
+    grid and the line into a layer of its own, where it can run through a wall or under a floor.
+    All part and no material: partItem 1 is Item_Salvage, scrap metal, one a cell. workToBuild 40
+    is a-07's 35 rounded to the table's tens.
   -->
   <BuildingDef>
     <defName>Building_Conduit</defName>
@@ -267,8 +267,9 @@
     <edifice>0</edifice>
     <conduit>true</conduit>
     <blocking>false</blocking>
-    <fixedStuff>4</fixedStuff>
-    <costCount>1</costCount>
+    <costCount>0</costCount>
+    <partItem>1</partItem>
+    <partCount>1</partCount>
     <workToBuild>40</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.conduit</iconKey>
@@ -297,6 +298,8 @@
     <fuelPerDay>22</fuelPerDay>
     <heatPerPass>400</heatPerPass>
     <costCount>30</costCount>
+    <partItem>1</partItem>
+    <partCount>20</partCount>
     <workToBuild>600</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.generator</iconKey>
@@ -316,6 +319,8 @@
     <powerDrawW>175</powerDrawW>
     <heatPerPass>1000</heatPerPass>
     <costCount>10</costCount>
+    <partItem>1</partItem>
+    <partCount>5</partCount>
     <workToBuild>240</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.heater</iconKey>

@@ -648,6 +648,23 @@ namespace Odyssey.Presentation.World
         /// <summary>Whether an order is waiting to be built in this cell.</summary>
         public bool HasSite(int index) => _sites.ContainsKey(index);
 
+        readonly HashSet<int> _lines = new HashSet<int>();
+
+        /// <summary>
+        /// The power lines published this frame (design 32 §14): every order and removal mark, and
+        /// the laid lines while they are shown. A line is a thing the player can point at exactly
+        /// as a building site is — it has a cell, an order and a pane — so the picker asks here
+        /// beside <see cref="HasSite"/>.
+        /// </summary>
+        public void SetLines(ReadOnlySpan<ConduitView> lines)
+        {
+            _lines.Clear();
+            for (int i = 0; i < lines.Length; i++) _lines.Add(lines[i].CellIndex);
+        }
+
+        /// <summary>Whether a line — ordered, marked, or laid and shown — is in this cell.</summary>
+        public bool HasLine(int index) => _lines.Contains(index);
+
         /// <summary>
         /// What is going up in this cell, as a <c>BuildingHandle</c>, or 0 where nothing is.
         /// </summary>

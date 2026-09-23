@@ -585,8 +585,17 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public float Progress => WorkTotal <= 0 ? 0f : (float)WorkDone / WorkTotal;
 
-        /// <summary>Has every unit arrived, so that the thing can be worked on?</summary>
-        public bool IsFrame => Delivered >= Cost;
+        /// <summary>Has every unit arrived — the material and the parts — so that the thing can be worked on?</summary>
+        public bool IsFrame => Delivered >= Cost && PartsDelivered >= PartsCost;
+
+        /// <summary>Units of the part item that have arrived — the second payment (design 32 §14).</summary>
+        public readonly ushort PartsDelivered;
+
+        /// <summary>Units of the part item the site wants; 0 for anything paid for in its material alone.</summary>
+        public readonly ushort PartsCost;
+
+        /// <summary>The <see cref="ItemHandle"/> the parts are paid in, or -1.</summary>
+        public readonly short PartsItem;
 
         /// <summary>
         /// The rotation the order was placed at, 0–3 — meaningful only while
@@ -600,8 +609,12 @@ namespace Odyssey.Sim.Contracts
 
         public SiteView(int cellIndex, byte building, byte stuff,
             ushort delivered, ushort cost, int workDone, int workTotal,
-            byte facing = 0, byte footprint = 1)
+            byte facing = 0, byte footprint = 1,
+            ushort partsDelivered = 0, ushort partsCost = 0, short partsItem = -1)
         {
+            PartsDelivered = partsDelivered;
+            PartsCost = partsCost;
+            PartsItem = partsItem;
             CellIndex = cellIndex;
             Building = building;
             Stuff = stuff;

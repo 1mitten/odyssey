@@ -319,7 +319,7 @@ namespace Odyssey.Tests.Hud
             // The words the playtest reports were about: a pile of wood is Wood and counted, a
             // rock is Rock, water is water at the speed it is crossed at.
             Assert.That(ItemLabels.Label(ItemHandle.Wood), Is.EqualTo("Wood"));
-            Assert.That(ItemLabels.Label(ItemHandle.Salvage), Is.EqualTo("Scrap"),
+            Assert.That(ItemLabels.Label(ItemHandle.Salvage), Is.EqualTo("Scrap metal"),
                 "salvage is scrap: the ledger settled the word, and the pane had hard-coded the other one");
             Assert.That(TerrainLabels.Label(TerrainHandle.Rock), Is.EqualTo("Rock"));
             Assert.That(TerrainLabels.Label(TerrainHandle.ShallowWater), Is.EqualTo("Shallow Water"));

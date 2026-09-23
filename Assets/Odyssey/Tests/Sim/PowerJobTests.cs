@@ -41,22 +41,38 @@ namespace Odyssey.Tests.Sim
             return cell;
         }
 
-        static int WoodOnTheBoard(ColonyWorld colony)
+        static int OnTheBoard(ColonyWorld colony, int item)
         {
             int total = 0;
             var items = colony.Pawns.Items.Items;
             for (int i = 0; i < items.Count; i++)
-                if (!items[i].Despawned && items[i].DefIndex == ItemHandle.Wood) total += items[i].Stack;
+                if (!items[i].Despawned && items[i].DefIndex == item) total += items[i].Stack;
             return total;
         }
 
-        /// <summary>Put this much wood down near the start, wherever there is room for it.</summary>
-        static void Stock(ColonyWorld colony, int count)
+        static int WoodOnTheBoard(ColonyWorld colony) => OnTheBoard(colony, ItemHandle.Wood);
+
+        /// <summary>Scrap metal anywhere, the bare scenario's own eight pieces included.</summary>
+        static int ScrapOnTheBoard(ColonyWorld colony) => OnTheBoard(colony, ItemHandle.Salvage);
+
+        /// <summary>Put this much of an item down near the start, wherever there is room for it.</summary>
+        static void Stock(ColonyWorld colony, int count, int item = ItemHandle.Salvage)
         {
             int near = Open(colony, 1, -3);
-            int at = colony.Pawns.Items.NearestCellWithSpace(colony.Grid, near, ItemHandle.Wood, count, 8);
+            int at = colony.Pawns.Items.NearestCellWithSpace(colony.Grid, near, item, count, 8);
             Assume.That(at, Is.GreaterThanOrEqualTo(0));
-            colony.Pawns.Items.Spawn(ItemHandle.Wood, at, count);
+            colony.Pawns.Items.Spawn(item, at, count);
+        }
+
+        static void StockWood(ColonyWorld colony, int count) => Stock(colony, count, ItemHandle.Wood);
+
+        /// <summary>Take every piece of scrap metal off the board — the bare scenario scatters eight.</summary>
+        static void ClearScrap(ColonyWorld colony)
+        {
+            var items = colony.Pawns.Items.Items;
+            for (int i = 0; i < items.Count; i++)
+                if (!items[i].Despawned && items[i].DefIndex == ItemHandle.Salvage)
+                    colony.Pawns.Items.Despawn(items[i]);
         }
 
         static void Give(ColonyWorld colony, IntentKind kind, int cell, int a = 0, int b = 0)
@@ -87,17 +103,17 @@ namespace Odyssey.Tests.Sim
         // ---- laying ---------------------------------------------------------------------------
 
         /// <summary>
-        /// The whole of decision 10 as a player meets it: a run of eight ordered lines is laid by
-        /// the colony, one wood a line, into one net — with the wood the lines did not take put
-        /// back down rather than lost.
+        /// Decision 14 as a player meets it: a run of eight ordered lines is laid by the colony,
+        /// one scrap metal a line, into one net — with the scrap the lines did not take put back
+        /// down rather than lost.
         /// </summary>
         [Test]
-        public void ARunOfLinesIsLaidAtOneWoodALine()
+        public void ARunOfLinesIsLaidAtOneScrapMetalALine()
         {
             ColonyWorld colony = Board();
             PowerGrid power = PowerOf(colony);
             Stock(colony, 20);
-            int before = WoodOnTheBoard(colony);
+            int before = ScrapOnTheBoard(colony);
 
             for (int x = 3; x <= 10; x++) Give(colony, IntentKind.PlaceBuilding, Open(colony, x, 6), BuildingHandle.Conduit, StuffHandle.Wood);
             colony.World.Tick();
@@ -108,7 +124,7 @@ namespace Odyssey.Tests.Sim
             colony.World.Tick(200);
             Assert.That(power.Lines.Count, Is.EqualTo(8));
             Assert.That(power.Nets.Count, Is.EqualTo(1), "a straight run is one net");
-            Assert.That(WoodOnTheBoard(colony), Is.EqualTo(before - 8), "one wood a line, and the rest set down again");
+            Assert.That(ScrapOnTheBoard(colony), Is.EqualTo(before - 8), "one scrap metal a line, and the rest set down again");
             Assert.That(colony.Jobs.CompletedOf(JobIndex.LayConduit), Is.EqualTo(8));
         }
 
@@ -148,11 +164,12 @@ namespace Odyssey.Tests.Sim
         /// scan does not loop trying — the giver answers no before it looks at a single site.
         /// </summary>
         [Test]
-        public void NoWoodMeansNoLineAndNoLoop()
+        public void NoScrapMetalMeansNoLineAndNoLoop()
         {
             ColonyWorld colony = Board();
             PowerGrid power = PowerOf(colony);
-            Assume.That(WoodOnTheBoard(colony), Is.Zero, "the bare scenario leaves no wood");
+            ClearScrap(colony);
+            Assume.That(ScrapOnTheBoard(colony), Is.Zero, "the scenario's own scrap is gone");
             Give(colony, IntentKind.PlaceBuilding, Open(colony, 6, 6), BuildingHandle.Conduit, StuffHandle.Wood);
 
             colony.World.Tick(3_000);
@@ -176,11 +193,12 @@ namespace Odyssey.Tests.Sim
                 PowerGrid power = PowerOf(colony);
                 int cell = Open(colony, 5, 5);
                 power.AddLine(cell);
+                int before = ScrapOnTheBoard(colony);
                 Give(colony, IntentKind.RemoveConduit, cell);
                 Assert.That(RunUntil(colony, () => !power.IsLine(cell), 20_000), Is.True, "the line came up");
                 Assert.That(power.IsMarked(cell), Is.False);
                 colony.World.Tick(200);
-                return WoodOnTheBoard(colony);
+                return ScrapOnTheBoard(colony) - before;
             }
 
             int first = Run();
@@ -202,7 +220,7 @@ namespace Odyssey.Tests.Sim
                 ColonyWorld colony = Board();
                 generator = RaiseNow(colony, Open(colony, 4, 5), BuildingHandle.Generator, facing: 1);
                 PowerOf(colony).SetFuelMilli(generator, fuelMilli);
-                Stock(colony, 75);
+                StockWood(colony, 75);
                 return colony;
             }
 
@@ -227,7 +245,7 @@ namespace Odyssey.Tests.Sim
             int head = Open(colony, 4, 5);
             int generator = RaiseNow(colony, head, BuildingHandle.Generator, facing: 1);
             PowerOf(colony).SetFuelMilli(generator, 1_000);
-            Stock(colony, 75);
+            StockWood(colony, 75);
             Assert.That(colony.Designations.Designate(Size.FromIndex(head), DesignationKind.Deconstruct),
                 Is.EqualTo(IntentRejection.None));
 
@@ -244,7 +262,8 @@ namespace Odyssey.Tests.Sim
         {
             ColonyWorld colony = Board();
             PowerGrid power = PowerOf(colony);
-            Stock(colony, 75);
+            Stock(colony, 30);
+            StockWood(colony, 75);
             int generator = RaiseNow(colony, Open(colony, 4, 5), BuildingHandle.Generator, facing: 1);
             power.SetFuelMilli(generator, 1_000);
             for (int x = 3; x <= 6; x++) Give(colony, IntentKind.PlaceBuilding, Open(colony, x, 8), BuildingHandle.Conduit, StuffHandle.Wood);

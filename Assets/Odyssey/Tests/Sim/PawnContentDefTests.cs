@@ -150,7 +150,12 @@ namespace Odyssey.Tests.Sim
         // as building does; refuelling trains hauling. Every golden moved with them, because the
         // job system hashes a completed and failed counter for every def — measured to be those
         // six zeros and nothing else (Golden.cs).
-        const ulong ContentFingerprint = 5397468250427084813UL;
+        //
+        // 2026-09-23, the same branch's second interview (design 32 §14): Item_Salvage is scrap
+        // metal now — labelled so, and stacking to 50 where it lay one to a cell — because power
+        // lines and machines are built from it. No golden moved: the starting kit's scatter still
+        // places one piece to an empty cell, which is what it always placed.
+        const ulong ContentFingerprint = 6571152878564343262UL;
 
 
         [Test]

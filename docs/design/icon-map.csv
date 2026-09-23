@@ -365,6 +365,7 @@ ui.bulletin.refugee,-,,,someone asking for shelter,-,gap
 ui.bulletin.animaljoin,06,,,paw print tile,med,shared
 ui.bulletin.crash,-,,,a crashed ship or drop pod,-,gap
 ui.bulletin.supplydrop,-,,,"a stack falling from the sky. Our own concept",-,gap
+ui.bulletin.scrapdrop,-,,,"scrap metal falling from the sky. Our own concept",-,gap
 ui.bulletin.birth,-,,,a newborn animal,-,gap
 ui.weather.clear,-,,,clear sky or sun,-,gap
 ui.weather.cloudy,-,,,cloud,-,gap

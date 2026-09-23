@@ -158,6 +158,10 @@ namespace Odyssey.Sim.Pawns
                 // and the switch and hopper of every power building (design 32 §8). A save from
                 // before power has no section and loads with no lines — which is what it had.
                 pawns.Power!,
+                // The parts delivered to building sites (design 32 §14), after the construction
+                // section whose sites they name. A save from before has none, and loads with every
+                // site's parts at nought — which is what every site then had.
+                construction.Parts,
             };
         }
 

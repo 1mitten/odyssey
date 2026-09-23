@@ -222,8 +222,13 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(line.conduit, Is.True);
             Assert.That(line.edifice, Is.EqualTo(CoreContent.EdificeNone), "a line is not an edifice");
-            Assert.That(line.fixedStuff, Is.EqualTo(StuffHandle.Wood));
-            Assert.That(line.costCount, Is.EqualTo(1));
+            // All part and no material: one scrap metal a cell (design 32 §14).
+            Assert.That(line.costCount, Is.Zero);
+            Assert.That(line.partItem, Is.EqualTo(ItemHandle.Salvage));
+            Assert.That(line.partCount, Is.EqualTo(1));
+            Assert.That(generator.partItem, Is.EqualTo(ItemHandle.Salvage));
+            Assert.That(generator.partCount, Is.EqualTo(20));
+            Assert.That(heater.partCount, Is.EqualTo(5));
 
             Assert.That(generator.edifice, Is.EqualTo(CoreContent.EdificeGenerator));
             Assert.That(generator.footprint, Is.EqualTo(2));
@@ -343,6 +348,29 @@ namespace Odyssey.Tests.Sim
             Assert.That(Send(colony, IntentKind.CancelBuilding, cell), Is.EqualTo(IntentRejection.None));
             Assert.That(Send(colony, IntentKind.CancelBuilding, cell), Is.EqualTo(IntentRejection.AlreadyInThatState),
                 "the control: an empty cell has nothing to cancel");
+        }
+
+        /// <summary>
+        /// The pane's Cancel for a line takes the line's order and nothing else (design 32 §14) —
+        /// and the control, the cancel drag's intent, takes the wall order beside it too.
+        /// </summary>
+        [Test]
+        public void CancellingALineFromItsPaneLeavesTheWallOrderInTheCell()
+        {
+            ColonyWorld colony = Board();
+            PowerGrid power = PowerOf(colony);
+            int cell = Open(colony, 6, 4);
+            Send(colony, IntentKind.PlaceBuilding, cell, BuildingHandle.Wall, StuffHandle.Wood);
+            OrderLine(colony, cell);
+
+            Assert.That(Send(colony, IntentKind.CancelConduit, cell), Is.EqualTo(IntentRejection.None));
+            Assert.That(power.HasSite(cell), Is.False, "the line order is gone");
+            Assert.That(colony.Construction.At(cell), Is.EqualTo(BuildingHandle.Wall), "and the wall order stands");
+            Assert.That(Send(colony, IntentKind.CancelConduit, cell), Is.EqualTo(IntentRejection.AlreadyInThatState));
+
+            OrderLine(colony, cell);
+            Send(colony, IntentKind.CancelBuilding, cell);
+            Assert.That(colony.Construction.At(cell), Is.EqualTo(BuildingHandle.None), "the control: the drag's cancel takes both");
         }
 
         /// <summary>Only a built line can be marked to come up, and a cancel takes the mark back.</summary>

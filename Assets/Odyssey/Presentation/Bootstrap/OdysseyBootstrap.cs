@@ -1290,6 +1290,7 @@ namespace Odyssey.Presentation.Bootstrap
             // the column and the layer was dead to every tool, which is what the cancel tool could
             // not cancel on 2026-09-18.
             _model.SetSites(_world.Views.Current.Sites);
+            _model.SetLines(_world.Views.Current.Conduits);
             int movePerTick = MovePerTick;
             MarkSection(FrameSection.Mirror);
 

@@ -77,13 +77,17 @@ namespace Odyssey.Tests.Sim
         // The same merge added `heatPerPass` to BuildingDef, which is nought on every other row.
         // 2026-09-23: Appended Building_Conduit, Building_Generator and Building_Heater at handles
         // 9, 10 and 11 (design 32, power). The conduit is edifice 0 and `conduit`: a line in its
-        // own layer, always wood (`fixedStuff` 4), 1 a cell, 40 ticks. The generator is edifice 15,
+        // own layer, always wood (then), 1 a cell, 40 ticks. The generator is edifice 15,
         // two cells, rotatable, 1,000 W, a 75-wood hopper burning 22 a day at full load, 400 heat
         // at full load, 30 stuff and 600 ticks. The heater is edifice 16, 175 W, 1,000 heat while
-        // powered, 10 stuff and 240 ticks. BuildingDef gained `conduit`, `fixedStuff`,
+        // powered, 10 stuff and 240 ticks. BuildingDef gained `conduit`, `fixedStuff` (since gone),
         // `powerOutputW`, `powerDrawW`, `fuelItem`, `fuelCapacity` and `fuelPerDay`, nought or -1
         // on every other row.
-        const ulong BuildingFingerprint = 15407323078921201971UL;
+        // Same day, second interview (design 32 §14): `fixedStuff` is gone and `partItem` /
+        // `partCount` replace it — a second payment in one fixed item beside the chosen material.
+        // The conduit is all part (costCount 0, one scrap metal); the generator takes 20 scrap
+        // metal and the heater 5 beside their wood or stone.
+        const ulong BuildingFingerprint = 15847031730655314357UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

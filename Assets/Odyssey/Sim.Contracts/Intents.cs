@@ -223,6 +223,14 @@ namespace Odyssey.Sim.Contracts
         /// nothing hashed, so a paused world answers it at once.
         /// </summary>
         WatchPower,
+
+        /// <summary>
+        /// Take back the line order or the removal mark in <see cref="Intent.Cell"/>, and nothing
+        /// else in the cell (design 32 §14). The pane's Cancel for a line; narrower than
+        /// <see cref="CancelBuilding"/>, which also takes a building order standing in the same
+        /// cell — right for a cancel drag, wrong for a button that names one thing.
+        /// </summary>
+        CancelConduit,
     }
 
     /// <summary>
@@ -295,6 +303,7 @@ namespace Odyssey.Sim.Contracts
             // A view question, like QueryCell: the lines appear the moment the tool is armed,
             // paused or not.
             IntentKind.WatchPower => true,
+            IntentKind.CancelConduit => true,
             _ => false,
         };
     }

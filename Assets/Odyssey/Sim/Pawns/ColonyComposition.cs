@@ -204,6 +204,11 @@ namespace Odyssey.Sim.Pawns
                     pawns.Cells.Size.Contains(intent.Cell)
                         ? power.MarkRemoval(pawns.Cells.Size.Index(intent.Cell))
                         : IntentRejection.OutOfBounds)
+                .AddIntentHandler(IntentKind.CancelConduit, intent =>
+                    pawns.Cells.Size.Contains(intent.Cell)
+                        ? (power.CancelAt(pawns.Cells.Size.Index(intent.Cell))
+                            ? IntentRejection.None : IntentRejection.AlreadyInThatState)
+                        : IntentRejection.OutOfBounds)
                 .AddIntentHandler(IntentKind.SetPowerSwitch, intent =>
                     pawns.Cells.Size.Contains(intent.Cell)
                         ? power.SetSwitch(pawns.Cells.Size.Index(intent.Cell), intent.A != 0)

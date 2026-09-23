@@ -24,9 +24,12 @@ the next session learns to ignore.
 ## Open
 
 - **Does power read?** (`claude/power`, `docs/design/32-power.md`; follows `claude/temperature-core`.)
-  Grant wood from the debug menu, then open Build → **Power**. Drag a **Conduit** run from open
-  ground *through a wall* into a room; put a **Heater** beside the run inside and a **Generator**
-  beside it outside. Watch the lines appear the moment the tool is armed and vanish when it is put
+  Lines, generators and heaters now take **scrap metal** (design 32 §14): a new game scatters ten
+  piles of wreckage over the board, fifteen or more cells from the start, and the debug menu's
+  Events tab has a **Scrap drop**. Grant wood too, then open Build → **Power**. Drag a **Conduit**
+  run from open ground *through a wall* into a room; put a **Heater** beside the run inside and a
+  **Generator** beside it outside. Click an ordered line: the pane should title it *Conduit* and
+  offer **Cancel**; a laid one, while the lines are shown, **Remove conduit**. Watch the lines appear the moment the tool is armed and vanish when it is put
   down; a hauler should fill the generator unasked; the heater's pane should go from *not
   connected* to *powered*, and the room should warm. Then build a sixth heater on the same net and
   watch the whole net go dark and the *Power failure* alert rise.
@@ -38,6 +41,8 @@ the next session learns to ignore.
   **five heaters to a generator** is the right size — a wrong answer is never needing a second
   generator, or needing one for the first room. And whether **the Remove conduit tool** is where a
   player looks for it, or whether they reach for Deconstruct and are surprised it leaves the line.
+  And whether **scrap metal is scarce in the right way** — a wrong answer is the wreckage never
+  being worth the walk, or ten piles being all the power a colony ever needs.
 
 - **Does the cold read?** (`claude/temperature-core`, `docs/design/28-temperature.md`.) Open the
   debug menu with backtick and press **Skip one month** four times — that is the row this review
