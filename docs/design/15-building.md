@@ -458,6 +458,10 @@ What it will need, in the order it should be built. **Steps 1 and 2 landed on 20
 4. **The menu itself**, which is a HUD panel and should be a director plus a presenter like every
    other region (09 §3). Its model asks `JobSystem.CanForce` once per command it is about to draw
    and submits a `ForceJob` intent when one is picked; nothing else in the simulation is needed.
+   **The menu is built, 2026-09-23 (design 33 §7a)**, with one row so far — *Equip* on a weapon —
+   as `ContextMenuModel` (Hud, fast tier) and `HudShell.ContextMenu.cs`. *Build this now* is one
+   more `Offer…` method there, but `JobSystem.CanForce` is a simulation query the Hud assembly
+   cannot call, so its answer has to reach the snapshot first.
 
 **How to test it**, written before the feature and now half kept. The Sim lines are built —
 `ForcedOrderTests`, nine tests in the fast tier; the Hud line waits on step 4 and the by-hand line on

@@ -865,7 +865,8 @@ says "hit this one of ours" outright. A downed colonist is rescued by the **near
 drafted colonist only (*our call*: one body, one carrier; sending all of them is a walk the
 reservation would refuse at the end of). A weapon in the clicked cell **or the one above it** (the
 rule a left click selects a pile by) is fetched by the first colonist in the selection, drafted or
-not. Everything else is the move, a floored or walled cell included. A downed, hostile or animal
+not. *(Superseded 2026-09-23: a weapon now opens the context menu, whose Equip row sends the same
+order for the same colonist, §7a.)* Everything else is the move, a floored or walled cell included. A downed, hostile or animal
 pawn in a stale selection is never an attacker.
 
 **A missed seam: the presenter's gate.** `SelectionPresenter.Order` (lane B's file) returns before
@@ -1101,3 +1102,95 @@ settled each one. They are built on `claude/combat-c2-polish` from `50ced466`.
 | *"When I right click to attack an enemy it wasn't clear"* | **Right-clicking an enemy attacks at once, with a lock-on ring.** An enemy has one sensible order, so it takes one click, and the menu is for things with several. A translucent red ring appears at 1.6× the target's footprint and snaps onto its feet in about 0.2 s (ease-out). It flashes once as it lands, then stays as a faint ring under the target while the attack order holds. It fades when the target goes down or dies, or the order changes. | §7b |
 | *"2 colonists attacking within the same tile ... should position themselves side by side"* | **Each takes the nearest free side.** Every attacker claims a different cell next to the target, the free one nearest to it, so two arriving from the west stand side by side on the west flank. If all eight cells are taken, the extra waits one ring back. No two attackers ever share a tile. | §7c |
 | *"We also need a blood effect ... even better blood splatter"* | **The seam is cut now; blood is built as the next unit.** Every landed hit spurts, scaled: sharp hits (machete, arc blade, bites) spurt more and leave a splatter, blunt hits (bat, crowbar, fists) a smaller puff and a smaller mark. Misses and dodges draw nothing. Downs and deaths leave a pool under the body. Ground marks fade over about one in-game day, capped (around 200, oldest first). They are **presentation only**: not saved, not simulated, nothing to clean. | §7d |
+
+### 7a. The context menu
+
+Built 2026-09-23 on `claude/combat-menu` from `claude/combat-c2-polish` (`10a61b00`). The owner's
+report was that picking up a weapon "wasn't clear": a right-click on a machete sent the colonist
+for it at once, and nothing said that was what the click had done. The decision: **a right-click
+on a thing with more than one sensible answer opens a small menu at the pointer**, and a thing with
+one answer keeps acting at once.
+
+**What opens it and what does not.** `OrderModel.RightClick` asks three questions in order and
+answers with **either** orders **or** menu rows, never both:
+
+1. **The pawn under the pointer** (`CombatOrders.Route`, unchanged): an animal or a hostile is an
+   instant attack by every selected drafted colonist; Ctrl on a colonist is an attack; a downed
+   colonist is an instant rescue by the nearest. An enemy standing on a weapon is still attacked —
+   the pawn wins over the cell, as it always has.
+2. **A thing with a choice** (`ContextMenuModel.Build`): a weapon lying in the clicked cell or the
+   one above it (the pick's rule for piles), **or held in a store there**, offers one
+   *Equip &lt;weapon&gt;* row per kind of weapon — a shelf of two bats and an arc blade is "Equip bat",
+   "Equip arc blade" — and *Cancel* last.
+3. **Everything else** is the move it was in C1, for the drafted only: bare ground, a pile of wood,
+   a floor, a wall. No menu.
+
+**The rows** (`ContextMenuRow`): the registry key of the verb, the whole line ("Equip machete" —
+`ui.command.equip` and the item's own name lower-cased, the pane's "Corpse of a midden hog" rule),
+whether it can be chosen, why not, and the intents it sends. Equip sends `OrderEquip` for the
+**primary colonist** — the first *standing* colonist in the selection, drafted or not (§5j), passing
+over an animal, a marauder or a downed colonist ahead of her — aimed at the weapon's own cell.
+A selection whose every colonist is down gets the row **disabled, reason "Downed"**
+(`ui.status.downed`), so the player sees why. A selection with **no colonist at all** — an animal, a
+marauder — gets **no menu**: they take no orders (the presenter's gate, `HearsRightClick`, never
+asks), and a menu of one Cancel says nothing. `ContextMenuModel.Choose` is the one door from a row to
+the world and sends nothing for Cancel or a disabled row, whatever the row carries — so a view that
+forgets to look at `Enabled` still cannot send one. One new key: `ui.menu.cancel`, in a new
+`ui.menu` namespace listed on the wiki's Commands page.
+
+**Closing** (owner): Escape — the new top rung of `SettingsDirector.Escape`, `CloseContextMenu`,
+appended to the enum so no value moved — any mouse press outside the menu, the camera turning more
+than 5° (a click that did not travel can add a degree or so of yaw while the button is down), and a
+change of selection, since the rows name that selection's primary. Also a new session, and
+`CloseMenusOverTheBoard`, so the rule "one panel over the board" holds for it too. A right-click
+elsewhere is a press outside, so it closes this menu and opens its own on the release. A disabled
+row, clicked, does nothing and leaves the menu up so its reason can still be read.
+
+**The view** (`HudShell.ContextMenu.cs`): a `.panel` built on first use — like the bed picker, so the
+smoke test's list of regions the shell builds at start is unchanged — in `_worldUi`, so it goes with
+the colony. **Its width is the stylesheet's** (`.ctxmenu { min-width: 168px }`), never written from
+code, so the border-box trap (CLAUDE.md, "A panel that sets its own width") cannot happen here; its
+left and top are written from code, because only the pointer knows them, and
+`HudLayout.ContextMenuLeft`/`Top` turn it to the pointer's other side at the right and bottom edges.
+It is placed again on `GeometryChangedEvent`, the bed picker's lesson that a panel shown this frame
+has no size. Rows are text only, in the `Row` role; the reason is `Meta` in the dim ink after a
+disabled row's words; Cancel sits under a divider. No glyph and no non-ASCII character.
+
+**Feedback after ordering.** The equipping colonist shows **the drafted order line to the weapon**
+and *Equipping* on her activity line. The line needed one simulation change: the order cell
+(`odyssey.pawn.order.cell`) was published only for a drafted colonist's move, and is now published
+for a forced `Job_Equip` too, **drafted or not**, still straight after the drafted row when there is
+one (`PawnRegistry.OrderCellOf`). `OrderModel.CollectDrafted` gained an overload that, in the same
+single walk of the aspects, collects an order cell with no drafted row before it; `DrawDraftMarks`
+draws those with the same line and bracket, without the diamond, which says "drafted". An aspect is
+neither saved nor hashed, so **no golden moved**. *Equipping* was already there: `JobLabels` has
+mapped `Job_Equip` to `ui.status.equipping` since the contracts step (§6D).
+
+**What stayed where it was, and why.** Ctrl + right-click on a colonist and the rescue are
+**unchanged** (instant, `CombatOrders.Route`). Moving the rescue into the menu is one `Offer…`
+method and one key, but it turns a played one-click order into two, which is a decision for the
+keyboard and not for tidying. *Build this now* on a site is also one method, with one catch: the
+legality it needs is `JobSystem.CanForce`, a simulation query the Hud assembly cannot call, so it
+will need that answer published (or asked through an intent with a reply) before the row can be
+honest about being disabled. `15-building.md` §8 step 4 is otherwise built by this.
+
+**Tests** (fast tier, each seen to fail with the thing it guards removed): `ContextMenuModelTests`
+(13) — the menu for an undrafted and a drafted selection, Equip's intent for the primary, a stale
+selection's primary, Cancel sends nothing, the downed selection's disabled row and its reason, no
+menu for an animal or a marauder, the block under a weapon, a store's one row per kind, ground is a
+move with no menu, an enemy is an attack with no menu even standing on a weapon, `Choose` refusing a
+disabled row that carries orders, Escape's top rung, and the label's two registry words;
+`HudLayoutTests.TheContextMenuOpensAtThePointerAndTurnsAtTheEdges`;
+`OrderModelTests.AnUndraftedColonistsOrderIsCollectedForItsLineAndADraftedOneIsNot`;
+`EquipTests.TheWeaponsCellIsPublishedAsTheOrderCellWhileSheFetchesIt` (drafted and not); and five
+colour rows in `HudStyleSheetTests`. The weapon cases in `CombatOrdersTests` moved here, and its
+helper now asserts that a click which acts opens no menu.
+
+**Never compiled** (the fast tier does not build Presentation, and Unity was not run):
+`HudShell.ContextMenu.cs`, and the edits to `HudShell.cs`, `HudShell.Panels.cs`,
+`HudShell.Start.cs`, `SelectionPresenter.cs`, `SettingsPresenter.cs` and `OdysseyBootstrap.cs`.
+
+**Open:** a weapon taken by somebody else while the menu is up leaves the row in place (the
+simulation refuses the order quietly); a colonist in a mental break is offered Equip enabled and
+refused by the simulation, because the break is not in the view's flags; an unreachable weapon is
+offered and refused the same way. Nobody has seen the menu.
