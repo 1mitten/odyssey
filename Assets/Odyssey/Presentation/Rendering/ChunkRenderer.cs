@@ -192,6 +192,32 @@ namespace Odyssey.Presentation.Rendering
         public Plane[]? Frustum { get; set; }
 
         /// <summary>
+        /// A frustum for a test to impose, which the composition root cannot overwrite. Null in
+        /// play, and null is the whole of the ordinary path.
+        ///
+        /// <para><b>It exists because a control that does not apply is worse than no control.</b>
+        /// <c>FrameTimeTests.CullingDoesNotChangeThePicture</c> proves the cull is invisible by
+        /// also rendering a frustum that admits *nothing* and checking that this moves a great
+        /// many pixels — if it does not, the comparison cannot see the board and its other
+        /// assertion means nothing. That control was written against <see cref="Frustum"/> and
+        /// silently did nothing, because the root assigns <see cref="Frustum"/> every frame
+        /// (<c>OdysseyBootstrap.LateUpdate</c>) and overwrote the test's planes before the
+        /// capture. <b>The tell was two readings with identical chunk, instance and draw
+        /// counts</b> — 126 / 57,818 / 1,744 for both the culled shot and the blind one, when the
+        /// blind one should have submitted nothing at all.</para>
+        ///
+        /// <para>That is the second time the same fault has been found in this one test file: the
+        /// first was <see cref="ShadowCasterMarginMetres"/>, re-derived per frame from
+        /// <c>QualitySettings.shadowDistance</c>, and it is written up as <c>P14</c> in
+        /// <c>docs/bug-patterns.md</c>. A field the root writes every frame cannot be set by a
+        /// test; it needs a seam of its own.</para>
+        /// </summary>
+        public Plane[]? FrustumOverride { get; set; }
+
+        /// <summary>The planes actually used this frame: the override if a test imposed one.</summary>
+        Plane[]? ActiveFrustum => FrustumOverride ?? Frustum;
+
+        /// <summary>
         /// Whether a chunk outside <see cref="Frustum"/> is actually skipped, or merely counted.
         ///
         /// <para><b>Off by default, and the off state is a measurement rather than a stub.</b>
@@ -276,7 +302,7 @@ namespace Odyssey.Presentation.Rendering
             float margin = ShadowCasterMarginMetres;
             if (margin > 0f) size += new Vector3(margin * 2f, margin * 2f, margin * 2f);
 
-            return GeometryUtility.TestPlanesAABB(Frustum, new Bounds(centre, size));
+            return GeometryUtility.TestPlanesAABB(ActiveFrustum, new Bounds(centre, size));
         }
 
         /// <summary>Scratch, reused every frame: the instances of one bucket that are in the way,
@@ -445,7 +471,7 @@ namespace Odyssey.Presentation.Rendering
                     if (batch.InstanceCount == 0) continue;
 
                     // Off-screen chunks. Counted always, skipped only when asked.
-                    if (Frustum != null && !InFrustum(batch.Bounds))
+                    if (ActiveFrustum != null && !InFrustum(batch.Bounds))
                     {
                         ChunksOutsideFrustum++;
                         if (CullToFrustum) continue;

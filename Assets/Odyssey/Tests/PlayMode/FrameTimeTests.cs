@@ -789,26 +789,39 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// Culling changes what is submitted and not what is seen — proved against pixels, with a
-        /// control that proves the comparison can see a difference at all.
+        /// Culling changes what is submitted and not what is seen — proved against pixels, with
+        /// **two** controls: one that must show a difference, and one that must not.
         ///
-        /// <para><b>Why this test has to exist.</b> The saving is enormous — 93.7% of Huge's
-        /// chunks are outside the frustum — and a broken frustum that rejected everything would
-        /// report exactly the same triumph. Nothing else here looks at the picture:
+        /// <para><b>Why this test has to exist.</b> The saving is enormous — most of a Huge
+        /// board's chunks are outside the frustum — and a broken frustum that rejected everything
+        /// would report exactly the same triumph. Nothing else here looks at the picture:
         /// <c>FrameTimeTests</c> times frames, the Unity tier asserts no pixels, and the fault
         /// this guards against is invisible in a still and only shows as shadows and geometry
-        /// popping at the screen edge while panning. That is the worst kind of bug to find late,
-        /// so it is found here.</para>
+        /// popping at the screen edge while panning.</para>
         ///
-        /// <para><b>The control is the point.</b> A pixel comparison that always passes proves
-        /// nothing, so the same scene is also rendered with a frustum that admits nothing, and the
-        /// test fails if *that* still matches. One assertion says culling changed nothing; the
-        /// other says the instrument could have noticed if it had.</para>
+        /// <para><b>Its first two versions both proved nothing, and the reasons are the whole
+        /// value of this comment.</b></para>
         ///
-        /// <para>A small tolerance is allowed because the pipeline is not bit-deterministic frame
-        /// to frame — post-processing and the light rig both jitter slightly. The control clears
-        /// it by two orders of magnitude, which is the gap that makes the tolerance safe rather
-        /// than convenient.</para>
+        /// <para><i>One — the positive control did not apply.</i> "A frustum admitting nothing"
+        /// was imposed by assigning <c>ChunkRenderer.Frustum</c>, which the composition root
+        /// rewrites every frame, so the blind shot was simply a second copy of the culled one.
+        /// Run on 2026-09-23, the two reported <b>identical</b> counts — 126 chunks, 57,818
+        /// instances, 1,744 calls — where the blind one should have submitted nothing whatever.
+        /// It now goes through <c>ChunkRenderer.FrustumOverride</c>, which the root does not
+        /// touch. <b>This is the second time in this one file that a test set a field the root
+        /// re-derives per frame</b>; the first was <c>ShadowCasterMarginMetres</c>, and both are
+        /// <c>P14</c> in <c>docs/bug-patterns.md</c>.</para>
+        ///
+        /// <para><i>Two — the scene was moving underneath it.</i> The shots were taken seconds
+        /// apart on a live colony, so colonists walked and the light drifted between them, and
+        /// <b>2 to 3 per cent of pixels moved whatever was being compared</b>. Culling's own
+        /// difference is supposed to be nought, and it was being asked to stand out against a
+        /// noise floor several times its own size. The world is paused for the captures now, and
+        /// the noise floor is no longer assumed — the test takes a <i>repeat</i> of the identical
+        /// configuration and asserts on that too.</para>
+        ///
+        /// <para>So: <b>repeat</b> must match (the instrument is quiet), <b>blind</b> must not
+        /// (the instrument can see), and only then does <b>culled</b> matching mean anything.</para>
         /// </summary>
         [UnityTest]
         public IEnumerator CullingDoesNotChangeThePicture()
@@ -820,6 +833,25 @@ namespace Odyssey.Tests.PlayMode
             {
                 yield return SeedOrders(boot);
 
+                // **Stop the world before photographing it.** A walking colonist and a drifting
+                // sun move more pixels than the thing being measured; see the remarks above.
+                boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                for (int i = 0; i < 4; i++) yield return null;
+                Assert.That(boot.World!.GameSpeed, Is.Zero, "the world would not pause, so the " +
+                    "shots below are of a moving scene and cannot measure a still difference");
+
+                // **And stop the clock presentation draws on, which pausing the simulation does
+                // not.** Pausing stops the ticks, so nobody walks — but the water still scrolls
+                // its streaks and foam, the figures still advance their animation graphs, and the
+                // daylight rig still moves, because all of those run on `Time.deltaTime` and the
+                // shaders on `_Time`. Measured: with the simulation paused and this left alone,
+                // two captures of the identical configuration still differed by **1.29%** of
+                // pixels, which is most of the way to culling's own 2.13% and made the two
+                // impossible to tell apart. `timeScale` is what `_Time` is derived from, so this
+                // one line stills the shaders as well as the scripts.
+                float previousScale = Time.timeScale;
+                Time.timeScale = 0f;
+
                 UnityEngine.Camera cam = boot.cameraRig!.Camera;
                 RenderTexture previousTarget = cam.targetTexture;
                 cam.targetTexture = target;
@@ -829,39 +861,54 @@ namespace Odyssey.Tests.PlayMode
                     Color32[] off = null!;
                     yield return Shoot("off", boot, target, p => off = p);
 
+                    // The negative control: the same configuration again. Whatever this moves is
+                    // the instrument's own noise, and every other number is read against it.
+                    Color32[] again = null!;
+                    yield return Shoot("again", boot, target, p => again = p);
+
                     boot.Renderer!.CullToFrustum = true;
                     Color32[] on = null!;
                     yield return Shoot("on", boot, target, p => on = p);
 
-                    // The control: a frustum nothing can be inside.
-                    Plane[] real = boot.Renderer!.Frustum!;
+                    // The positive control: a frustum nothing can be inside, through the seam the
+                    // root does not overwrite.
                     var nowhere = new Plane[6];
                     for (int i = 0; i < nowhere.Length; i++)
                         nowhere[i] = new Plane(Vector3.up, -1e6f);
-                    boot.Renderer!.Frustum = nowhere;
+                    boot.Renderer!.FrustumOverride = nowhere;
                     Color32[] blind = null!;
                     yield return Shoot("blind", boot, target, p => blind = p);
-                    boot.Renderer!.Frustum = real;
+                    boot.Renderer!.FrustumOverride = null;
 
+                    float noise = Difference(off, again);
                     float culled = Difference(off, on);
                     float blinded = Difference(off, blind);
-                    Debug.Log($"[FrameTime] cull proof: culling moved {culled * 100f:0.00}% of pixels, " +
+                    Debug.Log($"[FrameTime] cull proof: the same shot twice moved {noise * 100f:0.00}%, " +
+                              $"culling moved {culled * 100f:0.00}%, " +
                               $"a frustum admitting nothing moved {blinded * 100f:0.00}%");
+
+                    Assert.That(noise, Is.LessThan(0.005f),
+                        $"two captures of the identical configuration differ by {noise * 100f:0.00}% " +
+                        "of pixels, so this comparison has no floor to measure against. The world " +
+                        "is meant to be paused for these shots - check Logs/cull-off.png against " +
+                        "Logs/cull-again.png for a colonist who moved or a sun that drifted");
 
                     Assert.That(blinded, Is.GreaterThan(0.05f),
                         $"rejecting every chunk moved only {blinded * 100f:0.00}% of pixels, so this " +
                         "comparison cannot see a difference and its other assertion proves " +
-                        "nothing. Compare Logs/cull-off.png with Logs/cull-blind.png and check the " +
-                        "chunk counts logged during each capture: equal counts mean the cull is " +
-                        "not reaching the submission path, and a near-empty picture in both means " +
-                        "the camera never rendered the board into the target");
+                        "nothing. Compare the chunk counts logged during each capture: equal counts " +
+                        "for 'on' and 'blind' mean the override is not reaching the submission " +
+                        "path, which is exactly how this test failed on 2026-09-23");
+
                     Assert.That(culled, Is.LessThan(0.005f),
-                        $"culling moved {culled * 100f:0.00}% of pixels: it is not only skipping " +
-                        "submissions the camera could not see");
+                        $"culling moved {culled * 100f:0.00}% of pixels against a {noise * 100f:0.00}% " +
+                        "floor: it is not only skipping submissions the camera could not see");
                 }
                 finally
                 {
+                    Time.timeScale = previousScale;
                     cam.targetTexture = previousTarget;
+                    boot.Renderer!.FrustumOverride = null;
                 }
             }
             finally
