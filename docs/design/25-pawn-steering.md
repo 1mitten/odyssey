@@ -348,8 +348,14 @@ one lookup per far-form pawn per frame is `(N − 64) × kN`.
 
 **Left for its own unit, deliberately.** This one was asked to make `PawnPose.Of` stop scanning the
 colony, and it does; the remaining term is in the snapshot contract rather than in steering, and
-changing how aspects are read is a wider blast radius than a presentation-side mirror. It is now the
-largest per-frame quadratic left and should be the next PF unit.
+changing how aspects are read is a wider blast radius than a presentation-side mirror.
+
+> **Done the same day — `docs/design/31-aspect-lookup.md`.** A colonist publishes **57** aspect rows
+> a tick, so the published set is 57 × colonists and `TryGetPawnAspect` scanned it. A lazy index
+> built on the first lookup of each frame took `Actors` at 384 colonists from 4.59 ms to **0.83**,
+> and `Figures` from 6.39 to **0.74** — the prediction in the next paragraph, confirmed. The whole
+> frame at 384 is **4.82 ms**, against 27.81 before this line of work began, and **the knee is
+> gone**.
 
 **And `Figures` is now linear**, which is the other half of the plan's open question. With the figure
 count pinned at 64, it goes 1.231 ms at 64 pawns to 7.290 at 384 — 5.9× for a 6× colony. That is

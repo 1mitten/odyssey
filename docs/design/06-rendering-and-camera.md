@@ -1809,6 +1809,39 @@ The `Actors` figure at 384 moved from 13.3 ms (that sweep) to 15.8 ms (clear mac
 code, same commit family). **Neither is a baseline for the other**, and the only reason the two can
 be read together at all is that the per-pair cost they imply — ~117 ns and ~128 ns — agrees.
 
+### 6c.10 The second quadratic in the same pass, and the end of the knee
+
+**2026-09-23, straight after §6c.9.** Fixing the crowd scan left `Actors` still growing as
+`(N - 64) x N` — 43 ns a pair, flat across a five-fold range. It was
+`WorldSnapshot.TryGetPawnAspect`, a linear scan over every published aspect row, called once per
+far-form colonist per frame. A colonist publishes **57 rows a tick** (measured, `AspectScaleTests`),
+so the published set is 57 x colonists and the scan grew with the colony.
+
+A lazy index, built on the first lookup of each published frame, closes it.
+`docs/design/31-aspect-lookup.md` has the decision and the alternatives; the numbers, measured with
+both arms alternated in one run on a clear machine:
+
+| colony | frame, scan | frame, index | `Actors` | `Figures` |
+|---|---|---|---|---|
+| 64 | 3.606 ms | 3.142 ms | 0.025 -> 0.024 | 1.185 -> 0.778 |
+| 192 | 6.189 ms | 3.428 ms | 1.076 -> 0.344 | 2.638 -> 0.754 |
+| 384 | 14.202 ms | **4.107 ms** | 4.587 -> **0.830** | 6.390 -> **0.743** |
+
+**`Figures` is flat at last** — 0.778, 0.754, 0.743 ms at 64, 192 and 384. The figure ceiling pins
+the number of posed figures at 64, but each of them was making a lookup whose cost grew with the
+whole colony, so the pass grew anyway. It is the first time the cap has actually capped anything.
+
+**And the colony sweep has no knee in it.** 2.20 / 2.61 / 3.21 / 3.37 / 3.53 / 3.75 / 4.99 /
+**4.82 ms** at 8 to 384 colonists. The Play report this whole line of work came from was *"it seemed
+to hover 1.7 ms no matter the colony size but then frames dropped after so many colonists"*; what is
+left is the hover. At 384 the frame has gone **27.81 -> 14.99 -> 4.82 ms** across the two units.
+
+**The finding worth carrying is not the fix.** The crowd scan was 3.5x the aspect scan, so while it
+stood the aspect scan looked like a constant and the bend was attributed wholly to the larger term.
+Neither was found by reading code; both were found by splitting the frame and noticing the growth
+had the wrong shape. **After fixing a quadratic, measure the same pass again rather than declaring
+it linear** — `docs/bug-patterns.md` P12.
+
 ## 7. Presentation is a reader
 
 The rule that keeps this document honest, and the one that the architecture benchmark treats as a judged phase: **presentation never reads simulation objects and never mutates them.** It reads the immutable snapshot published by the simulation at tick end, keyed by stable handles, and it sends player actions back as intents on a queue consumed at a tick boundary (`docs/design/ui-plan-reconciliation.md`).

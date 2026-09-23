@@ -10550,3 +10550,52 @@ the snapshot contract. It is the next PF unit.
 raced my own EditMode run — a batch run that has printed its results can still be shutting down —
 and a single "is the machine clear" sample is not enough. The waiter now wants three consecutive
 quiet checks. That belongs in `docs/lessons.md` beside the run that finishes without exiting.
+
+## 2026-09-23 — the second quadratic, and a comment that stopped being true
+
+Fixing the crowd scan (above) left `Actors` still growing as `(N − 64) × N`. The design note named
+the suspect — `WorldSnapshot.TryGetPawnAspect` — and left it, because that one is in the snapshot
+contract rather than in steering. This is that unit, done the same day.
+
+**The whole fault is one stale comment.** `TryGetPawnAspect` walked every published row, and its own
+doc comment justified it: *"the published set is tens of rows on a real colony — sparse is the whole
+shape of `PawnAspect` — so an index would cost a dictionary per frame to save arithmetic that does
+not show up."* That was **true when it was written**. The Work tab's priorities (two rows per work
+type) and the colonist schedule (twenty-four rows) were both added afterwards, both publish for
+every colonist unconditionally, and both had good reasons written down at the time. Nobody connected
+them back to the comment that their existence falsified.
+
+**I predicted ~97 rows a colonist by reading the publish loop. The measurement said 57.** That is the
+second time in two units the arithmetic-from-reading was wrong and the cheap measurement was right,
+and `AspectScaleTests` is now a fast-tier guard so the next feature that adds a per-colonist row has
+to look at the number.
+
+The fix is a lazy index, built on the first lookup of each published frame. Lazy is the whole of the
+decision: indexing as rows are published would put the cost inside the *tick*, and would charge every
+world that publishes aspects whether anything ever read one — a headless golden run reads none at
+all. Rejected too: publishing the roll seed as a field on `PawnView`, which would have made the
+renderer's lookup free and left the other fifty-six call sites on the quadratic. The problem was
+never the roll seed.
+
+**The result is larger than the unit.** `Actors` at 384 colonists 4.59 → 0.83 ms, `Figures`
+6.39 → 0.74 — and `Figures` is now *flat* at 0.74 across 64, 192 and 384, which is the first time
+the figure ceiling has actually capped anything. It never did: the cap pins the posed figures at 64,
+but each was making a lookup that grew with the whole colony. The colony sweep is
+2.20 / 2.61 / 3.21 / 3.37 / 3.53 / 3.75 / 4.99 / **4.82 ms** across 8 to 384 pawns. **There is no
+knee.** At 384 the frame has gone 27.81 → 14.99 → 4.82 ms over the two units, and the Play report
+that started it — *"it seemed to hover 1.7 ms no matter the colony size but then frames dropped after
+so many colonists"* — is answered: what is left is the hover.
+
+**And the invalidation test was worthless on its first writing**, which is the P16 lesson arriving
+again by a different door. I removed the index invalidation deliberately and all six tests passed.
+Two reasons, both worth knowing: the snapshots are double-buffered, so each buffer merely builds its
+index once; and the index maps a key to a *row number*, while the rows are republished in the same
+order every tick — so a stale table still pointed at the right row, and the value read off it was
+fresh. A stale index is only wrong when the **set** of rows changes. The test now spawns a colonist
+who did not exist when either buffer built its index, and queries both buffers first so neither can
+pass by never having built one. That version fails on the mutation.
+
+**The generalisation, and it is now a paragraph in P12:** the crowd scan was 3.5× the aspect scan, so
+while it stood the aspect scan looked like a constant and the whole bend was attributed to the larger
+term. One pass held two quadratics. **After fixing a quadratic, measure the same pass again rather
+than declaring it linear.**

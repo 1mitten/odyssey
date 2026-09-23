@@ -91,4 +91,44 @@ frame is byte-for-byte what it was and **no golden moves**.
 
 ## 5. Measured
 
-<!-- MEASUREMENT -->
+`FrameTimeTests.TheAspectLookupCostsWhatItScans`, both arms alternated twice in one run on a clear
+machine. Barren natural board, 640 × 480, RTX 5070 Ti, 2026-09-23.
+
+| colony | rows published | frame, scan | frame, index | `Actors` | `Figures` |
+|---|---|---|---|---|---|
+| 64 | 3,648 | 3.606 ms | **3.142 ms** | 0.025 → 0.024 | 1.185 → 0.778 |
+| 192 | 10,944 | 6.189 ms | **3.428 ms** | 1.076 → 0.344 | 2.638 → 0.754 |
+| 384 | 21,888 | 14.202 ms | **4.107 ms** | 4.587 → 0.830 | 6.390 → 0.743 |
+
+**`Figures` is now flat: 0.778, 0.754, 0.743 ms at 64, 192 and 384 colonists.** That is the figure
+ceiling doing exactly what it was designed to do, visible for the first time. It never was: the cap
+pins the number of *posed* figures at 64, but each of them was doing a lookup whose cost grew with
+the whole colony, so the pass grew anyway. §9d of `25-pawn-steering.md` predicted this — it found
+`Figures` growing linearly at `64 × kN` after the crowd cull and named the aspect scan as the
+reason. The prediction is confirmed.
+
+### 5a. The colony sweep, and the end of the knee
+
+`TheFrameAgainstColonySize`, same run:
+
+| pawns | 8 | 32 | 64 | 96 | 128 | 192 | 256 | 384 |
+|---|---|---|---|---|---|---|---|---|
+| frame | 2.20 | 2.61 | 3.21 | 3.37 | 3.53 | 3.75 | 4.99 | **4.82 ms** |
+
+**There is no knee left.** The whole 48-fold range spans 2.2 to 5.0 ms, and the last two points are
+within noise of each other. Set against the Play report this line of work came from — *"it seemed to
+hover 1.7 ms no matter the colony size but then frames dropped after so many colonists"* — what is
+left is the hover.
+
+The journey at 384 colonists, all on a clear machine:
+
+| | frame | `Actors` | `Figures` |
+|---|---|---|---|
+| before the crowd cull | 27.81 ms | 15.79 | 8.65 |
+| after the crowd cull (`25-pawn-steering.md` §9) | 14.99 ms | 4.94 | 6.84 |
+| after this | **4.82 ms** | **0.83** | **0.74** |
+
+**Two quadratics, one pass, and only the second was visible once the first had gone.** That is the
+thing to carry: the crowd scan was 3.5× the aspect scan, so until it was removed the aspect scan
+looked like a constant. Neither was found by reading the code — both were found by measuring a
+split and noticing that the growth had the wrong shape.
