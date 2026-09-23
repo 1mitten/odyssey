@@ -56,6 +56,10 @@ namespace Odyssey.Presentation.World
         public const string Loop = "Loop";
         public const string End = "End";
 
+        /// <summary>The body's sex, for the draw and the sheathe (design 33 §8b): the pack authors each twice.</summary>
+        public const string Masc = "Masc";
+        public const string Femn = "Femn";
+
         /// <summary>Combo steps, played in turn: a light swing alternates A, B, C; a heavy one A, B.</summary>
         public static readonly string[] Combo = { "A", "B", "C" };
     }

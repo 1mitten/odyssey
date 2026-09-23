@@ -560,6 +560,9 @@ namespace Odyssey.Presentation.World
 
             /// <summary>Lay the computed four-legged gait over the idle; the rig is measured at build.</summary>
             public bool QuadrupedGait;
+
+            /// <summary>A feminine body: the draw and the sheathe are the pack's <c>_Femn</c> clips (design 33 §8b).</summary>
+            public bool Feminine;
         }
 
         readonly Look?[] _looks;
@@ -926,6 +929,7 @@ namespace Odyssey.Presentation.World
                     Scale = row.scale,
                     Gaits = gaits,
                     Speeds = GroundSpeeds(gaits, row.scale),
+                    Feminine = row.sex == BodySex.Female,
                 };
             }
             return looks;
@@ -1790,7 +1794,7 @@ namespace Odyssey.Presentation.World
             if (figure.SleepWeight > 0.001f) AimSleep(figure, in pawn);
 
             // The weapon in the right hand, now that the tool, the load and the lie are known.
-            ShowWeapon(figure, in pawn, carrying: carryDef >= 0);
+            ShowWeapon(figure, in pawn, carrying: carryDef >= 0, deltaTime);
 
             // Face the work. A pawn that has stopped walking has no heading left — that is what
             // makes PawnPose hand back a zero vector — so without the work cell the figure would
@@ -2309,8 +2313,10 @@ namespace Odyssey.Presentation.World
             // And somebody else's fight: a body lent to a colonist walking into view must not open
             // with the last tenant's stagger (design 33 §5f).
             figure.Fight.Forget();
-            // And somebody else's weapon, until this pawn's own is read on the first pose.
+            // And somebody else's weapon, until this pawn's own is read on the first pose — and
+            // whether it was drawn: the new pawn's is taken as the frame finds it (design 33 §8b).
             HideWeapon(figure);
+            ForgetSheath(figure);
             figure.WorkCentre = at;
             figure.SimPosition = at;
             figure.Steer = Vector3.zero;
@@ -2485,6 +2491,9 @@ namespace Odyssey.Presentation.World
             else
             {
                 figure.StandingHeight = MeasureBody(figure);
+                // Where a sheathed weapon hangs, and where in the draw the hand is on the hilt:
+                // measured off this body, after its height, in the idle (design 33 §8b).
+                BindSheath(figure, face.Feminine);
                 if (figure.StandingHeight > MeasuredStandingHeight)
                     MeasuredStandingHeight = figure.StandingHeight;
                 if (figure.SoleOffset > MeasuredSoleOffset) MeasuredSoleOffset = figure.SoleOffset;

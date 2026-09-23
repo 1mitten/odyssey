@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
@@ -97,6 +98,47 @@ namespace Odyssey.Presentation.World
             /// </summary>
             public GameObject? Weapon;
             public int WeaponDef = -1;
+
+            /// <summary>
+            /// Where the weapon sits in the fist and on the hip, each fitted once when the weapon
+            /// changes, as a local pose under the right hand and under <see cref="Pelvis"/>
+            /// (design 33 §8b, <c>PawnFigureDirector.Sheath.cs</c>). Moving it between the two is a
+            /// re-parent to a cached pose, never a re-fit.
+            /// </summary>
+            public Vector3 WeaponHandPosition;
+            public Quaternion WeaponHandRotation = Quaternion.identity;
+            public Vector3 WeaponHipPosition;
+            public Quaternion WeaponHipRotation = Quaternion.identity;
+
+            /// <summary>True while the weapon is parented at the hip; false in the hand.</summary>
+            public bool WeaponAtHip;
+
+            /// <summary>
+            /// The bone the sheath hangs from: the parent of the left thigh — the real pelvis. Not
+            /// <c>HumanBodyBones.Hips</c>, which the Synty avatar maps to <c>Root</c> on the floor.
+            /// Null where the rig has no left thigh, and then a sheathed weapon is simply not drawn.
+            /// </summary>
+            public Transform? Pelvis;
+
+            /// <summary>
+            /// The sheath's frame, measured once at bind off the drawn mesh in the idle and kept in
+            /// <see cref="Pelvis"/>'s own space: the point on the surface of the left hip the
+            /// weapon hangs from, the way its blade points (down, and back), the way out of the body
+            /// and the figure's front. <see cref="HasStow"/> is false until measured.
+            /// </summary>
+            public Vector3 StowPoint;
+            public Vector3 StowDown;
+            public Vector3 StowOut;
+            public Vector3 StowForward;
+            public bool HasStow;
+
+            /// <summary>Drawn or sheathed, as this figure has seen it. See <c>Odyssey.Hud.WeaponSheath</c>.</summary>
+            public SheathClock Sheath;
+
+            /// <summary>The draw or the sheathe playing, or <see cref="SheathChange.None"/>; its clip and how far in.</summary>
+            public SheathChange SheathAction;
+            public CombatClipEntry? SheathClip;
+            public float SheathSeconds;
 
             /// <summary>
             /// The computed gait, for an animal whose row asks for one and whose rig has the

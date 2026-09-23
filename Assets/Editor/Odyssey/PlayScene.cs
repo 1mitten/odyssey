@@ -1912,6 +1912,14 @@ namespace Odyssey.EditorTools
                 ("A_Death_F_01_Pose_Sword", F), ("A_Death_B_01_Pose_Sword", B),
                 ("A_Death_L_01_Pose_Sword", L), ("A_Death_R_01_Pose_Sword", R));
 
+            // Drawn and sheathed (design 33 §8b): the weapon from the left hip to the right hand and
+            // back, one per body. In place; the files hold one clip each, named without the suffix
+            // (A_Draw_Sword_Masc holds A_Draw_Sword), which the by-file lookup already allows for.
+            const string Masc = Odyssey.Presentation.World.CombatVariant.Masc;
+            const string Femn = Odyssey.Presentation.World.CombatVariant.Femn;
+            Row(ModuleIds.CombatDraw, ("A_Draw_Sword_Masc", Masc), ("A_Draw_Sword_Femn", Femn));
+            Row(ModuleIds.CombatSheathe, ("A_Sheathe_Sword_Masc", Masc), ("A_Sheathe_Sword_Femn", Femn));
+
             void Row(string id, params (string Clip, string Variant)[] clips)
             {
                 var entry = new ModuleEntry

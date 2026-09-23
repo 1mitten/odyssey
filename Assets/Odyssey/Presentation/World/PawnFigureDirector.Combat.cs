@@ -224,9 +224,19 @@ namespace Odyssey.Presentation.World
             /// <summary>How far the feet are released from the ground by the clip showing: a knocked-down body's are in the air.</summary>
             public float Unplanted;
 
+            /// <summary>
+            /// The draw and the sheathe's layer (design 33 §8b): input 2 of <see cref="Layer"/>,
+            /// masked to the upper body so the legs keep walking, with one clip slot. Absent where
+            /// the pack's sheath rows did not resolve, and the weapon then snaps between hip and hand.
+            /// </summary>
+            public bool HasSheathLayer;
+            public AnimationClipPlayable SheathSlot;
+            public CombatClipEntry? SheathSlotClip;
+
             /// <summary>Forget everything but the graph: a figure lent to a new pawn starts its fight afresh.</summary>
             public void Forget()
             {
+                if (HasSheathLayer) Layer.SetInputWeight(PawnFigureDirector.SheathLayerInput, 0f);
                 Action = CombatRole.None;
                 Variant = string.Empty;
                 Clip = null;
@@ -253,13 +263,23 @@ namespace Odyssey.Presentation.World
         {
             if (animal || !HasCombatClips) return gaits;
 
-            fight.Layer = AnimationLayerMixerPlayable.Create(graph, 2);
+            bool sheath = HasSheathClips;
+            fight.Layer = AnimationLayerMixerPlayable.Create(graph, sheath ? 3 : 2);
             graph.Connect(gaits, 0, fight.Layer, 0);
             fight.Layer.SetInputWeight(0, 1f);
             fight.Actions = AnimationMixerPlayable.Create(graph, 2);
             graph.Connect(fight.Actions, 0, fight.Layer, 1);
             fight.Layer.SetInputWeight(1, 0f);
             fight.HasLayer = true;
+
+            // The draw and the sheathe on top (design 33 §8b), arms and body only: a colonist
+            // drawing on the move keeps walking. Empty until a clip is put in it.
+            if (sheath)
+            {
+                fight.Layer.SetLayerMaskFromAvatarMask((uint)SheathLayerInput, UpperBody);
+                fight.Layer.SetInputWeight(SheathLayerInput, 0f);
+                fight.HasSheathLayer = true;
+            }
             return fight.Layer;
         }
 
