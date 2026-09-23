@@ -96,7 +96,7 @@ is generation time (a wooded board carries more trees to place), the feature cou
 about 2 B/cell, and save size by a few per cent.
 
 **What it cost was confidence, not conclusions**, and the general form is `docs/bug-patterns.md`
-P14 — which was written one commit before this was found, in this same branch, and not applied to
+P17 — which was written one commit before this was found, in this same branch, and not applied to
 the arms it was written about.
 
 **A tick at rest is 0.065 ms on Standard and 0.068 ms on Large — the board does not appear in it at
@@ -473,3 +473,65 @@ board into the target". **Open, at the time of writing.**
   attached to an unproven claim. `CullToFrustum` stays off and the branch stays unmerged.
 - **Play resolution and the target laptop**, as everywhere else in this document.
 - **`FrameSection.Doors`**, still 0.000 because no arm edits the world while it times (§2).
+
+## 10. The cull comes off hold (2026-09-23)
+
+`CullToFrustum` shipped **off** for two days because `FrameTimeTests.CullingDoesNotChangeThePicture`
+failed its own control, and nobody could say whether the cull was wrong or the test was blind. It
+was the test, twice over, and both faults are worth more than the fix.
+
+**One: the control never applied.** "A frustum admitting nothing" was imposed by assigning
+`ChunkRenderer.Frustum` — a field `OdysseyBootstrap.LateUpdate` rewrites every frame — so the blind
+shot was simply a second copy of the culled one. The tell was there in the diagnostics the previous
+session had added and not read: **identical counts in both readings**, 126 chunks / 57,818 instances
+/ 1,744 calls, where the blind one should have submitted nothing at all. `ChunkRenderer.FrustumOverride`
+is the seam the root does not touch.
+
+> **This is the second time in that one file that a test set a field the root re-derives per frame.**
+> The first was `ShadowCasterMarginMetres`, off `QualitySettings.shadowDistance`, and the tell was
+> the same both times. `docs/bug-patterns.md` P17.
+
+It also refuted the obvious hypothesis, which is why the diagnostics were worth having: the shots
+reported a **mean channel of 130.6**, so the capture was seeing the board perfectly well.
+
+**Two: the scene was moving underneath the comparison.** With the control working, two shots of the
+identical configuration still differed by **1.29%** of pixels against culling's 2.13% — a difference
+that is supposed to be *nought*, asked to stand out against a floor most of its own size. Pausing the
+simulation is not enough: it stops the ticks, so nobody walks, but the water still scrolls its
+streaks, the figures still advance their animation graphs and the daylight rig still moves, because
+those run on `Time.deltaTime` and the shaders on `_Time`. **`Time.timeScale = 0` is what stills the
+shaders as well as the scripts.** And the floor is no longer assumed — the test takes a *repeat* of
+the identical configuration and asserts on it, so the experiment has a control that must show a
+difference and one that must not.
+
+    the same shot twice           0.00%   (run alone)      0.04%   (in the full tier)
+    culling                       0.00%                     0.02%
+    a frustum admitting nothing  98.21%                    98.23%
+
+**Both columns matter, and the second is why the test is calibrated rather than fixed.** Run on its
+own the floor is nought; run inside the whole PlayMode tier on the same commit it was **0.77%** — a
+busy run is still finishing shader variants, texture streaming and the post stack's first frames, and
+eight frames between captures is not enough for that to be over. A 120-frame settle takes it to
+0.04%. The acceptance is then `culled <= noise + 0.002`: the repeat shot is exactly what *doing
+nothing* costs on this machine in this run, so that is what "culling is indistinguishable from doing
+nothing" should be judged against. A constant is a guess at that number, and the guess was wrong in
+both directions on the same day — 0.005 passed the isolated run and failed the tier.
+
+> **This is not the loose tolerance `docs/lessons.md` warns about.** The bound is *measured in the
+> same run*, not chosen; the positive control stays an absolute (>5%) and comes in at 98%, fifty
+> times clear of even the noisy floor, so the comparison cannot go quietly blind.
+
+### What it is worth, measured on `main` 2026-09-23
+
+| Board | Chunks culled | Frame | Draw calls | `World` |
+|---|---|---|---|---|
+| Standard 120 x 120 x 16 | 33 of 104 (31.7%) | 3.43 -> **2.86 ms** | 1,360 -> 996 | 1.353 -> 0.931 |
+| Huge 240 x 240 x 16 | 317 of 443 (71.6%) | 8.89 -> **3.84 ms** | 5,083 -> 1,744 | 5.613 -> 1.687 |
+
+**The saving follows the player's shadow distance and is not a promise on every setting.**
+`ShadowCasterMarginMetres` *is* the shadow distance, because a caster nearer than it may cast into
+the frustum and so has to be submitted. At a 120 m setting Standard culls **nothing at all** (3.26 ms)
+and Huge culls 74 of 443 (7.56 ms). That is the mechanism being correct rather than the measurement
+being disappointing, but a number quoted without the shadow distance beside it is not a number.
+
+`CullToFrustum` is therefore **on by default** from this date.

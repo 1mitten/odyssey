@@ -324,6 +324,8 @@ for Defs (the content fingerprints); a font is the same question with a differen
 
 ### P14 — A rule that only governs arrival, in a world where things are already there
 
+*There is one `P14`, one `P16` and one `P17`, and **two** `P15`s — the second is a known collision from two branches merging, kept because both numbers were already cited. A third would not be kept: renumber on merge, as `P17` was on 2026-09-23.*
+
 A gate is written where new things come in — a filter on what a store *accepts*, a check on what
 may be *placed*, a validator on what may be *entered* — and it is correct about every one of them.
 Nothing governs what was already sitting inside the boundary when the rule was written, or was
@@ -442,6 +444,113 @@ deliberate break costs it and nothing more — the same lesson as *"A test that 
 reason it named"* in the register below, reached from the opposite direction.
 
 ---
+
+---
+
+### P17 — An instrument that cannot see the thing it is comparing, and passes
+
+*Numbered P17 rather than P14, which it arrived as. `P14` was already taken on `main` by "a rule
+that only governs arrival", and this catalogue's whole value is that a number resolves to one
+pattern. Renumbered on merge, 2026-09-23, along with the three places that cited it.*
+
+**Symptom.** A before/after comparison reports a small, plausible difference and the test goes
+green. The change looks proven.
+
+**The real cause.** The instrument was never looking at the subject. Two of these on 2026-09-21,
+both in the frustum-culling work, and **neither was found by a failing assertion** — one was found
+by a control, one by reading a log line that looked fine.
+
+1. **The measurement was overwritten before it ran.** An arm set
+   `ChunkRenderer.ShadowCasterMarginMetres = 0f` to price the shadow correction, but the composition
+   root re-derives that property from `QualitySettings.shadowDistance` **every frame**. The test's
+   value was gone before the first timed frame, so the arm timed the same configuration twice and
+   reported the difference — 0.07 ms — as the price of correct shadows. **The tell was in its own
+   log line:** both readings printed the identical 2,053 draw calls. A comparison whose
+   *deterministic* half does not move is not a comparison, whatever its timings say.
+2. **The capture never saw the board.** `CullingDoesNotChangeThePicture` rendered the scene culled
+   and unculled, compared pixels, and would have reported 2.58% moved as "close enough". Its control
+   — the same scene with a frustum admitting *nothing* — moved 3.22%. Rejecting every chunk in the
+   world cannot move 3% of a picture of that world, so both figures were noise from a nearly-empty
+   buffer. **Without the control the test passes and certifies a blind comparison.**
+
+**Why it is this project's shape.** A timing or pixel comparison has no natural failure. A unit test
+asserts a value and is wrong loudly; an instrument asserts a *difference*, and a difference between
+two readings of nothing is indistinguishable from a difference between two readings of something.
+
+**The check, and it is two rules rather than one test.**
+
+- **Every comparison carries a control that must show a difference.** Not "the feature changed
+  nothing" alone — also "the deliberately broken case changed plenty". One assertion says the answer;
+  the other says the instrument could have noticed another answer. `docs/process.md` already asks for
+  the negative control; this is what it buys.
+- **Assert on the deterministic half, not only the timed half.** Draw calls, chunk counts, instances
+  and mined-cell counts do not move with the machine's mood. `MineOneCell.Mined == Ticks` and
+  `callsOn < callsOff` catch a fixture that stopped doing its job; a millisecond figure never will.
+
+**A third of the same shape, found hours later by an owner's play log rather than by any test.**
+Every per-board measurement arm generated its world from `MapGenerator.DefaultDef` while the played
+scene is *barren + wooded* and so gets `MakeWooded()` applied on top — two owners for one choice,
+silently disagreeing. The owner's console read `patches 0, trees 1598`; the arms were reporting
+`patches 2210, trees 1222` for the same board. The fix deleted the second owner
+(`ColonyWorld.DefFor`) rather than copying the first. **This pattern was written one commit earlier,
+in the same branch, about the other two — and was not applied to the arms it was written about.**
+Writing a pattern down is not the same as running it over the work in hand.
+
+**Where to look for more:** any property a per-frame system re-derives from settings — a test that
+writes it is writing into the next frame's overwrite. And any capture-and-compare: ask what the
+picture looks like when the subject is removed entirely, and make the test assert that answer.
+
+### P17, met a third time — and the field the root rewrites every frame
+
+**2026-09-23.** `CullingDoesNotChangeThePicture` was the test frustum culling was held on. It
+failed its own control — a frustum admitting *nothing* moved 3.22% of pixels — and for two days
+nobody could say whether the cull was wrong or the instrument was blind.
+
+**It was blind, and the reason is a specific, repeatable mechanism worth naming on its own: a test
+cannot set a field the composition root writes every frame.** The control assigned
+`ChunkRenderer.Frustum`; `OdysseyBootstrap.LateUpdate` assigns it too, once per frame, so the test's
+planes were gone before the first capture. The comparison was the culled shot against itself.
+
+**The tell both times was two readings with identical counters.** 126 chunks, 57,818 instances and
+1,744 draw calls for the culled shot *and* the blind one, where the blind one should have submitted
+nothing whatever. The first instance, one commit earlier in the same branch, was
+`ShadowCasterMarginMetres` re-derived from `QualitySettings.shadowDistance` — and the tell there was
+identical draw calls in both readings. **The lesson was written and then not applied to the field
+next to it.**
+
+- **The check:** before trusting any test that sets a renderer or director field, grep the
+  composition root for an assignment to that same field. If the root writes it per frame, the test
+  needs a seam of its own — `ChunkRenderer.FrustumOverride`, `PawnCrowdIndex.Mode`,
+  `ColonistAttachments.Enabled`. A property with a public setter is not a seam if something else
+  sets it sixty times a second.
+- **And assert on the deterministic half.** Chunk and draw counts would have failed instantly and
+  said why; pixels took two days. The counters were already being logged — nobody had held the
+  blind row against the culled one.
+
+**A second fault hid underneath the first, and it is the commoner one.** With the control finally
+working, two captures of the *identical* configuration still differed by **1.29%** of pixels, against
+culling's 2.13% — a difference that is meant to be nought, asked to stand out against a floor most of
+its own size. Pausing the simulation was not enough: it stops the ticks, so nobody walks, but water
+scrolls its streaks, figures advance their animation graphs and the daylight rig moves, because those
+run on `Time.deltaTime` and the shaders on `_Time`. **`Time.timeScale = 0` stills the shaders as well
+as the scripts**, and the floor went to 0.00%.
+
+- **The rule:** a comparison needs *both* controls — one that must show a difference and one that
+  must not. The repeat-shot is the cheap one and almost nobody writes it, and only the first of the
+  three numbers makes the other two mean anything.
+
+**And the repeat-shot immediately earned its keep a second way: it is not a constant.** With the
+control fixed and the clock stopped, the test passed *alone* at a 0.00% floor and **failed inside
+the full PlayMode tier at 0.77%**, on the same commit — a busy run is still finishing shader
+variants, texture streaming and the post stack's first frames. A longer settle takes it to 0.04%,
+but the lesson is the acceptance: judge against **the floor measured in the same run**
+(`culled <= noise + 0.002`), not against a chosen tolerance. A constant is a guess at the null, and
+this one guessed wrong in both directions on the same day.
+
+> That is the narrow exception to *"a loose tolerance can make a test prove nothing"* in
+> `docs/lessons.md`: the bound is *measured*, not chosen, and the positive control stays absolute so
+> the comparison cannot go quietly blind. **A tolerance you measured is a control; one you picked is
+> a hope.**
 
 ---
 
@@ -2171,51 +2280,3 @@ that invalidates over a comment asking callers to remember.
 Its sibling is the same day's `ColonistAppearance.Equals`, which kept its old idea of "the same
 person" after two fields were added, so a portrait cache handed fifteen different hairstyles the
 same picture. Both are caches that were right until something underneath them moved.
-### P14 — An instrument that cannot see the thing it is comparing, and passes
-
-**Symptom.** A before/after comparison reports a small, plausible difference and the test goes
-green. The change looks proven.
-
-**The real cause.** The instrument was never looking at the subject. Two of these on 2026-09-21,
-both in the frustum-culling work, and **neither was found by a failing assertion** — one was found
-by a control, one by reading a log line that looked fine.
-
-1. **The measurement was overwritten before it ran.** An arm set
-   `ChunkRenderer.ShadowCasterMarginMetres = 0f` to price the shadow correction, but the composition
-   root re-derives that property from `QualitySettings.shadowDistance` **every frame**. The test's
-   value was gone before the first timed frame, so the arm timed the same configuration twice and
-   reported the difference — 0.07 ms — as the price of correct shadows. **The tell was in its own
-   log line:** both readings printed the identical 2,053 draw calls. A comparison whose
-   *deterministic* half does not move is not a comparison, whatever its timings say.
-2. **The capture never saw the board.** `CullingDoesNotChangeThePicture` rendered the scene culled
-   and unculled, compared pixels, and would have reported 2.58% moved as "close enough". Its control
-   — the same scene with a frustum admitting *nothing* — moved 3.22%. Rejecting every chunk in the
-   world cannot move 3% of a picture of that world, so both figures were noise from a nearly-empty
-   buffer. **Without the control the test passes and certifies a blind comparison.**
-
-**Why it is this project's shape.** A timing or pixel comparison has no natural failure. A unit test
-asserts a value and is wrong loudly; an instrument asserts a *difference*, and a difference between
-two readings of nothing is indistinguishable from a difference between two readings of something.
-
-**The check, and it is two rules rather than one test.**
-
-- **Every comparison carries a control that must show a difference.** Not "the feature changed
-  nothing" alone — also "the deliberately broken case changed plenty". One assertion says the answer;
-  the other says the instrument could have noticed another answer. `docs/process.md` already asks for
-  the negative control; this is what it buys.
-- **Assert on the deterministic half, not only the timed half.** Draw calls, chunk counts, instances
-  and mined-cell counts do not move with the machine's mood. `MineOneCell.Mined == Ticks` and
-  `callsOn < callsOff` catch a fixture that stopped doing its job; a millisecond figure never will.
-
-**A third of the same shape, found hours later by an owner's play log rather than by any test.**
-Every per-board measurement arm generated its world from `MapGenerator.DefaultDef` while the played
-scene is *barren + wooded* and so gets `MakeWooded()` applied on top — two owners for one choice,
-silently disagreeing. The owner's console read `patches 0, trees 1598`; the arms were reporting
-`patches 2210, trees 1222` for the same board. The fix deleted the second owner
-(`ColonyWorld.DefFor`) rather than copying the first. **This pattern was written one commit earlier,
-in the same branch, about the other two — and was not applied to the arms it was written about.**
-Writing a pattern down is not the same as running it over the work in hand.
-
-**Where to look for more:** any property a per-frame system re-derives from settings — a test that
-writes it is writing into the next frame's overwrite. And any capture-and-compare: ask what the
-picture looks like when the subject is removed entirely, and make the test assert that answer.

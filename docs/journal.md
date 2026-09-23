@@ -10647,3 +10647,57 @@ by noticing two "different" readings printed the same draw-call count, and one b
 output. The rule that covers all three is already written — **assert on the deterministic half** —
 and the arms now do: `MineOneCell.Mined == Ticks`, `callsOn < callsOff`, trees present and patches
 zero. A millisecond never catches a fixture that has stopped doing its job.
+
+## 2026-09-23 — the cull comes off hold, and the instrument that could not see
+
+`claude/frustum-culling` had been sitting closed since 2026-09-21 as a deliberate draft. The work was
+done and measured; what held it was that its proof, `CullingDoesNotChangeThePicture`, **failed its
+own control** — a frustum admitting nothing moved 3.22% of pixels, which is not a difference between
+two pictures of a world but what two pictures of nearly nothing look like. The previous session added
+diagnostics to settle it and never re-ran them. Merging the branch up 134 commits and running it took
+about a minute and settled it in one line.
+
+**The blind shot reported counts identical to the culled one** — 126 chunks, 57,818 instances, 1,744
+calls — where a frustum admitting nothing should submit nothing at all. The control never applied.
+It assigned `ChunkRenderer.Frustum`, and `OdysseyBootstrap.LateUpdate` assigns that field every
+frame, so the test's planes were overwritten before the capture. The comparison was the culled shot
+against itself.
+
+**That is the second time in one file a test set a field the root re-derives per frame**; the first,
+one commit earlier in the same branch, was `ShadowCasterMarginMetres` off `QualitySettings.shadowDistance`.
+The tell was identical counters both times. The lesson had been written down and not applied to the
+field beside it. `ChunkRenderer.FrustumOverride` is a seam the root does not touch.
+
+**The diagnostics also killed my own hypothesis**, which is exactly what they were for. I had reasoned
+from §6c that forcing a camera `targetTexture` in batch is pathological and guessed the capture never
+saw the board. Mean channel 130.6 says it saw it perfectly well. Third time today that reading-derived
+reasoning lost to a cheap measurement.
+
+**A second fault was hiding underneath the first.** With the control working, two captures of the
+identical configuration still differed by 1.29% against culling's 2.13% — a difference meant to be
+nought, asked to stand out against a floor most of its own size. Pausing the simulation is not enough:
+it stops the ticks so nobody walks, but the water scrolls its streaks, the figures advance their
+animation graphs and the daylight rig moves, because those run on `Time.deltaTime` and the shaders on
+`_Time`. `Time.timeScale = 0` stills the shaders as well as the scripts. And the floor is no longer
+assumed — the test takes a *repeat* of the identical configuration and asserts on it, so there is now
+a control that must show a difference and one that must not.
+
+    the same shot twice           0.00%
+    culling                       0.00%
+    a frustum admitting nothing  98.21%
+
+So the cull is exactly invisible, and on `main` it is worth: Standard 33 of 104 chunks, 3.43 → 2.86 ms,
+1,360 → 996 calls; Huge 317 of 443, 8.89 → 3.84 ms, 5,083 → 1,744 calls, `World` 5.613 → 1.687.
+`CullToFrustum` is on by default from today.
+
+**One honest qualification recorded beside the good number.** The saving follows the player's shadow
+distance, because the margin *is* that distance — a caster nearer than it may cast into the frustum
+and has to be submitted. At a 120 m setting Standard culls nothing at all and Huge culls 74 of 443.
+The mechanism is right; the headline is a default-settings number.
+
+**And the merge brought two things that were not culling.** `ColonyWorld.DefFor` — the one-owner fix
+for a wrong-map fault where every per-board measurement arm read the unmodified default def while the
+played scene applies `MakeWooded()` — which never reached `main` and is worth having on its own. And a
+`P14` collision: the branch's new pattern arrived as `P14`, which `main` already used. Renumbered to
+`P17` on merge, with its three citations, and the catalogue now says plainly that a third collision
+gets renumbered rather than kept.

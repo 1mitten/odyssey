@@ -208,7 +208,7 @@ namespace Odyssey.Presentation.Rendering
         ///
         /// <para>That is the second time the same fault has been found in this one test file: the
         /// first was <see cref="ShadowCasterMarginMetres"/>, re-derived per frame from
-        /// <c>QualitySettings.shadowDistance</c>, and it is written up as <c>P14</c> in
+        /// <c>QualitySettings.shadowDistance</c>, and it is written up as <c>P17</c> in
         /// <c>docs/bug-patterns.md</c>. A field the root writes every frame cannot be set by a
         /// test; it needs a seam of its own.</para>
         /// </summary>
@@ -220,14 +220,32 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>
         /// Whether a chunk outside <see cref="Frustum"/> is actually skipped, or merely counted.
         ///
-        /// <para><b>Off by default, and the off state is a measurement rather than a stub.</b>
-        /// With it off every chunk is submitted exactly as before and
-        /// <see cref="ChunksOutsideFrustum"/> reports what culling *would* have saved; with it on
-        /// the same test skips them. One flag, two readings, taken seconds apart inside one run —
-        /// which is the only comparison this machine supports, and the same shape as
-        /// <see cref="InstanceCellPlates"/>.</para>
+        /// <para><b>The off state is a measurement rather than a stub.</b> With it off every
+        /// chunk is submitted exactly as before and <see cref="ChunksOutsideFrustum"/> reports
+        /// what culling *would* have saved; with it on the same test skips them. One flag, two
+        /// readings, taken seconds apart inside one run — which is the only comparison this
+        /// machine supports, and the same shape as <see cref="InstanceCellPlates"/>.</para>
+        ///
+        /// <para><b>On since 2026-09-23, once the proof could prove anything.</b> It shipped off
+        /// for two days because <c>FrameTimeTests.CullingDoesNotChangeThePicture</c> failed its
+        /// own control and nobody could say whether the cull was wrong or the test was blind. It
+        /// was the test: its "frustum admitting nothing" was imposed on <see cref="Frustum"/>,
+        /// which the composition root rewrites every frame. With that fixed and the scene stilled,
+        /// the answer is exact — <b>a repeat of the same shot moves 0.00% of pixels, culling moves
+        /// 0.00%, and a frustum admitting nothing moves 98.21%</b>. Culling changes what is
+        /// submitted and provably not what is seen.</para>
+        ///
+        /// <para>Measured on 2026-09-23 at the 40 m shadow margin: <b>Standard</b> 33 of 104
+        /// chunks culled, frame 3.43 → 2.86 ms, 1,360 → 996 draw calls; <b>Huge</b> 317 of 443,
+        /// frame 8.89 → 3.84 ms, 5,083 → 1,744 draw calls, and <c>FrameSection.World</c> 5.613 →
+        /// 1.687 ms. <b>The saving follows the player's shadow distance</b>, because
+        /// <see cref="ShadowCasterMarginMetres"/> is that distance: at a 120 m setting Standard
+        /// culls nothing at all and Huge culls 74 of 443. That is correct rather than
+        /// disappointing — a caster inside the shadow distance may cast into the frustum, so it
+        /// has to be submitted — but it means this is a saving on the default settings and not a
+        /// promise on every one.</para>
         /// </summary>
-        public bool CullToFrustum { get; set; }
+        public bool CullToFrustum { get; set; } = true;
 
         /// <summary>Chunks the frustum test rejected last frame, whether or not they were skipped.</summary>
         public int ChunksOutsideFrustum { get; private set; }
