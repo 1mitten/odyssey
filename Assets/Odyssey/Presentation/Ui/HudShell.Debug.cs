@@ -27,7 +27,8 @@ namespace Odyssey.Presentation.Ui
     /// <b>Events</b>: one row per incident the content declares, each fired through the same door
     /// a storyteller will use (design 23 §3), built from the open colony's content when the panel
     /// opens so a second Def appears by existing. <b>Spawn</b>: one row per kind of pawn —
-    /// the colonist and the animals — placed near the camera.</para>
+    /// the colonist, the animals and the marauder — and one per weapon, placed near the camera
+    /// (<see cref="DebugDirector.SpawnRows"/>).</para>
     /// </summary>
     public sealed partial class HudShell
     {
@@ -93,19 +94,17 @@ namespace Odyssey.Presentation.Ui
                 MarkTrace));
             _debugPanel.Add(_debugCheats);
 
-            // Who can be put on the board (owner, 2026-09-22: a tab of its own rather than three
-            // rows among the grants). One row per kind of pawn, the colonist first.
+            // Who and what can be put on the board (owner, 2026-09-22: a tab of its own rather
+            // than three rows among the grants): the colonist first, the animals, the marauder and
+            // one of each weapon (design 33 §1). The rows and what each sends are
+            // DebugDirector.SpawnRows, held by the fast tier; this only lays them out.
             _debugSpawn = new VisualElement();
             _debugSpawn.AddToClassList("settings__body");
-            _debugSpawn.Add(DebugActionRow(DebugDirector.SpawnPawnKey,
-                "Adds a colonist near the camera, with no scenario and no starting kit",
-                () => SpawnPawn()));
-            _debugSpawn.Add(DebugActionRow(DebugDirector.SpawnHogKey,
-                "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
-                () => SpawnPawn(PawnKindIndex.MiddenHog)));
-            _debugSpawn.Add(DebugActionRow(DebugDirector.SpawnRatKey,
-                "Adds a duct rat near the camera. It wanders and rests, and climbs anything",
-                () => SpawnPawn(PawnKindIndex.DuctRat)));
+            foreach (DebugDirector.SpawnRow spawn in DebugDirector.SpawnRows)
+            {
+                DebugDirector.SpawnRow captured = spawn;
+                _debugSpawn.Add(DebugActionRow(spawn.Key, spawn.Tooltip, () => Spawn(captured)));
+            }
             _debugPanel.Add(_debugSpawn);
 
             // Filled when the panel opens, from the colony that is open: the content is the
@@ -245,14 +244,15 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// A pawn of a kind near the camera (design 29 §7). The colonist is kind 0, which is what
-        /// the row that predates animals still sends.
+        /// One Spawn row's intent — a pawn of a kind (design 29 §7, design 33 §1) or one weapon —
+        /// aimed at the column the player is looking at. What it sends is the row's own
+        /// (<see cref="DebugDirector.SpawnRow.ToIntent"/>); only the anchor is found here.
         /// </summary>
-        void SpawnPawn(int kind = PawnKindIndex.Colonist)
+        void Spawn(DebugDirector.SpawnRow row)
         {
             var world = _boot!.World;
             if (world == null || _directors == null) return;
-            world.Intents.Submit(new Intent(IntentKind.SpawnPawn, DebugAnchorCell(world), kind));
+            world.Intents.Submit(row.ToIntent(DebugAnchorCell(world)));
         }
 
         /// <summary>Fire one incident regardless of its gates (design 23 §3). Lands on the next tick.</summary>
