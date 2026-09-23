@@ -412,3 +412,110 @@ panel is laid out by. Nothing checks that they agree. Both carry a note saying s
 raised to 0.75 on the loudness arithmetic in §13's audio note, and cut on hearing the real thing.
 An ear beats a calculation about loudness; the arithmetic is kept in `AudioSetup` because it still
 explains why the clip is quieter than the placeholder it replaced.
+
+
+## 15. Radiant heat — a recommendation, 2026-09-23
+
+Owner: *"The temperature of the campfire tile should indicate red in the temperature on the colony
+stat tile and set at a high temperature, colonists will avoid this tile unless fallen onto,
+directly told to etc (this can be done later). Also the surrounding tiles will get heat benefit
+(maybe amber to indicate more passive heat instead of dangerous heat) — please make
+recommendations."*
+
+**Nothing below is built.** The grass fix shipped; this is the thinking for the rest.
+
+### 15a. What stands in the way, and it is the model's best decision
+
+Design 28's core choice is *"every enclosed room is one integer scalar … per-room, **never**
+per-cell"*, and that is the only reason the thermal pass is affordable beside a 2.5 M cell board.
+`TemperatureSystem.CellTemp` reads it straight:
+
+```
+room air where the cell is in a room, the outdoor curve where it is not
+```
+
+So **every cell in a room reads the same number today**. A hot tile with a warm ring around it is a
+per-cell gradient, which is exactly what the model refuses to store.
+
+**It does not have to be stored.** A gradient that is a *pure function of distance to a heat source*
+needs no per-cell array, no save and no extra pass — only a handful of sources to measure against.
+That is the recommendation, and it is a different physical thing from what design 28 models, which
+is worth saying out loud: **design 28 models the air; this models radiance.** A fire warms the room
+by heating its air, slowly, and warms *you* by shining on you, instantly. Keeping the two named
+apart stops anybody later "simplifying" one into the other.
+
+### 15b. The recommendation
+
+**One term added inside `CellTemp`, not a second thing that reads temperature.**
+
+```
+CellTemp(cell) = room air (as today)  +  radiance from nearby sources
+```
+
+- **Sources are already known.** The thermal pass walks the standing edifices every 120 ticks for
+  `heatPerPass`; have it keep the handful that are warm in a small list as it goes. A query is then
+  a loop over that list, not a search.
+- **Falloff by cell distance**, integer and deterministic: full at the source's own cell, a fraction
+  at one cell, less at two, nothing beyond. Chebyshev distance, so the ring is square and matches
+  the grid the player sees.
+- **Same room only.** A wall should stop radiance, and the cheap correct test is
+  `RoomAt(cell) == RoomAt(source)` — one comparison, no raycast. Outdoors both are 0, so the test
+  costs nothing and falls back to distance alone, which is right: a fire in a field does warm the
+  grass beside it.
+
+### 15c. Why the colours need no new code
+
+`HudTheme.Temperature` already bands the pane:
+
+| Reading | Colour | |
+|---|---|---|
+| above 35 °C | **red** (`Bad`) | sweltering |
+| above 30 °C | **amber** (`Warn`) | hot |
+| below 10 °C | blue (`Info`) | cold |
+| between | none | comfortable |
+
+**So the owner's red tile and amber ring fall out of the table that exists** if the radiance is
+tuned so the fire's own cell lands above 35 °C and the first ring between 30 and 35. No new colour
+rule, no second opinion about what "hot" means, and the pane, the wiki and the mood bands stay one
+system. That is the strongest argument for these particular numbers.
+
+### 15d. The avoidance the owner deferred is mostly free
+
+`Temperature.xml` already sets `heatstrokeC` **3500** and `workMaxC` **3500** — the same 35 °C the
+red band starts at. So a colonist standing in a cell tuned above it would, with no new mechanic:
+
+- work at **×0.7** (`workOutsidePerMille`), and
+- build `TemperatureSeverity` at 15 per mille per centi-degree of overshoot, draining when they
+  leave.
+
+That is real pressure to not stand there, arriving from the tuning rather than from new code. **What
+it is not is pathfinding**, and the recommendation is to keep it that way for now: making the
+pathfinder consult temperature puts a per-cell lookup inside the hottest loop in the tick, for a
+handful of cells. When avoidance proper is wanted, the cheaper shapes in order of cost are
+(1) refuse the fire's cell as a *destination* for idle wander, (2) treat it as unreachable for job
+targets the way `ctx.Reachable` already gates givers, (3) a flee behaviour once there is a health
+model to flee for. Only the third wants a design of its own.
+
+### 15e. What this costs, and the one number to watch
+
+**It moves the state hash and re-bakes the goldens**, because `Pawn.AmbientTempC` is hashed and a
+colonist beside a fire would genuinely be warmer. That is correct rather than regrettable — it is
+the difference between the model meaning something and not.
+
+**The one to watch is crop growth.** `PlantGrowthSystem` asks `CellTemp` per growing cell, and a
+2,065-cell field already exists in the measurements. Adding a per-query loop over sources there is
+the only place this could be felt, and the mitigation is the same shape as everywhere else in this
+codebase: if the source list is empty — which it is on every board with no fire — the term costs one
+branch. **Measure it with a control before believing either way**, as §14 did.
+
+### 15f. What I would not do
+
+- **Display-only warmth.** Colouring the pane without changing what colonists feel would make the
+  pane and the simulation disagree about the temperature of the same cell, which is precisely what
+  `CellDetailContributor`'s own comment says it exists to prevent: *"the same one source the needs
+  system and the growth pass ask — so the pane cannot disagree with the simulation about what a
+  colonist is standing in."*
+- **A per-cell temperature field.** It is the obvious way to get a gradient and it abandons the
+  decision that makes the whole model affordable.
+- **Tuning the fire hotter to get the colour.** `heatPerPass` warms the *room*; raising it to make
+  one tile red would cook the whole hut. The radiance term exists so the two can be tuned apart.
