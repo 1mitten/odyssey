@@ -491,7 +491,10 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(model.Title, Is.EqualTo("Wall"));
             Assert.That(model.Site, Is.EqualTo("2 of 5 wood delivered"));
-            Assert.That(model.CellRows, Is.Empty, "the site is the whole answer while it stands");
+            // The site is the whole answer while it stands — its one row is the order's own
+            // Cancel (owner, 2026-09-23), never a fact about the tile under it.
+            Assert.That(model.CellRows.Count, Is.EqualTo(1), "the site is the whole answer while it stands");
+            Assert.That(model.CellRows[0].Name, Is.EqualTo(InspectModel.OrderActionRow));
         }
 
         [Test]

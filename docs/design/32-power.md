@@ -271,6 +271,12 @@ way back to it to cancel it; and a line made of wood read wrong. The owner's ans
   on the debug menu's Events tab beside the meals.
 - **Selecting**: line orders, and laid lines while they are shown, are pointer targets exactly as a
   building site is (`WorldRenderModel`'s site set, the picker's "a waiting order is a thing"). The
-  pane titles the cell *Conduit* and carries a pickable row — *Cancel order*, *Take it up*, or for
+  pane titles the cell *Conduit* and carries a pickable row — *Cancel*, *Remove conduit*, or for
   a line already marked, *Keep it* — which is the switch row's mechanism reused.
+- **Every order's pane has its Cancel, in red** (owner, 2026-09-23: *"make the cancel button red …
+  the same for any building blueprint that has been put down"*). A building site's pane, which had
+  no rows at all, carries one: *Cancel*, in the cancel tool's own red (`OrderColours`, the one owner
+  of an order's hue), sending `CancelBuilding` with `A` = 1 — the building order alone, never a line
+  ordered through the same cell. A line's Cancel is the same red; *Remove conduit* wears the remove
+  tool's amber, because taking a laid line up is not a cancel.
 

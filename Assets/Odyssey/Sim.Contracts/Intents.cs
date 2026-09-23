@@ -24,7 +24,11 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         PlaceBuilding,
 
-        /// <summary>Take a building site off a cell, refunding whatever was delivered to it.</summary>
+        /// <summary>
+        /// Take the orders off a cell, refunding whatever was delivered to them: the building site
+        /// and any power line order or removal mark (design 32 §3). <c>A</c> = 1 takes the building
+        /// site alone — the building pane's Cancel, which names one order rather than a cell.
+        /// </summary>
         CancelBuilding,
 
         /// <summary>

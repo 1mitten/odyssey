@@ -303,15 +303,16 @@ namespace Odyssey.Sim.Construction
             return -1;
         }
 
-        public IntentRejection Cancel(CellRef cell)
+        public IntentRejection Cancel(CellRef cell, bool lines = true)
         {
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
 
             // Every order in the cell, the line orders included: a cancel drag is "undo what I
             // asked for here", and a cell can hold a wall order and a line order at once (design
             // 32 §3). Asked first and separately, so a cell with only a line order in it is a
-            // cancel that did something rather than AlreadyInThatState.
-            bool line = Power != null && Power.CancelAt(_grid.Index(cell));
+            // cancel that did something rather than AlreadyInThatState. A building's own pane
+            // asks for the building alone (`lines: false`), because its Cancel names one thing.
+            bool line = lines && Power != null && Power.CancelAt(_grid.Index(cell));
 
             int index = SiteAt(cell);
             if (index < 0) return line ? IntentRejection.None : IntentRejection.AlreadyInThatState;
@@ -1661,8 +1662,11 @@ namespace Odyssey.Sim.Construction
         public IntentRejection HandlePlace(Intent intent) =>
             Place(intent.Cell, intent.A, intent.B, intent.C);
 
-        /// <summary><c>CancelBuilding(cell)</c>.</summary>
-        public IntentRejection HandleCancel(Intent intent) => Cancel(intent.Cell);
+        /// <summary>
+        /// <c>CancelBuilding(cell, A)</c>. <c>A</c> = 1 takes the building order only — the pane's
+        /// Cancel, which names one thing; 0, every order in the cell, which is what a drag means.
+        /// </summary>
+        public IntentRejection HandleCancel(Intent intent) => Cancel(intent.Cell, lines: intent.A != 1);
 
         /// <summary>
         /// <c>AssignBedOwner(cell, A = pawn)</c>, A = -1 to leave the bed unowned. Either cell of

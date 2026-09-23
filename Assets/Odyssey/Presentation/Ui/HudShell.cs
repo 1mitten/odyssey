@@ -537,8 +537,8 @@ namespace Odyssey.Presentation.Ui
             /// <summary>Whether the pickable row is a power building's switch rather than a bed's owner (design 32 §5).</summary>
             public bool IsSwitch;
 
-            /// <summary>Whether the pickable row is a line's action — cancel, take up, keep (design 32 §14).</summary>
-            public bool IsLineAction;
+            /// <summary>Whether the pickable row is an order's action — cancel, take up, keep (design 32 §14).</summary>
+            public bool IsOrderAction;
 
             /// <summary>The tint last applied to the value, so a redraw does not restyle on every frame.</summary>
             public HudColour? LastTint;

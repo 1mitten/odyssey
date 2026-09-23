@@ -230,27 +230,27 @@ namespace Odyssey.Tests.Hud
             InspectModel model = Looking(LineFrame(kind));
 
             Assert.That(model.Title, Is.EqualTo(Registry.Label(PaletteTools.Conduit)));
-            Assert.That(model.LineActionUnderPane, Is.True);
-            Assert.That(model.LineAction, Is.EqualTo(action));
-            Assert.That(Rows(model), Does.Contain(InspectModel.LineActionRow + "="));
+            Assert.That(model.OrderActionUnderPane, Is.True);
+            Assert.That(model.OrderAction, Is.EqualTo(action));
+            Assert.That(Rows(model), Does.Contain(InspectModel.OrderActionRow + "="));
         }
 
         [Test]
-        public void TheLineActionStaysPressableAfterTheRowsHaveSettled()
+        public void TheOrderActionStaysPressableAfterTheRowsHaveSettled()
         {
             WorldSnapshot frame = LineFrame(ConduitKind.Ordered);
             var model = new InspectModel();
             model.SetCell(At);
             model.Refresh(frame);
             model.Refresh(frame);
-            Assert.That(model.LineActionUnderPane, Is.True, "the bed's fault, not repeated a third time");
+            Assert.That(model.OrderActionUnderPane, Is.True, "the bed's fault, not repeated a third time");
 
             var empty = new WorldSnapshot();
             empty.BeginWrite(tick: 0, Size, sliceLayer: 1);
             empty.AddCellDetail(new CellDetail(Size.Index(At), TerrainHandle.Grass, EdificeHandle.None,
                 StuffHandle.None, 0, 1000, 0));
             model.Refresh(empty);
-            Assert.That(model.LineActionUnderPane, Is.False, "the control: with the line gone the row is dead");
+            Assert.That(model.OrderActionUnderPane, Is.False, "the control: with the line gone the row is dead");
         }
 
         /// <summary>
@@ -268,6 +268,36 @@ namespace Odyssey.Tests.Hud
 
             InspectModel model = Looking(frame);
             Assert.That(model.Site, Is.EqualTo(says));
+        }
+
+        /// <summary>
+        /// The owner's second ask (2026-09-23): a Cancel in red, and the same on every building
+        /// order's pane. A selected wall order carries a red Cancel that takes the building order
+        /// alone; a line order's Cancel is the same red; taking a laid line up is the remove tool's
+        /// amber.
+        /// </summary>
+        [Test]
+        public void EveryOrdersPaneOffersARedCancel()
+        {
+            var frame = new WorldSnapshot();
+            frame.BeginWrite(tick: 0, Size, sliceLayer: 1);
+            frame.AddSite(new SiteView(Size.Index(At), (byte)BuildingHandle.Wall, (byte)StuffHandle.Wood, 0, 5, 0, 135));
+            InspectModel wall = Looking(frame);
+
+            Assert.That(wall.OrderActionUnderPane, Is.True, "a building order can be cancelled from its pane");
+            Assert.That(wall.OrderAction, Is.EqualTo(IntentKind.CancelBuilding));
+            Assert.That(wall.OrderActionA, Is.EqualTo(1), "the building order only, never a line beside it");
+            InspectRow cancel = wall.CellRows.Single(r => r.Name == InspectModel.OrderActionRow);
+            Assert.That(cancel.Value, Is.EqualTo(Registry.Label(PaletteTools.Cancel)));
+            Assert.That(cancel.Tint, Is.EqualTo(OrderColours.Hue(DesignateTool.Cancel)), "red, the cancel tool's own");
+
+            InspectModel line = Looking(LineFrame(ConduitKind.Ordered));
+            Assert.That(line.CellRows.Single(r => r.Name == InspectModel.OrderActionRow).Tint,
+                Is.EqualTo(OrderColours.Hue(DesignateTool.Cancel)));
+
+            InspectModel laid = Looking(LineFrame(ConduitKind.Built));
+            Assert.That(laid.CellRows.Single(r => r.Name == InspectModel.OrderActionRow).Tint,
+                Is.EqualTo(OrderColours.Hue(DesignateTool.RemoveConduit)), "taking a line up is not a cancel");
         }
 
         // ---- the alerts (§10) -----------------------------------------------------------------------

@@ -373,6 +373,24 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Construction.At(cell), Is.EqualTo(BuildingHandle.None), "the control: the drag's cancel takes both");
         }
 
+        /// <summary>
+        /// And the mirror: the wall's own pane cancels the wall and leaves the line ordered through
+        /// the same cell (CancelBuilding with A = 1).
+        /// </summary>
+        [Test]
+        public void CancellingABuildingFromItsPaneLeavesTheLineOrderInTheCell()
+        {
+            ColonyWorld colony = Board();
+            PowerGrid power = PowerOf(colony);
+            int cell = Open(colony, 6, 4);
+            Send(colony, IntentKind.PlaceBuilding, cell, BuildingHandle.Wall, StuffHandle.Wood);
+            OrderLine(colony, cell);
+
+            Assert.That(Send(colony, IntentKind.CancelBuilding, cell, a: 1), Is.EqualTo(IntentRejection.None));
+            Assert.That(colony.Construction.At(cell), Is.EqualTo(BuildingHandle.None), "the wall order is gone");
+            Assert.That(power.HasSite(cell), Is.True, "and the line order stands");
+        }
+
         /// <summary>Only a built line can be marked to come up, and a cancel takes the mark back.</summary>
         [Test]
         public void ARemovalMarkNeedsABuiltLine()
