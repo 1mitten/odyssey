@@ -2602,3 +2602,40 @@ The four, and what each is the only one able to see:
 And the player build is the fifth thing, which is not a tier and proves what none of them do: that
 a stripped shader and a runtime path under `Assets/` survive. Two green tiers say nothing about
 whether the game runs.
+
+
+## The logged baseline is not enough to rule out load (2026-09-23)
+
+CLAUDE.md already records that `HudStressTests` is sensitive to what else is running — it failed at
+3.770 ms beside two other `unity.sh` runs and passed at 0.603 ms alone on the same commit — and
+says **"the baseline the test logs is the tell"**, because a real regression would leave the
+baseline alone. That is true as far as it goes and it is not sufficient.
+
+Three runs on the same machine within minutes, one of them a clean `origin/main` worktree as a
+control:
+
+| Run | Baseline | Dense arm, over baseline | Cost of a retexted label | Verdict |
+|---|---|---|---|---|
+| branch | 0.580 ms | **+1.485 ms** | 37.3 us | **failed** |
+| `origin/main` control | 0.583 ms | +0.647 ms | 17.0 us | passed |
+| branch again | **1.591 ms** | −0.298 ms | 76.2 us | passed |
+
+The first two look like a genuine regression by the documented rule: the baselines are identical to
+three decimal places, so conditions were the same, so the dense arm's 2.3× must be the code. **It
+was not.** The third run has the same code as the first and passes, and the per-label figure — the
+same measurement, same machine, same quarter of an hour — reads **17, then 37, then 76 us**.
+
+**The baseline only describes the load that was present when the baseline was taken.** The arms run
+one after another over several seconds; load arriving *between* the baseline and the arm leaves the
+baseline clean and inflates the arm, which is exactly the shape that reads as a regression. Run 3 is
+the mirror image: load present throughout inflated both, the arm is measured *over* the baseline,
+and it passed with a negative delta.
+
+**What to do instead.** Read the **per-label figure across runs**, not the baseline — it is the
+same quantity every time and it has no business moving. If it has moved, and especially if it has
+moved by more than the thing you changed could account for, run it again before believing it. And
+where it matters, take a control on a clean `origin/main` worktree **in the same conditions** — that
+is what settled this one, and it is the only form of the measurement that can distinguish the two.
+
+The owner had three editors open on another worktree and the CI runner was building, which is the
+ordinary state of this machine rather than an unusual one.
