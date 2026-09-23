@@ -1741,3 +1741,17 @@ moves her off a fighter's cell. Nothing she does is the fight's until the first 
 self-defence moves her. The guard counts her from the moment she is hunted, and no brawl here
 catches it, because an ordinary job rarely stops on a fighter's tile. If one ever does, the guard
 will name it.
+
+## 9. The third playtest's round (2026-09-23)
+
+Played on `claude/combat-c2-polish`. The owner's asks and the interview's answers, built on
+`claude/combat-c2-r3`:
+
+| Ask | Decision (owner, interviewed 2026-09-23) | Section |
+|---|---|---|
+| *"When a person is hit there should be a reaction ... visual reactions to hits"* | **Every landed hit flinches** the target, from the side the blow came (the pack's hit-react clip; computed for animals). **A hit of 12 or more damage, or any critical, staggers**, rocking the body back half a step. The stagger is drawn only: the pawn stays on its tile. | §9a |
+| *"A knockback — in fact a chance you can fall back on to the next tile (maybe on critical hit)"* | **Critical hits:** every landed hit has a 10% chance, plus 1% per 4 attacker Melee levels, and does ×1.5 damage. **A critical knocks the target back one tile** with a 50% chance (75% for a blunt weapon), directly away from the attacker. That tile must be free and standable; it may be **one terrace step down, never water, never two layers or more down, never a climb up**. If the tile is not allowed, the target staggers in place instead. The target lands **knocked down** for about 1.5 s (`PawnFlags.KnockedDown`, the knock-down clip), then stands. Animals can be knocked back too. Events: `Critical`, `KnockedBack` (from-cell in `Amount`). | §9b |
+| *"Baseball bat wasn't close enough to hips/waist when not drawn. Same goes for machete"* | Bring the sheathed weapon in against the hip. Measure the gap from the weapon mesh to the body surface on the drawn meshes, with a numeric test, and photograph it. | §9c |
+| *"We'll make an entry for gear later to include equipped weapon (seam for later)"* | A **seam only**: a Unity-free `GearModel` that lists what the colonist holds (the equipped weapon, drawn or at the hip). The Gear tab stays disabled; later work fills it. | §9d |
+| *"You could still attack a pig after it died — make a guard for this — check marauder does this"* | **A dead pawn is never a target.** The attack order is refused on a dead pawn or a corpse, an attack job ends the tick its target dies or leaves the board, and hostile, animal and drafted target choice never picks the dead. A guard test runs every tick of mixed fights to the death and fails if anybody swings at, walks to, or keeps a job against a dead pawn. The same guard covers marauders. | §9e |
+| *"Their health needs to be also displayed on their colony stats"* | **The colonist cards along the top get a fourth bar, health, always shown**, in the overhead bar's colours (green, amber below 60%, red below 40%). A downed colonist's card shows it empty and red, with *Downed*. | §9f |

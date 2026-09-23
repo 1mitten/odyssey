@@ -92,6 +92,13 @@ namespace Odyssey.Sim.Contracts
         /// ~2 s before a weapon is put away again is presentation's.
         /// </summary>
         Drawn = 1 << 6,
+
+        /// <summary>
+        /// Knocked off its feet by a critical blow and not yet up (design 33 §9b): lying on the tile it
+        /// was knocked to for about a second and a half, then standing. Not <see cref="Downed"/> —
+        /// its hit points are above nought and it gets up on its own.
+        /// </summary>
+        KnockedDown = 1 << 7,
     }
 
     /// <summary>
@@ -486,6 +493,20 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>A downed pawn got back up (an animal healing, a colonist in bed).</summary>
         Recovered = 8,
+
+        /// <summary>
+        /// The blow published as <see cref="Hit"/> on the same tick, by the same attacker on the same
+        /// target, was critical (design 33 §9b). <see cref="CombatEventView.Amount"/> is 0: the damage
+        /// is on the <see cref="Hit"/>. Presentation plays a stagger for it.
+        /// </summary>
+        Critical = 9,
+
+        /// <summary>
+        /// A critical blow knocked the target back a tile (design 33 §9b). <see cref="CombatEventView.Cell"/>
+        /// is where it landed; <see cref="CombatEventView.Amount"/> is the cell index it was knocked
+        /// from, so presentation can slide it along the line of the blow.
+        /// </summary>
+        KnockedBack = 10,
     }
 
     /// <summary>
