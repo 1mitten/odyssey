@@ -111,6 +111,13 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int Kind { get; internal set; }
 
+        /// <summary>
+        /// An animal that has decided to walk off the board (design 30 §3). Set by the wildlife
+        /// level-keeper, read by the animal's own think node, which then heads for the nearest
+        /// edge; saved in its own section and folded into the hash beside the kind.
+        /// </summary>
+        public bool Leaving { get; internal set; }
+
         /// <summary>The species this pawn's kind spawns as: what walks. See <see cref="SpeciesDef"/>.</summary>
         public SpeciesDef Species => Content.SpeciesOf(Kind);
 
@@ -712,7 +719,9 @@ namespace Odyssey.Sim.Pawns
             hash.Add(unchecked((int)RollSeed));
             // Design 29 §6. Every Simulated golden moved when it arrived, by the hash seeing one
             // more zero per colonist — measured to be that and nothing else.
-            hash.Add(Kind);
+            // Leaving rides in the kind's word: a colonist never leaves, so a board with no
+            // animals hashes exactly as it did before wildlife (design 30 §3).
+            hash.Add(Kind | (Leaving ? 1 << 16 : 0));
             for (int i = 0; i < Needs.Length; i++) hash.Add(Needs[i]);
             hash.Add(Mood);
             hash.Add(MoodTarget);

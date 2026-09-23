@@ -159,7 +159,8 @@ namespace Odyssey.Tests.Sim
         // Moved a fourteenth time, 2026-09-22: the duct rat's traverseMode went Colonist to the
         // new Climber, which climbs anything a colonist can and does not swim (owner: "animals
         // can't swim by default"). No golden moved.
-        const ulong ContentFingerprint = 10013780930231455378UL;
+        // 2026-09-23: SpeciesDef gained `nocturnal` and the duct rat sets it (design 30 §4).
+        const ulong ContentFingerprint = 4711152096717999996UL;
 
 
         [Test]

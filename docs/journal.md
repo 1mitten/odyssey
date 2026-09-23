@@ -10676,3 +10676,39 @@ look since the first had been judged from a strip in which the legs moved the wr
 and nobody, the owner included, could say what was wrong beyond "odd" — which is what a gait
 running backwards under a body moving forwards looks like. The sign is one named constant now
 and a test measures the sole.
+
+## 2026-09-23 — Wildlife: a world generates its animals, and keeps them
+
+The owner took the interview's recommendations whole and asked for the plan and the build in
+one go, so the plan is a page (`docs/plans/wildlife.md`) and the reasoning is here and in
+design 30.
+
+The shape is RimWorld's, by mechanics only: a world carries a wildlife table and a density, the
+map is seeded to it, and a spawner holds the level afterwards with arrivals at the edge and
+animals wandering off it. Three of ours are worth writing down.
+
+**The target is a census.** The density is per ten thousand *reachable* surface columns, and
+the first run of the seeder put four hogs on the whole meadow at the number the interview had
+in mind, because an animal hops only where a ramp is drawn and so can walk to 6,354 of the
+meadow's 14,391 columns. The density went from seven to fifteen and the count came to the nine
+or ten asked for. A number typed against the board's area would have been wrong by half and
+looked right in every test.
+
+**Removal is new.** Nothing had ever left the pawn registry — no health, no death — so a leaver
+walking off the edge is the first thing that has. The registry removes in place and renumbers
+its index, which is O(n) on an event that happens a few times a day; the figure director and
+the interface already coped with a pawn on another layer, which is the same absence from the
+snapshot. `Leaving` rides in the kind's hash word so the bare board hashes as it did, and lives
+in its own save section so no format was bumped — the temperature branch holds the next
+number and two branches taking it would collide at the merge.
+
+**The first leaver walked the ring for ever.** On the edge, the think node handed it another
+leg to the next edge cell along, since the one it stood on was excluded; the level-keeper only
+looks every 250 ticks and never caught it standing. A leaver on the ring now waits one rare
+tick. The test that found it also holds that a leaver moves one cell a tick — the same snap
+guard the animals unit needed — and that the registry's order and index survive the removal.
+
+Two goldens moved and the bare meadow did not. The colony probe on both branches: item counts
+identical, and the food and rest sums differ by exactly the animals' own untouched needs — ten
+at 800 on the meadow, four then three on the city, one of which decided to go inside the
+ten-thousand-tick run. The colonists did the same things.

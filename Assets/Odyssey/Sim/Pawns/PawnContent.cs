@@ -614,6 +614,13 @@ namespace Odyssey.Sim.Pawns
 
         public int restTicksMax = 900;
 
+        /// <summary>
+        /// Out at night and resting by day (design 30 §4). Off-hours an animal takes a quarter
+        /// as many legs and rests three times as long; the hours are the board clock's, 20:00 to
+        /// 06:00. A rat is nocturnal; a hog is not.
+        /// </summary>
+        public bool nocturnal;
+
         /// <summary>The figure catalogue entry presentation draws this species with. Not read by the simulation.</summary>
         public string figureKey = string.Empty;
     }

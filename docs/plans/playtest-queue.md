@@ -23,6 +23,21 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the meadow feel lived in, and do the comings and goings read as wildlife?**
+  (`claude/wildlife`, PR to follow #167, `docs/design/30-wildlife.md`). Press Play → New game
+  on the meadow and do not spawn anything: nine or ten animals should already be on the board —
+  hog sounders of three to five in the woodland, rats alone by outcrops and rock faces — and
+  **none inside the starting clearing**. Watch for a quarter of an hour. Things to judge that
+  no test can: whether nine or ten on a 120 × 120 board reads as *alive* or as *empty*
+  (`wildlifePer10000Columns` is the dial; the ceiling is 24 and the figures are the colonists'
+  first); whether a **sounder** landing together reads as a family or as a clump; whether a hog
+  that decides to go and walks to the edge reads as *wandering off* or as *fleeing* — a wrong
+  answer is one that looks pursued; whether an arrival at the edge is noticed at all, and
+  whether it looks like it walked in or like it appeared (it is placed on the ring on a rare
+  tick, so it appears; the honest fix is a walk-in from off-board); whether a rat by day and a
+  hog by night, resting three times as long, read as *asleep* or as *stuck*; and whether the
+  city's rats in the rubble are visible from the play camera at all. Click one: still
+  *Midden hog · Wandering* or *Resting*.
 - **Do the two animals read as animals, and does the hog's computed walk read as a walk?**
   (`claude/animals`, `docs/design/29-animals.md`, plan `docs/plans/animals.md`.) Debug menu →
   *Spawn midden hog* and *Spawn duct rat*, several of each, near the camera; then watch. Five
