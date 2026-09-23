@@ -583,6 +583,28 @@ costs at that scale. It is noise on top of the thing that actually needs fixing.
 exists: the figure cap is 64 and the audit's scale target is fifty, so a normal colony never enters
 this path at all. Where it does, it costs draws in pieces and its per-person work is constant.
 
-**Still unmeasured:** the live-figure side. Two extra rigid renderers per figure against a ceiling of
-64 is bounded, but no run isolates it — `Figures` goes 0.102 ms at 8 to 1.526 ms at 64 in the same
-sweep, and none of that is attributed to the attachments specifically.
+### The control, 2026-09-23
+
+The draw-call table above says the far form is bounded, but it is not the case that matters: a colony
+of fifty or sixty is **all live figures** and never enters that path. So the pass was measured the way
+§6c.1 insists — **against the same colony with it switched off, in the same run**.
+`ColonistAttachments.Enabled` is the control, exactly as `ChunkRenderer.SubmitToGpu` is for
+submission, and `FrameTimeTests.TheAttachmentsCostWhatTheyDraw` alternates on/off/on/off at two
+colony sizes so a drift falling between the halves cannot be mistaken for the pass.
+
+| Colony | Figures | On | Off | **Cost** |
+|---|---|---|---|---|
+| 64 (all live figures) | 64 | 3.743 ms (3.738 / 3.748) | 3.694 ms (3.697 / 3.692) | **+0.049 ms** |
+| 192 (128 in the far form) | 64 | 9.179 ms (9.258 / 9.099) | 9.127 ms (9.114 / 9.140) | **+0.051 ms** |
+
+**The whole feature costs about 0.05 ms, and it does not grow.** Tripling the colony — adding 128
+colonists in the far form on top of 64 wearing live renderers — moves it by 0.002 ms, which is inside
+the repeat spread. Against the 5 ms budget that is **one per cent**, and against the 3.7 ms the same
+board costs without it, 1.3%.
+
+The repeats are the reason to believe it: 3.738/3.748 against 3.697/3.692 is a gap of 0.049 ms with a
+spread of 0.010, so the difference is five times the noise rather than lost in it.
+
+**What it is not.** None of the frame's growth with colony size belongs here: at 192 the pass costs
+the same 0.05 ms it does at 64, while the frame itself goes 3.7 → 9.1 ms. That growth is the open
+`PF` finding, `PawnPose.Of`'s per-pawn crowd scan, and this sweep is further evidence for it.

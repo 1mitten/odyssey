@@ -28,6 +28,17 @@ namespace Odyssey.Presentation.Rendering
     /// </summary>
     public sealed class ColonistAttachments
     {
+        /// <summary>
+        /// Off, no colonist wears hair or a beard — near or far.
+        ///
+        /// <para><b>A measurement control, not a setting.</b>
+        /// <c>docs/design/06-rendering-and-camera.md</c> §6c.1 is emphatic that a pass is judged
+        /// against the same run with it switched off, because this machine's frame numbers drift
+        /// by more between runs than most passes cost. <c>ChunkRenderer.SubmitToGpu</c> exists for
+        /// the same reason. Nothing in the game writes it; the frame tests do, and put it back.</para>
+        /// </summary>
+        public static bool Enabled { get; set; } = true;
+
         /// <summary>One piece, resolved to the three things dressing a figure in it needs.</summary>
         public readonly struct Piece
         {
@@ -182,7 +193,7 @@ namespace Odyssey.Presentation.Rendering
         {
             if (filter == null || renderer == null) return;
 
-            if (!piece.Usable)
+            if (!Enabled || !piece.Usable)
             {
                 renderer.enabled = false;
                 filter.sharedMesh = null;

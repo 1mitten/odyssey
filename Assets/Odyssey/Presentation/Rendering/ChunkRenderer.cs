@@ -950,7 +950,7 @@ namespace Odyssey.Presentation.Rendering
                 // Whatever this colonist is wearing on their head, at the head of the body they
                 // are wearing. The appearance is the same object the figures read, so the person
                 // past the cap is the person in front of the camera.
-                if (colonist.HasHead)
+                if (colonist.HasHead && ColonistAttachments.Enabled)
                 {
                     Matrix4x4 head = placement * colonist.Head;
                     if (Attachments.Hair(look.HairPiece).Usable)
