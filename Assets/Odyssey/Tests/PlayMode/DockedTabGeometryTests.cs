@@ -51,7 +51,7 @@ namespace Odyssey.Tests.PlayMode
 
                 // Start a project: the table re-sorts and the detail pane grows a second button and
                 // loses the locked line. Neither may change the window.
-                directors.Research.Start(ResearchCatalogue.GeneratorsKey);
+                Assert.That(directors.Research.Start(ResearchCatalogue.ElectricityKey), Is.True);
                 for (int i = 0; i < 3; i++) yield return null;
                 AssertWindow(research, ResearchLayout.Width, ResearchLayout.Height, "Research, researching");
 

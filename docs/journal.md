@@ -10982,3 +10982,17 @@ rather than a 44 px one, the shipped wash and rule tokens, the contrast-correcte
 and six place rows. The new windows are flat with a 22 px close as specced, which leaves them
 different from Work and Animals — an inconsistency for the owner to settle, not one to tidy
 silently.
+
+**First look, the same evening: the list was invented, and it was cut to the game.** Five Power
+projects including batteries, lamps and solar arrays, none of which the game has, was a list
+written to fill a table. The owner asked for only what exists: Electricity, which opens Power
+lines and the Generator, and the Ladder under Furniture. Nothing starts done. The lesson is the
+one the registry exists for — a name on screen is a promise that the thing is in the game.
+
+**The same look reported that a stockpile drag painted nothing.** The log from that session had
+the Fell drag reaching the simulation (308 refusals, all correct) and not one stockpile order
+refused — so the orders were never sent. `StockpileDragTests` hands the presenter's own drag and
+click handlers a stockpile box and asserts a zone is published: that half passes, which puts the
+fault on the pointer side of the presenter, a side this branch does not touch. The pointer side
+cannot be driven in a batch run (CLAUDE.md, known gaps), so the next measurement is a Play session
+on `main` doing the same drag, to learn whether the fault came with this branch at all.

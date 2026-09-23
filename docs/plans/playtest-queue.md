@@ -31,8 +31,8 @@ the next session learns to ignore.
   landing on the store's corner away from the goods, or a pane titled with a different number.
 
 - **Does the Research tab read at a glance with no mechanism behind it?** (`claude/research-tab`,
-  `docs/design/34-research-tab.md`.) F3, press Research on Generators, Queue on Electric light,
-  then debug menu *Finish research*. Judge whether the four statuses read with the words covered,
+  `docs/design/34-research-tab.md`.) F3, press Research on Electricity, Queue on Ladder,
+  then debug menu *Finish research*: Power lines and Generator unlock and Ladder starts. Judge whether the four statuses read with the words covered,
   and whether the flat window and 22 px close beside the rounded Work tab look like one interface
   or two — a wrong answer is wanting them unified, and which way.
 

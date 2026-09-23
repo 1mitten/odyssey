@@ -25,24 +25,26 @@ So this is **the interface and a placeholder state, not a research system**:
 
 ## 2. The content
 
-One field, **Power**, and five projects. Names and descriptions live in
+**Only what is in the game** (owner, 2026-09-23: *"There should be only research for what in
+this game"*): two fields and four projects. Names and descriptions live in
 `docs/design/icon-keys.csv` (`ui.research.category.*`, `ui.research.project.*`) and are read
 through the registry; the project **description** is drawn from the CSV's description column,
 which `emit_labels.py` now emits for the `ui.research.project` namespace only
 (`Registry.Describe`). Costs, needs and unlocks are `ResearchCatalogue`, the only copy until a
 Def replaces it.
 
-| Project | Cost | Needs | Unlocks |
-|---|---:|---|---|
-| Wiring | 300 | none | Conduit |
-| Generators | 500 | Wiring | Generator |
-| Electric light | 400 | Wiring | Lamp |
-| Batteries | 700 | Generators | Battery |
-| Solar arrays | 1200 | Batteries | Solar array |
+| Field | Project | Cost | Needs | Unlocks |
+|---|---|---:|---|---|
+| Power | Electricity | 300 | none | nothing to build; it opens the two below |
+| Power | Power lines | 400 | Electricity | Conduit |
+| Power | Generator | 500 | Electricity | Generator |
+| Furniture | Ladder | 200 | none | Ladder |
 
-**Wiring starts done**, because the power branch (PR #173) lets a colony lay conduit with no
-research, and a tab calling it undiscovered would contradict the palette. So a new colony shows
-all four statuses but *researching*, and pressing **Research** on Generators shows the fourth.
+**Nothing starts done.** A new colony shows Electricity and Ladder available and the other two
+locked. The first version had five Power projects with Wiring done, and the owner cut it to what
+the game has. **The line is called *Conduit* in the palette** (the power branch, PR #173) and
+*Power lines* here, as the owner names it; the unlock reads the palette's own word, so renaming
+the tool is one row in `icon-keys.csv` when the power branch settles it.
 
 ## 3. The geometry
 
@@ -87,4 +89,4 @@ is also what a **very small window** would do, since the heights are fixed and t
 ## 6. Open
 
 - The mechanism: a research Def, a bench, points per tick, save and hash. Then the palette reads it.
-- A second field needs only a line in `ResearchCatalogue.Categories` and rows in the CSV.
+- A third field needs only a line in `ResearchCatalogue.Categories` and rows in the CSV.

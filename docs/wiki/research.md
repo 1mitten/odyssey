@@ -9,16 +9,16 @@ What the colony can learn, grouped by field, and the words the Research tab uses
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
 | **Power** | `ui.research.category.power` | Making current, carrying it and storing it | no art | RS |
+| **Furniture** | `ui.research.category.furniture` | What a colony builds to live and move among | no art | RS |
 
 ## Projects
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
-| **Wiring** | `ui.research.project.wiring` | Running current from where it is made to where it is wanted, along conduit. Everything electrical starts here. | no art | RS |
-| **Generators** | `ui.research.project.generators` | A burner that turns fuel into current. Loud and hungry, and the first power a colony can count on. | no art | RS |
-| **Electric light** | `ui.research.project.lighting` | Light that does not burn. A room stays usable after dark, at a steady draw on its net. | no art | RS |
-| **Batteries** | `ui.research.project.batteries` | Charge put by against the hours a generator stands idle or a panel sees no sun. | no art | RS |
-| **Solar arrays** | `ui.research.project.solar` | Free current by day and none at night, which is why it wants batteries behind it. | no art | RS |
+| **Electricity** | `ui.research.project.electricity` | How current is made and carried. It builds nothing by itself; power lines and the generator both start here. | no art | RS |
+| **Power lines** | `ui.research.project.powerlines` | Lines that carry current from where it is made to where it is wanted, through walls and between floors. | no art | RS |
+| **Generator** | `ui.research.project.generator` | A burner that turns fuel into current. Loud and hungry, and the first power a colony can count on. | no art | RS |
+| **Ladder** | `ui.research.project.ladder` | A way up that takes one cell. Slow to climb and cheap to build. | no art | RS |
 
 ## Project states
 

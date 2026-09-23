@@ -597,6 +597,7 @@ namespace Odyssey.Hud
             { "ui.res.tallow", "Tallow" },
             { "ui.res.wire", "Wire" },
             { "ui.res.wood", "Wood" },
+            { "ui.research.category.furniture", "Furniture" },
             { "ui.research.category.power", "Power" },
             { "ui.research.hud.cost", "Cost" },
             { "ui.research.hud.idle", "Nothing being researched. Pick a project." },
@@ -614,11 +615,10 @@ namespace Odyssey.Hud
             { "ui.research.hud.then", "then {list}" },
             { "ui.research.hud.unlocks", "Unlocks" },
             { "ui.research.hud.unqueue", "Unqueue" },
-            { "ui.research.project.batteries", "Batteries" },
-            { "ui.research.project.generators", "Generators" },
-            { "ui.research.project.lighting", "Electric light" },
-            { "ui.research.project.solar", "Solar arrays" },
-            { "ui.research.project.wiring", "Wiring" },
+            { "ui.research.project.electricity", "Electricity" },
+            { "ui.research.project.generator", "Generator" },
+            { "ui.research.project.ladder", "Ladder" },
+            { "ui.research.project.powerlines", "Power lines" },
             { "ui.research.status.available", "Available" },
             { "ui.research.status.done", "Done" },
             { "ui.research.status.locked", "Locked" },
@@ -795,11 +795,10 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly Dictionary<string, string> Descriptions = new Dictionary<string, string>
         {
-            { "ui.research.project.batteries", "Charge put by against the hours a generator stands idle or a panel sees no sun." },
-            { "ui.research.project.generators", "A burner that turns fuel into current. Loud and hungry, and the first power a colony can count on." },
-            { "ui.research.project.lighting", "Light that does not burn. A room stays usable after dark, at a steady draw on its net." },
-            { "ui.research.project.solar", "Free current by day and none at night, which is why it wants batteries behind it." },
-            { "ui.research.project.wiring", "Running current from where it is made to where it is wanted, along conduit. Everything electrical starts here." },
+            { "ui.research.project.electricity", "How current is made and carried. It builds nothing by itself; power lines and the generator both start here." },
+            { "ui.research.project.generator", "A burner that turns fuel into current. Loud and hungry, and the first power a colony can count on." },
+            { "ui.research.project.ladder", "A way up that takes one cell. Slow to climb and cheap to build." },
+            { "ui.research.project.powerlines", "Lines that carry current from where it is made to where it is wanted, through walls and between floors." },
         };
 
         /// <summary>A key's description, or empty when the registry draws none for it.</summary>

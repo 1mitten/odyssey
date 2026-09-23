@@ -52,43 +52,46 @@ namespace Odyssey.Hud
     /// becomes the registry's source, as <c>CLAUDE.md</c> already says of every other named
     /// thing, and the tab reads it through the same four properties.</para>
     ///
-    /// <para><b>Only Power.</b> The rail draws one row per category in this list's order, so a
-    /// second field is a line here and nothing in the shell.</para>
+    /// <para><b>Only what is in the game</b> (owner, 2026-09-23: "only research for what in this
+    /// game"): Electricity, which opens Power lines and the Generator, and the Ladder. Two fields,
+    /// four projects. The rail draws one row per category in this list's order, so a third field
+    /// is a line here and nothing in the shell.</para>
     /// </summary>
     public static class ResearchCatalogue
     {
         public const string PowerKey = "ui.research.category.power";
+        public const string FurnitureKey = "ui.research.category.furniture";
 
-        public const string WiringKey = "ui.research.project.wiring";
-        public const string GeneratorsKey = "ui.research.project.generators";
-        public const string LightingKey = "ui.research.project.lighting";
-        public const string BatteriesKey = "ui.research.project.batteries";
-        public const string SolarKey = "ui.research.project.solar";
+        public const string ElectricityKey = "ui.research.project.electricity";
+        public const string PowerLinesKey = "ui.research.project.powerlines";
+        public const string GeneratorKey = "ui.research.project.generator";
+        public const string LadderKey = "ui.research.project.ladder";
 
         /// <summary>The fields, in the rail's order.</summary>
-        public static readonly IReadOnlyList<string> Categories = new[] { PowerKey };
+        public static readonly IReadOnlyList<string> Categories = new[] { PowerKey, FurnitureKey };
 
         /// <summary>Every project, in catalogue order (the last tie-break of the table's sort).</summary>
         public static readonly IReadOnlyList<ResearchProject> Projects = new[]
         {
-            new ResearchProject(WiringKey, PowerKey, 300,
-                Array.Empty<string>(), new[] { "ui.arch.tool.conduit" }),
-            new ResearchProject(GeneratorsKey, PowerKey, 500,
-                new[] { WiringKey }, new[] { "ui.arch.tool.generator" }),
-            new ResearchProject(LightingKey, PowerKey, 400,
-                new[] { WiringKey }, new[] { "ui.arch.tool.lamp" }),
-            new ResearchProject(BatteriesKey, PowerKey, 700,
-                new[] { GeneratorsKey }, new[] { "ui.arch.tool.battery" }),
-            new ResearchProject(SolarKey, PowerKey, 1200,
-                new[] { BatteriesKey }, new[] { "ui.arch.tool.solar" }),
+            // The root: it unlocks nothing to build, only the two projects under it.
+            new ResearchProject(ElectricityKey, PowerKey, 300,
+                Array.Empty<string>(), Array.Empty<string>()),
+            // The palette calls the line a conduit (the power branch, PR #173); the project is
+            // named as the owner names it, and the unlock reads the palette's own name.
+            new ResearchProject(PowerLinesKey, PowerKey, 400,
+                new[] { ElectricityKey }, new[] { "ui.arch.tool.conduit" }),
+            new ResearchProject(GeneratorKey, PowerKey, 500,
+                new[] { ElectricityKey }, new[] { "ui.arch.tool.generator" }),
+            new ResearchProject(LadderKey, FurnitureKey, 200,
+                Array.Empty<string>(), new[] { "ui.arch.tool.ladder" }),
         };
 
         /// <summary>
-        /// What a colony knows on the first day. Wiring, because the power branch lets a colony
-        /// lay conduit with no research at all, and a tab that called it undiscovered would be
-        /// contradicting the Build palette.
+        /// What a colony knows on the first day: nothing. Research unlocks nothing yet, so a
+        /// colony can still build a ladder or a line before it is researched; the day the palette
+        /// reads this, the starting set is the decision to revisit.
         /// </summary>
-        public static readonly IReadOnlyList<string> StartsDone = new[] { WiringKey };
+        public static readonly IReadOnlyList<string> StartsDone = Array.Empty<string>();
 
         /// <summary>The project with this key, or null.</summary>
         public static ResearchProject? Find(string? key)

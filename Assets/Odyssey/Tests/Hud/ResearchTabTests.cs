@@ -14,14 +14,25 @@ namespace Odyssey.Tests.Hud
         static ResearchProject P(string key) => ResearchCatalogue.Find(key)!;
 
         [Test]
-        public void AColonyStartsKnowingWiringAndNothingElse()
+        public void TheListIsOnlyWhatIsInTheGame()
+        {
+            // Owner, 2026-09-23: Electricity, Power lines, Generator, Ladder, and nothing else.
+            Assert.That(ResearchCatalogue.Projects.Select(p => Registry.Label(p.Key)),
+                Is.EqualTo(new[] { "Electricity", "Power lines", "Generator", "Ladder" }));
+            Assert.That(ResearchCatalogue.Categories.Select(Registry.Label), Is.EqualTo(new[] { "Power", "Furniture" }));
+            Assert.That(P(ResearchCatalogue.PowerLinesKey).Needs, Is.EqualTo(new[] { ResearchCatalogue.ElectricityKey }));
+            Assert.That(P(ResearchCatalogue.GeneratorKey).Needs, Is.EqualTo(new[] { ResearchCatalogue.ElectricityKey }));
+            Assert.That(P(ResearchCatalogue.LadderKey).CategoryKey, Is.EqualTo(ResearchCatalogue.FurnitureKey));
+        }
+
+        [Test]
+        public void AColonyStartsKnowingNothing()
         {
             var research = new ResearchDirector();
-            Assert.That(research.StatusOf(P(ResearchCatalogue.WiringKey)), Is.EqualTo(ResearchStatus.Done));
-            Assert.That(research.StatusOf(P(ResearchCatalogue.GeneratorsKey)), Is.EqualTo(ResearchStatus.Available));
-            Assert.That(research.StatusOf(P(ResearchCatalogue.LightingKey)), Is.EqualTo(ResearchStatus.Available));
-            Assert.That(research.StatusOf(P(ResearchCatalogue.BatteriesKey)), Is.EqualTo(ResearchStatus.Locked));
-            Assert.That(research.StatusOf(P(ResearchCatalogue.SolarKey)), Is.EqualTo(ResearchStatus.Locked));
+            Assert.That(research.StatusOf(P(ResearchCatalogue.ElectricityKey)), Is.EqualTo(ResearchStatus.Available));
+            Assert.That(research.StatusOf(P(ResearchCatalogue.LadderKey)), Is.EqualTo(ResearchStatus.Available));
+            Assert.That(research.StatusOf(P(ResearchCatalogue.PowerLinesKey)), Is.EqualTo(ResearchStatus.Locked));
+            Assert.That(research.StatusOf(P(ResearchCatalogue.GeneratorKey)), Is.EqualTo(ResearchStatus.Locked));
             Assert.That(research.Current, Is.Null);
         }
 
@@ -29,17 +40,17 @@ namespace Odyssey.Tests.Hud
         public void TheTableSortsByStatusThenCheapestFirst()
         {
             var research = new ResearchDirector();
-            research.Start(ResearchCatalogue.GeneratorsKey);
+            research.Start(ResearchCatalogue.ElectricityKey);
+            research.FinishCurrent();
+            research.Start(ResearchCatalogue.GeneratorKey);
 
             string[] order = ResearchModel.Sorted(ResearchCatalogue.PowerKey, research).Select(p => p.Key).ToArray();
 
             Assert.That(order, Is.EqualTo(new[]
             {
-                ResearchCatalogue.GeneratorsKey,   // researching
-                ResearchCatalogue.LightingKey,     // available
-                ResearchCatalogue.WiringKey,       // done
-                ResearchCatalogue.BatteriesKey,    // locked, 700
-                ResearchCatalogue.SolarKey,        // locked, 1200
+                ResearchCatalogue.GeneratorKey,     // researching
+                ResearchCatalogue.PowerLinesKey,    // available
+                ResearchCatalogue.ElectricityKey,   // done
             }));
         }
 
@@ -47,30 +58,32 @@ namespace Odyssey.Tests.Hud
         public void StartingAnotherProjectPutsTheFirstBackWithItsProgress()
         {
             var research = new ResearchDirector();
-            research.Start(ResearchCatalogue.GeneratorsKey);
-            research.Advance(250);
-            Assert.That(research.PercentOf(P(ResearchCatalogue.GeneratorsKey)), Is.EqualTo(50));
+            research.Start(ResearchCatalogue.ElectricityKey);
+            research.Advance(150);
+            Assert.That(research.PercentOf(P(ResearchCatalogue.ElectricityKey)), Is.EqualTo(50));
 
-            Assert.That(research.Start(ResearchCatalogue.LightingKey), Is.True);
-            Assert.That(research.StatusOf(P(ResearchCatalogue.GeneratorsKey)), Is.EqualTo(ResearchStatus.Available));
-            Assert.That(research.ProgressOf(ResearchCatalogue.GeneratorsKey), Is.EqualTo(250), "a switch loses nothing");
+            Assert.That(research.Start(ResearchCatalogue.LadderKey), Is.True);
+            Assert.That(research.StatusOf(P(ResearchCatalogue.ElectricityKey)), Is.EqualTo(ResearchStatus.Available));
+            Assert.That(research.ProgressOf(ResearchCatalogue.ElectricityKey), Is.EqualTo(150), "a switch loses nothing");
         }
 
         [Test]
         public void OnlyAnAvailableProjectStarts()
         {
             var research = new ResearchDirector();
-            Assert.That(research.Start(ResearchCatalogue.BatteriesKey), Is.False, "locked");
-            Assert.That(research.Start(ResearchCatalogue.WiringKey), Is.False, "done");
-            Assert.That(research.Enqueue(ResearchCatalogue.SolarKey), Is.False, "locked");
+            Assert.That(research.Start(ResearchCatalogue.GeneratorKey), Is.False, "locked");
+            Assert.That(research.Enqueue(ResearchCatalogue.PowerLinesKey), Is.False, "locked");
+            research.Start(ResearchCatalogue.LadderKey);
+            research.FinishCurrent();
+            Assert.That(research.Start(ResearchCatalogue.LadderKey), Is.False, "done");
         }
 
         [Test]
         public void QueueingWithNothingInHandStartsIt()
         {
             var research = new ResearchDirector();
-            Assert.That(research.Enqueue(ResearchCatalogue.LightingKey), Is.True);
-            Assert.That(research.Current, Is.EqualTo(ResearchCatalogue.LightingKey));
+            Assert.That(research.Enqueue(ResearchCatalogue.LadderKey), Is.True);
+            Assert.That(research.Current, Is.EqualTo(ResearchCatalogue.LadderKey));
             Assert.That(research.Queue, Is.Empty);
         }
 
@@ -78,16 +91,16 @@ namespace Odyssey.Tests.Hud
         public void FinishingTheProjectInHandStartsTheQueueAndUnlocksWhatNeededIt()
         {
             var research = new ResearchDirector();
-            research.Start(ResearchCatalogue.GeneratorsKey);
-            research.Enqueue(ResearchCatalogue.LightingKey);
-            Assert.That(ResearchModel.ThenLine(research), Is.EqualTo("then Electric light"));
+            research.Start(ResearchCatalogue.ElectricityKey);
+            research.Enqueue(ResearchCatalogue.LadderKey);
+            Assert.That(ResearchModel.ThenLine(research), Is.EqualTo("then Ladder"));
 
             Assert.That(research.FinishCurrent(), Is.True);
 
-            Assert.That(research.IsDone(ResearchCatalogue.GeneratorsKey), Is.True);
-            Assert.That(research.Current, Is.EqualTo(ResearchCatalogue.LightingKey), "the queue's head starts");
-            Assert.That(research.StatusOf(P(ResearchCatalogue.BatteriesKey)), Is.EqualTo(ResearchStatus.Available),
-                "Batteries needed Generators and nothing else");
+            Assert.That(research.IsDone(ResearchCatalogue.ElectricityKey), Is.True);
+            Assert.That(research.Current, Is.EqualTo(ResearchCatalogue.LadderKey), "the queue's head starts");
+            Assert.That(research.StatusOf(P(ResearchCatalogue.PowerLinesKey)), Is.EqualTo(ResearchStatus.Available));
+            Assert.That(research.StatusOf(P(ResearchCatalogue.GeneratorKey)), Is.EqualTo(ResearchStatus.Available));
             Assert.That(ResearchModel.ThenLine(research), Is.Empty);
         }
 
@@ -95,11 +108,11 @@ namespace Odyssey.Tests.Hud
         public void PausingKeepsTheQueueWaiting()
         {
             var research = new ResearchDirector();
-            research.Start(ResearchCatalogue.GeneratorsKey);
-            research.Enqueue(ResearchCatalogue.LightingKey);
+            research.Start(ResearchCatalogue.ElectricityKey);
+            research.Enqueue(ResearchCatalogue.LadderKey);
             research.Pause();
             Assert.That(research.Current, Is.Null);
-            Assert.That(research.Queue, Is.EqualTo(new[] { ResearchCatalogue.LightingKey }));
+            Assert.That(research.Queue, Is.EqualTo(new[] { ResearchCatalogue.LadderKey }));
             Assert.That(ResearchModel.ThenLine(research), Is.Empty, "nothing is in hand, so nothing comes next");
         }
 
@@ -107,10 +120,13 @@ namespace Odyssey.Tests.Hud
         public void TheDetailPaneSaysWhatALockedProjectWaitsFor()
         {
             var research = new ResearchDirector();
-            Assert.That(ResearchModel.LockedLine(P(ResearchCatalogue.BatteriesKey), research),
-                Is.EqualTo("Needs Generators first."));
-            Assert.That(ResearchModel.LockedLine(P(ResearchCatalogue.LightingKey), research), Is.Empty);
-            Assert.That(ResearchModel.Meta(P(ResearchCatalogue.GeneratorsKey)), Is.EqualTo("Power, cost 500"));
+            Assert.That(ResearchModel.LockedLine(P(ResearchCatalogue.GeneratorKey), research),
+                Is.EqualTo("Needs Electricity first."));
+            Assert.That(ResearchModel.LockedLine(P(ResearchCatalogue.LadderKey), research), Is.Empty);
+            Assert.That(ResearchModel.Meta(P(ResearchCatalogue.GeneratorKey)), Is.EqualTo("Power, cost 500"));
+            Assert.That(ResearchModel.Meta(P(ResearchCatalogue.LadderKey)), Is.EqualTo("Furniture, cost 200"));
+            Assert.That(ResearchCatalogue.LeadingFrom(ResearchCatalogue.ElectricityKey).Select(p => p.Key),
+                Is.EqualTo(new[] { ResearchCatalogue.PowerLinesKey, ResearchCatalogue.GeneratorKey }));
         }
 
         [Test]
@@ -125,13 +141,12 @@ namespace Odyssey.Tests.Hud
             Assert.That(ResearchModel.PrimaryPressable(ResearchStatus.Locked), Is.False);
 
             var research = new ResearchDirector();
-            Assert.That(ResearchModel.SecondaryOf(P(ResearchCatalogue.LightingKey), research), Is.EqualTo(ResearchSecondary.Queue));
-            Assert.That(ResearchModel.SecondaryOf(P(ResearchCatalogue.WiringKey), research), Is.EqualTo(ResearchSecondary.None));
-            Assert.That(ResearchModel.SecondaryOf(P(ResearchCatalogue.SolarKey), research), Is.EqualTo(ResearchSecondary.None));
-            research.Start(ResearchCatalogue.GeneratorsKey);
-            research.Enqueue(ResearchCatalogue.LightingKey);
-            Assert.That(ResearchModel.SecondaryOf(P(ResearchCatalogue.GeneratorsKey), research), Is.EqualTo(ResearchSecondary.Pause));
-            Assert.That(ResearchModel.SecondaryOf(P(ResearchCatalogue.LightingKey), research), Is.EqualTo(ResearchSecondary.Unqueue));
+            Assert.That(ResearchModel.SecondaryOf(P(ResearchCatalogue.LadderKey), research), Is.EqualTo(ResearchSecondary.Queue));
+            Assert.That(ResearchModel.SecondaryOf(P(ResearchCatalogue.GeneratorKey), research), Is.EqualTo(ResearchSecondary.None));
+            research.Start(ResearchCatalogue.ElectricityKey);
+            research.Enqueue(ResearchCatalogue.LadderKey);
+            Assert.That(ResearchModel.SecondaryOf(P(ResearchCatalogue.ElectricityKey), research), Is.EqualTo(ResearchSecondary.Pause));
+            Assert.That(ResearchModel.SecondaryOf(P(ResearchCatalogue.LadderKey), research), Is.EqualTo(ResearchSecondary.Unqueue));
         }
 
         [Test]
@@ -151,8 +166,13 @@ namespace Odyssey.Tests.Hud
             Assert.That(model.Categories.Count(c => c.Selected), Is.EqualTo(1));
             Assert.That(model.Rows.Count(r => r.Selected), Is.EqualTo(1));
             Assert.That(model.Project, Is.EqualTo(model.Rows[0].Project.Key), "the first row, when nothing was chosen");
-            Assert.That(model.Categories[0].Done, Is.EqualTo(1));
-            Assert.That(model.Categories[0].Total, Is.EqualTo(5));
+            Assert.That(model.Categories[0].Done, Is.EqualTo(0));
+            Assert.That(model.Categories[0].Total, Is.EqualTo(3));
+            Assert.That(model.Categories[1].Total, Is.EqualTo(1));
+
+            model.SelectCategory(ResearchCatalogue.FurnitureKey);
+            model.Refresh(research);
+            Assert.That(model.Project, Is.EqualTo(ResearchCatalogue.LadderKey), "a new category selects its first row");
         }
 
         [Test]
