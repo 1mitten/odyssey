@@ -188,7 +188,13 @@ namespace Odyssey.Tests.Sim
         // `rechooseTicks` (300), lane A's constant on the attack driver, proposed for the Def in its
         // hand-over because Defs were frozen while the lanes ran. Same value, so no behaviour and no
         // golden moved.
-        const ulong ContentFingerprint = 1633548697748405690UL;
+        //
+        // Moved a twentieth time, 2026-09-24, by the third playtest's round (design 33 §9b): CombatDef
+        // gained the owner's critical and knockback numbers — critChancePerMille 100,
+        // critPerMillePerFourLevels 10, critDamagePerMille 1,500, knockbackPerMille 500,
+        // knockbackBluntPerMille 750 — and knockedDownTicks 90. No golden moved: no golden window
+        // fights, so no swing is ever decided in one.
+        const ulong ContentFingerprint = 17656075869051477129UL;
 
 
         [Test]

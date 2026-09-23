@@ -96,6 +96,9 @@ namespace Odyssey.Tests.Sim
             {
                 if (Moving(pawn) || _movingBefore.Contains(pawn.Id.Value)) return false;
                 if (pawn.StunnedAt(now - 1)) return true;
+                // Knocked down (design 33 §9b): lying on the tile the blow put it on, with no job,
+                // from the tick it lands. That tile is its own as surely as a side is.
+                if (pawn.KnockedDownAt(now - 1)) return true;
                 return pawn.CurrentJob != null && pawn.JobStartTick < now - 1;
             }
 
@@ -450,6 +453,84 @@ namespace Odyssey.Tests.Sim
             var guard = Run(colony, 2_500);
             guard.AssertClean(nameof(EveryMindAtOnce));
             Controls(nameof(EveryMindAtOnce), guard, rules, 20);
+        }
+
+        /// <summary>
+        /// Every landed blow critical and knocking its target back, for a fifth of a point so the
+        /// brawl goes on: the knockback's own guard (design 33 §9b) is that it never lands a pawn
+        /// on a tile another fighter holds.
+        /// </summary>
+        sealed class Knockers : MeleeRules
+        {
+            public int Swings;
+
+            public override SwingOutcome Resolve(Pawn attacker, Pawn defender, in Armament armament, PawnContext ctx, int tick)
+            {
+                Swings++;
+                SwingOutcome o = base.Resolve(attacker, defender, armament, ctx, tick);
+                return o.Landed ? new SwingOutcome(CombatEventKind.Hit, 200, 0, critical: true, knockback: true) : o;
+            }
+        }
+
+        /// <summary>
+        /// A knockback never stands two fighters on one tile (design 33 §9b): four brawl shapes with
+        /// every landed blow a critical that knocks back, the rule asserted after every tick, and the
+        /// control that pawns really were knocked about. With the knockback's own
+        /// <see cref="Melee.Holds"/> check withheld the guard names the tiles (measured).
+        /// </summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        public void KnockbacksNeverStackFighters(int shape)
+        {
+            var colony = CombatFixture.Board(colonists: shape == 1 ? 4 : 3);
+            colony.World.Tick();
+            var rules = new Knockers();
+            colony.Pawns.MeleeRules = rules;
+            var cs = new List<Pawn>(colony.Pawns.Pawns.All);
+            switch (shape)
+            {
+                case 0:
+                    Stand(colony, cs[0], Near(colony, 0, 0));
+                    Stand(colony, cs[1], Near(colony, 0, 1));
+                    Stand(colony, cs[2], Near(colony, 1, 0));
+                    for (int i = 0; i < 4; i++) Spawn(colony, PawnKindIndex.Marauder, Near(colony, i % 2 == 0 ? -8 : 8, i - 2));
+                    break;
+                case 1:
+                    for (int i = 0; i < cs.Count; i++) Stand(colony, cs[i], Near(colony, -6, i * 2 - 3));
+                    Pawn m = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 4, 0));
+                    foreach (Pawn c in cs) Assert.That(Draft(colony, c), Is.EqualTo(IntentRejection.None));
+                    foreach (Pawn c in cs) Assert.That(Attack(colony, c, m), Is.EqualTo(IntentRejection.None));
+                    break;
+                case 2:
+                    for (int i = 0; i < cs.Count; i++) Stand(colony, cs[i], Near(colony, 0, i - 1));
+                    foreach (Pawn c in cs) Assert.That(Draft(colony, c), Is.EqualTo(IntentRejection.None));
+                    for (int i = 0; i < 4; i++) Spawn(colony, PawnKindIndex.Marauder, Near(colony, -9, i - 2));
+                    break;
+                default:
+                    for (int i = 0; i < cs.Count; i++) Stand(colony, cs[i], Near(colony, 0, i * 2 - 2));
+                    Pawn h1 = Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, 5, 0));
+                    Pawn h2 = Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, 5, 2));
+                    Spawn(colony, PawnKindIndex.Marauder, Near(colony, -9, 0));
+                    foreach (Pawn c in cs) Assert.That(Draft(colony, c), Is.EqualTo(IntentRejection.None));
+                    Assert.That(Attack(colony, cs[0], h1), Is.EqualTo(IntentRejection.None));
+                    Assert.That(Attack(colony, cs[1], h1), Is.EqualTo(IntentRejection.None));
+                    Assert.That(Attack(colony, cs[2], h2), Is.EqualTo(IntentRejection.None));
+                    break;
+            }
+
+            var guard = new Guard();
+            var tape = new Tape();
+            for (int t = 0; t < 2_000; t++)
+            {
+                colony.World.Tick();
+                tape.Read(colony);
+                guard.Check(colony);
+            }
+            guard.AssertClean($"{nameof(KnockbacksNeverStackFighters)} shape {shape}");
+            Assert.That(tape.Of(CombatEventKind.KnockedBack).Count, Is.GreaterThan(5), "the control: nobody was knocked back");
+            Assert.That(rules.Swings, Is.GreaterThan(20), "the control: the fight never happened");
         }
 
         /// <summary>

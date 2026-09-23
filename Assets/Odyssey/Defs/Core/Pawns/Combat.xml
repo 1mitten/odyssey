@@ -85,6 +85,21 @@
 
     <!-- How far a hurt animal runs when it does not turn. INVENTED: out of reach, not off the board. -->
     <fleeCells>12</fleeCells>
+
+    <!--
+      Critical blows and knockback (design 33 section 9b), the owner's numbers (2026-09-23). A blow
+      that lands is critical at 10 per cent plus 1 per cent per four whole melee levels of the
+      attacker (an animal counts its species' meleeSkill), and does half as much again. A critical
+      knocks its target back a tile half the time, three times in four for a blunt weapon, and a
+      target knocked back lies where it landed for about a second and a half (90 ticks) before it
+      stands.
+    -->
+    <critChancePerMille>100</critChancePerMille>
+    <critPerMillePerFourLevels>10</critPerMillePerFourLevels>
+    <critDamagePerMille>1500</critDamagePerMille>
+    <knockbackPerMille>500</knockbackPerMille>
+    <knockbackBluntPerMille>750</knockbackBluntPerMille>
+    <knockedDownTicks>90</knockedDownTicks>
   </CombatDef>
 
 </Defs>

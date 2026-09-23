@@ -224,6 +224,9 @@ namespace Odyssey.Sim.Pawns
         {
             if (pawn == null) throw new System.ArgumentNullException(nameof(pawn));
             if (!_byId.TryGetValue(pawn.Id.Value, out int index) || !ReferenceEquals(_pawns[index], pawn)) return;
+            // Nobody fights a pawn that is gone (design 33 §9e): every attack on it ends now, on the
+            // tick it dies or leaves the board, rather than on each attacker's next tick.
+            _ctx.Combat?.EndAttacksOn(pawn);
             _ctx.Reservations.ReleaseAll(pawn);
             _ctx.Construction?.ReleaseBedsOf(pawn.Id.Value);
             // A weapon in the hand goes down where the pawn stood, or it would stay carried by an
@@ -350,6 +353,7 @@ namespace Odyssey.Sim.Pawns
                 if (pawn.Drafted) flags |= PawnFlags.Drafted;
                 if (pawn.Downed) flags |= PawnFlags.Downed;
                 if (pawn.StunnedAt(world.CurrentTick)) flags |= PawnFlags.Stunned;
+                if (pawn.KnockedDownAt(world.CurrentTick)) flags |= PawnFlags.KnockedDown;
                 if (pawn.CarriedBy != 0) flags |= PawnFlags.Carried;
                 // Drawn or sheathed (design 33 §8b): a report derived here from saved state, so
                 // it is neither saved nor hashed and no golden can move with it.

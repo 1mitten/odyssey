@@ -14,7 +14,7 @@ namespace Odyssey.Sim.Pawns
     /// positions the jobs saw and lands before anyone walks out of reach.</para>
     ///
     /// <para><b>Scales with the pawns on the board, one branch each, plus the swings landing this
-    /// tick and the hurt pawns whose needs interval falls on it.</b> A colony at peace pays four
+    /// tick and the hurt pawns whose needs interval falls on it.</b> A colony at peace pays five
     /// integer comparisons a pawn a tick and changes nothing: no field it touches is set, so
     /// nothing it does reaches the hash, which is why no golden moved. The 20-against-20 row in
     /// <c>TickBenchmarkTests</c> measures it with a fight on.</para>
@@ -71,6 +71,7 @@ namespace Odyssey.Sim.Pawns
                 // The clocks run out: back to nought, so a pawn over its fight carries no combat
                 // state and hashes exactly as it did before it (design 33 §6).
                 if (pawn.StunnedUntilTick != 0 && tick >= pawn.StunnedUntilTick) pawn.StunnedUntilTick = 0;
+                if (pawn.KnockedDownUntilTick != 0 && tick >= pawn.KnockedDownUntilTick) pawn.KnockedDownUntilTick = 0;
                 if (pawn.NextSwingTick != 0 && tick >= pawn.NextSwingTick
                     && !(pawn.Driver is AttackMeleeJobDriver { InWindup: true }))
                     pawn.NextSwingTick = 0;
@@ -90,8 +91,12 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// A swing in the air: lost if its attacker is stunned, down or dead (design 33 §5j — a
         /// stun is a pause for the job, so the wind-up would otherwise wait out the stun and land
-        /// afterwards, which is the swing the stun exists to deny); else, once wound up, resolved
-        /// and applied.
+        /// afterwards, which is the swing the stun exists to deny); else, once wound up, applied —
+        /// <b>the outcome decided when the wind-up began</b> (design 33 §9g), kept on the pawn,
+        /// exactly. A target that has stepped out of reach, died, or gone down on a job that stops
+        /// at down since then is a miss: the blow falls on air, and nothing is reported that did
+        /// not happen. A swing with no decided outcome — one in the air in a save older than the
+        /// decision — is decided here, as every swing was before.
         /// </summary>
         void LandOrLose(Pawn attacker, AttackMeleeJobDriver swing, int tick)
         {
@@ -103,6 +108,8 @@ namespace Odyssey.Sim.Pawns
 
             Armament armament = _ctx.WeaponRules.ArmamentOf(attacker, _ctx);
             if (!swing.WindupDone(armament)) return;
+            bool decided = attacker.HasPendingSwing;
+            SwingOutcome held = attacker.HeldSwing;
             swing.EndSwing();
 
             Pawn? target = _ctx.Pawns.Get(new PawnId(attacker.CombatTarget));
@@ -116,7 +123,7 @@ namespace Odyssey.Sim.Pawns
 
             SwingOutcome outcome = whiff
                 ? new SwingOutcome(CombatEventKind.Miss)
-                : _ctx.MeleeRules.Resolve(attacker, target, armament, _ctx, tick);
+                : decided ? held : _ctx.MeleeRules.Resolve(attacker, target, armament, _ctx, tick);
             ApplySwing(attacker, target, armament, outcome, tick);
         }
 

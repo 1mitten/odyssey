@@ -215,10 +215,11 @@ namespace Odyssey.Tests.Sim
             colony.Pawns.MeleeRules = rules;
 
             Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 0, 0));
-            for (int t = 0; t < 600 && !(marauder.Driver is AttackMeleeJobDriver { InWindup: true }); t++) colony.World.Tick();
+            var tape = new Tape();
+            for (int t = 0; t < 600 && !(marauder.Driver is AttackMeleeJobDriver { InWindup: true }); t++) tape.Tick(colony, 1);
             Assert.That(marauder.Driver is AttackMeleeJobDriver { InWindup: true }, Is.True, "the marauder never wound up a swing");
             Assert.That(marauder.CombatTarget, Is.EqualTo(engaged.Id.Value));
-            int swings = rules.TicksOf(marauder).Count;
+            int swings = tape.Landed(marauder).Count;
             int started = marauder.JobStartTick;
 
             CellRef at = colony.Pawns.Size.FromIndex(marauder.Cell);
@@ -231,8 +232,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(marauder.RetaliateAgainst, Is.EqualTo(hitter.Id.Value), "the hitter is remembered");
 
             int windup = colony.Pawns.Content.Items[colony.Pawns.Content.WeaponOf(PawnKindIndex.Marauder)].weapon!.windupTicks;
-            for (int t = 0; t <= windup + 1 && rules.TicksOf(marauder).Count == swings; t++) colony.World.Tick();
-            Assert.That(rules.TicksOf(marauder).Count, Is.EqualTo(swings + 1), "the swing it had wound up never landed");
+            for (int t = 0; t <= windup + 1 && tape.Landed(marauder).Count == swings; t++) tape.Tick(colony, 1);
+            Assert.That(tape.Landed(marauder).Count, Is.EqualTo(swings + 1), "the swing it had wound up never landed");
 
             // She goes down: the one who hit it is next, as remembered.
             Strike(colony, marauder, engaged, engaged.HpMilli);
