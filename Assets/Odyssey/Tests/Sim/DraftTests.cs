@@ -216,6 +216,40 @@ namespace Odyssey.Tests.Sim
             Assert.That(JobOf(pawn), Is.EqualTo(JobIndex.DraftHold), "did not hold on arrival");
         }
 
+        /// <summary>
+        /// A drafted colonist runs (design 33 §2h): twice her own pace, measured as the time to
+        /// cover the same ground against an undrafted colonist of the same pace walking it — the
+        /// control that says the difference is the draft and not the ground.
+        /// </summary>
+        [Test]
+        public void ADraftedColonistRunsAtTwiceHerOwnPace()
+        {
+            var colony = Board();
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            int walking = pawn.MoveRatePerMille();
+            Draft(colony, pawn);
+            Assert.That(pawn.MoveRatePerMille(), Is.EqualTo(walking * 2), "the draft did not double her pace");
+            Assert.That(colony.Pawns.Content.Movement.draftedPacePerMille, Is.EqualTo(2_000));
+
+            int Crossing(ColonyWorld board, bool drafted)
+            {
+                Pawn who = board.Pawns.Pawns.All[0];
+                Draft(board, who);
+                for (int t = 0; t < 400 && who.HasPath; t++) board.World.Tick();
+                int target = CellEast(board, who, 6);
+                Move(board, who, target);
+                if (!drafted) who.Drafted = false; // the control: the same order, walked
+                int ticks = 0;
+                while (who.Cell != target && ticks < 3_000) { board.World.Tick(); ticks++; }
+                Assert.That(who.Cell, Is.EqualTo(target), "never arrived");
+                return ticks;
+            }
+
+            int ran = Crossing(Board(), drafted: true);
+            int walked = Crossing(Board(), drafted: false);
+            Assert.That(ran, Is.LessThan(walked * 6 / 10), $"ran in {ran} ticks against {walked} walking");
+        }
+
         [Test]
         public void AnUndraftedColonistCannotBeSentAnywhere()
         {

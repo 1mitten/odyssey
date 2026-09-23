@@ -1,6 +1,8 @@
 # 33 — Combat: draft, move, melee
 
-**Status: C1 (draft and move) built 2026-09-23; C2–C7 designed, not built.** The line's plan and
+**Status: C1 (draft and move) built and played 2026-09-23 — the owner's verdict: drafting, T,
+moving onto surfaces, the diamond and the four hours all work; the run (§2h) and the deeper red
+(§2g) came out of that playtest. C2–C7 designed, not built.** The line's plan and
 its unit status are `docs/plans/combat.md`. Research: `docs/research/a-10-melee-combat.md` (the
 reference's rules, clean room) and `docs/research/synty-sword-combat.md` (the animation pack).
 Branch `claude/combat-mvp`, worktree `D:\code\odyssey-combat`, based on `claude/wildlife`
@@ -179,13 +181,32 @@ the carry aspects, the two spellings are held together by a test on each side.
 ### 2g. What is drawn
 
 - **A drafted marker** over every drafted colonist's head: a small diamond in `OrderColours.Draft`,
-  lit so it does not dim at night.
+  lit so it does not dim at night. **A deep, dark red, drawn translucent** (`OrderColours.DraftAlpha`
+  0.70, the line at three quarters of that) — the owner's call after the first playtest,
+  2026-09-23: *"make the cursor a deeper dark red but translucent"*. It was a hot orange-red.
+  All three draft marks share the one hue; the selection brackets are untouched.
 - **An order line** from a moving drafted colonist to its destination, with a floor bracket on the
   destination cell, for the **selected** colonists only. Twenty lines across the board is noise; the
   ones you are commanding are signal.
 
 Both are drawn through `ChunkRenderer`'s bracket material, like the selection cursor, and cost one
 submission per drafted colonist. That scales with the number drafted, never with the board.
+
+### 2h. A drafted colonist runs
+
+**Owner, after the first draft playtest (2026-09-23):** *"when you are drafted you should walk
+faster/run as this would make sense with the urgency."* `Pawn.UrgencyPerMille` is the last factor
+in `MoveRatePerMille`: `MovementDef.draftedPacePerMille` (2,000) for a drafted colonist, exactly
+1,000 for anybody else — so no undrafted pawn's speed moved and no golden with it. After condition
+in the product, so a starving colonist runs slower than a well one.
+
+Twice the walk is about 3 m/s at the standard pace (2.6 to 3.5 across the innate band), past the
+walk cycle's 2 m/s, so the gait blend draws the run clip in with no animation work — exactly the
+run design 17 §4f held back until the game had a reason, and this is the first reason. It is a
+**seam, not an urgency model**: fleeing and emergency jobs will answer through the same method when
+they exist. The rate is a pawn factor, never a cell cost, so the planner's prices are untouched
+(design 17 §4g). `ADraftedColonistRunsAtTwiceHerOwnPace` times the same crossing drafted and
+walked.
 
 ## 3. Health and melee (C2, designed)
 

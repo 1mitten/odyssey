@@ -570,6 +570,15 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Estimated cost of a layer change, used to order candidates before pathing.</summary>
         public int layerChangeEstimate = 300;
+
+        /// <summary>
+        /// How fast a drafted colonist moves, per mille of her own pace (design 33 §2h, design 17
+        /// §4f): 2,000 — about 3 m/s at the standard pace, which the gait blend draws as a run.
+        /// The owner's call after the first draft playtest (2026-09-23): <i>"when you are drafted
+        /// you should walk faster/run as this would make sense with the urgency"</i>. It is the
+        /// first reason to run the game has, which is what §4f held the run for.
+        /// </summary>
+        public int draftedPacePerMille = 2_000;
     }
 
     /// <summary>

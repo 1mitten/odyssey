@@ -445,7 +445,17 @@ namespace Odyssey.Sim.Pawns
             Content.Movement.movePerTick * Rates.Scale
                 * InnatePacePerMille() / 1_000
                 * ConditionPerMille() / 1_000
-                * Species.movePerMille / 1_000;
+                * Species.movePerMille / 1_000
+                * UrgencyPerMille() / 1_000;
+
+        /// <summary>
+        /// The run (design 17 §4f, design 33 §2h): a drafted colonist moves at
+        /// <see cref="MovementDef.draftedPacePerMille"/> of her own pace, and 1,000 — exact — for
+        /// anybody else, so no undrafted pawn's speed moved and no golden with it. The last factor
+        /// in the product, after condition, so a starving colonist runs slower than a well one.
+        /// A seam, not a model: the day there is fleeing or an emergency job, it answers here.
+        /// </summary>
+        public virtual int UrgencyPerMille() => Drafted ? Content.Movement.draftedPacePerMille : 1_000;
 
         /// <summary>
         /// The pace this colonist was dealt, per mille of the standard walk, rolled once from

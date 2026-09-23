@@ -68,12 +68,18 @@ namespace Odyssey.Hud
         public static readonly HudColour StoreHue = new HudColour(0x7f, 0x96, 0xa8);
 
         /// <summary>
-        /// A drafted colonist's hue (design 33 §2g): the marker over its head and the line to where
-        /// it has been sent. A hot orange-red, and deliberately not <see cref="HudTheme.Bad"/> — that
-        /// is the Cancel tool's, and a drafted colonist is under orders, not being undone. It sits
-        /// 79 channel-points from it, mostly in blue, and far from every tool hue in hue itself.
+        /// A drafted colonist's hue (design 33 §2g): the marker over its head, the line to where it
+        /// has been sent and the bracket on the cell. <b>A deep, dark red</b> — the owner's call
+        /// after the first draft playtest (2026-09-23: <i>"make the cursor a deeper dark red but
+        /// translucent"</i>), replacing a hot orange-red. Far from <see cref="HudTheme.Bad"/>, the
+        /// Cancel tool's brighter red, by being half as bright: a drafted colonist is under
+        /// orders, not being undone. Drawn translucent at <see cref="DraftAlpha"/>.
         /// </summary>
-        public static readonly HudColour Draft = new HudColour(0xff, 0x5a, 0x3c);
+        public static readonly HudColour Draft = new HudColour(0x8b, 0x12, 0x12);
+
+        /// <summary>How solid the draft's marks are: translucent, so the colonist under the
+        /// diamond and the ground under the line still read through them.</summary>
+        public const float DraftAlpha = 0.70f;
 
         /// <summary>
         /// The hue of an order, opaque — the chip's colour, and the colour every mark and cursor

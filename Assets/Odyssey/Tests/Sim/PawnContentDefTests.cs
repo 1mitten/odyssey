@@ -164,7 +164,11 @@ namespace Odyssey.Tests.Sim
         // Moved a fifteenth time, 2026-09-23, by the draft (design 33 §2c): Job_DraftHold and
         // Job_Goto at drivers 12 and 13, and PawnTuningDef gained draftQuietTicks (10,000 — four
         // in-game hours, the reference's auto-undraft). Taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 2149613539570819166UL;
+        //
+        // Moved a sixteenth time, 2026-09-23, after the first draft playtest: MovementDef gained
+        // draftedPacePerMille (2,000 — a drafted colonist runs; owner: "when you are drafted you
+        // should walk faster/run"). No golden moved: nobody in a golden window is drafted.
+        const ulong ContentFingerprint = 15492604582855010655UL;
 
 
         [Test]

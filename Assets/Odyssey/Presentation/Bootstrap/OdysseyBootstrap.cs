@@ -2554,8 +2554,8 @@ namespace Odyssey.Presentation.Bootstrap
             OrderModel.CollectDrafted(snapshot, _draftMarks);
             if (_draftMarks.Count == 0) return;
 
-            Color hue = Ui.HudTokens.Convert(OrderColours.Draft);
-            Color line = Ui.HudTokens.Convert(OrderColours.Draft.WithAlpha(0.55f));
+            Color hue = Ui.HudTokens.Convert(OrderColours.Draft.WithAlpha(OrderColours.DraftAlpha));
+            Color line = Ui.HudTokens.Convert(OrderColours.Draft.WithAlpha(OrderColours.DraftAlpha * 0.75f));
             SelectionDirector? selection = Directors?.Selection;
 
             for (int i = 0; i < _draftMarks.Count; i++)

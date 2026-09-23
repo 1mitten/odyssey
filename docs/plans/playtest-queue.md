@@ -23,18 +23,13 @@ the next session learns to ignore.
 
 ## Open
 
-- **Does drafting feel like taking a colonist in hand, and does a right-click send them where you
-  meant?** (`claude/combat-mvp`, C1, `docs/design/33-combat.md` §2). Select a colonist, press
-  **T**: they stop what they were doing, a red-orange diamond appears over their head, the pane
-  says *Drafted* and its button now reads *Undraft*. Right-click the ground: they walk there and
-  stand. Box-select three, T, right-click one tile: they should stand as a group on neighbouring
-  tiles, not in one pile. Things to judge that no test can: whether a colonist drafted mid-stride
-  finishing their step (up to two seconds on a diagonal) reads as *obeying* or as *ignoring you*;
-  whether the diamond and the order line are findable at the play camera without being loud;
-  whether four in-game hours before an idle draft lets go is right; and whether right-clicking
-  a drafted colonist's destination again mid-walk turns them cleanly. A wrong answer is a figure
-  that snaps back a cell, a drafted colonist who wanders off to eat, or a right-click that does
-  nothing while the orbit still works.
+- **Does a drafted colonist's run read as urgency, and is the deeper red findable?**
+  (`claude/combat-mvp`, design 33 §2g–§2h). Draft a colonist and right-click across the board: she
+  should visibly **run** — about twice her walking speed, the run clip, not a sped-up walk. The
+  diamond, the order line and the destination bracket are now a deep, dark, translucent red. A
+  wrong answer is a figure that skates (the walk clip played fast) or jogs so little it still
+  reads as a walk; or a red too dark to find at dusk or against dark rock. The pace is one number,
+  `draftedPacePerMille` in `Colonist.xml`.
 
 - **Does the meadow feel lived in, and do the comings and goings read as wildlife?**
   (`claude/wildlife`, PR to follow #167, `docs/design/30-wildlife.md`). Press Play → New game
@@ -671,6 +666,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-23 | **Drafting and moving** (C1, `claude/combat-mvp`, `docs/design/33-combat.md` §2) | working — owner: *"the drafting, T and moving onto surfaces, diamond and 4 hours all seemed to work"* | two asks: a drafted colonist runs (§2h), the marks a deeper translucent red (§2g); both built, re-queued above |
 | 2026-09-20 | **Head turning and gaze** (PR #128, `docs/design/23-head-turning-and-gaze.md`) | working — owner: *"gaze … is all working now"* | none; the design doc stands |
 | 2026-09-20 | **The flush selection cursor** (PR #127, `docs/design/23-flush-selection-cursor.md`) | working | none; the design doc stands |
 | 2026-09-20 | **The sight fade leaving water, banks and marsh whole** (PR #123) | working — the exemptions read as deliberate | none |

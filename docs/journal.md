@@ -10937,3 +10937,11 @@ pass by never having built one. That version fails on the mutation.
 while it stood the aspect scan looked like a constant and the whole bend was attributed to the larger
 term. One pass held two quadratics. **After fixing a quadratic, measure the same pass again rather
 than declaring it linear.**
+
+**The first draft playtest, the same afternoon.** The owner played C1: *"the drafting, T and moving
+onto surfaces, diamond and 4 hours all seemed to work."* Two asks came back. The first was that a
+drafted colonist should run. That was the first reason to run the game has had since design 17
+§4f held running back with "do not invent an urgency model". The answer is one factor on the move
+rate, `Pawn.UrgencyPerMille`: 2,000 while drafted and 1,000 otherwise. It needs no animation work,
+because the gait blend already draws the run clip in above 2 m/s. No golden moved, since nobody in
+a golden window is drafted. The second ask was a deeper, translucent red for the draft's marks.
