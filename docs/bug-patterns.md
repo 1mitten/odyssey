@@ -269,7 +269,7 @@ tests with the quadratic term is smaller than the noise.
 
 | The pass | What it consults | What it cost | State |
 |---|---|---|---|
-| `PawnPose.Of` crowd sidestep | every other pawn, per posed pawn, per frame | **13.3 ms of a 22.5 ms frame at 384 colonists**, 0.02 ms at 64 | open; the fix is exact, see below |
+| `PawnPose.Of` crowd sidestep | every other pawn, per posed pawn, per frame | **15.8 ms of a 27.8 ms frame at 384 colonists** in `Actors` alone, 0.02 ms at 64 (2026-09-23, clear machine) | **fixed** — `PawnCrowdIndex`, a 3 m bucket index built once a frame; `docs/design/25-pawn-steering.md` §9 |
 
 **The tell:** a cost that is flat while the count is small and then bends upward, with **draw
 calls and tick time both flat through the bend**. If neither the submissions nor the simulation
@@ -403,6 +403,38 @@ is beside it. Check the marks *before* narrowing the stamp, not after a stale ti
 
 ---
 
+### P16 — The exactness test, run on the case where exactness cannot show
+
+An optimisation that is *provably* exact still has to be tested, and the obvious test — "compute it
+both ways on a busy fixture and compare" — is often blind to the only way the optimisation can
+actually be wrong.
+
+**What decides where a miss is visible is the reduction that consumes the set**, not the set. The
+crowd sidestep reduces with a `max`: the nearest colonist wins and every other contributor is
+discarded. A cull that loses somebody at the *edge* of the influence radius therefore changes
+nothing, because that contributor was never the maximum — it is worth about 0.007 of the envelope
+where a near neighbour is worth 1.0. On a crowded fixture there is nearly always a nearer neighbour
+to hide behind.
+
+**Measured, 2026-09-23.** `PawnCrowdIndex`'s bucket size was mutated from the 3 m influence radius
+to the 2.5 m cell — the exact tidy-up its own doc comment warns against, and a plausible one — and
+`PawnCrowdIndexTests.EveryScanModeDrawsTheIdenticalPose`, 220 pawns and the headline claim of the
+whole unit, **passed**. Only the brute-force set-membership test caught it, and that one asserts no
+pose at all. Had it not been written, a broken cull would have shipped behind a green test named for
+exactly the property it was not checking.
+
+**The check:** for an exact optimisation, ask *where is the smallest surviving contribution, and
+what would hide it?* Then write the fixture where that contribution is **decisive** — one
+contributor, at the boundary, nothing larger in the set — and sweep it across the boundary.
+`AnInfluenceAtTheVeryEdgeOfTheRadiusSurvivesTheCull` is that test: two pawns, no crowd, walking from
+outside the radius to inside it.
+
+**And mutate the constant to prove the test can fail.** Both tests were green before the mutation
+and both were believed; one of them was decorative. A test for an exactness claim is worth what a
+deliberate break costs it and nothing more — the same lesson as *"A test that could not fail for the
+reason it named"* in the register below, reached from the opposite direction.
+
+---
 
 ---
 

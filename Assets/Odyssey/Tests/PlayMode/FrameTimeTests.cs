@@ -391,6 +391,76 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// What the crowd scan costs, and how much of it was the quadratic rather than the
+        /// constant factor under it (<c>docs/design/25-pawn-steering.md</c>, "Making the scan
+        /// stop walking the colony").
+        ///
+        /// <para><b>Three arms, because the plan warned against two.</b>
+        /// <c>docs/plans/pf-crowd-scan.md</c> named hoisting <c>WhereItIsNow</c> out of the inner
+        /// loop as the cheap candidate and said to measure it alone before building a spatial
+        /// index on top of an unmeasured constant factor. <c>CrowdScan.Cached</c> is exactly that
+        /// hoist and nothing else; <c>Bucketed</c> adds the cull. Measuring all three in one run
+        /// is the only way to say which of the two bought the frame back.</para>
+        ///
+        /// <para><b>Alternating, twice each, in one run</b> — the shape
+        /// <c>TheAttachmentsCostWhatTheyDraw</c> established. This machine's frame numbers drift
+        /// by more between runs than most passes cost, so a reading from another run is not a
+        /// control, and a drift that happens to land between two halves would otherwise be read
+        /// as the pass.</para>
+        ///
+        /// <para><b>Three colony sizes spanning the figure ceiling.</b> At 64 everybody is a live
+        /// figure, so <c>Actors</c> scans nobody and whatever <c>Figures</c> costs is the 64 x N
+        /// linear scan on its own — which is the open question the plan asked to answer on the
+        /// way. At 192 and 384 the quadratic term is what is being measured.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCrowdScanCostsWhatItVisits()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+
+                foreach (int size in new[] { 64, 192, 384 })
+                {
+                    yield return GrowColonyTo(boot, size);
+                    int pawns = boot.World!.Views.Current.Pawns.Length;
+
+                    foreach (CrowdScan mode in new[] { CrowdScan.Span, CrowdScan.Cached, CrowdScan.Bucketed })
+                    {
+                        float a = 0f, b = 0f;
+                        double[] splitA = System.Array.Empty<double>();
+                        double[] splitB = System.Array.Empty<double>();
+
+                        PawnCrowdIndex.Mode = mode;
+                        yield return TimeFrames($"crowd/{pawns}/{mode}", boot, 30,
+                            x => a = x, s => splitA = s);
+                        yield return TimeFrames($"crowd/{pawns}/{mode}", boot, 30,
+                            x => b = x, s => splitB = s);
+
+                        double Section(OdysseyBootstrap.FrameSection section) =>
+                            (splitA[(int)section] + splitB[(int)section]) * 0.5;
+
+                        Debug.Log($"[FrameTime] crowd {mode} at {pawns} pawns, " +
+                                  $"{boot.Figures?.FigureCount ?? 0} figures: " +
+                                  $"frame {(a + b) * 0.5f:0.000} ms (runs {a:0.000}/{b:0.000}), " +
+                                  $"Figures {Section(OdysseyBootstrap.FrameSection.Figures):0.000} ms, " +
+                                  $"Actors {Section(OdysseyBootstrap.FrameSection.Actors):0.000} ms, " +
+                                  $"Crowd {Section(OdysseyBootstrap.FrameSection.Crowd):0.000} ms, " +
+                                  $"{boot.Renderer?.DrawCalls ?? 0} draw calls");
+                    }
+                }
+            }
+            finally
+            {
+                PawnCrowdIndex.Mode = CrowdScan.Bucketed;
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
         [UnityTest]
         public IEnumerator TheFrameAgainstColonySize()
         {
