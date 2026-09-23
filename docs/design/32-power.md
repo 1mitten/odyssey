@@ -220,7 +220,11 @@ line list now, each face found from its lower side by a pointer that only moves 
 linear in lines with no search at all. A colony at rest pays nothing: the solve is lazy and the
 burn pass is linear in power buildings, every 120 ticks.
 
-Not yet measured: the drawing of the lines (§9), which is the next number owed.
+**Drawing the lines** (§9), `FrameTimeTests.ThePowerLinesCostWhatTheySubmit`, one world timed
+both ways in one run, alone on the machine, 2026-09-24, 640 × 480 on the RTX 5070 Ti: **2,000
+lines cost 0.02 ms shown against hidden** (2.13 → 2.15 ms a frame) in **9 draw calls** — the pass
+submits by colour and tier, never by line. `FrameSection.Overlays` moves 0.006 → 0.046 ms; nothing
+else moves. Hidden costs nothing because hiding is not submitting (§9).
 
 ## 12. Seams left open
 
