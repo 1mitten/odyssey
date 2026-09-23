@@ -109,6 +109,43 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// The order line (design 33 §7a): a colonist sent for a weapon publishes its cell under the
+        /// draft's order cell while she walks, drafted or not, and stops once it is in her hand —
+        /// the board draws the drafted move's line to it. Undrafted there is no drafted row, so the
+        /// order cell stands alone; drafted it follows the drafted row, as a move's does.
+        /// </summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void TheWeaponsCellIsPublishedAsTheOrderCellWhileSheFetchesIt(bool drafted)
+        {
+            var colony = Board();
+            Pawn colonist = colony.Pawns.Pawns.All[0];
+            colony.World.Tick(30);
+            if (drafted)
+                Assert.That(Send(colony, new Intent(IntentKind.SetDrafted, default, colonist.Id.Value, 1)),
+                    Is.EqualTo(IntentRejection.None));
+
+            WorldSnapshot before = colony.World.Views.Current;
+            Assert.That(before.TryGetPawnAspect(colonist.Id, CombatAspects.OrderCell, out _), Is.False,
+                "an order cell before any order");
+
+            ColonyItem machete = PutDown(colony, colonist, ItemIndex.Machete);
+            int lay = machete.Cell;
+            Assert.That(Equip(colony, colonist, machete), Is.EqualTo(IntentRejection.None));
+
+            WorldSnapshot walking = colony.World.Views.Current;
+            Assert.That(walking.TryGetPawnAspect(colonist.Id, CombatAspects.OrderCell, out int cell), Is.True,
+                "the fetch published no order cell");
+            Assert.That(cell, Is.EqualTo(lay));
+            Assert.That(walking.TryGetPawnAspect(colonist.Id, CombatAspects.Drafted, out _), Is.EqualTo(drafted));
+
+            RunTheJob(colony, colonist);
+            colony.World.Tick();
+            Assert.That(colony.World.Views.Current.TryGetPawnAspect(colonist.Id, CombatAspects.OrderCell, out _),
+                Is.False, "the order cell outlived the fetch");
+        }
+
+        /// <summary>
         /// Refused, and no fetch started: each case against the control of the same colonist being
         /// given a bat she may take.
         /// </summary>
