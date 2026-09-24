@@ -9,7 +9,7 @@ namespace Odyssey.Tests.Hud
     /// <summary>
     /// The rest of lane C's interface (design 33 §1, §5f): choosing a corpse, the debug menu's
     /// Spawn rows, and the colony-wide surfaces — alerts, the Work tab, the Almanac — reading the
-    /// flags so that a marauder is neither a colonist nor an animal.
+    /// flags so that a bandit is neither a colonist nor an animal.
     /// </summary>
     public class CombatDirectorsTests
     {
@@ -59,20 +59,20 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The marauder is a pawn of kind 3, spawned as a colonist or an animal is (design 33 §5a);
+        /// The bandit is a pawn of kind 3, spawned as a colonist or an animal is (design 33 §5a);
         /// each weapon is one item, granted as wood is (§5j: no simulation work). The colonist's row
         /// is the control on the kind.
         /// </summary>
         [Test]
-        public void TheSpawnTabPutsAMarauderAndOneOfEachWeaponNearTheCamera()
+        public void TheSpawnTabPutsABanditAndOneOfEachWeaponNearTheCamera()
         {
             var anchor = new CellRef(4, 5, 1);
 
-            Intent marauder = RowFor("ui.debug.spawnmarauder").ToIntent(anchor);
-            Assert.That(marauder.Kind, Is.EqualTo(IntentKind.SpawnPawn));
-            Assert.That(marauder.A, Is.EqualTo(PawnKindLabels.Marauder));
-            Assert.That(PawnKindLabels.IconKey(PawnKindLabels.Marauder), Is.EqualTo("ui.pawn.marauder"));
-            Assert.That(marauder.Cell, Is.EqualTo(anchor));
+            Intent bandit = RowFor("ui.debug.spawnbandit").ToIntent(anchor);
+            Assert.That(bandit.Kind, Is.EqualTo(IntentKind.SpawnPawn));
+            Assert.That(bandit.A, Is.EqualTo(PawnKindLabels.Bandit));
+            Assert.That(PawnKindLabels.IconKey(PawnKindLabels.Bandit), Is.EqualTo("ui.pawn.bandit"));
+            Assert.That(bandit.Cell, Is.EqualTo(anchor));
             Assert.That(RowFor(DebugDirector.SpawnPawnKey).ToIntent(anchor).A, Is.Zero, "the control: a colonist is kind 0");
 
             var weapons = new Dictionary<string, int>
@@ -103,7 +103,7 @@ namespace Odyssey.Tests.Hud
                 Assert.That(row.Tooltip, Is.Not.Empty, row.Key);
             }
             Assert.That(DebugDirector.SpawnRows.Length, Is.EqualTo(13),
-                "colonist, arm-all, marauder, three marauders, two animals, four weapons, three resources");
+                "colonist, arm-all, bandit, three bandits, two animals, four weapons, three resources");
             Assert.That(DebugDirector.SpawnRows[0].Key, Is.EqualTo(DebugDirector.SpawnPawnKey), "the colonist first");
         }
 
@@ -136,9 +136,9 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void TheNewRowsSendWhatTheySay()
         {
-            DebugDirector.SpawnRow band = RowFor(DebugDirector.SpawnMaraudersKey);
+            DebugDirector.SpawnRow band = RowFor(DebugDirector.SpawnBanditsKey);
             Assert.That(band.Kind, Is.EqualTo(IntentKind.SpawnPawn));
-            Assert.That(band.A, Is.EqualTo(PawnKindLabels.Marauder));
+            Assert.That(band.A, Is.EqualTo(PawnKindLabels.Bandit));
             Assert.That(band.Repeat, Is.EqualTo(3));
             Assert.That(band.Group, Is.EqualTo(DebugDirector.GroupHostilesKey));
 
@@ -157,15 +157,15 @@ namespace Odyssey.Tests.Hud
         // ---- alerts, the Work tab, the Almanac ------------------------------------------------------
 
         /// <summary>
-        /// A marauder does not eat (design 33 §5c) and is nobody's to worry about: its food and
+        /// A bandit does not eat (design 33 §5c) and is nobody's to worry about: its food and
         /// mood raise no alert. The same numbers on a colonist are the control.
         /// </summary>
         [Test]
-        public void AMarauderRaisesNoColonistAlert()
+        public void ABanditRaisesNoColonistAlert()
         {
             var alerts = new AlertModel();
             alerts.Refresh(Board(raiderMood: 10, raiderFood: 10), 0.0);
-            Assert.That(alerts.Rows, Is.Empty, "a marauder was starving or breaking");
+            Assert.That(alerts.Rows, Is.Empty, "a bandit was starving or breaking");
 
             WorldSnapshot control = Frame.Write();
             control.AddPawn(new PawnView(Ada, new CellRef(1, 1, 1), 10, 800, 10, JobHandle.Wait, flags: PawnFlags.Person));
@@ -175,11 +175,11 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// "The colony is idle" is about the colony: a hog wandering or a marauder fighting does
+        /// "The colony is idle" is about the colony: a hog wandering or a bandit fighting does
         /// not keep it from being said, and the one-colonist form names the colonist.
         /// </summary>
         [Test]
-        public void AnIdleColonyIsIdleWhateverTheAnimalsAndMaraudersAreDoing()
+        public void AnIdleColonyIsIdleWhateverTheAnimalsAndBanditsAreDoing()
         {
             WorldSnapshot frame = Frame.Write();
             frame.AddPawn(new PawnView(Ada, new CellRef(1, 1, 1), 800, 800, 800, -1, flags: PawnFlags.Person));
@@ -198,11 +198,11 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The Work tab draws what the roster hands it; a marauder handed to it by a stale order is
+        /// The Work tab draws what the roster hands it; a bandit handed to it by a stale order is
         /// still left out, because a priority for it would be an intent the simulation refuses.
         /// </summary>
         [Test]
-        public void TheWorkTabHasNoRowForAMarauder()
+        public void TheWorkTabHasNoRowForABandit()
         {
             var model = new WorkGridModel();
             model.Refresh(Board(), new[] { Ada, Raider, Bo }, null);
@@ -210,7 +210,7 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void TheAlmanacOpensAnAnimalsCorpseOnItsKindAndNothingForAMarauder()
+        public void TheAlmanacOpensAnAnimalsCorpseOnItsKindAndNothingForABandit()
         {
             var pane = new InspectModel();
             pane.SetCorpse(7);
@@ -222,7 +222,7 @@ namespace Odyssey.Tests.Hud
             pane.SetColonist(Raider);
             pane.Refresh(Board());
             Assert.That(AlmanacDirector.ResolveSelection(pane), Is.Null,
-                "a marauder opened a colonist's Skills entry");
+                "a bandit opened a colonist's Skills entry");
         }
 
         [Test]

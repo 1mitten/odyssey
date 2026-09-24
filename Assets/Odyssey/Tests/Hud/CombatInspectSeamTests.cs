@@ -10,7 +10,7 @@ namespace Odyssey.Tests.Hud
     /// is the model's answer rather than the shell's, and a corpse can be selected.
     ///
     /// <para><b>These pin the contracts step's values, which reproduce the pane as it was.</b>
-    /// Lane C changes <see cref="InspectModel.ShowsFace"/> and the rest for the marauder and fills
+    /// Lane C changes <see cref="InspectModel.ShowsFace"/> and the rest for the bandit and fills
     /// the corpse's pane; when it does, it changes the assertions here that name those two and
     /// leaves the colonist's, the animal's, the pile's and the tile's alone.</para>
     /// </summary>

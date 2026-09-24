@@ -43,7 +43,7 @@ namespace Odyssey.Tests.Presentation
             var snapshot = new WorldSnapshot();
             snapshot.BeginWrite(500, new GridSize(12, 12, 4), 0);
             snapshot.AddPawn(new PawnView(Attacker, new CellRef(1, 1, 0), 800, 800, 600, flags: PawnFlags.Person));
-            snapshot.AddPawn(new PawnView(Victim, new CellRef(3, 1, 0), 800, 800, 600, kind: PawnKindIndex.Marauder,
+            snapshot.AddPawn(new PawnView(Victim, new CellRef(3, 1, 0), 800, 800, 600, kind: PawnKindIndex.Bandit,
                 flags: PawnFlags.Person | PawnFlags.Hostile));
             foreach (CombatEventView e in events) snapshot.AddCombatEvent(e);
             return snapshot;
@@ -115,7 +115,7 @@ namespace Odyssey.Tests.Presentation
             Assert.That(sides.IsSharp(ItemHandle.Machete, PawnKindIndex.Colonist), Is.True);
             Assert.That(sides.IsSharp(ItemHandle.ArcBlade, PawnKindIndex.Colonist), Is.True);
             Assert.That(sides.IsSharp(-1, PawnKindIndex.Colonist), Is.False, "fists");
-            Assert.That(sides.IsSharp(-1, PawnKindIndex.Marauder), Is.False, "a marauder's fists");
+            Assert.That(sides.IsSharp(-1, PawnKindIndex.Bandit), Is.False, "a bandit's fists");
             Assert.That(sides.IsSharp(-1, PawnKindIndex.DuctRat), Is.True, "a rat's bite");
             Assert.That(sides.IsSharp(-1, PawnKindIndex.MiddenHog), Is.False, "the hog's tusks, as the content has them");
         }

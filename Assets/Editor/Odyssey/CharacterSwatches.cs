@@ -268,6 +268,89 @@ namespace Odyssey.EditorTools
             return cells;
         }
 
+        /// <summary>
+        /// Where a skinned overlay worn over a body takes its colour from: Battle Royale's armour
+        /// vests (<c>docs/design/39-bandits.md</c>).
+        ///
+        /// <para>An overlay has no skin and no hair to find, so every one-cell cluster is garment:
+        /// the largest goes in <c>cloth</c> and the next in <c>cloth2</c>, the same ranking
+        /// <see cref="Classify"/> uses for a body's clothing. <paramref name="note"/> lists every
+        /// cluster with its vertex count, largest first, which is what a contact sheet needs to say
+        /// which of them is the vest and which the straps.</para>
+        /// </summary>
+        public static AppearanceCells ClassifyOverlay(SkinnedMeshRenderer overlay, out string note)
+        {
+            note = string.Empty;
+            var cells = new AppearanceCells();
+
+            Mesh? mesh = overlay.sharedMesh;
+            if (mesh == null) { note = "no mesh"; return cells; }
+
+            Vector2[] uv = mesh.uv;
+            if (uv.Length == 0) { note = "mesh has no UVs"; return cells; }
+
+            List<Cluster> clusters = ClustersOf(uv, mesh.boneWeights, overlay.bones);
+            clusters.Sort((a, b) => b.Count.CompareTo(a.Count));
+            cells.totalVerts = mesh.vertexCount;
+
+            var garment = new List<Cluster>();
+            var described = new StringBuilder();
+            foreach (Cluster c in clusters)
+            {
+                described.Append($"[{c.Count}v @({c.Rect.center.x:F3},{c.Rect.center.y:F3})" +
+                                 $"{(IsOneCell(c) ? "" : " wide")}] ");
+                if (garment.Count < 2 && c.Count >= MinSlotVertices && IsOneCell(c)) garment.Add(c);
+            }
+            note = described.ToString();
+
+            if (garment.Count > 0)
+            {
+                cells.cloth = Rects(garment.GetRange(0, 1));
+                cells.clothVerts = garment[0].Count;
+            }
+            if (garment.Count > 1)
+            {
+                cells.cloth2 = Rects(garment.GetRange(1, 1));
+                cells.cloth2Verts = garment[1].Count;
+            }
+
+            cells.quality = cells.cloth.Length > 0 ? AppearanceQuality.ClothOnly : AppearanceQuality.None;
+            return cells;
+        }
+
+        /// <summary>
+        /// The clusters of a body's own mesh, largest first, with where on the body each one is
+        /// worn — for a contact sheet that has to say which slot is the trousers
+        /// (<c>docs/design/39-bandits.md</c>). The classifier counts torso and leg vertices only to
+        /// filter; this prints them.
+        /// </summary>
+        public static string DescribeBody(GameObject prefab, int top)
+        {
+            SkinnedMeshRenderer? skin = null;
+            int mostVertices = 0;
+            foreach (SkinnedMeshRenderer candidate in prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                if (!candidate.gameObject.activeSelf || candidate.sharedMesh == null) continue;
+                if (candidate.sharedMesh.vertexCount <= mostVertices) continue;
+                mostVertices = candidate.sharedMesh.vertexCount;
+                skin = candidate;
+            }
+            if (skin == null || skin.sharedMesh == null) return "no active skinned mesh";
+
+            List<Cluster> clusters = ClustersOf(skin.sharedMesh.uv, skin.sharedMesh.boneWeights, skin.bones);
+            clusters.Sort((a, b) => b.Count.CompareTo(a.Count));
+
+            var text = new StringBuilder();
+            for (int i = 0; i < clusters.Count && i < top; i++)
+            {
+                Cluster c = clusters[i];
+                text.AppendLine($"    {c.Count,5}v @({c.Rect.center.x:F3},{c.Rect.center.y:F3}) " +
+                                $"head {c.Head} torso {c.Torso} arm {c.Arm} leg {c.Leg}" +
+                                $"{(IsOneCell(c) ? "" : " wide")}");
+            }
+            return text.ToString();
+        }
+
         public static AppearanceCells Classify(GameObject prefab, out string note)
         {
             note = string.Empty;

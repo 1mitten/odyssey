@@ -12,10 +12,10 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// Marauders steal and leave (design 33 §17; the owner, 2026-09-24: <i>"It will thieve items or
+    /// Bandits steal and leave (design 33 §17; the owner, 2026-09-24: <i>"It will thieve items or
     /// kidnap people depending on their motivation creating a negative event (but they could be
     /// rescued later) - seam this later but for now - thieve items"</i>). With nobody standing that
-    /// it can reach and nothing it may break, a marauder lifts the nearest stack, walks to the
+    /// it can reach and nothing it may break, a bandit lifts the nearest stack, walks to the
     /// nearest edge and leaves the board with it — removed, not killed — and the ledger records a
     /// theft. The fight still comes first; a thief struck down drops what it carries.
     /// </summary>
@@ -47,16 +47,16 @@ namespace Odyssey.Tests.Sim
             return colony.Pawns.Items.Get(id)!;
         }
 
-        /// <summary>One colonist on the start, down; a marauder four cells off. Nobody left standing.</summary>
-        static (ColonyWorld colony, Pawn colonist, Pawn marauder) AllDown(ColonyWorld? colony = null)
+        /// <summary>One colonist on the start, down; a bandit four cells off. Nobody left standing.</summary>
+        static (ColonyWorld colony, Pawn colonist, Pawn bandit) AllDown(ColonyWorld? colony = null)
         {
             colony ??= Empty();
             Pawn colonist = colony.Pawns.Pawns.All[0];
             Stand(colony, colonist, Near(colony, 0, 0));
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 0, 4));
-            Strike(colony, marauder, colonist, colonist.HpMilli);
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 0, 4));
+            Strike(colony, bandit, colonist, colonist.HpMilli);
             Assert.That(colonist.Downed, Is.True, "the control: she is down");
-            return (colony, colonist, marauder);
+            return (colony, colonist, bandit);
         }
 
         static bool Gone(ColonyWorld colony, Pawn pawn) => colony.Pawns.Pawns.Get(pawn.Id) == null;
@@ -65,17 +65,17 @@ namespace Odyssey.Tests.Sim
 
         static int Carried(Pawn pawn) => pawn.CurrentJob?.CarriedItem ?? -1;
 
-        /// <summary>Tick until the marauder has gone, noting the last cell it stood on and what it last carried.</summary>
-        static (int lastCell, int lastCarried) RunUntilGone(ColonyWorld colony, Pawn marauder, int limit = 20_000)
+        /// <summary>Tick until the bandit has gone, noting the last cell it stood on and what it last carried.</summary>
+        static (int lastCell, int lastCarried) RunUntilGone(ColonyWorld colony, Pawn bandit, int limit = 20_000)
         {
-            int lastCell = marauder.Cell, lastCarried = -1;
-            for (int t = 0; t < limit && !Gone(colony, marauder); t++)
+            int lastCell = bandit.Cell, lastCarried = -1;
+            for (int t = 0; t < limit && !Gone(colony, bandit); t++)
             {
-                lastCell = marauder.Cell;
-                if (Carried(marauder) >= 0) lastCarried = Carried(marauder);
+                lastCell = bandit.Cell;
+                if (Carried(bandit) >= 0) lastCarried = Carried(bandit);
                 colony.World.Tick();
             }
-            Assert.That(Gone(colony, marauder), Is.True, $"the marauder was still on the board after {limit} ticks");
+            Assert.That(Gone(colony, bandit), Is.True, $"the bandit was still on the board after {limit} ticks");
             return (lastCell, lastCarried);
         }
 
@@ -90,35 +90,35 @@ namespace Odyssey.Tests.Sim
 
         /// <summary>
         /// The whole of it: the nearer of two stacks is lifted, carried to the edge nearest it, and
-        /// leaves with the marauder, whose machete goes too. The colony has one stack fewer; the
-        /// marauder is gone, with no corpse, no death reported and nobody remembering one.
+        /// leaves with the bandit, whose machete goes too. The colony has one stack fewer; the
+        /// bandit is gone, with no corpse, no death reported and nobody remembering one.
         /// </summary>
         [Test]
         public void WithEveryoneDownItCarriesOffTheNearestStackAndLeaves()
         {
-            var (colony, colonist, marauder) = AllDown();
+            var (colony, colonist, bandit) = AllDown();
             ColonyItem near = Put(colony, ItemIndex.Meal, Near(colony, 3, 4), 12);
             ColonyItem far = Put(colony, ItemIndex.Stone, Near(colony, -8, 4), 30);
             int nearCell = near.Cell;
-            int weapon = marauder.EquippedItem;
+            int weapon = bandit.EquippedItem;
             Assert.That(weapon, Is.Not.Zero, "the control: it arrived armed");
             int pawnsBefore = colony.Pawns.Pawns.All.Count;
             var tape = new Tape();
 
-            int expectedEdge = Theft.EdgeFrom(colony.Pawns, nearCell, marauder.OwnMode);
+            int expectedEdge = Theft.EdgeFrom(colony.Pawns, nearCell, bandit.OwnMode);
             bool sawItStealing = false, stoodOnTheStack = false;
-            int lastCell = marauder.Cell, lastCarried = -1, ticks = 0;
-            for (int t = 0; t < 20_000 && !Gone(colony, marauder); t++, ticks++)
+            int lastCell = bandit.Cell, lastCarried = -1, ticks = 0;
+            for (int t = 0; t < 20_000 && !Gone(colony, bandit); t++, ticks++)
             {
-                if (Stealing(marauder)) sawItStealing = true;
-                if (marauder.Cell == nearCell) stoodOnTheStack = true;
-                lastCell = marauder.Cell;
-                if (Carried(marauder) >= 0) lastCarried = Carried(marauder);
+                if (Stealing(bandit)) sawItStealing = true;
+                if (bandit.Cell == nearCell) stoodOnTheStack = true;
+                lastCell = bandit.Cell;
+                if (Carried(bandit) >= 0) lastCarried = Carried(bandit);
                 colony.World.Tick();
                 tape.Read(colony);
             }
 
-            Assert.That(Gone(colony, marauder), Is.True, "it never left");
+            Assert.That(Gone(colony, bandit), Is.True, "it never left");
             Assert.That(sawItStealing, Is.True, "it left without a theft job");
             Assert.That(stoodOnTheStack, Is.True, "it lifted a stack it never stood on");
             TestContext.WriteLine($"gone after {ticks} ticks, from {Size.FromIndex(lastCell)}; the stack was at {Size.FromIndex(nearCell)}");
@@ -135,7 +135,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Pawns.Corpses.Count, Is.Zero, "leaving the board left a corpse");
             Assert.That(tape.Of(CombatEventKind.Died), Is.Empty, "leaving the board was reported as a death");
             Assert.That(colonist.Memories.Exists(m => m.ThoughtIndex == ThoughtIndex.ColonistDied), Is.False,
-                "somebody mourned a marauder that walked off");
+                "somebody mourned a bandit that walked off");
         }
 
         /// <summary>
@@ -145,11 +145,11 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void TheLedgerRecordsTheTheftAndTheBulletinSaysWhat()
         {
-            var (colony, _, marauder) = AllDown();
+            var (colony, _, bandit) = AllDown();
             Put(colony, ItemIndex.Meal, Near(colony, 3, 4), 12);
             Assert.That(colony.Incidents.Ledger.Count, Is.Zero, "the control: nothing has happened yet");
 
-            var (lastCell, _) = RunUntilGone(colony, marauder);
+            var (lastCell, _) = RunUntilGone(colony, bandit);
             colony.World.Tick();
 
             var entries = Ledger(colony);
@@ -169,21 +169,21 @@ namespace Odyssey.Tests.Sim
             Assert.That(bulletins[0].Favourability, Is.EqualTo((int)IncidentFavourability.Bad), "a theft is a blow");
         }
 
-        /// <summary>With nothing on the board to take, it walks off by the nearest edge empty-handed, and the ledger says a marauder left.</summary>
+        /// <summary>With nothing on the board to take, it walks off by the nearest edge empty-handed, and the ledger says a bandit left.</summary>
         [Test]
         public void WithNothingToStealItLeavesEmptyHanded()
         {
-            var (colony, _, marauder) = AllDown();
-            int expectedEdge = Theft.EdgeFrom(colony.Pawns, marauder.Cell, marauder.OwnMode);
+            var (colony, _, bandit) = AllDown();
+            int expectedEdge = Theft.EdgeFrom(colony.Pawns, bandit.Cell, bandit.OwnMode);
 
-            var (lastCell, lastCarried) = RunUntilGone(colony, marauder);
+            var (lastCell, lastCarried) = RunUntilGone(colony, bandit);
             colony.World.Tick();
 
             Assert.That(lastCarried, Is.EqualTo(-1), "it carried something off an empty board");
             Assert.That(lastCell, Is.EqualTo(expectedEdge));
             var entries = Ledger(colony);
             Assert.That(entries.Count, Is.EqualTo(1));
-            Assert.That(entries[0].IncidentDef, Is.EqualTo(IncidentHandle.MarauderLeft));
+            Assert.That(entries[0].IncidentDef, Is.EqualTo(IncidentHandle.BanditLeft));
             Assert.That(colony.Incidents.Ledger.TryGetDetail(entries[0].Id, out _), Is.False, "an empty-handed leaving is about nothing");
             Assert.That(colony.World.Views.Current.Bulletins[0].Subject, Is.EqualTo(-1));
             Assert.That(colony.Pawns.Corpses.Count, Is.Zero);
@@ -196,14 +196,14 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void OnATieItTakesTheOlderStack()
         {
-            var (colony, _, marauder) = AllDown();
+            var (colony, _, bandit) = AllDown();
             ColonyItem first = Put(colony, ItemIndex.Wood, Near(colony, 3, 4), 5);
             ColonyItem second = Put(colony, ItemIndex.Stone, Near(colony, -3, 4), 5);
-            Assert.That(colony.Pawns.Distance(marauder.Cell, first.Cell), Is.EqualTo(colony.Pawns.Distance(marauder.Cell, second.Cell)),
+            Assert.That(colony.Pawns.Distance(bandit.Cell, first.Cell), Is.EqualTo(colony.Pawns.Distance(bandit.Cell, second.Cell)),
                 "the control: the two are the same distance off");
             Assert.That(first.Id.Value, Is.LessThan(second.Id.Value));
 
-            ColonyItem? chosen = Theft.NearestLoot(colony.Pawns, marauder, marauder.OwnMode, out int at);
+            ColonyItem? chosen = Theft.NearestLoot(colony.Pawns, bandit, bandit.OwnMode, out int at);
             Assert.That(chosen, Is.SameAs(first));
             Assert.That(at, Is.EqualTo(first.Cell));
         }
@@ -220,31 +220,31 @@ namespace Odyssey.Tests.Sim
         {
             var colony = Empty(colonists: 2);
             Pawn standing = colony.Pawns.Pawns.All[1];
-            var (_, _, marauder) = AllDown(colony);
+            var (_, _, bandit) = AllDown(colony);
             Stand(colony, standing, Near(colony, -6, 0));
             ColonyItem meal = Put(colony, ItemIndex.Meal, Near(colony, 1, 4), 6);
 
             colony.World.Tick();
-            Assert.That(marauder.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.AttackMelee), "a standing colonist did not come first");
-            Assert.That(marauder.CombatTarget, Is.EqualTo(standing.Id.Value));
+            Assert.That(bandit.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.AttackMelee), "a standing colonist did not come first");
+            Assert.That(bandit.CombatTarget, Is.EqualTo(standing.Id.Value));
 
             // Down her too, and put a wall up: the wall now comes before the meal.
-            Strike(colony, marauder, standing, standing.HpMilli);
+            Strike(colony, bandit, standing, standing.HpMilli);
             int wall = Near(colony, 6, 4);
             Assert.That(colony.Construction.Place(Size.FromIndex(wall), BuildingHandle.Wall, StuffHandle.Wood, 0), Is.EqualTo(IntentRejection.None));
             Assert.That(colony.Construction.Raise(colony.Pawns, wall), Is.True);
-            for (int t = 0; t < 30 && !(marauder.CurrentJob?.DefIndex == JobIndex.AttackMelee && marauder.CombatTarget == 0); t++)
+            for (int t = 0; t < 30 && !(bandit.CurrentJob?.DefIndex == JobIndex.AttackMelee && bandit.CombatTarget == 0); t++)
                 colony.World.Tick();
-            Assert.That(marauder.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.AttackMelee), "the wall did not come before the meal");
-            Assert.That(marauder.CombatTarget, Is.Zero, "the control: it is on the building, not a pawn");
+            Assert.That(bandit.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.AttackMelee), "the wall did not come before the meal");
+            Assert.That(bandit.CombatTarget, Is.Zero, "the control: it is on the building, not a pawn");
             Assert.That(meal.Despawned || meal.Cell < 0, Is.False, "it took the meal while it had a wall to break");
 
             // The control: nothing left to fight or break, and it steals.
             for (int t = 0; t < 20_000 && colony.Grid.Edifice[wall] >= 0 && BuildingTargets.TryFind(colony.Pawns, wall, out _); t++)
                 colony.World.Tick();
-            for (int t = 0; t < 60 && !Stealing(marauder); t++) colony.World.Tick();
-            Assert.That(Stealing(marauder), Is.True, "with nothing left to fight or break it did not turn thief");
-            Assert.That(marauder.CurrentJob!.TargetItem, Is.EqualTo(meal.Id));
+            for (int t = 0; t < 60 && !Stealing(bandit); t++) colony.World.Tick();
+            Assert.That(Stealing(bandit), Is.True, "with nothing left to fight or break it did not turn thief");
+            Assert.That(bandit.CurrentJob!.TargetItem, Is.EqualTo(meal.Id));
         }
 
         /// <summary>
@@ -254,21 +254,21 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void AThiefThatCanReachAColonistAgainDropsTheLoadAndFights()
         {
-            var (colony, _, marauder) = AllDown();
+            var (colony, _, bandit) = AllDown();
             ColonyItem meal = Put(colony, ItemIndex.Meal, Near(colony, 2, 4), 9);
-            for (int t = 0; t < 2_000 && Carried(marauder) < 0; t++) colony.World.Tick();
-            Assert.That(Carried(marauder), Is.EqualTo(meal.Id.Value), "the control: it is carrying the meal");
+            for (int t = 0; t < 2_000 && Carried(bandit) < 0; t++) colony.World.Tick();
+            Assert.That(Carried(bandit), Is.EqualTo(meal.Id.Value), "the control: it is carrying the meal");
 
             Pawn newcomer = Spawn(colony, PawnKindIndex.Colonist, Near(colony, -4, 0));
             int limit = colony.Pawns.Content.Combat.rechooseTicks + 120;
-            for (int t = 0; t < limit && Stealing(marauder); t++) colony.World.Tick();
+            for (int t = 0; t < limit && Stealing(bandit); t++) colony.World.Tick();
 
-            Assert.That(Stealing(marauder), Is.False, $"it kept stealing for {limit} ticks with a colonist to fight");
-            Assert.That(Gone(colony, marauder), Is.False);
+            Assert.That(Stealing(bandit), Is.False, $"it kept stealing for {limit} ticks with a colonist to fight");
+            Assert.That(Gone(colony, bandit), Is.False);
             Assert.That(meal.Despawned, Is.False, "the meal went with it");
             Assert.That(meal.Cell, Is.GreaterThanOrEqualTo(0), "the meal was not put down");
-            for (int t = 0; t < 30 && marauder.CombatTarget != newcomer.Id.Value; t++) colony.World.Tick();
-            Assert.That(marauder.CombatTarget, Is.EqualTo(newcomer.Id.Value), "it did not go for the newcomer");
+            for (int t = 0; t < 30 && bandit.CombatTarget != newcomer.Id.Value; t++) colony.World.Tick();
+            Assert.That(bandit.CombatTarget, Is.EqualTo(newcomer.Id.Value), "it did not go for the newcomer");
         }
 
         // ---- struck down with it --------------------------------------------------------------
@@ -277,21 +277,21 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void DownedWhileCarryingItDropsTheLoad()
         {
-            var (colony, colonist, marauder) = AllDown();
+            var (colony, colonist, bandit) = AllDown();
             ColonyItem meal = Put(colony, ItemIndex.Meal, Near(colony, 2, 4), 9);
-            for (int t = 0; t < 2_000 && Carried(marauder) < 0; t++) colony.World.Tick();
-            Assert.That(Carried(marauder), Is.EqualTo(meal.Id.Value), "the control: it is carrying the meal");
+            for (int t = 0; t < 2_000 && Carried(bandit) < 0; t++) colony.World.Tick();
+            Assert.That(Carried(bandit), Is.EqualTo(meal.Id.Value), "the control: it is carrying the meal");
             colony.World.Tick(20);
 
-            Strike(colony, colonist, marauder, marauder.HpMilli);
-            Assert.That(marauder.Downed, Is.True);
-            Assert.That(Carried(marauder), Is.EqualTo(-1));
+            Strike(colony, colonist, bandit, bandit.HpMilli);
+            Assert.That(bandit.Downed, Is.True);
+            Assert.That(Carried(bandit), Is.EqualTo(-1));
             Assert.That(meal.Despawned, Is.False, "the load vanished with a downed carrier");
             Assert.That(meal.Cell, Is.GreaterThanOrEqualTo(0), "the load is nowhere");
-            Assert.That(colony.Pawns.Distance(meal.Cell, marauder.Cell), Is.LessThanOrEqualTo(141 * 2), "the load fell far from the carrier");
+            Assert.That(colony.Pawns.Distance(meal.Cell, bandit.Cell), Is.LessThanOrEqualTo(141 * 2), "the load fell far from the carrier");
 
             colony.World.Tick(600);
-            Assert.That(Gone(colony, marauder), Is.False, "a downed thief left the board");
+            Assert.That(Gone(colony, bandit), Is.False, "a downed thief left the board");
             Assert.That(Ledger(colony), Is.Empty, "a theft was recorded that did not happen");
         }
 
@@ -299,14 +299,14 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void KilledWhileCarryingItDropsTheLoad()
         {
-            var (colony, colonist, marauder) = AllDown();
+            var (colony, colonist, bandit) = AllDown();
             ColonyItem meal = Put(colony, ItemIndex.Meal, Near(colony, 2, 4), 9);
-            for (int t = 0; t < 2_000 && Carried(marauder) < 0; t++) colony.World.Tick();
-            Assert.That(Carried(marauder), Is.EqualTo(meal.Id.Value), "the control: it is carrying the meal");
+            for (int t = 0; t < 2_000 && Carried(bandit) < 0; t++) colony.World.Tick();
+            Assert.That(Carried(bandit), Is.EqualTo(meal.Id.Value), "the control: it is carrying the meal");
 
-            Strike(colony, colonist, marauder, marauder.HpMilli - marauder.DeathAtMilli + 1_000);
+            Strike(colony, colonist, bandit, bandit.HpMilli - bandit.DeathAtMilli + 1_000);
             colony.World.Tick();
-            Assert.That(Gone(colony, marauder), Is.True);
+            Assert.That(Gone(colony, bandit), Is.True);
             Assert.That(colony.Pawns.Corpses.Count, Is.EqualTo(1));
             Assert.That(meal.Despawned, Is.False, "the load went with the dead");
             Assert.That(meal.Cell, Is.GreaterThanOrEqualTo(0));
@@ -322,8 +322,8 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void WithNoEdgeToReachItStays()
         {
-            var (colony, _, marauder) = AllDown();
-            CellRef at = Size.FromIndex(marauder.Cell);
+            var (colony, _, bandit) = AllDown();
+            CellRef at = Size.FromIndex(bandit.Cell);
             ColonyItem meal = Put(colony, ItemIndex.Meal, Size.Index(at.X + 1, at.Z, at.Y), 4);
 
             // A ring of the city's walls: not colony-built, so nothing it may choose to break.
@@ -343,44 +343,44 @@ namespace Odyssey.Tests.Sim
                 if (dx == 2 && dz == 0) gap = cell;
             }
             colony.World.Tick();
-            Assert.That(Theft.EdgeFrom(colony.Pawns, marauder.Cell, marauder.OwnMode), Is.EqualTo(-1), "the control: no edge can be reached");
+            Assert.That(Theft.EdgeFrom(colony.Pawns, bandit.Cell, bandit.OwnMode), Is.EqualTo(-1), "the control: no edge can be reached");
 
             for (int t = 0; t < 3_000; t++)
             {
                 colony.World.Tick();
-                Assert.That(Stealing(marauder), Is.False, $"tick {t}: it set out to steal with no way off the board");
+                Assert.That(Stealing(bandit), Is.False, $"tick {t}: it set out to steal with no way off the board");
             }
-            Assert.That(Gone(colony, marauder), Is.False);
+            Assert.That(Gone(colony, bandit), Is.False);
             Assert.That(meal.Cell, Is.GreaterThanOrEqualTo(0), "it picked the meal up with nowhere to take it");
 
             // A way out, and it goes — with the meal.
             Assert.That(colony.Construction.Demolish(colony.Pawns, gap, out _), Is.True);
             colony.World.Tick();
-            var (_, lastCarried) = RunUntilGone(colony, marauder);
+            var (_, lastCarried) = RunUntilGone(colony, bandit);
             Assert.That(lastCarried, Is.EqualTo(meal.Id.Value));
         }
 
         // ---- the motive ----------------------------------------------------------------------
 
         /// <summary>
-        /// The kidnap seam (design 33 §17f): a marauder that came to kidnap does exactly what one
+        /// The kidnap seam (design 33 §17f): a bandit that came to kidnap does exactly what one
         /// that came to loot does today, tick for tick — the same hash at every hundredth tick of
         /// the whole theft. One that came for nothing (the control) stays and idles.
         /// </summary>
         [Test]
         public void AKidnapperStealsAsALooterDoes()
         {
-            ColonyWorld Run(Motive motive, out Pawn marauder)
+            ColonyWorld Run(Motive motive, out Pawn bandit)
             {
                 var colony = Empty();
-                colony.Pawns.Content.KindMotive[PawnKindIndex.Marauder] = motive;
+                colony.Pawns.Content.KindMotive[PawnKindIndex.Bandit] = motive;
                 var (_, _, m) = AllDown(colony);
                 Put(colony, ItemIndex.Meal, Near(colony, 3, 4), 12);
-                marauder = m;
+                bandit = m;
                 return colony;
             }
 
-            Assert.That(ContentPackMotive(), Is.EqualTo(Motive.Loot), "the control: the shipped marauder came to loot");
+            Assert.That(ContentPackMotive(), Is.EqualTo(Motive.Loot), "the control: the shipped bandit came to loot");
 
             var looter = Run(Motive.Loot, out Pawn l);
             var kidnapper = Run(Motive.Kidnap, out Pawn k);
@@ -400,7 +400,7 @@ namespace Odyssey.Tests.Sim
         }
 
         static Motive ContentPackMotive() =>
-            Odyssey.Sim.Defs.ContentPack.Pawns().MotiveOf(PawnKindIndex.Marauder);
+            Odyssey.Sim.Defs.ContentPack.Pawns().MotiveOf(PawnKindIndex.Bandit);
 
         // ---- the hash -------------------------------------------------------------------------
 
@@ -430,8 +430,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Jobs.CompletedOf(JobIndex.Steal) + colony.Jobs.FailedOf(JobIndex.Steal), Is.Zero);
             Assert.That(now.Value, Is.EqualTo(asBaked.Value), "a job nobody ran moved the hash");
 
-            var (_, _, marauder) = AllDown(colony);
-            RunUntilGone(colony, marauder);
+            var (_, _, bandit) = AllDown(colony);
+            RunUntilGone(colony, bandit);
             Assert.That(colony.Jobs.CompletedOf(JobIndex.Steal), Is.EqualTo(1), "the control: the theft was counted");
             StateHash after = StateHash.New();
             colony.Jobs.ContributeTo(ref after);
@@ -456,21 +456,21 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void ATheftSavedMidCarryResumesIdentically()
         {
-            var (colony, _, marauder) = AllDown();
+            var (colony, _, bandit) = AllDown();
             ColonyItem meal = Put(colony, ItemIndex.Meal, Near(colony, 3, 4), 12);
-            for (int t = 0; t < 2_000 && Carried(marauder) < 0; t++) colony.World.Tick();
+            for (int t = 0; t < 2_000 && Carried(bandit) < 0; t++) colony.World.Tick();
             colony.World.Tick(40);
-            Assert.That(Carried(marauder), Is.EqualTo(meal.Id.Value), "the control: it is carrying the meal");
+            Assert.That(Carried(bandit), Is.EqualTo(meal.Id.Value), "the control: it is carrying the meal");
 
             var restored = Empty();
             restored.Load(colony.Save());
-            Pawn back = restored.Pawns.Pawns.Get(marauder.Id)!;
+            Pawn back = restored.Pawns.Pawns.Get(bandit.Id)!;
             Assert.That(back.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.Steal));
             Assert.That(Carried(back), Is.EqualTo(meal.Id.Value));
             Assert.That(restored.Pawns.Items.Get(meal.Id)!.CarriedBy, Is.EqualTo(back.Id.Value));
             Assert.That(Hash(restored), Is.EqualTo(Hash(colony)), "the loaded world is not the saved one");
 
-            var (cellA, _) = RunUntilGone(colony, marauder);
+            var (cellA, _) = RunUntilGone(colony, bandit);
             var (cellB, _) = RunUntilGone(restored, back);
             Assert.That(restored.World.CurrentTick, Is.EqualTo(colony.World.CurrentTick), "the two left on different ticks");
             Assert.That(cellB, Is.EqualTo(cellA));

@@ -25,7 +25,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// A colonist lying where she fell: downed, in nobody's arms, and not already in a bed.
-        /// An animal recovers where it lies and a downed marauder stays down (§11b). Asks
+        /// An animal recovers where it lies and a downed bandit stays down (§11b). Asks
         /// <see cref="Pawn.Downed"/> first, so a colony nobody has hurt pays one flag a pawn.
         /// </summary>
         public static bool NeedsRescue(Pawn pawn, PawnContext ctx) =>

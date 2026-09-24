@@ -27,7 +27,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(CombatAspectNames.HpKey, Is.EqualTo(AspectKey.Of("odyssey.pawn.hp")));
         }
 
-        static WorldSnapshot FrameWithAMarauder()
+        static WorldSnapshot FrameWithABandit()
         {
             var snapshot = Frame.Write();
             snapshot.AddPawn(new PawnView(new PawnId(1), new CellRef(1, 1, 0), 600, 800, 800, JobHandle.Wait));
@@ -39,14 +39,14 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// A marauder is kind 3 and a person. "Kind 0" would have kept it off the roster for the
+        /// A bandit is kind 3 and a person. "Kind 0" would have kept it off the roster for the
         /// wrong reason, and "kind not 0 is an animal" would have put it in the Animals tab; the
         /// flags answer both honestly. The colonist beside it is the control.
         /// </summary>
         [Test]
-        public void AMarauderIsNeitherOnTheRosterNorAnAnimal()
+        public void ABanditIsNeitherOnTheRosterNorAnAnimal()
         {
-            WorldSnapshot snapshot = FrameWithAMarauder();
+            WorldSnapshot snapshot = FrameWithABandit();
 
             var roster = new RosterModel();
             roster.Refresh(snapshot, selected: new PawnId(1));
@@ -55,17 +55,17 @@ namespace Odyssey.Tests.Hud
             Assert.That(OrderModel.IsColonist(snapshot, new PawnId(1)), Is.True);
             Assert.That(OrderModel.IsColonist(snapshot, new PawnId(2)), Is.False);
 
-            snapshot.TryGetPawn(new PawnId(2), out PawnView marauder);
+            snapshot.TryGetPawn(new PawnId(2), out PawnView bandit);
             snapshot.TryGetPawn(new PawnId(3), out PawnView hog);
-            Assert.That(PawnKindLabels.IsAnimal(marauder), Is.False);
+            Assert.That(PawnKindLabels.IsAnimal(bandit), Is.False);
             Assert.That(PawnKindLabels.IsAnimal(hog), Is.True);
-            Assert.That(PawnKindLabels.IconKey(3), Is.EqualTo("ui.pawn.marauder"));
+            Assert.That(PawnKindLabels.IconKey(3), Is.EqualTo("ui.pawn.bandit"));
         }
 
         [Test]
-        public void TheDraftKeyPassesOverAMarauder()
+        public void TheDraftKeyPassesOverABandit()
         {
-            WorldSnapshot snapshot = FrameWithAMarauder();
+            WorldSnapshot snapshot = FrameWithABandit();
             var sent = new List<Intent>();
             OrderModel.ToggleDraft(new[] { new PawnId(1), new PawnId(2), new PawnId(3) }, snapshot, sent);
 
@@ -89,7 +89,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The seams lane C filled (design 33 §5f), read through the flags: the marauder wears the
+        /// The seams lane C filled (design 33 §5f), read through the flags: the bandit wears the
         /// marker and the colonist beside it does not; an undrafted colonist's right-click on it
         /// sends nothing, because an attack needs a draft (§5j). Their full rules are
         /// <c>CombatOrdersTests</c> and <c>CombatFeedbackModelTests</c>; this replaced the contracts
@@ -98,17 +98,17 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void TheLaneSeamsReadTheFlags()
         {
-            WorldSnapshot snapshot = FrameWithAMarauder();
+            WorldSnapshot snapshot = FrameWithABandit();
             var sent = new List<Intent>();
             Assert.That(CombatOrders.Route(new[] { new PawnId(1) }, snapshot, new CellRef(2, 1, 0),
                 new PawnId(2), ctrl: false, sent), Is.False);
             Assert.That(sent, Is.Empty);
 
             snapshot.TryGetPawn(new PawnId(1), out PawnView colonist);
-            snapshot.TryGetPawn(new PawnId(2), out PawnView marauder);
-            Assert.That(CombatFeedbackModel.HostileMarker(marauder), Is.True);
+            snapshot.TryGetPawn(new PawnId(2), out PawnView bandit);
+            Assert.That(CombatFeedbackModel.HostileMarker(bandit), Is.True);
             Assert.That(CombatFeedbackModel.HostileMarker(colonist), Is.False);
-            Assert.That(CombatFeedbackModel.HealthBar(snapshot, marauder, out _, out _), Is.False,
+            Assert.That(CombatFeedbackModel.HealthBar(snapshot, bandit, out _, out _), Is.False,
                 "no hit points were published, so no bar is owed");
             Assert.That(CombatFeedbackModel.FloatingText(default), Is.Empty);
         }

@@ -261,11 +261,11 @@
   </JobDef>
 
   <!--
-    A marauder with nobody to fight and nothing to break carries off the nearest stack it can lift
+    A bandit with nobody to fight and nothing to break carries off the nearest stack it can lift
     and walks off the board's edge with it (design 33 section 17; owner, 2026-09-24: "thieve
     items"). No expiry: an expiry ends the job, and ending it drops the load, so a long walk to the
     edge would put the loot down and pick it up again. It looks up on the combat's rechooseTicks
-    instead. Trains nothing: a marauder has no work to get better at.
+    instead. Trains nothing: a bandit has no work to get better at.
   -->
   <JobDef>
     <defName>Job_Steal</defName>

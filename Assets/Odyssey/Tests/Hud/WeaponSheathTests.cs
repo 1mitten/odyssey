@@ -22,8 +22,8 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void AFirstSightingTakesTheWeaponAsItFindsIt()
         {
-            SheathClock marauder = Seen(drawn: true, drafted: false, tick: 500);
-            Assert.That(marauder.Out, Is.True);
+            SheathClock bandit = Seen(drawn: true, drafted: false, tick: 500);
+            Assert.That(bandit.Out, Is.True);
             SheathClock worker = Seen(drawn: false, drafted: false, tick: 500);
             Assert.That(worker.Out, Is.False);
         }

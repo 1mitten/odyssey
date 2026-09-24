@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// <c>Job_Steal</c> (design 33 §17): a marauder with nobody to fight and nothing to break walks
+    /// <c>Job_Steal</c> (design 33 §17): a bandit with nobody to fight and nothing to break walks
     /// to the stack <see cref="Theft.TryFill"/> chose (<see cref="Job.TargetItem"/>, lying at
     /// <see cref="Job.TargetCell"/>), lifts it through <see cref="JobDriver.LiftToil"/> — the
     /// hauler's own stoop, grasp and rise, so the load is in its arms and drawn there for nothing —
@@ -17,7 +17,7 @@ namespace Odyssey.Sim.Pawns
     /// back, struck by a colonist it then turns on, or looking up to find a fight.</para>
     ///
     /// <para><b>It looks up while it goes.</b> Once every <see cref="CombatDef.rechooseTicks"/>, at a
-    /// step boundary, it asks the marauder's mind whether there is a colonist to reach or a building
+    /// step boundary, it asks the bandit's mind whether there is a colonist to reach or a building
     /// to break (<see cref="HostileThinkNode.HasAFight"/>); if there is, the theft ends and the next
     /// think fights. A hunt ends its job and thinks again on the same cadence; a thief cannot, because
     /// ending the job would put the load down every three hundred ticks. <see cref="Job.WorkTicks"/>,

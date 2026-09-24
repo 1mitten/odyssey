@@ -63,7 +63,7 @@
   </IncidentDef>
 
   <!--
-    A marauder with nobody left to fight and nothing left to break carried a stack off the board
+    A bandit with nobody left to fight and nothing left to break carried a stack off the board
     (docs/design/33-combat.md section 17; owner, 2026-09-24: "thieve items ... creating a negative
     event"). Written down by the world when it happens and never fired, so its worker is Recorded,
     which the debug menu's Events tab leaves off its list; the bulletin carries the item and the
@@ -72,7 +72,7 @@
   <IncidentDef>
     <defName>Incident_Theft</defName>
     <label>theft</label>
-    <description>A marauder carried a stack off the board. Recorded when it happens; nothing fires it</description>
+    <description>A bandit carried a stack off the board. Recorded when it happens; nothing fires it</description>
     <bulletinKey>ui.bulletin.theft</bulletinKey>
     <favourability>Bad</favourability>
     <category>ThreatSmall</category>
@@ -80,14 +80,14 @@
   </IncidentDef>
 
   <!--
-    The same marauder with nothing it could reach to take: it walks off the board empty-handed.
+    The same bandit with nothing it could reach to take: it walks off the board empty-handed.
     Neutral, because nothing was lost; on the panel so a player who watched it go knows it has.
   -->
   <IncidentDef>
-    <defName>Incident_MarauderLeft</defName>
-    <label>marauder left</label>
-    <description>A marauder walked off the board with nothing. Recorded when it happens; nothing fires it</description>
-    <bulletinKey>ui.bulletin.marauderleft</bulletinKey>
+    <defName>Incident_BanditLeft</defName>
+    <label>bandit left</label>
+    <description>A bandit walked off the board with nothing. Recorded when it happens; nothing fires it</description>
+    <bulletinKey>ui.bulletin.banditleft</bulletinKey>
     <favourability>Neutral</favourability>
     <category>ThreatSmall</category>
     <worker>Recorded</worker>

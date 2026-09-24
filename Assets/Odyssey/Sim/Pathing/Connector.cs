@@ -86,7 +86,7 @@ namespace Odyssey.Sim.Pathing
                     CostDown = MoveCost.LadderDown;
                     // A hauler's bulky load and an animal's lack of hands both rule a ladder out.
                     ModeMask = (byte)(TraverseModes.Mask(TraverseMode.Colonist) |
-                                      TraverseModes.Mask(TraverseMode.Marauder) |
+                                      TraverseModes.Mask(TraverseMode.Bandit) |
                                       TraverseModes.Mask(TraverseMode.Climber));
                     break;
                 default:

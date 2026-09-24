@@ -419,7 +419,7 @@ namespace Odyssey.Tests.Sim
             Assume.That(hauler.CurrentJob?.CarriedItem, Is.EqualTo(scrap.Value), "the fixture: she never picked it up");
 
             // Struck from whichever side leaves open ground behind her.
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, -15, -15));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, -15, -15));
             CellRef h = Size.FromIndex(hauler.Cell);
             int struckAt = hauler.Cell;
             bool knocked = false;
@@ -427,9 +427,9 @@ namespace Odyssey.Tests.Sim
             {
                 int stand = Size.Index(h.X + dx, h.Z + dz, h.Y);
                 if (!colony.Pawns.Cells.IsWalkable(stand)) continue;
-                marauder.Cell = stand;
-                if (CombatSystem.KnockbackCell(colony.Pawns, marauder, hauler) < 0) continue;
-                colony.Pawns.Combat!.ApplySwing(marauder, hauler, Fists(colony.Pawns), Knock(), colony.World.CurrentTick);
+                bandit.Cell = stand;
+                if (CombatSystem.KnockbackCell(colony.Pawns, bandit, hauler) < 0) continue;
+                colony.Pawns.Combat!.ApplySwing(bandit, hauler, Fists(colony.Pawns), Knock(), colony.World.CurrentTick);
                 knocked = true;
                 break;
             }

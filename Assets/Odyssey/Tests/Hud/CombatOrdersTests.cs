@@ -27,7 +27,7 @@ namespace Odyssey.Tests.Hud
         static readonly CellRef WoodCell = new CellRef(2, 2, 1);
 
         /// <summary>
-        /// Two colonists, a hog, a marauder and a downed colonist, a machete and a pile of wood on
+        /// Two colonists, a hog, a bandit and a downed colonist, a machete and a pile of wood on
         /// the ground. <paramref name="drafted"/> names who is under the player's hand.
         /// </summary>
         static WorldSnapshot Board(params PawnId[] drafted)
@@ -155,7 +155,7 @@ namespace Odyssey.Tests.Hud
         {
             WorldSnapshot frame = Board();
             Assert.That(RightClick(Both, frame, new CellRef(6, 6, 1), Hog), Is.Empty, "attacked a hog");
-            Assert.That(RightClick(Both, frame, new CellRef(8, 8, 1), Raider), Is.Empty, "attacked a marauder");
+            Assert.That(RightClick(Both, frame, new CellRef(8, 8, 1), Raider), Is.Empty, "attacked a bandit");
             Assert.That(RightClick(Both, frame, new CellRef(8, 4, 1), Cy), Is.Empty, "rescued");
             Assert.That(RightClick(Both, frame, new CellRef(7, 4, 1), Bo, ctrl: true), Is.Empty, "Ctrl-attacked");
         }

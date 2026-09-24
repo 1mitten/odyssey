@@ -9,7 +9,7 @@ namespace Odyssey.Tests.Sim
 {
     /// <summary>
     /// The dead are not targets (design 33 §9e). Owner, 2026-09-23: <i>"You could still attack a pig
-    /// after it died — make a guard for this for now — check marauder does this."</i>
+    /// after it died — make a guard for this for now — check bandit does this."</i>
     ///
     /// <para><b>The rule:</b> at the end of every tick, nobody carries an attack job against a pawn
     /// that is dead or gone from the board, and no swing, blow, stun, critical or knockback is
@@ -19,9 +19,9 @@ namespace Odyssey.Tests.Sim
     /// on air.</para>
     ///
     /// <para>The guard runs fights to the death on several seeds — colonists with machetes against
-    /// marauders, colonists against hogs, marauders and hogs together — with a player who keeps
+    /// bandits, colonists against hogs, bandits and hogs together — with a player who keeps
     /// re-ordering every drafted colonist on to the nearest foe, standing or down, the way a player
-    /// finishes a downed marauder, and who right-clicks every body the moment it dies. Blows land
+    /// finishes a downed bandit, and who right-clicks every body the moment it dies. Blows land
     /// at ten times the shipped damage in half the brawls, so pawns die from standing, several
     /// attackers at once, which is where a swing outlives its target.</para>
     /// </summary>
@@ -115,7 +115,7 @@ namespace Odyssey.Tests.Sim
                 Assert.That(Violations, Is.Empty, $"{name}: fighting the dead, {Count} times:\n" + string.Join("\n", Violations));
         }
 
-        public enum Mix { ColonistsWithMachetesOnMarauders, ColonistsOnHogs, MaraudersAndHogs }
+        public enum Mix { ColonistsWithMachetesOnBandits, ColonistsOnHogs, BanditsAndHogs }
 
         static void Arm(ColonyWorld colony, Pawn pawn, int item)
         {
@@ -148,7 +148,7 @@ namespace Odyssey.Tests.Sim
         internal static (DeadGuard guard, int swings, int deadOrders, int refused) Brawl(Mix mix, uint seed, bool brutal, int ticks = 3_000)
         {
             var roll = new System.Random((int)seed * 104_729 + (int)mix);
-            int colonists = mix == Mix.MaraudersAndHogs ? 1 : 3 + roll.Next(2);
+            int colonists = mix == Mix.BanditsAndHogs ? 1 : 3 + roll.Next(2);
             var colony = CombatFixture.Board(colonists: colonists, seed: seed);
             colony.World.Tick();
             MeleeRules rules = brutal ? new Brutal() : new Counted();
@@ -163,20 +163,20 @@ namespace Odyssey.Tests.Sim
 
             switch (mix)
             {
-                case Mix.ColonistsWithMachetesOnMarauders:
+                case Mix.ColonistsWithMachetesOnBandits:
                     for (int i = 0; i < 2 + roll.Next(2); i++)
-                        Spawn(colony, PawnKindIndex.Marauder, Near(colony, roll.Next(-10, 11), roll.Next(0, 2) == 0 ? -10 : 10));
+                        Spawn(colony, PawnKindIndex.Bandit, Near(colony, roll.Next(-10, 11), roll.Next(0, 2) == 0 ? -10 : 10));
                     break;
                 case Mix.ColonistsOnHogs:
                     for (int i = 0; i < 2 + roll.Next(2); i++)
                         Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, roll.Next(-6, 7), roll.Next(3, 7)));
                     break;
-                case Mix.MaraudersAndHogs:
-                    // The one colonist is sent far off; the marauders hunt her, and the hogs are
-                    // set on the marauders by a blow each, so hog and marauder fight to the death.
+                case Mix.BanditsAndHogs:
+                    // The one colonist is sent far off; the bandits hunt her, and the hogs are
+                    // set on the bandits by a blow each, so hog and bandit fight to the death.
                     Stand(colony, cs[0], Near(colony, 20, 20));
                     var ms = new List<Pawn>();
-                    for (int i = 0; i < 2; i++) ms.Add(Spawn(colony, PawnKindIndex.Marauder, Near(colony, -4 + i * 8, 0)));
+                    for (int i = 0; i < 2; i++) ms.Add(Spawn(colony, PawnKindIndex.Bandit, Near(colony, -4 + i * 8, 0)));
                     for (int i = 0; i < 3; i++)
                     {
                         // A blow a tick until it turns: a hog that fails its roll runs instead.
@@ -191,7 +191,7 @@ namespace Odyssey.Tests.Sim
             }
 
             var guard = new DeadGuard();
-            bool player = mix != Mix.MaraudersAndHogs;
+            bool player = mix != Mix.BanditsAndHogs;
             if (player)
                 foreach (Pawn c in cs) Assert.That(Draft(colony, c), Is.EqualTo(IntentRejection.None));
 
@@ -236,12 +236,12 @@ namespace Odyssey.Tests.Sim
             return (guard, swings, deadOrders, refused);
         }
 
-        [TestCase(Mix.ColonistsWithMachetesOnMarauders, 1u, false)]
-        [TestCase(Mix.ColonistsWithMachetesOnMarauders, 2u, true)]
+        [TestCase(Mix.ColonistsWithMachetesOnBandits, 1u, false)]
+        [TestCase(Mix.ColonistsWithMachetesOnBandits, 2u, true)]
         [TestCase(Mix.ColonistsOnHogs, 3u, false)]
         [TestCase(Mix.ColonistsOnHogs, 4u, true)]
-        [TestCase(Mix.MaraudersAndHogs, 5u, true)]
-        [TestCase(Mix.MaraudersAndHogs, 6u, true)]
+        [TestCase(Mix.BanditsAndHogs, 5u, true)]
+        [TestCase(Mix.BanditsAndHogs, 6u, true)]
         public void NobodyFightsTheDead(Mix mix, uint seed, bool brutal)
         {
             var (guard, swings, deadOrders, refused) = Brawl(mix, seed, brutal);
@@ -260,9 +260,9 @@ namespace Odyssey.Tests.Sim
         {
             int deaths = 0;
             for (uint seed = 11; seed <= 18; seed++)
-            foreach (Mix mix in new[] { Mix.ColonistsWithMachetesOnMarauders, Mix.ColonistsOnHogs, Mix.MaraudersAndHogs })
+            foreach (Mix mix in new[] { Mix.ColonistsWithMachetesOnBandits, Mix.ColonistsOnHogs, Mix.BanditsAndHogs })
             {
-                bool brutal = mix == Mix.MaraudersAndHogs || seed % 2 == 0;
+                bool brutal = mix == Mix.BanditsAndHogs || seed % 2 == 0;
                 var (guard, _, deadOrders, refused) = Brawl(mix, seed, brutal, ticks: 4_000);
                 guard.AssertClean($"{mix} seed {seed}");
                 Assert.That(refused, Is.EqualTo(deadOrders), $"{mix} seed {seed}: an attack order on the dead was taken");
@@ -307,7 +307,7 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// Every target chosen without an order skips the dead (design 33 §9e): the marauder's hunt,
+        /// Every target chosen without an order skips the dead (design 33 §9e): the bandit's hunt,
         /// a colonist's self-defence and the threat beside her, an animal's revenge, and the drafted
         /// hold's blow. Each is asked with a pawn killed between ticks — still on the board, dead —
         /// as the thing it would choose; the control is the same question asked while it lived.
@@ -322,39 +322,39 @@ namespace Odyssey.Tests.Sim
             Stand(colony, far, Near(colony, 15, 15));
             PawnContext ctx = colony.Pawns;
 
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 1, 0));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 1, 0));
             Pawn hog = Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, 0, 1));
             hog.RetaliateAgainst = c.Id.Value;
             hog.RetaliateUntilTick = colony.World.CurrentTick + 5_000;
-            c.RetaliateAgainst = marauder.Id.Value;
+            c.RetaliateAgainst = bandit.Id.Value;
             c.RetaliateUntilTick = colony.World.CurrentTick + 5_000;
 
             Assert.That(new AnimalCombatThinkNode().TryGiveJob(hog, ctx, new Job()), Is.True, "the control: revenge on the living");
             Assert.That(new SelfDefenceThinkNode().TryGiveJob(c, ctx, new Job()), Is.True, "the control: self-defence on the living");
-            Assert.That(Melee.AdjacentThreat(ctx, c), Is.SameAs(marauder), "the control: a threat beside her");
+            Assert.That(Melee.AdjacentThreat(ctx, c), Is.SameAs(bandit), "the control: a threat beside her");
             c.Drafted = true;
             Assert.That(new DraftedThinkNode().TryGiveJob(c, ctx, new Job()), Is.True);
-            Assert.That(c.CombatTarget, Is.EqualTo(marauder.Id.Value), "the control: the hold strikes the living");
+            Assert.That(c.CombatTarget, Is.EqualTo(bandit.Id.Value), "the control: the hold strikes the living");
             c.Drafted = false;
             c.CombatTarget = 0;
             hog.CombatTarget = 0;
 
-            // The marauder dies: nothing picks it.
-            Kill(colony, far, marauder);
-            Assert.That(Melee.IsDead(marauder) && ctx.Pawns.Get(marauder.Id) == marauder, Is.True);
-            Assert.That(Melee.AdjacentThreat(ctx, c), Is.Not.SameAs(marauder), "a dead marauder is a threat");
+            // The bandit dies: nothing picks it.
+            Kill(colony, far, bandit);
+            Assert.That(Melee.IsDead(bandit) && ctx.Pawns.Get(bandit.Id) == bandit, Is.True);
+            Assert.That(Melee.AdjacentThreat(ctx, c), Is.Not.SameAs(bandit), "a dead bandit is a threat");
             new SelfDefenceThinkNode().TryGiveJob(c, ctx, new Job());
-            Assert.That(c.CombatTarget, Is.Not.EqualTo(marauder.Id.Value), "self-defence chose the dead marauder");
+            Assert.That(c.CombatTarget, Is.Not.EqualTo(bandit.Id.Value), "self-defence chose the dead bandit");
             c.CombatTarget = 0;
             c.Drafted = true;
             var hold = new Job();
             Assert.That(new DraftedThinkNode().TryGiveJob(c, ctx, hold), Is.True);
-            Assert.That(hold.DefIndex, Is.EqualTo(JobIndex.DraftHold), "the hold struck the dead marauder");
+            Assert.That(hold.DefIndex, Is.EqualTo(JobIndex.DraftHold), "the hold struck the dead bandit");
             c.Drafted = false;
             c.CombatTarget = 0;
 
-            // c dies: the hog's revenge and a marauder's hunt pass her by.
-            Pawn hunter = Spawn(colony, PawnKindIndex.Marauder, Near(colony, -2, 0));
+            // c dies: the hog's revenge and a bandit's hunt pass her by.
+            Pawn hunter = Spawn(colony, PawnKindIndex.Bandit, Near(colony, -2, 0));
             Stand(colony, far, Near(colony, -25, -25));
             Assert.That(new HostileThinkNode().TryGiveJob(hunter, ctx, new Job()), Is.True);
             Assert.That(hunter.CombatTarget, Is.EqualTo(c.Id.Value), "the control: the hunt picks the nearer colonist");

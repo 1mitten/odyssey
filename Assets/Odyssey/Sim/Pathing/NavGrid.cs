@@ -85,7 +85,7 @@ namespace Odyssey.Sim.Pathing
 
         /// <summary>
         /// As Colonist — ladders, stairs, the hop, the wade — but <b>a closed door is a wall</b>: a
-        /// marauder (design 33 §16). It does not open the colony's doors, so a door between it and
+        /// bandit (design 33 §16). It does not open the colony's doors, so a door between it and
         /// the colonists leaves them unreachable and it breaks the door down instead (§14b). An
         /// open door — one a colonist is walking through — it may pass.
         ///
@@ -94,7 +94,7 @@ namespace Odyssey.Sim.Pathing
         /// every mode costs a district flood on every nav rebuild whether any pawn walks in it or
         /// not (§16b).</para>
         /// </summary>
-        Marauder = 3,
+        Bandit = 3,
 
         /// <summary>
         /// As Colonist — ladders, stairs, the hop — but no water: a rat (design 29 §4). The two
@@ -124,13 +124,13 @@ namespace Odyssey.Sim.Pathing
             mode == TraverseMode.Animal || mode == TraverseMode.Climber;
 
         /// <summary>
-        /// May this mode open a closed door? Everyone but the hog and the marauder (design 33 §16).
+        /// May this mode open a closed door? Everyone but the hog and the bandit (design 33 §16).
         /// The rat opens doors, as it always has: <see cref="TraverseMode.Climber"/> was
         /// "as Colonist, no water", and a door was never part of the difference. The one owner of
         /// the rule; <see cref="NavGrid.CanEnter"/> is its only caller.
         /// </summary>
         public static bool OpensDoors(TraverseMode mode) =>
-            mode != TraverseMode.Animal && mode != TraverseMode.Marauder;
+            mode != TraverseMode.Animal && mode != TraverseMode.Bandit;
 
         /// <summary>
         /// The bits every mode has; the animal modes are stripped by

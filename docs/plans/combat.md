@@ -13,7 +13,7 @@ combat adds save sections, not a format bump.
 |---|---|---|---|---|
 | C0 | Research `a-10-melee-combat.md`, pack inventory `synty-sword-combat.md`, design 33, this plan | — | — | **done** |
 | C1 | Draft and move: drafted state, `Job_DraftHold`, `Job_Goto`, `SetDrafted`, `OrderMove`, the Drafted think node, the four-hour release, the job-count load guard. T, the pane's button, `OrderModel`, `SelectionPresenter.Order`, the diamond and the order line. After the playtest: the run (§2h), the deeper red (§2g), the blade sound (§2i) | **played 2026-09-23 — works** | moved once: two job defs | **PR #176** |
-| C2 | Health and melee against a marauder: species hit points, revenge and natural attack, `CombatDef`, live Melee skill, `PawnKind_Marauder`, attack, flee and downed jobs, `OrderAttack`, adjacent auto-attack, `CombatSystem`, corpses; health tab, corpse pane, spawn marauder, feedback, the clip layer and its fallback | **▶ playtest** | moved once, in the contracts step; **none since**, probe-diffed | **built 2026-09-23 (lanes A, B, C), integrated on `claude/combat-c2` — awaiting playtest** |
+| C2 | Health and melee against a bandit: species hit points, revenge and natural attack, `CombatDef`, live Melee skill, `PawnKind_Bandit`, attack, flee and downed jobs, `OrderAttack`, adjacent auto-attack, `CombatSystem`, corpses; health tab, corpse pane, spawn bandit, feedback, the clip layer and its fallback | **▶ playtest** | moved once, in the contracts step; **none since**, probe-diffed | **built 2026-09-23 (lanes A, B, C), integrated on `claude/combat-c2` — awaiting playtest** |
 | C3 | Weapons: bat, crowbar, machete, sci-fi blade; the equip job and order; stun; starting kit; held prop | **▶ playtest** | moved once, in the contracts step; **none since** | **built 2026-09-23 (lane D; the held prop at the integration) — awaiting playtest, with C2** |
 | CB | Blood: spurts, a mark per hit, pools under the fallen, a fade by the tick (design 33 §10) | **▶ playtest** | **none** — presentation only | **built 2026-09-24, PR #182** |
 | C4 | Rescue and healing in bed: carried in the arms to her own or the nearest free bed, in it until whole, *No bed for the wounded* (design 33 §11) | **▶ playtest** | **none since the contracts step** | **built 2026-09-24, `claude/combat-rescue`** |
@@ -66,7 +66,7 @@ single-threaded:
 brief — files owned, seams to fill, tests to add, files not to touch — is
 `docs/plans/combat-contracts.md`. Two refinements of the table below came out of cutting the seams:
 lane D's "stun from blunt" is rolled and applied by lane A from the armament lane D supplies, and the
-debug Spawn rows (the marauder and the four weapons) are lane C's, because they are interface and
+debug Spawn rows (the bandit and the four weapons) are lane C's, because they are interface and
 `GiveResource` already places any item. **A seam review the same day** read the briefs against the
 code before any lane started and moved eleven things into the spine or into one written rule
 (design 33 §5j; the journal says why) — so the lanes start from the head of `claude/combat-c2`
@@ -76,7 +76,7 @@ It delivers:
 
 - **Every handle the line needs, appended once.** No behaviour yet; stub drivers return `Failed`.
   - Jobs: `AttackMelee`, `Flee`, `Downed`, `Equip`, `Rescue`.
-  - `Skill_Melee`, live. `Work_Rescue`. `PawnKind_Marauder`.
+  - `Skill_Melee`, live. `Work_Rescue`. `PawnKind_Bandit`.
   - Four weapon items, with our own names in `icon-keys.csv`.
   - Intents: `OrderAttack`, `OrderEquip`, `OrderRescue`.
 - **Defs and their fields:**
@@ -112,9 +112,9 @@ Each lane owns the files it creates and touches the spine only through Phase 1's
 
 | Lane | Owns | Proves itself with | Must not touch |
 |---|---|---|---|
-| **A — the fight (sim)** | `CombatSystem`, `CombatRules`, the attack, flee and downed drivers, hostile and animal think nodes, corpses, healing, adjacent auto-attack, drafted retaliation | fast tier: `CombatMathTests`, `AttackDriverTests`, `DownedDeathTests`, `HostileTests`, `AnimalRevengeTests`; the mid-swing save round trip; a Long "marauder a day for ten days"; a 20-against-20 row in `TickBenchmarkTests`; **goldens unchanged** | Presentation, Hud |
+| **A — the fight (sim)** | `CombatSystem`, `CombatRules`, the attack, flee and downed drivers, hostile and animal think nodes, corpses, healing, adjacent auto-attack, drafted retaliation | fast tier: `CombatMathTests`, `AttackDriverTests`, `DownedDeathTests`, `HostileTests`, `AnimalRevengeTests`; the mid-swing save round trip; a Long "bandit a day for ten days"; a 20-against-20 row in `TickBenchmarkTests`; **goldens unchanged** | Presentation, Hud |
 | **B — the fight (drawn)** | `PawnFigureDirector.Combat.cs`, `CombatPose.cs`, the Sword Combat clip rows in `PlayScene.cs`, HP bars, floating text, the hostile marker, combat sounds, `CorpseDirector` | fed a scripted `CombatEventView` stream, so it does not wait for lane A. EditMode fallback tests. **Never runs Unity**: it hands its branch to the integrator | Sim |
-| **C — the interface** | `Hud/CombatFeedbackModel.cs`, the Health tab, the corpse pane, the Spawn-marauder row, `OrderModel` routing (right-click an animal or hostile to attack, Ctrl for a colonist, a downed colonist to rescue, a weapon to equip), roster and Work-tab filters by flags | Hud fast tier; the registry and font tests | Sim behaviour, Presentation |
+| **C — the interface** | `Hud/CombatFeedbackModel.cs`, the Health tab, the corpse pane, the Spawn-bandit row, `OrderModel` routing (right-click an animal or hostile to attack, Ctrl for a colonist, a downed colonist to rescue, a weapon to equip), roster and Work-tab filters by flags | Hud fast tier; the registry and font tests | Sim behaviour, Presentation |
 | **D — weapons (C3 sim)** | the equip driver and `OrderEquip`, the weapon lookup `ICombatRules` reads, stun from blunt, drop on death, the starting kit, the debug spawn | fast tier; **goldens unchanged** for colonies with no weapon picked up, which the starting kit must respect (design 33 §4) | Presentation, Hud |
 
 Lanes A and D both implement parts of `ICombatRules`. Phase 1 splits it into two interfaces, one

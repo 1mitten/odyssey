@@ -7,7 +7,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// A marauder a day for ten days (design 33 §6A), on the soak's own board and colony: the
+    /// A bandit a day for ten days (design 33 §6A), on the soak's own board and colony: the
     /// fight left running unattended, with the colony's ordinary life around it. What it holds is
     /// what a two-minute test cannot see — that nothing throws, that the fight's invariants hold at
     /// every sample (a pawn past its death line never outlives its tick, a downed pawn is on
@@ -15,19 +15,19 @@ namespace Odyssey.Tests.Sim
     /// exactly one corpse, that the fight actually happened, and that a save taken in the middle of
     /// it resumes on the same hash a day later.
     ///
-    /// <para><b>Fists only until lane D's merge</b> arms the marauder with its machete; the
+    /// <para><b>Fists only until lane D's merge</b> arms the bandit with its machete; the
     /// integrator's run after that merge is the one with steel in it. Nothing here rescues a
     /// downed colonist (C4), so the colony wears down over the ten days, which is the honest
     /// picture of C2 alone.</para>
     /// </summary>
-    public class MarauderSoakTests
+    public class BanditSoakTests
     {
         static readonly GridSize PlaySize = new GridSize(120, 120, 16);
         const int Day = 60_000;
         const int SampleEvery = 500;
 
         [Test, Category("Long")]
-        public void AMarauderADayForTenDays()
+        public void ABanditADayForTenDays()
         {
             ScenarioDef scenario = ScenarioDef.Bare();
             scenario.stockpileCells = 9;
@@ -52,7 +52,7 @@ namespace Odyssey.Tests.Sim
                 CellRef at = colony.Start;
                 int before = colony.Pawns.Pawns.Count;
                 colony.World.Intents.Submit(new Intent(IntentKind.SpawnPawn,
-                    new CellRef(at.X + dx, at.Z + dz, at.Y), PawnKindIndex.Marauder));
+                    new CellRef(at.X + dx, at.Z + dz, at.Y), PawnKindIndex.Bandit));
                 colony.World.Tick();
                 if (colony.Pawns.Pawns.Count == before + 1)
                 {
@@ -89,15 +89,15 @@ namespace Odyssey.Tests.Sim
             watch.Stop();
 
             recovered = tape.Of(CombatEventKind.Recovered).Count;
-            int standing = 0, downed = 0, marauders = 0;
+            int standing = 0, downed = 0, bandits = 0;
             foreach (Pawn pawn in colony.Pawns.Pawns.All)
             {
-                if (pawn.IsHostile) marauders++;
+                if (pawn.IsHostile) bandits++;
                 if (pawn.Downed) downed++; else standing++;
             }
 
-            // Where every marauder went (design 33 §17): still on the board, dead, or off the edge. A
-            // marauder that left is a ledger entry, a theft or an empty-handed leaving, and nothing
+            // Where every bandit went (design 33 §17): still on the board, dead, or off the edge. A
+            // bandit that left is a ledger entry, a theft or an empty-handed leaving, and nothing
             // else takes one off the board.
             int dead = 0, departed = 0;
             foreach (int id in ids)
@@ -108,10 +108,10 @@ namespace Odyssey.Tests.Sim
                 if (corpse) dead++; else departed++;
             }
             var ledger = colony.Incidents.Ledger;
-            int thefts = ledger.Fires(IncidentHandle.Theft), empty = ledger.Fires(IncidentHandle.MarauderLeft);
+            int thefts = ledger.Fires(IncidentHandle.Theft), empty = ledger.Fires(IncidentHandle.BanditLeft);
 
             TestContext.WriteLine(
-                $"marauder soak: {watch.Elapsed.TotalSeconds:F1} s wall; {spawned} marauders spawned, {marauders} left on the board; " +
+                $"bandit soak: {watch.Elapsed.TotalSeconds:F1} s wall; {spawned} bandits spawned, {bandits} left on the board; " +
                 $"{dead} killed, {thefts} left with a stack and {empty} empty-handed (design 33 §17); " +
                 $"{rules.Swings.Count} swings resolved, {tape.Of(CombatEventKind.Hit).Count} hits, " +
                 $"{hooks.DownedCount} downed, {hooks.DiedCount} died, {recovered} got up; " +
@@ -120,14 +120,14 @@ namespace Odyssey.Tests.Sim
                 $"{colony.Jobs.FailedOf(JobIndex.AttackMelee)}, downed {colony.Jobs.FailedOf(JobIndex.Downed)}, " +
                 $"flee {colony.Jobs.FailedOf(JobIndex.Flee)}");
 
-            Assert.That(spawned, Is.EqualTo(10), "a marauder could not be spawned");
-            Assert.That(rules.Swings.Count, Is.GreaterThan(100), "ten marauders and hardly a blow: the fight never happened");
+            Assert.That(spawned, Is.EqualTo(10), "a bandit could not be spawned");
+            Assert.That(rules.Swings.Count, Is.GreaterThan(100), "ten bandits and hardly a blow: the fight never happened");
             Assert.That(hooks.DownedCount, Is.GreaterThan(0), "ten days of fighting and nobody went down");
             Assert.That(colony.Pawns.Corpses.Count, Is.EqualTo(hooks.DiedCount), "a death without its corpse, or a corpse without a death");
             Assert.That(colony.Jobs.FailedOf(JobIndex.Downed), Is.EqualTo(0), "Job_Downed failed: somebody got up by the wrong door");
             Assert.That(resumed, Is.EqualTo(original), "a save taken mid-fight did not resume the same");
-            Assert.That(departed, Is.EqualTo(thefts + empty), "a marauder left the board without the ledger saying so, or the ledger says one left that did not");
-            Assert.That(marauders + dead + departed, Is.EqualTo(spawned), "a marauder is unaccounted for");
+            Assert.That(departed, Is.EqualTo(thefts + empty), "a bandit left the board without the ledger saying so, or the ledger says one left that did not");
+            Assert.That(bandits + dead + departed, Is.EqualTo(spawned), "a bandit is unaccounted for");
         }
 
         static void Invariants(ColonyWorld colony, int day)

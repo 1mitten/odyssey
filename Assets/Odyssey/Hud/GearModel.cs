@@ -76,7 +76,7 @@ namespace Odyssey.Hud
         /// <summary>
         /// Refill <see cref="Rows"/> for <paramref name="pawn"/>. False, and no rows, when the frame
         /// no longer carries that pawn; true and no rows for an animal; true and one row for a
-        /// person — a colonist or a marauder.
+        /// person — a colonist or a bandit.
         /// </summary>
         public bool Refresh(WorldSnapshot snapshot, PawnId pawn)
         {

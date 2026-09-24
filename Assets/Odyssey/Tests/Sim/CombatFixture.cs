@@ -14,7 +14,7 @@ namespace Odyssey.Tests.Sim
     {
         public static readonly GridSize Size = new GridSize(60, 60, 16);
 
-        /// <param name="beds">A bed each unless a test says otherwise: a marauder with nobody standing
+        /// <param name="beds">A bed each unless a test says otherwise: a bandit with nobody standing
         /// attacks the colony's buildings (design 33 §14b), so a test of it idling has none.</param>
         public static ColonyWorld Board(int colonists = 2, uint seed = 7u, int beds = -1)
         {

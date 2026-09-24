@@ -246,7 +246,7 @@ namespace Odyssey.Sim.Pawns
         /// <item>Otherwise <b>choose a side</b> when the attack is new, when she is in reach on a
         /// held cell, or, waiting, every <see cref="CombatDef.chaseRepathTicks"/>; not while walking,
         /// since nothing she walks to can move. No side she can reach at all: the order fails.
-        /// Every side held: a player's order waits, a marauder's own choice thinks again (§19).</item>
+        /// Every side held: a player's order waits, a bandit's own choice thinks again (§19).</item>
         /// </list>
         /// </summary>
         JobStatus TickBuilding(PawnContext ctx)
@@ -265,7 +265,7 @@ namespace Odyssey.Sim.Pawns
             TraverseMode mode = Job.Mode;
             bool boundary = Pawn.MoveProgress < Pawn.MoveRatePerMille();
 
-            // A marauder's own choice (design 33 §14b) thinks again every rechooseTicks, between
+            // A bandit's own choice (design 33 §14b) thinks again every rechooseTicks, between
             // swings and in reach or not — unlike a hunt, which re-chooses only while chasing,
             // because one beating on a wall never chases and would not look up till it fell. A
             // player's order is forced and runs until the building has gone.
@@ -296,7 +296,7 @@ namespace Odyssey.Sim.Pawns
                 if (!reachable) return JobStatus.Failed;
                 if (dest < 0)
                 {
-                    // Every side held. A marauder's own choice thinks again at once (design 33
+                    // Every side held. A bandit's own choice thinks again at once (design 33
                     // §19): the choice takes only a building with a side free, so it goes to the
                     // next one rather than standing on "Fighting" behind the one who got the side —
                     // the owner's three at a wall on a terrace edge, which had one side. Two can

@@ -46,7 +46,7 @@ namespace Odyssey.Hud
             // fleeing, lying downed, fetching a weapon, carrying the downed to bed.
             "ui.status.fighting", "ui.status.fleeing", "ui.status.downed",
             "ui.status.equipping", "ui.status.rescuing",
-            // A marauder carrying something off the board (design 33 §17), JobHandle 22. With a
+            // A bandit carrying something off the board (design 33 §17), JobHandle 22. With a
             // load in its arms the line reads "Stealing · Meal × 12" by Carrying below.
             "ui.status.stealing",
         };

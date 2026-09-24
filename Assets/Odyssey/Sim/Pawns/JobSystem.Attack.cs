@@ -12,7 +12,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// <c>OrderAttack(cell, A = attacker, B = target pawn, or 0 and the cell a building)</c>.
         /// A drafted colonist closes on the target and swings until one of them goes down — or,
-        /// ordered on a pawn already down, until it is dead (the only way a marauder that stays
+        /// ordered on a pawn already down, until it is dead (the only way a bandit that stays
         /// down is finished). The job is forced, like a move (design 33 §2c): the same
         /// <c>Job_AttackMelee</c> the hunt uses, with <see cref="Job.PlayerForced"/> set and the
         /// target named on the pawn (<see cref="Pawn.CombatTarget"/>).
@@ -22,7 +22,7 @@ namespace Odyssey.Sim.Pawns
         /// a building (C6, design 33 §13d) — as <see cref="OrderAttackBuilding"/> says; for a
         /// target that does not exist, is dead, is the attacker
         /// herself, or cannot be reached. <b>Any pawn may be the target</b> — an animal, a
-        /// marauder, a colonist: the Ctrl that a colonist target needs is the interface's gesture
+        /// bandit, a colonist: the Ctrl that a colonist target needs is the interface's gesture
         /// (<c>CombatOrders.Route</c>), and the contract gives the intent no argument to carry it
         /// (design 33 §6A). <b><c>AlreadyInThatState</c></b> for the order she is already carrying
         /// out: the same target, forced, to the same end.</para>

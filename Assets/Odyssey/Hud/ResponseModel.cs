@@ -57,7 +57,7 @@ namespace Odyssey.Hud
         /// The button pressed (design 33 §18e): the next response after the <b>first selected
         /// colonist's</b>, set on every selected colonist not already at it — so one press on a box
         /// selection puts the whole squad on one response, as the draft key's rule for a mixed
-        /// selection does. Animals and marauders in the selection are passed over. Adds nothing when
+        /// selection does. Animals and bandits in the selection are passed over. Adds nothing when
         /// there is no colonist to act on.
         /// </summary>
         public static void Cycle(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot, List<Intent> into)

@@ -150,22 +150,22 @@ namespace Odyssey.Hud
         // ---- what the pane's shell builds (design 33 §5f) ------------------------------------
         //
         // The shell (HudShell.Inspect, Presentation) used to decide its shape from the subject
-        // and IsAnimal, which left every new kind of pawn — the marauder, the corpse — falling to
+        // and IsAnimal, which left every new kind of pawn — the bandit, the corpse — falling to
         // the colonist's defaults in a file the interface lane does not own. It reads these four
         // answers instead, and they live here, in the fast tier, where lane C can change them and
         // test them. Their values as the contracts step left them reproduce the pane exactly as it
-        // was; the marauder and the corpse are lane C's to answer.
+        // was; the bandit and the corpse are lane C's to answer.
 
         /// <summary>
         /// The pane's avatar slot shows this pawn's own face (and portrait) rather than a keyed
-        /// badge. A colonist's, and nobody else's: an animal and a marauder wear their kind's
+        /// badge. A colonist's, and nobody else's: an animal and a bandit wear their kind's
         /// badge (design 33 §5f, lane C).
         /// </summary>
         public bool ShowsFace => Subject == InspectSubject.Colonist && !IsAnimal && !IsHostile;
 
         /// <summary>
         /// The needs, the skills, the Health tab's values and the mood in the state line are
-        /// synced. A colonist's only. <b>A marauder has none of them</b> (design 33 §5c: no needs;
+        /// synced. A colonist's only. <b>A bandit has none of them</b> (design 33 §5c: no needs;
         /// its skills are not the player's to read and its health is the bar over its head), so
         /// its pane is the animal's shape — kind, activity, where.
         /// </summary>
@@ -174,7 +174,7 @@ namespace Odyssey.Hud
         /// <summary>
         /// The tab strip and the fixed-height tab box are built. A colonist's, and an animal's —
         /// whose box is built from an empty tab list, the pane as it was (design 33 §5i) and kept
-        /// rather than changed without a decision. A marauder's is not: its pane has no tabs to
+        /// rather than changed without a decision. A bandit's is not: its pane has no tabs to
         /// hold, and an empty box would be the Health tab's place with nothing in it.
         /// </summary>
         public bool ShowsTabBox => Subject == InspectSubject.Colonist && !IsHostile;
@@ -267,7 +267,7 @@ namespace Odyssey.Hud
         public bool IsAnimal;
 
         /// <summary>
-        /// The selected pawn is hostile — a marauder (design 33 §1). A person, and not ours: its
+        /// The selected pawn is hostile — a bandit (design 33 §1). A person, and not ours: its
         /// pane is the animal's shape (kind, activity, where) with the kind's badge, and it has no
         /// needs, skills, Health tab or Draft button. Set from the view's flags on every refresh.
         /// </summary>
@@ -480,7 +480,7 @@ namespace Odyssey.Hud
         /// §1). A colonist is named as she was named alive: <see cref="ColonistNames.Of(uint, PawnId)"/>
         /// over the seed and id the corpse kept, which answers a player's own name first, so the
         /// roster she left and the body she left agree. Nothing else has a name, so an animal and a
-        /// marauder are called by their kind.
+        /// bandit are called by their kind.
         /// </summary>
         void DescribeCorpse(in CorpseView corpse)
         {
@@ -602,7 +602,7 @@ namespace Odyssey.Hud
 
                 if (IsAnimal || IsHostile)
                 {
-                    // An animal (design 29 §8) or a marauder (design 33 §1): kind, activity,
+                    // An animal (design 29 §8) or a bandit (design 33 §1): kind, activity,
                     // where. The colonist's tabs, commands and skills are not added, so the pane
                     // below the header is empty — and stays so when the pawn leaves the frame,
                     // which a fight now makes ordinary: it keeps its shape, greyed.
@@ -630,7 +630,7 @@ namespace Odyssey.Hud
                     }
                     else
                     {
-                        // A marauder's job is a person's job — fighting, mostly — in a person's words.
+                        // A bandit's job is a person's job — fighting, mostly — in a person's words.
                         Subtitle = HostileWord;
                         SetJob(snapshot, pawn);
                         JobIconKey = JobLabels.IconKey(pawn.JobDef);
