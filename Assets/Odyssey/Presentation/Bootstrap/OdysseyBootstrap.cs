@@ -148,6 +148,12 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Fade whatever stands between the camera and a selected colonist, so a tree cannot hide the person you are watching.")]
         public bool seeThroughToSelection = true;
 
+        [Tooltip("See-through for every colonist on screen, not only the selected ones (design 38 §19).")]
+        public bool seeThroughToEveryColonist = true;
+
+        [Tooltip("Fade a bush over a body or an item lying under it (design 38 §19).")]
+        public bool seeThroughToGround = true;
+
         [Tooltip("How wide the beam to a selected colonist is, in metres. It stands for the width of the person, not the thickness of the line.")]
         [Range(0.2f, 3f)]
         public float seeThroughRadius = SightLines.DefaultRadius;
@@ -2679,29 +2685,123 @@ namespace Odyssey.Presentation.Bootstrap
             _renderer.SightFadeAlpha = seeThroughAlpha;
             _sight.Radius = seeThroughRadius;
 
+            // The player's See-through switch governs all of it.
             if (!seeThroughToSelection || cameraRig == null) return;
-            SelectionDirector? selection = Directors?.Selection;
-            if (selection == null || !selection.HasPawn) return;
 
             Vector3 eye = cameraRig.transform.position;
-            var selected = selection.Pawns;
-            for (int i = 0; i < selected.Count && i < MaxSightLines; i++)
+            Vector3 focus = cameraRig.Focus;
+            float lift = colonistCursor.y * 0.5f;
+
+            // Selected colonists first: they are who the player is watching, and they must never
+            // lose their line to a closer stranger.
+            SelectionDirector? selection = Directors?.Selection;
+            int lines = 0;
+            if (selection != null && selection.HasPawn)
             {
-                if (!snapshot.TryGetPawn(selected[i], out PawnView pawn)) continue;
-                if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
-                _sight.Add(eye, feet + Vector3.up * (colonistCursor.y * 0.5f));
+                var selected = selection.Pawns;
+                for (int i = 0; i < selected.Count && lines < MaxSightLines; i++)
+                {
+                    if (!snapshot.TryGetPawn(selected[i], out PawnView pawn)) continue;
+                    _sight.Add(eye, FeetOf(pawn, movePerTick) + Vector3.up * lift);
+                    lines++;
+                }
             }
+
+            // Then every other colonist on screen, nearest the focus first, up to a fixed count
+            // (owner, 2026-09-24: trees fade for every colonist). Bounded so the cost does not
+            // grow with the colony: each line is a slab test per instance in the chunks it crosses.
+            _sightCandidates.Clear();
+            System.ReadOnlySpan<PawnView> pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length && seeThroughToEveryColonist; i++)
+            {
+                if (!pawns[i].IsColonist) continue;
+                if (selection != null && selection.HasPawn && Selected(selection.Pawns, pawns[i].Id)) continue;
+                Vector3 feet = FeetOf(pawns[i], movePerTick);
+                bool lying = _renderer.LiesOnTheGround(in pawns[i]);
+                _sightCandidates.Add((Flat(feet - focus), feet + Vector3.up * (lying ? 0.2f : lift)));
+            }
+            lines += AddNearest(eye, MaxColonistSightLines);
+
+            // And what lies on the ground under a bush: a body, a corpse, or a loose item. Grass
+            // lies flat round these (ChunkRenderer.StampLying and the item ring); a bush cannot, so
+            // it fades instead, through the same line (design 38 §19).
+            _sightCandidates.Clear();
+            if (!seeThroughToGround) { SightLinesLastFrame = _sight.Count; return; }
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                if (!_renderer.LiesOnTheGround(in pawns[i])) continue;
+                Vector3 at = FeetOf(pawns[i], movePerTick);
+                if (_renderer.UnderBush(at, pawns[i].Cell.Y)) _sightCandidates.Add((Flat(at - focus), at + Vector3.up * 0.2f));
+            }
+            System.ReadOnlySpan<CorpseView> corpses = snapshot.Corpses;
+            for (int i = 0; i < corpses.Length; i++)
+            {
+                Vector3 at = CellMetrics.FloorCentre(corpses[i].Cell);
+                if (_renderer.UnderBush(at, corpses[i].Cell.Y)) _sightCandidates.Add((Flat(at - focus), at + Vector3.up * 0.2f));
+            }
+            System.ReadOnlySpan<ThingView> things = snapshot.Things;
+            for (int i = 0; i < things.Length; i++)
+            {
+                if (things[i].Contained) continue;
+                Vector3 at = CellMetrics.FloorCentre(things[i].Cell);
+                if (Flat(at - focus) > GrassClearance.WindowMetres * GrassClearance.WindowMetres * 0.25f) continue;
+                if (_renderer.UnderBush(at, things[i].Cell.Y)) _sightCandidates.Add((Flat(at - focus), at + Vector3.up * 0.2f));
+            }
+            AddNearest(eye, MaxGroundSightLines);
+            SightLinesLastFrame = _sight.Count;
         }
 
+        Vector3 FeetOf(in PawnView pawn, int movePerTick)
+        {
+            if (_figures != null && _figures.TryGetFeet(pawn.Id, out Vector3 feet)) return feet;
+            return PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+        }
+
+        static float Flat(Vector3 v) => v.x * v.x + v.z * v.z;
+
+        static bool Selected(IReadOnlyList<PawnId> selected, PawnId id)
+        {
+            for (int i = 0; i < selected.Count; i++) if (selected[i].Equals(id)) return true;
+            return false;
+        }
+
+        /// <summary>Add a line to the nearest <paramref name="most"/> candidates, by distance from the
+        /// focus. A partial selection, not a sort: the count is small and the list is reused.</summary>
+        int AddNearest(Vector3 eye, int most)
+        {
+            int added = 0;
+            for (; added < most && _sightCandidates.Count > 0; added++)
+            {
+                int best = 0;
+                for (int i = 1; i < _sightCandidates.Count; i++)
+                    if (_sightCandidates[i].Distance < _sightCandidates[best].Distance) best = i;
+                _sight.Add(eye, _sightCandidates[best].Target);
+                _sightCandidates[best] = _sightCandidates[_sightCandidates.Count - 1];
+                _sightCandidates.RemoveAt(_sightCandidates.Count - 1);
+            }
+            return added;
+        }
+
+        readonly List<(float Distance, Vector3 Target)> _sightCandidates = new List<(float, Vector3)>();
+
         /// <summary>
-        /// The most lines of sight drawn at once. A box selection can hold the whole colony, and
-        /// each line costs a slab test per instance in every chunk any of them crosses — so the
-        /// cost of the feature would grow with the size of the selection, which is the one thing
-        /// it must not do. Beyond this many the player is commanding a crowd rather than watching
-        /// a person, and the first few are the ones the camera is on.
+        /// The most lines of sight drawn at once for selected colonists. A box selection can hold
+        /// the whole colony, and each line costs a slab test per instance in every chunk any of
+        /// them crosses — so the cost of the feature would grow with the size of the selection,
+        /// which is the one thing it must not do.
         /// </summary>
         const int MaxSightLines = 8;
+
+        /// <summary>The most unselected colonists given a line, nearest the focus first (design 38
+        /// §19). With <see cref="MaxSightLines"/> and <see cref="MaxGroundSightLines"/> it caps the
+        /// sight test at a fixed cost whatever the colony's size.</summary>
+        public const int MaxColonistSightLines = 16;
+
+        /// <summary>The most bodies and items under bushes given a line.</summary>
+        public const int MaxGroundSightLines = 16;
+
+        /// <summary>How many lines of sight were drawn last frame, for the frame measurement.</summary>
+        public int SightLinesLastFrame { get; private set; }
 
         readonly SightLines _sight = new SightLines();
 

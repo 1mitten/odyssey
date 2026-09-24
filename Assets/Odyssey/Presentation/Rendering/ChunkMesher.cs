@@ -602,6 +602,15 @@ namespace Odyssey.Presentation.Rendering
                 surface + new Vector3(offsetX * CellMetrics.SizeXZ, 0f, offsetZ * CellMetrics.SizeXZ));
             AddBody(batch, family[which], tint, Matrix4x4.TRS(
                 at, Quaternion.Euler(0f, yaw, 0f), new Vector3(scale, scale, scale)));
+
+            // Where the bush stands and how wide, for the renderer's "is this thing under a bush"
+            // (design 38 §19): the half-diagonal of its footprint, so any bearing is covered.
+            if (kind == MeadowDressing.Kind.Bush)
+            {
+                Vector3 extent = _model.Library[family[which]].Bounds.extents * scale;
+                batch.BushDiscs.Add(new Vector3(at.x, at.z,
+                    Mathf.Sqrt(extent.x * extent.x + extent.z * extent.z)));
+            }
         }
 
         /// <summary>

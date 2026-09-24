@@ -596,6 +596,62 @@ namespace Odyssey.Presentation.Rendering
         /// than a stack of logs does.</summary>
         public float MarkClearance { get; set; } = 1.1f;
 
+        /// <summary>
+        /// How far past a thing's own footprint the grass lies flat (owner, 2026-09-24: "flatten
+        /// grass so items can be seen clearer", design 38 §19). An item's ring is its drawn
+        /// footprint plus this, never less than <see cref="ItemClearance"/>.
+        /// </summary>
+        public float ItemMargin { get; set; } = 0.5f;
+
+        /// <summary>
+        /// How far the grass lies flat round a colonist lying on the ground — downed, asleep out of
+        /// a bed, or dead: half a body's length plus <see cref="ItemMargin"/>, from the cell the
+        /// body lies in.
+        /// </summary>
+        public float LyingClearance { get; set; } = 1.4f;
+
+        /// <summary>
+        /// The ring an item on the floor pushes the grass back by: its footprint plus the margin.
+        /// A heap spreads its rocks over <c>Recipe.Spread</c> from the cell centre; a single prop
+        /// covers its module's half-diagonal. Pure so a test can state it.
+        /// </summary>
+        public static float ItemRing(float footprint, float margin, float floor) =>
+            Mathf.Max(floor, footprint + margin);
+
+        /// <summary>
+        /// Whether a point on the ground is under one of the Meadow bushes (design 38 §19): the
+        /// bushes of the chunks round it, as the mesher recorded them. A bush cannot lie flat the
+        /// way grass does, so what is under one is instead given a line of sight, and the bush
+        /// fades as a tree does over a colonist.
+        /// </summary>
+        public bool UnderBush(Vector3 point, int layer)
+        {
+            var chunks = _model.Chunks;
+            var size = _model.Size;
+            int cx = Mathf.FloorToInt(point.x / CellMetrics.SizeXZ);
+            int cz = Mathf.FloorToInt(point.z / CellMetrics.SizeXZ);
+            // The bush stands on the surface below the thing's own layer, which is where the
+            // mesher filed it (the surface cell is the solid one under the air the thing is in).
+            int surface = layer - 1;
+            if (surface < 0 || surface >= size.SizeY) return false;
+            for (int dz = -Odyssey.Sim.World.CellGrid.ChunkSize; dz <= Odyssey.Sim.World.CellGrid.ChunkSize; dz += Odyssey.Sim.World.CellGrid.ChunkSize)
+            for (int dx = -Odyssey.Sim.World.CellGrid.ChunkSize; dx <= Odyssey.Sim.World.CellGrid.ChunkSize; dx += Odyssey.Sim.World.CellGrid.ChunkSize)
+            {
+                int x = cx + dx, z = cz + dz;
+                if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
+                ChunkBatch? batch = _batches[chunks.ChunkIndexOfCell(x, z, surface)];
+                if (batch == null) continue;
+                var discs = batch.BushDiscs;
+                for (int i = 0; i < discs.Count; i++)
+                {
+                    Vector3 d = discs[i];
+                    float ddx = point.x - d.x, ddz = point.z - d.y;
+                    if (ddx * ddx + ddz * ddz <= d.z * d.z) return true;
+                }
+            }
+            return false;
+        }
+
         /// <summary>Instances drawn ghosted last frame because they stood in a line of sight.</summary>
         public int InstancesFaded { get; private set; }
 
@@ -1593,6 +1649,66 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
+        /// Lay the grass flat round every body on the ground (design 38 §19): a colonist downed,
+        /// asleep somewhere that is not a bed, or dead. The same ring for all three, because at the
+        /// play camera the question is the same — can you see who is lying there.
+        /// </summary>
+        void StampLying(WorldSnapshot snapshot, int lowest, int highest)
+        {
+            System.ReadOnlySpan<PawnView> pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                CellRef cell = pawns[i].Cell;
+                if (cell.Y < lowest || cell.Y > highest) continue;
+                if (!LiesOnTheGround(in pawns[i])) continue;
+                Clearance.Stamp(CellMetrics.Centre(cell.X, cell.Z, cell.Y), LyingClearance);
+            }
+
+            System.ReadOnlySpan<CorpseView> corpses = snapshot.Corpses;
+            for (int i = 0; i < corpses.Length; i++)
+            {
+                CellRef cell = corpses[i].Cell;
+                if (cell.Y < lowest || cell.Y > highest) continue;
+                Clearance.Stamp(CellMetrics.Centre(cell.X, cell.Z, cell.Y), LyingClearance);
+            }
+        }
+
+        /// <summary>For the photograph only: treat every colonist as lying on the ground, so the
+        /// flattened grass and the faded bush round a body can be judged by looking. Never set by the
+        /// game.</summary>
+        public bool ForceLyingForAPhotograph { get; set; }
+
+        /// <summary>The nearest bush to a point on the given surface layer, from the discs the mesher
+        /// recorded; false when no meshed chunk nearby holds one. For the photograph.</summary>
+        public bool TryNearestBush(Vector3 near, int surfaceLayer, out Vector3 at)
+        {
+            at = default;
+            float best = float.MaxValue;
+            for (int i = 0; i < _batches.Length; i++)
+            {
+                ChunkBatch? batch = _batches[i];
+                if (batch == null || batch.Layer != surfaceLayer) continue;
+                foreach (Vector3 d in batch.BushDiscs)
+                {
+                    float dist = (d.x - near.x) * (d.x - near.x) + (d.y - near.z) * (d.y - near.z);
+                    if (dist < best) { best = dist; at = new Vector3(d.x, near.y, d.y); }
+                }
+            }
+            return best < float.MaxValue;
+        }
+
+        /// <summary>Downed, or asleep out of a bed: lying on the ground rather than on a mattress.</summary>
+        public bool LiesOnTheGround(in PawnView pawn)
+        {
+            if (ForceLyingForAPhotograph && pawn.IsColonist) return true;
+            if (pawn.IsDowned) return true;
+            if (!pawn.Asleep) return false;
+            CellRef c = pawn.Cell;
+            if (!_model.Size.Contains(c.X, c.Z, c.Y)) return true;
+            return _model.BedHeadAt(_model.Size.Index(c.X, c.Z, c.Y)) < 0;
+        }
+
+        /// <summary>
         /// Where a load rides on a colonist drawn as an instanced stand-in rather than as a live
         /// figure, as a fraction of a cell's height above the pawn's feet.
         ///
@@ -1627,6 +1743,7 @@ namespace Odyssey.Presentation.Rendering
             Material fallback, ICarriedLoads? carried, float tickAlpha, int movePerTick)
         {
             System.ReadOnlySpan<ThingView> things = snapshot.Things;
+            StampLying(snapshot, lowest, highest);
             if (things.Length == 0 && snapshot.PawnCount == 0 && snapshot.FallingCount == 0) return;
             EnsureItemModules();
             System.Array.Clear(_itemCounts, 0, _itemCounts.Length);
@@ -1636,12 +1753,22 @@ namespace Odyssey.Presentation.Rendering
                 CellRef cell = things[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
 
-                // A stack of logs is shorter than a blade of grass. Stamped from the drawn set, so
-                // an item three storeys down does not bald the meadow above it.
-                Clearance.Stamp(CellMetrics.Centre(cell.X, cell.Z, cell.Y), ItemClearance);
-
                 int def = things[i].DefIndex;
                 ResolvedModule? module = ItemModule(def);
+
+                // A stack of logs is shorter than a blade of grass, so the grass round it lies flat
+                // over its whole footprint and half a metre more (design 38 §19). Stamped from the
+                // drawn set, so an item three storeys down does not bald the meadow above it. A
+                // thing on a shelf keeps the old small ring: it is off the ground.
+                float footprint = 0f;
+                if (!things[i].Contained)
+                {
+                    if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe ring)) footprint = ring.Spread + 0.3f;
+                    else if (module != null && !module.IsEmpty)
+                        footprint = new Vector2(module.Bounds.extents.x, module.Bounds.extents.z).magnitude;
+                }
+                Clearance.Stamp(CellMetrics.Centre(cell.X, cell.Z, cell.Y),
+                    things[i].Contained ? ItemClearance : ItemRing(footprint, ItemMargin, ItemClearance));
                 if (module == null || module.IsEmpty || !module.UsesArt)
                 {
                     // No art for this kind — either the packs are absent or the def is newer than
