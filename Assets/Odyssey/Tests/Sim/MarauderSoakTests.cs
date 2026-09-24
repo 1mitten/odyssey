@@ -117,8 +117,11 @@ namespace Odyssey.Tests.Sim
                 Assert.That(Melee.IsDead(pawn), Is.False, $"{who}: dead and still on the board");
                 Assert.That(pawn.HpMilli, Is.LessThanOrEqualTo(pawn.HpMaxMilli), $"{who}: over its pool");
                 if (pawn.HpMilli <= 0) Assert.That(pawn.Downed, Is.True, $"{who}: at {pawn.HpMilli} and standing");
+                // The line a pawn gets up at: whole for a colonist, who heals only in a bed and stays
+                // there until she is (design 33 §11c); the content's threshold for an animal.
+                int upAt = pawn.IsColonist ? 1_000 : pawn.Content.Combat.downedRecoverAtPerMille;
                 if (pawn.Downed)
-                    Assert.That((long)pawn.HpMilli * 1_000, Is.LessThan((long)pawn.HpMaxMilli * pawn.Content.Combat.downedRecoverAtPerMille),
+                    Assert.That((long)pawn.HpMilli * 1_000, Is.LessThan((long)pawn.HpMaxMilli * upAt),
                         $"{who}: down past the line it gets up at");
                 if (pawn.Downed && pawn.FinishingStepTo < 0)
                     Assert.That(pawn.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.Downed), $"{who}: down and doing something else");

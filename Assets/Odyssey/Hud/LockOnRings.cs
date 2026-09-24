@@ -150,6 +150,9 @@ namespace Odyssey.Hud
         static int TargetOf(WorldSnapshot snapshot, PawnId pawn)
         {
             if (!snapshot.TryGetPawn(pawn, out PawnView view) || !view.IsColonist || !view.IsDrafted) return 0;
+            // A rescue names its patient as the order's target too; the ring says *attack*, so a
+            // colonist carrying somebody to a bed draws none (design 33 §11e).
+            if (view.JobDef == JobHandle.Rescue) return 0;
             return snapshot.TryGetPawnAspect(pawn, CombatAspectNames.OrderTargetKey, out int target) ? target : 0;
         }
 
