@@ -628,8 +628,9 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// Where the pawn is walking under the player's orders, or -1 (design 33 §2e, §7a): a
         /// drafted colonist's move, or a weapon she was sent for — the only equip there is comes
-        /// from an order, drafted or not. An attack or a rescue is drawn to its target, not a cell
-        /// (<see cref="CombatAspects.OrderTarget"/>).
+        /// from an order, drafted or not. An attack on a pawn or a rescue is drawn to its target,
+        /// not a cell (<see cref="CombatAspects.OrderTarget"/>); an attack on a building to the cell
+        /// of it she strikes (design 33 §13i).
         /// </summary>
         static int OrderCellOf(Pawn pawn)
         {
@@ -637,6 +638,9 @@ namespace Odyssey.Sim.Pawns
             if (job == null) return -1;
             if (job.DefIndex == JobIndex.Goto && pawn.Drafted) return job.TargetCell;
             if (job.DefIndex == JobIndex.Equip && job.PlayerForced) return job.TargetCell;
+            // A building has no pawn id to draw a line to, so it rides the order cell (design 33
+            // §5d, §13i): the cell of it she strikes at.
+            if (job.DefIndex == JobIndex.AttackMelee && job.PlayerForced && pawn.CombatTarget == 0) return job.TargetCell;
             return -1;
         }
 
