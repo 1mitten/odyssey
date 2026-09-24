@@ -376,6 +376,12 @@ namespace Odyssey.Presentation.World
             public float SleepWeight;
 
             /// <summary>
+            /// How far down into the row's settled idle this figure is, 0 standing and 1 sitting
+            /// (design 31 §18d). Eased, so a colonist lowers herself and gets up.
+            /// </summary>
+            public float SitWeight;
+
+            /// <summary>
             /// Which way the body lies, head to foot. The bed's own facing where there is a bed,
             /// and whatever the colonist was facing when it dropped where there is not.
             /// </summary>

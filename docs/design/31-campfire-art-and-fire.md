@@ -657,3 +657,68 @@ it should arrive with the pose that consumes it.
 
 Until then the tell is that idle colonists **stand still at the fire** while everybody else is
 walking somewhere, which is most of the signal the owner asked for and none of the charm.
+**Built the next day — §18d.**
+
+### 18d. They sit — 2026-09-24
+
+The shape §18c found, built as it said, with one change of mind on where the posture lives.
+
+**The simulation decides, because only it knows.** The fireside settle is an ordinary `Wait`, and so
+is the stand-down and the idler with nowhere to go, so presentation cannot tell a hearth from a
+standstill. Every settle at the hearth now rolls `IdleThinkNode.SitPerMille` (500) to sit, and a
+seat is **a `Wait` whose `DestCell` names the fire beside it**; `Job.Seated` is derived from exactly
+that. A wait has no destination, so the fire's cell there is unambiguous — and `DestCell` is
+already saved and hashed, so a seat survives a save and sits inside the hash **for nothing**: no new
+job field and no save-format bump. §18c had it as a field on `PawnView` only; it is that too
+(`PawnView.Seated`, for `Asleep`'s reason — every figure is posed whether or not it is selected),
+but the view reads it off the job rather than carrying a second copy.
+
+**No memory, and the alternation still happens.** The first idea was a two-state chain — a stander
+sits half the time, a sitter mostly stays down. It needs the last settle's posture, and `Think`
+resets the job buffer before every node, so there is nothing to read it from without a new pawn
+field. Rolling afresh each time gives stand-then-sit and sit-then-stand anyway. What the chain was
+for is done by duration: a seat lasts `SeatedLingerFactor` (2) times a stand, so with the linger's
+spread **every seat outlasts every stand** (480–958 ticks against 240–479), and the ring reads as
+*stand for a bit, then sit* rather than as bobbing. Both numbers are INVENTED and are the playtest's.
+
+**She faces the fire.** `PawnView.WorkCell`, meaningless when idle until now, names the fire while
+she is seated, and the figure's existing *face the work* turn reads it. Without it a colonist who
+walked in from the far side sits with her back to the flames.
+
+**The figure blends into the pack's crouching idle** — `A_Idle_Crouching_Femn` / `_Masc`, a new
+`sitClip` on every colonist row, the mixer's last input after the gaits. The sitter's weight is
+taken *from* the gaits rather than laid over them, so the mixer still sums to one. `SitPose` eases it
+over 0.8 s, slower than lying down, because somebody lowering themselves to a fire does it
+unhurriedly. Foot planting stays on: the clip's feet are already on the floor, and on a slope
+planting is what keeps them there.
+
+**Measured off the drawn mesh, not trusted to the clip's name** (`SitPoseTests`, the
+`FigureBuildTests` rule). Both sexes, at the catalogue's 1.4 scale:
+
+| Clip | Standing | Seated | Crown |
+|---|---|---|---|
+| `A_Idle_Crouching_Femn` | −0.012 .. 2.566 m | −0.012 .. 1.770 m | 69% of standing |
+| `A_Idle_Crouching_Masc` | −0.011 .. 2.564 m | −0.011 .. 1.773 m | 69% of standing |
+
+The sole does not move by a millimetre, so the feet are neither through the floor nor off it. Whether
+69% reads as *sitting* at the play camera is the playtest's question; the test asserts only that it
+is below 80%, the point at which it would read as standing.
+
+**What it cost to find out that the catalogue rebuild is two passes.** `PlayScene.RebuildCatalogue`
+alone writes every row fresh with **empty appearance swatches** — `CharacterSwatches` is the second
+pass that fills them — and on this branch it also serialised four `fit*` fields another unit had
+declared and never written. The diff was 4,834 lines for two fields. The committed asset was
+restored and the two fields added to the 73 colonist rows by hand, with the clip references taken
+from the rebuild: **146 lines, nothing else touched**. Anyone rebuilding the catalogue owes the
+swatch pass straight after, or every colonist loses its recolouring.
+
+**Not done, and why.**
+
+- **A colonist past the figure cap stands.** The instanced baked form poses nobody; it does not lie
+  sleepers down either. Under the 64-figure ceiling that is every colonist on screen.
+- **A seat does not survive the fire going out** until the settle ends, at most 958 ticks. Nothing
+  puts a fire out yet but deconstruction.
+- **No log seat.** Western Frontier ships `SM_Prop_LogSeat_01`, and no pack ships a seated clip, so a
+  seat to sit on would sit a crouching figure beside a log. That is a unit with its own clip.
+- **The crowd sidestep** can nudge a sitter the way it nudges anybody standing still. It has not
+  been seen to; it is the first thing to look for if a seated figure drifts.

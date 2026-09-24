@@ -23,6 +23,16 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the hearth read as a hearth?** (`claude/campfire-art`, PR #170, `docs/design/31-campfire-art-and-fire.md`
+  §17–§18d.) Build a campfire, give the colony nothing to do, and watch for a game hour. Idlers
+  should drift to it two times in three, **stay** once there, and alternate between standing and
+  crouching round it, facing the flames; a seat lasts about twice a stand. Three things only a
+  keyboard decides. Whether **a crouch reads as sitting** at the play camera — it is 69% of standing
+  height, measured; a wrong answer is not being able to pick the seated ones out, and the fix is a
+  seated clip, which no pack has. Whether **the split is right** — a wrong answer is a ring that
+  never sits or one that is always down (`SitPerMille`, 500). And whether **getting up and down
+  looks deliberate** — 0.8 s each way; a wrong answer is a bob or a slow melt (`SitPose.SettleSeconds`).
+
 - **Does power read?** (`claude/power`, PR #173, `docs/design/32-power.md`; merged with `main` 2026-09-24.)
   Lines, generators and heaters now take **scrap metal** (design 32 §14): a new game scatters ten
   piles of wreckage over the board, fifteen or more cells from the start, and the debug menu's

@@ -11321,3 +11321,19 @@ The content fingerprint and all three goldens were re-taken rather than adopted,
 side's numbers came from the merged code. `GoldenColonyProbe` on the merge and on `origin/main`
 diffs clean on every board. The wiki and label registry were regenerated from the merged CSVs, not
 merged by hand.
+
+## 2026-09-24 — Colonists sit at the fire
+
+The half of the owner's hearth request that §18c left owed: idle colonists *"sit by the fire or
+stand by the fire for a bit and then sit down and vice versa"*. Every settle at the hearth rolls
+sit or stand; a seat is a `Wait` whose `DestCell` names the fire, so it is saved and hashed through
+a field that already was, with no format bump and no golden moved (every golden board is fireless).
+The view publishes `Seated` and the fire's cell, and the figure blends into the pack's crouching idle
+facing it. A two-state chain was designed and dropped: `Think` resets the job before every node, so
+it needed a new pawn field for something that fresh rolls plus a longer seated linger already give.
+
+The measurement that paid for itself was not the pose — the crouch came out at 69% of standing
+height with the soles unmoved, as §18c predicted — but the catalogue. A bare
+`PlayScene.RebuildCatalogue` wipes every colonist's appearance swatches, because `CharacterSwatches`
+is a second pass, and would have been a 4,834-line diff carrying that loss. Recorded in design 31
+§18d so the next rebuild runs both.

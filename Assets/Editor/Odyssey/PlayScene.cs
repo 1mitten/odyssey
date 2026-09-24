@@ -1760,6 +1760,9 @@ namespace Odyssey.EditorTools
                     uniform = IsUniform(prefab),
                     sex = feminine ? BodySex.Female : BodySex.Male,
                     poseClipName = $"A_Idle_Standing_{suffix}",
+                    // The pack's crouching idle is the lowest authored rest there is; no pack
+                    // ships a seated clip (design 31 §18d).
+                    sitClipName = $"A_Idle_Crouching_{suffix}",
                     centreXZ = true, baseAtY = true,
                     scale = new Vector3(1.4f, 1.4f, 1.4f),
                     locomotion = new List<LocomotionEntry>
@@ -1920,6 +1923,7 @@ namespace Odyssey.EditorTools
             }
 
             ResolveGaits(rows, clips);
+            foreach (ModuleEntry row in rows) row.sitClip = LookUpClip(row.sitClipName, clips);
 
             var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
             if (catalogue == null)

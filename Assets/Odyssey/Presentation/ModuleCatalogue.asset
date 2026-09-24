@@ -2771,6 +2771,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -2843,6 +2845,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -2915,6 +2919,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -2987,6 +2993,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -3059,6 +3067,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -3131,6 +3141,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -3203,6 +3215,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -3275,6 +3289,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -3347,6 +3363,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -3419,6 +3437,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -3491,6 +3511,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -3563,6 +3585,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -3635,6 +3659,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -3707,6 +3733,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -3779,6 +3807,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -3851,6 +3881,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -3923,6 +3955,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -3995,6 +4029,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4057,6 +4093,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4124,6 +4162,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4181,6 +4221,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -4253,6 +4295,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4320,6 +4364,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -4392,6 +4438,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -4469,6 +4517,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -4541,6 +4591,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4603,6 +4655,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -4675,6 +4729,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -4747,6 +4803,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -4819,6 +4877,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -4891,6 +4951,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4953,6 +5015,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -5025,6 +5089,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -5097,6 +5163,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -5169,6 +5237,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -5241,6 +5311,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -5318,6 +5390,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -5395,6 +5469,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -5467,6 +5543,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -5544,6 +5622,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -5621,6 +5701,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -5698,6 +5780,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -5770,6 +5854,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -5842,6 +5928,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -5914,6 +6002,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -5991,6 +6081,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -6063,6 +6155,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -6140,6 +6234,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -6217,6 +6313,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -6294,6 +6392,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -6366,6 +6466,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -6438,6 +6540,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -6510,6 +6614,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -6587,6 +6693,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -6664,6 +6772,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -6736,6 +6846,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -6813,6 +6925,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -6885,6 +6999,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -6962,6 +7078,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -7039,6 +7157,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -7116,6 +7236,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -7193,6 +7315,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -7260,6 +7384,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -7337,6 +7463,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -7409,6 +7537,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -7486,6 +7616,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -7558,6 +7690,8 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 1827226128182048838, guid: 52a2eb3158000934eb33267c807b8b15, type: 3}
+    sitClipName: A_Idle_Crouching_Masc
     quadrupedGait: 0
     appearance:
       skin:
@@ -7630,6 +7764,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -7707,6 +7843,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -7779,6 +7917,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -7856,6 +7996,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -7928,6 +8070,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
@@ -8005,6 +8149,8 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    sitClip: {fileID: 2864948920634185294, guid: 7301ec1a168c67348a8f697f79a221ab, type: 3}
+    sitClipName: A_Idle_Crouching_Femn
     quadrupedGait: 0
     appearance:
       skin:
