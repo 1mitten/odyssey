@@ -727,6 +727,8 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-24 | **The Inventory tab, restyled** (PR #177, `docs/design/35-inventory-tab.md` §5a) | working — owner: *"it's good"* | none; ready to merge |
+| 2026-09-23 | **The Research tab** (PR #177, `docs/design/34-research-tab.md`) | working — owner: *"the research control is fine"*, after the list was cut to what the game has | the list became Electricity, Power lines, Generator, Ladder (34 §2) |
 | 2026-09-23 | **Drafting and moving** (C1, `claude/combat-mvp`, `docs/design/33-combat.md` §2) | working — owner: *"the drafting, T and moving onto surfaces, diamond and 4 hours all seemed to work"* | two asks: a drafted colonist runs (§2h), the marks a deeper translucent red (§2g); both built, re-queued above |
 | 2026-09-20 | **Head turning and gaze** (PR #128, `docs/design/23-head-turning-and-gaze.md`) | working — owner: *"gaze … is all working now"* | none; the design doc stands |
 | 2026-09-20 | **The flush selection cursor** (PR #127, `docs/design/23-flush-selection-cursor.md`) | working | none; the design doc stands |

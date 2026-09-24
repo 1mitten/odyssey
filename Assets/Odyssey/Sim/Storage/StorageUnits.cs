@@ -99,6 +99,13 @@ namespace Odyssey.Sim.Storage
 
         public int Count => _units.Count;
 
+        /// <summary>
+        /// The painted zones, so a shelf can be published with its number in the one series both
+        /// kinds share (<see cref="StorageZones.OrdinalOfCell"/>). Null in a harness with no zones,
+        /// where a shelf is published unnumbered.
+        /// </summary>
+        public StorageZones? Zones { get; set; }
+
         /// <summary>Every unit, ascending by edifice, tombstones included.</summary>
         public IReadOnlyList<StorageUnit> Units => _units;
 
@@ -347,8 +354,10 @@ namespace Odyssey.Sim.Storage
                 StorageUnit unit = _units[i];
                 if (unit.Removed) continue;
 
+                int cell = CellOf(unit);
                 writer.AddStorageUnit(new StorageUnitView(
-                    CellOf(unit), (byte)StacksIn(unit), (byte)unit.Slots, IsEmptying(unit)));
+                    cell, (byte)StacksIn(unit), (byte)unit.Slots, IsEmptying(unit),
+                    Zones?.OrdinalOfCell(cell) ?? 0));
             }
         }
 

@@ -106,6 +106,9 @@ namespace Odyssey.Sim.Pawns
             // shelf — the panel opens and closes again, which is the shape of fault design 20 §8
             // records as "Assign did nothing, three times".
             storage.Units = units;
+            // And the numbering, which both kinds of store share: the Inventory tab names shelves
+            // and stockpiles side by side off the published rows (design 35).
+            units.Zones = storage;
             // U29: the seam through which a job that edits the world says the structure changed.
             // Taken off the system rather than passed in beside it, so the solver a collapse is
             // computed from and the solver a wall marks dirty cannot be two different objects.

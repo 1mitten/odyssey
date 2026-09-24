@@ -91,7 +91,7 @@ namespace Odyssey.Tests.PlayMode
                 string[] expected =
                 {
                     "stores", "clock", "alerts", "bulletins", "toasts", "rail", "orders", "views", "inspect",
-                    "build", "menu", "settings", "debug", "work", "animals", "start", "saveprompt",
+                    "build", "menu", "settings", "debug", "work", "inventory", "research", "animals", "start", "saveprompt",
                     "leaveprompt", "almanac-panel",
                 };
                 var regions = doc.rootVisualElement.Query(className: "region").ToList();

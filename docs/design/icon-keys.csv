@@ -726,3 +726,46 @@ ui.res.category.items,Items,ui.res.category,M3,"Made things that are carried, wo
 ui.res.category.weapons,Weapons,ui.res.category,M3,What a colonist fights with
 ui.tab.storage,Storage,ui.tab,M3,"What a store takes, and how much it matters"
 ui.tab.tile,Tile,ui.tab,M3,"The ground itself, under whatever is standing on it"
+ui.keys.research,Research tab,ui.keys,RS,"Open and close the research window"
+ui.debug.finishresearch,Finish research,ui.debug,RS,"Completes the project being researched and starts the next in the queue"
+ui.research.category.power,Power,ui.research.category,RS,"Making current, carrying it and storing it"
+ui.research.category.furniture,Furniture,ui.research.category,RS,"What a colony builds to live and move among"
+ui.research.project.electricity,Electricity,ui.research.project,RS,"How current is made and carried. It builds nothing by itself; power lines and the generator both start here."
+ui.research.project.powerlines,Power lines,ui.research.project,RS,"Lines that carry current from where it is made to where it is wanted, through walls and between floors."
+ui.research.project.generator,Generator,ui.research.project,RS,"A burner that turns fuel into current. Loud and hungry, and the first power a colony can count on."
+ui.research.project.ladder,Ladder,ui.research.project,RS,"A way up that takes one cell. Slow to climb and cheap to build."
+ui.research.hud.now,Current,ui.research.hud,RS,"The label of the strip that says what is being researched. Not Now, which the HUD reads as a placeholder"
+ui.research.hud.then,"then {list}",ui.research.hud,RS,"What the queue does next, after the project in hand"
+ui.research.hud.idle,Nothing being researched. Pick a project.,ui.research.hud,RS,The Now strip when no project is in hand
+ui.research.hud.project,Project,ui.research.hud,RS,Column heading
+ui.research.hud.status,Status,ui.research.hud,RS,Column heading
+ui.research.hud.cost,Cost,ui.research.hud,RS,Column heading
+ui.research.hud.meta,"{category}, cost {cost}",ui.research.hud,RS,The line under a selected project's name
+ui.research.hud.needs,Needs,ui.research.hud,RS,The projects that must be done first
+ui.research.hud.unlocks,Unlocks,ui.research.hud,RS,What finishing the project gives the colony
+ui.research.hud.leadsto,Leads to,ui.research.hud,RS,The projects this one opens up
+ui.research.hud.none,None,ui.research.hud,RS,An empty list in the facts
+ui.research.hud.needsfirst,"Needs {project} first.",ui.research.hud,RS,Why a locked project cannot be started
+ui.research.hud.research,Research,ui.research.hud,RS,Start this project now
+ui.research.hud.queue,Queue,ui.research.hud,RS,Research this project after the one in hand
+ui.research.hud.unqueue,Unqueue,ui.research.hud,RS,Take this project back out of the queue
+ui.research.hud.pause,Pause,ui.research.hud,RS,"Stop researching, keeping the progress"
+ui.research.status.researching,Researching,ui.research.status,RS,Being worked on now
+ui.research.status.available,Available,ui.research.status,RS,Everything it needs is done
+ui.research.status.done,Done,ui.research.status,RS,Finished; what it unlocks is the colony's
+ui.research.status.locked,Locked,ui.research.status,RS,Something it needs is not done yet
+ui.tab.inventory,Inventory,ui.tab,INV,"Everything in the colony's stores, and which store holds it"
+ui.keys.inventory,Inventory tab,ui.keys,INV,"Open and close the inventory window"
+ui.inventory.hud.search,Find an item,ui.inventory.hud,INV,The search field's placeholder
+ui.inventory.hud.item,Item,ui.inventory.hud,INV,Column heading
+ui.inventory.hud.places,Places,ui.inventory.hud,INV,"Column heading: how many stores hold the item"
+ui.inventory.hud.total,Total,ui.inventory.hud,INV,"Column heading: how many the colony's stores hold"
+ui.inventory.hud.where,Where,ui.inventory.hud,INV,Column heading
+ui.inventory.hud.qty,Count,ui.inventory.hud,INV,"Column heading: how many of the item the store holds. Not Qty, which the HUD reads as a placeholder"
+ui.inventory.hud.go,Go,ui.inventory.hud,INV,Move the camera to this store and select it
+ui.inventory.hud.goto,Go to {place},ui.inventory.hud,INV,The primary button: the selected store
+ui.inventory.hud.inplaces,"{category}, in {count} places",ui.inventory.hud,INV,The line under a selected item's name
+ui.inventory.hud.inplace,"{category}, in 1 place",ui.inventory.hud,INV,The line under a selected item's name when one store holds it
+ui.inventory.hud.hint,Go moves the camera to that place and selects it. Clicking the item row itself goes to the place holding the most.,ui.inventory.hud,INV,The hint under the list of places
+ui.inventory.hud.empty,Nothing is in a store yet.,ui.inventory.hud,INV,The table when the colony's stores are empty
+ui.inventory.hud.nomatch,No item matches.,ui.inventory.hud,INV,The table when a search finds nothing

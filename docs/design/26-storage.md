@@ -578,5 +578,9 @@ strip. **Cost: one bucket per chunk that holds a store and nothing per frame** (
 neighbour joining or leaving changes a cell's line, `Mark` dirties the four neighbours' chunks as
 well. `StoreEdgeTests`: a 2 x 2 block and a lone cell give exactly 8 + 4 strips.
 
+**The category hues moved the same day** (design 35 §5a): re-tuned so no two collapse for a
+colour-blind player, and the heading's wash strengths became `HudTheme` constants shared with the
+Inventory tab.
+
 **Open:** the width and the hue are a first guess for the owner's eye; a strip can hide under grass
 tufts on a meadow, which the first look will say.

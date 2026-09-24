@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-96 entries, 70 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+110 entries, 84 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -87,6 +87,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Menu** | `ui.tab.menu` | Save, load, settings, quit <br>**Needs:** a settings or menu mark | no art | M1 |
 | **Storage** | `ui.tab.storage` | What a store takes, and how much it matters <br>**Needs:** an open crate seen from above | no art | M3 |
 | **Tile** | `ui.tab.tile` | The ground itself, under whatever is standing on it <br>**Needs:** a single square of ground, in plan | no art | M3 |
+| **Inventory** | `ui.tab.inventory` | Everything in the colony's stores, and which store holds it | no art | INV |
 
 ## Game speed
 
@@ -134,6 +135,24 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Ambience volume** | `ui.settings.volume.ambience` | The sound of the place itself | no art | M3 |
 | **Effects volume** | `ui.settings.volume.effects` | Axes, picks and the noises of work | no art | M3 |
 | **Alerts volume** | `ui.settings.volume.alerts` | What asks for attention | no art | M3 |
+
+## The Inventory tab's words
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Find an item** | `ui.inventory.hud.search` | The search field's placeholder | no art | INV |
+| **Item** | `ui.inventory.hud.item` | Column heading | no art | INV |
+| **Places** | `ui.inventory.hud.places` | Column heading: how many stores hold the item | no art | INV |
+| **Total** | `ui.inventory.hud.total` | Column heading: how many the colony's stores hold | no art | INV |
+| **Where** | `ui.inventory.hud.where` | Column heading | no art | INV |
+| **Count** | `ui.inventory.hud.qty` | Column heading: how many of the item the store holds. Not Qty, which the HUD reads as a placeholder | no art | INV |
+| **Go** | `ui.inventory.hud.go` | Move the camera to this store and select it | no art | INV |
+| **Go to {place}** | `ui.inventory.hud.goto` | The primary button: the selected store | no art | INV |
+| **{category}, in {count} places** | `ui.inventory.hud.inplaces` | The line under a selected item's name | no art | INV |
+| **{category}, in 1 place** | `ui.inventory.hud.inplace` | The line under a selected item's name when one store holds it | no art | INV |
+| **Go moves the camera to that place and selects it. Clicking the item row itself goes to the place holding the most.** | `ui.inventory.hud.hint` | The hint under the list of places | no art | INV |
+| **Nothing is in a store yet.** | `ui.inventory.hud.empty` | The table when the colony's stores are empty | no art | INV |
+| **No item matches.** | `ui.inventory.hud.nomatch` | The table when a search finds nothing | no art | INV |
 
 ---
 

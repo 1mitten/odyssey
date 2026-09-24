@@ -692,11 +692,24 @@ namespace Odyssey.Sim.Contracts
         /// <summary>The zone's <c>StoragePriority</c>, 0 to 4. Drawn as a strength, not a hue.</summary>
         public readonly byte Priority;
 
-        public StoreView(int cellIndex, int zone, byte priority)
+        /// <summary>
+        /// The zone's place among the colony's stores, from 1: the "3" of "Stockpile 3".
+        ///
+        /// <para>Published rather than derived on the interface side, because
+        /// <c>StorageZones.OrdinalOfCell</c> is the one owner of that rule and the inspect pane
+        /// already reads it through <see cref="CellDetail.StorageOrdinal"/>. The Inventory tab
+        /// (design 35) names every store at once, and a second copy of the count in the HUD would
+        /// be the tab and the pane able to disagree about which store is which. 0 where no
+        /// numbering was given.</para>
+        /// </summary>
+        public readonly int Ordinal;
+
+        public StoreView(int cellIndex, int zone, byte priority, int ordinal = 0)
         {
             CellIndex = cellIndex;
             Zone = zone;
             Priority = priority;
+            Ordinal = ordinal;
         }
     }
 
@@ -724,12 +737,16 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Ordered taken apart, so its contents should be leaving.</summary>
         public readonly bool Emptying;
 
-        public StorageUnitView(int cellIndex, byte stacks, byte slots, bool emptying)
+        /// <summary>The store's place in the same series zones are numbered in: the "3" of "Shelf 3". See <see cref="StoreView.Ordinal"/>.</summary>
+        public readonly int Ordinal;
+
+        public StorageUnitView(int cellIndex, byte stacks, byte slots, bool emptying, int ordinal = 0)
         {
             CellIndex = cellIndex;
             Stacks = stacks;
             Slots = slots;
             Emptying = emptying;
+            Ordinal = ordinal;
         }
     }
 

@@ -11133,6 +11133,76 @@ editor log's project path is the first thing to read before chasing a second cau
 
 The owner's interview added an outline round the zone's outer edge, baked into the chunk: one bucket
 per chunk with a store, nothing per frame.
+## 2026-09-23 — The Research and Inventory tabs (designs 34, 35)
+
+Two owner specs in one afternoon, both for windows docked in the Work tab's corner, so one PR.
+Research (F3) was asked for as **interface only** — *"only include power for now but we'll create
+the mechanism later"* — and Inventory (F2) was folded in mid-session.
+
+**Research is a placeholder state, said plainly.** There is no research system, so the project in
+hand, the queue and what is done live in `ResearchDirector` on the interface side: session state,
+unsaved, unhashed. Progress never moves; the debug menu's *Finish research* is the only way a
+project becomes done. That is deliberate, and the seam the bench will drive (`Advance`) is tested
+now so the mechanism unit starts from a contract rather than a guess. Wiring starts done because
+the power branch builds conduit with no research at all.
+
+**A project's description needed a route to the screen**, and the rule is that content is written
+once. The registry emitted names only, so `emit_labels.py` now also emits the description column
+for the `ui.research.project` namespace (`Registry.Describe`). One namespace rather than all seven
+hundred rows, so the generated file does not carry tooltip seeds nothing draws.
+
+**Inventory needed a store's name, and the name had one owner in the simulation.** "Stockpile 3"
+is `StorageZones.OrdinalOfCell`, one series across zones and shelves in cell order, and it reached
+the interface only for the one selected cell. The HUD could have re-derived it from the published
+rows — the zone cells are sorted, so the first row of a zone is its first cell — and that would
+have been P1 (one rule, two owners) written on purpose. It is published on `StoreView` and
+`StorageUnitView` instead, once per zone per publish, and `StoreOrdinalTests` holds the published
+number to the pane's. Views are not hashed, so nothing moved.
+
+**Go selects the cell, not the pile.** A pick on a stockpile cell selects what lies there first,
+because that is what a click usually means; Go is asking for the store, and the pane leads with
+the store only when the cell is the subject. So `SelectionDirector.ChooseCell` exists, and
+`HudDirectors.ChooseStore` moves the slice as the roster does rather than keeping it as the
+Animals tab does: a store may be underground.
+
+**Where the specs were not followed, the design docs say so** (34 §5, 35 §5): the shipped bar
+rather than a 44 px one, the shipped wash and rule tokens, the contrast-corrected category hues,
+and six place rows. The new windows are flat with a 22 px close as specced, which leaves them
+different from Work and Animals — an inconsistency for the owner to settle, not one to tidy
+silently.
+
+**First look, the same evening: the list was invented, and it was cut to the game.** Five Power
+projects including batteries, lamps and solar arrays, none of which the game has, was a list
+written to fill a table. The owner asked for only what exists: Electricity, which opens Power
+lines and the Generator, and the Ladder under Furniture. Nothing starts done. The lesson is the
+one the registry exists for — a name on screen is a promise that the thing is in the game.
+
+**The same look reported that a stockpile drag painted nothing.** The log from that session had
+the Fell drag reaching the simulation (308 refusals, all correct) and not one stockpile order
+refused — so the orders were never sent. `StockpileDragTests` hands the presenter's own drag and
+click handlers a stockpile box and asserts a zone is published: that half passes, which puts the
+fault on the pointer side of the presenter, a side this branch does not touch. The pointer side
+cannot be driven in a batch run (CLAUDE.md, known gaps), so the next measurement is a Play session
+on `main` doing the same drag, to learn whether the fault came with this branch at all.
+
+**Then the stockpile had its interview.** The owner's second report — *"There is no visual to the
+stockpile"* — was the true one: the zone existed and was not drawn, because the ground under a store
+on grass is meshed a layer down and only the store's own chunk was being marked, which stopped
+being enough when chunks got their own versions. The answers that followed: the drag's preview had
+shown (so the pointer was never at fault, and the earlier "fault is on the input side" was wrong
+reasoning from an incomplete test that had only asked whether a zone was *published*), keep the
+wash, add a line round the outer edge, and nothing about priority or fullness. The outline is baked
+into the chunk, one bucket per chunk with a store. The lesson for the test: **"was it made" and "is
+it on screen" are two questions, and the second is the one a player asks.** `26-storage.md` §13.
+
+**The Inventory's first look, and a palette that was only safe for most eyes.** The owner asked for
+the Inventory's rows to match the stockpile pane and to be checked for accessibility, and asked
+whether many colours or one was better. Measured before answering: every category hue cleared
+contrast easily, and three of them were one colour under deuteranopia. The answer given — and taken —
+was many colours as a second cue behind a glyph and a name, which is what the stockpile pane already
+did; the hues were re-tuned within their families until every pair stayed apart under all three
+dichromacies, and a test now simulates them. Contrast ratios are what accessibility checks usually
+stop at; they said nothing here about the fault that mattered. Design 35 §5a.
 
 ## 2026-09-23 — Power: a generator, the lines, a heater
 
