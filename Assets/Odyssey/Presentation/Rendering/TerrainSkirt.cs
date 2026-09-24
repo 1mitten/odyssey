@@ -851,7 +851,12 @@ namespace Odyssey.Presentation.Rendering
             // ChunkRenderer.DrawBuckets for why a tree cannot take a single tint. Without this
             // the wood would change colour at the rim, which is the one thing the surround exists
             // to prevent.
-            Material? painted = TintCode.IsTree(tintCode) && !part.IsFallback
+            // Meadow art takes the board's own Meadow-tree material, muted like the rest of the
+            // surround; the atlas repaint is for the PolygonGeneric trees (design 38 §17).
+            bool meadowTree = TintCode.IsTree(tintCode) && !part.IsFallback
+                              && FoliageLook.IsMeadowFoliage(part.Material);
+            Material? meadow = meadowTree ? _materials.GetTree(part.Material, tint) : null;
+            Material? painted = !meadowTree && TintCode.IsTree(tintCode) && !part.IsFallback
                 ? _materials.Trees.For(part.Material, TintCode.TreeSpeciesOf(tintCode), 1f, muteStep)
                 : null;
 
@@ -859,7 +864,7 @@ namespace Odyssey.Presentation.Rendering
             {
                 Mesh = part.Mesh,
                 Submesh = part.Submesh,
-                Material = painted ?? _materials.Get(part.Material, tint, emission, ghost: false, alpha: 1f,
+                Material = meadow ?? painted ?? _materials.Get(part.Material, tint, emission, ghost: false, alpha: 1f,
                     foliage: foliage),
                 Props = painted != null && theme >= 0
                     ? _materials.Trees.UniformProps(theme, muteStep)

@@ -162,6 +162,36 @@ namespace Odyssey.Presentation.Rendering
             return gone.Count;
         }
 
+        readonly Dictionary<(Material, uint), Material> _treeMaterials = new Dictionary<(Material, uint), Material>();
+
+        /// <summary>
+        /// A Meadow tree or bush drawn by <c>Odyssey/Foliage</c> (the look pass, design 38 §17):
+        /// the art's textures and its own colour scheme, the tint the renderer resolved (the slice's
+        /// shade), drawn late in the foliage queue like the grass. <b>Not in the opaque queue,
+        /// measured by looking:</b> there the outline pass inked every cut-out leaf and a crown read
+        /// as a black scribble — the grass's own reason for being late (<see cref="FoliageQueue"/>).
+        /// It still casts its shadow, which the queue does not decide.
+        /// Null when our shader is not available, and the caller falls back to the art's own.
+        /// </summary>
+        public Material? GetTree(Material art, Color tint)
+        {
+            if (FoliageBase == null || !OwnFoliageShader) return null;
+            uint key = Pack(new Color(tint.r, tint.g, tint.b, 1f));
+            if (_treeMaterials.TryGetValue((art, key), out Material cached)) return cached;
+
+            var material = new Material(FoliageBase)
+            {
+                name = art.name + "/tree#" + key.ToString("x8"),
+                enableInstancing = true,
+                renderQueue = FoliageQueue,
+            };
+            SetColour(material, new Color(tint.r, tint.g, tint.b, 1f));
+            FoliageLook.DressTree(material, art);
+            _treeMaterials.Add((art, key), material);
+            _owned.Add(material);
+            return material;
+        }
+
         /// <summary>
         /// Moves foliage to another queue, including every foliage clone this cache has already
         /// built — <see cref="FoliageQueue"/> alone is read only when a clone is made, so setting

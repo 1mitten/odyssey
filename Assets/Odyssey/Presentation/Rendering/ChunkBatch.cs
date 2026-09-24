@@ -203,6 +203,17 @@ namespace Odyssey.Presentation.Rendering
 
         public static int StoreEdge() => StoreEdgeBase;
 
+        /// <summary>
+        /// Bit 29 marks a bucket as <b>Meadow dressing</b> — scenery the simulation never heard of
+        /// (design 38 §17) — so the drawing can treat a bush apart from a tree that wears the same
+        /// tree path. Says nothing about colour.
+        /// </summary>
+        public const int DressingBase = 1 << 29;
+
+        public static int Dressing(int code) => code | DressingBase;
+
+        public static bool IsDressing(int code) => (code & DressingBase) != 0;
+
         public static int Stuff(int stuff) => stuff;
 
         /// <summary>Bedding: one fixed colour, ignoring whatever material is passed beside it.</summary>

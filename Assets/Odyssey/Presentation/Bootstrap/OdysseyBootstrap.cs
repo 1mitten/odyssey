@@ -953,6 +953,9 @@ namespace Odyssey.Presentation.Bootstrap
                 GameObjectLayer = gameObject.layer,
                 ScatterDensity = grassScatter,
                 Appearances = appearances,
+                // The colony's clearing stays free of bushes and stones: it is where the first
+                // buildings go (design 38 §17). Before any meshing, so the first frame has it.
+                DressingClearing = new Vector2Int(outcome.StartCell.X, outcome.StartCell.Z),
             };
             // The power lines (design 32 §9): their own pass, outside the chunk meshes, so showing
             // and hiding them costs no re-mesh. A new session starts unwatched, because its view

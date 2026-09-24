@@ -337,8 +337,39 @@ namespace Odyssey.Presentation.Rendering
         /// tree — which is precisely what the sight line is for. Without this allowance the coarse
         /// test would reject the very chunk holding the crown that is doing the hiding, and the
         /// feature would do nothing at all while every per-instance test still passed.</para>
+        ///
+        /// <para><b>Measured since the look pass</b> (design 38 §17): the Meadow trees reach
+        /// fifteen metres and more, and a hand-set twelve would cull a crown still on screen. It is
+        /// the tallest tree or bush the mesher has resolved, never less than the twelve it was.</para>
         /// </summary>
-        public const float TallestModuleMetres = 12f;
+        public float TallestModuleMetres => Mathf.Max(MinimumTallestModuleMetres, _mesher.TallestResolved);
+
+        /// <summary>The allowance before anything taller has resolved: the twelve metres it always was.</summary>
+        public const float MinimumTallestModuleMetres = 12f;
+
+        /// <summary>See <see cref="ChunkMesher.DressingClearing"/>: where the colony started, kept
+        /// clear of bushes and stones. Set before the first meshing.</summary>
+        public Vector2Int? DressingClearing
+        {
+            get => _mesher.DressingClearing;
+            set => _mesher.DressingClearing = value;
+        }
+
+        /// <summary>
+        /// Whether trees and bushes — the tree-tinted buckets — are drawn by level of detail, on
+        /// their own bias, whatever <see cref="UseLods"/> says. The look pass turns this on: the
+        /// Meadow trees are 5,000 to 45,000 triangles each, and they are the art the levels were
+        /// built for (design 38 §14, §17).
+        /// </summary>
+        public bool TreeLevels { get; set; } = true;
+
+        /// <summary>See <see cref="ChunkMesher.DressingFamiliesWithArt"/>.</summary>
+        public int DressingFamiliesWithArt => _mesher.DressingFamiliesWithArt;
+
+        /// <summary>The bias a tree or bush is judged at. Set against the play camera: above
+        /// one keeps the finer levels further out, because the pack authored its heights for a
+        /// camera standing on the ground.</summary>
+        public float TreeLodBias { get; set; } = 3f;
 
         /// <summary>
         /// Whether a chunk's box, grown upwards, meets the camera's frustum.
@@ -689,17 +720,31 @@ namespace Odyssey.Presentation.Rendering
                 // level; the chunk's distance chooses which level's parts are submitted from it
                 // (docs/design/38-meadow-overhaul.md §3). Anything else is one part per bucket.
                 ModulePart[]? levelParts = null;
+                int shadowLevel = -1;
                 if (resolved.DrawsByLevel)
                 {
-                    int level = LevelFor(resolved, distance);
+                    int level = TintCode.IsTree(bucket.Tint) && TreeLevels
+                        ? LevelFor(resolved, distance, ViewerFieldOfView, TreeLodBias)
+                        : LevelFor(resolved, distance);
                     levelParts = resolved.Lods[level].Parts;
                     if (level > 0) InstancesAtCoarserLevels += bucket.Count;
+
+                    // A tree's shadow from a coarse level (design 38 §17): measured, shadow casters
+                    // were seven of the Meadow look's milliseconds at 4K, every crown drawing its
+                    // finest mesh into four cascades. The last mesh before the card is the proxy —
+                    // never the card, which casts a flat pane — and never finer than what is drawn.
+                    if (TintCode.IsTree(bucket.Tint) && TreeShadowProxy)
+                    {
+                        int lods = resolved.Lods.Length;
+                        shadowLevel = Mathf.Max(level, lods >= 3 ? lods - 2 : lods - 1);
+                    }
                 }
                 int drawnParts = levelParts?.Length ?? 1;
 
                 // Once per bucket, not per part: it splits the bucket's matrices, which every part
                 // of a level shares.
                 int faded = sight && !NeverFades(bucket.Tint) ? Partition(bucket) : 0;
+                bool proxyCasts = false;
 
                 for (int k = 0; k < drawnParts; k++)
                 {
@@ -712,9 +757,16 @@ namespace Odyssey.Presentation.Rendering
                     // and has no atlas to repaint — goes the ordinary way. A null from the tree cache
                     // means there was no shader or no art, and the fallback is exactly what a tree
                     // drew before this feature existed.
-                    Material? painted = !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
-                        ? _materials.Trees.For(part.Material, TintCode.TreeSpeciesOf(bucket.Tint), shade)
-                        : null;
+                    // Meadow art is drawn by our foliage shader in the opaque queue; the atlas repaint
+                    // is for the PolygonGeneric trees it was measured against and would scramble a
+                    // Meadow texture (design 38 §17).
+                    bool meadowTree = !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
+                                      && FoliageLook.IsMeadowFoliage(part.Material);
+                    Material? painted = meadowTree
+                        ? _materials.GetTree(part.Material, tint)
+                        : !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
+                            ? _materials.Trees.For(part.Material, TintCode.TreeSpeciesOf(bucket.Tint), shade)
+                            : null;
                     Material material = painted ?? _materials.Get(part.Material, tint, emission, ghost, alpha,
                         foliage: TintCode.IsFoliage(bucket.Tint),
                         water: TintCode.IsWater(bucket.Tint));
@@ -742,20 +794,22 @@ namespace Odyssey.Presentation.Rendering
                     if (foliage && ViewerPosition.HasValue
                         && batch.Bounds.SqrDistance(ViewerPosition.Value) > FoliageDrawDistance * FoliageDrawDistance)
                         continue;
-                    bool casts = CastShadows && !ghost && !terrain && (!foliage || FoliageCastsShadows);
+                    bool casts = CastShadows && !ghost && !terrain && (!foliage || FoliageCastsShadows)
+                                 && (DressingCastsShadows || !TintCode.IsDressing(bucket.Tint));
+                    if (casts && shadowLevel >= 0) proxyCasts = true;
 
                     var rp = new RenderParams(material)
                     {
                         worldBounds = batch.Bounds,
                         layer = GameObjectLayer,
                         receiveShadows = !ghost,
-                        shadowCastingMode = casts ? ShadowCastingMode.On : ShadowCastingMode.Off,
+                        shadowCastingMode = casts && shadowLevel < 0 ? ShadowCastingMode.On : ShadowCastingMode.Off,
                     };
 
                     // The per-instance colours of a tree, which is what lets every colour in a chunk
                     // share one draw. Built once per meshing rather than once a frame, and only when
                     // the material that reads them is the one actually drawing.
-                    bool coloured = painted != null && bucket.IsColoured;
+                    bool coloured = painted != null && !meadowTree && bucket.IsColoured;
 
                     if (faded == 0)
                     {
@@ -794,8 +848,49 @@ namespace Odyssey.Presentation.Rendering
                     InstancesDrawn += bucket.Count;
                     InstancesFaded += faded;
                 }
+
+                // The shadow, from the proxy level, shadows only, for every instance whether faded
+                // or not: a tree seen through still casts on the ground.
+                if (proxyCasts)
+                {
+                    ModulePart[] casters = resolved.Lods[shadowLevel].Parts;
+                    for (int k = 0; k < casters.Length; k++)
+                    {
+                        ModulePart caster = casters[k];
+                        // Never the art's own material: pack materials ship with instancing off,
+                        // and RenderMeshInstanced refuses them. Ours when it draws Meadow art,
+                        // otherwise the cache's instanced clone (found by the arm that prices the
+                        // pack's shader, which switches ours off).
+                        Material shadowMaterial = (!caster.IsFallback && FoliageLook.IsMeadowFoliage(caster.Material)
+                                ? _materials.GetTree(caster.Material, Color.white) : null)
+                            ?? _materials.Get(caster.Material, Color.white, Color.black, ghost: false, alpha: 1f);
+                        var shadowParams = new RenderParams(shadowMaterial)
+                        {
+                            worldBounds = batch.Bounds,
+                            layer = GameObjectLayer,
+                            receiveShadows = false,
+                            shadowCastingMode = ShadowCastingMode.ShadowsOnly,
+                        };
+                        Submit(shadowParams, caster, bucket.Matrices, bucket.Count);
+                    }
+                }
             }
         }
+
+        /// <summary>
+        /// Whether a tree or bush casts its shadow from a coarse level of detail rather than the
+        /// one drawn (design 38 §17). On: the Meadow crowns' finest meshes in four shadow cascades
+        /// were most of what the look cost at 4K.
+        /// </summary>
+        public bool TreeShadowProxy { get; set; } = true;
+
+        /// <summary>
+        /// Whether the Meadow dressing's bushes cast shadows. Off, measured (design 38 §17): the
+        /// bushes' shadows were the whole of what the dressing cost at 4K — the Meadow rung with
+        /// no casters drew in the time the bare rung took with them — and a bush's contact shadow
+        /// is the least of what the reference picture's shadows are.
+        /// </summary>
+        public bool DressingCastsShadows { get; set; }
 
         /// <summary>
         /// What the sight fade never touches, however squarely it stands in the beam.

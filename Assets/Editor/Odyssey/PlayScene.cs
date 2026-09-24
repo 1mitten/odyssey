@@ -1305,6 +1305,10 @@ namespace Odyssey.EditorTools
                 scale = new Vector3(size, size, size),
             });
 
+            // A piece of the Meadow dressing. The same shape as a tuft, named apart because the
+            // two are placed by different rules and a reader should be able to tell which is which.
+            void Dress(string id, string prefab, float size) => Tuft(id, prefab, size);
+
             // A cell-shaped box wearing a tiling terrain texture. See the note above the natural
             // terrain rows for why this is the one kind of pack material a box may wear.
             void Ground(string id, string material) => rows.Add(new ModuleEntry
@@ -1541,6 +1545,34 @@ namespace Odyssey.EditorTools
             Tuft(ModuleIds.GrassTuftB, "SM_Env_Grass_Med_Clump_02", 1.0f);
             Tuft(ModuleIds.GrassTuftC, "SM_Env_Grass_Tall_Clump_03", 1.0f);
 
+            // The Meadow dressing (the look pass, owner 2026-09-24, design 38 §17): what stands on
+            // the ground in the reference screenshot and is not simulated. Pivots at the base and
+            // centred, like a tuft; the sizes are the art's own except where a piece would swamp a
+            // 2.5 m cell. None of it is Wildflowers_Patch or Grass_Large, which are 135-211k-triangle
+            // set-dressing meshes authored for a hand-built scene, not for instancing (e-09).
+            Dress(ModuleIds.DressTallGrass[0], "SM_Env_Grass_Tall_Clump_04", 1.0f);
+            Dress(ModuleIds.DressTallGrass[1], "SM_Env_Grass_Tall_Clump_05", 0.8f);
+            Dress(ModuleIds.DressCover[0], "SM_Env_Ground_Cover_01", 1.0f);
+            Dress(ModuleIds.DressCover[1], "SM_Env_Ground_Cover_02", 1.0f);
+            Dress(ModuleIds.DressCover[2], "SM_Env_Ground_Cover_03", 1.0f);
+            Dress(ModuleIds.DressCover[3], "SM_Env_Grass_Bush_01", 1.0f);
+            Dress(ModuleIds.DressFlowers[0], "SM_Env_Wildflowers_01", 1.3f);
+            Dress(ModuleIds.DressFlowers[1], "SM_Env_Wildflowers_02", 1.3f);
+            Dress(ModuleIds.DressFlowers[2], "SM_Env_Wildflowers_03", 1.3f);
+            // The flat flower cards were tried and read as scattered lilac pebbles from the play
+            // camera, so only the standing wildflowers are used.
+            Dress(ModuleIds.DressSunflower[0], "SM_Env_Sunflower_01", 1.0f);
+            // Bushes are the biggest thing in the reference picture after the trees; the largest is
+            // six metres across, so it is drawn a little smaller to sit among cells.
+            Dress(ModuleIds.DressBushes[0], "SM_Env_Bush_01", 1.0f);
+            Dress(ModuleIds.DressBushes[1], "SM_Env_Bush_02", 0.8f);
+            Dress(ModuleIds.DressBushes[2], "SM_Env_Bush_03", 0.7f);
+            // Stones sized to lie inside a cell. The pebble piles were tried and read as lilac
+            // confetti from the play camera, so they are left out.
+            Dress(ModuleIds.DressRocks[0], "SM_Env_Rock_01", 0.6f);
+            Dress(ModuleIds.DressRocks[1], "SM_Env_Rock_02", 0.55f);
+            Dress(ModuleIds.DressRocks[2], "SM_Env_Rock_Round_01", 0.45f);
+
             // A crop's drawn stages: sprout, half-grown, mature, one row each, standing on the
             // soil like a tuft does. The ids are the PlantDef's own module ids, so this table and
             // the simulation read from one copy of the names.
@@ -1580,19 +1612,28 @@ namespace Odyssey.EditorTools
             Crop("odyssey.module.carrot.l", "SM_Prop_Carrot_01_L", 1.4f, sink: 0.25f);
 
 
-            // Trees are the pieces that actually make this look like a place. Measured widths
-            // decide the casting: the pines are 1.78–2.12 m and sit inside a 2.5 m cell, while the
-            // broadleaf trees run 2.74–4.32 m. Tree_03 at 2.74 m is the closest fit, and a little
-            // overspill between neighbouring trees reads as canopy rather than as error.
-            rows.Add(new ModuleEntry
+            // Trees are the pieces that actually make this look like a place. Since the look pass
+            // (owner 2026-09-24: the Meadow screenshots are the target) the two simulated species
+            // wear Meadow art, several trees each, chosen per cell by the mesher: the conifer slot
+            // is the birch, the broadleaf slot the round meadow trees and the fruit trees, with the
+            // fifteen-metre giant as a rare fifth. Pivots are the trunk's foot (e-09), so they are
+            // not centred on their bounds — a lopsided crown must not walk the trunk off its cell.
+            // The canopies overhang their cells by a good deal; in the reference they touch, and
+            // that is what a wood looks like from above.
+            Tree(NaturalContent.ModuleTreeConifer, 0, "SM_Env_Tree_Birch_01", 0.85f);
+            Tree(NaturalContent.ModuleTreeConifer, 1, "SM_Env_Tree_Birch_02", 0.85f);
+            Tree(NaturalContent.ModuleTreeConifer, 2, "SM_Env_Tree_Birch_03", 1.2f);
+            Tree(NaturalContent.ModuleTreeBroadleaf, 0, "SM_Env_Tree_Meadow_02", 0.8f);
+            Tree(NaturalContent.ModuleTreeBroadleaf, 1, "SM_Env_Tree_Fruit_01", 1.1f);
+            Tree(NaturalContent.ModuleTreeBroadleaf, 2, "SM_Env_Tree_Fruit_02", 1.1f);
+            Tree(NaturalContent.ModuleTreeBroadleaf, 3, "SM_Env_Tree_Fruit_03", 1.1f);
+            Tree(NaturalContent.ModuleTreeBroadleaf, 4, "SM_Env_Tree_Meadow_01", 0.6f);
+
+            void Tree(string baseId, int variant, string prefab, float size) => rows.Add(new ModuleEntry
             {
-                moduleId = "odyssey.module.tree.conifer", shape = ModuleShape.Pillar,
-                prefabName = "SM_Gen_Env_Tree_Pine_01", centreXZ = true, baseAtY = true,
-            });
-            rows.Add(new ModuleEntry
-            {
-                moduleId = "odyssey.module.tree.broadleaf", shape = ModuleShape.Pillar,
-                prefabName = "SM_Gen_Env_Tree_03", centreXZ = true, baseAtY = true,
+                moduleId = ModuleIds.TreeVariant(baseId, variant), shape = ModuleShape.Pillar,
+                prefabName = prefab, centreXZ = false, baseAtY = true,
+                scale = new Vector3(size, size, size),
             });
 
             // The axe a colonist swings while felling. One row, held by whoever is working: it is

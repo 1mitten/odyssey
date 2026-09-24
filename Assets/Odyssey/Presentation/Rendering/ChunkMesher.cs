@@ -65,6 +65,7 @@ namespace Odyssey.Presentation.Rendering
                 EmitTerrain(batch, index, x, z, y);
                 EmitBank(batch, index, x, z, y);
                 EmitScatter(batch, index, x, z, y);
+                EmitDressing(batch, index, x, z, y);
                 EmitFloor(batch, index, x, z, y);
                 EmitStoreEdge(batch, index, x, z, y);
                 EmitEdifice(batch, index, x, z, y);
@@ -439,6 +440,214 @@ namespace Odyssey.Presentation.Rendering
         /// thousand grey cubes strewn across a meadow, so a clone without the packs gets bare
         /// ground instead, which is what it had before any of this existed.
         /// </summary>
+        // ------------------------------------------------------------ dressing
+
+        /// <summary>
+        /// A cell the colony started in, and how far round it the big dressing stays away: the
+        /// clearing is where the colony lays out its first buildings, and a bush there would be in
+        /// the way of every order. Set by the composition root before the first meshing; none means
+        /// the dressing stands anywhere it may.
+        /// </summary>
+        public Vector2Int? DressingClearing { get; set; }
+
+        /// <summary>The clearing's radius in cells.</summary>
+        public int DressingClearRadius { get; set; } = 4;
+
+        /// <summary>
+        /// The tallest tree or bush the dressing and the tree variants resolved to, in metres above
+        /// the cell floor: what the frustum and sight tests must allow for above a chunk's box.
+        /// Zero until something has resolved.
+        /// </summary>
+        public float TallestResolved { get; private set; }
+
+        /// <summary>How many dressing families resolved to real art. Zero on a checkout without the
+        /// packs, which is how a measurement knows there is no dressing to price.</summary>
+        public int DressingFamiliesWithArt
+        {
+            get
+            {
+                EnsureDressModules();
+                int n = 0;
+                foreach (int[] family in _dressModules) if (family.Length > 0) n++;
+                return n;
+            }
+        }
+
+        int[][] _dressModules = System.Array.Empty<int[]>();
+        bool _dressResolved;
+        readonly Dictionary<int, int[]> _treeVariants = new Dictionary<int, int[]>();
+
+        /// <summary>
+        /// Strew the Meadow dressing over an exposed grass surface: one big piece on the lattice
+        /// (a bush or a stand of tall grass) and a handful of small ones (flowers, cover, a stone),
+        /// by <see cref="MeadowDressing"/>'s fields. The same ground rule as the tufts, and more:
+        /// the big pieces overhang their cell, so they also need a clear ring round it — no zone,
+        /// floor or building in any neighbour — and keep out of the colony's clearing.
+        /// </summary>
+        void EmitDressing(ChunkBatch batch, int index, int x, int z, int y)
+        {
+            if (ScatterDensity <= 0) return;
+            if (!DressableSurface(index, y)) return;
+            EnsureDressModules();
+            if (_dressModules.Length == 0) return;
+
+            float density = ScatterDensity / 60f;
+            var size = _model.Size;
+            bool inClearing = DressingClearing.HasValue
+                && (new Vector2Int(x, z) - DressingClearing.Value).sqrMagnitude
+                   <= DressingClearRadius * DressingClearRadius;
+            bool daylit = _model.OpenToTheSky(index, y);
+            Vector3 surface = CellMetrics.FloorCentre(x, z, y) + Vector3.up * CellMetrics.SizeY;
+
+            bool ringFree = true, woodEdge = false, nearRock = false;
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dz == 0) continue;
+                int nx = x + dx, nz = z + dz;
+                if (nx < 0 || nz < 0 || nx >= size.SizeX || nz >= size.SizeZ) continue;
+                int n = size.Index(nx, nz, y);
+                if (_model.IsZoned(n)) ringFree = false;
+                if (y + 1 < size.SizeY)
+                {
+                    int up = n + size.LayerStride;
+                    if (_model.Floor(up) != CoreContent.SlabNone) ringFree = false;
+                    ushort edifice = _model.EdificeDef(up);
+                    if (edifice != CoreContent.EdificeNone)
+                    {
+                        if (NaturalContent.IsTree(edifice)) woodEdge = true;
+                        else ringFree = false;
+                    }
+                    if (_model.IsSolid(up) && _model.DrawnTerrain(up) == NaturalContent.TerrainRock) nearRock = true;
+                }
+                if (_model.DrawnTerrain(n) == NaturalContent.TerrainRock) nearRock = true;
+            }
+
+            // The big piece, on its lattice.
+            if (ringFree && !inClearing)
+            {
+                MeadowDressing.Kind big = MeadowDressing.BigPiece(x, z, density, woodEdge);
+                if (big != MeadowDressing.Kind.None)
+                    PlaceDressing(batch, big, x, z, surface, daylit, spread: 0.5f);
+            }
+
+            for (int slot = 0; slot < MeadowDressing.SmallSlots; slot++)
+            {
+                MeadowDressing.Kind small = MeadowDressing.SmallPiece(x, z, slot, density, nearRock);
+                if (small == MeadowDressing.Kind.None) continue;
+                if (small == MeadowDressing.Kind.Rock && inClearing) continue;
+                PlaceDressing(batch, small, x, z, surface, daylit, spread: 0.7f, slot: slot);
+            }
+        }
+
+        void PlaceDressing(ChunkBatch batch, MeadowDressing.Kind kind, int x, int z, Vector3 surface,
+            bool daylit, float spread, int slot = 0)
+        {
+            int[] family = _dressModules[(int)kind];
+            if (family.Length == 0) return;
+            uint salt = MeadowDressing.SaltOf(kind) + (uint)slot * 104729u;
+            int which = MeadowDressing.VariantFor(x, z, salt, family.Length);
+            MeadowDressing.Placement(x, z, salt, spread,
+                out float offsetX, out float offsetZ, out float yaw, out float scale);
+
+            // Grass and flowers are foliage (no shadow, cleared round items, our shader); a bush
+            // takes the tree's path (it casts a shadow, and fades when it stands between the camera
+            // and a colonist); a stone is plain art.
+            int tint = kind switch
+            {
+                MeadowDressing.Kind.Bush => TintCode.Dressing(TintCode.Tree(TreeSpecies.Broadleaf)),
+                MeadowDressing.Kind.Rock => TintCode.Stuff(CoreContent.StuffNone),
+                _ => TintCode.Daylit(TintCode.Foliage(which % StuffPalette.FoliageTintCount), daylit),
+            };
+
+            Vector3 at = GroundRelief.Lift(
+                surface + new Vector3(offsetX * CellMetrics.SizeXZ, 0f, offsetZ * CellMetrics.SizeXZ));
+            AddBody(batch, family[which], tint, Matrix4x4.TRS(
+                at, Quaternion.Euler(0f, yaw, 0f), new Vector3(scale, scale, scale)));
+        }
+
+        /// <summary>
+        /// Whether the top of this cell is open grass the dressing may stand on: the tufts' own
+        /// rule — grass, solid, nothing solid, no floor and nothing built on it (a tree is allowed:
+        /// woodland has a floor).
+        /// </summary>
+        bool DressableSurface(int index, int y)
+        {
+            if (_model.DrawnTerrain(index) != NaturalContent.TerrainGrass) return false;
+            if (!_model.IsSolid(index)) return false;
+            var size = _model.Size;
+            if (y + 1 >= size.SizeY) return true;
+            int above = index + size.LayerStride;
+            if (_model.IsSolid(above)) return false;
+            if (_model.Floor(above) != CoreContent.SlabNone) return false;
+            ushort built = _model.EdificeDef(above);
+            return built == CoreContent.EdificeNone || NaturalContent.IsTree(built);
+        }
+
+        /// <summary>
+        /// Resolve every dressing family once, keeping only the rows that found real art — a
+        /// clone without the packs strews no boxes, the tufts' rule — and note the tallest.
+        /// Indexed by <see cref="MeadowDressing.Kind"/>.
+        /// </summary>
+        void EnsureDressModules()
+        {
+            if (_dressResolved) return;
+            _dressResolved = true;
+
+            var families = new int[System.Enum.GetValues(typeof(MeadowDressing.Kind)).Length][];
+            for (int i = 0; i < families.Length; i++) families[i] = System.Array.Empty<int>();
+            families[(int)MeadowDressing.Kind.TallGrass] = ResolveFamily(ModuleIds.DressTallGrass);
+            families[(int)MeadowDressing.Kind.Cover] = ResolveFamily(ModuleIds.DressCover);
+            families[(int)MeadowDressing.Kind.Flower] = ResolveFamily(ModuleIds.DressFlowers);
+            families[(int)MeadowDressing.Kind.Sunflower] = ResolveFamily(ModuleIds.DressSunflower);
+            families[(int)MeadowDressing.Kind.Bush] = ResolveFamily(ModuleIds.DressBushes);
+            families[(int)MeadowDressing.Kind.Rock] = ResolveFamily(ModuleIds.DressRocks);
+
+            bool any = false;
+            foreach (int[] family in families) any |= family.Length > 0;
+            _dressModules = any ? families : System.Array.Empty<int[]>();
+            foreach (int bush in families[(int)MeadowDressing.Kind.Bush])
+                TallestResolved = Mathf.Max(TallestResolved, _model.Library[bush].Bounds.max.y);
+        }
+
+        int[] ResolveFamily(string[] ids)
+        {
+            var usable = new List<int>();
+            foreach (string id in ids)
+            {
+                if (_model.Library.Catalogue == null || _model.Library.Catalogue.Find(id) == null) continue;
+                int module = _model.Library.Resolve(id, ModuleShape.Pillar);
+                ResolvedModule resolved = _model.Library[module];
+                if (resolved.UsesArt && !resolved.IsEmpty) usable.Add(module);
+            }
+            return usable.ToArray();
+        }
+
+        /// <summary>
+        /// A tree species' art variants, its own row first, resolved once per species module.
+        /// Only rows the catalogue actually has are asked for, so a checkout whose catalogue
+        /// predates the variants — or has no packs — gets its one tree, and no "missing art" noise.
+        /// </summary>
+        int[] TreeVariantsOf(int module)
+        {
+            if (_treeVariants.TryGetValue(module, out int[]? known)) return known;
+
+            var variants = new List<int> { module };
+            string baseId = _model.Library[module].Id;
+            for (int v = 1; v < ModuleIds.MaxTreeVariants; v++)
+            {
+                string id = ModuleIds.TreeVariant(baseId, v);
+                if (_model.Library.Catalogue == null || _model.Library.Catalogue.Find(id) == null) continue;
+                int resolved = _model.Library.Resolve(id, ModuleShape.Pillar);
+                if (_model.Library[resolved].UsesArt && !_model.Library[resolved].IsEmpty) variants.Add(resolved);
+            }
+            int[] result = variants.ToArray();
+            _treeVariants[module] = result;
+            foreach (int m in result)
+                TallestResolved = Mathf.Max(TallestResolved, _model.Library[m].Bounds.max.y * 1.15f);
+            return result;
+        }
+
         void EnsureScatterModules()
         {
             if (_scatterResolved) return;
@@ -942,6 +1151,19 @@ namespace Odyssey.Presentation.Rendering
             TreeSpecies species = TreeLook.SpeciesOf(def);
             TreeTheme theme = TreePalette.At(TreeLook.Theme(x, z, species));
             Matrix4x4 placement = GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y));
+
+            // Which tree this is, and which way it faces (the look pass, design 38 §17): a species
+            // has several pieces of art, chosen per cell, each turned and sized a little by the
+            // hash so a wood is not one tree stamped in rows. A species with one row — no packs,
+            // or the old art — is drawn exactly as before.
+            int[] variants = TreeVariantsOf(module);
+            if (variants.Length > 1)
+            {
+                module = variants[MeadowDressing.TreeVariant(x, z, variants.Length)];
+                float yaw = GroundScatter.Unit(x, z, 0x6A09u) * 360f;
+                float size = 0.9f + GroundScatter.Unit(x, z, 0x6A0Bu) * 0.25f;
+                placement *= Matrix4x4.TRS(Vector3.zero, Quaternion.Euler(0f, yaw, 0f), Vector3.one * size);
+            }
 
             var parts = _model.Library[module].Parts;
             int tint = TintCode.Tree(species);
