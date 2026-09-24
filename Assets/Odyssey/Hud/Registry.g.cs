@@ -32,6 +32,7 @@ namespace Odyssey.Hud
             { "ui.alert.nofood", "No food" },
             { "ui.alert.nofuel", "Out of fuel" },
             { "ui.alert.nomedicine", "No medicine" },
+            { "ui.alert.norescuebed", "No bed for the wounded" },
             { "ui.alert.powerloss", "Power failure" },
             { "ui.alert.prisonerescape", "Prisoner escaping" },
             { "ui.alert.raid", "Raid" },
