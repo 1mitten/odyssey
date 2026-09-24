@@ -11713,3 +11713,13 @@ the shared `ColonistMaterials` with the cloth rectangles alone. It is one materi
 draw calls. Skin and hair still keep the pack's paint across the cap; that is recorded as a decision
 in design 29-modular-colonists §13a, not a fix. The spawn ceiling of 200 on this branch stays, as the
 rail it always said it was.
+
+**The ceiling also hung CI**, which is why PR #175's Unity tier was red: *timed out after 1800s with
+no results*, where `main` takes about six minutes. `FrameTimeTests.GrowColonyTo` grew its sweeps to
+256 and 384 through the spawn intent, and its escape was `at > wanted * 4`. But `at` goes back to
+zero whenever the placement walks off the board, and for 384 that happens at about 650, below the
+escape at 1,536. Before the ceiling every spawn took, so the loop reached its count first. After it,
+every intent past 200 was refused, the index cycled for ever, and the coroutine never yielded. The
+harness now counts attempts apart from the index and spawns straight into the registry, the path
+worldgen and the scenario use and that the ceiling deliberately leaves open, so the 256 and 384 arms
+still measure what they say.

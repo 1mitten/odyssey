@@ -2632,3 +2632,8 @@ Design 29-modular-colonists §13a.
 Behaviour changes form at a cap, and there is more than one drawer of a thing past it. And *a colour
 in a report is a hypothesis until the asset's own paint has been sampled*: one script that sampled the atlas
 answered what a 384-colonist sweep could not.
+
+**A second fault from the same branch, in the harness.** The spawn ceiling made the frame sweeps hang CI. `GrowColonyTo` used one counter both
+to place colonists and to give up, and it reset that counter on walking off the board. The escape
+was reachable only while spawns succeeded. *Check: a retry loop's escape must be a counter that
+nothing resets, and a loop that ticks without yielding must be bounded by it.*
