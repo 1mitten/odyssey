@@ -445,7 +445,7 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(colony.Grid.Edifice[bed], Is.LessThan(0));
             Assert.That(colony.Grid.Edifice[door], Is.LessThan(0));
-            Assert.That(colony.Pawns.Items.Beds, Does.Not.Contain(bed), "a demolished bed is still a bed");
+            Assert.That(colony.Pawns.Items.Beds, Has.No.Member(bed), "a demolished bed is still a bed");
             Assert.That(colony.Pawns.Nav.Grid.Flags[door] & NavFlags.Door, Is.EqualTo(NavFlags.None), "a demolished door is still a door");
             Assert.That(colony.Pawns.EdificeDamage.Count, Is.Zero);
         }
