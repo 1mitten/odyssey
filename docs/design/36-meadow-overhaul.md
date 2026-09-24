@@ -1,6 +1,6 @@
 # 36 — The Meadow overhaul: lush grass, Meadow trees, a landscape instead of terraces
 
-**Status: designed 2026-09-24; M1 measured the same day (§13), nothing else built.** Branch `claude/meadow-overhaul`, worktree
+**Status: designed 2026-09-24; M1 measured (§13) and M2 built (§14) the same day.** Branch `claude/meadow-overhaul`, worktree
 `D:\code\odyssey-meadow`. Interview: `docs/research/meadow-interview.md` (twenty answers, the
 source of every decision here). Research: `e-09-meadow-mesh-data.md` (what the pack's meshes carry),
 `d-16-shader-warmup.md`, `d-17-terrain-skin-shading.md`, `d-18-dense-foliage-cost.md`.
@@ -233,7 +233,7 @@ measurements here.
 |---|---|---|
 | **M0** | This document, the interview, four research files. | Owner reads. |
 | **M1** | **Measured 2026-09-24** (§13): what grass costs at 640 × 480 and 3840 × 2160, none / shipped / full cover / full cover in the opaque queue. | Done; the owner's GPU reading agrees (§13). |
-| **M2** | Instanced LOD (§3) and the derived tallest bound. | Tests; LOD on/off arm. |
+| **M2** | **Built 2026-09-24** (§14): instanced LOD, off by default. The tallest-bound constant moves with M5, when a tree first exceeds it. | Done. |
 | **M3** | `Odyssey/Foliage` (§4). | Tests; keep-alive in a player build. |
 | **M4** | Lush grass and flowers on today's ground (§5). | **First Play.** 2.0 ms at 4K. |
 | **M5** | Meadow trees and bushes as sim species; the topple; goldens measured; wiki. Confirm fruit-bearing. | **Second Play.** |
@@ -313,3 +313,39 @@ reading by eye off a smoothed overlay cannot resolve a 0.2 ms difference.
 taller and broader cards are more fill per instance, which is exactly what this measured as cheap
 at today's size. M4 re-runs this arm with its clumps before the first Play, and the arm is built to
 take that without change.
+
+## 14. M2: levels of detail, built (2026-09-24)
+
+§3 as designed, with three differences worth recording.
+
+- **Every level the art ships is kept, not three.** e-09 proposed dropping the four-level trees'
+  LOD1 to save a bucket, but a bucket here is chosen per chunk and only the chosen level is
+  submitted, so a kept level costs memory the prefab reference already holds and not one draw.
+- **The bucket is the first part's, not a new kind.** A module drawn by level
+  (`ResolvedModule.DrawsByLevel`) is emitted into one bucket keyed as its part 0 always was; since
+  every part of every level shares that part's local transform (checked at load,
+  `ModuleLibrary.CoarserLevels`), its matrices serve every part of whichever level is drawn.
+  `DrawBuckets` loops the level's parts over it. Nothing else that reads buckets had to change.
+- **`UseLods` ships off.** The pack's switch heights assume a camera near the ground: at this
+  camera's 40° a 1.9 m grass clump leaves its finest level about 25 m out, and the play camera is
+  60–160 m away. The arm below confirms it — switched on, 4,403 of the ~4,800 tufts on screen at
+  640 × 480 and 5,021 at 4K were drawn at a coarser level. Each unit that brings art turns levels on
+  with `LodBias` set against that art and a person looking at it (M4, M5).
+
+**Measured** (`FrameTimeTests.TheLevelsOfDetailAgainstTheFrame`, played meadow, one run):
+
+| | 640 × 480 off / on | 3840 × 2160 off / on |
+|---|---|---|
+| frame | 2.08 / 2.03 ms | 7.92 / 8.00 ms |
+| draw calls | 803 / 803 | 877 / 877 |
+| instances at a coarser level | 0 / 4,403 | 0 / 5,021 |
+
+Three modules on today's board resolve with levels — the three Meadow grass tufts; the
+PolygonGeneric trees have none. **With levels off the counts are M1's shipped counts to the
+instance** (803 calls, 34,428 instances), which is the evidence that drawing a module from one
+bucket by level changed nothing about today's picture. The frame does not move either way, as §13
+predicts for grass; the saving levels exist for is the Meadow trees in M5.
+
+Guards: `InstancedLodTests` (EditMode) — a prefab resolves into every level placed as the finest,
+a level off the origin falls back to the finest alone, a prefab without a group has one level, the
+pick follows the screen height by the pack's rule and never culls, and levels are off by default.

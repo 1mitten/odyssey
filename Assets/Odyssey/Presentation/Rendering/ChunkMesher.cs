@@ -930,7 +930,7 @@ namespace Odyssey.Presentation.Rendering
 
             var parts = _model.Library[module].Parts;
             int tint = TintCode.Tree(species);
-            for (int p = 0; p < parts.Length; p++)
+            for (int p = 0; p < BucketsPerPlacement(module); p++)
             {
                 InstanceBucket bucket = BucketFor(batch.Body, _bodyIndex, module, p, tint);
                 bucket.Add(placement * parts[p].Local,
@@ -968,11 +968,25 @@ namespace Odyssey.Presentation.Rendering
             int module, int tint, in Matrix4x4 placement)
         {
             var parts = _model.Library[module].Parts;
-            for (int p = 0; p < parts.Length; p++)
+            for (int p = 0; p < BucketsPerPlacement(module); p++)
             {
                 BucketFor(list, lookup, module, p, tint).Add(placement * parts[p].Local);
                 batch.InstanceCount++;
             }
+        }
+
+        /// <summary>
+        /// One bucket for a module drawn by level, whatever its part count; one per part otherwise.
+        ///
+        /// <para>A module drawn by level has every part of every level at the local transform of its
+        /// first part (<see cref="ResolvedModule.DrawsByLevel"/>), so the first part's bucket holds
+        /// the only matrix array it needs and the renderer draws the chosen level's parts from it.
+        /// A bucket per part as well would draw the finest level twice over.</para>
+        /// </summary>
+        int BucketsPerPlacement(int module)
+        {
+            ResolvedModule resolved = _model.Library[module];
+            return resolved.DrawsByLevel ? 1 : resolved.Parts.Length;
         }
 
         static InstanceBucket BucketFor(List<InstanceBucket> list, Dictionary<long, int> lookup,

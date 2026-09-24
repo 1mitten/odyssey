@@ -1334,6 +1334,9 @@ namespace Odyssey.Presentation.Bootstrap
             if (cameraRig != null)
             {
                 _renderer.ViewerPosition = cameraRig.transform.position;
+                // A level of detail is judged by the screen height a module fills, which the
+                // field of view decides as much as the distance does.
+                if (cameraRig.Camera != null) _renderer.ViewerFieldOfView = cameraRig.Camera.fieldOfView;
                 // And the figure director wants it for one decision of its own: which colonists
                 // keep a live figure when there are more of them than the cap allows.
                 if (_figures != null) _figures.ViewerPosition = cameraRig.transform.position;
