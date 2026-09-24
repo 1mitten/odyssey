@@ -11823,6 +11823,33 @@ before Unity compiled a line; the unit moved into M2's warm worktree once there 
 shader compiled clean on its first real run and every foliage test passed; the player build keeps
 it, and its log carries no fallback warning.
 
+## 2026-09-24 — Walls down
+
+The owner could not see colonists inside their own buildings: at or above the surface every
+storey above the slice is drawn solid, and the working storey's walls are always 3 m tall. The
+request was a toggle by the R/F control, on by default, that **removes** the walls rather than
+making them translucent and leaves a low stump. Build mode ignores it. The interview settled the
+rest (design 42 §2): build mode is the palette or Build/Deconstruct; the stump is a 0.75 m block;
+built storeys above are hidden and the landscape is not; rock never lowers; H, a drawn icon under
+the rail, remembered per player.
+
+**Research backed removal over transparency** (`b-walls-down-cutaway.md`): every complaint thread
+found was about see-through or clickable leftovers. Nothing found says any game raises walls on its
+own in build mode, so that half is ours to judge in play.
+
+**It costs no re-meshing, and that decided the shape.** The toggle flips every time the Build
+palette opens, and a board re-mesh is seconds of visible arrival at eleven chunks a frame. So the
+chunk batch holds both forms: walls, door frames and pillars moved out of `Body` into `Walls`,
+their stumps into `Stumps`, and the renderer picks one as it draws — the principle the roof list
+was already built on. Above the slice, the storey is filtered by bucket tint: anything carrying a
+terrain, foliage, water, tree or whole-surface bit is landscape, and the rest is built.
+
+**One owner of the rule.** `WallsView.Lowered` (Hud, fast tier) is evaluated once a frame by the
+composition root and written to `SliceSettings.wallsLowered`. The renderer, picker, order marks,
+door leaves, colonists, items, corpses, fire, health bars, rings, blood and sites all ask the
+slice's three questions and nothing else (P1). Moving walls out of `Body` meant nine mesher tests
+that counted walls there were re-pointed at `Walls`, deliberately.
+
 ## 2026-09-24 — Blood
 
 The unit design 33 §7d cut the seam for, built to the owner's rules there (§10). Two tests on PR

@@ -23,6 +23,17 @@ the next session learns to ignore.
 
 ## Open
 
+- **Walls down: can you see inside your buildings?** (`claude/walls-down`, design 42.) Build a
+  room of a few walls with a door, put a floor over part of it and a wall on the storey above, and
+  send colonists in. The walls should stand as knee-high stumps in the wall's colour, the doorway
+  as two short posts with a gap, and the storey above and its colonists should be gone while the
+  hills and trees above the slice stay. **H** or the new button under the depth rail's "R / F"
+  switches the walls between lowered and standing; open **B** or arm Deconstruct and the walls
+  stand in full, then drop back when you put the tool down. A wrong answer is a stump too low to
+  read as a wall line or so high it still hides a working colonist, a doorway that reads as a wall,
+  a delay or a flicker when the palette opens, colonists floating where the upper storey was, or
+  a hilltop house vanishing in a way that feels broken rather than chosen.
+
 - **Does blood read as blood, and is it too much?** (`claude/combat-blood`, design 33 §10).
   *Arm every colonist*, *Spawn 3 marauders*, and watch at the play camera's distance. Every landed
   hit should throw a few red drops from the wound along the blow and leave one mark where they
