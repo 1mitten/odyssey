@@ -63,12 +63,8 @@ namespace Odyssey.Tests.Sim
             return grid;
         }
 
-        static CellGrid Natural(GridSize size, uint seed = 4242)
-        {
-            var grid = new CellGrid(size);
-            NaturalMapGenerator.Generate(grid, seed, NaturalMapGenDef.For(size));
-            return grid;
-        }
+        /// <summary>A natural board as the game builds it — see <see cref="PlayedMap"/>.</summary>
+        static CellGrid Natural(GridSize size, uint seed = 4242) => PlayedMap.Generate(size, seed);
 
         // ---------------------------------------------------------------- the round trip
 

@@ -329,7 +329,7 @@ namespace Odyssey.Tests.PlayMode
         static int People(Odyssey.Sim.Contracts.WorldSnapshot frame)
         {
             int people = 0;
-            foreach (Odyssey.Sim.Contracts.PawnView view in frame.Pawns) if (view.Kind == 0) people++;
+            foreach (Odyssey.Sim.Contracts.PawnView view in frame.Pawns) if (view.IsColonist) people++;
             return people;
         }
 

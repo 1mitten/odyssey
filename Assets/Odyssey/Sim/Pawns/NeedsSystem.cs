@@ -54,7 +54,9 @@ namespace Odyssey.Sim.Pawns
 
                 // An animal has no needs, no mood and no mental break (design 29 §2): the values
                 // it was built with never move. The day it eats is the day the loop is designed.
-                if (!pawn.IsPerson) continue;
+                // Nor has a marauder, and a downed colonist's pause (design 33 §5): Pawn.NeedsTick
+                // is the one answer, and for every colonist standing it is the old IsPerson.
+                if (!pawn.NeedsTick) continue;
 
                 // Phase spreading by id. Over any window of exactly `interval` ticks each pawn
                 // updates exactly once, which is what keeps the cadence exact and testable while

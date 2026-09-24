@@ -453,8 +453,12 @@ namespace Odyssey.Tests.Sim
             var order = new List<string>();
             foreach (var node in colony.Jobs.Tree) order.Add(node.Name);
             // Drafted sits above the needs branch, or a drafted colonist wanders off to eat
-            // (design 33 §2b).
-            Assert.That(order, Is.EqualTo(new[] { "MentalState", "Drafted", "CriticalNeeds", "Work", "Idle" }));
+            // (design 33 §2b). Downed is first of all and SelfDefence sits between the draft and
+            // the needs (design 33 §5): both decline for anybody standing and unhurt.
+            Assert.That(order, Is.EqualTo(new[]
+            {
+                "Downed", "MentalState", "Drafted", "SelfDefence", "CriticalNeeds", "Work", "Idle",
+            }));
         }
 
         [Test]

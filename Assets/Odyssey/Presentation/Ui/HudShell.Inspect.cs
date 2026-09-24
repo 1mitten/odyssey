@@ -156,10 +156,14 @@ namespace Odyssey.Presentation.Ui
             string signature =
                 _inspect.Subject + ":" +
                 // The draft is in it too (design 33 §2f): the Draft button changes face, and the
-                // header it sits in is structure.
+                // header it sits in is structure. So are the model's shape answers (design 33
+                // §5f), which the combat lanes may change for a pawn while it is on the pane.
                 (_inspect.Subject == InspectSubject.Colonist
                     ? _inspect.Pawn.ToString() + (_inspect.Drafted ? ":drafted" : string.Empty)
+                        + (_inspect.ShowsColonistBody ? string.Empty : ":bare")
+                        + (_inspect.ShowsTabBox ? ":tabs" : string.Empty)
                  : _inspect.Subject == InspectSubject.Item ? _inspect.Thing.ToString()
+                 : _inspect.Subject == InspectSubject.Corpse ? _inspect.Corpse.ToString()
                  : _inspect.Position + ":" + _inspect.Layer);
             if (signature != _inspectBuiltFor)
             {
@@ -180,11 +184,10 @@ namespace Odyssey.Presentation.Ui
             // through, or a pile that changes hands, swaps its icon without a rebuild.
             // An animal is a pawn with no face (design 29 §8): the badge slot shows its species
             // key and the portrait slot stays out, as for anything that is not a person.
-            bool colonist = _inspect.Subject == InspectSubject.Colonist && !_inspect.IsAnimal;
-            string avatarKey = _inspect.Subject == InspectSubject.Item ? _inspect.ItemIconKey
-                : _inspect.Subject == InspectSubject.Cell ? _inspect.CellIconKey
-                : _inspect.IsAnimal ? _inspect.KindIconKey
-                : PawnKindLabels.Colonist;
+            // Both answers are the model's (design 33 §5f), so a marauder and a corpse are decided
+            // in the fast tier by the interface lane rather than here.
+            bool colonist = _inspect.ShowsFace;
+            string avatarKey = _inspect.AvatarKey;
             if (avatarKey != _inspectAvatarKey)
             {
                 _inspectAvatarKey = avatarKey;
@@ -210,7 +213,7 @@ namespace Odyssey.Presentation.Ui
             // rarely and the job hardly at all.
             int layer = _inspect.Layer;
             int selected = _directors != null ? _directors.Selection.Pawns.Count : 0;
-            string band = _inspect.Subject == InspectSubject.Colonist && !_inspect.IsAnimal
+            string band = _inspect.ShowsColonistBody
                 ? MoodBands.Band(_inspect.Mood)
                 : string.Empty;
 
@@ -236,7 +239,7 @@ namespace Odyssey.Presentation.Ui
             if (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item)
                 SyncCellRows();
 
-            if (_inspect.Subject != InspectSubject.Colonist || _inspect.Tombstoned || _inspect.IsAnimal) return;
+            if (!_inspect.ShowsColonistBody || _inspect.Tombstoned) return;
 
             SetNeed(0, _inspect.Food);
             SetNeed(1, _inspect.Rest);
@@ -247,6 +250,8 @@ namespace Odyssey.Presentation.Ui
                 SkillRow row = _inspect.Skills[i];
                 SetSkill(i, row);
             }
+
+            SyncHealthTab();
         }
 
         /// <summary>
@@ -262,10 +267,15 @@ namespace Odyssey.Presentation.Ui
             string active = _inspect.ActiveTabName;
             bool skills = active == "Skills";
 
+            // The Health tab (design 33 §5): its body is lane C's, in HudShell.Combat.cs. While it
+            // is the active tab the needs grid steps aside, as it does for Skills.
+            bool health = active == "Health";
+
             if (_needsGrid != null)
-                _needsGrid.style.display = skills ? DisplayStyle.None : DisplayStyle.Flex;
+                _needsGrid.style.display = skills || health ? DisplayStyle.None : DisplayStyle.Flex;
             if (_skillsGrid != null)
                 _skillsGrid.style.display = skills ? DisplayStyle.Flex : DisplayStyle.None;
+            ShowHealthTab(health);
 
             // A store's two tabs stand in the same box and one of them is drawn, exactly as the
             // colonist's needs and skills do — so changing tab changes which rows are shown and
@@ -506,8 +516,9 @@ namespace Odyssey.Presentation.Ui
             {
                 case InspectSubject.Colonist:
                     {
-                        // An animal has an activity and no mood (design 29 §8).
-                        if (_inspect.IsAnimal) return _inspect.Job;
+                        // An animal has an activity and no mood (design 29 §8), and so does any
+                        // pawn the model says has no colonist's body (design 33 §5f).
+                        if (!_inspect.ShowsColonistBody) return _inspect.Job;
 
                         // A multi-selection shows the primary colonist in full, with the size of
                         // the set said out loud: "3 selected" is the whole of what a pane can add
@@ -529,6 +540,9 @@ namespace Odyssey.Presentation.Ui
                     // below in its own column, and the state line stays empty rather than
                     // repeating any of them.
                     return _inspect.Site;
+                case InspectSubject.Corpse:
+                    // The model's words (design 33 §5f): lane C writes the corpse's line into Job.
+                    return _inspect.Job;
                 default:
                     return string.Empty;
             }
@@ -543,6 +557,7 @@ namespace Odyssey.Presentation.Ui
             _cellRows.Clear();
             _needsGrid = null;
             _skillsGrid = null;
+            ForgetHealthTab();
             _cellRowsGrid = null;
             _locationRow = null;
             _locationValue = null;
@@ -581,9 +596,7 @@ namespace Odyssey.Presentation.Ui
             // the only kind of thing an icon key can describe. They are both built here rather
             // than swapped in on selection, because the header is rebuilt on a change of *shape*
             // and a colonist replacing a rock is not one.
-            _inspectAvatarKey = _inspect.Subject == InspectSubject.Item ? _inspect.ItemIconKey
-                : _inspect.Subject == InspectSubject.Cell ? _inspect.CellIconKey
-                : "ui.pawn.colonist";
+            _inspectAvatarKey = _inspect.AvatarKey;
             _inspectAvatar = new IconBadge(_inspectAvatarKey, IconBadge.AvatarSize);
             _inspectAvatar.Inherit(HudTokens.TextPrimary);
             _inspectFace = new AvatarGlyph(HudLayout.Avatar);
@@ -637,14 +650,15 @@ namespace Odyssey.Presentation.Ui
             // said its story in a tooltip nobody hovers, and read as a broken button. Named
             // stores bring their own control when they bring the name (26-storage.md §9a, SZ4).
 
-            if (_inspect.Subject == InspectSubject.Colonist)
-                foreach (InspectCommand command in _inspect.Commands)
-                {
-                    // Two of the three: the pane's header carries the commands a player reaches
-                    // for, and Inspect is not one of them when the pane is already open.
-                    if (command.Label == "Inspect") continue;
-                    actions.Add(ActionButton(command));
-                }
+            // The model fills Commands for the subjects that have any (a colonist's, today), so the
+            // shell draws whatever is there rather than deciding who may be commanded.
+            foreach (InspectCommand command in _inspect.Commands)
+            {
+                // Two of the three: the pane's header carries the commands a player reaches
+                // for, and Inspect is not one of them when the pane is already open.
+                if (command.Label == "Inspect") continue;
+                actions.Add(ActionButton(command));
+            }
 
             var info = new VisualElement();
             info.AddToClassList("inspect__info");
@@ -662,7 +676,7 @@ namespace Odyssey.Presentation.Ui
             header.Add(actions);
             _inspectBody.Add(header);
 
-            if (_inspect.Subject == InspectSubject.Colonist)
+            if (_inspect.ShowsTabBox)
             {
                 var strip = new VisualElement();
                 strip.AddToClassList("inspect__tabs");
@@ -707,6 +721,9 @@ namespace Odyssey.Presentation.Ui
                 for (int i = 0; i < _inspect.Skills.Count; i++)
                     _skills.Add(SkillLine(_skillsGrid, withBar: true));
                 tabBody.Add(_skillsGrid);
+
+                // The Health tab's body, in the same fixed-height box (design 33 §5).
+                BuildHealthTab(tabBody);
 
                 _inspectBody.Add(tabBody);
 

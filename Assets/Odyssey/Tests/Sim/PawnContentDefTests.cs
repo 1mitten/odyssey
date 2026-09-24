@@ -189,7 +189,37 @@ namespace Odyssey.Tests.Sim
         // Moved again, 2026-09-24, merging main (combat, wildlife, temperature) into power: the
         // draft's two jobs keep drivers 12 and 13 and power's three follow at 14-16. Neither
         // side's number covers the merged pack, so it is re-taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 5505190820075516158UL;
+        // Moved a seventeenth time, 2026-09-23, by the combat contracts step (design 33 §5), which
+        // claims every handle the combat line needs at once: five jobs (Job_AttackMelee, Job_Flee,
+        // Job_Downed, Job_Equip, Job_Rescue at drivers 14 to 18), Skill_Melee, Work_Rescue, four
+        // weapons (Item_Bat, Item_Crowbar, Item_Machete, Item_ArcBlade, each with a weapon block),
+        // PawnKind_Marauder with PawnKindDef.faction (the two animal kinds Wild), SpeciesDef's
+        // combat fields with the owner's pools (person 100, hog 60, rat 15), death at -500 per mille,
+        // revenge (hog 700, rat 50) and the two natural attacks, and a new CombatDef carrying the
+        // owner's hit and dodge curves and fists. Taken from a freshly loaded pack. The goldens
+        // moved in the same commit, and not for any of the numbers: see Golden.cs.
+        //
+        // Moved an eighteenth time, 2026-09-23, by the seam review of the same step: PawnKindDef
+        // gained `weapon` and PawnKind_Marauder names Item_Machete (design 33 §1: "debug-spawned,
+        // armed"; IWeaponRules.ArmOnSpawn puts it in the hand). No golden moved: no golden spawns
+        // a marauder.
+        //
+        // Moved a nineteenth time, 2026-09-23, at the C2/C3 integration: CombatDef gained
+        // `rechooseTicks` (300), lane A's constant on the attack driver, proposed for the Def in its
+        // hand-over because Defs were frozen while the lanes ran. Same value, so no behaviour and no
+        // golden moved.
+        //
+        // Moved a twentieth time, 2026-09-24, by the third playtest's round (design 33 §9b): CombatDef
+        // gained the owner's critical and knockback numbers — critChancePerMille 100,
+        // critPerMillePerFourLevels 10, critDamagePerMille 1,500, knockbackPerMille 500,
+        // knockbackBluntPerMille 750 — and knockedDownTicks 90. No golden moved: no golden window
+        // fights, so no swing is ever decided in one.
+        //
+        // Moved again, 2026-09-24, merging main (power, research) into the combat line: power's three
+        // jobs keep drivers 14-16, so the combat five move from 14-18 to 17-21 (nothing combat shipped
+        // had saved them). Neither side's number covers the merged pack, so it is re-taken from a
+        // freshly loaded pack rather than adopted from either.
+        const ulong ContentFingerprint = 7311169109491343133UL;
 
 
         [Test]

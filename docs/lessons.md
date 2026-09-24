@@ -181,6 +181,17 @@ same message — and it does not get slower, because it stops as soon as the eff
 applies to anything downstream of a tick: a published snapshot, a job starting, a designation
 clearing.
 
+**The same trap has a second form: counting frames, or timing a window of frames, across a tick.**
+2026-09-24, PR #180, two PlayMode tests red on the CI runner and green here. `StockpileDragTests`
+counted frames from the drag to the drawn zone and allowed ten, but the zone exists only after the
+next tick, and at the runner's ~1 ms frames that tick can be sixteen frames off — `main` read 3 and
+the branch 11 on the same renderer. `TheFrameWithAFightInView` asserted combat events inside 180
+timed frames, which are 27 ticks at 2.5 ms here and about twelve at 1.2 ms there, and the runner's
+twelve caught no swing. **The runner is the faster machine, so it is where this shows.** Count
+from the effect (the tick that published the zone), and where a window must hold simulation time,
+tick it from the test (`boot.StartCoroutine` ticking once a frame) rather than hoping the frame
+rate supplies it. Print the tick count beside any frame count, so the next failure names itself.
+
 **The fast tier compiles neither Presentation nor Editor.** `scripts/test-fast.sh` builds only the
 two mirror projects, `Odyssey.Tests.Sim` and `Odyssey.Tests.Hud`, so a green fast tier says nothing
 at all about `Assets/Odyssey/Presentation/`, `Assets/Editor/` or the scene wiring. A unit that
@@ -2546,6 +2557,72 @@ once a *tick*, and a rig with nothing to draw runs frames far faster than the fi
 **When something is published by the simulation, assert the tick.** Frames are a unit of how fast the
 machine happened to be going; seconds of wall clock are the unit the owner's report was made in, and
 both of those are worth logging. The frame count is a diagnostic, never a gate.
+## Never switch branches in a worktree you have just handed to the owner
+
+**2026-09-21.** The map-size handover named `D:\code\odyssey-bigmaps` as the place to press Play.
+Minutes later the same worktree was moved to a new branch with `git checkout -b` to start the
+follow-up unit, while the owner had an editor open on it. Unity reimported underneath a live
+playtest.
+
+Nothing was lost — the handed-over branch was already committed and pushed, and the new code was
+inert behind a default-off flag — but the owner was asked to reason about a worktree changing shape
+mid-session, which is exactly what a handover exists to prevent.
+
+**The rule: a worktree named in a handover belongs to the owner until they say otherwise.** The
+follow-up unit gets its own worktree, however tempting the warm `Library/` is. A fresh worktree
+costs about ten minutes of Synty import; interrupting a playtest costs the playtest, and the owner
+is the only person who can run one.
+
+The tell that it had happened was not a test failure. It was `scripts/unity.sh` refusing to run —
+see the next lesson.
+
+## `unity.sh` refusing with "this project is locked" identifies the process; use it before assuming
+
+**2026-09-21.** Two batch runs were refused in a row with *"this project is locked and a Unity
+process is running"*. The temptation is to read that as the phantom-editor phenomenon already in
+this file and clear the lock.
+
+The guard is more precise than that. It matches `-projectPath` against **this** project, so the
+message means a Unity process genuinely has *this* worktree open. One query separates the cases:
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='Unity.exe'" | ForEach-Object {
+  $cl = $_.CommandLine
+  $pp = if ($cl -match '(?i)-projectpath\s+"?([^"]+?)"?(\s|$)') { $Matches[1] } else { '<none>' }
+  $kind = if ($cl -match '(?i)-batchmode') { 'BATCH' } else { 'GUI' }
+  "{0} | {1} | {2} | started {3}" -f $_.ProcessId, $kind, $pp, $_.CreationDate
+}
+```
+
+`GUI` plus a path that is the owner's worktree is a person, and the answer is to wait or to work
+elsewhere. `BATCH` plus a path this session started is a leftover of one's own and is safe to end.
+On the day this was written the answer was `GUI | D:\code\odyssey-bigmaps` — the owner, playing what
+they had just been handed.
+
+**Force-killing a batch Unity makes the owner's next editor session open with a recovery prompt.**
+2026-09-21: the owner asked for the lock to be freed, `Stop-Process -Force` took the batch Unity out
+mid-run, and their next open asked *"Scene backups from a previous Editor session have been
+detected. Do you want to copy and preserve these backups in Assets/_Recovery/?"* The answer is
+**no** — a headless test run edits no scene, and saying yes writes new assets **inside `Assets/`**
+for Unity to import and somebody to commit. Better still is not to cause it: stop a batch run
+between its runs rather than killing it mid-run, and if it must be killed, say so *before* the owner
+next opens the editor rather than letting the prompt be a surprise.
+
+**Two rules fall out of it.** Never kill on the strength of the refusal alone; the message does not
+say whose process it is, and the query does. And when a batch Unity of one's own is stopped by
+stopping its wrapper, **the Unity itself survives** — it goes on holding the project and the
+directory cannot be deleted until the process is ended by id.
+
+## Unlink a Synty junction before deleting anything, including a throwaway worktree
+
+**2026-09-21**, and it is worth repeating here because the throwaway case is where it will happen.
+A worktree created for ten minutes of verification still gets `Assets/Synty` junctioned into it, and
+a recursive delete follows a junction. `git worktree remove --force` failed with *"Invalid
+argument"*, and the reflex is to reach for `Remove-Item -Recurse -Force`.
+
+Order that cannot go wrong: `(Get-Item $junction).Delete()` first, **check the real packs are still
+there**, then delete the directory, then `git worktree prune`. The check in the middle is not
+ceremony — it is the only step that catches the mistake while it is still cheap.
 
 **Rebuilding the module catalogue wipes the recolour classification, and nothing says so** (2026-09-22).
 `scripts/unity.sh exec Odyssey.EditorTools.PlayScene.RebuildCatalogue` replaces every row with
@@ -2610,3 +2687,13 @@ The four, and what each is the only one able to see:
 And the player build is the fifth thing, which is not a tier and proves what none of them do: that
 a stripped shader and a runtime path under `Assets/` survive. Two green tiers say nothing about
 whether the game runs.
+
+## Rebuild a serialized asset after a merge; do not trust git's text merge of it (2026-09-24)
+
+`ModuleCatalogue.asset` merged without a conflict and was wrong: git kept both branches' rows and
+dropped the four `fit*` fields that one side had added to *every* row, because each hunk only
+touched the other side's rows. Nothing fails. The editor fills a missing field with its default, so
+main's machines would have silently lost their footprint fit. After any merge that touches a
+generated asset, regenerate it (`unity.sh exec Odyssey.EditorTools.PlayScene.RebuildCatalogue`,
+then `CharacterSwatches.Classify` and `AudioSetup.Build`). Then compare its ids against both parents
+before trusting it.

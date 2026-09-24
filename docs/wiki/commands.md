@@ -1,8 +1,10 @@
 # Commands
 
-What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein.
+What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein. A right-click on a thing with more than one answer, a weapon today, opens a small menu at the pointer whose rows are these commands; the menu's own words are listed after them.
 
-48 entries, 28 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+49 entries, 29 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+
+## Commands
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
@@ -54,6 +56,12 @@ What the player can tell a selected thing to do. Many are conventional; the ones
 | **Evacuate** | `ui.command.evacuate` | Everyone out of this area <br>**Needs:** clear this area now | no art | M3 |
 | **Hunt** | `ui.command.hunt` | Kill this wild animal for meat | sheet 06 (action tiles), high | M3 |
 | **Strip** | `ui.command.strip` | Take everything they carry <br>**Needs:** taking everything a pawn carries | no art | M3 |
+
+## The context menu
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Cancel** | `ui.menu.cancel` | Close the menu a right-click opened, and order nothing | no art | CB |
 
 ---
 

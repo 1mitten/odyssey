@@ -127,6 +127,10 @@ namespace Odyssey.Hud
                 string title = inspect.Title;
                 string iconKey = inspect.ItemIconKey;
 
+                // The four weapons (design 33 §1) have no entry yet, and falling through to the
+                // Ration Pack below would open the wrong page rather than none.
+                if (iconKey.StartsWith("ui.item.", StringComparison.Ordinal)) return null;
+
                 if (title.StartsWith(AlmanacKeys.Wood, StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, AlmanacKeys.Wood);
                 if (title.StartsWith(AlmanacKeys.Stone, StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, AlmanacKeys.Stone);
                 if (title.StartsWith("Concrete", StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, "Concrete");
@@ -187,12 +191,23 @@ namespace Odyssey.Hud
                 return ("Terrain", "Grass");
             }
 
+            // A corpse (design 33 §1): an animal's opens its kind's Fauna entry, as the living
+            // animal does; a person's has no entry to open.
+            if (inspect.Subject == InspectSubject.Corpse)
+            {
+                if (!inspect.CorpseWasAnimal) return null;
+                string kind = Registry.Label(inspect.CorpseKindKey);
+                return AlmanacCatalogue.GetEntry(kind) != null ? ("Fauna", kind) : null;
+            }
+
             if (inspect.Subject == InspectSubject.Colonist)
             {
                 // An animal opens its own Fauna entry (design 30; owner, 2026-09-23: "make sure
                 // the almanac is up-to-date with animals"), by the kind's registry name, which
                 // is the entry's name.
-                if (inspect.IsAnimal)
+                // A marauder (design 33 §1) is not a colonist and its skills are not the player's:
+                // its kind's entry if the Almanac has one, else none, never a colonist's page.
+                if (inspect.IsAnimal || inspect.IsHostile)
                 {
                     string kind = Registry.Label(inspect.KindIconKey);
                     return AlmanacCatalogue.GetEntry(kind) != null ? ("Fauna", kind) : null;

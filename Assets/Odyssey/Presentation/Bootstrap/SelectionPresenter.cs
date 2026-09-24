@@ -101,6 +101,17 @@ namespace Odyssey.Presentation.Bootstrap
             // readout visibly skipped to something else before settling). Republishing between
             // ticks is safe for exactly the reason a question is safe: it changes no state the
             // simulation owns, publishes over the same settled world, and moves no counter.
+            // A corpse under the pointer, where no living pawn is (design 33 §5f): clickable as
+            // "Corpse of X". The corpse's own box, the one its cursor draws. The choice is lane C's
+            // (HudDirectors.ChooseCorpse); until it answers yes the click falls through to the
+            // ground beneath, as it always did.
+            if (!under.IsValid && picked.HasValue && !shift && _bootstrap?.Corpses != null)
+            {
+                SelectableBand(out int lowest, out _);
+                int corpse = _bootstrap.Corpses.CorpseUnderRay(ray, Mathf.Max(lowest, picked.Value.Y));
+                if (corpse > 0 && directors.ChooseCorpse(corpse, world.Views.Current)) return;
+            }
+
             if (picked.HasValue)
                 world.Intents.Submit(new Intent(IntentKind.QueryCell, picked.Value));
             else
@@ -115,8 +126,20 @@ namespace Odyssey.Presentation.Bootstrap
         /// <see cref="DesignatePresenter"/>. <see cref="OrderModel.RightClick"/> decides; this only
         /// supplies the two things a Unity-free model cannot find for itself — who is under the
         /// pointer, by the same hit-test a left click uses, and whether Ctrl is held — and carries
-        /// the answer to the world. A selection with nobody drafted in it is not asked at all, so
+        /// the answer to the world. A selection with no colonist in it is not asked at all, so
         /// a right-click that is not an order costs nothing.
+        ///
+        /// <para><b>A colonist, not a drafted one</b> (design 33 §5j): a right-click on a weapon
+        /// sends the primary colonist for it drafted or not, so the gate is
+        /// <see cref="OrderModel.HearsRightClick"/>. Behind <c>AnyDrafted</c>, as C1 left it, an
+        /// undrafted colonist could not be sent for a weapon at all — the model said yes and the
+        /// click never reached it (integration, 2026-09-23). Everything else still needs a draft
+        /// inside the model, so the wider gate sends nothing new.</para>
+        ///
+        /// <para><b>A thing with several answers asks instead of acting</b> (design 33 §7a): when
+        /// the model answers with menu rows — a weapon's <i>Equip</i> and <i>Cancel</i> — the HUD
+        /// raises them at the pointer and nothing is sent until a row is chosen. The model fills
+        /// one list or the other, never both.</para>
         /// </summary>
         public void Order(CellRef? cell, Ray ray)
         {
@@ -126,19 +149,29 @@ namespace Odyssey.Presentation.Bootstrap
 
             WorldSnapshot snapshot = world.Views.Current;
             IReadOnlyList<PawnId> selection = directors.Selection.Pawns;
-            if (!OrderModel.AnyDrafted(selection, snapshot)) return;
+            if (!OrderModel.HearsRightClick(selection, snapshot)) return;
 
             PawnId under = cell.HasValue ? PawnUnderRay(snapshot, ray, cell.Value.Y) : PawnId.None;
             bool ctrl = Keyboard.current?.ctrlKey.isPressed == true;
 
             _orders.Clear();
-            OrderModel.RightClick(selection, snapshot, cell, under, ctrl, _orders);
+            OrderModel.RightClick(selection, snapshot, cell, under, ctrl, _orders, _menu);
+            if (_menu.Count > 0)
+            {
+                if (_shell == null) _shell = GetComponent<Ui.HudShell>();
+                Mouse? mouse = Mouse.current;
+                if (_shell != null && mouse != null) _shell.OpenContextMenu(_menu, mouse.position.ReadValue());
+            }
             for (int i = 0; i < _orders.Count; i++) world.Intents.Submit(_orders[i]);
             _orders.Clear();
+            _menu.Clear();
         }
 
-        // Scratch for Order: filled and emptied inside one call, never state.
+        // Scratch for Order: filled and emptied inside one call, never state. The shell copies
+        // the rows it is handed, so the list can be emptied as soon as the menu is up.
         readonly List<Intent> _orders = new List<Intent>();
+        readonly List<ContextMenuRow> _menu = new List<ContextMenuRow>();
+        Ui.HudShell? _shell;
 
         void OnBoxSelected(Rect screenRect, bool additive)
         {
@@ -271,7 +304,7 @@ namespace Odyssey.Presentation.Bootstrap
                 // reach the wood, so the pose and the screen disagree by most of a stride exactly
                 // while a colonist is chopping — which is when the player is trying to click them.
                 Bounds bounds;
-                if (pawn.Kind != 0 && _bootstrap?.Figures != null
+                if (pawn.IsAnimal && _bootstrap?.Figures != null
                     && _bootstrap.Figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 place, out Vector3 animal))
                 {
                     // An animal is clicked through its own drawn box, the one the cursor draws

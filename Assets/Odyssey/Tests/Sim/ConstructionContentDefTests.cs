@@ -89,7 +89,14 @@ namespace Odyssey.Tests.Sim
         // metal and the heater 5 beside their wood or stone.
         // Same day, third look (design 32 §14c): the heater rotates. Its facing is drawing only
         // and backs on to a wall where there is one; nothing in the simulation reads it.
-        const ulong BuildingFingerprint = 5691991369606031804UL;
+        // 2026-09-23, the combat contracts step (design 33 §4, §5): BuildingDef gained
+        // `maxHitPoints`, what a finished thing has when it is struck (C6) — wall 300, floor 250,
+        // deck plate 150, ladder 80, bed 120, door 160, shelf 100, all INVENTED and C6's to tune.
+        // Added to the XML and the code oracle together, and taken from a freshly loaded pack.
+        // Moved again, 2026-09-24, merging main (power) into the combat line: neither side's number
+        // covers the merged table, so it is re-taken from a freshly loaded pack. Power's three rows
+        // and the campfire carry no maxHitPoints yet (0); C6 gives them one when anything strikes.
+        const ulong BuildingFingerprint = 1802851213417361357UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

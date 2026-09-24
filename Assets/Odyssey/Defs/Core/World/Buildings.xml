@@ -19,6 +19,13 @@
 -->
 <Defs>
 
+  <!--
+    maxHitPoints (design 33 section 4, C6) is what a finished thing has when it is struck, in whole
+    points, before any material scaling: INVENTED per thing by the combat contracts step, and C6's
+    to tune. A building nobody has hit carries no row anywhere; what is left of a struck one is
+    EdificeDamage's. Building_None has none.
+  -->
+
   <!-- 0 is "nothing", matching the grid's zero default, exactly as TerrainAir is 0. -->
   <BuildingDef>
     <defName>Building_None</defName>
@@ -46,6 +53,7 @@
     <workToBuild>135</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.wall</iconKey>
+    <maxHitPoints>300</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -75,6 +83,7 @@
     <workToBuild>120</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.roof</iconKey>
+    <maxHitPoints>250</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -113,6 +122,7 @@
     <workToBuild>60</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.deckplate</iconKey>
+    <maxHitPoints>150</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -153,6 +163,7 @@
     <workToBuild>90</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.ladder</iconKey>
+    <maxHitPoints>80</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -186,6 +197,7 @@
     <workToBuild>180</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.bed</iconKey>
+    <maxHitPoints>120</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -203,6 +215,7 @@
     <workToBuild>135</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.door</iconKey>
+    <maxHitPoints>160</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -225,6 +238,7 @@
     <workToBuild>180</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.shelf</iconKey>
+    <maxHitPoints>100</maxHitPoints>
   </BuildingDef>
 
   <!--

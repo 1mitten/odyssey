@@ -430,6 +430,44 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// The inspect pane names what a pawn is — colonist, hostile, animal — on the living pane
+        /// and on the corpse's, and both words come from <c>ui.pawn.*</c>. <b>Ignoring case</b>,
+        /// because the pane says them lower-cased, which is exactly how the corpse pane's three
+        /// literals got past <see cref="NoPlayerFacingNameIsWrittenInCSharp"/> (review,
+        /// 2026-09-23): renaming <c>ui.pawn.hostile</c> would have renamed the wiki and left the
+        /// pane saying "hostile". One file rather than the namespace everywhere, because "Corpse"
+        /// is also a GameObject's name and "colonist" a USS class, and neither is a word a player
+        /// reads.
+        /// </summary>
+        [Test]
+        public void TheInspectPaneWritesNoPawnKindItself()
+        {
+            var kinds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (KeyValuePair<string, string> entry in Registry.Labels)
+                if (entry.Key.StartsWith("ui.pawn.", StringComparison.Ordinal) && entry.Value.Length > 0
+                    && !kinds.ContainsKey(entry.Value))
+                    kinds[entry.Value] = entry.Key;
+            Assert.That(kinds.Count, Is.GreaterThan(5), "the registry lost the pawn kinds, so this watches nothing");
+
+            string? hud = Find("Assets/Odyssey/Hud");
+            Assert.That(hud, Is.Not.Null, "the HUD sources were not found");
+            string[] lines = File.ReadAllLines(Path.Combine(hud!, "InspectModel.cs"));
+            var literal = new Regex("\"([^\"\\\\]*)\"");
+            var offences = new List<string>();
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].TrimStart().StartsWith("//", StringComparison.Ordinal)) continue;
+                foreach (Match match in literal.Matches(lines[i]))
+                    if (kinds.TryGetValue(match.Groups[1].Value, out string? key))
+                        offences.Add($"InspectModel.cs:{i + 1} writes \"{match.Groups[1].Value}\", which is {key}");
+            }
+
+            Assert.That(offences, Is.Empty,
+                "the pane writes a pawn kind's name itself; say Registry.Label(key), lower-cased if " +
+                "the pane wants it so:\n  " + string.Join("\n  ", offences));
+        }
+
+        /// <summary>
         /// Every C# file the HUD and the presentation layer are built from, apart from the
         /// generated registry itself — which is where the names are supposed to be.
         ///

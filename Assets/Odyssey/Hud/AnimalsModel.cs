@@ -116,7 +116,9 @@ namespace Odyssey.Hud
             int people = 0;
             foreach (PawnView view in snapshot.Pawns)
             {
-                if (PawnKindLabels.IsAnimal(view.Kind)) continue;
+                // The colony's home is its own people (design 33 §5): not the animals, and not a
+                // marauder standing in the middle of it.
+                if (!view.IsColonist) continue;
                 sumX += view.Cell.X;
                 sumZ += view.Cell.Z;
                 people++;
@@ -127,7 +129,7 @@ namespace Odyssey.Hud
             _scratch.Clear();
             foreach (PawnView view in snapshot.Pawns)
             {
-                if (!PawnKindLabels.IsAnimal(view.Kind)) continue;
+                if (!PawnKindLabels.IsAnimal(view)) continue;
                 _scratch.Add(new AnimalRow
                 {
                     Id = view.Id,

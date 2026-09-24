@@ -11025,6 +11025,108 @@ pass by never having built one. That version fails on the mutation.
 while it stood the aspect scan looked like a constant and the whole bend was attributed to the larger
 term. One pass held two quadratics. **After fixing a quadratic, measure the same pass again rather
 than declaring it linear.**
+### The arms were measuring a board nobody plays, and a play log found it
+
+The owner pasted a console log while playing — not a bug report, just context for a question about
+whether the editor felt slow. Their 120 × 120 × 16 session read `patches 0, trees 1598`. Every
+measurement arm written that day had been reporting `patches 2210, trees 1222` for the same board.
+
+**Two owners for one choice.** `Assets/Scenes/Play.unity` carries `barrenMap: 1, woodedMap: 1`, so
+`ColonyWorld.Build` applied `MakeWooded()` on top of `MapGenerator.DefaultDef`. Every arm —
+worldgen, nav statistics, save — reached for `NaturalMapGenDef.For(size)`, which *is*
+`DefaultDef`, and got the def without it. `BoardMemoryTests` was further out again:
+`ColonyWorld.Build`'s `wooded` parameter defaults to `false`, and `false` means `MakeBarren()` — a
+board with no trees and no water at all. So the memory figures were for a bare board, the rest for
+a half-wooded one, and the game plays neither.
+
+**The fix was to delete the second owner rather than copy the first.** `ColonyWorld.DefFor` is now
+the one place that decision is made; `Build` calls it and `PlayedMap` calls it. A copy would have
+been quicker and would have re-created the fault the moment either side moved — which is the shape
+`HopCost` and `OrderColours` already exist to prevent, and now the third instance of it.
+
+**The first guard was itself wrong, and the guard caught that too.** The obvious oracle is to hash a
+grid built by `PlayedMap` against one built by `ColonyWorld.Build` and assert they match. They do
+not: `Build` also applies the scenario's placements, so it compares far more than the def. The test
+failed, and the failure was the instrument rather than the subject — twice in one day. What replaced
+it holds the helper to an *observable property* of `MakeWooded` — trees present, patches zero —
+with a negative control that fails if the helper ever becomes a synonym for the plain default.
+
+**What it moved was less than feared, and saying so is part of the record.** Live regions and links
+came out **identical on every board**: 2,110/1,477, 7,360/3,511, 8,406/6,180, 24,141/6,772. Trees and
+surface patches do not change how the region graph carves a 10 × 10 block, so the region counts, the
+edit tick and the whole ceiling argument stand. Huge is 0.865 ms an edited cell against the 0.883
+first reported — noise, on the same structure. What did move: generation time (24 / 77 / 104 ms),
+the feature counts, memory by about 2 B/cell, save size by a few per cent.
+
+One finding sharpened rather than softened. Water shapes across the four boards are **2, 4, 7 and
+5** — Huge has *fewer* than Large while covering nearly twice the ground, because `streamCount` is a
+per-map absolute. That was a theory in §4 and is now a number, and a better playtest question for it.
+
+**The uncomfortable part.** `docs/bug-patterns.md` P14 — *an instrument that cannot see the thing it
+is comparing, and passes* — was written one commit earlier, in this same branch, about two other
+faults of the same shape found the same afternoon. It was not applied to the arms it was written
+about. Writing the pattern down is not the same as running it over the work in hand, and the thing
+that actually caught this was a person pasting a log.
+
+Three instrument faults in one day, none found by a failing assertion: one found by a control, one
+by noticing two "different" readings printed the same draw-call count, and one by an owner's console
+output. The rule that covers all three is already written — **assert on the deterministic half** —
+and the arms now do: `MineOneCell.Mined == Ticks`, `callsOn < callsOff`, trees present and patches
+zero. A millisecond never catches a fixture that has stopped doing its job.
+
+## 2026-09-23 — the cull comes off hold, and the instrument that could not see
+
+`claude/frustum-culling` had been sitting closed since 2026-09-21 as a deliberate draft. The work was
+done and measured; what held it was that its proof, `CullingDoesNotChangeThePicture`, **failed its
+own control** — a frustum admitting nothing moved 3.22% of pixels, which is not a difference between
+two pictures of a world but what two pictures of nearly nothing look like. The previous session added
+diagnostics to settle it and never re-ran them. Merging the branch up 134 commits and running it took
+about a minute and settled it in one line.
+
+**The blind shot reported counts identical to the culled one** — 126 chunks, 57,818 instances, 1,744
+calls — where a frustum admitting nothing should submit nothing at all. The control never applied.
+It assigned `ChunkRenderer.Frustum`, and `OdysseyBootstrap.LateUpdate` assigns that field every
+frame, so the test's planes were overwritten before the capture. The comparison was the culled shot
+against itself.
+
+**That is the second time in one file a test set a field the root re-derives per frame**; the first,
+one commit earlier in the same branch, was `ShadowCasterMarginMetres` off `QualitySettings.shadowDistance`.
+The tell was identical counters both times. The lesson had been written down and not applied to the
+field beside it. `ChunkRenderer.FrustumOverride` is a seam the root does not touch.
+
+**The diagnostics also killed my own hypothesis**, which is exactly what they were for. I had reasoned
+from §6c that forcing a camera `targetTexture` in batch is pathological and guessed the capture never
+saw the board. Mean channel 130.6 says it saw it perfectly well. Third time today that reading-derived
+reasoning lost to a cheap measurement.
+
+**A second fault was hiding underneath the first.** With the control working, two captures of the
+identical configuration still differed by 1.29% against culling's 2.13% — a difference meant to be
+nought, asked to stand out against a floor most of its own size. Pausing the simulation is not enough:
+it stops the ticks so nobody walks, but the water scrolls its streaks, the figures advance their
+animation graphs and the daylight rig moves, because those run on `Time.deltaTime` and the shaders on
+`_Time`. `Time.timeScale = 0` stills the shaders as well as the scripts. And the floor is no longer
+assumed — the test takes a *repeat* of the identical configuration and asserts on it, so there is now
+a control that must show a difference and one that must not.
+
+    the same shot twice           0.00%
+    culling                       0.00%
+    a frustum admitting nothing  98.21%
+
+So the cull is exactly invisible, and on `main` it is worth: Standard 33 of 104 chunks, 3.43 → 2.86 ms,
+1,360 → 996 calls; Huge 317 of 443, 8.89 → 3.84 ms, 5,083 → 1,744 calls, `World` 5.613 → 1.687.
+`CullToFrustum` is on by default from today.
+
+**One honest qualification recorded beside the good number.** The saving follows the player's shadow
+distance, because the margin *is* that distance — a caster nearer than it may cast into the frustum
+and has to be submitted. At a 120 m setting Standard culls nothing at all and Huge culls 74 of 443.
+The mechanism is right; the headline is a default-settings number.
+
+**And the merge brought two things that were not culling.** `ColonyWorld.DefFor` — the one-owner fix
+for a wrong-map fault where every per-board measurement arm read the unmodified default def while the
+played scene applies `MakeWooded()` — which never reached `main` and is worth having on its own. And a
+`P14` collision: the branch's new pattern arrived as `P14`, which `main` already used. Renumbered to
+`P17` on merge, with its three citations, and the catalogue now says plainly that a third collision
+gets renumbered rather than kept.
 
 **The first draft playtest, the same afternoon.** The owner played C1: *"the drafting, T and moving
 onto surfaces, diamond and 4 hours all seemed to work."* Two asks came back. The first was that a
@@ -11033,6 +11135,135 @@ drafted colonist should run. That was the first reason to run the game has had s
 rate, `Pawn.UrgencyPerMille`: 2,000 while drafted and 1,000 otherwise. It needs no animation work,
 because the gait blend already draws the run clip in above 2 m/s. No golden moved, since nobody in
 a golden window is drafted. The second ask was a deeper, translucent red for the draft's marks.
+
+## 2026-09-23 — Combat: the contracts, cut once so four lanes can build at once
+
+The owner said "run the combat workflow", and this is its Phase 1: the one step that edits the
+shared spine, so that the four lanes after it (the fight in the simulation, the fight drawn, the
+interface, the weapons) only fill seams. Every handle the line needs was appended in one commit —
+five jobs, the melee skill, the rescue work type, the marauder, the four weapons, three orders — with
+every number from the owner's table in XML, and nothing yet fights. `docs/design/33-combat.md` §5
+says what each seam is for, and `docs/plans/combat-contracts.md` says who owns which file.
+
+**The shape that made it possible is a rule C1 had already set: combat state is hashed only while
+it is set.** Eight fields on the pawn, the corpse registry and the struck-building store all
+contribute nothing to a colony that has never fought, so the goldens moved once, here, for the new
+handles alone — ten job counters, a sixth skill, a sixth priority and four allow-list slots, all
+zeros — and every lane after this can assert them unchanged. The colony probe says so: widened to
+print mood, step progress, the first five skills' experience and passions and the per-job counts,
+it diffs clean against `origin/main` for all three golden colonies.
+
+**One bug came out of the contracts themselves, and it is the kind that only a round trip finds.**
+A pawn's hit points are full at spawn, and "full" depends on the species. The loader builds every
+pawn as a colonist — pool 100 — and only then reads that it is a hog, whose pool is 60. So a reloaded
+hog carried 100 of 60 hit points; that is combat state, which is saved and hashed, and every board
+with an animal on it would have disagreed with itself across a save. `Pawn.Kind`'s setter now keeps
+a whole pawn whole when its kind changes. `AnAnimalReloadedIsWhole` failed with the setter withheld
+(100,000 against 60,000), which is the control.
+
+**The plan's table had one seam in the wrong place.** "One `ICombatRules`" would have been one file
+that the fight and the weapons both edit, so it is two interfaces: what a pawn *holds*
+(`IWeaponRules`, which never rolls) and what a swing *does* (`IMeleeRules`, which never asks where
+the armament came from), with one value, `Armament`, between them. The fight lane can fight with
+fists and teeth from day one, because that is already the whole truth of a colony with no weapons.
+Two smaller moves: the stun is rolled where every other roll is, in the fight's lane; and the debug
+Spawn rows went to the interface lane, because `GiveResource` already places any item.
+
+**The kind was carrying a meaning it could not hold.** Six places in the interface and the renderer
+read "kind is not 0" as "an animal". A marauder is kind 3 and a person. `PawnView` now carries a
+flags byte — person, hostile, drafted, downed, stunned, carried — and every one of those places asks
+it. A view built by hand without flags still reads its kind the old way, so no existing test had to
+change for it.
+
+Recorded rather than fixed: `PawnPurpose.AnimalMind` and `DeconstructRefund` share a salt. It
+predates combat, and fixing it moves a golden.
+
+## 2026-09-23 — Combat: the seam review, before any lane started
+
+A reviewer read the lane briefs against the code with one question — *can each lane do its job from
+the files it owns?* — and found eleven places where the answer was no, or where two lanes would each
+have answered the same question their own way. The spine was fixed for the first kind and the rule
+written down once for the second (design 33 §5j), so no lane has to edit a shared file and none has
+to guess what another decided.
+
+**The design said things the code could not make true.** The marauder is "armed" in the owner's
+table, the Def comment and the wiki, but no lane could arm it: the kind had no weapon field, the
+only spawn path belonged to nobody, and a phantom armament would not have reached the held prop or
+the drop on death, which both read a real `EquippedItem`. The kind now names `Item_Machete` and
+`Spawn` calls `IWeaponRules.ArmOnSpawn`, which is lane D's. Likewise a stun meant "no swing and no
+step", but only the publish read it: movement and the job pipeline, neither in the fight's lane,
+carried on regardless, and the one thing that lane could do — interrupt the job — would have dropped
+a carried load and thrown away a player's order. **A stun is a pause, not an interrupt**, held in
+`JobSystem.TickPawn` and `MovementSystem.Advance`, and the difference was worth deciding once rather
+than by whichever lane got there first.
+
+**Death found two things nothing had needed before.** Until today only animals were despawned, and
+they own no beds, so a dead colonist would have kept hers for ever under an id that no longer
+exists. `Despawn` releases the pawn's beds now — in the despawn rather than the death, so every way
+off the board releases the same things. And a colonist downed during a mental break would have had
+her `Job_Downed` failed and restarted every tick of the break, inflating the hashed counters; going
+down ends the break, in lane A's one apply method.
+
+**The pane was the largest seam, and it was invisible from the briefs.** Every shape decision in
+`HudShell.Inspect` — which avatar, whether needs and skills are synced, whether there is a tab box,
+who gets commands — was keyed on the subject and `IsAnimal`, in a file belonging to the drawing lane.
+A corpse would have worn the colonist badge; a marauder would have shown needs, skills and a Draft
+button the simulation refuses. `InspectModel` now answers four questions (`ShowsFace`,
+`ShowsColonistBody`, `ShowsTabBox`, `AvatarKey`) and the shell reads them, with values that
+reproduce the pane exactly as it was; the interface lane changes them in the fast tier. The corpse
+became a subject and a selection in the same move.
+
+Every spine fix has its negative control seen to fail with the fix withheld (six in the simulation,
+three in the interface). No golden moved; the content fingerprint moved once, for the machete.
+
+## 2026-09-23 — Combat: C2 and C3 integrated, and the prop nobody owned
+
+The four lanes (`claude/combat-fight`, `-weapons`, `-hud`, `-drawn`) were merged on to
+`claude/combat-c2` in the plan's order — simulation first — and the only conflicts were their own
+subsections of design 33, each appended at the end of the same file. That is the contracts step
+paying for itself: four branches built in parallel against one spine and nobody's code touched
+anybody else's. The fast tier was green after every merge.
+
+**What the merge could not see was what lay between the lanes.** Three things did, and one was a
+missing owner rather than a missing wire:
+
+- **The equip click never arrived.** Lane C's model sends `OrderEquip` for an undrafted colonist
+  (the seam review's rule), but lane B's presenter still asked `AnyDrafted` before asking the model,
+  so the rule was true in a test and false at the keyboard. P1 again: who hears a right-click had
+  two owners, the model and a gate upstream of it that still answered in C1's words.
+- **The health bar had two colour ladders.** Lane B coloured it 60/30 %, lane C had written the
+  need bar's 60/40 % for lane B to call. P1, one rule with two owners, caught before anyone saw
+  them disagree at 35 %. The bar asks the model now, and the floating words take their lifetimes
+  from it too.
+- **Nobody drew the weapon.** Lane D put it in the simulation's hand and published it; lane B picked
+  the swing's clip family from it; the brief gave the held prop to no lane at all, and the ground
+  rows the contracts step claimed said "until lane B's catalogue build gives it a prop", which lane
+  B's brief never asked for. So a marauder would have swung a sword clip with an empty fist, and a
+  dropped machete would have been the orange stand-in box. The plan's split listed files, and a
+  thing that lives in no file of its own fell between them. It is one piece of art now — the
+  weapon's ground row, laid flat on the ground and seated under the right hand by measurement.
+
+**Two lane reports were stale by the time they merged**, which is worth knowing about lane
+hand-overs: lane D recorded that `Job_Equip` had no status word, but the contracts step had mapped
+it all along; and lane C said its two Presentation files had never been compiled, which was true
+and turned out not to matter — they compiled first time. The one Unity failure was elsewhere:
+a lane D assertion used an overload only the fast tier's NUnit has, and the editor refused the
+whole test assembly over it.
+
+**Decided rather than left:** `OrderAttack` carries no Ctrl flag. The right-click is the only thing
+that sends it, and the gesture belongs where the gesture is read. `rechooseTicks` went into
+`CombatDef`. A pawn despawned while holding a weapon puts it down.
+
+**One finding for the owner rather than a fix:** the Long soak, rerun with machetes, made nine downs
+and no deaths. Only a blow that crosses −50 % kills, nothing strikes a body on the ground unless
+ordered to, and so an unattended fight never kills anyone. That is the owner's rules working as
+written; whether it is what they meant is a playtest question, and it is in the hand-over as one.
+
+Measured, alone on the machine: EditMode 2,823 / 2,797 / 0 failed, PlayMode 106 / 101 / 0, fast
+1,161 + 795, Long 39. No golden moved and the colony probe is identical to the contracts commit's.
+A fight in view costs 2.29 ms against 2.06 at peace, in one run. The player build boots into a colony
+clean. Design 33 §6E has the rest.
+
 ## 2026-09-22 — Temperature merged with main: the campfire renumbers, and the season becomes reachable
 
 `main` moved twice under PR #164 while it sat in review — the shelf (#158) and floating crops
@@ -11321,6 +11552,58 @@ The content fingerprint and all three goldens were re-taken rather than adopted,
 side's numbers came from the merged code. `GoldenColonyProbe` on the merge and on `origin/main`
 diffs clean on every board. The wiki and label registry were regenerated from the merged CSVs, not
 merged by hand.
+
+## 2026-09-24 — Combat C2 and C3 merged with main, and the verdict
+
+The owner played round three and the spawn and debug-menu changes and called it: *"it seems great.
+Happy to merge in and do more testing later ... have a battle with tons and tons of characters - was
+hovering 3.5ms."* 3.5 ms is inside the 5 ms budget, but it is the RTX 5070 Ti, not the 2022 laptop,
+and the 64-figure animation ceiling is what keeps a crowd cheap to draw. So it is a good number on
+this machine and an open one for the target.
+
+Main had taken power and the Research and Inventory tabs meanwhile: 46 commits, 26 files in
+conflict. **The job table collided again, the other way round from power's own merge.** Power's
+three jobs are on `main`, so they keep 14–16 and combat's five move from 14–18 to 17–21. Nothing
+combat shipped had saved those numbers, so moving them breaks no save. The same applies to the
+intents: combat's three orders and the debug arming now follow power's four.
+
+Two faults were invisible to the fast tier. `SettingsPresenter` called an `Escape` with ten
+arguments, because main added the Inventory and Research panels and combat added the context menu,
+each with its own overload and neither with all ten. Only Presentation's compile found it, so the
+combined overload now has a test. And the textual merge of `ModuleCatalogue.asset` kept both sides'
+rows but dropped main's four `fit*` fields from every one of them. Rebuilding the catalogue in Unity
+put them back; a module-id comparison with both parents then showed nothing was lost. Rebuild a
+serialized asset rather than trust git's merge of it (`docs/lessons.md`).
+
+A third fault was already on `main`. `Odyssey/PowerLine` is found at runtime and was never added to
+the always-included shader list, so the player build guard refuses `main` as it stands. The fix is
+one line, from `ShaderInclusion.Apply`, in its own commit on PR #180.
+
+The fingerprints and all six goldens were re-taken from the merged code, since both sides had moved
+each of them. `GoldenColonyProbe`, reading the first seventeen job defs so the same file runs on
+both sides, gives identical output on `main` 54df119a and on the merge for all three boards.
+
+## 2026-09-24 — The cull merged up to main, and asked before the mesher
+
+PR #174 had fallen 169 commits behind `main` (power, the research tab, combat, wildlife). Three
+conflicts, none of them in the cull: `ColonyWorld` (this branch's `DefFor` against main's wildlife
+switch on the same lines — both kept, the switch after `DefFor`), and the status and journal files,
+where both sides had appended. The merge created one more collision: main had given `P17` to the
+flickering bar while this branch had renamed its pattern to `P17`, so the branch's pattern is `P18`
+now, with every citation — the catalogue's own rule for a third collision.
+
+One real fault went in with it, found while planning the Meadow overhaul: the frustum was asked
+*after* `BatchFor`, so a stale chunk behind the camera was meshed first and culled second, and a
+graphics toggle spent the eleven-chunk budget on the board in index order rather than on what was on
+screen. The test now goes first, against `ChunkMesher.BoundsOf` — the box `Mesh` writes, a function
+of the footprint only — so the picture cannot move, and the proof agrees: the same shot twice moved
+0.03%, culling 0.02%, a frustum admitting nothing 98.22%. The budget arm shows it directly: an
+unbudgeted whole-board re-mesh on Huge meshed **227 chunks in 51 ms**, the ones on screen, where it
+meshed all 900 in 156 ms before. `28-map-size.md` §10.1.
+
+Tiers on the merge: fast 1,322 Sim + 977 Hud, Long 41, content gates clean; EditMode 3,222 / 3,191
+/ 0; PlayMode 115 / 110 / 0. Culling at a 40 m margin, same run: Standard 2.74 -> 2.33 ms (33 of 104
+chunks, 1,363 -> 999 calls), Huge 7.05 -> 3.43 ms (317 of 443, 5,086 -> 1,747).
 
 ## 2026-09-24 — The Meadow overhaul: explored, interviewed, researched (design 36)
 

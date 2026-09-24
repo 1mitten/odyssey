@@ -42,6 +42,10 @@ namespace Odyssey.Hud
             // Power (design 32): laying a line is building, taking one up is deconstructing, and
             // feeding a generator has a word of its own.
             "ui.status.building", "ui.status.deconstructing", "ui.status.refuelling",
+            // The combat line's five (design 33 §5), in JobHandle order 17 to 21, after power's three: attacking,
+            // fleeing, lying downed, fetching a weapon, carrying the downed to bed.
+            "ui.status.fighting", "ui.status.fleeing", "ui.status.downed",
+            "ui.status.equipping", "ui.status.rescuing",
         };
 
         public static string IconKey(int jobDef) =>

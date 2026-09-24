@@ -182,6 +182,100 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public SightLines? Sight { get; set; }
 
+        /// <summary>
+        /// The camera's frustum planes, six of them, or null for "draw the whole band".
+        ///
+        /// <para>Set per frame by the composition root, the same way <see cref="Sight"/> is, so
+        /// this class still knows nothing about a <c>Camera</c>. Null is the ordinary case for a
+        /// headless or probe render and costs one null test per chunk.</para>
+        /// </summary>
+        public Plane[]? Frustum { get; set; }
+
+        /// <summary>
+        /// A frustum for a test to impose, which the composition root cannot overwrite. Null in
+        /// play, and null is the whole of the ordinary path.
+        ///
+        /// <para><b>It exists because a control that does not apply is worse than no control.</b>
+        /// <c>FrameTimeTests.CullingDoesNotChangeThePicture</c> proves the cull is invisible by
+        /// also rendering a frustum that admits *nothing* and checking that this moves a great
+        /// many pixels — if it does not, the comparison cannot see the board and its other
+        /// assertion means nothing. That control was written against <see cref="Frustum"/> and
+        /// silently did nothing, because the root assigns <see cref="Frustum"/> every frame
+        /// (<c>OdysseyBootstrap.LateUpdate</c>) and overwrote the test's planes before the
+        /// capture. <b>The tell was two readings with identical chunk, instance and draw
+        /// counts</b> — 126 / 57,818 / 1,744 for both the culled shot and the blind one, when the
+        /// blind one should have submitted nothing at all.</para>
+        ///
+        /// <para>That is the second time the same fault has been found in this one test file: the
+        /// first was <see cref="ShadowCasterMarginMetres"/>, re-derived per frame from
+        /// <c>QualitySettings.shadowDistance</c>, and it is written up as <c>P18</c> in
+        /// <c>docs/bug-patterns.md</c>. A field the root writes every frame cannot be set by a
+        /// test; it needs a seam of its own.</para>
+        /// </summary>
+        public Plane[]? FrustumOverride { get; set; }
+
+        /// <summary>The planes actually used this frame: the override if a test imposed one.</summary>
+        Plane[]? ActiveFrustum => FrustumOverride ?? Frustum;
+
+        /// <summary>
+        /// Whether a chunk outside <see cref="Frustum"/> is actually skipped, or merely counted.
+        ///
+        /// <para><b>The off state is a measurement rather than a stub.</b> With it off every
+        /// chunk is submitted exactly as before and <see cref="ChunksOutsideFrustum"/> reports
+        /// what culling *would* have saved; with it on the same test skips them. One flag, two
+        /// readings, taken seconds apart inside one run — which is the only comparison this
+        /// machine supports, and the same shape as <see cref="InstanceCellPlates"/>.</para>
+        ///
+        /// <para><b>On since 2026-09-23, once the proof could prove anything.</b> It shipped off
+        /// for two days because <c>FrameTimeTests.CullingDoesNotChangeThePicture</c> failed its
+        /// own control and nobody could say whether the cull was wrong or the test was blind. It
+        /// was the test: its "frustum admitting nothing" was imposed on <see cref="Frustum"/>,
+        /// which the composition root rewrites every frame. With that fixed and the scene stilled,
+        /// the answer is exact — <b>a repeat of the same shot moves 0.00% of pixels, culling moves
+        /// 0.00%, and a frustum admitting nothing moves 98.21%</b>. Culling changes what is
+        /// submitted and provably not what is seen.</para>
+        ///
+        /// <para>Measured on 2026-09-23 at the 40 m shadow margin: <b>Standard</b> 33 of 104
+        /// chunks culled, frame 3.43 → 2.86 ms, 1,360 → 996 draw calls; <b>Huge</b> 317 of 443,
+        /// frame 8.89 → 3.84 ms, 5,083 → 1,744 draw calls, and <c>FrameSection.World</c> 5.613 →
+        /// 1.687 ms. <b>The saving follows the player's shadow distance</b>, because
+        /// <see cref="ShadowCasterMarginMetres"/> is that distance: at a 120 m setting Standard
+        /// culls nothing at all and Huge culls 74 of 443. That is correct rather than
+        /// disappointing — a caster inside the shadow distance may cast into the frustum, so it
+        /// has to be submitted — but it means this is a saving on the default settings and not a
+        /// promise on every one.</para>
+        /// </summary>
+        public bool CullToFrustum { get; set; } = true;
+
+        /// <summary>Chunks the frustum test rejected last frame, whether or not they were skipped.</summary>
+        public int ChunksOutsideFrustum { get; private set; }
+
+        /// <summary>
+        /// How far outside the frustum a chunk must be before it may be skipped, in metres.
+        ///
+        /// <para><b>This is the shadow correction, and without it culling is a visible
+        /// regression.</b> A wall outside the camera's frustum still casts into it: the sun sits
+        /// at 30 degrees in play and sweeps lower at both ends of the day, so a twelve-metre wall
+        /// throws twenty-one metres of shadow at noon and far more at dusk. Skipping its
+        /// submission removes it from the shadow map as well as from the picture, and what a
+        /// player sees is shadows appearing and vanishing at the screen edge as they pan.</para>
+        ///
+        /// <para><b>The bound is the shadow distance, not the sun angle</b>, which is what makes
+        /// this simple: the pipeline renders no shadow at all from a caster further from the
+        /// camera than <c>shadowDistance</c>, so however long a low sun makes a shadow, a caster
+        /// beyond that distance contributes nothing. The margin therefore never needs to exceed
+        /// it, and no trigonometry is involved.</para>
+        ///
+        /// <para>Terrain never casts and foliage does not cast by default, which is why the
+        /// existing <c>FoliageDrawDistance</c> cull needed none of this. Walls, buildings and
+        /// stairs do. <b>Raising the shadow distance makes culling worth less</b>, which is a real
+        /// trade and is measured rather than assumed — see <c>FrameTimeTests</c>.</para>
+        ///
+        /// <para>Defaults to the widest rung the settings offer, so a caller that sets
+        /// <see cref="Frustum"/> and forgets this one is merely slower and never wrong.</para>
+        /// </summary>
+        public float ShadowCasterMarginMetres { get; set; } = 120f;
+
         /// <summary>How solid an occluder in the way is left. Zero would be invisible; this is a
         /// hint of what is there, in the same idiom as a ghosted storey above the slice.</summary>
         public float SightFadeAlpha { get; set; } = DefaultSightFadeAlpha;
@@ -197,6 +291,37 @@ namespace Odyssey.Presentation.Rendering
         /// feature would do nothing at all while every per-instance test still passed.</para>
         /// </summary>
         public const float TallestModuleMetres = 12f;
+
+        /// <summary>
+        /// Whether a chunk's box, grown upwards, meets the camera's frustum.
+        ///
+        /// <para><b>Grown by <see cref="TallestModuleMetres"/>, and that is the load-bearing part.</b>
+        /// A chunk's bounds are one layer plus padding — about seven metres — while a tree rooted
+        /// in that layer carries its crown twelve metres up. The box therefore does not contain
+        /// everything drawn from the chunk, which is the same gap <see cref="Sight"/> allows for
+        /// and the reason that constant exists.</para>
+        ///
+        /// <para>Growing it makes this test <b>strictly more conservative than the one Unity is
+        /// already applying</b>: <c>RenderParams.worldBounds</c> is <c>batch.Bounds</c> unpadded at
+        /// both submission sites, so anything this rejects, the GPU-side cull was rejecting
+        /// already. The change can only remove work, never a picture. <b>Do not "tidy" the
+        /// allowance away</b> — without it a chunk whose tree tops are on screen and whose ground
+        /// is not would stop drawing, and that is a horrible fault to find because the geometry is
+        /// provably correct.</para>
+        /// </summary>
+        bool InFrustum(in Bounds bounds)
+        {
+            Vector3 centre = bounds.center;
+            Vector3 size = bounds.size;
+            centre.y += TallestModuleMetres * 0.5f;
+            size.y += TallestModuleMetres;
+
+            // And outwards, so an off-screen caster keeps its shadow on screen.
+            float margin = ShadowCasterMarginMetres;
+            if (margin > 0f) size += new Vector3(margin * 2f, margin * 2f, margin * 2f);
+
+            return GeometryUtility.TestPlanesAABB(ActiveFrustum, new Bounds(centre, size));
+        }
 
         /// <summary>Scratch, reused every frame: the instances of one bucket that are in the way,
         /// and the ones that are not. Partitioning in place would corrupt the mesher's array.</summary>
@@ -300,6 +425,7 @@ namespace Odyssey.Presentation.Rendering
             ChunksMeshedThisFrame = 0;
             InstancesFaded = 0;
             ChunksSightTested = 0;
+            ChunksOutsideFrustum = 0;
             CellPlatesDrawn = 0;
             ChunksMeshDeferred = 0;
             _meshedThisFrame = 0;
@@ -359,8 +485,30 @@ namespace Odyssey.Presentation.Rendering
                 int first = layer * chunksPerLayer;
                 for (int i = 0; i < chunksPerLayer; i++)
                 {
-                    ChunkBatch batch = BatchFor(first + i);
+                    int index = first + i;
+
+                    // Off-screen chunks, asked *before* BatchFor. Asked after it, a stale chunk
+                    // behind the camera was meshed first and culled second, so it spent the
+                    // meshing budget on geometry nobody would see, and a panning camera could
+                    // leave on-screen chunks deferred behind off-screen ones. The box is the one
+                    // Mesh would write — a function of the footprint only — so the answer is the
+                    // same as before and the picture cannot move. An off-screen chunk simply stays
+                    // stale until it is on screen, which is what deferral already means.
+                    bool outside = ActiveFrustum != null && !InFrustum(_mesher.BoundsOf(index));
+                    if (outside && CullToFrustum)
+                    {
+                        // Counted as before: only chunks known to hold something.
+                        ChunkBatch? known = _batches[index];
+                        if (known != null && known.InstanceCount > 0) ChunksOutsideFrustum++;
+                        continue;
+                    }
+
+                    ChunkBatch batch = BatchFor(index);
                     if (batch.InstanceCount == 0) continue;
+
+                    // Culling off: counted, and drawn anyway, so the off state stays a measurement.
+                    if (outside) ChunksOutsideFrustum++;
+
                     ChunksDrawn++;
 
                     // The coarse half of the sight test, asked once for the whole chunk. A layer
@@ -931,7 +1079,7 @@ namespace Odyssey.Presentation.Rendering
                 // An animal is drawn only as a figure (design 29): this pass deals every pawn a
                 // colonist's face, and a hog past the figure cap wearing one would be worse than
                 // a hog not drawn. A baked animal pose is a recorded gap, not an oversight.
-                if (pawns[i].Kind != 0) continue;
+                if (pawns[i].IsAnimal) continue;
 
                 // Glide between cells rather than snapping. The simulation is discrete and
                 // integer, which determinism requires; this is a presentation facade over it,
@@ -2576,6 +2724,102 @@ namespace Odyssey.Presentation.Rendering
             DrawCalls++;
             InstancesDrawn++;
         }
+
+        /// <summary>
+        /// A flat ring lying on the ground in the bracket's lit, translucent material — the
+        /// lock-on ring under an attack order's target (design 33 §7b). <paramref name="placement"/>
+        /// carries the drape, the lift and the radius in x and z; the mesh is
+        /// <see cref="PrimitiveMeshes.UnitRing"/>. One submission.
+        /// </summary>
+        public void DrawRing(Matrix4x4 placement, Color colour)
+        {
+            var rp = new RenderParams(BracketMaterial(colour))
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+            if (SubmitToGpu) Graphics.RenderMesh(rp, PrimitiveMeshes.UnitRing, 0, placement);
+            DrawCalls++;
+            InstancesDrawn++;
+        }
+
+        /// <summary>
+        /// One piece of a health bar over a pawn's head (design 33 §8a), held until
+        /// <see cref="FlushBarPieces"/> and bucketed by its ink, so every bar in view goes out as
+        /// one instanced call per ink — the outline, the plate and the fill's colours, at most
+        /// five calls however many pawns wear a bar. The same buckets as the cell plates, kept
+        /// apart because the material differs: a bar piece's opacity is its ink's own alpha, not
+        /// the bracket's 0.62 of it, so the fill can be nearly solid and the plate see-through.
+        /// </summary>
+        public void GatherBarPiece(Color colour, in Matrix4x4 place)
+        {
+            PlateBucket? bucket = null;
+            for (int i = 0; i < _barBucketCount; i++)
+                if (_barBuckets[i]!.Colour == colour) { bucket = _barBuckets[i]; break; }
+
+            if (bucket == null)
+            {
+                if (_barBucketCount == _barBuckets.Length)
+                    System.Array.Resize(ref _barBuckets, _barBuckets.Length == 0 ? 8 : _barBuckets.Length * 2);
+                bucket = _barBuckets[_barBucketCount] ??= new PlateBucket();
+                bucket.Colour = colour;
+                bucket.Count = 0;
+                _barBucketCount++;
+            }
+
+            if (bucket.Count == bucket.Matrices.Length)
+                System.Array.Resize(ref bucket.Matrices, bucket.Matrices.Length * 2);
+            bucket.Matrices[bucket.Count++] = place;
+        }
+
+        /// <summary>
+        /// Draw every bar piece gathered this frame. <b>The order the buckets go out in does not
+        /// matter</b>, and that is the point of the layout: no two pieces of one bar cover each
+        /// other, so however the transparent sort orders the calls the bar looks the same
+        /// (<c>HealthBarLayoutTests.NoTwoPiecesOfABarOverlapAtAnyFraction</c>).
+        /// </summary>
+        public void FlushBarPieces()
+        {
+            for (int i = 0; i < _barBucketCount; i++)
+            {
+                PlateBucket bucket = _barBuckets[i]!;
+                if (bucket.Count == 0) continue;
+
+                var rp = new RenderParams(BarMaterial(bucket.Colour))
+                {
+                    layer = GameObjectLayer,
+                    shadowCastingMode = ShadowCastingMode.Off,
+                    receiveShadows = false,
+                };
+
+                int drawn = 0;
+                while (drawn < bucket.Count)
+                {
+                    int n = Mathf.Min(MaxInstancesPerCall, bucket.Count - drawn);
+                    if (SubmitToGpu)
+                        Graphics.RenderMeshInstanced(rp, PrimitiveMeshes.UnitCube, 0, bucket.Matrices, n, drawn);
+                    drawn += n;
+                    DrawCalls++;
+                    InstancesDrawn += n;
+                }
+
+                bucket.Count = 0;
+            }
+
+            _barBucketCount = 0;
+        }
+
+        /// <summary>
+        /// The bracket's lit, glowing, translucent material with the ink's own opacity: the same
+        /// shader and the same cache, so nothing new has to survive the player build's stripping.
+        /// </summary>
+        Material BarMaterial(Color colour) =>
+            _materials.Get(_model.Library.FallbackMaterial, colour, colour * BracketGlow,
+                ghost: true, alpha: colour.a);
+
+        PlateBucket?[] _barBuckets = System.Array.Empty<PlateBucket?>();
+        int _barBucketCount;
 
         /// <summary>Turned 45 degrees about the vertical, then tipped on to a corner.</summary>
         static readonly Quaternion MarkerTurn = Quaternion.Euler(0f, 45f, 0f) * Quaternion.Euler(35.264f, 0f, 45f);

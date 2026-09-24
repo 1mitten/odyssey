@@ -82,6 +82,24 @@ namespace Odyssey.Hud
         public const float DraftAlpha = 0.70f;
 
         /// <summary>
+        /// An attack order's hue: the lock-on ring under the target (design 33 §7b; owner,
+        /// 2026-09-23: <i>"paints a red transparent circle quickly around the selected enemy"</i>).
+        /// <b>A clear, saturated red</b>, and deliberately neither of the two reds already on the
+        /// board. Not <see cref="Draft"/>'s deep dark red, which marks <i>who</i> is under orders —
+        /// the ring marks <i>whom</i> they are sent at, and the two are on screen together in every
+        /// fight, one over a head and one under feet. Not <see cref="HudTheme.Bad"/>, the Cancel
+        /// tool's salmon red, which is also the hostile marker's diamond over the very marauder the
+        /// ring is drawn under: a ring in the marker's colour would read as more of the marker —
+        /// "this is an enemy" — rather than "this is the one you sent them at". Pure red with a
+        /// little blue kept out of pink sits apart from both: brighter than the draft by half
+        /// again, and redder than the salmon by taking the green and blue out.
+        /// <c>OrderColoursTests.TheAttackRedIsNeitherTheDraftNorTheCancelRed</c> holds it apart
+        /// from both at the board's eighty-point distance. Its opacity is the ring's clock's
+        /// (<see cref="LockOnRing"/>), not a constant here.
+        /// </summary>
+        public static readonly HudColour Attack = new HudColour(0xf0, 0x28, 0x2c);
+
+        /// <summary>
         /// The hue of an order, opaque — the chip's colour, and the colour every mark and cursor
         /// below is a transparency of.
         ///

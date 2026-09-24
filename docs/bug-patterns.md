@@ -336,6 +336,8 @@ for Defs (the content fingerprints); a font is the same question with a differen
 
 ### P14 — A rule that only governs arrival, in a world where things are already there
 
+*There is one `P14`, one `P16`, one `P17` and one `P18`, and **two** `P15`s — the second is a known collision from two branches merging, kept because both numbers were already cited. A third would not be kept: renumber on merge, as `P18` was twice (2026-09-23 and 2026-09-24).*
+
 A gate is written where new things come in — a filter on what a store *accepts*, a check on what
 may be *placed*, a validator on what may be *entered* — and it is correct about every one of them.
 Nothing governs what was already sitting inside the boundary when the rule was written, or was
@@ -453,11 +455,166 @@ and both were believed; one of them was decorative. A test for an exactness clai
 deliberate break costs it and nothing more — the same lesson as *"A test that could not fail for the
 reason it named"* in the register below, reached from the opposite direction.
 
+### P17 — Two translucent draws that cover each other, ordered by a key that cannot tell them apart
+
+A translucent material writes no depth, so where two translucent draws cover the same pixels, the
+picture is whatever was drawn **last**. Unity picks that order by the distance from the camera to
+each draw's bounds centre. Two things built around one centre (a fill inside its track, a glow
+inside its core, a plate behind its label) tie on that key **exactly**. The sort then breaks the
+tie differently from frame to frame, depending on everything else in the translucent list. Two
+things whose centres differ only across the screen trade places when the object crosses the
+middle.
+
+**Measured, 2026-09-23** (design 33 §8a). The health bar's fill was a translucent box inside a
+translucent track. For a full bar the two centres tied on 480 frames out of 480 of a walk across
+the screen, and the fill showed at 0.62 of its colour one way round and 0.29 the other. The owner
+reported it as *"the bar above their heads flicker"*.
+
+**The check:** for any mark made of more than one translucent draw, ask *do any two of them cover
+the same pixels?* If they do, the look depends on the sort. Lay the pieces so they meet on edges and
+never overlap (`HealthBarLayout`, held by `NoTwoPiecesOfABarOverlapAtAnyFraction`), or merge them
+into one draw. Nudging one "a little nearer the camera" is not a fix: the lateral term in the
+distance is worth tens of centimetres at the play camera.
+
 ---
+
+---
+
+### P18 — An instrument that cannot see the thing it is comparing, and passes
+
+*Numbered P18. It arrived as P14, which `main` had already given to "a rule that only governs
+arrival", and was renumbered P17 on merge on 2026-09-23; by the next merge, 2026-09-24, `main` had
+given P17 to "two translucent draws", so it moved again, with every place that cited it. This
+catalogue's whole value is that a number resolves to one pattern.*
+
+**Symptom.** A before/after comparison reports a small, plausible difference and the test goes
+green. The change looks proven.
+
+**The real cause.** The instrument was never looking at the subject. Two of these on 2026-09-21,
+both in the frustum-culling work, and **neither was found by a failing assertion** — one was found
+by a control, one by reading a log line that looked fine.
+
+1. **The measurement was overwritten before it ran.** An arm set
+   `ChunkRenderer.ShadowCasterMarginMetres = 0f` to price the shadow correction, but the composition
+   root re-derives that property from `QualitySettings.shadowDistance` **every frame**. The test's
+   value was gone before the first timed frame, so the arm timed the same configuration twice and
+   reported the difference — 0.07 ms — as the price of correct shadows. **The tell was in its own
+   log line:** both readings printed the identical 2,053 draw calls. A comparison whose
+   *deterministic* half does not move is not a comparison, whatever its timings say.
+2. **The capture never saw the board.** `CullingDoesNotChangeThePicture` rendered the scene culled
+   and unculled, compared pixels, and would have reported 2.58% moved as "close enough". Its control
+   — the same scene with a frustum admitting *nothing* — moved 3.22%. Rejecting every chunk in the
+   world cannot move 3% of a picture of that world, so both figures were noise from a nearly-empty
+   buffer. **Without the control the test passes and certifies a blind comparison.**
+
+**Why it is this project's shape.** A timing or pixel comparison has no natural failure. A unit test
+asserts a value and is wrong loudly; an instrument asserts a *difference*, and a difference between
+two readings of nothing is indistinguishable from a difference between two readings of something.
+
+**The check, and it is two rules rather than one test.**
+
+- **Every comparison carries a control that must show a difference.** Not "the feature changed
+  nothing" alone — also "the deliberately broken case changed plenty". One assertion says the answer;
+  the other says the instrument could have noticed another answer. `docs/process.md` already asks for
+  the negative control; this is what it buys.
+- **Assert on the deterministic half, not only the timed half.** Draw calls, chunk counts, instances
+  and mined-cell counts do not move with the machine's mood. `MineOneCell.Mined == Ticks` and
+  `callsOn < callsOff` catch a fixture that stopped doing its job; a millisecond figure never will.
+
+**A third of the same shape, found hours later by an owner's play log rather than by any test.**
+Every per-board measurement arm generated its world from `MapGenerator.DefaultDef` while the played
+scene is *barren + wooded* and so gets `MakeWooded()` applied on top — two owners for one choice,
+silently disagreeing. The owner's console read `patches 0, trees 1598`; the arms were reporting
+`patches 2210, trees 1222` for the same board. The fix deleted the second owner
+(`ColonyWorld.DefFor`) rather than copying the first. **This pattern was written one commit earlier,
+in the same branch, about the other two — and was not applied to the arms it was written about.**
+Writing a pattern down is not the same as running it over the work in hand.
+
+**Where to look for more:** any property a per-frame system re-derives from settings — a test that
+writes it is writing into the next frame's overwrite. And any capture-and-compare: ask what the
+picture looks like when the subject is removed entirely, and make the test assert that answer.
+
+### P18, met a third time — and the field the root rewrites every frame
+
+**2026-09-23.** `CullingDoesNotChangeThePicture` was the test frustum culling was held on. It
+failed its own control — a frustum admitting *nothing* moved 3.22% of pixels — and for two days
+nobody could say whether the cull was wrong or the instrument was blind.
+
+**It was blind, and the reason is a specific, repeatable mechanism worth naming on its own: a test
+cannot set a field the composition root writes every frame.** The control assigned
+`ChunkRenderer.Frustum`; `OdysseyBootstrap.LateUpdate` assigns it too, once per frame, so the test's
+planes were gone before the first capture. The comparison was the culled shot against itself.
+
+**The tell both times was two readings with identical counters.** 126 chunks, 57,818 instances and
+1,744 draw calls for the culled shot *and* the blind one, where the blind one should have submitted
+nothing whatever. The first instance, one commit earlier in the same branch, was
+`ShadowCasterMarginMetres` re-derived from `QualitySettings.shadowDistance` — and the tell there was
+identical draw calls in both readings. **The lesson was written and then not applied to the field
+next to it.**
+
+- **The check:** before trusting any test that sets a renderer or director field, grep the
+  composition root for an assignment to that same field. If the root writes it per frame, the test
+  needs a seam of its own — `ChunkRenderer.FrustumOverride`, `PawnCrowdIndex.Mode`,
+  `ColonistAttachments.Enabled`. A property with a public setter is not a seam if something else
+  sets it sixty times a second.
+- **And assert on the deterministic half.** Chunk and draw counts would have failed instantly and
+  said why; pixels took two days. The counters were already being logged — nobody had held the
+  blind row against the culled one.
+
+**A second fault hid underneath the first, and it is the commoner one.** With the control finally
+working, two captures of the *identical* configuration still differed by **1.29%** of pixels, against
+culling's 2.13% — a difference that is meant to be nought, asked to stand out against a floor most of
+its own size. Pausing the simulation was not enough: it stops the ticks, so nobody walks, but water
+scrolls its streaks, figures advance their animation graphs and the daylight rig moves, because those
+run on `Time.deltaTime` and the shaders on `_Time`. **`Time.timeScale = 0` stills the shaders as well
+as the scripts**, and the floor went to 0.00%.
+
+- **The rule:** a comparison needs *both* controls — one that must show a difference and one that
+  must not. The repeat-shot is the cheap one and almost nobody writes it, and only the first of the
+  three numbers makes the other two mean anything.
+
+**And the repeat-shot immediately earned its keep a second way: it is not a constant.** With the
+control fixed and the clock stopped, the test passed *alone* at a 0.00% floor and **failed inside
+the full PlayMode tier at 0.77%**, on the same commit — a busy run is still finishing shader
+variants, texture streaming and the post stack's first frames. A longer settle takes it to 0.04%,
+but the lesson is the acceptance: judge against **the floor measured in the same run**
+(`culled <= noise + 0.002`), not against a chosen tolerance. A constant is a guess at the null, and
+this one guessed wrong in both directions on the same day.
+
+> That is the narrow exception to *"a loose tolerance can make a test prove nothing"* in
+> `docs/lessons.md`: the bound is *measured*, not chosen, and the positive control stays absolute so
+> the comparison cannot go quietly blind. **A tolerance you measured is a control; one you picked is
+> a hope.**
+
+**And a third machine found a third fault, which is the argument for having one.** The test then
+failed on the CI runner and nowhere else — not on pixels, but on its own precondition: `GameSpeed`
+was still 1, so it had photographed a moving world. The pause was submitted **once**, and an intent
+goes on a bus with a capacity and drains on a tick boundary, with the thousand designations the
+fixture had just queued still going through. It landed on the dev machine and did not on the runner.
+
+- **The rule:** *submitted* is not *applied*. Anything a test asks of the game through a queue is
+  asked until the state it wanted is readable, bounded, and then asserted — never submitted once and
+  waited a fixed number of frames.
+- **The guard is what made this cheap.** It failed loudly and named the precondition instead of
+  quietly photographing a moving scene and reporting a plausible noise figure. Assert on the
+  deterministic half: here that is *is the world actually paused*, not *how many pixels moved*.
 
 ---
 
 ## The register
+
+### 2026-09-24 — The cull was asked after the mesher, so the budget went on chunks nobody could see (P1-adjacent)
+
+Found by reading, while planning the Meadow overhaul, and fixed on merging `main` up to the culling
+branch. `ChunkRenderer.Render` called `BatchFor` — which meshes a stale chunk — and only then asked
+the frustum. So after a board-wide `Remesh` (every graphics toggle) the eleven-chunk meshing budget
+was spent in index order on chunks behind the camera, and the chunks on screen waited behind them.
+Two fixes that each worked alone, the budget and the cull, met in an order neither had chosen.
+
+**What now stops it:** `MeshBudgetTests.AnOffScreenChunkSpendsNoneOfTheBudget` — a whole-board
+re-mesh under a frustum round one chunk defers nothing, and removing the frustum meshes the rest.
+The cull asks `ChunkMesher.BoundsOf`, the same box `Mesh` writes, so the picture cannot move.
+`28-map-size.md` §10.1.
 
 ### 2026-09-22 — A merge with no conflict where the fault was, and a claim that outlived a review (P1, P10)
 
@@ -545,6 +702,19 @@ world *component by component* before and after — five minutes that turned "th
 into "only the thermal section moved".
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-23 — The bar over their heads flickers (P17)
+
+Owner: *"The bar above their heads flicker."* One candidate on each side of the seam was measured
+before anything was changed. On the simulation side the bar is owed exactly when the pawn's state
+says, tick after tick: `HealthBarPublishingTests` fought 3,000 ticks, and no bar changed on a tick
+its state did not. On the drawing side the fill was a translucent box inside a translucent track,
+and the sort key that orders them was an exact tie on every frame of a full bar, which is every
+drafted colonist nobody has hurt. The bar is now nine camera-facing pieces that never overlap.
+
+**What now stops it:** `HealthBarLayoutTests.NoTwoPiecesOfABarOverlapAtAnyFraction` and
+`ThePiecesTileTheWholeBar`. Both failed on the plate laid behind the fill as one rectangle.
+Design 33 §8a.
 
 ### 2026-09-23 — A stockpile drag paints nothing
 
@@ -2399,3 +2569,43 @@ that invalidates over a comment asking callers to remember.
 Its sibling is the same day's `ColonistAppearance.Equals`, which kept its old idea of "the same
 person" after two fields were added, so a portrait cache handed fifteen different hairstyles the
 same picture. Both are caches that were right until something underneath them moved.
+
+### 2026-09-23 — Two lanes, one health bar, two ladders; and a gate that still spoke C1 (P1)
+
+**Symptom, caught at the integration before anyone played.** Lane B coloured the health bar green,
+amber and red at 60 and 30 per cent; lane C had written `CombatFeedbackModel.HealthBarColour` at the
+need bar's 60 and 40 for lane B to call. And lane C's model sent an undrafted colonist for a weapon,
+while lane B's presenter returned before asking the model unless someone was drafted.
+
+**Cause.** Both are one rule with two owners, split across two lanes that each built their half in
+a separate worktree: what colour a bar is, and who hears a right-click. Each lane's tests were
+green, because each tested its own copy.
+
+**Fix.** The bar asks the model (`CombatMarks.BarInk` deleted); the presenter's gate is
+`OrderModel.HearsRightClick`. `docs/design/33-combat.md` §6E.
+
+**The check this earns.** *When lanes split a feature, list every question both sides answer, and
+give each one owner in the brief.* The contracts named which lane "writes" and which "calls" for the
+four fixed answers, and those four did not diverge. The bar colour was an answer lane C offered as
+optional, so lane B wrote its own; the gate was a rule the brief gave lane C in a file it gave lane B.
+
+### 2026-09-23 — Side by side held for attackers, and nobody else in the fight (P15)
+
+**Symptom, found by the guard before anyone played it.** The owner asked that fighters never
+share a tile, *"handled uniformly"*. §7c had given every attacker a side of its own. A test that
+walked every tick of mixed brawls then found fighters standing together for hundreds of ticks
+anyway. A marauder stood on a downed body a colonist was finishing off beside it. Two drafted
+colonists swung from one tile. A colonist ordered onto a marauder's tile was given it.
+
+**Cause.** The rule was written for one side of the relation. An attacker held its side, but a pawn
+being attacked held nothing. Three ways into a fight also had no rule at all: the drafted hold
+("strikes from where she stands"), drafting in place, and the move order's spread. Each was right
+for the pawns it had been written for, and none asked about the others.
+
+**Fix.** One answer, `Melee.Holds`: every fighter holds its `SideOf`, attacker or target. The
+hold, the draft and the move order all ask it. `docs/design/33-combat.md` §8c.
+
+**The check this earns.** *When a rule is about a relation, test it over the relation, not over
+the actor that prompted it.* `SideBySideTests` checked attackers against attackers, and all of
+them passed. `FightGuardTests` checks everyone in the fight, on every tick. Each hole it found was
+seen to fail with its fix withheld.

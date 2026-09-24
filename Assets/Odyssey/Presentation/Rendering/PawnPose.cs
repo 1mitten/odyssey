@@ -219,7 +219,7 @@ namespace Odyssey.Presentation.Rendering
                 // against P11, whose per-pawn scan this is; CrowdWeight is where the other side
                 // of it lives. Merged over the crowd index on 2026-09-23: the gate is on the
                 // posed pawn and the weight, whichever scan finds the pair.
-                if (pawn.Kind == 0)
+                if (pawn.IsPerson)
                 {
                     bool usable = index != null && index.Count == otherPawns.Length &&
                                   PawnCrowdIndex.Mode != CrowdScan.Span;
@@ -324,7 +324,7 @@ namespace Odyssey.Presentation.Rendering
         {
             if (other.Id == self.Id) return 0f;
             // An animal is outside the sidestep on both sides (design 29): nobody dodges a hog.
-            if (other.Kind != 0) return 0f;
+            if (other.IsAnimal) return 0f;
             float near = SteeringCurve.Proximity(Vector3.Distance(hereNow, otherAt));
             if (near <= 0f) return 0f;
             return near * SteeringCurve.InTheWay(headingDir, in other);

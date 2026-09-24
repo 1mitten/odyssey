@@ -170,7 +170,13 @@ namespace Odyssey.Presentation.World
                 // to the boards and drops the hips to follow — a colonist folded through its own
                 // bed. Faded rather than switched, exactly as the swim is, so getting up hands the
                 // footing back continuously instead of planting both feet on one frame.
-                float planted = 1f - Mathf.Clamp01(Mathf.Max(figure.SwimWeight, figure.SleepWeight));
+                //
+                // **Nor a body the knock-down clip has put on its back** (design 33 §1): its boots
+                // are in the air by the clip's own authority, and planting them would drag it
+                // upright by the ankles.
+                float planted = 1f - Mathf.Clamp01(Mathf.Max(
+                    Mathf.Max(figure.SwimWeight, figure.SleepWeight),
+                    figure.Fight.Unplanted * figure.Fight.Weight));
 
                 // A rig with no legs bound is not an error: a non-Humanoid prefab answers null to
                 // every bone and simply goes on walking, which is what it does for the arms too.
@@ -285,6 +291,10 @@ namespace Odyssey.Presentation.World
                         ApplySwimPose(figure);
                     else if (figure.ClimbPhase >= 0f && figure.ClimbFace != Vector3.zero)
                         ApplyClimbPose(figure);
+                    // A computed blow, reaction or stun (design 33 §1): the fight owns the arms
+                    // while it lasts, and the pack's clips need nothing here at all.
+                    else if (ShowsComputedCombat(figure))
+                        ApplyCombatPose(figure);
                     else if (figure.Gesture != PawnGesture.None || ForceGesture.HasValue)
                         ApplyGesturePose(figure);
                     // Last of the five, and the only one that is a stance rather than an event.

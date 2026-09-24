@@ -183,6 +183,14 @@ namespace Odyssey.Sim.Construction
 
         /// <summary>The registry key the interface names it by. Never a label, never a filename.</summary>
         public string iconKey = "";
+
+        /// <summary>
+        /// Hit points the finished thing has when it is struck (design 33 §4, C6), in whole points.
+        /// Nought for nothing. A building nobody has hit is at this and carries no row anywhere;
+        /// what is left of a struck one is <c>EdificeDamage</c>'s. INVENTED, per thing, before any
+        /// material scaling — C6's to tune. Claimed by the combat contracts step.
+        /// </summary>
+        public int maxHitPoints;
     }
 
     /// <summary>
@@ -469,7 +477,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Wall", label = "wall", edifice = CoreContent.EdificeWall,
                     blocking = true, costCount = 5, workToBuild = 135, minSkill = 0,
-                    iconKey = "ui.arch.tool.wall",
+                    iconKey = "ui.arch.tool.wall", maxHitPoints = 300,
                 },
 
                 // A slab at the cell's lower boundary rather than an edifice in the cell (U29), and
@@ -481,7 +489,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Floor", label = "floor", edifice = CoreContent.EdificeNone,
                     slab = true, blocking = false, costCount = 4, workToBuild = 120, minSkill = 0,
-                    iconKey = "ui.arch.tool.roof",
+                    iconKey = "ui.arch.tool.roof", maxHitPoints = 250,
                 },
 
                 // Paving: the same slab, laid on ground that is already there (U42). `covering` is
@@ -493,7 +501,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_DeckPlate", label = "deck plate", edifice = CoreContent.EdificeNone,
                     slab = true, covering = true, blocking = false, costCount = 3, workToBuild = 60,
-                    minSkill = 0, iconKey = "ui.arch.tool.deckplate",
+                    minSkill = 0, iconKey = "ui.arch.tool.deckplate", maxHitPoints = 150,
                 },
 
                 // The way up (U43). An edifice like a wall, and `blocking = false` is what makes it
@@ -504,7 +512,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Ladder", label = "ladder", edifice = CoreContent.EdificeLadder,
                     blocking = false, rotates = true, costCount = 4, workToBuild = 90, minSkill = 0,
-                    iconKey = "ui.arch.tool.ladder",
+                    iconKey = "ui.arch.tool.ladder", maxHitPoints = 80,
                 },
 
                 // The first furniture (docs/design/20-beds.md). Two cells, passable, rotatable at
@@ -518,7 +526,7 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Bed", label = "bed", edifice = CoreContent.EdificeBed,
                     blocking = false, footprint = 2, rotates = true, takesQuality = true,
                     needsClearCell = true, costCount = 5, workToBuild = 180, minSkill = 0,
-                    iconKey = "ui.arch.tool.bed",
+                    iconKey = "ui.arch.tool.bed", maxHitPoints = 120,
                 },
 
                 // The door. Edifice 2 is CoreContent.EdificeDoor. Passable, takes no quality,
@@ -527,7 +535,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Door", label = "door", edifice = CoreContent.EdificeDoor,
                     blocking = false, rotates = true, costCount = 5, workToBuild = 135, minSkill = 0,
-                    iconKey = "ui.arch.tool.door",
+                    iconKey = "ui.arch.tool.door", maxHitPoints = 160,
                 },
 
                 // The shelf: one cell of furniture that holds an inventory rather than standing in
@@ -543,6 +551,7 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Shelf", label = "shelf", edifice = CoreContent.EdificeShelf,
                     blocking = false, rotates = true, needsClearCell = true, storageSlots = 8,
                     costCount = 5, workToBuild = 180, minSkill = 0, iconKey = "ui.arch.tool.shelf",
+                    maxHitPoints = 100,
                 },
 
                 // The first heat source (design 28 §7). Edifice 13, the next free id after the

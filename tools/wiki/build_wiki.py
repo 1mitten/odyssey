@@ -40,9 +40,11 @@ SECTIONS = [
      "Everything on the architect menu: what can be built, and the one-off orders that can be given "
      "to things that already exist. The vertical connectors matter more here than in a flat colony "
      "sim, because a stair occupies two cells and a ladder one."),
-    ("commands", "Commands", ["ui.command"],
+    ("commands", "Commands", ["ui.command", "ui.menu"],
      "What the player can tell a selected thing to do. Many are conventional; the ones that are not "
-     "come from the setting, such as stripping a shell rather than mining a vein."),
+     "come from the setting, such as stripping a shell rather than mining a vein. A right-click on "
+     "a thing with more than one answer, a weapon today, opens a small menu at the pointer whose "
+     "rows are these commands; the menu's own words are listed after them."),
     ("work", "Work and skills", ["ui.work", "ui.skill", "ui.schedule"],
      "The work types a colonist can be assigned, in priority order of urgency, the skills that "
      "govern how well they do them, and the schedule blocks that say when. Salvaging is ours: it "
@@ -77,7 +79,7 @@ NS_TITLES = {
     "ui.terrain": "Terrain",
     "ui.res": "Commodities", "ui.item": "Items and equipment",
     "ui.arch.category": "Architect categories", "ui.arch.tool": "Architect tools",
-    "ui.command": "Commands", "ui.work": "Work types", "ui.skill": "Skills",
+    "ui.command": "Commands", "ui.menu": "The context menu", "ui.work": "Work types", "ui.skill": "Skills",
     "ui.schedule": "Schedule blocks",
     "ui.pawn": "Kinds of pawn", "ui.need": "Needs", "ui.mood": "Mood states",
     "ui.status": "Current activity", "ui.health": "Body parts and conditions",
