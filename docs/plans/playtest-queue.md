@@ -23,6 +23,12 @@ the next session learns to ignore.
 
 ## Open
 
+- **No more orange suits past 64 colonists?** (`claude/pawn-ceiling`, PR #175, design
+  `29-modular-colonists.md` §13a.) Spawn about 100 colonists from the debug menu, pull the camera out
+  and pan across the colony. Everyone should be in the white uniform, near and far. A wrong answer
+  looks like some colonists in burnt orange, or clothes flicking as you pan. Two things are expected
+  and are not faults: a far colonist's **skin tone and hair colour** can still change as they cross
+  the cap (recorded, not fixed), and the debug menu **stops spawning at 200**.
 - **Does the Meadow grass read as grass, and is this the grass to judge?** (PR for
   `claude/meadow-m3-foliage`, design 38 §16) **This is the first branch to test grass in.** New game,
   play camera. Three things: (1) the meadow reads as grass and the green is the lighter spring green

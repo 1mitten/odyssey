@@ -608,3 +608,52 @@ spread of 0.010, so the difference is five times the noise rather than lost in i
 **What it is not.** None of the frame's growth with colony size belongs here: at 192 the pass costs
 the same 0.05 ms it does at 64, while the frame itself goes 3.7 → 9.1 ms. That growth is the open
 `PF` finding, `PawnPose.Of`'s per-pawn crowd scan, and this sweep is further evidence for it.
+
+## 13a. The far form wears the uniform (2026-09-24)
+
+**The report** (owner, 2026-09-23): past a certain number of colonists, some "spawned in an orange
+suit", textures "kept switching", and the session "got buggy".
+
+**The number is the figure cap, and the orange is the pack's own jumpsuit.** Past 64, the colonists
+furthest from the camera are drawn in the baked far form (§13). That form draws each body through
+`MaterialCache` in the pack's own paint, one material per body, and §13 says so on purpose: a far
+body is never recoloured per colonist. But the issued uniform (§9b) *is* a recolour. The live figure
+paints the jumpsuit `#E8EDF6`, and nothing painted the far one. PolygonGeneric paints
+`SM_Gen_Chr_Jumpsuit_*_01` **burnt orange**: `#B06F24` cloth and `#BD8436` trim, sampled off
+`Generic_01_A.png` at the catalogue row's own cloth rectangles. The unflipped sample lands on a
+neutral grey, which rules out a UV-orientation mistake. So everyone beyond the nearest 64 was in
+orange, and the nearest-64 set moves with the camera, so colonists changed clothes as it panned.
+That is the "switching".
+
+**The first investigation looked at the wrong orange** (`docs/journal.md`, 2026-09-23). The actor
+stand-in cube is also orange, and a sweep correctly found zero stand-ins at 384 colonists. But the
+question was not whether a stand-in was drawn. It was what colour the far body is. That sweep ran on
+a barren board and counted stand-ins, so it could not have seen this.
+
+**The fix is the uniform, not a far recolour.** `ColonistAppearance.IssuedCloth(pools, look)` says
+whether *everybody* in a body wears the same cloth. That is true only for the uniform's two bodies
+while a uniform is issued, and false for every rolled colour. It sits beside `Of`, which applies
+the same two constants on the same condition. `ChunkRenderer.FarMaterials` asks it once per body and,
+for those two, draws the far body through the shared `ColonistMaterials` with **the cloth rectangles
+only**. Skin and hair are empty rectangles, so they keep the pack's paint exactly as before. It is
+still one material per body, so §13's rule holds and the draw calls do not move: the bucket is still
+the body. `OdysseyBootstrap` hands the renderer the same `ColonistMaterials` the figures use. One
+thing does change on the GPU. A painted far body draws through `Odyssey/Character`, so it now gets
+that shader's ink hull, as the live figure always has. That is a second pass per uniform body, not
+a new draw call, and it is the same outline the person had before they crossed the cap.
+
+**What still changes across the cap, and is left:** skin tone and hair colour. The far form keeps the
+pack's skin, and its hair is drawn unrecoloured (§13). Both are rolled per colonist, so matching them
+means buckets per (body, skin, hair) rather than per body. That multiplies the far form's draw calls
+by the palette, and it is a decision, not a fix. The suit was the thing a player notices from across
+the board. Skin and hair are a few pixels at the distance the far form is drawn.
+
+**Do not undo by tidying.** Do not widen `IssuedCloth` to "whatever the colonist wears": the far
+form would then need a material per colonist, which is exactly what §13 rules out. And do not paint
+the skin and hair slots with a default. An empty rectangle is what keeps the pack's paint.
+
+**The checks.** Fast tier: `TheBodyAColonistIsIssuedSaysTheColourTheyWear` (every uniformed colonist
+wears what the body says) and `NoBodyButTheUniformClaimsAColour` (the negative control). Unity tier:
+`FarColonistUniformTests` resolves the real uniform rows, asserts a near-white cloth colour with skin
+and hair switched off, and asserts every other body still draws in its own paint. It ignores itself
+where the packs are absent.

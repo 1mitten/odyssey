@@ -9,6 +9,7 @@ using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -864,26 +865,46 @@ namespace Odyssey.Tests.PlayMode
             boot.World!.Tick();
         }
 
+        /// <summary>
+        /// Grow the colony to <paramref name="wanted"/> pawns, or as near as the board allows.
+        ///
+        /// <para><b>Straight into the registry, not through the spawn intent.</b> The intent is
+        /// the debug menu's, and it refuses past <see cref="PawnRegistry.PawnCeiling"/> (200). These
+        /// sweeps measure past it on purpose, because 384 is where the crowd scan's quadratic
+        /// was found. Worldgen and the scenario take this same path, and it is the one the
+        /// ceiling's own comment leaves unbounded.</para>
+        ///
+        /// <para><b>The attempts are counted apart from the placement index.</b> The index goes
+        /// back to zero when it walks off the board, so it could not also be the escape. When the
+        /// ceiling first refused this loop's intents, the index kept resetting before it reached
+        /// its limit, and the loop never yielded. That hung CI's PlayMode tier for thirty
+        /// minutes on PR #175.</para>
+        /// </summary>
         IEnumerator GrowColonyTo(OdysseyBootstrap boot, int wanted)
         {
-            GridSize size = boot.Colony!.Grid.Size;
+            ColonyWorld colony = boot.Colony!;
+            GridSize size = colony.Grid.Size;
+            PawnRegistry pawns = colony.Pawns.Pawns;
             int side = Mathf.CeilToInt(Mathf.Sqrt(wanted)) + 1;
             int step = Mathf.Max(1, (size.SizeX / 2) / side);
             int at = 0;
+            int attempts = 0;
 
-            while (boot.World!.Views.Current.Pawns.Length < wanted)
+            while (pawns.Count < wanted && attempts++ < wanted * 8)
             {
                 int x = size.SizeX / 4 + (at % side) * step;
                 int z = size.SizeZ / 4 + (at / side) * step;
                 at++;
-                if (at > wanted * 4) break;   // the board refused; measure what took
                 if (x >= size.SizeX - 1 || z >= size.SizeZ - 1) { at = 0; continue; }
 
-                boot.World!.Intents.Submit(new Intent(IntentKind.SpawnPawn,
-                    new CellRef(x, z, size.SizeY - 2), 0));
-                boot.World!.Tick();
+                int cell = colony.Grid.NearestWalkableInColumn(x, z, size.SizeY - 2);
+                if (cell < 0) continue;   // the board refused this column; measure what took
+                Pawn pawn = pawns.Spawn(cell);
+                pawn.RollPassions();
             }
 
+            // One tick publishes them, as the intent path's own tick did.
+            boot.World!.Tick();
             yield return null;
         }
 

@@ -953,6 +953,9 @@ namespace Odyssey.Presentation.Bootstrap
                 GameObjectLayer = gameObject.layer,
                 ScatterDensity = grassScatter,
                 Appearances = appearances,
+                // The same materials the figures paint through, so a far colonist wears the
+                // issued uniform rather than the pack's orange (design 29-modular-colonists §13a).
+                Recolours = _colonistMaterials,
             };
             // The power lines (design 32 §9): their own pass, outside the chunk meshes, so showing
             // and hiding them costs no re-mesh. A new session starts unwatched, because its view
