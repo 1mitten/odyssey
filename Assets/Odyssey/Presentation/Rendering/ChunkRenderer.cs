@@ -360,22 +360,53 @@ namespace Odyssey.Presentation.Rendering
         public bool SweepShadowMargin { get; set; } = true;
 
         /// <summary>
-        /// Whether the grass tufts are drawn from GPU buffers with a compute cull
-        /// (<see cref="IndirectFoliage"/>, design 38 §18) rather than one instanced call per chunk.
-        /// Where the machine can do it; the chunk path draws them otherwise, and always on a ghosted
-        /// layer.
+        /// Whether the scenery — grass tufts, tall-grass stands, flowers, ground cover and bushes — is
+        /// drawn from GPU buffers with a compute cull (<see cref="Rendering.IndirectScenery"/>,
+        /// design 38 §22) rather than one instanced call per chunk, kind and level. Where the machine
+        /// can do it; the chunk path draws them otherwise, and always on a ghosted layer, and always
+        /// for a kind that casts shadows, fades, or is drawn by a shader that cannot read the buffers
+        /// (trees, stones).
         ///
-        /// <para><b>Off by default, and the reason is a measurement.</b> The path is picture-exact
-        /// (<c>FrameTimeTests.TheIndirectTuftsDoNotChangeThePicture</c>: 0.00% against a 0.00% floor)
-        /// but, once the shadow margin sweeps towards the sun, the tufts are 67 of the 1,175 calls on
-        /// screen, and replacing 52 of them saves nothing a stopwatch can see. The calls are in the
-        /// dressing's grass and flowers, which share this shader and this path's properties; it is
-        /// switched on when they join it (§18).</para>
+        /// <para><b>On, because the owner's frame drop zoomed out was the scenery's calls</b> (§21:
+        /// each kind 100–170 calls at far zoom). The path is picture-exact against the chunk path
+        /// (<c>FrameTimeTests.TheIndirectSceneryDoesNotChangeThePicture</c>), and off is the arm that
+        /// measures it.</para>
         /// </summary>
-        public bool IndirectTufts { get; set; }
+        public bool UseIndirectScenery { get; set; } = true;
 
         /// <summary>Draw calls the indirect path issued last frame (already in <see cref="DrawCalls"/>).</summary>
         public int IndirectDrawCalls { get; private set; }
+
+        /// <summary>
+        /// Last frame's chunk-path draw calls by kind (for measurement): which kinds the calls a zoomed
+        /// out frame costs actually belong to. Indexed as <see cref="CallKindNames"/>.
+        /// </summary>
+        public readonly int[] ChunkCallsByKind = new int[CallKindNames.Length];
+
+        public static readonly string[] CallKindNames =
+            { "trees", "bushes", "grass dressing", "other dressing", "tufts", "terrain", "water", "skin", "other" };
+
+        const int SkinKind = 7, OtherKind = 8;
+        int _currentKind = OtherKind;
+
+        int CallKindOf(int tint, int module)
+        {
+            if (TintCode.IsTree(tint)) return TintCode.IsDressing(tint) ? 1 : 0;
+            if (TintCode.IsDressing(tint)) return 3;
+            if (TintCode.IsFoliage(tint)) return _mesher.IsScatterModule(module) ? 4 : 2;
+            if (TintCode.IsWater(tint)) return 6;
+            if (TintCode.IsTerrain(tint)) return 5;
+            return OtherKind;
+        }
+
+        /// <summary>Milliseconds the indirect path spent regathering its buffers last frame (0 when
+        /// nothing was re-meshed): the cost a dig, a build or a growing crop adds to its frame.</summary>
+        public double IndirectRegatherMs { get; private set; }
+
+        /// <summary>Instances in the indirect path's buffers.</summary>
+        public int IndirectInstances => _indirect?.InstanceCount ?? 0;
+
+        readonly System.Diagnostics.Stopwatch _regatherTimer = new System.Diagnostics.Stopwatch();
 
         /// <summary>See <see cref="ChunkMesher.Dressing"/>. Meshed, so a change needs a re-mesh.</summary>
         public bool Dressing { get => _mesher.Dressing; set => _mesher.Dressing = value; }
@@ -386,14 +417,126 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>See <see cref="ChunkMesher.DressingKinds"/>. Meshed, so a change needs a re-mesh.</summary>
         public int DressingKinds { get => _mesher.DressingKinds; set => _mesher.DressingKinds = value; }
 
-        IndirectFoliage? _indirect;
+        Rendering.IndirectScenery? _indirect;
         bool? _indirectAvailable;
         bool _indirectActive;
+        // Per chunk, this frame: whether the chunk walk drew it (a solid layer, inside the frustum)
+        // and its distance from the viewer, exactly as the walk computed them, so the indirect path
+        // decides per segment what the chunk path decided per bucket.
+        int _renderStamp;
+        int[] _chunkDrawnStamp = System.Array.Empty<int>();
+        float[] _chunkDistance = System.Array.Empty<float>();
+        float[] _chunkSqrDistance = System.Array.Empty<float>();
+        readonly System.Collections.Generic.Dictionary<(int, int, int), bool> _indirectKinds =
+            new System.Collections.Generic.Dictionary<(int, int, int), bool>();
+        (bool, bool, bool) _indirectKindSignature;
         readonly System.Collections.Generic.List<(int Layer, float Shade)> _solidLayers =
             new System.Collections.Generic.List<(int Layer, float Shade)>();
 
-        bool IsTuft(InstanceBucket bucket) =>
-            TintCode.IsFoliage(bucket.Tint) && !TintCode.IsDressing(bucket.Tint) && _mesher.IsScatterModule(bucket.Module);
+        /// <summary>
+        /// Whether a bucket goes the indirect way (design 38 §22): grass tufts and foliage dressing,
+        /// and bushes; only if every part of every level is drawn by <c>Odyssey/Foliage</c> (the one
+        /// shader that reads the buffers), the module has at most <see cref="Rendering.IndirectScenery.MaxLevels"/>
+        /// levels, and the kind casts no shadow. Asked per kind and remembered; the remembered answers
+        /// are dropped when a setting that changes them moves.
+        /// </summary>
+        bool IsIndirectKind(InstanceBucket bucket)
+        {
+            int tint = bucket.Tint;
+            bool bush = TintCode.IsTree(tint) && TintCode.IsDressing(tint);
+            // Any foliage that is not a tree: the tufts, and the grass dressing — tall-grass stands,
+            // flowers, ground cover, sunflowers — which the mesher tints as plain foliage, not as
+            // dressing (only bushes and stones carry the dressing bit). Crops are foliage too and are
+            // turned away below: their material is not drawn by the foliage shader.
+            bool grass = !TintCode.IsTree(tint) && TintCode.IsFoliage(tint);
+            if (!bush && !grass) return false;
+            if (CastShadows && (bush ? DressingCastsShadows : FoliageCastsShadows)) return false;
+
+            var key = (bucket.Module, bucket.Part, tint);
+            if (_indirectKinds.TryGetValue(key, out bool known)) return known;
+
+            bool ok = true;
+            ModulePart[][] levels = LevelsOf(bucket);
+            if (levels.Length == 0 || levels.Length > Rendering.IndirectScenery.MaxLevels) ok = false;
+            foreach (ModulePart[] level in levels)
+            {
+                if (!ok) break;
+                if (level.Length == 0 || level.Length > Rendering.IndirectScenery.MaxPartsPerLevel) { ok = false; break; }
+                foreach (ModulePart part in level)
+                {
+                    if (part.IsFallback || part.Mesh == null) { ok = false; break; }
+                    if (bush && !FoliageLook.IsMeadowFoliage(part.Material)) { ok = false; break; }
+                    Material? material = IndirectMaterialFor(tint, part, 1f);
+                    if (material == null || material.shader == null || material.shader.name != "Odyssey/Foliage")
+                    { ok = false; break; }
+                }
+            }
+            _indirectKinds[key] = ok;
+            return ok;
+        }
+
+        /// <summary>
+        /// Which scenery kinds were asked about and whether they go the indirect way, by module name
+        /// and the shader their first part draws with (for measurement: a kind turned away stays on
+        /// the chunk path and keeps its calls).
+        /// </summary>
+        public string IndirectKindReport()
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            foreach (var kv in _indirectKinds)
+            {
+                ResolvedModule resolved = _model.Library[kv.Key.Item1];
+                ModulePart part = resolved.Parts.Length > 0 ? resolved.Parts[0] : null!;
+                string shader = part != null
+                    ? (IndirectMaterialFor(kv.Key.Item3, part, 1f)?.shader?.name ?? "none")
+                    : "no parts";
+                parts.Add($"{resolved.Id} [{CallKindNames[CallKindOf(kv.Key.Item3, kv.Key.Item1)]}, {resolved.Lods.Length} levels, {shader}] " +
+                          (kv.Value ? "indirect" : "CHUNK"));
+            }
+            return string.Join("; ", parts);
+        }
+
+        /// <summary>A bucket's levels, finest first: every level of a module drawn by level, else its one part.</summary>
+        ModulePart[][] LevelsOf(InstanceBucket bucket)
+        {
+            ResolvedModule resolved = _model.Library[bucket.Module];
+            if (!resolved.DrawsByLevel) return new[] { new[] { resolved.Parts[bucket.Part] } };
+            var levels = new ModulePart[resolved.Lods.Length][];
+            for (int l = 0; l < levels.Length; l++) levels[l] = resolved.Lods[l].Parts;
+            return levels;
+        }
+
+        /// <summary>
+        /// The material a part of an indirect kind is drawn with at a layer's shade — the very one
+        /// <see cref="DrawBuckets"/> picks for it, so the two paths cannot draw a clump differently.
+        /// </summary>
+        Material? IndirectMaterialFor(int tint, ModulePart part, float shade)
+        {
+            ResolveColour(tint, part.IsFallback, shade, out Color colour, out Color emission);
+            if (TintCode.IsTree(tint))
+                return _materials.GetTree(part.Material, colour, 1f,
+                    TintCode.IsDressing(tint) ? BushStandVariety : TreeStandVariety);
+            return _materials.Get(part.Material, colour, emission, false, 1f,
+                foliage: TintCode.IsFoliage(tint), water: TintCode.IsWater(tint));
+        }
+
+        /// <summary>
+        /// The level of detail a bucket of this kind is drawn at from a distance: the one rule both
+        /// paths use (design 38 §3, §17b, §18, §21).
+        /// </summary>
+        int LevelOf(int tint, int module, ResolvedModule resolved, float distance)
+        {
+            if (TintCode.IsTree(tint) && TreeLevels)
+                return LevelFor(resolved, distance, ViewerFieldOfView, TintCode.IsDressing(tint) ? BushLodBias : TreeLodBias);
+            if (DressingLevels && TintCode.IsFoliage(tint) && !_mesher.IsScatterModule(module))
+                return LevelFor(resolved, distance, ViewerFieldOfView, DressingLodBias);
+            if (TuftLevels && TintCode.IsFoliage(tint) && _mesher.IsScatterModule(module))
+                return LevelFor(resolved, distance, ViewerFieldOfView, TuftLodBias);
+            return LevelFor(resolved, distance);
+        }
+
+        /// <summary>Whether a kind is grass the distance thinning thins (design 38 §21).</summary>
+        bool IsThinnedKind(int tint, int module) => TintCode.IsFoliage(tint) && _mesher.IsGrassModule(module);
 
         /// <summary>The bottom of the lowest drawn layer this frame: where a shadow ray stops
         /// mattering, because nothing below it is drawn. Set by <see cref="Render"/>.</summary>
@@ -806,13 +949,29 @@ namespace Odyssey.Presentation.Rendering
 
             // The tufts go the indirect way this frame if asked, possible, and there is a frustum
             // for the compute cull to test against; the chunk walk then leaves them out.
-            if (IndirectTufts && _indirectAvailable == null)
+            if (UseIndirectScenery && _indirectAvailable == null)
             {
-                _indirect ??= new IndirectFoliage();
+                _indirect ??= new Rendering.IndirectScenery();
                 _indirectAvailable = _indirect.Available;
             }
-            _indirectActive = IndirectTufts && _indirectAvailable == true && ActiveFrustum != null;
+            _indirectActive = UseIndirectScenery && _indirectAvailable == true && ActiveFrustum != null;
             _solidLayers.Clear();
+            _renderStamp++;
+            System.Array.Clear(ChunkCallsByKind, 0, ChunkCallsByKind.Length);
+            if (_chunkDrawnStamp.Length != _batches.Length)
+            {
+                _chunkDrawnStamp = new int[_batches.Length];
+                _chunkDistance = new float[_batches.Length];
+                _chunkSqrDistance = new float[_batches.Length];
+            }
+            // A setting that moves which kinds go the indirect way regathers everything.
+            var signature = (CastShadows, DressingCastsShadows, FoliageCastsShadows);
+            if (_indirect != null && signature != _indirectKindSignature)
+            {
+                _indirectKindSignature = signature;
+                _indirectKinds.Clear();
+                _indirect.MarkAllDirty();
+            }
 
             for (int layer = lowest; layer <= highest; layer++)
             {
@@ -877,16 +1036,22 @@ namespace Odyssey.Presentation.Rendering
                     if (sight) ChunksSightTested++;
 
                     // Once per chunk: every bucket's level of detail is chosen against it.
-                    float distance = ViewerPosition.HasValue
-                        ? Mathf.Sqrt(batch.Bounds.SqrDistance(ViewerPosition.Value))
-                        : 0f;
-                    DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight, distance);
+                    float sqrDistance = ViewerPosition.HasValue ? batch.Bounds.SqrDistance(ViewerPosition.Value) : 0f;
+                    float distance = ViewerPosition.HasValue ? Mathf.Sqrt(sqrDistance) : 0f;
+                    if (!ghost)
+                    {
+                        _chunkDrawnStamp[index] = _renderStamp;
+                        _chunkDistance[index] = distance;
+                        _chunkSqrDistance[index] = sqrDistance;
+                    }
+                    DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight, distance, body: true);
                     DrawSkin(batch, shade, ghost, alpha);
                     if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight, distance);
+                    _currentKind = OtherKind;
                 }
             }
 
-            if (_indirectActive) DrawIndirectTufts();
+            if (_indirectActive) DrawIndirectScenery();
         }
 
         /// <summary>
@@ -921,14 +1086,18 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
-        /// The tufts of every solid layer this frame, through <see cref="IndirectFoliage"/>: the
-        /// buffers regathered if a chunk was re-meshed, then culled and drawn per layer with the
-        /// material the chunk path would have chosen for that layer's shade.
+        /// The scenery of every solid layer this frame, through <see cref="Rendering.IndirectScenery"/>:
+        /// the dirty layers regathered, then per layer each segment decided exactly as
+        /// <see cref="DrawBuckets"/> decides a bucket — drawn at all, level, thinned prefix — and the
+        /// groups culled and drawn with the material the chunk path would have chosen at that shade.
         /// </summary>
-        void DrawIndirectTufts()
+        void DrawIndirectScenery()
         {
-            IndirectFoliage indirect = _indirect!;
-            if (indirect.Dirty) indirect.Rebuild(_batches, _model.Library, IsTuft);
+            Rendering.IndirectScenery indirect = _indirect!;
+            _regatherTimer.Restart();
+            indirect.Rebuild(_batches, IsIndirectKind, LevelsOf, bucket => IsThinnedKind(bucket.Tint, bucket.Module));
+            _regatherTimer.Stop();
+            IndirectRegatherMs = indirect.GroupsRegathered > 0 ? _regatherTimer.Elapsed.TotalMilliseconds : 0d;
             if (indirect.InstanceCount == 0) return;
 
             var size = _model.Size;
@@ -941,17 +1110,39 @@ namespace Odyssey.Presentation.Rendering
             {
                 if (!indirect.HasLayer(layer)) continue;
                 float layerShade = shade;
-                int calls = indirect.DrawLayer(layer, ActiveFrustum!, ViewerPosition, FoliageDrawDistance,
-                    (part, tintCode) =>
-                    {
-                        ResolveColour(tintCode, part.IsFallback, layerShade, out Color tint, out Color emission);
-                        return _materials.Get(part.Material, tint, emission, false, 1f, foliage: true, water: false);
-                    },
-                    GameObjectLayer, board, SubmitToGpu, out int instances);
+                int calls = indirect.DrawLayer(layer, ActiveFrustum!, DecideSegment,
+                    (group, part) => IndirectMaterialFor(group.Tint, part, layerShade)!,
+                    GameObjectLayer, board, SubmitToGpu,
+                    out int offered, out int coarser, out int thinned);
                 IndirectDrawCalls += calls;
                 DrawCalls += calls;
-                InstancesDrawn += instances;
+                InstancesDrawn += offered;
+                InstancesAtCoarserLevels += coarser;
+                GrassInstancesThinned += thinned;
             }
+        }
+
+        /// <summary>
+        /// One segment's decision, made as <see cref="DrawBuckets"/> makes it for the bucket the
+        /// segment was gathered from: not drawn if the walk did not draw its chunk or it is past the
+        /// foliage draw distance; its level from the chunk's distance; its survivors the rank prefix.
+        /// </summary>
+        Rendering.IndirectScenery.Decision DecideSegment(Rendering.IndirectScenery.Group group, Rendering.IndirectScenery.Segment segment)
+        {
+            int chunk = segment.ChunkIndex;
+            if (_chunkDrawnStamp[chunk] != _renderStamp) return default;
+            if (TintCode.IsFoliage(group.Tint) && ViewerPosition.HasValue
+                && _chunkSqrDistance[chunk] > FoliageDrawDistance * FoliageDrawDistance)
+                return default;
+
+            float distance = _chunkDistance[chunk];
+            ResolvedModule resolved = _model.Library[group.Module];
+            int level = resolved.DrawsByLevel ? LevelOf(group.Tint, group.Module, resolved, distance) : 0;
+            int submitted = segment.Count;
+            if (_thinning && group.Thinned)
+                submitted = Rendering.IndirectScenery.CountBelow(group.Ranks, segment.Start, segment.Count,
+                    GrassThinning.Keep(distance, GrassThinNear, GrassThinFloor));
+            return new Rendering.IndirectScenery.Decision { Drawn = true, Submitted = submitted, Level = level };
         }
 
         ChunkBatch BatchFor(int chunkIndex)
@@ -978,7 +1169,7 @@ namespace Odyssey.Presentation.Rendering
                 // The skin's apron meets the surround at its level, which the skirt settles.
                 _mesher.SurroundLevel = Skirt.Enabled && Skirt.Built ? Skirt.SurfaceLayer : -1;
                 _mesher.Mesh(batch, chunkIndex);
-                if (_indirect != null) _indirect.Dirty = true;
+                _indirect?.MarkDirty(chunkIndex);
                 _meshedThisFrame++;
                 ChunksMeshedThisFrame++;
                 TotalChunksMeshed++;
@@ -987,14 +1178,15 @@ namespace Odyssey.Presentation.Rendering
         }
 
         void DrawBuckets(ChunkBatch batch, System.Collections.Generic.List<InstanceBucket> buckets,
-            float shade, bool ghost, float alpha, bool sight = false, float distance = 0f)
+            float shade, bool ghost, float alpha, bool sight = false, float distance = 0f, bool body = false)
         {
             for (int b = 0; b < buckets.Count; b++)
             {
                 InstanceBucket bucket = buckets[b];
                 if (bucket.Count == 0) continue;
-                // Drawn by the indirect path instead (design 38 §18); a ghosted layer keeps this one.
-                if (_indirectActive && !ghost && IsTuft(bucket)) continue;
+                _currentKind = CallKindOf(bucket.Tint, bucket.Module);
+                // Drawn by the indirect path instead (design 38 §22); a ghosted layer keeps this one.
+                if (_indirectActive && !ghost && body && IsIndirectKind(bucket)) continue;
 
                 ResolvedModule resolved = _model.Library[bucket.Module];
 
@@ -1005,16 +1197,7 @@ namespace Odyssey.Presentation.Rendering
                 int shadowLevel = -1;
                 if (resolved.DrawsByLevel)
                 {
-                    int level;
-                    if (TintCode.IsTree(bucket.Tint) && TreeLevels)
-                        level = LevelFor(resolved, distance, ViewerFieldOfView,
-                            TintCode.IsDressing(bucket.Tint) ? BushLodBias : TreeLodBias);
-                    else if (DressingLevels && TintCode.IsFoliage(bucket.Tint) && !_mesher.IsScatterModule(bucket.Module))
-                        level = LevelFor(resolved, distance, ViewerFieldOfView, DressingLodBias);
-                    else if (TuftLevels && TintCode.IsFoliage(bucket.Tint) && _mesher.IsScatterModule(bucket.Module))
-                        level = LevelFor(resolved, distance, ViewerFieldOfView, TuftLodBias);
-                    else
-                        level = LevelFor(resolved, distance);
+                    int level = LevelOf(bucket.Tint, bucket.Module, resolved, distance);
                     levelParts = resolved.Lods[level].Parts;
                     if (level > 0) InstancesAtCoarserLevels += bucket.Count;
 
@@ -1036,7 +1219,7 @@ namespace Odyssey.Presentation.Rendering
                 // prefix can survive anywhere in this chunk — the keep at its nearest point is the most
                 // any clump in it gets. The shader shrinks the rest of the way, clump by clump.
                 int submitted = bucket.Count;
-                if (_thinning && !ghost && TintCode.IsFoliage(bucket.Tint) && _mesher.IsGrassModule(bucket.Module))
+                if (_thinning && !ghost && IsThinnedKind(bucket.Tint, bucket.Module))
                 {
                     float keep = GrassThinning.Keep(distance, GrassThinNear, GrassThinFloor);
                     submitted = GrassThinning.CountBelow(bucket.Matrices, bucket.Count, keep);
@@ -1363,6 +1546,7 @@ namespace Odyssey.Presentation.Rendering
                 if (SubmitToGpu)
                     Graphics.RenderMeshInstanced(rp, part.Mesh, part.Submesh, matrices, n, drawn);
                 DrawCalls++;
+                ChunkCallsByKind[_currentKind]++;
                 drawn += n;
             }
         }
@@ -1488,6 +1672,7 @@ namespace Odyssey.Presentation.Rendering
                 // than RenderMesh: the two light the ground differently (measured, design 38 §20).
                 if (SubmitToGpu) Graphics.RenderMeshInstanced(rp, mesh, g, SkinIdentity, 1);
                 DrawCalls++;
+                ChunkCallsByKind[SkinKind]++;
             }
             SkinTrianglesDrawn += skin.TriangleCount;
         }
@@ -1502,6 +1687,7 @@ namespace Odyssey.Presentation.Rendering
                     Graphics.RenderMeshInstanced(rp, part.Mesh, part.Submesh, matrices, n, drawn);
                 drawn += n;
                 DrawCalls++;
+                ChunkCallsByKind[_currentKind]++;
             }
         }
 

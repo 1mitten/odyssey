@@ -23,6 +23,13 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does zooming out over Full grass feel smoother, and does anything flicker or vanish?**
+  (`claude/meadow-grass-perf`, PR #195, design 38 §22). Grass → Full, zoom slowly from the start out to the
+  farthest pull and pan along the board's edge, watching the overlay's `frame` and `gpu`. The scenery
+  (grass, flowers, bushes) is now drawn from GPU buffers. **A wrong answer looks like:** a patch of flowers
+  or a bush that vanishes at the screen's edge or pops in late; grass that flickers while panning; a stutter
+  when a colonist digs, builds or a crop grows; or no smoother than before at the far zoom.
+
 - **Does blood read as blood, and is it too much?** (`claude/combat-blood`, design 33 §10).
   *Arm every colonist*, *Spawn 3 marauders*, and watch at the play camera's distance. Every landed
   hit should throw a few red drops from the wound along the blow and leave one mark where they

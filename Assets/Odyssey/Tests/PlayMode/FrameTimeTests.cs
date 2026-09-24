@@ -2336,7 +2336,7 @@ namespace Odyssey.Tests.PlayMode
                         }
                         renderer.SubmitToGpu = arm.Submit;
                         renderer.CastShadows = arm.Shadows;
-                        renderer.IndirectTufts = arm.Indirect;
+                        renderer.UseIndirectScenery = arm.Indirect;
                         // -1 marks the arm that measures the old margin: a shell in every direction.
                         renderer.SweepShadowMargin = arm.ShadowMetres >= 0f;
                         if (copy != null)
@@ -2378,7 +2378,7 @@ namespace Odyssey.Tests.PlayMode
                     boot.Renderer.SubmitToGpu = true;
                     boot.Renderer.CastShadows = true;
                     boot.Renderer.SweepShadowMargin = true;
-                    boot.Renderer.IndirectTufts = false;
+                    boot.Renderer.UseIndirectScenery = false;
                 }
                 if (cam != null) cam.targetTexture = previousTarget;
                 if (fourK != null) fourK.Release();
@@ -2387,25 +2387,28 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// The tufts drawn from GPU buffers look exactly as the tufts drawn chunk by chunk
-        /// (design 38 §18). Stilled, settled, three shots: the chunk path twice (the floor), then the
-        /// indirect path; and the grass taken away altogether as the positive control, so a pass that
-        /// drew no grass at all could not read as "no change".
+        /// The scenery drawn from GPU buffers looks exactly as the scenery drawn chunk by chunk
+        /// (design 38 §22): tufts, tall-grass stands, flowers, ground cover and bushes, with their
+        /// levels of detail and the distance thinning. Stilled and settled, at three framings — the
+        /// start, 70 m and 140 m, where the far field thins and simplifies — and at noon and in the
+        /// evening. At each, the chunk path is shot until two shots agree (the floor), then the
+        /// indirect path; and once, the scenery taken away altogether as the positive control, so a
+        /// pass that drew nothing could not read as "no change".
         /// </summary>
         [UnityTest]
-        public IEnumerator TheIndirectTuftsDoNotChangeThePicture()
+        public IEnumerator TheIndirectSceneryDoesNotChangeThePicture()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
                 out OdysseyBootstrap boot);
-            var target = new RenderTexture(320, 240, 24) { name = "indirect-proof" };
+            var target = new RenderTexture(480, 270, 24) { name = "indirect-proof" };
             float previousScale = Time.timeScale;
             UnityEngine.Camera? cam = null;
             RenderTexture? previousTarget = null;
-            bool indirectWas = false;
+            bool indirectWas = true;
             try
             {
                 yield return null;
-                indirectWas = boot.Renderer!.IndirectTufts;
+                indirectWas = boot.Renderer!.UseIndirectScenery;
                 for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
                 {
                     boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
@@ -2416,84 +2419,214 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(boot.World!.GameSpeed, Is.Zero, "the world would not pause, so the shots cannot be still");
                 Time.timeScale = 0f;
                 ChunkRenderer renderer = boot.Renderer!;
-                // Settled means the board has finished meshing in, not a fixed count of frames:
-                // inside the full tier two shots of one configuration differed by 3.8% at 120
-                // frames, against 0.00% alone, because chunks were still arriving under the budget.
-                for (int i = 0, quiet = 0; i < 1200 && (i < 120 || quiet < 30); i++)
-                {
-                    yield return null;
-                    quiet = renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
-                }
 
-                renderer.IndirectTufts = true;
+                renderer.UseIndirectScenery = true;
                 yield return null;
                 if (renderer.IndirectDrawCalls == 0)
-                    Assert.Ignore("the indirect path did not draw on this machine (no compute, no grass art, " +
+                    Assert.Ignore("the indirect path did not draw on this machine (no compute, no scenery art, " +
                                   "or no foliage shader), so there is nothing to compare");
 
                 cam = boot.cameraRig!.Camera;
                 previousTarget = cam.targetTexture;
                 cam.targetTexture = target;
+                WorldSnapshot frame = boot.World!.Views.Current;
+                CellRef at = frame.Pawns.Length > 0 ? frame.Pawns[0].Cell : default;
 
-                renderer.IndirectTufts = false;
-                long tickBefore = boot.World!.CurrentTick;
-                Color32[] chunk = null!, again = null!, indirect = null!, bare = null!;
-                // **Still means two shots agree, not a count of frames.** With the world paused and
-                // the tick unchanged, the full tier still read a 3.8-6.5% floor after a fixed wait
-                // where a run alone read 0.00% — something (the camera easing in, a first-use
-                // upload) was still settling. So pairs are shot until two agree, and the pair that
-                // did is the floor.
-                int chunkCalls = 0;
-                for (int attempt = 0; attempt < 10; attempt++)
+                var lines = new List<string>();
+                float worstExcess = float.NegativeInfinity;
+                string worst = string.Empty;
+                Color32[] firstChunk = null!;
+                foreach ((string Name, float Distance) framing in new[] { ("start", 0f), ("wide", 70f), ("far", 140f) })
+                foreach (float hour in new[] { 12f, 19.5f })
                 {
-                    yield return Shoot("indirect-off", boot, target, p => chunk = p);
-                    chunkCalls = renderer.DrawCalls;
-                    yield return Shoot("indirect-off-again", boot, target, p => again = p);
-                    if (Difference(chunk, again) < 0.005f) break;
-                    for (int i = 0; i < 60; i++) yield return null;
-                }
-                renderer.IndirectTufts = true;
-                yield return Shoot("indirect-on", boot, target, p => indirect = p);
-                int indirectCalls = renderer.DrawCalls;
-                int indirectOnly = renderer.IndirectDrawCalls;
-                Assert.That(boot.World!.CurrentTick, Is.EqualTo(tickBefore),
-                    "the world ticked between the shots, so the wind moved every blade and nothing can be compared");
+                    boot.DaylightHourOverride = hour;
+                    if (framing.Distance > 0f) boot.cameraRig!.FocusOn(at, framing.Distance);
+                    // Settled means the board has finished meshing in and the camera has arrived,
+                    // not a fixed count of frames.
+                    for (int i = 0, quiet = 0; i < 1500 && (i < 150 || quiet < 30); i++)
+                    {
+                        yield return null;
+                        quiet = renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
+                    }
 
+                    long tickBefore = boot.World!.CurrentTick;
+                    renderer.UseIndirectScenery = false;
+                    Color32[] chunk = null!, again = null!, indirect = null!;
+                    int chunkCalls = 0;
+                    // Still means two shots agree, not a count of frames (the full tier read a
+                    // 3.8-6.5% floor after a fixed wait where a run alone read 0.00%).
+                    for (int attempt = 0; attempt < 10; attempt++)
+                    {
+                        yield return Shoot($"indirect-{framing.Name}-{hour:0.#}-off", boot, target, px => chunk = px);
+                        chunkCalls = renderer.DrawCalls;
+                        yield return Shoot($"indirect-{framing.Name}-{hour:0.#}-off-again", boot, target, px => again = px);
+                        if (Difference(chunk, again) < 0.005f) break;
+                        for (int i = 0; i < 60; i++) yield return null;
+                    }
+                    renderer.UseIndirectScenery = true;
+                    yield return Shoot($"indirect-{framing.Name}-{hour:0.#}-on", boot, target, px => indirect = px);
+                    int indirectCalls = renderer.DrawCalls;
+                    int indirectOnly = renderer.IndirectDrawCalls;
+                    Assert.That(boot.World!.CurrentTick, Is.EqualTo(tickBefore),
+                        "the world ticked between the shots, so the wind moved every blade and nothing can be compared");
+
+                    float noise = Difference(chunk, again);
+                    float moved = Difference(chunk, indirect);
+                    lines.Add($"{framing.Name} {hour:0.#} h: floor {noise * 100f:0.00}%, indirect moved {moved * 100f:0.00}%, " +
+                              $"{chunkCalls} calls chunk by chunk, {indirectCalls} with {indirectOnly} indirect");
+                    lines.Add($"{framing.Name} {hour:0.#} h chunk-path calls by kind with the indirect path on: " + CallsByKind(renderer));
+                    Assert.That(noise, Is.LessThan(0.02f), $"{framing.Name} {hour} h: the repeated shot has no floor to measure against");
+                    Assert.That(indirectCalls, Is.LessThan(chunkCalls),
+                        $"{framing.Name} {hour} h: the indirect path did not reduce the calls, so the chunk walk is still drawing the scenery");
+                    if (moved - noise > worstExcess) { worstExcess = moved - noise; worst = $"{framing.Name} {hour:0.#} h"; }
+                    Assert.That(moved, Is.LessThanOrEqualTo(noise + 0.002f),
+                        $"{framing.Name} {hour} h: the indirect scenery moved {moved * 100f:0.00}% of pixels against a " +
+                        $"floor of {noise * 100f:0.00}%: it is not drawing what the chunk path drew");
+                    if (firstChunk == null) firstChunk = chunk;
+                }
+
+                // The positive control, once, at the start framing and noon.
+                boot.DaylightHourOverride = 12f;
+                boot.cameraRig!.FocusOn(at, 32f);
                 int shipped = renderer.ScatterDensity;
+                renderer.UseIndirectScenery = false;
+                for (int i = 0; i < 120; i++) yield return null;
+                Color32[] withScenery = null!, bare = null!;
+                yield return Shoot("indirect-control-on", boot, target, px => withScenery = px);
                 renderer.ScatterDensity = 0;
                 boot.Model!.Remesh();
-                for (int i = 0; i < 60; i++) yield return null;
-                yield return Shoot("indirect-bare", boot, target, p => bare = p);
+                for (int i = 0; i < 120; i++) yield return null;
+                yield return Shoot("indirect-control-bare", boot, target, px => bare = px);
                 renderer.ScatterDensity = shipped;
                 boot.Model!.Remesh();
+                float scenery = Difference(withScenery, bare);
 
-                float noise = Difference(chunk, again);
-                float moved = Difference(chunk, indirect);
-                float grass = Difference(chunk, bare);
-                Debug.Log($"[FrameTime] indirect proof: the same shot twice moved {noise * 100f:0.00}%, " +
-                          $"the indirect tufts moved {moved * 100f:0.00}%, taking the grass away moved " +
-                          $"{grass * 100f:0.00}%; {chunkCalls} calls chunk by chunk, {indirectCalls} with " +
-                          $"{indirectOnly} indirect");
-
-                Assert.That(noise, Is.LessThan(0.02f), "the repeated shot has no floor to measure against");
-                Assert.That(grass, Is.GreaterThan(0.01f),
-                    "taking the grass away changed nothing, so the grass is not in these shots and the " +
+                Debug.Log($"[FrameTime] indirect scenery proof: " + string.Join("; ", lines) +
+                          $"; taking the scenery away moved {scenery * 100f:0.00}%; worst excess over the floor " +
+                          $"{worstExcess * 100f:0.00}% at {worst}");
+                Debug.Log("[FrameTime] indirect scenery kinds: " + renderer.IndirectKindReport());
+                Assert.That(scenery, Is.GreaterThan(0.01f),
+                    "taking the scenery away changed nothing, so the scenery is not in these shots and the " +
                     "comparison proves nothing");
-                Assert.That(indirectCalls, Is.LessThan(chunkCalls),
-                    "the indirect path did not reduce the calls, so the chunk walk is still drawing the tufts");
-                Assert.That(moved, Is.LessThanOrEqualTo(noise + 0.002f),
-                    $"the indirect tufts moved {moved * 100f:0.00}% of pixels against a floor of " +
-                    $"{noise * 100f:0.00}%: they are not drawing what the chunk path drew");
             }
             finally
             {
                 Time.timeScale = previousScale;
+                boot.DaylightHourOverride = null;
                 if (cam != null) cam.targetTexture = previousTarget;
-                if (boot.Renderer != null) boot.Renderer.IndirectTufts = indirectWas;
+                if (boot.Renderer != null) boot.Renderer.UseIndirectScenery = indirectWas;
                 UnityEngine.Object.Destroy(root);
                 target.Release();
                 UnityEngine.Object.Destroy(target);
             }
+        }
+
+        /// <summary>
+        /// What drawing the scenery from GPU buffers is worth (design 38 §22): the chunk path against
+        /// the indirect path, one world per board, on Standard and Huge, at the start zoom and pulled
+        /// back to 140 m where the owner saw the drop, at the batch view (CPU-bound) and into a
+        /// 3840 x 2160 target. Only differences inside the run are quoted. And the worst regather: a
+        /// whole-board re-mesh dirties every layer, which is the most the buffers are ever rebuilt at once.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheIndirectSceneryAgainstTheFrame()
+        {
+            var lines = new List<string>();
+            foreach ((string board, int side) in new[] { ("standard", 120), ("huge", 240) })
+            {
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                    out OdysseyBootstrap boot, side, side, 16);
+                UnityEngine.Camera? cam = null;
+                RenderTexture? previousTarget = null;
+                RenderTexture? fourK = null;
+                try
+                {
+                    yield return TimeFrames($"indirect/{board}/warm", boot, WarmupFrames, _ => { });
+                    ChunkRenderer renderer = boot.Renderer!;
+                    renderer.UseIndirectScenery = true;
+                    yield return null;
+                    if (renderer.IndirectDrawCalls == 0)
+                        Assert.Ignore("the indirect path did not draw on this machine (no compute or no scenery art)");
+
+                    cam = boot.cameraRig!.Camera;
+                    previousTarget = cam.targetTexture;
+                    fourK = new RenderTexture(3840, 2160, 24) { name = "indirect-4k" };
+                    WorldSnapshot frame = boot.World!.Views.Current;
+                    CellRef at = frame.Pawns.Length > 0 ? frame.Pawns[0].Cell : default;
+
+                    foreach ((string zoom, float distance) in new[] { ("start", 32f), ("140 m", 140f) })
+                    {
+                        boot.cameraRig!.FocusOn(at, distance);
+                        for (int i = 0; i < 120; i++) yield return null;
+                        foreach (bool big in new[] { false, true })
+                        {
+                            cam.targetTexture = big ? fourK : previousTarget;
+                            string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                            foreach (bool indirect in new[] { false, true })
+                            {
+                                renderer.UseIndirectScenery = indirect;
+                                float ms = 0f;
+                                yield return TimeFrames($"indirect/{board}/{zoom}/{resolution}/{(indirect ? "indirect" : "chunk")}",
+                                    boot, WarmupFrames, m => ms = m);
+                                Assert.That(renderer.ChunksMeshDeferred, Is.Zero, $"{board} {zoom} was timed mid-re-mesh");
+                                if (big) Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
+                                if (indirect) Assert.That(renderer.IndirectDrawCalls, Is.GreaterThan(0),
+                                    $"{board} {zoom}: the indirect arm drew nothing indirectly, so it measured the chunk path twice");
+                                lines.Add($"{board} {zoom} {resolution} {(indirect ? "indirect" : "chunk")}: frame {ms:0.00} ms, " +
+                                          $"submit {boot.SubmitMs:0.00}, {renderer.DrawCalls} calls " +
+                                          $"({renderer.IndirectDrawCalls} indirect), {renderer.ChunksDrawn} chunks");
+                            }
+                        }
+                    }
+
+                    // The worst regather: every layer dirty at once.
+                    cam.targetTexture = previousTarget;
+                    renderer.UseIndirectScenery = true;
+                    boot.Model!.Remesh();
+                    double worstRegather = 0d;
+                    for (int i = 0; i < 180; i++)
+                    {
+                        yield return null;
+                        if (renderer.IndirectRegatherMs > worstRegather) worstRegather = renderer.IndirectRegatherMs;
+                    }
+                    lines.Add($"{board}: {renderer.IndirectInstances} instances in the buffers, worst regather " +
+                              $"{worstRegather:0.000} ms after a whole-board re-mesh");
+
+                    // And the case play meets: one chunk re-meshed (a dig, a build, a crop that grew),
+                    // which dirties only the layers it is on.
+                    double oneChunk = 0d;
+                    for (int repeat = 0; repeat < 5; repeat++)
+                    {
+                        var chunks = boot.Model!.Chunks;
+                        boot.Model!.RemeshChunk(chunks.ChunkIndexOfCell(at.X, at.Z, at.Y));
+                        if (at.Y > 0) boot.Model!.RemeshChunk(chunks.ChunkIndexOfCell(at.X, at.Z, at.Y - 1));
+                        for (int i = 0; i < 10; i++)
+                        {
+                            yield return null;
+                            if (renderer.IndirectRegatherMs > oneChunk) oneChunk = renderer.IndirectRegatherMs;
+                        }
+                    }
+                    lines.Add($"{board}: worst regather {oneChunk:0.000} ms after one chunk re-meshed (5 tries)");
+                }
+                finally
+                {
+                    if (cam != null) cam.targetTexture = previousTarget;
+                    if (fourK != null) fourK.Release();
+                    UnityEngine.Object.Destroy(root);
+                }
+                yield return null;
+            }
+            Debug.Log($"[FrameTime] indirect scenery ({SystemInfo.graphicsDeviceName}, {SystemInfo.graphicsDeviceType}): " +
+                      string.Join("; ", lines));
+        }
+
+        /// <summary>The chunk path's draw calls last frame, by kind.</summary>
+        static string CallsByKind(ChunkRenderer renderer)
+        {
+            var parts = new List<string>();
+            for (int k = 0; k < ChunkRenderer.CallKindNames.Length; k++)
+                if (renderer.ChunkCallsByKind[k] > 0) parts.Add($"{ChunkRenderer.CallKindNames[k]} {renderer.ChunkCallsByKind[k]}");
+            return string.Join(", ", parts);
         }
 
         /// <summary>The meshed buckets by kind: how many, how full, and how many calls they cost.</summary>

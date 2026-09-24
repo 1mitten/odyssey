@@ -12030,3 +12030,21 @@ so the work moved (stash, then a clean re-apply) rather than editing under a liv
 `cd` into a worktree that had been deleted to free disk space failed silently, so two git commands
 ran in the main checkout — it was switched back to `main` and the stash re-taken within the minute.
 Every chain now guards its `cd`.
+
+## 2026-09-24 — The scenery drawn from GPU buffers (design 38 §22)
+
+The owner asked for the scenery next, to go in with the grass. §21 had put the zoomed-out frame drop in
+draw calls — every chunk submitting every kind — and §18b's indirect path, built for the tufts and left
+off, was the tool. It now draws the tufts, the grass dressing and the bushes: one buffer per kind and
+layer, a compute cull, one indirect draw per level part. Trees and stones stay on the chunk path, for
+reasons (the fade and the shadow proxy; a pack shader) that are the next unit's.
+
+Two things worth keeping. **The decisions stay on the CPU**, per segment, made by the very code the
+chunk path uses, so the picture proof reads 0.00% against a 0.00% floor at three framings and two hours —
+the GPU only applies them. And **the first regather was a stutter waiting to happen**: one chunk
+re-meshed on Huge regathered the whole surface layer, 3.9 ms, on every dig, build and growing crop. Per
+chunk slots rewritten in place took it to 0.16 ms. A call breakdown by kind also caught the first cut
+moving only the tufts and bushes: the grass dressing is tinted as plain foliage, not as dressing.
+
+At 140 m the 4K frame is 4–5 ms lighter on Standard and Huge in two noisy runs; at the start framing the
+gain is inside the noise. The GPU's own numbers wait on the owner's go for the player bench.

@@ -1319,6 +1319,17 @@ namespace Odyssey.Presentation.World
             BumpEveryChunk();
         }
 
+        /// <summary>
+        /// Draw one chunk again, without a cell having changed: what a dig, a build or a growing crop
+        /// costs the renderer, isolated for measurement (the indirect scenery regathers the layer the
+        /// chunk is on, design 38 §22). Nothing reaches the simulation, the save or the hash.
+        /// </summary>
+        public void RemeshChunk(int chunkIndex)
+        {
+            Version++;
+            _chunkVersion[chunkIndex] = Version;
+        }
+
         /// <summary>Stamp the current version on every chunk: everything is to be re-meshed.</summary>
         void BumpEveryChunk()
         {

@@ -37,6 +37,10 @@ namespace Odyssey.Presentation.Bootstrap
         /// of the look's (Full grass, the wide and farthest framings).</summary>
         public const string GrassArgument = "-odyssey-bench-grass";
 
+        /// <summary>With <see cref="Argument"/>: the scenery drawn from GPU buffers against the chunk
+        /// path (design 38 §22), Full grass, at the start, 70 m and 140 m.</summary>
+        public const string SceneryArgument = "-odyssey-bench-scenery";
+
         static bool Has(string wanted)
         {
             foreach (string argument in Environment.GetCommandLineArgs())
@@ -154,6 +158,13 @@ namespace Odyssey.Presentation.Bootstrap
             _table.AppendLine("|---|---|---|---|---|" + PassRule());
 
             ChunkRenderer renderer = _boot.Renderer!;
+            if (Has(SceneryArgument))
+            {
+                yield return SceneryArms(renderer);
+                Log("[Bench] table:\n" + _table);
+                Quit("[Bench] done");
+                yield break;
+            }
             if (Has(GrassArgument))
             {
                 yield return GrassArms(renderer);
@@ -261,6 +272,30 @@ namespace Odyssey.Presentation.Bootstrap
                     () => { renderer.Dressing = true; _boot.Model!.Remesh(); });
                 yield return Arm($"{at}, no grass", () => { renderer.ScatterDensity = 0; _boot.Model!.Remesh(); },
                     () => { renderer.ScatterDensity = GroundScatter.MaxPerCell * 100; _boot.Model!.Remesh(); });
+            }
+        }
+
+        /// <summary>
+        /// The scenery drawn from GPU buffers against the chunk path (design 38 §22), Full grass, at
+        /// the start, 70 m and 140 m — where the owner saw the drop. Each pair is taken back to back,
+        /// and each row says how many of its calls were indirect, so the table itself shows the path
+        /// really ran on this machine's API.
+        /// </summary>
+        IEnumerator SceneryArms(ChunkRenderer renderer)
+        {
+            renderer.ScatterDensity = GroundScatter.MaxPerCell * 100;
+            _boot.Model!.Remesh();
+            yield return Settle();
+            Odyssey.Sim.Contracts.CellRef? focus = FirstPawnCell();
+            foreach (float framing in new[] { 32f, 70f, 140f })
+            {
+                if (focus.HasValue && _boot.cameraRig != null) _boot.cameraRig.FocusOn(focus.Value, framing);
+                yield return Settle();
+                string at = $"@{framing:0} m";
+                yield return Arm($"full {at}, scenery from GPU buffers", () => renderer.UseIndirectScenery = true, null);
+                Log($"[Bench] {at}: {renderer.IndirectDrawCalls} indirect calls, {renderer.IndirectInstances} instances in the buffers");
+                yield return Arm($"full {at}, chunk by chunk", () => renderer.UseIndirectScenery = false,
+                    () => renderer.UseIndirectScenery = true);
             }
         }
 

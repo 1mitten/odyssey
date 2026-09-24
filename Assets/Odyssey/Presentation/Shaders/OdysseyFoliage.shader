@@ -702,6 +702,9 @@ Shader "Odyssey/Foliage"
             #pragma vertex DepthVertex
             #pragma fragment DepthFragment
             #pragma multi_compile_instancing
+            // The scenery drawn from GPU buffers (design 38 §22): bushes are opaque, so they reach
+            // this pass and must read the same instance the forward pass does.
+            #pragma multi_compile_local _ ODYSSEY_INDIRECT
             #pragma target 3.5
 
             struct DepthAttributes
@@ -711,6 +714,9 @@ Shader "Odyssey/Foliage"
                 float4 colour     : COLOR;
                 float2 uv         : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
+            #if defined(ODYSSEY_INDIRECT) && !UNITY_ANY_INSTANCING_ENABLED
+                uint indirectID   : SV_InstanceID;
+            #endif
             };
 
             struct DepthVaryings
@@ -726,6 +732,13 @@ Shader "Odyssey/Foliage"
                 DepthVaryings output = (DepthVaryings)0;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
+            #if defined(ODYSSEY_INDIRECT)
+                #if UNITY_ANY_INSTANCING_ENABLED
+                FoliageIndirectSetup(input.instanceID);
+                #else
+                FoliageIndirectSetup(input.indirectID);
+                #endif
+            #endif
                 output.positionCS = TransformWorldToHClip(
                     FoliageDisplace(input.positionOS.xyz, input.normalOS, input.colour));
                 output.uv = input.uv;
@@ -757,6 +770,7 @@ Shader "Odyssey/Foliage"
             #pragma vertex DepthNormalsVertex
             #pragma fragment DepthNormalsFragment
             #pragma multi_compile_instancing
+            #pragma multi_compile_local _ ODYSSEY_INDIRECT
             #pragma target 3.5
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -768,6 +782,9 @@ Shader "Odyssey/Foliage"
                 float4 colour     : COLOR;
                 float2 uv         : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
+            #if defined(ODYSSEY_INDIRECT) && !UNITY_ANY_INSTANCING_ENABLED
+                uint indirectID   : SV_InstanceID;
+            #endif
             };
 
             struct NormalsVaryings
@@ -784,9 +801,16 @@ Shader "Odyssey/Foliage"
                 NormalsVaryings output = (NormalsVaryings)0;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
+            #if defined(ODYSSEY_INDIRECT)
+                #if UNITY_ANY_INSTANCING_ENABLED
+                FoliageIndirectSetup(input.instanceID);
+                #else
+                FoliageIndirectSetup(input.indirectID);
+                #endif
+            #endif
                 output.positionCS = TransformWorldToHClip(
                     FoliageDisplace(input.positionOS.xyz, input.normalOS, input.colour));
-                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                output.normalWS = FoliageToWorldNormal(input.normalOS);
                 output.uv = input.uv;
                 output.leafMask = input.colour.b;
                 return output;

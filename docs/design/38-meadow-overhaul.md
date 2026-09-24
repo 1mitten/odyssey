@@ -1058,8 +1058,83 @@ bench** (`PlayerBench`, `-odyssey-bench-grass`), which needs the owner's go beca
 ### 21e. What is owed
 
 - **The player bench's grass table**, which settles the numbers above on the GPU's own clock.
-- **GPU-driven drawing for the dressing** (§18b's indirect path, built for the tufts and left off):
+- **GPU-driven drawing for the dressing** — **done, §22.** (§18b's indirect path, built for the tufts and left off):
   the measured driver at distance is draw calls per kind per chunk, which is exactly what one indirect
   draw per kind removes. It was shelved on a measurement at the start camera, where it saved little;
   §21b says the far camera is where it pays. The owner's call.
 - Huge re-measured on a quiet machine.
+
+## 22. GPU-driven scenery (2026-09-24)
+
+Owner: *"work on the scenery please now — to be included with this grass."* §21 had found the frame drop
+zoomed out in the scenery's draw calls — every chunk submitting every kind — so the scenery now goes
+the way §18b built for the tufts alone.
+
+### 22a. What moved, and what did not
+
+**On the indirect path** (`IndirectScenery`, `ChunkRenderer.UseIndirectScenery`, on by default): the
+grass tufts, and every Meadow dressing kind drawn by `Odyssey/Foliage` — tall-grass stands, wildflowers,
+sunflowers, ground cover, the grass bush — and the bushes. Each kind's instances on a layer live in one
+GPU buffer; a compute pass (`OdysseyIndirectCull.compute`) culls them and one indirect draw per level
+part draws what it kept. The foliage shader's DepthOnly and DepthNormals passes read the same instance
+the forward pass reads, because bushes are opaque and reach the prepass.
+
+**Left on the chunk path, deliberately:** trees (they fade for colonists through the ghost pass and cast
+from a proxy level, and an indirect shadow caster must not be culled to the camera — the next lever, 618
+of the 1,589 calls left at 140 m); stones (a pack shader that cannot read the buffers); crops; anything
+on a ghosted layer; and any kind whose settings make it cast. Eligibility is asked per kind and
+remembered (`ChunkRenderer.IndirectKindReport` lists the answers).
+
+**A finding on the way:** the mesher tints the grass dressing as plain foliage — only bushes and stones
+carry the dressing bit — so the first cut, which looked for the dressing bit, moved the tufts and bushes
+and left every grass stand and flower on the chunk path. A per-kind call breakdown
+(`ChunkRenderer.ChunkCallsByKind`) found it.
+
+### 22b. Nothing the chunk path decides moved
+
+The instances are gathered from the chunk buckets as segments (one chunk's bucket each). Every frame the
+renderer decides per segment exactly what `DrawBuckets` decides per bucket — whether the walk drew the
+chunk (frustum, the sun-side shadow sweep, the foliage draw distance), the level of detail from the
+chunk's distance (one shared `LevelOf`), and the rank-sorted prefix the distance thinning keeps
+(`IndirectScenery.CountBelow`, pinned against `GrassThinning.CountBelow`). The GPU only applies those
+per instance, adds a per-instance frustum test (these kinds cast nothing, so an instance off screen is
+never seen), and sorts survivors into one list per level.
+
+**Proof** (`FrameTimeTests.TheIndirectSceneryDoesNotChangeThePicture`, paused and stilled, shots repeated
+until two agree): **0.00% of pixels moved against a 0.00% floor at the start, 70 m and 140 m, at noon and
+at 19.5 h**; taking the scenery away moved 22%, so it was in the shots.
+
+### 22c. Regathered per chunk, in place
+
+The first cut regathered a whole layer whenever any chunk on it re-meshed: **3.9 ms on Huge for one
+chunk** — a stutter on every dig, build or growing crop. Each group now gives every chunk a slot with room
+to spare; a re-meshed chunk rewrites only its own slots and uploads only those ranges; a slot that
+outgrows its room moves to the end, and dead space is compacted once it is half the buffer
+(`IndirectSceneryTests`). One chunk re-meshed: **0.16 ms on Huge, 0.11 on Standard**; a whole-board
+re-mesh (a settings change): 0.58 and 0.71 ms.
+
+### 22d. Measured
+
+`FrameTimeTests.TheIndirectSceneryAgainstTheFrame`, one world per board, frame at 3840 × 2160 standing in
+for the GPU (another session's batch run and the CI runner shared the machine; two runs):
+
+| | chunk path | indirect | calls (chunk → indirect path) |
+|---|---|---|---|
+| Standard, start | 12.84 / 12.20 ms | 11.40 / 13.24 ms | 1,122 → 964 |
+| Standard, 140 m | 20.93 / 19.09 ms | **16.33 / 15.27 ms** | 1,983 → 1,599 (173 indirect) |
+| Huge, start | 13.09 / 13.32 ms | 11.88 / 11.67 ms | 1,560 → 1,236 |
+| Huge, 140 m | 26.27 / 28.02 ms | **21.02 / 23.28 ms** | 3,363 → 2,573 (224 indirect) |
+
+At 140 m the frame drops **4–5 ms at 4K** in both runs — more than the CPU submission it saves (Huge at
+640 × 480: submit 5.06 → 3.59 ms), because the chunk walk keeps whole chunks inside the shadow sweep and
+the indirect path culls each instance to the camera. At the start framing the gain is within this
+machine's noise. **The GPU's own numbers are owed from the player bench**
+(`-odyssey-bench -odyssey-bench-scenery`), which takes the screen and needs the owner's go.
+
+### 22e. What is owed
+
+- The player bench's scenery table (the owner's go; it quits itself within 180 s).
+- Trees on the indirect path — the largest block of calls left — with the sight fade kept on the chunk
+  path for the chunks a colonist is behind, and an indirect shadow-caster draw culled by the sun-side
+  sweep rather than the camera.
+- Stones, if they move to a shader that reads the buffers.
