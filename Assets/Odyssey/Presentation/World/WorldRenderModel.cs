@@ -1393,6 +1393,17 @@ namespace Odyssey.Presentation.World
                 // The chunks that actually changed, and only those. Stamped after the version
                 // moves so the number they carry is the new one.
                 for (int i = 0; i < refreshed; i++) _chunkVersion[_dirtyThisRefresh[i]] = Version;
+
+                // **And every chunk beneath them in the same column** (P15, design 38 §20). Whether
+                // a cell is open to the sky is a question about its whole column — a ramp, the
+                // daylit bit on the ground — while the simulation marks only the 3 x 3 x 3 chunks
+                // around an edit. A slab laid five layers up changed the ground below it and nothing
+                // re-meshed it. Their cells did not change, so they are not refreshed, only re-meshed;
+                // a chunk below the drawn band is never meshed at all, so this costs what is on screen.
+                int perLayer = Chunks.ChunksX * Chunks.ChunksZ;
+                for (int i = 0; i < refreshed; i++)
+                    for (int below = _dirtyThisRefresh[i] - perLayer; below >= 0; below -= perLayer)
+                        _chunkVersion[below] = Version;
             }
             return refreshed;
         }

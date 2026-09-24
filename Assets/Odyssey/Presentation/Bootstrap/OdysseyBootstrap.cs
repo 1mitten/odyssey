@@ -3153,6 +3153,24 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            // The skin's ramp, by its own corners (design 38 §20): the bracket's corner order is
+            // bit 0 for +x and bit 1 for +z, the ramp's is anticlockwise from (−x,−z).
+            if (GroundSkin.Enabled)
+            {
+                if (BankLayout.RampCorners(_model, cell.X, cell.Z, cell.Y, out BankLayout.Ramp ramp))
+                {
+                    float h = CellMetrics.SizeY;
+                    _bracketRises[0] = ramp.R0 * h;
+                    _bracketRises[1] = ramp.R1 * h;
+                    _bracketRises[2] = ramp.R3 * h;
+                    _bracketRises[3] = ramp.R2 * h;
+                    _renderer.DrawFloorBracket(GroundRelief.Drape(CellMetrics.FloorCentre(cell)), colour, _bracketRises);
+                    return;
+                }
+                _renderer.DrawFloorBracket(cell, colour);
+                return;
+            }
+
             BankLayout.Bank bank = BankLayout.At(_model, cell);
             if (bank.Exists)
             {
@@ -3181,6 +3199,9 @@ namespace Odyssey.Presentation.Bootstrap
 
             _renderer.DrawFloorBracket(cell, colour);
         }
+
+        /// <summary>The ramp bracket's four corner rises, reused so the cursor allocates nothing a frame.</summary>
+        readonly float[] _bracketRises = new float[4];
 
         void OnGUI()
         {

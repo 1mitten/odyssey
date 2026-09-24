@@ -48,6 +48,7 @@ namespace Odyssey.Presentation.Rendering
 
             batch.ChunkIndex = chunkIndex;
             batch.Layer = y;
+            _rampCacheIndex = -1;
             batch.Bounds = ChunkWorldBounds(x0, z0, y, x1, z1);
             batch.Clear();
             _bodyIndex.Clear();
@@ -72,6 +73,7 @@ namespace Odyssey.Presentation.Rendering
                 EmitCrop(batch, index, x, z, y);
             }
 
+            batch.Skin.Build(batch.Bounds);
             batch.Version = _model.ChunkVersion(chunkIndex);
         }
 
@@ -247,6 +249,11 @@ namespace Odyssey.Presentation.Rendering
         internal void SinkRoof(ChunkBatch batch, int module, int tint, in Matrix4x4 at) =>
             AddRoof(batch, module, tint, at);
 
+        internal bool SinkSkinsTop(in TerrainCell cell) => SkinsTop(cell.Index, cell.X, cell.Z, cell.Y);
+
+        internal void SinkSkin(ChunkBatch batch, int module, int tint, int x, int z, int y) =>
+            SinkSkinTop(batch, module, tint, x, z, y);
+
         // ------------------------------------------------------------- scatter
 
         /// <summary>
@@ -396,6 +403,7 @@ namespace Odyssey.Presentation.Rendering
 
                 Vector3 at = GroundRelief.Lift(
                     surface + new Vector3(offsetX * CellMetrics.SizeXZ, ripple, offsetZ * CellMetrics.SizeXZ));
+                at.y += SkinRise(x, z, surface.y, at.x, at.z);
 
                 AddBody(batch, module, tint, Matrix4x4.TRS(
                     at, Quaternion.Euler(0f, yaw, 0f), new Vector3(scale, scale, scale)));
@@ -600,6 +608,7 @@ namespace Odyssey.Presentation.Rendering
 
             Vector3 at = GroundRelief.Lift(
                 surface + new Vector3(offsetX * CellMetrics.SizeXZ, 0f, offsetZ * CellMetrics.SizeXZ));
+            at.y += SkinRise(x, z, surface.y, at.x, at.z);
             AddBody(batch, family[which], tint, Matrix4x4.TRS(
                 at, Quaternion.Euler(0f, yaw, 0f), new Vector3(scale, scale, scale)));
         }
@@ -774,6 +783,11 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         void EmitBank(ChunkBatch batch, int index, int x, int z, int y)
         {
+            if (GroundSkin.Enabled)
+            {
+                EmitRamp(batch, x, z, y);
+                return;
+            }
 
             BankLayout.Bank bank = BankLayout.At(_model, x, z, y);
             if (!bank.Exists) return;
@@ -789,6 +803,195 @@ namespace Odyssey.Presentation.Rendering
                 Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[bank.Rotation], 0f)));
         }
 
+
+        // ------------------------------------------------------------- the ground skin
+
+        // Corner i of a cell, in cells from its low-x low-z corner: the order BankLayout.Ramp uses.
+        static readonly int[] SkinCornerX = { 0, 1, 1, 0 };
+        static readonly int[] SkinCornerZ = { 0, 0, 1, 1 };
+
+        // The edge on each side of a cell as a pair of corners, indexed by Directions.
+        static readonly int[] EdgeFirst = new int[Directions.Count];
+        static readonly int[] EdgeSecond = new int[Directions.Count];
+
+        static ChunkMesher()
+        {
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int dx = Directions.DeltaX[dir], dz = Directions.DeltaZ[dir];
+                // The two corners on that side are the ones whose offset agrees with the direction.
+                int first = -1, second = -1;
+                for (int c = 0; c < 4; c++)
+                {
+                    bool onSide = dx != 0 ? SkinCornerX[c] == (dx > 0 ? 1 : 0) : SkinCornerZ[c] == (dz > 0 ? 1 : 0);
+                    if (!onSide) continue;
+                    if (first < 0) first = c; else second = c;
+                }
+                EdgeFirst[dir] = first;
+                EdgeSecond[dir] = second;
+            }
+        }
+
+        /// <summary>
+        /// A corner of the skin in world space: the cell's corner at a rise above a plane, on the
+        /// relief sampled at the corner itself so two cells meeting there agree to the bit.
+        /// </summary>
+        static Vector3 SkinCorner(int x, int z, float planeY, int corner, float rise)
+        {
+            float wx = (x + SkinCornerX[corner]) * CellMetrics.SizeXZ;
+            float wz = (z + SkinCornerZ[corner]) * CellMetrics.SizeXZ;
+            return new Vector3(wx, planeY + rise + GroundRelief.HeightAt(wx, wz), wz);
+        }
+
+        // The last cell a point was lifted onto a ramp for: a meadow cell asks for up to three tufts
+        // and a clump or two of dressing, and each would otherwise re-run the ramp's neighbour scan.
+        int _rampCacheIndex = -1;
+        bool _rampCacheHas;
+        BankLayout.Ramp _rampCache;
+
+        /// <summary>
+        /// How far the skin's ramp lifts a point standing on the ground whose top is at
+        /// <paramref name="surfaceY"/> — zero off a ramp. Grass, dressing and crops stand at points,
+        /// so they are lifted onto the ramp rather than buried in it (the draped/lifted rule).
+        /// </summary>
+        float SkinRise(int x, int z, float surfaceY, float worldX, float worldZ)
+        {
+            if (!GroundSkin.Enabled || !BankLayout.LiftFigures) return 0f;
+            int layer = Mathf.RoundToInt(surfaceY / CellMetrics.SizeY);
+            var size = _model.Size;
+            if (!size.Contains(x, z, layer)) return 0f;
+            int index = size.Index(x, z, layer);
+            if (index != _rampCacheIndex)
+            {
+                _rampCacheIndex = index;
+                _rampCacheHas = BankLayout.RampCorners(_model, x, z, layer, out _rampCache);
+            }
+            if (!_rampCacheHas) return 0f;
+            float u = Mathf.Clamp01((worldX - x * CellMetrics.SizeXZ) / CellMetrics.SizeXZ);
+            float v = Mathf.Clamp01((worldZ - z * CellMetrics.SizeXZ) / CellMetrics.SizeXZ);
+            return _rampCache.HeightAt(u, v) * CellMetrics.SizeY + GroundSkin.RampLift;
+        }
+
+        /// <summary>The flat earth this ground is made of, as the material its turf box wore.</summary>
+        ModulePart? GroundPart(ushort terrain)
+        {
+            int module = _model.EarthModule(terrain, 0, showsAFace: false);
+            if (module == 0) return null;
+            ModulePart[] parts = _model.Library[module].Parts;
+            return parts.Length > 0 ? parts[0] : null;
+        }
+
+        /// <summary>
+        /// The ramp in a terrace's foot cell, and a skirt down any side where the ground beside it is
+        /// lower than the ramp's edge — a cell drawn flat because a ramp would have capped it.
+        /// </summary>
+        void EmitRamp(ChunkBatch batch, int x, int z, int y)
+        {
+            if (!BankLayout.RampCorners(_model, x, z, y, out BankLayout.Ramp ramp)) return;
+            BankLayout.Bank bank = BankLayout.At(_model, x, z, y);
+            ModulePart? part = GroundPart(bank.Terrain);
+            if (part == null) return;
+
+            // Always daylit: the ramp needs open sky over it (BankLayout.CanBank).
+            int tint = TintCode.Daylit(TintCode.Whole(TintCode.Terrain(bank.Terrain)), open: true);
+            float plane = y * CellMetrics.SizeY + GroundSkin.RampLift;
+            float h = CellMetrics.SizeY;
+            Vector3 c0 = SkinCorner(x, z, plane, 0, ramp.R0 * h);
+            Vector3 c1 = SkinCorner(x, z, plane, 1, ramp.R1 * h);
+            Vector3 c2 = SkinCorner(x, z, plane, 2, ramp.R2 * h);
+            Vector3 c3 = SkinCorner(x, z, plane, 3, ramp.R3 * h);
+
+            GroundSkinMesh skin = batch.Skin;
+            if (ramp.SplitZeroTwo)
+            {
+                skin.Triangle(part.Material, tint, part.IsFallback, c0, c2, c1, Vector3.up);
+                skin.Triangle(part.Material, tint, part.IsFallback, c0, c3, c2, Vector3.up);
+            }
+            else
+            {
+                skin.Triangle(part.Material, tint, part.IsFallback, c0, c3, c1, Vector3.up);
+                skin.Triangle(part.Material, tint, part.IsFallback, c1, c3, c2, Vector3.up);
+            }
+            batch.InstanceCount++;
+
+            // Skirts. A neighbouring ramp meets this one exactly and a solid neighbour is a wall of
+            // its own, so only an open neighbour lower than the edge needs closing — the flat cell
+            // beside a trench, or the ground past the lip of a step down.
+            var size = _model.Size;
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
+                if (!size.Contains(nx, nz, y)) continue;
+                int neighbour = size.Index(nx, nz, y);
+                if (_model.IsSolid(neighbour)) continue;
+
+                int a = EdgeFirst[dir], b = EdgeSecond[dir];
+                float mineA = ramp.Corner(a), mineB = ramp.Corner(b);
+                float theirA = 0f, theirB = 0f;
+                if (BankLayout.RampCorners(_model, nx, nz, y, out BankLayout.Ramp other))
+                {
+                    // The same world corner seen from the other cell: its offset is ours, less the step.
+                    theirA = other.Corner(Mirror(a, dir));
+                    theirB = other.Corner(Mirror(b, dir));
+                }
+                if (mineA <= theirA && mineB <= theirB) continue;
+
+                Vector3 topA = SkinCorner(x, z, plane, a, mineA * h);
+                Vector3 topB = SkinCorner(x, z, plane, b, mineB * h);
+                Vector3 lowA = SkinCorner(x, z, plane, a, Mathf.Min(mineA, theirA) * h);
+                Vector3 lowB = SkinCorner(x, z, plane, b, Mathf.Min(mineB, theirB) * h);
+                var outward = new Vector3(Directions.DeltaX[dir], 0f, Directions.DeltaZ[dir]);
+                skin.Triangle(part.Material, tint, part.IsFallback, topA, topB, lowB, outward, vertical: true);
+                skin.Triangle(part.Material, tint, part.IsFallback, topA, lowB, lowA, outward, vertical: true);
+            }
+        }
+
+        /// <summary>The index, in the neighbour across <paramref name="dir"/>, of our corner <paramref name="corner"/>.</summary>
+        static int Mirror(int corner, int dir)
+        {
+            int cx = SkinCornerX[corner] - (Directions.DeltaX[dir] > 0 ? 1 : Directions.DeltaX[dir] < 0 ? -1 : 0);
+            int cz = SkinCornerZ[corner] - (Directions.DeltaZ[dir] > 0 ? 1 : Directions.DeltaZ[dir] < 0 ? -1 : 0);
+            for (int c = 0; c < 4; c++)
+                if (SkinCornerX[c] == cx && SkinCornerZ[c] == cz) return c;
+            return corner;
+        }
+
+        /// <summary>
+        /// Whether this earth cell's top goes into the skin rather than a box: nothing but its top
+        /// can be seen (no side open, open above, solid below), and nothing is built on it whose
+        /// drape the ground must match to the millimetre — a slab, a wall, a bed. A tree is not
+        /// built; woodland keeps its skin.
+        /// </summary>
+        internal bool SkinsTop(int index, int x, int z, int y)
+        {
+            if (!GroundSkin.Enabled) return false;
+            var size = _model.Size;
+            if (y + 1 >= size.SizeY) return false;
+            if (ExposedSides(x, z, y) != 0) return false;
+            int above = index + size.LayerStride;
+            if (_model.IsSolid(above)) return false;
+            if (y > 0 && !_model.IsSolid(index - size.LayerStride)) return false;
+            if (_model.Floor(above) != CoreContent.SlabNone) return false;
+            ushort edifice = _model.EdificeDef(above);
+            if (edifice != 0 && !Odyssey.Sim.Worldgen.Natural.NaturalContent.IsTree(edifice)) return false;
+            return true;
+        }
+
+        /// <summary>The flat top of an earth cell, as two triangles of skin.</summary>
+        internal void SinkSkinTop(ChunkBatch batch, int module, int tint, int x, int z, int y)
+        {
+            ModulePart[] parts = _model.Library[module].Parts;
+            if (parts.Length == 0) return;
+            ModulePart part = parts[0];
+            float plane = (y + 1) * CellMetrics.SizeY;
+            Vector3 c0 = SkinCorner(x, z, plane, 0, 0f);
+            Vector3 c1 = SkinCorner(x, z, plane, 1, 0f);
+            Vector3 c2 = SkinCorner(x, z, plane, 2, 0f);
+            Vector3 c3 = SkinCorner(x, z, plane, 3, 0f);
+            batch.Skin.Triangle(part.Material, tint, part.IsFallback, c0, c2, c1, Vector3.up);
+            batch.Skin.Triangle(part.Material, tint, part.IsFallback, c0, c3, c2, Vector3.up);
+            batch.InstanceCount++;
+        }
 
         /// <summary>
         /// Can any of this cell's four vertical faces be seen — is it a terrace riser, the wall of

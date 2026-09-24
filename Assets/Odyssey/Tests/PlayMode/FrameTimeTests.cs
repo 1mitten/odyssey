@@ -2782,6 +2782,91 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// The ground skin against the boxes it replaces (<c>docs/design/38-meadow-overhaul.md</c>
+        /// §20): the played meadow on Standard and Huge, each at 640 x 480 and into a 3840 x 2160
+        /// target, with <see cref="GroundSkin.Enabled"/> off and on in one world, and a whole-board
+        /// re-mesh with the budget off timed each way — the per-chunk meshing cost the budget was
+        /// sized on, now with a mesh upload in it.
+        ///
+        /// <para>Asserts only that the controls applied: the skin drew triangles when on and none
+        /// when off, the instance count fell, the camera drew at 4K, nothing was timed mid-re-mesh.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheSkinAgainstTheBoxes()
+        {
+            bool skinWas = GroundSkin.Enabled;
+            var lines = new List<string>();
+            try
+            {
+                foreach ((string board, int side) in new[] { ("standard", 120), ("huge", 240) })
+                {
+                    GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                        out OdysseyBootstrap boot, side, side, 16);
+                    UnityEngine.Camera? cam = null;
+                    RenderTexture? previousTarget = null;
+                    RenderTexture? fourK = null;
+                    try
+                    {
+                        yield return TimeFrames($"skin/{board}/warm", boot, WarmupFrames, _ => { });
+                        ChunkRenderer renderer = boot.Renderer!;
+                        cam = boot.cameraRig!.Camera;
+                        previousTarget = cam.targetTexture;
+                        fourK = new RenderTexture(3840, 2160, 24) { name = "skin-4k" };
+
+                        int instancesOff = -1, instancesOn = -1;
+                        foreach (bool on in new[] { false, true })
+                        {
+                            GroundSkin.Enabled = on;
+
+                            // A whole-board re-mesh in one frame, budget off, to time the meshing itself.
+                            int budget = renderer.MeshBudgetPerFrame;
+                            renderer.MeshBudgetPerFrame = 0;
+                            boot.Model!.Remesh();
+                            yield return null;
+                            float meshFrame = Time.unscaledDeltaTime * 1000f;
+                            int meshed = renderer.ChunksMeshedThisFrame;
+                            renderer.MeshBudgetPerFrame = budget;
+
+                            foreach (bool big in new[] { false, true })
+                            {
+                                cam.targetTexture = big ? fourK : previousTarget;
+                                string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                                float ms = 0f;
+                                yield return TimeFrames($"skin/{board}/{resolution}/{(on ? "skin" : "boxes")}",
+                                    boot, WarmupFrames, m => ms = m);
+                                Assert.That(renderer.ChunksMeshDeferred, Is.Zero, $"{board} timed mid-re-mesh");
+                                if (big) Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
+                                if (on) Assert.That(renderer.SkinTrianglesDrawn, Is.GreaterThan(0), "the skin drew nothing");
+                                else Assert.That(renderer.SkinTrianglesDrawn, Is.Zero, "the skin drew with the switch off");
+                                if (!big) { if (on) instancesOn = renderer.InstancesDrawn; else instancesOff = renderer.InstancesDrawn; }
+                                lines.Add($"{board} {resolution} {(on ? "skin" : "boxes")}: frame {ms:0.00} ms, " +
+                                          $"{renderer.DrawCalls} calls, {renderer.InstancesDrawn} instances, " +
+                                          $"{renderer.SkinTrianglesDrawn} skin triangles, {renderer.ChunksDrawn} chunks");
+                            }
+                            lines.Add($"{board} {(on ? "skin" : "boxes")} whole-board re-mesh: {meshed} chunks in {meshFrame:0.0} ms " +
+                                      $"({(meshed > 0 ? meshFrame / meshed : 0f):0.000} ms a chunk)");
+                        }
+                        Assert.That(instancesOn, Is.LessThan(instancesOff),
+                            $"{board}: the skin should take the flat tops and banks out of the instanced buckets");
+                    }
+                    finally
+                    {
+                        if (cam != null) cam.targetTexture = previousTarget;
+                        if (fourK != null) fourK.Release();
+                        GroundSkin.Enabled = skinWas;
+                        UnityEngine.Object.Destroy(root);
+                    }
+                    yield return null;
+                }
+                Debug.Log($"[FrameTime] skin ({SystemInfo.graphicsDeviceName}): " + string.Join("; ", lines));
+            }
+            finally
+            {
+                GroundSkin.Enabled = skinWas;
+            }
+        }
+
+        /// <summary>
         /// Designate the board row-major until a thousand orders stand, the same walk and the
         /// same draining <see cref="SeedField"/> uses and for the same reasons: the meadow
         /// refuses what stands on it, and the intent bus has a capacity.

@@ -377,11 +377,21 @@ namespace Odyssey.Presentation.Rendering
 
         public int InstanceCount;
 
+        /// <summary>
+        /// The ground skin in this chunk (<see cref="GroundSkin"/>): ramps, flat tops and the skirts
+        /// between them, as one mesh. Drawn with <see cref="Body"/>; owned here and destroyed with
+        /// the batch.
+        /// </summary>
+        public readonly GroundSkinMesh Skin = new GroundSkinMesh();
+
         public void Clear()
         {
             for (int i = 0; i < Body.Count; i++) Body[i].Clear();
             for (int i = 0; i < Roof.Count; i++) Roof[i].Clear();
+            Skin.Clear();
             InstanceCount = 0;
         }
+
+        public void Dispose() => Skin.Dispose();
     }
 }

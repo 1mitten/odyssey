@@ -188,8 +188,118 @@ namespace Odyssey.Presentation.Rendering
         {
             if (model == null || !LiftFigures) return 0f;
             if (!model.Size.Contains(cell.X, cell.Z, cell.Y)) return 0f;
+
+            // The ground skin's ramp (design 38 §6, §20): the surface the mesher draws, read back by
+            // the same corners and the same triangulation, so a figure stands on the drawn slope.
+            if (GroundSkin.Enabled)
+            {
+                if (!RampCorners(model, cell.X, cell.Z, cell.Y, out Ramp ramp)) return 0f;
+                Vector3 corner = CellMetrics.FloorCentre(cell) - new Vector3(CellMetrics.HalfXZ, 0f, CellMetrics.HalfXZ);
+                float u = Mathf.Clamp01((worldX - corner.x) / CellMetrics.SizeXZ);
+                float v = Mathf.Clamp01((worldZ - corner.z) / CellMetrics.SizeXZ);
+                return ramp.HeightAt(u, v) * CellMetrics.SizeY;
+            }
+
             Bank bank = At(model, cell);
             return bank.Exists ? RiseAt(bank, cell, worldX, worldZ) : 0f;
+        }
+
+        // ------------------------------------------------------------------ the skin's ramp
+
+        /// <summary>
+        /// A ramp over one cell as four corner rises, in cell heights (0 = the cell's floor, 1 = the
+        /// rim of the step above), and the diagonal its two triangles share.
+        ///
+        /// <para>Corners are numbered from the cell's low-x low-z corner anticlockwise seen from
+        /// above: 0 (−x,−z), 1 (+x,−z), 2 (+x,+z), 3 (−x,+z). <see cref="SplitZeroTwo"/> says the
+        /// quad is cut along 0–2, otherwise along 1–3.</para>
+        /// </summary>
+        public readonly struct Ramp
+        {
+            public Ramp(float r0, float r1, float r2, float r3, bool splitZeroTwo)
+            {
+                R0 = r0; R1 = r1; R2 = r2; R3 = r3; SplitZeroTwo = splitZeroTwo;
+            }
+
+            public readonly float R0, R1, R2, R3;
+            public readonly bool SplitZeroTwo;
+
+            public float Corner(int i) => i switch { 0 => R0, 1 => R1, 2 => R2, _ => R3 };
+
+            /// <summary>
+            /// The rise at (u, v) in the cell, both 0..1 from corner 0 — exactly the two triangles
+            /// the mesher draws, so a reader and the picture cannot disagree.
+            /// </summary>
+            public float HeightAt(float u, float v)
+            {
+                if (SplitZeroTwo)
+                    return u >= v
+                        ? R0 + (R1 - R0) * u + (R2 - R1) * v
+                        : R0 + (R2 - R3) * u + (R3 - R0) * v;
+                return u + v <= 1f
+                    ? R0 + (R1 - R0) * u + (R3 - R0) * v
+                    : (R1 + R3 - R2) + (R2 - R3) * u + (R2 - R1) * v;
+            }
+        }
+
+        // Corner i sits at (CornerX[i], CornerZ[i]) in half-cell units from the centre.
+        static readonly int[] CornerX = { -1, 1, 1, -1 };
+        static readonly int[] CornerZ = { -1, -1, 1, 1 };
+
+        /// <summary>
+        /// The skin's ramp in this cell, or false where the ground here is drawn flat.
+        ///
+        /// <para><b>The corner rule.</b> A corner rises to the rim where any of the three other
+        /// cells that meet at it is a step (<see cref="IsStep"/>). That is the three bank shapes
+        /// generalised — a straight run lifts the two corners on its step's side, an inner corner
+        /// three, an outer corner one — and because two neighbouring cells ask the same cells about
+        /// the corner they share, the surface is continuous without either knowing the other.</para>
+        ///
+        /// <para><b>The same cells, not new ones.</b> A cell gets a ramp only where
+        /// <see cref="At"/> finds a bank, which is where <c>TerraceFoot.IsFoot</c> says a step rises
+        /// out of it — the simulation's copy of the rule is unchanged, and so is every golden.</para>
+        ///
+        /// <para><b>All four corners high is drawn flat instead.</b> That is a trench between two
+        /// terraces, a pit, or a cell ringed by diagonal steps, and the ramp would cap it flush with
+        /// the ground above — hiding a hole the simulation still has. It keeps its floor and its
+        /// sheer walls, as it always did; <see cref="GroundSkin"/> closes the edge with a skirt.</para>
+        /// </summary>
+        public static bool RampCorners(WorldRenderModel model, int x, int z, int y, out Ramp ramp)
+        {
+            ramp = default;
+            if (!At(model, x, z, y).Exists) return false;
+
+            float r0 = CornerHigh(model, x, z, y, 0) ? 1f : 0f;
+            float r1 = CornerHigh(model, x, z, y, 1) ? 1f : 0f;
+            float r2 = CornerHigh(model, x, z, y, 2) ? 1f : 0f;
+            float r3 = CornerHigh(model, x, z, y, 3) ? 1f : 0f;
+
+            int high = (int)(r0 + r1 + r2 + r3);
+            if (high == 0 || high == 4) return false;
+
+            // The diagonal: through the odd corner when one or three are high, which is what makes
+            // an inner corner max(u,v) and an outer corner min(u,v) as the old banks were; along the
+            // ridge when two opposite corners are high; otherwise any, and 0–2 by convention.
+            bool split02;
+            if (high == 1 || high == 3)
+            {
+                bool odd0 = (r0 != r1) && (r0 != r3);
+                bool odd2 = (r2 != r1) && (r2 != r3);
+                split02 = odd0 || odd2;
+            }
+            else
+            {
+                split02 = !(r1 > 0f && r3 > 0f && r0 == 0f && r2 == 0f);
+            }
+
+            ramp = new Ramp(r0, r1, r2, r3, split02);
+            return true;
+        }
+
+        static bool CornerHigh(WorldRenderModel model, int x, int z, int y, int corner)
+        {
+            int cx = CornerX[corner], cz = CornerZ[corner];
+            return IsStep(model, x, z, y, cx, 0) || IsStep(model, x, z, y, 0, cz) || IsStep(model, x, z, y, cx, cz);
         }
 
         /// <summary>The same for a bank already found, which is what a caller with one in hand wants.</summary>

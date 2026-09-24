@@ -696,6 +696,7 @@ namespace Odyssey.Presentation.Rendering
             ChunksOutsideFrustum = 0;
             IndirectDrawCalls = 0;
             InstancesAtCoarserLevels = 0;
+            SkinTrianglesDrawn = 0;
             CellPlatesDrawn = 0;
             ChunksMeshDeferred = 0;
             _meshedThisFrame = 0;
@@ -806,6 +807,7 @@ namespace Odyssey.Presentation.Rendering
                         ? Mathf.Sqrt(batch.Bounds.SqrDistance(ViewerPosition.Value))
                         : 0f;
                     DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight, distance);
+                    DrawSkin(batch, shade, ghost, alpha);
                     if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight, distance);
                 }
             }
@@ -1347,6 +1349,46 @@ namespace Odyssey.Presentation.Rendering
             return _solidProps;
         }
 
+        /// <summary>
+        /// A point on the ground of this cell as it is drawn: the relief, and the ground skin's ramp
+        /// where the cell is the foot of a step (design 38 §20). Items and heaps stand here, so a
+        /// stack put down at the foot of a terrace lies on the slope instead of inside it.
+        /// </summary>
+        Vector3 OnGround(Vector3 point, CellRef cell) =>
+            GroundRelief.Lift(point) + Vector3.up * BankLayout.RiseAt(_model, cell, point.x, point.z);
+
+        /// <summary>Skin triangles submitted last frame, for the measurement arms (design 38 §20).</summary>
+        public int SkinTrianglesDrawn { get; private set; }
+
+        /// <summary>
+        /// A chunk's ground skin, one call per (material, tint) group. Ground: receives shadows,
+        /// never casts them (the argument in <see cref="DrawBuckets"/>), and never fades for a sight
+        /// line, so none of the bucket path's per-instance machinery applies.
+        /// </summary>
+        void DrawSkin(ChunkBatch batch, float shade, bool ghost, float alpha)
+        {
+            GroundSkinMesh skin = batch.Skin;
+            Mesh? mesh = skin.Mesh;
+            if (mesh == null) return;
+
+            for (int g = 0; g < skin.GroupCount; g++)
+            {
+                int tintCode = skin.GroupTint(g);
+                ResolveColour(tintCode, skin.GroupFallback(g), shade, out Color tint, out Color emission);
+                Material material = _materials.Get(skin.GroupMaterial(g), tint, emission, ghost, alpha);
+                var rp = new RenderParams(material)
+                {
+                    worldBounds = batch.Bounds,
+                    layer = GameObjectLayer,
+                    receiveShadows = !ghost,
+                    shadowCastingMode = ShadowCastingMode.Off,
+                };
+                if (SubmitToGpu) Graphics.RenderMesh(rp, mesh, g, Matrix4x4.identity);
+                DrawCalls++;
+            }
+            SkinTrianglesDrawn += skin.TriangleCount;
+        }
+
         void Submit(in RenderParams rp, ModulePart part, Matrix4x4[] matrices, int count)
         {
             int drawn = 0;
@@ -1763,7 +1805,7 @@ namespace Odyssey.Presentation.Rendering
                     for (int rock = 0; rock < rocks; rock++)
                     {
                         Matrix4x4 placement = _heapPlacements[rock];
-                        Vector3 at = GroundRelief.Lift(placement.GetColumn(3)) + falling;
+                        Vector3 at = OnGround(placement.GetColumn(3), cell) + falling;
                         placement.SetColumn(3, new Vector4(at.x, at.y, at.z, 1f));
                         AppendItem(def, placement);
                     }
@@ -1772,7 +1814,7 @@ namespace Odyssey.Presentation.Rendering
                 }
 
                 AppendItem(def, Matrix4x4.TRS(
-                    GroundRelief.Lift(floor) + falling,
+                    OnGround(floor, cell) + falling,
                     Quaternion.Euler(0f, YawOf(things[i].Id), 0f),
                     Vector3.one));
             }
@@ -3277,6 +3319,7 @@ namespace Odyssey.Presentation.Rendering
 
         public void Dispose()
         {
+            for (int i = 0; i < _batches.Length; i++) _batches[i]?.Dispose();
             Skirt.Dispose();
             _materials.Dispose();
             Clearance.Dispose();

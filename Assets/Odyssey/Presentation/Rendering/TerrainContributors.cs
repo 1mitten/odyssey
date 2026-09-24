@@ -87,6 +87,13 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>Ground, slabs and water — everything a storey above the slice drops.</summary>
         public void Roof(int module, int tint, in Matrix4x4 at) => _mesher.SinkRoof(_batch, module, tint, at);
+
+        /// <summary>Whether this earth cell's top belongs in the ground skin (see <see cref="GroundSkin"/>).</summary>
+        public bool SkinsTop(in TerrainCell cell) => _mesher.SinkSkinsTop(cell);
+
+        /// <summary>The flat top of an earth cell, drawn as skin in this module's material and tint.</summary>
+        public void SkinTop(int module, int tint, int x, int z, int y) =>
+            _mesher.SinkSkin(_batch, module, tint, x, z, y);
     }
 
     /// <summary>
@@ -346,8 +353,15 @@ namespace Odyssey.Presentation.Rendering
             int earth;
             if (exposed == 0)
             {
-                yaw = GroundLook.Yaw(cell.X, cell.Z, cell.Y);
                 earth = cell.Model.EarthModule(cell.Terrain, variant, showsAFace: false);
+                // Nothing but its top can be seen, and nothing built stands on it: the top goes
+                // into the chunk's ground skin rather than a box (design 38 §20).
+                if (sink.SkinsTop(cell))
+                {
+                    sink.SkinTop(earth, cell.Tint, cell.X, cell.Z, cell.Y);
+                    return true;
+                }
+                yaw = GroundLook.Yaw(cell.X, cell.Z, cell.Y);
             }
             else
             {
