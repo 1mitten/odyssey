@@ -32,6 +32,26 @@ the next session learns to ignore.
   if a log disappears into the grass, the clearance is not reaching the drawn view. Density is
   unchanged (full cover is M4), and trees are still the old ones (M5).
 
+- **Grass → Full: the first grass you can see change** (`claude/meadow-m6-presets`, design 38 §13,
+  §15). New game on the default meadow, the camera at its starting zoom over the clearing. Settings
+  → Graphics → **Grass**: press **Meadow** (today's grass), then **Full**, then **Off**, a few
+  seconds apart, with the overlay (backtick) showing `gpu`. **Full** should read as a meadow mostly
+  covered, soil showing only in patches, about 1 ms dearer on the GPU than Meadow at 4K; **Off**
+  should be bare ground. The grass redraws a few chunks at a time, so it spreads across the screen
+  over a second rather than switching at once. **A wrong answer looks like:** Full no thicker than
+  Meadow (the ladder is not reaching the renderer); the frame stuttering while it redraws; or Full
+  costing well over 2 ms of `gpu`. **Known, not a fault here:** at Full the grass will stand over
+  dropped items and order marks — nothing clears grass round them until M3's clearance field — so
+  judge the look on open meadow.
+
+- **Do the quality presets feel right?** (`claude/meadow-m6-presets`, design 38 §15,
+  `27-graphics-settings.md` §10). Settings -> Graphics: a Quality row across the top. At 3840 x 2160
+  pick each of Low, Medium, High, Ultra and watch the overlay's `gpu` and the frame. **Ultra** should
+  hold 60 fps with grass on every cell; if it does not, or it looks no richer than High, say so.
+  **Low** should look acceptable at 1080p on a laptop — if the 70% render scale is too soft or the
+  missing surround reads as the world ending, that is the row to change. Moving any lever by hand
+  should light **Custom**; restarting the game should come back on the preset you left.
+
 - **Does the hearth read as a hearth?** (`claude/campfire-art`, PR #170, `docs/design/31-campfire-art-and-fire.md`
   §17–§18d.) Build a campfire, give the colony nothing to do, and watch for a game hour. Idlers
   should drift to it two times in three and **stay** once there, about half of them turned to face

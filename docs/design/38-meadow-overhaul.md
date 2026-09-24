@@ -240,7 +240,7 @@ measurements here.
 | **M3** | **Built 2026-09-24** (§16): `Odyssey/Foliage` draws the Meadow grass — tick wind, clearance round items and marks, a spring grade. | Awaiting the owner's first look. |
 | **M4** | Lush grass and flowers on today's ground (§5). | **First Play.** 2.0 ms at 4K. |
 | **M5** | Meadow trees and bushes as sim species; the topple; goldens measured; wiki. Confirm fruit-bearing. | **Second Play.** |
-| **M6** | Settings and presets (§9). | Each preset measured. |
+| **M6** | **Built 2026-09-24** (§15): quality presets, the grass ladders, grass shadows; preferences now reach a new session. | Unity tiers owed (disk); owner's look at 4K and on a laptop. |
 | **M7** | The board-depth measurement (§7). | **Owner picks.** |
 | **M8** | Hills worldgen and the per-column slice. | Goldens measured. |
 | **M9** | The ground skin and its shader (§6). | **Third Play.** |
@@ -352,6 +352,22 @@ predicts for grass; the saving levels exist for is the Meadow trees in M5.
 Guards: `InstancedLodTests` (EditMode) — a prefab resolves into every level placed as the finest,
 a level off the origin falls back to the finest alone, a prefab without a group has one level, the
 pick follows the screen height by the pack's rule and never culls, and levels are off by default.
+
+## 15. M6: presets and the grass ladders, built (2026-09-24)
+
+`27-graphics-settings.md` §10 has the tab and the table. The decisions:
+
+- **Built from the levers `main` has today.** LOD bias arrives with M4/M5, wind with M3 and terrain
+  detail with M9; each joins `SettingsDirector.PresetLadders` (or `PresetOptions`) and the preset
+  table when it lands, rather than as a dead row now.
+- **The grass-tufts toggle is gone**, replaced by the Grass ladder's Off rung — one owner for how
+  grassy the board is.
+- **The preset table is derived, not tuned.** High is what ships. Ultra adds the one step up that is
+  measured — full cover, 0.8–1.9 ms at 4K (§13). Medium and Low only take things away, so they cannot
+  break a bar the tier above holds. Anti-aliasing and grass shadows stay off on every preset because
+  nothing has measured them.
+- **Owed:** a measured frame per preset at 3840 × 2160 on the owner's machine and at 1080p on an
+  RTX 3050/3060 laptop — the Low bar cannot be checked on this machine at all.
 
 ## 16. M3: `Odyssey/Foliage`, built (2026-09-24)
 
