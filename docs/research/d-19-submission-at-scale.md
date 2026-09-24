@@ -1,5 +1,12 @@
 # d-19 — Where the look pass's frame goes, and how to make submission cheap at scale
 
+> **Built and measured, 2026-09-24 (design 38 §18).** Recommendation 1 (the sun-ward margin): 104 →
+> 42 chunks, submit 2.92 → 1.42 ms at 4K, proof 0.00% at noon and at dusk. Recommendation 2's
+> tie-breaker: picture-exact but unmeasurable, because the census's "722 tuft buckets" counted every
+> foliage-tinted bucket — the tufts proper are 67 of 1,175 calls after the sweep; the dressing's
+> grass and flowers are where the calls are. Recommendation 4 (BatchRendererGroup) is recorded as
+> the long-term route, not built (owner).
+
 **Lane:** D (Unity), Meadow overhaul, the look pass (`docs/design/38-meadow-overhaul.md` §17).
 **Date:** 2026-09-24. **Branch:** `claude/meadow-perf-research` (measurement arm only; nothing in the
 renderer changed).

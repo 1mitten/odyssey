@@ -11800,3 +11800,19 @@ its lens-dirt bloom costs eight milliseconds at 4K. And the harness had been pho
 nobody plays — the Play scene carries the golden-hour Volume and the test rig did not — which is the
 board-nobody-plays fault met a third time, in the one tool built to show what the player sees.
 Design 38 §17a.
+
+## 2026-09-24 — Performance of the look: the shadow margin, and a tie-breaker that could not break
+
+d-19 found shadows the largest term in the look's 4K frame, half of it the cull keeping every chunk
+within the shadow distance in every direction. The margin now sweeps towards the sun along the key
+light's path, as long as the light can fall before it leaves the drawn layers: 104 chunks to 42 on
+Standard, submit 2.92 → 1.42 ms, frame 12.81 → 11.23, in one run. The new low-sun case of the picture
+proof caught the first version: 80 pixels at one edge at 19.5 h, the shadow of a Meadow crown that
+overhangs its chunk's box by metres — the old shell had covered it by accident. The box grows by the
+widest resolved module's reach now, and the proof reads 0.00% at noon and at dusk.
+
+The tie-breaker for indirect drawing — the tufts alone — came out picture-exact and unmeasurable.
+After the sweep the tufts are 67 of the 1,175 calls on screen; d-19's 722 "tufts" were every
+foliage-tinted bucket, mostly the dressing's grass stands and flowers. So the path ships off and
+the question moves to the kinds that hold the calls, which join it after the leaf-fade branch lands.
+Design 38 §18.

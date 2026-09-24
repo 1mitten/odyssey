@@ -92,6 +92,33 @@ Shader "Odyssey/Foliage"
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
+        // The indirect path (design 38 §18). Under ODYSSEY_INDIRECT a clump's matrix comes from the
+        // buffer the compute cull read, at the index it kept for this instance, instead of from the
+        // instancing arrays; nothing else about the clump changes. Everything below asks for a
+        // position or a normal in world space through these two, never through the URP transforms
+        // directly, so the two paths cannot drift apart.
+        #if defined(ODYSSEY_INDIRECT)
+            StructuredBuffer<float4x4> _OdysseyInstances;
+            StructuredBuffer<uint> _OdysseyVisible;
+            static float4x4 _OdysseyObjectToWorld;
+            void FoliageIndirectSetup(uint instanceID)
+            {
+                _OdysseyObjectToWorld = _OdysseyInstances[_OdysseyVisible[instanceID]];
+            }
+            float3 FoliageToWorld(float3 positionOS)
+            {
+                return mul(_OdysseyObjectToWorld, float4(positionOS, 1.0)).xyz;
+            }
+            // Clumps are placed turned and uniformly scaled, so the matrix itself carries a normal.
+            float3 FoliageToWorldNormal(float3 normalOS)
+            {
+                return normalize(mul((float3x3)_OdysseyObjectToWorld, normalOS));
+            }
+        #else
+            float3 FoliageToWorld(float3 positionOS) { return TransformObjectToWorld(positionOS); }
+            float3 FoliageToWorldNormal(float3 normalOS) { return TransformObjectToWorldNormal(normalOS); }
+        #endif
+
         TEXTURE2D(_LeafMap);  SAMPLER(sampler_LeafMap);
         TEXTURE2D(_TrunkMap); SAMPLER(sampler_TrunkMap);
 
@@ -171,9 +198,9 @@ Shader "Odyssey/Foliage"
         // along its normal.
         float3 FoliageDisplace(float3 positionOS, float3 normalOS, float4 colour)
         {
-            float3 rootWS = TransformObjectToWorld(float3(0, 0, 0));
+            float3 rootWS = FoliageToWorld(float3(0, 0, 0));
             float scale = FoliageDistanceScale(rootWS);
-            float3 positionWS = TransformObjectToWorld(positionOS * scale);
+            float3 positionWS = FoliageToWorld(positionOS * scale);
 
             // The clearing, asked where the blade is rather than where its clump is rooted: a
             // Meadow tall-grass mat is six metres across, and a log two metres off its root was
@@ -202,7 +229,7 @@ Shader "Odyssey/Foliage"
             positionWS = rootWS + RotateAbout(positionWS - rootWS, axis, angle);
 
             // Flutter: leaves only (blue), strongest at the free tip (green).
-            float3 normalWS = TransformObjectToWorldNormal(normalOS);
+            float3 normalWS = FoliageToWorldNormal(normalOS);
             float shiver = sin(_OdysseyWind.w * 2.3 + travel * 3.1 + dot(positionWS.xz, float2(1.7, 2.3)));
             positionWS += normalWS * (shiver * _Flutter * colour.b * colour.g * saturate(strength / 0.45));
             return positionWS;
@@ -306,6 +333,9 @@ Shader "Odyssey/Foliage"
             #pragma fragment Fragment
             // Without this the instanced path draws every clump at the origin, silently.
             #pragma multi_compile_instancing
+            // The indirect path: only the forward pass, because grass is drawn in queue 2501 and
+            // casts nothing, so the depth and shadow passes never see a tuft (design 38 §13, §18).
+            #pragma multi_compile_local _ ODYSSEY_INDIRECT
             #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
@@ -323,6 +353,10 @@ Shader "Odyssey/Foliage"
                 float4 colour     : COLOR;
                 float2 uv         : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
+            // UNITY_ANY_INSTANCING_ENABLED is always defined, as 0 or 1: tested by value.
+            #if defined(ODYSSEY_INDIRECT) && !UNITY_ANY_INSTANCING_ENABLED
+                uint indirectID   : SV_InstanceID;
+            #endif
             };
 
             struct Varyings
@@ -345,10 +379,17 @@ Shader "Odyssey/Foliage"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+            #if defined(ODYSSEY_INDIRECT)
+                #if UNITY_ANY_INSTANCING_ENABLED
+                FoliageIndirectSetup(input.instanceID);
+                #else
+                FoliageIndirectSetup(input.indirectID);
+                #endif
+            #endif
 
-                float3 rootWS = TransformObjectToWorld(float3(0, 0, 0));
+                float3 rootWS = FoliageToWorld(float3(0, 0, 0));
                 float3 positionWS = FoliageDisplace(input.positionOS.xyz, input.normalOS, input.colour);
-                float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                float3 normalWS = FoliageToWorldNormal(input.normalOS);
 
                 output.positionWS = positionWS;
                 output.positionCS = TransformWorldToHClip(positionWS);

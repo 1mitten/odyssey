@@ -258,6 +258,14 @@ namespace Odyssey.Presentation.Rendering
         public int ScatterDensity { get; set; } = 60;
 
         int[] _scatterModules = System.Array.Empty<int>();
+
+        /// <summary>Whether a module is one of the grass tufts the scatter strews — the kind the
+        /// indirect path draws (design 38 §18). Resolves the tufts on first ask.</summary>
+        public bool IsScatterModule(int module)
+        {
+            EnsureScatterModules();
+            return System.Array.IndexOf(_scatterModules, module) >= 0;
+        }
         bool _scatterResolved;
 
         /// <summary>

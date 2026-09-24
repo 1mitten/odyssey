@@ -2199,18 +2199,22 @@ namespace Odyssey.Tests.PlayMode
                 previousTarget = cam.targetTexture;
                 fourK = new RenderTexture(3840, 2160, 24) { name = "submission-4k" };
 
-                var arms = new (string Name, int Density, bool Submit, bool Shadows, float ShadowMetres)[]
+                // Every arm but the last two draws the tufts the chunk way, so the rows stay
+                // comparable with d-19's; the last two are design 38 §18's tie-breaker.
+                var arms = new (string Name, int Density, bool Submit, bool Shadows, float ShadowMetres, bool Indirect)[]
                 {
-                    ("look", shipped, true, true, 0f),
-                    ("look, nothing handed to Unity", shipped, false, true, 0f),
-                    ("no dressing or tufts", 0, true, true, 0f),
-                    ("no dressing or tufts, nothing handed to Unity", 0, false, true, 0f),
-                    ("look, no shadow casters", shipped, true, false, 0f),
-                    ("look, shadow margin as a shell", shipped, true, true, -1f),
+                    ("look", shipped, true, true, 0f, false),
+                    ("look, nothing handed to Unity", shipped, false, true, 0f, false),
+                    ("no dressing or tufts", 0, true, true, 0f, false),
+                    ("no dressing or tufts, nothing handed to Unity", 0, false, true, 0f, false),
+                    ("look, no shadow casters", shipped, true, false, 0f, false),
+                    ("look, shadow margin as a shell", shipped, true, true, -1f, false),
                     // The High preset's shadow distance, on a runtime copy of the pipeline asset so
                     // the committed one is never dirtied (DisplaySettingsApplier's rule).
-                    ("look, 120 m shadows", shipped, true, true, 120f),
-                    ("no dressing or tufts, 120 m shadows", 0, true, true, 120f),
+                    ("look, 120 m shadows", shipped, true, true, 120f, false),
+                    ("no dressing or tufts, 120 m shadows", 0, true, true, 120f, false),
+                    ("look, tufts indirect", shipped, true, true, 0f, true),
+                    ("look again, tufts chunk by chunk", shipped, true, true, 0f, false),
                 };
                 var pipeline = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
                 RenderPipelineAsset? qualityWas = QualitySettings.renderPipeline;
@@ -2233,6 +2237,7 @@ namespace Odyssey.Tests.PlayMode
                         }
                         renderer.SubmitToGpu = arm.Submit;
                         renderer.CastShadows = arm.Shadows;
+                        renderer.IndirectTufts = arm.Indirect;
                         // -1 marks the arm that measures the old margin: a shell in every direction.
                         renderer.SweepShadowMargin = arm.ShadowMetres >= 0f;
                         if (copy != null)
@@ -2252,7 +2257,8 @@ namespace Odyssey.Tests.PlayMode
                                   $"World {Section(split, OdysseyBootstrap.FrameSection.World):0.000}, " +
                                   $"Surround {Section(split, OdysseyBootstrap.FrameSection.Surround):0.000}, " +
                                   $"Figures {Section(split, OdysseyBootstrap.FrameSection.Figures):0.000}, " +
-                                  $"{renderer.DrawCalls} calls, {renderer.InstancesDrawn} instances, {renderer.ChunksDrawn} chunks");
+                                  $"{renderer.DrawCalls} calls ({renderer.IndirectDrawCalls} indirect), " +
+                                  $"{renderer.InstancesDrawn} instances, {renderer.ChunksDrawn} chunks");
                     }
                 }
                 }
@@ -2273,10 +2279,104 @@ namespace Odyssey.Tests.PlayMode
                     boot.Renderer.SubmitToGpu = true;
                     boot.Renderer.CastShadows = true;
                     boot.Renderer.SweepShadowMargin = true;
+                    boot.Renderer.IndirectTufts = false;
                 }
                 if (cam != null) cam.targetTexture = previousTarget;
                 if (fourK != null) fourK.Release();
                 UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// The tufts drawn from GPU buffers look exactly as the tufts drawn chunk by chunk
+        /// (design 38 §18). Stilled, settled, three shots: the chunk path twice (the floor), then the
+        /// indirect path; and the grass taken away altogether as the positive control, so a pass that
+        /// drew no grass at all could not read as "no change".
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheIndirectTuftsDoNotChangeThePicture()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            var target = new RenderTexture(320, 240, 24) { name = "indirect-proof" };
+            float previousScale = Time.timeScale;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            bool indirectWas = false;
+            try
+            {
+                yield return null;
+                indirectWas = boot.Renderer!.IndirectTufts;
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+                Time.timeScale = 0f;
+                ChunkRenderer renderer = boot.Renderer!;
+                // Settled means the board has finished meshing in, not a fixed count of frames:
+                // inside the full tier two shots of one configuration differed by 3.8% at 120
+                // frames, against 0.00% alone, because chunks were still arriving under the budget.
+                for (int i = 0, quiet = 0; i < 1200 && (i < 120 || quiet < 30); i++)
+                {
+                    yield return null;
+                    quiet = renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
+                }
+
+                renderer.IndirectTufts = true;
+                yield return null;
+                if (renderer.IndirectDrawCalls == 0)
+                    Assert.Ignore("the indirect path did not draw on this machine (no compute, no grass art, " +
+                                  "or no foliage shader), so there is nothing to compare");
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                cam.targetTexture = target;
+
+                renderer.IndirectTufts = false;
+                Color32[] chunk = null!, again = null!, indirect = null!, bare = null!;
+                yield return Shoot("indirect-off", boot, target, p => chunk = p);
+                int chunkCalls = renderer.DrawCalls;
+                yield return Shoot("indirect-off-again", boot, target, p => again = p);
+                renderer.IndirectTufts = true;
+                yield return Shoot("indirect-on", boot, target, p => indirect = p);
+                int indirectCalls = renderer.DrawCalls;
+                int indirectOnly = renderer.IndirectDrawCalls;
+
+                int shipped = renderer.ScatterDensity;
+                renderer.ScatterDensity = 0;
+                boot.Model!.Remesh();
+                for (int i = 0; i < 60; i++) yield return null;
+                yield return Shoot("indirect-bare", boot, target, p => bare = p);
+                renderer.ScatterDensity = shipped;
+                boot.Model!.Remesh();
+
+                float noise = Difference(chunk, again);
+                float moved = Difference(chunk, indirect);
+                float grass = Difference(chunk, bare);
+                Debug.Log($"[FrameTime] indirect proof: the same shot twice moved {noise * 100f:0.00}%, " +
+                          $"the indirect tufts moved {moved * 100f:0.00}%, taking the grass away moved " +
+                          $"{grass * 100f:0.00}%; {chunkCalls} calls chunk by chunk, {indirectCalls} with " +
+                          $"{indirectOnly} indirect");
+
+                Assert.That(noise, Is.LessThan(0.02f), "the repeated shot has no floor to measure against");
+                Assert.That(grass, Is.GreaterThan(0.01f),
+                    "taking the grass away changed nothing, so the grass is not in these shots and the " +
+                    "comparison proves nothing");
+                Assert.That(indirectCalls, Is.LessThan(chunkCalls),
+                    "the indirect path did not reduce the calls, so the chunk walk is still drawing the tufts");
+                Assert.That(moved, Is.LessThanOrEqualTo(noise + 0.002f),
+                    $"the indirect tufts moved {moved * 100f:0.00}% of pixels against a floor of " +
+                    $"{noise * 100f:0.00}%: they are not drawing what the chunk path drew");
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (boot.Renderer != null) boot.Renderer.IndirectTufts = indirectWas;
+                UnityEngine.Object.Destroy(root);
+                target.Release();
+                UnityEngine.Object.Destroy(target);
             }
         }
 

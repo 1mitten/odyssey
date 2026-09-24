@@ -349,6 +349,33 @@ namespace Odyssey.Presentation.Rendering
         /// both; see <see cref="ShadowLightDirection"/>.</summary>
         public bool SweepShadowMargin { get; set; } = true;
 
+        /// <summary>
+        /// Whether the grass tufts are drawn from GPU buffers with a compute cull
+        /// (<see cref="IndirectFoliage"/>, design 38 §18) rather than one instanced call per chunk.
+        /// Where the machine can do it; the chunk path draws them otherwise, and always on a ghosted
+        /// layer.
+        ///
+        /// <para><b>Off by default, and the reason is a measurement.</b> The path is picture-exact
+        /// (<c>FrameTimeTests.TheIndirectTuftsDoNotChangeThePicture</c>: 0.00% against a 0.00% floor)
+        /// but, once the shadow margin sweeps towards the sun, the tufts are 67 of the 1,175 calls on
+        /// screen, and replacing 52 of them saves nothing a stopwatch can see. The calls are in the
+        /// dressing's grass and flowers, which share this shader and this path's properties; it is
+        /// switched on when they join it (§18).</para>
+        /// </summary>
+        public bool IndirectTufts { get; set; }
+
+        /// <summary>Draw calls the indirect path issued last frame (already in <see cref="DrawCalls"/>).</summary>
+        public int IndirectDrawCalls { get; private set; }
+
+        IndirectFoliage? _indirect;
+        bool? _indirectAvailable;
+        bool _indirectActive;
+        readonly System.Collections.Generic.List<(int Layer, float Shade)> _solidLayers =
+            new System.Collections.Generic.List<(int Layer, float Shade)>();
+
+        bool IsTuft(InstanceBucket bucket) =>
+            TintCode.IsFoliage(bucket.Tint) && !TintCode.IsDressing(bucket.Tint) && _mesher.IsScatterModule(bucket.Module);
+
         /// <summary>The bottom of the lowest drawn layer this frame: where a shadow ray stops
         /// mattering, because nothing below it is drawn. Set by <see cref="Render"/>.</summary>
         float _lowestReceiverY = float.NegativeInfinity;
@@ -606,6 +633,7 @@ namespace Odyssey.Presentation.Rendering
             InstancesFaded = 0;
             ChunksSightTested = 0;
             ChunksOutsideFrustum = 0;
+            IndirectDrawCalls = 0;
             InstancesAtCoarserLevels = 0;
             CellPlatesDrawn = 0;
             ChunksMeshDeferred = 0;
@@ -640,6 +668,16 @@ namespace Odyssey.Presentation.Rendering
             // The floor of what is drawn, padded as a chunk's own box is, for the shadow sweep.
             _lowestReceiverY = _mesher.BoundsOf(lowest * chunksPerLayer).min.y;
 
+            // The tufts go the indirect way this frame if asked, possible, and there is a frustum
+            // for the compute cull to test against; the chunk walk then leaves them out.
+            if (IndirectTufts && _indirectAvailable == null)
+            {
+                _indirect ??= new IndirectFoliage();
+                _indirectAvailable = _indirect.Available;
+            }
+            _indirectActive = IndirectTufts && _indirectAvailable == true && ActiveFrustum != null;
+            _solidLayers.Clear();
+
             for (int layer = lowest; layer <= highest; layer++)
             {
                 int steps = layer - activeLayer;
@@ -656,6 +694,7 @@ namespace Odyssey.Presentation.Rendering
                 // texture render as dark olive.
                 float shade = above ? 1f : slice.ShadeBelow(-steps - 1);
                 if (ghost) shade *= 1.15f; // translucent geometry reads darker than it is
+                if (!ghost) _solidLayers.Add((layer, shade));
 
                 // The active layer's ceiling is the slab of the layer above it. Dropping it is
                 // what makes interiors visible, and it is also exactly what roofs-off mode wants
@@ -709,6 +748,8 @@ namespace Odyssey.Presentation.Rendering
                     if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight, distance);
                 }
             }
+
+            if (_indirectActive) DrawIndirectTufts();
         }
 
         /// <summary>
@@ -742,6 +783,40 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
+        /// <summary>
+        /// The tufts of every solid layer this frame, through <see cref="IndirectFoliage"/>: the
+        /// buffers regathered if a chunk was re-meshed, then culled and drawn per layer with the
+        /// material the chunk path would have chosen for that layer's shade.
+        /// </summary>
+        void DrawIndirectTufts()
+        {
+            IndirectFoliage indirect = _indirect!;
+            if (indirect.Dirty) indirect.Rebuild(_batches, _model.Library, IsTuft);
+            if (indirect.InstanceCount == 0) return;
+
+            var size = _model.Size;
+            var board = new Bounds();
+            board.SetMinMax(new Vector3(-50f, -50f, -50f),
+                new Vector3(size.SizeX * CellMetrics.SizeXZ + 50f, size.SizeY * CellMetrics.SizeY + 50f,
+                    size.SizeZ * CellMetrics.SizeXZ + 50f));
+
+            foreach ((int layer, float shade) in _solidLayers)
+            {
+                if (!indirect.HasLayer(layer)) continue;
+                float layerShade = shade;
+                int calls = indirect.DrawLayer(layer, ActiveFrustum!, ViewerPosition, FoliageDrawDistance,
+                    (part, tintCode) =>
+                    {
+                        ResolveColour(tintCode, part.IsFallback, layerShade, out Color tint, out Color emission);
+                        return _materials.Get(part.Material, tint, emission, false, 1f, foliage: true, water: false);
+                    },
+                    GameObjectLayer, board, SubmitToGpu, out int instances);
+                IndirectDrawCalls += calls;
+                DrawCalls += calls;
+                InstancesDrawn += instances;
+            }
+        }
+
         ChunkBatch BatchFor(int chunkIndex)
         {
             ChunkBatch? batch = _batches[chunkIndex];
@@ -764,6 +839,7 @@ namespace Odyssey.Presentation.Rendering
                 }
 
                 _mesher.Mesh(batch, chunkIndex);
+                if (_indirect != null) _indirect.Dirty = true;
                 _meshedThisFrame++;
                 ChunksMeshedThisFrame++;
                 TotalChunksMeshed++;
@@ -778,6 +854,8 @@ namespace Odyssey.Presentation.Rendering
             {
                 InstanceBucket bucket = buckets[b];
                 if (bucket.Count == 0) continue;
+                // Drawn by the indirect path instead (design 38 §18); a ghosted layer keeps this one.
+                if (_indirectActive && !ghost && IsTuft(bucket)) continue;
 
                 ResolvedModule resolved = _model.Library[bucket.Module];
 
@@ -3109,6 +3187,7 @@ namespace Odyssey.Presentation.Rendering
             Skirt.Dispose();
             _materials.Dispose();
             Clearance.Dispose();
+            _indirect?.Dispose();
         }
     }
 }

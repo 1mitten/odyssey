@@ -570,3 +570,86 @@ machine; in-run differences only):
   are kept off anything built, zoned or floored, but not off an order mark or a stockpile's
   neighbourhood beyond one cell.
 - **Huge at High** needs the owner's GPU reading before the High preset is signed off.
+
+## 18. Performance of the look (2026-09-24)
+
+The owner, after the look pass: *"We need to make this as performant as possible … the compute is up
+to 5 ms."* Research and measurement are `docs/research/d-19-submission-at-scale.md`; the owner
+approved its recommendations 1–3 and recorded 4. Branch `claude/meadow-perf`, worktree
+`D:\code\odyssey-cull`. All numbers are Standard, the played meadow, RTX 5070 Ti, Direct3D 11, and
+only differences inside one run are quoted (§6c).
+
+### 18a. The shadow margin sweeps towards the sun (built)
+
+**What was wrong.** A chunk off screen is kept if its casters can shadow the view, and the cull
+asked that by growing every chunk's box by the whole shadow distance **in every direction**. At the
+pipeline's 250 m that kept every chunk of a Standard board — 104 submitted for 26 on screen — and
+d-19 measured shadows as the largest term in the 4K frame, about 4.3 ms.
+
+**What it is.** A caster can only darken what lies along the light's path from it. So a chunk's box
+is **swept along the key light's direction** (`ChunkRenderer.ShadowLightDirection`, written by the
+root from the key light the day moves) and kept only if the sweep reaches the frustum
+(`ChunkRenderer.SweptInside`: outside a plane only if both ends of the sweep are). The sweep is as
+long as the light can travel before it drops below the lowest drawn layer — the drop from the
+chunk's tallest possible top over the sine of the sun's elevation — and never longer than the shadow
+distance, the old bound, which a low sun therefore still reaches. With no key light the old shell
+is kept.
+
+**The finding the proof made.** The first version passed at noon and moved **80 pixels at 19.5 h**,
+all at one screen edge: a Meadow crown up to 17 m wide overhangs its chunk's box by far more than the
+box's 2 m padding, the old shell had covered the overhang by accident, and the sweep started from the
+box. The box now grows sideways by the widest resolved module's reach
+(`ChunkMesher.OverhangResolved`: turned, at its largest scale, jittered), for the picture as well as
+the shadow.
+
+| One run, 3840 × 2160 | shell | sweep |
+|---|---|---|
+| chunks submitted | 104 | **42** |
+| draw calls | 2,852 | **1,175** |
+| submit | 2.92 ms | **1.42 ms** |
+| frame | 12.81 ms | **11.23 ms** |
+
+At 640 × 480, where the frame is the CPU: 3.91 → 1.85 ms. The proof
+(`FrameTimeTests.CullingDoesNotChangeThePicture`) now shoots noon **and a low sun at 19.5 h** (about
+nine degrees, the longest shadows the day has, held by `OdysseyBootstrap.DaylightHourOverride`
+because the root re-applies the hour every frame, P18): 0.00% against a 0.00% floor at both, blind
+control 98.20%. `ShadowSweepTests` pins the geometry: up-sun kept, down-sun dropped, too short
+dropped, straight through kept. `SweepShadowMargin` off gives the shell, for measuring.
+
+### 18b. Indirect drawing: the tie-breaker (built, off by default)
+
+**What it is.** `IndirectFoliage`: the grass tufts of every meshed chunk gathered into one GPU buffer
+per (module, tint, layer), a compute pass (`Resources/OdysseyCompute/OdysseyIndirectCull.compute`)
+keeping each clump whose bounding sphere is inside the frustum and within the grass distance, and one
+`Graphics.RenderMeshIndirect` per part drawing what it kept. `Odyssey/Foliage` reads its matrix from
+the buffer under a local keyword, `ODYSSEY_INDIRECT`, through two wrappers every transform in the
+shader already goes through, so the two paths cannot drift. The material is the chunk path's own for
+that layer's shade, cloned once with the keyword. Buffers are regathered when a chunk re-meshes.
+
+**What it measured.** Picture-exact — `TheIndirectTuftsDoNotChangeThePicture`: 0.00% against a
+0.00% floor, and taking the grass away moved 23.6%, so the grass really is in the shots. **And no
+saving a stopwatch can see**, because after 18a the tufts are 67 of the 1,175 calls on screen:
+1,175 → 1,123 calls (15 of them indirect), submit 1.42 → 1.30 → 1.61 ms across on / off / on again
+at 640 × 480, i.e. inside the noise. d-19's "722 tuft buckets" had counted every foliage-tinted
+bucket, and most of those are the dressing's grass stands, flowers and cover, not tufts. Another
+session's batch run and the CI runner shared the machine; the 4K rows of that run are not quotable.
+
+**So it ships off** (`ChunkRenderer.IndirectTufts`), and the tie-breaker is answered as far as tufts
+can answer it: the mechanism works and costs nothing in the picture; whether it pays is a question
+for the calls that are actually there. **Next:** the dressing's foliage-tinted kinds (grass stands,
+wildflowers, ground cover, sunflowers) join the same path — same shader, never fade, never cast —
+once `claude/meadow-look-fixes` (the leaf fade and colour) has landed; then trees, which need the
+sight fade and per-instance colour carried in the buffer.
+
+### 18c. Levels of detail on the dressing (owed)
+
+Bushes and grass stands with levels on and a bias tuned by photographs at the play camera — d-19's
+~2.4 ms of dressing fill at 4K. Not started.
+
+### 18d. BatchRendererGroup (recorded, not built)
+
+The long-term route if the whole world should become GPU-resident (d-19 §2a): persistent instance
+data, SRP Batcher draws with no per-call C#, but every world shader needs a `DOTS_INSTANCING_ON`
+variant, Project Settings must keep BRG variants and URP must stop stripping unused ones — the
+setting whose flip once took one pass to 884,736 variants — and its DX11 player cost is unmeasured.
+The owner's call: record it, do not build it.
