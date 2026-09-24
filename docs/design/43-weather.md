@@ -1,4 +1,14 @@
-# 39 — Weather: sky state the seasons roll, rain that roofs stop
+# 43 — Weather: sky state the seasons roll, rain that roofs stop
+
+**Numbered 43 on review (2026-09-24).** Written as 39; `main` has since given 39 to the settings
+window, and 40–42 are held by branches in flight (the title screen and stair gait, the draw, walls
+down). Every place that cited it moved with it.
+
+**Reviewed 2026-09-24 against `origin/main` 3ca5098c** (`claude/weather-design-review`): the number,
+the system order (§5), the roof rule and the canopy (§6), the save format (§3), and §7, which is
+rewritten — the owner approved shared particle emitters, and the review proposes GPU-procedural
+rain and a wet ground instead, **with pictures of both** (`claude/rain-look`, `RainCheck`,
+`docs/research/d-20-rain-rendering.md`). Which one ships is the owner's call.
 
 **Status: designed 2026-09-24; design only, nothing built.** Branch `claude/weather-design`, worktree
 `D:\code\odyssey-weather`. Ground: `main` at `3a39dd8d`. The owner approved the shape — three kinds
@@ -55,11 +65,13 @@ query nobody restates (P1).
 - **Chance** in per-10,000, like the wildlife tables — a weight of 2,500 means "a quarter of
   rolls", not "a quarter of the time" (episodes have different lengths; the owner tunes lengths
   separately).
-- **RNG** only through `DeterministicRandom.ForTick(seed, tick, purpose)` with a purpose of its
-  own, so weather rolls can never collide with another system's draws. Same seed → same sky,
+- **RNG** only through `DeterministicRandom.ForTick(seed, tick, purpose)` (the tick is an `int`)
+  with a purpose of its own, so weather rolls can never collide with another system's draws. Same seed → same sky,
   on Mono and CoreCLR (01 §7).
 - **State**: active kind, previous kind, both intensities, the blend window, the episode-end tick.
-  `ISaveable` (`SaveKey "odyssey.weather"`; save format 9 → 10 when it lands) and
+  `ISaveable` (`SaveKey "odyssey.weather"`, a new keyed section, so **no format bump**: storage (8)
+  and temperature (9) settled that only a change to an existing record moves the number,
+  `SaveFormat.cs`) and
   `IStateHashable` — anything a pass reads is saved and hashed, the `AmbientTempC` lesson. Goldens
   re-baked with a reason line in `Golden.cs`.
 
@@ -111,23 +123,41 @@ is untouched, so the planner and the mover keep agreeing (design 17's hop-price 
 walks dry under a roof at full pace while the rain drums a cell away — the shelter rule answers
 both, which is the point of owning it once.
 
-**`WeatherSystem` order:** WorldSystems phase, **Order 45** — after Enclosure 30 and Growing 40,
-before Temperature 50, so the offset is current the same tick the thermal pass reads it. Cadence
-120 ticks, matching the thermal pass. `ctx.Weather` joins `PawnContext` beside `ctx.Temperature`,
+**`WeatherSystem` order:** WorldSystems phase, **Order 35** — after Enclosure 30, before Growing 40,
+`PowerGrid` 45 and Temperature 50, so every reader sees this pass's weather: the offset is current
+when the thermal pass reads it, and growth reads this pass's rain rather than the last one's.
+Cadence 120 ticks, matching the thermal pass. (The first draft said 45, which is `PowerGrid`'s,
+on the same cadence — `PowerGrid.cs`.) `ctx.Weather` joins `PawnContext` beside `ctx.Temperature`,
 null-tolerant in fixtures (the colony-world composition pattern).
 
 ## 6. Shelter has one owner: `ShelteredFromSky(cell)`
 
 Two facts compose, and the composition is the query — nobody else re-derives either:
 
-1. **A roof.** `CellGrid.IsRoofed(index)` — the slab stored on the cell above, or solid terrain
-   above. This answer already exists and is already tested; weather only asks it. This is design
-   03 §6's no-drop contract, owned at last.
-2. **A tree canopy.** Trees are placed edifices (`TreePass`); a trunk marks a 3×3 of ground cells
-   as canopied. A sparse cover map (dictionary: cell → canopy count) is incremented when a tree
-   lands and decremented when it goes — including when a colonist chops it, which is P14's
-   eviction half, tested (§10). No sweep, no per-cell state over the board; cost scales with
-   trees, like `GrowingZones.Planted`.
+1. **A roof — asked of the whole column, not of the cell above.** `CellGrid.IsRoofed` is *not*
+   this rule: it asks only whether the cell one layer up carries a slab (`CellGrid.cs`), ignores
+   solid terrain, and nothing tests it. `EnclosureGrid.HasRoof` adds terrain but is still one layer.
+   A two-storey hall, a roof on posts over a tall ramp and a cave mouth under an overhang are all
+   wrongly wet under both. Rain needs the column, which is what the render side already walks
+   (`WorldRenderModel.OpenToTheSky`). So the owner is a **per-column rain-stop height**, sim-side
+   (`SkyColumns`, `Sim/World`): the top of the highest slab, solid cell or water surface over each
+   column, and a canopy where one is higher (below). `ShelteredFromSky(cell)` is *this cell's floor
+   is below its column's stop*. **One pure function computes a column**; the simulation's map and
+   the render mirror's texture (§7) both call it, and a test holds the two to the same answer cell
+   by cell on the played board — the `TerraceFoot`/`BankLayout` pattern (P1). It also closes the
+   P15 gap 38 §6 names: `CanBank` walks whole columns while `MarkChunksAround` dirties 3 × 3 × 3.
+2. **A tree canopy — derived, never counted.** Trees are placed edifices (`TreePass`) standing in
+   the air cell above their ground. A trunk lifts the columns of its 3 × 3 to its canopy height,
+   about 4.5 m above that ground, whenever those columns are recomputed. No per-cell count exists,
+   so none can drift. That matters because **felling has two removal paths** — `JobDrivers.FellTree`
+   and `Falling.TreesOutOf` (a floor collapsing under a tree) — both call `CellGrid.RemoveEdifice`
+   directly and neither sets `PlacedEdifice.Removed`, so an incremental map would need both hooked,
+   and a load-time rebuild from the edifice list would resurrect every felled tree. Recomputing the
+   dirty columns from the grid has neither fault. The eviction test (chop it → the 3 × 3 is wet)
+   stands as named.
+
+   Cost: a column walk stops at the first thing it meets — two or three cells on the surface —
+   and runs only for the columns an edit dirtied, plus the canopy reach around them.
 
 `EnclosureGrid` keeps the indoors question — a tree is not a room, and cover grants no thermal
 enclosure, no room temperature, nothing but dry. Growth deliberately does **not** read canopy as
@@ -147,35 +177,85 @@ one.
 
 ## 7. The look
 
-**Rain — two shared world-space `ParticleSystem`s, the `FireDirector` pattern exactly** (31 §4's
-option B): one emitter for streaks, one for splashes, the whole colony's rain in two draw calls.
-Fixed-cadence `Emit()` (streaks ≈ 0.05 s), materials built in code from the particle shaders
-already on the keep-alive list — **no new shader**, `ShaderInclusion.cs` untouched, the P13 trap
-never opened. Synty's rain textures (`PNB_Core` `FX_Rain_*`, `PolygonParticleFX`) may dress the
-material later; their Shader Graphs never load. `Warm()` on boot, `simulationSpeed = 0` pause-hold,
-slice-aware: a view sliced below the top layer shows no rain, the same discipline blood follows.
+**Rewritten on review (2026-09-24), pending the owner's choice between the two in pictures**
+(`claude/rain-look`: `RainCheck` photographs both through the real renderer and the real day,
+with the same cover map; research `d-20-rain-rendering.md`). The first draft drew rain with shared
+`ParticleSystem`s, the campfire's shape. That is right for nine fires and wrong for rain across a
+160 m view, for four reasons:
 
-**Dry cells are an emission rule, not a clip.** Each cadence burst samples a handful of columns
-near the camera; a column emits only where the sky reaches it — the presentation mirror answers
-with the same two facts §6 composes (no floor above, no canopy). Nothing is spawned over a roofed
-or canopied cell, so nothing has to be hidden there, and the splash cells and the streak columns
-agree by construction. Cost scales with emission bursts, never with cells (P10). Intensity sets
-the burst count and the streak length: drizzle is few and short, a downpour is many and long —
-one number, read from the snapshot each frame.
+- **the CPU pays per drop**, on the main thread, in a frame whose budget is CPU submission;
+- **the per-burst column sampling is C# work** in the same frame;
+- **each drop needs a lifetime** cut to end at its own column's ground;
+- and from a 48° camera **falling streaks are the weakest sign of rain there is**. A streak shows
+  0.67 of its side-on length and moves about 2 px a frame at 160 m (d-20 §D). The ground carries
+  it.
 
-**Overcast — through the one hook.** `DaylightDirector.ApplyHour` gains a weather term: sun
-intensity scaled by (1 − cloud), sky colours eased toward a grey, ambient desaturated, fog
-density raised — the fog-stays-horizon-colour identity preserved. A cloudy Wash day reads mid
-and dim; clear Glare reads bright. No post-processing stack, no new volume: the day table is
-already the owner of every one of those numbers (28 §10 named this the hook for a reason).
+**Streaks and splashes: GPU-procedural, two draws.** `Odyssey/Rain` draws N camera-facing quads
+with `Graphics.RenderPrimitives`: no mesh, no particle state.
+- **Placement.** Every drop is placed in the vertex shader from its instance id and the rain clock,
+  on a lattice wrapped into a box around the rig's focus. The lattice is world-anchored, so panning
+  moves the box over the rain rather than dragging the rain with it.
+- **Width.** Streaks are held to at least a pixel wide with their alpha given back, so they never
+  sparkle, and they slant with `_OdysseyWind`.
+- **Splashes** are a second draw: short crowns on hard ground and roofs, longer rings on water.
+- **Cost.** The CPU cost is two calls and four globals whatever the rain. The count is a quality
+  rung: 24k streaks at Ultra, a quarter of that at Low.
 
-**Wind.** `WindDirector` (new on `main`) already sways foliage; rain streaks slanting with it is
-a one-line read when the emitters land, noted here so it is not rediscovered.
+**Cover: the column map (§6), on the GPU.** `_OdysseySkyTex` holds one half-float texel per column
+(115 KB on Huge): R is the rain-stop height, G what the rain lands on.
+- A streak whose head is below its column's stop is not drawn.
+- A splash is placed on the stop, so rain drums on a roof, rings a pond and never falls through a
+  canopy.
+- The texture is re-uploaded for the columns a dirty chunk covers.
 
-**The upgrade path stays open.** If rain ever needs to scale past shared emitters — a storm
-system with per-column volumes — 31 §4's option C is the documented road: instanced cards
-through the chunk machinery, the `OdysseyWater` trick, frustum-culled for free. Shared emitters
-first, because the campfire measured them and the campfire is many fires.
+Because the shaders and the simulation read the same column rule, the picture and the pace penalty
+cannot disagree about where a roof is.
+
+**Wet ground: the larger half of the look.** A global wetness, presentation-side and not simulated,
+lags the rain: it wets over tens of game minutes and dries over hours.
+- It darkens and glosses every surface the sky reaches, masked by the same texture.
+- `Odyssey/MeadowGround` (every natural terrain since 38 §17) and `Odyssey/Foliage` take it in
+  their forward pass, through one include, `OdysseyWeather.hlsl`, of about sixty lines.
+- Puddles gather in flat patches once the ground is soaked.
+- Built things drawn by the pack's own Shader Graphs (walls, roofs, paving) stay dry in v1: we do
+  not own those shaders (d-20).
+- **Design 38's ground work keeps the two globals** (`_OdysseyRain`, `_OdysseySkyTex`) through any
+  later rework of the ground shader, so that neither track builds half of the wetness.
+
+**Overcast goes through `DaylightDirector`, as one pure function.** `Overcast.Grade(state, cover)`
+is applied after the hour's own state, so the time of day shows through a grey day. At full cover:
+- the sun dims to 30 % and its shadow strength to 25 %;
+- the sun's colour and the ambient drain towards a cool grey, and the ambient lifts;
+- the sky moves towards cloud grey;
+- fog is ×2.4.
+
+A weight-blended Overcast `Volume` beside the Golden Hour one (saturation and contrast down) is
+the second lever, if the grade alone reads flat. Whether heavy cloud should also stop rendering the
+shadow map, the largest single term in a 4K frame (d-19), is a measurement for this PR.
+
+**Sound belongs in this PR, not in a seam.** Rain with no sound reads as a screensaver: a loop
+scaled by intensity, and a drum under a roof from the same column map.
+
+**Pause, speed, slice, cut-away.**
+- The rain clock is game seconds, as `WindDirector`'s is, so a paused world holds its drops and
+  speed 3 rains three times as fast.
+- A view cut below the surface (`SliceSettings.BelowSurface`) draws no rain.
+- Rain stops at a roof the player has cut away from view. That is honest, because the roof is
+  there, and it is a picture in the sheet to judge.
+
+**Budget, measured rather than inferred:** CPU ≤ 0.05 ms and ≤ 4 draw calls; GPU ≤ 0.5 ms at 4K
+Ultra and ≤ 0.3 ms at 1080p Low. The PlayMode arm (`FrameTimeTests.TheRainAgainstTheFrame`) runs
+off, zero intensity (the negative control, P18), the particle arm and the procedural arm in one
+run. The 4K and laptop figures come from a Play session.
+
+**Rejected, and why.**
+- **VFX Graph**: similar GPU cost, but it adds a package and compute passes, and its depth collision
+  is weaker than a lookup the grid already owns.
+- **Screen-space layers**: built for a level view, and they cannot keep a roof dry.
+- **A depth render from above** (*Remember Me*, *Far Cry 6*): pays for a camera to learn what the
+  grid already knows.
+- **Synty's `FX_Rain_*` prefabs**: licensed Shader Graphs, a GameObject each, and invisible on a
+  clone without the packs.
 
 ## 8. Order of work
 
@@ -189,9 +269,12 @@ Three PRs, each green on both tiers and playable at the keyboard:
 2. **`claude/weather-world`** — `ShelteredFromSky` (roof + canopy, with eviction), the pace
    factor, the growth multiply, `AnimalShelterThinkNode`, fixture tests, TickBenchmark rows.
    *Rain touches pawns, crops and animals.*
-3. **`claude/weather-visuals`** — `WeatherDirector` (streaks, splashes, emission masking),
-   the overcast grade, PlayMode tests, a FrameTime row with a negative control (P18). *Rain is
-   seen, and only where the sky reaches.*
+3. **`claude/weather-visuals`** — grown from `claude/rain-look`: `RainDirector` and
+   `Odyssey/Rain` (streaks, splashes), the sky texture read off the column map, wetness in the
+   ground and foliage shaders, `Overcast` in `DaylightDirector`, the rain loop, the density rung
+   in `GraphicsLadder` and the quality presets, PlayMode tests, and the frame-time arm with its
+   negative control (P18). *Rain is seen, heard and felt underfoot, and only where the sky
+   reaches.*
 
 ## 9. Seams left open, on purpose
 
@@ -209,8 +292,6 @@ Three PRs, each green on both tiers and playable at the keyboard:
 - **Deterioration** — ×5 outdoors in rain (`a-14`), when items can deteriorate.
 - **Accuracy** — RimWorld's rain ×0.80; combat's hit formula (33) has no weather term yet.
 - **Firewatcher** — rain chasing fire needs fire to spread first (28 §10's fire seam).
-- **Rain ambience** — the audio framework's probe already reads wet terrain; a rain loop is a
-  director away.
 - **Cloud cards / a skydome** — art, and a shader + keep-alive pair, only when the grey day
   reads as missing something.
 
@@ -228,19 +309,26 @@ The fast tier carries the model; the Unity tier carries the picture.
   end.
 - **Save** — round-trip mid-episode resumes the blend; the hash before equals the hash after.
 - **Shelter** — the `RoomEnclosureTests` fixture pattern: build a roof → dry; remove it → wet;
-  plant a tree → its 3×3 dry; chop it → wet again (the eviction half, P14, is a named test).
+  a roof two layers up over a tall room → still dry (the case `IsRoofed` gets wrong); a cave mouth
+  under an overhang → dry; plant a tree → its 3×3 dry; chop it → wet again, and the same through a
+  collapsing floor (`Falling.TreesOutOf`) — the eviction half, P14, is a named test for **both**
+  removal paths.
+- **One column rule, two readers** — on the played board, every column's sim stop height equals the
+  render mirror's, cell by cell, with a negative control that edits one side.
 - **Pace and growth** — an exposed pawn's rate falls by exactly the factor, the same pawn under
   a roof does not; an exposed crop's gain rises by exactly the multiply.
 - **Animals** — rain crosses the gate → the animal relocates under the tree; already roofed → no
   relocation; the tree is chopped mid-rain → it re-seeks.
-- **The picture** — zero emissions at intensity 0; a roofed fixture world emits nothing under
-  the roof (asserted against the sampled columns); a FrameTime row for rain on/off with its
-  negative control (P18).
+- **The picture** — zero draws at intensity 0 and below the surface; the sky texture's texel
+  under a roofed fixture equals the roof's height; the frame-time arm (§7) with its negative
+  control (P18), draw calls beside every number; and `RainCheck`'s sheet for what no test can
+  judge.
 - **Benchmarks** — a TickBenchmark row for `WeatherSystem` (O(1); noise-level beside an empty
   tick); every new loop states in its doc comment what it scales with (process.md's rule).
 
 ## 11. Scaling, stated once
 
-`WeatherSystem` is O(1) per evaluation and evaluates on the thermal cadence. The canopy map is
-O(trees). Emission is O(bursts) — bursts scale with intensity, never with board size. The
-overcast grade is O(1) per frame. Nothing in this design walks the board.
+`WeatherSystem` is O(1) per evaluation and evaluates on the thermal cadence. The column map is
+O(dirty columns) per edit and nothing per tick. Rain is two draws of N instances whatever the
+board, N a quality rung. The overcast grade is O(1) per frame. Nothing in this design walks the
+board.
