@@ -3,7 +3,7 @@
 *Numbered 38. Written as 36; by the time it merged, `main` had given 36 to radiant heat and
 `claude/medical-supplies` had 37, so it moved, with every place that cited it (2026-09-24).*
 
-**Status: designed 2026-09-24, nothing built.** Branch `claude/meadow-overhaul`, worktree
+**Status: designed 2026-09-24; M1 measured the same day (§13), nothing else built.** Branch `claude/meadow-overhaul`, worktree
 `D:\code\odyssey-meadow`. Interview: `docs/research/meadow-interview.md` (twenty answers, the
 source of every decision here). Research: `e-09-meadow-mesh-data.md` (what the pack's meshes carry),
 `d-16-shader-warmup.md`, `d-17-terrain-skin-shading.md`, `d-18-dense-foliage-cost.md`.
@@ -46,10 +46,13 @@ and its reversals here as it lands, in the project's usual way.
 - **The world has no GameObjects**, so a LODGroup does nothing: `ModuleLibrary.HighestDetail` keeps
   LOD0. Instancing on the pack's own materials is off, and its Foliage shader runs its wind on
   `_Time`.
-- **As the project is set up, anything drawn is drawn up to six times** (d-18 §2): the SSAO
-  DepthNormals prepass, the forward pass, and four shadow cascades over a 250 m shadow distance,
-  with depth priming off, so the forward pass gains nothing from the prepass. For full-cover grass
-  this is the whole problem.
+- **Grass is drawn once a frame, not six times.** d-18 predicted that every foliage instance is
+  drawn up to six times — the SSAO DepthNormals prepass, the forward pass and four shadow cascades —
+  and this document first built its order of work on that. Read against the code it does not hold
+  for grass: `ChunkRenderer.FoliageCastsShadows` is off, and foliage is drawn in queue 2501
+  (`MaterialCache.FoliageQueue`), just past the opaque range so the outline never inks it, which
+  also keeps it out of the opaque-only prepass. **It does hold for trees**, which cast shadows and
+  are opaque. §13 has the measurement that replaced the prediction.
 - **The player starts on Direct3D 11**, then DX12 (`ProjectSettings.asset`). That decides which
   warm-up exists (§8).
 - **Frustum culling is built and not on `main`.** PR #174 is green, and since 2026-09-24 it conflicts
@@ -97,8 +100,9 @@ is copied, modified or committed**; a clone without the packs draws primitives, 
   unchanged), so a paused world holds still. Meshes without vertex colour do not move.
 - **Passes:** `UniversalForward`, `DepthOnly`, `DepthNormals`, `ShadowCaster`. **Every pass shares
   one displacement include**, or the prepass and the forward pass disagree and the grass shimmers.
-- **Alpha** (d-18 Recommendation 2): `clip` in the depth passes; the forward pass is **depth-primed**
-  (`ZTest Equal`, `ZWrite Off`, no `clip`) once priming is on (§6). Not alpha-to-coverage.
+- **Alpha:** `clip`, in queue 2501 like today's foliage, so grass stays out of the prepass and the
+  outline. **Depth priming is dropped** (§13): it only reaches the opaque range, and moving grass
+  there bought 0.2 ms at 4K at the price of inked grass. Not alpha-to-coverage.
 - **The clearance field** (from the closed branch): a small top-down texture over a window **centred
   on the rig's focus, not the camera** — the closed branch centred it on `ViewerPosition`, which
   leaves the far half of a 48° view outside it. Items and order marks stamp a ~0.5 m ring. Buildings
@@ -122,8 +126,8 @@ is copied, modified or committed**; a clone without the packs draws primitives, 
   the density setting. The multiply-and-shift hash is out: its low bits are unusable (`lessons.md`).
 - **No pop at a chunk seam.** The shader **shrinks** each clump by the same rank against distance, so
   thinning is continuous across the 62.5 m boundary the count steps at. Shrink, not dither (d-18).
-- **Grass casts no shadows and receives them** (hard shadows on Low). That alone removes up to four
-  of six draws per instance, and it is in from the first commit.
+- **Grass casts no shadows and receives them**, as today's foliage already does
+  (`ChunkRenderer.FoliageCastsShadows` off); `Odyssey/Foliage` keeps it that way.
 - **Memory:** meshing at the densest rung is about 3,750 matrices per surface chunk, 20+ MB on the
   250² board. The price of density being a draw-time setting.
 - **Culling:** CPU per chunk on the existing grid. Not GPU-driven: 12–30k instances are on screen,
@@ -231,7 +235,7 @@ measurements here.
 | Unit | What | Gate |
 |---|---|---|
 | **M0** | This document, the interview, four research files. | Owner reads. |
-| **M1** | **The six-draws measurement** before any art moves: one run, grass off / on with priming off / on with priming *Auto*, no grass shadows, at 640 × 480 and 3840 × 2160. First give `OdysseyCharacter` a `DepthNormals` pass and check `OdysseyPowerLine`, or priming makes them vanish (d-18). **PR #174 merged first.** | Numbers. |
+| **M1** | **Measured 2026-09-24** (§13): what grass costs at 640 × 480 and 3840 × 2160, none / shipped / full cover / full cover in the opaque queue. | Done; the owner's GPU reading agrees (§13). |
 | **M2** | Instanced LOD (§3) and the derived tallest bound. | Tests; LOD on/off arm. |
 | **M3** | `Odyssey/Foliage` (§4). | Tests; keep-alive in a player build. |
 | **M4** | Lush grass and flowers on today's ground (§5). | **First Play.** 2.0 ms at 4K. |
@@ -245,10 +249,9 @@ measurements here.
 | **M12** | Atmosphere (§10). | Play. |
 | **M13** | Loose rocks, mushrooms, berry bushes. Fruit later. | Goldens; wiki. |
 
-M1 is new against the approved plan and comes before any art moves. d-18 found that the project
-draws every foliage instance up to six times, so "completely full of grass" is decided by depth
-priming and grass shadows before it is decided by clump counts. That measurement is the headroom
-every later unit spends.
+M1 is new against the approved plan and comes before any art moves. It was written to test d-18's
+six-draws prediction and found the prediction does not apply to grass (§2, §13); what it measured
+instead is the headroom every later unit spends.
 
 ## 12. What not to undo by tidying
 
@@ -259,3 +262,57 @@ every later unit spends.
 - **Wind on the tick**, in one include shared by every pass.
 - **No licensed file committed**: the Meadow post-processing profile, a traced state collection that
   names pack shaders, and the pack's textures all stay out.
+
+## 13. M1: what grass costs, measured (2026-09-24)
+
+`FrameTimeTests.TheGrassAgainstTheFrame`, on the played wooded meadow (Standard, seed 1, culling
+on), RTX 5070 Ti on Direct3D 11. One world, eight readings a run: no grass, the shipped density
+(60 tufts per hundred grass cells), full cover (300, which is `GroundScatter.MaxPerCell` on every
+cell and the most the scatter can place today), and full cover moved into the opaque alpha-test
+queue — each at the batch view and with the camera drawing into a 3840 × 2160 target. The run
+asserts that every control applied: the instance count moved, a foliage material was re-queued
+(`MaterialCache.RequeueFoliage`, returning its count, P18), the camera drew at 4K, and no reading
+was taken while the board re-meshed.
+
+| 3840 × 2160, frame vs no grass | Run 1 | Run 2 | Run 3 (inside the full tier) |
+|---|---|---|---|
+| no grass | 7.39 ms | 7.88 ms | 10.81 ms |
+| shipped (~4,800 clumps) | **+1.24** | **+1.11** | **+1.27** |
+| full cover (~24,100 clumps) | +1.78 | +0.83 | +1.93 |
+| full cover, opaque queue 2450 | +1.60 | +0.64 | −0.58 |
+
+At 640 × 480 the same arms cost +0.12 to +0.31 ms, all of it submission.
+
+**What it says.**
+
+- **The shipped grass costs 1.1–1.3 ms at 4K, steadily, across three runs; full cover costs
+  0.8–1.9.** Five times the clumps moved the frame by −0.3 to +0.7 ms over the shipped density, so
+  most of the cost is having grass at all, and full cover at today's clump size sits inside d-18's
+  2.0 ms budget. "Lush on every tile" is affordable at this size.
+- **The frame is GPU-bound at 4K** — submission is 1.6–2.0 ms of a 7.4–9.2 ms frame — so the frame
+  time stands in for the GPU time here. `GpuFrameMs` reads **unavailable** in a batch run on
+  Direct3D 11, which is why the column is the frame and why one reading is owed from Play (the
+  developer overlay does read it; the owner's 4K shots on 2026-09-21 had it at 8–9 ms).
+- **The opaque queue was cheaper all three times — by 0.18, 0.19 and 2.51 ms**, the last inside
+  the busier full tier. That is the back-to-front sort of the transparent range showing, and its
+  size is not settled: small on a quiet machine, large on a busy one. Moving grass there wholesale
+  would put it into the DepthNormals prepass, under SSAO and under the ink the queue exists to
+  avoid, so **the queue stays at 2501 for now and depth priming is dropped** (it only ever reached
+  the opaque range). **If the GPU reading confirms the gap, the lever is to keep grass out of the
+  outline by a rendering-layer mask and draw it opaque, front to back** — an M3 decision, taken
+  with the timer rather than with this noise.
+- **The noise floor is about half a millisecond** on this machine with two other batch runs going
+  (a sibling worktree and the CI runner, both runs). Anything finer than that — taller clumps, the
+  next rung of density — is decided with the GPU timer in a Play session, not by another batch run.
+
+**The GPU reading, from Play (owner, 2026-09-24, 3840 × 2160, the shipped density).** *"6–7 ms on
+gpu (sometimes bit lower) without grass tufts. On — 7 ish — spikes up to 8 moving around — this is
+an approximation."* So the shipped grass is **about 0.5–1 ms of GPU, peaking near 1.5 while the
+camera moves**, which agrees with the batch arm's frame-time stand-in and sits well under the 2 ms
+line the playtest row set. M4 plans for full cover. The opaque-queue question stays with M3: a
+reading by eye off a smoothed overlay cannot resolve a 0.2 ms difference.
+
+**What it does not say.** Nothing about Meadow's own clumps drawn by `Odyssey/Foliage` (M3–M4):
+taller and broader cards are more fill per instance, which is exactly what this measured as cheap
+at today's size. M4 re-runs this arm with its clumps before the first Play, and the arm is built to
+take that without change.
