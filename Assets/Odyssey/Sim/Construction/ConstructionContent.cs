@@ -124,8 +124,88 @@ namespace Odyssey.Sim.Construction
         /// <summary>Construction level a colonist needs before it may take the job. 0 for a wall.</summary>
         public int minSkill;
 
+        /// <summary>
+        /// Heat the finished thing pushes into its room each thermal pass, in centi-degree-cells
+        /// (design 28 §7): energy, not temperature, so the same campfire is an oven in a broom
+        /// cupboard and a warm corner in a hall. Zero for everything that is not a heat source,
+        /// which is everything until the campfire.
+        /// </summary>
+        public int heatPerPass;
+
+        /// <summary>
+        /// Is this a <b>power line</b> rather than a thing standing in the cell (design 32 §3)?
+        ///
+        /// <para>A line lives in its own per-cell layer, owned by <c>PowerGrid</c>, so it can run
+        /// through a wall or under a floor without taking the cell's one edifice slot. Everything a
+        /// player does to order one — arm, ghost, drag, place — is a build like any other, which is
+        /// why it is a row here at all; <c>ConstructionGrid.Place</c> is the one place that reads
+        /// this and hands the order on.</para>
+        /// </summary>
+        public bool conduit;
+
+        /// <summary>
+        /// A second payment, in one fixed item whatever the thing is made of — the scrap metal in a
+        /// generator's workings, or the whole of a power line (design 32 §14). -1 for anything
+        /// that is paid for in its material alone, which is everything before power.
+        ///
+        /// <para>Kept apart from <see cref="costCount"/> because the two answer different
+        /// questions: the material is the player's choice and the part is not. A site banks them
+        /// separately, is a frame only when both are in, and gives each back by its own rule.</para>
+        /// </summary>
+        public int partItem = -1;
+
+        /// <summary>Units of <see cref="partItem"/> a site swallows before work can start.</summary>
+        public int partCount;
+
+        /// <summary>Does this thing take a second, fixed payment besides its material?</summary>
+        public bool HasParts => partItem >= 0 && partCount > 0;
+
+        /// <summary>Watts this makes while it runs, or 0 for anything that is not a generator (design 32 §5).</summary>
+        public int powerOutputW;
+
+        /// <summary>Watts this wants while it is switched on, or 0 for anything that is not a consumer.</summary>
+        public int powerDrawW;
+
+        /// <summary>The <see cref="ItemHandle"/> this burns, or -1 for anything that burns nothing.</summary>
+        public int fuelItem = -1;
+
+        /// <summary>How many of <see cref="fuelItem"/> the hopper holds, in whole units.</summary>
+        public int fuelCapacity;
+
+        /// <summary>
+        /// Units of fuel a day <b>at full load</b>. The burn is in proportion to the load carried,
+        /// so this is the ceiling, not the rate (design 32 §6, decision 8).
+        /// </summary>
+        public int fuelPerDay;
+
+        /// <summary>Does a power net care about this — does it make power or spend it?</summary>
+        public bool IsPowered => powerOutputW > 0 || powerDrawW > 0;
+        /// How much warmer the thing's <b>own cell</b> is than the air around it, in
+        /// centi-degrees (design 36). Zero for everything that is not a heat source.
+        ///
+        /// <para><b>A different thing from <see cref="heatPerPass"/>, and the pair is the point.</b>
+        /// That one is energy pushed into the room's air — slow, shared by the whole room, and
+        /// the same campfire is an oven in a cupboard and a warm corner in a hall. This is
+        /// <i>radiance</i>: what a fire does to you by shining on you, which is immediate, local,
+        /// and no different in a cupboard than in a hall. Design 28 models the air and refuses to
+        /// store anything per cell; this is a pure function of how far away you are standing, so
+        /// it needs no storage at all.</para>
+        ///
+        /// <para>Tuning the two apart is why they are separate fields. Making one tile read hot by
+        /// raising <c>heatPerPass</c> would cook the whole hut.</para>
+        /// </summary>
+        public int radiantC;
+
         /// <summary>The registry key the interface names it by. Never a label, never a filename.</summary>
         public string iconKey = "";
+
+        /// <summary>
+        /// Hit points the finished thing has when it is struck (design 33 §4, C6), in whole points.
+        /// Nought for nothing. A building nobody has hit is at this and carries no row anywhere;
+        /// what is left of a struck one is <c>EdificeDamage</c>'s. INVENTED, per thing, before any
+        /// material scaling — C6's to tune. Claimed by the combat contracts step.
+        /// </summary>
+        public int maxHitPoints;
     }
 
     /// <summary>
@@ -183,6 +263,19 @@ namespace Odyssey.Sim.Construction
         /// invented ahead of it.</para>
         /// </summary>
         public int hitPointsFactorPerMille = 1000;
+
+        /// <summary>
+        /// The material's effect on how much heat crosses a wall made of it, in thousandths of
+        /// the standard material's conductance (design 28 §6).
+        ///
+        /// <para><b>The one place building material changes the weather indoors.</b> The
+        /// reference's walls are all equally warm — a log cabin and a granite bunker hold heat
+        /// identically — and our stuff table already exists to make material a decision, so it
+        /// is a decision: wood insulates best of the buildables, stone is the standard the
+        /// numbers are quoted against, and the city's concrete and steel bleed heat, which is
+        /// the ruined city's problem and one day a salvage line's opportunity.</para>
+        /// </summary>
+        public int thermalConductancePerMille = 1_000;
 
         /// <summary>The registry key the interface names it by.</summary>
         public string iconKey = "";
@@ -353,7 +446,8 @@ namespace Odyssey.Sim.Construction
         public static readonly string[] BuildingOrder =
         {
             "Building_None", "Building_Wall", "Building_Floor", "Building_DeckPlate", "Building_Ladder",
-            "Building_Bed", "Building_Door", "Building_Shelf",
+            "Building_Bed", "Building_Door", "Building_Shelf", "Building_Campfire",
+            "Building_Conduit", "Building_Generator", "Building_Heater",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -398,7 +492,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Wall", label = "wall", edifice = CoreContent.EdificeWall,
                     blocking = true, costCount = 5, workToBuild = 135, minSkill = 0,
-                    iconKey = "ui.arch.tool.wall",
+                    iconKey = "ui.arch.tool.wall", maxHitPoints = 300,
                 },
 
                 // A slab at the cell's lower boundary rather than an edifice in the cell (U29), and
@@ -410,7 +504,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Floor", label = "floor", edifice = CoreContent.EdificeNone,
                     slab = true, blocking = false, costCount = 4, workToBuild = 120, minSkill = 0,
-                    iconKey = "ui.arch.tool.roof",
+                    iconKey = "ui.arch.tool.roof", maxHitPoints = 250,
                 },
 
                 // Paving: the same slab, laid on ground that is already there (U42). `covering` is
@@ -422,7 +516,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_DeckPlate", label = "deck plate", edifice = CoreContent.EdificeNone,
                     slab = true, covering = true, blocking = false, costCount = 3, workToBuild = 60,
-                    minSkill = 0, iconKey = "ui.arch.tool.deckplate",
+                    minSkill = 0, iconKey = "ui.arch.tool.deckplate", maxHitPoints = 150,
                 },
 
                 // The way up (U43). An edifice like a wall, and `blocking = false` is what makes it
@@ -433,7 +527,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Ladder", label = "ladder", edifice = CoreContent.EdificeLadder,
                     blocking = false, rotates = true, costCount = 4, workToBuild = 90, minSkill = 0,
-                    iconKey = "ui.arch.tool.ladder",
+                    iconKey = "ui.arch.tool.ladder", maxHitPoints = 80,
                 },
 
                 // The first furniture (docs/design/20-beds.md). Two cells, passable, rotatable at
@@ -447,7 +541,7 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Bed", label = "bed", edifice = CoreContent.EdificeBed,
                     blocking = false, footprint = 2, rotates = true, takesQuality = true,
                     needsClearCell = true, costCount = 5, workToBuild = 180, minSkill = 0,
-                    iconKey = "ui.arch.tool.bed",
+                    iconKey = "ui.arch.tool.bed", maxHitPoints = 120,
                 },
 
                 // The door. Edifice 2 is CoreContent.EdificeDoor. Passable, takes no quality,
@@ -456,7 +550,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Door", label = "door", edifice = CoreContent.EdificeDoor,
                     blocking = false, rotates = true, costCount = 5, workToBuild = 135, minSkill = 0,
-                    iconKey = "ui.arch.tool.door",
+                    iconKey = "ui.arch.tool.door", maxHitPoints = 160,
                 },
 
                 // The shelf: one cell of furniture that holds an inventory rather than standing in
@@ -472,6 +566,63 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Shelf", label = "shelf", edifice = CoreContent.EdificeShelf,
                     blocking = false, rotates = true, needsClearCell = true, storageSlots = 8,
                     costCount = 5, workToBuild = 180, minSkill = 0, iconKey = "ui.arch.tool.shelf",
+                    maxHitPoints = 100,
+                },
+
+                // The first heat source (design 28 §7). Edifice 13, the next free id after the
+                // bed's. Blocking — nobody stands in a fire — and wanting a clear cell like the
+                // bed does, for the same reason with worse graphics. heatPerPass 1200 holds a
+                // 6×6 room comfortably above deepest Rime and overshoots in Wash, which is the
+                // brazier-in-a-broom-cupboard lesson arriving for free. 3 stuff and 60 ticks:
+                // kindling and a ring of stones. Fuel is a recorded hook — v1 burns steadily.
+                new BuildingDef
+                {
+                    defName = "Building_Campfire", label = "campfire", edifice = CoreContent.EdificeCampfire,
+                    blocking = true, needsClearCell = true, heatPerPass = 1_200, radiantC = 2_600,
+                    costCount = 3, workToBuild = 60, minSkill = 0,
+                    iconKey = "ui.arch.tool.campfire",
+                },
+
+                // A power line (design 32 §3, §14). Not an edifice — `conduit` sends the order to
+                // the power grid and the line into a layer of its own — and all part: no material
+                // to choose, one scrap metal a cell, fetched and spent by the colonist who lays it.
+                // 40 ticks of work, a-07's 35 rounded to the table's tens.
+                new BuildingDef
+                {
+                    defName = "Building_Conduit", label = "conduit", edifice = CoreContent.EdificeNone,
+                    conduit = true, blocking = false, costCount = 0,
+                    partItem = ItemHandle.Salvage, partCount = 1, workToBuild = 40, minSkill = 0,
+                    iconKey = "ui.arch.tool.conduit",
+                },
+
+                // The wood-fired generator (design 32 §6). a-07's output, hopper and full-load burn
+                // — 1,000 W, 75 wood (exactly one stack, so one trip fills it), 22 a day — with the
+                // burn in proportion to load, which is the owner's departure. Two cells because the
+                // footprint allows no more; blocking and wanting a clear cell like the campfire.
+                // heatPerPass is the heat at full load and scales with the load like the burn: the
+                // power grid owns it, never the thermal pass's per-def table. 30 stuff and 600
+                // ticks: the first expensive thing in the table.
+                new BuildingDef
+                {
+                    defName = "Building_Generator", label = "generator", edifice = CoreContent.EdificeGenerator,
+                    blocking = true, footprint = 2, rotates = true, needsClearCell = true,
+                    powerOutputW = 1_000, fuelItem = ItemHandle.Wood, fuelCapacity = 75, fuelPerDay = 22,
+                    heatPerPass = 400, costCount = 30, partItem = ItemHandle.Salvage, partCount = 20,
+                    workToBuild = 600, minSkill = 0,
+                    iconKey = "ui.arch.tool.generator",
+                },
+
+                // The electric heater (design 32 §7): a-07's 175 W, and 1,000 heat a pass into its
+                // room only while powered and switched on — the campfire's shape behind a gate.
+                // One cell, blocking, wanting a clear cell; 10 stuff and 240 ticks. It rotates
+                // (§14c): the facing is drawing only, and backs on to a wall where there is one.
+                new BuildingDef
+                {
+                    defName = "Building_Heater", label = "heater", edifice = CoreContent.EdificeHeater,
+                    blocking = true, rotates = true, needsClearCell = true, powerDrawW = 175, heatPerPass = 1_000,
+                    costCount = 10, partItem = ItemHandle.Salvage, partCount = 5,
+                    workToBuild = 240, minSkill = 0,
+                    iconKey = "ui.arch.tool.heater",
                 },
             };
         }
@@ -481,9 +632,9 @@ namespace Odyssey.Sim.Construction
             return new[]
             {
                 new StuffDef { defName = "Stuff_None", label = "nothing", stuff = CoreContent.StuffNone },
-                new StuffDef { defName = "Stuff_Concrete", label = "concrete", stuff = CoreContent.StuffConcrete },
-                new StuffDef { defName = "Stuff_Steel", label = "steel", stuff = CoreContent.StuffSteel },
-                new StuffDef { defName = "Stuff_Composite", label = "composite", stuff = CoreContent.StuffComposite },
+                new StuffDef { defName = "Stuff_Concrete", label = "concrete", stuff = CoreContent.StuffConcrete, thermalConductancePerMille = 1100 },
+                new StuffDef { defName = "Stuff_Steel", label = "steel", stuff = CoreContent.StuffSteel, thermalConductancePerMille = 1400 },
+                new StuffDef { defName = "Stuff_Composite", label = "composite", stuff = CoreContent.StuffComposite, thermalConductancePerMille = 800 },
 
                 // Wood carries no offset: nailing and lashing a plank into place has no separate
                 // fitting step for the factor to leave out, so the whole of wood's cost is the
@@ -493,6 +644,7 @@ namespace Odyssey.Sim.Construction
                     defName = "Stuff_Wood", label = "wood", stuff = NaturalContent.StuffWood,
                     item = ItemHandle.Wood, workFactorPerMille = 1000, workOffsetTicks = 0,
                     hitPointsFactorPerMille = 1000, iconKey = "ui.res.wood",
+                    thermalConductancePerMille = 600,
                 },
 
                 // 1.7x the work and 1.5x the hit points: the reference's own relation between a
@@ -512,6 +664,7 @@ namespace Odyssey.Sim.Construction
                     defName = "Stuff_Stone", label = "stone", stuff = NaturalContent.StuffStone,
                     item = ItemHandle.Stone, workFactorPerMille = 1700, workOffsetTicks = 15,
                     hitPointsFactorPerMille = 1500, iconKey = "ui.res.stone",
+                    thermalConductancePerMille = 1000,
                 },
             };
         }

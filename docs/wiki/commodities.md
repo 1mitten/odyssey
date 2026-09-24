@@ -6,7 +6,7 @@ What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the o
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
-| **Scrap** | `ui.res.scrap` | Mixed unsorted salvage. Feeds the reclaimer | sheet 04 (manufactured), med | M1 |
+| **Scrap metal** | `ui.res.scrap` | Salvaged metal. Power lines and machines are built from it | sheet 04 (manufactured), med | M1 |
 | **Rubble** | `ui.res.rubble` | Broken concrete and masonry. Cleared, not mined | sheet 01 (raw materials), high | M1 |
 | **Girder** | `ui.res.girder` | Structural steel cut from a shell. Heavy, valuable | sheet 04 (manufactured), med | M1 |
 | **Hull panel** | `ui.res.panel` | Flat salvaged plating. The cheapest wall material | sheet 04 (manufactured), high | M1 |

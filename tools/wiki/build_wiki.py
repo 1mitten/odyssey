@@ -40,9 +40,11 @@ SECTIONS = [
      "Everything on the architect menu: what can be built, and the one-off orders that can be given "
      "to things that already exist. The vertical connectors matter more here than in a flat colony "
      "sim, because a stair occupies two cells and a ladder one."),
-    ("commands", "Commands", ["ui.command"],
+    ("commands", "Commands", ["ui.command", "ui.menu"],
      "What the player can tell a selected thing to do. Many are conventional; the ones that are not "
-     "come from the setting, such as stripping a shell rather than mining a vein."),
+     "come from the setting, such as stripping a shell rather than mining a vein. A right-click on "
+     "a thing with more than one answer, a weapon today, opens a small menu at the pointer whose "
+     "rows are these commands; the menu's own words are listed after them."),
     ("work", "Work and skills", ["ui.work", "ui.skill", "ui.schedule"],
      "The work types a colonist can be assigned, in priority order of urgency, the skills that "
      "govern how well they do them, and the schedule blocks that say when. Salvaging is ours: it "
@@ -62,8 +64,14 @@ SECTIONS = [
      "often enough that clearing it by hand would become a chore. Alerts and bulletins carry the "
      "layer they occurred on and jump the camera there, which a flat colony sim never has to think "
      "about."),
+    ("research", "Research", ["ui.research.category", "ui.research.project", "ui.research.status",
+                              "ui.research.hud"],
+     "What the colony can learn, grouped by field, and the words the Research tab uses about it. "
+     "A project's description here is the body of its detail pane: the screen reads this column, "
+     "so correcting a line here corrects the game. Only Power is listed yet, and the projects are "
+     "placeholders until the research mechanism exists (design 34)."),
     ("world", "World and interface", ["ui.terrain", "ui.weather", "ui.overlay", "ui.layer",
-                                      "ui.tab", "ui.speed", "ui.settings"],
+                                      "ui.tab", "ui.speed", "ui.settings", "ui.inventory.hud"],
      "Weather, the data overlays, the layer controls and the rest of the interface furniture. The "
      "six layer visibility modes are decided: see ADR 0006."),
 ]
@@ -71,7 +79,7 @@ NS_TITLES = {
     "ui.terrain": "Terrain",
     "ui.res": "Commodities", "ui.item": "Items and equipment",
     "ui.arch.category": "Architect categories", "ui.arch.tool": "Architect tools",
-    "ui.command": "Commands", "ui.work": "Work types", "ui.skill": "Skills",
+    "ui.command": "Commands", "ui.menu": "The context menu", "ui.work": "Work types", "ui.skill": "Skills",
     "ui.schedule": "Schedule blocks",
     "ui.pawn": "Kinds of pawn", "ui.need": "Needs", "ui.mood": "Mood states",
     "ui.status": "Current activity", "ui.health": "Body parts and conditions",
@@ -79,6 +87,9 @@ NS_TITLES = {
     "ui.weather": "Weather",
     "ui.overlay": "Overlays", "ui.layer": "Layer controls", "ui.tab": "Tabs",
     "ui.speed": "Game speed", "ui.settings": "Settings",
+    "ui.research.category": "Fields", "ui.research.project": "Projects",
+    "ui.research.status": "Project states", "ui.research.hud": "The Research tab's words",
+    "ui.inventory.hud": "The Inventory tab's words",
 }
 SHEET_NAMES = {
     "01": "raw materials", "02": "food", "03": "camp and crafting", "04": "manufactured",

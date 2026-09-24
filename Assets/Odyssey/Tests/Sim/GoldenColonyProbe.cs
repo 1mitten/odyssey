@@ -75,13 +75,40 @@ namespace Odyssey.Tests.Sim
             }
 
             long pawnCells = 0;
-            long food = 0, rest = 0;
+            long food = 0, rest = 0, mood = 0, progress = 0;
+
+            // The first five skills and their passions, which every build since growing has. The
+            // bound is written as a number rather than read off the build on purpose: a build that
+            // has appended a sixth skill rolls it too, and a census that summed it would call the
+            // new roll a colony that behaved differently (added for the combat contracts step,
+            // 2026-09-23, whose Skill_Melee is exactly that).
+            long experience = 0, passions = 0;
+            const int SharedSkills = 5;
             for (int i = 0; i < ctx.Pawns.All.Count; i++)
             {
                 Pawn pawn = ctx.Pawns.All[i];
                 pawnCells += pawn.Cell;
                 food += pawn.Needs[NeedIndex.Food];
                 rest += pawn.Needs[NeedIndex.Rest];
+                mood += pawn.Mood;
+                progress += pawn.MoveProgress;
+                for (int s = 0; s < SharedSkills && s < pawn.Skills.Length; s++)
+                {
+                    experience += pawn.Skills[s];
+                    passions += pawn.Passions[s];
+                }
+            }
+
+            // What the colony did, job by job, over the seventeen job defs every build since
+            // power has — the same reasoning as the skills above.
+            var jobs = new StringBuilder();
+            const int SharedJobs = 17;
+            for (int j = 0; j < SharedJobs && j < ctx.Content.Jobs.Length; j++)
+            {
+                int done = colony.Jobs.CompletedOf(j), failed = colony.Jobs.FailedOf(j);
+                if (done == 0 && failed == 0) continue;
+                if (jobs.Length > 0) jobs.Append(',');
+                jobs.Append(j).Append(':').Append(done).Append('/').Append(failed);
             }
 
             var defs = new StringBuilder();
@@ -95,6 +122,8 @@ namespace Odyssey.Tests.Sim
             return $"live={live} stacks={stacks} itemCells={itemCells} [{defs}] "
                  + $"loose={ctx.Items.LooseItems.Count} stored={ctx.Items.StoredItems.Count} "
                  + $"pawns={ctx.Pawns.Count} pawnCells={pawnCells} food={food} rest={rest} "
+                 + $"mood={mood} progress={progress} experience={experience} passions={passions} "
+                 + $"started={colony.Jobs.JobsStarted} failed={colony.Jobs.JobsFailed} jobs=[{jobs}] "
                  + $"orders={ctx.Designations?.Cells.Count ?? 0} zones={ctx.Storage?.ZoneCount ?? 0}";
         }
     }

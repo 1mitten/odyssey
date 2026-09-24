@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
@@ -74,6 +75,70 @@ namespace Odyssey.Presentation.World
 
             /// <summary>The pawn this figure is lent to, or -1 when it is parked in the pool.</summary>
             public int Pawn;
+
+            /// <summary>
+            /// Lent out to lie down as a corpse (<see cref="BorrowForCorpse"/>): nobody's live
+            /// figure, and not in the pool either until it is handed back.
+            /// </summary>
+            public bool Borrowed;
+
+            /// <summary>
+            /// A lent figure falling on a layer that is not drawn: every renderer under it forced
+            /// off (<see cref="ShowCorpse"/>), undone when it is handed back.
+            /// </summary>
+            public bool CorpseHidden;
+
+            /// <summary>The fight as this figure is drawing it: its action, its held states, its clip layer.</summary>
+            public CombatState Fight = new CombatState();
+
+            /// <summary>
+            /// The weapon prop in the right hand, seated once when the pawn's weapon changes, or
+            /// null; and the item def it was made for, -1 for bare hands. See
+            /// <c>PawnFigureDirector.Weapons.cs</c>.
+            /// </summary>
+            public GameObject? Weapon;
+            public int WeaponDef = -1;
+
+            /// <summary>
+            /// Where the weapon sits in the fist and on the hip, each fitted once when the weapon
+            /// changes, as a local pose under the right hand and under <see cref="Pelvis"/>
+            /// (design 33 §8b, <c>PawnFigureDirector.Sheath.cs</c>). Moving it between the two is a
+            /// re-parent to a cached pose, never a re-fit.
+            /// </summary>
+            public Vector3 WeaponHandPosition;
+            public Quaternion WeaponHandRotation = Quaternion.identity;
+            public Vector3 WeaponHipPosition;
+            public Quaternion WeaponHipRotation = Quaternion.identity;
+
+            /// <summary>True while the weapon is parented at the hip; false in the hand.</summary>
+            public bool WeaponAtHip;
+
+            /// <summary>
+            /// The bone the sheath hangs from: the parent of the left thigh — the real pelvis. Not
+            /// <c>HumanBodyBones.Hips</c>, which the Synty avatar maps to <c>Root</c> on the floor.
+            /// Null where the rig has no left thigh, and then a sheathed weapon is simply not drawn.
+            /// </summary>
+            public Transform? Pelvis;
+
+            /// <summary>
+            /// The sheath's frame, measured once at bind off the drawn mesh in the idle and kept in
+            /// <see cref="Pelvis"/>'s own space: the point on the surface of the left hip the
+            /// weapon hangs from, the way its blade points (down, and back), the way out of the body
+            /// and the figure's front. <see cref="HasStow"/> is false until measured.
+            /// </summary>
+            public Vector3 StowPoint;
+            public Vector3 StowDown;
+            public Vector3 StowOut;
+            public Vector3 StowForward;
+            public bool HasStow;
+
+            /// <summary>Drawn or sheathed, as this figure has seen it. See <c>Odyssey.Hud.WeaponSheath</c>.</summary>
+            public SheathClock Sheath;
+
+            /// <summary>The draw or the sheathe playing, or <see cref="SheathChange.None"/>; its clip and how far in.</summary>
+            public SheathChange SheathAction;
+            public CombatClipEntry? SheathClip;
+            public float SheathSeconds;
 
             /// <summary>
             /// The computed gait, for an animal whose row asks for one and whose rig has the
@@ -374,6 +439,12 @@ namespace Odyssey.Presentation.World
             /// colonist lies down and gets up rather than snapping between the two.
             /// </summary>
             public float SleepWeight;
+
+            /// <summary>
+            /// How far down into the row's settled idle this figure is, 0 standing and 1 sitting
+            /// (design 31 §18d). Eased, so a colonist lowers herself and gets up.
+            /// </summary>
+            public float SitWeight;
 
             /// <summary>
             /// Which way the body lies, head to foot. The bed's own facing where there is a bed,

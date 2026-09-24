@@ -70,6 +70,24 @@ namespace Odyssey.Sim
 
         /// <summary>Publish one thing in the air. See <see cref="FallingView"/>.</summary>
         public void AddFalling(in FallingView view) => _target.AddFalling(view);
+
+        /// <summary>Publish one line cell. See <see cref="ConduitView"/> for which are published when.</summary>
+        public void AddConduit(in ConduitView view) => _target.AddConduit(view);
+
+        /// <summary>Publish one power building.</summary>
+        public void AddPowerDevice(in PowerDeviceView view) => _target.AddPowerDevice(view);
+
+        /// <summary>Publish one power net's balance.</summary>
+        public void AddPowerNet(in PowerNetView view) => _target.AddPowerNet(view);
+
+        /// <summary>Say which drawing of the lines this frame's rows are. See <see cref="WorldSnapshot.PowerVersion"/>.</summary>
+        public void SetPowerVersion(int version) => _target.SetPowerVersion(version);
+
+        /// <summary>Publish one moment of a fight. See <see cref="CombatEventView"/>.</summary>
+        public void AddCombatEvent(in CombatEventView view) => _target.AddCombatEvent(view);
+
+        /// <summary>Publish one corpse. See <see cref="CorpseView"/>.</summary>
+        public void AddCorpse(in CorpseView view) => _target.AddCorpse(view);
     }
 
     /// <summary>
@@ -107,6 +125,14 @@ namespace Odyssey.Sim
         /// view state: not saved, not hashed, and a question changes nothing the simulation owns.
         /// </summary>
         public int QueryCell { get; internal set; } = -1;
+
+        /// <summary>
+        /// Is presentation showing the power lines (design 32 §9)? While it is, built lines are
+        /// published; while it is not, only orders and marks are. Set through a
+        /// <c>WatchPower</c> intent, and view state like <see cref="QueryCell"/>: not saved, not
+        /// hashed, and changing nothing the simulation owns.
+        /// </summary>
+        public bool WatchPower { get; internal set; }
 
         public int PublishCount { get; private set; }
 

@@ -62,6 +62,9 @@ namespace Odyssey.EditorTools
             "Odyssey/Water",
             "Odyssey/Outline",
 
+            // The power lines (design 32 §9), drawn over everything. Found by name like the rest.
+            "Odyssey/PowerLine",
+
             // The sky, and it was not on the first draft of this list — `ShaderInclusionTests`
             // found it on the run that was meant to confirm the fix, along with `Standard` below.
             // Worth recording rather than quietly adding: a list of runtime-found shaders

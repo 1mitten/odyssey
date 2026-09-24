@@ -174,6 +174,9 @@ namespace Odyssey.Tests.Sim
         public void AnAnimalWandersAndRests()
         {
             ColonyWorld colony = Board();
+            // At noon: a hog is a creature of the day (design 30 §4), and this test is about its
+            // legs and rests, not about the night making both rarer and longer.
+            colony.World.StartAtTick(colony.Pawns.Content.DayTicks / 2);
             Pawn hog = colony.Pawns.Pawns.Spawn(GroundNear(colony, 3, 0), PawnKindIndex.MiddenHog);
             int radius = hog.Species.wanderRadius;
 
@@ -201,7 +204,10 @@ namespace Odyssey.Tests.Sim
                 else if (job.DefIndex == JobIndex.Wait)
                 {
                     rests++;
-                    Assert.That(job.WorkTicks, Is.InRange(hog.Species.restTicksMin, hog.Species.restTicksMax),
+                    // Off its hours — and a hog at midnight is off them (design 30 §4) — a rest is
+                    // three times as long; the bounds are the species' either way.
+                    int factor = AnimalIdleThinkNode.IsNight(colony.Pawns) == hog.Species.nocturnal ? 1 : AnimalIdleThinkNode.OffHoursFactor;
+                    Assert.That(job.WorkTicks, Is.InRange(hog.Species.restTicksMin * factor, hog.Species.restTicksMax * factor),
                         "a rest is jittered between the species' two bounds");
                 }
             }

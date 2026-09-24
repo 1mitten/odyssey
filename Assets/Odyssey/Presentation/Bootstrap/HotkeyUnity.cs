@@ -75,6 +75,10 @@ namespace Odyssey.Presentation.Bootstrap
             HudKey.PageDown => Key.PageDown,
             HudKey.Backquote => Key.Backquote,
             HudKey.F1 => Key.F1,
+            HudKey.F2 => Key.F2,
+            HudKey.F3 => Key.F3,
+            HudKey.F5 => Key.F5,
+            HudKey.F6 => Key.F6,
             HudKey.F9 => Key.F9,
             _ => Key.None,
         };
@@ -135,6 +139,10 @@ namespace Odyssey.Presentation.Bootstrap
             Key.PageDown => HudKey.PageDown,
             Key.Backquote => HudKey.Backquote,
             Key.F1 => HudKey.F1,
+            Key.F2 => HudKey.F2,
+            Key.F3 => HudKey.F3,
+            Key.F5 => HudKey.F5,
+            Key.F6 => HudKey.F6,
             Key.F9 => HudKey.F9,
             _ => null,
         };

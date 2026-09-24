@@ -159,7 +159,67 @@ namespace Odyssey.Tests.Sim
         // Moved a fourteenth time, 2026-09-22: the duct rat's traverseMode went Colonist to the
         // new Climber, which climbs anything a colonist can and does not swim (owner: "animals
         // can't swim by default"). No golden moved.
-        const ulong ContentFingerprint = 10013780930231455378UL;
+        // 2026-09-23: SpeciesDef gained `nocturnal` and the duct rat sets it (design 30 §4).
+        //
+        // Moved a fifteenth time, 2026-09-23, by the draft (design 33 §2c): Job_DraftHold and
+        // Job_Goto at drivers 12 and 13, and PawnTuningDef gained draftQuietTicks (10,000 — four
+        // in-game hours, the reference's auto-undraft). Taken from a freshly loaded pack.
+        //
+        // Moved a sixteenth time, 2026-09-23, after the first draft playtest: MovementDef gained
+        // draftedPacePerMille (2,000 — a drafted colonist runs; owner: "when you are drafted you
+        // should walk faster/run"). No golden moved: nobody in a golden window is drafted.
+        //
+        // Moved again, 2026-09-23, merging temperature into a main that had taken combat and
+        // wildlife. Neither side's number covers the merged pack - main's has the combat and
+        // wildlife tuning, this branch's has TemperatureDef - so it is re-taken from a freshly
+        // loaded pack rather than adopted from either. Third pass of the same resolution in one
+        // day; main is moving under this branch faster than it is being reviewed.
+        //
+        // 2026-09-23, power (design 32): three JobDefs appended — Job_LayConduit (driver 14),
+        // Job_RemoveConduit (15) and Job_Refuel (16), after the draft's two. The first two train construction and settle
+        // as building does; refuelling trains hauling. Every golden moved with them, because the
+        // job system hashes a completed and failed counter for every def — measured to be those
+        // six zeros and nothing else (Golden.cs).
+        //
+        // 2026-09-23, the same branch's second interview (design 32 §14): Item_Salvage is scrap
+        // metal now — labelled so, and stacking to 50 where it lay one to a cell — because power
+        // lines and machines are built from it. No golden moved: the starting kit's scatter still
+        // places one piece to an empty cell, which is what it always placed.
+        //
+        // Moved again, 2026-09-24, merging main (combat, wildlife, temperature) into power: the
+        // draft's two jobs keep drivers 12 and 13 and power's three follow at 14-16. Neither
+        // side's number covers the merged pack, so it is re-taken from a freshly loaded pack.
+        // Moved a seventeenth time, 2026-09-23, by the combat contracts step (design 33 §5), which
+        // claims every handle the combat line needs at once: five jobs (Job_AttackMelee, Job_Flee,
+        // Job_Downed, Job_Equip, Job_Rescue at drivers 14 to 18), Skill_Melee, Work_Rescue, four
+        // weapons (Item_Bat, Item_Crowbar, Item_Machete, Item_ArcBlade, each with a weapon block),
+        // PawnKind_Marauder with PawnKindDef.faction (the two animal kinds Wild), SpeciesDef's
+        // combat fields with the owner's pools (person 100, hog 60, rat 15), death at -500 per mille,
+        // revenge (hog 700, rat 50) and the two natural attacks, and a new CombatDef carrying the
+        // owner's hit and dodge curves and fists. Taken from a freshly loaded pack. The goldens
+        // moved in the same commit, and not for any of the numbers: see Golden.cs.
+        //
+        // Moved an eighteenth time, 2026-09-23, by the seam review of the same step: PawnKindDef
+        // gained `weapon` and PawnKind_Marauder names Item_Machete (design 33 §1: "debug-spawned,
+        // armed"; IWeaponRules.ArmOnSpawn puts it in the hand). No golden moved: no golden spawns
+        // a marauder.
+        //
+        // Moved a nineteenth time, 2026-09-23, at the C2/C3 integration: CombatDef gained
+        // `rechooseTicks` (300), lane A's constant on the attack driver, proposed for the Def in its
+        // hand-over because Defs were frozen while the lanes ran. Same value, so no behaviour and no
+        // golden moved.
+        //
+        // Moved a twentieth time, 2026-09-24, by the third playtest's round (design 33 §9b): CombatDef
+        // gained the owner's critical and knockback numbers — critChancePerMille 100,
+        // critPerMillePerFourLevels 10, critDamagePerMille 1,500, knockbackPerMille 500,
+        // knockbackBluntPerMille 750 — and knockedDownTicks 90. No golden moved: no golden window
+        // fights, so no swing is ever decided in one.
+        //
+        // Moved again, 2026-09-24, merging main (power, research) into the combat line: power's three
+        // jobs keep drivers 14-16, so the combat five move from 14-18 to 17-21 (nothing combat shipped
+        // had saved them). Neither side's number covers the merged pack, so it is re-taken from a
+        // freshly loaded pack rather than adopted from either.
+        const ulong ContentFingerprint = 7311169109491343133UL;
 
 
         [Test]

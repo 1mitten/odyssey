@@ -45,6 +45,18 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Overrides the def's work duration when positive. Used by the stand-down.</summary>
         public int WorkTicks;
 
+        /// <summary>
+        /// A wait taken sitting down beside a fire (design 31 §18d), with <see cref="DestCell"/>
+        /// naming the fire so the figure can face it.
+        ///
+        /// <para><b>Derived rather than stored, on purpose.</b> A wait has no destination, so the
+        /// fire's cell there is unambiguous; and because <see cref="DestCell"/> is already saved
+        /// and hashed, a seat survives a save and is covered by the hash for nothing — no new
+        /// field in the record and no save-format bump. A stand-down, or an idler with nowhere to
+        /// wander, is a wait with no destination and so is always a stand.</para>
+        /// </summary>
+        public bool Seated => DefIndex == JobIndex.Wait && DestCell >= 0;
+
         public void Reset(int defIndex)
         {
             DefIndex = defIndex;
@@ -436,6 +448,7 @@ namespace Odyssey.Sim.Pawns
         protected JobStatus GotoCell(PawnContext ctx, int dest)
         {
             if (dest < 0) return JobStatus.Failed;
+
 
             if (Pawn.Cell == dest)
             {

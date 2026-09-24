@@ -153,6 +153,7 @@ namespace Odyssey.Presentation.Ui
         // ---- clock and speed (A3/A4)
         Label _clockTime = null!;
         Label _clockDate = null!;
+        Label _clockTemp = null!;
         readonly List<VisualElement> _speedButtons = new List<VisualElement>();
 
         // ---- alerts (A5)
@@ -347,6 +348,17 @@ namespace Odyssey.Presentation.Ui
             public Label Name = null!;
             public IconBadge JobIcon = null!;
 
+            /// <summary>The health bar (design 33 §9f): the track, its fill, and "Downed" across the portrait's foot.</summary>
+            public VisualElement Health = null!;
+            public VisualElement HealthFill = null!;
+            public Label HealthWord = null!;
+
+            /// <summary>
+            /// What the bar was last drawn from: the fill per mille, or <see cref="DownedHealth"/>.
+            /// The ink and the word are functions of it, so one int says whether anything moved.
+            /// </summary>
+            public int LastHealth = int.MinValue;
+
             public PawnId LastId;
             /// <summary>
             /// The seed the colonist in this slot was rolled from, beside their id.
@@ -534,6 +546,12 @@ namespace Odyssey.Presentation.Ui
             /// </summary>
             public bool IsPick;
 
+            /// <summary>Whether the pickable row is a power building's switch rather than a bed's owner (design 32 §5).</summary>
+            public bool IsSwitch;
+
+            /// <summary>Whether the pickable row is an order's action — cancel, take up, keep (design 32 §14).</summary>
+            public bool IsOrderAction;
+
             /// <summary>The tint last applied to the value, so a redraw does not restyle on every frame.</summary>
             public HudColour? LastTint;
 
@@ -631,6 +649,9 @@ namespace Odyssey.Presentation.Ui
             BuildSettings();
             BuildDebug();
             BuildWork();
+            BuildAnimals();
+            BuildInventory();
+            BuildResearch();
             BuildAlmanac();
 
             // B18, last, so it is the top-most element in the tree and its scrim covers everything
@@ -680,6 +701,10 @@ namespace Odyssey.Presentation.Ui
         void Attach(HudDirectors directors)
         {
             _directors = directors;
+            // A new session's overlay starts off; the menu row and the views strip must not go on
+            // saying otherwise.
+            _powerOverlayRow?.EnableInClassList("menu__row--on", directors.Overlays.PowerVisible);
+            _viewsPaintedFor = -1;
             _directors.Selection.Changed += OnSelectionChanged;
             _directors.Slice.LayerChanged += OnLayerChanged;
             _directors.Settings.Changed += OnSettingsChanged;
@@ -699,6 +724,10 @@ namespace Odyssey.Presentation.Ui
             _directors.Debug.TabChanged += OnDebugTabChanged;
             _directors.Work.Changed += OnWorkChanged;
             _directors.Work.ModeChanged += OnWorkModeChanged;
+            _directors.Animals.Changed += OnAnimalsChanged;
+            _directors.Inventory.Changed += OnInventoryChanged;
+            _directors.Research.Changed += OnResearchChanged;
+            _directors.Research.StateChanged += OnResearchStateChanged;
             _directors.Almanac.Changed += OnAlmanacChanged;
             _directors.Almanac.Navigated += OnAlmanacNavigated;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
@@ -736,6 +765,8 @@ namespace Odyssey.Presentation.Ui
             // without this the panel a player left open in the last colony stays on the screen
             // over the next one, drawing the last colony's rows.
             OnWorkChanged();
+            OnInventoryChanged();
+            OnResearchChanged();
         }
 
         void Detach()
@@ -760,6 +791,9 @@ namespace Odyssey.Presentation.Ui
             _directors.Debug.TabChanged -= OnDebugTabChanged;
             _directors.Work.Changed -= OnWorkChanged;
             _directors.Work.ModeChanged -= OnWorkModeChanged;
+            _directors.Inventory.Changed -= OnInventoryChanged;
+            _directors.Research.Changed -= OnResearchChanged;
+            _directors.Research.StateChanged -= OnResearchStateChanged;
             _directors.Almanac.Changed -= OnAlmanacChanged;
             _directors.Almanac.Navigated -= OnAlmanacNavigated;
             _directors.Hotkeys.BindingChanged -= OnBindingChanged;
@@ -875,6 +909,8 @@ namespace Odyssey.Presentation.Ui
                 RefreshSpeed();
                 RefreshBuildPalette();
                 RefreshWork();
+                RefreshAnimals();
+                RefreshInventory();
             }
             if (_slow >= SlowBucketSeconds)
             {
@@ -886,7 +922,9 @@ namespace Odyssey.Presentation.Ui
             UpdateMarquee();
             UpdateArmedBanner();
             MarkOrders();
+            MarkViews();
             ReadBarKeys();
+            UpdateContextMenu();
 
             // The roster sweep ends when the button does, wherever the pointer happens to be when
             // it ends — a card's own PointerUp never arrives if the release landed off the strip.
@@ -1062,7 +1100,7 @@ namespace Odyssey.Presentation.Ui
             // model rather than switched on the tool here: ArmedPinned is what the orders strip
             // lights its button from, so one question answers the word, the colour and the lit
             // button, and the three cannot drift apart.
-            string order = _palette?.ArmedPinned ?? string.Empty;
+            string order = _palette?.ArmedOrder ?? string.Empty;
 
             // The order's own registry name — the same words the wiki prints, the palette's
             // breadcrumb says and the strip's tooltip repeats (owner: "keep the consistent in the
@@ -1081,7 +1119,7 @@ namespace Odyssey.Presentation.Ui
             // The border, in the held order's own colour — the same four tokens the strip paints
             // its buttons with. A build tool is not an order and has no hue of its own, which is
             // what the accent is doing here.
-            HudColour hue = (order.Length > 0 ? HudTheme.PinnedActionHue(order) : null)
+            HudColour hue = (order.Length > 0 ? HudTheme.ArmedOrderHue(order) : null)
                             ?? HudTheme.Accent;
             Color edge = HudTokens.Convert(hue);
             _armedBanner.style.borderTopColor = _armedBanner.style.borderRightColor =
@@ -1120,10 +1158,26 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void OnSelectionChanged(SelectionChange reason)
         {
+            // The context menu was raised for the selection there was (design 33 §7a): its Equip
+            // row names that selection's primary colonist, so a new selection puts it away.
+            CloseContextMenu();
+
             var world = _boot!.World;
             if (world == null || _directors == null) return;
 
             SelectionDirector selection = _directors.Selection;
+
+            // The Animals tab and the inspect pane never show together (design 30 §6): a
+            // selection — including the one a row of the tab makes — puts the tab away and
+            // gives the corner to the pane.
+            // The Inventory and Research tabs share that corner and that rule (designs 35 and 34),
+            // and Inventory's Go is one of the selections that puts it away.
+            if (!selection.IsEmpty)
+            {
+                _directors.Animals.SetOpen(false);
+                _directors.Inventory.SetOpen(false);
+                _directors.Research.SetOpen(false);
+            }
 
             // The pane and the palette dock into the same bottom-left corner, so the corner holds
             // one of them. Opening the palette has cleared the selection since 2026-09-17; this is
@@ -1136,6 +1190,7 @@ namespace Odyssey.Presentation.Ui
 
             if (selection.HasPawn) _inspect.SetColonist(selection.Pawn);
             else if (selection.HasThing) _inspect.SetItem(selection.Thing);
+            else if (selection.HasCorpse) _inspect.SetCorpse(selection.Corpse);
             else if (selection.Cell is { } cell) _inspect.SetCell(cell);
             else _inspect.ClearSelection();
 

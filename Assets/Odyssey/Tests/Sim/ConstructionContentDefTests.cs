@@ -69,14 +69,53 @@ namespace Odyssey.Tests.Sim
         // rather than a rule keyed off the edifice id, for the reason `needsClearCell` is one — it
         // is a fact about the shape of the thing — and it is what makes a second, larger store one
         // row of content rather than a second code path.
-        const ulong BuildingFingerprint = 18276317653320036380UL;
+        // 2026-09-22: Appended Building_Campfire at handle 8 — edifice 14, the first heat source
+        // (design 28 §7) and the one building whose `heatPerPass` is not zero. Blocking, wanting a
+        // clear cell like the bed, 3 stuff and 60 ticks. Written at handle 7 / edifice 13 and moved
+        // here on the merge with main: the shelf reached main first and both numbers are contracts,
+        // so the later branch is the one that moves — the same rule Building_Bed records at 5.
+        // The same merge added `heatPerPass` to BuildingDef, which is nought on every other row.
+        // 2026-09-23: Appended Building_Conduit, Building_Generator and Building_Heater at handles
+        // 9, 10 and 11 (design 32, power). The conduit is edifice 0 and `conduit`: a line in its
+        // own layer, always wood (then), 1 a cell, 40 ticks. The generator is edifice 15,
+        // two cells, rotatable, 1,000 W, a 75-wood hopper burning 22 a day at full load, 400 heat
+        // at full load, 30 stuff and 600 ticks. The heater is edifice 16, 175 W, 1,000 heat while
+        // powered, 10 stuff and 240 ticks. BuildingDef gained `conduit`, `fixedStuff` (since gone),
+        // `powerOutputW`, `powerDrawW`, `fuelItem`, `fuelCapacity` and `fuelPerDay`, nought or -1
+        // on every other row.
+        // Same day, second interview (design 32 §14): `fixedStuff` is gone and `partItem` /
+        // `partCount` replace it — a second payment in one fixed item beside the chosen material.
+        // The conduit is all part (costCount 0, one scrap metal); the generator takes 20 scrap
+        // metal and the heater 5 beside their wood or stone.
+        // Same day, third look (design 32 §14c): the heater rotates. Its facing is drawing only
+        // and backs on to a wall where there is one; nothing in the simulation reads it.
+        // 2026-09-23, on the merge of radiance into a main that had taken power: both
+        // branches added fields to BuildingDef — `radiantC` here, and the conduit, generator
+        // and heater rows with their own — so neither side's number covers the merged table.
+        // Re-taken from a freshly loaded pack.
+        //
+        // `radiantC` is what a heat source is like to STAND BESIDE (design 36), against
+        // `heatPerPass`, which is energy into the room's air. Two fields because they tune
+        // apart: making one tile read hot by raising heatPerPass would cook the whole hut.
+        //
+        // 2026-09-23, the combat contracts step (design 33 §4, §5): BuildingDef gained
+        // `maxHitPoints`, what a finished thing has when it is struck (C6) — wall 300, floor 250,
+        // deck plate 150, ladder 80, bed 120, door 160, shelf 100, all INVENTED and C6's to tune.
+        // Added to the XML and the code oracle together, and taken from a freshly loaded pack.
+        // Moved again, 2026-09-24, merging main (power) into the combat line: neither side's number
+        // covers the merged table, so it is re-taken from a freshly loaded pack. Power's three rows
+        // and the campfire carry no maxHitPoints yet (0); C6 gives them one when anything strikes.
+        // Moved again, 2026-09-24, merging main (combat) into the campfire line: `radiantC` there
+        // and `maxHitPoints` here, so neither number covers the merged table. Re-taken from a
+        // freshly loaded pack.
+        const ulong BuildingFingerprint = 4989369424864157307UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone
         /// 15). Update this only when you meant to change a material's numbers, and say what moved
         /// in the commit message.
         /// </summary>
-        const ulong StuffFingerprint = 5872933115437906559UL;
+        const ulong StuffFingerprint = 4054578596745551293UL;
 
         /// <summary>
         /// The quality tiers as they stand: Poor 85, Normal 100, Decent 112, Uber 125, Epic 140

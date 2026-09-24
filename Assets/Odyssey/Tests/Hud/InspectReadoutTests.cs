@@ -57,7 +57,8 @@ namespace Odyssey.Tests.Hud
         {
             InspectModel model = LookingAt(FrameWithPile(ItemHandle.Salvage, 1), new ThingId(7));
 
-            Assert.That(model.Title, Is.EqualTo("Scrap"));
+            // "Scrap metal" since power made it the stuff lines are built from (design 32 §14).
+            Assert.That(model.Title, Is.EqualTo("Scrap metal"));
         }
 
         [Test]
@@ -140,9 +141,26 @@ namespace Odyssey.Tests.Hud
             byte floorStuff = StuffHandle.None, byte support = 0,
             ushort moveCost = 1000, ushort workToClear = 0,
             byte quality = 0, int owner = 0, byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue,
-            byte zoneYield = 0, bool isIndoors = false) =>
+            byte zoneYield = 0, bool isIndoors = false, int ambientTempC = int.MinValue) =>
             new CellDetail(Size.Index(At), terrain, edifice, floorStuff, support, moveCost, workToClear,
-                quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors);
+                quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors,
+                ambientTempC: ambientTempC);
+
+        [Test]
+        public void ATileSaysHowWarmItIsWhenItKnows()
+        {
+            // The click's own decision aid (design 28 §8): one decimal, signed, beside the
+            // environment row — and silent for a detail nobody filled, which in the game is
+            // never, and in a fixture is always.
+            InspectModel model = Looking(FrameWith(Detail(isIndoors: true, ambientTempC: 2_125)));
+            Assert.That(Rows(model), Does.Contain("temperature=21.2 °C"));
+
+            model = Looking(FrameWith(Detail(ambientTempC: -1_250)));
+            Assert.That(Rows(model), Does.Contain("temperature=-12.5 °C"));
+
+            model = Looking(FrameWith(Detail()));
+            Assert.That(Rows(model), Does.Not.Contain("temperature="));
+        }
 
         /// <summary>The rows as one readable line, in order: "walk speed=33%" and friends.</summary>
         static string Rows(InspectModel model)
@@ -473,7 +491,10 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(model.Title, Is.EqualTo("Wall"));
             Assert.That(model.Site, Is.EqualTo("2 of 5 wood delivered"));
-            Assert.That(model.CellRows, Is.Empty, "the site is the whole answer while it stands");
+            // The site is the whole answer while it stands — its one row is the order's own
+            // Cancel (owner, 2026-09-23), never a fact about the tile under it.
+            Assert.That(model.CellRows.Count, Is.EqualTo(1), "the site is the whole answer while it stands");
+            Assert.That(model.CellRows[0].Name, Is.EqualTo(InspectModel.OrderActionRow));
         }
 
         [Test]

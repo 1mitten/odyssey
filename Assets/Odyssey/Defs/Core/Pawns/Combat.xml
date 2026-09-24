@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The fight's numbers (docs/design/33-combat.md section 1), in one record, from the combat
+  contracts step. Which figures are the owner's and which are invented is said beside each.
+
+  Hit points everywhere are in THOUSANDTHS of a point, the Rates convention, except where a Def
+  names whole points (SpeciesDef.healthPoints, AttackDef.damage): a heal of a fraction of a point
+  a tick is then exact without a float.
+-->
+<Defs>
+
+  <CombatDef>
+    <defName>Combat_Default</defName>
+
+    <!--
+      The attacker's chance to land, per mille, by melee level - the owner's three points
+      (2026-09-23): 50 per cent at level 0, 80 at 10, 90 at 20. Linear between them, flat past the
+      ends. An animal reads it at its species' meleeSkill.
+    -->
+    <hitCurve>
+      <li><level>0</level><perMille>500</perMille></li>
+      <li><level>10</level><perMille>800</perMille></li>
+      <li><level>20</level><perMille>900</perMille></li>
+    </hitCurve>
+
+    <!--
+      The defender's chance to step out of a swing that would have landed, per mille, by the
+      DEFENDER's melee level - the owner's three points: 0 at level 0, 10 per cent at 10, 30 at 20.
+      A second roll, made only after the first lands.
+    -->
+    <dodgeCurve>
+      <li><level>0</level><perMille>0</perMille></li>
+      <li><level>10</level><perMille>100</perMille></li>
+      <li><level>20</level><perMille>300</perMille></li>
+    </dodgeCurve>
+
+    <!--
+      A person's bare hands: about 4 damage every two seconds (owner; the reference's unarmed human
+      is about 4.1 every 2 s). The wind-up is INVENTED - a punch lands about a third of a second
+      in - and so is the experience, which is the weapons' 50 points a swing (Items.xml).
+    -->
+    <fists>
+      <damage>4</damage>
+      <cooldownTicks>120</cooldownTicks>
+      <windupTicks>18</windupTicks>
+      <damageKind>Blunt</damageKind>
+      <experiencePerSwing>50000</experiencePerSwing>
+      <style>Fists</style>
+    </fists>
+
+    <!-- A landed blow does its weapon's figure give or take a fifth (design 33 section 3). -->
+    <damageSpreadPerMille>200</damageSpreadPerMille>
+
+    <!--
+      Healing, in thousandths of a point per in-game day. The shape is the owner's - a colonist
+      heals only in a bed, an animal recovers on its own - and the rates are INVENTED: a colonist
+      at nought is on her feet in about a day in bed, and a downed hog in about a day wherever it
+      fell.
+    -->
+    <bedHealPerDay>20000</bedHealPerDay>
+    <animalHealPerDay>12000</animalHealPerDay>
+
+    <!--
+      A downed pawn gets up at 150 per mille of its pool: above nought on purpose, so the first
+      blow after it rises does not put it straight back down. INVENTED.
+    -->
+    <downedRecoverAtPerMille>150</downedRecoverAtPerMille>
+
+    <!-- A chase re-plans to a moving target once a second. INVENTED; a cost figure as much as a feel. -->
+    <chaseRepathTicks>60</chaseRepathTicks>
+
+    <!--
+      How long an attack nobody ordered (a hunt, a revenge, a self-defence) keeps its first target
+      before it thinks again, so a marauder notices a nearer colonist. INVENTED: five seconds.
+    -->
+    <rechooseTicks>300</rechooseTicks>
+
+    <!--
+      How long a colonist struck by a colonist fights back (owner: she does), 20 seconds; and how
+      long a hog that turned stays vengeful, the reference's 10,000-tick floor (a-10). Both in
+      ticks. The first is INVENTED.
+    -->
+    <retaliationTicks>1200</retaliationTicks>
+    <revengeTicks>10000</revengeTicks>
+
+    <!-- How far a hurt animal runs when it does not turn. INVENTED: out of reach, not off the board. -->
+    <fleeCells>12</fleeCells>
+
+    <!--
+      Critical blows and knockback (design 33 section 9b), the owner's numbers (2026-09-23). A blow
+      that lands is critical at 10 per cent plus 1 per cent per four whole melee levels of the
+      attacker (an animal counts its species' meleeSkill), and does half as much again. A critical
+      knocks its target back a tile half the time, three times in four for a blunt weapon, and a
+      target knocked back lies where it landed for about a second and a half (90 ticks) before it
+      stands.
+    -->
+    <critChancePerMille>100</critChancePerMille>
+    <critPerMillePerFourLevels>10</critPerMillePerFourLevels>
+    <critDamagePerMille>1500</critDamagePerMille>
+    <knockbackPerMille>500</knockbackPerMille>
+    <knockbackBluntPerMille>750</knockbackBluntPerMille>
+    <knockedDownTicks>90</knockedDownTicks>
+  </CombatDef>
+
+</Defs>

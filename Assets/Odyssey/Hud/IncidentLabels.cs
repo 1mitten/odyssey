@@ -22,6 +22,7 @@ namespace Odyssey.Hud
         public static readonly string[] Keys =
         {
             "ui.bulletin.supplydrop",
+            "ui.bulletin.scrapdrop",
         };
 
         /// <summary>The key for an incident the table does not know, so the fault is visible on screen.</summary>

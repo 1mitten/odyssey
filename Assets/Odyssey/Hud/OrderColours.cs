@@ -68,6 +68,38 @@ namespace Odyssey.Hud
         public static readonly HudColour StoreHue = new HudColour(0x7f, 0x96, 0xa8);
 
         /// <summary>
+        /// A drafted colonist's hue (design 33 §2g): the marker over its head, the line to where it
+        /// has been sent and the bracket on the cell. <b>A deep, dark red</b> — the owner's call
+        /// after the first draft playtest (2026-09-23: <i>"make the cursor a deeper dark red but
+        /// translucent"</i>), replacing a hot orange-red. Far from <see cref="HudTheme.Bad"/>, the
+        /// Cancel tool's brighter red, by being half as bright: a drafted colonist is under
+        /// orders, not being undone. Drawn translucent at <see cref="DraftAlpha"/>.
+        /// </summary>
+        public static readonly HudColour Draft = new HudColour(0x8b, 0x12, 0x12);
+
+        /// <summary>How solid the draft's marks are: translucent, so the colonist under the
+        /// diamond and the ground under the line still read through them.</summary>
+        public const float DraftAlpha = 0.70f;
+
+        /// <summary>
+        /// An attack order's hue: the lock-on ring under the target (design 33 §7b; owner,
+        /// 2026-09-23: <i>"paints a red transparent circle quickly around the selected enemy"</i>).
+        /// <b>A clear, saturated red</b>, and deliberately neither of the two reds already on the
+        /// board. Not <see cref="Draft"/>'s deep dark red, which marks <i>who</i> is under orders —
+        /// the ring marks <i>whom</i> they are sent at, and the two are on screen together in every
+        /// fight, one over a head and one under feet. Not <see cref="HudTheme.Bad"/>, the Cancel
+        /// tool's salmon red, which is also the hostile marker's diamond over the very marauder the
+        /// ring is drawn under: a ring in the marker's colour would read as more of the marker —
+        /// "this is an enemy" — rather than "this is the one you sent them at". Pure red with a
+        /// little blue kept out of pink sits apart from both: brighter than the draft by half
+        /// again, and redder than the salmon by taking the green and blue out.
+        /// <c>OrderColoursTests.TheAttackRedIsNeitherTheDraftNorTheCancelRed</c> holds it apart
+        /// from both at the board's eighty-point distance. Its opacity is the ring's clock's
+        /// (<see cref="LockOnRing"/>), not a constant here.
+        /// </summary>
+        public static readonly HudColour Attack = new HudColour(0xf0, 0x28, 0x2c);
+
+        /// <summary>
         /// The hue of an order, opaque — the chip's colour, and the colour every mark and cursor
         /// below is a transparency of.
         ///
@@ -99,6 +131,9 @@ namespace Odyssey.Hud
             // is not a transformation of the ground, so the order's colour and the result's can
             // be the same one.
             DesignateTool.Stockpile => StoreHue,
+            // Taking a line up is taking something apart, and says so in deconstruct's own amber:
+            // the two are the same act on two layers of one cell (design 32 §2a).
+            DesignateTool.RemoveConduit => HudTheme.Warn,
             _ => HudTheme.Accent,
         };
 

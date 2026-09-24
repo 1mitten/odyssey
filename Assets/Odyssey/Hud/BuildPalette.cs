@@ -450,6 +450,22 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
+        /// The order being held, pinned or not — <see cref="ArmedPinned"/>, or the one order tool
+        /// that lives in a category rather than on the strip: taking power lines up (design 32).
+        /// What the armed banner names and colours itself from, so a player holding the remove
+        /// tool is not told they are building a conduit.
+        /// </summary>
+        public string ArmedOrder
+        {
+            get
+            {
+                string pinned = ArmedPinned;
+                if (pinned.Length > 0) return pinned;
+                return _designate.Tool == DesignateTool.RemoveConduit ? PaletteTools.Unwire : string.Empty;
+            }
+        }
+
+        /// <summary>
         /// Arm or put down a pinned action. The same toggle the category tools use, so a player
         /// can always put a tool down the way they picked it up.
         /// </summary>

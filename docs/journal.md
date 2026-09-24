@@ -9324,6 +9324,40 @@ built, and that the collector does not run at all while the panel sits open.
 
 It logs its baseline and says to read that first, because the last timing test to fail on this
 machine failed to contention and not to a regression.
+## 2026-09-21 — temperature lands (design 28, the a-06 model)
+
+The M4 core pulled forward on the owner's ask. The model is the one `a-06` recommended and the
+design doc restates: per-room scalars, one pass per 120 ticks, conductances in per-mille, buoyancy
+as one asymmetric number on vertical openings, the ground as a boundary that damps the season by
+depth. Three things the implementation itself found, all now amendments in §3 and §4 of the
+design doc:
+
+**The quarter clamp strangled the fire.** ONI's rule bounds how fast two temperatures may
+approach each other; the first cut clamped the room's whole step with it, and a fired room at
+one with the outdoors had a driving difference of zero — a limit of zero — and could never warm.
+Sources are now clamped by nothing; the exchanges alone carry the bound.
+
+**A cellar with a way up was not a room.** The 100%-roofed rule read a ladder shaft as a hole in
+the roof, so any room with a stairwell or a hatch read the outdoor curve — the buoyancy feature
+dead on arrival, the cellar being the whole point. The shaft rule: a hole into *the room above*
+still counts as roofed, and the model carries it as an Opening surface. Rooms then needed the
+sweep to run ascending to fixed point, because each sweep pulls one more layer of a shaft chain
+to life — found as a round-trip divergence, a played world and a loaded one disagreeing about
+which caverns existed three layers down, which is also why rooms resolve their starting
+temperature at solve time rather than at the next pass: the warm half of a split room was
+snapping to the outdoors between the two.
+
+**Heat rises, read the right way round.** The buoyancy experiment's first assertion demanded the
+loft *warmer* than a fired hall below, which equilibrium forbids — the source is downstairs. What
+the 4:1 actually buys is the *gradient*: driven from below, the fast upward coupling keeps the
+loft close behind; driven from above, the slow downward one leaves the cellar far below. The test
+asserts the separation between the two, which is a-06's tie-breaker stated properly.
+
+Balance note: the first climate made a Wash night "bad-band" cold and the session round trip
+found a colony that hauled nothing — 5.8 °C nights against band edges tuned for autumn. The
+shipped table lifts Wash (mean 15/19 °C, ±5 swing) and widens the mild band so spring nights are
+full-rate work and mild mood; Rime still crosses the floor. The numbers are the owner's to tune;
+the shapes are pinned by tests.
 
 ---
 
@@ -10327,6 +10361,60 @@ enough not to be worth one.
 **What is not measured, said out loud:** the write is synchronous and lands inside one frame. On a
 large colony that is a hitch every game morning, and it is the first thing to look at if a daily
 stutter is ever reported.
+
+## 2026-09-21 — temperature reviewed: nine findings, the playtest held
+
+PR #164 reviewed on its own worktree with `main` merged in (seven conflicts, all docs, the wiki
+and one fingerprint; the code merged clean). The method was the one this project keeps having to
+relearn: **a probe test per suspicion, before believing any of them** — nine were written, one
+passed for a reason that turned out to be the probe's own (an unroofed gap), and after that fix
+all nine fail on the branch. They are `[Explicit]` in `TemperatureReviewProbes.cs`; a fix turns
+its probe into a test. The findings and the numbers are `docs/design/28-temperature.md` §12.
+
+The one that would have decided the playtest on its own: the severity bar fills in fourteen
+game-minutes at a Candle night, against the four hours every comment promises — a per-mille
+applied per centi-degree, so the shipped 300 is ten to twenty times the intent, and the test
+that pins it says "three" in its message while pinning 300. The two that matter for the record
+are both load divergences the round trip cannot see because it runs in Wash: the fixed-point
+sweep only re-solves the layers the edit marked, so a house roofed last has a cellar that is a
+room after a load and not before; and a re-sealed room resumes its old temperature in play and
+resolves from the outdoors after a load, because only live rooms are saved. And a surface one
+that the buoyancy test hides: a shared slab is charged to the sky *and* to the room above, so
+building upstairs makes downstairs colder.
+
+The cost was measured because the benchmark could not: `TickBenchmarkTests`' edit arm marks nav
+alone, so the enclosure has never been in the edit tick. Same probe on both, one after the
+other: the per-edit solve is up 1.6× (0.56 → 0.92 ms Standard, 2.6 → 4.3 ms Huge), the initial
+solve 5–6× on the wooded boards (37 ms and 106 ms), the worst single edit on Huge 11 ms — and
+the enclosure was already most of a real edit's cost on Huge before this branch, invisible.
+
+Nothing was fixed; the owner asked for a review. The merge with `main` is pushed to the branch,
+the playtest row is held until F1–F4 are in, and the PR carries the review.
+
+## 2026-09-21 — the nine fixed, and the goldens measured before they were re-baked
+
+The temperature review's findings (design 28 §12), fixed in the order the review ranked them and
+recorded in §12a. The one restructure is the enclosure solve: identity top-down with dirtiness
+carried downward on change, surfaces built once after — which is both the correctness fix (the
+cellar under a house roofed last) and the cost fix (no fixed-point sweep). The rest are a number,
+a mark, a ledger that counts a room's own votes, a ceiling that is not sky when a room is above it,
+a remainder that is kept, and a field that is saved.
+
+Two things worth writing down about the method. **The fastest way to know what moved a golden is
+to hash its components separately** — cells, pawns, edifices, the thermal section — before and
+after, on the same worlds: five minutes, and it turned "the Simulated hash changed on two boards"
+into "only the thermal section changed, the colony did nothing different" with no reasoning at
+all. And **disable the new hash fields and re-run before believing a tick-zero move is only the
+hash seeing more**; it was, on all three, and now the sentence in `Golden.cs` can say so.
+
+The playtest row is un-held. The residual and the saved ambient are two more hashed fields; the
+severity slope is one content line; the enclosure's first solve on a wooded board is back near
+what it was.
+
+The edit-tick benchmark ran with the enclosure in it for the first time: Standard's lattice world
+3.86 → 5.76 ms per tick, nav alone against nav and the enclosure. The 0.298 ms `28-map-size.md`
+quotes for Standard is the generated board and never was this arm — one more number that meant a
+different world from the one it was read as.
 ## 2026-09-21 — Two reports: sealed in a wall, and a building that takes a second to appear
 
 The owner asked to be interviewed before either was fixed, which was the right instinct for the
@@ -10677,6 +10765,119 @@ and nobody, the owner included, could say what was wrong beyond "odd" — which 
 running backwards under a body moving forwards looks like. The sign is one named constant now
 and a test measures the sole.
 
+## 2026-09-23 — Wildlife: a world generates its animals, and keeps them
+
+The owner took the interview's recommendations whole and asked for the plan and the build in
+one go, so the plan is a page (`docs/plans/wildlife.md`) and the reasoning is here and in
+design 30.
+
+The shape is RimWorld's, by mechanics only: a world carries a wildlife table and a density, the
+map is seeded to it, and a spawner holds the level afterwards with arrivals at the edge and
+animals wandering off it. Three of ours are worth writing down.
+
+**The target is a census.** The density is per ten thousand *reachable* surface columns, and
+the first run of the seeder put four hogs on the whole meadow at the number the interview had
+in mind, because an animal hops only where a ramp is drawn and so can walk to 6,354 of the
+meadow's 14,391 columns. The density went from seven to fifteen and the count came to the nine
+or ten asked for. A number typed against the board's area would have been wrong by half and
+looked right in every test.
+
+**Removal is new.** Nothing had ever left the pawn registry — no health, no death — so a leaver
+walking off the edge is the first thing that has. The registry removes in place and renumbers
+its index, which is O(n) on an event that happens a few times a day; the figure director and
+the interface already coped with a pawn on another layer, which is the same absence from the
+snapshot. `Leaving` rides in the kind's hash word so the bare board hashes as it did, and lives
+in its own save section so no format was bumped — the temperature branch holds the next
+number and two branches taking it would collide at the merge.
+
+**The first leaver walked the ring for ever.** On the edge, the think node handed it another
+leg to the next edge cell along, since the one it stood on was excluded; the level-keeper only
+looks every 250 ticks and never caught it standing. A leaver on the ring now waits one rare
+tick. The test that found it also holds that a leaver moves one cell a tick — the same snap
+guard the animals unit needed — and that the registry's order and index survive the removal.
+
+Two goldens moved and the bare meadow did not. The colony probe on both branches: item counts
+identical, and the food and rest sums differ by exactly the animals' own untouched needs — ten
+at 800 on the meadow, four then three on the city, one of which decided to go inside the
+ten-thousand-tick run. The colonists did the same things.
+
+**The panel, the same day.** The interview had said an *Animals* panel on F2. The registry
+said otherwise and had since M1: it carries both an Animals tab ("tame beasts and their
+training") and a Wildlife tab ("what is out there"), and the command bar has drawn Wildlife on
+F6 as a dead item with the reason "wildlife arrives with M5" since the bar was first laid out.
+So the panel is Wildlife, on F6, and the placeholder became real the way Work made F1 real — the
+tuple's reason emptied, the key added to the binding map, the clash tests told. The one design
+question in it was what "how far away" is measured from; the frame carries no start cell, and
+the mean of the colonists' cells is the colony as it is now rather than as it was placed.
+
+**And then the Animals tab, from the brief.** The interview's answer was one tab called
+Animals with the tamed half deferred; the brief went to Claude Design and came back as a
+specification with numbers — a 560 window, 32 + 250 + 252 columns, 30 px rows, a 7 × 5 sort
+mark, 22 px pager buttons — and the day's second panel was built to it, replacing the day's
+first. Two things in the specification are worth writing down. It **drops the distance and the
+layer columns** the Wildlife panel had drawn, while keeping distance as the sort order, which
+is a cleaner table and a question for the playtest. And it says twice that **the tab and the
+inspect pane never show together** while also specifying a selected-row style; the rule wins,
+the style is built and unseen, and the note is in §6 so nobody spends an afternoon looking for
+the row that never highlights. The arithmetic in the brief was right: 560 less the panel's own
+padding and border is exactly the three columns, which is the border-box lesson of design 27
+§17 arriving from the design side for once.
+
+**The third look, the same afternoon.** Three small things and one that was not: Wildlife off
+the bar, the Esc cap off the tab's header, sounders spread — a centre drawn up to twelve times
+for one twenty-four cells from the others, members scattered over a four-cell square instead of
+filling a spiral from the centre outward, which is what had put five hogs on six adjacent cells
+— and the Almanac. The Almanac's Fauna turned out to be two invented entries, a "Scraphound"
+and a rat with bite damage and tame chances, written before there were animals; they are the
+two real animals now, saying only what the simulation does, and the inspect pane's info button
+opens them, which it had declined to do for an animal because there was nothing to open. The
+goldens moved for the scatter and the probe read the same as the first time. The level-keeper
+also stopped allocating on its arrival check — the census refills one kept instance — after
+the idle-tick allocation test failed once in the Long tier and passed alone; that was collector
+noise from a neighbour, since the test builds a world with no wildlife system in it, but a
+system that allocates tens of thousands of ints six times a minute is not one to leave.
+
+## 2026-09-23 — Combat: the interview, and the draft (C1)
+
+The owner asked for an MVP of RimWorld's attack system — a colonist put into an attack mode,
+ordered to move and to attack animals, colonists, buildings and enemies — and asked to be
+interviewed on every detail. Five rounds settled the table in `docs/design/33-combat.md` §1. Most
+of the recommended defaults were taken. Three were not, and they are the ones worth remembering:
+- **Downed colonists heal only in a bed**, so rescue is in the MVP.
+- **Draft is on T**, because R stays slice-up.
+- Box selection already existed, so orders apply to **every selected drafted colonist** rather
+  than the single colonist the interview assumed.
+
+The owner also handed over Synty's Sword Combat animation package mid-plan. It was unpacked into
+the shared `Assets/Synty` entry by entry, GUIDs kept, with its runtime C# tool left out so no
+junctioned checkout gained scripts. Its attacks come pre-cut at the impact frame, which is what
+C2's wind-up will be timed against (`docs/research/synty-sword-combat.md`).
+
+The branch sits on `claude/wildlife` because animals are targets, so it merges after #167 and
+#169.
+
+**The one thing C1 found that nobody asked for was a snap.** An order has to take effect now: a
+player who clicks expects the colonist to respond. But ending a job clears the path, and with it
+the step in progress. Every draft of a walking colonist, and every re-aimed right-click, would
+have put the pawn back on the cell it was leaving while its figure stood most of the way into the
+next. That is the fault the job expiry was taught to avoid on 2026-09-22.
+
+The fix is `JobSystem.Interrupt`: end the job, keep the one step as a path of its own, and have
+the next walk wait for it to land. The kept step has to be saved and hashed, because its
+destination went with the job that chose it. Without that, a save taken mid-step resumed on a
+different trajectory, which `ASaveTakenMidStepResumesIdentically` pins. The test that proves the
+step is kept was run once with the keep withheld, and it failed there first.
+
+**The goldens moved, all six, and the colony did not.** Two job defs means four more hashed zeros
+in the job counters before a tick. The colony probe run on `claude/wildlife` and on this branch
+diffs clean. The draft flag itself is hashed only while set, on the `Leaving` precedent, which is
+what will let C5 and C6 assert that nothing moves.
+
+`JobSystem.Load` used to refuse any save whose job count differed from the build's. That would
+have made every save before C1 unloadable, so it now accepts fewer, since the table is
+append-only.
+
+
 ## 2026-09-22 — Modular colonists, and four caches that were right until something moved
 
 `docs/design/29-modular-colonists.md`, `docs/research/e-06-modular-colonists.md`, PR #168.
@@ -10824,6 +11025,515 @@ pass by never having built one. That version fails on the mutation.
 while it stood the aspect scan looked like a constant and the whole bend was attributed to the larger
 term. One pass held two quadratics. **After fixing a quadratic, measure the same pass again rather
 than declaring it linear.**
+### The arms were measuring a board nobody plays, and a play log found it
+
+The owner pasted a console log while playing — not a bug report, just context for a question about
+whether the editor felt slow. Their 120 × 120 × 16 session read `patches 0, trees 1598`. Every
+measurement arm written that day had been reporting `patches 2210, trees 1222` for the same board.
+
+**Two owners for one choice.** `Assets/Scenes/Play.unity` carries `barrenMap: 1, woodedMap: 1`, so
+`ColonyWorld.Build` applied `MakeWooded()` on top of `MapGenerator.DefaultDef`. Every arm —
+worldgen, nav statistics, save — reached for `NaturalMapGenDef.For(size)`, which *is*
+`DefaultDef`, and got the def without it. `BoardMemoryTests` was further out again:
+`ColonyWorld.Build`'s `wooded` parameter defaults to `false`, and `false` means `MakeBarren()` — a
+board with no trees and no water at all. So the memory figures were for a bare board, the rest for
+a half-wooded one, and the game plays neither.
+
+**The fix was to delete the second owner rather than copy the first.** `ColonyWorld.DefFor` is now
+the one place that decision is made; `Build` calls it and `PlayedMap` calls it. A copy would have
+been quicker and would have re-created the fault the moment either side moved — which is the shape
+`HopCost` and `OrderColours` already exist to prevent, and now the third instance of it.
+
+**The first guard was itself wrong, and the guard caught that too.** The obvious oracle is to hash a
+grid built by `PlayedMap` against one built by `ColonyWorld.Build` and assert they match. They do
+not: `Build` also applies the scenario's placements, so it compares far more than the def. The test
+failed, and the failure was the instrument rather than the subject — twice in one day. What replaced
+it holds the helper to an *observable property* of `MakeWooded` — trees present, patches zero —
+with a negative control that fails if the helper ever becomes a synonym for the plain default.
+
+**What it moved was less than feared, and saying so is part of the record.** Live regions and links
+came out **identical on every board**: 2,110/1,477, 7,360/3,511, 8,406/6,180, 24,141/6,772. Trees and
+surface patches do not change how the region graph carves a 10 × 10 block, so the region counts, the
+edit tick and the whole ceiling argument stand. Huge is 0.865 ms an edited cell against the 0.883
+first reported — noise, on the same structure. What did move: generation time (24 / 77 / 104 ms),
+the feature counts, memory by about 2 B/cell, save size by a few per cent.
+
+One finding sharpened rather than softened. Water shapes across the four boards are **2, 4, 7 and
+5** — Huge has *fewer* than Large while covering nearly twice the ground, because `streamCount` is a
+per-map absolute. That was a theory in §4 and is now a number, and a better playtest question for it.
+
+**The uncomfortable part.** `docs/bug-patterns.md` P14 — *an instrument that cannot see the thing it
+is comparing, and passes* — was written one commit earlier, in this same branch, about two other
+faults of the same shape found the same afternoon. It was not applied to the arms it was written
+about. Writing the pattern down is not the same as running it over the work in hand, and the thing
+that actually caught this was a person pasting a log.
+
+Three instrument faults in one day, none found by a failing assertion: one found by a control, one
+by noticing two "different" readings printed the same draw-call count, and one by an owner's console
+output. The rule that covers all three is already written — **assert on the deterministic half** —
+and the arms now do: `MineOneCell.Mined == Ticks`, `callsOn < callsOff`, trees present and patches
+zero. A millisecond never catches a fixture that has stopped doing its job.
+
+## 2026-09-23 — the cull comes off hold, and the instrument that could not see
+
+`claude/frustum-culling` had been sitting closed since 2026-09-21 as a deliberate draft. The work was
+done and measured; what held it was that its proof, `CullingDoesNotChangeThePicture`, **failed its
+own control** — a frustum admitting nothing moved 3.22% of pixels, which is not a difference between
+two pictures of a world but what two pictures of nearly nothing look like. The previous session added
+diagnostics to settle it and never re-ran them. Merging the branch up 134 commits and running it took
+about a minute and settled it in one line.
+
+**The blind shot reported counts identical to the culled one** — 126 chunks, 57,818 instances, 1,744
+calls — where a frustum admitting nothing should submit nothing at all. The control never applied.
+It assigned `ChunkRenderer.Frustum`, and `OdysseyBootstrap.LateUpdate` assigns that field every
+frame, so the test's planes were overwritten before the capture. The comparison was the culled shot
+against itself.
+
+**That is the second time in one file a test set a field the root re-derives per frame**; the first,
+one commit earlier in the same branch, was `ShadowCasterMarginMetres` off `QualitySettings.shadowDistance`.
+The tell was identical counters both times. The lesson had been written down and not applied to the
+field beside it. `ChunkRenderer.FrustumOverride` is a seam the root does not touch.
+
+**The diagnostics also killed my own hypothesis**, which is exactly what they were for. I had reasoned
+from §6c that forcing a camera `targetTexture` in batch is pathological and guessed the capture never
+saw the board. Mean channel 130.6 says it saw it perfectly well. Third time today that reading-derived
+reasoning lost to a cheap measurement.
+
+**A second fault was hiding underneath the first.** With the control working, two captures of the
+identical configuration still differed by 1.29% against culling's 2.13% — a difference meant to be
+nought, asked to stand out against a floor most of its own size. Pausing the simulation is not enough:
+it stops the ticks so nobody walks, but the water scrolls its streaks, the figures advance their
+animation graphs and the daylight rig moves, because those run on `Time.deltaTime` and the shaders on
+`_Time`. `Time.timeScale = 0` stills the shaders as well as the scripts. And the floor is no longer
+assumed — the test takes a *repeat* of the identical configuration and asserts on it, so there is now
+a control that must show a difference and one that must not.
+
+    the same shot twice           0.00%
+    culling                       0.00%
+    a frustum admitting nothing  98.21%
+
+So the cull is exactly invisible, and on `main` it is worth: Standard 33 of 104 chunks, 3.43 → 2.86 ms,
+1,360 → 996 calls; Huge 317 of 443, 8.89 → 3.84 ms, 5,083 → 1,744 calls, `World` 5.613 → 1.687.
+`CullToFrustum` is on by default from today.
+
+**One honest qualification recorded beside the good number.** The saving follows the player's shadow
+distance, because the margin *is* that distance — a caster nearer than it may cast into the frustum
+and has to be submitted. At a 120 m setting Standard culls nothing at all and Huge culls 74 of 443.
+The mechanism is right; the headline is a default-settings number.
+
+**And the merge brought two things that were not culling.** `ColonyWorld.DefFor` — the one-owner fix
+for a wrong-map fault where every per-board measurement arm read the unmodified default def while the
+played scene applies `MakeWooded()` — which never reached `main` and is worth having on its own. And a
+`P14` collision: the branch's new pattern arrived as `P14`, which `main` already used. Renumbered to
+`P17` on merge, with its three citations, and the catalogue now says plainly that a third collision
+gets renumbered rather than kept.
+
+**The first draft playtest, the same afternoon.** The owner played C1: *"the drafting, T and moving
+onto surfaces, diamond and 4 hours all seemed to work."* Two asks came back. The first was that a
+drafted colonist should run. That was the first reason to run the game has had since design 17
+§4f held running back with "do not invent an urgency model". The answer is one factor on the move
+rate, `Pawn.UrgencyPerMille`: 2,000 while drafted and 1,000 otherwise. It needs no animation work,
+because the gait blend already draws the run clip in above 2 m/s. No golden moved, since nobody in
+a golden window is drafted. The second ask was a deeper, translucent red for the draft's marks.
+
+## 2026-09-23 — Combat: the contracts, cut once so four lanes can build at once
+
+The owner said "run the combat workflow", and this is its Phase 1: the one step that edits the
+shared spine, so that the four lanes after it (the fight in the simulation, the fight drawn, the
+interface, the weapons) only fill seams. Every handle the line needs was appended in one commit —
+five jobs, the melee skill, the rescue work type, the marauder, the four weapons, three orders — with
+every number from the owner's table in XML, and nothing yet fights. `docs/design/33-combat.md` §5
+says what each seam is for, and `docs/plans/combat-contracts.md` says who owns which file.
+
+**The shape that made it possible is a rule C1 had already set: combat state is hashed only while
+it is set.** Eight fields on the pawn, the corpse registry and the struck-building store all
+contribute nothing to a colony that has never fought, so the goldens moved once, here, for the new
+handles alone — ten job counters, a sixth skill, a sixth priority and four allow-list slots, all
+zeros — and every lane after this can assert them unchanged. The colony probe says so: widened to
+print mood, step progress, the first five skills' experience and passions and the per-job counts,
+it diffs clean against `origin/main` for all three golden colonies.
+
+**One bug came out of the contracts themselves, and it is the kind that only a round trip finds.**
+A pawn's hit points are full at spawn, and "full" depends on the species. The loader builds every
+pawn as a colonist — pool 100 — and only then reads that it is a hog, whose pool is 60. So a reloaded
+hog carried 100 of 60 hit points; that is combat state, which is saved and hashed, and every board
+with an animal on it would have disagreed with itself across a save. `Pawn.Kind`'s setter now keeps
+a whole pawn whole when its kind changes. `AnAnimalReloadedIsWhole` failed with the setter withheld
+(100,000 against 60,000), which is the control.
+
+**The plan's table had one seam in the wrong place.** "One `ICombatRules`" would have been one file
+that the fight and the weapons both edit, so it is two interfaces: what a pawn *holds*
+(`IWeaponRules`, which never rolls) and what a swing *does* (`IMeleeRules`, which never asks where
+the armament came from), with one value, `Armament`, between them. The fight lane can fight with
+fists and teeth from day one, because that is already the whole truth of a colony with no weapons.
+Two smaller moves: the stun is rolled where every other roll is, in the fight's lane; and the debug
+Spawn rows went to the interface lane, because `GiveResource` already places any item.
+
+**The kind was carrying a meaning it could not hold.** Six places in the interface and the renderer
+read "kind is not 0" as "an animal". A marauder is kind 3 and a person. `PawnView` now carries a
+flags byte — person, hostile, drafted, downed, stunned, carried — and every one of those places asks
+it. A view built by hand without flags still reads its kind the old way, so no existing test had to
+change for it.
+
+Recorded rather than fixed: `PawnPurpose.AnimalMind` and `DeconstructRefund` share a salt. It
+predates combat, and fixing it moves a golden.
+
+## 2026-09-23 — Combat: the seam review, before any lane started
+
+A reviewer read the lane briefs against the code with one question — *can each lane do its job from
+the files it owns?* — and found eleven places where the answer was no, or where two lanes would each
+have answered the same question their own way. The spine was fixed for the first kind and the rule
+written down once for the second (design 33 §5j), so no lane has to edit a shared file and none has
+to guess what another decided.
+
+**The design said things the code could not make true.** The marauder is "armed" in the owner's
+table, the Def comment and the wiki, but no lane could arm it: the kind had no weapon field, the
+only spawn path belonged to nobody, and a phantom armament would not have reached the held prop or
+the drop on death, which both read a real `EquippedItem`. The kind now names `Item_Machete` and
+`Spawn` calls `IWeaponRules.ArmOnSpawn`, which is lane D's. Likewise a stun meant "no swing and no
+step", but only the publish read it: movement and the job pipeline, neither in the fight's lane,
+carried on regardless, and the one thing that lane could do — interrupt the job — would have dropped
+a carried load and thrown away a player's order. **A stun is a pause, not an interrupt**, held in
+`JobSystem.TickPawn` and `MovementSystem.Advance`, and the difference was worth deciding once rather
+than by whichever lane got there first.
+
+**Death found two things nothing had needed before.** Until today only animals were despawned, and
+they own no beds, so a dead colonist would have kept hers for ever under an id that no longer
+exists. `Despawn` releases the pawn's beds now — in the despawn rather than the death, so every way
+off the board releases the same things. And a colonist downed during a mental break would have had
+her `Job_Downed` failed and restarted every tick of the break, inflating the hashed counters; going
+down ends the break, in lane A's one apply method.
+
+**The pane was the largest seam, and it was invisible from the briefs.** Every shape decision in
+`HudShell.Inspect` — which avatar, whether needs and skills are synced, whether there is a tab box,
+who gets commands — was keyed on the subject and `IsAnimal`, in a file belonging to the drawing lane.
+A corpse would have worn the colonist badge; a marauder would have shown needs, skills and a Draft
+button the simulation refuses. `InspectModel` now answers four questions (`ShowsFace`,
+`ShowsColonistBody`, `ShowsTabBox`, `AvatarKey`) and the shell reads them, with values that
+reproduce the pane exactly as it was; the interface lane changes them in the fast tier. The corpse
+became a subject and a selection in the same move.
+
+Every spine fix has its negative control seen to fail with the fix withheld (six in the simulation,
+three in the interface). No golden moved; the content fingerprint moved once, for the machete.
+
+## 2026-09-23 — Combat: C2 and C3 integrated, and the prop nobody owned
+
+The four lanes (`claude/combat-fight`, `-weapons`, `-hud`, `-drawn`) were merged on to
+`claude/combat-c2` in the plan's order — simulation first — and the only conflicts were their own
+subsections of design 33, each appended at the end of the same file. That is the contracts step
+paying for itself: four branches built in parallel against one spine and nobody's code touched
+anybody else's. The fast tier was green after every merge.
+
+**What the merge could not see was what lay between the lanes.** Three things did, and one was a
+missing owner rather than a missing wire:
+
+- **The equip click never arrived.** Lane C's model sends `OrderEquip` for an undrafted colonist
+  (the seam review's rule), but lane B's presenter still asked `AnyDrafted` before asking the model,
+  so the rule was true in a test and false at the keyboard. P1 again: who hears a right-click had
+  two owners, the model and a gate upstream of it that still answered in C1's words.
+- **The health bar had two colour ladders.** Lane B coloured it 60/30 %, lane C had written the
+  need bar's 60/40 % for lane B to call. P1, one rule with two owners, caught before anyone saw
+  them disagree at 35 %. The bar asks the model now, and the floating words take their lifetimes
+  from it too.
+- **Nobody drew the weapon.** Lane D put it in the simulation's hand and published it; lane B picked
+  the swing's clip family from it; the brief gave the held prop to no lane at all, and the ground
+  rows the contracts step claimed said "until lane B's catalogue build gives it a prop", which lane
+  B's brief never asked for. So a marauder would have swung a sword clip with an empty fist, and a
+  dropped machete would have been the orange stand-in box. The plan's split listed files, and a
+  thing that lives in no file of its own fell between them. It is one piece of art now — the
+  weapon's ground row, laid flat on the ground and seated under the right hand by measurement.
+
+**Two lane reports were stale by the time they merged**, which is worth knowing about lane
+hand-overs: lane D recorded that `Job_Equip` had no status word, but the contracts step had mapped
+it all along; and lane C said its two Presentation files had never been compiled, which was true
+and turned out not to matter — they compiled first time. The one Unity failure was elsewhere:
+a lane D assertion used an overload only the fast tier's NUnit has, and the editor refused the
+whole test assembly over it.
+
+**Decided rather than left:** `OrderAttack` carries no Ctrl flag. The right-click is the only thing
+that sends it, and the gesture belongs where the gesture is read. `rechooseTicks` went into
+`CombatDef`. A pawn despawned while holding a weapon puts it down.
+
+**One finding for the owner rather than a fix:** the Long soak, rerun with machetes, made nine downs
+and no deaths. Only a blow that crosses −50 % kills, nothing strikes a body on the ground unless
+ordered to, and so an unattended fight never kills anyone. That is the owner's rules working as
+written; whether it is what they meant is a playtest question, and it is in the hand-over as one.
+
+Measured, alone on the machine: EditMode 2,823 / 2,797 / 0 failed, PlayMode 106 / 101 / 0, fast
+1,161 + 795, Long 39. No golden moved and the colony probe is identical to the contracts commit's.
+A fight in view costs 2.29 ms against 2.06 at peace, in one run. The player build boots into a colony
+clean. Design 33 §6E has the rest.
+
+## 2026-09-22 — Temperature merged with main: the campfire renumbers, and the season becomes reachable
+
+`main` moved twice under PR #164 while it sat in review — the shelf (#158) and floating crops
+(#163) — and the merge turned out to be the interesting part rather than a formality. **Both
+branches had appended at the same two slots.** The shelf reached `main` first and took edifice 13
+and `BuildingHandle` 7; the campfire had both. The rule for that is already written down in two
+places (`BuildingHandle.Bed`'s own comment records the bed moving from 2 to 5 for exactly this),
+so the campfire moves to 14 and 8. It is only safe because no save with a campfire in it has ever
+left the branch, and that sentence is the whole of the argument.
+
+Eighteen files conflicted. Seventeen were a union — one branch appending a row, the other
+appending a different row to the same table — and resolving them was mechanical. **The interesting
+ones are the two tables that did not conflict at all.** `BuildShapes.Cells` is parallel to
+`BuildingHandle`, and both branches had added a `1` to it; git took one of the two, so the merged
+table was one entry short and the campfire had no shape. `EdificeHandle.Count` and
+`BuildingHandle.Count` likewise merged clean and were both wrong by one.
+
+`RegistryTests.EveryBuildableHasAShapeOfItsOwn` caught the shape table. That test exists *because
+of this exact failure* — its own comment records the day the bed's handle moved from 2 to 5, the
+three-entry table merged in silence, and the bed became a one-cell thing that could not be turned
+while three `DesignateDirector` tests failed and none of them named the cause. It has now earned
+its keep twice, on the same fault, two months apart. **The lesson it teaches is not about shapes:
+a merge conflict marks where two branches wrote different text, and the dangerous case is where
+they wrote the *same* text for different reasons.** Every hand-maintained parallel table in this
+codebase has that property, and only the ones with a length assertion are defended.
+
+**The goldens and the building fingerprint were re-baked, and measured before they were.** A merge
+of two branches that each moved a golden leaves neither side's number right, so taking either
+would have committed a number nothing had produced. `GoldenColonyProbe` — committed by the shelf
+work for exactly this — was run on the merged branch, on the branch head and on `main`, and the
+three outputs **diff clean**: all nine census numbers identical on all three boards across all
+three commits. The hash sees more; no colony does anything different. Which also says something
+quieter and worth writing down: **in the ten-thousand-tick golden windows, temperature changes
+nothing at all**, because those windows sit in the work band, nobody sleeps in them, and the
+boards have no crops. The goldens are not evidence the model bites, and were never going to be.
+
+### Three findings, and one of them is not about code
+
+**The pass is O(standing edifices) and its own summary said it was not.** `TemperatureSystem`
+claimed *"O(rooms + surfaces), never O(cells)"*. Measured with the edifice count printed beside
+the time, the shape is the opposite of the claim: 250 × 250 × 40 barren — 2.5 M cells, 0 rooms,
+**5 edifices** — costs 0.0054 ms, while 240 × 240 × 16 wooded — 69 rooms, **6,311 edifices** —
+costs 0.17 ms. The sweep for heat sources has to visit every standing thing to find the warm ones,
+a wooded board is mostly trees, and it was calling `BuildingForEdifice` — *a linear scan of the
+building table* — once per tree. A scan inside a sweep. Precomputing the answer by edifice id in
+the constructor took it to 0.051 and 0.013 ms, both arms in one run.
+
+The number is not the point. **The point is that a complexity claim in a doc comment is not a
+measurement, and this one had survived a nine-finding review.** It reads as true because the room
+half of the sentence is true, and the half that is not is the half that grows. `P10` in
+`bug-patterns.md` is the drawing-side version of the same thing — a pass that costs once per cell,
+which reviews cannot see — and this is its tick-side twin: a pass that costs once per *thing*,
+hidden behind a cadence that makes the amortised figure look like nothing.
+
+**The form of a temperature had two owners.** The pane's tile row and the clock's outdoor reading
+each carried their own copy of centi-degrees-to-one-signed-decimal, in two assemblies, agreeing by
+luck. P1 again. `TemperatureLabels.Describe` is the one owner now, and the guard **reads the C#
+files** rather than asserting behaviour, because two copies of a rule that happen to agree cannot
+be caught by running either of them. It immediately found `AlmanacCatalogue` writing `20°C` where
+the pane writes `20.0 °C` — prose rather than a second implementation, so exempted, but the
+exemption says what it is leaving unchecked instead of quietly widening the rule to fit.
+
+**And the finding that mattered most was not a bug.** This work's headline sentence is *"Rime
+kills"*, and Rime is months four and five of six. The debug menu offered **Skip one day**. Reaching
+the season the entire model exists for was therefore sixty presses — and the branch's own "still
+owed" note asked only whether *Wash's* chill reads as mild. That is what a question looks like when
+the interesting one cannot be asked: the scope of a playtest had been silently set by the tooling
+rather than by the work. **Skip one month** is one new row using the day row's own mechanism, and
+six presses now walk the year.
+
+Worth keeping as a habit: before handing something over, ask what the playtest instruction actually
+is, and then try to *follow it*. "Fast forward into Rime" was already written in the queue, by
+somebody who had not counted the presses.
+
+**What was deliberately left alone.** `WeatherOffsetC` is a settable seam with nothing setting it,
+so a cold snap cannot be reached in any season — and a debug row for it would have been one line.
+It was not written. The incident that owns weather is deferred work with a design behind it, and a
+debug switch that sets a field an incident is supposed to own is how a seam quietly becomes an
+interface. If the playtest comes back wanting the cold snap first, that is the moment to
+reconsider, and the reason will be on record rather than reconstructed.
+
+## 2026-09-23 — A stockpile you could not see (design 26 §13)
+
+Reported three ways in an evening — *"I can't seem to create stockpiles anymore"*, *"There is no
+visual to the stockpile"*, and then *"big delay and in another case didn't appear"*, *"having more
+than one stockpile - seemed to not draw the other one"*. One fault: the zone was made and its chunk
+was not re-meshed. On grass a store's cell is the air over the ground and its wash is on the ground's
+top face, meshed a layer down; `StorageZones.Mark` dirtied only the store's own chunk, which stopped
+being enough when chunks got their own versions on 2026-09-21. A stockpile showed only when
+something else re-meshed its ground — a felled tree, a job nearby — which is exactly a delay, a
+never, and one of two. Found on `claude/research-tab`, measured both ways there, and split out here
+because it is on `main` and every branch the owner plays inherits it.
+
+**Two lessons.** *"Was it made"* and *"is it on screen"* are two questions; the first test asked only
+the first and sent the diagnosis to the pointer for a round. And the last two reports came from
+sessions in other worktrees (`odyssey-power`, `odyssey-review-164`) that did not have the fix — the
+editor log's project path is the first thing to read before chasing a second cause.
+
+The owner's interview added an outline round the zone's outer edge, baked into the chunk: one bucket
+per chunk with a store, nothing per frame.
+## 2026-09-23 — The Research and Inventory tabs (designs 34, 35)
+
+Two owner specs in one afternoon, both for windows docked in the Work tab's corner, so one PR.
+Research (F3) was asked for as **interface only** — *"only include power for now but we'll create
+the mechanism later"* — and Inventory (F2) was folded in mid-session.
+
+**Research is a placeholder state, said plainly.** There is no research system, so the project in
+hand, the queue and what is done live in `ResearchDirector` on the interface side: session state,
+unsaved, unhashed. Progress never moves; the debug menu's *Finish research* is the only way a
+project becomes done. That is deliberate, and the seam the bench will drive (`Advance`) is tested
+now so the mechanism unit starts from a contract rather than a guess. Wiring starts done because
+the power branch builds conduit with no research at all.
+
+**A project's description needed a route to the screen**, and the rule is that content is written
+once. The registry emitted names only, so `emit_labels.py` now also emits the description column
+for the `ui.research.project` namespace (`Registry.Describe`). One namespace rather than all seven
+hundred rows, so the generated file does not carry tooltip seeds nothing draws.
+
+**Inventory needed a store's name, and the name had one owner in the simulation.** "Stockpile 3"
+is `StorageZones.OrdinalOfCell`, one series across zones and shelves in cell order, and it reached
+the interface only for the one selected cell. The HUD could have re-derived it from the published
+rows — the zone cells are sorted, so the first row of a zone is its first cell — and that would
+have been P1 (one rule, two owners) written on purpose. It is published on `StoreView` and
+`StorageUnitView` instead, once per zone per publish, and `StoreOrdinalTests` holds the published
+number to the pane's. Views are not hashed, so nothing moved.
+
+**Go selects the cell, not the pile.** A pick on a stockpile cell selects what lies there first,
+because that is what a click usually means; Go is asking for the store, and the pane leads with
+the store only when the cell is the subject. So `SelectionDirector.ChooseCell` exists, and
+`HudDirectors.ChooseStore` moves the slice as the roster does rather than keeping it as the
+Animals tab does: a store may be underground.
+
+**Where the specs were not followed, the design docs say so** (34 §5, 35 §5): the shipped bar
+rather than a 44 px one, the shipped wash and rule tokens, the contrast-corrected category hues,
+and six place rows. The new windows are flat with a 22 px close as specced, which leaves them
+different from Work and Animals — an inconsistency for the owner to settle, not one to tidy
+silently.
+
+**First look, the same evening: the list was invented, and it was cut to the game.** Five Power
+projects including batteries, lamps and solar arrays, none of which the game has, was a list
+written to fill a table. The owner asked for only what exists: Electricity, which opens Power
+lines and the Generator, and the Ladder under Furniture. Nothing starts done. The lesson is the
+one the registry exists for — a name on screen is a promise that the thing is in the game.
+
+**The same look reported that a stockpile drag painted nothing.** The log from that session had
+the Fell drag reaching the simulation (308 refusals, all correct) and not one stockpile order
+refused — so the orders were never sent. `StockpileDragTests` hands the presenter's own drag and
+click handlers a stockpile box and asserts a zone is published: that half passes, which puts the
+fault on the pointer side of the presenter, a side this branch does not touch. The pointer side
+cannot be driven in a batch run (CLAUDE.md, known gaps), so the next measurement is a Play session
+on `main` doing the same drag, to learn whether the fault came with this branch at all.
+
+**Then the stockpile had its interview.** The owner's second report — *"There is no visual to the
+stockpile"* — was the true one: the zone existed and was not drawn, because the ground under a store
+on grass is meshed a layer down and only the store's own chunk was being marked, which stopped
+being enough when chunks got their own versions. The answers that followed: the drag's preview had
+shown (so the pointer was never at fault, and the earlier "fault is on the input side" was wrong
+reasoning from an incomplete test that had only asked whether a zone was *published*), keep the
+wash, add a line round the outer edge, and nothing about priority or fullness. The outline is baked
+into the chunk, one bucket per chunk with a store. The lesson for the test: **"was it made" and "is
+it on screen" are two questions, and the second is the one a player asks.** `26-storage.md` §13.
+
+**The Inventory's first look, and a palette that was only safe for most eyes.** The owner asked for
+the Inventory's rows to match the stockpile pane and to be checked for accessibility, and asked
+whether many colours or one was better. Measured before answering: every category hue cleared
+contrast easily, and three of them were one colour under deuteranopia. The answer given — and taken —
+was many colours as a second cue behind a glyph and a name, which is what the stockpile pane already
+did; the hues were re-tuned within their families until every pair stayed apart under all three
+dichromacies, and a test now simulates them. Contrast ratios are what accessibility checks usually
+stop at; they said nothing here about the fault that mattered. Design 35 §5a.
+
+## 2026-09-23 — Power: a generator, the lines, a heater
+
+The owner asked for power in the RimWorld mould — a wood generator, lines to what needs
+electricity, the lines hidden except while being worked on — and was interviewed before anything
+was built (design 32 §2 holds the eleven answers). A clean-room research pass (a-07) backed all of
+them and supplied the reference's numbers: 1,000 W, a 75-wood hopper, 22 wood a day, 175 W heaters.
+Built on `origin/claude/temperature-core`, because the local checkout was 115 commits behind its
+own remote — found by the design agent reading the wrong tree, which is this project's standing
+lesson about checkouts arriving at the next session unannounced.
+
+**A line is not an edifice, and that decision shaped everything after it.** "Anywhere, under
+anything" means a cell holds a wall and a line at once, and the edifice slot holds one thing. So
+lines live in their own layer (`PowerGrid`, a bitset and a sorted list), with their own order lane
+— a wall order and a line order share a cell — and their own claim kind, so a builder on the wall
+does not lock out the colonist laying the line. The order still arrives as `PlaceBuilding`, and the
+construction grid's `Allows`, `WhereItWouldLand` and `RunLayerFor` all delegate to one rule, so the
+cursor and the order cannot drift: the P1 lesson taken before the fault rather than after.
+
+**Deconstruct does not take lines**, and that was a default taken without asking (§2a). It takes
+one thing a cell — the building, then our floor — so folding lines in would make rerouting a wire
+under a floor cost the floor. Lines get their own *Remove conduit* tool instead. The playtest row
+asks whether a player looks for it there.
+
+**The net solve was measured seven times too slow and rewritten before merge.** The first cut
+flooded outward with a binary search per face: 3.1 ms for one edit at 10,000 lines, the audit's
+`NavGraph.Rebuild` fault in a new costume. A union-find over the sorted list, each face found from
+its lower side by a pointer that only ever moves forward, is linear with no search: 0.43 ms at
+10,000, 0.08 ms at 2,000. The measurement was the only thing that could have said so; the code
+read as linear both times.
+
+**Whole-net-dark needs demand to count what is switched on, not what is powered** — a-07's
+observation, and the reason the reference's shedding flickers. Counting only the powered would let
+a dark net drop its demand, relight, and go dark again every solve.
+
+**The goldens moved once, and the proof was sharper than the census.** Three job defs add three
+counter pairs to the job system's hash. Rather than compare colony censuses, the hash was cut back
+(uncommitted) to the first twelve defs, and all three boards then matched the *previous* goldens
+exactly — so the new givers never fired and the new scan order changed no job anywhere. And
+`JobSystem.Load` stopped refusing a save with fewer job defs than the build: defs are append-only,
+so a shorter list is simply an older save, and the refusal had made every save older than the last
+new job unloadable for a reason that was never true.
+
+**Two side-findings.** `WorkGiverRegistrationTests` walked every permutation of the givers; eleven
+givers made that 11! and two minutes for one test, and a twelfth would have made it twenty. It
+samples orders now — every rotation, every reversal, five thousand seeded shuffles — which is the
+same question at a fixed price, with `NoTwoGiversCanTieInTheSort` still guarding the total order
+that makes the answer true. And a line in open air two storeys above anything standable is accepted
+and never laid, the same answer a slab in mid-air gets; recorded in design 32 §3 rather than guarded.
+
+## 2026-09-23 — Power, second round: scrap metal, and a line you can click again
+
+The owner's first look found an ordered line could not be selected again — so there was no way
+back to it to cancel it — and asked for lines to be built of scrap metal. Interviewed again (design
+32 §14): the existing *Scrap* item, relabelled *Scrap metal*; wreckage on the board and a scrap
+drop for more; a line 1, a generator 20 beside its 30 wood or stone, a heater 5 beside its 10; and
+a Cancel on the selected line's pane.
+
+**Why the click missed** is the picker's own rule meeting a second channel: a waiting order is a
+pointer target because `WorldRenderModel` is told the frame's building sites, and a line order is
+not a building site — it is in the power grid's own channel. The click fell through to the grass
+under it. Lines now go into the same answer (`SetLines`, `HasLine`), which is the fix and not a
+workaround: the picker's argument for sites — a waiting order has a cell, an order and a pane — is
+word for word true of a line.
+
+**A building paid for twice** is the one real mechanism in the round. `partItem`/`partCount` sit
+beside the chosen material, a site banks them apart, the delivery giver carries the material first
+and then the parts, a site is a frame only when both are in, and cancel, botch and deconstruct give
+each back by its own rule. The count is saved in a section of its own, so there is still no
+save-format bump. The pane's Cancel for a line got a narrow intent (`CancelConduit`) of its own:
+the cancel drag's `CancelBuilding` rightly takes every order in a cell, and a button that names one
+line must not also take the wall order standing beside it.
+
+**The first run moved every golden, and it was a real change, not a hash change.** Scrap metal
+stacking to fifty let the bare scenario's starting scatter drop a second piece on to an earlier
+one's cell — "room" had quietly become a different question — so the starting kit itself differed.
+The scatter asks for an empty cell with room now, which is what it always placed, and every golden
+and the scenario placement signature came back exactly. The wreckage goes through the Playtest
+scenario only, for the reason the stone and wood piles do: the bare scenario is what the goldens
+stand on.
+
+One Long-tier run failed `ATickThatDoesNothingAllocatesNextToNothing` once and passed three times
+after it, at the documented 1.6 and 3.3 bytes a tick. Recorded rather than retried away: a
+GC-sensitive figure on a machine running several editors is exactly where a one-off lives, and if
+it comes back, the per-tick allocations of the new power paths are the place to look first.
+
+## 2026-09-23 — Power, third look: the machines stand flush
+
+The owner found the generator and heater standing off their walls "with spacing that is awkward",
+and that neither would turn. Measured rather than reasoned: the two FBX files were read for their
+vertex bounds (0.61 x 0.58 x 0.91 m and 0.94 x 0.70 x 0.64 m), which showed the uniform fit had left
+the generator 3.1 m long in 5 m of footprint and the heater centred. The heater also did not rotate
+at all — `rotates` was false in the content — and the generator does, so "doesn't rotate" was
+probably the heater.
+
+The generator now fills its footprint (a stretch along its length), and the heater stands with its
+back on the back edge of its cell and faces away from a wall where there is one, R choosing among
+walls rather than being overruled by them — the ladder's rule would have left "doesn't rotate" true
+against every wall. Which way the air-conditioner's front looks was read off the mesh (its detail is
+at +Z, the pivot on the plain back face), not seen, and is the first thing to look at. Design 32 §14c.
 
 ## 2026-09-23 — the orange suits: what was ruled out, and a rail that is not a fix
 
@@ -10872,3 +11582,112 @@ so it is not where anything was found to break. Its whole job is that a debug co
 session into a state nobody designed for. `PawnCeilingTests` carries the negative control that
 matters — under the ceiling nothing is refused — because a rail that started governing ordinary play
 would be worse than the fault it guards.
+
+## 2026-09-24 — Power merged with main
+
+Temperature (#164) merged, and main had taken combat's draft, wildlife and the stockpile outline
+meanwhile: 77 commits, nineteen files in conflict. **The only real collision was the job table.**
+The draft appended `DraftHold` and `Goto` at 12 and 13, and power had appended its three at the same
+slots. A job def's number is a save contract and main's is already shipped to anyone playing `main`,
+so the draft keeps 12 and 13 and power moves to 14–16, in `JobHandle`, `Jobs.xml`, the driver list
+and the name list alike. Both sides had independently relaxed `JobSystem.Load` to accept a shorter
+job list, for the same reason and in almost the same words; main's copy was kept. The intents, the
+job labels, the bootstrap's draw passes and the catalogue's new fields were side-by-side additions,
+kept whole. Every other handle was checked for a silent collision — anything main numbered since
+the fork — and there was none.
+
+The content fingerprint and all three goldens were re-taken rather than adopted, since neither
+side's numbers came from the merged code. `GoldenColonyProbe` on the merge and on `origin/main`
+diffs clean on every board. The wiki and label registry were regenerated from the merged CSVs, not
+merged by hand.
+
+## 2026-09-24 — Combat C2 and C3 merged with main, and the verdict
+
+The owner played round three and the spawn and debug-menu changes and called it: *"it seems great.
+Happy to merge in and do more testing later ... have a battle with tons and tons of characters - was
+hovering 3.5ms."* 3.5 ms is inside the 5 ms budget, but it is the RTX 5070 Ti, not the 2022 laptop,
+and the 64-figure animation ceiling is what keeps a crowd cheap to draw. So it is a good number on
+this machine and an open one for the target.
+
+Main had taken power and the Research and Inventory tabs meanwhile: 46 commits, 26 files in
+conflict. **The job table collided again, the other way round from power's own merge.** Power's
+three jobs are on `main`, so they keep 14–16 and combat's five move from 14–18 to 17–21. Nothing
+combat shipped had saved those numbers, so moving them breaks no save. The same applies to the
+intents: combat's three orders and the debug arming now follow power's four.
+
+Two faults were invisible to the fast tier. `SettingsPresenter` called an `Escape` with ten
+arguments, because main added the Inventory and Research panels and combat added the context menu,
+each with its own overload and neither with all ten. Only Presentation's compile found it, so the
+combined overload now has a test. And the textual merge of `ModuleCatalogue.asset` kept both sides'
+rows but dropped main's four `fit*` fields from every one of them. Rebuilding the catalogue in Unity
+put them back; a module-id comparison with both parents then showed nothing was lost. Rebuild a
+serialized asset rather than trust git's merge of it (`docs/lessons.md`).
+
+A third fault was already on `main`. `Odyssey/PowerLine` is found at runtime and was never added to
+the always-included shader list, so the player build guard refuses `main` as it stands. The fix is
+one line, from `ShaderInclusion.Apply`, in its own commit on PR #180.
+
+The fingerprints and all six goldens were re-taken from the merged code, since both sides had moved
+each of them. `GoldenColonyProbe`, reading the first seventeen job defs so the same file runs on
+both sides, gives identical output on `main` 54df119a and on the merge for all three boards.
+
+## 2026-09-24 — The cull merged up to main, and asked before the mesher
+
+PR #174 had fallen 169 commits behind `main` (power, the research tab, combat, wildlife). Three
+conflicts, none of them in the cull: `ColonyWorld` (this branch's `DefFor` against main's wildlife
+switch on the same lines — both kept, the switch after `DefFor`), and the status and journal files,
+where both sides had appended. The merge created one more collision: main had given `P17` to the
+flickering bar while this branch had renamed its pattern to `P17`, so the branch's pattern is `P18`
+now, with every citation — the catalogue's own rule for a third collision.
+
+One real fault went in with it, found while planning the Meadow overhaul: the frustum was asked
+*after* `BatchFor`, so a stale chunk behind the camera was meshed first and culled second, and a
+graphics toggle spent the eleven-chunk budget on the board in index order rather than on what was on
+screen. The test now goes first, against `ChunkMesher.BoundsOf` — the box `Mesh` writes, a function
+of the footprint only — so the picture cannot move, and the proof agrees: the same shot twice moved
+0.03%, culling 0.02%, a frustum admitting nothing 98.22%. The budget arm shows it directly: an
+unbudgeted whole-board re-mesh on Huge meshed **227 chunks in 51 ms**, the ones on screen, where it
+meshed all 900 in 156 ms before. `28-map-size.md` §10.1.
+
+Tiers on the merge: fast 1,322 Sim + 977 Hud, Long 41, content gates clean; EditMode 3,222 / 3,191
+/ 0; PlayMode 115 / 110 / 0. Culling at a 40 m margin, same run: Standard 2.74 -> 2.33 ms (33 of 104
+chunks, 1,363 -> 999 calls), Huge 7.05 -> 3.43 ms (317 of 443, 5,086 -> 1,747).
+
+## 2026-09-24 — Colonists sit at the fire
+
+The half of the owner's hearth request that §18c left owed: idle colonists *"sit by the fire or
+stand by the fire for a bit and then sit down and vice versa"*. Every settle at the hearth rolls
+sit or stand; a seat is a `Wait` whose `DestCell` names the fire, so it is saved and hashed through
+a field that already was, with no format bump and no golden moved (every golden board is fireless).
+The view publishes `Seated` and the fire's cell, and the figure blends into the pack's crouching idle
+facing it. A two-state chain was designed and dropped: `Think` resets the job before every node, so
+it needed a new pawn field for something that fresh rolls plus a longer seated linger already give.
+
+The measurement that paid for itself was not the pose — the crouch came out at 69% of standing
+height with the soles unmoved, as §18c predicted — but the catalogue. A bare
+`PlayScene.RebuildCatalogue` wipes every colonist's appearance swatches, because `CharacterSwatches`
+is a second pass, and would have been a 4,834-line diff carrying that loss. Recorded in design 31
+§18d so the next rebuild runs both.
+
+## 2026-09-24 — The crouch taken off
+
+First look at §18d: *"it looks like they are sneaking/crawling and not sat down."* The number was
+right — a crouch at 69% of standing height with the feet planted — and it was the wrong pose: at the
+play camera a crouch is somebody about to move. Taken off the 73 colonist rows; the simulation half
+and the figure's blend stay, dormant, so a seated colonist stands facing the fire and a real seated
+clip is one catalogue field. Recommended: a floor sit authored in Blender on the humanoid rig, after
+checking whether Synty sells one. The lesson worth keeping is that `SitPoseTests` proved the pose
+low and grounded and could not prove it read as sitting — a measurement of a pose is a guard, not a
+verdict. Design 31 §18e.
+
+## 2026-09-24 — The campfire line merged with combat
+
+97 commits of combat into `claude/campfire-art`. The conflict markers were the easy part; the three
+findings were in files git merged cleanly or in code that met for the first time. **A marauder sat at
+the colony's fire** — the hostile mind ends in the same idle node the hearth lives in — so the fireside
+is now for non-hostiles only, with a test. **The HUD's last 0.3% had been spent on both branches**
+(the wider clock here, the roster card's health bar there), 20.20% together; the owner chose to take
+the clock back to 271 rather than raise the ceiling. And the **catalogue** was checked row by row
+against both parents, per combat's lesson of the same morning, and the campfire row given the fields
+main added to every row. `Seated` stayed a bool beside `Asleep` because `PawnFlags` is full and is
+the fight's. Design 31 §19.

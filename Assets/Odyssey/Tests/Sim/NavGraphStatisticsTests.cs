@@ -6,6 +6,7 @@ using System.Text;
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pathing;
+using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
@@ -100,7 +101,14 @@ namespace Odyssey.Tests.Sim
         {
             var grid = new CellGrid(size);
             var generation = Stopwatch.StartNew();
-            MapGenOutcome outcome = MapGenerator.Generate(grid, seed, type);
+            // The def the game builds from, not MapGenerator's unmodified default. Until
+            // 2026-09-21 this measured the plain def while the played scene applies
+            // MakeWooded on top -- so the region counts below, which are what the edit tick
+            // is priced in, described a board nobody plays. ColonyWorld.DefFor is the one
+            // owner of that choice and handles the ruined city too (its barren branch only
+            // applies to a natural def).
+            MapGenOutcome outcome = MapGenerator.Generate(
+                grid, seed, ColonyWorld.DefFor(type, size, barren: true, wooded: true));
             generation.Stop();
 
             var nav = new NavGraph(grid);

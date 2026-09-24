@@ -1,11 +1,13 @@
 #nullable enable
 using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.World;
 using UnityEngine;
@@ -127,6 +129,72 @@ namespace Odyssey.Tests.PlayMode
                 UnityEngine.Object.Destroy(root);
             }
         }
+
+        /// <summary>
+        /// What showing the power lines costs (design 32 §11): two thousand lines on the ground
+        /// across the drawn band, the frame with them hidden against the frame with the overlay
+        /// on, seconds apart in one session so that whatever the machine is doing cancels out.
+        ///
+        /// <para>The draw-call half is the one that is a gate: hidden, the pass submits nothing;
+        /// shown, it submits in colours — a handful of calls — never one per line
+        /// (<c>docs/bug-patterns.md</c> P10). The milliseconds are logged for design 32 §11 and
+        /// asserted against nothing, for the reason <c>CLAUDE.md</c> gives about every frame number
+        /// on a machine running several editors at once.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ThePowerLinesCostWhatTheySubmit()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.Colony, Is.Not.Null, "the bootstrap never built a colony");
+                var colony = boot.Colony!;
+                var power = colony.Pawns.Power!;
+                var grid = colony.Grid;
+                var size = grid.Size;
+
+                // Straight runs along X on the surface, one row in every two, so the rows stay
+                // separate nets and the links are real: two thousand cells.
+                int laid = 0;
+                for (int z = 2; z < size.SizeZ - 2 && laid < PowerLines; z += 2)
+                for (int x = 2; x < size.SizeX - 2 && laid < PowerLines; x++)
+                {
+                    int top = -1;
+                    for (int y = size.SizeY - 2; y >= 0; y--)
+                        if ((grid.Flags[size.Index(x, z, y)] & CellFlags.SolidTerrain) != 0) { top = y; break; }
+                    if (top < 0 || top + 1 >= size.SizeY) continue;
+                    power.AddLine(size.Index(x, z, top + 1));
+                    laid++;
+                }
+                boot.World!.Tick();
+
+                float hidden = 0f;
+                yield return TimeFrames("power/hidden", boot, WarmupFrames, x => hidden = x);
+                Assert.That(boot.PowerLineDrawCalls, Is.Zero, "hidden lines are not submitted");
+
+                boot.Directors!.Overlays.SetPower(true);
+                // The watch goes out on the next frame and is answered on the tick after it.
+                for (int i = 0; i < 4; i++) { yield return null; boot.World!.Tick(); }
+
+                float shown = 0f;
+                yield return TimeFrames("power/shown", boot, WarmupFrames, x => shown = x);
+                int calls = boot.PowerLineDrawCalls;
+
+                Debug.Log($"[FrameTime] power lines: {laid} lines, hidden {hidden:0.00} ms, " +
+                          $"shown {shown:0.00} ms (+{shown - hidden:0.00}), {calls} draw calls");
+
+                Assert.That(calls, Is.GreaterThan(0), "the overlay drew nothing, so this measured nothing");
+                Assert.That(calls, Is.LessThanOrEqualTo(24), "two thousand lines must cost draws in colours, not in lines");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        const int PowerLines = 2_000;
 
         /// <summary>
         /// What a warehouse costs to draw: forty shelves holding eight stacks each, against the
@@ -526,6 +594,80 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// What finding the campfires costs, against the sweep it replaced, in one run.
+        ///
+        /// <para><b>The owner reported the frame going from 1.5 to 4.5 ms and thought the machine
+        /// might have been under load.</b> Both can be true, and only a control inside one run can
+        /// separate them — this machine drifted the city canary from 2.01 to 4.01 ms in an
+        /// afternoon on what a sibling worktree was doing (CLAUDE.md).</para>
+        ///
+        /// <para><b>The bug the control exists to price.</b> <c>FireDirector.RefreshCells</c>
+        /// caches which cells hold a fire against <c>WorldRenderModel.Version</c>, and its comment
+        /// claimed the board was therefore swept "once per structural change rather than once a
+        /// frame". <c>RefreshDirty</c> bumps that version whenever <b>any chunk remeshes</b>, so
+        /// in a colony doing anything the sweep ran most frames — 230,400 cells on the played
+        /// board, to find at most a handful of fires. <c>Rescans</c> against the frame count is
+        /// the tell, and it is logged.</para>
+        ///
+        /// <para><b>It is paid with no campfire on the board at all</b>, which is why this arm
+        /// does not build one: the sweep is unconditional, so a colony that has never seen a fire
+        /// was paying for looking for one.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCampfireSweepCostsWhatItVisits()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+                Assert.That(boot.Fires, Is.Not.Null, "the bootstrap never built a fire director");
+
+                int cells = boot.World!.Views.Current.Size.CellCount;
+
+                // No fire, one fire, then eight, each measured twice with the two lookup modes
+                // alternating. The zero row is the control the other two are read against, and it
+                // is in the same run because this machine moves more between runs than the pass
+                // costs.
+                foreach (int fires in new[] { 0, 1, 8 })
+                {
+                    Light(boot, fires);
+
+                    foreach (FireDirector.Find mode in new[]
+                             { FireDirector.Find.Edifices, FireDirector.Find.Cells })
+                    {
+                        FireDirector.Mode = mode;
+
+                        int rescansBefore = boot.Fires!.Rescans;
+                        long visitsBefore = boot.Fires.RescanVisits;
+
+                        float ms = 0f;
+                        var split = System.Array.Empty<double>();
+                        yield return TimeFrames($"campfire/{fires}/{mode}", boot, 30,
+                            x => ms = x, s => split = s);
+
+                        int rescans = boot.Fires.Rescans - rescansBefore;
+                        long visits = boot.Fires.RescanVisits - visitsBefore;
+
+                        Debug.Log($"[FrameTime] campfire {fires} lit ({boot.Fires.LitFires} drawn), " +
+                                  $"{mode}: frame {ms:0.000} ms, " +
+                                  $"{rescans} rescans over {TimedFrames} frames, " +
+                                  $"{visits:N0} records visited " +
+                                  $"({(rescans > 0 ? visits / rescans : 0):N0} a rescan, " +
+                                  $"board {cells:N0} cells), " +
+                                  $"{boot.Renderer?.DrawCalls ?? 0} draw calls");
+                    }
+                }
+            }
+            finally
+            {
+                FireDirector.Mode = FireDirector.Find.Edifices;
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
         [UnityTest]
         public IEnumerator TheFrameAgainstColonySize()
         {
@@ -566,9 +708,162 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// The frame with a fight in view (design 33, the C2/C3 integration): ten colonists at the
+        /// start timed at peace, then ten marauders spawned among them and the same colony timed
+        /// again once the swinging has started — one run, so the difference is the fight and not
+        /// the machine (the rule in this class's other sweeps).
+        ///
+        /// <para>What a fight adds to a frame is the clip layer on every fighting figure, the
+        /// computed poses, the health bars and markers (two or three submissions per marked pawn),
+        /// the floating words and the combat event reader, and on the simulation side the swings
+        /// and the chase re-plans. It asserts that a fight really was in view — combat events in
+        /// the timed window, marauders on the board — because a brawl that never started reports a
+        /// beautifully cheap frame; about time it asserts only the class's 30 Hz ceiling.</para>
+        ///
+        /// <para>The brawl is ticked once a frame by the test on top of the bootstrap's own
+        /// real-time ticks. Without it the window's sim time was the machine's frame rate: 180
+        /// frames at 2.5 ms here are 27 ticks and caught four swings, and at 1.2 ms on the CI
+        /// runner they were about twelve and caught none (2026-09-24, PR #180). A tick of this
+        /// colony is 0.005 ms, so the frame it adds is noise; a peace it lets through is not.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheFrameWithAFightInView()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+                Assert.That(boot.Colony, Is.Not.Null, "the bootstrap never built a colony");
+                CellRef start = boot.Colony!.Start;
+                int top = boot.Colony.Grid.Size.SizeY - 2;
+
+                // Ten colonists about the start, where the camera is.
+                for (int i = 0; boot.World!.Views.Current.Pawns.Length < 10 && i < 40; i++)
+                {
+                    boot.World.Intents.Submit(new Intent(IntentKind.SpawnPawn,
+                        new CellRef(start.X - 2 + i % 5, start.Z - 1 + i / 5, top), 0));
+                    boot.World.Tick();
+                }
+                yield return null;
+
+                float peace = 0f;
+                yield return TimeFrames("fight/peace", boot, WarmupFrames, x => peace = x);
+                int peaceDraws = boot.Renderer?.DrawCalls ?? 0;
+
+                // Ten marauders a few cells off, each hunting the nearest colonist standing.
+                int before = boot.World.Views.Current.Pawns.Length;
+                for (int i = 0; boot.World.Views.Current.Pawns.Length < before + 10 && i < 40; i++)
+                {
+                    boot.World.Intents.Submit(new Intent(IntentKind.SpawnPawn,
+                        new CellRef(start.X - 2 + i % 5, start.Z + 4 + i / 5, top), 3));
+                    boot.World.Tick();
+                }
+
+                // Let them close and start swinging before the clock starts.
+                for (int i = 0; i < 240; i++)
+                {
+                    boot.World.Tick();
+                    if (i % 20 == 0) yield return null;
+                }
+
+                int eventsBefore = LastCombatEvent(boot);
+                long ticksBefore = boot.World.Views.Current.Tick;
+                bool brawling = true;
+                IEnumerator TickEachFrame()
+                {
+                    while (brawling)
+                    {
+                        boot.World!.Tick();
+                        yield return null;
+                    }
+                }
+
+                Coroutine ticker = boot.StartCoroutine(TickEachFrame());
+                float fight = 0f;
+                try
+                {
+                    yield return TimeFrames("fight/brawl", boot, 30, x => fight = x);
+                }
+                finally
+                {
+                    brawling = false;
+                    boot.StopCoroutine(ticker);
+                }
+                int events = LastCombatEvent(boot) - eventsBefore;
+                long windowTicks = boot.World.Views.Current.Tick - ticksBefore;
+
+                WorldSnapshot frame = boot.World.Views.Current;
+                int hostiles = Hostiles(frame);
+                Debug.Log($"[FrameTime] fight: peace {peace:0.00} ms ({peaceDraws} draw calls), " +
+                          $"brawl {fight:0.00} ms ({boot.Renderer?.DrawCalls ?? 0} draw calls), " +
+                          $"{frame.Pawns.Length} pawns ({hostiles} hostile), {boot.Figures?.FigureCount ?? 0} figures, " +
+                          $"{events} combat events in {windowTicks} ticks of the window, {frame.Corpses.Length} corpses");
+
+                Assert.That(hostiles + frame.Corpses.Length, Is.GreaterThan(0), "no marauder was ever spawned");
+                Assert.That(events, Is.GreaterThan(0), "nothing fought in the timed window: this timed a peace");
+                Assert.That(fight, Is.LessThan(CeilingMs), "a fight of ten against ten takes longer than a 30 Hz frame");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>How many hostiles the frame holds. Its own method: a span cannot live in an iterator.</summary>
+        static int Hostiles(WorldSnapshot frame)
+        {
+            int count = 0;
+            foreach (PawnView pawn in frame.Pawns) if (pawn.IsHostile) count++;
+            return count;
+        }
+
+        /// <summary>The id of the newest combat moment in the frame, 0 before the first.</summary>
+        static int LastCombatEvent(OdysseyBootstrap boot)
+        {
+            ReadOnlySpan<CombatEventView> events = boot.World!.Views.Current.CombatEvents;
+            return events.Length > 0 ? events[events.Length - 1].Id : 0;
+        }
+
+        /// <summary>
         /// Spawn colonists until the colony is this big, spread over the middle of the board so
         /// they do not all arrive in one column and stand on each other.
         /// </summary>
+
+        /// <summary>
+        /// Put <paramref name="wanted"/> campfires on the board, near the middle where the camera
+        /// is, raised directly rather than ordered — a site has to be walked to and built, and
+        /// this arm is measuring the drawn fire rather than the colony's willingness to make one.
+        /// </summary>
+        static void Light(OdysseyBootstrap boot, int wanted)
+        {
+            GridSize size = boot.Colony!.Grid.Size;
+            var ctx = boot.Colony.Pawns;
+
+            int placed = 0;
+            for (int i = 0; i < wanted * 40 && placed < wanted; i++)
+            {
+                int x = size.SizeX / 2 + (i % 8) * 2;
+                int z = size.SizeZ / 2 + (i / 8) * 2;
+                if (x >= size.SizeX - 1 || z >= size.SizeZ - 1) break;
+
+                int cell = boot.Colony.Grid.NearestWalkableInColumn(x, z, size.SizeY - 2);
+                if (cell < 0) continue;
+
+                // Place THEN raise: RaiseWhenClear returns at once unless a site for that
+                // building is already queued at the cell, which Place is what queues.
+                if (boot.Colony.Construction.Place(size.FromIndex(cell),
+                        BuildingHandle.Campfire, StuffHandle.Wood) != IntentRejection.None) continue;
+
+                boot.Colony.Construction.RaiseWhenClear(ctx, cell, BuildingHandle.Campfire);
+                placed++;
+            }
+
+            // A tick to let the raise reach the mirror, and a frame to let the director see it.
+            boot.World!.Tick();
+        }
+
         IEnumerator GrowColonyTo(OdysseyBootstrap boot, int wanted)
         {
             GridSize size = boot.Colony!.Grid.Size;
@@ -686,6 +981,325 @@ namespace Odyssey.Tests.PlayMode
             Assert.That(chunks[2], Is.GreaterThan(chunks[0]),
                 "the huge board drew no more chunks than the standard one, so the size seam did " +
                 "not take and all three readings are the same board");
+        }
+
+        /// <summary>
+        /// What frustum culling is worth, measured with a control inside one run, on the board
+        /// where it matters.
+        ///
+        /// <para><b>The same world timed twice, seconds apart</b>, with
+        /// <c>ChunkRenderer.CullToFrustum</c> the only thing that changes between the readings —
+        /// the shape <c>TheMarkPassCostsWhatItSubmits</c> established, and the only comparison a
+        /// machine running several editors supports. The off arm also reports
+        /// <c>ChunksOutsideFrustum</c>, so the saving can be predicted from the chunk count and
+        /// then checked against the clock rather than inferred from it.</para>
+        ///
+        /// <para>Huge, because that is where the cost is: the board is 600 m across and the camera
+        /// reaches 160 m, so most of what the band admits cannot be on screen. On Standard the
+        /// whole board is nearly in view and the honest expectation is that this buys little —
+        /// which is the point, and why the standard reading is taken too.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator WhatFrustumCullingIsWorth()
+        {
+            foreach ((string label, int x, int z, int y) in new[]
+                     { ("standard", 120, 120, 16), ("huge", 240, 240, 16) })
+            {
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                    out OdysseyBootstrap boot, x, z, y);
+                try
+                {
+                    yield return SeedOrders(boot);
+
+                    float margin = boot.Renderer!.ShadowCasterMarginMetres;
+
+                    boot.Renderer!.CullToFrustum = false;
+                    float off = 0f;
+                    yield return TimeFrames($"cull/{label}/off", boot, WarmupFrames, m => off = m);
+
+                    int drawn = boot.Renderer!.ChunksDrawn;
+                    int outside = boot.Renderer!.ChunksOutsideFrustum;
+                    int callsOff = boot.Renderer!.DrawCalls;
+
+                    // As it would actually ship: the margin keeps off-screen shadow casters.
+                    boot.Renderer!.CullToFrustum = true;
+                    float on = 0f;
+                    yield return TimeFrames($"cull/{label}/on", boot, WarmupFrames, m => on = m);
+                    int callsOn = boot.Renderer!.DrawCalls;
+
+                    // What the top shadow rung costs, which is the player-facing version of the
+                    // same question: a longer shadow distance means a wider margin, so fewer
+                    // chunks are culled AND more of them cast. Driven through the setting rather
+                    // than through the renderer, because the bootstrap re-derives the margin from
+                    // QualitySettings every frame — an earlier version of this arm set the margin
+                    // directly, was silently overwritten, and reported two identical readings with
+                    // the same draw-call count as though they were a comparison.
+                    float wasShadowDistance = QualitySettings.shadowDistance;
+                    float farShadows = 0f;
+                    int callsFarShadows;
+                    int outsideFarShadows;
+                    try
+                    {
+                        QualitySettings.shadowDistance = 120f;   // the top rung the settings offer
+                        yield return TimeFrames($"cull/{label}/shadows120", boot, WarmupFrames, m => farShadows = m);
+                        callsFarShadows = boot.Renderer!.DrawCalls;
+                        outsideFarShadows = boot.Renderer!.ChunksOutsideFrustum;
+                    }
+                    finally
+                    {
+                        QualitySettings.shadowDistance = wasShadowDistance;
+                    }
+
+                    Debug.Log($"[FrameTime] cull {label} {x}x{z}x{y}: " +
+                              $"{outside} of {drawn} chunks outside the frustum " +
+                              $"({(drawn > 0 ? 100f * outside / drawn : 0f):0.0}%) at a {margin:0} m " +
+                              $"shadow margin; frame {off:0.00} -> {on:0.00} ms " +
+                              $"(saves {off - on:0.00}); draw calls {callsOff} -> {callsOn}. " +
+                              $"At a 120 m shadow distance {farShadows:0.00} ms, " +
+                              $"{outsideFarShadows} culled, {callsFarShadows} calls");
+
+                    Assert.That(margin, Is.GreaterThan(0f),
+                        "the shadow margin is zero, so this arm measured a cull that would drop " +
+                        "off-screen shadow casters and is not the one that would ship");
+
+                    // The control. If the test never rejected a chunk it measured the same thing
+                    // twice and the difference is this machine's mood, not the cull.
+                    Assert.That(outside, Is.GreaterThan(0),
+                        $"{label}: no chunk was outside the frustum, so the two readings are the " +
+                        "same submission and the comparison is meaningless");
+                    Assert.That(callsOn, Is.LessThan(callsOff),
+                        $"{label}: culling did not reduce draw calls, so CullToFrustum is not " +
+                        "reaching the submission path");
+                }
+                finally
+                {
+                    UnityEngine.Object.Destroy(root);
+                }
+
+                yield return null;
+                GC.Collect();
+                yield return null;
+            }
+        }
+
+        /// <summary>
+        /// Culling changes what is submitted and not what is seen — proved against pixels, with
+        /// **two** controls: one that must show a difference, and one that must not.
+        ///
+        /// <para><b>Why this test has to exist.</b> The saving is enormous — most of a Huge
+        /// board's chunks are outside the frustum — and a broken frustum that rejected everything
+        /// would report exactly the same triumph. Nothing else here looks at the picture:
+        /// <c>FrameTimeTests</c> times frames, the Unity tier asserts no pixels, and the fault
+        /// this guards against is invisible in a still and only shows as shadows and geometry
+        /// popping at the screen edge while panning.</para>
+        ///
+        /// <para><b>Its first two versions both proved nothing, and the reasons are the whole
+        /// value of this comment.</b></para>
+        ///
+        /// <para><i>One — the positive control did not apply.</i> "A frustum admitting nothing"
+        /// was imposed by assigning <c>ChunkRenderer.Frustum</c>, which the composition root
+        /// rewrites every frame, so the blind shot was simply a second copy of the culled one.
+        /// Run on 2026-09-23, the two reported <b>identical</b> counts — 126 chunks, 57,818
+        /// instances, 1,744 calls — where the blind one should have submitted nothing whatever.
+        /// It now goes through <c>ChunkRenderer.FrustumOverride</c>, which the root does not
+        /// touch. <b>This is the second time in this one file that a test set a field the root
+        /// re-derives per frame</b>; the first was <c>ShadowCasterMarginMetres</c>, and both are
+        /// <c>P18</c> in <c>docs/bug-patterns.md</c>.</para>
+        ///
+        /// <para><i>Two — the scene was moving underneath it.</i> The shots were taken seconds
+        /// apart on a live colony, so colonists walked and the light drifted between them, and
+        /// <b>2 to 3 per cent of pixels moved whatever was being compared</b>. Culling's own
+        /// difference is supposed to be nought, and it was being asked to stand out against a
+        /// noise floor several times its own size. The world is paused for the captures now, and
+        /// the noise floor is no longer assumed — the test takes a <i>repeat</i> of the identical
+        /// configuration and asserts on that too.</para>
+        ///
+        /// <para>So: <b>repeat</b> must match (the instrument is quiet), <b>blind</b> must not
+        /// (the instrument can see), and only then does <b>culled</b> matching mean anything.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CullingDoesNotChangeThePicture()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot, 240, 240, 16);
+            var target = new RenderTexture(320, 240, 24) { name = "cull-proof" };
+            try
+            {
+                yield return SeedOrders(boot);
+
+                // **Stop the world before photographing it.** A walking colonist and a drifting
+                // sun move more pixels than the thing being measured; see the remarks above.
+                // **Submitted until it takes, not submitted once and hoped for.** An intent goes
+                // on a bus with a capacity and is drained on a tick boundary, and the thousand
+                // designations `SeedOrders` has just queued can still be going through. Submitted
+                // once and waited four frames, this passed on this machine and **failed on the CI
+                // runner**, where the speed was still 1 — a machine-dependent flake in a test whose
+                // whole job is to be believed.
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+
+                Assert.That(boot.World!.GameSpeed, Is.Zero, "the world would not pause, so the " +
+                    "shots below are of a moving scene and cannot measure a still difference");
+
+                // **And stop the clock presentation draws on, which pausing the simulation does
+                // not.** Pausing stops the ticks, so nobody walks — but the water still scrolls
+                // its streaks and foam, the figures still advance their animation graphs, and the
+                // daylight rig still moves, because all of those run on `Time.deltaTime` and the
+                // shaders on `_Time`. Measured: with the simulation paused and this left alone,
+                // two captures of the identical configuration still differed by **1.29%** of
+                // pixels, which is most of the way to culling's own 2.13% and made the two
+                // impossible to tell apart. `timeScale` is what `_Time` is derived from, so this
+                // one line stills the shaders as well as the scripts.
+                float previousScale = Time.timeScale;
+                Time.timeScale = 0f;
+
+                // **Let it settle before the first shot, generously.** Run on its own the floor
+                // below is 0.00%; run inside the whole PlayMode tier it was 0.77%, on the same
+                // commit. A busy run is still finishing things off — shader variants, texture
+                // streaming, the post stack's first frames — and eight frames between captures is
+                // not enough for that to be over. This wait is once, before anything is compared.
+                for (int i = 0; i < 120; i++) yield return null;
+
+                UnityEngine.Camera cam = boot.cameraRig!.Camera;
+                RenderTexture previousTarget = cam.targetTexture;
+                cam.targetTexture = target;
+                try
+                {
+                    boot.Renderer!.CullToFrustum = false;
+                    Color32[] off = null!;
+                    yield return Shoot("off", boot, target, p => off = p);
+
+                    // The negative control: the same configuration again. Whatever this moves is
+                    // the instrument's own noise, and every other number is read against it.
+                    Color32[] again = null!;
+                    yield return Shoot("again", boot, target, p => again = p);
+
+                    boot.Renderer!.CullToFrustum = true;
+                    Color32[] on = null!;
+                    yield return Shoot("on", boot, target, p => on = p);
+
+                    // The positive control: a frustum nothing can be inside, through the seam the
+                    // root does not overwrite.
+                    var nowhere = new Plane[6];
+                    for (int i = 0; i < nowhere.Length; i++)
+                        nowhere[i] = new Plane(Vector3.up, -1e6f);
+                    boot.Renderer!.FrustumOverride = nowhere;
+                    Color32[] blind = null!;
+                    yield return Shoot("blind", boot, target, p => blind = p);
+                    boot.Renderer!.FrustumOverride = null;
+
+                    float noise = Difference(off, again);
+                    float culled = Difference(off, on);
+                    float blinded = Difference(off, blind);
+                    Debug.Log($"[FrameTime] cull proof: the same shot twice moved {noise * 100f:0.00}%, " +
+                              $"culling moved {culled * 100f:0.00}%, " +
+                              $"a frustum admitting nothing moved {blinded * 100f:0.00}%");
+
+                    // **The floor has to be small enough to conclude anything from**, but it is
+                    // not required to be nought: see the settle above. Two per cent still leaves
+                    // the blind control fifty times clear of it.
+                    Assert.That(noise, Is.LessThan(0.02f),
+                        $"two captures of the identical configuration differ by {noise * 100f:0.00}% " +
+                        "of pixels, so this comparison has no floor to measure against. The world " +
+                        "is meant to be paused and the clock stopped for these shots - check " +
+                        "Logs/cull-off.png against Logs/cull-again.png for a colonist who moved, " +
+                        "water that scrolled or a sun that drifted");
+
+                    Assert.That(blinded, Is.GreaterThan(0.05f),
+                        $"rejecting every chunk moved only {blinded * 100f:0.00}% of pixels, so this " +
+                        "comparison cannot see a difference and its other assertion proves " +
+                        "nothing. Compare the chunk counts logged during each capture: equal counts " +
+                        "for 'on' and 'blind' mean the override is not reaching the submission " +
+                        "path, which is exactly how this test failed on 2026-09-23");
+
+                    // **Judged against the floor measured in this same run, not against a constant.**
+                    // The claim is that culling is indistinguishable from doing nothing, and the
+                    // repeat shot is precisely what "doing nothing" costs on this machine, in this
+                    // run, at this moment. A fixed tolerance would be a guess at that, and would
+                    // either fail honestly-quiet runs or pass noisy ones - it did the first of
+                    // those inside the full tier on 2026-09-23 while passing alone.
+                    float allowed = noise + 0.002f;
+                    Assert.That(culled, Is.LessThanOrEqualTo(allowed),
+                        $"culling moved {culled * 100f:0.00}% of pixels where doing nothing twice " +
+                        $"moved {noise * 100f:0.00}%: it is not only skipping submissions the " +
+                        "camera could not see. The blind control moved " +
+                        $"{blinded * 100f:0.00}%, so the instrument can certainly see a real change");
+                }
+                finally
+                {
+                    Time.timeScale = previousScale;
+                    cam.targetTexture = previousTarget;
+                    boot.Renderer!.FrustumOverride = null;
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+                target.Release();
+                UnityEngine.Object.Destroy(target);
+            }
+        }
+
+        /// <summary>
+        /// Let the normal loop draw into the target, read it back, and say what the renderer did
+        /// while it was drawing.
+        ///
+        /// <para><b>The counters and the file are why this is not a guessing game.</b> The first
+        /// run of <see cref="CullingDoesNotChangeThePicture"/> failed on its own control: a
+        /// frustum admitting nothing moved 3.22% of pixels, which is not a difference between two
+        /// pictures of a world — it is what two pictures of *nearly nothing* look like. Chunk
+        /// counts taken during the capture separate "the cull is wrong" from "the capture never
+        /// saw the board", and the written frame lets a person settle it in one look, which is
+        /// what this project does with anything that is about how something appears.</para>
+        /// </summary>
+        IEnumerator Shoot(string name, OdysseyBootstrap boot, RenderTexture target, Action<Color32[]> pixels)
+        {
+            // Several frames: the submission is rebuilt every frame and the post stack settles.
+            for (int i = 0; i < 8; i++) yield return null;
+
+            int chunks = boot.Renderer?.ChunksDrawn ?? -1;
+            int instances = boot.Renderer?.InstancesDrawn ?? -1;
+            int calls = boot.Renderer?.DrawCalls ?? -1;
+
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = target;
+            var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+            image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+            image.Apply();
+            RenderTexture.active = previous;
+
+            Color32[] read = image.GetPixels32();
+            long sum = 0;
+            for (int i = 0; i < read.Length; i++) sum += read[i].r + read[i].g + read[i].b;
+
+            Directory.CreateDirectory(Path.GetFullPath("Logs"));
+            File.WriteAllBytes(Path.GetFullPath($"Logs/cull-{name}.png"), image.EncodeToPNG());
+            Debug.Log($"[FrameTime] cull shot {name}: {chunks} chunks, {instances} instances, " +
+                      $"{calls} calls while capturing; mean channel " +
+                      $"{(read.Length > 0 ? sum / (double)(read.Length * 3) : 0):0.0} " +
+                      $"-> Logs/cull-{name}.png");
+
+            pixels(read);
+            UnityEngine.Object.Destroy(image);
+        }
+
+        /// <summary>The fraction of pixels that differ by more than a channel of noise.</summary>
+        static float Difference(Color32[] a, Color32[] b)
+        {
+            if (a.Length != b.Length) return 1f;
+            int moved = 0;
+            for (int i = 0; i < a.Length; i++)
+            {
+                int dr = Mathf.Abs(a[i].r - b[i].r);
+                int dg = Mathf.Abs(a[i].g - b[i].g);
+                int db = Mathf.Abs(a[i].b - b[i].b);
+                if (dr + dg + db > 12) moved++;
+            }
+
+            return a.Length == 0 ? 0f : (float)moved / a.Length;
         }
 
         static double Section(double[] split, OdysseyBootstrap.FrameSection section) =>

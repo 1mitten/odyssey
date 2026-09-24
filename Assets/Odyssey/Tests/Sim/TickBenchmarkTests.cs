@@ -258,6 +258,66 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// Twenty colonists against twenty marauders on the played board (design 33 §6A, lane A):
+        /// what a fight costs the tick, beside the same colony at peace in the same run. The
+        /// combat pass walks every pawn with one branch each and does its real work only for the
+        /// swings landing and the hurt healing, and the hunt and the self-defence each scan the
+        /// pawns once per think — so the row that matters is the Pawns phase, fight against peace.
+        ///
+        /// <para>Explicit, like every arm here. The assertion is only that the fight was real:
+        /// swings were resolved in the window.</para>
+        /// </summary>
+        [Test, Explicit, Category("Benchmark")]
+        public void TwentyAgainstTwenty()
+        {
+            var report = new StringBuilder();
+            double peace = MeasureFight(report, "twenty colonists at peace", marauders: 0, out _);
+            double fight = MeasureFight(report, "twenty against twenty", marauders: 20, out int swings);
+            report.AppendLine($"the fight costs {fight - peace:F3} ms a tick over the colony at peace ({fight / Math.Max(peace, 1e-9):F2}x)");
+            TestContext.WriteLine(report.ToString());
+            Assert.That(swings, Is.GreaterThan(50), "the measured window held no fight");
+        }
+
+        static double MeasureFight(StringBuilder report, string label, int marauders, out int swings)
+        {
+            var size = new GridSize(120, 120, 16);
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 20;
+            scenario.beds = 20;
+            scenario.stockpileCells = 9;
+            ColonyWorld colony = ColonyWorld.Build(size, 12345u, scenario);
+            var rules = new CombatFixture.RecordingRules();
+            colony.Pawns.MeleeRules = rules;
+
+            CellRef start = colony.Start;
+            for (int i = 0; i < marauders; i++)
+            {
+                int cell = colony.Pawns.Cells.NearestWalkableInColumn(start.X + 12 + i % 5, start.Z - 2 + i / 5, start.Y);
+                if (cell >= 0) colony.Pawns.Pawns.Spawn(cell, PawnKindIndex.Marauder);
+            }
+
+            // Past the approach, into the thick of it, before the window opens.
+            colony.World.Tick(600);
+            int before = rules.Swings.Count;
+
+            var trace = new PhaseTrace(Ticks);
+            colony.World.PhaseSink = trace;
+            var wall = Stopwatch.StartNew();
+            colony.World.Tick(Ticks);
+            wall.Stop();
+            colony.World.PhaseSink = null;
+            swings = rules.Swings.Count - before;
+
+            int downed = 0;
+            foreach (Pawn pawn in colony.Pawns.Pawns.All) if (pawn.Downed) downed++;
+            double tick = trace.MeanTickMs();
+            report.AppendLine($"--- {label}: {colony.Pawns.Pawns.Count} pawns on {size.SizeX} x {size.SizeZ} x {size.SizeY}, {Ticks} ticks ---");
+            report.AppendLine($"tick {tick:F3} ms mean, {trace.P95TickMs():F3} p95; Pawns phase {trace.MeanMs(TickSegment.Pawns):F3} ms mean, " +
+                              $"{trace.P95Ms(TickSegment.Pawns):F3} p95; {swings} swings resolved in the window, {downed} down at its end");
+            return tick;
+        }
+
+        /// <summary>
         /// The two enumerations that describe the order of a tick must not come to disagree about
         /// it. <see cref="TickPhase"/> names the three phases a system may register in;
         /// <see cref="TickSegment"/> names all seven, for timing. Where they overlap the numbers
@@ -496,7 +556,7 @@ namespace Odyssey.Tests.Sim
                 // so the dirty block is waiting when NavigationSystem rebuilds in phase 2 of the
                 // *next* tick. The cost therefore lands on WorldSystems, which is where a
                 // colonist's own mined cell would land it.
-                miner = new MineOneCell(cells, nav, s);
+                miner = new MineOneCell(cells, nav, s, pawns.Enclosure);
                 world.Register(miner);
             }
 
@@ -538,12 +598,18 @@ namespace Odyssey.Tests.Sim
         {
             readonly CellGrid _cells;
             readonly NavGraph _nav;
+            readonly EnclosureGrid? _enclosure;
             uint _s;
 
-            public MineOneCell(CellGrid cells, NavGraph nav, uint seed)
+            /// <param name="enclosure">The colony's enclosure, so the edit marks what a real
+            /// mined cell marks. Until 2026-09-21 this arm marked nav alone, and the enclosure
+            /// solve — the largest cost of a real edit on Huge — was never in the number
+            /// (`docs/lessons.md`).</param>
+            public MineOneCell(CellGrid cells, NavGraph nav, uint seed, EnclosureGrid? enclosure = null)
             {
                 _cells = cells;
                 _nav = nav;
+                _enclosure = enclosure;
                 _s = seed == 0 ? 1u : seed;
             }
 
@@ -564,6 +630,7 @@ namespace Odyssey.Tests.Sim
 
                     _cells.Flags[idx] &= ~CellFlags.SolidTerrain;
                     _nav.MarkDirty(idx);
+                    _enclosure?.MarkDirty(idx);
                     Mined++;
                     return;
                 }

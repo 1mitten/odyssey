@@ -267,8 +267,12 @@ namespace Odyssey.Presentation.CameraRig
         /// disarms and does nothing else, and with nothing armed it is deliberately inert, because
         /// that is the gesture the forced-order context menu is reserved for
         /// (<c>docs/design/15-building.md</c> §8).</para>
+        ///
+        /// <para><b>It carries the pick now</b>, the cell and the ray, exactly as
+        /// <see cref="Picked"/> does (design 33 §2f): with nothing armed a right-click is a drafted
+        /// colonist's order, and an order has to know where it was aimed and at whom.</para>
         /// </summary>
-        public event Action? WorldRightClicked;
+        public event Action<CellRef?, Ray>? WorldRightClicked;
 
         /// <summary>Whether the right button is being swept or merely pressed. See <see cref="WorldRightClicked"/>.</summary>
         PressGesture _rightPress;
@@ -449,7 +453,7 @@ namespace Odyssey.Presentation.CameraRig
 
             if (_rightPress.Down && mouse.rightButton.isPressed) _rightPress.MoveTo(pointer.x, pointer.y);
             if (mouse.rightButton.wasReleasedThisFrame && _rightPress.Release())
-                WorldRightClicked?.Invoke();
+                RightClickAt(pointer);
 
             if (mouse.rightButton.wasPressedThisFrame || mouse.middleButton.wasPressedThisFrame)
                 _orbiting = mouse.rightButton.isPressed;
@@ -664,13 +668,23 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         public event Action<CellRef>? ToolClick;
 
+        UnityEngine.Camera? _camera;
+
+        /// <summary>
+        /// The camera this rig drives. Required by the component, so it always exists; cached
+        /// because it is now wanted every frame for the frustum the chunk renderer culls against,
+        /// and a <c>GetComponent</c> a frame is the sort of thing that is invisible until it is
+        /// in a profile.
+        /// </summary>
+        public UnityEngine.Camera Camera =>
+            _camera != null ? _camera : _camera = GetComponent<UnityEngine.Camera>();
+
         /// <summary>
         /// The one place a screen position becomes a ray. Shared so that a tool drag and a
         /// selection click cannot resolve the same pixel to different cells.
         /// </summary>
         Ray RayAt(Vector2 screenPosition) =>
-            GetComponent<UnityEngine.Camera>()
-                .ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
+            Camera.ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
 
         /// <summary>
         /// The highest layer a click may land on, and the lowest. The picker's band, published so
@@ -816,6 +830,17 @@ namespace Odyssey.Presentation.CameraRig
         }
 
         // -------------------------------------------------------- selection
+
+        /// <summary>A right-click, resolved the way a left one is: the same ray, the same picker.</summary>
+        void RightClickAt(Vector2 screenPosition)
+        {
+            if (WorldRightClicked == null) return;
+            Ray ray = RayAt(screenPosition);
+            if (_model != null && SlicePicker.Pick(ray, _model, ActiveLayer, slice, out CellRef cell))
+                WorldRightClicked.Invoke(cell, ray);
+            else
+                WorldRightClicked.Invoke(null, ray);
+        }
 
         void PickAt(Vector2 screenPosition)
         {

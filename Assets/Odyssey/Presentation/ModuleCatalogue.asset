@@ -22,7 +22,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -36,6 +41,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -57,7 +63,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -71,6 +82,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -92,7 +104,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -106,6 +123,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -127,7 +145,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -141,6 +164,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -162,7 +186,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -176,6 +205,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -197,7 +227,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -211,6 +246,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -232,7 +268,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -246,6 +287,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -267,7 +309,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -281,6 +328,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -302,7 +350,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -316,6 +369,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -337,7 +391,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -351,6 +410,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -372,7 +432,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -386,6 +451,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -407,7 +473,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -421,6 +492,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -442,7 +514,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -456,6 +533,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -477,7 +555,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -491,6 +574,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -512,7 +596,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -526,6 +615,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -547,7 +637,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -561,6 +656,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -582,7 +678,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -596,6 +697,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -617,7 +719,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -631,6 +738,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -652,7 +760,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: -1.15}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -666,6 +779,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -687,7 +801,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: -1.15}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -701,6 +820,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -722,7 +842,12 @@ MonoBehaviour:
     topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -736,6 +861,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -757,7 +883,12 @@ MonoBehaviour:
     topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -771,6 +902,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -792,7 +924,12 @@ MonoBehaviour:
     topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -806,6 +943,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -827,7 +965,12 @@ MonoBehaviour:
     topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -841,6 +984,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -862,7 +1006,12 @@ MonoBehaviour:
     topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -876,6 +1025,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -897,7 +1047,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -911,6 +1066,130 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.generator
+    shape: 4
+    prefab: {fileID: 1906143108443636, guid: 8c366b74a8be11d409236ded1f90f979, type: 3}
+    prefabName: SM_Prop_Generator_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 2.4, y: 4.9}
+    fitHeight: 2.1
+    fitStretch: 1
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.heater
+    shape: 4
+    prefab: {fileID: 1054224122226918, guid: 481f055a844be084eae4eefebdd9a49f, type: 3}
+    prefabName: SM_Prop_AirConditioningUnit_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 2.4, y: 2.4}
+    fitHeight: 2.2
+    fitStretch: 0
+    fitAgainstBack: 1
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.campfire
+    shape: 4
+    prefab: {fileID: 1008667369134030, guid: ac728ce9ca76cf84bb4f051bad08e5b0, type: 3}
+    prefabName: SM_Prop_Campfire_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 0.7, y: 0.7, z: 0.7}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -932,7 +1211,12 @@ MonoBehaviour:
     topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -946,6 +1230,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -967,7 +1252,12 @@ MonoBehaviour:
     topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -981,6 +1271,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1002,7 +1293,12 @@ MonoBehaviour:
     topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1016,6 +1312,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1037,7 +1334,12 @@ MonoBehaviour:
     topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1051,6 +1353,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1072,7 +1375,12 @@ MonoBehaviour:
     topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1086,6 +1394,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1107,7 +1416,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1121,6 +1435,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1142,7 +1457,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1156,6 +1476,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1177,7 +1498,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1191,6 +1517,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1212,7 +1539,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1226,6 +1558,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1247,7 +1580,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1261,6 +1599,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1282,7 +1621,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1296,6 +1640,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1317,7 +1662,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1331,6 +1681,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1352,7 +1703,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1366,6 +1722,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1387,7 +1744,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1401,6 +1763,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1422,7 +1785,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1436,6 +1804,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1457,7 +1826,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1471,6 +1845,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1492,7 +1867,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1506,6 +1886,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1527,7 +1908,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1541,6 +1927,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1562,7 +1949,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1576,6 +1968,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1597,7 +1990,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1611,6 +2009,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1632,7 +2031,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1646,6 +2050,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1667,7 +2072,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1681,6 +2091,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1702,7 +2113,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1716,6 +2132,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1737,7 +2154,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1751,6 +2173,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1772,7 +2195,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1786,6 +2214,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1807,7 +2236,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1821,6 +2255,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1842,7 +2277,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1856,6 +2296,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1877,7 +2318,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1891,6 +2337,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1912,7 +2359,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1926,6 +2378,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1947,7 +2400,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1961,6 +2419,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1982,7 +2441,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -1996,6 +2460,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2017,7 +2482,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2031,6 +2501,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2052,7 +2523,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2066,6 +2542,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2087,7 +2564,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2101,6 +2583,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2122,7 +2605,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2136,6 +2624,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2157,7 +2646,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2171,6 +2665,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2192,7 +2687,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2206,6 +2706,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2227,7 +2728,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2241,6 +2747,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2262,7 +2769,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2276,6 +2788,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2297,7 +2810,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2311,6 +2829,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2332,7 +2851,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2346,6 +2870,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2367,7 +2892,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: -0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2381,6 +2911,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2402,7 +2933,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: -0.05, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2416,6 +2952,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2437,7 +2974,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: -0.25, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2451,6 +2993,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2472,7 +3015,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2486,6 +3034,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2507,7 +3056,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2521,6 +3075,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2542,7 +3097,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2556,6 +3116,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2577,7 +3138,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2591,6 +3157,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2612,7 +3179,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -2626,6 +3198,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2647,7 +3220,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 2
     recolours: 1
@@ -2673,6 +3251,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -2719,7 +3298,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -2745,6 +3329,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -2791,7 +3376,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 2
     recolours: 1
@@ -2817,6 +3407,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -2863,7 +3454,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -2889,6 +3485,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -2935,7 +3532,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 2
     recolours: 1
@@ -2961,6 +3563,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -3007,7 +3610,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -3033,6 +3641,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -3079,7 +3688,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 2
     recolours: 1
@@ -3105,6 +3719,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -3151,7 +3766,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -3177,6 +3797,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -3223,7 +3844,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -3249,6 +3875,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -3295,7 +3922,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 2
     recolours: 1
@@ -3321,6 +3953,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -3367,7 +4000,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 2
     recolours: 1
@@ -3393,6 +4031,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -3439,7 +4078,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 2
     recolours: 1
@@ -3465,6 +4109,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -3511,7 +4156,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 2
     recolours: 1
@@ -3537,6 +4187,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -3583,7 +4234,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -3609,6 +4265,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -3655,7 +4312,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -3681,6 +4343,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -3727,7 +4390,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -3753,6 +4421,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -3799,7 +4468,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -3825,6 +4499,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -3871,7 +4546,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -3897,6 +4577,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -3933,7 +4614,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -3959,6 +4645,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4000,7 +4687,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 2
     recolours: 1
@@ -4026,6 +4718,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4057,7 +4750,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -4083,6 +4781,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -4129,7 +4828,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -4155,6 +4859,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4196,7 +4901,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -4222,6 +4932,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -4268,7 +4979,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 2
     recolours: 1
@@ -4294,6 +5010,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -4345,7 +5062,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -4371,6 +5093,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -4417,7 +5140,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -4443,6 +5171,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4479,7 +5208,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -4505,6 +5239,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -4551,7 +5286,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 2
     recolours: 1
@@ -4577,6 +5317,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -4623,7 +5364,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 2
     recolours: 1
@@ -4649,6 +5395,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -4695,7 +5442,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -4721,6 +5473,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -4767,7 +5520,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -4793,6 +5551,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4829,7 +5588,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -4855,6 +5619,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -4901,7 +5666,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -4927,6 +5697,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -4973,7 +5744,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 2
     recolours: 1
@@ -4999,6 +5775,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -5045,7 +5822,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -5071,6 +5853,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -5117,7 +5900,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -5143,6 +5931,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -5194,7 +5983,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 2
     recolours: 1
@@ -5220,6 +6014,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -5271,7 +6066,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 2
     recolours: 1
@@ -5297,6 +6097,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -5343,7 +6144,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -5369,6 +6175,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -5420,7 +6227,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -5446,6 +6258,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -5497,7 +6310,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -5523,6 +6341,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -5574,7 +6393,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -5600,6 +6424,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -5646,7 +6471,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -5672,6 +6502,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -5718,7 +6549,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -5744,6 +6580,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -5790,7 +6627,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -5816,6 +6658,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -5867,7 +6710,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 2
     recolours: 1
@@ -5893,6 +6741,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -5939,7 +6788,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -5965,6 +6819,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -6016,7 +6871,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -6042,6 +6902,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -6093,7 +6954,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -6119,6 +6985,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -6170,7 +7037,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 2
     recolours: 1
@@ -6196,6 +7068,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -6242,7 +7115,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 2
     recolours: 1
@@ -6268,6 +7146,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -6314,7 +7193,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -6340,6 +7224,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -6386,7 +7271,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -6412,6 +7302,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -6463,7 +7354,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -6489,6 +7385,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -6540,7 +7437,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 2
     recolours: 1
@@ -6566,6 +7468,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -6612,7 +7515,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -6638,6 +7546,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -6689,7 +7598,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -6715,6 +7629,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -6761,7 +7676,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -6787,6 +7707,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -6838,7 +7759,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -6864,6 +7790,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -6915,7 +7842,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -6941,6 +7873,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -6992,7 +7925,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 2
     recolours: 1
@@ -7018,6 +7956,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -7069,7 +8008,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -7095,6 +8039,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -7136,7 +8081,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -7162,6 +8112,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -7213,7 +8164,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -7239,6 +8195,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -7285,7 +8242,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -7311,6 +8273,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -7362,7 +8325,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -7388,6 +8356,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -7434,7 +8403,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 1
     recolours: 1
@@ -7460,6 +8434,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -7506,7 +8481,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 2
     recolours: 1
@@ -7532,6 +8512,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -7583,7 +8564,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 2
     recolours: 1
@@ -7609,6 +8595,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -7655,7 +8642,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 2
     recolours: 1
@@ -7681,6 +8673,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -7732,7 +8725,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 2
     recolours: 1
@@ -7758,6 +8756,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -7804,7 +8803,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 2
     recolours: 1
@@ -7830,6 +8834,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -7881,7 +8886,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 1
     sex: 2
     recolours: 1
@@ -7907,6 +8917,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    combat: []
     quadrupedGait: 0
     appearance:
       skin:
@@ -7953,7 +8964,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -7967,6 +8983,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -7993,7 +9010,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -8007,6 +9029,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8033,7 +9056,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -8047,6 +9075,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8073,7 +9102,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -8087,6 +9121,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8113,7 +9148,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -8127,6 +9167,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8153,7 +9194,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -8167,6 +9213,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8193,7 +9240,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 2
     recolours: 1
@@ -8207,6 +9259,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8233,7 +9286,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -8247,6 +9305,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8273,7 +9332,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -8287,6 +9351,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8313,7 +9378,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -8327,6 +9397,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8353,7 +9424,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -8367,6 +9443,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8393,7 +9470,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -8407,6 +9489,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8433,7 +9516,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -8447,6 +9535,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8473,7 +9562,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -8487,6 +9581,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8513,7 +9608,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -8527,6 +9627,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8553,7 +9654,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -8567,6 +9673,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8593,7 +9700,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -8607,6 +9719,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8633,7 +9746,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -8647,6 +9765,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8673,7 +9792,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -8687,6 +9811,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8713,7 +9838,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -8727,6 +9857,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8753,7 +9884,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -8767,6 +9903,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8793,7 +9930,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -8807,6 +9949,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8833,7 +9976,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -8847,6 +9995,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8873,7 +10022,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 1
     recolours: 1
@@ -8887,6 +10041,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8913,7 +10068,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -8931,6 +10091,7 @@ MonoBehaviour:
       clip: {fileID: -8945691123924629249, guid: 4a05467d051682c4788592b32f244768, type: 3}
       speedFromClipName: 
       metresPerSecond: 0
+    combat: []
     quadrupedGait: 1
     appearance:
       skin: []
@@ -8952,7 +10113,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -8978,6 +10144,7 @@ MonoBehaviour:
       clip: {fileID: -5573254151428076804, guid: 84b54a4e64593d9418f72dbd733ff161, type: 3}
       speedFromClipName: 
       metresPerSecond: 2.2
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -8999,7 +10166,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.6, y: 1.6, z: 1.6}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -9013,6 +10185,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9034,7 +10207,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 1.5, y: 1.5, z: 1.5}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -9048,6 +10226,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9069,7 +10248,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 0.4, y: 0.4, z: 0.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -9083,6 +10267,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9104,7 +10289,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 0.35, y: 0.35, z: 0.35}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -9118,6 +10308,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9139,7 +10330,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 0.16, y: 0.16, z: 0.16}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -9153,6 +10349,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9174,7 +10371,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 0.5, y: 0.5, z: 0.5}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -9188,6 +10390,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9209,7 +10412,12 @@ MonoBehaviour:
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
+    lieFlat: 0
     scale: {x: 0.6, y: 0.6, z: 0.6}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
     colonistPool: 0
     sex: 0
     recolours: 1
@@ -9223,6 +10431,758 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    combat: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.item.bat
+    shape: 4
+    prefab: {fileID: 1079387494257586, guid: 27af943660497544a943e5dc2595eea7, type: 3}
+    prefabName: SM_Wep_Bat_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 1
+    scale: {x: 1.5, y: 1.5, z: 1.5}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.item.crowbar
+    shape: 4
+    prefab: {fileID: 1053601135882890, guid: e836a075ea7fb4948a5ac07f447e206d, type: 3}
+    prefabName: SM_Wep_Crowbar_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 1
+    scale: {x: 1.5, y: 1.5, z: 1.5}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.item.machete
+    shape: 4
+    prefab: {fileID: 1657996491295356, guid: 9023a47e211f9384aa25b0a32a008f0f, type: 3}
+    prefabName: SM_Wep_Machete_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 1
+    scale: {x: 1.5, y: 1.5, z: 1.5}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.item.arcblade
+    shape: 4
+    prefab: {fileID: 1565935239740110, guid: 4d5e45013e2bb8042b0207cf4a203289, type: 3}
+    prefabName: SM_Wep_Sword_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 1
+    scale: {x: 1.5, y: 1.5, z: 1.5}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.anim.combat.swing.light
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_Attack_LightCombo01A_Sword
+      clip: {fileID: -7717634560727564301, guid: 9f773338b2a96174ebe9b63870034ca3, type: 3}
+      variant: A
+      impactSeconds: 0.33333334
+    - clipName: A_Attack_LightCombo01B_Sword
+      clip: {fileID: 5800342443961765143, guid: 95697c3218923dd43aa160c110bfbc79, type: 3}
+      variant: B
+      impactSeconds: 0.16666667
+    - clipName: A_Attack_LightCombo01C_Sword
+      clip: {fileID: -8890989884591690541, guid: c9e0b6900401fcb42980df96b84db76c, type: 3}
+      variant: C
+      impactSeconds: 0.36666667
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.anim.combat.swing.heavy
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_Attack_HeavyCombo01A_Sword
+      clip: {fileID: -8709411803423658444, guid: f3800f1bd189abc469fcc7c374371a91, type: 3}
+      variant: A
+      impactSeconds: 0.96666664
+    - clipName: A_Attack_HeavyStab01_Sword
+      clip: {fileID: 8332939666779294377, guid: b963d0c4e093a9c4ea792b8095e51ba2, type: 3}
+      variant: B
+      impactSeconds: 0.8666667
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.anim.combat.react.hit
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_Hit_F_React_Sword
+      clip: {fileID: -5694488986427802680, guid: adc1feaf8563f6247989bffd0737b6ad, type: 3}
+      variant: F
+      impactSeconds: 0
+    - clipName: A_Hit_B_React_Sword
+      clip: {fileID: 5410598297907043000, guid: 646e411aff9e6a3409589c9eebc68c3a, type: 3}
+      variant: B
+      impactSeconds: 0
+    - clipName: A_Hit_L_React_Sword
+      clip: {fileID: 8990611995264232770, guid: 202a1ac9f04ce2a419bc2bdd6b148b2a, type: 3}
+      variant: L
+      impactSeconds: 0
+    - clipName: A_Hit_R_React_Sword
+      clip: {fileID: -8134992637236915294, guid: 881ed1a8905746f4d9b1def6f9e773dd, type: 3}
+      variant: R
+      impactSeconds: 0
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.anim.combat.react.stagger
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_Hit_F_Stagger_Sword
+      clip: {fileID: 8724492062134716513, guid: 3af9f677619822043a708e52c79ba040, type: 3}
+      variant: F
+      impactSeconds: 0
+    - clipName: A_Hit_B_Stagger_Sword
+      clip: {fileID: 8724492062134716513, guid: 2c9d421561b7c9941bd5d9942e4dcaa5, type: 3}
+      variant: B
+      impactSeconds: 0
+    - clipName: A_Hit_L_Stagger_Sword
+      clip: {fileID: -5950831409251336622, guid: ec81d250c60b03d47b70b65309c588ee, type: 3}
+      variant: L
+      impactSeconds: 0
+    - clipName: A_Hit_R_Stagger_Sword
+      clip: {fileID: -5950831409251336622, guid: bb9255eddd5619c4e9398d076eb337fd, type: 3}
+      variant: R
+      impactSeconds: 0
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.anim.combat.dodge
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_Dodge_F_Sword
+      clip: {fileID: 6808892750511483125, guid: 80f9aad568ebdbf4f9fd28c054c27a20, type: 3}
+      variant: F
+      impactSeconds: 0
+    - clipName: A_Dodge_B_Sword
+      clip: {fileID: -377892130397285394, guid: b3ac7f325a7e6a843be780efd40ca046, type: 3}
+      variant: B
+      impactSeconds: 0
+    - clipName: A_Dodge_L_Sword
+      clip: {fileID: 8020556318125480424, guid: e8bce1554d1659347aae4f4f75892c21, type: 3}
+      variant: L
+      impactSeconds: 0
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.anim.combat.stun
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_Stun_Begin_Sword
+      clip: {fileID: 3635232535751687706, guid: f348d316efadffb46a8fe603f8bac817, type: 3}
+      variant: Begin
+      impactSeconds: 0
+    - clipName: A_Stun_Loop_Sword
+      clip: {fileID: -2029077043182818740, guid: 23b7cb91698239b4aa8dd2c6e5298354, type: 3}
+      variant: Loop
+      impactSeconds: 0
+    - clipName: A_Stun_End_Sword
+      clip: {fileID: -6759780123328594538, guid: ee840371c325fd748b10e1b2f509cff2, type: 3}
+      variant: End
+      impactSeconds: 0
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.anim.combat.downed
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_KnockDown_Begin_Sword
+      clip: {fileID: 3719875270879779954, guid: 7ba7023334e89e340927c5c166306e04, type: 3}
+      variant: Begin
+      impactSeconds: 0
+    - clipName: A_KnockDown_Loop_Sword
+      clip: {fileID: 3546632239941170796, guid: 334f831830b92884ca55ad69efd72917, type: 3}
+      variant: Loop
+      impactSeconds: 0
+    - clipName: A_KnockDown_End_Sword
+      clip: {fileID: -7560739488375888718, guid: 8a405eac44feba441a02a2df3f42f432, type: 3}
+      variant: End
+      impactSeconds: 0
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.anim.combat.death
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_Death_F_01_Sword
+      clip: {fileID: -7862834798869268496, guid: 90f98101f7a4c2c4bbbf30f76e7b91c7, type: 3}
+      variant: F
+      impactSeconds: 0
+    - clipName: A_Death_B_01_Sword
+      clip: {fileID: -1444214504022159124, guid: a0b8f6f252ea03c46b36b357f5ea81e5, type: 3}
+      variant: B
+      impactSeconds: 0
+    - clipName: A_Death_L_01_Sword
+      clip: {fileID: 2178902523417233475, guid: 65976cacc9c112c4bb50b463be29f1db, type: 3}
+      variant: L
+      impactSeconds: 0
+    - clipName: A_Death_R_01_Sword
+      clip: {fileID: -5737455498129746005, guid: fb3c21dead0f2e54284772f27eb1de00, type: 3}
+      variant: R
+      impactSeconds: 0
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.anim.combat.death.pose
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_Death_F_01_Pose_Sword
+      clip: {fileID: 4976112731881477189, guid: e700b1959b9313b4d9d43d5e666417fe, type: 3}
+      variant: F
+      impactSeconds: 0
+    - clipName: A_Death_B_01_Pose_Sword
+      clip: {fileID: 5381203422592421398, guid: 1d11585940b474e4b991d89402e88cd1, type: 3}
+      variant: B
+      impactSeconds: 0
+    - clipName: A_Death_L_01_Pose_Sword
+      clip: {fileID: 2772978117036748950, guid: 7824bbe4742763d408feb32763148c02, type: 3}
+      variant: L
+      impactSeconds: 0
+    - clipName: A_Death_R_01_Pose_Sword
+      clip: {fileID: 5990651622721326783, guid: 5952bcb69b331a841a9e9b77b715507d, type: 3}
+      variant: R
+      impactSeconds: 0
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.anim.combat.sheath.draw
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_Draw_Sword_Masc
+      clip: {fileID: -1799629646076063188, guid: 1e112675476098345a62bc14cbf8a7ef, type: 3}
+      variant: Masc
+      impactSeconds: 0
+    - clipName: A_Draw_Sword_Femn
+      clip: {fileID: 1972962540892491625, guid: 3f6f85425f929304198f743d3902c6b0, type: 3}
+      variant: Femn
+      impactSeconds: 0
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.anim.combat.sheath.sheathe
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_Sheathe_Sword_Masc
+      clip: {fileID: 2918243416346985125, guid: febb68dd712756c4c883a3e4f482d3b1, type: 3}
+      variant: Masc
+      impactSeconds: 0
+    - clipName: A_Sheathe_Sword_Femn
+      clip: {fileID: 4741049883773862030, guid: 8d7a574352a5f294fa488a9148bc9ceb, type: 3}
+      variant: Femn
+      impactSeconds: 0
     quadrupedGait: 0
     appearance:
       skin: []

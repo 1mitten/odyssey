@@ -78,7 +78,11 @@ namespace Odyssey.Tests.Sim
             scenario.colonists = 0;
             scenario.beds = beds;
             scenario.startingFellRadius = 0;
-            return ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: true);
+            // No wildlife: these fixtures deal pawn ids by hand and the pace is keyed on the id.
+            return ColonyWorld.Build(new ColonyRequest
+            {
+                Size = Size, Seed = seed, Scenario = scenario, Barren = true, Wooded = true, Wildlife = false,
+            });
         }
 
         static Pinned Adopt(ColonyWorld colony, uint id = 1u)

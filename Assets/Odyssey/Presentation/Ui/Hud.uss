@@ -251,7 +251,9 @@
    giving names 80 px of width (a 60% increase over the old 50 px budget). */
 .card {
     width: 96px;
-    height: 89px;
+    /* 89 until 2026-09-23; the health bar and its gap added 5, which is all the coverage ceiling
+       had left (design 33 §9f, HudLayout.CardHeight). */
+    height: 94px;
     /* Half the gap on each side horizontally, the whole of it below — so the gap between two
        rows is one CardGap and the first row still starts exactly at the strip's top edge, which
        is what lets the layout model state the strip's height as rows and gaps and be right. */
@@ -318,6 +320,41 @@
     width: 100%;
     margin-top: 2px;
     -unity-text-align: middle-center;
+}
+
+/* The health bar (design 33 §9f): always shown, the full width inside the padding, the need bar's
+   4px. The fill's width and colour are set from code - the colour is
+   CombatFeedbackModel.HealthBarColour, the one owner of the bar over a colonist's head, so no
+   colour for the fill is written here. A downed colonist's track is tinted red from code too. */
+.card__health {
+    height: 4px;
+    width: 100%;
+    margin-top: 1px;
+    flex-shrink: 0;
+    background-color: rgba(255, 255, 255, 0.09);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.card__health-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 2px;
+}
+
+/* "Downed", across the foot of the portrait: a 4px bar is too thin to carry a word, and the card
+   has no pixel of height left to give one a line (HudLayout.CardHeight). The plate is set from
+   code in the bar's red; the job badge is added after it and so sits on top at the right. */
+.card__downed {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 15px;
+    padding-left: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    color: #eef3f6;
+    -unity-text-align: middle-left;
+    white-space: nowrap;
 }
 
 /* Drag and drop slot swapping feedback */
@@ -402,11 +439,13 @@
    twenty pixels below a strip beside it that started at zero, and the two read as misaligned
    because they were. It is not against the right edge — the depth rail is, and this column sits
    inside it — so only its top corners are squared. */
+/* Width is HudLayout.ClockWidth said again in the language the panel is actually laid out in.
+   Nothing checks that the two agree; change them together. */
 .column-right {
     position: absolute;
     right: 56px;
     top: 0;
-    width: 266px;
+    width: 271px;
 }
 
 .clock.panel {
@@ -432,6 +471,17 @@
 .clock__date {
     color: rgba(255, 255, 255, 0.66);
     height: 28px;
+    -unity-text-align: middle-right;
+}
+
+/* The outdoor temperature, third on the clock's row. Yellow so a reading that matters is
+   findable at a glance without being an alarm - the alert colours are Warn's orange and Bad's
+   red, and a temperature that is merely being read must not be mistaken for either. It keeps the
+   row's own 28 px so the clock's height, and the coverage budget, are unchanged. */
+.clock__temp {
+    color: rgba(240, 214, 122, 0.92);
+    height: 28px;
+    margin-left: 8px;
     -unity-text-align: middle-right;
 }
 
@@ -806,6 +856,11 @@
 }
 
 .ord__btn:hover { background-color: rgba(255, 255, 255, 0.07); }
+
+/* The views strip (design 32 §14): the orders strip's own box and buttons, a gap below it in the
+   same gutter. Its buttons are switches, lit while their view is on, in the accent rather than an
+   order's hue, because showing the lines is not an order. */
+.views { margin-top: 9px; }
 
 /* ---------------------------------------------------------------- A9/A10 inspect */
 
@@ -1340,6 +1395,9 @@
 
 .menu__row:hover { background-color: rgba(255, 255, 255, 0.07); }
 .menu__row--off { opacity: 0.42; }
+/* An overlay that is showing (design 32 §9: the power row). The accent at the pressed-chip
+   strength, so an overlay left on is visible in the menu that turns it off. */
+.menu__row--on { background-color: rgba(111, 211, 227, 0.14); }
 .menu__row--off:hover { background-color: rgba(0, 0, 0, 0); }
 
 .menu__label {
@@ -1816,7 +1874,9 @@
     top: 50%;
     left: 50%;
     translate: -50% -50%;
-    width: 280px;
+    /* 280 until 2026-09-24 (owner: "make the debug menu bigger"): wide enough now for the Spawn
+       tab's two columns of headed rows (design 33 §9i). */
+    width: 460px;
 }
 
 .settings__tabs {
@@ -2630,6 +2690,38 @@
 
 .inspect__row--pick:hover .inspect__rowvalue { color: rgb(238, 250, 253); }
 
+/* An order's own action dressed as the button it is (owner, 2026-09-23: "colour the cancel button
+   a red theme with white text to make it clear it cancels"). Danger is a filled red with white
+   ink — #a8352b under white is 6.6:1, where the cancel tool's own #e06a5c would be 3.2 and fail
+   small text — and the tool's red is kept for the border so the two read as one colour. Warn is
+   taking a laid line up: the remove tool's amber, filled, with the panel's dark ink on it. Both
+   come after the pick rules above, which they replace at the same specificity. */
+.inspect__row--danger .inspect__rowbox {
+    background-color: rgb(168, 53, 43);
+    border-color: rgb(224, 106, 92);
+}
+.inspect__row--danger .inspect__rowvalue,
+.inspect__row--danger .inspect__rowchevron { color: rgb(255, 255, 255); }
+.inspect__row--danger:hover .inspect__rowbox {
+    background-color: rgb(196, 66, 54);
+    border-color: rgb(255, 255, 255);
+}
+.inspect__row--danger:hover .inspect__rowvalue,
+.inspect__row--danger:hover .inspect__rowchevron { color: rgb(255, 255, 255); }
+
+.inspect__row--warn .inspect__rowbox {
+    background-color: rgb(232, 181, 92);
+    border-color: rgb(232, 181, 92);
+}
+.inspect__row--warn .inspect__rowvalue,
+.inspect__row--warn .inspect__rowchevron { color: rgb(11, 17, 22); }
+.inspect__row--warn:hover .inspect__rowbox {
+    background-color: rgb(244, 204, 132);
+    border-color: rgb(255, 255, 255);
+}
+.inspect__row--warn:hover .inspect__rowvalue,
+.inspect__row--warn:hover .inspect__rowchevron { color: rgb(11, 17, 22); }
+
 .inspect__rowglyph { margin-right: 1px; }
 
 .inspect__rowchevron {
@@ -3131,3 +3223,44 @@
     margin-left: 6px;
 }
 
+
+/* ---------------------------------------------------------------- The context menu (design 33 §7a)
+
+   A small panel at the pointer, raised by a right-click on a thing with more than one answer: a
+   weapon's "Equip machete" and "Cancel" today. Its width is set here and never from code, so the
+   border-box trap a panel that writes its own width falls into cannot happen (CLAUDE.md); its left
+   and top are written from code, because only the pointer knows them. Tighter than a board panel:
+   it is a list of two or three rows, not a readout. */
+.ctxmenu {
+    min-width: 168px;
+    padding: 4px;
+    background-color: rgba(12, 16, 20, 0.96);
+}
+
+.ctxmenu__row {
+    flex-direction: row;
+    align-items: center;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 3px;
+}
+.ctxmenu__row:hover { background-color: rgba(255, 255, 255, 0.07); }
+.ctxmenu__row--off:hover { background-color: rgba(0, 0, 0, 0); }
+
+/* Cancel sits under a hairline, apart from the orders above it. */
+.ctxmenu__row--cancel {
+    margin-top: 3px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.09);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.ctxmenu__label { color: rgb(238, 243, 246); }
+.ctxmenu__row--off .ctxmenu__label { color: rgba(255, 255, 255, 0.35); }
+
+/* Why a row cannot be chosen, after its words: "Equip machete  Downed". */
+.ctxmenu__reason {
+    color: rgba(255, 255, 255, 0.50);
+    margin-left: 10px;
+}

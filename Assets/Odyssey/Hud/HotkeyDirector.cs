@@ -40,6 +40,10 @@ namespace Odyssey.Hud
         /// always one with nothing behind it.
         /// </summary>
         F1,
+        F2,
+        F3,
+        F5,
+        F6,
         F9,
     }
 
@@ -89,10 +93,25 @@ namespace Odyssey.Hud
         /// </summary>
         WorkTab,
 
+        /// <summary>Open or close the Animals tab (design 30 §6), on the F5 the bar has advertised for it since M1.</summary>
+        AnimalsTab,
+
         /// <summary>
         /// Open or close the Almanac reference browser. F9 on the command bar.
         /// </summary>
         Almanac,
+
+        /// <summary>
+        /// Draft or release the selected colonists (design 33 §2f). <b>T, not the reference's R</b>
+        /// — R is slice-up here, and the owner kept it (2026-09-23). Appended, so no stored binding
+        /// shifts.
+        /// </summary>
+        Draft,
+        /// <summary>Open or close the Inventory tab (design 35), on F2. Appended, so no stored binding shifts.</summary>
+        InventoryTab,
+
+        /// <summary>Open or close the Research tab (design 34), on the F3 the bar has advertised since M1.</summary>
+        ResearchTab,
     }
 
     /// <summary>What came of offering a key to a listening slot.</summary>
@@ -174,11 +193,15 @@ namespace Odyssey.Hud
             (HotkeyAction.ToolFell,   HudKey.C, HudKey.None),
             (HotkeyAction.ToolCancel, HudKey.X, HudKey.None),
             (HotkeyAction.ToolGrowZone, HudKey.G, HudKey.None),
+            (HotkeyAction.Draft,        HudKey.T, HudKey.None),
 
             (HotkeyAction.BuildPalette,     HudKey.B,         HudKey.None),
             (HotkeyAction.DebugMenu,        HudKey.Backquote, HudKey.None),
             (HotkeyAction.WorkTab,          HudKey.F1,        HudKey.None),
+            (HotkeyAction.AnimalsTab,       HudKey.F5,        HudKey.None),
             (HotkeyAction.Almanac,          HudKey.F9,        HudKey.None),
+            (HotkeyAction.InventoryTab,     HudKey.F2,        HudKey.None),
+            (HotkeyAction.ResearchTab,      HudKey.F3,        HudKey.None),
         };
 
         /// <summary>
@@ -359,7 +382,11 @@ namespace Odyssey.Hud
             HotkeyAction.BuildPalette => "ui.keys.build",
             HotkeyAction.DebugMenu => "ui.keys.debugmenu",
             HotkeyAction.WorkTab => "ui.keys.worktab",
+            HotkeyAction.AnimalsTab => "ui.keys.animals",
             HotkeyAction.Almanac => "ui.keys.almanac",
+            HotkeyAction.Draft => "ui.keys.draft",
+            HotkeyAction.InventoryTab => "ui.keys.inventory",
+            HotkeyAction.ResearchTab => "ui.keys.research",
             _ => KeysKey,
         };
 

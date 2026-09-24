@@ -108,7 +108,9 @@ namespace Odyssey.Tests.Sim
                 if (kind == IntentKind.None
                     || kind == IntentKind.SetGameSpeed
                     || kind == IntentKind.SetSliceLayer
-                    || kind == IntentKind.QueryCell) continue;
+                    || kind == IntentKind.QueryCell
+                    // The fifth, and a question too: whether the power lines are being shown.
+                    || kind == IntentKind.WatchPower) continue;
 
                 Assert.That(colony.World.HandlesIntent(kind), Is.True,
                     $"nothing in the colony handles {kind}, so a player sending it gets silence");

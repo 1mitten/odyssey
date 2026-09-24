@@ -53,7 +53,7 @@ namespace Odyssey.Sim.Pawns
     /// before the next think runs. That single rule is what a reservation leak is the absence of,
     /// and it is the fault a ten-day unattended run surfaces and a two-minute test does not.
     /// </summary>
-    public sealed class JobSystem : IWorldSystem, IStateHashable, ISaveable
+    public sealed partial class JobSystem : IWorldSystem, IStateHashable, ISaveable
     {
         readonly PawnContext _ctx;
         readonly ThinkNode[] _tree;
@@ -177,7 +177,15 @@ namespace Odyssey.Sim.Pawns
 
         public static ThinkNode[] DefaultTree() => new ThinkNode[]
         {
+            // First of all (design 33 §5): a downed colonist lies where she fell, whatever else
+            // is true of her. Declines for anybody standing, so it costs one branch a think.
+            new DownedThinkNode(),
             new MentalStateThinkNode(),
+            // Above the needs branch, or a drafted colonist wanders off to eat (design 33 §2b).
+            new DraftedThinkNode(),
+            // Below the draft — a drafted colonist's hold does its own fighting — and above the
+            // needs, because being struck outranks being hungry (design 33 §5).
+            new SelfDefenceThinkNode(),
             new CriticalNeedsThinkNode(),
             new WorkThinkNode(),
             new IdleThinkNode(),
@@ -291,6 +299,9 @@ namespace Odyssey.Sim.Pawns
         {
             if (pawn.BreakTicksLeft > 0)
             {
+                // A break is the one state the player may not command through (design 33 §2b).
+                // The draft's own job is ended as a failure a few lines down, like any other.
+                if (pawn.Drafted) pawn.Drafted = false;
                 pawn.BreakTicksLeft--;
                 if (pawn.BreakTicksLeft == 0)
                 {
@@ -305,6 +316,30 @@ namespace Odyssey.Sim.Pawns
                     EndJob(pawn, JobStatus.Failed);
                 }
             }
+
+            // An interrupted colonist lands the step she was part way through before her job does
+            // anything at all (design 33 §2d). Held here, for every driver, rather than in the walk
+            // toil: a job whose first toil is not a walk — lying down where she stands, working
+            // the stance she happens to be on — would otherwise start while the figure was still
+            // stepping away. The mover clears the mark on arrival; this is the backstop for a
+            // step that was dropped by something else.
+            if (pawn.FinishingStepTo >= 0)
+            {
+                if (pawn.HasPath && pawn.Cell != pawn.FinishingStepTo) return;
+                pawn.FinishingStepTo = -1;
+            }
+
+            // A stun holds the pawn where it is (design 33 §4 C3, §5c): its job neither ticks nor
+            // ends, and it does not think. So a stunned hauler keeps her load, a sleeper his bed and
+            // a drafted colonist the player's order, and each carries on when the stun wears off —
+            // a stun is a pause, not an interrupt. The mover's half is MovementSystem.Advance.
+            // Nought in every golden window, so no golden moves.
+            //
+            // A knock-down holds it the same way (design 33 §9b), for the second and a half it lies
+            // where the blow put it. The knockback already ended its job, so there is nothing to
+            // pause; what this holds back is the tree, which would otherwise give it a job — and
+            // an order given meanwhile starts, and waits here until it stands.
+            if (pawn.StunnedAt(tick) || pawn.KnockedDownAt(tick)) return;
 
             if (pawn.CurrentJob != null)
             {
@@ -382,17 +417,21 @@ namespace Odyssey.Sim.Pawns
             JobsStarted = reader.ReadInt();
             JobsFailed = reader.ReadInt();
 
+            // Fewer is an older save and is fine: the job table is append-only, so the defs the
+            // save does not know are exactly the newest ones, and nothing ever ran them (design 33
+            // §6). It refused any difference until the draft's two jobs arrived, which would have
+            // made every earlier save unloadable. More is a save from a newer build, and guessing
+            // at that mapping would silently attribute one job's history to another.
             int count = reader.ReadInt();
-            if (count != _completed.Length)
+            if (count > _completed.Length)
                 throw new SaveLoadException(
-                    $"The save has {count} job defs and this build has {_completed.Length}. Def " +
-                    "migration is not written yet, and guessing at the mapping would silently " +
-                    "attribute one job's history to another.");
+                    $"The save has {count} job defs and this build has {_completed.Length}. A save " +
+                    "from a newer build cannot be read by an older one.");
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < _completed.Length; i++)
             {
-                _completed[i] = reader.ReadInt();
-                _failed[i] = reader.ReadInt();
+                _completed[i] = i < count ? reader.ReadInt() : 0;
+                _failed[i] = i < count ? reader.ReadInt() : 0;
             }
         }
 
@@ -407,7 +446,11 @@ namespace Odyssey.Sim.Pawns
                 pawn.JobStartsInWindow = 0;
             }
 
-            if (pawn.JobStartsInWindow >= _ctx.Content.ThinkLoopLimit)
+            // A drafted colonist is exempt (design 33 §2b): her own tree gives only the hold, which
+            // cannot loop, and every other start is an order the player clicked — ten brisk
+            // right-clicks are a player, not a fault, and parking her in a plain wait for them
+            // would drop the draft's hold.
+            if (pawn.JobStartsInWindow >= _ctx.Content.ThinkLoopLimit && !pawn.Drafted)
             {
                 var standDown = pawn.JobBuffer;
                 standDown.Reset(JobIndex.Wait);
@@ -421,7 +464,8 @@ namespace Odyssey.Sim.Pawns
             // An animal consults the animal tree (design 29 §3), never the colonist's: a node
             // that returned false for a person would be a node every colonist evaluated on
             // every think, and the animal's whole mind is one node anyway.
-            ThinkNode[] tree = pawn.IsPerson ? _tree : AnimalTree;
+            // A hostile person consults the hostile tree (design 33 §5), for the same reason.
+            ThinkNode[] tree = !pawn.IsPerson ? AnimalTree : pawn.IsHostile ? HostileTree : _tree;
             var job = pawn.JobBuffer;
             for (int i = 0; i < tree.Length; i++)
             {
@@ -431,8 +475,30 @@ namespace Odyssey.Sim.Pawns
             }
         }
 
-        /// <summary>The whole of an animal's mind. Shared: the node holds no state.</summary>
-        static readonly ThinkNode[] AnimalTree = { new AnimalIdleThinkNode() };
+        /// <summary>
+        /// The whole of an animal's mind. Shared: the nodes hold no state. The fight's two nodes
+        /// (design 33 §5) stand ahead of the idle one and decline for an animal nobody has hurt,
+        /// so an animal at peace thinks exactly as it did before combat.
+        /// </summary>
+        static readonly ThinkNode[] AnimalTree =
+        {
+            new DownedThinkNode(), new AnimalCombatThinkNode(), new AnimalIdleThinkNode(),
+        };
+
+        /// <summary>
+        /// A marauder's mind (design 33 §1, §5): down, else hunt, else idle. No needs, no work, no
+        /// draft: it is debug-spawned to fight and is never one of ours.
+        /// </summary>
+        static readonly ThinkNode[] HostileTree =
+        {
+            new DownedThinkNode(), new HostileThinkNode(), new IdleThinkNode(),
+        };
+
+        /// <summary>The animal tree, in traversal order, so a test can assert it.</summary>
+        public static IReadOnlyList<ThinkNode> AnimalMind => AnimalTree;
+
+        /// <summary>The hostile tree, in traversal order, so a test can assert it.</summary>
+        public static IReadOnlyList<ThinkNode> HostileMind => HostileTree;
 
         /// <summary>
         /// Claim everything, then run. A driver whose claims cannot all be taken releases what it
@@ -506,6 +572,11 @@ namespace Odyssey.Sim.Pawns
         {
             stand = -1;
             if (pawn == null || ctx == null) return false;
+
+            // Only one of ours, and only standing (design 33 §5c): a marauder is nobody's to
+            // command, and a downed colonist's Job_Downed is never interruptible — a forced build
+            // would otherwise end it and walk her to the site.
+            if (!pawn.IsColonist || pawn.Downed) return false;
 
             switch (jobDefIndex)
             {
@@ -698,9 +769,29 @@ namespace Odyssey.Sim.Pawns
 
             job.Reset(JobIndex.Sleep);
 
+            if (own >= 0 || bestBed >= 0)
+            {
+                job.TargetCell = own >= 0 ? own : bestBed;
+                return true;
+            }
+
             // No bed within reach is not a failure: a tired colonist lies down in the rubble and
-            // remembers having done so.
-            job.TargetCell = own >= 0 ? own : bestBed;
+            // remembers having done so. But if there is a fire, she lies down beside THAT
+            // (owner, 2026-09-23: "especially if no beds — there will sleep next to the
+            // campfire").
+            //
+            // **It is not only the picture, it is the arithmetic.** Rest recovers at the bed's
+            // own effectiveness scaled by `TemperatureDef.SleepPerMille` of the air the sleeper
+            // is in (design 28 §8), and radiance makes the ring around a fire warmer than the
+            // field (design 32). On a Rime night that is the difference between the extreme band,
+            // where hypothermia severity builds while you sleep, and the bad one, where it does
+            // not — so a colonist with no bed who sleeps by the fire wakes up, and one who lies
+            // where she stood may not.
+            //
+            // Reserved, unlike the idler's: she is going to be there for hours, and a second
+            // sleeper lying in the same cell is the fault the beds' own reservations prevent.
+            int fireside = FiresideTarget.Find(pawn, ctx, reserve: true);
+            job.TargetCell = fireside;
             return true;
         }
     }
@@ -742,9 +833,116 @@ namespace Odyssey.Sim.Pawns
     {
         public override string Name => "Idle";
 
+        /// <summary>
+        /// How often an idle colonist heads for a fire rather than wandering, per mille.
+        ///
+        /// <para>Not always, on the owner's own instinct (2026-09-23: *"sometimes they might walk
+        /// around or even explore"*). A colony where every idler stands in the same ring is a
+        /// screensaver; one where nobody does has no hearth. Two in three splits it so the fire
+        /// is plainly the place people drift to while the board still looks alive.</para>
+        /// </summary>
+        public const int FiresidePerMille = 660;
+
+        /// <summary>
+        /// How often a colonist already at the hearth moves to a different place in the ring,
+        /// per mille, rather than standing where she is.
+        ///
+        /// <para>Low on purpose. The point of the fireside is that idle people <b>stay</b>, and a
+        /// ring that reshuffles every few seconds reads as the milling this was written to stop.
+        /// One settle in eight is enough that a group looks alive.</para>
+        /// </summary>
+        public const int ShufflePerMille = 125;
+
+        /// <summary>
+        /// How often a settle at the hearth is taken sitting down, per mille (design 31 §18d).
+        ///
+        /// <para>Rolled afresh on every settle, so consecutive settles give the owner's *"stand by
+        /// the fire for a bit and then sit down and vice versa"* without any memory of the last
+        /// one. An even split because the point is that both are seen: a sitter is the clearest
+        /// tell on the board that somebody has nothing to do. INVENTED; a playtest number.</para>
+        /// </summary>
+        public const int SitPerMille = 500;
+
+        /// <summary>
+        /// How many times longer a seated settle lasts than a standing one. Sitting down is a
+        /// longer stay than standing about, and a ring that bobs up and down every few seconds is
+        /// its own kind of milling. With the linger's spread this makes every seat outlast every
+        /// stand. INVENTED; a playtest number.
+        /// </summary>
+        public const int SeatedLingerFactor = 2;
+
+        /// <summary>How long a settle lasts, in ticks, before she thinks again.</summary>
+        public const int LingerTicks = 240;
+
+        /// <summary>Spread on top of it, so a ring does not think in unison.</summary>
+        public const int LingerVarianceTicks = 240;
+
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
             if (pawn.Asleep) return false;
+            // The hearth first, most of the time: an idle colony gathers round the fire, which
+            // is both the thing the owner asked for and the clearest signal on the board that
+            // nobody has anything to do (owner, 2026-09-23).
+            var rng = DeterministicRandom.ForTick(
+                ctx.Seed, ctx.CurrentTick, PawnPurpose.Fireside ^ (uint)pawn.Id.Value);
+
+            // **The hearth is the colony's, not a marauder's.** This node is also the last in
+            // the hostile mind (design 33 §5), so without the guard a raider with nobody to hunt
+            // walked to the colony's own fire and settled at it, facing the flames among the
+            // people it came to kill. A hostile idler wanders instead, as it did before fires.
+            int fireside = pawn.IsHostile ? -1 : FiresideTarget.Find(pawn, ctx, reserve: false);
+
+            // **Already at the hearth: settle, and do not roll again.** This is the fix for the
+            // owner's report that idle colonists "are just walking about" (2026-09-23). `Find`
+            // answers with the pawn's own cell when she is already beside a fire, and the first
+            // version of this then failed its own `!= pawn.Cell` guard and fell through to the
+            // wander below — so arriving at the fire *guaranteed* walking away from it on the
+            // very next think, and a colony of idlers milled about exactly as reported.
+            //
+            // Settling is unconditional now rather than a two-in-three roll. The roll decides
+            // whether somebody standing in a field sets off for the fire; once she is there, she
+            // stays. A hearth people keep leaving is not a hearth.
+            if (fireside == pawn.Cell)
+            {
+                // Sometimes shift to another place in the ring, so a group round a fire is a
+                // group rather than a frieze.
+                if (rng.NextInt(0, 1_000) < ShufflePerMille)
+                {
+                    int along = FiresideTarget.Find(pawn, ctx, reserve: false, excludeOwn: true);
+                    if (along >= 0)
+                    {
+                        job.Reset(JobIndex.Wander);
+                        job.TargetCell = along;
+                        job.Mode = TraverseMode.Colonist;
+                        return true;
+                    }
+                }
+
+                job.Reset(JobIndex.Wait);
+                job.WorkTicks = LingerTicks + rng.NextInt(0, LingerVarianceTicks);
+
+                // Otherwise stand, or sit down facing the fire (design 31 §18d). The fire goes in
+                // the wait's destination, which is what makes the job a seat.
+                if (rng.NextInt(0, 1_000) < SitPerMille)
+                {
+                    int fire = FiresideTarget.FireBeside(pawn.Cell, ctx);
+                    if (fire >= 0)
+                    {
+                        job.DestCell = fire;
+                        job.WorkTicks *= SeatedLingerFactor;
+                    }
+                }
+                return true;
+            }
+
+            if (fireside >= 0 && rng.NextInt(0, 1_000) < FiresidePerMille)
+            {
+                job.Reset(JobIndex.Wander);
+                job.TargetCell = fireside;
+                job.Mode = TraverseMode.Colonist;
+                return true;
+            }
+
             if (WanderTarget.Fill(pawn, ctx, job)) return true;
 
             job.Reset(JobIndex.Wait);
@@ -768,27 +966,233 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Legs per hundred thinks. INVENTED; a playtest number.</summary>
         public const int LegPerCent = 40;
 
+        /// <summary>Off its hours an animal takes this many times fewer legs and rests this many times longer.</summary>
+        public const int OffHoursFactor = 3;
+
+        /// <summary>The board clock's night, in hours: from 20:00 up to 06:00 (design 30 §4).</summary>
+        public const int NightFrom = 20, NightTo = 6;
+
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
             SpeciesDef species = pawn.Species;
             var rng = DeterministicRandom.ForTick(
                 ctx.Seed, ctx.CurrentTick, PawnPurpose.AnimalMind ^ (uint)pawn.Id.Value);
 
-            if (rng.NextInt(100) < LegPerCent &&
+            // An animal that has decided to go heads for the nearest edge it can reach (design
+            // 30 §3), leg by leg: the wander's expiry cuts a long walk into pieces and this picks
+            // the edge again from wherever the last piece ended.
+            if (pawn.Leaving)
+            {
+                if (Wildlife.WildlifeSystem.IsEdge(ctx.Size, pawn.Cell))
+                {
+                    // On the edge: stand, and the level-keeper takes it from here on its next
+                    // rare tick. Another leg from here would be a walk along the edge for ever.
+                    job.Reset(JobIndex.Wait);
+                    job.Mode = species.traverseMode;
+                    job.WorkTicks = (int)TickGroup.Rare;
+                    return true;
+                }
+                if (EdgeTarget.Fill(pawn, ctx, job, species.traverseMode)) return true;
+            }
+
+            bool active = IsNight(ctx) == species.nocturnal;
+            int legPerCent = active ? LegPerCent : LegPerCent / OffHoursFactor;
+            if (rng.NextInt(100) < legPerCent &&
                 WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, species.traverseMode, avoidSlopes: true))
                 return true;
 
             int span = species.restTicksMax > species.restTicksMin
                 ? species.restTicksMin + rng.NextInt(species.restTicksMax - species.restTicksMin + 1)
                 : species.restTicksMin;
+            if (!active) span *= OffHoursFactor;
             job.Reset(JobIndex.Wait);
             job.Mode = species.traverseMode;
             job.WorkTicks = span > 0 ? span : 1;
             return true;
         }
+
+        public static bool IsNight(PawnContext ctx)
+        {
+            int day = ctx.Content.DayTicks;
+            int hour = day <= 0 ? 12 : (int)((long)(ctx.CurrentTick % day) * 24 / day);
+            return hour >= NightFrom || hour < NightTo;
+        }
+    }
+
+    /// <summary>
+    /// The nearest cell on the board's outer ring an animal can reach (design 30 §3): the four
+    /// edges are walked outward from the point on each nearest the animal, and the first
+    /// reachable cell on the nearest edge wins. Bounded by the board's side, and cheap: a
+    /// reachability test is two region reads.
+    /// </summary>
+    static class EdgeTarget
+    {
+        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, TraverseMode mode)
+        {
+            GridSize size = ctx.Size;
+            CellRef from = size.FromIndex(pawn.Cell);
+            int best = -1, bestDist = int.MaxValue;
+            int reach = System.Math.Max(size.SizeX, size.SizeZ);
+            for (int edge = 0; edge < 4; edge++)
+            {
+                for (int k = 0; k < reach; k++)
+                {
+                    bool found = false;
+                    for (int sgn = -1; sgn <= 1; sgn += 2)
+                    {
+                        if (k == 0 && sgn == 1) continue;
+                        int x, z;
+                        switch (edge)
+                        {
+                            case 0: x = 0; z = from.Z + sgn * k; break;
+                            case 1: x = size.SizeX - 1; z = from.Z + sgn * k; break;
+                            case 2: z = 0; x = from.X + sgn * k; break;
+                            default: z = size.SizeZ - 1; x = from.X + sgn * k; break;
+                        }
+                        if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
+                        int dist = System.Math.Max(System.Math.Abs(x - from.X), System.Math.Abs(z - from.Z));
+                        if (dist >= bestDist) { found = true; break; }
+                        int cell = ctx.Cells.NearestWalkableInColumn(x, z, from.Y);
+                        if (cell < 0 || cell == pawn.Cell || !ctx.Reachable(pawn, cell, mode)) continue;
+                        best = cell;
+                        bestDist = dist;
+                        found = true;
+                        break;
+                    }
+                    if (found) break;
+                }
+            }
+            if (best < 0) return false;
+            job.Reset(JobIndex.Wander);
+            job.TargetCell = best;
+            job.Mode = mode;
+            return true;
+        }
     }
 
     /// <summary>Picking somewhere nearby to drift to. Shared by idling, by the break and by an animal.</summary>
+    /// <summary>
+    /// A free cell beside a fire (owner, 2026-09-23: *"colonists should get drawn to campfires —
+    /// especially if no beds — there will sleep next to the campfire … when colonists are idle
+    /// they will tend to gravitate towards the fireplace"*).
+    ///
+    /// <para><b>Beside and never on.</b> A campfire is <c>blocking</c> and wants a clear cell, so
+    /// its own tile is the one nobody can occupy — which is also the right picture: people sit
+    /// round a fire, not in it. The ring is what this returns.</para>
+    ///
+    /// <para><b>It asks the thermal system where the fires are</b> rather than walking the
+    /// edifices itself. The thing that makes a fireside worth going to is the thing that makes it
+    /// warm, and that list already exists and is already refreshed by the pass. A second list of
+    /// campfires here could come to disagree with it about where a fire is, which is the fault
+    /// this codebase keeps meeting under different names.</para>
+    /// </summary>
+    static class FiresideTarget
+    {
+        /// <summary>How far a colonist will go out of her way to reach one, in cells.</summary>
+        public const int ReachCells = 24;
+
+        /// <summary>
+        /// The same distance in the unit <see cref="PawnContext.Distance"/> actually speaks:
+        /// <b>hundredths of a cell</b> — 100 an orthogonal step, 141 a diagonal.
+        ///
+        /// <para>Written out because the first version of this compared that estimate against a
+        /// plain 24 and so refused anything further than a quarter of one cell away. Every
+        /// existing caller uses <c>Distance</c> only to rank candidates against each other, where
+        /// the unit cancels and never shows; this is the first to compare it against an absolute,
+        /// which is exactly where the unit stops cancelling.</para>
+        /// </summary>
+        const int Reach = ReachCells * 100;
+
+        /// <summary>
+        /// The nearest free cell adjacent to a standing heat source, or -1.
+        /// </summary>
+        /// <param name="reserve">
+        /// True for a sleeper, who is going to lie there for hours and must not be lain on;
+        /// false for an idler, who is passing through. A reservation held by somebody merely
+        /// loitering would make the fireside a place one colonist could occupy for the night.
+        /// </param>
+        public static int Find(Pawn pawn, PawnContext ctx, bool reserve) =>
+            Find(pawn, ctx, reserve, excludeOwn: false);
+
+        /// <param name="excludeOwn">
+        /// True to refuse the cell the pawn is standing in, which is how an idler already at the
+        /// hearth shifts to a different place in the ring rather than answering "you are already
+        /// there" for ever.
+        /// </param>
+        public static int Find(Pawn pawn, PawnContext ctx, bool reserve, bool excludeOwn)
+        {
+            var warmth = ctx.Temperature;
+            if (warmth == null || warmth.HeatSourceCount == 0) return -1;
+
+            GridSize size = ctx.Size;
+            int best = -1;
+            int bestDistance = int.MaxValue;
+
+            for (int i = 0; i < warmth.HeatSourceCount; i++)
+            {
+                CellRef fire = size.FromIndex(warmth.HeatSourceCell(i));
+
+                // The eight around it, in a fixed order, so two colonists choosing on the same
+                // tick choose the same way and the hash does not depend on iteration luck.
+                for (int dz = -1; dz <= 1; dz++)
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    if (dx == 0 && dz == 0) continue;
+
+                    int x = fire.X + dx;
+                    int z = fire.Z + dz;
+                    if (!size.Contains(x, z, fire.Y)) continue;
+
+                    int cell = size.Index(x, z, fire.Y);
+                    if (cell == pawn.Cell)
+                    {
+                        if (excludeOwn) continue;
+                        return cell;                      // already there
+                    }
+
+                    if (reserve)
+                    {
+                        long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
+                        if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
+                    }
+
+                    if (!ctx.Reachable(pawn, cell)) continue;
+
+                    int distance = ctx.Distance(pawn.Cell, cell);
+                    if (distance > Reach || distance >= bestDistance) continue;
+
+                    bestDistance = distance;
+                    best = cell;
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>
+        /// The heat source in the ring round <paramref name="cell"/> — one of the eight beside it
+        /// on its own layer — or -1. The first in the thermal system's own order when a cell is
+        /// beside two, so the answer is the same on every machine.
+        /// </summary>
+        public static int FireBeside(int cell, PawnContext ctx)
+        {
+            var warmth = ctx.Temperature;
+            if (warmth == null) return -1;
+
+            GridSize size = ctx.Size;
+            CellRef at = size.FromIndex(cell);
+            for (int i = 0; i < warmth.HeatSourceCount; i++)
+            {
+                int source = warmth.HeatSourceCell(i);
+                CellRef fire = size.FromIndex(source);
+                if (fire.Y != at.Y || source == cell) continue;
+                if (System.Math.Abs(fire.X - at.X) <= 1 && System.Math.Abs(fire.Z - at.Z) <= 1) return source;
+            }
+
+            return -1;
+        }
+    }
+
     static class WanderTarget
     {
         public static bool Fill(Pawn pawn, PawnContext ctx, Job job) =>

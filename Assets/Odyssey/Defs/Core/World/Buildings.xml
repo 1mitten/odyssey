@@ -19,6 +19,13 @@
 -->
 <Defs>
 
+  <!--
+    maxHitPoints (design 33 section 4, C6) is what a finished thing has when it is struck, in whole
+    points, before any material scaling: INVENTED per thing by the combat contracts step, and C6's
+    to tune. A building nobody has hit carries no row anywhere; what is left of a struck one is
+    EdificeDamage's. Building_None has none.
+  -->
+
   <!-- 0 is "nothing", matching the grid's zero default, exactly as TerrainAir is 0. -->
   <BuildingDef>
     <defName>Building_None</defName>
@@ -46,6 +53,7 @@
     <workToBuild>135</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.wall</iconKey>
+    <maxHitPoints>300</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -75,6 +83,7 @@
     <workToBuild>120</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.roof</iconKey>
+    <maxHitPoints>250</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -113,6 +122,7 @@
     <workToBuild>60</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.deckplate</iconKey>
+    <maxHitPoints>150</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -153,6 +163,7 @@
     <workToBuild>90</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.ladder</iconKey>
+    <maxHitPoints>80</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -186,6 +197,7 @@
     <workToBuild>180</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.bed</iconKey>
+    <maxHitPoints>120</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -203,6 +215,7 @@
     <workToBuild>135</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.door</iconKey>
+    <maxHitPoints>160</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -225,6 +238,120 @@
     <workToBuild>180</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.shelf</iconKey>
+    <maxHitPoints>100</maxHitPoints>
+  </BuildingDef>
+
+  <!--
+    THE FIRST HEAT SOURCE (design 28 §7). edifice 14 is CoreContent.EdificeCampfire.
+
+    heatPerPass 1200 is in centi-degree-cells: in deepest Rime it holds a 6×6 room at roughly
+    +38 °C over the outdoors - comfortable - and in Wash the same fire in the same room runs
+    toward 49 °C, which is the lesson "don't burn fires in summer" arriving for free. A
+    temperature cap on a source is a recorded hook, not v1.
+
+    blocking true: nobody stands in a fire. needsClearCell true like the bed's - a stack of
+    meals on a campfire is a worse version of the stack through the mattress.
+
+    costCount 3 and workToBuild 60: kindling and a ring of stones, the cheapest thing in the
+    table beside the deck plate. It burns steadily in v1; fuel is a recorded hook, and the
+    campfire sound is already in the library waiting for the day something plays it.
+
+    radiantC 2600 is a DIFFERENT thing from heatPerPass and the pair is the point (design 31
+    section 15). heatPerPass warms the room's air, slowly and everywhere at once. radiantC is
+    what the fire does to you by shining on you: immediate, local, and no different in a
+    cupboard than in a hall. 2600 puts the fire's own cell at about 45 C in Wash - past the
+    35 C the pane already draws red at, and past heatstrokeC, so standing in it is a bad idea
+    by the tuning rather than by a new rule. The ring one cell out lands in the amber band.
+
+    In deep Rime the same fire reads about 13 C at its own cell and is not red, which is
+    correct rather than a miss: the colour tracks whether it is DANGEROUS, and a fire in
+    freezing air is the opposite of dangerous. That is the owner's own distinction - red for
+    danger, amber for passive benefit - falling out of absolute temperature.
+  -->
+  <BuildingDef>
+    <defName>Building_Campfire</defName>
+    <label>campfire</label>
+    <edifice>14</edifice>
+    <blocking>true</blocking>
+    <needsClearCell>true</needsClearCell>
+    <heatPerPass>1200</heatPerPass>
+    <radiantC>2600</radiantC>
+    <costCount>3</costCount>
+    <workToBuild>60</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.campfire</iconKey>
+  </BuildingDef>
+
+  <!--
+    A POWER LINE (design 32 §3, §14). conduit true: not an edifice, so the order goes to the power
+    grid and the line into a layer of its own, where it can run through a wall or under a floor.
+    All part and no material: partItem 1 is Item_Salvage, scrap metal, one a cell. workToBuild 40
+    is a-07's 35 rounded to the table's tens.
+  -->
+  <BuildingDef>
+    <defName>Building_Conduit</defName>
+    <label>conduit</label>
+    <edifice>0</edifice>
+    <conduit>true</conduit>
+    <blocking>false</blocking>
+    <costCount>0</costCount>
+    <partItem>1</partItem>
+    <partCount>1</partCount>
+    <workToBuild>40</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.conduit</iconKey>
+  </BuildingDef>
+
+  <!--
+    THE WOOD-FIRED GENERATOR (design 32 §6). edifice 15 is CoreContent.EdificeGenerator.
+
+    powerOutputW 1000, fuelCapacity 75 and fuelPerDay 22 are a-07's; the burn is in proportion to
+    load (the owner's departure), so 22 is the ceiling. fuelItem 2 is Item_Wood, and 75 is exactly
+    one stack of it. heatPerPass 400 is the heat at full load, scaled by load like the burn and
+    owned by the power grid rather than the thermal pass's table. Two cells, rotatable, blocking,
+    wanting a clear cell. 30 stuff and 600 ticks: the first expensive thing in the table.
+  -->
+  <BuildingDef>
+    <defName>Building_Generator</defName>
+    <label>generator</label>
+    <edifice>15</edifice>
+    <blocking>true</blocking>
+    <footprint>2</footprint>
+    <rotates>true</rotates>
+    <needsClearCell>true</needsClearCell>
+    <powerOutputW>1000</powerOutputW>
+    <fuelItem>2</fuelItem>
+    <fuelCapacity>75</fuelCapacity>
+    <fuelPerDay>22</fuelPerDay>
+    <heatPerPass>400</heatPerPass>
+    <costCount>30</costCount>
+    <partItem>1</partItem>
+    <partCount>20</partCount>
+    <workToBuild>600</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.generator</iconKey>
+  </BuildingDef>
+
+  <!--
+    THE ELECTRIC HEATER (design 32 §7). edifice 16 is CoreContent.EdificeHeater. a-07's 175 W, and
+    heatPerPass 1000 into its room only while powered and switched on. One cell, blocking, wanting
+    a clear cell; 10 stuff and 240 ticks.
+  -->
+  <BuildingDef>
+    <defName>Building_Heater</defName>
+    <label>heater</label>
+    <edifice>16</edifice>
+    <blocking>true</blocking>
+    <rotates>true</rotates>
+    <needsClearCell>true</needsClearCell>
+    <powerDrawW>175</powerDrawW>
+    <heatPerPass>1000</heatPerPass>
+    <costCount>10</costCount>
+    <partItem>1</partItem>
+    <partCount>5</partCount>
+    <workToBuild>240</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.heater</iconKey>
   </BuildingDef>
 
   <!--
@@ -247,6 +374,7 @@
     <label>concrete</label>
     <stuff>1</stuff>
     <item>-1</item>
+    <thermalConductancePerMille>1100</thermalConductancePerMille>
   </StuffDef>
 
   <StuffDef>
@@ -254,6 +382,7 @@
     <label>steel</label>
     <stuff>2</stuff>
     <item>-1</item>
+    <thermalConductancePerMille>1400</thermalConductancePerMille>
   </StuffDef>
 
   <StuffDef>
@@ -261,6 +390,7 @@
     <label>composite</label>
     <stuff>3</stuff>
     <item>-1</item>
+    <thermalConductancePerMille>800</thermalConductancePerMille>
   </StuffDef>
 
   <!--
@@ -278,6 +408,7 @@
     <workOffsetTicks>0</workOffsetTicks>
     <hitPointsFactorPerMille>1000</hitPointsFactorPerMille>
     <iconKey>ui.res.wood</iconKey>
+    <thermalConductancePerMille>600</thermalConductancePerMille>
   </StuffDef>
 
   <!--
@@ -303,6 +434,7 @@
     <workOffsetTicks>15</workOffsetTicks>
     <hitPointsFactorPerMille>1500</hitPointsFactorPerMille>
     <iconKey>ui.res.stone</iconKey>
+    <thermalConductancePerMille>1000</thermalConductancePerMille>
   </StuffDef>
 
 </Defs>
