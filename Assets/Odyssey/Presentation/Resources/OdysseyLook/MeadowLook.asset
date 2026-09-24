@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a0530662d47467d862e37b0f9024891, type: 3}
+  m_Name: MeadowLook
+  m_EditorClassIdentifier: Odyssey.Presentation::Odyssey.Presentation.Rendering.MeadowLook
+  grassA: {fileID: 2800000, guid: 6064e4e3e79a3a1408ee2059beaa066b, type: 3}
+  grassB: {fileID: 2800000, guid: 4ab04421b5858c9448571c40e080bbf8, type: 3}
+  clover: {fileID: 2800000, guid: 9f7fc21be940cdc4ebc6137d8729c742, type: 3}
+  flowers: {fileID: 2800000, guid: b1cbbc8780bce5549af1c3292b577e52, type: 3}
+  leaves: {fileID: 2800000, guid: bc583934af2b6314aa172e24cfac8544, type: 3}
+  earth: {fileID: 2800000, guid: 90e1d4ee0eac50d47bb8979169cf1302, type: 3}
+  grade: {fileID: 11400000, guid: 7679a2a2468dc7742a7ece2dea61ab3b, type: 2}

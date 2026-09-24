@@ -86,6 +86,7 @@ namespace Odyssey.Presentation.Rendering
             if (Hour >= 0f && Mathf.Abs(hour - Hour) < ApplyEpsilonHours) return;
 
             DaylightState state = Daylight.Sample(hour);
+            if (Daylight.MeadowLight) state = Daylight.Meadow(state);
             Hour = hour;
 
             _sun.color = state.SunColour;

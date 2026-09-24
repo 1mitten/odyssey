@@ -32,14 +32,32 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void TheGraphicsTabFitsTheFrameToo()
         {
-            int left = SettingsLayout.ColumnHeight(new[]
+            // The Quality band across the top takes a row and a section gap from both columns.
+            int band = SettingsLayout.RowHeight + SettingsLayout.SectionGap;
+            int left = band + SettingsLayout.ColumnHeight(new[]
             {
                 // The display ladders and the resolution row, then the performance ladders.
                 SettingsLayout.DisplayLadders.Length + 1, SettingsLayout.PerformanceLadders.Length,
             });
-            int right = SettingsLayout.ColumnHeight(new[] { SettingsDirector.All.Count });
+            // The grass ladders, then the switches.
+            int right = band + SettingsLayout.ColumnHeight(new[]
+                { SettingsDirector.DetailLadders.Count + SettingsDirector.All.Count });
             Assert.That(left, Is.LessThanOrEqualTo(SettingsLayout.ColumnsHeight));
             Assert.That(right, Is.LessThanOrEqualTo(SettingsLayout.ColumnsHeight));
+        }
+
+        /// <summary>
+        /// Display and Performance between them are every ladder the director calls a display
+        /// ladder, each once. The split is this window's; the set is the director's, and a ladder
+        /// added there (the grass came in on 2026-09-24) must not fall off the page.
+        /// </summary>
+        [Test]
+        public void TheDisplayAndPerformanceSectionsHoldEveryDisplayLadder()
+        {
+            var drawn = new List<GraphicsLadder>(SettingsLayout.DisplayLadders);
+            drawn.AddRange(SettingsLayout.PerformanceLadders);
+            Assert.That(drawn, Is.Unique);
+            Assert.That(drawn, Is.EquivalentTo(SettingsDirector.DisplayLadders));
         }
 
         [Test]
@@ -186,7 +204,7 @@ namespace Odyssey.Tests.Hud
             settings.SetCameraSpeed(60);
             settings.SetBuildPaletteLayout(BuildPaletteLayout.Bar);
             settings.SetValue(GraphicsLadder.RenderScale, 70);
-            settings.Set(GraphicsOption.GrassTufts, false);
+            settings.Set(GraphicsOption.Surround, false);
             settings.SetBusDb(SettingsBus.Music, -20);
             settings.SetAutosaveDays(3);
 
@@ -198,7 +216,7 @@ namespace Odyssey.Tests.Hud
 
             settings.ResetTab(SettingsTab.Graphics);
             Assert.That(settings.Value(GraphicsLadder.RenderScale), Is.EqualTo(SettingsDirector.DefaultOf(GraphicsLadder.RenderScale)));
-            Assert.That(settings.IsOn(GraphicsOption.GrassTufts), Is.True);
+            Assert.That(settings.IsOn(GraphicsOption.Surround), Is.True);
             Assert.That(settings.IsOn(GraphicsOption.CutAwayCeiling), Is.False, "the one option that ships off");
             Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(-20), "Graphics' reset reached Audio");
 

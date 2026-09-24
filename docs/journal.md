@@ -11887,3 +11887,206 @@ Before this, the first play of the settings window found that Settings opened fr
 showed but took no clicks. The start screen's scrim is built after the window and is pickable; the
 window is brought to the front when it opens now, and a pick at its centre is asserted, with a
 negative control that fails on `start-scrim`.
+
+## 2026-09-24 — Meadow M6: quality presets, and preferences that never reached a session
+
+The Graphics tab gained a Quality row — Low, Medium, High, Ultra, and Custom whenever the levers
+match none — and the grass became a ladder (Off to Full) in place of the tufts toggle, with a grass
+distance and a grass-shadows toggle beside it. The preset is read off the levers every time and
+never stored, so it cannot disagree with them. High is what ships; Ultra adds full cover, the one
+step up M1 measured; the lower tiers only take things away.
+
+Building it found a bug older than the unit. Nothing put the player's stored graphics preferences
+on a session's renderer: the settings presenter attaches at the start screen, when there is no
+renderer, so its `Apply` returned early, and the renderer was then built from the bootstrap's own
+fields. A stored "shadows off" has been lost at every new game since the panel existed — and a
+preset that came back as High after a restart would have made it impossible to miss.
+`SettingsPresenter.ApplyRendererLevers` is now the one mapping, and the root calls it as it builds a
+renderer, before meshing, whenever a store is attached.
+
+The Unity tiers were not run: drive D: filled during the first import in this worktree. The fast
+tier (1,345 + 988), the Long tier (41) and the three content gates pass.
+
+## 2026-09-24 — The look pass, the dressing: a meadow of the reference's own parts
+
+The owner looked at M3's grass and said it looked nothing like Synty's screenshots. The screenshot
+at the play camera's angle (their #13) is not a grass setting: it is bushes everywhere, trees in
+stands, tall grass in mats, flowers in sweeps, stones and warm light. So the first thing built was
+an instrument — `TheLookAtThePlayCamera`, which photographs the played meadow three ways — and
+everything after it was decided by looking.
+
+It found things reasoning would not have. Two of the three tuft tints lifted blue 2.2 times for the
+pack's shader and turned the grass teal under ours. The pack colours a leaf from material values,
+not from its texture — base at the root, two noise colours at the tip, frosting on the sunlit top —
+and the birches' autumn lives there; `FoliageLook` now reads those off the art at runtime as it
+reads the textures. Meadow trees in the opaque queue were inked leaf by leaf into black scribbles.
+The flat flower cards and pebble piles read as lilac confetti from above and were dropped.
+
+The measurement found the money in shadows: every Meadow crown and bush drawing its finest mesh
+into four cascades. Trees now cast from a coarse proxy level (1.5 ms at 4K) and bushes cast nothing;
+the dressing costs about 2 ms at High and 3 at Full on Standard. Huge at High was over the 60 fps
+line in a run shared with other Unity processes and at the asset's 250 m of shadow; the owner's GPU
+reading decides it. Design 38 §17.
+
+## 2026-09-24 — The look pass, ground and light: the floor painted, and the light that paints it
+
+The owner put three of Synty's own screenshots beside the game and said it looked nothing like them.
+The ground half of the answer turned out to be half ground and half light. The painted ground — six
+of the pack's terrain textures blended by noise in world space, a 4 m repeat instead of one tile a
+cell — came out *darker* than the stock tile on its first frame, because the stock tile had been
+lifted towards lime by a (1.04, 1.30, 1.55) multiply and the pack paints its terrain olive. The
+brightness in the screenshots is the demo's light: an orange key at 3 over a trilight ambient at 1.6,
+three times ours. So the day's light moves towards that by daylight only, as a transform of the
+sampled state so the keys the owner judged at dawn and dusk stand, and with that the painted meadow
+comes up to something recognisably like #13.
+
+The demo's grade was tried and refused on two counts, both measured: it haloes every white thing, and
+its lens-dirt bloom costs eight milliseconds at 4K. And the harness had been photographing a frame
+nobody plays — the Play scene carries the golden-hour Volume and the test rig did not — which is the
+board-nobody-plays fault met a third time, in the one tool built to show what the player sees.
+Design 38 §17a.
+
+## 2026-09-24 — The look's first playtest, and three fixes (design 38 §17c)
+
+The owner played the merged look: a step in the right direction, and four things — leaves that still
+blocked a colonist behind a tree, the lines along the terraces, more leaf colour, and performance
+(the last its own unit). Three were fixed on `claude/meadow-look-fixes`, each judged by photograph
+before it was believed.
+
+The fade took two attempts. Wiring the foliage shader's dither at the owner's 15% produced exactly
+what a sparse ordered dither is — a screen door, invisible at the play camera. A two-pass ghost
+(depth first, then colour blended at 15%) shows one faint layer of the front-most leaves, which is
+what the owner described. The ink needed a mask the outline could read cheaply; the DepthNormals
+prepass already runs for SSAO and has a spare channel, so the ground marks itself there — and
+colonists, who were never in that prepass, had to join it or lose their own outlines. Stone stays
+inked on purpose. The colour pass was photographed to be *reducing* the variety on its first cut —
+it was overwriting each species' own colour with green — and was retuned until the range widened.
+
+## 2026-09-24 — Performance of the look: the shadow margin, and a tie-breaker that could not break
+
+d-19 found shadows the largest term in the look's 4K frame, half of it the cull keeping every chunk
+within the shadow distance in every direction. The margin now sweeps towards the sun along the key
+light's path, as long as the light can fall before it leaves the drawn layers: 104 chunks to 42 on
+Standard, submit 2.92 → 1.42 ms, frame 12.81 → 11.23, in one run. The new low-sun case of the picture
+proof caught the first version: 80 pixels at one edge at 19.5 h, the shadow of a Meadow crown that
+overhangs its chunk's box by metres — the old shell had covered it by accident. The box grows by the
+widest resolved module's reach now, and the proof reads 0.00% at noon and at dusk.
+
+The tie-breaker for indirect drawing — the tufts alone — came out picture-exact and unmeasurable.
+After the sweep the tufts are 67 of the 1,175 calls on screen; d-19's 722 "tufts" were every
+foliage-tinted bucket, mostly the dressing's grass stands and flowers. So the path ships off and
+the question moves to the kinds that hold the calls, which join it after the leaf-fade branch lands.
+Design 38 §18.
+
+The first real GPU numbers came from a development player (`PlayerBench`, design 38 §18e), and they
+reorder what is left. At 4K after the sun-ward margin: shadows ~2.1 ms of GPU, the dressing's fill
+~1.0–1.3 (and ~1.0 of it comes back at the coarsest level), the grade ~0.9, the painted ground ~0.7,
+against a drift of ~0.4 between two runs of the same arm. CPU submission is ~1 ms, so the indirect
+conversion d-19 ranked second would buy ~0.2 ms of CPU on a GPU-bound frame; levels of detail on the
+dressing and the shadow casters come first. The bench's first attempt had no guard, died on an
+unsupported profiler flag, and held the owner's screen fullscreen for six minutes; it now runs
+under a try/catch per step, a watchdog and a hard kill, and only on the owner's word.
+
+## 2026-09-24 — The dressing's levels, the wrong pack's bushes, and three shadow reductions
+
+Tuning the bushes' levels found they had none, and the reason was not the levels: the dressing rows
+look their prefab up by name, three packs have an `SM_Env_Bush_01`, and the lookup took Battle
+Royale's because its path sorts first — the Meadow look had been drawing another pack's bushes and
+two of its stones since it was built. Rows can name their pack now, and the five references were
+patched by hand, because a catalogue rebuild also drops the probed swatches. The grass stands and
+flowers take levels at bias 8, chosen by photographs (the near meadow unchanged; 4 thinned the
+nearest flowers), and bushes at 1.5.
+
+The owner asked to try three shadow reductions — trees casting from their card, two cascades, and
+nothing small casting — and all three are in, on the runtime pipeline copy, photographed at noon and
+dusk with no visible seam, for the owner to judge. The bench after them was only half usable: it did
+not pause the colony or hold the hour, and two identical arms a minute apart differed by 2.7 ms. The
+first four arms, back to back, put the whole of 18c and 18f at about 1.2 ms of GPU at 4K. The bench
+pauses and holds noon now; one more run is owed. Design 38 §18c, §18f, §18g.
+
+## 2026-09-24 — Meadow polish: grass that lies flat, bushes that fade, every colonist, a thicker wood
+
+The owner asked for grass flattened round dropped things and fallen people, and trees in the land
+beyond the board. The first was a ring and a rule — footprint plus half a metre round an item, 1.4 m
+round a body downed, asleep off a bed or dead — and one thing more: a bush cannot lie flat, so a
+bush over a body or a stack now fades, found by discs the mesher records as it plants them. The
+owner's earlier decision that trees fade for *every* colonist had never reached the code; it does
+now, bounded to the sixteen nearest the camera's focus. Its first cut cost 1.9 ms of `World` at 4K
+with fifty colonists, nearly all of it ground boxes tested against thirty-two lines, so the lines to
+unselected colonists fade only trees and bushes and the cost fell to 0.1–0.3 ms.
+
+The surround was the surprise: photographed from the board's corner it was already wooded. What it
+lacked was undergrowth and depth, so the wood thins less, the far wood is denser, three trees in
+four have a bush beside them — and all of it is drawn at coarse levels of detail and the card, which
+design §3 promised and nobody had built. More trees, 31 more draw calls, the same CPU. Design 38 §19.
+
+## 2026-09-24 — Meadow M9: the terraces drawn as a skin
+
+The terraces were a box per cell and a wedge per bank. They are now a mesh per chunk: a ramp in each
+terrace foot cell, its corners set by one rule (a corner rises where any of the three cells meeting it
+is a step), the flat ground around it out of its boxes, stream banks sloping into their water, and an
+apron at the board's edge that meets the surround. The simulation did not move and neither did a
+golden: the rule changes a ramp's shape, never which cells have one, and those are exactly the cells
+`TerraceFoot` already knew.
+
+Three findings came from photographs rather than tests. The skin first drew the meadow yellow; a
+same-run pair with the skin switched off proved the draw path, not the mesh — `RenderMesh` lights the
+ground differently from `RenderMeshInstanced`, and the skin now takes the instanced path. The stream
+banks were the most terraced thing left on screen, and are not foot cells at all (a stream cell is
+water, not air), so they needed a rule of their own; `SlicePickerBoardTests` then caught that rule
+dipping the bed under a cascade and dragging the water down with it. And the brown line round the
+board turned out to be the surround's deep tiles showing at a one-layer step, which the skin, having
+removed the rim boxes, showed more of — hence the apron.
+
+It costs the frame nothing measurable and meshing about 0.2 ms more a chunk, after three cuts. Design
+38 §20.
+
+## 2026-09-24 — Grass at distance, measured before it was cut (design 38 §21)
+
+The owner: bushes should stay put when walked through, and grass — "especially when full at distance"
+— was the biggest drop. Bushes were one line (the dressing never fades) and the removal of the lines
+that faded them over items. Grass took three measurements, and the second overturned the first plan.
+
+The plan approved was to thin Full towards the Meadow rung's density far out. Built and measured at
+the farthest pull, it bought almost nothing, because the split showed why: Meadow already cost what
+Full did there. The cost at distance is having the grass layer at all — and most of that is the
+dressing, not the tufts: flowers, bushes, ground cover and stones each adding a hundred-odd draw
+calls at that zoom, a bucket per kind and variant in every visible chunk. So the thinning became a
+rule for every rung, falling as the square of distance from 70 m to a floor of a tenth, sorted by a
+hashed rank the CPU and the shader agree on so the far field loses clumps one at a time. At the
+reference's framing the meadow still reads lush; at the farthest pull more painted ground shows.
+
+The solid far blades were not built: the measurement named draw calls and instance counts, not
+overdraw, and the lever that removes draw calls per kind is the indirect path §18b built for the
+tufts and left off. The owner's editor was open on the same GPU for every reading, so each condition
+was taken twice and the lower kept, Huge's numbers were discarded as noise, and the player bench —
+the one instrument with the GPU's own clock — is prepared and waits for the owner's go.
+
+Two operational slips on the way, both recovered: the owner opened the worktree this work began in,
+so the work moved (stash, then a clean re-apply) rather than editing under a live editor; and a
+`cd` into a worktree that had been deleted to free disk space failed silently, so two git commands
+ran in the main checkout — it was switched back to `main` and the stash re-taken within the minute.
+Every chain now guards its `cd`.
+
+## 2026-09-24 — The scenery drawn from GPU buffers (design 38 §22)
+
+The owner asked for the scenery next, to go in with the grass. §21 had put the zoomed-out frame drop in
+draw calls — every chunk submitting every kind — and §18b's indirect path, built for the tufts and left
+off, was the tool. It now draws the tufts, the grass dressing and the bushes: one buffer per kind and
+layer, a compute cull, one indirect draw per level part. Trees and stones stay on the chunk path, for
+reasons (the fade and the shadow proxy; a pack shader) that are the next unit's.
+
+Two things worth keeping. **The decisions stay on the CPU**, per segment, made by the very code the
+chunk path uses, so the picture proof reads 0.00% against a 0.00% floor at three framings and two hours —
+the GPU only applies them. And **the first regather was a stutter waiting to happen**: one chunk
+re-meshed on Huge regathered the whole surface layer, 3.9 ms, on every dig, build and growing crop. Per
+chunk slots rewritten in place took it to 0.16 ms. A call breakdown by kind also caught the first cut
+moving only the tufts and bushes: the grass dressing is tinted as plain foliage, not as dressing.
+
+At 140 m the 4K frame is 4–5 ms lighter on Standard and Huge in two noisy runs; at the start framing the
+gain is inside the noise. The GPU's own numbers wait on the owner's go for the player bench.
+
+The owner ran the scenery benchmark in the player at 4K: with Full grass, the GPU is 5.44 / 7.43 /
+6.62 ms at 32 / 70 / 140 m with the scenery drawn from GPU buffers, against 6.12 / 8.31 / 7.04 chunk
+by chunk — a real 0.4–0.9 ms, and the whole look at 125–170 fps. The batch arm's 4–5 ms was the
+editor's inflation; design 38 §22a keeps the player's numbers as the ones to quote.

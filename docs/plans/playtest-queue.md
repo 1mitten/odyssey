@@ -39,6 +39,13 @@ the next session learns to ignore.
   the camera should not pan and the game should not pause while it does. A wrong answer is a window
   that shifts as you change tab, a Keys tab with a scrollbar, a ring that jumps two rows for one
   arrow press (the engine moving focus as well as us), or Space pausing the game from a switch.
+- **Does zooming out over Full grass feel smoother, and does anything flicker or vanish?**
+  (`claude/meadow-grass-perf`, PR #195, design 38 §22). Grass → Full, zoom slowly from the start out to the
+  farthest pull and pan along the board's edge, watching the overlay's `frame` and `gpu`. The scenery
+  (grass, flowers, bushes) is now drawn from GPU buffers. **A wrong answer looks like:** a patch of flowers
+  or a bush that vanishes at the screen's edge or pops in late; grass that flickers while panning; a stutter
+  when a colonist digs, builds or a crop grows; or no smoother than before at the far zoom.
+
 - **Does blood read as blood, and is it too much?** (`claude/combat-blood`, design 33 §10).
   *Arm every colonist*, *Spawn 3 marauders*, and watch at the play camera's distance. Every landed
   hit should throw a few red drops from the wound along the blow and leave one mark where they
@@ -56,6 +63,68 @@ the next session learns to ignore.
   looks like some colonists in burnt orange, or clothes flicking as you pan. Two things are expected
   and are not faults: a far colonist's **skin tone and hair colour** can still change as they cross
   the cap (recorded, not fixed), and the debug menu **stops spawning at 200**.
+
+- **Bushes stay, and grass at distance is cheaper** (`claude/meadow-grass-perf`, design 38 §21).
+  Walk colonists through and past bushes: **the bush stays solid** — if it fades or vanishes, the
+  dressing is still in the sight fade. Then Settings → Graphics → Grass → **Full**, overlay on
+  (backtick), and zoom out to the farthest pull and back: the near meadow looks as it did, the far
+  field thins smoothly as you pull back and fills in as you come close — **a wrong answer is clumps
+  popping in or out at a line, or the far field reading bald**; and `gpu` at the farthest pull should
+  be lower than before this branch. Trees still fade for colonists.
+
+- **Do the terraces read as slopes?** (`claude/meadow-skin`, design 38 §20). New game; walk the
+  camera along a hillside and a stream. The steps between terraces should read as grassy slopes, the
+  stream banks should run down into the water, and there should be no line where the board meets the
+  land around it. **A wrong answer looks like:** a gap or a dark crack between cells; a slope that
+  flickers where it meets flat ground; a colonist, item or tuft of grass sunk into a slope or floating
+  over it; a click on a slope picking the wrong cell; the meadow a different green from before.
+
+- **Is a dropped stack or a fallen colonist easy to see now?** (`claude/meadow-look-polish`,
+  design 38 §19a). Drop a stack on long grass and next to a bush; let a colonist sleep outdoors (or
+  get downed). The grass should lie flat in a ring round each, and a bush over one should fade to a
+  ghost. **A wrong answer looks like:** the stack or body still half-hidden (the ring is too small),
+  a bald patch much bigger than the thing, or a square of ghosted ground under it.
+- **Do trees fade for colonists you have not selected?** (design 38 §19b). Let colonists walk into a
+  wood with nothing selected. Crowns between the camera and any of them should ghost. **A wrong answer
+  looks like:** only selected colonists get the fade, or whole walls and ground ghost round unselected
+  ones.
+- **Does the land beyond the board read wooded?** (design 38 §19c). Zoom right out over an edge of
+  the board. **A wrong answer looks like:** bare lawn past the rim — then check Settings → Graphics →
+  Surround is on and send a screenshot, because our photographs show wood there.
+
+- **Can you see a colonist through a tree now?** (`claude/meadow-look-fixes`, design 38 §17c). Walk
+  a colonist behind a tree and a bush: the leaves should fade to a faint ghost (about 15%) with the
+  trunk, soft rather than dotted, and come back when the colonist leaves. **A wrong answer looks
+  like:** the crown still hiding the colonist (the ghost is not reaching it), a dotted screen-door
+  pattern, or the tree flickering as a colonist walks along its edge.
+- **Are the lines gone from the terraces?** (same). The steps, banks and stream edges should have no
+  black line; colonists, walls, furniture, piles and rock outcrops keep theirs. **A wrong answer looks
+  like:** a black line still along a step (a terrain left off the ground shader), or a colonist or a
+  pile that has lost its outline (something missing from the normals prepass).
+- **Is there enough colour in the trees?** (same). Mostly greens, with gold and orange stands and
+  the odd red, varying tree to tree. **A wrong answer looks like:** trees all one colour again, the
+  autumn reading as brown or olive, or colour changing tree by tree so evenly it looks like confetti
+  rather than stands.
+
+- **Does the meadow look like the Synty screenshot now?** (`claude/meadow-look-dressing` with the
+  ground-and-light half, design 38 §17). New game; zoom out to about the reference's height. Look
+  for: Meadow trees in stands (birches in autumn colour, round meadow trees), round bushes across the
+  meadow and at wood edges, tall-grass stands, wildflowers, stones by rock — as patches, not a
+  sprinkle. Then at 3840 x 2160 on **High** on a **Huge** board, backtick for the overlay: **`gpu`
+  under about 16 ms** holds 60 fps; the batch arm read 19 ms with other Unity runs on the machine.
+  **A wrong answer looks like:** trees or bushes with black scribbled edges (ink on the leaves);
+  a sprinkle of the same bush in rows; grass hiding a dropped item (it should part round it); the
+  colours dark and olive (that is the light, judged with the ground half); Huge High well over 16 ms.
+
+- **Does the ground read like the Meadow screenshots now?** (`claude/meadow-look-ground`, design 38
+  §17a, integrated into the look PR). New game, default camera, then watch a day go by. Look for:
+  the ground painted in patches — grass, clover, yellow flowers here and there — with no grid of
+  tiles, in a bright yellow-green rather than lime; shade soft and cool rather than dark. **A wrong
+  answer looks like:** a repeating pattern you can see at the default zoom (the 4 m repeat is too
+  small); flowers everywhere rather than in patches; the ground washing out or turning too bright
+  at midday (the Meadow light is too strong — one number, `Daylight.MeadowSunScale`); or dawn and
+  dusk looking different from before (they should not have moved at all).
+
 - **Does the Meadow grass read as grass, and is this the grass to judge?** (PR for
   `claude/meadow-m3-foliage`, design 38 §16) **This is the first branch to test grass in.** New game,
   play camera. Three things: (1) the meadow reads as grass and the green is the lighter spring green
@@ -64,6 +133,26 @@ the next session learns to ignore.
   or haul a stack onto grass, and designate a tree: **the grass clears in a small ring round each** —
   if a log disappears into the grass, the clearance is not reaching the drawn view. Density is
   unchanged (full cover is M4), and trees are still the old ones (M5).
+
+- **Grass → Full: the first grass you can see change** (`claude/meadow-m6-presets`, design 38 §13,
+  §15). New game on the default meadow, the camera at its starting zoom over the clearing. Settings
+  → Graphics → **Grass**: press **Meadow** (today's grass), then **Full**, then **Off**, a few
+  seconds apart, with the overlay (backtick) showing `gpu`. **Full** should read as a meadow mostly
+  covered, soil showing only in patches, about 1 ms dearer on the GPU than Meadow at 4K; **Off**
+  should be bare ground. The grass redraws a few chunks at a time, so it spreads across the screen
+  over a second rather than switching at once. **A wrong answer looks like:** Full no thicker than
+  Meadow (the ladder is not reaching the renderer); the frame stuttering while it redraws; or Full
+  costing well over 2 ms of `gpu`. **Known, not a fault here:** at Full the grass will stand over
+  dropped items and order marks — nothing clears grass round them until M3's clearance field — so
+  judge the look on open meadow.
+
+- **Do the quality presets feel right?** (`claude/meadow-m6-presets`, design 38 §15,
+  `27-graphics-settings.md` §10). Settings -> Graphics: a Quality row across the top. At 3840 x 2160
+  pick each of Low, Medium, High, Ultra and watch the overlay's `gpu` and the frame. **Ultra** should
+  hold 60 fps with grass on every cell; if it does not, or it looks no richer than High, say so.
+  **Low** should look acceptable at 1080p on a laptop — if the 70% render scale is too soft or the
+  missing surround reads as the world ending, that is the row to change. Moving any lever by hand
+  should light **Custom**; restarting the game should come back on the preset you left.
 
 - **Does the hearth read as a hearth?** (`claude/campfire-art`, PR #170, `docs/design/31-campfire-art-and-fire.md`
   §17–§18d.) Build a campfire, give the colony nothing to do, and watch for a game hour. Idlers

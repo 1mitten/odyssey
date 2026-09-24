@@ -473,6 +473,62 @@ Shader "Odyssey/Character"
             }
             ENDHLSL
         }
+
+        // In the normals prepass, which a colonist was never in (d-18 noted it). It matters now for
+        // one reason: the ink line leaves a pixel alone when the normals texture says its visible
+        // surface is terrain (design 38 §17c), and a colonist missing from the prepass left the
+        // ground's mark under it — so the colonist would have lost its own outline. 0 in the spare
+        // channel: a colonist is not terrain.
+        Pass
+        {
+            Name "DepthNormals"
+            Tags { "LightMode" = "DepthNormals" }
+
+            ZWrite On
+            Cull Back
+
+            HLSLPROGRAM
+            #pragma vertex NormalsVertex
+            #pragma fragment NormalsFragment
+            #pragma multi_compile_instancing
+            #pragma target 3.5
+
+            struct NormalsAttributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS   : NORMAL;
+                float2 uv         : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct NormalsVaryings
+            {
+                float4 positionCS : SV_POSITION;
+                float2 uv         : TEXCOORD0;
+                half3  normalWS   : TEXCOORD1;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            NormalsVaryings NormalsVertex(NormalsAttributes input)
+            {
+                NormalsVaryings output = (NormalsVaryings)0;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.uv = TRANSFORM_TEX(input.uv, _Albedo_Map);
+                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                return output;
+            }
+
+            half4 NormalsFragment(NormalsVaryings input) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                float alpha = SAMPLE_TEXTURE2D(_Albedo_Map, sampler_Albedo_Map, input.uv).a;
+                clip(alpha - _Alpha_Clip_Threshold);
+                return half4(NormalizeNormalPerPixel(input.normalWS), 0);
+            }
+            ENDHLSL
+        }
     }
 
     FallBack "Universal Render Pipeline/Lit"

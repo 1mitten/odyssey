@@ -62,6 +62,10 @@ namespace Odyssey.Presentation.Ui
         /// display mode in the editor.</summary>
         readonly Dictionary<GraphicsLadder, RowView> _ladderViews = new();
 
+        /// <summary>The quality row's segments, one per preset and Custom, lit by whichever the
+        /// levers are on (<c>SettingsDirector.Preset</c>, design 38 §9).</summary>
+        readonly Dictionary<QualityPreset, Label> _presetRungs = new();
+
         DropdownField? _resolutionDropdown;
         RowView? _resolutionRow;
 
@@ -322,6 +326,34 @@ namespace Odyssey.Presentation.Ui
 
         // ============================================================ building blocks
 
+        /// <summary>
+        /// A page with a full-width band above its columns, for a row that belongs to both of them:
+        /// the Graphics tab's Quality, which sets levers in every group (design 38 §9).
+        /// </summary>
+        VisualElement[] PageWithBand(VisualElement parent, SettingsTab tab, int columns, out VisualElement band)
+        {
+            var page = new VisualElement();
+            page.AddToClassList("sw__page");
+            band = new VisualElement();
+            band.AddToClassList("sw__band");
+            page.Add(band);
+
+            var row = new VisualElement();
+            row.AddToClassList("sw__columns");
+            row.AddToClassList("sw__columns--inner");
+            var cols = new VisualElement[columns];
+            for (int c = 0; c < columns; c++)
+            {
+                cols[c] = new VisualElement();
+                cols[c].AddToClassList("sw__column");
+                row.Add(cols[c]);
+            }
+            page.Add(row);
+            _settingPages[tab] = page;
+            parent.Add(page);
+            return cols;
+        }
+
         /// <summary>A page: the tab's equal columns.</summary>
         VisualElement[] Page(VisualElement parent, SettingsTab tab, int columns)
         {
@@ -499,7 +531,15 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void BuildGraphicsSection(VisualElement parent)
         {
-            VisualElement[] cols = Page(parent, SettingsTab.Graphics, 2);
+            VisualElement[] cols = PageWithBand(parent, SettingsTab.Graphics, 2, out VisualElement band);
+
+            // Quality, across the top over both groups, because a preset sets levers in both
+            // (design 38 §9). Custom is drawn and lit like any segment but picking it does nothing:
+            // it is a statement about the levers, not a thing to choose.
+            Row(band, SettingsDirector.QualityKey,
+                Segmented(SettingsDirector.Presets, SettingsDirector.PresetLabel, SettingsDirector.PresetTooltip,
+                    preset => _directors?.Settings.ApplyPreset(preset), _presetRungs, numeric: false),
+                "Sets every lever it owns at once. Moving one by hand makes it Custom");
 
             VisualElement display = Section(cols[0], SettingsTab.Graphics, SettingsDirector.DisplayGroupKey);
             foreach (GraphicsLadder ladder in SettingsLayout.DisplayLadders)
@@ -522,6 +562,9 @@ namespace Odyssey.Presentation.Ui
                 mode.SetLive(false, SettingsLayout.BuiltGameOnly);
 
             VisualElement detail = Section(cols[1], SettingsTab.Graphics, SettingsDirector.DetailGroupKey);
+
+            // The grass ladders lead the Detail group: how much grass, and how far out.
+            foreach (GraphicsLadder ladder in SettingsDirector.DetailLadders) LadderRow(detail, ladder);
             foreach (GraphicsOption option in SettingsDirector.All)
             {
                 SwitchView view = Switch();
@@ -587,7 +630,17 @@ namespace Odyssey.Presentation.Ui
         static string RowCostOf(GraphicsLadder ladder) =>
             SettingsDirector.CostsAHitch(ladder)
                 ? "Rebuilds the frame buffers when it changes, once"
-                : "Takes effect on the next frame";
+                : SettingsDirector.NeedsRedraw(ladder)
+                    ? "Redraws the board when it changes, over a few frames"
+                    : "Takes effect on the next frame";
+
+        /// <summary>Light the preset the levers are on, or Custom. Asked whenever a lever moves,
+        /// never per frame.</summary>
+        void RefreshPresetRow()
+        {
+            if (_directors == null) return;
+            LightRung(_presetRungs, _directors.Settings.Preset);
+        }
 
         /// <summary>
         /// The resolution row: a select of the machine's own sizes, built after the director has
@@ -617,6 +670,16 @@ namespace Odyssey.Presentation.Ui
 
             SettingsDirector.Mode current = _directors?.Settings.Resolution ?? default;
             string initial = current.Width > 0 ? ResolutionText(current) : choices[0];
+            // A window the monitor does not list as a display mode (a windowed player at a size of
+            // its own) is still the resolution in use: offered as a choice rather than refused,
+            // because DropdownField throws on a default that is not in its list and took the
+            // settings panel down with it (found by the scenery smoke test at 960 x 540, design 38
+            // §22).
+            if (!choices.Contains(initial))
+            {
+                choices.Insert(0, initial);
+                modeMap[initial] = current;
+            }
 
             var dropdown = new DropdownField(choices, initial);
             dropdown.AddToClassList("sw__select");
@@ -1179,6 +1242,7 @@ namespace Odyssey.Presentation.Ui
             bool on = _directors.Settings.IsOn(option);
             view.Control.EnableInClassList("sw__switch--on", on);
             view.Word.text = on ? "On" : "Off";
+            RefreshPresetRow();
         }
 
         void OnAutosaveDaysChanged(int days) => LightRung(_autosaveRungs, days);
@@ -1203,6 +1267,7 @@ namespace Odyssey.Presentation.Ui
 
             if (ladder == GraphicsLadder.VSync) RefreshFrameCapRow();
             if (ladder == GraphicsLadder.DisplayMode) RefreshResolutionRow();
+            RefreshPresetRow();
         }
 
         /// <summary>The frame cap is dead behind VSync — Unity ignores the target rate whenever
