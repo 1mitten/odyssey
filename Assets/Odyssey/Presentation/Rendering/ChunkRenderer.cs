@@ -489,6 +489,48 @@ namespace Odyssey.Presentation.Rendering
         public float DressingLodBias { get; set; } = 8f;
 
         /// <summary>
+        /// Whether grass thins with distance from the camera (owner, 2026-09-24: "the biggest
+        /// performance hit I can see is actually grass, especially when full at distance"; design 38
+        /// §21). Full cover out to <see cref="GrassThinNear"/>, falling to the density of
+        /// <see cref="GrassFarDensity"/> by <see cref="GrassThinFar"/>, clump by clump without a pop
+        /// (<see cref="GrassThinning"/>). Rungs at or below that density are never thinned.
+        /// </summary>
+        public bool ThinGrass { get; set; } = true;
+
+        /// <summary>Metres from the camera at which grass starts to thin.</summary>
+        public float GrassThinNear { get; set; } = DefaultGrassThinNear;
+
+        /// <summary>Metres from the camera by which grass is down to <see cref="GrassFarDensity"/>.</summary>
+        public float GrassThinFar { get; set; } = DefaultGrassThinFar;
+
+        /// <summary>The far field's density, in tufts per hundred cells: the Meadow rung.</summary>
+        public int GrassFarDensity { get; set; } = 60;
+
+        public const float DefaultGrassThinNear = 70f;
+        public const float DefaultGrassThinFar = 160f;
+
+        /// <summary>Grass clumps the thinning left unsubmitted last frame (the rest shrink in the shader).</summary>
+        public int GrassInstancesThinned { get; private set; }
+
+        float _grassFarKeep = 1f;
+        static readonly int ThinId = Shader.PropertyToID("_OdysseyThin");
+
+        /// <summary>
+        /// Whether the grass tufts take coarser levels of detail with distance, on
+        /// <see cref="TuftLodBias"/> (design 38 §21). M2 left the tufts at their finest because
+        /// the pack's own switch heights made every one on screen crude from this camera; a bias
+        /// chosen by photographs keeps the near meadow and simplifies only the far field.
+        /// </summary>
+        public bool TuftLevels { get; set; } = true;
+
+        /// <summary>The bias the tufts are judged at; see <see cref="TuftLevels"/>.</summary>
+        public float TuftLodBias { get; set; } = 8f;
+
+        /// <summary>Whether far grass is drawn solid, without the see-through edge (design 38 §21):
+        /// see <c>FoliageThin</c> in <c>Odyssey/Foliage</c>.</summary>
+        public bool SolidFarGrass { get; set; }
+
+        /// <summary>
         /// Whether a chunk's box, grown upwards, meets the camera's frustum.
         ///
         /// <para><b>Grown by <see cref="TallestModuleMetres"/>, and that is the load-bearing part.</b>
@@ -618,40 +660,6 @@ namespace Odyssey.Presentation.Rendering
         public static float ItemRing(float footprint, float margin, float floor) =>
             Mathf.Max(floor, footprint + margin);
 
-        /// <summary>
-        /// Whether a point on the ground is under one of the Meadow bushes (design 38 §19): the
-        /// bushes of the chunks round it, as the mesher recorded them. A bush cannot lie flat the
-        /// way grass does, so what is under one is instead given a line of sight, and the bush
-        /// fades as a tree does over a colonist.
-        /// </summary>
-        public bool UnderBush(Vector3 point, int layer)
-        {
-            var chunks = _model.Chunks;
-            var size = _model.Size;
-            int cx = Mathf.FloorToInt(point.x / CellMetrics.SizeXZ);
-            int cz = Mathf.FloorToInt(point.z / CellMetrics.SizeXZ);
-            // The bush stands on the surface below the thing's own layer, which is where the
-            // mesher filed it (the surface cell is the solid one under the air the thing is in).
-            int surface = layer - 1;
-            if (surface < 0 || surface >= size.SizeY) return false;
-            for (int dz = -Odyssey.Sim.World.ChunkGrid.ChunkSize; dz <= Odyssey.Sim.World.ChunkGrid.ChunkSize; dz += Odyssey.Sim.World.ChunkGrid.ChunkSize)
-            for (int dx = -Odyssey.Sim.World.ChunkGrid.ChunkSize; dx <= Odyssey.Sim.World.ChunkGrid.ChunkSize; dx += Odyssey.Sim.World.ChunkGrid.ChunkSize)
-            {
-                int x = cx + dx, z = cz + dz;
-                if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
-                ChunkBatch? batch = _batches[chunks.ChunkIndexOfCell(x, z, surface)];
-                if (batch == null) continue;
-                var discs = batch.BushDiscs;
-                for (int i = 0; i < discs.Count; i++)
-                {
-                    Vector3 d = discs[i];
-                    float ddx = point.x - d.x, ddz = point.z - d.y;
-                    if (ddx * ddx + ddz * ddz <= d.z * d.z) return true;
-                }
-            }
-            return false;
-        }
-
         /// <summary>Instances drawn ghosted last frame because they stood in a line of sight.</summary>
         public int InstancesFaded { get; private set; }
 
@@ -752,6 +760,12 @@ namespace Odyssey.Presentation.Rendering
             ChunksOutsideFrustum = 0;
             IndirectDrawCalls = 0;
             InstancesAtCoarserLevels = 0;
+            GrassInstancesThinned = 0;
+            _grassFarKeep = ThinGrass && ViewerPosition.HasValue
+                ? GrassThinning.FarKeepFor(ScatterDensity, GrassFarDensity)
+                : 1f;
+            Shader.SetGlobalVector(ThinId, new Vector4(GrassThinNear, GrassThinFar, _grassFarKeep,
+                _grassFarKeep < 1f ? 1f : 0f));
             SkinTrianglesDrawn = 0;
             CellPlatesDrawn = 0;
             ChunksMeshDeferred = 0;
@@ -993,6 +1007,8 @@ namespace Odyssey.Presentation.Rendering
                             TintCode.IsDressing(bucket.Tint) ? BushLodBias : TreeLodBias);
                     else if (DressingLevels && TintCode.IsFoliage(bucket.Tint) && !_mesher.IsScatterModule(bucket.Module))
                         level = LevelFor(resolved, distance, ViewerFieldOfView, DressingLodBias);
+                    else if (TuftLevels && TintCode.IsFoliage(bucket.Tint) && _mesher.IsScatterModule(bucket.Module))
+                        level = LevelFor(resolved, distance, ViewerFieldOfView, TuftLodBias);
                     else
                         level = LevelFor(resolved, distance);
                     levelParts = resolved.Lods[level].Parts;
@@ -1011,6 +1027,18 @@ namespace Odyssey.Presentation.Rendering
                     }
                 }
                 int drawnParts = levelParts?.Length ?? 1;
+
+                // Grass thinned with distance (design 38 §21): the bucket is in rank order, so only a
+                // prefix can survive anywhere in this chunk — the keep at its nearest point is the most
+                // any clump in it gets. The shader shrinks the rest of the way, clump by clump.
+                int submitted = bucket.Count;
+                if (_grassFarKeep < 1f && !ghost && TintCode.IsFoliage(bucket.Tint) && _mesher.IsGrassModule(bucket.Module))
+                {
+                    float keep = GrassThinning.Keep(distance, GrassThinNear, GrassThinFar, _grassFarKeep);
+                    submitted = GrassThinning.CountBelow(bucket.Matrices, bucket.Count, keep);
+                    GrassInstancesThinned += bucket.Count - submitted;
+                    if (submitted == 0) continue;
+                }
 
                 // Once per bucket, not per part: it splits the bucket's matrices, which every part
                 // of a level shares.
@@ -1086,12 +1114,12 @@ namespace Odyssey.Presentation.Rendering
                     if (faded == 0)
                     {
                         if (coloured)
-                            SubmitColoured(rp, part, bucket.Matrices, bucket.Count,
+                            SubmitColoured(rp, part, bucket.Matrices, submitted,
                                 bucket.BarkDeep!, bucket.BarkWarm!, bucket.LeafDeep!, bucket.LeafFresh!,
                                 PropsOf(bucket));
                         else
-                            Submit(rp, part, bucket.Matrices, bucket.Count);
-                        InstancesDrawn += bucket.Count;
+                            Submit(rp, part, bucket.Matrices, submitted);
+                        InstancesDrawn += submitted;
                         continue;
                     }
 
@@ -1196,7 +1224,10 @@ namespace Odyssey.Presentation.Rendering
         /// so the next surface that wants it needs nothing here.</para>
         /// </summary>
         public static bool NeverFades(int tint) =>
-            TintCode.IsFoliage(tint) || TintCode.IsWater(tint) || TintCode.IsWhole(tint);
+            TintCode.IsFoliage(tint) || TintCode.IsWater(tint) || TintCode.IsWhole(tint)
+            // Bushes and stones — the dressing — stay put whatever walks through or lies under them
+            // (owner, 2026-09-24; design 38 §21). Trees still fade for colonists.
+            || TintCode.IsDressing(tint);
 
         /// <summary>
         /// Split one bucket's instances into the ones standing in a line of sight and the rest,

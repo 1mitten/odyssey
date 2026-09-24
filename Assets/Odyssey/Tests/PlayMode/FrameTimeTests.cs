@@ -2786,6 +2786,242 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// Where Full grass costs, and what the distance techniques of design 38 §21 buy back: one
+        /// board at a time, 3840 x 2160 (the frame is GPU-bound there, so the frame stands in for
+        /// the GPU, which a batch run cannot read), the world paused, at three framings — the camera
+        /// a new game opens with, the reference's wide view and the farthest pull — and at each the
+        /// grass rungs Off, Meadow and Full, Full cut at two distances past the focus (how much of
+        /// Full's cost is the far field), then Full with each technique added in turn. Only
+        /// differences inside one board's run are quoted (§6c). Explicit: a measurement, minutes
+        /// long, run by name.
+        /// </summary>
+        [UnityTest, Explicit("a measurement, run by name")]
+        public IEnumerator TheGrassAtDistanceAgainstTheFrame()
+        {
+            var lines = new List<string>();
+            foreach ((string board, int side) in new[] { ("standard", 120), ("huge", 240) })
+            {
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                    out OdysseyBootstrap boot, side, side, 16);
+                UnityEngine.Camera? cam = null;
+                RenderTexture? previousTarget = null;
+                RenderTexture? fourK = null;
+                ChunkRenderer renderer = null!;
+                try
+                {
+                    yield return null;
+                    renderer = boot.Renderer!;
+                    for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                    {
+                        boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                        yield return null;
+                    }
+                    yield return TimeFrames($"grass-distance/{board}/warm", boot, WarmupFrames, _ => { });
+                    if (renderer.RequeueFoliage(MaterialCache.DefaultFoliageQueue) == 0)
+                        Assert.Ignore("no grass art resolved on this machine, so there is no grass to price");
+
+                    cam = boot.cameraRig!.Camera;
+                    previousTarget = cam.targetTexture;
+                    fourK = new RenderTexture(3840, 2160, 24) { name = "grass-distance-4k" };
+                    cam.targetTexture = fourK;
+
+                    int shipped = renderer.ScatterDensity;
+                    int full = GroundScatter.MaxPerCell * 100;
+                    WorldSnapshot frame = boot.World!.Views.Current;
+                    CellRef focusCell = frame.Pawns.Length > 0 ? frame.Pawns[0].Cell : default;
+                    float startDistance = boot.cameraRig!.TargetDistance;
+
+                    foreach (float framing in new[] { startDistance, 70f, 140f })
+                    {
+                        if (frame.Pawns.Length > 0) boot.cameraRig!.FocusOn(focusCell, framing);
+                        var conditions = new List<(string Name, int Density, float Cut, Action On, Action Off)>
+                        {
+                            ("off", 0, float.PositiveInfinity, () => { }, () => { }),
+                            ("meadow", shipped, float.PositiveInfinity, () => { }, () => { }),
+                            ("full", full, float.PositiveInfinity, () => { }, () => { }),
+                            ($"full, cut {framing + 25f:0} m", full, framing + 25f, () => { }, () => { }),
+                            ($"full, cut {framing + 60f:0} m", full, framing + 60f, () => { }, () => { }),
+                        };
+                        foreach (var c in GrassTechniqueArms(renderer)) conditions.Add(c);
+
+                        foreach (var c in conditions)
+                        {
+                            if (renderer.ScatterDensity != c.Density)
+                            {
+                                renderer.ScatterDensity = c.Density;
+                                boot.Model!.Remesh();
+                            }
+                            float cutWas = renderer.FoliageDrawDistance;
+                            renderer.FoliageDrawDistance = c.Cut;
+                            c.On();
+                            // Out of the meshing budget's instalments before the clock starts.
+                            for (int i = 0, quiet = 0; i < 1200 && (i < 30 || quiet < 20); i++)
+                            {
+                                yield return null;
+                                quiet = renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
+                            }
+                            float ms = 0f;
+                            yield return TimeFrames($"grass-distance/{board}/{framing:0}m/{c.Name}", boot, WarmupFrames, m => ms = m);
+                            Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
+                            lines.Add($"{board} @{framing:0} m {c.Name}: frame {ms:0.00} ms, {renderer.DrawCalls} calls, " +
+                                      $"{renderer.InstancesDrawn} instances, {renderer.InstancesAtCoarserLevels} coarser, " +
+                                      $"{renderer.GrassInstancesThinned} thinned");
+                            c.Off();
+                            renderer.FoliageDrawDistance = cutWas;
+                        }
+                    }
+                }
+                finally
+                {
+                    if (cam != null) cam.targetTexture = previousTarget;
+                    if (fourK != null) fourK.Release();
+                    UnityEngine.Object.Destroy(root);
+                }
+                yield return null;
+            }
+            Debug.Log($"[FrameTime] grass at distance, 3840x2160 ({SystemInfo.graphicsDeviceName}): " + string.Join("; ", lines));
+        }
+
+        /// <summary>
+        /// Photographs Full grass at distance for tuning and for the owner (design 38 §21): the
+        /// world paused and the clock stilled, at the start, wide and farthest framings, with none of
+        /// §21, with thinning, with thinning and the tufts' levels at several biases, and — where
+        /// built — with solid far grass; each against the untouched picture as a fraction of pixels
+        /// moved. Written to <c>Logs/look/grass/</c>. Explicit: photographs, not a test.
+        /// </summary>
+        [UnityTest, Explicit("photographs for tuning the grass at distance, not a test")]
+        public IEnumerator TheGrassAtDistanceAtThePlayCamera()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            RenderTexture? target = null;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            float previousScale = Time.timeScale;
+            ChunkRenderer renderer = null!;
+            bool thinWas = true, levelsWas = true, solidWas = false;
+            float biasWas = 8f;
+            try
+            {
+                yield return null;
+                renderer = boot.Renderer!;
+                thinWas = renderer.ThinGrass; levelsWas = renderer.TuftLevels; solidWas = renderer.SolidFarGrass;
+                biasWas = renderer.TuftLodBias;
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+                Time.timeScale = 0f;
+                renderer.ScatterDensity = GroundScatter.MaxPerCell * 100;
+                boot.Model!.Remesh();
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                target = new RenderTexture(1920, 1080, 24) { name = "grass-look" };
+                cam.targetTexture = target;
+                Directory.CreateDirectory(Path.GetFullPath("Logs/look/grass"));
+#if UNITY_EDITOR
+                var golden = UnityEditor.AssetDatabase.LoadAssetAtPath<VolumeProfile>("Assets/Settings/OdysseyGoldenHour.asset");
+                if (golden != null)
+                {
+                    var grade = new GameObject("Grade").AddComponent<Volume>();
+                    grade.transform.SetParent(root.transform, false);
+                    grade.isGlobal = true;
+                    grade.sharedProfile = golden;
+                }
+#endif
+                WorldSnapshot frame = boot.World!.Views.Current;
+                var framings = new List<(string Name, float Distance)> { ("start", -1f) };
+                if (frame.Pawns.Length > 0) { framings.Add(("wide", 70f)); framings.Add(("far", 140f)); }
+                var lines = new List<string>();
+
+                foreach (var framing in framings)
+                {
+                    if (framing.Distance > 0f) boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, framing.Distance);
+                    var conditions = new List<(string Name, bool Thin, bool Levels, float Bias, bool Solid)>
+                    {
+                        ("none", false, false, biasWas, false),
+                        ("thin", true, false, biasWas, false),
+                        ("thin-levels-16", true, true, 16f, false),
+                        ("thin-levels-8", true, true, 8f, false),
+                        ("thin-levels-4", true, true, 4f, false),
+                        ("shipped", thinWas, levelsWas, biasWas, solidWas),
+                    };
+                    if (!solidWas) conditions.Add(("shipped-solid", thinWas, levelsWas, biasWas, true));
+
+                    Color32[] none = null!;
+                    foreach (var c in conditions)
+                    {
+                        renderer.ThinGrass = c.Thin; renderer.TuftLevels = c.Levels;
+                        renderer.TuftLodBias = c.Bias; renderer.SolidFarGrass = c.Solid;
+                        for (int i = 0, quiet = 0; i < 1200 && (i < 40 || quiet < 20); i++)
+                        {
+                            yield return null;
+                            quiet = renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
+                        }
+                        Color32[] shot = null!;
+                        yield return SnapInto("grass", $"{framing.Name}-{c.Name}", target, p => shot = p);
+                        if (c.Name == "none") none = shot;
+                        lines.Add($"{framing.Name} {c.Name}: moved {Difference(none, shot) * 100f:0.00}%, " +
+                                  $"{renderer.InstancesDrawn} instances, {renderer.GrassInstancesThinned} thinned, " +
+                                  $"{renderer.InstancesAtCoarserLevels} coarser, {renderer.DrawCalls} calls");
+                    }
+                }
+                Debug.Log("[Look] grass at distance: " + string.Join("; ", lines));
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                if (renderer != null)
+                {
+                    renderer.ThinGrass = thinWas; renderer.TuftLevels = levelsWas;
+                    renderer.SolidFarGrass = solidWas; renderer.TuftLodBias = biasWas;
+                }
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (target != null) target.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        IEnumerator SnapInto(string folder, string name, RenderTexture target, Action<Color32[]> pixels)
+        {
+            for (int i = 0; i < 8; i++) yield return null;
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = target;
+            var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+            image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+            image.Apply();
+            RenderTexture.active = previous;
+            File.WriteAllBytes(Path.GetFullPath($"Logs/look/{folder}/{name}.png"), image.EncodeToPNG());
+            pixels(image.GetPixels32());
+            UnityEngine.Object.Destroy(image);
+        }
+
+        /// <summary>The design 38 §21 techniques as measurement conditions, each switched on over
+        /// Full and back off, cumulatively in the order they were built.</summary>
+        static IEnumerable<(string Name, int Density, float Cut, Action On, Action Off)> GrassTechniqueArms(ChunkRenderer renderer)
+        {
+            int full = GroundScatter.MaxPerCell * 100;
+            bool thinWas = renderer.ThinGrass, levelsWas = renderer.TuftLevels, solidWas = renderer.SolidFarGrass;
+            int farWas = renderer.GrassFarDensity;
+            Action restore = () =>
+            {
+                renderer.ThinGrass = thinWas; renderer.TuftLevels = levelsWas;
+                renderer.SolidFarGrass = solidWas; renderer.GrassFarDensity = farWas;
+            };
+            yield return ("full, none of §21", full, float.PositiveInfinity,
+                () => { renderer.ThinGrass = false; renderer.TuftLevels = false; renderer.SolidFarGrass = false; }, restore);
+            yield return ("full, thinned to Meadow (60)", full, float.PositiveInfinity,
+                () => { renderer.ThinGrass = true; renderer.GrassFarDensity = 60; renderer.TuftLevels = false; renderer.SolidFarGrass = false; }, restore);
+            yield return ("full, thinned to Lush (150)", full, float.PositiveInfinity,
+                () => { renderer.ThinGrass = true; renderer.GrassFarDensity = 150; renderer.TuftLevels = false; renderer.SolidFarGrass = false; }, restore);
+            yield return ("full, thinned to Meadow + tuft levels", full, float.PositiveInfinity,
+                () => { renderer.ThinGrass = true; renderer.GrassFarDensity = 60; renderer.TuftLevels = true; renderer.SolidFarGrass = false; }, restore);
+            yield return ("full, as shipped", full, float.PositiveInfinity, () => { }, () => { });
+        }
+
         IEnumerator Snap(string name, OdysseyBootstrap boot, RenderTexture target, Action<Color32[]> pixels)
         {
             for (int i = 0; i < 8; i++) yield return null;
@@ -2914,13 +3150,11 @@ namespace Odyssey.Tests.PlayMode
             {
                 renderer.ItemMargin = 0f;
                 renderer.LyingClearance = 0f;
-                boot.seeThroughToGround = false;
                 for (int i = 0; i < 120; i++) yield return null;
                 yield return Photograph(prefix + "ground-before", boot, target);
 
                 renderer.ItemMargin = margin;
                 renderer.LyingClearance = lying;
-                boot.seeThroughToGround = true;
                 for (int i = 0; i < 30; i++) yield return null;
                 yield return Photograph(prefix + "ground-after", boot, target);
             }
@@ -2928,7 +3162,6 @@ namespace Odyssey.Tests.PlayMode
             {
                 renderer.ItemMargin = margin;
                 renderer.LyingClearance = lying;
-                boot.seeThroughToGround = true;
                 renderer.ForceLyingForAPhotograph = false;
                 if (boot.Figures != null) boot.Figures.ForceSleep = null;
             }

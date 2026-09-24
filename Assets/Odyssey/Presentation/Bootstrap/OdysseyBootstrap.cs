@@ -151,9 +151,6 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("See-through for every colonist on screen, not only the selected ones (design 38 §19).")]
         public bool seeThroughToEveryColonist = true;
 
-        [Tooltip("Fade a bush over a body or an item lying under it (design 38 §19).")]
-        public bool seeThroughToGround = true;
-
         [Tooltip("How wide the beam to a selected colonist is, in metres. It stands for the width of the person, not the thickness of the line.")]
         [Range(0.2f, 3f)]
         public float seeThroughRadius = SightLines.DefaultRadius;
@@ -2724,32 +2721,10 @@ namespace Odyssey.Presentation.Bootstrap
             }
             lines += AddNearest(eye, MaxColonistSightLines);
 
-            // And what lies on the ground under a bush: a body, a corpse, or a loose item. Grass
-            // lies flat round these (ChunkRenderer.StampLying and the item ring); a bush cannot, so
-            // it fades instead, through the same line (design 38 §19).
-            _sightCandidates.Clear();
-            if (!seeThroughToGround) { SightLinesLastFrame = _sight.Count; return; }
-            for (int i = 0; i < pawns.Length; i++)
-            {
-                if (!_renderer.LiesOnTheGround(in pawns[i])) continue;
-                Vector3 at = FeetOf(pawns[i], movePerTick);
-                if (_renderer.UnderBush(at, pawns[i].Cell.Y)) _sightCandidates.Add((Flat(at - focus), at + Vector3.up * lift));
-            }
-            System.ReadOnlySpan<CorpseView> corpses = snapshot.Corpses;
-            for (int i = 0; i < corpses.Length; i++)
-            {
-                Vector3 at = CellMetrics.FloorCentre(corpses[i].Cell);
-                if (_renderer.UnderBush(at, corpses[i].Cell.Y)) _sightCandidates.Add((Flat(at - focus), at + Vector3.up * lift));
-            }
-            System.ReadOnlySpan<ThingView> things = snapshot.Things;
-            for (int i = 0; i < things.Length; i++)
-            {
-                if (things[i].Contained) continue;
-                Vector3 at = CellMetrics.FloorCentre(things[i].Cell);
-                if (Flat(at - focus) > GrassClearance.WindowMetres * GrassClearance.WindowMetres * 0.25f) continue;
-                if (_renderer.UnderBush(at, things[i].Cell.Y)) _sightCandidates.Add((Flat(at - focus), at + Vector3.up * lift));
-            }
-            AddNearest(eye, MaxGroundSightLines);
+            // Bushes never fade (owner, 2026-09-24: "walking through / past a bush shouldn't make it
+            // disappear, keep it there — it's fine to walk through bushes"), for a colonist or for
+            // anything lying under one; grass still lies flat round an item or a body
+            // (ChunkRenderer.StampLying and the item ring). Design 38 §21.
             SightLinesLastFrame = _sight.Count;
         }
 
@@ -2795,12 +2770,9 @@ namespace Odyssey.Presentation.Bootstrap
         const int MaxSightLines = 8;
 
         /// <summary>The most unselected colonists given a line, nearest the focus first (design 38
-        /// §19). With <see cref="MaxSightLines"/> and <see cref="MaxGroundSightLines"/> it caps the
-        /// sight test at a fixed cost whatever the colony's size.</summary>
+        /// §19). With <see cref="MaxSightLines"/> it caps the sight test at a fixed cost whatever the
+        /// colony's size.</summary>
         public const int MaxColonistSightLines = 16;
-
-        /// <summary>The most bodies and items under bushes given a line.</summary>
-        public const int MaxGroundSightLines = 16;
 
         /// <summary>How many lines of sight were drawn last frame, for the frame measurement.</summary>
         public int SightLinesLastFrame { get; private set; }

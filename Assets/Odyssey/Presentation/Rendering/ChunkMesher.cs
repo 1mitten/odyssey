@@ -75,9 +75,43 @@ namespace Odyssey.Presentation.Rendering
                 EmitCrop(batch, index, x, z, y);
             }
 
+            // Grass in rank order, so the renderer's distance thinning submits a prefix (design 38
+            // §21, GrassThinning). Once per meshing, not per frame.
+            for (int i = 0; i < batch.Body.Count; i++)
+            {
+                InstanceBucket bucket = batch.Body[i];
+                if (bucket.Count > 1 && !bucket.IsColoured && IsGrassModule(bucket.Module))
+                    GrassThinning.SortByRank(bucket.Matrices, bucket.Count, ref _rankKeys);
+            }
+
             batch.Skin.Build(batch.Bounds);
             batch.Version = _model.ChunkVersion(chunkIndex);
         }
+
+        float[] _rankKeys = new float[256];
+
+        /// <summary>
+        /// Whether a module is grass the distance thinning may thin (design 38 §21): the tufts, and
+        /// the Meadow dressing that reads as meadow — tall-grass stands, flowers, ground cover and
+        /// sunflowers. Not bushes or stones, which are single features rather than a carpet, and not
+        /// crops, which are the colony's own.
+        /// </summary>
+        public bool IsGrassModule(int module)
+        {
+            if (_grassModules == null)
+            {
+                EnsureScatterModules();
+                EnsureDressModules();
+                _grassModules = new HashSet<int>(_scatterModules);
+                if (_dressModules.Length > 0)
+                    foreach (MeadowDressing.Kind kind in new[] { MeadowDressing.Kind.TallGrass,
+                                 MeadowDressing.Kind.Flower, MeadowDressing.Kind.Cover, MeadowDressing.Kind.Sunflower })
+                        foreach (int m in _dressModules[(int)kind]) _grassModules.Add(m);
+            }
+            return _grassModules.Contains(module);
+        }
+
+        HashSet<int>? _grassModules;
 
         /// <summary>
         /// The chunk's cell volume, padded.

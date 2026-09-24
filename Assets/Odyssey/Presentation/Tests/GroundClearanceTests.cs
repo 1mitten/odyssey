@@ -56,7 +56,6 @@ namespace Odyssey.Tests.Presentation
             var world = new RenderTestWorld(30, 30, 3).Publish();
             using var renderer = new ChunkRenderer(world.Model) { SubmitToGpu = false };
             renderer.Render(1, new Odyssey.Presentation.CameraRig.SliceSettings());
-            Assert.That(renderer.UnderBush(new Vector3(10f, 3f, 10f), 1), Is.False);
             Assert.That(renderer.TryNearestBush(new Vector3(10f, 3f, 10f), 0, out _), Is.False);
         }
     }

@@ -82,6 +82,10 @@ Shader "Odyssey/Foliage"
         _ShrinkStart("Shrink starts, metres", Float) = 0
         _ShrinkEnd("Shrink complete by, metres", Float) = 0
 
+        // Whether this material's clumps thin with distance by rank (design 38 §21): grass yes,
+        // trees and bushes no. The distances come from the renderer, as _OdysseyThin.
+        _Thinnable("Thins with distance", Float) = 0
+
         _Smoothness("Smoothness", Range(0, 1)) = 0.1
 
         // The stand colours (design 38 §17c): how strongly the leaves take the green, gold,
@@ -160,6 +164,7 @@ Shader "Odyssey/Foliage"
             float _Fade;
             float _ShrinkStart;
             float _ShrinkEnd;
+            float _Thinnable;
             float _Smoothness;
             float _StandVariety;
             float _Ghost;
@@ -181,7 +186,43 @@ Shader "Odyssey/Foliage"
         SAMPLER(sampler_OdysseyClearTex);
         float4 _OdysseyClear;
 
+        // The grass thinning from ChunkRenderer (design 38 §21): x where it starts, y where it
+        // reaches the far keep, both metres from the camera; z the far keep fraction; w on.
+        float4 _OdysseyThin;
+
         #define ODYSSEY_FOLIAGE_MAX_BOW 0.6
+        #define ODYSSEY_THIN_SOFT 0.05
+
+        // **Mirrors GrassThinning.Rank exactly** — the same quantisation (a sixteenth of a metre,
+        // exact in float), the same integer PCG — because the CPU submits a prefix of each bucket
+        // sorted by this rank and a clump the two disagreed about would pop. GrassThinningTests
+        // pins the C# side; change one, change both.
+        uint FoliagePcg(uint v)
+        {
+            uint state = v * 747796405u + 2891336453u;
+            uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+            return (word >> 22u) ^ word;
+        }
+
+        float FoliageRank(float2 xz)
+        {
+            uint ix = (uint)(int)floor(xz.x * 16.0);
+            uint iz = (uint)(int)floor(xz.y * 16.0);
+            uint h = FoliagePcg(ix + FoliagePcg(iz));
+            return (h >> 8) * (1.0 / 16777216.0);
+        }
+
+        // One while the clump is kept at its distance; shrinking to nothing over the last
+        // ODYSSEY_THIN_SOFT of the keep fraction, so the far field loses clumps one at a time as the
+        // camera moves rather than a chunk's worth at a seam.
+        float FoliageThinScale(float3 rootWS)
+        {
+            if (_OdysseyThin.w < 0.5 || _Thinnable < 0.5) return 1;
+            float span = distance(_WorldSpaceCameraPos.xyz, rootWS);
+            float t = saturate((span - _OdysseyThin.x) / max(_OdysseyThin.y - _OdysseyThin.x, 1e-3));
+            float keep = lerp(1.0, _OdysseyThin.z, t);
+            return saturate((keep - FoliageRank(rootWS.xz)) / ODYSSEY_THIN_SOFT);
+        }
 
         // Sampled at the clump's root, so a clump clears or stands as one thing.
         float FoliageClearanceAt(float3 rootWS)
@@ -216,7 +257,7 @@ Shader "Odyssey/Foliage"
         float3 FoliageDisplace(float3 positionOS, float3 normalOS, float4 colour)
         {
             float3 rootWS = FoliageToWorld(float3(0, 0, 0));
-            float scale = FoliageDistanceScale(rootWS);
+            float scale = FoliageDistanceScale(rootWS) * FoliageThinScale(rootWS);
             float3 positionWS = FoliageToWorld(positionOS * scale);
 
             // The clearing, asked where the blade is rather than where its clump is rooted: a

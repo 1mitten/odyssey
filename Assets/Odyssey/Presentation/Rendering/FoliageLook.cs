@@ -26,6 +26,7 @@ namespace Odyssey.Presentation.Rendering
         static readonly int WindResponseId = Shader.PropertyToID("_WindResponse");
         static readonly int FlutterId = Shader.PropertyToID("_Flutter");
         static readonly int ClearableId = Shader.PropertyToID("_Clearable");
+        static readonly int ThinnableId = Shader.PropertyToID("_Thinnable");
 
         // The art's colour scheme, as the pack's own foliage shader names it. Read at runtime off
         // the art material, exactly as its textures are, and never written into this repository.
@@ -101,6 +102,8 @@ namespace Odyssey.Presentation.Rendering
             material.SetFloat(WindResponseId, GrassWindResponse);
             material.SetFloat(FlutterId, GrassFlutter);
             material.SetFloat(ClearableId, 1f);
+            // Grass and flowers thin with distance (design 38 §21); trees never do.
+            material.SetFloat(ThinnableId, 1f);
             CopyColours(material, source);
         }
 
@@ -128,6 +131,7 @@ namespace Odyssey.Presentation.Rendering
             material.SetFloat(WindResponseId, TreeWindResponse);
             material.SetFloat(FlutterId, TreeFlutter);
             material.SetFloat(ClearableId, 0f);
+            material.SetFloat(ThinnableId, 0f);
             // A crown shaded by its own leaves' normals, not pulled flat towards the sky the way
             // a grass clump is: from above a crown has a lit side and a shadowed one, and pulled
             // up it read as one flat blob of colour.
