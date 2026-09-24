@@ -3722,3 +3722,167 @@ Each rule was withheld and the tests run and seen to fail, then restored:
 - *With every colonist down, a marauder breaks the beds*: it no longer does (§16d). A marauder
   with nothing to hunt and nothing else to break now **idles**. Leaving is a separate question for
   the owner, not taken here.
+
+## 18. The ring means an order; a colonist's response (2026-09-24)
+
+**The owner, 2026-09-24**, asked whether the red lock-on ring should mean only orders the player
+gave: *"Update the depending on the correct action."* And asked whether undrafted colonists should
+ever help others in a fight: *"Maybe a setting to configure this - if there is a UI manage the colony
+with such things - IE a management of rules - we might need another UI to say that all colonists (by
+default) - even if undrafted, will draft themselves and fight maybe? not sure what do you
+recommend"*.
+
+Built on `claude/combat-response`, from `claude/combat-owner-round` at `2e01d57e`, on the fast and
+Long tiers only, with no Unity.
+
+### 18a. The two decisions
+
+| Question | Decision |
+|---|---|
+| What does the ring mean? | **An attack the player ordered**, and nothing else. A fight a colonist started herself — the drafted hold's blow beside her, fighting back when struck, a drafted colonist joining a fight nearby (§15), and the new *Defend* below — draws no ring. A rescue already drew none (§11e). |
+| Should undrafted colonists help? | **Yes, if the player says so, colonist by colonist.** Each colonist has a **response**, cycled by a button on her pane beside Draft: **Fight back** (the default, today's behaviour), **Defend** (she joins a fight near her, then goes back to work) and **Flee** (she runs from danger near her). |
+| Should a colonist draft herself? | **No** (our recommendation, recorded for the owner). A draft takes a colonist off work until released, or until four quiet hours pass; *Defend* gives the protective behaviour without taking her off work. |
+| A colony-wide rules panel? | **Deferred.** One default response for everybody is one rule; a panel is worth building when there are several colony rules for it to hold. Until then the pane's button, on a box selection, sets everybody selected at once (§18e). |
+
+### 18b. The ring means an order
+
+**The rule has one owner: what the simulation publishes.**
+
+- `odyssey.pawn.order.target` is published **only for an attack the player ordered**: the pawn's
+  job is `Job_AttackMelee`, `PlayerForced`, on a pawn (`PawnRegistry.OrderTargetOf`). That is
+  `OrderAttack`, and the knockback's re-issue of it (§9b), which keeps the order forced.
+- **A rescue's patient moved to an aspect of its own**, `odyssey.pawn.rescue.patient`, published for
+  every rescue, ordered or the giver's (`PawnRegistry.RescuePatientOf`). The target aspect had been
+  carrying two meanings — *whom she was sent to hit* and *whom she is carrying* — and the ring had to
+  ask the job to tell them apart. Presentation's carrier lookups (`PawnFigureDirector.CarriesAPatient`
+  and `CarrierOf`) read the patient aspect now.
+- **`LockOnRings` asks the aspect and nothing else about the job.** Its two filters went: the
+  rescue's (the aspect no longer names a patient) and "drafted only" (an order needs a draft, which
+  the simulation already enforces). A second copy of "was this an order" in the interface is the
+  bug pattern the catalogue lists first.
+- **Nothing that reads *whom she is fighting* was lost.** The target stays on the pawn
+  (`Pawn.CombatTarget`), saved and hashed, and the simulation reads it there. No other reader of the
+  published aspect existed; the figure turns to a swing's target through `WorkFocus`, which is the
+  cell and unchanged.
+
+**What each kind of fight draws now:**
+
+| Fight | Ring | Order line | Diamond |
+|---|---|---|---|
+| Ordered attack on a pawn (right-click, Ctrl on a colonist) | yes | none — a pawn target never drew one | yes (drafted) |
+| Ordered attack on a building (§13i) | no — a building is not a pawn | yes, to the struck cell | yes |
+| Drafted hold's blow beside her | **no** (was yes) | none | yes |
+| Drafted colonist joining a fight (§15) | **no** (was yes) | none | yes |
+| Undrafted: fighting back, or *Defend* | no | none | none |
+| Rescue, ordered or automatic | no | none | while drafted |
+
+So the order marks — the ring and the line — are the player's orders and only those. The diamond is
+not an order mark: it says *drafted*, and a drafted colonist fighting on her own is still drafted.
+
+### 18c. The response
+
+`HostilityResponse` on the pawn: **Fight back** 0, **Defend** 1, **Flee** 2.
+
+- **Saved** in `odyssey.combat`, in the record's flags word (two bits beside the draft and the
+  downed flags), and the record is written for a colonist whose response is not the default. **No
+  layout change**: an older build reading the word ignores the bits, and an older save loads with
+  everybody at Fight back.
+- **Hashed** as two bits of the kind word (bits 24–25; 22 and 23 left for the thief line, which is
+  building beside this one), so a colony with every colonist at the default hashes exactly as before
+  and **no golden moved**.
+- **Published** as `odyssey.pawn.response` (1 or 2), sparse: absent at the default.
+- **Set by `SetHostilityResponse(A pawn, B response)`**, applied while paused like the other orders
+  over a colonist (`PausedIntents`). Refused for a pawn that is not a colonist and for a value outside
+  the three; `AlreadyInThatState` for a no-op. It may be set on anybody of ours — drafted, downed or
+  broken — because it is a standing setting, not an order to act. An undrafted colonist on a fight or
+  a flight she started herself is interrupted, so the new setting answers at once rather than when
+  that one ends.
+- **The draft overrides it.** A drafted colonist does what §2 and §15 say whatever her response; it
+  takes effect again when she is released.
+
+### 18d. What each response does
+
+**Fight back** is unchanged: she answers whoever strikes her, and a threat beside her when she next
+thinks (§6A.6).
+
+**Defend** is Fight back, and she also **joins a fight near her exactly as a drafted colonist on her
+hold does** (§15b): the one rule, `Melee.HoldTarget` — a threat in reach first, else the nearest
+victim's attacker, a marauder or an animal on another colonist, both within
+`CombatDef.helpRadiusCells`, and she can reach it. The job is §15c's — the unforced attack marked
+`Joining` — and it ends as that one ends: the attacker down, dead, gone, unreachable, or on no
+colonist any more. **Then she goes back to work**: the tree runs and gives her whatever it would
+have. She is never drafted, so no four-hour clock runs and nothing needs releasing.
+
+**Flee** runs from danger near her instead of fighting.
+
+- **Danger** is a standing pawn within the same `helpRadiusCells` (eight cells, 20 m — one number
+  for *near* in a fight) that is a marauder, whatever it is doing; an animal attacking a colonist;
+  or anybody attacking her. A wild animal at peace is not danger. **Only danger that can reach her
+  in its own mode counts**: a marauder behind a shut door (§16b) does not keep her off work.
+- **She runs** on `Job_Flee`, to `FleeJobDriver.FindFleeCell`, `fleeCells` (12) straight away from
+  the nearest danger, turning 45° and then 90° either side when that is blocked — the animals' own
+  flight, at the run's pace (§6A.7).
+- **She stops** when she arrives. The tree asks again: danger still within eight cells, she runs
+  again from where she is; none, she goes back to work.
+- **Struck, she runs rather than fighting back.** Cornered — no flee cell at all — she fights back,
+  as Fight back would: the retaliation memory is still written at the blow, for exactly that case.
+
+**Both are noticed while working.** The tree runs only between jobs, so a colonist chopping a tree
+would never see a fight until the tree was down. `JobSystem.TickPawn` asks each undrafted *Defend*
+or *Flee* colonist, every tick, whether her response would act now (`HostilityResponses.WouldAct`,
+the same function the think node asks); if so, the job in hand ends as a failure, keeping the step
+in progress (§2d), and the tree runs the same tick. **Not asked** of a colonist who is:
+
+- asleep — a fight nearby does not wake her; a blow does (it interrupts, §6A.6);
+- already fighting, fleeing, down, or carrying somebody to a bed;
+- on a job the player forced (an equip, a prioritised build): the player's order stands;
+- stunned, knocked down, broken, drafted.
+
+### 18e. The pane
+
+A second live button on a colonist's pane, after Draft. **It shows the response she has** — *Fight
+back*, *Defend*, *Flee*, each a registry name (`ui.command.fightback`, `ui.command.defend`,
+`ui.command.flee`) — and pressing it moves to the next, round the three. Its tooltip says what the
+current one does and that a press changes it.
+
+- **On a selection of several**, the next response is the one after the first selected colonist's,
+  and every selected colonist is set to it, so one press can put a whole squad on Defend. The same
+  shape as the draft key's rule for a mixed selection (§2f).
+- The decision is `Hud.ResponseModel`, Unity-free and fast-tier tested. The shell only carries its
+  intents to the world (`HudShell.CycleResponse`, one line in `ActionButton`).
+
+### 18f. What it costs
+
+- **Nothing while every colonist is at the default.** The notice is asked only of a *Defend* or
+  *Flee* colonist, one byte comparison for everybody else.
+- **For a *Defend* or *Flee* colonist, nothing while nothing is hostile.** Whether anything is —
+  a standing marauder, or anybody in an attack on a colonist — is found once a tick, lazily, by the
+  first colonist who asks, in one pass over the pawns (`PawnContext.AnythingHostile`), and reset
+  when the job system's tick begins.
+- **With something hostile about**, each responder's notice is the §15 scan (`HoldTarget`) or the
+  flee scan, one pass over the pawns, and a flee also costs the flee-cell search (at most twenty-five
+  column searches) while danger is near. **It scales with the pawns on the board, per responder,
+  per tick, while there is a fight** — the drafted hold's own cost profile (§15f).
+
+### 18g. Do not undo by tidying
+
+- **The ring reads the aspect and asks nothing else.** Putting a job or a draft check back in
+  `LockOnRings` makes the interface a second owner of "was this an order".
+- **A rescue's patient is its own aspect.** Folding it back into the order target puts the rescue
+  filter back in the ring.
+- **The notice and the node ask one function.** A notice that decided differently from the node
+  would interrupt her and then give her work again, every tick, until the think-loop breaker parked
+  her.
+- **The hostility gate is reset by the job system's tick, not cached by tick number.** A cache keyed
+  on the tick would survive a load of an earlier save into the same world.
+- **Defend never drafts.** A draft is the player's hand; her own response is not.
+
+### 18h. Open for the owner
+
+- **The recommendation itself**: Defend rather than self-drafting, and the colony-wide rules panel
+  deferred until there is more than one rule to hold.
+- **Flee's radius** is the help radius, eight cells. If fleeing colonists run from a marauder that
+  was never coming for them, it wants its own number.
+- **A *Defend* colonist asleep** is not woken by a fight nearby. Say if she should be.
+- **The button shows the current response**, where Draft shows what pressing it will do. The
+  Draft button's face is an action; this one is a setting. Say if they read as inconsistent.
