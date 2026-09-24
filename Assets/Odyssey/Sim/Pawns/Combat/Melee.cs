@@ -74,7 +74,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// The colonist <paramref name="attacker"/> is fighting, when it is a marauder or an animal
+        /// The colonist <paramref name="attacker"/> is fighting, when it is a bandit or an animal
         /// in a melee attack on one and on its feet; else null (design 33 §15). The one answer to
         /// "is a colonist being attacked, and by whom": the attacker's own job and target, which are
         /// what swings at her. A colonist attacking a colonist — the player's Ctrl order, or the
@@ -94,7 +94,7 @@ namespace Odyssey.Sim.Pawns
         /// <item><b>A threat in reach</b> (<see cref="IsThreatTo"/>, <see cref="InReach"/>) — the first
         /// in list order, exactly as <see cref="AdjacentThreat"/> answers it — and
         /// <paramref name="joining"/> is false: she strikes from where she stands.</item>
-        /// <item>Else <b>the attacker of another colonist</b>, a marauder or an animal
+        /// <item>Else <b>the attacker of another colonist</b>, a bandit or an animal
         /// (<see cref="ColonistUnderAttackBy"/>), with the victim and the attacker both within
         /// <see cref="CombatDef.helpRadiusCells"/> of her (<see cref="WithinHelp"/>) and the attacker
         /// reachable in her own mode — and <paramref name="joining"/> is true: she goes to it. The
@@ -155,10 +155,10 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// The nearest danger to <paramref name="me"/>, for a colonist whose response is Flee (design
         /// 33 §18d), or null: a standing pawn within <see cref="CombatDef.helpRadiusCells"/> of her
-        /// (<see cref="WithinHelp"/>, the one number for <i>near</i> in a fight) that is a marauder,
+        /// (<see cref="WithinHelp"/>, the one number for <i>near</i> in a fight) that is a bandit,
         /// whatever it is doing; an animal attacking a colonist (<see cref="ColonistUnderAttackBy"/>);
         /// or anybody attacking her. A wild animal at peace is not danger. <b>Only danger that can
-        /// reach her in its own mode counts</b>, so a marauder behind a shut door (§16b) does not
+        /// reach her in its own mode counts</b>, so a bandit behind a shut door (§16b) does not
         /// keep her off work. Nearest by squared distance in cells, a tie to the lower id.
         /// <para><b>Scales with the pawns on the board</b>: an integer comparison or two each, and a
         /// reachability test (two array reads) only for a candidate nearer than the best so far.</para>
@@ -192,7 +192,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Is anything hostile about (design 33 §18f): a standing marauder, or anybody in an attack
+        /// Is anything hostile about (design 33 §18f): a standing bandit, or anybody in an attack
         /// on a colonist? The gate in front of the per-tick notice of a Defend or Flee colonist
         /// (<see cref="HostilityResponses.Notices"/>): with nothing hostile neither can act, so
         /// neither scans. Everything either would act on is one of these — a threat to her is a

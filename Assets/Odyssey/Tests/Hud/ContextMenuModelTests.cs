@@ -27,7 +27,7 @@ namespace Odyssey.Tests.Hud
         static readonly CellRef ShelfCell = new CellRef(5, 2, 1);
 
         /// <summary>
-        /// Two colonists, a hog, a marauder and a downed colonist; a machete and a pile of wood on
+        /// Two colonists, a hog, a bandit and a downed colonist; a machete and a pile of wood on
         /// the ground, and a shelf holding two bats and an arc blade. <paramref name="drafted"/>
         /// names who is under the player's hand.
         /// </summary>
@@ -118,7 +118,7 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void TheFirstStandingColonistInTheSelectionIsThePrimary()
         {
-            // A hog, a marauder and a downed colonist ahead of Bo in a stale selection are passed
+            // A hog, a bandit and a downed colonist ahead of Bo in a stale selection are passed
             // over; Bo is sent.
             var (_, menu) = RightClick(new[] { Hog, Raider, Cy, Bo, Ada }, Board(), MacheteCell);
             List<Intent> sent = Choose(menu[0]);
@@ -172,7 +172,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// An animal or a marauder takes no orders, so a selection with no colonist in it opens no
+        /// An animal or a bandit takes no orders, so a selection with no colonist in it opens no
         /// menu at all — a menu of one Cancel would say nothing — and sends nothing.
         /// </summary>
         [Test]

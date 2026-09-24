@@ -8,7 +8,7 @@ namespace Odyssey.Tests.Sim
 {
     /// <summary>
     /// Pawns spawned in quick succession at one point land on separate tiles (owner, 2026-09-24:
-    /// marauders spawned one after another "don't spawn from same tile so quickly — spawn on free
+    /// bandits spawned one after another "don't spawn from same tile so quickly — spawn on free
     /// tiles around"; design 33 §9h). The control is the first spawn, which lands exactly where the
     /// debug spawn always put it.
     /// </summary>
@@ -39,7 +39,7 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void SixMaraudersSentInOneTickStandOnSixTiles()
+        public void SixBanditsSentInOneTickStandOnSixTiles()
         {
             var colony = Board();
             CellRef at = SpawnPoint(colony);
@@ -47,7 +47,7 @@ namespace Odyssey.Tests.Sim
             int expected = colony.Pawns.Cells.NearestWalkableInColumn(at.X, at.Z, at.Y);
 
             for (int i = 0; i < 6; i++)
-                colony.World.Intents.Submit(new Intent(IntentKind.SpawnPawn, at, PawnKindIndex.Marauder));
+                colony.World.Intents.Submit(new Intent(IntentKind.SpawnPawn, at, PawnKindIndex.Bandit));
             colony.World.Tick();
 
             List<Pawn> spawned = Spawned(colony, before);
@@ -57,7 +57,7 @@ namespace Odyssey.Tests.Sim
             var cells = new HashSet<int>();
             foreach (Pawn p in spawned)
             {
-                Assert.That(cells.Add(p.Cell), Is.True, "two spawned marauders share a tile");
+                Assert.That(cells.Add(p.Cell), Is.True, "two spawned bandits share a tile");
                 Assert.That(colony.Pawns.Cells.IsWalkable(p.Cell), Is.True);
                 CellRef c = Size.FromIndex(p.Cell);
                 Assert.That(System.Math.Max(System.Math.Abs(c.X - at.X), System.Math.Abs(c.Z - at.Z)),
@@ -76,7 +76,7 @@ namespace Odyssey.Tests.Sim
             // it arrived, and check it against where every earlier spawn stands on that tick.
             for (int i = 0; i < 4; i++)
             {
-                colony.World.Intents.Submit(new Intent(IntentKind.SpawnPawn, at, PawnKindIndex.Marauder));
+                colony.World.Intents.Submit(new Intent(IntentKind.SpawnPawn, at, PawnKindIndex.Bandit));
                 colony.World.Tick();
                 List<Pawn> spawned = Spawned(colony, before);
                 Pawn newest = spawned[spawned.Count - 1];
@@ -87,12 +87,12 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void EveryKindSpreadsNotOnlyMarauders()
+        public void EveryKindSpreadsNotOnlyBandits()
         {
             var colony = Board();
             CellRef at = SpawnPoint(colony);
             int before = colony.Pawns.Pawns.Count;
-            int[] kinds = { PawnKindIndex.Colonist, PawnKindIndex.MiddenHog, PawnKindIndex.DuctRat, PawnKindIndex.Marauder };
+            int[] kinds = { PawnKindIndex.Colonist, PawnKindIndex.MiddenHog, PawnKindIndex.DuctRat, PawnKindIndex.Bandit };
             foreach (int kind in kinds)
                 colony.World.Intents.Submit(new Intent(IntentKind.SpawnPawn, at, kind));
             colony.World.Tick();

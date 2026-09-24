@@ -718,7 +718,7 @@ namespace Odyssey.Tests.PlayMode
 
         /// <summary>
         /// The frame with a fight in view (design 33, the C2/C3 integration): ten colonists at the
-        /// start timed at peace, then ten marauders spawned among them and the same colony timed
+        /// start timed at peace, then ten bandits spawned among them and the same colony timed
         /// again once the swinging has started — one run, so the difference is the fight and not
         /// the machine (the rule in this class's other sweeps).
         ///
@@ -726,7 +726,7 @@ namespace Odyssey.Tests.PlayMode
         /// computed poses, the health bars and markers (two or three submissions per marked pawn),
         /// the floating words and the combat event reader, and on the simulation side the swings
         /// and the chase re-plans. It asserts that a fight really was in view — combat events in
-        /// the timed window, marauders on the board — because a brawl that never started reports a
+        /// the timed window, bandits on the board — because a brawl that never started reports a
         /// beautifully cheap frame; about time it asserts only the class's 30 Hz ceiling.</para>
         ///
         /// <para>The brawl is ticked once a frame by the test on top of the bootstrap's own
@@ -761,7 +761,7 @@ namespace Odyssey.Tests.PlayMode
                 yield return TimeFrames("fight/peace", boot, WarmupFrames, x => peace = x);
                 int peaceDraws = boot.Renderer?.DrawCalls ?? 0;
 
-                // Ten marauders a few cells off, each hunting the nearest colonist standing.
+                // Ten bandits a few cells off, each hunting the nearest colonist standing.
                 int before = boot.World.Views.Current.Pawns.Length;
                 for (int i = 0; boot.World.Views.Current.Pawns.Length < before + 10 && i < 40; i++)
                 {
@@ -825,7 +825,7 @@ namespace Odyssey.Tests.PlayMode
                           $"{frame.Pawns.Length} pawns ({hostiles} hostile), {boot.Figures?.FigureCount ?? 0} figures, " +
                           $"{events} combat events in {windowTicks} ticks of the window, {frame.Corpses.Length} corpses");
 
-                Assert.That(hostiles + frame.Corpses.Length, Is.GreaterThan(0), "no marauder was ever spawned");
+                Assert.That(hostiles + frame.Corpses.Length, Is.GreaterThan(0), "no bandit was ever spawned");
                 Assert.That(events, Is.GreaterThan(0), "nothing fought in the timed window: this timed a peace");
                 Assert.That(blood, Is.Not.Null, "the bootstrap built no blood director");
                 Assert.That(blood!.Marks.Count, Is.GreaterThan(0), "a fight of ten against ten left no blood on the ground");

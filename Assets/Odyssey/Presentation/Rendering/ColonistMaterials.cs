@@ -171,6 +171,24 @@ namespace Odyssey.Presentation.Rendering
         public Material? For(Material? source, AppearanceCells? cells, in ColonistAppearance look)
         {
             if (source == null || cells == null || !cells.Any) return null;
+            return Make(source, cells, look);
+        }
+
+        /// <summary>
+        /// The art exactly as painted, but drawn as a character: the ink hull and the queue after
+        /// the outline pass that every colonist gets (see <see cref="CharacterQueue"/>). For a
+        /// piece worn in its own paint — the bandit's welding helmet (design 42) — which drawn in
+        /// the pack's material would lose its outline and have the trees' ink painted over it.
+        /// One material per source, however many wear it.
+        /// </summary>
+        public Material? InOwnPaint(Material? source) =>
+            source == null ? null : Make(source, OwnPaint, default);
+
+        /// <summary>No rectangle in any slot: nothing is repainted.</summary>
+        static readonly AppearanceCells OwnPaint = new AppearanceCells();
+
+        Material? Make(Material source, AppearanceCells cells, in ColonistAppearance look)
+        {
             Shader? shader = Shader;
             if (shader == null) return null;
 

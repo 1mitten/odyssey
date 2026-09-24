@@ -8,7 +8,7 @@ namespace Odyssey.Presentation.Ui
     /// <summary>
     /// <see cref="HudShell"/>: the fight's Health tab (design 33 §1, §5f). <b>Lane C's file</b>
     /// (<c>docs/plans/combat-contracts.md</c>): one of the two Presentation files the interface lane
-    /// writes, so it never edits a file the drawing lane owns. The corpse's and the marauder's
+    /// writes, so it never edits a file the drawing lane owns. The corpse's and the bandit's
     /// panes need nothing here — their shape is <c>InspectModel</c>'s answer, read by
     /// <c>HudShell.Inspect</c> — and the Spawn rows are <c>HudShell.Debug</c>'s.
     ///

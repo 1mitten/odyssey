@@ -203,11 +203,11 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// Every melee attacker spreads, not only a drafted colonist under orders: three marauders
+        /// Every melee attacker spreads, not only a drafted colonist under orders: three bandits
         /// hunting one colonist stand on three sides of her.
         /// </summary>
         [Test]
-        public void MaraudersHuntingOneColonistSpreadRoundHer()
+        public void BanditsHuntingOneColonistSpreadRoundHer()
         {
             var colony = Board(colonists: 1);
             colony.World.Tick();
@@ -216,15 +216,15 @@ namespace Odyssey.Tests.Sim
             var rules = new Whiffs();
             colony.Pawns.MeleeRules = rules;
             Assert.That(Draft(colony, target), Is.EqualTo(IntentRejection.None));
-            var marauders = new List<Pawn>();
-            for (int i = 0; i < 3; i++) marauders.Add(Spawn(colony, PawnKindIndex.Marauder, Near(colony, -8, i - 1)));
+            var bandits = new List<Pawn>();
+            for (int i = 0; i < 3; i++) bandits.Add(Spawn(colony, PawnKindIndex.Bandit, Near(colony, -8, i - 1)));
 
-            Run(colony, marauders, 1_200);
+            Run(colony, bandits, 1_200);
             Assert.That(rules.Swings, Is.GreaterThan(4), "the control: a fight happened");
-            Assert.That(marauders.All(m => m.CombatTarget == target.Id.Value), Is.True);
-            Assert.That(marauders.All(m => Melee.InReach(colony.Pawns, m, target, TraverseMode.Colonist)), Is.True, "a marauder not beside her");
-            Assert.That(marauders.All(m => m.Cell != target.Cell), Is.True, "a marauder on her tile");
-            Assert.That(marauders.Select(m => m.Cell).Distinct().Count(), Is.EqualTo(3), "two marauders on one tile");
+            Assert.That(bandits.All(m => m.CombatTarget == target.Id.Value), Is.True);
+            Assert.That(bandits.All(m => Melee.InReach(colony.Pawns, m, target, TraverseMode.Colonist)), Is.True, "a bandit not beside her");
+            Assert.That(bandits.All(m => m.Cell != target.Cell), Is.True, "a bandit on her tile");
+            Assert.That(bandits.Select(m => m.Cell).Distinct().Count(), Is.EqualTo(3), "two bandits on one tile");
         }
 
         /// <summary>

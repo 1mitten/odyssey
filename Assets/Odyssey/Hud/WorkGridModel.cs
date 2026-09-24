@@ -352,7 +352,7 @@ namespace Odyssey.Hud
             // The whole colony first, because the page count comes out of it and so does
             // EnsureRowPageFor. Only the slice is turned into rows.
             // Colonists only, by the flags (design 33 §5d): the roster hands over only colonists
-            // already, and this keeps a marauder or an animal in a stale order from growing a row of
+            // already, and this keeps a bandit or an animal in a stale order from growing a row of
             // priorities the simulation would refuse.
             _all.Clear();
             if (order != null)

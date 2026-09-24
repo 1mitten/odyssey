@@ -99,9 +99,9 @@ namespace Odyssey.Tests.Hud
             Assert.That(row.Name, Is.EqualTo(Registry.Label("ui.combat.barehands")));
         }
 
-        /// <summary>A marauder is a person with a weapon, always drawn: the model is not the colony's alone.</summary>
+        /// <summary>A bandit is a person with a weapon, always drawn: the model is not the colony's alone.</summary>
         [Test]
-        public void AMaraudersGearIsReadTheSameWay()
+        public void ABanditsGearIsReadTheSameWay()
         {
             WorldSnapshot frame = Frame.Write();
             frame.AddPawn(new PawnView(Raider, new CellRef(3, 1, 1), 800, 800, 800, kind: 3,

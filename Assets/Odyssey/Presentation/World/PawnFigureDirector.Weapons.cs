@@ -12,7 +12,7 @@ namespace Odyssey.Presentation.World
     ///
     /// <para><b>Nobody owned this until the integration</b> (2026-09-23). Lane D put the weapon in
     /// the simulation's hand and published it as <c>odyssey.pawn.weapon</c>; lane B chose the
-    /// swing's clip family from it; neither drew it, so a marauder swung a sword clip with an empty
+    /// swing's clip family from it; neither drew it, so a bandit swung a sword clip with an empty
     /// fist. It is the tool code's approach cut down: the prop is the weapon's own ground row
     /// (<see cref="ModuleIds.Item"/>), so a clone without the packs draws no prop and fights
     /// exactly as before.</para>

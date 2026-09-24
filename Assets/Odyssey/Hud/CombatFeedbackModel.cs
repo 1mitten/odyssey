@@ -90,7 +90,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The ink those words are drawn in. <b>Damage and the two ends of a fight are the bad
-        /// red</b> — whoever took them, because a number over a marauder and over a colonist are
+        /// red</b> — whoever took them, because a number over a bandit and over a colonist are
         /// read the same way, as a blow landing; a miss is dim, since nothing happened; a dodge is
         /// the information blue, since something was avoided; a stun is the warning amber.
         /// Transparent for a moment that floats nothing.

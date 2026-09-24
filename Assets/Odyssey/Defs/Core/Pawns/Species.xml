@@ -128,23 +128,28 @@
   </PawnKindDef>
 
   <!--
-    The marauder (design 33 section 1): a person under the Hostile faction, debug-spawned, armed,
+    The bandit (design 33 section 1): a person under the Hostile faction, debug-spawned, armed,
     hunting the nearest reachable colonist who is standing. Hostility comes from the kind, so no
-    pawn carries a saved field for it (section 3). A person species, so it is drawn with a
-    colonist's body and face; the red marker says which side it is on. Its needs do not tick
-    (Pawn.NeedsTick), so the needs fields below are the type's defaults and unread.
+    pawn carries a saved field for it (section 3). A person species, rolled as a colonist is,
+    and dressed as a bandit on top of that: welding helmet, red vest, black trousers (design 42).
+    Its needs do not tick (Pawn.NeedsTick), so the needs fields below are the type's defaults and
+    unread.
   -->
   <PawnKindDef>
-    <defName>PawnKind_Marauder</defName>
+    <defName>PawnKind_Bandit</defName>
     <species>Species_Person</species>
     <faction>Hostile</faction>
-    <!-- Armed from the moment it arrives (design 33 section 1). The hand is filled by
-         IWeaponRules.ArmOnSpawn, lane D's; until that is written the marauder fights with fists. -->
-    <weapon>Item_Machete</weapon>
+    <!-- Armed from the moment it arrives (design 33 section 1), with one of these, dealt per
+         bandit by a hash of the pawn rather than a draw (design 42 section 3). A crowbar or a bat,
+         never a blade (owner, 2026-09-24: "not swords - not their style"). -->
+    <weapons>
+      <li>Item_Crowbar</li>
+      <li>Item_Bat</li>
+    </weapons>
     <!-- A person who does not open the colony's doors (design 33 section 16; owner, 2026-09-24:
          "do what you recommend"). Ladders, stairs, the hop and the wade as a colonist, but a
          closed door is a wall: with the colonists behind one, it breaks the door down. -->
-    <traverseMode>Marauder</traverseMode>
+    <traverseMode>Bandit</traverseMode>
     <!-- What it came for, once nobody is left standing to fight and nothing is left to break
          (design 33 section 17; owner, 2026-09-24: "thieve items or kidnap people depending on
          their motivation ... for now - thieve items"). Loot carries the nearest stack off the

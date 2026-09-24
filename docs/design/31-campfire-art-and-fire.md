@@ -756,12 +756,12 @@ proof that the numbers alone do not say *sitting*.
 `main` took combat (design 33, PR #180) while this was in review: 97 commits, eleven files in
 conflict, and three things worth keeping that no conflict marker pointed at.
 
-**A marauder sat at the colony's fire.** Combat's hostile mind is *down, else hunt, else idle*, and
+**A bandit sat at the colony's fire.** Combat's hostile mind is *down, else hunt, else idle*, and
 its idle is the same `IdleThinkNode` the hearth lives in. Neither branch alone could show it — main
-had no fireside, this line had no marauders — so after the merge a raider with nobody to hunt walked
+had no fireside, this line had no bandits — so after the merge a raider with nobody to hunt walked
 to the colony's campfire, settled, and half the time sat facing the flames. The hearth is now the
 colony's: a hostile idler gets no fireside and wanders as it did before fires.
-`FiresideTests.AMarauderDoesNotSettleAtTheColonysFire`.
+`FiresideTests.ABanditDoesNotSettleAtTheColonysFire`.
 
 **`Seated` stays a bool, not a `PawnFlags` bit.** Combat made `PawnFlags` the byte that says what a
 pawn is and what state it is in, and all eight bits are spent on the fight. Widening it to take a

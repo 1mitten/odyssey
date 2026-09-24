@@ -13,7 +13,7 @@ namespace Odyssey.Sim.Pawns
     /// copy (its stack limit is one), and the day renewed from the latest blow (its
     /// <c>renewsOnRepeat</c>, design 33 §14e).</item>
     /// <item><b>Died</b> (<see cref="ThoughtIndex.ColonistDied"/>): a colonist died, and every
-    /// other colonist on the board remembers it — standing, downed, drafted or broken. A marauder's
+    /// other colonist on the board remembers it — standing, downed, drafted or broken. A bandit's
     /// or an animal's death is felt by nobody, and nobody but a colonist feels anything.</item>
     /// </list>
     ///

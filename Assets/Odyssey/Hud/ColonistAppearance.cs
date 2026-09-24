@@ -124,6 +124,27 @@ namespace Odyssey.Hud
         /// <summary>No piece in this slot: bald, or clean-shaven.</summary>
         public const int NoPiece = -1;
 
+        /// <summary>
+        /// What this person is wearing over themselves (<c>docs/design/42-bandits.md</c> §5).
+        /// Everything above is the person; this, <see cref="HeadPiece"/>, and the body and cloth
+        /// it chose are the clothes.
+        /// </summary>
+        public readonly PawnOutfit Outfit;
+
+        /// <summary>
+        /// What covers the head — the bandit's welding helmet — as an index into the headgear
+        /// family, or <see cref="NoPiece"/>.
+        ///
+        /// <para><b>It hides the hair and the beard; it does not delete them.</b>
+        /// <see cref="HairPiece"/> and <see cref="BeardPiece"/> keep the person's own, so the day
+        /// the helmet comes off (a captured bandit) the face under it is the one they were rolled
+        /// with. A drawer asks <see cref="HidesHair"/> and wears neither while it is true.</para>
+        /// </summary>
+        public readonly int HeadPiece;
+
+        /// <summary>Whether the hair and beard slots go unworn because something covers the head.</summary>
+        public bool HidesHair => HeadPiece != NoPiece;
+
         public ColonistAppearance(int look, Rgb24 skin, Rgb24 hair, Rgb24 cloth, Rgb24 cloth2)
             : this(look, skin, hair, cloth, cloth2, NoPiece, NoPiece)
         {
@@ -131,6 +152,12 @@ namespace Odyssey.Hud
 
         public ColonistAppearance(int look, Rgb24 skin, Rgb24 hair, Rgb24 cloth, Rgb24 cloth2,
             int hairPiece, int beardPiece)
+            : this(look, skin, hair, cloth, cloth2, hairPiece, beardPiece, PawnOutfit.Issued, NoPiece)
+        {
+        }
+
+        public ColonistAppearance(int look, Rgb24 skin, Rgb24 hair, Rgb24 cloth, Rgb24 cloth2,
+            int hairPiece, int beardPiece, PawnOutfit outfit, int headPiece)
         {
             Look = look;
             Skin = skin;
@@ -139,6 +166,42 @@ namespace Odyssey.Hud
             Cloth2 = cloth2;
             HairPiece = hairPiece;
             BeardPiece = beardPiece;
+            Outfit = outfit;
+            HeadPiece = headPiece;
+        }
+
+        /// <summary>
+        /// The appearance of one pawn wearing <paramref name="outfit"/>
+        /// (<c>docs/design/42-bandits.md</c> §5).
+        ///
+        /// <para><b>The person is rolled first, exactly as a colonist is</b>, by the overload below —
+        /// every stream in the same order — and then dressed. So a bandit's sex, skin, hair and
+        /// beard are the ones the same seed and id would deal a colonist, and a bandit taken
+        /// prisoner and later dressed in the uniform is the person the gang had.</para>
+        ///
+        /// <para>A bandit's clothes replace the body (the gang's row for their sex and a vest cut
+        /// rolled on a stream of its own), the cloth (a red from <see cref="BanditReds"/>, on
+        /// another), the trousers (<see cref="BanditTrousers"/>, fixed) and the head
+        /// (<see cref="ColonistCastPools.Headgear"/>). A catalogue with no bandit rows leaves the
+        /// body as rolled and still paints the colours, so a clone without the packs degrades to a
+        /// red-and-black colonist rather than to nothing.</para>
+        /// </summary>
+        public static ColonistAppearance Of(
+            uint seed, int pawnId, ColonistCastPools pools, char gender, int age, PawnOutfit outfit)
+        {
+            ColonistAppearance person = Of(seed, pawnId, pools, gender, age);
+            if (outfit != PawnOutfit.Bandit) return person;
+
+            char sex = SexOf(gender, seed, pawnId);
+            int look = person.Look;
+            int[] gang = pools.BanditBodiesFor(sex);
+            if (gang.Length > 0) look = gang[(int)(Mix(seed, pawnId, VestStream) % (uint)gang.Length)];
+
+            Rgb24 red = BanditReds[(int)(Mix(seed, pawnId, BanditRedStream) % (uint)BanditReds.Length)];
+            int head = pools.Headgear.Length > 0 ? pools.Headgear[0] : NoPiece;
+
+            return new ColonistAppearance(look, person.Skin, person.Hair, red, BanditTrousers,
+                person.HairPiece, person.BeardPiece, PawnOutfit.Bandit, head);
         }
 
         /// <summary>
@@ -358,6 +421,42 @@ namespace Odyssey.Hud
             return issued;
         }
 
+        /// <summary>
+        /// The reds a bandit's vest is dealt, crimson to rust (owner, 2026-09-24: "dirt / wear on
+        /// the red"), so a gang does not look freshly issued and every one of them still reads as
+        /// red at the play camera. Fixed, not derived from a hue, because the rust end is where a
+        /// derivation would drift into brown.
+        /// </summary>
+        public static readonly Rgb24[] BanditReds =
+        {
+            Rgb24.FromHex(0xA01C1C),
+            Rgb24.FromHex(0x8E1B22),
+            Rgb24.FromHex(0xA62B1E),
+            Rgb24.FromHex(0x922A16),
+            Rgb24.FromHex(0x7F2119),
+        };
+
+        /// <summary>
+        /// A bandit's trousers, and everything else on the body that is not skin. Near-black
+        /// rather than black, for the reason <see cref="UniformCloth"/> is not pure white: the
+        /// golden-hour grade needs somewhere to go.
+        /// </summary>
+        public static readonly Rgb24 BanditTrousers = Rgb24.FromHex(0x1E1E22);
+
+        /// <summary>
+        /// Whether body <paramref name="look"/> is one of the gang's, and the colours its far
+        /// form wears (<see cref="IssuedCloth"/>'s twin). The far form is one material per body,
+        /// never per person, so it wears one red — the table's first — rather than each bandit's
+        /// own; the difference is invisible at the distance that form is drawn from.
+        /// </summary>
+        public static bool BanditCloth(ColonistCastPools pools, int look, out Rgb24 cloth, out Rgb24 cloth2)
+        {
+            bool bandit = pools.IsBanditBody(look);
+            cloth = bandit ? BanditReds[0] : default;
+            cloth2 = bandit ? BanditTrousers : default;
+            return bandit;
+        }
+
         static Rgb24 Pick(Rgb24[] table, uint seed, int pawnId, uint stream) =>
             table[(int)(Mix(seed, pawnId, stream) % (uint)table.Length)];
 
@@ -374,6 +473,11 @@ namespace Odyssey.Hud
         const uint BaldStream = 0xB55A4F09u;
         const uint ShavenStream = 0x5BD1E995u;
         const uint SexStream = 0x9E3779BBu;
+
+        // The bandit's two rolls (design 42 §5), after everything the person takes, so dressing
+        // somebody moves nothing about who they are.
+        const uint VestStream = 0x68E31DA4u;
+        const uint BanditRedStream = 0xB5297A4Du;
 
         /// <summary>One avalanche over (seed, pawn, stream). Integers only, unchecked, no float.</summary>
         static uint Mix(uint seed, int pawnId, uint stream)
@@ -407,17 +511,20 @@ namespace Odyssey.Hud
         public bool Equals(ColonistAppearance other) =>
             Look == other.Look && Skin.Equals(other.Skin) && Hair.Equals(other.Hair) &&
             Cloth.Equals(other.Cloth) && Cloth2.Equals(other.Cloth2) &&
-            HairPiece == other.HairPiece && BeardPiece == other.BeardPiece;
+            HairPiece == other.HairPiece && BeardPiece == other.BeardPiece &&
+            Outfit == other.Outfit && HeadPiece == other.HeadPiece;
 
         public override bool Equals(object? obj) => obj is ColonistAppearance other && Equals(other);
 
         public override int GetHashCode() =>
-            unchecked(((((((Look * 397) ^ (int)Skin.Packed) * 397 ^ (int)Hair.Packed) * 397 ^
-                         (int)Cloth.Packed) * 397 ^ HairPiece) * 397) ^ BeardPiece);
+            unchecked(((((((((Look * 397) ^ (int)Skin.Packed) * 397 ^ (int)Hair.Packed) * 397 ^
+                           (int)Cloth.Packed) * 397 ^ HairPiece) * 397) ^ BeardPiece) * 397 ^
+                       ((int)Outfit << 16 | (HeadPiece & 0xFFFF))));
 
         public override string ToString() =>
             "look " + Look + ", skin " + Skin + ", hair " + Hair + ", cloth " + Cloth + "/" + Cloth2 +
-            ", hairPiece " + HairPiece + ", beard " + BeardPiece;
+            ", hairPiece " + HairPiece + ", beard " + BeardPiece +
+            (Outfit == PawnOutfit.Issued ? string.Empty : ", outfit " + Outfit + ", head " + HeadPiece);
     }
 
     /// <summary>

@@ -155,7 +155,7 @@ namespace Odyssey.Tests.Sim
         /// that board: every block the loaded grid differs in must be flooded again, not only the
         /// ones something on the load path happens to dirty. Measured in the owner's save
         /// (2026-09-24): seven walls of a house on the first column of a navigation block were
-        /// walkable after the load, and marauders walked through them and chose sides inside them.
+        /// walkable after the load, and bandits walked through them and chose sides inside them.
         ///
         /// <para><see cref="AWorldWhoseGridHasChangedStillResumesIdentically"/> cannot see this: its
         /// wall is written straight into the grid and nothing marks the graph dirty in either

@@ -55,7 +55,7 @@ namespace Odyssey.Sim.Contracts
     ///
     /// <para><b>Why this replaced "kind ≠ 0 means animal".</b> Until combat every pawn that was
     /// not kind 0 was an animal, and six places in the interface and the renderer read the kind
-    /// that way. A marauder is kind 3 and a person, so the question "is this a person" has to be
+    /// that way. A bandit is kind 3 and a person, so the question "is this a person" has to be
     /// asked of the thing that knows — the species — and published as a fact, not reconstructed
     /// from a table index on the far side of the seam.</para>
     ///
@@ -300,7 +300,7 @@ namespace Odyssey.Sim.Contracts
         /// it, and the roster has to leave the animals out before anyone clicks anything.
         /// Presentation turns the index into a species through its own catalogue.
         ///
-        /// <para><b>Not "an animal" when it is not 0</b> — a marauder is kind 3 and a person. Ask
+        /// <para><b>Not "an animal" when it is not 0</b> — a bandit is kind 3 and a person. Ask
         /// <see cref="Flags"/> (<see cref="IsPerson"/>, <see cref="IsAnimal"/>,
         /// <see cref="IsColonist"/>) what a pawn is; ask the kind only which row of a table to
         /// draw it from.</para>
@@ -471,11 +471,11 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>
         /// The item def the entry is about, as an <see cref="ItemHandle"/> value, or -1 when it is
-        /// about none — what a marauder carried off (design 33 §17). Most entries carry none.
+        /// about none — what a bandit carried off (design 33 §17). Most entries carry none.
         /// </summary>
         public readonly int Subject;
 
-        /// <summary>How many of <see cref="Subject"/>: the stack a marauder carried off. 0 with no subject.</summary>
+        /// <summary>How many of <see cref="Subject"/>: the stack a bandit carried off. 0 with no subject.</summary>
         public readonly int Amount;
 
         public BulletinView(int id, int incidentDef, CellRef cell, int tick, int favourability = 0,

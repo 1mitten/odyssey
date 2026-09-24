@@ -99,6 +99,8 @@ namespace Odyssey.Presentation.Tests
                 for (int i = 0; i < rows.Count; i++)
                 {
                     if (i == pools.UniformMale || i == pools.UniformFemale) continue;
+                    // The gang's bodies own their colour too (design 42): FarBanditTests holds them.
+                    if (pools.IsBanditBody(i)) continue;
                     Assert.That(renderer.FarMaterialsFor(i), Is.Null,
                         $"{rows[i].prefabName} claimed a far colour it does not own");
                 }

@@ -23,6 +23,14 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
+  Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest
+  over bare arms and black trousers, and carry a crowbar or a bat; click one and the pane shows a
+  name, "bandit" under it and a masked portrait. Zoom out past the figure cap (or spawn a crowd):
+  a far bandit keeps the helmet and the red. A wrong answer is hair or a beard poking through the
+  helmet, a vest that is still camo, trousers that are red, a far bandit in camo or the white
+  jumpsuit, or three bandits you cannot tell from colonists at play distance.
+
 - **Do the streams and ponds read as water with a natural edge?** (`claude/meadow-shorelines`,
   design 38 §24.) New game; pan to the nearest stream and a pond, close in and pulled back.
   **Look for** a shoreline that curves and cuts corners instead of following the cells, marsh as a
@@ -69,16 +77,16 @@ the next session learns to ignore.
   or a bush that vanishes at the screen's edge or pops in late; grass that flickers while panning; a stutter
   when a colonist digs, builds or a crop grows; or no smoother than before at the far zoom.
 
-- **Should four armed colonists lose to three marauders?** (`claude/combat-c7`, design 33 §21d,
+- **Should four armed colonists lose to three bandits?** (`claude/combat-c7`, design 33 §21d,
   `docs/milestones/combat-report.md` §5.) **Every combat row from here down is on `main` since PR
   #194**, whatever branch it names; the combat plan is done and these are what is left of it.
   - *Set-up.* New game, five colonists. Debug menu: *Arm every colonist*, then draft them all and
-    move them together. *Spawn 3 marauders* about twenty cells off.
+    move them together. *Spawn 3 bandits* about twenty cells off.
   - *What the gate saw.* On one seed of three the gathered squad of four lost to the three; on the
-    other two the squads downed nine and seven marauders over ten days. Every number in the fight is
+    other two the squads downed nine and seven bandits over ten days. Every number in the fight is
     invented, so this is the tuning speaking.
-  - *A wrong answer looks like* an armed squad that feels hopeless against three (the marauders too
-    strong — their level, the machete, or the colonists' weapon roll), or three marauders that never
+  - *A wrong answer looks like* an armed squad that feels hopeless against three (the bandits too
+    strong — their level, the machete, or the colonists' weapon roll), or three bandits that never
     get a colonist down (too weak). Say which, and roughly how many a squad of four should beat.
 - **Does the landing ring read, and does a drag across the roster select the squad?**
   (`claude/draft-ring-roster-drag`, design 33 §20.)
@@ -86,7 +94,7 @@ the next session learns to ignore.
   - *Expect.* Select the squad and right-click the ground: under each colonist's own destination a
     **pale ring** snaps in from wide, flashes once as it lands, stays faint while she walks, and
     fades as she arrives. Sent somewhere else mid-walk, the old ring fades as the new one snaps.
-    Undraft mid-walk and it fades. The red attack ring (right-click a marauder) still looks like
+    Undraft mid-walk and it fades. The red attack ring (right-click a bandit) still looks like
     the same family in a different colour.
   - *Then the roster.* With no tool armed, press on one card and drag across three more: all four
     are selected, the first as the one in the pane, and the camera does not move. Drag back: the
@@ -101,19 +109,19 @@ the next session learns to ignore.
     - the camera swinging to the first card during a drag, or a click that no longer jumps;
     - a right-drag that selects instead of reordering.
 
-- **Do three marauders all get to work, and does a squad go upstairs?** (`claude/combat-stall-fix`,
+- **Do three bandits all get to work, and does a squad go upstairs?** (`claude/combat-stall-fix`,
   design 33 §19.)
   - *Set-up.* Load a save with a building on a terrace (the owner's `the-latest-tim` will do), wall
-    the colonists in or put them behind a shut door, and let three marauders come.
-  - *Expect.* Each marauder breaks something: one at a wall with a single side, the others at other
-    walls. None stands on *Fighting* with nothing to hit for more than a moment. No marauder or
+    the colonists in or put them behind a shut door, and let three bandits come.
+  - *Expect.* Each bandit breaks something: one at a wall with a single side, the others at other
+    walls. None stands on *Fighting* with nothing to hit for more than a moment. No bandit or
     colonist walks through a wall after a load.
   - *Also check:* draft the squad, select them all and right-click the upper floor of a two-storey
     building: all go up, on that floor, none to the room below or the ground outside. Then
     right-click the ladder itself and see whether the attack it starts (§13i) is what you want.
 
-- **Does a marauder steal and leave?** (`claude/combat-thieves`, design 33 §17.)
-  - *Set-up.* Let a marauder down every colonist, with no walls, doors or other buildings of yours
+- **Does a bandit steal and leave?** (`claude/combat-thieves`, design 33 §17.)
+  - *Set-up.* Let a bandit down every colonist, with no walls, doors or other buildings of yours
     about (beds are fine: it leaves them alone), and a few stacks lying around — the starting meals
     will do.
   - *Expect.* It walks to the nearest stack, stoops and lifts it, and walks off with it in its
@@ -121,14 +129,14 @@ the next session learns to ignore.
     edge it vanishes, with no body, and the Events panel shows a red **Theft · Meal × 12** row with
     the negative chime; clicking it jumps the camera to where it left.
   - *Also check:*
-    - with nothing on the board to take, it walks off empty-handed and the panel says **Marauder
+    - with nothing on the board to take, it walks off empty-handed and the panel says **Bandit
       left**, in the neutral colour;
     - knock it down while it carries something and the stack is dropped where it falls;
     - spawn a colonist from the debug menu while it is walking off: within about five seconds it
       drops the stack and goes for her;
     - the debug menu's Events tab lists the two drops and nothing new.
   - A wrong answer looks like any of these:
-    - a marauder that stands about for ever with everybody down and stacks lying in the open;
+    - a bandit that stands about for ever with everybody down and stacks lying in the open;
     - one that takes a stack while a colonist it could reach stands in the open, or while it has
       a wall of yours to break;
     - the stack still drawn on the ground after it is lifted, or nothing in its arms;
@@ -141,13 +149,13 @@ the next session learns to ignore.
       There is no value yet; say if the choice reads as stupid.
 
 - **Does the ring now mean only your orders?** (`claude/combat-response`, design 33 §18b.)
-  - *Set-up.* Draft two colonists and select both. Spawn a marauder beside one of them from the
+  - *Set-up.* Draft two colonists and select both. Spawn a bandit beside one of them from the
     debug menu, and another on an undrafted colonist about five cells from them.
-  - *Expect.* No red ring while they fight of their own accord — the one striking the marauder
-    beside her, the other running over to help. Right-click the marauder: the ring snaps in, as
+  - *Expect.* No red ring while they fight of their own accord — the one striking the bandit
+    beside her, the other running over to help. Right-click the bandit: the ring snaps in, as
     before. Rescue a downed colonist: no ring, and she is still carried in the arms.
   - A wrong answer looks like any of these:
-    - a ring under a marauder nobody right-clicked;
+    - a ring under a bandit nobody right-clicked;
     - no ring after a right-click on one;
     - a rescued colonist left on the ground or standing at the carrier's feet — the carrier lookup
       moved to a new aspect, and only Unity can say it still finds her.
@@ -156,10 +164,10 @@ the next session learns to ignore.
   - *Set-up.* Select a colonist and press the new button beside Draft on her pane: it reads
     *Fight back*, then *Defend*, then *Flee*, then round again. Box-select three and press it
     once: all three should read the same.
-  - *Defend.* Put a colonist on Defend while she works. Spawn a marauder on another colonist
+  - *Defend.* Put a colonist on Defend while she works. Spawn a bandit on another colonist
     about five cells from her. She drops her work, runs to it and fights it; when it is down she
     goes back to work. She is never drafted: no diamond, no four-hour clock.
-  - *Flee.* Put a colonist on Flee and spawn a marauder about six cells from her. She drops her
+  - *Flee.* Put a colonist on Flee and spawn a bandit about six cells from her. She drops her
     work and runs, well away; when it is down or far off, she goes back to work. Struck, she runs
     rather than fighting back.
   - *Fight back.* The default does what it always did: works on until she is struck.
@@ -181,7 +189,7 @@ the next session learns to ignore.
 
 - **Do drafted colonists come to help?** (`claude/combat-drafted-help`, design 33 §15.)
   - *Set-up.* Draft two or three colonists and leave them standing within about eight cells of a
-    colonist who is **not** drafted. Spawn a marauder beside her from the debug menu.
+    colonist who is **not** drafted. Spawn a bandit beside her from the debug menu.
   - *Expect.* As soon as it is on her, the drafted ones run to it and fight it, each on a free side.
     When it goes down they stand where they are, still drafted.
   - *Also check:*
@@ -202,10 +210,10 @@ the next session learns to ignore.
       only your orders, and a helper wears none now (design 33 §18b; the row above).
     - Eight cells (20 m): say if it is too far or not far enough.
 
-- **Does a marauder break in, and do the weapons feel different on wood and stone?**
+- **Does a bandit break in, and do the weapons feel different on wood and stone?**
   (`claude/combat-owner-round`, design 33 §14b, §14d.)
   - *Break in.* Build a small room of wooden walls with **no door** round a colonist, or down
-    every colonist. Then spawn a marauder from the debug menu. It should walk to the nearest wall
+    every colonist. Then spawn a bandit from the debug menu. It should walk to the nearest wall
     you built and beat it down: floating numbers, the thud, and the wall gone with nothing left
     behind.
   - *Look up.* Take down another wall of the room yourself, or send a colonist out. Within a few
@@ -216,29 +224,29 @@ the next session learns to ignore.
     - The bat should do better on stone (about 9) than on wood (about 7).
     - Her Melee should not rise while she does it.
   - A wrong answer looks like any of these:
-    - a marauder that idles beside your walls;
+    - a bandit that idles beside your walls;
     - one that attacks a wall while a colonist it could reach stands in the open;
     - one that keeps at a wall for a long time after a way in has opened;
     - one that goes for a ruined-city wall;
     - the same numbers from every weapon on every wall.
-  - Since §16 (`claude/combat-marauder-doors`) a closed door holds it and it leaves beds alone;
+  - Since §16 (`claude/combat-bandit-doors`) a closed door holds it and it leaves beds alone;
     the row below is the test for both.
 
-- **Does a door hold a marauder, and does it spare the beds?** (`claude/combat-marauder-doors`,
+- **Does a door hold a bandit, and does it spare the beds?** (`claude/combat-bandit-doors`,
   design 33 §16.)
   - *The door.* Build a small room of wooden walls **with a door**, put a colonist inside and
-    draft her so she stays. Spawn a marauder outside, on the door's side. It should walk to the
+    draft her so she stays. Spawn a bandit outside, on the door's side. It should walk to the
     door and beat it down — it never opens it — then go in for her.
-  - *The far side.* Do it again with the marauder on the side away from the door. It should break
+  - *The far side.* Do it again with the bandit on the side away from the door. It should break
     the nearest wall, not walk round to the door. That is the rule as decided (§16e); say if it
     reads as stupid, because that is the question a smarter breach would answer.
-  - *Following in.* Undraft her and let her walk out while the marauder is near. It may follow
+  - *Following in.* Undraft her and let her walk out while the bandit is near. It may follow
     her through the open door; that is expected.
-  - *Beds.* Build a bed, then let a marauder down every colonist. It should stand about or
+  - *Beds.* Build a bed, then let a bandit down every colonist. It should stand about or
     wander, and not touch the bed. Build a wall near it and it should go for the wall. Then
     order a drafted colonist on to the bed: the order still works.
   - A wrong answer looks like any of these:
-    - a marauder standing in a doorway, or a door swinging open for it;
+    - a bandit standing in a doorway, or a door swinging open for it;
     - one that idles outside a closed door with a colonist behind it, and breaks nothing;
     - one that walks round a room to reach its door rather than breaking the nearer wall;
     - a bed with floating numbers over it and nobody ordered to strike it;
@@ -248,13 +256,13 @@ the next session learns to ignore.
   colonist, Ctrl + right-click another: she is attacked, fights back, and her mood drops by about 8
   points for a day (the Needs panel's mood; the Thoughts tab that would name it is still disabled).
   Let a colonist die: every other colonist's mood drops by about 6 for three days, and a
-  marauder's death moves nobody. A wrong answer is no drop, a drop for a marauder, or a drop that
+  bandit's death moves nobody. A wrong answer is no drop, a drop for a bandit, or a drop that
   stacks up on every blow. **Since the owner's answers (§14, `claude/combat-owner-round`)**: a
   swing that misses or is dodged gives the drop too, and a second swing renews the day rather than
   stacking. Both sides of a fight carry it.
 
 - **Does blood read as blood, and is it too much?** (`claude/combat-blood`, design 33 §10).
-  *Arm every colonist*, *Spawn 3 marauders*, and watch at the play camera's distance. Every landed
+  *Arm every colonist*, *Spawn 3 bandits*, and watch at the play camera's distance. Every landed
   hit should throw a few red drops from the wound along the blow and leave one mark where they
   land: a machete or arc blade a long splatter with drops thrown ahead, a bat, crowbar or fist a
   smaller round spot. Somebody going down should get a pool under the middle of the body a moment
@@ -362,7 +370,7 @@ the next session learns to ignore.
   should light **Custom**; restarting the game should come back on the preset you left.
 
 - **Does a rescue read, and is a five-day bed rest right?** (`claude/combat-rescue`, design 33 §11).
-  Build a bed, let a marauder down a colonist, then draft another, select her and right-click the
+  Build a bed, let a bandit down a colonist, then draft another, select her and right-click the
   one on the ground: she walks over, stoops, stands up with the body across her arms, carries it to
   the bed and lays it down. Undrafted, with Rescue ticked on the Work tab, colonists do it by
   themselves. With no free bed, *No bed for the wounded* appears and nobody comes. A wrong answer is
@@ -380,16 +388,16 @@ the next session learns to ignore.
   colonists waiting on a job. **And since the merge with combat (design 31 §19)**: the right-hand
   column is **271 px, down from 296**, so check the outdoor temperature on the clock still clears the
   speed buttons beside it — a wrong answer is the reading touching or running under them again; and
-  spawn a marauder with nobody to fight near a campfire — a wrong answer is it settling at the fire.
+  spawn a bandit with nobody to fight near a campfire — a wrong answer is it settling at the fire.
 
 - **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
-  Spawn a marauder, draft two colonists, select both and right-click it: a translucent red ring
+  Spawn a bandit, draft two colonists, select both and right-click it: a translucent red ring
   should appear wide round its feet and snap in, in a fifth of a second, flash once as it lands
   and stay faint under it until it goes down — then fade. Right-click a hog: its ring hugs the
   hog's own length. Deselect them: it fades; reselect: it is back at rest, without the snap. A
   wrong answer is a ring you notice only when it lands (the 0.2 s is too quick), a flash that
   reads as a glitch, a hold so faint it is lost on grass or at night, a red you confuse with the
-  draft's dark red over their heads or the salmon diamond over the marauder, or a ring sunk into a
+  draft's dark red over their heads or the salmon diamond over the bandit, or a ring sunk into a
   slope or floating on a terrace step.
 
 - **Does the context menu make taking up a weapon clear?** (design 33 §7a, `claude/combat-menu`).
@@ -404,7 +412,7 @@ the next session learns to ignore.
   still unclear — in which case say what would make it clear (the colonist's name on the row?).
 
 - **Should an unattended fight end in downs, never deaths?** (design 33 §3, PR #180). Only an
-  order strikes a body on the ground, so a marauder left alone downs a colonist and turns to the
+  order strikes a body on the ground, so a bandit left alone downs a colonist and turns to the
   next; nobody dies unless you send someone to finish it. Say if that is wrong.
 
 - **Is a weapon held and dropped where it should be?** (checkpoint 3, C3 — `claude/combat-c2`,

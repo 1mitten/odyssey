@@ -73,6 +73,13 @@ namespace Odyssey.Presentation.World
             public MeshFilter? BeardMesh;
             public MeshRenderer? BeardRenderer;
 
+            /// <summary>The headgear slot — the bandit's welding helmet (design 42) — on the same terms.</summary>
+            public MeshFilter? HeadMesh;
+            public MeshRenderer? HeadRenderer;
+
+            /// <summary>What the pawn this figure is lent to wears, set on every lease (design 42).</summary>
+            public PawnOutfit Outfit;
+
             /// <summary>The pawn this figure is lent to, or -1 when it is parked in the pool.</summary>
             public int Pawn;
 

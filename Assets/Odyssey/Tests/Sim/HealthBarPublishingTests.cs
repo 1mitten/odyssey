@@ -25,7 +25,7 @@ namespace Odyssey.Tests.Sim
         static bool Rule(Pawn pawn) => pawn.HpMilli < pawn.HpMaxMilli || pawn.Downed || pawn.Drafted;
 
         /// <summary>
-        /// Two drafted colonists sent at two marauders, a third colonist left alone, fought for
+        /// Two drafted colonists sent at two bandits, a third colonist left alone, fought for
         /// 3,000 ticks with the shipped rules. On every tick every living pawn's bar is owed
         /// exactly when its state says, and the bar only ever changes on a tick the state changed —
         /// so the bar does not blink on the publishing side. Measured 2026-09-23: see §8a.
@@ -40,8 +40,8 @@ namespace Odyssey.Tests.Sim
             Stand(colony, a, Near(colony, 0, 0));
             Stand(colony, b, Near(colony, 1, 0));
             Stand(colony, idle, Near(colony, -6, -6));
-            Pawn m1 = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 4, 0));
-            Pawn m2 = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 4, 2));
+            Pawn m1 = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 4, 0));
+            Pawn m2 = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 4, 2));
             Assert.That(Draft(colony, a), Is.EqualTo(IntentRejection.None));
             Assert.That(Draft(colony, b), Is.EqualTo(IntentRejection.None));
             Assert.That(Attack(colony, a, m1), Is.EqualTo(IntentRejection.None));

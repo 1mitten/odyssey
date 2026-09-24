@@ -4,7 +4,7 @@ namespace Odyssey.Sim.Events
 {
     /// <summary>
     /// The worker of an incident that is <b>written down, never fired</b> (design 33 §17): the world
-    /// records it in the ledger at the moment it happens — a marauder carrying a stack off the
+    /// records it in the ledger at the moment it happens — a bandit carrying a stack off the
     /// board, or walking off it empty-handed — and nothing asks for it. So it is on the Events panel
     /// and in the History to come, with its own name, ink and chime, exactly as a fired incident is,
     /// and it is never on the debug menu's Events tab (<see cref="Fireable"/>), where a row would do

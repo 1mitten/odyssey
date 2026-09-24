@@ -8,7 +8,7 @@ namespace Odyssey.Tests.Sim
 {
     /// <summary>
     /// Healing (design 33 §1, §6A): a colonist heals only lying in a bed, an animal wherever it
-    /// lies, a marauder never; a downed pawn gets up at 15 % of its pool; the rate is the content's
+    /// lies, a bandit never; a downed pawn gets up at 15 % of its pool; the rate is the content's
     /// per day, exactly. Each claim is set beside the pawn that does not heal, over the same day.
     /// </summary>
     public class HealingTests
@@ -78,22 +78,22 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void AnAnimalHealsWhereItLiesAndAMarauderNever()
+        public void AnAnimalHealsWhereItLiesAndABanditNever()
         {
             var colony = Board();
             colony.World.Tick(5);
             Pawn by = colony.Pawns.Pawns.All[0];
             Pawn hog = Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, 10, 0));
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, -10, 0));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, -10, 0));
             colony.World.Tick();
 
             Strike(colony, by, hog, hog.HpMilli + 1_000);
-            Strike(colony, by, marauder, marauder.HpMilli + 1_000);
-            Assert.That(hog.Downed && marauder.Downed, Is.True);
+            Strike(colony, by, bandit, bandit.HpMilli + 1_000);
+            Assert.That(hog.Downed && bandit.Downed, Is.True);
 
             colony.World.Tick(Day(colony));
-            Assert.That(marauder.HpMilli, Is.EqualTo(-1_000), "a marauder healed");
-            Assert.That(marauder.Downed, Is.True, "a marauder got up");
+            Assert.That(bandit.HpMilli, Is.EqualTo(-1_000), "a bandit healed");
+            Assert.That(bandit.Downed, Is.True, "a bandit got up");
             Assert.That(hog.Downed, Is.False, "the hog never got up");
             Assert.That(hog.HpMilli, Is.GreaterThan(0));
         }

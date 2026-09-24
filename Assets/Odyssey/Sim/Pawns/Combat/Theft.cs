@@ -5,14 +5,14 @@ using Odyssey.Sim.Pathing;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// What a marauder does when there is nobody left to fight and nothing left to break (design
+    /// What a bandit does when there is nobody left to fight and nothing left to break (design
     /// 33 §17; the owner, 2026-09-24: <i>"It will thieve items or kidnap people depending on their
     /// motivation creating a negative event (but they could be rescued later) - seam this later but
     /// for now - thieve items"</i>): it lifts the nearest stack it can reach, walks to the nearest
     /// edge of the board it can reach, and leaves, taking the stack with it. With nothing to take
     /// it leaves empty-handed; with no edge to reach it stays, and thinks again as it did.
     ///
-    /// <para><b>The last thing a marauder's mind reaches for</b> (<see cref="HostileThinkNode"/>): a
+    /// <para><b>The last thing a bandit's mind reaches for</b> (<see cref="HostileThinkNode"/>): a
     /// colonist it can reach comes first, then a colony building it may break, and only then what
     /// it came for. A thief looks up on <see cref="CombatDef.rechooseTicks"/> while it walks
     /// (<see cref="StealJobDriver"/>), so a colonist who can be reached again takes it back to the
@@ -35,7 +35,7 @@ namespace Odyssey.Sim.Pawns
         /// <para><b>Scales with the item stacks on the board</b> (every loose, stored and contained
         /// one: a branch and a reservation probe each, and a reachability test for each nearer
         /// than the best so far) plus the edge search, which is bounded by the board's side. Asked
-        /// on a marauder's think, and only when it has nobody to fight and nothing to break.</para>
+        /// on a bandit's think, and only when it has nobody to fight and nothing to break.</para>
         /// </summary>
         public static bool TryFill(PawnContext ctx, Pawn pawn, TraverseMode mode, Job job)
         {
@@ -136,7 +136,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// Take a thief that has reached its edge off the board (design 33 §17): the stack in its
         /// arms and the weapon in its hand go with it, the ledger records a theft — or, with
-        /// nothing carried, a marauder leaving — and the pawn is despawned. <b>Deferred</b> to the
+        /// nothing carried, a bandit leaving — and the pawn is despawned. <b>Deferred</b> to the
         /// end of the tick by the driver (<see cref="PawnContext.Defer"/>), for death's reason:
         /// <see cref="PawnRegistry.Despawn"/> shifts the list every pawn loop walks.
         ///
@@ -146,7 +146,7 @@ namespace Odyssey.Sim.Pawns
         ///
         /// <para><b>Its weapon leaves with it.</b> <see cref="PawnRegistry.Despawn"/> puts a held
         /// weapon down where the pawn stood, which is right for a death and for a pawn that is simply
-        /// gone; a marauder walking off with its machete has not been disarmed, and leaving one on
+        /// gone; a bandit walking off with its machete has not been disarmed, and leaving one on
         /// the edge of the board for every thief would arm the colony for free.</para>
         /// </summary>
         public static bool Leave(PawnContext ctx, Pawn pawn, int tick)
@@ -174,7 +174,7 @@ namespace Odyssey.Sim.Pawns
             if (weapon != null) ctx.Items.Despawn(weapon);
 
             ctx.Incidents?.Ledger.Record(
-                subject >= 0 ? IncidentHandle.Theft : IncidentHandle.MarauderLeft, pawn.Cell, tick, subject, amount);
+                subject >= 0 ? IncidentHandle.Theft : IncidentHandle.BanditLeft, pawn.Cell, tick, subject, amount);
 
             ctx.Combat?.Jobs.EndJob(pawn, JobStatus.Succeeded);
             ctx.Pawns.Despawn(pawn);

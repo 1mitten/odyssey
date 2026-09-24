@@ -121,7 +121,7 @@ namespace Odyssey.Hud
         /// left click selects a pile by), or held in a store there. The primary colonist — the
         /// first standing colonist in the selection, drafted or not (design 33 §5j) — is the one
         /// sent. A selection whose every colonist is down gets the row disabled, reason "Downed";
-        /// a selection with no colonist at all gets no row, so no menu: an animal or a marauder in
+        /// a selection with no colonist at all gets no row, so no menu: an animal or a bandit in
         /// a stale selection takes no orders, and a menu of one Cancel is a menu that says nothing.
         /// </summary>
         static void OfferEquip(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot, CellRef cell,

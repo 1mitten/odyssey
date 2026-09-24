@@ -131,14 +131,26 @@ Shader "Odyssey/Character"
             return saturate(InsideRect(uv, a) + InsideRect(uv, b));
         }
 
-        // The order of the four is irrelevant: the classifier guarantees the slots are disjoint,
-        // and asserts it, so no fragment is ever inside two of them.
+        // The first slot a fragment is inside wins, in the order skin, hair, cloth, cloth2. For a
+        // colonist that is no rule at all: the classifier guarantees the slots are disjoint, and
+        // asserts it, so no fragment is ever inside two of them and the order cannot show. It is
+        // for the bandit (docs/design/42-bandits.md §5), whose cloth2 is the whole atlas — "every
+        // part of this body that is not skin, black" — lying behind the skin and the vest's red.
         float3 Repaint(float3 albedo, float2 uv)
         {
-            albedo = lerp(albedo, _SkinColour.rgb,   _RemapStrength * InsidePair(uv, _SkinRect0, _SkinRect1));
-            albedo = lerp(albedo, _HairColour.rgb,   _RemapStrength * InsidePair(uv, _HairRect0, _HairRect1));
-            albedo = lerp(albedo, _ClothColour.rgb,  _RemapStrength * InsidePair(uv, _ClothRect0, _ClothRect1));
-            albedo = lerp(albedo, _Cloth2Colour.rgb, _RemapStrength * InsidePair(uv, _Cloth2Rect0, _Cloth2Rect1));
+            float taken = 0;
+            float w;
+            w = InsidePair(uv, _SkinRect0, _SkinRect1);
+            albedo = lerp(albedo, _SkinColour.rgb, _RemapStrength * w);
+            taken = w;
+            w = InsidePair(uv, _HairRect0, _HairRect1) * (1 - taken);
+            albedo = lerp(albedo, _HairColour.rgb, _RemapStrength * w);
+            taken = saturate(taken + w);
+            w = InsidePair(uv, _ClothRect0, _ClothRect1) * (1 - taken);
+            albedo = lerp(albedo, _ClothColour.rgb, _RemapStrength * w);
+            taken = saturate(taken + w);
+            w = InsidePair(uv, _Cloth2Rect0, _Cloth2Rect1) * (1 - taken);
+            albedo = lerp(albedo, _Cloth2Colour.rgb, _RemapStrength * w);
             return albedo;
         }
 

@@ -231,9 +231,9 @@ namespace Odyssey.Hud
             int noBed = 0;
             long noBedIds = 0;
 
-            // Colonists only (design 33 §5d): these are the colony's alerts, and a marauder or an
+            // Colonists only (design 33 §5d): these are the colony's alerts, and a bandit or an
             // animal is neither hungry on the colony's account nor part of whether it is idle. A
-            // marauder's needs never move at all (design 33 §5c). Read from the flags, which a view
+            // bandit's needs never move at all (design 33 §5c). Read from the flags, which a view
             // built without them derives from the kind as it always did.
             int colonists = 0;
             PawnId onlyColonist = default;

@@ -66,6 +66,7 @@ namespace Odyssey.Presentation.Rendering
 
         readonly Piece[] _hair;
         readonly Piece[] _beards;
+        readonly Piece[] _headgear;
 
         /// <summary>
         /// Resolve both families.
@@ -79,6 +80,7 @@ namespace Odyssey.Presentation.Rendering
         {
             _hair = Resolve(catalogue, ModuleIds.HairBase);
             _beards = Resolve(catalogue, ModuleIds.BeardBase);
+            _headgear = Resolve(catalogue, ModuleIds.HeadgearBase);
         }
 
         /// <summary>How many hair pieces there are, so a drawer can size a bucket per piece.</summary>
@@ -87,9 +89,37 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>How many beards there are.</summary>
         public int BeardCount => _beards.Length;
 
+        /// <summary>How many pieces of headgear there are (design 42).</summary>
+        public int HeadgearCount => _headgear.Length;
+
         public Piece Hair(int index) => At(_hair, index);
 
         public Piece Beard(int index) => At(_beards, index);
+
+        /// <summary>
+        /// A piece of headgear. Its rows carry no appearance, so <see cref="Piece.Cells"/> is null
+        /// and <see cref="Wear"/> puts it on in the pack's own paint — the helmet is metal, and
+        /// the owner chose it as painted (design 42 §2).
+        /// </summary>
+        public Piece Headgear(int index) => At(_headgear, index);
+
+        /// <summary>
+        /// Switch on the skinned overlay a row names — the bandit's vest — after
+        /// <see cref="BareTheHead"/> has switched every <c>_Attach_</c> child off. The overlays
+        /// are children of the rig and deform with it, so turning one on is the whole of wearing
+        /// it. Returns the renderer, or null when the row names none or the rig has no such child.
+        /// </summary>
+        public static SkinnedMeshRenderer? ShowOverlay(GameObject instance, string overlayName)
+        {
+            if (string.IsNullOrEmpty(overlayName)) return null;
+            foreach (SkinnedMeshRenderer skin in instance.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true))
+            {
+                if (!string.Equals(skin.gameObject.name, overlayName, StringComparison.Ordinal)) continue;
+                skin.gameObject.SetActive(true);
+                return skin;
+            }
+            return null;
+        }
 
         static Piece At(Piece[] pieces, int index) =>
             (uint)index < (uint)pieces.Length ? pieces[index] : default;
@@ -202,8 +232,12 @@ namespace Odyssey.Presentation.Rendering
 
             filter.sharedMesh = piece.Mesh;
 
+            // A piece with no appearance (the helmet) is worn in its own paint, but still as a
+            // character, so it is inked and drawn after the outline pass like the head under it.
             Material? art = piece.Material;
-            Material? painted = materials?.For(art, piece.Cells, look);
+            Material? painted = piece.Cells != null
+                ? materials?.For(art, piece.Cells, look)
+                : materials?.InOwnPaint(art);
             renderer.sharedMaterial = painted != null ? painted : art;
             renderer.enabled = true;
         }

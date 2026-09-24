@@ -231,7 +231,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// Is there a side of the building <paramref name="pawn"/> could take <b>now</b> — a cell in
         /// reach she can stand on and get to that no other fighter holds, her own cell included?
-        /// <see cref="ChooseSide"/>'s answer, so the marauder's choice (§14b) and the driver that
+        /// <see cref="ChooseSide"/>'s answer, so the bandit's choice (§14b) and the driver that
         /// carries it out ask one question (design 33 §19). <see cref="CanReach"/> is the order's
         /// question and counts a held side: a player's attacker waits for one.
         /// </summary>
@@ -279,7 +279,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// The colony building a marauder with no colonist to reach attacks (design 33 §14b; the
+        /// The colony building a bandit with no colonist to reach attacks (design 33 §14b; the
         /// owner, 2026-09-24: <i>"kill colonists, destroy base"</i>): of every edifice a colonist
         /// raised (<see cref="PlacedEdifice.Built"/>) that is a target (<see cref="TryStanding"/>)
         /// and that has a side <paramref name="pawn"/> can take now (<see cref="HasAFreeSide"/>,
@@ -287,30 +287,30 @@ namespace Odyssey.Sim.Pawns
         /// nearest by <see cref="PawnContext.Distance"/> to its own cell, <b>a tie to the lower
         /// record handle</b> — the older building. The ruined city's walls are passed over:
         /// <i>destroy base</i> names the colony's. A building whose every side is held is not a
-        /// choice: the next one is, and with none free the marauder turns to what it came for.
+        /// choice: the next one is, and with none free the bandit turns to what it came for.
         ///
         /// <para><b>Scales with the edifice records</b> — every edifice ever placed, trees and removed
         /// slots included: one branch for anything a colonist did not raise, a content lookup of at
         /// most twelve rows for anything she did, and for each one nearer than the best so far a
         /// side search of at most ten cells, each a reachability test and, for one nearer than the
-        /// last, a pass over the pawns (<see cref="Melee.Holds"/>). Asked on a marauder's think when
+        /// last, a pass over the pawns (<see cref="Melee.Holds"/>). Asked on a bandit's think when
         /// no colonist can be reached, never per tick.</para>
         ///
-        /// <para><b>A bed is passed over</b> (<see cref="IsMarauderTarget"/>, design 33 §16), so a
+        /// <para><b>A bed is passed over</b> (<see cref="IsBanditTarget"/>, design 33 §16), so a
         /// colony with everybody down still has somewhere to be carried to and get up from.
-        /// <b>Nearest to the marauder</b> is still the whole of the choice: the wall between it and
+        /// <b>Nearest to the bandit</b> is still the whole of the choice: the wall between it and
         /// a colonist, or a price for walking through walls, is deferred until play asks for it.</para>
         /// </summary>
         /// <summary>
-        /// May a marauder choose this edifice for itself (design 33 §16; owner, 2026-09-24: "do what
+        /// May a bandit choose this edifice for itself (design 33 §16; owner, 2026-09-24: "do what
         /// you recommend")? Everything that is a target (§13b) but a bed. A bed is where a downed
-        /// colonist is carried to and recovers in (§11), and in the §14 soak a marauder left with
-        /// nobody standing broke the beds first and nobody got up again. <b>Only the marauder's own
+        /// colonist is carried to and recovers in (§11), and in the §14 soak a bandit left with
+        /// nobody standing broke the beds first and nobody got up again. <b>Only the bandit's own
         /// choice asks this</b>: a player's order may still strike a bed (§13d, C6 answer (c)), and
         /// <see cref="TryStanding"/> — what a target is — is unchanged. One owner, so a medical bed
         /// or a cot later joins here.
         /// </summary>
-        public static bool IsMarauderTarget(ushort edifice) => edifice != CoreContent.EdificeBed;
+        public static bool IsBanditTarget(ushort edifice) => edifice != CoreContent.EdificeBed;
 
         public static bool TryNearestColonyTarget(PawnContext ctx, Pawn pawn, TraverseMode mode, out BuildingTarget nearest)
         {
@@ -325,13 +325,13 @@ namespace Odyssey.Sim.Pawns
             {
                 PlacedEdifice placed = records[handle];
                 if (placed.Removed || !placed.Built) continue;
-                if (!IsMarauderTarget(placed.Def)) continue;
+                if (!IsBanditTarget(placed.Def)) continue;
                 int distance = ctx.Distance(pawn.Cell, placed.CellIndex);
                 if (distance >= bestDistance) continue;
                 if (!TryStanding(ctx, handle, out BuildingTarget target)) continue;
                 // A side it can take now, not merely one it can get to (design 33 §19): the
                 // driver's own question. Asked as reach alone, a wall whose one side another
-                // marauder held was chosen again every rethink, and the marauder stood beside the
+                // bandit held was chosen again every rethink, and the bandit stood beside the
                 // step below it on "Fighting" for as long as the other one was striking.
                 if (!HasAFreeSide(ctx, pawn, target, mode)) continue;
                 nearest = target;
