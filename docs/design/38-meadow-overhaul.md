@@ -712,6 +712,53 @@ wildflowers, ground cover, sunflowers) join the same path — same shader, never
 once `claude/meadow-look-fixes` (the leaf fade and colour) has landed; then trees, which need the
 sight fade and per-instance colour carried in the buffer.
 
+### 18e. The player benchmark: real GPU time, arm by arm (2026-09-24)
+
+Every GPU figure before this was the frame standing in for the GPU, because `FrameTimingManager`
+reads nothing in a batch editor on Direct3D 11. `PlayerBench` runs inside a **development player**
+(`Build/Win64/Odyssey.exe -odyssey-newgame -odyssey-bench -screen-fullscreen 1 -screen-width 3840
+-screen-height 2160 -logFile <path>`), builds the Standard meadow, and times arms in one run: the
+GPU's own frame time, CPU submission, frame and draw calls, then writes the table and quits. **It
+takes the screen**, so it is guarded three ways — every step under a try/catch that logs and quits,
+a 3-minute watchdog, and a thread timer that kills the process after that. The first attempt had
+none of them, died on an unsupported profiler option, and sat fullscreen over the owner's work for
+six minutes; run it only with the owner's say-so.
+
+One run, 2026-09-24, RTX 5070 Ti, DX11, 3840 × 2160, render scale 1, no MSAA, the player's stored
+settings (shadow distance 40 m, four cascades, grass 60), after 18a. 66 s, quit on its own.
+
+| arm | GPU ms | vs look | submit ms | draw calls |
+|---|---|---|---|---|
+| look as shipped | 8.69 | | 1.07 | 1,175 |
+| look again (drift control) | 8.32 | | 1.04 | 1,175 |
+| **no shadow casters** | 6.44 | **−2.1** | 0.79 | 871 |
+| no dressing | 7.22 | −1.3 | 0.85 | 911 |
+| dressing and tufts at their coarsest level | 7.51 | −1.0 | 1.03 | 1,175 |
+| golden grade off | 7.64 | −0.9 | 1.05 | 1,175 |
+| no tufts | 7.80 | −0.7 | 1.01 | 1,108 |
+| no dressing or tufts | 7.45 | −1.0 | 0.79 | 844 |
+| stock ground (new session) | 7.49 | −0.7 against the next row | 0.97 | 1,175 |
+| look (new session) | 8.20 | | 0.97 | 1,175 |
+
+"vs look" is against the mean of the two look rows (8.5 ms); the drift between them, **~0.4 ms**,
+is the resolution of this table. The per-pass split was attempted and recorded nothing: the render
+markers that accept a GPU recorder here are CPU-side names (`Shadows.*`, `CommandBuffer.*`), and
+none returned a GPU time on DX11. A RenderDoc capture is the instrument for the pass split.
+
+**What it ranks.**
+
+1. **Shadows, ~2.1 ms of GPU** — the largest term even after 18a, and it is the casting itself now,
+   not the margin (the calls fall only 1,175 → 871). The levers are the casters (the tree shadow
+   proxy's level, bushes already off) and the cascades (four at a 40 m distance).
+2. **The dressing's fill, ~1.0–1.3 ms** — and drawing it at its coarsest level recovers ~1.0 of
+   that, so **levels of detail on the dressing (18c) are the next unit**, measured, not guessed.
+3. **The golden grade, ~0.9 ms** and **the painted ground, ~0.7 ms** — real, and each a look
+   decision the owner made; recorded, not touched.
+4. **CPU submission is ~1 ms now**, not the ~2.5–3 of d-19: 18a took most of it. The dressing's
+   share of submission is ~0.2 ms. **So converting the dressing and trees to indirect drawing (18b)
+   would buy ~0.2 ms of CPU and nothing on the GPU**, where the frame is bound. It is not
+   recommended ahead of 18c and the shadow casters.
+
 ### 18c. Levels of detail on the dressing (owed)
 
 Bushes and grass stands with levels on and a bias tuned by photographs at the play camera — d-19's

@@ -257,6 +257,14 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public int ScatterDensity { get; set; } = 60;
 
+        /// <summary>Whether the Meadow dressing is strewn at all, apart from the density. A
+        /// measurement seam (the player benchmark, design 38 §18e): on in the game.</summary>
+        public bool Dressing { get; set; } = true;
+
+        /// <summary>Whether the grass tufts are strewn at all, apart from the density. A
+        /// measurement seam, as <see cref="Dressing"/>: on in the game.</summary>
+        public bool Tufts { get; set; } = true;
+
         int[] _scatterModules = System.Array.Empty<int>();
 
         /// <summary>Whether a module is one of the grass tufts the scatter strews — the kind the
@@ -283,7 +291,7 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         void EmitScatter(ChunkBatch batch, int index, int x, int z, int y)
         {
-            if (ScatterDensity <= 0) return;
+            if (ScatterDensity <= 0 || !Tufts) return;
 
             // The drawn terrain, so a zoned cell - drawn as dirt - grows no tuft through it.
             ushort terrain = _model.DrawnTerrain(index);
@@ -514,7 +522,7 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         void EmitDressing(ChunkBatch batch, int index, int x, int z, int y)
         {
-            if (ScatterDensity <= 0) return;
+            if (ScatterDensity <= 0 || !Dressing) return;
             if (!DressableSurface(index, y)) return;
             EnsureDressModules();
             if (_dressModules.Length == 0) return;

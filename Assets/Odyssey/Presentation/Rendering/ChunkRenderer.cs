@@ -367,6 +367,12 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Draw calls the indirect path issued last frame (already in <see cref="DrawCalls"/>).</summary>
         public int IndirectDrawCalls { get; private set; }
 
+        /// <summary>See <see cref="ChunkMesher.Dressing"/>. Meshed, so a change needs a re-mesh.</summary>
+        public bool Dressing { get => _mesher.Dressing; set => _mesher.Dressing = value; }
+
+        /// <summary>See <see cref="ChunkMesher.Tufts"/>. Meshed, so a change needs a re-mesh.</summary>
+        public bool Tufts { get => _mesher.Tufts; set => _mesher.Tufts = value; }
+
         IndirectFoliage? _indirect;
         bool? _indirectAvailable;
         bool _indirectActive;

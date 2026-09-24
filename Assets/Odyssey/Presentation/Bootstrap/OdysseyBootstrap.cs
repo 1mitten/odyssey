@@ -560,6 +560,9 @@ namespace Odyssey.Presentation.Bootstrap
             _menuBed = new MenuAmbience(audioCatalogue, transform, gameObject.layer);
 
             if (buildOnPlay || StartedFromTheCommandLine()) BuildSession();
+            // The player benchmark (design 38 §18e): a development player told -odyssey-bench
+            // times its arms on the colony it just built, writes the table to the log and quits.
+            if (PlayerBench.Requested()) StartCoroutine(new PlayerBench(this).Run());
         }
 
         /// <summary>The switch that boots a player straight into a colony. See below.</summary>

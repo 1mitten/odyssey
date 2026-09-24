@@ -11832,3 +11832,12 @@ After the sweep the tufts are 67 of the 1,175 calls on screen; d-19's 722 "tufts
 foliage-tinted bucket, mostly the dressing's grass stands and flowers. So the path ships off and
 the question moves to the kinds that hold the calls, which join it after the leaf-fade branch lands.
 Design 38 §18.
+
+The first real GPU numbers came from a development player (`PlayerBench`, design 38 §18e), and they
+reorder what is left. At 4K after the sun-ward margin: shadows ~2.1 ms of GPU, the dressing's fill
+~1.0–1.3 (and ~1.0 of it comes back at the coarsest level), the grade ~0.9, the painted ground ~0.7,
+against a drift of ~0.4 between two runs of the same arm. CPU submission is ~1 ms, so the indirect
+conversion d-19 ranked second would buy ~0.2 ms of CPU on a GPU-bound frame; levels of detail on the
+dressing and the shadow casters come first. The bench's first attempt had no guard, died on an
+unsupported profiler flag, and held the owner's screen fullscreen for six minutes; it now runs
+under a try/catch per step, a watchdog and a hard kill, and only on the owner's word.

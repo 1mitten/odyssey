@@ -2312,6 +2312,9 @@ namespace Odyssey.Tests.PlayMode
                     boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
                     yield return null;
                 }
+                // The wind is phased off the tick, so a world still ticking waves every blade
+                // between two shots and the floor is noise everywhere (4.9% on the first attempt).
+                Assert.That(boot.World!.GameSpeed, Is.Zero, "the world would not pause, so the shots cannot be still");
                 Time.timeScale = 0f;
                 ChunkRenderer renderer = boot.Renderer!;
                 // Settled means the board has finished meshing in, not a fixed count of frames:
@@ -2334,6 +2337,7 @@ namespace Odyssey.Tests.PlayMode
                 cam.targetTexture = target;
 
                 renderer.IndirectTufts = false;
+                long tickBefore = boot.World!.CurrentTick;
                 Color32[] chunk = null!, again = null!, indirect = null!, bare = null!;
                 yield return Shoot("indirect-off", boot, target, p => chunk = p);
                 int chunkCalls = renderer.DrawCalls;
@@ -2342,6 +2346,8 @@ namespace Odyssey.Tests.PlayMode
                 yield return Shoot("indirect-on", boot, target, p => indirect = p);
                 int indirectCalls = renderer.DrawCalls;
                 int indirectOnly = renderer.IndirectDrawCalls;
+                Assert.That(boot.World!.CurrentTick, Is.EqualTo(tickBefore),
+                    "the world ticked between the shots, so the wind moved every blade and nothing can be compared");
 
                 int shipped = renderer.ScatterDensity;
                 renderer.ScatterDensity = 0;
