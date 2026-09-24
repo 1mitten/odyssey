@@ -23,7 +23,10 @@
     maxHitPoints (design 33 section 4, C6) is what a finished thing has when it is struck, in whole
     points, before any material scaling: INVENTED per thing by the combat contracts step, and C6's
     to tune. A building nobody has hit carries no row anywhere; what is left of a struck one is
-    EdificeDamage's. Building_None has none.
+    EdificeDamage's. Building_None has none. The pool is this times the material's
+    hitPointsFactorPerMille (design 33 section 13c): a wooden wall 300, a stone one 450. Only an
+    edifice standing in a cell can be struck, so the floor's, the deck plate's and the conduit's
+    numbers are not read yet.
   -->
 
   <!-- 0 is "nothing", matching the grid's zero default, exactly as TerrainAir is 0. -->
@@ -280,6 +283,8 @@
     <workToBuild>60</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.campfire</iconKey>
+    <!-- C6 (design 33 section 13c), INVENTED: kindling and a ring of stones, the cheapest thing in the table. -->
+    <maxHitPoints>60</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -300,6 +305,8 @@
     <workToBuild>40</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.conduit</iconKey>
+    <!-- C6, INVENTED and unread: a line is not an edifice, so nothing can strike one yet. -->
+    <maxHitPoints>40</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -330,6 +337,8 @@
     <workToBuild>600</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.generator</iconKey>
+    <!-- C6, INVENTED: the first expensive thing, a wall's worth. -->
+    <maxHitPoints>300</maxHitPoints>
   </BuildingDef>
 
   <!--
@@ -352,6 +361,8 @@
     <workToBuild>240</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.heater</iconKey>
+    <!-- C6, INVENTED: a shelf's worth. -->
+    <maxHitPoints>100</maxHitPoints>
   </BuildingDef>
 
   <!--
