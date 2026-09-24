@@ -385,6 +385,13 @@ namespace Odyssey.Sim.Pawns
                 // and a figure that swings an axe while walking is worse than one that glides.
                 int workFocus = pawn.Driver != null ? pawn.Driver.WorkFocus : -1;
 
+                // Sitting by a fire, and which fire: the figure faces it (design 31 §18d). The
+                // cell rides in WorkCell, which is otherwise the pawn's own cell when idle.
+                bool seated = pawn.CurrentJob != null && pawn.CurrentJob.Seated;
+                CellRef faces = workFocus >= 0 ? size.FromIndex(workFocus)
+                    : seated ? size.FromIndex(pawn.CurrentJob!.DestCell)
+                    : cell;
+
                 // What the pawn is and what state it is in (design 33 §5): the byte that replaced
                 // every "kind is not 0, so an animal" in the interface. A report, derived here
                 // from state hashed where it lives.
@@ -411,14 +418,15 @@ namespace Odyssey.Sim.Pawns
                     nextCell,
                     movePercent,
                     workFocus >= 0,
-                    workFocus >= 0 ? size.FromIndex(workFocus) : cell,
+                    faces,
                     pawn.Gesture,
                     pawn.GestureSerial,
                     pawn.Asleep,
                     movePerMille,
                     moveDeltaPerMille,
                     pawn.Kind,
-                    flags));
+                    flags,
+                    seated));
 
                 // The fight (design 33 §5), sparse, and for animals as much as people: the health
                 // bar is drawn over the hurt, the downed and the drafted, and a hog can be all

@@ -23,6 +23,17 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the hearth read as a hearth?** (`claude/campfire-art`, PR #170, `docs/design/31-campfire-art-and-fire.md`
+  §17–§18d.) Build a campfire, give the colony nothing to do, and watch for a game hour. Idlers
+  should drift to it two times in three and **stay** once there, about half of them turned to face
+  the flames. **The crouch was judged 2026-09-24** — *"sneaking/crawling and not sat down"* — and
+  taken off (design 31 §18e); a real seated clip is owed. Left to judge: whether the ring **reads
+  as people at a fire rather than a queue** — a wrong answer is idlers you cannot tell from
+  colonists waiting on a job. **And since the merge with combat (design 31 §19)**: the right-hand
+  column is **271 px, down from 296**, so check the outdoor temperature on the clock still clears the
+  speed buttons beside it — a wrong answer is the reading touching or running under them again; and
+  spawn a marauder with nobody to fight near a campfire — a wrong answer is it settling at the fire.
+
 - **Medical supplies: the box, the doctor and the patient** (`claude/medical-supplies`, design 37
   §9). Start a new game: there should be a red first-aid case among the starting piles, and it
   should go to a stockpile or a shelf like anything else. Is it readable at play distance, or
@@ -760,9 +771,10 @@ the next session learns to ignore.
   at 16, 17 and 30 px while ADR 0007 says not to draw pixel art below 32 — measured, 30 px reads,
   17 px loses the grooves, 16 px goes to noise.
 - **The 29 proposed proper nouns** in `docs/design/proper-nouns.csv` await approval or veto.
-- **The Synty junction chain wants inverting.** The only real copy of the licensed packs sits inside
-  `D:\code\odyssey-audio`, a worktree on a merged branch; the main checkout junctions to it. See
-  `docs/lessons.md` — do not prune a worktree without checking.
+- ~~**The Synty junction chain wants inverting.**~~ **Done, and verified 2026-09-23.** The real
+  copy is `D:\code\odyssey\Assets\Synty`, a real directory, and every worktree junctions straight
+  to it in one hop; `D:\code\odyssey-audio` no longer exists. The standing rule is unchanged and
+  is in `docs/lessons.md` — do not prune a worktree without checking for reparse points first.
 
 
 ## Judged

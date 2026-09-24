@@ -189,6 +189,7 @@ namespace Odyssey.Presentation.Bootstrap
         DesignatePresenter? _designate;
         AudioDirector? _audio;
         DoorDirector? _doors;
+        FireDirector? _fires;
 
         /// <summary>The dead, drawn (design 33 §5). Built, synced and disposed beside the doors; lane B's to fill.</summary>
         CorpseDirector? _corpses;
@@ -279,6 +280,9 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         public PawnFigureDirector? Figures => _figures;
         public DoorDirector? Doors => _doors;
+
+        /// <summary>The flame, smoke and light on every drawn campfire (design 31).</summary>
+        public FireDirector? Fires => _fires;
         readonly Stopwatch _frameTimer = new Stopwatch();
         double _renderMs;
         double _tickMs;
@@ -1004,6 +1008,8 @@ namespace Odyssey.Presentation.Bootstrap
             if (_model != null)
             {
                 _doors = new DoorDirector(_model, moduleCatalogue, transform, gameObject.layer);
+                _fires = new FireDirector(_model, transform, gameObject.layer,
+                    _colony?.Construction.Edifices.Records);
                 _corpses = new CorpseDirector(_model, moduleCatalogue, _figures, transform, gameObject.layer);
             }
 
@@ -1450,6 +1456,15 @@ namespace Odyssey.Presentation.Bootstrap
             _doors?.Sync(_world.Views.Current, activeLayer, slice, Time.deltaTime, _audio);
             _corpses?.Sync(_world.Views.Current, activeLayer, slice, Time.deltaTime);
             MarkSection(FrameSection.Doors);
+
+            // The campfires burn after the doors and before the marks, with the figures'
+            // own reading of whether the world is advancing: a paused game holds the flame
+            // and the flicker where they are rather than burning on (design 31 §8).
+            if (_fires != null)
+            {
+                _fires.Running = _figures?.Running ?? true;
+                _fires.Sync(activeLayer, slice, Time.deltaTime, _audio);
+            }
 
             DrawStandingOrders(_world.Views.Current);
             DrawZones(_world.Views.Current);
@@ -3656,6 +3671,7 @@ namespace Odyssey.Presentation.Bootstrap
             _corpses?.Dispose();
             _figures?.Dispose();
             _doors?.Dispose();
+            _fires?.Dispose();
             _floaterView?.Dispose();
             _combatFeedback.Floaters.Clear();
             _combatFeedback.Blood.Clear();
@@ -3687,6 +3703,7 @@ namespace Odyssey.Presentation.Bootstrap
             _daylight = null;
             _figures = null;
             _doors = null;
+            _fires = null;
             _corpses = null;
             _floaterView = null;
             _colonistMaterials = null;

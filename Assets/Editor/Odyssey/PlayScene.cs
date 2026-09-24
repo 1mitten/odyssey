@@ -1416,6 +1416,34 @@ namespace Odyssey.EditorTools
                 fitAgainstBack = true,
             });
 
+            // The campfire (design 31 §3). The owner's report was that it drew as a wooden block,
+            // on the ghost and on the board alike, which it did: ModuleIds.Campfire had no row, so
+            // it resolved to the SolidBlock fallback. This is the row its own comment promised —
+            // "one row on this id upgrades every campfire when the art arrives" — and it fixes
+            // both surfaces at once, because the ghost and the mesher ask ModuleForEdificeAt the
+            // same question and place the answer with the same Drape(FloorCentre) transform.
+            //
+            // **The big ring, scaled, and not the small one.** SM_Prop_Campfire_Small_01 is the
+            // one that fits a 2.5 m cell unaided at 1.29 m — but it carries a SECOND renderer,
+            // SM_Prop_Campfire_Pot_01, a cooking pot on a tripod, and FlattenPrefab takes every
+            // MeshFilter under a prefab. There is no per-part exclusion on ModuleEntry, so that
+            // prefab puts a cooking pot on every campfire in the colony. It would also be wrong
+            // on the merits: nothing cooks yet, no stove exists in any owned pack, and design 28
+            // describes this as kindling and a ring of stones for 3 wood.
+            //
+            // SM_Prop_Campfire_01 is one renderer, 714 triangles, no pot, and 3.28 m across —
+            // 0.78 m wider than the cell. 0.70 brings it to 2.30 m, which sits inside the cell
+            // with a margin at the corners, where the ring is widest. centreXZ and baseAtY do the
+            // rest: the pack's pivot convention is neutralised once here rather than once per
+            // instance.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.Campfire, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_Campfire_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(0.70f, 0.70f, 0.70f),
+            });
+
             // Street surfaces: the half tiles are exactly one cell square.
             Slab(ModuleIds.Terrain("Pavement"), "SM_Env_Ground_Tile_Half_01");
             Slab(ModuleIds.Terrain("CrackedPavement"), "SM_Env_Ground_Tile_Half_02");
@@ -1732,6 +1760,9 @@ namespace Odyssey.EditorTools
                     uniform = IsUniform(prefab),
                     sex = feminine ? BodySex.Female : BodySex.Male,
                     poseClipName = $"A_Idle_Standing_{suffix}",
+                    // No sitClipName yet: no pack ships a seated clip, and the crouching idle
+                    // read as sneaking rather than sitting (owner, 2026-09-24; design 31 §18e).
+                    // A seated clip of our own goes here when there is one.
                     centreXZ = true, baseAtY = true,
                     scale = new Vector3(1.4f, 1.4f, 1.4f),
                     locomotion = new List<LocomotionEntry>
@@ -2125,6 +2156,7 @@ namespace Odyssey.EditorTools
             }
 
             ResolveGaits(rows, clips);
+            foreach (ModuleEntry row in rows) row.sitClip = LookUpClip(row.sitClipName, clips);
             ResolveCombatClips(rows);
 
             var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);

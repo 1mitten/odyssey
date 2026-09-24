@@ -936,38 +936,30 @@ Before deleting any tree that a worktree owns, ask whether anything under it is 
 Get-ChildItem <path> -Recurse -Force -Directory | Where-Object { $_.LinkType }
 ```
 
-**If it has already happened**, the packs are recoverable without re-downloading: `D:\code\odyssey-audio`
-holds a *real* copy rather than a junction. `robocopy <source> <dest> /E /COPY:DAT /DCOPY:DAT` restores
-it byte for byte in about ten seconds, and the `.meta` files come with it, so the GUIDs are the ones
-`ModuleCatalogue.asset` already refers to — check one before believing it, e.g. that
+**If it has already happened**, see the recovery procedure in *The licensed packs must not live
+inside a worktree* below, and check a GUID before believing any restore — e.g. that
 `PolygonGeneric\Prefabs\Base\SM_Bld_Base_Wall_01.prefab.meta` still reads
-`guid: d6b56504304c325419b598fe3ddb95ed`. **Keeping one real copy somewhere is what made that
-possible**, so do not "tidy" `odyssey-audio` into a junction as well.
+`guid: d6b56504304c325419b598fe3ddb95ed`. Art restored under fresh GUIDs resolves to nothing and the
+world draws as boxes *with* the packs present, which looks exactly like not having them.
 
-**And `odyssey-audio` is no longer a spare copy — it is the live one** (measured 2026-09-18, and
-this paragraph used to imply otherwise). The links now run in a **chain**: the five junctioned
-worktrees point at `D:\code\odyssey\Assets\Synty`, and *that* is itself a junction pointing at
-`D:\code\odyssey-audio\Assets\Synty`, which holds the only real directory — 15,868 files, 1.54 GB,
-eight packs. The main checkout does not own its own art.
-
-Two consequences, and the second is the dangerous one:
-
-- **Everything dies at one remove.** `rmdir` on the main checkout's `Assets\Synty` unlinks only that
-  hop, but it also cuts the five worktrees that point through it, because their target stops
-  resolving. Any recursive delete of the main checkout's `Assets` follows the chain into
-  `odyssey-audio` and takes the real packs with it.
-- **The only real copy is sitting inside a worktree that looks disposable.** `odyssey-audio` is on
-  `claude/audio-framework`, which is **merged into main and behind it** — exactly the profile of a
-  branch somebody tidies up without thinking. `git worktree remove` on it, or a recursive delete of
-  `D:\code\odyssey-audio`, destroys 1.54 GB of licensed art that is gitignored and recoverable only
-  by re-importing the `.unitypackage` files.
+> **Retired 2026-09-23.** Three paragraphs stood here describing a junction **chain** — the main
+> checkout junctioned to `D:\code\odyssey-audio`, which held the only real copy — and telling the
+> reader to protect that worktree and not to "tidy" it into a junction. **That arrangement is gone
+> and so is the folder.** `D:\code\odyssey-audio` does not exist; `D:\code\odyssey\Assets\Synty`
+> is a **real directory** (`(Get-Item <path> -Force).LinkType` is empty) and every worktree
+> junctions straight to it, one hop, which is precisely the inversion the retired text asked for.
+> The section below records why, and it is the one to read.
+>
+> It is left as a marked stub rather than deleted because of what it was: a **safety warning that
+> named the wrong folder as the one thing on the machine you must not delete.** Anybody who had
+> followed it would have protected a folder that is not there and left the real one unguarded. A
+> stale fact in a warning is worse than no warning, and CLAUDE.md's own status section carries the
+> same caution — *"a 'known gap' in this file outlived its own fix"*. Found while junctioning a new
+> worktree and checking the claim rather than repeating it.
 
 **Check before pruning any worktree**, with the `LinkType` command above, or:
 `Get-Item <path>\Assets\Synty -Force | Select Attributes, Target` — a `ReparsePoint` is a link and
-safe to `rmdir`, anything else is the real thing. The arrangement wants inverting when somebody has
-a quiet moment: the real directory belongs in the **main checkout**, with every worktree and
-`odyssey-audio` junctioned to it, so that the packs live where the project does and every worktree
-is genuinely disposable.
+safe to `rmdir`, anything else is the real thing.
 
 ## Per-cell geometry cracks where a continuous field does not
 
@@ -2687,6 +2679,43 @@ The four, and what each is the only one able to see:
 And the player build is the fifth thing, which is not a tier and proves what none of them do: that
 a stripped shader and a runtime path under `Assets/` survive. Two green tiers say nothing about
 whether the game runs.
+
+
+## The logged baseline is not enough to rule out load (2026-09-23)
+
+CLAUDE.md already records that `HudStressTests` is sensitive to what else is running — it failed at
+3.770 ms beside two other `unity.sh` runs and passed at 0.603 ms alone on the same commit — and
+says **"the baseline the test logs is the tell"**, because a real regression would leave the
+baseline alone. That is true as far as it goes and it is not sufficient.
+
+Three runs on the same machine within minutes, one of them a clean `origin/main` worktree as a
+control:
+
+| Run | Baseline | Dense arm, over baseline | Cost of a retexted label | Verdict |
+|---|---|---|---|---|
+| branch | 0.580 ms | **+1.485 ms** | 37.3 us | **failed** |
+| `origin/main` control | 0.583 ms | +0.647 ms | 17.0 us | passed |
+| branch again | **1.591 ms** | −0.298 ms | 76.2 us | passed |
+
+The first two look like a genuine regression by the documented rule: the baselines are identical to
+three decimal places, so conditions were the same, so the dense arm's 2.3× must be the code. **It
+was not.** The third run has the same code as the first and passes, and the per-label figure — the
+same measurement, same machine, same quarter of an hour — reads **17, then 37, then 76 us**.
+
+**The baseline only describes the load that was present when the baseline was taken.** The arms run
+one after another over several seconds; load arriving *between* the baseline and the arm leaves the
+baseline clean and inflates the arm, which is exactly the shape that reads as a regression. Run 3 is
+the mirror image: load present throughout inflated both, the arm is measured *over* the baseline,
+and it passed with a negative delta.
+
+**What to do instead.** Read the **per-label figure across runs**, not the baseline — it is the
+same quantity every time and it has no business moving. If it has moved, and especially if it has
+moved by more than the thing you changed could account for, run it again before believing it. And
+where it matters, take a control on a clean `origin/main` worktree **in the same conditions** — that
+is what settled this one, and it is the only form of the measurement that can distinguish the two.
+
+The owner had three editors open on another worktree and the CI runner was building, which is the
+ordinary state of this machine rather than an unusual one.
 
 ## Rebuild a serialized asset after a merge; do not trust git's text merge of it (2026-09-24)
 
