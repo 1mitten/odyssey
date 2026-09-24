@@ -11850,3 +11850,30 @@ cached translucent material, so no new shader has to survive the player build. T
 calls whatever the fight, and a colony with no blood submits nothing. Negative controls seen to
 fail: the cap dropping the newest, the fade brightening before its hold ends, the fans wound face
 down, the per-frame ground check off, the water rule off.
+
+## 2026-09-24 — Weather, designed
+
+The seam 28 §10 left open gets its plan: design `39-weather.md`, on `claude/weather-design`. The
+owner asked for rain that roofs stop, cloudy mid-days, sunnier ones, and weather that moves
+temperature, growth and animals; approved the shape (Clear/Cloudy/Rain, shared emitters, three
+phased PRs) and asked for the design as the PR — nothing built yet.
+
+**The one decision everything hangs off: the sky is map-wide state, asked like the roof grid is
+asked.** One `WeatherSystem` (WorldSystems, Order 45, before Temperature 50) holds kind,
+intensity in per-mille and the episode clock; every consumer — thermometer, pace, growth, animal
+minds, the rain drawing — asks it, and `WeatherOffsetC` gets its one writer at last. Episodes
+roll from a `WeatherDef` table weighted by `Calendar.SeasonOfYear`, last game-hours and blend
+over ≈2 h integer-linear, so the sky never flips at midnight and the first drop is an event.
+
+**Shelter composes two facts into one query**: `CellGrid.IsRoofed` (already built, already
+tested) plus a sparse tree-canopy map with the eviction half the patterns owe — chopping the
+tree dries the 3×3 under it, as a named test. Rain drawing is an emission rule and not a clip:
+shared emitters (the campfire's measured shape, no new shader, `ShaderInclusion` untouched)
+sample columns near the camera and spawn only where the sky reaches, so cost scales with bursts
+and never with cells. Overcast rides the hook 28 §10 named — `DaylightDirector` already owns sun,
+sky, ambient and fog.
+
+Rime's cold rain is the honest compromise of shipping rain before snow, and its weight in the
+invented table is lowest for that reason; snow, fog, storms, moisture, apparel, deterioration,
+accuracy, the firewatcher and the almanac's promised cold snap are recorded seams, each with the
+mechanism that will carry it when a follow-up asks.
