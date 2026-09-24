@@ -10567,6 +10567,47 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+  - moduleId: odyssey.module.item.medicalsupplies
+    shape: 4
+    prefab: {fileID: 1435410842068634, guid: 9efa848c9a423b04493ee1b7772154b2, type: 3}
+    prefabName: SM_Prop_MedicalBox_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.anim.combat.swing.light
     shape: 0
     prefab: {fileID: 0}

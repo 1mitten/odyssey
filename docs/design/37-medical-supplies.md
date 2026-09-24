@@ -147,3 +147,48 @@ MD1 can be played on its own (stockpiles, shelves, carrying). MD2 and MD3 are pl
 - `ui.alert.nomedicine`, which is an alert that fires when there is a patient and no supplies.
   It is one line in the alert model and **is included if MD4 has room**.
 - Body parts, bleeding, infection: none of these exist in design 33's model.
+
+## 9. As built (2026-09-24)
+
+All four units are in, on `claude/medical-supplies`. What moved from the plan, and why:
+
+- **No game-wide save format bump.** The plan said 9 → 10. `TreatedUntilTick` went into the
+  combat section, which carries its own layout number (3 → 4) and writes a record only for a pawn
+  with combat state. The pawn section already writes its skill and priority array lengths, so an
+  older save loads with Medicine at 0 and Doctor at the default priority of 3. `CombatContractTests`
+  round-trips the new field and checks that it is hashed only while set.
+- **The patient's identity is `Job.WorkTicks`** (a `PawnId` value), not `CombatTarget`. Every
+  driver already uses that field for its own purpose, and it is saved and hashed with the job. A
+  new reservation kind, `ReservationTargetKind.Pawn`, stops two doctors treating one patient;
+  rescue (C4) can use it too.
+- **One unit, not the stack.** `ColonyItems.SplitOff` takes a count off a stack straight into a
+  colonist's hands. `LiftToil` picks up whole stacks, so without this a doctor would have carried
+  all six boxes to the patient and left five on the floor. The unit is used up only when the heal
+  lands; a treatment that fails first puts it down (`DropCarried`).
+- **Getting up goes through the combat system.** A treatment that lifts a downed colonist past
+  15 % asks `CombatSystem.Recover` at the end of the tick (`ctx.Defer`), because that is the one
+  owner of ending `Job_Downed`.
+- **Three patient rules the plan did not have, all found while writing it:**
+  1. A patient gets up when hungry, because nothing in the job system interrupts a running job for
+     a need, and a patient can be in bed for days.
+  2. A patient lies on the ground only while a doctor could still come. Lying in the mud heals
+     nothing, and without this rule a colonist would lie down and stand up again every tick.
+  3. A patient in bed checks every 250 ticks whether she should get up and treat herself. That
+     check scans the colony, so it is not run every tick.
+- **A doctor treats a colonist asleep in a bed** as well as a patient or a downed one: a colonist
+  who is hurt and sleeping is lying still in a bed, which is the owner's condition.
+- **Art: `SM_Prop_MedicalBox_01` at scale 1.0** (0.48 × 0.13 × 0.39 m), picked from
+  `MedicalBoxSheet` (`scripts/unity.sh shot Odyssey.EditorTools.MedicalBoxSheet.Shoot`). Both other
+  candidates are olive and disappear into the grass. **The owner has the final say** (playtest
+  queue).
+- **`PlayScene.RebuildCatalogue` was not used to write the row.** Run in this worktree, it
+  regenerated the catalogue with every colonist's skin, hair and cloth swatch data missing (3,678
+  lines). The row was therefore added by hand, with the same fields as its neighbours. Why the
+  rebuild drops the swatches is **unexplained**. It may be a fresh worktree's import state, and it
+  is worth checking before anybody trusts a rebuild.
+- **The goldens moved and were measured.** A seventh skill, a seventh priority and two job
+  counters are hashed. `GoldenColonyProbe` gives identical output on `main` (52f53112) and on the
+  branch for all three boards. MD1's twelfth item moved nothing, because no golden colony has a
+  storage zone.
+
+`ui.alert.nomedicine` is **not** built. It remains a hook.
