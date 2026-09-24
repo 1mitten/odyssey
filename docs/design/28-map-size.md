@@ -548,7 +548,7 @@ being disappointing, but a number quoted without the shadow distance beside it i
 
 ### 10.1 The cull is asked before the mesher (2026-09-24)
 
-Found while planning the Meadow overhaul (`36-meadow-overhaul.md`) and fixed on merging `main` up to
+Found while planning the Meadow overhaul (`38-meadow-overhaul.md`) and fixed on merging `main` up to
 this branch. The frustum test sat **after** `BatchFor`, so every stale chunk on the walk was meshed
 first and rejected second. After a board-wide `Remesh` — which every graphics toggle does — the
 eleven-chunk budget was spent in index order on chunks behind the camera, and the chunks on screen

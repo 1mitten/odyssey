@@ -7,6 +7,7 @@ using NUnit.Framework;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.World;
 using UnityEngine;
@@ -593,6 +594,80 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// What finding the campfires costs, against the sweep it replaced, in one run.
+        ///
+        /// <para><b>The owner reported the frame going from 1.5 to 4.5 ms and thought the machine
+        /// might have been under load.</b> Both can be true, and only a control inside one run can
+        /// separate them — this machine drifted the city canary from 2.01 to 4.01 ms in an
+        /// afternoon on what a sibling worktree was doing (CLAUDE.md).</para>
+        ///
+        /// <para><b>The bug the control exists to price.</b> <c>FireDirector.RefreshCells</c>
+        /// caches which cells hold a fire against <c>WorldRenderModel.Version</c>, and its comment
+        /// claimed the board was therefore swept "once per structural change rather than once a
+        /// frame". <c>RefreshDirty</c> bumps that version whenever <b>any chunk remeshes</b>, so
+        /// in a colony doing anything the sweep ran most frames — 230,400 cells on the played
+        /// board, to find at most a handful of fires. <c>Rescans</c> against the frame count is
+        /// the tell, and it is logged.</para>
+        ///
+        /// <para><b>It is paid with no campfire on the board at all</b>, which is why this arm
+        /// does not build one: the sweep is unconditional, so a colony that has never seen a fire
+        /// was paying for looking for one.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCampfireSweepCostsWhatItVisits()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+                Assert.That(boot.Fires, Is.Not.Null, "the bootstrap never built a fire director");
+
+                int cells = boot.World!.Views.Current.Size.CellCount;
+
+                // No fire, one fire, then eight, each measured twice with the two lookup modes
+                // alternating. The zero row is the control the other two are read against, and it
+                // is in the same run because this machine moves more between runs than the pass
+                // costs.
+                foreach (int fires in new[] { 0, 1, 8 })
+                {
+                    Light(boot, fires);
+
+                    foreach (FireDirector.Find mode in new[]
+                             { FireDirector.Find.Edifices, FireDirector.Find.Cells })
+                    {
+                        FireDirector.Mode = mode;
+
+                        int rescansBefore = boot.Fires!.Rescans;
+                        long visitsBefore = boot.Fires.RescanVisits;
+
+                        float ms = 0f;
+                        var split = System.Array.Empty<double>();
+                        yield return TimeFrames($"campfire/{fires}/{mode}", boot, 30,
+                            x => ms = x, s => split = s);
+
+                        int rescans = boot.Fires.Rescans - rescansBefore;
+                        long visits = boot.Fires.RescanVisits - visitsBefore;
+
+                        Debug.Log($"[FrameTime] campfire {fires} lit ({boot.Fires.LitFires} drawn), " +
+                                  $"{mode}: frame {ms:0.000} ms, " +
+                                  $"{rescans} rescans over {TimedFrames} frames, " +
+                                  $"{visits:N0} records visited " +
+                                  $"({(rescans > 0 ? visits / rescans : 0):N0} a rescan, " +
+                                  $"board {cells:N0} cells), " +
+                                  $"{boot.Renderer?.DrawCalls ?? 0} draw calls");
+                    }
+                }
+            }
+            finally
+            {
+                FireDirector.Mode = FireDirector.Find.Edifices;
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
         [UnityTest]
         public IEnumerator TheFrameAgainstColonySize()
         {
@@ -755,6 +830,40 @@ namespace Odyssey.Tests.PlayMode
         /// Spawn colonists until the colony is this big, spread over the middle of the board so
         /// they do not all arrive in one column and stand on each other.
         /// </summary>
+
+        /// <summary>
+        /// Put <paramref name="wanted"/> campfires on the board, near the middle where the camera
+        /// is, raised directly rather than ordered — a site has to be walked to and built, and
+        /// this arm is measuring the drawn fire rather than the colony's willingness to make one.
+        /// </summary>
+        static void Light(OdysseyBootstrap boot, int wanted)
+        {
+            GridSize size = boot.Colony!.Grid.Size;
+            var ctx = boot.Colony.Pawns;
+
+            int placed = 0;
+            for (int i = 0; i < wanted * 40 && placed < wanted; i++)
+            {
+                int x = size.SizeX / 2 + (i % 8) * 2;
+                int z = size.SizeZ / 2 + (i / 8) * 2;
+                if (x >= size.SizeX - 1 || z >= size.SizeZ - 1) break;
+
+                int cell = boot.Colony.Grid.NearestWalkableInColumn(x, z, size.SizeY - 2);
+                if (cell < 0) continue;
+
+                // Place THEN raise: RaiseWhenClear returns at once unless a site for that
+                // building is already queued at the cell, which Place is what queues.
+                if (boot.Colony.Construction.Place(size.FromIndex(cell),
+                        BuildingHandle.Campfire, StuffHandle.Wood) != IntentRejection.None) continue;
+
+                boot.Colony.Construction.RaiseWhenClear(ctx, cell, BuildingHandle.Campfire);
+                placed++;
+            }
+
+            // A tick to let the raise reach the mirror, and a frame to let the director see it.
+            boot.World!.Tick();
+        }
+
         IEnumerator GrowColonyTo(OdysseyBootstrap boot, int wanted)
         {
             GridSize size = boot.Colony!.Grid.Size;

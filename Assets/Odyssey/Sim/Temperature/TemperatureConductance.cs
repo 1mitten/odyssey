@@ -53,6 +53,28 @@ namespace Odyssey.Sim.Temperature
         public const int FloorHolePerMille = 250;
 
         /// <summary>
+        /// How much of a heat source's <c>radiantC</c> survives each cell of distance, per mille
+        /// (design 36). 550 means a little over half at one cell and under a third at two.
+        ///
+        /// <para>Structural rather than content, unlike <c>radiantC</c> itself: how fast radiance
+        /// falls with distance is a fact about distance, and a second heat source tuned to a
+        /// different falloff would mean two fires of the same temperature warming their
+        /// neighbours differently, which nobody could read.</para>
+        /// </summary>
+        public const int RadiantFalloffPerMille = 550;
+
+        /// <summary>
+        /// How far radiance reaches, in cells. Two, so a fire warms its own tile and the ring
+        /// around it and stops.
+        ///
+        /// <para><b>Chebyshev distance, so the ring is square.</b> The player sees a grid, and a
+        /// round falloff on a square grid puts the diagonal neighbours in a different band from
+        /// the orthogonal ones at the same apparent distance — which reads as a bug rather than
+        /// as physics. It is also the cheaper measure, having no multiply in it.</para>
+        /// </summary>
+        public const int RadiantRangeCells = 2;
+
+        /// <summary>
         /// A wall's material factor, from its raw stuff value — the thing a standing
         /// <c>PlacedEdifice</c> carries. Rock and unknown materials read as the standard, which
         /// is what the generator's walls are.

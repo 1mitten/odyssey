@@ -29,7 +29,11 @@ namespace Odyssey.Tests.Sim
     [TestFixture]
     public class TemperatureTests
     {
-        sealed class Fixture
+        /// <summary>Shared with <c>RadiantHeatTests</c>, which needs the same board, the same
+        /// campfire and the same settle. Internal rather than private since 2026-09-23 because a
+        /// second file wants it; duplicating it would have given the two suites two slightly
+        /// different worlds to disagree in.</summary>
+        internal sealed class Fixture
         {
             public readonly GridSize Size;
             public readonly CellGrid Cells;
@@ -205,8 +209,8 @@ namespace Odyssey.Tests.Sim
             f.BuildCampfire(4, 4, y: 0);
             f.Passes(200); // a good while: the fire has its equilibrium
 
-            int indoors = f.Temperature.CellTemp(f.Cell(3, 3, 0), f.World.CurrentTick);
-            int outdoors = f.Temperature.CellTemp(f.Cell(15, 15, 0), f.World.CurrentTick);
+            int indoors = f.Temperature.RoomTempC(f.Cell(3, 3, 0), f.World.CurrentTick);
+            int outdoors = f.Temperature.RoomTempC(f.Cell(15, 15, 0), f.World.CurrentTick);
             Assert.That(outdoors, Is.EqualTo(1_500), "an open cell reads the curve");
             Assert.That(indoors, Is.GreaterThan(2_000),
                 "a fired room sits comfortably above the outdoors");
@@ -221,9 +225,9 @@ namespace Odyssey.Tests.Sim
             f.BuildCampfire(4, 4, y: 0);
             f.Passes(600); // fifty game-hours: past equilibrium
 
-            int first = f.Temperature.CellTemp(f.Cell(4, 5, 0), f.World.CurrentTick);
+            int first = f.Temperature.RoomTempC(f.Cell(4, 5, 0), f.World.CurrentTick);
             f.Passes(50);
-            int second = f.Temperature.CellTemp(f.Cell(4, 5, 0), f.World.CurrentTick);
+            int second = f.Temperature.RoomTempC(f.Cell(4, 5, 0), f.World.CurrentTick);
             Assert.That(second, Is.EqualTo(first), "an equilibrium is a number that stops moving");
             Assert.That(first, Is.GreaterThan(0),
                 "the fire holds its room above freezing against a −20 °C outdoors");
@@ -254,8 +258,8 @@ namespace Odyssey.Tests.Sim
                 f.BuildCampfire(4, 4, y: fireLayer);
                 f.Passes(600);
 
-                int lower = f.Temperature.CellTemp(f.Cell(4, 5, 0), f.World.CurrentTick);
-                int upper = f.Temperature.CellTemp(f.Cell(4, 5, 1), f.World.CurrentTick);
+                int lower = f.Temperature.RoomTempC(f.Cell(4, 5, 0), f.World.CurrentTick);
+                int upper = f.Temperature.RoomTempC(f.Cell(4, 5, 1), f.World.CurrentTick);
                 return upper - lower;
             }
 
@@ -298,8 +302,8 @@ namespace Odyssey.Tests.Sim
             int previous = int.MinValue;
             for (int i = 0; i < 80; i++)
             {
-                int left = f.Temperature.CellTemp(f.Cell(4, 4, 0), f.World.CurrentTick);
-                int right = f.Temperature.CellTemp(f.Cell(11, 4, 0), f.World.CurrentTick);
+                int left = f.Temperature.RoomTempC(f.Cell(4, 4, 0), f.World.CurrentTick);
+                int right = f.Temperature.RoomTempC(f.Cell(11, 4, 0), f.World.CurrentTick);
                 int gap = left - right;
                 Assert.That(gap, Is.GreaterThan(0),
                     "the gap crossed zero: the near-merge overshot, which is the one thing the clamp exists to stop");
@@ -321,14 +325,14 @@ namespace Odyssey.Tests.Sim
             f.BuildRoom(2, 2, 9, 7, y: 0);
             f.BuildCampfire(4, 4, y: 0);
             f.Passes(600);
-            int warm = f.Temperature.CellTemp(f.Cell(4, 4, 0), f.World.CurrentTick);
+            int warm = f.Temperature.RoomTempC(f.Cell(4, 4, 0), f.World.CurrentTick);
             Assert.That(warm, Is.GreaterThan(1_000), "the room is warm to begin with");
 
             for (int z = 3; z <= 6; z++) f.BuildWall(5, z, y: 0);
             f.Pass();
 
-            int west = f.Temperature.CellTemp(f.Cell(4, 4, 0), f.World.CurrentTick);
-            int east = f.Temperature.CellTemp(f.Cell(6, 4, 0), f.World.CurrentTick);
+            int west = f.Temperature.RoomTempC(f.Cell(4, 4, 0), f.World.CurrentTick);
+            int east = f.Temperature.RoomTempC(f.Cell(6, 4, 0), f.World.CurrentTick);
             Assert.That(west, Is.GreaterThan(warm - 600), "the half with the fire keeps the heat");
             Assert.That(east, Is.GreaterThan(500),
                 "the half without the fire inherits warmth rather than snapping to the outdoors");
@@ -342,9 +346,9 @@ namespace Odyssey.Tests.Sim
             f.BuildRoom(2, 2, 5, 5, y: 0);
             for (int i = 0; i < 4; i++) f.Ctx.Pawns.Spawn(f.Cell(3 + i % 2, 3 + i / 2, 0));
 
-            int before = f.Temperature.CellTemp(f.Cell(3, 3, 0), f.World.CurrentTick);
+            int before = f.Temperature.RoomTempC(f.Cell(3, 3, 0), f.World.CurrentTick);
             f.Passes(200);
-            int after = f.Temperature.CellTemp(f.Cell(3, 3, 0), f.World.CurrentTick);
+            int after = f.Temperature.RoomTempC(f.Cell(3, 3, 0), f.World.CurrentTick);
             Assert.That(after, Is.GreaterThan(before),
                 "four colonists in a sealed room warm it above the outdoors they shelter from");
         }
@@ -358,7 +362,7 @@ namespace Odyssey.Tests.Sim
             f.BuildRoom(2, 2, 7, 7, y: 0);
             f.BuildCampfire(4, 4, y: 0);
             f.Passes(300);
-            int warm = f.Temperature.CellTemp(f.Cell(4, 4, 0), f.World.CurrentTick);
+            int warm = f.Temperature.RoomTempC(f.Cell(4, 4, 0), f.World.CurrentTick);
 
             using var buffer = new MemoryStream();
             WorldSave.Save(f.World, buffer, new ISaveable[] { f.Temperature });
@@ -371,7 +375,7 @@ namespace Odyssey.Tests.Sim
             second.BuildCampfire(4, 4, y: 0);
             WorldSave.Load(second.World, buffer, new ISaveable[] { second.Temperature });
 
-            Assert.That(second.Temperature.CellTemp(second.Cell(4, 4, 0), second.World.CurrentTick),
+            Assert.That(second.Temperature.RoomTempC(second.Cell(4, 4, 0), second.World.CurrentTick),
                 Is.EqualTo(warm), "a loaded room is as warm as the one that was saved");
         }
 
