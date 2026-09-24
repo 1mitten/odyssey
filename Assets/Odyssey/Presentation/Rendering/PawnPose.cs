@@ -393,6 +393,24 @@ namespace Odyssey.Presentation.Rendering
             /// <summary>How far the step climbs in all, or zero when it does not climb.</summary>
             public float Rise => Mathf.Max(0f, Landing - _h0);
 
+            /// <summary>
+            /// How far the <b>first half</b> of the step climbs — the bank's own share when the
+            /// bank is in the cell being left, which a terrace hop's is. <see cref="StairGait"/>
+            /// phases its stair against this and not against the whole step, because the other
+            /// half is flat walking and a whole-step curve would bob the figure across it.
+            /// </summary>
+            public float RiseFirstHalf => Mathf.Max(0f, _h1 - _h0);
+
+            /// <summary>How far the second half climbs — a bank in the cell being entered.</summary>
+            public float RiseSecondHalf => Mathf.Max(0f, _h2 - _h1);
+
+            /// <summary>How far the first half descends — leaving a bank downhill within a layer.</summary>
+            public float DropFirstHalf => Mathf.Max(0f, _h0 - _h1);
+
+            /// <summary>How far the second half descends — the bank a stepped-down arrival
+            /// walks down, which <see cref="StairGait.Hold"/> turns into treads.</summary>
+            public float DropSecondHalf => Mathf.Max(0f, _h1 - _h2);
+
             /// <summary>The drawn surface part way along the step, ignoring the relief field.</summary>
             public float GroundAt(float s) => s < 0.5f
                 ? Mathf.Lerp(_h0, _h1, s * 2f)
@@ -482,7 +500,14 @@ namespace Odyssey.Presentation.Rendering
             CellRef over = s < 0.5f ? pawn.Cell : pawn.NextCell;
             float bare;
 
-            if (pace.Falling && IsDrawnAsAHop(world, pawn))
+            // **A banked descent is a staircase, not a fall.** Where the arriving cell has a bank
+            // in it there is a ramp under the whole drop, and with the stair gait on the step
+            // falls through to the surface-following branch below, which walks down it the way
+            // it walks up: level treads with smooth lowerings. Only a sheer edge keeps the
+            // gravity fall — nothing underfoot past the edge is the whole reason a fall exists.
+            bool bankedArrival = BankLayout.At(world, pawn.NextCell).Exists;
+
+            if (pace.Falling && IsDrawnAsAHop(world, pawn) && !(bankedArrival && StairGait.Enabled))
             {
                 // **A fall begins where the ground ends.** Off a bank, the ramp in the arriving
                 // cell carries the figure down until it falls away faster than the body does, and
@@ -491,7 +516,7 @@ namespace Odyssey.Presentation.Rendering
                 // across the whole step was already 66 cm below the ledge when the clamp let go and
                 // snapped there in one frame — 657 mm, measured. Timed into the second half, the
                 // release is continuous.
-                float fall = BankLayout.At(world, pawn.NextCell).Exists
+                float fall = bankedArrival
                     ? HopArc.Fall(s)
                     : HopArc.Fall(Mathf.Clamp01((s - 0.5f) * 2f));
 
@@ -509,8 +534,7 @@ namespace Odyssey.Presentation.Rendering
                 // straight line between them are exact on a straight bank and wrong at a corner,
                 // where the surface is two planes (`BankMesh.HeightAt` is a max or a min). Reading
                 // the surface itself cannot disagree with the surface.
-                bool ramp = BankLayout.At(world, pawn.Cell).Exists ||
-                            BankLayout.At(world, pawn.NextCell).Exists;
+                bool ramp = BankLayout.At(world, pawn.Cell).Exists || bankedArrival;
 
                 // With no ramp there is nothing to sample: the ground under the walker is flat for
                 // half the step and a whole layer higher for the other half, because that is when
@@ -520,6 +544,23 @@ namespace Odyssey.Presentation.Rendering
                 bare = ramp
                     ? CellMetrics.FloorCentre(over).y + BankLayout.RiseAt(world, over, along.x, along.z)
                     : pace.GroundAt(s);
+
+                // **The stair gait, added to the surface rather than in place of it** (design 40).
+                // A smoothed sawtooth per tread, phased to whichever half of the step climbs or
+                // descends: never below the ramp, never downhill on a climb nor uphill on a
+                // descent, and zero on a flat half, at both ends and at every tread boundary — so
+                // the glide this branch was tuned for is exactly what remains between the steps.
+                // See <see cref="StairGait"/>; the third attempt at this, kept smooth because the
+                // first two were not.
+                if (ramp && StairGait.Enabled)
+                {
+                    if (s < 0.5f)
+                        bare += StairGait.Lift(pace.RiseFirstHalf, s * 2f) +
+                                StairGait.Hold(pace.DropFirstHalf, s * 2f);
+                    else
+                        bare += StairGait.Lift(pace.RiseSecondHalf, (s - 0.5f) * 2f) +
+                                StairGait.Hold(pace.DropSecondHalf, (s - 0.5f) * 2f);
+                }
             }
 
             // **The relief is sampled where the walker is, not at the cell's centre**, and that

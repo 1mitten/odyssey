@@ -396,6 +396,17 @@ namespace Odyssey.Presentation.World
             public float ClimbWeight;
 
             /// <summary>
+            /// The tread this figure is climbing a bank on, in metres, or zero when it is not.
+            ///
+            /// <para>Set from <see cref="Rendering.StairGait.IsClimbing"/> — the one owner of
+            /// "is this step a banked climb" — so the footing pass can lift a knee for a tread
+            /// without re-deriving the question itself. Zero is the whole gate: every foot
+            /// behaviour keyed on it is off on the flat, in the water, on a ladder and on a
+            /// sheer face alike.</para>
+            /// </summary>
+            public float StairTread;
+
+            /// <summary>
             /// Whether what is being climbed is a ladder rather than a rock face.
             ///
             /// <para><b>They are not the same pose and the owner's reference photographs are why.</b>

@@ -36,6 +36,7 @@ namespace Odyssey.Tests.Presentation
         {
             BankLayout.Reset();
             GroundRelief.Reset();
+            StairGait.Reset();
         }
 
         [TearDown]
@@ -43,6 +44,7 @@ namespace Odyssey.Tests.Presentation
         {
             BankLayout.Reset();
             GroundRelief.Reset();
+            StairGait.Reset();
         }
 
         // ------------------------------------------------------------------ the curves
@@ -217,6 +219,13 @@ namespace Odyssey.Tests.Presentation
             // is the bank's own surface, sampled where it stands — not a curve fitted to it, not
             // strides quantised off it, not an arc over it. Every departure from this has been
             // reported: a parabola read as jumping, strides read as jolting.
+            //
+            // **This is the glide's own claim, pinned with the stair off** (design 40): the stair
+            // gait departs from the surface on purpose, by up to two thirds of a tread between
+            // treads, and its own surface relationship — never inside, touching down at every
+            // tread boundary — lives in `StairGaitTests`, asked with the stair on. What this
+            // keeps holding is that the surface-following underneath the stair is still exact.
+            StairGait.Enabled = false;
             RenderTestWorld world = Terrace();
 
             for (int perMille = 0; perMille <= 1000; perMille++)
@@ -237,6 +246,12 @@ namespace Odyssey.Tests.Presentation
             // predictable." So: while it is on the ramp, every frame moves the figure the same
             // distance. This measures the *variation* and not just the maximum, because a
             // hold-and-push rhythm passes a maximum test and is exactly what was complained about.
+            //
+            // **The glide's claim, pinned with the stair off** (design 40): a stair gait is a
+            // rhythm on purpose — the owner's plan asked for steps — so the variation bound here
+            // would forbid the feature rather than guard it. The stair's own frame budget, the
+            // 50 mm teleport ceiling that predates it, is what `StairGaitTests` holds it to.
+            StairGait.Enabled = false;
             RenderTestWorld world = Terrace();
 
             Vector3 footCentre = CellMetrics.FloorCentre(Foot), topCentre = CellMetrics.FloorCentre(Top);
