@@ -754,11 +754,22 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// How this pawn traverses. Taken from the current job and fixed for its whole life: a
         /// mode that changed halfway through a walk would silently invalidate the path the pawn
-        /// is standing on. Between jobs it is the species' own (design 29 §4), which is what a
-        /// wander target is tested for reachability under.
+        /// is standing on. Between jobs it is the pawn's own (<see cref="OwnMode"/>), which is what
+        /// a wander target is tested for reachability under.
         /// </summary>
         public virtual TraverseMode Mode =>
-            CurrentJob != null ? CurrentJob.Mode : Species.traverseMode;
+            CurrentJob != null ? CurrentJob.Mode : OwnMode;
+
+        /// <summary>
+        /// The way this pawn moves when it chooses for itself: its kind's mode, else its species'
+        /// (design 29 §4, design 33 §16). A colonist is <see cref="TraverseMode.Colonist"/>, a hog
+        /// <see cref="TraverseMode.Animal"/>, a rat <see cref="TraverseMode.Climber"/>, and a
+        /// marauder <see cref="TraverseMode.Marauder"/> — a person who does not open doors. Every
+        /// job a pawn's own mind or its own reflexes start (the hunt, the wander, the flight, the
+        /// fall) moves in it. A colonist's work jobs name their own mode (the hauler's), and a
+        /// player's order is a colonist's.
+        /// </summary>
+        public TraverseMode OwnMode => Content.ModeOf(Kind);
 
         /// <summary>Whether the pawn will consider work at all this think.</summary>
         public virtual bool WillWork() => !IsBroken && !Asleep;

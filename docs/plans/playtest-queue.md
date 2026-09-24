@@ -65,10 +65,28 @@ the next session learns to ignore.
     - one that keeps at a wall for a long time after a way in has opened;
     - one that goes for a ruined-city wall;
     - the same numbers from every weapon on every wall.
-  - Expected and not a fault:
-    - a marauder walks straight through a **closed door**. Doors do not stop it yet, which is an
-      open question (§14g).
-    - with everyone down it will break the **beds** (§14g).
+  - Since §16 (`claude/combat-marauder-doors`) a closed door holds it and it leaves beds alone;
+    the row below is the test for both.
+
+- **Does a door hold a marauder, and does it spare the beds?** (`claude/combat-marauder-doors`,
+  design 33 §16.)
+  - *The door.* Build a small room of wooden walls **with a door**, put a colonist inside and
+    draft her so she stays. Spawn a marauder outside, on the door's side. It should walk to the
+    door and beat it down — it never opens it — then go in for her.
+  - *The far side.* Do it again with the marauder on the side away from the door. It should break
+    the nearest wall, not walk round to the door. That is the rule as decided (§16e); say if it
+    reads as stupid, because that is the question a smarter breach would answer.
+  - *Following in.* Undraft her and let her walk out while the marauder is near. It may follow
+    her through the open door; that is expected.
+  - *Beds.* Build a bed, then let a marauder down every colonist. It should stand about or
+    wander, and not touch the bed. Build a wall near it and it should go for the wall. Then
+    order a drafted colonist on to the bed: the order still works.
+  - A wrong answer looks like any of these:
+    - a marauder standing in a doorway, or a door swinging open for it;
+    - one that idles outside a closed door with a colonist behind it, and breaks nothing;
+    - one that walks round a room to reach its door rather than breaking the nearer wall;
+    - a bed with floating numbers over it and nobody ordered to strike it;
+    - a hog walking through a closed door, or a colonist or a rat unable to.
 
 - **Does friendly fire feel like anything?** (C5, `claude/combat-phase4`, design 33 §12). Draft a
   colonist, Ctrl + right-click another: she is attacked, fights back, and her mood drops by about 8

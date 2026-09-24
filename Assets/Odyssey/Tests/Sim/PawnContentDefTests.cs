@@ -235,7 +235,12 @@ namespace Odyssey.Tests.Sim
         // 33 §15): CombatDef gained helpRadiusCells (8, INVENTED), how near another colonist's
         // fight must be for a drafted colonist on her hold to join it. No golden moved: no golden
         // window drafts anybody.
-        const ulong ContentFingerprint = 1636227730504628602UL;
+        // And a twenty-fourth, the same day, by doors holding marauders out (design 33 §16):
+        // PawnKindDef gained traverseMode, empty everywhere but PawnKind_Marauder (Marauder), and
+        // PawnContent the resolved KindMode table. No golden moved: no golden has a marauder, and
+        // every other kind resolves to its species' mode exactly as before. The value below is the
+        // two together, measured on the merge rather than taken from either side.
+        const ulong ContentFingerprint = 6953925138484699291UL;
 
 
         [Test]

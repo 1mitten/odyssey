@@ -106,7 +106,7 @@ namespace Odyssey.Sim.Pawns
 
             Job job = pawn.JobBuffer;
             job.Reset(JobIndex.Downed);
-            job.Mode = pawn.Species.traverseMode;
+            job.Mode = pawn.OwnMode;
             _jobs.StartJob(pawn, job, tick);
 
             _ctx.CombatLog.Report(CombatEventKind.Downed, by?.Id ?? default, pawn.Id,
@@ -241,7 +241,7 @@ namespace Odyssey.Sim.Pawns
             if (pawn.CombatTarget == 0 || pawn.CurrentJob == null || pawn.CurrentJob.DefIndex != JobIndex.AttackMelee)
                 return false;
             Pawn? foe = _ctx.Pawns.Get(new PawnId(pawn.CombatTarget));
-            return foe != null && Melee.IsStanding(foe) && Melee.InReach(_ctx, pawn, foe, pawn.Species.traverseMode);
+            return foe != null && Melee.IsStanding(foe) && Melee.InReach(_ctx, pawn, foe, pawn.OwnMode);
         }
 
         /// <summary>
@@ -250,7 +250,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         void Flee(Pawn pawn, Pawn threat, int tick)
         {
-            TraverseMode mode = pawn.Species.traverseMode;
+            TraverseMode mode = pawn.OwnMode;
             int cell = FleeJobDriver.FindFleeCell(_ctx, pawn, threat.Cell, _ctx.Content.Combat.fleeCells, mode);
             if (cell < 0) return;
 
