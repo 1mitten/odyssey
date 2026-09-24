@@ -39,8 +39,16 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < cells.Count; i++)
             {
                 int site = cells[i];
-                int outstanding = sites.Outstanding(site);
-                if (outstanding <= 0) continue;
+
+                // The material first, then the parts (design 32 §14): a site wants its thirty wood
+                // before its twenty scrap metal, and a colonist carries one of them at a time.
+                int wanted;
+                if (sites.Outstanding(site) > 0)
+                    wanted = ConstructionContent.StuffAt(sites.StuffAt(site)).item;
+                else if (sites.OutstandingParts(site) > 0)
+                    wanted = ConstructionContent.BuildingAt(sites.At(site)).partItem;
+                else
+                    continue;
 
                 // One deliverer per site. Without it two colonists each fetch a full stack for a
                 // wall that wants five, and the second one walks the length of the map to put
@@ -52,7 +60,6 @@ namespace Odyssey.Sim.Pawns
                 int distance = ctx.Distance(pawn.Cell, site);
                 if (distance >= bestDistance) continue;
 
-                int wanted = ConstructionContent.StuffAt(sites.StuffAt(site)).item;
                 if (wanted < 0) continue;
 
                 ColonyItem? load = NearestLoad(pawn, ctx, wanted);
@@ -90,7 +97,7 @@ namespace Odyssey.Sim.Pawns
         /// refusing to take wood out of one would mean a colony that can only build from wood it
         /// has not tidied away yet.</para>
         /// </summary>
-        static ColonyItem? NearestLoad(Pawn pawn, PawnContext ctx, int defIndex)
+        internal static ColonyItem? NearestLoad(Pawn pawn, PawnContext ctx, int defIndex)
         {
             ColonyItem? best = null;
             int bestDistance = int.MaxValue;
@@ -307,7 +314,8 @@ namespace Odyssey.Sim.Pawns
 
             var item = ctx.Items.Get(Job.TargetItem);
             if (item == null || ctx.WhereIs(item) < 0) return false;
-            if (Job.DestCell < 0 || sites.Outstanding(Job.DestCell) <= 0) return false;
+            if (Job.DestCell < 0) return false;
+            if (sites.Outstanding(Job.DestCell) <= 0 && sites.OutstandingParts(Job.DestCell) <= 0) return false;
 
             long itemKey = ReservationManager.Key(ReservationTargetKind.Item, Job.TargetItem.Value);
             long siteKey = ReservationManager.Key(ReservationTargetKind.Cell, Job.DestCell);
@@ -332,8 +340,9 @@ namespace Odyssey.Sim.Pawns
             // somebody else while this colonist walked. Checked every tick rather than on arrival,
             // so a cancelled order stops a colonist crossing the map for it.
             if (sites.At(Job.DestCell) == BuildingHandle.None) return JobStatus.Failed;
-            if (ConstructionContent.StuffAt(sites.StuffAt(Job.DestCell)).item != item.DefIndex)
-                return JobStatus.Failed;
+            bool material = ConstructionContent.StuffAt(sites.StuffAt(Job.DestCell)).item == item.DefIndex;
+            bool part = ConstructionContent.BuildingAt(sites.At(Job.DestCell)).partItem == item.DefIndex;
+            if (!material && !part) return JobStatus.Failed;
 
             switch (ToilIndex)
             {
@@ -360,11 +369,13 @@ namespace Odyssey.Sim.Pawns
 
                 default:
                 {
-                    int wanted = sites.Outstanding(Job.DestCell);
+                    // Into whichever payment this load is: the material, or the parts.
+                    int wanted = material ? sites.Outstanding(Job.DestCell) : sites.OutstandingParts(Job.DestCell);
                     if (wanted <= 0) return JobStatus.Failed;
 
                     int given = item.Stack < wanted ? item.Stack : wanted;
-                    sites.Deliver(Job.DestCell, given);
+                    if (material) sites.Deliver(Job.DestCell, given);
+                    else sites.DeliverParts(Job.DestCell, given);
                     item.Stack -= given;
 
                     // The stoop is the same motion whether the load goes on the floor or into a

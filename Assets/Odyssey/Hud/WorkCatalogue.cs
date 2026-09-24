@@ -138,7 +138,9 @@ namespace Odyssey.Hud
             new Entry("ui.work.fabrication",  NotSimulated, NoSkill, "advanced production arrives with M8"),
             new Entry("ui.work.art",          NotSimulated, NoSkill, "decoration arrives with M6"),
             new Entry("ui.work.operating",    NotSimulated, NoSkill, "powered machinery arrives with M4"),
-            new Entry("ui.work.rescue",       NotSimulated, NoSkill, "downed colonists arrive with health (M6)"),
+            // Live from the combat contracts step (design 33 §5): Work_Rescue, whose emergency
+            // giver carries the downed to bed from C4.
+            new Entry("ui.work.rescue",       "rescue",       NoSkill,        "", WorkHandle.Rescue),
         };
 
         /// <summary>Every key the grid can draw, for the registry test.</summary>

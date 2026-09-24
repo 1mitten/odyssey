@@ -23,6 +23,111 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
+  Spawn a marauder, draft two colonists, select both and right-click it: a translucent red ring
+  should appear wide round its feet and snap in, in a fifth of a second, flash once as it lands
+  and stay faint under it until it goes down — then fade. Right-click a hog: its ring hugs the
+  hog's own length. Deselect them: it fades; reselect: it is back at rest, without the snap. A
+  wrong answer is a ring you notice only when it lands (the 0.2 s is too quick), a flash that
+  reads as a glitch, a hold so faint it is lost on grass or at night, a red you confuse with the
+  draft's dark red over their heads or the salmon diamond over the marauder, or a ring sunk into a
+  slope or floating on a terrace step.
+
+- **Does the context menu make taking up a weapon clear?** (design 33 §7a, `claude/combat-menu`).
+  Select a colonist, undrafted, and right-click the machete: a small menu opens at the pointer with
+  *Equip machete* and *Cancel*, and nothing happens until a row is picked. Pick Equip: a line runs
+  from her feet to the weapon with a bracket on it, her activity line says *Equipping*, and the line
+  goes when it is in her hand. Then check the closes — Escape, a click elsewhere, an orbit, clicking
+  another colonist — and that right-click on bare ground (drafted) still moves at once, and on a hog
+  still attacks at once, with no menu. Select only a downed colonist and right-click a weapon:
+  *Equip* is dim with *Downed* beside it. A wrong answer is a menu that opens under the pointer's
+  arrow or off the screen edge, one that will not close, a move or attack that now asks, or Equip
+  still unclear — in which case say what would make it clear (the colonist's name on the row?).
+
+- **Should an unattended fight end in downs, never deaths?** (design 33 §3, PR #180). Only an
+  order strikes a body on the ground, so a marauder left alone downs a colonist and turns to the
+  next; nobody dies unless you send someone to finish it. Say if that is wrong.
+
+- **Is a weapon held and dropped where it should be?** (checkpoint 3, C3 — `claude/combat-c2`,
+  design 33 §6D–§6E). A new game lays a bat and a machete beside the food: they should lie flat and
+  be recognisable. Select a colonist, undrafted, and right-click the bat: she walks over, stoops and
+  stands with it in her right hand, gripped at the handle. Swap it for the machete: the bat is put
+  down where she stands. A wrong answer is a weapon standing on end, hovering off the hand, held by
+  its head, through the forearm, far too big or small — the grip is measured from the mesh and
+  nobody has seen it — or a right-click on a weapon that does nothing without a draft.
+
+- **Does power read?** (`claude/power`, PR #173, `docs/design/32-power.md`; merged with `main` 2026-09-24.)
+  Lines, generators and heaters now take **scrap metal** (design 32 §14): a new game scatters ten
+  piles of wreckage over the board, fifteen or more cells from the start, and the debug menu's
+  Events tab has a **Scrap drop**. Grant wood too, then open Build → **Power**. Drag a **Conduit**
+  run from open ground *through a wall* into a room; put a **Heater** beside the run inside and a
+  **Generator** beside it outside. Click an ordered line: the pane should title it *Conduit* and
+  offer **Cancel**; a laid one, while the lines are shown, **Remove conduit**. The **Power** button
+  under the orders strip keeps the lines shown whatever is armed. Run *Odyssey → Presentation →
+  Rebuild module catalogue* once first, or the generator and heater are still blocks. Watch the lines appear the moment the tool is armed and vanish when it is put
+  down; a hauler should fill the generator unasked; the heater's pane should go from *not
+  connected* to *powered*, and the room should warm. Then build a sixth heater on the same net and
+  watch the whole net go dark and the *Power failure* alert rise.
+
+  Four things only a keyboard decides. Whether **a line drawn through walls reads as inside the
+  wall** or as a glitch floating over it — a wrong answer is a player thinking the line runs across
+  the roof. Whether **a dark net reads as dark without opening the pane** — red lines and the alert
+  should be enough; a wrong answer is clicking heaters to find out why the room is cold. Whether
+  **five heaters to a generator** is the right size — a wrong answer is never needing a second
+  generator, or needing one for the first room. And whether **the Remove conduit tool** is where a
+  player looks for it, or whether they reach for Deconstruct and are surprised it leaves the line.
+  And whether **scrap metal is scarce in the right way** — a wrong answer is the wreckage never
+  being worth the walk, or ten piles being all the power a colony ever needs.
+  And (§14c) whether **the machines sit flush**: the generator filling both its cells, a heater
+  put beside a wall turning its back to it, R choosing the wall in a corner. A wrong answer is
+  the stretched generator reading as distorted, or the air-conditioner's grille facing the wall
+  (its front was read off the mesh, not seen).
+
+- **Can you see a stockpile, and does its outline read?** (`claude/stockpile-drawn`,
+  `docs/design/26-storage.md` §13.) Paint a stockpile on grass and one on a built floor, and two
+  at once. It had been created and not drawn since 2026-09-21 unless something else re-meshed its
+  chunk; now it should wash the ground and carry a line in the store's hue round its outer edge
+  only, within a couple of frames. A wrong answer is no wash, a delay, a line between its own
+  cells, a line lost under grass tufts, or one too heavy for a big warehouse floor.
+
+- **Does a drafted colonist's run read as urgency, and is the deeper red findable?**
+  (`claude/combat-mvp`, design 33 §2g–§2h). Draft a colonist and right-click across the board: she
+  should visibly **run** — about twice her walking speed, the run clip, not a sped-up walk. The
+  diamond, the order line and the destination bracket are now a deep, dark, translucent red. A
+  wrong answer is a figure that skates (the walk clip played fast) or jogs so little it still
+  reads as a walk; or a red too dark to find at dusk or against dark rock. The pace is one number,
+  `draftedPacePerMille` in `Colonist.xml`. **And listen:** pressing T should draw a blade, once
+  however many are selected, and releasing should be silent. A wrong answer is a sound late
+  enough to feel like lag, one loud enough to jump at, or a clatter when five are drafted at once
+  (design 33 §2i).
+
+- **Does the meadow feel lived in, and do the comings and goings read as wildlife?**
+  (`claude/wildlife`, PR to follow #167, `docs/design/30-wildlife.md`). Press Play → New game
+  on the meadow and do not spawn anything: nine or ten animals should already be on the board —
+  hog sounders of three to five in the woodland, rats alone by outcrops and rock faces — and
+  **none inside the starting clearing**. Watch for a quarter of an hour. Things to judge that
+  no test can: whether nine or ten on a 120 × 120 board reads as *alive* or as *empty*
+  (`wildlifePer10000Columns` is the dial; the ceiling is 24 and the figures are the colonists'
+  first); whether a **sounder** landing together reads as a family or as a clump; whether a hog
+  that decides to go and walks to the edge reads as *wandering off* or as *fleeing* — a wrong
+  answer is one that looks pursued; whether an arrival at the edge is noticed at all, and
+  whether it looks like it walked in or like it appeared (it is placed on the ring on a rare
+  tick, so it appears; the honest fix is a walk-in from off-board); whether a rat by day and a
+  hog by night, resting three times as long, read as *asleep* or as *stuck*; and whether the
+  city's rats in the rubble are visible from the play camera at all. Click one: still
+  *Midden hog · Wandering* or *Resting*. Then **F5**, or the Animals item on the bar: the count
+  strip should say how many of each kind are out there and the rows should list them nearest
+  first with the KIND heading marked; click DOING and the resting ones should gather; click a
+  row and the tab should close, the camera land on that animal and the pane show it, with the
+  depth where you had it (owner, 2026-09-23) — a wrong answer is the view lurching to another
+  layer, or the tab and the pane both on screen; an animal in a cavern below the slice is
+  selected without being shown, which is the price of the depth staying put. Whether the tab **needs the distance back** (the brief dropped it; the rows are still
+  ordered by it) is the question only you can answer, and whether 560 wide reads as a tab or
+  as a card. After the third look (2026-09-23): whether two sounders now land in different
+  parts of the meadow and each reads as a loose family rather than a knot — a wrong answer is
+  all the hogs in one glade again, or a sounder so scattered it is not a sounder; and press the
+  info button on a selected hog: the Almanac should open on *Midden hog* under Fauna, and what
+  it says should be true of what you have watched.
 - **Do the two animals read as animals, and does the hog's computed walk read as a walk?**
   (`claude/animals`, `docs/design/29-animals.md`, plan `docs/plans/animals.md`.) Debug menu →
   *Spawn midden hog* and *Spawn duct rat*, several of each, near the camera; then watch. Five
@@ -53,6 +158,7 @@ the next session learns to ignore.
   living rather than pacing a corner or standing for minutes. Click one: the pane should say
   *Midden hog · Wandering* or *Resting*, with no face, needs or tabs; the roster should not gain
   a card. Both scales are one number each in `AnimalImport.Scales`.
+
 - **Does the frame still fall over at a high colony count?** (PRs #171 and the aspect-lookup PR,
   `docs/design/25-pawn-steering.md` §9 and `31-aspect-lookup.md`.) **One row for two units**, because
   they are one answer. Spawn colonists past a couple of
@@ -82,6 +188,29 @@ the next session learns to ignore.
   palette it may not be. If it reads as goggles rather than as shadow, §10 has three costed ways
   out and the cheapest experiment that decides between them.
 
+- **Does the cold read?** (`claude/temperature-core`, `docs/design/28-temperature.md`.) Open the
+  debug menu with backtick and press **Skip one month** four times — that is the row this review
+  added, because with only *Skip one day* the season the whole model was built for was sixty
+  presses away and so was never going to be looked at. Watch the clock as you go: the outdoor
+  reading beside the date is the curve, and Wash → Glare → Rime should feel like a year turning
+  rather than a number changing.
+
+  In **Rime**, stand a colonist outdoors at night: the pane should say a freezing tile, the clock
+  a freezing outdoors, and within hours her work should slow and then her condition. Then build a
+  hut — walls, door, a floor above — put a **campfire** in it (3 wood, furniture beside the bed)
+  and skip again: the room should hold comfortable, the pane should say so, and sleeping there
+  should rest better than the ground outside.
+
+  Four things only a keyboard decides. Whether **Wash's chill is mild enough** that spring feels
+  benign — a wrong answer is spring already wanting a fire, and the bands are in
+  `Temperature.xml`. Whether the **campfire feels like a fire or like a radiator** — a wrong
+  answer is one fire holding a hall, or a fire in a cupboard not being uncomfortable; the number
+  is `heatPerPass` in `Buildings.xml` and the design says what it was tuned against. Whether
+  **four hours outdoors in Candle is the right amount of rope** before a colonist is in trouble —
+  a wrong answer is either dying while you are reading the pane, or standing in −13 °C all night
+  and being fine. And whether **going down is worth it**: dig a cellar and click a tile, which
+  should read warmer than the surface in Rime and cooler in Glare — if it reads the same, the
+  ground damping is not arriving where a player would ever meet it.
 - **Does a wall ever go up around somebody now, and does the fix cost anything to watch?**
   (`claude/build-appearance-and-entombment`, `docs/design/30-nobody-in-a-wall.md`.) Order walls
   across a route colonists are using and let them finish while people are crossing. Three things
@@ -631,6 +760,10 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-24 | **Combat C2 + C3 and the three rounds after play** (PR #180, `docs/design/33-combat.md` §3–§9) | working — owner: *"it seems great ... weapons sit at hips, have a battle with tons and tons of characters - was hovering 3.5ms ... it flowed really well"* | closes the brawl and fight rows; 3.5 ms is inside the 5 ms budget on the dev GPU, unmeasured on the target laptop; the ring, menu and grip rows stay open for the "more testing later" |
+| 2026-09-24 | **The Inventory tab, restyled** (PR #177, `docs/design/35-inventory-tab.md` §5a) | working — owner: *"it's good"* | none; ready to merge |
+| 2026-09-23 | **The Research tab** (PR #177, `docs/design/34-research-tab.md`) | working — owner: *"the research control is fine"*, after the list was cut to what the game has | the list became Electricity, Power lines, Generator, Ladder (34 §2) |
+| 2026-09-23 | **Drafting and moving** (C1, `claude/combat-mvp`, `docs/design/33-combat.md` §2) | working — owner: *"the drafting, T and moving onto surfaces, diamond and 4 hours all seemed to work"* | two asks: a drafted colonist runs (§2h), the marks a deeper translucent red (§2g); both built, re-queued above |
 | 2026-09-20 | **Head turning and gaze** (PR #128, `docs/design/23-head-turning-and-gaze.md`) | working — owner: *"gaze … is all working now"* | none; the design doc stands |
 | 2026-09-20 | **The flush selection cursor** (PR #127, `docs/design/23-flush-selection-cursor.md`) | working | none; the design doc stands |
 | 2026-09-20 | **The sight fade leaving water, banks and marsh whole** (PR #123) | working — the exemptions read as deliberate | none |

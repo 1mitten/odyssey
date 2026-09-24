@@ -153,6 +153,29 @@ namespace Odyssey.Sim.Pawns
                 // terms of the seed section above; a save from before animals has no entry here
                 // and every restored pawn is the colonist it was.
                 new PawnKindSection(pawns.Pawns),
+                // Which animals have decided to leave (design 30 §3). Absent from an older save,
+                // which loads with nobody leaving.
+                new WildlifeSection(pawns.Pawns),
+                // Who is drafted, and a step an order interrupted (design 33 §2a). Absent from an
+                // older save, which loads with nobody drafted.
+                new CombatSection(pawns.Pawns),
+                // Appended, as every section since the first has been: the room temperatures,
+                // keyed by room. A save from before temperature has no section and loads with
+                // every room at the outdoor curve — which is what it was, in a world where
+                // nothing was ever cold (design 28 §9).
+                pawns.Temperature!,
+                // Appended, as every section since the first has been: the lines, their orders,
+                // and the switch and hopper of every power building (design 32 §8). A save from
+                // before power has no section and loads with no lines — which is what it had.
+                pawns.Power!,
+                // The parts delivered to building sites (design 32 §14), after the construction
+                // section whose sites they name. A save from before has none, and loads with every
+                // site's parts at nought — which is what every site then had.
+                construction.Parts,
+                // The dead, and what is left of each struck building (design 33 §5). Appended;
+                // absent from an older save, which loads with no corpses and every building whole.
+                pawns.Corpses,
+                pawns.EdificeDamage,
             };
         }
 
@@ -257,6 +280,10 @@ namespace Odyssey.Sim.Pawns
             // worse than one on the floor.
             Pawns.StorageUnits?.AdoptContents(Pawns);
 
+            // The power records against what is standing: the repair for a file where the two
+            // disagree, and nothing at all on every file this build wrote (design 32 §8).
+            Pawns.Power?.Reconcile();
+
             _nav.Rebuild();
         }
 
@@ -333,6 +360,11 @@ namespace Odyssey.Sim.Pawns
             ChunkGrid? chunks = request.Chunks;
 
             MapGenDef gen = DefFor(request.Map, size, request.Barren, request.Wooded);
+            if (!request.Wildlife)
+            {
+                gen.wildlife = System.Array.Empty<Wildlife.WildlifeEntry>();
+                gen.wildlifePer10000Columns = 0;
+            }
 
             var grid = new CellGrid(size);
             MapGenOutcome outcome = MapGenerator.Generate(grid, seed, gen);
@@ -364,6 +396,10 @@ namespace Odyssey.Sim.Pawns
             SimWorld world = builder
                 .AddColony(pawns, designations, support, nav, outcome.Placements,
                     out ConstructionGrid construction, jobs)
+                // The level-keeper for the world's animals (design 30 §3). Inert on a world whose
+                // table is empty, which is the bare board and every test built on it.
+                .AddTickable(_ => new Wildlife.WildlifeSystem(pawns, jobs, gen, outcome.StartCell,
+                    request.Scenario.startingFellRadius + Wildlife.WildlifeSeeder.ClearingMargin))
                 .Build();
 
             // Before anything is placed and before the first tick, which is the only window
@@ -385,6 +421,11 @@ namespace Odyssey.Sim.Pawns
             ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed,
                 scenario, request.Colonists);
             int marked = ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenario);
+            // The world's animals, after its people and before its first tick (design 30 §2):
+            // the seeder reads the trees and the rock the generator left and the clearing the
+            // scenario is about to fell, and draws from the world's own seed.
+            Wildlife.WildlifeSeeder.Seed(pawns, gen, outcome.StartCell,
+                scenario.startingFellRadius + Wildlife.WildlifeSeeder.ClearingMargin, seed);
 
             var built = new ColonyWorld(grid, pawns, designations, construction, world, outcome, scenario, placement,
                 solver, nav, jobs, gen, marked, request);

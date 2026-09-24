@@ -179,6 +179,7 @@ namespace Odyssey.Tests.Sim
             foreach (Pawn pawn in colony.Pawns.Pawns.All)
             for (int h = 0; h < ScheduleHandle.Hours; h++)
             {
+                if (!pawn.IsPerson) continue;   // the world's animals keep no day (design 30)
                 Assert.That(frame.TryGetPawnAspect(pawn.Id, ScheduleAspects.Hour[h], out int block),
                     Is.True, "every colonist's every hour, not only the selected one");
                 Assert.That(block, Is.EqualTo(pawn.ScheduleAt(h)));

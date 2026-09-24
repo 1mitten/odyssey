@@ -53,6 +53,18 @@ namespace Odyssey.Sim.Growing
         public int growWindowStartTick = 15_000;
         public int growWindowEndTick = 47_500;
 
+        /// <summary>
+        /// The temperature band a crop grows in, in centi-degrees (design 28 §8): full speed
+        /// between <see cref="minGrowTempC"/> and <see cref="optimalGrowTempC"/>, falling off
+        /// linearly to nothing at absolute zero of growth below the one and at
+        /// <see cref="maxGrowTempC"/> above the other. The defaults are the reference's own
+        /// 6/42/58 °C shape (a-06 §2), carried as content so a hardy or a delicate crop is a row
+        /// of XML rather than a code change.
+        /// </summary>
+        public int minGrowTempC = 600;
+        public int optimalGrowTempC = 4_200;
+        public int maxGrowTempC = 5_800;
+
         /// <summary>Presentation module ids, one per drawn stage. Never resolved in the simulation.</summary>
         public string moduleIdSmall = "odyssey.module.carrot.s";
         public string moduleIdMedium = "odyssey.module.carrot.m";
@@ -61,6 +73,22 @@ namespace Odyssey.Sim.Growing
         /// <summary>Is the crop in daylight at this tick of the day?</summary>
         public bool GrowsAt(int tickOfDay) =>
             tickOfDay >= growWindowStartTick && tickOfDay < growWindowEndTick;
+
+        /// <summary>
+        /// How fast the crop grows at a temperature, per-mille: the reference's own response
+        /// (a-06 §2) — linear from frozen at <see cref="minGrowTempC"/> to full speed at
+        /// comfortable, full through the band, then linear again down to nothing at
+        /// <see cref="maxGrowTempC"/>. Integer division floors toward zero, so below freezing of
+        /// the band the answer is exactly stopped rather than fractionally creeping.
+        /// </summary>
+        public int GrowRatePerMille(int tempC)
+        {
+            if (tempC <= 0) return 0;
+            if (tempC < minGrowTempC) return tempC * 1_000 / minGrowTempC;
+            if (tempC <= optimalGrowTempC) return 1_000;
+            if (tempC >= maxGrowTempC) return 0;
+            return (maxGrowTempC - tempC) * 1_000 / (maxGrowTempC - optimalGrowTempC);
+        }
 
         /// <summary>How far through growing this many accumulated ticks is, 0–1000.</summary>
         public int Milligrowth(int ticks)

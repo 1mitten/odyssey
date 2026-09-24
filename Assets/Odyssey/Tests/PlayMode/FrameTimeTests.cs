@@ -130,6 +130,72 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What showing the power lines costs (design 32 §11): two thousand lines on the ground
+        /// across the drawn band, the frame with them hidden against the frame with the overlay
+        /// on, seconds apart in one session so that whatever the machine is doing cancels out.
+        ///
+        /// <para>The draw-call half is the one that is a gate: hidden, the pass submits nothing;
+        /// shown, it submits in colours — a handful of calls — never one per line
+        /// (<c>docs/bug-patterns.md</c> P10). The milliseconds are logged for design 32 §11 and
+        /// asserted against nothing, for the reason <c>CLAUDE.md</c> gives about every frame number
+        /// on a machine running several editors at once.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ThePowerLinesCostWhatTheySubmit()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.Colony, Is.Not.Null, "the bootstrap never built a colony");
+                var colony = boot.Colony!;
+                var power = colony.Pawns.Power!;
+                var grid = colony.Grid;
+                var size = grid.Size;
+
+                // Straight runs along X on the surface, one row in every two, so the rows stay
+                // separate nets and the links are real: two thousand cells.
+                int laid = 0;
+                for (int z = 2; z < size.SizeZ - 2 && laid < PowerLines; z += 2)
+                for (int x = 2; x < size.SizeX - 2 && laid < PowerLines; x++)
+                {
+                    int top = -1;
+                    for (int y = size.SizeY - 2; y >= 0; y--)
+                        if ((grid.Flags[size.Index(x, z, y)] & CellFlags.SolidTerrain) != 0) { top = y; break; }
+                    if (top < 0 || top + 1 >= size.SizeY) continue;
+                    power.AddLine(size.Index(x, z, top + 1));
+                    laid++;
+                }
+                boot.World!.Tick();
+
+                float hidden = 0f;
+                yield return TimeFrames("power/hidden", boot, WarmupFrames, x => hidden = x);
+                Assert.That(boot.PowerLineDrawCalls, Is.Zero, "hidden lines are not submitted");
+
+                boot.Directors!.Overlays.SetPower(true);
+                // The watch goes out on the next frame and is answered on the tick after it.
+                for (int i = 0; i < 4; i++) { yield return null; boot.World!.Tick(); }
+
+                float shown = 0f;
+                yield return TimeFrames("power/shown", boot, WarmupFrames, x => shown = x);
+                int calls = boot.PowerLineDrawCalls;
+
+                Debug.Log($"[FrameTime] power lines: {laid} lines, hidden {hidden:0.00} ms, " +
+                          $"shown {shown:0.00} ms (+{shown - hidden:0.00}), {calls} draw calls");
+
+                Assert.That(calls, Is.GreaterThan(0), "the overlay drew nothing, so this measured nothing");
+                Assert.That(calls, Is.LessThanOrEqualTo(24), "two thousand lines must cost draws in colours, not in lines");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        const int PowerLines = 2_000;
+
+        /// <summary>
         /// What a warehouse costs to draw: forty shelves holding eight stacks each, against the
         /// same three hundred and twenty stacks lying on the floor, in one world.
         ///
@@ -564,6 +630,125 @@ namespace Odyssey.Tests.PlayMode
             {
                 UnityEngine.Object.Destroy(root);
             }
+        }
+
+        /// <summary>
+        /// The frame with a fight in view (design 33, the C2/C3 integration): ten colonists at the
+        /// start timed at peace, then ten marauders spawned among them and the same colony timed
+        /// again once the swinging has started — one run, so the difference is the fight and not
+        /// the machine (the rule in this class's other sweeps).
+        ///
+        /// <para>What a fight adds to a frame is the clip layer on every fighting figure, the
+        /// computed poses, the health bars and markers (two or three submissions per marked pawn),
+        /// the floating words and the combat event reader, and on the simulation side the swings
+        /// and the chase re-plans. It asserts that a fight really was in view — combat events in
+        /// the timed window, marauders on the board — because a brawl that never started reports a
+        /// beautifully cheap frame; about time it asserts only the class's 30 Hz ceiling.</para>
+        ///
+        /// <para>The brawl is ticked once a frame by the test on top of the bootstrap's own
+        /// real-time ticks. Without it the window's sim time was the machine's frame rate: 180
+        /// frames at 2.5 ms here are 27 ticks and caught four swings, and at 1.2 ms on the CI
+        /// runner they were about twelve and caught none (2026-09-24, PR #180). A tick of this
+        /// colony is 0.005 ms, so the frame it adds is noise; a peace it lets through is not.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheFrameWithAFightInView()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+                Assert.That(boot.Colony, Is.Not.Null, "the bootstrap never built a colony");
+                CellRef start = boot.Colony!.Start;
+                int top = boot.Colony.Grid.Size.SizeY - 2;
+
+                // Ten colonists about the start, where the camera is.
+                for (int i = 0; boot.World!.Views.Current.Pawns.Length < 10 && i < 40; i++)
+                {
+                    boot.World.Intents.Submit(new Intent(IntentKind.SpawnPawn,
+                        new CellRef(start.X - 2 + i % 5, start.Z - 1 + i / 5, top), 0));
+                    boot.World.Tick();
+                }
+                yield return null;
+
+                float peace = 0f;
+                yield return TimeFrames("fight/peace", boot, WarmupFrames, x => peace = x);
+                int peaceDraws = boot.Renderer?.DrawCalls ?? 0;
+
+                // Ten marauders a few cells off, each hunting the nearest colonist standing.
+                int before = boot.World.Views.Current.Pawns.Length;
+                for (int i = 0; boot.World.Views.Current.Pawns.Length < before + 10 && i < 40; i++)
+                {
+                    boot.World.Intents.Submit(new Intent(IntentKind.SpawnPawn,
+                        new CellRef(start.X - 2 + i % 5, start.Z + 4 + i / 5, top), 3));
+                    boot.World.Tick();
+                }
+
+                // Let them close and start swinging before the clock starts.
+                for (int i = 0; i < 240; i++)
+                {
+                    boot.World.Tick();
+                    if (i % 20 == 0) yield return null;
+                }
+
+                int eventsBefore = LastCombatEvent(boot);
+                long ticksBefore = boot.World.Views.Current.Tick;
+                bool brawling = true;
+                IEnumerator TickEachFrame()
+                {
+                    while (brawling)
+                    {
+                        boot.World!.Tick();
+                        yield return null;
+                    }
+                }
+
+                Coroutine ticker = boot.StartCoroutine(TickEachFrame());
+                float fight = 0f;
+                try
+                {
+                    yield return TimeFrames("fight/brawl", boot, 30, x => fight = x);
+                }
+                finally
+                {
+                    brawling = false;
+                    boot.StopCoroutine(ticker);
+                }
+                int events = LastCombatEvent(boot) - eventsBefore;
+                long windowTicks = boot.World.Views.Current.Tick - ticksBefore;
+
+                WorldSnapshot frame = boot.World.Views.Current;
+                int hostiles = Hostiles(frame);
+                Debug.Log($"[FrameTime] fight: peace {peace:0.00} ms ({peaceDraws} draw calls), " +
+                          $"brawl {fight:0.00} ms ({boot.Renderer?.DrawCalls ?? 0} draw calls), " +
+                          $"{frame.Pawns.Length} pawns ({hostiles} hostile), {boot.Figures?.FigureCount ?? 0} figures, " +
+                          $"{events} combat events in {windowTicks} ticks of the window, {frame.Corpses.Length} corpses");
+
+                Assert.That(hostiles + frame.Corpses.Length, Is.GreaterThan(0), "no marauder was ever spawned");
+                Assert.That(events, Is.GreaterThan(0), "nothing fought in the timed window: this timed a peace");
+                Assert.That(fight, Is.LessThan(CeilingMs), "a fight of ten against ten takes longer than a 30 Hz frame");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>How many hostiles the frame holds. Its own method: a span cannot live in an iterator.</summary>
+        static int Hostiles(WorldSnapshot frame)
+        {
+            int count = 0;
+            foreach (PawnView pawn in frame.Pawns) if (pawn.IsHostile) count++;
+            return count;
+        }
+
+        /// <summary>The id of the newest combat moment in the frame, 0 before the first.</summary>
+        static int LastCombatEvent(OdysseyBootstrap boot)
+        {
+            ReadOnlySpan<CombatEventView> events = boot.World!.Views.Current.CombatEvents;
+            return events.Length > 0 ? events[events.Length - 1].Id : 0;
         }
 
         /// <summary>

@@ -226,6 +226,31 @@ namespace Odyssey.Sim.Worldgen
         /// </summary>
         public byte constructedSupport = 4;
 
+        // ---- wildlife (design 30 §1) ----------------------------------------------------------
+
+        /// <summary>
+        /// The kinds that live on this world, how common each is, how many arrive together and
+        /// where they are put. Empty is a world with no animals, which is what the bare board is
+        /// on purpose: anything that is not grass on it is a bug.
+        /// </summary>
+        public Pawns.Wildlife.WildlifeEntry[] wildlife = Array.Empty<Pawns.Wildlife.WildlifeEntry>();
+
+        /// <summary>
+        /// The population the board holds, per ten thousand walkable, dry, reachable surface
+        /// columns — a census taken of the board as generated, not a number typed for one size.
+        /// Reachable is the word that matters: an animal hops only at a drawn ramp, so it can
+        /// walk to under half of the meadow's 14,400 columns (6,354 on seed 1), and fifteen per
+        /// ten thousand of those is nine or ten animals — about one per 1,500 cells of board.
+        /// Zero is no wildlife and no level-keeping at all.
+        /// </summary>
+        public int wildlifePer10000Columns;
+
+        /// <summary>
+        /// The most animals the level-keeper will let a board carry, whatever the census says.
+        /// The 64 drawn figures are the colonists' first (design 29 §8, the figure ceiling).
+        /// </summary>
+        public int wildlifeCeiling = 24;
+
         /// <summary>The slice map: 60 x 60 x 5 — one service layer, street level, three storeys.</summary>
         public static MapGenDef Slice() => new MapGenDef { defName = "MapGen_Slice", groundLayer = 1 };
 
@@ -238,6 +263,14 @@ namespace Odyssey.Sim.Worldgen
         {
             var gen = new MapGenDef { defName = "MapGen_" + size };
             gen.groundLayer = Math.Max(1, Math.Min(12, size.SizeY / 3));
+            // The ruin's wildlife: rats first, in the rubble, and a few hogs at the middens
+            // (design 30 §1). The same density as the meadow; a city block is no emptier.
+            gen.wildlife = new[]
+            {
+                new Pawns.Wildlife.WildlifeEntry("PawnKind_DuctRat", 3, 1, 2, Pawns.Wildlife.Habitat.Rock),
+                new Pawns.Wildlife.WildlifeEntry("PawnKind_MiddenHog", 1, 2, 3, Pawns.Wildlife.Habitat.Any),
+            };
+            gen.wildlifePer10000Columns = 15;
             return gen;
         }
 
@@ -251,6 +284,9 @@ namespace Odyssey.Sim.Worldgen
             if (minSoilDepth < 1 || maxSoilDepth < minSoilDepth) throw new ArgumentOutOfRangeException(nameof(minSoilDepth));
             if (minRockDepth <= maxSoilDepth || maxRockDepth < minRockDepth) throw new ArgumentOutOfRangeException(nameof(minRockDepth));
             if (vaultSize < 3) throw new ArgumentOutOfRangeException(nameof(vaultSize));
+            if (wildlifePer10000Columns < 0) throw new ArgumentOutOfRangeException(nameof(wildlifePer10000Columns));
+            if (wildlifeCeiling < 0) throw new ArgumentOutOfRangeException(nameof(wildlifeCeiling));
+            for (int i = 0; i < wildlife.Length; i++) wildlife[i].Validate();
         }
     }
 
@@ -368,6 +404,25 @@ namespace Odyssey.Sim.Worldgen
         /// beside the ones it must not collide with is safer than an offset to re-derive.</para>
         /// </summary>
         public const ushort EdificeShelf = 13;
+
+        /// <summary>
+        /// The first heat source (design 28 §7). Like the bed, it arrives only by
+        /// <c>ConstructionGrid.Raise</c> — nothing stamps it — and it is the one building whose
+        /// <c>heatPerPass</c> is not zero, which is the whole reason it exists: Rime is survivable
+        /// by shelter and fire, and nothing else. 14, the next free id after the shelf — spelled as
+        /// a literal for the same reason the bed's is.
+        /// </summary>
+        public const ushort EdificeCampfire = 14;
+
+        /// <summary>
+        /// The wood-fired generator (design 32 §6): the first thing that makes power, and like the
+        /// bed two cells along its facing. 15, the next free id after the campfire, spelled as a
+        /// literal for the reason the bed's is.
+        /// </summary>
+        public const ushort EdificeGenerator = 15;
+
+        /// <summary>The electric heater (design 32 §7): the first thing that spends power.</summary>
+        public const ushort EdificeHeater = 16;
 
         /// <summary>
         /// The city's ten, which are the first ten of the one table. Loaded from

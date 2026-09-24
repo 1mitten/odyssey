@@ -181,6 +181,17 @@ same message — and it does not get slower, because it stops as soon as the eff
 applies to anything downstream of a tick: a published snapshot, a job starting, a designation
 clearing.
 
+**The same trap has a second form: counting frames, or timing a window of frames, across a tick.**
+2026-09-24, PR #180, two PlayMode tests red on the CI runner and green here. `StockpileDragTests`
+counted frames from the drag to the drawn zone and allowed ten, but the zone exists only after the
+next tick, and at the runner's ~1 ms frames that tick can be sixteen frames off — `main` read 3 and
+the branch 11 on the same renderer. `TheFrameWithAFightInView` asserted combat events inside 180
+timed frames, which are 27 ticks at 2.5 ms here and about twelve at 1.2 ms there, and the runner's
+twelve caught no swing. **The runner is the faster machine, so it is where this shows.** Count
+from the effect (the tick that published the zone), and where a window must hold simulation time,
+tick it from the test (`boot.StartCoroutine` ticking once a frame) rather than hoping the frame
+rate supplies it. Print the tick count beside any frame count, so the next failure names itself.
+
 **The fast tier compiles neither Presentation nor Editor.** `scripts/test-fast.sh` builds only the
 two mirror projects, `Odyssey.Tests.Sim` and `Odyssey.Tests.Hud`, so a green fast tier says nothing
 at all about `Assets/Odyssey/Presentation/`, `Assets/Editor/` or the scene wiring. A unit that
@@ -2500,6 +2511,17 @@ git worktree remove D:\code\<worktree>
 ```
 
 `rmdir` on a junction removes the link. A recursive delete follows it.
+
+
+## A benchmark that edits the grid directly bypasses every cache a real edit invalidates
+
+`TickBenchmarkTests.MineOneCell` flips a cell and marks the nav grid, and that was the whole
+"edit tick" the map-size numbers were taken on. A colonist's mined cell also marks the enclosure,
+the structure solver and the chunks — and the enclosure solve was the largest of them on Huge
+(2.3 ms of a real edit against 0.9 ms measured) before temperature made it larger. **When a
+benchmark stands in for a game action, list every mark the real action sets and set them all**,
+or the number is of a different action than the one it is named after. Found reviewing PR #164
+(2026-09-21); `EnclosureCostProbe` is the explicit arm that measures the missing one.
 ## A dead process can hold the build backend, and the batch run waits for it for ever
 
 `scripts/unity.sh test editmode` wrote its log up to `Compiling Scripts` and then sat there. The last
@@ -2618,3 +2640,60 @@ scripts/unity.sh exec Odyssey.EditorTools.CharacterSwatches.Classify
 and the diff of `ModuleCatalogue.asset` is checked for `quality: [1-9]` still counting sixty-one
 before the commit. The right fix is for the rebuild to carry the cells across from the asset it
 is replacing; until then this is the rule.
+
+## The runner has art of its own now, and "is the art here" must name the rows it means
+
+**2026-09-23, the animals and wildlife PRs.** Both were green on every tier here and red on the
+self-hosted runner, twice over, for one cause: the animals unit committed two rows of the
+project's own art (`Assets/Art/Custom/Animals`), which resolve on the runner precisely because
+they are not the licensed packs. Every guard that asked "is there any art at all" — a slab
+test's "does any catalogue row resolve", `PawnFigureDirector.Enabled` in a colonist test —
+flipped from *ignore* to *run* on the one machine with no colonist art, and failed on what it
+then measured. **A guard asks about the rows the rule is about:** slab rows for a slab rule,
+`CanDrawColonists` for a colonist figure, `Enabled` only for "can anything be drawn".
+
+The second lesson is cheaper and cost more: **run the whole PlayMode tier before the push, not
+the tests you wrote.** Three PlayMode tests elsewhere counted pawns where the world now seeds
+animals beside the colonists, and the runner found all three one push at a time, each a
+fifteen-minute round trip. The tier is ten minutes here.
+## Four tiers, and a branch can report three of them (2026-09-22)
+
+PR #164 reported *"Fast tier 921 + 583 green, Long tier 23 green, Unity EditMode 2,280 total, 0
+failed"* — three tiers, all honest, and **no PlayMode figure**. PlayMode had one real failure
+waiting in it: the campfire was live on the Build palette with no glyph, so its chip drew the
+placeholder square the specification forbids, and it had been that way for as long as the campfire
+had existed.
+
+**Nothing else could have caught it.** `PaletteGlyphs` lives in `Odyssey.Presentation`, which the
+fast tier does not compile at all; EditMode compiles it and does not carry the test;
+`HudGeometryTests` is PlayMode because it needs a panel. So the one tier that was not run was the
+only tier that could see it.
+
+This is the Long tier's lesson again in different clothes — PR #145 merged with three green tiers
+on top of a Long tier nobody ran and turned `main` red on a wall-clock gate. **The rule that comes
+out of both: a report of "tiers green" names every tier, and a tier with no number beside it was
+not run.** "EditMode 2,280, 0 failed" reads like the authoritative gate because CLAUDE.md calls
+EditMode authoritative, and it is — for what it covers.
+
+The four, and what each is the only one able to see:
+
+| Tier | Compiles | Only it can catch |
+|---|---|---|
+| Fast (`test-fast.sh`) | Sim, Sim.Contracts, Hud | nothing exclusively — it is the inner loop, not a gate |
+| Long (`--filter TestCategory=Long`) | the same | soak runs, scale-target round trips, wall-clock gates |
+| Unity EditMode | **everything**, including Presentation and Editor | assembly-definition boundaries, editor tooling, anything that will not compile outside the editor |
+| Unity PlayMode | everything | anything that needs a panel, a frame or a player loop: HUD geometry, glyphs, frame time |
+
+And the player build is the fifth thing, which is not a tier and proves what none of them do: that
+a stripped shader and a runtime path under `Assets/` survive. Two green tiers say nothing about
+whether the game runs.
+
+## Rebuild a serialized asset after a merge; do not trust git's text merge of it (2026-09-24)
+
+`ModuleCatalogue.asset` merged without a conflict and was wrong: git kept both branches' rows and
+dropped the four `fit*` fields that one side had added to *every* row, because each hunk only
+touched the other side's rows. Nothing fails. The editor fills a missing field with its default, so
+main's machines would have silently lost their footprint fit. After any merge that touches a
+generated asset, regenerate it (`unity.sh exec Odyssey.EditorTools.PlayScene.RebuildCatalogue`,
+then `CharacterSwatches.Classify` and `AudioSetup.Build`). Then compare its ids against both parents
+before trusting it.

@@ -70,6 +70,68 @@ namespace Odyssey.Presentation.Ui
 
             BuildRail(_gutter);
             BuildOrders(_gutter);
+            BuildViews(_gutter);
+        }
+
+        // ============================================================ the views strip
+
+        /// <summary>One toggle per view, by its key (design 32 §14).</summary>
+        readonly Dictionary<string, VisualElement> _viewButtons = new Dictionary<string, VisualElement>();
+
+        /// <summary>What the strip was last painted for: one bit per view, and -1 so the first paint runs.</summary>
+        int _viewsPaintedFor = -1;
+
+        /// <summary>
+        /// The views strip: under the orders, the same buttons, but each a switch that stays where
+        /// it is put rather than a tool that is held (owner, 2026-09-23). Which views exist is
+        /// <see cref="HudViews.Keys"/>; whether one is on is the overlay director's.
+        /// </summary>
+        void BuildViews(VisualElement gutter)
+        {
+            VisualElement strip = Panel("views", "orders", "views");
+            foreach (string key in HudViews.Keys) strip.Add(ViewButton(key));
+            gutter.Add(strip);
+        }
+
+        VisualElement ViewButton(string key)
+        {
+            var button = new VisualElement { name = "view-" + key };
+            button.AddToClassList("ord__btn");
+            button.Add(new HudGlyph(key == HudViews.Power ? HudGlyphKind.CategoryPower : HudGlyphKind.Placeholder,
+                17f, HudTokens.Convert(HudTheme.Accent)));
+            button.tooltip = Registry.Label(key) + " — show it whatever is armed; press again to hide it";
+            button.RegisterCallback<ClickEvent>(_ =>
+            {
+                if (_directors == null) return;
+                HudViews.Toggle(_directors.Overlays, key);
+                _powerOverlayRow?.EnableInClassList("menu__row--on", _directors.Overlays.PowerVisible);
+                MarkViews();
+            });
+            _viewButtons[key] = button;
+            return button;
+        }
+
+        /// <summary>Light the views that are on. Called every frame; early-returns when nothing moved.</summary>
+        void MarkViews()
+        {
+            if (_directors == null) return;
+            int bits = 0;
+            for (int i = 0; i < HudViews.Keys.Length; i++)
+                if (HudViews.IsOn(_directors.Overlays, HudViews.Keys[i])) bits |= 1 << i;
+            if (bits == _viewsPaintedFor) return;
+            _viewsPaintedFor = bits;
+
+            for (int i = 0; i < HudViews.Keys.Length; i++)
+            {
+                if (!_viewButtons.TryGetValue(HudViews.Keys[i], out VisualElement? button)) continue;
+                bool on = (bits & (1 << i)) != 0;
+                HudColour hue = HudTheme.Accent;
+                button.EnableInClassList("ord__btn--on", on);
+                button.style.backgroundColor = HudTokens.Convert(hue.WithAlpha(on ? 0.30f : 0.06f));
+                button.style.borderTopColor = button.style.borderRightColor =
+                    button.style.borderBottomColor = button.style.borderLeftColor =
+                        HudTokens.Convert(hue.WithAlpha(on ? 1f : 0.30f));
+            }
         }
 
         // ============================================================ the orders strip

@@ -54,6 +54,13 @@ namespace Odyssey.Tests.Hud
             (".commandbar", "background-color", () => HudTheme.BarFill, "bar fill"),
             (".commandbar", "border-color", () => HudTheme.PanelBorder, "panel border"),
             (".window", "background-color", () => HudTheme.PopoverFill, "popover fill"),
+            // The context menu (design 33 §7a): a popover's fill, and the three inks every list
+            // row already uses — its words, a disabled row's, and the reason beside one.
+            (".ctxmenu", "background-color", () => HudTheme.PopoverFill, "popover fill"),
+            (".ctxmenu__label", "color", () => HudTheme.TextPrimary, "text primary"),
+            (".ctxmenu__row--off .ctxmenu__label", "color", () => HudTheme.TextFaint, "text faint"),
+            (".ctxmenu__reason", "color", () => HudTheme.TextDim, "text dim"),
+            (".ctxmenu__row--cancel", "border-top-color", () => HudTheme.Divider, "divider"),
 
             (".stores__name", "color", () => HudTheme.TextPrimary, "text primary"),
             (".stores__value", "color", () => HudTheme.TextPrimary, "text primary"),
@@ -252,6 +259,10 @@ namespace Odyssey.Tests.Hud
             (".card__badge", "width", () => HudLayout.CardJobRow, "card badge width"),
             (".card__badge", "height", () => HudLayout.CardJobRow, "card badge height"),
             (".card", "padding", () => HudLayout.CardPad, "card padding"),
+            (".card__name", "margin-top", () => HudLayout.CardNameGap, "portrait to name"),
+            (".card__name", "height", () => HudLayout.CardNameRow, "the name's line"),
+            (".card__health", "margin-top", () => HudLayout.CardHealthGap, "name to health bar"),
+            (".card__health", "height", () => HudLayout.CardHealthBar, "the card's health bar"),
 
             (".bar-row", "bottom", () => HudLayout.BarBottom, "the command bar docked to the bottom"),
             (".commandbar", "padding", () => HudCommands.BarPad, "command bar padding"),

@@ -2,7 +2,7 @@
 
 Things a colonist carries, wears or fights with, as distinct from the bulk commodities above. A commodity is counted; an item is an object with a quality and a history.
 
-30 entries, 4 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+34 entries, 8 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
@@ -24,6 +24,10 @@ Things a colonist carries, wears or fights with, as distinct from the bulk commo
 | **Grenade** | `ui.item.grenade` | Area damage, and friendly fire | sheet 08 (salvage gear), med | M3 |
 | **Shield** | `ui.item.shield` | Melee defence | sheet 05 (tools and weapons), high | M3 |
 | **Helmet** | `ui.item.helmet` | Protects the head <br>**Needs:** a helmet | no art | M3 |
+| **Bat** | `ui.item.bat` | Blunt, and now and then it stuns | no art | CB |
+| **Crowbar** | `ui.item.crowbar` | Heavier than a bat, slower, and stuns more often | no art | CB |
+| **Machete** | `ui.item.machete` | Sharp and quick | no art | CB |
+| **Arc blade** | `ui.item.arcblade` | A powered edge. The best thing a colonist can hold | no art | CB |
 | **Vest** | `ui.item.vest` | Torso armour | sheet 08 (salvage gear), med | M3 |
 | **Jacket** | `ui.item.jacket` | Warmth and a little protection <br>**Needs:** a coat or jacket | no art | M3 |
 | **Mask** | `ui.item.mask` | Filters what you would rather not breathe | sheet 08 (salvage gear), high | M3 |

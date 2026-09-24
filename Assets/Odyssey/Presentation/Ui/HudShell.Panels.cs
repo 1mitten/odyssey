@@ -220,6 +220,7 @@ namespace Odyssey.Presentation.Ui
             if (BuildPaletteOpen) SetBuildPalette(false);
             if (MenuOpen) ToggleMenu(false);
             CloseBedPicker();
+            CloseContextMenu();
         }
 
         /// <summary>
@@ -568,6 +569,8 @@ namespace Odyssey.Presentation.Ui
                     view.JobIcon.SetKey(JobLabels.IconKey(model.JobDef));
                 }
 
+                SyncCardHealth(view, model);
+
                 view.Root.EnableInClassList("card--sel", model.Selected);
                 view.Ring.style.display = model.Selected ? DisplayStyle.Flex : DisplayStyle.None;
                 view.LastLayer = model.Layer;
@@ -607,6 +610,39 @@ namespace Odyssey.Presentation.Ui
             }
         }
 
+        /// <summary><see cref="CardView.LastHealth"/> for a downed colonist, which no fill can be.</summary>
+        const int DownedHealth = -2;
+
+        /// <summary>
+        /// Draw a card's health bar from the model (design 33 §9f): the fill's width and ink, and
+        /// for a downed colonist an empty track in the red and "Downed" across the foot of the
+        /// portrait. Every number, colour and word is <see cref="RosterModel.Health"/>'s; this only
+        /// writes them, and only when the reading moved, because the strip refreshes fifteen times
+        /// a second.
+        /// </summary>
+        static void SyncCardHealth(CardView view, in RosterCard model)
+        {
+            int key = model.Downed ? DownedHealth : model.Health;
+            if (view.LastHealth == key) return;
+            view.LastHealth = key;
+
+            view.HealthFill.style.width = Length.Percent(model.Health <= 0 ? 0f : model.Health / 10f);
+            view.HealthFill.style.backgroundColor = HudTokens.Convert(model.HealthInk);
+
+            if (model.Downed)
+            {
+                view.Health.style.backgroundColor = HudTokens.Convert(model.HealthInk.WithAlpha(0.35f));
+                view.HealthWord.style.backgroundColor = HudTokens.Convert(model.HealthInk.WithAlpha(0.85f));
+                HudText.Set(view.HealthWord, model.HealthWord, HudTextRole.Meta);
+                view.HealthWord.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+                view.Health.style.backgroundColor = StyleKeyword.Null;
+                view.HealthWord.style.display = DisplayStyle.None;
+            }
+        }
+
         CardView NewCard(int index)
         {
             var card = new VisualElement();
@@ -640,10 +676,26 @@ namespace Odyssey.Presentation.Ui
             Label name = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "card__name");
             card.Add(name);
 
+            // The health bar under the name, always shown (design 33 §9f), and "Downed" across the
+            // foot of the portrait, shown only while downed. The caption goes into the avatar box
+            // before the badge so the badge still sits on top of it.
+            var health = new VisualElement { pickingMode = PickingMode.Ignore };
+            health.AddToClassList("card__health");
+            var healthFill = new VisualElement { pickingMode = PickingMode.Ignore };
+            healthFill.AddToClassList("card__health-fill");
+            health.Add(healthFill);
+            card.Add(health);
+
+            Label downed = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "card__downed");
+            downed.pickingMode = PickingMode.Ignore;
+            downed.style.display = DisplayStyle.None;
+            avatarBox.Insert(avatarBox.IndexOf(jobIcon), downed);
+
             var view = new CardView
             {
                 Root = card, Ring = ring, Avatar = avatar, Name = name,
                 JobIcon = jobIcon,
+                Health = health, HealthFill = healthFill, HealthWord = downed,
             };
 
             // Shift is the strip's toggle, exactly as it is in the world: a shift-press on a card
@@ -1031,8 +1083,16 @@ namespace Odyssey.Presentation.Ui
             if (world == null) return;
             long tick = world.CurrentTick;
             HudText.Set(_clockTime, $"{GameClock.HourOfDay(tick):00}:00", HudTextRole.Clock);
+
+            // The outdoor temperature beside the date, labelled outdoor because it is not the
+            // temperature anywhere in particular — it is the one the unenclosed world reads, and
+            // the pane's own row is where a tile's answer lives (design 28 §8, panel A3).
+            var temperature = _boot.Colony?.Pawns.Temperature;
+            string outdoor = temperature == null
+                ? string.Empty
+                : $" · {TemperatureLabels.Describe(temperature.OutdoorTempC(tick))} outdoors";
             HudText.Set(_clockDate,
-                $"Day {GameClock.DayOfMonth(tick)} · {GameClock.MonthName(tick)} · {GameClock.SeasonName(tick)}",
+                $"Day {GameClock.DayOfMonth(tick)} · {GameClock.MonthName(tick)} · {GameClock.SeasonName(tick)}{outdoor}",
                 HudTextRole.Body);
         }
 

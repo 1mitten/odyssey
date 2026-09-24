@@ -45,6 +45,34 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
+        /// The lock-on ring (design 33 §7b) faces up, by the cube's rule: the fast tier checks the
+        /// winding it is built from (<c>LockOnRingTests.TheRingFacesUp</c>), and this checks the
+        /// mesh was built from it — normals up and every triangle wound to match them.
+        /// </summary>
+        [Test]
+        public void TheRingFacesUp()
+        {
+            Mesh ring = PrimitiveMeshes.UnitRing;
+            Vector3[] vertices = ring.vertices;
+            Vector3[] normals = ring.normals;
+            int[] triangles = ring.triangles;
+
+            Assert.That(triangles.Length, Is.EqualTo(Odyssey.Hud.LockOnRing.Segments * 6));
+            for (int t = 0; t < triangles.Length; t += 3)
+            {
+                Vector3 a = vertices[triangles[t]];
+                Vector3 b = vertices[triangles[t + 1]];
+                Vector3 c = vertices[triangles[t + 2]];
+                Vector3 wound = Vector3.Cross(b - a, c - a).normalized;
+                Assert.That(Vector3.Dot(wound, Vector3.up), Is.GreaterThan(0.99f), $"triangle {t / 3} faces down");
+                Assert.That(normals[triangles[t]], Is.EqualTo(Vector3.up));
+            }
+
+            Assert.That(ring.bounds.extents.x, Is.EqualTo(1f).Within(1e-4f), "outer radius 1 m");
+            Assert.That(ring.bounds.extents.y, Is.EqualTo(0f).Within(1e-6f), "flat");
+        }
+
+        /// <summary>
         /// The pillow faces outwards too, and the same argument applies: a rounded box wound the
         /// wrong way is valid geometry that draws its own inside and reports healthy counts.
         ///

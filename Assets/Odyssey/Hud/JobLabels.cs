@@ -35,6 +35,17 @@ namespace Odyssey.Hud
             Idle, Idle, "ui.status.felling", "ui.status.mining",
             "ui.status.hauling", "ui.status.building", "ui.status.deconstructing",
             "ui.status.sowing", "ui.status.harvesting",
+            // The draft's two jobs (design 33 §2c): holding and walking to an order both read as
+            // drafted, because what the player needs from the line is that this colonist is
+            // theirs to command and not the work list's.
+            "ui.status.drafted", "ui.status.drafted",
+            // Power (design 32): laying a line is building, taking one up is deconstructing, and
+            // feeding a generator has a word of its own.
+            "ui.status.building", "ui.status.deconstructing", "ui.status.refuelling",
+            // The combat line's five (design 33 §5), in JobHandle order 17 to 21, after power's three: attacking,
+            // fleeing, lying downed, fetching a weapon, carrying the downed to bed.
+            "ui.status.fighting", "ui.status.fleeing", "ui.status.downed",
+            "ui.status.equipping", "ui.status.rescuing",
         };
 
         public static string IconKey(int jobDef) =>

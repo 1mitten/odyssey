@@ -435,13 +435,16 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.Tabs[0].Name, Is.EqualTo("Needs"));
             Assert.That(pane.Tabs[0].Enabled, Is.True);
             Assert.That(pane.Tabs[1].Name, Is.EqualTo("Skills"));
-            Assert.That(pane.Tabs.Count(t => t.Enabled), Is.EqualTo(2),
-                "Needs and Skills are live; Gear, Thoughts, Social, Health and Log are visible " +
-                "with reasons");
+            Assert.That(pane.Tabs.Count(t => t.Enabled), Is.EqualTo(3),
+                "Needs, Skills and Health are live (Health since the combat contracts step, design " +
+                "33 §5); Gear, Thoughts, Social and Log are visible with reasons");
+            Assert.That(pane.Tabs.Single(t => t.Name == "Health").Enabled, Is.True);
 
             Assert.That(pane.Commands, Is.Not.Empty);
-            Assert.That(pane.Commands.Count(c => c.Enabled), Is.Zero,
-                "no colonist command is wired yet, and none may pretend to be");
+            // The draft is the one command wired (design 33 §2f); the rest may not pretend to be.
+            Assert.That(pane.Commands.Where(c => c.Enabled).Select(c => c.IconKey),
+                Is.EqualTo(new[] { InspectModel.DraftKey }),
+                "only Draft is wired, and none of the others may pretend to be");
         }
 
         /// <summary>
@@ -511,9 +514,9 @@ namespace Odyssey.Tests.Hud
             pane.Refresh(snapshot);
 
             Assert.That(pane.Skills.Count, Is.EqualTo(SkillCatalogue.All.Length));
-            Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(4),
-                "mining, chopping, construction and growing are the four the simulation backs; " +
-                "hauling is a work type and not a skill in the design's list");
+            Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(5),
+                "mining, chopping, construction, growing and melee are the five the simulation " +
+                "backs; hauling is a work type and not a skill in the design's list");
 
             SkillRow mining = pane.Skills.Single(s => s.IconKey == "ui.skill.mining");
             Assert.That(mining.Name, Is.EqualTo("Mining"), "the registry's word for ui.skill.mining");
@@ -550,6 +553,8 @@ namespace Odyssey.Tests.Hud
                 {
                     "ui.skill.mining", "ui.skill.cutting",
                     "ui.skill.construction", "ui.skill.growing",
+                    // Live since the combat contracts step (design 33 §5).
+                    "ui.skill.melee",
                 }),
                 "the live rows are the simulation's own skills, each under its own name");
 

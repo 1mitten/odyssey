@@ -560,6 +560,9 @@ namespace Odyssey.Presentation.World
 
             /// <summary>Lay the computed four-legged gait over the idle; the rig is measured at build.</summary>
             public bool QuadrupedGait;
+
+            /// <summary>A feminine body: the draw and the sheathe are the pack's <c>_Femn</c> clips (design 33 §8b).</summary>
+            public bool Feminine;
         }
 
         readonly Look?[] _looks;
@@ -926,6 +929,7 @@ namespace Odyssey.Presentation.World
                     Scale = row.scale,
                     Gaits = gaits,
                     Speeds = GroundSpeeds(gaits, row.scale),
+                    Feminine = row.sex == BodySex.Female,
                 };
             }
             return looks;
@@ -977,7 +981,7 @@ namespace Odyssey.Presentation.World
 
         /// <summary>An animal's look is its kind's row; a person's is the face the book dealt.</summary>
         int LookFor(in PawnView pawn) =>
-            pawn.Kind != 0 ? AnimalLookIndex(pawn.Kind) : LookFor(pawn.Id);
+            pawn.IsAnimal ? AnimalLookIndex(pawn.Kind) : LookFor(pawn.Id);
 
         /// <summary>
         /// How far the sole sits below the ankle, on the figure whose boot is thickest.
@@ -1009,7 +1013,7 @@ namespace Odyssey.Presentation.World
 
         /// <summary>The same question of a view, which is the only thing that knows a pawn's kind.</summary>
         bool CanDraw(in PawnView pawn) =>
-            pawn.Kind != 0
+            pawn.IsAnimal
                 ? (uint)pawn.Kind < (uint)_animalLooks.Length && _animalLooks[pawn.Kind] != null
                 : CanDraw(pawn.Id);
 
@@ -1063,6 +1067,11 @@ namespace Odyssey.Presentation.World
             // can-we-draw-this-one test all need it, and they are called from half a dozen places
             // down the stack rather than from here.
             _frame = snapshot;
+
+            // The fight's clock (design 33 §3): a swing is timed in the simulation's ticks, drawn
+            // at the part-tick this frame is drawn at, so its blow lands on the tick it is resolved.
+            _frameTicks = snapshot.Tick + tickAlpha;
+            FightingFigures = 0;
 
             // Is the world actually running? The snapshot says so — see WorldSnapshot.GameSpeed.
             //
@@ -1474,10 +1483,15 @@ namespace Odyssey.Presentation.World
             // state rather than advancing it is left alone.
             float deltaTime = running ? frameTime : 0f;
 
+            // Whether the work stroke plays. Not for a fight (design 33 §5j): the attack driver
+            // publishes a work focus through its wind-up so the figure turns to its target, and
+            // the blow itself is the fight's clip or computed swing, never the axe's.
+            bool stroking = PlaysWorkStroke(in pawn);
+
             // Work eases in and out rather than switching, and the axe is in the hand for exactly
             // as long as the pose is worth anything. See WorkEaseSeconds.
             float step = WorkEaseSeconds > 1e-3f ? deltaTime / WorkEaseSeconds : running ? 1f : 0f;
-            figure.WorkWeight = Mathf.MoveTowards(figure.WorkWeight, pawn.Working ? 1f : 0f, step);
+            figure.WorkWeight = Mathf.MoveTowards(figure.WorkWeight, stroking ? 1f : 0f, step);
 
             // The computed walk's cycle steps on here, once a frame, from the speed this figure
             // was measured at last frame; the pose pass only applies it (design 29).
@@ -1492,9 +1506,9 @@ namespace Odyssey.Presentation.World
             // off the stroke phase, the chips and the impact audio follow for free. Work stays
             // continuous per tick in the simulation and the swing is scaled to match it — the
             // two agree in aggregate without either owning the other.
-            if (pawn.Working && running)
+            if (stroking && running)
                 figure.SwingClock += SwingAdvance(deltaTime, WorkRateOf(pawn.Id));
-            else if (!pawn.Working && figure.WorkWeight <= 0f) figure.SwingClock = 0f;
+            else if (!stroking && figure.WorkWeight <= 0f) figure.SwingClock = 0f;
 
             // The one-shot gestures, started by a serial that has moved rather than by a state
             // that is true. See PawnView.GestureSerial: the view reports the *last* gesture
@@ -1511,7 +1525,11 @@ namespace Odyssey.Presentation.World
                 // First sighting records and poses nothing. A figure leased for a colonist who has
                 // been hauling for an hour would otherwise open with a lift it never made, as would
                 // every colonist on the board on the first frame after a load.
-                if (figure.SeenSerial >= 0 && pawn.Gesture != PawnGesture.None)
+                // A strike is the fight's (design 33 §5): it starts a swing, never the crouch every
+                // other gesture is drawn as — GestureOf would otherwise read it as a lift.
+                if (figure.SeenSerial >= 0 && pawn.Gesture == PawnGesture.Strike)
+                    BeginStrike(figure, in pawn);
+                else if (figure.SeenSerial >= 0 && pawn.Gesture != PawnGesture.None)
                 {
                     figure.Gesture = pawn.Gesture;
                     figure.GestureClock = 0f;
@@ -1520,12 +1538,16 @@ namespace Odyssey.Presentation.World
                 figure.SeenSerial = pawn.GestureSerial;
             }
 
+            // The fight: the action it is drawing and the held states, before anything below
+            // reads them — the downed lie rides the sleeper's weight.
+            PoseCombat(figure, in pawn, frameTime, running);
+
             if (figure.Gesture != PawnGesture.None)
             {
                 // Work wins. Nothing in the game can pick something up and swing an axe at the same
                 // time, but the two poses write the same bones, and a gesture left running under a
                 // work pose would be a fight rather than a blend.
-                if (pawn.Working) figure.Gesture = PawnGesture.None;
+                if (stroking) figure.Gesture = PawnGesture.None;
                 else if (running)
                 {
                     figure.GestureClock += deltaTime;
@@ -1549,7 +1571,7 @@ namespace Odyssey.Presentation.World
             // and it.
             WorkStroke stroke = Styles[figure.Style].Stroke;
             float phase = stroke.Phase(figure.SwingClock, figure.SwingOffset);
-            if (pawn.Working && running && figure.WorkWeight > 0.5f
+            if (stroking && running && figure.WorkWeight > 0.5f
                 && stroke.Lands(figure.LastPhase, phase))
                 figure.Landed = true;
             figure.LastPhase = phase;
@@ -1764,10 +1786,15 @@ namespace Odyssey.Presentation.World
             // Asleep, and where. A bed decides which way the body lies and how high off the floor;
             // with no bed the colonist lies where it dropped, facing wherever it last faced, which
             // is the SleptOnGround case and is drawn rather than left standing.
+            // A downed pawn with no knock-down clip to lie in lies down as a sleeper does, on the
+            // ground where she fell (design 33 §1): a body on the floor is a body on the floor.
             figure.SleepWeight = ForceSleep.HasValue
                 ? ForceSleep.Value
-                : SleepPose.Settle(figure.SleepWeight, pawn.Asleep ? 1f : 0f, deltaTime);
+                : SleepPose.Settle(figure.SleepWeight, pawn.Asleep || figure.Fight.Lying ? 1f : 0f, deltaTime);
             if (figure.SleepWeight > 0.001f) AimSleep(figure, in pawn);
+
+            // The weapon in the right hand, now that the tool, the load and the lie are known.
+            ShowWeapon(figure, in pawn, carrying: carryDef >= 0, deltaTime);
 
             // Face the work. A pawn that has stopped walking has no heading left — that is what
             // makes PawnPose hand back a zero vector — so without the work cell the figure would
@@ -1819,7 +1846,8 @@ namespace Odyssey.Presentation.World
             // last one until the weight is gone makes the way out retrace the way in.
             // On the drawn ground, because the whole stance is solved against it: the step-up to
             // the tree, the arm IK target and the chips thrown where the blade lands all read this.
-            if (pawn.Working)
+            // Not for a fight, whose focus only turns the figure (design 33 §5j).
+            if (stroking)
             {
                 figure.WorkCentre = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.WorkCell));
 
@@ -1875,6 +1903,9 @@ namespace Odyssey.Presentation.World
             if (figure.ClimbWeight > 0.001f && figure.LastClimbFace != Vector3.zero)
                 drawn += figure.LastClimbFace * (ClimbLean * figure.ClimbWeight);
 
+            // A computed blow's lunge, a stagger's shove, a dodge's sidestep (design 33 §1).
+            drawn += CombatOffset(figure);
+
             figure.Transform.position = drawn;
 
             // Turn towards the heading rather than snapping to it.
@@ -1910,7 +1941,7 @@ namespace Odyssey.Presentation.World
             figure.Lean = settled ? Footing.Settle(figure.Lean, wanted, deltaTime) : wanted;
 
             figure.GroundY = drawn.y - GroundRelief.HeightAt(drawn.x, drawn.z);
-            figure.Transform.rotation = figure.Lean * Quaternion.Euler(0f, figure.Yaw, 0f);
+            figure.Transform.rotation = figure.Lean * Quaternion.Euler(0f, figure.Yaw, 0f) * CombatBodyPitch(figure);
 
             // Laid down last, over everything above, because lying is a statement about the whole
             // figure rather than an adjustment to a standing one: the lean, the heading and the
@@ -1999,7 +2030,8 @@ namespace Odyssey.Presentation.World
                 figure.Gaze.PosturePitchOffset = 0f;
 
             // Tier 6: SleepLock
-            if (pawn.Asleep || figure.SleepWeight > 0.001f)
+            // A downed pawn does not look about either: she is on the ground (design 33 §1).
+            if (pawn.Asleep || figure.SleepWeight > 0.001f || pawn.IsDowned)
             {
                 figure.Gaze.ActivePriority = GazePriority.SleepLock;
                 figure.Gaze.HasTarget = false;
@@ -2169,10 +2201,19 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void Repaint(Figure figure, PawnId pawn)
         {
+            Repaint(figure, pawn, RollSeedOf(pawn));
+        }
+
+        /// <summary>
+        /// The same, dealt from a seed the caller holds rather than the frame's — a corpse's, whose
+        /// pawn the frame no longer carries (design 33 §3).
+        /// </summary>
+        void Repaint(Figure figure, PawnId pawn, uint rollSeed)
+        {
             if (Materials == null || figure.Skins.Length == 0) return;
 
             AppearanceCells? cells = CellsFor(figure.Look);
-            ColonistAppearance look = Appearances.For(pawn.Value, RollSeedOf(pawn));
+            ColonistAppearance look = Appearances.For(pawn.Value, rollSeed);
 
             // The hair and the beard, before the body: they are part of being dressed in this
             // pawn's colours rather than a separate pass, so nothing can repaint one and forget
@@ -2269,6 +2310,13 @@ namespace Odyssey.Presentation.World
             figure.Gesture = PawnGesture.None;
             figure.GestureClock = 0f;
             figure.SeenSerial = -1;
+            // And somebody else's fight: a body lent to a colonist walking into view must not open
+            // with the last tenant's stagger (design 33 §5f).
+            figure.Fight.Forget();
+            // And somebody else's weapon, until this pawn's own is read on the first pose — and
+            // whether it was drawn: the new pawn's is taken as the frame finds it (design 33 §8b).
+            HideWeapon(figure);
+            ForgetSheath(figure);
             figure.WorkCentre = at;
             figure.SimPosition = at;
             figure.Steer = Vector3.zero;
@@ -2308,8 +2356,9 @@ namespace Odyssey.Presentation.World
 
         Figure? Free(int look)
         {
+            // Never one lent out as a corpse: it is nobody's, but it is not free either.
             for (int i = 0; i < _figures.Count; i++)
-                if (_figures[i].Pawn < 0 && _figures[i].Look == look) return _figures[i];
+                if (_figures[i].Pawn < 0 && !_figures[i].Borrowed && _figures[i].Look == look) return _figures[i];
             return null;
         }
 
@@ -2328,6 +2377,7 @@ namespace Odyssey.Presentation.World
                 // to a colonist who is only walking past would otherwise arrive carrying it.
                 figure.WorkWeight = 0f;
                 ShowHeldTool(figure, working: false);
+                HideWeapon(figure);
                 figure.GameObject.SetActive(false);
                 _byPawn.Remove(_retired[i]);
             }
@@ -2385,8 +2435,13 @@ namespace Odyssey.Presentation.World
                 mixer.SetInputWeight(i, i == 0 ? 1f : 0f);
             }
 
+            // The fight's clip layer over the gaits (design 33 §5f), for a person when the pack is
+            // here. Without it the output reads the gait mixer exactly as it always has.
+            var fight = new CombatState();
+            Playable source = BuildCombatLayer(graph, mixer, face.Animal, fight);
+
             AnimationPlayableOutput output = AnimationPlayableOutput.Create(graph, "Pose", animator);
-            output.SetSourcePlayable(mixer);
+            output.SetSourcePlayable(source);
             graph.Play();
 
             // Write the idle before anything measures this figure. A graph that has been played
@@ -2396,7 +2451,7 @@ namespace Odyssey.Presentation.World
             // fitting to a scarecrow.
             graph.Evaluate(0f);
 
-            var figure = new Figure(instance, animator, graph, mixer, clips) { Look = look };
+            var figure = new Figure(instance, animator, graph, mixer, clips) { Look = look, Fight = fight };
             figure.Skins = skins;
             figure.ArtMaterials = new Material?[skins.Length];
             for (int i = 0; i < skins.Length; i++) figure.ArtMaterials[i] = skins[i].sharedMaterial;
@@ -2436,6 +2491,9 @@ namespace Odyssey.Presentation.World
             else
             {
                 figure.StandingHeight = MeasureBody(figure);
+                // Where a sheathed weapon hangs, and where in the draw the hand is on the hilt:
+                // measured off this body, after its height, in the idle (design 33 §8b).
+                BindSheath(figure, face.Feminine);
                 if (figure.StandingHeight > MeasuredStandingHeight)
                     MeasuredStandingHeight = figure.StandingHeight;
                 if (figure.SoleOffset > MeasuredSoleOffset) MeasuredSoleOffset = figure.SoleOffset;

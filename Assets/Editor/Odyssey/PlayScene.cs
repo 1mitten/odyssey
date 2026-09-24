@@ -1396,6 +1396,26 @@ namespace Odyssey.EditorTools
                 moduleId = ModuleIds.UtilityTap, shape = ModuleShape.Pillar, prefabName = string.Empty,
             });
 
+            // Power (design 32 §14, the owner's picks of 2026-09-23). Pack props fitted to their
+            // footprint rather than given a measured scale. §14c, after the owner found both
+            // standing off their walls with awkward gaps: the generator *fills* its two cells to
+            // 5 cm of every edge, stretched along its length, and the air-conditioning unit — a
+            // heat pump in all but name — stands with its back on the back edge of its cell,
+            // 2.4 m across. A clone without the packs resolves them to nothing and draws the
+            // tinted block per cell, as it always did.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.Generator, shape = ModuleShape.Pillar, prefabName = "SM_Prop_Generator_01",
+                centreXZ = true, baseAtY = true, fitFootprint = new Vector2(2.4f, 4.9f), fitHeight = 2.1f,
+                fitStretch = true,
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.Heater, shape = ModuleShape.Pillar, prefabName = "SM_Prop_AirConditioningUnit_01",
+                centreXZ = true, baseAtY = true, fitFootprint = new Vector2(2.4f, 2.4f), fitHeight = 2.2f,
+                fitAgainstBack = true,
+            });
+
             // Street surfaces: the half tiles are exactly one cell square.
             Slab(ModuleIds.Terrain("Pavement"), "SM_Env_Ground_Tile_Half_01");
             Slab(ModuleIds.Terrain("CrackedPavement"), "SM_Env_Ground_Tile_Half_02");
@@ -1825,8 +1845,228 @@ namespace Odyssey.EditorTools
                 scale = new Vector3(0.6f, 0.6f, 0.6f),
             });
 
+            // The four weapons (design 33 §1, C3). Each row is the weapon lying on the ground AND
+            // the prop a figure holds (PawnFigureDirector.Weapons.cs), so a machete looks the same
+            // in a hand as on the grass. The Battle Royale pack has a bat, a crowbar and a machete
+            // by name; the arc blade is the Sci-Fi City sword, the one blade in the packs that
+            // reads as the future rather than the frontier. The hand ignores the placement fields
+            // (it seats the prop by its own measurement); the ground wants them lying on their
+            // broadest face, centred, and half again as large, like every other item, because at
+            // true scale a bat on a 2.5 m cell is a stick. Chosen by name, not by a contact sheet:
+            // the look is the owner's to judge (C3 playtest).
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemBat, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Bat_01",
+                centreXZ = true, baseAtY = true, lieFlat = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemCrowbar, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Crowbar_01",
+                centreXZ = true, baseAtY = true, lieFlat = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemMachete, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Machete_01",
+                centreXZ = true, baseAtY = true, lieFlat = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemArcBlade, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Sword_01",
+                centreXZ = true, baseAtY = true, lieFlat = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+
+            AddCombatRows(rows);
+
             return rows;
         }
+
+        /// <summary>
+        /// The fight's clip rows (design 33 §1, <c>docs/research/synty-sword-combat.md</c>): one row
+        /// per role, its entries the Sword Combat pack's <b>Polygon, in-place, non-returning</b>
+        /// clips for that role. Never the Sidekick set (another rig), never a <c>_RootMotion</c> or
+        /// <c>_ReturnToIdle</c> twin (the simulation owns position, and a swing hands back to the
+        /// walk by itself), and never <c>Dodge_R</c>, which imports Generic and cannot drive our
+        /// bodies. Resolved by <see cref="ResolveCombatClips"/>; on a checkout without the pack
+        /// every clip is null and the figures compute every role instead.
+        /// </summary>
+        static void AddCombatRows(List<ModuleEntry> rows)
+        {
+            const string F = Odyssey.Presentation.World.CombatVariant.Front;
+            const string B = Odyssey.Presentation.World.CombatVariant.Back;
+            const string L = Odyssey.Presentation.World.CombatVariant.Left;
+            const string R = Odyssey.Presentation.World.CombatVariant.Right;
+            const string Begin = Odyssey.Presentation.World.CombatVariant.Begin;
+            const string Loop = Odyssey.Presentation.World.CombatVariant.Loop;
+            const string End = Odyssey.Presentation.World.CombatVariant.End;
+
+            Row(ModuleIds.CombatSwingLight,
+                ("A_Attack_LightCombo01A_Sword", "A"), ("A_Attack_LightCombo01B_Sword", "B"),
+                ("A_Attack_LightCombo01C_Sword", "C"));
+            Row(ModuleIds.CombatSwingHeavy,
+                ("A_Attack_HeavyCombo01A_Sword", "A"), ("A_Attack_HeavyStab01_Sword", "B"));
+            Row(ModuleIds.CombatHitReact,
+                ("A_Hit_F_React_Sword", F), ("A_Hit_B_React_Sword", B),
+                ("A_Hit_L_React_Sword", L), ("A_Hit_R_React_Sword", R));
+            Row(ModuleIds.CombatStagger,
+                ("A_Hit_F_Stagger_Sword", F), ("A_Hit_B_Stagger_Sword", B),
+                ("A_Hit_L_Stagger_Sword", L), ("A_Hit_R_Stagger_Sword", R));
+            Row(ModuleIds.CombatDodge,
+                ("A_Dodge_F_Sword", F), ("A_Dodge_B_Sword", B), ("A_Dodge_L_Sword", L));
+            Row(ModuleIds.CombatStun,
+                ("A_Stun_Begin_Sword", Begin), ("A_Stun_Loop_Sword", Loop), ("A_Stun_End_Sword", End));
+            Row(ModuleIds.CombatDowned,
+                ("A_KnockDown_Begin_Sword", Begin), ("A_KnockDown_Loop_Sword", Loop),
+                ("A_KnockDown_End_Sword", End));
+            Row(ModuleIds.CombatDeath,
+                ("A_Death_F_01_Sword", F), ("A_Death_B_01_Sword", B),
+                ("A_Death_L_01_Sword", L), ("A_Death_R_01_Sword", R));
+            Row(ModuleIds.CombatDeathPose,
+                ("A_Death_F_01_Pose_Sword", F), ("A_Death_B_01_Pose_Sword", B),
+                ("A_Death_L_01_Pose_Sword", L), ("A_Death_R_01_Pose_Sword", R));
+
+            // Drawn and sheathed (design 33 §8b): the weapon from the left hip to the right hand and
+            // back, one per body. In place; the files hold one clip each, named without the suffix
+            // (A_Draw_Sword_Masc holds A_Draw_Sword), which the by-file lookup already allows for.
+            const string Masc = Odyssey.Presentation.World.CombatVariant.Masc;
+            const string Femn = Odyssey.Presentation.World.CombatVariant.Femn;
+            Row(ModuleIds.CombatDraw, ("A_Draw_Sword_Masc", Masc), ("A_Draw_Sword_Femn", Femn));
+            Row(ModuleIds.CombatSheathe, ("A_Sheathe_Sword_Masc", Masc), ("A_Sheathe_Sword_Femn", Femn));
+
+            void Row(string id, params (string Clip, string Variant)[] clips)
+            {
+                var entry = new ModuleEntry
+                {
+                    moduleId = id, shape = ModuleShape.None, centreXZ = false, baseAtY = false,
+                };
+                foreach ((string clip, string variant) in clips)
+                    entry.combat.Add(new CombatClipEntry { clipName = clip, variant = variant });
+                rows.Add(entry);
+            }
+        }
+
+        /// <summary>Where the Sword Combat pack's Polygon clips live. The search never leaves it.</summary>
+        public const string SwordCombatPolygon = "Assets/Synty/AnimationSwordCombat/Animations/Polygon";
+
+        /// <summary>
+        /// Resolve each combat clip, and measure where each blow lands in it.
+        ///
+        /// <para><b>The impact is read off the author's own cut.</b> Every attack FBX carries its
+        /// whole clip and three sub-clips — WindUp, Hit, FollowThrough — so the frame the blade
+        /// lands is where the WindUp ends. It is read from the importer's clip ranges and written
+        /// in seconds from the whole clip's start, and the figure scales the clip to put it on the
+        /// simulation's wind-up tick.</para>
+        ///
+        /// <para>A clip that did not import Humanoid is refused and reported rather than
+        /// catalogued: it would bind no bone on our rigs and the figure would stand still through
+        /// the fight with nothing anywhere saying why.</para>
+        /// </summary>
+        static void ResolveCombatClips(List<ModuleEntry> rows)
+        {
+            foreach (ModuleEntry row in rows)
+            foreach (CombatClipEntry entry in row.combat)
+            {
+                entry.clip = FindSwordCombatClip(entry.clipName, out string? path);
+                entry.impactSeconds = 0f;
+                if (entry.clip == null || path == null) continue;
+
+                if (!entry.clip.humanMotion)
+                {
+                    Debug.LogWarning(
+                        $"[Odyssey] {entry.clipName} did not import Humanoid, so it cannot drive a colonist; left out.");
+                    entry.clip = null;
+                    continue;
+                }
+
+                entry.impactSeconds = MeasureImpact(path, entry.clip.name, entry.clip);
+            }
+        }
+
+        /// <summary>
+        /// Seconds from a clip's start to the end of its WindUp sub-clip, or 0 when the file has no
+        /// WindUp — a reaction, a death, anything that is not a blow.
+        /// </summary>
+        static float MeasureImpact(string path, string clipName, AnimationClip clip)
+        {
+            if (!(AssetImporter.GetAtPath(path) is ModelImporter importer)) return 0f;
+            ModelImporterClipAnimation[] cuts = importer.clipAnimations;
+            if (cuts == null || cuts.Length == 0) cuts = importer.defaultClipAnimations;
+
+            string windUpName = clipName.EndsWith("_Sword", StringComparison.Ordinal)
+                ? clipName.Substring(0, clipName.Length - "_Sword".Length) + "_WindUp_Sword"
+                : clipName + "_WindUp";
+            ModelImporterClipAnimation? whole = null, windUp = null;
+            foreach (ModelImporterClipAnimation cut in cuts)
+            {
+                if (cut.name == clipName) whole = cut;
+                else if (cut.name == windUpName) windUp = cut;
+            }
+            if (whole == null || windUp == null) return 0f;
+
+            float fps = clip.frameRate > 0f ? clip.frameRate : 30f;
+            float seconds = (windUp.lastFrame - whole.firstFrame) / fps;
+            return Mathf.Clamp(seconds, 0f, clip.length);
+        }
+
+        /// <summary>
+        /// The whole clip of the file of this name under the Polygon folder — never one of the
+        /// WindUp, Hit or FollowThrough sub-clips that share an attack's FBX, and never a preview.
+        ///
+        /// <para><b>By the file's name, not the clip's.</b> Two files name their one clip
+        /// differently from themselves — <c>A_Stun_Loop_Sword</c> holds <c>A_Stunned_Loop_Sword</c>
+        /// and <c>A_Death_B_01_Pose_Sword</c> holds <c>A_Death_B_Pose_01_Sword</c> — and a lookup
+        /// that insisted on the two agreeing silently lost the stun's loop and one death pose. The search
+        /// has no type filter for the same reason: a clip search matches the clip's name, not the file's.</para>
+        /// </summary>
+        static AnimationClip? FindSwordCombatClip(string exactName, out string? path)
+        {
+            path = null;
+            if (!Directory.Exists(Path.GetFullPath(SwordCombatPolygon))) return null;
+            foreach (string guid in AssetDatabase.FindAssets(exactName, new[] { SwordCombatPolygon }))
+            {
+                string candidate = AssetDatabase.GUIDToAssetPath(guid);
+                if (!string.Equals(Path.GetFileNameWithoutExtension(candidate), exactName,
+                        StringComparison.OrdinalIgnoreCase)) continue;
+                if (candidate.IndexOf("RootMotion", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                if (candidate.IndexOf("ReturnToIdle", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+
+                AnimationClip? whole = null;
+                int wholes = 0;
+                foreach (UnityEngine.Object asset in AssetDatabase.LoadAllAssetsAtPath(candidate))
+                {
+                    if (!(asset is AnimationClip clip) || clip.name.StartsWith("__preview__")) continue;
+                    if (clip.name == exactName)
+                    {
+                        path = candidate;
+                        return clip;
+                    }
+                    if (IsSubClip(clip.name)) continue;
+                    whole = clip;
+                    wholes++;
+                }
+                if (wholes == 1)
+                {
+                    path = candidate;
+                    return whole;
+                }
+                if (wholes > 1)
+                    Debug.LogWarning($"[Odyssey] {candidate} holds {wholes} whole clips and none is called {exactName}; left out.");
+            }
+            return null;
+        }
+
+        /// <summary>One of the three pieces the pack's author cut an attack into, as against the attack itself.</summary>
+        static bool IsSubClip(string name) =>
+            name.EndsWith("_WindUp_Sword", StringComparison.Ordinal)
+            || name.EndsWith("_Hit_Sword", StringComparison.Ordinal)
+            || name.EndsWith("_FollowThrough_Sword", StringComparison.Ordinal);
 
         static ModuleCatalogue BuildCatalogueAsset()
         {
@@ -1872,6 +2112,7 @@ namespace Odyssey.EditorTools
             }
 
             ResolveGaits(rows, clips);
+            ResolveCombatClips(rows);
 
             var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
             if (catalogue == null)

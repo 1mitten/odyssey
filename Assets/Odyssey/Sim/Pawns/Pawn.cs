@@ -86,6 +86,12 @@ namespace Odyssey.Sim.Pawns
                 Needs[i] = kindDef.startingNeeds[i];
             Mood = kindDef.startingMood;
             MoodTarget = kindDef.startingMood;
+            // Comfortable until a world with a thermal pass says otherwise: a bare pawn
+            // fixture has no thermal system, and zero — freezing — would have been a
+            // silently cold test world (design 28 §8). Read from the colonist's tuning and
+            // not the kind's: a hog has no comfort band of its own yet, and the midpoint of
+            // the one band there is beats inventing a second (design 29).
+            AmbientTempC = (content.Temperature.comfortMinC + content.Temperature.comfortMaxC) / 2;
             WorkPriorities = new byte[WorkTypeIndex.Count];
             for (int i = 0; i < WorkPriorities.Length; i++) WorkPriorities[i] = 3;
             ScheduleHours = new byte[ScheduleHandle.Hours];
@@ -93,6 +99,7 @@ namespace Odyssey.Sim.Pawns
             Skills = new int[SkillIndex.Count];
             Passions = new byte[SkillIndex.Count];
             SkillGainedToday = new int[SkillIndex.Count];
+            HpMilli = HpMaxMilli;
         }
 
         public PawnId Id { get; }
@@ -108,18 +115,219 @@ namespace Odyssey.Sim.Pawns
         ///
         /// <para>Settable only by the loader, which builds the pawn before the section that
         /// names its kind is read. Nothing else may change what a pawn is.</para>
+        ///
+        /// <para><b>A pawn at full health stays at full health when its kind is set</b> (design 33
+        /// §5). The loader builds every pawn as a colonist, whose pool is 100, and only then reads
+        /// that it is a hog, whose pool is 60 — so without this a reloaded hog carried 100 of 60
+        /// hit points, which is combat state, which is saved and hashed, and every round trip of a
+        /// board with an animal on it would have disagreed with itself. A hurt pawn is left alone:
+        /// its hit points come back from the combat section, which is read after the kinds.</para>
         /// </summary>
-        public int Kind { get; internal set; }
+        public int Kind
+        {
+            get => _kind;
+            internal set
+            {
+                bool full = HpMilli == HpMaxMilli;
+                _kind = value;
+                if (full) HpMilli = HpMaxMilli;
+            }
+        }
+
+        int _kind;
+
+        /// <summary>
+        /// An animal that has decided to walk off the board (design 30 §3). Set by the wildlife
+        /// level-keeper, read by the animal's own think node, which then heads for the nearest
+        /// edge; saved in its own section and folded into the hash beside the kind.
+        /// </summary>
+        public bool Leaving { get; internal set; }
+
+        /// <summary>
+        /// Under the player's hand (design 33 §2): work stops, the colonist holds its position or
+        /// walks where it is sent, and it neither eats nor sleeps. Set only through
+        /// <see cref="JobSystem.SetDrafted"/>, which ends the job in hand as it changes. Saved in
+        /// <c>CombatSection</c> and folded into the hash beside the kind, so a colony nobody
+        /// drafts hashes as it did before drafting existed.
+        /// </summary>
+        public bool Drafted { get; internal set; }
+
+        /// <summary>
+        /// The tick the draft last had something to do — the draft itself or the latest order. Four
+        /// quiet hours after it the colonist undrafts itself (<see cref="PawnContent.DraftQuietTicks"/>).
+        /// Meaningless, unsaved and unhashed while <see cref="Drafted"/> is false.
+        /// </summary>
+        public int DraftQuietSinceTick { get; internal set; }
+
+        /// <summary>
+        /// The cell an interrupted colonist is still stepping into, or -1 (design 33 §2d).
+        ///
+        /// <para>An order given mid-step used to end the job, and ending a job drops the step in
+        /// progress: the pawn stayed on the cell it was leaving while its figure had been drawn
+        /// most of the way into the next, so every draft and every re-aimed right-click snapped
+        /// the figure back by up to a cell. <see cref="JobSystem.Interrupt"/> keeps that one step
+        /// instead, and the job loop holds every driver until it lands. Cleared by
+        /// <see cref="ClearPath"/>, so whatever drops the step drops the mark. Saved and hashed while set, because it is a path the world cannot
+        /// re-derive: its destination is gone with the job that chose it.</para>
+        /// </summary>
+        public int FinishingStepTo { get; internal set; } = -1;
 
         /// <summary>The species this pawn's kind spawns as: what walks. See <see cref="SpeciesDef"/>.</summary>
         public SpeciesDef Species => Content.SpeciesOf(Kind);
 
         /// <summary>
-        /// A colonist, as against an animal. Every pawn-wide system asks this once at the top of
-        /// its loop (design 29 §2): an animal has no needs tick, no mood, no skills, no work and no
-        /// schedule, and the same movement, doors and falling as anyone.
+        /// A person, as against an animal — a colonist <b>or a hostile one</b>. Every pawn-wide
+        /// system asks this once at the top of its loop (design 29 §2): an animal has no needs
+        /// tick, no mood, no skills, no work and no schedule, and the same movement, doors and
+        /// falling as anyone. Since combat a person may be a marauder: a system that means "one
+        /// of ours" asks <see cref="IsColonist"/>.
         /// </summary>
         public bool IsPerson => Species.person;
+
+        /// <summary>Whose side this pawn is on — its kind's (design 33 §3). Nothing is saved for it.</summary>
+        public Faction Faction => Content.KindOf(Kind).faction;
+
+        /// <summary>Fights the colony on sight: a marauder (design 33 §1).</summary>
+        public bool IsHostile => Faction == Faction.Hostile;
+
+        /// <summary>One of ours: a person of the colony's faction. The draft, the roster and the Work tab mean this.</summary>
+        public bool IsColonist => IsPerson && Faction == Faction.Colony;
+
+        /// <summary>
+        /// Whether the needs system ticks this pawn's needs, mood and breaks. A colonist's do; an
+        /// animal's never have (design 29 §2); a hostile's do not — a marauder is debug-spawned to
+        /// hunt until it is killed, and one that went looking for the colony's meals would be a
+        /// raider with a pantry (design 33 §5); and <b>a downed pawn's needs pause</b>, the C2
+        /// default the owner did not object to.
+        /// </summary>
+        public virtual bool NeedsTick => IsColonist && !Downed;
+
+        // ---- combat state (design 33 §3, §5) ---------------------------------------------------
+        //
+        // Saved in CombatSection (layout 2), keyed by pawn id and written only for a pawn with
+        // something to say, and hashed only while set (ContributeTo, bit 19 of the kind word), so
+        // a colony that has never fought saves and hashes exactly as it did before combat. Every
+        // field below is written by the combat lanes and by nothing else; the contracts step only
+        // declared them.
+
+        /// <summary>This pawn's full pool, in thousandths of a hit point: the species' <see cref="SpeciesDef.healthPoints"/> × 1,000.</summary>
+        public int HpMaxMilli => Species.healthPoints * Rates.Scale;
+
+        /// <summary>
+        /// Hit points, in thousandths (<c>Rates</c>), so a slow heal is exact without a float.
+        /// Full at spawn. <b>Downed</b> at nought and below; <b>dead</b> at or below
+        /// <see cref="DeathAtMilli"/>.
+        /// </summary>
+        public int HpMilli { get; internal set; }
+
+        /// <summary>The hit points at or below which this pawn dies: <see cref="SpeciesDef.deathAtPerMille"/> of the pool.</summary>
+        public int DeathAtMilli => (int)((long)HpMaxMilli * Species.deathAtPerMille / 1_000);
+
+        /// <summary>Lying where it fell (design 33 §1). Set and cleared by the fight's rules, never inferred from <see cref="HpMilli"/> by a reader.</summary>
+        public bool Downed { get; internal set; }
+
+        /// <summary>
+        /// The tick the next swing may start on. On the pawn rather than the job, so a new order
+        /// does not reset the cooldown (design 33 §3). Nought for a pawn that has never swung.
+        /// </summary>
+        public int NextSwingTick { get; internal set; }
+
+        /// <summary>Stunned until this tick: no swing and no step before it. Nought when never stunned.</summary>
+        public int StunnedUntilTick { get; internal set; }
+
+        /// <summary>
+        /// Who this pawn is fighting back against, as a <see cref="PawnId"/> value, or 0 — an
+        /// animal's revenge or a colonist struck by a colonist (design 33 §1). Paired with
+        /// <see cref="RetaliateUntilTick"/>.
+        /// </summary>
+        public int RetaliateAgainst { get; internal set; }
+
+        /// <summary>The tick the retaliation runs out. Meaningless while <see cref="RetaliateAgainst"/> is 0.</summary>
+        public int RetaliateUntilTick { get; internal set; }
+
+        /// <summary>
+        /// The weapon in the hand, as a <see cref="ThingId"/> value, or 0 for bare hands (C3). The
+        /// item itself stays in <c>ColonyItems</c> with no cell; lane D owns how it gets there.
+        /// </summary>
+        public int EquippedItem { get; internal set; }
+
+        /// <summary>
+        /// The pawn this one is under orders to attack or rescue, as a <see cref="PawnId"/> value,
+        /// or 0. On the pawn rather than the job record because the job record is read
+        /// sequentially inside the pawns section, and a field there would be a save-format bump.
+        /// A building target rides the job's own <see cref="Job.TargetCell"/> (C6).
+        /// </summary>
+        public int CombatTarget { get; internal set; }
+
+        /// <summary>The <see cref="PawnId"/> value of whoever is carrying this pawn, or 0 (C4).</summary>
+        public int CarriedBy { get; internal set; }
+
+        /// <summary>Stunned right now, at <paramref name="tick"/>.</summary>
+        public bool StunnedAt(int tick) => StunnedUntilTick > tick;
+
+        /// <summary>
+        /// Knocked off its feet by a critical blow until this tick (design 33 §9b): lying on the
+        /// tile it was knocked to, doing nothing — no job ticks, no step — and published as
+        /// <see cref="PawnFlags.KnockedDown"/>. Nought when not; the combat pass puts it back to
+        /// nought once past, so a pawn over its fall hashes as it did before. Saved (layout 3) and
+        /// hashed only while set.
+        /// </summary>
+        public int KnockedDownUntilTick { get; internal set; }
+
+        /// <summary>Knocked down right now, at <paramref name="tick"/>.</summary>
+        public bool KnockedDownAt(int tick) => KnockedDownUntilTick > tick;
+
+        // The swing in the air, decided when its wind-up began (design 33 §9g) and applied at its
+        // impact: what the rules rolled, kept here through the wind-up so a save taken mid-swing
+        // lands the same blow. Set only while an attack driver is in its wind-up, cleared when
+        // the swing lands or is lost and when the job ends, so saved (layout 3) and hashed only
+        // while set. The word packs the result, the critical and the knockback, with a bit that
+        // says it is set at all — a miss is a pending swing too.
+        const int SwingSet = 1 << 16, SwingCrit = 1 << 8, SwingKnock = 1 << 9;
+
+        /// <summary>The pending swing's result word: nought when no swing is in the air.</summary>
+        public int PendingSwing { get; internal set; }
+
+        /// <summary>The pending swing's damage in thousandths, multiplier included.</summary>
+        public int PendingDamageMilli { get; internal set; }
+
+        /// <summary>The pending swing's stun in ticks.</summary>
+        public int PendingStunTicks { get; internal set; }
+
+        /// <summary>Is a swing in the air, its outcome already decided?</summary>
+        public bool HasPendingSwing => PendingSwing != 0;
+
+        /// <summary>Keep a decided swing through its wind-up.</summary>
+        internal void HoldSwing(in SwingOutcome outcome)
+        {
+            PendingSwing = SwingSet | (byte)outcome.Result
+                | (outcome.Critical ? SwingCrit : 0) | (outcome.Knockback ? SwingKnock : 0);
+            PendingDamageMilli = outcome.DamageMilli;
+            PendingStunTicks = outcome.StunTicks;
+        }
+
+        /// <summary>The swing in the air, as it was decided; a miss when none is.</summary>
+        public SwingOutcome HeldSwing => PendingSwing == 0
+            ? new SwingOutcome(CombatEventKind.Miss)
+            : new SwingOutcome((CombatEventKind)(PendingSwing & 0xFF), PendingDamageMilli, PendingStunTicks,
+                (PendingSwing & SwingCrit) != 0, (PendingSwing & SwingKnock) != 0);
+
+        /// <summary>The swing landed, was lost, or its job ended.</summary>
+        internal void ClearSwing()
+        {
+            PendingSwing = 0;
+            PendingDamageMilli = 0;
+            PendingStunTicks = 0;
+        }
+
+        /// <summary>
+        /// Does this pawn have any combat state to save and hash? False for every pawn in a colony
+        /// that has never fought, which is what keeps its save and its hash exactly as they were.
+        /// </summary>
+        public bool HasCombatState =>
+            HpMilli != HpMaxMilli || Downed || NextSwingTick != 0 || StunnedUntilTick != 0
+            || RetaliateAgainst != 0 || EquippedItem != 0 || CombatTarget != 0 || CarriedBy != 0
+            || KnockedDownUntilTick != 0 || PendingSwing != 0;
 
         /// <summary>Cell index, layer included. Always layer-aware; there is no 2D form of this.</summary>
         public int Cell { get; set; }
@@ -137,6 +345,37 @@ namespace Odyssey.Sim.Pawns
         /// gone is the whole of the answer to "how much time have I got".</para>
         /// </summary>
         public int StarvationSeverity { get; set; }
+
+        /// <summary>
+        /// How far gone this colonist is from the cold or the heat, signed: negative is
+        /// hypothermia, positive heatstroke, and they cannot both be true of one person at one
+        /// time, which is the argument for one bar rather than two (design 28 §8).
+        ///
+        /// <para>Grown by <see cref="NeedsSystem"/> past the safe bounds — the same
+        /// build-and-drain shape <see cref="StarvationSeverity"/> has, with the distance beyond
+        /// the bound setting the rate so a cold snap is worse than a chill — and read by
+        /// <see cref="TemperatureOffsetPerMille"/> in the same thirds starvation steps through.
+        /// Real lethality is the health milestone's to add; today, as with starvation, the bar
+        /// slows a colonist to the condition floor and stops there.</para>
+        ///
+        /// <para><b>Saved.</b> How cold someone got is the whole of the answer to how long they
+        /// take to warm through, and a colonist reloaded mid-winter is still mid-winter.</para>
+        /// </summary>
+        public int TemperatureSeverity { get; set; }
+
+        /// <summary>
+        /// The ambient temperature this colonist is standing in, centi-degrees — a cache
+        /// refreshed on the needs cadence and read by the rates, so work and rest feel a
+        /// temperature that is minutes stale at worst and costs nothing per tick to know.
+        ///
+        /// <para><b>Saved and hashed, because it is a sample and not a derivation.</b> It was
+        /// meant to be the <see cref="MoveStepCost"/> arrangement — a copy of an answer the
+        /// world can give again — but the answer it copies is the one at the colonist's last
+        /// interval, in the cell she stood in then, and the work rate reads it for up to an
+        /// interval after a load. A file without it ran a saved 700‰ colonist at 1000‰ until
+        /// her next interval, and milliwork is hashed (design 28 §12, F8).</para>
+        /// </summary>
+        public int AmbientTempC { get; internal set; }
 
         /// <summary>Displayed mood, 0..1000. Drifts toward <see cref="MoodTarget"/>.</summary>
         public int Mood { get; set; }
@@ -390,6 +629,10 @@ namespace Odyssey.Sim.Pawns
                 ? Rates.Scale
                 : def.WorkRatePerMille(SkillLevel(def.rateSkill));
             int rate = curve * ConditionPerMille() / 1_000;
+            // Then the room: too cold or too hot to work well, as a factor on everything the
+            // curve said (design 28 §8). Composed here rather than in the drivers so every job
+            // inherits it from the one seam, exactly as condition is.
+            rate = rate * Content.Temperature.WorkPerMille(AmbientTempC) / 1_000;
             return rate < def.workRateFloorPerMille ? def.workRateFloorPerMille : rate;
         }
 
@@ -409,7 +652,23 @@ namespace Odyssey.Sim.Pawns
             Content.Movement.movePerTick * Rates.Scale
                 * InnatePacePerMille() / 1_000
                 * ConditionPerMille() / 1_000
-                * Species.movePerMille / 1_000;
+                * Species.movePerMille / 1_000
+                * UrgencyPerMille() / 1_000;
+
+        /// <summary>
+        /// The run (design 17 §4f, design 33 §2h): a drafted colonist moves at
+        /// <see cref="MovementDef.draftedPacePerMille"/> of her own pace, and 1,000 — exact — for
+        /// anybody else, so no undrafted pawn's speed moved and no golden with it. The last factor
+        /// in the product, after condition, so a starving colonist runs slower than a well one.
+        /// A seam, not a model: the day there is fleeing or an emergency job, it answers here.
+        /// <para>That day is combat's (design 33 §6A): a pawn chasing to strike or running from a
+        /// blow runs too, or a hunt at walking pace never closes on a colonist walking away. No
+        /// golden window fights, so no golden moved.</para>
+        /// </summary>
+        public virtual int UrgencyPerMille() =>
+            Drafted || (CurrentJob != null && (CurrentJob.DefIndex == JobIndex.AttackMelee || CurrentJob.DefIndex == JobIndex.Flee))
+                ? Content.Movement.draftedPacePerMille
+                : 1_000;
 
         /// <summary>
         /// The pace this colonist was dealt, per mille of the standard walk, rolled once from
@@ -451,7 +710,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public virtual int ConditionPerMille()
         {
-            int condition = Rates.Scale - StarvationOffsetPerMille();
+            int condition = Rates.Scale - StarvationOffsetPerMille() - TemperatureOffsetPerMille();
             if (condition > Rates.Scale) condition = Rates.Scale;
             if (condition < ConditionFloorPerMille) condition = ConditionFloorPerMille;
             return condition;
@@ -473,6 +732,22 @@ namespace Odyssey.Sim.Pawns
             if (StarvationSeverity >= 750) return 300;
             if (StarvationSeverity >= 500) return 200;
             if (StarvationSeverity >= 250) return 100;
+            return 0;
+        }
+
+        /// <summary>
+        /// The offset the cold or the heat applies to <see cref="ConditionPerMille"/>, read off
+        /// the severity bar in the same thirds starvation uses: −100 minor, −200 moderate,
+        /// −300 severe (design 28 §8). The bar's sign says which way it went; the thirds do not
+        /// care, because shivering and sweltering slow a person down about equally and one
+        /// number is easier to read on the way past.
+        /// </summary>
+        public virtual int TemperatureOffsetPerMille()
+        {
+            int magnitude = TemperatureSeverity < 0 ? -TemperatureSeverity : TemperatureSeverity;
+            if (magnitude >= 750) return 300;
+            if (magnitude >= 500) return 200;
+            if (magnitude >= 250) return 100;
             return 0;
         }
 
@@ -681,6 +956,13 @@ namespace Odyssey.Sim.Pawns
             MoveProgress = 0;
             PathPending = false;
             PathFailed = false;
+
+            // A kept step is a path (design 33 §2d): whatever drops the path — arrival, a step
+            // that stopped being legal, a fall, an eviction, a job ending — drops the mark with it,
+            // or it would stay saved and hashed and a load would rebuild a step that no longer
+            // exists. JobSystem.Interrupt sets it after its own clear, which is the one place it
+            // is ever set.
+            FinishingStepTo = -1;
         }
 
         internal void AdoptPath(int[] cells, int length)
@@ -712,10 +994,49 @@ namespace Odyssey.Sim.Pawns
             hash.Add(unchecked((int)RollSeed));
             // Design 29 §6. Every Simulated golden moved when it arrived, by the hash seeing one
             // more zero per colonist — measured to be that and nothing else.
-            hash.Add(Kind);
+            // Leaving rides in the kind's word: a colonist never leaves, so a board with no
+            // animals hashes exactly as it did before wildlife (design 30 §3).
+            // The draft rides in the same word, and its clock only while it is set (design 33
+            // §2a): a colony nobody drafts hashes exactly as it did before drafting existed.
+            // A finishing step (design 33 §2d) is flagged in the same word for the same reason.
+            // And the fight's state (design 33 §5), flagged in the same word and walked only while
+            // there is any, so a colony that has never fought hashes exactly as before combat.
+            // The knock-down and the swing in the air (design 33 §9b, §9g) have a bit each in it
+            // too, so a pawn with neither hashes as it did before them.
+            bool combat = HasCombatState;
+            bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
+            hash.Add(Kind | (Leaving ? 1 << 16 : 0) | (Drafted ? 1 << 17 : 0)
+                | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0)
+                | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0));
+            if (Drafted) hash.Add(DraftQuietSinceTick);
+            if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
+            if (combat)
+            {
+                hash.Add(HpMilli);
+                hash.Add(Downed);
+                hash.Add(NextSwingTick);
+                hash.Add(StunnedUntilTick);
+                hash.Add(RetaliateAgainst);
+                hash.Add(RetaliateUntilTick);
+                hash.Add(EquippedItem);
+                hash.Add(CombatTarget);
+                hash.Add(CarriedBy);
+                if (knocked) hash.Add(KnockedDownUntilTick);
+                if (swinging)
+                {
+                    hash.Add(PendingSwing);
+                    hash.Add(PendingDamageMilli);
+                    hash.Add(PendingStunTicks);
+                }
+            }
             for (int i = 0; i < Needs.Length; i++) hash.Add(Needs[i]);
             hash.Add(Mood);
             hash.Add(MoodTarget);
+            // Saved state that is not derived belongs in the hash (OQ-50) — the same sentence
+            // that put RollSeed here. The severity bar decides condition, and a run that could
+            // not see it could diverge by three hundred per-mille of work rate in silence.
+            hash.Add(TemperatureSeverity);
+            hash.Add(AmbientTempC);
             for (int i = 0; i < Skills.Length; i++) hash.Add(Skills[i]);
             for (int i = 0; i < Passions.Length; i++) hash.Add(Passions[i]);
             for (int i = 0; i < SkillGainedToday.Length; i++) hash.Add(SkillGainedToday[i]);

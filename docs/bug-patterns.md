@@ -212,6 +212,18 @@ constant came from each drew a real mesh, and a mark is a unit cube. The counted
 this pattern is the reliable one; the it-must-be-expensive half is a hypothesis to test.
 `docs/design/06-rendering-and-camera.md` §6c.1.
 
+**And once per *thing* rather than once per cell, hidden behind a cadence.** The thermal pass
+(2026-09-22) runs one tick in 120 and sweeps **every standing edifice** to find the ones that are
+warm — so it is priced by how much is on the board, not by how many rooms there are. On a wooded
+board that is trees: 2.5 M cells with 5 edifices cost 0.0054 ms, and 921 k cells with 6,311
+edifices cost 0.17. **The class's own summary said "O(rooms + surfaces), never O(cells)"**, and it
+had survived a nine-finding review, because the sentence is half true and the false half is the
+half that grows. The inner step was `BuildingForEdifice`, a linear scan of the building table — a
+scan inside a sweep — and precomputing it by edifice id took the pass to 0.051 ms.
+**The cadence is what hides it:** amortised over 120 ticks any of those numbers rounds to nothing,
+so the honest figure to look at is the cost of the pass itself and the count it scales with, printed
+side by side. A complexity claim in a doc comment is not a measurement.
+
 **The same shape on the simulation side**, found the same day and not yet fixed: `GrowingZones`
 publishes one `ZoneView` per zoned cell *every tick* for a list that changes only when the player
 paints. With **no colonists alive at all** a 2,015-cell field still cost 0.035 ms a tick, ~97% of
@@ -443,6 +455,27 @@ and both were believed; one of them was decorative. A test for an exactness clai
 deliberate break costs it and nothing more — the same lesson as *"A test that could not fail for the
 reason it named"* in the register below, reached from the opposite direction.
 
+### P17 — Two translucent draws that cover each other, ordered by a key that cannot tell them apart
+
+A translucent material writes no depth, so where two translucent draws cover the same pixels, the
+picture is whatever was drawn **last**. Unity picks that order by the distance from the camera to
+each draw's bounds centre. Two things built around one centre (a fill inside its track, a glow
+inside its core, a plate behind its label) tie on that key **exactly**. The sort then breaks the
+tie differently from frame to frame, depending on everything else in the translucent list. Two
+things whose centres differ only across the screen trade places when the object crosses the
+middle.
+
+**Measured, 2026-09-23** (design 33 §8a). The health bar's fill was a translucent box inside a
+translucent track. For a full bar the two centres tied on 480 frames out of 480 of a walk across
+the screen, and the fill showed at 0.62 of its colour one way round and 0.29 the other. The owner
+reported it as *"the bar above their heads flicker"*.
+
+**The check:** for any mark made of more than one translucent draw, ask *do any two of them cover
+the same pixels?* If they do, the look depends on the sort. Lay the pieces so they meet on edges and
+never overlap (`HealthBarLayout`, held by `NoTwoPiecesOfABarOverlapAtAnyFraction`), or merge them
+into one draw. Nudging one "a little nearer the camera" is not a fix: the lateral term in the
+distance is worth tens of centimetres at the play camera.
+
 ---
 
 ---
@@ -569,7 +602,130 @@ fixture had just queued still going through. It landed on the dev machine and di
 
 ## The register
 
+### 2026-09-22 — A merge with no conflict where the fault was, and a claim that outlived a review (P1, P10)
+
+PR #164 merged with a `main` that had moved twice under it. Eighteen files conflicted and the
+merge was mechanical; **the fault was in a file that did not conflict.**
+
+**Two branches that wrote the same text for different reasons.** `BuildShapes.Cells` is a table
+parallel to `BuildingHandle`, and the shelf branch and the campfire branch had each appended a
+`1` to it. Git saw one added line and took it once. The merged table was one entry short, so the
+campfire silently had no shape — and `EdificeHandle.Count` and `BuildingHandle.Count` merged clean
+and were both wrong by one for the same reason.
+
+`RegistryTests.EveryBuildableHasAShapeOfItsOwn` caught it. **That test exists because of this
+exact failure**, two months earlier: when the bed's handle moved from 2 to 5, the same table
+merged in silence, the bed became a one-cell thing that could not be turned, and three
+`DesignateDirector` tests failed without naming the cause. It has now paid for itself twice on the
+same fault.
+
+**The tell:** a merge conflict marks where two branches wrote *different* text. The dangerous case
+is where they wrote the *same* text for different reasons — which is the normal case for a
+hand-maintained parallel table, since every entry in one is some flavour of `1`, `false` or `""`.
+**The check:** every such table wants a length assertion against the enum it parallels, and only
+the ones that have one are defended. `BuildShapes`, `BuildLabels`, `EdificeLabels`,
+`QualityLabels`, `TerrainLabels` and `ItemLabels` are the family.
+
+**And a golden conflict has exactly one honest resolution.** Both branches had moved all six
+numbers, so neither side's value was right for the merged code and taking either would have
+committed a number nothing had produced. Re-baked, then *measured* with `GoldenColonyProbe` on the
+merged branch, the branch head and `main` — three diffs, clean. Which also established the quieter
+fact that **the goldens were never evidence the thermal model bites**: their windows sit inside the
+work band, nobody sleeps in them, and the boards have no crops.
+
+The other two findings are P1 in its usual clothes (the temperature-to-text form written out in two
+assemblies, agreeing by luck — now `TemperatureLabels`, guarded by a test that reads the C# files)
+and the P10 entry above.
+
+**A third kind, which this catalogue had no room for and gets a sentence here instead.** The work's
+headline claim was *"Rime kills"*; Rime is month five of six; the debug menu offered *Skip one day*.
+Sixty presses. Nothing was broken, every test was green, and the effect was that **the scope of the
+playtest had been set by the tooling rather than by the work** — the branch's own "still owed" note
+asked only about the mild season, which is what a question looks like when the interesting one
+cannot be asked. The check is cheap and belongs beside the handover: **read your own playtest
+instruction and try to follow it.** "Fast forward into Rime" was already written down, by somebody
+who had not counted the presses.
+
+### 2026-09-21 — Nine faults in a thermal model that had thirteen green tests (P1, P2, P11)
+
+Reviewed before its first playtest, PR #164, by writing one probe test per suspicion and
+believing none of them until it failed (`docs/design/28-temperature.md` §12, §12a). Four shapes
+this catalogue already has, in new clothes:
+
+**A per-mille applied to the wrong unit (P11).** `severitySlopePerMille` 300, "per centi-degree
+of distance": a Candle night filled the hypothermia bar in fourteen game-minutes while the XML,
+the def comment and the pinning test's own message all promised hours. The number was pinned and
+green; the message beside it said "three" and the value said 300. **A test that pins a number
+under a sentence describing a different number is the tell** — read the message against the
+value, not just the value against the code.
+
+**A fixed point over a fixed set (P2).** The enclosure swept "until nothing changed" over the
+layers the edit had marked, but the change it was converging on propagates *downward* (a layer's
+roof rule reads the layer above), so the cellar under a house roofed last was never re-solved.
+The played world and a loaded one disagreed — the divergence the sweep had been written to end.
+The fix is not a wider window: identity solves top-down, and a layer that changed marks the one
+below itself. **When a solve iterates to a fixed point, ask whether the set it iterates over can
+grow; if the dependency has a direction, solve in that direction and let change carry the mark.**
+
+**One event, several caches, one missed (P1).** `Demolish` and `MineJob` told the enclosure; the
+floor's `RemoveSlab` told nav and the structure solver and not the enclosure. Grepping every
+caller of `Enclosure` in `Sim` took a minute and is the whole check: **list the caches a world
+edit invalidates, then list the edits, and look for the empty cell.** The tick benchmark's own
+edit arm was another empty cell — it marked nav alone, so the enclosure had never been in the
+edit tick (`docs/lessons.md`).
+
+**A shortcut ahead of the rule (P2 again).** "Return the known key's temperature" sat before the
+ledger that knew what the room's cells had been, so a room re-sealed after a day open to the sky
+came back at a season-old temperature, and a hall knocked through to a cupboard took the
+cupboard's. The rule was right; the shortcut in front of it answered first. And the same shape
+once more in the surfaces: a ceiling was "rock or sky", and the third case — another room's
+floor — fell into sky, so building upstairs made downstairs colder.
+
+**What now stops it:** `TemperatureRegressionTests`, fifteen tests, one per finding and one per
+other side of each rule; `EnclosureCostProbe` for the number the benchmark could not see; the
+benchmark's miner marks the enclosure. And the goldens were re-baked only after hashing each
+world *component by component* before and after — five minutes that turned "the hash moved"
+into "only the thermal section moved".
+
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-23 — The bar over their heads flickers (P17)
+
+Owner: *"The bar above their heads flicker."* One candidate on each side of the seam was measured
+before anything was changed. On the simulation side the bar is owed exactly when the pawn's state
+says, tick after tick: `HealthBarPublishingTests` fought 3,000 ticks, and no bar changed on a tick
+its state did not. On the drawing side the fill was a translucent box inside a translucent track,
+and the sort key that orders them was an exact tie on every frame of a full bar, which is every
+drafted colonist nobody has hurt. The bar is now nine camera-facing pieces that never overlap.
+
+**What now stops it:** `HealthBarLayoutTests.NoTwoPiecesOfABarOverlapAtAnyFraction` and
+`ThePiecesTileTheWholeBar`. Both failed on the plate laid behind the fill as one rectangle.
+Design 33 §8a.
+
+### 2026-09-23 — A stockpile drag paints nothing
+
+Owner: *"I can't seem to create stockpiles anymore"*, then *"There is no visual to the stockpile
+or indicator or marker - has this somehow been removed"*. It had not been removed and it was being
+created: the session log had no stockpile order refused, and `StockpileDragTests`, handing the
+presenter a box, published nine zone cells. **The zone existed and was not drawn.**
+
+On natural ground a store's cell is the air over the ground (`StoreCellOf`), and the wash is on the
+ground's top face — meshed by the terrain cell a layer down, which washes itself when the cell
+above is stored (`WorldRenderModel.IsStoredAbove`). A chunk is one layer, so that face is in a
+different chunk from the store. `StorageZones.Mark` dirtied only the store's own chunk. **That was
+enough until 2026-09-21**, when chunks got their own versions (P15, `0df9514b`): before it, any mark
+bumped one board-wide version and re-meshed everything, the ground included. The per-chunk fix was
+right, and its own note said *"a cell edit must now dirty every chunk whose mesh depends on it —
+the global version was forgiving under-marking"*. This was the under-marking it forgave.
+
+**Measured both ways in one test:** without the fix the store's chunk is at version 2 and the
+ground's at 1; with it both are at 2. `Mark` now dirties the layer below as well.
+
+**The check this earns.** When a cache stops being global, list every reader that looks at a cell
+other than its own — `IsStoredAbove`, and anything else named *Above* or *Below* — and check that
+whatever changes that other cell marks this chunk too. The fast tier cannot see it (no meshing)
+and the picture is only wrong where nothing else happens to re-mesh the chunk, which on open
+grass is everywhere.
 
 ### 2026-09-22 — A hog walks past a tree, snaps back a cell, walks past it again
 
@@ -2399,3 +2555,43 @@ that invalidates over a comment asking callers to remember.
 Its sibling is the same day's `ColonistAppearance.Equals`, which kept its old idea of "the same
 person" after two fields were added, so a portrait cache handed fifteen different hairstyles the
 same picture. Both are caches that were right until something underneath them moved.
+
+### 2026-09-23 — Two lanes, one health bar, two ladders; and a gate that still spoke C1 (P1)
+
+**Symptom, caught at the integration before anyone played.** Lane B coloured the health bar green,
+amber and red at 60 and 30 per cent; lane C had written `CombatFeedbackModel.HealthBarColour` at the
+need bar's 60 and 40 for lane B to call. And lane C's model sent an undrafted colonist for a weapon,
+while lane B's presenter returned before asking the model unless someone was drafted.
+
+**Cause.** Both are one rule with two owners, split across two lanes that each built their half in
+a separate worktree: what colour a bar is, and who hears a right-click. Each lane's tests were
+green, because each tested its own copy.
+
+**Fix.** The bar asks the model (`CombatMarks.BarInk` deleted); the presenter's gate is
+`OrderModel.HearsRightClick`. `docs/design/33-combat.md` §6E.
+
+**The check this earns.** *When lanes split a feature, list every question both sides answer, and
+give each one owner in the brief.* The contracts named which lane "writes" and which "calls" for the
+four fixed answers, and those four did not diverge. The bar colour was an answer lane C offered as
+optional, so lane B wrote its own; the gate was a rule the brief gave lane C in a file it gave lane B.
+
+### 2026-09-23 — Side by side held for attackers, and nobody else in the fight (P15)
+
+**Symptom, found by the guard before anyone played it.** The owner asked that fighters never
+share a tile, *"handled uniformly"*. §7c had given every attacker a side of its own. A test that
+walked every tick of mixed brawls then found fighters standing together for hundreds of ticks
+anyway. A marauder stood on a downed body a colonist was finishing off beside it. Two drafted
+colonists swung from one tile. A colonist ordered onto a marauder's tile was given it.
+
+**Cause.** The rule was written for one side of the relation. An attacker held its side, but a pawn
+being attacked held nothing. Three ways into a fight also had no rule at all: the drafted hold
+("strikes from where she stands"), drafting in place, and the move order's spread. Each was right
+for the pawns it had been written for, and none asked about the others.
+
+**Fix.** One answer, `Melee.Holds`: every fighter holds its `SideOf`, attacker or target. The
+hold, the draft and the move order all ask it. `docs/design/33-combat.md` §8c.
+
+**The check this earns.** *When a rule is about a relation, test it over the relation, not over
+the actor that prompted it.* `SideBySideTests` checked attackers against attackers, and all of
+them passed. `FightGuardTests` checks everyone in the fight, on every tick. Each hole it found was
+seen to fail with its fix withheld.

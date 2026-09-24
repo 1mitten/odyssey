@@ -167,6 +167,22 @@ namespace Odyssey.EditorTools
                 mono: true, loadInBackground: false, placeholder: null),
             new("carry-drop", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: true, loadInBackground: false, placeholder: null),
+            // The draft's blade (design 33 §2i): two thirds of a second, mono in the file already,
+            // and it has to sound on the frame the order lands — so PCM, decompressed on load, the
+            // chimes' class. 58 KB.
+            new("draft", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
+            // The sound of a blow (design 33 §9g), baked by tools/audio/bake_combat.sh: two
+            // whooshes (combat-whoosh and its _01), the critical slice and the thud. Mono, because
+            // each is heard from a fighter; PCM decompressed on load, because each is timed to the
+            // frame against the blow and a decode at the moment of play is latency the timing
+            // cannot see. 197 KB for all four.
+            new("combat-whoosh", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
+            new("combat-crit-slice", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
+            new("combat-hit", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
             new("alert-normal", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: false, loadInBackground: false, Alert),
             new("alert-negative", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
@@ -608,6 +624,66 @@ namespace Odyssey.EditorTools
                 // together are what stop a stockpile run sounding like one file on repeat.
                 CarrySound(SoundIds.CarryLift, "carry-lift"),
                 CarrySound(SoundIds.CarryDrop, "carry-drop"),
+                // The draft (design 33 §2i): a blade drawn when a colonist is drafted. An
+                // indicator, so 2D like a chime and with no variance — a signal that wobbles reads
+                // as a fault — but on the Effects bus rather than Alerts: it answers the player's
+                // own click and must not duck the music the way an alert does. The cooldown makes
+                // a box of five drafted at once one draw, not a clatter.
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.Draft,
+                    Clips = Variants("draft"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.7f, VolumeVariance = 0f, PitchVariance = 0f,
+                    SpatialBlend = 0f, MinDistance = 1f, MaxDistance = 500f,
+                    Priority = 24, Cooldown = 0.25f,
+                },
+                // The sound of a blow (design 33 §9g). Placed like the axe, at the axe's ranges —
+                // a fight is heard where felling is — and every one on the Effects bus.
+                //
+                // **No cooldown on any of the three.** The director's cooldown is per sound, so any
+                // cooldown at all swallows a second fighter's blow read in the same frame, and in a
+                // group fight at x3 that is most of them. The bound on a big fight is the voice
+                // budget instead, and the priorities say what yields: a whoosh (140) gives its voice
+                // to a thud (110) or a slice (100) before a blow goes unheard.
+                //
+                // The mix against the axe is baked (the script's header): a thud sits about 6 dB
+                // over a felling blow at the same distance, a whoosh about 4 dB over, the slice
+                // the loudest thing in a fight. Volume is one number for all three so the bake's
+                // balance between them is the one that plays.
+                new AudioCatalogue.SoundDef
+                {
+                    // Two takes and a little pitch spread, so a long exchange is not one file on
+                    // repeat. Pitch moves the peak by a few per cent of 40 ms — a millisecond or two.
+                    Id = SoundIds.CombatSwing,
+                    Clips = Variants("combat-whoosh"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.65f, VolumeVariance = 0.12f, PitchVariance = 0.06f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = 140, Cooldown = 0f,
+                },
+                new AudioCatalogue.SoundDef
+                {
+                    // No variance: the slice is timed so its biggest moment lands on the impact, and
+                    // it is rare enough that repetition is not the risk a wandering pitch would be.
+                    Id = SoundIds.CombatCritSlice,
+                    Clips = Variants("combat-crit-slice"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.65f, VolumeVariance = 0f, PitchVariance = 0f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = 100, Cooldown = 0f,
+                },
+                new AudioCatalogue.SoundDef
+                {
+                    // One take, so the variance the axe gets: the same thud fifty times in a fight
+                    // needs its level and pitch moved a little to stop reading as a sample.
+                    Id = SoundIds.CombatHit,
+                    Clips = Variants("combat-hit"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.65f, VolumeVariance = 0.15f, PitchVariance = 0.07f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = 110, Cooldown = 0f,
+                },
                 // The alerts. Zero variance on all five: a chime is a signal and a signal that
                 // wobbles reads as a fault, which is the opposite of what the work sounds want
                 // variance for. 2D, top voice priority, and a cooldown long enough that two

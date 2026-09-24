@@ -25,15 +25,18 @@
   </ItemDef>
 
   <!--
-    A heap in its own right, one to a cell, until the things line decides what it is made of.
+    Scrap metal (design 32 §14): what power lines and machines are built from, and what the
+    wreckage on the board and the scrap drop pay out. It was a heap in its own right, one to a
+    cell, until power gave it a use; 50 to a stack is a run of line's worth in one armful.
 
-    Filed under Materials rather than Items: it is what the reclaimer eats, and the wiki has
-    described it as "mixed unsorted salvage" since before the reclaimer was designed. A player
-    ticking Materials means "the raw stuff", and this is raw stuff.
+    Filed under Materials rather than Items: it is raw stuff, and what the reclaimer will eat.
+    The defName stays Item_Salvage because an item handle is a save contract; the name a player
+    reads is the registry's (ui.res.scrap, "Scrap metal").
   -->
   <ItemDef>
     <defName>Item_Salvage</defName>
-    <label>salvage</label>
+    <label>scrap metal</label>
+    <stackLimit>50</stackLimit>
     <category>Materials</category>
   </ItemDef>
 
@@ -85,6 +88,86 @@
     <nutrition>180</nutrition>
     <stackLimit>75</stackLimit>
     <category>Food</category>
+  </ItemDef>
+
+  <!--
+    The four melee weapons (design 33 section 1, C3), the owner's four: a bat and a crowbar, blunt
+    with a chance to stun, and a machete and a sci-fi blade, sharp. Real items, one to a stack,
+    filed under Weapons, appended together by the combat contracts step. The names are our own
+    (docs/design/icon-keys.csv); nothing spawns one yet, and the starting kit is lane D's.
+
+    The owner set the envelope and the rest is INVENTED inside it, to be tuned after the first
+    play: weapons do 7 to 10 a blow every 1.6 to 2.4 seconds, against bare hands' 4 every 2
+    (Combat.xml). Cooldowns are ticks at sixty a second. Blunt trades speed for the stun; sharp
+    is quicker, and the arc blade is simply the best thing a colonist can hold.
+
+    windupTicks is when the blow lands after the swing starts, and it is the number the drawn
+    clip is timed to: the Sword Combat pack's light swings reach their impact about 0.37 s in and
+    its heavy ones about 1.0 s in (docs/research/synty-sword-combat.md), played faster or slower to
+    land on this tick. style picks the family of clip, never a clip.
+
+    experiencePerSwing is in thousandths of a point, the SkillDef unit, landed or not: 50 points a
+    swing, so a minute of fighting is worth about a working day's cap. INVENTED; the reference only
+    says melee trains fast.
+  -->
+  <ItemDef>
+    <defName>Item_Bat</defName>
+    <label>bat</label>
+    <category>Weapons</category>
+    <weapon>
+      <damage>7</damage>
+      <cooldownTicks>120</cooldownTicks>
+      <windupTicks>30</windupTicks>
+      <damageKind>Blunt</damageKind>
+      <stunPerMille>200</stunPerMille>
+      <stunTicks>60</stunTicks>
+      <experiencePerSwing>50000</experiencePerSwing>
+      <style>Heavy</style>
+    </weapon>
+  </ItemDef>
+
+  <ItemDef>
+    <defName>Item_Crowbar</defName>
+    <label>crowbar</label>
+    <category>Weapons</category>
+    <weapon>
+      <damage>8</damage>
+      <cooldownTicks>132</cooldownTicks>
+      <windupTicks>36</windupTicks>
+      <damageKind>Blunt</damageKind>
+      <stunPerMille>250</stunPerMille>
+      <stunTicks>90</stunTicks>
+      <experiencePerSwing>50000</experiencePerSwing>
+      <style>Heavy</style>
+    </weapon>
+  </ItemDef>
+
+  <ItemDef>
+    <defName>Item_Machete</defName>
+    <label>machete</label>
+    <category>Weapons</category>
+    <weapon>
+      <damage>8</damage>
+      <cooldownTicks>96</cooldownTicks>
+      <windupTicks>22</windupTicks>
+      <damageKind>Sharp</damageKind>
+      <experiencePerSwing>50000</experiencePerSwing>
+      <style>Light</style>
+    </weapon>
+  </ItemDef>
+
+  <ItemDef>
+    <defName>Item_ArcBlade</defName>
+    <label>arc blade</label>
+    <category>Weapons</category>
+    <weapon>
+      <damage>10</damage>
+      <cooldownTicks>114</cooldownTicks>
+      <windupTicks>26</windupTicks>
+      <damageKind>Sharp</damageKind>
+      <experiencePerSwing>50000</experiencePerSwing>
+      <style>Light</style>
+    </weapon>
   </ItemDef>
 
 </Defs>

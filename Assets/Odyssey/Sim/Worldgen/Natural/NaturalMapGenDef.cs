@@ -45,6 +45,23 @@ namespace Odyssey.Sim.Worldgen.Natural
         public MapType mapType = MapType.Natural;
 
         /// <summary>
+        /// The meadow's animals (design 30 §1): hog sounders in the woodland, rats by the rock.
+        /// The natural board's default whether or not <see cref="MakeWooded"/> is called, because
+        /// the untouched def has trees and rock too; <see cref="MakeBarren"/> is what clears it.
+        /// </summary>
+        public static Pawns.Wildlife.WildlifeEntry[] MeadowWildlife() => new[]
+        {
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_MiddenHog", 3, 3, 5, Pawns.Wildlife.Habitat.Woodland),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_DuctRat", 2, 1, 1, Pawns.Wildlife.Habitat.Rock),
+        };
+
+        public NaturalMapGenDef()
+        {
+            wildlife = MeadowWildlife();
+            wildlifePer10000Columns = 15;
+        }
+
+        /// <summary>
         /// A plain starting board: flat ground, grass everywhere, no trees, outcrops, ore or bare
         /// patches. The strata below are untouched, so digging still finds rock.
         ///
@@ -58,6 +75,10 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// <summary>Flatten the surface and switch off every scattered feature.</summary>
         public NaturalMapGenDef MakeBarren()
         {
+            // No animals: a bare board with a hog on it is a hog to explain in every test that
+            // counts pawns, and the baseline is the board on which nothing needs explaining.
+            wildlife = System.Array.Empty<Pawns.Wildlife.WildlifeEntry>();
+            wildlifePer10000Columns = 0;
             barren = true;
             surfaceRelief = 0;              // one flat surface layer, no terracing
             treeDensityPerMille = 0;
@@ -119,6 +140,10 @@ namespace Odyssey.Sim.Worldgen.Natural
             // unless its whole footprint is one level terrace, which is what keeps a water surface
             // level and its banks a single step high.
             water = true;
+
+            // And its animals (design 30 §1), which the bare board this may follow had cleared.
+            wildlife = MeadowWildlife();
+            wildlifePer10000Columns = 15;
             return this;
         }
 

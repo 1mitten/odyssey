@@ -59,8 +59,21 @@ namespace Odyssey.Sim.Growing
                 PlantDef def = _zones.Plant(_zones.CropPlant(index));
                 if (!def.GrowsAt(tickOfDay)) continue;
 
+                // How much of this interval the temperature lets the crop keep — the hook
+                // design 22 §8 recorded and design 28 §8 fills. The gain is the interval scaled
+                // by the response and floored by integer division, so a crop out of its band
+                // waits rather than creeps, and the two numbers cannot disagree about which
+                // happened.
+                int gain = IntervalTicks;
+                if (_pawns.Temperature != null)
+                {
+                    int rate = def.GrowRatePerMille(_pawns.Temperature.CellTemp(index, world.CurrentTick));
+                    if (rate <= 0) continue;
+                    if (rate < 1_000) gain = IntervalTicks * rate / 1_000;
+                }
+
                 int before = def.StageOfTicks(_zones.GrowthTicks(index));
-                int after = _zones.Advance(index, IntervalTicks);
+                int after = _zones.Advance(index, gain);
                 if (after != before) _pawns.Chunks?.MarkDirty(_zones.Size.FromIndex(index));
             }
         }

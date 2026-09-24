@@ -25,6 +25,14 @@ namespace Odyssey.Hud
         /// for the reason <see cref="Debug"/> is.</summary>
         public WorkDirector Work { get; } = new WorkDirector();
 
+        /// <summary>Whether the Animals tab is open (design 30 §6). Session state, likewise.</summary>
+        public AnimalsDirector Animals { get; } = new AnimalsDirector();
+        /// <summary>Whether the Inventory tab is open (design 35). Session state, likewise.</summary>
+        public InventoryDirector Inventory { get; } = new InventoryDirector();
+
+        /// <summary>Whether the Research tab is open, and the research until the mechanism exists (design 34).</summary>
+        public ResearchDirector Research { get; } = new ResearchDirector();
+
         /// <summary>Whether the Almanac reference browser is open, and what entry it shows.</summary>
         public AlmanacDirector Almanac { get; } = new AlmanacDirector();
 
@@ -96,6 +104,63 @@ namespace Odyssey.Hud
             Selection.Choose(id);
             Camera.JumpTo(view.Cell);
             return true;
+        }
+
+        /// <summary>
+        /// The Animals tab's path (design 30 §6; owner, 2026-09-23: "can the depth remain the
+        /// same"): the selection and the camera jump, and <b>the slice left where it is</b>. A
+        /// wild animal is almost always on the surface the player is looking at, and a row click
+        /// that also moved the depth read as the view lurching. An animal below the slice is
+        /// selected and jumped to all the same; the player changes depth if they want to see it.
+        /// </summary>
+        public bool ChooseAnimal(PawnId id, WorldSnapshot snapshot)
+        {
+            if (!snapshot.TryGetPawn(id, out PawnView view)) return false;
+            Selection.Choose(id);
+            Camera.JumpTo(view.Cell);
+            return true;
+        }
+
+        /// <summary>
+        /// The Inventory tab's Go (design 35): a store may be on any layer, so this is the roster's
+        /// path rather than the Animals tab's — the slice to its layer first, since the picker and
+        /// the pane will not look through a floor, then the cell as the selection, so the pane
+        /// opens on the store, then the camera.
+        /// </summary>
+        public void ChooseStore(CellRef cell)
+        {
+            Slice.SetLayer(cell.Y);
+            Selection.ChooseCell(cell);
+            Camera.JumpTo(cell);
+        }
+
+        /// <summary>
+        /// A corpse was clicked (design 33 §1: clickable as "Corpse of X"). The seam between the
+        /// two combat lanes that meet here (design 33 §5): lane B's hit-test finds the corpse under
+        /// the pointer (<c>CorpseDirector</c>) and calls this; lane C selects it and the shell gives
+        /// the pane its corpse subject.
+        ///
+        /// <para><b>Only a corpse the frame carries is chosen</b>, and the answer says whether it
+        /// was: a hit-test a frame behind the world can name a corpse that is gone, and choosing it
+        /// would empty the selection for a subject the pane could only tombstone. On false the
+        /// selection is untouched and the click falls through to whatever else is under it. No
+        /// slice or camera move: the corpse is already under the pointer, as a world click on a
+        /// colonist is.</para>
+        ///
+        /// <para>One walk of <see cref="WorldSnapshot.Corpses"/> a click: a colony has a handful.</para>
+        /// </summary>
+        /// <param name="corpseId">A <see cref="CorpseView.Id"/>, never a pawn id: the pawn is gone.</param>
+        public bool ChooseCorpse(int corpseId, WorldSnapshot snapshot)
+        {
+            if (corpseId <= 0) return false;
+            var corpses = snapshot.Corpses;
+            for (int i = 0; i < corpses.Length; i++)
+            {
+                if (corpses[i].Id != corpseId) continue;
+                Selection.ChooseCorpse(corpseId);
+                return true;
+            }
+            return false;
         }
 
         /// <summary>Once per interface frame, before anything reads the selection.</summary>
