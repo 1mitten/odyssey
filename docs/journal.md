@@ -12219,3 +12219,41 @@ memory the only price. What the frame *does* feel is the relief: ±4 hills add a
 and 0.6–0.75 ms of `World` on Standard and Huge, because taller hills put more layers of chunks in
 view. So the owner's "make sure performance doesn't suffer" is a question for the ground skin (M9),
 not for the board height. EditMode 3,261 / 3,229 / 0, PlayMode 117 / 112 / 0.
+
+## 2026-09-24 — The combat gate (C7)
+
+The last unit of the combat plan: ten days with and without hostiles, on three seeds, and the
+records. Without hostiles nothing needed doing — `SoakRunTests.TenDays` holds on today's `main` and
+no golden moved. With them, the gate became `MarauderSoakTests.TheGateWithRaids`, and three things
+about writing it are worth keeping.
+
+**An unanswered colony is not a gate.** The first cut spawned the raids and left the colony alone,
+armed. Every seed was all down by day two, so eight of the ten days tested theft and nothing else.
+Drafting the colonists where they stood did not help: five colonists across a 120-cell board met a
+party of three one at a time and lost each fight three to one, which the probe showed as one
+marauder walking the board downing four drafted, armed colonists in turn. What a player does is
+draft **and gather**, so the gate answers each party of three with a draft and one move order to the
+start, and leaves a lone marauder to each colonist's own response. Then the squads fought: seeds 2
+and 3 downed nine and seven marauders. Seed 1's squad of four still lost to three on day one — the
+invented numbers, recorded for the owner rather than tuned here.
+
+**A bound on "rescuable" needs the rescuer to be free.** The first rescue invariant read 12,500 ticks
+on seed 1 and looked like a stuck rescue. The trace said otherwise: one colonist left standing,
+carrying four patients to bed one at a time, each carry 2,500–4,000 ticks. A rescuer already
+carrying somebody is not free, and the predicate says so now.
+
+**The save round trip found a real fault, and only a crowd could.** Saved at the first swing of day
+one's raid and loaded, two seeds of three came to a different hash a day later, while the lockstep
+twin agreed every hour — so the round trip, not the simulation. Per-pawn hashes named one drafted
+colonist who had joined a fight; every field matched except her progress through a step, which had
+not moved in the loaded world. Five branches of the attack driver let a step under way land before
+deciding and trust the mover to finish it on the pawn's path, and a path is never saved. The fix asks
+for the path again when a waiting pawn has none (`LandTheStep`); the regression test saves at exactly
+that moment in a three-against-two fight and failed without it. The gate's final hashes were
+identical to the digit before and after the fix, which is the cleanest evidence available that it
+reaches nothing but a loaded world. Every earlier round trip saved a duel mid-swing or a thief
+mid-carry; an attacker in reach while still walking needs several attackers on one target.
+
+The twin every hour is the thing to copy: "the same final hash" would have said the same, but an
+hourly comparison says *where* two runs part, and here it said they never did — which is what pointed
+at the save.

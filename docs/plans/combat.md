@@ -1,11 +1,10 @@
 # Combat — the plan
 
 **Approved by the owner 2026-09-23** after an interview of five rounds (every answer is in the
-decision table of `docs/design/33-combat.md` §1). **C1 merged as PR #176** (branch
-`claude/combat-mvp`), which also carried wildlife (#169) to `main`. **C2 and C3 are built and
-integrated on `claude/combat-c2`** (worktree `D:\code\odyssey-combat`), awaiting the owner's
-playtest; the hand-over is `docs/plans/combat-c2-handover.md`. Temperature (#164) is independent:
-combat adds save sections, not a format bump.
+decision table of `docs/design/33-combat.md` §1). **Done 2026-09-24.** C1 merged as PR #176, C2 and
+C3 as PR #180, blood as PR #182, and C4–C6 with the owner's rounds after them as PR #194. C7, the
+gate, is PR #204 (`claude/combat-c7`); its report is `docs/milestones/combat-report.md`. What is still open is
+the owner's (the report's §5, the playtest queue).
 
 ## Units
 
@@ -13,13 +12,13 @@ combat adds save sections, not a format bump.
 |---|---|---|---|---|
 | C0 | Research `a-10-melee-combat.md`, pack inventory `synty-sword-combat.md`, design 33, this plan | — | — | **done** |
 | C1 | Draft and move: drafted state, `Job_DraftHold`, `Job_Goto`, `SetDrafted`, `OrderMove`, the Drafted think node, the four-hour release, the job-count load guard. T, the pane's button, `OrderModel`, `SelectionPresenter.Order`, the diamond and the order line. After the playtest: the run (§2h), the deeper red (§2g), the blade sound (§2i) | **played 2026-09-23 — works** | moved once: two job defs | **PR #176** |
-| C2 | Health and melee against a marauder: species hit points, revenge and natural attack, `CombatDef`, live Melee skill, `PawnKind_Marauder`, attack, flee and downed jobs, `OrderAttack`, adjacent auto-attack, `CombatSystem`, corpses; health tab, corpse pane, spawn marauder, feedback, the clip layer and its fallback | **▶ playtest** | moved once, in the contracts step; **none since**, probe-diffed | **built 2026-09-23 (lanes A, B, C), integrated on `claude/combat-c2` — awaiting playtest** |
-| C3 | Weapons: bat, crowbar, machete, sci-fi blade; the equip job and order; stun; starting kit; held prop | **▶ playtest** | moved once, in the contracts step; **none since** | **built 2026-09-23 (lane D; the held prop at the integration) — awaiting playtest, with C2** |
-| CB | Blood: spurts, a mark per hit, pools under the fallen, a fade by the tick (design 33 §10) | **▶ playtest** | **none** — presentation only | **built 2026-09-24, PR #182** |
-| C4 | Rescue and healing in bed: carried in the arms to her own or the nearest free bed, in it until whole, *No bed for the wounded* (design 33 §11) | **▶ playtest** | **none since the contracts step** | **built 2026-09-24, `claude/combat-rescue`** |
-| C5 | Friendly fire and its mood: the two memories (design 33 §12); Ctrl-attack and self-defence were C2's, now tested end to end | **▶ playtest** | **none**, asserted; content fingerprint moved once | **built 2026-09-24 on `claude/combat-friendly-fire`** (fast and Long tiers; no Unity needed, nothing drawn) |
-| C6 | Buildings as targets: `EdificeDamage` filled, the attack driver's building mode, `OrderAttack` with `B = 0`, demolition through `ConstructionGrid.Demolish` with no refund, the right-click (`CombatOrders.RouteBuilding`), hit points for the campfire and power's three | **▶ playtest** | **none, asserted** (building fingerprint moved once) | **built 2026-09-24, `claude/combat-buildings`, design 33 §13 — awaiting the integrator's Unity run and the owner's playtest** |
-| C7 | Ten-day gate with and without hostiles, benchmark rows, records, wiki republish | — | — | — |
+| C2 | Health and melee against a marauder: species hit points, revenge and natural attack, `CombatDef`, live Melee skill, `PawnKind_Marauder`, attack, flee and downed jobs, `OrderAttack`, adjacent auto-attack, `CombatSystem`, corpses; health tab, corpse pane, spawn marauder, feedback, the clip layer and its fallback | **played 2026-09-23** | moved once, in the contracts step; none since, probe-diffed | **PR #180** |
+| C3 | Weapons: bat, crowbar, machete, sci-fi blade; the equip job and order; stun; starting kit; held prop | **played 2026-09-23** | moved once, in the contracts step; none since | **PR #180** |
+| CB | Blood: spurts, a mark per hit, pools under the fallen, a fade by the tick (design 33 §10) | **played** (*"it seems great"*) | **none** — presentation only | **PR #182** |
+| C4 | Rescue and healing in bed: carried in the arms to her own or the nearest free bed, in it until whole, *No bed for the wounded* (design 33 §11) | **▶ playtest** | **none since the contracts step** | **PR #194** |
+| C5 | Friendly fire and its mood: the two memories (design 33 §12); Ctrl-attack and self-defence were C2's, now tested end to end | **▶ playtest** | **none**, asserted; content fingerprint moved once | **PR #194** |
+| C6 | Buildings as targets: `EdificeDamage` filled, the attack driver's building mode, `OrderAttack` with `B = 0`, demolition through `ConstructionGrid.Demolish` with no refund, the right-click (`CombatOrders.RouteBuilding`), hit points for the campfire and power's three | **▶ playtest** | **none, asserted** (building fingerprint moved once) | **PR #194**, with the owner's rounds (design 33 §14–§20) |
+| C7 | Ten-day gate with and without hostiles, benchmark rows, records, wiki republish (design 33 §21) | — | **none** (asserted; the gate's own fix touches only a loaded world) | **done 2026-09-24, PR #204, `claude/combat-c7`** — `docs/milestones/combat-report.md` |
 
 ## Running C2–C7 with several agents
 
@@ -172,9 +171,10 @@ per lane, so the two never edit one file.
 
 ## Blocked on the owner
 
-- **The C2/C3 playtest** — checkpoints 2 and 3 together, on `claude/combat-c2`
-  (`docs/plans/combat-c2-handover.md`), and then its PR. Phase 4 (C4–C6) waits on the verdict.
-- **The combat sounds.** Five ids are named (`SoundIds.CombatSwing`, `CombatHit`, `CombatMiss`,
-  `CombatDown`, `CombatDeath`) with no clips, so a fight is silent until clips are supplied.
+- **The playtests of C4–C6 and the rounds after them**, which have never been played — the combat
+  rows in `docs/plans/playtest-queue.md`.
+- **The questions in `docs/milestones/combat-report.md` §5**: right-click on your own ladder, door or
+  bed; the drawing owed to a damaged building; the Thoughts tab; kidnap; and whether a squad of four
+  armed colonists should lose to three marauders at today's numbers.
 - **The draft sound's licence**: `draft.wav` comes from a Pixabay recording (Dragon Studio). To
   confirm, per design 33 §2i.
