@@ -23,6 +23,15 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do the streams and ponds read as water with a natural edge?** (`claude/meadow-shorelines`,
+  design 38 §24.) New game; pan to the nearest stream and a pond, close in and pulled back.
+  **Look for** a shoreline that curves and cuts corners instead of following the cells, marsh as a
+  soft dark band rather than pale tiles, a pond's deep middle as a darker blob, and murky green-teal
+  water like the reference. Walk a colonist along a bank. **A wrong answer looks like:** a staircase
+  still visible along a diagonal stream; pale slivers or wedges at the water's edge; a colonist
+  standing in the water or floating over a bank; a waterfall missing or cut short; or the water too
+  dark to read as water at dusk.
+
 - **Does the title screen's dock read well, and does Exit ask?** (`claude/settings-frame`, design
   40.) Press Play. A dark panel down the left edge with the layered mark and ODYSSEY, four
   coloured buttons and the build line at the foot, the starfield clear to the right. New game should

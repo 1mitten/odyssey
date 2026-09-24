@@ -12219,3 +12219,26 @@ memory the only price. What the frame *does* feel is the relief: ±4 hills add a
 and 0.6–0.75 ms of `World` on Standard and Huge, because taller hills put more layers of chunks in
 view. So the owner's "make sure performance doesn't suffer" is a question for the ground skin (M9),
 not for the board height. EditMode 3,261 / 3,229 / 0, PlayMode 117 / 112 / 0.
+
+## 2026-09-24 — Meadow: the shoreline is geometry, not shading
+
+The target was the reference's stream (#13): a soft edge, murky green water, no grid. Three shading
+attempts failed before the fourth, and the reason is worth keeping. Sinking a bank under the water
+line and laying water over it left the edge at the underwater wall, because the depth fade made the
+thin water clear. Driving the edge from a soft board field instead gave a soft blob — over square
+geometry, which showed wherever the blob and the cells disagreed: pits onto the sand bed at a water
+cell's corners, the bank's sawtooth where it overran. **A soft edge painted over a square hole is
+still a square hole.** What worked was making the ground itself cross the water line on a line of
+its own: the bank and the bed as one height field, each of nine points a cell at `(1 − w)` of a layer
+above the bed by how much water surrounds it. Every cell's centre keeps its height, so nothing in the
+simulation moved.
+
+The deep water's cross of squares survived a correct blend, and the way it was found is the lesson.
+Drawing the shader's own intermediate terms as colour, one at a time — the field, then the depth each
+material thought it was, then the lit colour — showed each term right and the result wrong: the two
+palette colours reached the shader as globals and `_BaseColor` as a material property, and the two
+do not share a colour-space path, so a ratio of them was a different constant per material. Four
+Unity runs, each a few minutes, against an afternoon of reasoning from screenshots.
+
+Measured in one run on Standard and Huge at 640 × 480 and 4K: draw calls identical, instances up by
+the banks, meshing 7–9% dearer a chunk. Design 38 §24.

@@ -1243,3 +1243,101 @@ was live):
 Tree calls fall 80–96%; the most is won where the owner asked about it, big boards zoomed out. The
 real GPU figure comes from the player: `-odyssey-bench -odyssey-bench-trees`
 (`PlayerBench.TreeArms`: as shipped, chunk by chunk, grouped only, no trees, at 32 / 70 / 140 m).
+
+## 24. Shorelines and water (2026-09-24)
+
+**The target** is the reference screenshot #13 at the play camera: a stream whose edge is a soft,
+natural line in a murky green-teal, with no grid in it. What the board drew was the grid three times
+over: the water's edge was every cell's square edge (a diagonal stream a staircase), the marsh round
+it a ring of pale square tiles, and a pond's deep middle a cross of darker squares.
+
+### 24a. Why the first three attempts failed, and what finally worked
+
+1. **Sinking the bank's wet corners under the water line and laying water over the bank.** The
+   shader's depth fade then made that thin water transparent, so the visible edge stayed where the
+   water got deep — at the underwater wall on the grid line.
+2. **Driving the water's edge from a soft field instead of depth.** The blob was soft, but a soft
+   blob over square geometry is still square wherever the two disagree: where the blob fell short
+   of a water cell's corner it opened a pit onto the pale sand bed, and where it overran, the bank's
+   own sawtooth crossing line showed.
+3. **The deep cross stayed sharp after its colour was blended.** Diagnosed by drawing the shader's
+   own terms as colour: the field was right, the blend was right, and each depth's material still
+   landed on a different colour, because the two palette colours went in as `Shader.SetGlobalColor`
+   and `_BaseColor` does not travel the same colour-space path. They are now properties on the one
+   base material every water tile is cloned from (`MaterialCache.WaterBase`), and the cross became
+   a soft blob.
+
+**What worked is geometry, not shading.** `BankLayout.ShoreFan` makes the bank and the bed one height
+field: nine points a cell (corners, edge midpoints, centre), each at `(1 − w)` of a layer above the
+bed, where `w` is the share of the water layer round that point that is water — bilinear over the
+cells whose centres surround it. Drawn as eight triangles fanned from the centre, read back by
+`Ramp.HeightAt` through the same eight, so `RiseAt` (the one surface owner) stands a figure on what
+is drawn. The water line is where that surface crosses the water, `w ≈ 0.28`: inside the bank, a
+straight line along a straight bank, and with the corners of a staircase cut. The shader's depth fade
+then traces that line and can be short (`_FieldShoreFade` 0.7 m).
+
+### 24b. What did not change, deliberately
+
+**Every cell's centre stands where it did** — a bank's at its top (`w = 0`), a water cell's at its
+bed (`w = 1`) — and so does the line between two dry centres. The places a colonist stands and walks
+keep their heights; the simulation hears nothing; no golden moved. `ShorelineTests.EveryCentreStaysWhereItWas`.
+
+**The façade rule, asked:** *can the simulation put something where this is drawn?* The one place
+drawn ground enters a water cell is the tip of a convex corner, where a quarter-water point stands
+9 cm above the water; nothing is placed in a water cell and a swimmer's path runs centre to centre,
+so it cannot be reached. A bank's centre is never under water, an islet included
+(`AnIsletKeepsItsCentreAboveTheWater`).
+
+**Falls are untouched.** A bed counts air and the board's edge as water, so it stays flat at a
+fall's lip under the sheet; cascades are box cells and never skinned.
+
+### 24c. The rest of it
+
+- **`GroundField`**: one texel a column — R marsh, G sand or gravel, B water, A deep — bilinear,
+  rebuilt a chunk at a time when that chunk re-meshes and uploaded at most once a frame. Globals, so
+  every ground and water material reads the same field.
+- **Marsh is painted, not tiled**: it wears the meadow ground's material and the field blends a moss
+  texture in over metres (`_WetAmount` 0.85), with ground bordering water a little darker and cooler.
+- **Shallow into deep by the field**, not per cell. Level water is at least 0.96 opaque with the
+  shoreline on: the reference's water is murky, and the bed's grid read through anything less.
+- **Water retuned towards #13**: shallow `(0.21, 0.41, 0.39)`, deep `(0.08, 0.21, 0.24)`, from the
+  old sky-cyan that read as a swimming pool at noon. `StuffPalette` is still the one owner.
+- **A bed that rises wears the bank's grass**, so the rounded tip of a corner is not pale sand
+  above the water; a bed ringed by water keeps its sand.
+- **Water is laid over every bank**, one instance a bank in the bucket the water is already in.
+- **`WaterShore.Enabled`** off gives the square shore back exactly (the measurement's control).
+  Marsh keeps whichever material it resolved with, so a runtime toggle leaves it painted.
+
+### 24d. Measured
+
+`FrameTimeTests.TheShorelineAgainstTheFrame`, one run, each board built square then with the
+shoreline (the switch decides the marsh's material, so each arm is its own world from one seed).
+RTX 5070 Ti, editor batch; **the CI runner's EditMode run was live beside it**, so frame times are
+within noise of each other and only the counts are exact:
+
+| Board | Frame @640×480 | Frame @4K | Draw calls | Instances | Skin triangles | Re-mesh a chunk |
+|---|---|---|---|---|---|---|
+| Standard | 2.23 → 2.17 | 8.54 → 8.79 | **738 → 738** | 29,002 → 29,339 | 10,806 → 15,098 | 0.399 → 0.434 ms |
+| Huge | 2.94 → 3.11 | 8.58 → 8.26 | **641 → 634** (4K 732 → 723) | 28,213 → 28,815 | 17,327 → 24,895 | 0.480 → 0.513 ms |
+
+**Draw calls do not move** (P10 holds: the water over the banks joins the water's bucket, and the
+fans are more triangles in the skin mesh a chunk already draws). Instances grow by the banks, ~340 on
+Standard. Meshing is **7–9% dearer a chunk**, about 0.4 ms across the eleven-chunk budget of a
+frame (§6c.7), which stays inside it. The field's upload happens only when a chunk re-meshes.
+
+The player's GPU figure is owed — prepared, not run:
+`Build/Win64/Odyssey.exe -odyssey-bench -odyssey-bench-shore -logFile Logs/bench-shore.log`
+(`PlayerBench.ShoreArms`: as shipped against the square shore at 32 / 70 / 140 m, framed on the
+water nearest the colony; ~40 s, takes the screen).
+
+### 24e. What is owed
+
+- **The owner's eye** on the photographs and in Play (playtest queue).
+- **The player's GPU figure**, from the bench below, not run.
+- **A few pale slivers where a bank meets a box cell** — a bank beside a dry drop (a terrace riser)
+  is still a box, and where it shares a corner with a fan the two do not meet. Visible on the wide
+  shot, top left; pre-existing in kind (the square rule had the same crack) and not chased here.
+- **A faint diamond in open water**, the fans of the bed seen through 4% transparency.
+
+Before / after: `docs/reference/screenshots/look/2026-09-24-shore-{before,after}-{near,wide,pond}.png`
+and `-after-start.png` (the start has no water; it is the regression shot).
