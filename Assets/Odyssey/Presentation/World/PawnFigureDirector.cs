@@ -1123,6 +1123,9 @@ namespace Odyssey.Presentation.World
             {
                 CellRef cell = pawns[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
+                // Walls down: gone with the storey they stand on (design 42 §5). Skipped here and
+                // in the baked pass alike, so a hidden colonist does not fall through to a stand-in.
+                if (slice.HidesStandingAt(activeLayer, cell, World)) continue;
 
                 // A face that did not resolve is not drawn here at all: the pawn falls through to
                 // the baked path, which will draw whatever that row does resolve to (a marker, if
@@ -1793,8 +1796,11 @@ namespace Odyssey.Presentation.World
             // over means the fold begins from where the rise left the hands, which is continuous.
             // The load itself is unaffected: it follows the palms either way (see PlaceCarriedLoad).
             bool gesturing = figure.Gesture != PawnGesture.None || ForceGesture.HasValue;
+            // A body in the arms takes the same scoop as a load (design 33 §11e); the body itself
+            // is laid in them by PlaceCarriedPatients, once every bone is final.
+            bool carryingSomebody = CarriesAPatient(in pawn);
             figure.CarryWeight = CarryPose.Settle(
-                figure.CarryWeight, carryDef >= 0 && !gesturing ? 1f : 0f, deltaTime);
+                figure.CarryWeight, (carryDef >= 0 || carryingSomebody) && !gesturing ? 1f : 0f, deltaTime);
 
             // Asleep, and where. A bed decides which way the body lies and how high off the floor;
             // with no bed the colonist lies where it dropped, facing wherever it last faced, which
@@ -1804,6 +1810,9 @@ namespace Odyssey.Presentation.World
             figure.SleepWeight = ForceSleep.HasValue
                 ? ForceSleep.Value
                 : SleepPose.Settle(figure.SleepWeight, pawn.Asleep || figure.Fight.Lying ? 1f : 0f, deltaTime);
+            // Lifted or laid in a bed, she goes from the floor loop to lying at once: both are lying
+            // down, and easing between them would stand her up half way (design 33 §11e).
+            if (!ForceSleep.HasValue && Cradled(in pawn)) figure.SleepWeight = 1f;
             if (figure.SleepWeight > 0.001f) AimSleep(figure, in pawn);
 
             // Sitting by a fire (design 31 §18d). Eased like sleep; the blend itself is in Blend,
@@ -1812,7 +1821,7 @@ namespace Odyssey.Presentation.World
                 ? ForceSit.Value
                 : SitPose.Settle(figure.SitWeight, pawn.Seated ? 1f : 0f, deltaTime);
             // The weapon in the right hand, now that the tool, the load and the lie are known.
-            ShowWeapon(figure, in pawn, carrying: carryDef >= 0, deltaTime);
+            ShowWeapon(figure, in pawn, carrying: carryDef >= 0 || carryingSomebody, deltaTime);
 
             // Face the work. A pawn that has stopped walking has no heading left — that is what
             // makes PawnPose hand back a zero vector — so without the work cell the figure would

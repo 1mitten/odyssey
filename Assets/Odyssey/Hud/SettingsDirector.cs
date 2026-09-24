@@ -16,7 +16,6 @@ namespace Odyssey.Hud
     {
         Shadows,
         Surround,
-        GrassTufts,
         GroundRelief,
         SeeThrough,
 
@@ -31,6 +30,29 @@ namespace Odyssey.Hud
         /// changing depth is the specialist one, so it is the specialist that asks.</para>
         /// </summary>
         CutAwayCeiling,
+
+        /// <summary>
+        /// Whether grass casts shadows. **Off by default, and off is how it has always shipped**
+        /// (<c>ChunkRenderer.FoliageCastsShadows</c>): a meadow is tens of thousands of clumps,
+        /// each drawn again into every shadow cascade to cast a shadow centimetres long onto grass
+        /// of the same colour (design 38 §2, §13). A lever for a machine with room to spare.
+        ///
+        /// <para>Replaced the grass-tufts toggle in the enum on 2026-09-24 (M6): whether grass is
+        /// drawn at all is now the <see cref="GraphicsLadder.VegetationDensity"/> ladder's Off rung,
+        /// so there is one control for how grassy the board is rather than two that could
+        /// disagree.</para>
+        /// </summary>
+        FoliageShadows,
+
+        /// <summary>
+        /// Lower the walls to a stump and hide the upper storeys above the slice, so a player can
+        /// see who is inside a building and what they are doing (design 42).
+        ///
+        /// <para><b>On by default</b> (owner, 2026-09-24), and overruled while the player is
+        /// building: <see cref="WallsView.Lowered"/> is the whole rule. Drawn, never simulated,
+        /// like everything else here.</para>
+        /// </summary>
+        WallsDown,
     }
 
     /// <summary>
@@ -76,6 +98,40 @@ namespace Odyssey.Hud
 
         /// <summary>Fullscreen, borderless or a window. <c>UnityEngine.FullScreenMode</c>.</summary>
         DisplayMode,
+
+        /// <summary>
+        /// How thick the grass is strewn, in tufts per hundred grass cells —
+        /// <c>ChunkRenderer.ScatterDensity</c>'s own number, so the presenter hands it over
+        /// unchanged. Zero is bare ground and is what the grass-tufts toggle's Off used to mean;
+        /// the top rung is <c>GroundScatter.MaxPerCell</c> on every cell, full cover (design 38
+        /// §13: about a millisecond of GPU at 4K on the owner's machine, shipped or full).
+        /// Baked into the chunks, so moving it re-meshes the board under the meshing budget.
+        /// </summary>
+        VegetationDensity,
+
+        /// <summary>
+        /// How far from the camera grass is still drawn, in metres, with <see cref="Unlimited"/>
+        /// for everywhere. <c>ChunkRenderer.FoliageDrawDistance</c>; read as the frame is
+        /// submitted, so it costs nothing to move. Past it the ground texture carries the field.
+        /// </summary>
+        GrassDistance,
+    }
+
+    /// <summary>
+    /// A whole-page setting of the graphics levers, Low to Ultra, or <see cref="Custom"/> once any
+    /// lever a preset owns has been moved on its own (design 38 §9, M6).
+    ///
+    /// <para><b>Not stored.</b> The preset is read off the levers every time it is asked for, so it
+    /// can never disagree with them: a player who picks High and then turns the shadows off is on
+    /// Custom because that is what the levers say, not because a flag was remembered.</para>
+    /// </summary>
+    public enum QualityPreset
+    {
+        Low,
+        Medium,
+        High,
+        Ultra,
+        Custom,
     }
 
     /// <summary>
@@ -292,6 +348,21 @@ namespace Odyssey.Hud
 
         public const string ExitKey = "ui.settings.exit";
 
+        /// <summary>The registry key naming the quality preset row.</summary>
+        public const string QualityKey = "ui.settings.quality";
+
+        /// <summary>The registry key naming the vegetation ladder, and the key it is stored
+        /// under.</summary>
+        public const string VegetationKey = "ui.settings.vegetation";
+
+        /// <summary>
+        /// Where the grass-tufts toggle kept its yes or no until 2026-09-24. Read once, by
+        /// <see cref="UseStore"/>, so a player who had the grass off still has it off: the new
+        /// ladder is stored under its own key, because a stored 1 read as a density would snap to
+        /// bare ground and turn the grass off for everybody who had it on.
+        /// </summary>
+        public const string LegacyGrassKey = "ui.settings.grass";
+
         /// <summary>The registry key naming the gameplay section.</summary>
         public const string GameplayKey = "ui.settings.gameplay";
 
@@ -300,14 +371,19 @@ namespace Odyssey.Hud
         /// their words and the preference are one thing and the clock owns it.</summary>
         public const string AutosaveKey = AutosaveClock.SettingKey;
 
+        /// <summary>The registry key naming the walls-down option, which the depth rail's button
+        /// is labelled with as well as the settings row (design 42 §7).</summary>
+        public const string WallsDownKey = "ui.settings.wallsdown";
+
         static readonly GraphicsOption[] Order =
         {
             GraphicsOption.Shadows,
+            GraphicsOption.FoliageShadows,
             GraphicsOption.Surround,
-            GraphicsOption.GrassTufts,
             GraphicsOption.GroundRelief,
             GraphicsOption.SeeThrough,
             GraphicsOption.CutAwayCeiling,
+            GraphicsOption.WallsDown,
         };
 
         /// <summary>
@@ -328,10 +404,10 @@ namespace Odyssey.Hud
             ExitKey,
             "ui.settings.shadows",
             "ui.settings.surround",
-            "ui.settings.grass",
             "ui.settings.relief",
             "ui.settings.seethrough",
             "ui.settings.cutaway",
+            WallsDownKey,
             "ui.settings.volume.master",
             "ui.settings.volume.music",
             "ui.settings.volume.ambience",
@@ -346,6 +422,10 @@ namespace Odyssey.Hud
             "ui.settings.antialias",
             "ui.settings.shadowdist",
             "ui.settings.displaymode",
+            QualityKey,
+            VegetationKey,
+            "ui.settings.grassdist",
+            "ui.settings.foliageshadows",
         };
 
         /// <summary>The registry key naming one volume row.</summary>
@@ -402,7 +482,7 @@ namespace Odyssey.Hud
         /// one a player comes looking for, and the frame cap follows it because the cap means
         /// nothing until VSync is off (<see cref="FrameCapIsLive"/>).
         /// </summary>
-        static readonly GraphicsLadder[] LadderOrder =
+        static readonly GraphicsLadder[] DisplayOrder =
         {
             GraphicsLadder.VSync,
             GraphicsLadder.FrameCap,
@@ -412,8 +492,32 @@ namespace Odyssey.Hud
             GraphicsLadder.DisplayMode,
         };
 
-        /// <summary>The ladders, in the order they are drawn.</summary>
+        /// <summary>The ladders that decide what the board is drawn with, in the order the Detail
+        /// group draws them, above its toggles.</summary>
+        static readonly GraphicsLadder[] DetailOrder =
+        {
+            GraphicsLadder.VegetationDensity,
+            GraphicsLadder.GrassDistance,
+        };
+
+        static readonly GraphicsLadder[] LadderOrder = Concat(DisplayOrder, DetailOrder);
+
+        static GraphicsLadder[] Concat(GraphicsLadder[] a, GraphicsLadder[] b)
+        {
+            var all = new GraphicsLadder[a.Length + b.Length];
+            a.CopyTo(all, 0);
+            b.CopyTo(all, a.Length);
+            return all;
+        }
+
+        /// <summary>Every ladder: the Display group's, then the Detail group's.</summary>
         public static IReadOnlyList<GraphicsLadder> AllLadders => LadderOrder;
+
+        /// <summary>The Display group's ladders, in the order they are drawn.</summary>
+        public static IReadOnlyList<GraphicsLadder> DisplayLadders => DisplayOrder;
+
+        /// <summary>The Detail group's ladders, in the order they are drawn.</summary>
+        public static IReadOnlyList<GraphicsLadder> DetailLadders => DetailOrder;
 
         // Unity's own numbers wherever Unity has one, so the presenter casts rather than
         // translates. See the enum's remarks for the two that are not.
@@ -423,6 +527,20 @@ namespace Odyssey.Hud
         static readonly int[] AntiAliasRungs = { 1, 2, 4, 8 };
         static readonly int[] ShadowDistanceRungs = { 30, 60, 120 };
         static readonly int[] DisplayModeRungs = { ExclusiveFullScreen, BorderlessWindow, Windowed };
+
+        // Tufts per hundred grass cells. 60 is what the game has shipped at since the meadow was
+        // first strewn; 300 is GroundScatter.MaxPerCell (3) on every cell, which an EditMode test
+        // holds to the scatter's own constant because this assembly cannot see it.
+        static readonly int[] VegetationRungs = { 0, 30, 60, 150, 300 };
+        static readonly int[] GrassDistanceRungs = { 60, 120, 250, Unlimited };
+
+        /// <summary>The grass density the game ships with, and the rung the Medium and High
+        /// presets keep.</summary>
+        public const int ShippedVegetation = 60;
+
+        /// <summary>The grass-distance rung meaning "wherever the camera can see". <c>0</c> for the
+        /// same reason <see cref="Uncapped"/> is: it sorts to the end of the ladder.</summary>
+        public const int Unlimited = 0;
 
         /// <summary><c>FullScreenMode.ExclusiveFullScreen</c>. Named rather than written as 0,
         /// because a bare integer here is a number nobody can check against the API.</summary>
@@ -449,6 +567,8 @@ namespace Odyssey.Hud
             GraphicsLadder.AntiAliasing => AntiAliasRungs,
             GraphicsLadder.ShadowDistance => ShadowDistanceRungs,
             GraphicsLadder.DisplayMode => DisplayModeRungs,
+            GraphicsLadder.VegetationDensity => VegetationRungs,
+            GraphicsLadder.GrassDistance => GrassDistanceRungs,
             _ => VSyncRungs,
         };
 
@@ -472,6 +592,8 @@ namespace Odyssey.Hud
             GraphicsLadder.AntiAliasing => 1,
             GraphicsLadder.ShadowDistance => 60,
             GraphicsLadder.DisplayMode => BorderlessWindow,
+            GraphicsLadder.VegetationDensity => ShippedVegetation,
+            GraphicsLadder.GrassDistance => Unlimited,
             _ => 0,
         };
 
@@ -484,6 +606,8 @@ namespace Odyssey.Hud
             GraphicsLadder.AntiAliasing => "ui.settings.antialias",
             GraphicsLadder.ShadowDistance => "ui.settings.shadowdist",
             GraphicsLadder.DisplayMode => "ui.settings.displaymode",
+            GraphicsLadder.VegetationDensity => VegetationKey,
+            GraphicsLadder.GrassDistance => "ui.settings.grassdist",
             _ => GraphicsKey,
         };
 
@@ -506,7 +630,9 @@ namespace Odyssey.Hud
             },
             GraphicsLadder.FrameCap => rung == Uncapped ? "Uncapped" : rung.ToString(),
             GraphicsLadder.RenderScale => rung + "%",
-            GraphicsLadder.AntiAliasing => rung <= 1 ? "Off" : rung + "\u00d7",
+            // "x" rather than the multiplication sign: every string in the settings window is
+            // ASCII (design 39 \u00a72), so nothing on it depends on what a face happens to carry.
+            GraphicsLadder.AntiAliasing => rung <= 1 ? "Off" : rung + "x",
             GraphicsLadder.ShadowDistance => rung + " m",
             GraphicsLadder.DisplayMode => rung switch
             {
@@ -514,6 +640,15 @@ namespace Odyssey.Hud
                 Windowed => "Windowed",
                 _ => "Borderless",
             },
+            GraphicsLadder.VegetationDensity => rung switch
+            {
+                0 => "Off",
+                30 => "Sparse",
+                ShippedVegetation => "Meadow",
+                150 => "Lush",
+                _ => "Full",
+            },
+            GraphicsLadder.GrassDistance => rung == Unlimited ? "All" : rung + " m",
             _ => rung.ToString(),
         };
 
@@ -550,8 +685,138 @@ namespace Odyssey.Hud
                 Windowed => "A window you can size and move",
                 _ => "Fills the screen with no border. Alt-tabs instantly",
             },
+            GraphicsLadder.VegetationDensity => rung switch
+            {
+                0 => "Bare ground. The meadow's colour is carried by the ground texture alone",
+                30 => "Half the shipped grass. For a machine that is short of time",
+                ShippedVegetation => "The grass the game has always shipped with",
+                150 => "Two and a half times the shipped grass",
+                _ => "Grass on every cell. About a millisecond of GPU at 4K on a fast card",
+            },
+            GraphicsLadder.GrassDistance => rung == Unlimited
+                ? "Grass wherever the camera can see"
+                : $"Grass to {rung} m from the camera. Past it the ground carries the field",
             _ => string.Empty,
         };
+
+        /// <summary>
+        /// Whether moving this ladder re-meshes the board — the ladder counterpart of
+        /// <see cref="NeedsRedraw(GraphicsOption)"/>. Only the grass density: it is baked into
+        /// the chunks. The re-mesh goes through the meshing budget, so it arrives over a few
+        /// frames rather than in one.
+        /// </summary>
+        public static bool NeedsRedraw(GraphicsLadder ladder) => ladder == GraphicsLadder.VegetationDensity;
+
+        // ==================================================================== the presets
+
+        /// <summary>The presets a player can choose, in the order the row draws them. Custom is
+        /// drawn too, lit when it is true, but is not a thing anybody can pick.</summary>
+        public static readonly QualityPreset[] Presets =
+        {
+            QualityPreset.Low, QualityPreset.Medium, QualityPreset.High, QualityPreset.Ultra, QualityPreset.Custom,
+        };
+
+        /// <summary>The toggles a preset sets. The rest — relief, see-through, the cut-away — are
+        /// how a player likes to look at the board, not what the machine can afford.</summary>
+        public static readonly GraphicsOption[] PresetOptions =
+        {
+            GraphicsOption.Shadows, GraphicsOption.Surround, GraphicsOption.FoliageShadows,
+        };
+
+        /// <summary>The ladders a preset sets. VSync, the frame cap, the display mode and the
+        /// resolution are the screen's business and a preset leaves them alone.</summary>
+        public static readonly GraphicsLadder[] PresetLadders =
+        {
+            GraphicsLadder.ShadowDistance, GraphicsLadder.RenderScale, GraphicsLadder.AntiAliasing,
+            GraphicsLadder.VegetationDensity, GraphicsLadder.GrassDistance,
+        };
+
+        /// <summary>
+        /// Where a preset puts a toggle.
+        ///
+        /// <para><b>Shadows are on at every tier</b>, because a shadow is what tells the eye where
+        /// a colonist is standing; Low buys its time back from their distance instead. The
+        /// surround is off on Low only: it is a flat ~0.6 ms of submission on every board
+        /// (<c>06-rendering-and-camera.md</c> §6c.4), which is a tenth of a laptop's budget and
+        /// none of the colony. Grass shadows stay off everywhere, as they always have — nothing
+        /// has measured what they cost, and at full cover they are the most expensive lever on
+        /// the page.</para>
+        /// </summary>
+        public static bool PresetOn(QualityPreset preset, GraphicsOption option) => option switch
+        {
+            GraphicsOption.Shadows => true,
+            GraphicsOption.Surround => preset != QualityPreset.Low,
+            GraphicsOption.FoliageShadows => false,
+            _ => DefaultOn(option),
+        };
+
+        /// <summary>
+        /// Where a preset puts a ladder (design 38 §9, M6).
+        ///
+        /// <para><b>High is exactly what the game ships with</b> — the pipeline asset's shadow
+        /// distance, full render scale, no multisampling, the shipped grass drawn everywhere — so a
+        /// machine that has never been told reads as High and choosing it changes nothing.
+        /// <b>Ultra is High with grass on every cell</b>, the one step up that is measured: full
+        /// cover cost 0.8–1.9 ms at 3840 × 2160 on the RTX 5070 Ti against a 16.7 ms frame (§13).
+        /// Anti-aliasing stays off on Ultra until something measures it; it is the dearest lever
+        /// on the page and the camera already runs SMAA in post.</para>
+        ///
+        /// <para><b>Medium and Low only ever take things away</b>, so they cannot break a bar the
+        /// tier above holds: Medium draws at 85% and keeps grass to 120 m; Low draws at 70% with
+        /// FSR, halves the grass and keeps it to 60 m, pulls shadows in to 30 m and drops the
+        /// surround. Whether Low holds 60 fps at 1080p on an RTX 3050/3060 laptop is owed to a
+        /// laptop — nothing here can measure one.</para>
+        /// </summary>
+        public static int PresetRung(QualityPreset preset, GraphicsLadder ladder) => ladder switch
+        {
+            GraphicsLadder.ShadowDistance => preset switch
+            {
+                QualityPreset.Low => 30,
+                QualityPreset.Medium => 60,
+                _ => 120,
+            },
+            GraphicsLadder.RenderScale => preset switch
+            {
+                QualityPreset.Low => 70,
+                QualityPreset.Medium => 85,
+                _ => 100,
+            },
+            GraphicsLadder.AntiAliasing => 1,
+            GraphicsLadder.VegetationDensity => preset switch
+            {
+                QualityPreset.Low => 30,
+                QualityPreset.Ultra => 300,
+                _ => ShippedVegetation,
+            },
+            GraphicsLadder.GrassDistance => preset switch
+            {
+                QualityPreset.Low => 60,
+                QualityPreset.Medium => 120,
+                _ => Unlimited,
+            },
+            _ => DefaultOf(ladder),
+        };
+
+        /// <summary>What one preset says on its face.</summary>
+        public static string PresetLabel(QualityPreset preset) => preset switch
+        {
+            QualityPreset.Low => "Low",
+            QualityPreset.Medium => "Medium",
+            QualityPreset.High => "High",
+            QualityPreset.Ultra => "Ultra",
+            _ => "Custom",
+        };
+
+        /// <summary>What one preset costs or buys, said on hover.</summary>
+        public static string PresetTooltip(QualityPreset preset) => preset switch
+        {
+            QualityPreset.Low => "For a laptop. Drawn at 70%, half the grass, near shadows, no surrounding land",
+            QualityPreset.Medium => "Drawn at 85%, grass to 120 m, shadows over the working area",
+            QualityPreset.High => "What the game ships with",
+            QualityPreset.Ultra => "High with grass on every cell",
+            _ => "Set by hand. Pick a preset to put every lever back on one",
+        };
+
 
         /// <summary>
         /// Whether throwing this lever makes the renderer throw its buffers away and build new
@@ -680,7 +945,8 @@ namespace Odyssey.Hud
         /// ceiling cut-away is the first that is not: it <em>removes</em> something, and removing
         /// the floor a player has just built is the surprise it was reported as.</para>
         /// </summary>
-        public static bool DefaultOn(GraphicsOption option) => option != GraphicsOption.CutAwayCeiling;
+        public static bool DefaultOn(GraphicsOption option) =>
+            option != GraphicsOption.CutAwayCeiling && option != GraphicsOption.FoliageShadows;
 
         /// <summary>The options, in the order they are drawn.</summary>
         public static IReadOnlyList<GraphicsOption> All => Order;
@@ -787,17 +1053,18 @@ namespace Odyssey.Hud
         /// an instance matrix, false for anything read as the frame is drawn.
         /// </summary>
         public static bool NeedsRedraw(GraphicsOption option) =>
-            option is GraphicsOption.GrassTufts or GraphicsOption.GroundRelief;
+            option is GraphicsOption.GroundRelief;
 
         /// <summary>The registry key naming this option. Never a word: words live in the CSV.</summary>
         public static string KeyOf(GraphicsOption option) => option switch
         {
             GraphicsOption.Shadows => "ui.settings.shadows",
             GraphicsOption.Surround => "ui.settings.surround",
-            GraphicsOption.GrassTufts => "ui.settings.grass",
             GraphicsOption.GroundRelief => "ui.settings.relief",
             GraphicsOption.SeeThrough => "ui.settings.seethrough",
             GraphicsOption.CutAwayCeiling => "ui.settings.cutaway",
+            GraphicsOption.FoliageShadows => "ui.settings.foliageshadows",
+            GraphicsOption.WallsDown => WallsDownKey,
             _ => "ui.settings.panel",
         };
 
@@ -865,6 +1132,45 @@ namespace Odyssey.Hud
 
         public void Toggle(GraphicsOption option) => Set(option, !IsOn(option));
 
+        /// <summary>
+        /// Where the interface scale goes back to on a reset. The screen's own answer
+        /// (<see cref="DefaultScaleFor"/>), told by the presenter that can see the screen; 100
+        /// until it is.
+        /// </summary>
+        public int DefaultUiScale { get; set; } = 100;
+
+        /// <summary>
+        /// Put one tab's settings back where they ship (design 39 §5): the footer's
+        /// "Reset &lt;tab&gt; to defaults".
+        ///
+        /// <para><b>Through the same setters a press uses</b>, so every lever that moves raises its
+        /// own event and writes its own preference, and one that is already at its default says
+        /// nothing. The resolution is left alone: its rungs are the machine's and there is no
+        /// default to go back to. Keys are the hotkey director's, which has had its own reset since
+        /// the Keys tab landed; this does not reach into it.</para>
+        /// </summary>
+        public void ResetTab(SettingsTab tab)
+        {
+            switch (tab)
+            {
+                case SettingsTab.Interface:
+                    SetUiScale(DefaultUiScale);
+                    SetCameraSpeed(100);
+                    SetBuildPaletteLayout(BuildPaletteModel.Default);
+                    break;
+                case SettingsTab.Graphics:
+                    foreach (GraphicsLadder ladder in LadderOrder) SetValue(ladder, DefaultOf(ladder));
+                    foreach (GraphicsOption option in Order) Set(option, DefaultOn(option));
+                    break;
+                case SettingsTab.Audio:
+                    foreach (SettingsBus bus in Buses) SetBusDb(bus, UnityDb);
+                    break;
+                case SettingsTab.Gameplay:
+                    SetAutosaveDays(AutosaveClock.DefaultDays);
+                    break;
+            }
+        }
+
         // ======================================================================== the autosave
 
         /// <summary>
@@ -891,6 +1197,54 @@ namespace Odyssey.Hud
         }
 
         // ==================================================================== the number ladders
+
+        /// <summary>
+        /// The preset the levers are on, or <see cref="QualityPreset.Custom"/> when they match
+        /// none. Read off the levers every time, never remembered (see <see cref="QualityPreset"/>).
+        /// </summary>
+        public QualityPreset Preset
+        {
+            get
+            {
+                for (int p = 0; p < Presets.Length; p++)
+                {
+                    QualityPreset preset = Presets[p];
+                    if (preset == QualityPreset.Custom) continue;
+                    if (Matches(preset)) return preset;
+                }
+                return QualityPreset.Custom;
+            }
+        }
+
+        bool Matches(QualityPreset preset)
+        {
+            foreach (GraphicsOption option in PresetOptions)
+                if (IsOn(option) != PresetOn(preset, option)) return false;
+            foreach (GraphicsLadder ladder in PresetLadders)
+                if (Value(ladder) != Nearest(RungsOf(ladder), PresetRung(preset, ladder))) return false;
+            return true;
+        }
+
+        /// <summary>
+        /// Put every lever a preset owns where the preset says. Each lever goes through its own
+        /// setter, so each is written down and announced exactly as if the player had pressed it —
+        /// one rule for a change however it was asked for. Custom is not a thing to choose, and
+        /// asking for it does nothing.
+        /// </summary>
+        public void ApplyPreset(QualityPreset preset)
+        {
+            if (preset == QualityPreset.Custom) return;
+            foreach (GraphicsOption option in PresetOptions) Set(option, PresetOn(preset, option));
+            foreach (GraphicsLadder ladder in PresetLadders) SetValue(ladder, PresetRung(preset, ladder));
+        }
+
+        /// <summary>
+        /// Whether a store is attached, which is to say whether these preferences are the player's
+        /// rather than a scene's defaults. The composition root asks before it builds a session's
+        /// renderer from them: a test harness with no settings presenter never attaches one, and its
+        /// own fields must win.
+        /// </summary>
+        public bool HasStore => _store != null;
 
         /// <summary>Which rung a ladder rests on. Always a member of its own
         /// <see cref="RungsOf"/>, whatever was stored.</summary>
@@ -1249,6 +1603,12 @@ namespace Odyssey.Hud
                 int? rung = store.ReadInt(KeyOf(ladder));
                 if (rung.HasValue) SetValue(ladder, rung.Value);
             }
+
+            // The grass-tufts toggle's answer, carried over once: off becomes bare ground. An old
+            // "on" needs nothing — the ladder already starts where the grass was — and a density
+            // this machine has stored since outranks it.
+            if (!store.ReadInt(VegetationKey).HasValue && store.Read(LegacyGrassKey) == false)
+                SetValue(GraphicsLadder.VegetationDensity, 0);
 
             Mode? mode = ParseMode(store.ReadString(ResolutionKey));
             if (mode.HasValue) SetResolution(mode.Value);

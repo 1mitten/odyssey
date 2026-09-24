@@ -155,7 +155,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// The named cell if no other drafted colonist stands on it or is walking to it, else the
-        /// nearest cell within <see cref="SpreadRings"/> that is free, standable and reachable — in
+        /// nearest cell within <see cref="SpreadRings"/> on its own layer that is free, standable and reachable — in
         /// a fixed scan order, so the answer is a function of the world and never of timing. Falls
         /// back to the named cell if the rings are full.
         /// </summary>
@@ -173,8 +173,13 @@ namespace Odyssey.Sim.Pawns
                 int x = at.X + dx, z = at.Z + dz;
                 if (!size.Contains(x, z, at.Y)) continue;
 
-                int cell = StandAt(x, z, at.Y);
-                if (cell < 0 || Taken(pawn, cell)) continue;
+                // On the named cell's own floor (design 33 §19b). Not StandAt, which is the click's
+                // rule — that cell, else the one above, else the one below — and which dropped a
+                // squad sent upstairs through the ladder's open shaft and off the edge of the floor
+                // to the room below it and the ground beside it: 49 of 160 orders in the owner's
+                // house. The click has been lifted already; the spread is round where she stands.
+                int cell = size.Index(x, z, at.Y);
+                if (!_ctx.Cells.IsWalkable(cell) || Taken(pawn, cell)) continue;
                 if (!_ctx.Reachable(pawn, cell, TraverseMode.Colonist)) continue;
                 return cell;
             }

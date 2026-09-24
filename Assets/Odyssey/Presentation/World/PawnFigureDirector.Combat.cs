@@ -664,7 +664,10 @@ namespace Odyssey.Presentation.World
                 if (downed || stunned) fight.Shown = downed ? CombatRole.Downed : CombatRole.Stun;
                 if (downed)
                 {
-                    CombatClipEntry? loop = fight.HasLayer ? ExactClip(CombatRole.Downed, CombatVariant.Loop) : null;
+                    // Carried, or lying in a bed (design 33 §11e): not the pack's floor loop but the
+                    // lying path, which the sleep pose aims at the cradle or the mattress.
+                    CombatClipEntry? loop = fight.HasLayer && !Cradled(in pawn)
+                        ? ExactClip(CombatRole.Downed, CombatVariant.Loop) : null;
                     if (loop != null)
                     {
                         showing = loop;

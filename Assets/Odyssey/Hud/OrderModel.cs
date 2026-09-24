@@ -80,21 +80,30 @@ namespace Odyssey.Hud
         /// they are about — an animal, a hostile, a downed colonist, a colonist under Ctrl — and
         /// act at once; a thing with a choice of answers, a weapon today, fills
         /// <paramref name="menu"/> instead (<see cref="ContextMenuModel"/>, design 33 §7a) and
-        /// sends nothing until a row is chosen; the rest are moves, a building included until C6.
+        /// sends nothing until a row is chosen; then a building standing in the cell is attacked
+        /// (<see cref="CombatOrders.RouteBuilding"/>, C6, design 33 §13i); the rest are moves, a
+        /// floored cell included.
+        ///
+        /// <para><paramref name="edifice"/> is the <see cref="EdificeHandle"/> standing in
+        /// <paramref name="cell"/>, as the presenter's render mirror has it — none for bare ground
+        /// and for a floor, which is a slab and not an edifice.</para>
         ///
         /// <para><b>Exactly one of the two lists is filled, or neither.</b> The presenter opens
         /// the menu when <paramref name="menu"/> has rows and submits <paramref name="into"/>
         /// otherwise, so a click can never both act and ask.</para>
         /// </summary>
         public static void RightClick(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot,
-            CellRef? cell, PawnId under, bool ctrl, List<Intent> into, List<ContextMenuRow> menu)
+            CellRef? cell, PawnId under, bool ctrl, List<Intent> into, List<ContextMenuRow> menu,
+            int edifice = EdificeHandle.None)
         {
             menu.Clear();
 
             // The fight's orders claim the clicks they are about first (design 33 §5j): attack and
-            // rescue, at once. Then a thing that asks (§7a). What is left is the move it was in C1.
+            // rescue, at once. Then a thing that asks (§7a). Then a building standing in the cell
+            // (§13i). What is left is the move it was in C1.
             if (CombatOrders.Route(selection, snapshot, cell, under, ctrl, into)) return;
             if (ContextMenuModel.Build(selection, snapshot, cell, under, menu)) return;
+            if (CombatOrders.RouteBuilding(selection, snapshot, cell, under, edifice, into)) return;
 
             if (cell == null) return;
 

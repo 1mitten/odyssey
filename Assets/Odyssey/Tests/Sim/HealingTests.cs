@@ -22,6 +22,8 @@ namespace Odyssey.Tests.Sim
             colony.World.Tick(5);
             Pawn inBed = colony.Pawns.Pawns.All[0], onGround = colony.Pawns.Pawns.All[1], by = colony.Pawns.Pawns.All[2];
             int bed = colony.Pawns.Items.Beds[0];
+            // Nobody carries the one on the ground to a bed: this is the healing, not the rescue.
+            foreach (Pawn pawn in colony.Pawns.Pawns.All) pawn.WorkPriorities[WorkTypeIndex.Rescue] = 0;
             Stand(colony, inBed, bed);
             Stand(colony, onGround, Near(colony, 8, 8));
             Assume.That(bed, Is.Not.EqualTo(onGround.Cell));
@@ -41,17 +43,22 @@ namespace Odyssey.Tests.Sim
         /// Then she goes about her business, and her needs, paused while she lay there, run again.
         /// </summary>
         [Test]
-        public void ADownedColonistInABedGetsUpAtFifteenPerCent()
+        public void ADownedColonistInABedGetsUpWhole()
         {
+            // Design 33 §11c (owner, 2026-09-24): a colonist stays in bed until whole, not up at
+            // 15 %. Started at 80 % so the day it takes is a test and not a wait: the old rule
+            // stood her up on the first heal.
             var colony = Board();
             colony.World.Tick(5);
             Pawn patient = colony.Pawns.Pawns.All[0], by = colony.Pawns.Pawns.All[1];
+            foreach (Pawn pawn in colony.Pawns.Pawns.All) pawn.WorkPriorities[WorkTypeIndex.Rescue] = 0;
             Stand(colony, patient, colony.Pawns.Items.Beds[0]);
             Strike(colony, by, patient, patient.HpMilli);
+            patient.HpMilli = patient.HpMaxMilli * 8 / 10;
             int completed = colony.Jobs.CompletedOf(JobIndex.Downed);
             var tape = new Tape();
 
-            int recoverAt = patient.HpMaxMilli * colony.Pawns.Content.Combat.downedRecoverAtPerMille / 1_000;
+            int recoverAt = patient.HpMaxMilli;
             for (int t = 0; t < 2 * Day(colony) && patient.Downed; t++)
             {
                 colony.World.Tick();

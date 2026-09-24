@@ -125,5 +125,41 @@ namespace Odyssey.Presentation.Rendering
             mesh.UploadMeshData(markNoLongerReadable: false);
             return mesh;
         }
+
+        static readonly Mesh?[] _blood = new Mesh?[3];
+
+        /// <summary>
+        /// A blood mark lying flat on the ground (design 33 §10a): facing up, inside a unit radius,
+        /// +x the way the blow went. The outline is <see cref="Odyssey.Hud.BloodShapes"/>'s, so the
+        /// fast tier checks it faces up and fits (<c>BloodShapesTests</c>) and this only copies it
+        /// into a mesh, once per shape.
+        /// </summary>
+        public static Mesh Blood(Odyssey.Hud.BloodShape shape)
+        {
+            int slot = (int)shape;
+            Mesh? mesh = _blood[slot];
+            if (mesh != null) return mesh;
+
+            Odyssey.Hud.BloodShapes.Build(shape, out float[] xs, out float[] zs, out int[] triangles);
+            var vertices = new Vector3[xs.Length];
+            var normals = new Vector3[xs.Length];
+            var uvs = new Vector2[xs.Length];
+            for (int i = 0; i < xs.Length; i++)
+            {
+                vertices[i] = new Vector3(xs[i], 0f, zs[i]);
+                normals[i] = Vector3.up;
+                uvs[i] = new Vector2(xs[i] * 0.5f + 0.5f, zs[i] * 0.5f + 0.5f);
+            }
+
+            mesh = new Mesh { name = "Odyssey/Blood/" + shape };
+            mesh.vertices = vertices;
+            mesh.normals = normals;
+            mesh.uv = uvs;
+            mesh.triangles = triangles;
+            mesh.RecalculateBounds();
+            mesh.UploadMeshData(markNoLongerReadable: false);
+            _blood[slot] = mesh;
+            return mesh;
+        }
     }
 }

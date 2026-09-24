@@ -148,6 +148,15 @@ namespace Odyssey.Presentation.Ui
         LayoutRows,
         LayoutRail,
         LayoutBar,
+
+        /// <summary>A brick wall standing its full height: the walls are up (design 42 §7).</summary>
+        WallsUp,
+
+        /// <summary>
+        /// The same wall cut to a stump, with where the rest of it stood left as a dashed outline:
+        /// the walls are down. Drawn rather than typed — neither shipped font has a wall.
+        /// </summary>
+        WallsDown,
     }
 
     /// <summary>
@@ -412,6 +421,33 @@ namespace Odyssey.Presentation.Ui
                         P(4.3f, 8.9f), P(4.0f, 13.6f), P(6.4f, 17.7f), P(10.6f, 19.9f),
                         P(15.3f, 19.5f), P(18.7f, 16.6f));
                     FillTriangle(painter, P(20.6f, 3.4f), P(21.0f, 10.0f), P(14.8f, 8.0f));
+                    return;
+
+                case HudGlyphKind.WallsUp:
+                    // Three courses of brick, the joints staggered, the whole wall standing.
+                    Polyline(painter, false, P(3, 5), P(21, 5), P(21, 19), P(3, 19));
+                    painter.ClosePath();
+                    painter.Stroke();
+                    Polyline(painter, true, P(3, 9.7f), P(21, 9.7f));
+                    Polyline(painter, true, P(3, 14.3f), P(21, 14.3f));
+                    Polyline(painter, true, P(12, 5), P(12, 9.7f));
+                    Polyline(painter, true, P(7.5f, 9.7f), P(7.5f, 14.3f));
+                    Polyline(painter, true, P(16.5f, 9.7f), P(16.5f, 14.3f));
+                    Polyline(painter, true, P(12, 14.3f), P(12, 19));
+                    return;
+
+                case HudGlyphKind.WallsDown:
+                    // One course left standing, solid, and the rest of the wall a dotted ghost of
+                    // itself — what it was, and what walls-down leaves.
+                    FillRect(painter, P(3, 15), P(21, 19));
+                    painter.lineWidth = Mathf.Max(1f, painter.lineWidth * 0.6f);
+                    for (float y = 5f; y < 13.5f; y += 3f)
+                    {
+                        Polyline(painter, true, P(3, y), P(3, y + 1.4f));
+                        Polyline(painter, true, P(21, y), P(21, y + 1.4f));
+                    }
+                    for (float x = 3f; x < 20.5f; x += 3f)
+                        Polyline(painter, true, P(x, 5), P(x + 1.4f, 5));
                     return;
 
                 case HudGlyphKind.Info:

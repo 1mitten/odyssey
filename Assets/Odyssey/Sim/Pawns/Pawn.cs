@@ -172,6 +172,15 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int FinishingStepTo { get; internal set; } = -1;
 
+        /// <summary>
+        /// What she does about danger near her while undrafted (design 33 §18): fight back — the
+        /// default — defend, or flee. A standing setting the player chooses on her pane, not an
+        /// order. Set through <c>SetHostilityResponse</c>. Saved in <c>CombatSection</c>'s flags
+        /// word and folded into the hash beside the kind, <b>both only while it is not the
+        /// default</b>, so a colony that never touched it saves and hashes as it did before.
+        /// </summary>
+        public HostilityResponse Response { get; internal set; }
+
         /// <summary>The species this pawn's kind spawns as: what walks. See <see cref="SpeciesDef"/>.</summary>
         public SpeciesDef Species => Content.SpeciesOf(Kind);
 
@@ -754,11 +763,28 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// How this pawn traverses. Taken from the current job and fixed for its whole life: a
         /// mode that changed halfway through a walk would silently invalidate the path the pawn
-        /// is standing on. Between jobs it is the species' own (design 29 §4), which is what a
-        /// wander target is tested for reachability under.
+        /// is standing on. Between jobs it is the pawn's own (<see cref="OwnMode"/>), which is what
+        /// a wander target is tested for reachability under.
         /// </summary>
         public virtual TraverseMode Mode =>
-            CurrentJob != null ? CurrentJob.Mode : Species.traverseMode;
+            CurrentJob != null ? CurrentJob.Mode : OwnMode;
+
+        /// <summary>
+        /// The way this pawn moves when it chooses for itself: its kind's mode, else its species'
+        /// (design 29 §4, design 33 §16). A colonist is <see cref="TraverseMode.Colonist"/>, a hog
+        /// <see cref="TraverseMode.Animal"/>, a rat <see cref="TraverseMode.Climber"/>, and a
+        /// marauder <see cref="TraverseMode.Marauder"/> — a person who does not open doors. Every
+        /// job a pawn's own mind or its own reflexes start (the hunt, the wander, the flight, the
+        /// fall) moves in it. A colonist's work jobs name their own mode (the hauler's), and a
+        /// player's order is a colonist's.
+        /// </summary>
+        public TraverseMode OwnMode => Content.ModeOf(Kind);
+
+        /// <summary>
+        /// What this pawn came for, when there is nobody left to fight and nothing left to break
+        /// (design 33 §17): its kind's. <see cref="Motive.None"/> for a colonist and an animal.
+        /// </summary>
+        public Motive Motive => Content.MotiveOf(Kind);
 
         /// <summary>Whether the pawn will consider work at all this think.</summary>
         public virtual bool WillWork() => !IsBroken && !Asleep;
@@ -904,15 +930,34 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// Remember something. Copies beyond the stack limit are dropped rather than queued: the
         /// limit is the point, and a queue behind it would only delay the same saturation.
+        ///
+        /// <para><b>Unless the thought renews</b> (<see cref="ThoughtDef.renewsOnRepeat"/>, design 33
+        /// §14e): then the copy that would lapse soonest — the first of them on a tie — is pushed out
+        /// to a full duration from now, and never brought in. Only the friendly-fire memory does, so
+        /// every other thought, and every golden, is exactly as before.</para>
         /// </summary>
         public virtual void AddMemory(int thoughtIndex, int currentTick)
         {
             var def = Content.Thoughts[thoughtIndex];
-            int copies = 0;
+            int copies = 0, soonest = -1;
             for (int i = 0; i < Memories.Count; i++)
-                if (Memories[i].ThoughtIndex == thoughtIndex) copies++;
-            if (copies >= def.stackLimit) return;
-            Memories.Add(new Memory { ThoughtIndex = thoughtIndex, ExpiryTick = currentTick + def.durationTicks });
+            {
+                if (Memories[i].ThoughtIndex != thoughtIndex) continue;
+                copies++;
+                if (soonest < 0 || Memories[i].ExpiryTick < Memories[soonest].ExpiryTick) soonest = i;
+            }
+
+            int expiry = currentTick + def.durationTicks;
+            if (copies < def.stackLimit)
+            {
+                Memories.Add(new Memory { ThoughtIndex = thoughtIndex, ExpiryTick = expiry });
+                return;
+            }
+
+            if (!def.renewsOnRepeat || soonest < 0 || Memories[soonest].ExpiryTick >= expiry) return;
+            Memory renewed = Memories[soonest];
+            renewed.ExpiryTick = expiry;
+            Memories[soonest] = renewed;
         }
 
         /// <summary>
@@ -1003,11 +1048,15 @@ namespace Odyssey.Sim.Pawns
             // there is any, so a colony that has never fought hashes exactly as before combat.
             // The knock-down and the swing in the air (design 33 §9b, §9g) have a bit each in it
             // too, so a pawn with neither hashes as it did before them.
+            // The response (design 33 §18c) is two bits of the same word, nought at the default, so
+            // a colony that never set one hashes as it did before. Bits 24 and 25: 22 and 23 are
+            // left free for the line building beside this one.
             bool combat = HasCombatState;
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
             hash.Add(Kind | (Leaving ? 1 << 16 : 0) | (Drafted ? 1 << 17 : 0)
                 | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0)
-                | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0));
+                | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
+                | ((int)Response << 24));
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             if (combat)

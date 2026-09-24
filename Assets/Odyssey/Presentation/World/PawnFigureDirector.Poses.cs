@@ -385,7 +385,100 @@ namespace Odyssey.Presentation.World
             // inside the loop would read whichever bones that figure's branch happened to leave,
             // which is a load correct for a walking colonist and a frame late for a stooping one.
             for (int i = 0; i < _figures.Count; i++) PlaceCarriedLoad(_figures[i]);
+
+            // And a third, for the same reason: a carried patient lies in her carrier's arms, and
+            // the arms are final only now (design 33 §11e).
+            PlaceCarriedPatients();
         }
+
+        /// <summary>
+        /// A downed colonist who is carried, or lying on a bed: drawn lying by the sleep pose rather
+        /// than by the pack's floor loop, because the sleep pose can be aimed at a cradle or a
+        /// mattress and the loop lies on whatever floor the root stands on (design 33 §11e).
+        /// </summary>
+        bool Cradled(in PawnView pawn)
+        {
+            if (!pawn.IsDowned) return false;
+            if (pawn.IsCarried) return true;
+            if (World == null || !World.Size.Contains(pawn.Cell.X, pawn.Cell.Z, pawn.Cell.Y)) return false;
+            return World.BedHeadAt(World.Size.Index(pawn.Cell.X, pawn.Cell.Z, pawn.Cell.Y)) >= 0;
+        }
+
+        /// <summary>
+        /// Whether this colonist has somebody in her arms: on a rescue, and the patient it names
+        /// carried. The simulation says who carries whom from the patient's side
+        /// (<c>Pawn.CarriedBy</c>), and publishes the rescuer's patient under an aspect of its own
+        /// (design 33 §18b: the order target means an attack the player ordered, and nothing else).
+        /// </summary>
+        bool CarriesAPatient(in PawnView pawn)
+        {
+            if (_frame == null || pawn.JobDef != JobHandle.Rescue) return false;
+            if (!_frame.TryGetPawnAspect(pawn.Id, Odyssey.Sim.Pawns.CombatAspects.RescuePatient, out int patient)) return false;
+            return _frame.TryGetPawn(new PawnId(patient), out PawnView view) && view.IsCarried;
+        }
+
+        /// <summary>The figure of whoever is carrying <paramref name="patient"/>, if it has one.</summary>
+        Figure? CarrierOf(PawnId patient)
+        {
+            if (_frame == null) return null;
+            ReadOnlySpan<PawnView> pawns = _frame.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                if (pawns[i].JobDef != JobHandle.Rescue) continue;
+                if (!_frame.TryGetPawnAspect(pawns[i].Id, Odyssey.Sim.Pawns.CombatAspects.RescuePatient, out int target)
+                    || target != patient.Value) continue;
+                return _byPawn.TryGetValue(pawns[i].Id.Value, out Figure? carrier) ? carrier : null;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Lay every carried patient across her carrier's arms (design 33 §11e, owner: cradled):
+        /// the body's middle at the cradle measured off the carrier's palms — the load's own point,
+        /// <see cref="CarryPose.Cradle"/> — lying at right angles to the way the carrier faces,
+        /// head to her left. Only the root moves: the lying posture is already on the bones, which
+        /// the root carries with it. A walk over the figures, asking the frame only of the carried.
+        /// </summary>
+        void PlaceCarriedPatients()
+        {
+            if (_frame == null) return;
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn < 0 || !_frame.TryGetPawn(new PawnId(figure.Pawn), out PawnView pawn) || !pawn.IsCarried)
+                    continue;
+                Figure? carrier = CarrierOf(pawn.Id);
+                if (carrier == null || carrier.LeftGrip.Hand == null || carrier.RightGrip.Hand == null) continue;
+
+                Vector3 left = HandGrip.Palm(carrier.LeftGrip);
+                Vector3 right = HandGrip.Palm(carrier.RightGrip);
+                Vector3 chest = carrier.Chest != null ? carrier.Chest.position : carrier.Transform.position;
+                float shoulders = carrier.LeftUpperArm != null && carrier.RightUpperArm != null
+                    ? Vector3.Distance(carrier.LeftUpperArm.position, carrier.RightUpperArm.position)
+                    : 0f;
+                Vector3 cradle = CarryPose.Cradle(left, right, chest, carrier.Transform.forward, shoulders);
+
+                Vector3 across = Vector3.Cross(Vector3.up, carrier.Transform.forward);
+                across.y = 0f;
+                if (across.sqrMagnitude < 1e-6f) across = Vector3.right;
+                across.Normalize();
+
+                float half = SleepPose.BodyLength(figure.StandingHeight) * 0.5f;
+                SleepPose.Place(
+                    SleepPose.PostureFor(figure.Pawn), cradle - across * half, across,
+                    cradle.y - CradleSink, figure.StandingHeight, 0f, 1f,
+                    figure.Transform.position, figure.Transform.rotation,
+                    out Vector3 lain, out Quaternion laid);
+                figure.Transform.position = lain;
+                figure.Transform.rotation = laid;
+            }
+        }
+
+        /// <summary>
+        /// How far below the cradle point the body's underside lies: the palms are under her, not
+        /// level with her middle. INVENTED, for the playtest's eye.
+        /// </summary>
+        const float CradleSink = 0.06f;
 
         /// <summary>
         /// Fold the arms into the scoop: upper arms forward a little, elbows up, spine back.

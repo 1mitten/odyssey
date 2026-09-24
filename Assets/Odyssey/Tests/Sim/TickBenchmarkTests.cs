@@ -274,11 +274,15 @@ namespace Odyssey.Tests.Sim
             double peace = MeasureFight(report, "twenty colonists at peace", marauders: 0, out _);
             double fight = MeasureFight(report, "twenty against twenty", marauders: 20, out int swings);
             report.AppendLine($"the fight costs {fight - peace:F3} ms a tick over the colony at peace ({fight / Math.Max(peace, 1e-9):F2}x)");
+            // Every colonist drafted (design 33 §15): each one on her hold scans the pawns every
+            // tick for a threat beside her or a fight to join, and joins the ones nearby.
+            double drafted = MeasureFight(report, "twenty drafted against twenty", marauders: 20, out _, drafted: true);
+            report.AppendLine($"drafted, the fight costs {drafted - peace:F3} ms a tick over the colony at peace");
             TestContext.WriteLine(report.ToString());
             Assert.That(swings, Is.GreaterThan(50), "the measured window held no fight");
         }
 
-        static double MeasureFight(StringBuilder report, string label, int marauders, out int swings)
+        static double MeasureFight(StringBuilder report, string label, int marauders, out int swings, bool drafted = false)
         {
             var size = new GridSize(120, 120, 16);
             ScenarioDef scenario = ScenarioDef.Bare();
@@ -295,6 +299,9 @@ namespace Odyssey.Tests.Sim
                 int cell = colony.Pawns.Cells.NearestWalkableInColumn(start.X + 12 + i % 5, start.Z - 2 + i / 5, start.Y);
                 if (cell >= 0) colony.Pawns.Pawns.Spawn(cell, PawnKindIndex.Marauder);
             }
+            if (drafted)
+                foreach (Pawn pawn in new System.Collections.Generic.List<Pawn>(colony.Pawns.Pawns.All))
+                    if (pawn.IsColonist) CombatFixture.Draft(colony, pawn);
 
             // Past the approach, into the thick of it, before the window opens.
             colony.World.Tick(600);

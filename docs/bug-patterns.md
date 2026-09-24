@@ -603,6 +603,62 @@ fixture had just queued still going through. It landed on the dev machine and di
 
 ## The register
 
+### 2026-09-24 — A stored graphics preference never reached a new game (P1, P2-adjacent)
+
+Found by reading, while building the quality presets. `SettingsPresenter` attaches on the first
+frame — the start screen — and lays the stored preferences over the director, which raises
+`OptionChanged`; its `Apply` asks for the renderer, finds none, and returns. The session's renderer
+is then built from the bootstrap's fields. So a stored "shadows off" or "surround off" was applied to
+nothing and every new game came up as the scene said; only a lever moved *during* play ever took.
+Two owners of what a preference means to the renderer — the live handler and the bootstrap's
+initialiser — and only one of them read the preferences.
+
+**What now stops it:** `SettingsPresenter.ApplyRendererLevers` is the one mapping, called by the
+root as it builds a renderer whenever a store is attached, and `GraphicsLeverTests` holds the
+mapping. `27-graphics-settings.md` §10.
+
+### 2026-09-24 — Two marauders stood on "Fighting" at a wall with one side (P1)
+
+The owner: three marauders, one breaking a building, two standing about. Measured in the owner's
+save: all three chose the same wall of a house on the edge of a terrace step, whose only side on its
+own layer was one cell (the others are air over the step below). One struck; two waited 3,245 and
+3,312 ticks. The choice (`TryNearestColonyTarget`) asked whether a side could be **reached**; the
+driver (`ChooseSide`) asked whether one was **free**; every rethink sent them back to the same wall.
+The difference had been written down on purpose (*"a held side is the driver's to sort out"*), which
+is how a P1 looks when it is a decision rather than an accident.
+
+**What now stops it:** the choice asks `BuildingTargets.HasAFreeSide`, the driver's own answer, and
+an unforced attack that finds every side held thinks again at once.
+`MarauderSideTests.ThreeMaraudersAtAWallWithOneSideDoNotStandAbout`. `33-combat.md` §19a–§19b.
+
+### 2026-09-24 — A loaded game kept the generated board's paths (P1-adjacent; a test that could not fail)
+
+Found by the same probe. `ColonyWorld.RebuildDerived` — "the derived state is now correct", one
+definition for both paths — called `NavGraph.Rebuild`, which floods only the blocks something marked
+dirty, and a load marks none. In every block of a loaded game that no door or ladder on the load
+path happened to dirty, a built wall was walkable and a built floor was not. In the owner's save:
+seven walls on the first column of a block, walked into by marauders, and six upstairs cells a
+colonist could not be ordered to. The test written for exactly this,
+`AWorldWhoseGridHasChangedStillResumesIdentically`, wrote its wall straight into the grid with
+nothing marking the graph in **either** world, so both were equally stale and the hashes agreed.
+
+**What now stops it:** `MarkAllDirty` before the rebuild, and
+`WorldRoundTripTests.ABuiltWallIsStillAWallToThePathsAfterTheLoad`, whose walls go up through
+`Raise` so the original is right and the loaded copy is compared with it cell by cell. The shape to
+ask of any "rebuild" on a load path: **does it rebuild, or does it catch up?** `33-combat.md` §19a.
+
+### 2026-09-24 — A squad sent upstairs was spread downstairs (P1)
+
+A right-click on the upper floor with four drafted colonists selected sent 49 of 160 orders to
+another layer (the owner: *"tricky to draft then move my colonists to another floor"*).
+`JobSystem.Spread` placed the others round the clicked cell with the **click's** lift, `StandAt` —
+that cell, else above, else below — so a ring cell over the ladder's open shaft or past the floor's
+edge dropped to the room below or the ground outside. One rule (where she stands for a click) was
+serving a second question (where the others stand round her).
+
+**What now stops it:** the spread keeps to the named cell's layer.
+`DraftOrderLevelTests.ASquadSentUpstairsIsSpreadOnTheFloorItWasSentTo`. `33-combat.md` §19c.
+
 ### 2026-09-24 — The cull was asked after the mesher, so the budget went on chunks nobody could see (P1-adjacent)
 
 Found by reading, while planning the Meadow overhaul, and fixed on merging `main` up to the culling
@@ -2609,3 +2665,31 @@ hold, the draft and the move order all ask it. `docs/design/33-combat.md` §8c.
 the actor that prompted it.* `SideBySideTests` checked attackers against attackers, and all of
 them passed. `FightGuardTests` checks everyone in the fight, on every tick. Each hole it found was
 seen to fail with its fix withheld.
+
+### 2026-09-24 — Colonists past the figure cap wore an orange suit (P1)
+
+**Symptom.** Past a certain number of colonists, some were "in an orange suit" and textures "kept
+switching".
+
+**Cause.** Two drawers of one colonist gave two answers. The live figure paints the issued uniform
+white, but the baked far form (past the 64-figure cap) draws each body in the pack's own paint, and
+that jumpsuit is painted burnt orange. The nearest-64 set follows the camera, so people changed
+clothes as it panned.
+
+**How it hid.** The first investigation matched the report's colour to the orange stand-in cube,
+measured that no stand-in was drawn, and stopped with the report unreproduced. The measurement was
+right; it answered a different question.
+
+**Fix.** `ColonistAppearance.IssuedCloth` says which bodies wear one colour for everybody, and
+`ChunkRenderer.FarMaterials` paints those bodies' cloth through the shared `ColonistMaterials`.
+Design 29-modular-colonists §13a.
+
+**The check this earns.** *When a symptom starts "past a certain number", look at the caps first*.
+Behaviour changes form at a cap, and there is more than one drawer of a thing past it. And *a colour
+in a report is a hypothesis until the asset's own paint has been sampled*: one script that sampled the atlas
+answered what a 384-colonist sweep could not.
+
+**A second fault from the same branch, in the harness.** The spawn ceiling made the frame sweeps hang CI. `GrowColonyTo` used one counter both
+to place colonists and to give up, and it reset that counter on walking off the board. The escape
+was reachable only while spawns succeeded. *Check: a retry loop's escape must be a counter that
+nothing resets, and a loop that ticks without yielding must be bounded by it.*

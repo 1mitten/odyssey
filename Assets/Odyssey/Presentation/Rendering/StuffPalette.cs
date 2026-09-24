@@ -159,8 +159,17 @@ namespace Odyssey.Presentation.Rendering
             new Color(0.92f, 1.10f, 0.74f),            // 20 marsh
         };
 
-        public static Color TerrainTint(int terrain) =>
-            terrain >= 0 && terrain < TerrainTints.Length ? TerrainTints[terrain] : Color.white;
+        public static Color TerrainTint(int terrain)
+        {
+            // Over the painted Meadow ground the grass keeps the pack's own colours (owner,
+            // 2026-09-24: "Synty's colours"), so the lift above — which pulled a single olive
+            // texture towards a lime it was never painted as — is not applied (design 38 §17).
+            if (terrain == GrassTerrain && MeadowLook.GroundActive) return Color.white;
+            return terrain >= 0 && terrain < TerrainTints.Length ? TerrainTints[terrain] : Color.white;
+        }
+
+        /// <summary>The grass terrain's index in the tables above.</summary>
+        const int GrassTerrain = 10;
 
         /// <summary>
         /// What multiplies a tuft of grass or any other piece of standing foliage.
@@ -210,12 +219,19 @@ namespace Odyssey.Presentation.Rendering
         /// Green is a low-blue colour too, so lifting blue is a weak handle — multiplying 0.06 by
         /// two is still 0.12. Bringing red down is what turns yellow-green into green, and it is
         /// why these multipliers look lopsided.</para>
+        ///
+        /// <para><b>Neutral since the look pass (owner, 2026-09-24: "Synty's colours").</b> The
+        /// lopsided multipliers above were tuned against the pack's own shader, which made the
+        /// straw green. <c>Odyssey/Foliage</c> draws the art's own flat colour scheme and multiplies
+        /// this tint straight onto it, so a blue lifted 2.2 times turned two tuft variants in three
+        /// <b>teal</b> — the fault the owner's first look at the meadow showed. Now a whisper of
+        /// variety between modules and no more; the colour is the art's.</para>
         /// </summary>
         static readonly Color[] FoliageTints =
         {
-            new Color(0.55f, 1.00f, 2.20f),            // 0 meadow green
-            new Color(0.45f, 0.86f, 1.80f),            // 1 a deeper green, so a field is not one note
-            new Color(1.00f, 1.00f, 1.00f),            // 2 the odd straw clump, exactly as the pack made it
+            new Color(1.00f, 1.00f, 1.00f),            // 0 the art's own colour
+            new Color(0.94f, 0.97f, 0.92f),            // 1 a shade deeper, so a field is not one note
+            new Color(1.04f, 1.02f, 0.94f),            // 2 a shade warmer
         };
 
         /// <summary>How many tints a tuft can wear. One per clump module, so variety costs no draws.</summary>

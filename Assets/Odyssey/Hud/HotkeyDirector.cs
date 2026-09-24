@@ -112,6 +112,13 @@ namespace Odyssey.Hud
 
         /// <summary>Open or close the Research tab (design 34), on the F3 the bar has advertised since M1.</summary>
         ResearchTab,
+
+        /// <summary>
+        /// Lower the walls to a stump, or raise them again (design 42), on H. Appended, so no
+        /// stored binding shifts; beside the slice keys in the panel, because it is part of the
+        /// same question of what the player can see.
+        /// </summary>
+        WallsDown,
     }
 
     /// <summary>What came of offering a key to a listening slot.</summary>
@@ -183,6 +190,7 @@ namespace Odyssey.Hud
             (HotkeyAction.SliceDown, HudKey.F,       HudKey.PageDown),
             (HotkeyAction.CycleAbove, HudKey.V,      HudKey.None),
             (HotkeyAction.FrameMap,  HudKey.Home,    HudKey.None),
+            (HotkeyAction.WallsDown, HudKey.H,       HudKey.None),
 
             (HotkeyAction.Pause,  HudKey.Space,  HudKey.None),
             (HotkeyAction.Speed1, HudKey.Digit1, HudKey.None),
@@ -387,6 +395,7 @@ namespace Odyssey.Hud
             HotkeyAction.Draft => "ui.keys.draft",
             HotkeyAction.InventoryTab => "ui.keys.inventory",
             HotkeyAction.ResearchTab => "ui.keys.research",
+            HotkeyAction.WallsDown => "ui.keys.wallsdown",
             _ => KeysKey,
         };
 
@@ -510,6 +519,19 @@ namespace Odyssey.Hud
             _bindings[action][slot] = HudKey.None;
             Write(action);
             BindingChanged?.Invoke(action);
+        }
+
+        /// <summary>
+        /// Empty the slot that is waiting for its key, and stop waiting: Backspace in the Keys
+        /// tab (design 39 §6). The second slot is optional, and this is how a player says so
+        /// without a key to spare. Nothing happens when no slot is listening.
+        /// </summary>
+        public void ClearListening()
+        {
+            if (Listening == null) return;
+            (HotkeyAction action, int slot) = Listening.Value;
+            CancelListen();
+            ClearSlot(action, slot);
         }
 
         /// <summary>

@@ -176,6 +176,10 @@ namespace Odyssey.Sim.Pawns
                 // absent from an older save, which loads with no corpses and every building whole.
                 pawns.Corpses,
                 pawns.EdificeDamage,
+                // What a ledger entry is about — the stack a marauder carried off (design 33 §17).
+                // Appended, after the ledger whose load clears it; absent from an older save, which
+                // loads with no entry about anything, as none then was.
+                pawns.Incidents!.Ledger.DetailSection,
             };
         }
 
@@ -284,6 +288,15 @@ namespace Odyssey.Sim.Pawns
             // disagree, and nothing at all on every file this build wrote (design 32 §8).
             Pawns.Power?.Reconcile();
 
+            // **The whole graph, not the dirty blocks** (design 33 §19a). `NavGraph.Rebuild` floods
+            // only the blocks something marked, and a load writes the cell arrays wholesale without
+            // marking any: the graph the fresh world built for the generated board survived the
+            // load everywhere a door or a ladder above did not happen to dirty a block. In the
+            // owner's save seven walls of a house on the first column of a block (x = 60) stayed
+            // walkable, and marauders walked through them and chose sides inside them. On the
+            // generation path every block is still dirty from the graph's construction, so this
+            // changes nothing there.
+            _nav.MarkAllDirty();
             _nav.Rebuild();
         }
 

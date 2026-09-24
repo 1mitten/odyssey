@@ -25,6 +25,9 @@ namespace Odyssey.Sim.Saving
     /// began. Four ints appended to every record, so a record is read the same way whatever is set;
     /// layouts 1 and 2 still load, with nobody knocked down and no swing in the air.</para>
     ///
+    /// <para><b>The response</b> (design 33 §18c) rides in two bits of the flags word, with no
+    /// layout change, and a colonist whose response is not the default has a record for it.</para>
+    ///
     /// <para>Hashing is <see cref="Pawn.ContributeTo"/>'s, not this section's. What it writes is
     /// exactly what that hashes, and <see cref="HasState"/> is the same question
     /// <c>Pawn.HasCombatState</c> answers, plus the draft's two.</para>
@@ -45,6 +48,10 @@ namespace Odyssey.Sim.Saving
         const int FlagDrafted = 1;
         const int FlagDowned = 2;
 
+        // The response (design 33 §18c): two bits of the flags word, so no layout moved. A build
+        // from before §18 reads the word for its two flags and never looks at these.
+        const int ResponseShift = 2, ResponseMask = 3;
+
         readonly PawnRegistry _pawns;
         readonly List<Pawn> _scratch = new List<Pawn>();
 
@@ -53,7 +60,9 @@ namespace Odyssey.Sim.Saving
 
         public string SaveKey => "odyssey.combat";
 
-        static bool HasState(Pawn pawn) => pawn.Drafted || pawn.FinishingStepTo >= 0 || pawn.HasCombatState;
+        static bool HasState(Pawn pawn) =>
+            pawn.Drafted || pawn.FinishingStepTo >= 0 || pawn.HasCombatState
+            || pawn.Response != HostilityResponse.FightBack;
 
         public void Save(SaveWriter writer)
         {
@@ -67,7 +76,8 @@ namespace Odyssey.Sim.Saving
             {
                 Pawn pawn = _scratch[i];
                 writer.Write(pawn.Id.Value);
-                writer.Write((pawn.Drafted ? FlagDrafted : 0) | (pawn.Downed ? FlagDowned : 0));
+                writer.Write((pawn.Drafted ? FlagDrafted : 0) | (pawn.Downed ? FlagDowned : 0)
+                    | ((int)pawn.Response << ResponseShift));
                 writer.Write(pawn.DraftQuietSinceTick);
                 writer.Write(pawn.FinishingStepTo);
 
@@ -130,6 +140,8 @@ namespace Odyssey.Sim.Saving
                 pawn.DraftQuietSinceTick = pawn.Drafted ? quiet : 0;
 
                 pawn.Downed = (flags & FlagDowned) != 0;
+                int response = (flags >> ResponseShift) & ResponseMask;
+                pawn.Response = response < HostilityResponses.Count ? (HostilityResponse)response : HostilityResponse.FightBack;
                 pawn.HpMilli = hp == int.MinValue ? pawn.HpMaxMilli : hp;
                 pawn.NextSwingTick = nextSwing;
                 pawn.StunnedUntilTick = stunnedUntil;

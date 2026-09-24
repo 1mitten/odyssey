@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-46 entries, 28 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+47 entries, 29 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -66,9 +66,10 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Wandering** | `ui.status.wandering` | An animal on a leg of its own: going somewhere nearby for no reason | no art | AN |
 | **Resting** | `ui.status.resting` | An animal between legs | no art | AN |
 | **Fighting** | `ui.status.fighting` | Closing on a target and swinging at it | no art | CB |
-| **Fleeing** | `ui.status.fleeing` | Running from whatever hurt it | no art | CB |
+| **Fleeing** | `ui.status.fleeing` | Running from danger, or from whatever hurt it | no art | CB |
 | **Equipping** | `ui.status.equipping` | Fetching a weapon to hold | no art | CB |
 | **Rescuing** | `ui.status.rescuing` | Carrying the downed to a bed | no art | CB |
+| **Stealing** | `ui.status.stealing` | A marauder carrying something off the board | no art | CB |
 
 ---
 

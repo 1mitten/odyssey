@@ -111,9 +111,10 @@ ui.status.drafted,Drafted,ui.status,M2,"Under direct order, not the work list"
 ui.status.wandering,Wandering,ui.status,AN,"An animal on a leg of its own: going somewhere nearby for no reason"
 ui.status.resting,Resting,ui.status,AN,"An animal between legs"
 ui.status.fighting,Fighting,ui.status,CB,Closing on a target and swinging at it
-ui.status.fleeing,Fleeing,ui.status,CB,Running from whatever hurt it
+ui.status.fleeing,Fleeing,ui.status,CB,"Running from danger, or from whatever hurt it"
 ui.status.equipping,Equipping,ui.status,CB,Fetching a weapon to hold
 ui.status.rescuing,Rescuing,ui.status,CB,Carrying the downed to a bed
+ui.status.stealing,Stealing,ui.status,CB,"A marauder carrying something off the board"
 ui.combat.miss,Miss,ui.combat,CB,A swing that did not land
 ui.combat.dodge,Dodge,ui.combat,CB,A swing the target stepped out of
 ui.combat.stunned,Stunned,ui.combat,CB,"Knocked senseless by a blunt blow, for a moment"
@@ -285,6 +286,9 @@ ui.command.gift,Gift,ui.command,M3,Give this away for goodwill
 ui.command.evacuate,Evacuate,ui.command,M3,Everyone out of this area
 ui.command.hunt,Hunt,ui.command,M3,Kill this wild animal for meat
 ui.command.strip,Strip,ui.command,M3,Take everything they carry
+ui.command.fightback,Fight back,ui.command,CB,"Fights only whoever strikes her. Press to change"
+ui.command.defend,Defend,ui.command,CB,"Joins a fight near her, then goes back to work. Press to change"
+ui.command.flee,Flee,ui.command,CB,"Runs from danger near her, and fights only when cornered. Press to change"
 ui.menu.cancel,Cancel,ui.menu,CB,"Close the menu a right-click opened, and order nothing"
 ui.overlay.temperature,Temperature,ui.overlay,M1,Warm to cold across the slice
 ui.overlay.light,Light,ui.overlay,M1,How lit each cell is
@@ -333,6 +337,7 @@ ui.alert.spoilage,Spoiling,ui.alert,M2,Food is going off
 ui.alert.darkness,No light,ui.alert,M2,Work is slowed for want of a lamp
 ui.alert.trapped,Trapped,ui.alert,M2,Someone cannot reach the colony
 ui.alert.storagestuck,Store cannot be emptied,ui.alert,M3,"A shelf is marked for removal and there is nowhere to put what is in it"
+ui.alert.norescuebed,No bed for the wounded,ui.alert,M3,"A downed colonist has no free bed to be carried to, so nobody can rescue her"
 ui.toast.skillup,{name} has reached {skill} {level},ui.toast,M2,A colonist's skill has gone up a level
 ui.bulletin.salvage,Salvage found,ui.bulletin,M2,Something worthwhile in the rubble
 ui.bulletin.scrapdrop,Scrap drop,ui.bulletin,M3,Scrap metal fell from the sky
@@ -351,6 +356,8 @@ ui.bulletin.animaljoin,Animal joined,ui.bulletin,M2,A tame beast has attached it
 ui.bulletin.crash,Crash,ui.bulletin,M2,Something has come down nearby
 ui.bulletin.supplydrop,Supply drop,ui.bulletin,M3,"Something has fallen from the sky. Fetch it before the weather does"
 ui.bulletin.birth,Birth,ui.bulletin,M2,A tame animal has given birth
+ui.bulletin.theft,Theft,ui.bulletin,CB,"A marauder carried something off the board"
+ui.bulletin.marauderleft,Marauder left,ui.bulletin,CB,"A marauder walked off the board with nothing"
 ui.weather.clear,Clear,ui.weather,M1,Open sky
 ui.weather.cloudy,Cloudy,ui.weather,M1,"Less light, no other effect"
 ui.weather.rain,Rain,ui.weather,M1,"Puts out fires, waters crops"
@@ -457,10 +464,10 @@ ui.settings.interface,Interface,ui.settings,M1,"How the interface itself is draw
 ui.settings.uiscale,Interface scale,ui.settings,M1,"How large the HUD is drawn. Larger type covers more of the board"
 ui.settings.shadows,Shadows,ui.settings,M1,"Whether people and buildings cast shadows on the ground"
 ui.settings.surround,Surrounding land,ui.settings,M1,"The land carried past the rim so the board does not end in mid-air"
-ui.settings.grass,Grass tufts,ui.settings,M1,"Tufts strewn over the meadow. Decoration, in no cell and no save"
 ui.settings.relief,Ground relief,ui.settings,M1,"The roll of the drawn ground. The cells underneath stay flat"
 ui.settings.seethrough,See through to selection,ui.settings,M1,"Fade whatever stands between the camera and a selected colonist"
 ui.settings.cutaway,Cut away the ceiling,ui.settings,M3,"See into rooms on this layer. Off shows the floor above you"
+ui.settings.wallsdown,Walls down,ui.settings,M3,"Lower walls to a stump and hide the storeys above, so you can see inside. Building shows them in full"
 ui.settings.keys,Keys,ui.settings,M3,"Every key the game reads, and what each one may be changed to"
 ui.settings.resetkeys,Reset keys to defaults,ui.settings,M3,"Put every action back on the key it shipped with"
 ui.keys.forward,Camera forward,ui.keys,M3,"Move the camera up the screen"
@@ -472,6 +479,7 @@ ui.keys.turnright,Turn camera right,ui.keys,M3,"Orbit the view clockwise while h
 ui.keys.sliceup,Slice up,ui.keys,M3,"Step the visible layer up one"
 ui.keys.slicedown,Slice down,ui.keys,M3,"Step the visible layer down one"
 ui.keys.cycleabove,Cycle above-slice view,ui.keys,M3,"Step through how the layers above the slice are drawn"
+ui.keys.wallsdown,Walls down,ui.keys,M3,"Lower walls to a stump, or raise them again"
 ui.keys.frame,Frame the map,ui.keys,M3,"Pull the camera back until the whole board is in view"
 ui.keys.pause,Pause,ui.keys,M3,"Stop the clock, or start it again"
 ui.keys.speed1,Speed one,ui.keys,M3,"Run the clock at its first speed"
@@ -530,6 +538,10 @@ ui.settings.renderscale,Render scale,ui.settings,M3,"How large the world is draw
 ui.settings.antialias,Anti-aliasing,ui.settings,M3,"Smooth the stepped edges of the board. The most expensive thing on this page"
 ui.settings.shadowdist,Shadow distance,ui.settings,M3,"How far from the camera shadows are still drawn"
 ui.settings.displaymode,Display mode,ui.settings,M3,"Fullscreen, borderless or a window"
+ui.settings.quality,Quality,ui.settings,MF,"Set every lever on this page at once, from Low to Ultra. Custom once any is moved by hand"
+ui.settings.vegetation,Grass,ui.settings,MF,"How thick the grass is strewn, from bare ground to every cell. Decoration, in no cell and no save"
+ui.settings.grassdist,Grass distance,ui.settings,MF,"How far from the camera grass is still drawn. Past it the ground carries the field"
+ui.settings.foliageshadows,Grass shadows,ui.settings,MF,"Whether grass casts shadows. Off, as it has always shipped: a shadow centimetres long on grass the same colour"
 ui.settings.resolution,Resolution,ui.settings,M3,"How many pixels the game is drawn at. Only a built game can change it"
 ui.settings.exit,Exit game,ui.settings,M3,"Leave the game. The row asks twice, because leaving is not undoable"
 ui.settings.gameplay,Gameplay,ui.settings,MS,"What the game does for you while you play"
@@ -539,6 +551,17 @@ ui.settings.volume.music,Music volume,ui.settings,M3,"What plays under the game"
 ui.settings.volume.ambience,Ambience volume,ui.settings,M3,"The sound of the place itself"
 ui.settings.volume.effects,Effects volume,ui.settings,M3,"Axes, picks and the noises of work"
 ui.settings.volume.alerts,Alerts volume,ui.settings,M3,"What asks for attention"
+ui.settings.group.scale,Scale,ui.settings,M3,"How large the interface is drawn"
+ui.settings.group.camera,Camera,ui.settings,M3,"How the camera moves, and the keys that move it"
+ui.settings.group.palette,Build palette,ui.settings,M3,"The shape of the Build palette"
+ui.settings.group.performance,Performance,ui.settings,M3,"What the frame costs to draw"
+ui.settings.group.volume,Volume,ui.settings,M3,"The loudness of the game and its music and ambience"
+ui.settings.group.cues,Cues,ui.settings,M3,"The loudness of work and of what asks for attention"
+ui.settings.group.saving,Saving,ui.settings,M3,"When the colony is written to disk without being asked"
+ui.settings.group.game,Game,ui.settings,M3,"Saving, loading and leaving, pinned under the tabs"
+ui.settings.group.view,View,ui.settings,M3,"The keys that move the slice and frame the map"
+ui.settings.group.tools,Tools,ui.settings,M3,"The keys that arm an order"
+ui.settings.group.time,Time,ui.settings,M3,"The keys that pause the game and set its speed"
 ui.session.newgame,New game,ui.session,MS,"Start a colony on a fresh board"
 ui.session.load,Load,ui.session,MS,"Open a saved colony. The list reads each file's header, never its body"
 ui.session.save,Save,ui.session,MS,"Write this colony over the save it came from. Names one the first time"

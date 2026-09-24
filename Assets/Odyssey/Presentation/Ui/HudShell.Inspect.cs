@@ -38,11 +38,69 @@ namespace Odyssey.Presentation.Ui
             _railCells.AddToClassList("rail__cells");
             rail.Add(_railCells);
 
-            _railHint = HudText.Make("R / F", HudTextRole.Meta, numeric: false, "rail__hint");
-            _railHint.tooltip = "R and F move the slice up and down. Home recentres.";
-            rail.Add(_railHint);
+            rail.Add(BuildWallsToggle());
 
             gutter.Add(rail);
+        }
+
+        // ============================================================ walls down (design 42 §7)
+
+        VisualElement? _wallsButton;
+        HudGlyph? _wallsGlyph;
+
+        /// <summary>What the walls button was last painted for: bit 0 the choice, bit 1 build mode;
+        /// -1 so the first paint runs.</summary>
+        int _wallsPaintedFor = -1;
+
+        /// <summary>
+        /// The walls-down switch, under the "R / F" hint it belongs beside (owner, 2026-09-24): a
+        /// drawn wall, standing while they are up and cut to a stump while they are down, lit in
+        /// the accent while on as the views strip's switches are. It throws the one setting H and
+        /// the Settings row throw, so the three can never disagree.
+        /// </summary>
+        VisualElement BuildWallsToggle()
+        {
+            var button = new VisualElement { name = "walls-down" };
+            button.AddToClassList("rail__walls");
+            _wallsGlyph = new HudGlyph(HudGlyphKind.WallsDown, 16f, HudTokens.Convert(HudTheme.Accent));
+            button.Add(_wallsGlyph);
+            button.RegisterCallback<ClickEvent>(_ =>
+            {
+                _directors?.Settings.Toggle(GraphicsOption.WallsDown);
+                MarkWalls();
+            });
+            _wallsButton = button;
+            return button;
+        }
+
+        /// <summary>
+        /// Show the choice, and dim it while build mode is overruling it so a player can see why
+        /// the walls came back. Called every frame; early-returns when nothing moved.
+        /// </summary>
+        void MarkWalls()
+        {
+            if (_directors == null || _wallsButton == null || _wallsGlyph == null) return;
+            bool chosen = _directors.Settings.IsOn(GraphicsOption.WallsDown);
+            bool building = WallsView.BuildMode(BuildPaletteOpen, _directors.Designate.Tool);
+            int bits = (chosen ? 1 : 0) | (building ? 2 : 0);
+            if (bits == _wallsPaintedFor) return;
+            _wallsPaintedFor = bits;
+
+            _wallsGlyph.Kind = chosen ? HudGlyphKind.WallsDown : HudGlyphKind.WallsUp;
+            bool lit = chosen && !building;
+            HudColour hue = HudTheme.Accent;
+            _wallsGlyph.Tint = HudTokens.Convert(hue.WithAlpha(building ? 0.45f : 1f));
+            _wallsButton.EnableInClassList("rail__walls--on", lit);
+            _wallsButton.style.backgroundColor = HudTokens.Convert(hue.WithAlpha(lit ? 0.30f : 0.06f));
+            _wallsButton.style.borderTopColor = _wallsButton.style.borderRightColor =
+                _wallsButton.style.borderBottomColor = _wallsButton.style.borderLeftColor =
+                    HudTokens.Convert(hue.WithAlpha(lit ? 1f : 0.30f));
+
+            string name = Registry.Label(SettingsDirector.WallsDownKey);
+            string key = HotkeyDirector.Display(_directors.Hotkeys.Key(HotkeyAction.WallsDown, 0));
+            string state = building ? "standing while you build"
+                : chosen ? "on — press again to raise them" : "off";
+            _wallsButton.tooltip = key.Length > 0 ? $"{name} ({key}) — {state}" : $"{name} — {state}";
         }
 
         /// <summary>
@@ -122,7 +180,11 @@ namespace Odyssey.Presentation.Ui
                         ? $"{occupancyPercent}% built"
                         : "occupancy publishes for the active slice only";
                     view.Root.tooltip =
-                        $"Layer {model.Layer}{surface} — {model.Pawns} colonists, {occupancy}. Click to move the slice.";
+                        $"Layer {model.Layer}{surface} — {model.Pawns} colonists, {occupancy}. " +
+                        "Click to move the slice, or R and F; Home recentres.";
+                    // The keys ride on each cell's own tooltip rather than on an "R / F" label under
+                    // the rail (owner, 2026-09-24): the label took a row of a rail whose length the
+                    // world decides, and the walls switch beside the slice keys has that row now.
                 }
             }
         }
@@ -2006,6 +2068,9 @@ namespace Odyssey.Presentation.Ui
             if (command.Enabled
                 && (command.IconKey == InspectModel.DraftKey || command.IconKey == InspectModel.UndraftKey))
                 button.RegisterCallback<ClickEvent>(_ => ToggleDraft());
+            // The response beside it (design 33 §18e): the model decides, this carries its intents.
+            if (command.Enabled && ResponseModel.IsResponseKey(command.IconKey))
+                button.RegisterCallback<ClickEvent>(_ => CycleResponse());
             return button;
         }
 

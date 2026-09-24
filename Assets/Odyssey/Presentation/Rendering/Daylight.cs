@@ -259,6 +259,56 @@ namespace Odyssey.Presentation.Rendering
             return Keys[0].State;
         }
 
+        /// <summary>
+        /// Whether the day is lit the way the Meadow Forest reference is (design 38 §17, the look
+        /// pass). On by default: the owner chose the pack's own colours, and the pack's textures are
+        /// painted for this light, not for ours — under our noon they read as dark olive.
+        /// </summary>
+        public static bool MeadowLight { get; set; } = true;
+
+        /// <summary>
+        /// A state moved towards the Meadow demo's lighting, by daylight only.
+        ///
+        /// <para><b>What the reference does.</b> The demo scene lights its meadow with an orange key
+        /// at intensity 3 over a heavy trilight ambient at 1.6 — a blue sky term, a pale equator
+        /// and a warm ground — so shade is cool and bright rather than dark, and the painted
+        /// yellow-green of the terrain comes up to the colour in the screenshots. Our keys were
+        /// tuned for a photographic golden hour with a far lighter ambient.</para>
+        ///
+        /// <para><b>By daylight only.</b> The weight follows the sun's elevation, so dawn, dusk
+        /// and night keep the palettes the owner judged; midday takes the whole move. It is a
+        /// transform of the sampled state, not new keys, so the table and its tests are
+        /// untouched and switching it off gives exactly the old light.</para>
+        /// </summary>
+        public static DaylightState Meadow(in DaylightState s)
+        {
+            float day = Mathf.Clamp01(s.SunElevation / 30f);
+            if (day <= 0f) return s;
+
+            // The demo's own terms, its ambient intensity of 1.6 folded in, since our trilight has
+            // no separate intensity to carry it.
+            Color warmKey = new Color(1.00f, 0.80f, 0.60f);
+            Color sky = new Color(0.62f, 0.84f, 1.30f) * MeadowAmbientScale;
+            Color equator = new Color(0.71f, 0.84f, 0.88f) * MeadowAmbientScale;
+            Color ground = new Color(0.69f, 0.60f, 0.42f) * MeadowAmbientScale;
+
+            return new DaylightState(
+                s.SunElevation, s.SunAzimuth,
+                Color.Lerp(s.SunColour, warmKey, 0.55f * day),
+                s.SunIntensity * Mathf.Lerp(1f, MeadowSunScale, day),
+                s.ShadowStrength,
+                Color.Lerp(s.AmbientSky, sky, 0.85f * day),
+                Color.Lerp(s.AmbientEquator, equator, 0.85f * day),
+                Color.Lerp(s.AmbientGround, ground, 0.85f * day),
+                s.Zenith, s.Horizon, s.BelowHorizon, s.FogDensity);
+        }
+
+        /// <summary>How much stronger the Meadow key is at full daylight.</summary>
+        public static float MeadowSunScale { get; set; } = 1.35f;
+
+        /// <summary>The demo's ambient intensity, applied to its three trilight colours.</summary>
+        public static float MeadowAmbientScale { get; set; } = 1.5f;
+
         /// <summary>How many keys the table holds. For the tests, which walk it.</summary>
         public static int KeyCount => Keys.Length;
 
