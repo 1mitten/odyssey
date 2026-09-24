@@ -2522,6 +2522,14 @@ namespace Odyssey.Tests.PlayMode
                     // And an unselected colonist standing behind a tree, with the see-through for
                     // selected colonists only (before) and for every colonist (after).
                     yield return PhotographBehindATree(boot, target, prefix);
+
+                    // The surround at the camera's farthest pull, from the rim of the board looking
+                    // out (design 38 §19): the land beyond should read wooded, not bare.
+                    var size = boot.World!.Size;
+                    boot.cameraRig!.FocusOn(new CellRef(size.SizeX / 2, 2, frame.Pawns[0].Cell.Y),
+                        boot.cameraRig.maxDistance);
+                    for (int i = 0; i < 150; i++) yield return null;
+                    yield return Photograph(prefix + "horizon", boot, target);
                 }
 
                 // And the wide framing again under the Meadow demo's own grade, where it resolved.
@@ -2887,7 +2895,9 @@ namespace Odyssey.Tests.PlayMode
             SliceCameraRig rig = boot.cameraRig!;
             Debug.Log($"[Look] {name}: {path}; distance {rig.TargetDistance:0.0} m, focus {rig.Focus}; " +
                       $"{boot.Renderer?.DrawCalls ?? -1} calls, {boot.Renderer?.InstancesDrawn ?? -1} instances, " +
-                      $"{boot.Renderer?.ChunksDrawn ?? -1} chunks");
+                      $"{boot.Renderer?.ChunksDrawn ?? -1} chunks; surround " +
+                      $"{boot.Renderer?.Skirt.TreeInstances ?? -1} near + {boot.Renderer?.Skirt.FarTreeInstances ?? -1} far trees, " +
+                      $"{boot.Renderer?.Skirt.DrawCalls ?? -1} calls");
         }
 
         /// <summary>

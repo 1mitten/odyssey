@@ -634,8 +634,8 @@ namespace Odyssey.Presentation.Rendering
             // mesher filed it (the surface cell is the solid one under the air the thing is in).
             int surface = layer - 1;
             if (surface < 0 || surface >= size.SizeY) return false;
-            for (int dz = -Odyssey.Sim.World.CellGrid.ChunkSize; dz <= Odyssey.Sim.World.CellGrid.ChunkSize; dz += Odyssey.Sim.World.CellGrid.ChunkSize)
-            for (int dx = -Odyssey.Sim.World.CellGrid.ChunkSize; dx <= Odyssey.Sim.World.CellGrid.ChunkSize; dx += Odyssey.Sim.World.CellGrid.ChunkSize)
+            for (int dz = -Odyssey.Sim.World.ChunkGrid.ChunkSize; dz <= Odyssey.Sim.World.ChunkGrid.ChunkSize; dz += Odyssey.Sim.World.ChunkGrid.ChunkSize)
+            for (int dx = -Odyssey.Sim.World.ChunkGrid.ChunkSize; dx <= Odyssey.Sim.World.ChunkGrid.ChunkSize; dx += Odyssey.Sim.World.ChunkGrid.ChunkSize)
             {
                 int x = cx + dx, z = cz + dz;
                 if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
