@@ -351,6 +351,13 @@ n / N*, Next colonist, All pulled; Space does the same, never while a name is be
 - **The wiki moves**: the `ui.trait` namespace joins the Colonists page, and the machine's words
   and the mode names join the registry.
 
+- **A bug older than the draw, found by it: no colonist in a played game had starting skills.**
+  `StartingSkillsSystem` fired when the tick read zero; the played scene starts at noon. The draw's
+  PlayMode test compared the colony with the landed card and printed *tick at start 30009, real xp
+  all zero*. It now fires on the first tick it sees; a load fires it once more, which writes only
+  into skills still at zero and so writes what was already there (bug pattern P19). No golden moved:
+  they start at zero.
+
 ## 8. Units
 
 Written in dependency order; one branch, one PR.

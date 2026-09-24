@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
@@ -88,6 +89,12 @@ namespace Odyssey.Tests.PlayMode
                 yield return Settle();
 
                 Assert.That(boot.Colony, Is.Not.Null, "Start built no world");
+
+                // Starting skills are rolled on the world's first tick (StartingSkillsSystem), and a
+                // new colony may not have taken one yet; the traits and the profile were placed with
+                // the colonist. Tick once, as ColonistDrawTests does, rather than wait on the clock.
+                int tickAtStart = boot.World!.CurrentTick;
+                if (tickAtStart == 0) boot.World.Tick();
                 var people = new List<Pawn>();
                 foreach (Pawn pawn in boot.Colony!.Pawns.Pawns.All) if (pawn.IsPerson) people.Add(pawn);
                 Assert.That(people.Count, Is.EqualTo(ColonistSelect.Slots));
@@ -99,9 +106,12 @@ namespace Odyssey.Tests.PlayMode
                     Assert.That(real.Profile, Is.EqualTo(RollProfile.Gamble), $"colonist {slot + 1} was not rolled as a gamble");
                     Assert.That(real.RollSeed, Is.EqualTo(cards[slot].Seed));
                     Assert.That(real.Traits, Is.EqualTo(cards[slot].Traits), $"colonist {slot + 1}'s traits are not the ones that landed");
-                    for (int s = 0; s < SkillIndex.Count; s++)
-                        Assert.That(real.SkillLevel(s), Is.EqualTo(card.SkillLevel(s)),
-                            $"colonist {slot + 1}'s skill {s} is not the one that landed");
+                    string realLevels = string.Join(",", Enumerable.Range(0, SkillIndex.Count).Select(s => real.SkillLevel(s)));
+                    string cardLevels = string.Join(",", Enumerable.Range(0, SkillIndex.Count).Select(s => card.SkillLevel(s)));
+                    Assert.That(realLevels, Is.EqualTo(cardLevels),
+                        $"colonist {slot + 1}'s skills are not the ones that landed: id {real.Id.Value} vs {card.Id.Value}, " +
+                        $"tick at start {tickAtStart}, same content {ReferenceEquals(real.Content, card.Content)}, " +
+                        $"real xp [{string.Join(",", real.Skills)}] card xp [{string.Join(",", card.Skills)}]");
                 }
 
                 Assert.That(select.Mode, Is.EqualTo(CreationMode.Standard), "the gamble outlived the colony it built");

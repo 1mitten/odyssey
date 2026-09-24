@@ -534,6 +534,75 @@ namespace Odyssey.Tests.Sim
             }
         }
 
+        /// <summary>
+        /// The same guarantee on the scenario the game actually builds (Playtest, wooded, the
+        /// played board's size), rather than on a bare fixture: a PlayMode run found a Construction
+        /// level differing from the card here, and this is the fast-tier question it asked.
+        /// </summary>
+        [Test]
+        public void AGambleColonyOnThePlayedScenarioIsTheCards()
+        {
+            uint[] chosen = { 3_402_411_231u, 77u, 918_273u };
+            RollProfile[] profiles = { RollProfile.Gamble, RollProfile.Gamble, RollProfile.Gamble };
+            ColonyWorld colony = ColonyWorld.Build(new ColonyRequest
+            {
+                Size = new GridSize(120, 120, 16), Seed = 555u,
+                Scenario = ScenarioDef.Playtest().WithColonists(3),
+                Barren = true, Wooded = true, Colonists = chosen, Profiles = profiles,
+            });
+            colony.World.Tick();
+            Pawn[] placed = colony.Pawns.Pawns.All.Where(p => p.IsPerson).ToArray();
+            for (int slot = 0; slot < chosen.Length; slot++)
+            {
+                Pawn card = Rolled(chosen[slot], slot, RollProfile.Gamble);
+                string real = string.Join(",", Enumerable.Range(0, SkillIndex.Count).Select(s => placed[slot].SkillLevel(s)));
+                string shown = string.Join(",", Enumerable.Range(0, SkillIndex.Count).Select(s => card.SkillLevel(s)));
+                Assert.That(placed[slot].Id.Value, Is.EqualTo(card.Id.Value), $"slot {slot}: ids");
+                Assert.That(real, Is.EqualTo(shown), $"slot {slot}: the colony's levels against the card's");
+            }
+        }
+
+        /// <summary>
+        /// The played scene starts its clock at noon (<c>ColonyRequest.StartTick</c>), and the
+        /// starting-skill roll fired only when the tick read zero — so every colonist in every played
+        /// game had no skills at all, while every headless run and golden, which start at zero, had
+        /// them. Found by the draw's PlayMode test (design 41 §6.7): the colony's skills were all 0
+        /// against the card's.
+        /// </summary>
+        [Test]
+        public void AColonyStartedAtNoonStillRollsItsColonistsSkills()
+        {
+            uint[] chosen = { 101u, 202u, 303u };
+            ColonyWorld colony = ColonyWorld.Build(new ColonyRequest
+            {
+                Size = new GridSize(60, 60, 16), Seed = 4242u, Scenario = Scenario(3),
+                Barren = true, Wooded = true, Colonists = chosen, StartTick = 30_000,
+            });
+            Assert.That(colony.World.CurrentTick, Is.EqualTo(30_000), "the control: the clock starts at noon");
+            colony.World.Tick();
+
+            Pawn[] placed = colony.Pawns.Pawns.All.Where(p => p.IsPerson).ToArray();
+            for (int slot = 0; slot < chosen.Length; slot++)
+                Assert.That(placed[slot].Skills, Is.EqualTo(Rolled(chosen[slot], slot, RollProfile.Standard).Skills),
+                    $"slot {slot}: a colony that began at noon has no starting skills");
+        }
+
+        [Test]
+        public void TheStartingRollNeverOverwritesEarnedExperienceWhenItFiresAgainAfterALoad()
+        {
+            ColonyWorld colony = Board(colonists: 1);
+            colony.World.Tick();
+            Pawn p = colony.Pawns.Pawns.All[0];
+            p.Skills[SkillIndex.Mining] += 1_234;
+            int[] before = (int[])p.Skills.Clone();
+            byte[] bytes = colony.Save();
+
+            ColonyWorld after = Board(colonists: 1);
+            after.Load(bytes);
+            after.World.Tick();   // a fresh system: fires on the first tick after the load
+            Assert.That(after.Pawns.Pawns.All[0].Skills, Is.EqualTo(before), "the roll wrote over what she had");
+        }
+
         [Test]
         public void ADebugSpawnedColonistArrivesWithSkillsAfterTickZero()
         {

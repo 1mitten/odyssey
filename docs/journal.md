@@ -11909,3 +11909,11 @@ ratio (they would have been seen to march together); three trait windows and the
 px in a 618 px grid; and the stylesheet set a bold weight, which the sheet is not allowed to (type
 belongs to the roles). The HUD's three-letter rule also retired the "SPD" and "CHP" abbreviations
 the first design had leant on: the spec's full skill names made them unnecessary anyway.
+
+**And the end-to-end test paid for itself on its first run, on something that was not the draw's.**
+The colony built from three landed pulls had every skill at zero against the cards'. A fast-tier
+reproduction on the game's own scenario passed, so the diagnostic went into the PlayMode assertion
+instead of into more reasoning: *tick at start 30009*. The played scene starts at noon and the
+starting-skill roll fired only at tick zero, so no colonist in a played game has ever had starting
+skills — the setup page showed them and the colony did not have them. The rule now fires on the
+first tick it sees (P19).
