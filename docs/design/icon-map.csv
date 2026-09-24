@@ -371,7 +371,7 @@ ui.bulletin.supplydrop,-,,,"a stack falling from the sky. Our own concept",-,gap
 ui.bulletin.scrapdrop,-,,,"scrap metal falling from the sky. Our own concept",-,gap
 ui.bulletin.birth,-,,,a newborn animal,-,gap
 ui.bulletin.theft,-,,,"a figure carrying a sack off the edge. Our own concept",-,gap
-ui.bulletin.marauderleft,-,,,"a figure walking off the edge. Our own concept",-,gap
+ui.bulletin.banditleft,-,,,"a figure walking off the edge. Our own concept",-,gap
 ui.weather.clear,-,,,clear sky or sun,-,gap
 ui.weather.cloudy,-,,,cloud,-,gap
 ui.weather.rain,06,,,water drop tile,med,shared

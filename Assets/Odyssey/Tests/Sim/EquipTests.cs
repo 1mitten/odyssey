@@ -182,9 +182,9 @@ namespace Odyssey.Tests.Sim
             ColonyItem bat = PutDown(colony, colonist, ItemIndex.Bat);
 
             Pawn hog = SpawnKind(colony, PawnKindIndex.MiddenHog);
-            Pawn marauder = SpawnKind(colony, PawnKindIndex.Marauder);
+            Pawn bandit = SpawnKind(colony, PawnKindIndex.Bandit);
             Assert.That(Equip(colony, hog, bat), Is.EqualTo(IntentRejection.NotPermitted), "an animal");
-            Assert.That(Equip(colony, marauder, bat), Is.EqualTo(IntentRejection.NotPermitted), "a hostile");
+            Assert.That(Equip(colony, bandit, bat), Is.EqualTo(IntentRejection.NotPermitted), "a hostile");
             Assert.That(Send(colony, new Intent(IntentKind.OrderEquip, Size.FromIndex(bat.Cell), 9_999, bat.Id.Value)),
                 Is.EqualTo(IntentRejection.NotPermitted), "nobody");
 

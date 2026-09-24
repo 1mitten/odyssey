@@ -17,6 +17,7 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 1314183909916261615, guid: d6b56504304c325419b598fe3ddb95ed, type: 3}
     prefabName: SM_Bld_Base_Wall_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -46,6 +47,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -60,6 +74,7 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 1314183909916261615, guid: d6b56504304c325419b598fe3ddb95ed, type: 3}
     prefabName: SM_Bld_Base_Wall_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -89,6 +104,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -103,6 +131,7 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 1314183909916261615, guid: d6b56504304c325419b598fe3ddb95ed, type: 3}
     prefabName: SM_Bld_Base_Wall_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -132,6 +161,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -146,6 +188,7 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 2095505155170527388, guid: c5c2a8e6bf649504c9a44506e4e45bd9, type: 3}
     prefabName: SM_Bld_Base_Wall_Window_Double_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -175,6 +218,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -189,6 +245,7 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 1575485029253254693, guid: 312c2475757f3d449bc5791d854de9f8, type: 3}
     prefabName: SM_Bld_Base_Wall_Window_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -218,6 +275,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -232,6 +302,7 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 1575485029253254693, guid: 312c2475757f3d449bc5791d854de9f8, type: 3}
     prefabName: SM_Bld_Base_Wall_Window_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -261,6 +332,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -275,6 +359,7 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 2095505155170527388, guid: c5c2a8e6bf649504c9a44506e4e45bd9, type: 3}
     prefabName: SM_Bld_Base_Wall_Window_Double_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -304,6 +389,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -318,6 +416,7 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 2095505155170527388, guid: c5c2a8e6bf649504c9a44506e4e45bd9, type: 3}
     prefabName: SM_Bld_Base_Wall_Window_Double_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -347,6 +446,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -361,6 +473,7 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 1314183909916261615, guid: d6b56504304c325419b598fe3ddb95ed, type: 3}
     prefabName: SM_Bld_Base_Wall_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -390,6 +503,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -404,6 +530,7 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 4708598954288714395, guid: 83a611f447bb8ee49af1bbcf9d9a51a6, type: 3}
     prefabName: SM_Bld_Base_Wall_Door_Large_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -433,6 +560,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -447,6 +587,7 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 4708598954288714395, guid: 83a611f447bb8ee49af1bbcf9d9a51a6, type: 3}
     prefabName: SM_Bld_Base_Wall_Door_Large_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -476,6 +617,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -490,6 +644,7 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 5000267000382648265, guid: 4429b90df2f00014eb1874ba70387189, type: 3}
     prefabName: SM_Bld_Base_Wall_Door_Double_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -519,6 +674,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -533,6 +701,7 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 6601050566410634084, guid: 80f8de5fa3b15d8459024f191962186c, type: 3}
     prefabName: SM_Bld_Base_Wall_Door_Double_Large_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -562,6 +731,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -576,6 +758,7 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 3872603109300624465, guid: 2a0efb0670c655d4ea90059acb092716, type: 3}
     prefabName: SM_Bld_Base_Door_Large_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -605,6 +788,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -619,6 +815,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 7567519678023432404, guid: 3c3333a360e049e459c73b3ca0afec89, type: 3}
     prefabName: SM_Bld_Base_Pillar_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -648,6 +845,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -662,6 +872,7 @@ MonoBehaviour:
     shape: 5
     prefab: {fileID: 5184713431846949732, guid: d1e81d08282ca3b49b6f9b7fb3935878, type: 3}
     prefabName: SM_Bld_Base_Stairs_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 0
     topAtY: 0
@@ -691,6 +902,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -705,6 +929,7 @@ MonoBehaviour:
     shape: 5
     prefab: {fileID: 5184713431846949732, guid: d1e81d08282ca3b49b6f9b7fb3935878, type: 3}
     prefabName: SM_Bld_Base_Stairs_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 0
     topAtY: 0
@@ -734,6 +959,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -748,6 +986,7 @@ MonoBehaviour:
     shape: 5
     prefab: {fileID: 5184713431846949732, guid: d1e81d08282ca3b49b6f9b7fb3935878, type: 3}
     prefabName: SM_Bld_Base_Stairs_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 0
     topAtY: 0
@@ -777,6 +1016,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -791,6 +1043,7 @@ MonoBehaviour:
     shape: 6
     prefab: {fileID: 9016761526901123284, guid: 52340b3b1ff43e74bae915614541ffad, type: 3}
     prefabName: SM_Gen_Bld_Ladder_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -820,6 +1073,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -834,6 +1100,7 @@ MonoBehaviour:
     shape: 6
     prefab: {fileID: 9016761526901123284, guid: 52340b3b1ff43e74bae915614541ffad, type: 3}
     prefabName: SM_Gen_Bld_Ladder_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -873,10 +1140,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.slab
     shape: 2
     prefab: {fileID: 218261247472390261, guid: 14c2043f70fad33459f6bbab2bef8720, type: 3}
     prefabName: SM_Bld_Base_Floor_Combined_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 0
     topAtY: 1
@@ -906,6 +1187,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -920,6 +1214,7 @@ MonoBehaviour:
     shape: 2
     prefab: {fileID: 218261247472390261, guid: 14c2043f70fad33459f6bbab2bef8720, type: 3}
     prefabName: SM_Bld_Base_Floor_Combined_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 0
     topAtY: 1
@@ -949,6 +1244,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -963,6 +1271,7 @@ MonoBehaviour:
     shape: 2
     prefab: {fileID: 218261247472390261, guid: 14c2043f70fad33459f6bbab2bef8720, type: 3}
     prefabName: SM_Bld_Base_Floor_Combined_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 0
     topAtY: 1
@@ -992,6 +1301,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -1006,6 +1328,7 @@ MonoBehaviour:
     shape: 2
     prefab: {fileID: 218261247472390261, guid: 14c2043f70fad33459f6bbab2bef8720, type: 3}
     prefabName: SM_Bld_Base_Floor_Combined_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 0
     topAtY: 1
@@ -1035,6 +1358,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -1049,6 +1385,7 @@ MonoBehaviour:
     shape: 2
     prefab: {fileID: 1554687143679090, guid: 625e1518f7d51b741b259e863a096e42, type: 3}
     prefabName: SM_Env_Ground_Tile_Half_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 0
     topAtY: 1
@@ -1088,10 +1425,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.utility.tap
     shape: 4
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1131,10 +1482,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.generator
     shape: 4
     prefab: {fileID: 1906143108443636, guid: 8c366b74a8be11d409236ded1f90f979, type: 3}
     prefabName: SM_Prop_Generator_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1174,10 +1539,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.heater
     shape: 4
     prefab: {fileID: 1054224122226918, guid: 481f055a844be084eae4eefebdd9a49f, type: 3}
     prefabName: SM_Prop_AirConditioningUnit_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1217,10 +1596,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.campfire
     shape: 4
     prefab: {fileID: 1008667369134030, guid: ac728ce9ca76cf84bb4f051bad08e5b0, type: 3}
     prefabName: SM_Prop_Campfire_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1260,10 +1653,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.pavement
     shape: 2
     prefab: {fileID: 1554687143679090, guid: 625e1518f7d51b741b259e863a096e42, type: 3}
     prefabName: SM_Env_Ground_Tile_Half_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 0
     topAtY: 1
@@ -1293,6 +1700,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -1307,6 +1727,7 @@ MonoBehaviour:
     shape: 2
     prefab: {fileID: 1965909188301746, guid: ac86e58f7706ca04a9df3f348cf148bd, type: 3}
     prefabName: SM_Env_Ground_Tile_Half_02
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 0
     topAtY: 1
@@ -1336,6 +1757,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -1350,6 +1784,7 @@ MonoBehaviour:
     shape: 2
     prefab: {fileID: 1653527390631264, guid: bc32377f7b002c2408c36cbf8dcff58c, type: 3}
     prefabName: SM_Env_Ground_Tile_Half_03
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 0
     topAtY: 1
@@ -1379,6 +1814,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -1393,6 +1841,7 @@ MonoBehaviour:
     shape: 2
     prefab: {fileID: 1577172829149528, guid: f1caf2cf329e69744a5b641ea8285df6, type: 3}
     prefabName: SM_Env_Ground_Tile_Half_04
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 0
     topAtY: 1
@@ -1422,6 +1871,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -1436,6 +1898,7 @@ MonoBehaviour:
     shape: 2
     prefab: {fileID: 1036822767203376, guid: 2d7c7ed92e45db34992dafca4ced6ea5, type: 3}
     prefabName: SM_Env_Ground_Tile_Half_05
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 0
     topAtY: 1
@@ -1475,10 +1938,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.engineeredfill
     shape: 3
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1508,6 +1985,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -1522,6 +2012,7 @@ MonoBehaviour:
     shape: 3
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1551,6 +2042,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -1565,6 +2069,7 @@ MonoBehaviour:
     shape: 3
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1604,10 +2109,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.grass
     shape: 3
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1647,10 +2166,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.bareearth
     shape: 3
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1690,10 +2223,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.packedgravel
     shape: 3
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1733,10 +2280,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.subsoil
     shape: 3
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1776,10 +2337,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.marsh
     shape: 3
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1819,10 +2394,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.sand
     shape: 3
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1852,6 +2441,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -1866,6 +2468,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1895,6 +2498,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -1909,6 +2525,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1938,6 +2555,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -1952,6 +2582,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -1981,6 +2612,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -1995,6 +2639,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2024,6 +2669,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2038,6 +2696,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2067,6 +2726,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2081,6 +2753,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2110,6 +2783,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2124,6 +2810,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2153,6 +2840,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2167,6 +2867,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2196,6 +2897,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2210,6 +2924,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2239,6 +2954,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2253,6 +2981,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2282,6 +3011,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2296,6 +3038,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2325,6 +3068,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2339,6 +3095,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2378,10 +3135,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.ironore
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2411,6 +3182,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2425,6 +3209,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2454,6 +3239,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2468,6 +3266,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2497,6 +3296,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2511,6 +3323,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2540,6 +3353,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2554,6 +3380,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2583,6 +3410,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2597,6 +3437,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2626,6 +3467,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2640,6 +3494,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2669,6 +3524,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2683,6 +3551,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2712,6 +3581,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2726,6 +3608,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2755,6 +3638,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2769,6 +3665,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2798,6 +3695,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2812,6 +3722,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2841,6 +3752,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2855,6 +3779,7 @@ MonoBehaviour:
     shape: 7
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2894,10 +3819,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.scatter.grass.a
     shape: 4
     prefab: {fileID: 6998238221925613595, guid: 0996b546c8b0c714991e7456ae040490, type: 3}
     prefabName: SM_Env_Grass_Med_Clump_03
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2927,6 +3866,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -2941,6 +3893,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 7698657471702998983, guid: c0a9fc5c9edd29e4b9879734f3792d2c, type: 3}
     prefabName: SM_Env_Grass_Med_Clump_02
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -2980,10 +3933,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.scatter.grass.c
     shape: 4
     prefab: {fileID: 6171772110245735729, guid: cfe5427e6e4acef4bb8dc5e23f38b3d5, type: 3}
     prefabName: SM_Env_Grass_Tall_Clump_03
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3013,6 +3980,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -3067,6 +4047,19 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.dress.grass.tall.b
     shape: 4
     prefab: {fileID: 4190401626231728328, guid: 59302d4b4398e504da743b9d9f8e7b67, type: 3}
@@ -3101,6 +4094,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -3155,6 +4161,19 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.dress.cover.b
     shape: 4
     prefab: {fileID: 8567074628543705154, guid: c2997bb6f6d25bb418a808309627e831, type: 3}
@@ -3189,6 +4208,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -3243,6 +4275,19 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.dress.cover.grassbush
     shape: 4
     prefab: {fileID: 1159558787302553158, guid: 93d6b405c00afaa46b2e4f45cb9f2a2e, type: 3}
@@ -3277,6 +4322,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -3331,6 +4389,19 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.dress.flower.wild.b
     shape: 4
     prefab: {fileID: 1557974530457926728, guid: d74b9ad70f26c1c41805b672a71665b0, type: 3}
@@ -3365,6 +4436,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -3419,6 +4503,19 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.dress.flower.sun
     shape: 4
     prefab: {fileID: 30244553050222735, guid: 73663df767caaeb4e8d8a22389f6b41f, type: 3}
@@ -3453,6 +4550,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -3507,6 +4617,19 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.dress.bush.b
     shape: 4
     prefab: {fileID: 6906830690193866741, guid: 3595ba075729fec458abd9577f51845e, type: 3}
@@ -3541,6 +4664,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -3595,6 +4731,19 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.dress.rock.a
     shape: 4
     prefab: {fileID: 756244418324746648, guid: 9cc02011d1e1d024e9c4420809cd2623, type: 3}
@@ -3629,6 +4778,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -3683,6 +4845,19 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.dress.rock.c
     shape: 4
     prefab: {fileID: 4259286663014254190, guid: 85d4b66433595d840b0ef5a47fa79d10, type: 3}
@@ -3727,10 +4902,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.carrot.s
     shape: 13
     prefab: {fileID: 1712200964176758, guid: a74d9e41a3e780f47b3278a49fe842da, type: 3}
     prefabName: SM_Prop_Carrot_01_S
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3770,10 +4959,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.carrot.m
     shape: 13
     prefab: {fileID: 1290591311347902, guid: d87f295218b7b4245906cd9610c542da, type: 3}
     prefabName: SM_Prop_Carrot_01_M
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3813,10 +5016,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.carrot.l
     shape: 13
     prefab: {fileID: 1879033853735152, guid: 6d30e14ec4d9bf240be449faa7956c55, type: 3}
     prefabName: SM_Prop_Carrot_01_L
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3856,10 +5073,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.tree.conifer
     shape: 4
     prefab: {fileID: 1016392496237815170, guid: f8b47c2401a09be4f87efe27b925b3fd, type: 3}
     prefabName: SM_Env_Tree_Birch_01
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 1
     topAtY: 0
@@ -3889,6 +5120,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -3903,6 +5147,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 5592075822852266847, guid: 44bbd64fad9366947a1c9b68c15e1261, type: 3}
     prefabName: SM_Env_Tree_Birch_02
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 1
     topAtY: 0
@@ -3942,10 +5187,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.tree.conifer.2
     shape: 4
     prefab: {fileID: 3298165907711742831, guid: 050fd5c9e63617c4db35ee70e9e823f1, type: 3}
     prefabName: SM_Env_Tree_Birch_03
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 1
     topAtY: 0
@@ -3985,10 +5244,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.tree.broadleaf
     shape: 4
     prefab: {fileID: 2146921750331591826, guid: a6dccea81e1455d4491d73f1d0e6d0ce, type: 3}
     prefabName: SM_Env_Tree_Meadow_02
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 1
     topAtY: 0
@@ -4028,10 +5301,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.tree.broadleaf.1
     shape: 4
     prefab: {fileID: 2452613710419899469, guid: f5ba9e2973c6d8d4cad295b79e2a7f45, type: 3}
     prefabName: SM_Env_Tree_Fruit_01
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 1
     topAtY: 0
@@ -4061,6 +5348,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -4075,6 +5375,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 2154830210199987570, guid: 681cbb809427f574a9f0d40322b45c90, type: 3}
     prefabName: SM_Env_Tree_Fruit_02
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 1
     topAtY: 0
@@ -4104,6 +5405,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -4118,6 +5432,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 739240639354438539, guid: ab41e12e3193e5241a054da74ad6cee7, type: 3}
     prefabName: SM_Env_Tree_Fruit_03
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 1
     topAtY: 0
@@ -4157,10 +5472,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.tree.broadleaf.4
     shape: 4
     prefab: {fileID: 6954770494557141849, guid: 0f2120e89197acc47bfde23175d19f26, type: 3}
     prefabName: SM_Env_Tree_Meadow_01
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 1
     topAtY: 0
@@ -4200,10 +5529,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.tool.axe
     shape: 4
     prefab: {fileID: 936837361358885588, guid: c037a3d7cf0b14449a2efc99e7a8f759, type: 3}
     prefabName: SM_Gen_Wep_Axe_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -4233,6 +5576,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -4247,6 +5603,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 203093951140853599, guid: 02233d3c799d9b746bcfa1a8b34a3ade, type: 3}
     prefabName: SM_Gen_Wep_Pickaxe_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -4276,6 +5633,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -4290,6 +5660,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 1294210970984720, guid: 19cc85b724f1bea4c806426ea56b0ac3, type: 3}
     prefabName: SM_Wep_Hammer_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -4329,10 +5700,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist
     shape: 4
     prefab: {fileID: 6597860165486235920, guid: 0a84514f554d6724098bbb2bd951d28b, type: 3}
     prefabName: SM_Gen_Chr_Business_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -4409,10 +5794,24 @@ MonoBehaviour:
       cloth2Verts: 366
       totalVerts: 3401
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.1
     shape: 4
     prefab: {fileID: 6346790247640168239, guid: 34e0c0478273ba845ab029d21cb52a79, type: 3}
     prefabName: SM_Gen_Chr_Business_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -4489,10 +5888,24 @@ MonoBehaviour:
       cloth2Verts: 828
       totalVerts: 3029
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.2
     shape: 4
     prefab: {fileID: 3863946197356255772, guid: e19a6cb628a52034393bc3af10bf0a72, type: 3}
     prefabName: SM_Gen_Chr_Jumpsuit_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -4569,10 +5982,24 @@ MonoBehaviour:
       cloth2Verts: 294
       totalVerts: 3022
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.3
     shape: 4
     prefab: {fileID: 1237103786066752629, guid: 6b755f2212fb17d4f8d6ee004f322f2c, type: 3}
     prefabName: SM_Gen_Chr_Jumpsuit_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -4649,10 +6076,24 @@ MonoBehaviour:
       cloth2Verts: 280
       totalVerts: 2848
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.4
     shape: 4
     prefab: {fileID: 3898496384508839527, guid: 3c469630796c82c4387e97ea9923fb5c, type: 3}
     prefabName: SM_Gen_Chr_Peasent_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -4729,10 +6170,24 @@ MonoBehaviour:
       cloth2Verts: 669
       totalVerts: 3468
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.5
     shape: 4
     prefab: {fileID: 3755277747141990492, guid: 89e401adace34884084d47323dfed9fc, type: 3}
     prefabName: SM_Gen_Chr_Peasent_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -4809,10 +6264,24 @@ MonoBehaviour:
       cloth2Verts: 285
       totalVerts: 3284
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.6
     shape: 4
     prefab: {fileID: 2651856903210286764, guid: eb54016f4b8b78e49b46d6ae66b3a976, type: 3}
     prefabName: SM_Gen_Chr_Prisoner_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -4889,10 +6358,24 @@ MonoBehaviour:
       cloth2Verts: 578
       totalVerts: 4268
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.7
     shape: 4
     prefab: {fileID: 7229581758514280130, guid: 2d07864ce16f5e042a9bb64e7d61d8ff, type: 3}
     prefabName: SM_Gen_Chr_Prisoner_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -4969,10 +6452,24 @@ MonoBehaviour:
       cloth2Verts: 440
       totalVerts: 3570
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.8
     shape: 4
     prefab: {fileID: 85345772695510664, guid: f17f73fd88e335b499ab14d595ab4540, type: 3}
     prefabName: SM_Gen_Chr_Space_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -5049,10 +6546,24 @@ MonoBehaviour:
       cloth2Verts: 731
       totalVerts: 3791
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.9
     shape: 4
     prefab: {fileID: 3458756976290546274, guid: 7b5fb4afed2fb4d4f8a267687405b11c, type: 3}
     prefabName: SM_Gen_Chr_Street_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -5129,10 +6640,24 @@ MonoBehaviour:
       cloth2Verts: 548
       totalVerts: 3148
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.10
     shape: 4
     prefab: {fileID: 9064580088405009711, guid: 2d9271186b9b6394698643d253e56181, type: 3}
     prefabName: SM_Gen_Chr_Street_Female_02
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -5209,10 +6734,24 @@ MonoBehaviour:
       cloth2Verts: 784
       totalVerts: 3551
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.11
     shape: 4
     prefab: {fileID: 3779599460037819802, guid: 078289b95e4329c4698859519204f23e, type: 3}
     prefabName: SM_Gen_Chr_Street_Female_03
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -5289,10 +6828,24 @@ MonoBehaviour:
       cloth2Verts: 417
       totalVerts: 2743
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.12
     shape: 4
     prefab: {fileID: 3381359940843186067, guid: 415206fdf339ef44cbed508914a9a7e2, type: 3}
     prefabName: SM_Gen_Chr_Street_Female_04
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -5369,10 +6922,24 @@ MonoBehaviour:
       cloth2Verts: 306
       totalVerts: 2789
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.13
     shape: 4
     prefab: {fileID: 3989931881015276717, guid: 253e338a5c21f2d4691b62c2411dbf0d, type: 3}
     prefabName: SM_Gen_Chr_Street_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -5449,10 +7016,24 @@ MonoBehaviour:
       cloth2Verts: 584
       totalVerts: 4081
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.14
     shape: 4
     prefab: {fileID: 2601170466289135297, guid: 0f895ab6fa2a7e9419ef17d25c18bf9c, type: 3}
     prefabName: SM_Gen_Chr_Street_Male_02
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -5529,10 +7110,24 @@ MonoBehaviour:
       cloth2Verts: 683
       totalVerts: 3155
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.15
     shape: 4
     prefab: {fileID: 1315923550000629945, guid: 875a2010d705b604f8a5d36dd1a8b485, type: 3}
     prefabName: SM_Gen_Chr_Street_Male_03
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -5609,10 +7204,24 @@ MonoBehaviour:
       cloth2Verts: 558
       totalVerts: 2730
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.16
     shape: 4
     prefab: {fileID: 1988853622293806244, guid: 56f849b594aff0f429ad26bb10cf911f, type: 3}
     prefabName: SM_Gen_Chr_Street_Male_04
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -5689,10 +7298,24 @@ MonoBehaviour:
       cloth2Verts: 480
       totalVerts: 3299
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.17
     shape: 4
     prefab: {fileID: 1199693883326640, guid: 9d6944272ca1ef448a6c08e77fec10f0, type: 3}
     prefabName: SM_Chr_Alien_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -5759,10 +7382,24 @@ MonoBehaviour:
       cloth2Verts: 1055
       totalVerts: 4752
       quality: 3
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.18
     shape: 4
     prefab: {fileID: 1076653177335980, guid: 9724bf37757803a4997ef69d34974e3d, type: 3}
     prefabName: SM_Chr_Alien_Male_02
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -5834,10 +7471,24 @@ MonoBehaviour:
       cloth2Verts: 558
       totalVerts: 5194
       quality: 3
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.19
     shape: 4
     prefab: {fileID: 1132329847709068, guid: 35b2f23f35e445a4ab2e58c5310d87bd, type: 3}
     prefabName: SM_Chr_Android_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -5899,10 +7550,24 @@ MonoBehaviour:
       cloth2Verts: 1748
       totalVerts: 4851
       quality: 4
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.20
     shape: 4
     prefab: {fileID: 1394440181588748, guid: a37e15f4f9ea2284097945cfeb8fe9c0, type: 3}
     prefabName: SM_Chr_Augmented_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -5979,10 +7644,24 @@ MonoBehaviour:
       cloth2Verts: 710
       totalVerts: 7149
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.21
     shape: 4
     prefab: {fileID: 1298641209967538, guid: 80a5aa5d3c514d842841d031ae24d8e1, type: 3}
     prefabName: SM_Chr_Cop_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -6054,10 +7733,24 @@ MonoBehaviour:
       cloth2Verts: 1280
       totalVerts: 4722
       quality: 3
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.22
     shape: 4
     prefab: {fileID: 1447477219941586, guid: 4493b9786df76d64fad99c1e9ac91ace, type: 3}
     prefabName: SM_Chr_CyberPunk_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -6134,10 +7827,24 @@ MonoBehaviour:
       cloth2Verts: 912
       totalVerts: 5838
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.23
     shape: 4
     prefab: {fileID: 1546608955749146, guid: 6b3fff6a0afe72545a41df9afbe304a2, type: 3}
     prefabName: SM_Chr_Cyber_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -6219,10 +7926,24 @@ MonoBehaviour:
       cloth2Verts: 746
       totalVerts: 5715
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.24
     shape: 4
     prefab: {fileID: 1550672808291654, guid: 0f9ccd71741ee50488626ad04bd719f9, type: 3}
     prefabName: SM_Chr_Cyber_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -6299,10 +8020,24 @@ MonoBehaviour:
       cloth2Verts: 517
       totalVerts: 4756
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.25
     shape: 4
     prefab: {fileID: 1112095941276756, guid: 9173cd04cd0fa7d478bdcc707b3aab84, type: 3}
     prefabName: SM_Chr_CyborgNinja_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -6369,10 +8104,24 @@ MonoBehaviour:
       cloth2Verts: 1185
       totalVerts: 4209
       quality: 3
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.26
     shape: 4
     prefab: {fileID: 1885274332863988, guid: 9d49ce5feb2bfd245a9e7f8e7a33026f, type: 3}
     prefabName: SM_Chr_Garbage_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -6449,10 +8198,24 @@ MonoBehaviour:
       cloth2Verts: 990
       totalVerts: 5174
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.27
     shape: 4
     prefab: {fileID: 1568468871427000, guid: aad8348bab0cb854f83377110195a3bc, type: 3}
     prefabName: SM_Chr_Hacker_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -6529,10 +8292,24 @@ MonoBehaviour:
       cloth2Verts: 792
       totalVerts: 5779
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.28
     shape: 4
     prefab: {fileID: 1787067274310504, guid: be6e7002526a3724f97d31ae3e596927, type: 3}
     prefabName: SM_Chr_Junky_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -6609,10 +8386,24 @@ MonoBehaviour:
       cloth2Verts: 674
       totalVerts: 7150
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.29
     shape: 4
     prefab: {fileID: 1295246249878948, guid: 5f7f35f5ee9d7fa4e9139ee56900d398, type: 3}
     prefabName: SM_Chr_Junky_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -6689,10 +8480,24 @@ MonoBehaviour:
       cloth2Verts: 694
       totalVerts: 5643
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.30
     shape: 4
     prefab: {fileID: 1967492678687660, guid: 57fc8dbaad512514aa9683fd9261d4a2, type: 3}
     prefabName: SM_Chr_Medical_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -6759,10 +8564,24 @@ MonoBehaviour:
       cloth2Verts: 990
       totalVerts: 5850
       quality: 3
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.31
     shape: 4
     prefab: {fileID: 1542036819191410, guid: fc62b962a6a22f148b707e207ab06996, type: 3}
     prefabName: SM_Chr_Monk_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -6839,10 +8658,24 @@ MonoBehaviour:
       cloth2Verts: 476
       totalVerts: 3683
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.32
     shape: 4
     prefab: {fileID: 1870903629192928, guid: 2c12eb3809a798446836011a05b7a00b, type: 3}
     prefabName: SM_Chr_Muscle_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -6919,10 +8752,24 @@ MonoBehaviour:
       cloth2Verts: 677
       totalVerts: 5950
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.33
     shape: 4
     prefab: {fileID: 1102192756587244, guid: 19c80593b90872a4fa3bb5a1139b26c1, type: 3}
     prefabName: SM_Chr_Rich_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -6999,10 +8846,24 @@ MonoBehaviour:
       cloth2Verts: 434
       totalVerts: 3969
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.34
     shape: 4
     prefab: {fileID: 1420900672563822, guid: a136ffd5a9160a74d975cbda00d432bb, type: 3}
     prefabName: SM_Chr_Rich_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -7079,10 +8940,24 @@ MonoBehaviour:
       cloth2Verts: 913
       totalVerts: 4017
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.35
     shape: 4
     prefab: {fileID: 1674885529865632, guid: 5384b0579aea21545b42e1e5bd2f4cc0, type: 3}
     prefabName: SM_Chr_FarmBoy_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -7164,10 +9039,24 @@ MonoBehaviour:
       cloth2Verts: 566
       totalVerts: 3872
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.36
     shape: 4
     prefab: {fileID: 1660164172697688, guid: a3981b0f4b9c4bb489dce3db59ee32b5, type: 3}
     prefabName: SM_Chr_FarmGirl_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -7249,10 +9138,24 @@ MonoBehaviour:
       cloth2Verts: 276
       totalVerts: 4568
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.37
     shape: 4
     prefab: {fileID: 1019791486663424, guid: 827a26e9b261b7847ac6cc3df54f2677, type: 3}
     prefabName: SM_Chr_Farmer_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -7329,10 +9232,24 @@ MonoBehaviour:
       cloth2Verts: 464
       totalVerts: 4091
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.38
     shape: 4
     prefab: {fileID: 1160220439793846, guid: 3c3a8236be548bb4c892cf39a5abadfe, type: 3}
     prefabName: SM_Chr_Farmer_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -7414,10 +9331,24 @@ MonoBehaviour:
       cloth2Verts: 172
       totalVerts: 2960
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.39
     shape: 4
     prefab: {fileID: 1350103588185370, guid: 6a71738add6483c4e8a1479556240d54, type: 3}
     prefabName: SM_Chr_Farmer_Male_Old_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -7499,10 +9430,24 @@ MonoBehaviour:
       cloth2Verts: 372
       totalVerts: 4376
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.40
     shape: 4
     prefab: {fileID: 1344827926872286, guid: 1007a253e12b0a040ac2601c4464f7c2, type: 3}
     prefabName: SM_Chr_Bandit_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -7584,10 +9529,24 @@ MonoBehaviour:
       cloth2Verts: 589
       totalVerts: 5161
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.41
     shape: 4
     prefab: {fileID: 1104157133539584, guid: 61a51a0904b1ab846b8015fc4017ff05, type: 3}
     prefabName: SM_Chr_Captain_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -7664,10 +9623,24 @@ MonoBehaviour:
       cloth2Verts: 840
       totalVerts: 3963
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.42
     shape: 4
     prefab: {fileID: 1076165931881782, guid: 46a285bd16879d240b8c67eb1509a33a, type: 3}
     prefabName: SM_Chr_GoldMiner_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -7744,10 +9717,24 @@ MonoBehaviour:
       cloth2Verts: 794
       totalVerts: 5510
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.43
     shape: 4
     prefab: {fileID: 1699602026086422, guid: ce1e13ae0f9a7e04ea8ff9e83390f083, type: 3}
     prefabName: SM_Chr_GoldMiner_Male_02
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -7824,10 +9811,24 @@ MonoBehaviour:
       cloth2Verts: 706
       totalVerts: 4696
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.44
     shape: 4
     prefab: {fileID: 1367791153762574, guid: 61cca5f35bc07064c8b53b56641c4bc4, type: 3}
     prefabName: SM_Chr_Hunter_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -7909,10 +9910,24 @@ MonoBehaviour:
       cloth2Verts: 828
       totalVerts: 6030
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.45
     shape: 4
     prefab: {fileID: 1910007866545544, guid: 665550c0dd38b7f4bb813b293b9efeaa, type: 3}
     prefabName: SM_Chr_Mexican_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -7989,10 +10004,24 @@ MonoBehaviour:
       cloth2Verts: 480
       totalVerts: 4251
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.46
     shape: 4
     prefab: {fileID: 1847472524973406, guid: 44cca74992c7c9244beb12877a22e37d, type: 3}
     prefabName: SM_Chr_Mexican_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -8074,10 +10103,24 @@ MonoBehaviour:
       cloth2Verts: 508
       totalVerts: 3919
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.47
     shape: 4
     prefab: {fileID: 1433619625548648, guid: 6dd2a3233145d71498a233d919f68aba, type: 3}
     prefabName: SM_Chr_Mexican_Male_02
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -8159,10 +10202,24 @@ MonoBehaviour:
       cloth2Verts: 526
       totalVerts: 4747
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.48
     shape: 4
     prefab: {fileID: 1614204489042142, guid: 53bec25d8f1b3d940891e307bc7cb56f, type: 3}
     prefabName: SM_Chr_NativeAmericanChief_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -8244,10 +10301,24 @@ MonoBehaviour:
       cloth2Verts: 809
       totalVerts: 12740
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.49
     shape: 4
     prefab: {fileID: 1725913698063520, guid: da740ceec44642c43b7db9037aa14024, type: 3}
     prefabName: SM_Chr_NativeAmericanElder_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -8324,10 +10395,24 @@ MonoBehaviour:
       cloth2Verts: 294
       totalVerts: 4831
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.50
     shape: 4
     prefab: {fileID: 1859953206739270, guid: f5b6bad2280936a43aa995f321812e03, type: 3}
     prefabName: SM_Chr_NativeAmericanWarrior_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -8404,10 +10489,24 @@ MonoBehaviour:
       cloth2Verts: 586
       totalVerts: 5116
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.51
     shape: 4
     prefab: {fileID: 1539777346913648, guid: 05e3035009b0eaf44b0e3cb2a6e2e98e, type: 3}
     prefabName: SM_Chr_NativeAmericanWarrior_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -8484,10 +10583,24 @@ MonoBehaviour:
       cloth2Verts: 612
       totalVerts: 4864
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.52
     shape: 4
     prefab: {fileID: 1465311805662470, guid: 6a8f21ba83708e943944219ac28b3aca, type: 3}
     prefabName: SM_Chr_NativeAmericanWarrior_Male_02
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -8569,10 +10682,24 @@ MonoBehaviour:
       cloth2Verts: 354
       totalVerts: 4731
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.53
     shape: 4
     prefab: {fileID: 1717726254881766, guid: 09093ff8624662d43a05d585d0c17e3d, type: 3}
     prefabName: SM_Chr_NativeAmericanWarrior_Male_03
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -8654,10 +10781,24 @@ MonoBehaviour:
       cloth2Verts: 488
       totalVerts: 7157
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.54
     shape: 4
     prefab: {fileID: 1251887375674614, guid: f4a4844b0c1edce4fadad9ab0d125d6c, type: 3}
     prefabName: SM_Chr_NativeAmerican_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -8734,10 +10875,24 @@ MonoBehaviour:
       cloth2Verts: 496
       totalVerts: 5637
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.55
     shape: 4
     prefab: {fileID: 1152173450834818, guid: 6c049a3b6de50ad40a9313fe33d2743f, type: 3}
     prefabName: SM_Chr_Priest_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -8819,10 +10974,24 @@ MonoBehaviour:
       cloth2Verts: 380
       totalVerts: 3299
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.56
     shape: 4
     prefab: {fileID: 1761784186981298, guid: d7f7756c24aae434f902ccb965490a0d, type: 3}
     prefabName: SM_Chr_Salesman_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -8899,10 +11068,24 @@ MonoBehaviour:
       cloth2Verts: 685
       totalVerts: 4102
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.57
     shape: 4
     prefab: {fileID: 1303515429907952, guid: 9b802b1f99ad3cf47afb574a6ce9ce7d, type: 3}
     prefabName: SM_Chr_Soldier_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -8984,10 +11167,24 @@ MonoBehaviour:
       cloth2Verts: 652
       totalVerts: 3893
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.58
     shape: 4
     prefab: {fileID: 1611975939568586, guid: 83d6acf81ce429644af87dbde08a456a, type: 3}
     prefabName: SM_Chr_Thug_Male_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -9069,10 +11266,24 @@ MonoBehaviour:
       cloth2Verts: 516
       totalVerts: 4552
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.59
     shape: 4
     prefab: {fileID: 1407229853643162, guid: 304b0adaadef5f643a6e6d4f06099092, type: 3}
     prefabName: SM_Chr_Thug_Male_02
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -9154,10 +11365,24 @@ MonoBehaviour:
       cloth2Verts: 442
       totalVerts: 4529
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.60
     shape: 4
     prefab: {fileID: 1165589093028652, guid: e335486154b22ae44b3eca1992570c22, type: 3}
     prefabName: SM_Chr_Traveller_Female_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -9239,10 +11464,24 @@ MonoBehaviour:
       cloth2Verts: 256
       totalVerts: 4139
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.61
     shape: 4
     prefab: {fileID: 1415556995387802, guid: 18ff8a7a7ca91ff4bab92d116fa797c8, type: 3}
     prefabName: Character_BusinessMale_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -9314,10 +11553,24 @@ MonoBehaviour:
       cloth2Verts: 422
       totalVerts: 3485
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.62
     shape: 4
     prefab: {fileID: 1513220350763136, guid: 325c2a72f558d4e419ec4f9ea74e54f5, type: 3}
     prefabName: Character_MercenaryMale_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -9399,10 +11652,24 @@ MonoBehaviour:
       cloth2Verts: 758
       totalVerts: 3525
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.63
     shape: 4
     prefab: {fileID: 1938837853794670, guid: 30c23f6bcd4f35648bbfc61c9f671e51, type: 3}
     prefabName: Character_MilitaryMale_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -9479,10 +11746,24 @@ MonoBehaviour:
       cloth2Verts: 92
       totalVerts: 3299
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.64
     shape: 4
     prefab: {fileID: 1564443653002224, guid: 7126961e40fcaf34297e9547d17c2f70, type: 3}
     prefabName: Character_RedneckMale_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -9564,10 +11845,24 @@ MonoBehaviour:
       cloth2Verts: 424
       totalVerts: 3738
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.65
     shape: 4
     prefab: {fileID: 1834572944770430, guid: 948bbd331c306c945ba7d4f6d7d76d61, type: 3}
     prefabName: Character_SportyMale_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -9644,10 +11939,24 @@ MonoBehaviour:
       cloth2Verts: 360
       totalVerts: 3975
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.66
     shape: 4
     prefab: {fileID: 1946735617089952, guid: a980100c51505dc469368879b38464e0, type: 3}
     prefabName: Character_SportyMale_02
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -9724,10 +12033,24 @@ MonoBehaviour:
       cloth2Verts: 404
       totalVerts: 3510
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.67
     shape: 4
     prefab: {fileID: 1278689708014708, guid: 86fbce35c5d130147bc5b953dbf3059c, type: 3}
     prefabName: Character_70sFemale_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -9809,10 +12132,24 @@ MonoBehaviour:
       cloth2Verts: 157
       totalVerts: 2763
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.68
     shape: 4
     prefab: {fileID: 1911775350683022, guid: daa9c4ca5ba6fe045b6458a025ba298d, type: 3}
     prefabName: Character_GothFemale_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -9889,10 +12226,24 @@ MonoBehaviour:
       cloth2Verts: 472
       totalVerts: 3504
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.69
     shape: 4
     prefab: {fileID: 1534467912851604, guid: 8a24513771aad7b4fb0e3d52c969a2c4, type: 3}
     prefabName: Character_MercenaryFemale_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -9974,10 +12325,24 @@ MonoBehaviour:
       cloth2Verts: 603
       totalVerts: 4453
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.70
     shape: 4
     prefab: {fileID: 1485438405061212, guid: 5d65c3bd98b79f84e996821ebfc0a190, type: 3}
     prefabName: Character_MilitaryFemale_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -10054,10 +12419,24 @@ MonoBehaviour:
       cloth2Verts: 96
       totalVerts: 3384
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.71
     shape: 4
     prefab: {fileID: 1351662411566064, guid: 747e5359c417b5d46bed4a579eba5c06, type: 3}
     prefabName: Character_SportyFemale_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -10139,10 +12518,24 @@ MonoBehaviour:
       cloth2Verts: 341
       totalVerts: 3846
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist.72
     shape: 4
     prefab: {fileID: 1605408588197318, guid: 136486fd3adeccb4a93bbede6d9d4a99, type: 3}
     prefabName: Character_SportyFemale_02
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -10219,10 +12612,24 @@ MonoBehaviour:
       cloth2Verts: 568
       totalVerts: 4395
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair
     shape: 4
     prefab: {fileID: 1553320175195256, guid: 1fe153fdea188ed4e892bb4c9972beae, type: 3}
     prefabName: SM_Chr_Attach_Male_Default_Hair_01
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10267,10 +12674,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 320
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair.1
     shape: 4
     prefab: {fileID: 1964416899909496, guid: de83cd92389c3bd4f97bcce0a9b2714a, type: 3}
     prefabName: SM_Chr_Attach_Male_Hair_01
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10315,10 +12736,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 373
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair.2
     shape: 4
     prefab: {fileID: 1346800952627374, guid: 9e97aa60fb05bc54db3ac4c1ae34bb8c, type: 3}
     prefabName: SM_Chr_Attach_Male_Hair_02
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10363,10 +12798,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 246
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair.3
     shape: 4
     prefab: {fileID: 1146829034728444, guid: 3ceca72bcb48a4642bb4f845c93e2a19, type: 3}
     prefabName: SM_Chr_Attach_Male_Hair_03
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10411,10 +12860,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 598
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair.4
     shape: 4
     prefab: {fileID: 1787159064215936, guid: 0fba6aa0583f5794c976afadb4b60f28, type: 3}
     prefabName: SM_Chr_Attach_Male_Hair_06
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10459,10 +12922,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 331
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair.5
     shape: 4
     prefab: {fileID: 1614463849732976, guid: 2b3554e8e5bb72a49b25995c0af62a5a, type: 3}
     prefabName: SM_Chr_Attach_Male_Hair_07
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10507,10 +12984,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 140
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair.6
     shape: 4
     prefab: {fileID: 1521171663515148, guid: 3722dd800daac424dac0695259ae2045, type: 3}
     prefabName: SM_Chr_Attach_Female_Default_Hair_01
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10555,10 +13046,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 438
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair.7
     shape: 4
     prefab: {fileID: 5359095326366316309, guid: 6acd4702716c64b49bd8504d04baea3b, type: 3}
     prefabName: SM_Gen_Chr_Attach_Hair_04
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10603,10 +13108,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 533
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair.8
     shape: 4
     prefab: {fileID: 4248136288128711640, guid: 6599356a61fd47a4eaaeed1ac887d65a, type: 3}
     prefabName: SM_Gen_Chr_Attach_Hair_06
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10651,10 +13170,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 964
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair.9
     shape: 4
     prefab: {fileID: 1090390649989844869, guid: d30df5bb55089ad4a989b1473c7a2293, type: 3}
     prefabName: SM_Gen_Chr_Attach_Hair_07
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10699,10 +13232,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 3542
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair.10
     shape: 4
     prefab: {fileID: 1213043109083764429, guid: d8091c7a2d9d8f2448b954f8720e99d5, type: 3}
     prefabName: SM_Gen_Chr_Attach_Hair_08
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10747,10 +13294,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 1236
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair.11
     shape: 4
     prefab: {fileID: 3051544637601550317, guid: 69ac49a48a29c9448ac5a507d38a3301, type: 3}
     prefabName: SM_Gen_Chr_Attach_Hair_09
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10795,10 +13356,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 254
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair.12
     shape: 4
     prefab: {fileID: 1816054855935763832, guid: 260657d29bfb17c47841ae7a62fcf3f4, type: 3}
     prefabName: SM_Gen_Chr_Attach_Hair_09_alt
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10843,10 +13418,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 614
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair.13
     shape: 4
     prefab: {fileID: 1272386763867106638, guid: 515a24c6c0ff2404782d8d7c7de093af, type: 3}
     prefabName: SM_Gen_Chr_Attach_Hair_10
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10891,10 +13480,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 401
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.hair.14
     shape: 4
     prefab: {fileID: 593454656204496684, guid: 8f87914eee5a99b4381f0a1c7fdcd158, type: 3}
     prefabName: SM_Gen_Chr_Attach_Hair_11
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10939,10 +13542,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 635
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.beard
     shape: 4
     prefab: {fileID: 1395447336697490, guid: 85622633d5d3be041b1046022b49ba23, type: 3}
     prefabName: SM_Chr_Attach_Beard_02
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -10987,10 +13604,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 430
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.beard.1
     shape: 4
     prefab: {fileID: 1699811905562804, guid: cbcd1c298510d4c48b4bcf78775d2dbe, type: 3}
     prefabName: SM_Chr_Attach_Beard_03
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -11035,10 +13666,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 336
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.beard.2
     shape: 4
     prefab: {fileID: 1787760780986768, guid: a06008e7cd183a944a56bb0d368d6067, type: 3}
     prefabName: SM_Chr_Attach_Beard_05
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -11083,10 +13728,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 427
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.beard.3
     shape: 4
     prefab: {fileID: 1858514242760228, guid: f33d4807920b5d84e927b8c82ac33f28, type: 3}
     prefabName: SM_Chr_Attach_Beard_06
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -11131,10 +13790,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 646
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.beard.4
     shape: 4
     prefab: {fileID: 1583257336742216, guid: 19309ad8de603e442841465c06251a6e, type: 3}
     prefabName: SM_Chr_Attach_Beard_07
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -11179,10 +13852,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 178
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.beard.5
     shape: 4
     prefab: {fileID: 3252513830353061635, guid: 5552d13d2d0636b4b84403bca027f0c0, type: 3}
     prefabName: SM_Gen_Chr_Attach_Beard_01
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -11227,10 +13914,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 758
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.beard.6
     shape: 4
     prefab: {fileID: 5381899529043745372, guid: 2c3db847c027ff04f9f95cf539c047de, type: 3}
     prefabName: SM_Gen_Chr_Attach_Beard_02
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -11275,10 +13976,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 459
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.beard.7
     shape: 4
     prefab: {fileID: 4158117797329843660, guid: 1d06f16f48b790548b778a5bdf7a69d6, type: 3}
     prefabName: SM_Gen_Chr_Attach_Chops_01
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -11323,10 +14038,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 250
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.attach.beard.8
     shape: 4
     prefab: {fileID: 4609227968844860818, guid: 6b5f1a42b82110e49988de1ad2a41fd9, type: 3}
     prefabName: SM_Gen_Chr_Attach_Moustache_01
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -11371,10 +14100,630 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 124
       quality: 1
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.colonist.73
+    shape: 4
+    prefab: {fileID: 1014623955112378, guid: 97f7e6b749ccd1b4fbd20203ba928e47, type: 3}
+    prefabName: Character_ToplessMale_01
+    prefabUnder: 
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780825
+        y: 0.1877069
+        width: 0.0023999996
+        height: 0.0024000406
+      - serializedVersion: 2
+        x: 0.017655632
+        y: 0.1848741
+        width: 0.0039484818
+        height: 0.003978491
+      hair: []
+      cloth: []
+      cloth2:
+      - serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1
+        height: 1
+      skinVerts: 1559
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 1588
+      totalVerts: 3147
+      quality: 1
+    bandit: 1
+    overlayName: SM_Char_Attach_Male_Armor_01
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth:
+      - serializedVersion: 2
+        x: 0.46723655
+        y: 0.24469687
+        width: 0.3885586
+        height: 0.25401324
+      cloth2:
+      - serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1
+        height: 1
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 768
+      cloth2Verts: 144
+      totalVerts: 912
+      quality: 4
+  - moduleId: odyssey.module.pawn.colonist.74
+    shape: 4
+    prefab: {fileID: 1014623955112378, guid: 97f7e6b749ccd1b4fbd20203ba928e47, type: 3}
+    prefabName: Character_ToplessMale_01
+    prefabUnder: 
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780825
+        y: 0.1877069
+        width: 0.0023999996
+        height: 0.0024000406
+      - serializedVersion: 2
+        x: 0.017655632
+        y: 0.1848741
+        width: 0.0039484818
+        height: 0.003978491
+      hair: []
+      cloth: []
+      cloth2:
+      - serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1
+        height: 1
+      skinVerts: 1559
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 1588
+      totalVerts: 3147
+      quality: 1
+    bandit: 1
+    overlayName: SM_Char_Attach_Male_Armor_02
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth:
+      - serializedVersion: 2
+        x: 0.8174778
+        y: 0.27111962
+        width: 0.15430766
+        height: 0.16583219
+      cloth2:
+      - serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1
+        height: 1
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 856
+      cloth2Verts: 101
+      totalVerts: 957
+      quality: 4
+  - moduleId: odyssey.module.pawn.colonist.75
+    shape: 4
+    prefab: {fileID: 1014623955112378, guid: 97f7e6b749ccd1b4fbd20203ba928e47, type: 3}
+    prefabName: Character_ToplessMale_01
+    prefabUnder: 
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780825
+        y: 0.1877069
+        width: 0.0023999996
+        height: 0.0024000406
+      - serializedVersion: 2
+        x: 0.017655632
+        y: 0.1848741
+        width: 0.0039484818
+        height: 0.003978491
+      hair: []
+      cloth: []
+      cloth2:
+      - serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1
+        height: 1
+      skinVerts: 1559
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 1588
+      totalVerts: 3147
+      quality: 1
+    bandit: 1
+    overlayName: SM_Char_Attach_Male_Armor_03
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth:
+      - serializedVersion: 2
+        x: 0.73883396
+        y: 0.28764567
+        width: 0.21071804
+        height: 0.20521069
+      cloth2:
+      - serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1
+        height: 1
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 2131
+      cloth2Verts: 99
+      totalVerts: 2230
+      quality: 4
+  - moduleId: odyssey.module.pawn.colonist.76
+    shape: 4
+    prefab: {fileID: 1605408588197318, guid: 136486fd3adeccb4a93bbede6d9d4a99, type: 3}
+    prefabName: Character_SportyFemale_02
+    prefabUnder: 
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.017362352
+        y: 0.1864837
+        width: 0.002551416
+        height: 0.0024442226
+      hair: []
+      cloth: []
+      cloth2:
+      - serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1
+        height: 1
+      skinVerts: 1000
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 3395
+      totalVerts: 4395
+      quality: 1
+    bandit: 1
+    overlayName: SM_Char_Attach_Female_Armor_01
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth:
+      - serializedVersion: 2
+        x: 0.46723655
+        y: 0.24469687
+        width: 0.3885586
+        height: 0.25401324
+      cloth2:
+      - serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1
+        height: 1
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 748
+      cloth2Verts: 166
+      totalVerts: 914
+      quality: 4
+  - moduleId: odyssey.module.pawn.colonist.77
+    shape: 4
+    prefab: {fileID: 1605408588197318, guid: 136486fd3adeccb4a93bbede6d9d4a99, type: 3}
+    prefabName: Character_SportyFemale_02
+    prefabUnder: 
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.017362352
+        y: 0.1864837
+        width: 0.002551416
+        height: 0.0024442226
+      hair: []
+      cloth: []
+      cloth2:
+      - serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1
+        height: 1
+      skinVerts: 1000
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 3395
+      totalVerts: 4395
+      quality: 1
+    bandit: 1
+    overlayName: SM_Char_Attach_Female_Armor_02
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth:
+      - serializedVersion: 2
+        x: 0.8174778
+        y: 0.27111962
+        width: 0.15430766
+        height: 0.16583219
+      cloth2:
+      - serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1
+        height: 1
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 870
+      cloth2Verts: 96
+      totalVerts: 966
+      quality: 4
+  - moduleId: odyssey.module.pawn.colonist.78
+    shape: 4
+    prefab: {fileID: 1605408588197318, guid: 136486fd3adeccb4a93bbede6d9d4a99, type: 3}
+    prefabName: Character_SportyFemale_02
+    prefabUnder: 
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.017362352
+        y: 0.1864837
+        width: 0.002551416
+        height: 0.0024442226
+      hair: []
+      cloth: []
+      cloth2:
+      - serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1
+        height: 1
+      skinVerts: 1000
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 3395
+      totalVerts: 4395
+      quality: 1
+    bandit: 1
+    overlayName: SM_Char_Attach_Female_Armor_03
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth:
+      - serializedVersion: 2
+        x: 0.73883396
+        y: 0.28764567
+        width: 0.21071804
+        height: 0.20521069
+      cloth2:
+      - serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1
+        height: 1
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 2152
+      cloth2Verts: 92
+      totalVerts: 2244
+      quality: 4
+  - moduleId: odyssey.module.attach.head
+    shape: 4
+    prefab: {fileID: 1076520536433196, guid: 7b0c656d342f1f64eb4267baf477675f, type: 3}
+    prefabName: SM_Chr_Attach_Helmet_03
+    prefabUnder: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 0
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.animal.hog
     shape: 4
     prefab: {fileID: 919132149155446097, guid: 4a05467d051682c4788592b32f244768, type: 3}
     prefabName: Pig
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -11418,10 +14767,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.animal.rat
     shape: 4
     prefab: {fileID: 919132149155446097, guid: 84b54a4e64593d9418f72dbd733ff161, type: 3}
     prefabName: Rat
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -11473,10 +14836,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.meal
     shape: 4
     prefab: {fileID: 8752115278972753073, guid: 53e689cdb89924f4eacb5b2f01c0bae0, type: 3}
     prefabName: SM_Gen_Prop_Sack_Stack_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -11516,10 +14893,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.salvage
     shape: 4
     prefab: {fileID: 1183212502589018, guid: 8c52c17108ac4d14b93017d91e804006, type: 3}
     prefabName: SM_Prop_Box_Supplies_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -11559,10 +14950,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.wood
     shape: 4
     prefab: {fileID: 1512692650189916, guid: 64662ae7674b301469fcf38f47b7c658, type: 3}
     prefabName: SM_Prop_LogPile_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -11602,10 +15007,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.stone
     shape: 4
     prefab: {fileID: 7211606713778384998, guid: cc46b771562eb3e4793292607fc3f72b, type: 3}
     prefabName: SM_Gen_Env_Rock_03
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -11645,10 +15064,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.ironore
     shape: 4
     prefab: {fileID: 1168210563750090145, guid: daad3195a405192409324b56eec44e2b, type: 3}
     prefabName: SM_Gen_Env_Rock_08
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -11688,10 +15121,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.coal
     shape: 4
     prefab: {fileID: 6873938577213127126, guid: a9a82dc7a09f37741916c33cc3483e7c, type: 3}
     prefabName: SM_Gen_Env_Rock_Pebbles_02
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -11731,10 +15178,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.carrots
     shape: 13
     prefab: {fileID: 1879033853735152, guid: 6d30e14ec4d9bf240be449faa7956c55, type: 3}
     prefabName: SM_Prop_Carrot_01_L
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -11774,10 +15235,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.bat
     shape: 4
     prefab: {fileID: 1079387494257586, guid: 27af943660497544a943e5dc2595eea7, type: 3}
     prefabName: SM_Wep_Bat_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -11807,6 +15282,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -11821,6 +15309,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 1053601135882890, guid: e836a075ea7fb4948a5ac07f447e206d, type: 3}
     prefabName: SM_Wep_Crowbar_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -11850,6 +15339,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -11864,6 +15366,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 1657996491295356, guid: 9023a47e211f9384aa25b0a32a008f0f, type: 3}
     prefabName: SM_Wep_Machete_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -11893,6 +15396,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []
@@ -11907,6 +15423,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 1565935239740110, guid: 4d5e45013e2bb8042b0207cf4a203289, type: 3}
     prefabName: SM_Wep_Sword_01
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -11946,10 +15463,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.anim.combat.swing.light
     shape: 0
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -12001,10 +15532,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.anim.combat.swing.heavy
     shape: 0
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -12052,10 +15597,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.anim.combat.react.hit
     shape: 0
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -12111,10 +15670,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.anim.combat.react.stagger
     shape: 0
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -12170,10 +15743,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.anim.combat.dodge
     shape: 0
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -12225,10 +15812,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.anim.combat.stun
     shape: 0
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -12280,10 +15881,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.anim.combat.downed
     shape: 0
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -12335,10 +15950,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.anim.combat.death
     shape: 0
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -12394,10 +16023,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.anim.combat.death.pose
     shape: 0
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -12453,10 +16096,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.anim.combat.sheath.draw
     shape: 0
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -12504,10 +16161,24 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.anim.combat.sheath.sheathe
     shape: 0
     prefab: {fileID: 0}
     prefabName: 
+    prefabUnder: 
     centreXZ: 0
     baseAtY: 0
     topAtY: 0
@@ -12545,6 +16216,19 @@ MonoBehaviour:
     sitClipName: 
     quadrupedGait: 0
     appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
       skin: []
       hair: []
       cloth: []

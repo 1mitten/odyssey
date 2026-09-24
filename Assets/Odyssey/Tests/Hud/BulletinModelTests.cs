@@ -204,15 +204,15 @@ namespace Odyssey.Tests.Hud
                 subject: ItemHandle.Meal, amount: 12));
             snapshot.AddBulletin(new BulletinView(2, IncidentHandle.Theft, new CellRef(0, 7, 1), 200, favourability: 2,
                 subject: ItemHandle.Machete, amount: 1));
-            snapshot.AddBulletin(new BulletinView(3, IncidentHandle.MarauderLeft, new CellRef(0, 7, 1), 300));
+            snapshot.AddBulletin(new BulletinView(3, IncidentHandle.BanditLeft, new CellRef(0, 7, 1), 300));
             model.Refresh(snapshot);
 
             string theft = Registry.Label("ui.bulletin.theft");
             Assert.That(model.Rows[2].Key, Is.EqualTo("ui.bulletin.theft"));
             Assert.That(model.Rows[2].Title, Is.EqualTo(theft + " · " + ItemLabels.Label(ItemHandle.Meal) + " × 12"));
             Assert.That(model.Rows[1].Title, Is.EqualTo(theft + " · " + ItemLabels.Label(ItemHandle.Machete)));
-            Assert.That(model.Rows[0].Key, Is.EqualTo("ui.bulletin.marauderleft"));
-            Assert.That(model.Rows[0].Title, Is.EqualTo(Registry.Label("ui.bulletin.marauderleft")));
+            Assert.That(model.Rows[0].Key, Is.EqualTo("ui.bulletin.banditleft"));
+            Assert.That(model.Rows[0].Title, Is.EqualTo(Registry.Label("ui.bulletin.banditleft")));
             Assert.That(model.ArrivedFavourability, Is.EqualTo(2), "a theft did not chime as a blow");
         }
 

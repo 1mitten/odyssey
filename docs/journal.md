@@ -12257,3 +12257,31 @@ mid-carry; an attacker in reach while still walking needs several attackers on o
 The twin every hour is the thing to copy: "the same final hash" would have said the same, but an
 hourly comparison says *where* two runs part, and here it said they never did — which is what pointed
 at the save.
+
+## 2026-09-24 — The marauder becomes the bandit, and stops looking like a colonist
+
+The owner: *"The marauders look like colonists."* They did, exactly. The figure director asked a
+pawn only whether it was an animal, so a hostile person was dealt a colonist's body and the colony's
+white jumpsuit. The word is **bandit** now, everywhere but this journal (design 42). A bandit is a
+person rolled as a colonist and then dressed: welding helmet, red vest, black trousers, and a
+crowbar or a bat. The owner asked for each to have a name of their own, because bandits may be
+kidnapped one day.
+
+The contact sheets settled more than the helmet. The trousers and every vest in Battle Royale are
+**camo texture**, not swatch cells, so the swatch classifier painted the male's belt and boots and
+left the garments alone. The male rig's trouser camo also shares a box of the atlas with every vest.
+Three consequences:
+
+- Each gang row carries two sets of rectangles.
+- The body's black is the *whole atlas*, lying behind its skin. The character shader now lets the
+  first slot a fragment is inside win. That changes nothing for a colonist, because the classifier
+  keeps a colonist's slots disjoint.
+- The far form keeps the vest a separate part, through a twin material, so it can be painted from
+  its own set.
+
+The weapon is dealt by a hash of the pawn rather than a draw, so no roll after the first bandit
+moves.
+
+One test had been measuring swing speed without saying so. Three bandits at a one-sided wall struck
+three walls with the machete and two with the slower blunt weapons, because fewer walls fell in the
+run. The test is now pinned to the machete it was measured with. Nobody stood about either way.

@@ -41,7 +41,7 @@ namespace Odyssey.Sim.Events
 
         /// <summary>
         /// What an entry is about, for the few that are about something (design 33 §17): the item
-        /// def a marauder carried off and how many. Keyed by entry id, ascending, because entries
+        /// def a bandit carried off and how many. Keyed by entry id, ascending, because entries
         /// are appended in id order and so are these.
         /// </summary>
         public readonly struct Detail
@@ -157,7 +157,7 @@ namespace Odyssey.Sim.Events
                 hash.Add(entry.Cell);
             }
 
-            // Only while set, so a colony no marauder ever robbed hashes as it did before.
+            // Only while set, so a colony no bandit ever robbed hashes as it did before.
             if (_details.Count == 0) return;
             hash.Add(_details.Count);
             for (int i = 0; i < _details.Count; i++)

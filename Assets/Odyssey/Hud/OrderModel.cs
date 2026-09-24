@@ -35,7 +35,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// Is this pawn a colonist — the only thing the draft applies to? Asked of the view's
-        /// flags (design 33 §5), not of its kind: a marauder is kind 3 and a person, and "kind 0"
+        /// flags (design 33 §5), not of its kind: a bandit is kind 3 and a person, and "kind 0"
         /// would have been right for the wrong reason until the first hostile arrived.
         /// </summary>
         public static bool IsColonist(WorldSnapshot snapshot, PawnId pawn) =>

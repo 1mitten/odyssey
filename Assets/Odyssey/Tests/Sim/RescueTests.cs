@@ -124,10 +124,10 @@ namespace Odyssey.Tests.Sim
             Assert.That(Rescue(colony, rescuer, other), Is.EqualTo(IntentRejection.NotPermitted), "a patient standing up");
             Assert.That(Rescue(colony, rescuer, rescuer), Is.EqualTo(IntentRejection.NotPermitted), "herself");
 
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, -8, 4));
-            Strike(colony, by, marauder, marauder.HpMilli + 1_000);
-            Assume.That(marauder.Downed, Is.True);
-            Assert.That(Rescue(colony, rescuer, marauder), Is.EqualTo(IntentRejection.NotPermitted), "a downed marauder");
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, -8, 4));
+            Strike(colony, by, bandit, bandit.HpMilli + 1_000);
+            Assume.That(bandit.Downed, Is.True);
+            Assert.That(Rescue(colony, rescuer, bandit), Is.EqualTo(IntentRejection.NotPermitted), "a downed bandit");
 
             Assert.That(Rescue(colony, rescuer, patient), Is.EqualTo(IntentRejection.None), "the control");
             Assert.That(Rescue(colony, rescuer, patient), Is.EqualTo(IntentRejection.AlreadyInThatState));

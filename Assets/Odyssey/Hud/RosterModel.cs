@@ -148,7 +148,7 @@ namespace Odyssey.Hud
             {
                 // The roster is the colony's people (design 29 §2): an animal has no card, no
                 // name and no slot to be dragged into, so it never enters the order at all. Nor
-                // has a marauder, which is a person and not ours (design 33 §5): asked of the
+                // has a bandit, which is a person and not ours (design 33 §5): asked of the
                 // flags, never of the kind.
                 if (!pawns[i].IsColonist) continue;
                 PawnId id = pawns[i].Id;

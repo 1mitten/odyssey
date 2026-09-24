@@ -71,7 +71,7 @@
 
     <!--
       How long an attack nobody ordered (a hunt, a revenge, a self-defence) keeps its first target
-      before it thinks again, so a marauder notices a nearer colonist. INVENTED: five seconds.
+      before it thinks again, so a bandit notices a nearer colonist. INVENTED: five seconds.
     -->
     <rechooseTicks>300</rechooseTicks>
 

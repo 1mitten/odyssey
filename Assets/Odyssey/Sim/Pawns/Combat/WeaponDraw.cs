@@ -10,7 +10,7 @@ namespace Odyssey.Sim.Pawns
     ///
     /// <para>Drawn when the pawn holds a weapon and any of four things is true:</para>
     /// <list type="bullet">
-    /// <item>it is hostile — a marauder always has its weapon out;</item>
+    /// <item>it is hostile — a bandit always has its weapon out;</item>
     /// <item>it is a drafted colonist;</item>
     /// <item>it is in a melee attack whose target is within <see cref="Reach"/> tiles —
     /// Chebyshev on its own layer, or the layer above or below;</item>

@@ -20,7 +20,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public IntentRejection HandleSetDrafted(Intent intent)
         {
-            // One of ours (design 33 §5): a marauder is a person and is nobody's to draft.
+            // One of ours (design 33 §5): a bandit is a person and is nobody's to draft.
             Pawn? pawn = _ctx.Pawns.Get(new PawnId(intent.A));
             if (pawn == null || !pawn.IsColonist) return IntentRejection.NotPermitted;
 

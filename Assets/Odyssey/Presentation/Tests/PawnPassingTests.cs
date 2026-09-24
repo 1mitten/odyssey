@@ -117,33 +117,33 @@ namespace Odyssey.Tests.Presentation
                 "walking pawn must veer to the side of the tile around the stationary pawn");
         }
 
-        // What the simulation publishes for each kind (PawnRegistry.Contribute): a marauder is a
+        // What the simulation publishes for each kind (PawnRegistry.Contribute): a bandit is a
         // person under the hostile flag, a hog is no person at all. Kind numbers are the sim's
         // PawnKindIndex, which this assembly cannot see.
-        const int Colonist = 0, Hog = 1, Marauder = 3;
+        const int Colonist = 0, Hog = 1, Bandit = 3;
 
         static PawnFlags FlagsOf(int kind) => kind switch
         {
             Colonist => PawnFlags.Person,
-            Marauder => PawnFlags.Person | PawnFlags.Hostile,
+            Bandit => PawnFlags.Person | PawnFlags.Hostile,
             _ => PawnFlags.None,
         };
 
         /// <summary>
         /// **The person flag decides who steps round whom, not the kind** (design 33 §8c). Every
-        /// person - colonist or marauder - steps round every other person standing in its way,
-        /// so two marauders walking into a brawl do not draw through each other or through a
+        /// person - colonist or bandit - steps round every other person standing in its way,
+        /// so two bandits walking into a brawl do not draw through each other or through a
         /// colonist; an animal is outside the sidestep on both sides (design 29). Before the
-        /// combat contracts the gate was <c>Kind == 0</c>, and a marauder, kind 3, neither
+        /// combat contracts the gate was <c>Kind == 0</c>, and a bandit, kind 3, neither
         /// stepped round anybody nor was stepped round.
         /// </summary>
         [TestCase(Colonist, Colonist, true)]
-        [TestCase(Marauder, Colonist, true)]
-        [TestCase(Colonist, Marauder, true)]
-        [TestCase(Marauder, Marauder, true)]
+        [TestCase(Bandit, Colonist, true)]
+        [TestCase(Colonist, Bandit, true)]
+        [TestCase(Bandit, Bandit, true)]
         [TestCase(Hog, Colonist, false)]
         [TestCase(Colonist, Hog, false)]
-        [TestCase(Marauder, Hog, false)]
+        [TestCase(Bandit, Hog, false)]
         public void ThePersonFlagDecidesWhoStepsRound(int walkerKind, int standerKind, bool steps)
         {
             CellRef c0 = new CellRef(0, 0, 0);

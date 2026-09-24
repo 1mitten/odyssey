@@ -39,7 +39,7 @@ namespace Odyssey.Tests.Presentation
         /// the 3 m radius, spread over several layers so the vertical axis is exercised, and a
         /// mixture of walking and standing so <c>InTheWay</c> takes both of its branches. And a
         /// mixture of kinds as the simulation publishes them (design 33 §8c): colonists,
-        /// marauders - persons under the hostile flag, who step round and are stepped round - and
+        /// bandits - persons under the hostile flag, who step round and are stepped round - and
         /// animals, who are outside the sidestep on both sides, so every scan is pinned to the
         /// same gate and not only to the same arithmetic.
         /// </summary>
@@ -56,7 +56,7 @@ namespace Odyssey.Tests.Presentation
                 int y = random.Next(0, 3);
                 var cell = new CellRef(x, z, y);
 
-                // One in five a marauder (kind 3), one in seven a hog (kind 1), the rest colonists.
+                // One in five a bandit (kind 3), one in seven a hog (kind 1), the rest colonists.
                 int kind = i % 5 == 4 ? 3 : i % 7 == 6 ? 1 : 0;
                 PawnFlags flags = kind == 3 ? PawnFlags.Person | PawnFlags.Hostile
                     : kind == 1 ? PawnFlags.None : PawnFlags.Person;

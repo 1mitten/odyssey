@@ -88,7 +88,7 @@ namespace Odyssey.Hud
         /// board. Not <see cref="Draft"/>'s deep dark red, which marks <i>who</i> is under orders —
         /// the ring marks <i>whom</i> they are sent at, and the two are on screen together in every
         /// fight, one over a head and one under feet. Not <see cref="HudTheme.Bad"/>, the Cancel
-        /// tool's salmon red, which is also the hostile marker's diamond over the very marauder the
+        /// tool's salmon red, which is also the hostile marker's diamond over the very bandit the
         /// ring is drawn under: a ring in the marker's colour would read as more of the marker —
         /// "this is an enemy" — rather than "this is the one you sent them at". Pure red with a
         /// little blue kept out of pink sits apart from both: brighter than the draft by half

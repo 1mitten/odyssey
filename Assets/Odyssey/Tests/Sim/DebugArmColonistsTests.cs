@@ -91,7 +91,7 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void AMarauderIsNotArmedTwiceAndAnAnimalIsNotArmedAtAll()
+        public void ABanditIsNotArmedTwiceAndAnAnimalIsNotArmedAtAll()
         {
             var colony = Board(colonists: 1);
             colony.World.Tick(5);

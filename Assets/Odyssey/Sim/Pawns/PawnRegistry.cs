@@ -72,10 +72,10 @@ namespace Odyssey.Sim.Pawns
             // own, so no scenario, headless run or fixture had to change.
             pawn.RollSeed = _ctx.Seed;
             Adopt(pawn);
-            // What the kind arrives holding (design 33 §1: the marauder is armed). After the
+            // What the kind arrives holding (design 33 §1: the bandit is armed). After the
             // adoption, so the rules see a pawn the registry knows; a kind naming no weapon is one
             // comparison. The loader never comes here — it restores the hand from the save.
-            if (_ctx.Content.WeaponOf(kind) >= 0) _ctx.WeaponRules.ArmOnSpawn(pawn, _ctx);
+            if (_ctx.Content.ArmsOnSpawn(kind)) _ctx.WeaponRules.ArmOnSpawn(pawn, _ctx);
             return pawn;
         }
 
@@ -159,7 +159,7 @@ namespace Odyssey.Sim.Pawns
         /// nothing is dealt one of the content's melee weapons — a roll on her own stream, so a seed
         /// deals the same arms every time — made on the nearest cell that can take it and taken
         /// straight up (<see cref="WeaponHand.TakeUp"/>), exactly as <see cref="IWeaponRules.ArmOnSpawn"/>
-        /// arms a marauder. A colonist already holding a weapon keeps it; a downed one is skipped.
+        /// arms a bandit. A colonist already holding a weapon keeps it; a downed one is skipped.
         /// <c>AlreadyInThatState</c> when there was nobody to arm.
         /// </summary>
         public IntentRejection HandleDebugArmColonists(Intent intent)
@@ -193,12 +193,12 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// The spawn cell if nobody stands on it, else the nearest free tile round it (owner,
-        /// 2026-09-24: marauders spawned in quick succession must not pile on one tile; design 33
+        /// 2026-09-24: bandits spawned in quick succession must not pile on one tile; design 33
         /// §9h). Rings outward from the spawn point, in a fixed scan order so the answer is a
         /// function of the world; each column is tried on the spawn layer, then one up, then one
         /// down — the same lift a move order uses — and a tile must be standable, unoccupied and
         /// reachable from the spawn point, so a pawn never arrives walled into a pocket. Falls back
-        /// to the spawn cell itself if every ring is full. Every kind, not only marauders: a
+        /// to the spawn cell itself if every ring is full. Every kind, not only bandits: a
         /// shared tile is the same fault whoever stands on it. A debug command, so it costs a scan
         /// of the pawns per candidate and nothing per tick.
         /// </summary>
@@ -304,7 +304,7 @@ namespace Odyssey.Sim.Pawns
             // A weapon in the hand goes down where the pawn stood, or it would stay carried by an
             // id that no longer exists, with no cell, for ever (design 33 §6D). A death has already
             // let go of it through the drop listener, so this is a no-op there; it is for every
-            // other way off the board — a marauder that flees off the edge (integration, 2026-09-23).
+            // other way off the board — a bandit that flees off the edge (integration, 2026-09-23).
             if (pawn.EquippedItem != 0) WeaponHand.PutDown(pawn, _ctx, pawn.Cell);
             _pawns.RemoveAt(index);
             _byId.Remove(pawn.Id.Value);
@@ -347,7 +347,7 @@ namespace Odyssey.Sim.Pawns
             new DownedJobDriver(),
             new EquipJobDriver(),
             new RescueJobDriver(),
-            // A marauder carrying something off the board (design 33 §17), JobHandle 22.
+            // A bandit carrying something off the board (design 33 §17), JobHandle 22.
             new StealJobDriver(),
         };
 

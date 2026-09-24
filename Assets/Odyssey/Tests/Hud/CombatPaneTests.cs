@@ -7,7 +7,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The inspect pane's fight (design 33 §1, §5f): a corpse named "Corpse of X", a marauder with
+    /// The inspect pane's fight (design 33 §1, §5f): a corpse named "Corpse of X", a bandit with
     /// none of a colonist's pane, and the Health tab's rows. The shape answers are the model's so
     /// the shell never decides them; these hold the answers lane C gave.
     /// </summary>
@@ -17,7 +17,7 @@ namespace Odyssey.Tests.Hud
 
         const int Pool = 100_000;
 
-        /// <summary>A colonist, a hog, a marauder; the three corpses 7 (a colonist), 8 (a hog), 9 (a marauder).</summary>
+        /// <summary>A colonist, a hog, a bandit; the three corpses 7 (a colonist), 8 (a hog), 9 (a bandit).</summary>
         static WorldSnapshot Board(int tick = 0)
         {
             WorldSnapshot frame = Frame.Write(tick: tick);
@@ -73,13 +73,24 @@ namespace Odyssey.Tests.Hud
             finally { ColonistNames.Book.Clear(); }
         }
 
-        /// <summary>An animal and a marauder have no names: the kind's word, with its article.</summary>
+        /// <summary>An animal has no name: the kind's word, with its article.</summary>
         [Test]
-        public void AnAnimalsAndAMaraudersCorpseAreCalledByTheirKind()
+        public void AnAnimalsCorpseIsCalledByItsKind()
         {
             string corpse = Registry.Label(InspectModel.CorpseKey);
             Assert.That(Corpse(8).Title, Is.EqualTo(corpse + " of a " + Registry.Label("ui.pawn.hog").ToLowerInvariant()));
-            Assert.That(Corpse(9).Title, Is.EqualTo(corpse + " of a " + Registry.Label("ui.pawn.marauder").ToLowerInvariant()));
+        }
+
+        /// <summary>
+        /// A bandit is a person with a name of their own (design 42 §2: "they need to be their own
+        /// character"), dealt from the colonist pool by the seed and id the corpse kept, and the
+        /// corpse keeps it.
+        /// </summary>
+        [Test]
+        public void ABanditsCorpseIsCalledByTheirName()
+        {
+            string name = ColonistNames.Of(44u, new PawnId(13));
+            Assert.That(Corpse(9).Title, Is.EqualTo(Registry.Label(InspectModel.CorpseKey) + " of " + name));
         }
 
         [Test]
@@ -91,7 +102,7 @@ namespace Odyssey.Tests.Hud
             // renamed on the corpse too (RegistryTests.TheInspectPaneWritesNoPawnKindItself).
             Assert.That(pane.Subtitle, Is.EqualTo(Registry.Label("ui.pawn.colonist").ToLowerInvariant()), "what it was");
             Assert.That(Corpse(8).Subtitle, Is.EqualTo(Registry.Label("ui.pawn.animal").ToLowerInvariant()));
-            Assert.That(Corpse(9).Subtitle, Is.EqualTo(Registry.Label("ui.pawn.hostile").ToLowerInvariant()));
+            Assert.That(Corpse(9).Subtitle, Is.EqualTo(Registry.Label("ui.pawn.bandit").ToLowerInvariant()));
             Assert.That(pane.Subtitle, Is.EqualTo("colonist"), "the words themselves did not change");
         }
 
@@ -144,7 +155,7 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void ACorpseHasNoLivingPawnsPaneAndAMaraudersCorpseWearsTheCorpseBadge()
+        public void ACorpseHasNoLivingPawnsPaneAndABanditsCorpseWearsTheCorpseBadge()
         {
             foreach (int id in new[] { 7, 8, 9 })
             {
@@ -156,15 +167,16 @@ namespace Odyssey.Tests.Hud
             }
         }
 
-        // ---- the marauder ------------------------------------------------------------------------
+        // ---- the bandit ------------------------------------------------------------------------
 
         /// <summary>
-        /// A marauder is a person and not ours (design 33 §1, §5c): no face or portrait, no needs,
-        /// no skills, no Health tab and no Draft button — none of which it has, or could be given.
-        /// The colonist on the same frame is the control.
+        /// A bandit is a person and not ours (design 33 §1, §5c): no needs, no skills, no Health
+        /// tab and no Draft button — none of which it has, or could be given. But it is a person
+        /// with a name and a portrait of its own, helmet on (design 42 §2). The colonist on the
+        /// same frame is the control.
         /// </summary>
         [Test]
-        public void AMaraudersPaneHasNoNeedsSkillsHealthTabOrDraftButton()
+        public void ABanditsPaneHasNoNeedsSkillsHealthTabOrDraftButton()
         {
             WorldSnapshot frame = Board();
             var pane = new InspectModel();
@@ -177,26 +189,27 @@ namespace Odyssey.Tests.Hud
 
             pane.SetColonist(Raider);
             pane.Refresh(frame);
-            Assert.That(pane.ShowsFace, Is.False, "a marauder wore a colonist's face");
-            Assert.That(pane.ShowsColonistBody, Is.False, "a marauder had needs");
-            Assert.That(pane.ShowsTabBox, Is.False, "a marauder had a tab box");
-            Assert.That(pane.Tabs, Is.Empty, "a marauder had tabs");
-            Assert.That(pane.Skills, Is.Empty, "a marauder had skills");
-            Assert.That(pane.Commands, Is.Empty, "a marauder could be drafted");
-            Assert.That(pane.AvatarKey, Is.EqualTo("ui.pawn.marauder"));
-            Assert.That(pane.Title, Is.EqualTo(Registry.Label("ui.pawn.marauder")));
-            Assert.That(pane.Subtitle, Is.EqualTo("hostile"));
+            Assert.That(pane.ShowsFace, Is.True, "a bandit showed a badge rather than their own portrait");
+            Assert.That(pane.ShowsColonistBody, Is.False, "a bandit had needs");
+            Assert.That(pane.ShowsTabBox, Is.False, "a bandit had a tab box");
+            Assert.That(pane.Tabs, Is.Empty, "a bandit had tabs");
+            Assert.That(pane.Skills, Is.Empty, "a bandit had skills");
+            Assert.That(pane.Commands, Is.Empty, "a bandit could be drafted");
+            Assert.That(pane.AvatarKey, Is.EqualTo("ui.pawn.bandit"));
+            Assert.That(pane.Title, Is.EqualTo(ColonistNames.Of(frame, Raider)), "a bandit is called by their name");
+            Assert.That(pane.Subtitle, Is.EqualTo(Registry.Label("ui.pawn.bandit").ToLowerInvariant()));
+            Assert.That(pane.Subtitle, Is.EqualTo("bandit"), "the word itself");
             Assert.That(pane.Job, Is.EqualTo(Registry.Label("ui.status.fighting")));
             Assert.That(pane.Layer, Is.EqualTo(1));
         }
 
         /// <summary>
         /// A pawn that leaves the frame keeps the pane open, greyed (design 09 §2.3) — and keeps
-        /// the shape it had. Before this, a hog or a marauder that died fell to the colonist's
+        /// the shape it had. Before this, a hog or a bandit that died fell to the colonist's
         /// tombstone and grew a Health tab and a Draft button for the grace frames.
         /// </summary>
         [Test]
-        public void AMarauderOrAnimalThatLeavesTheFrameKeepsItsShape()
+        public void ABanditOrAnimalThatLeavesTheFrameKeepsItsShape()
         {
             foreach (PawnId id in new[] { Raider, Hog })
             {
@@ -208,7 +221,8 @@ namespace Odyssey.Tests.Hud
                 Assert.That(pane.Tombstoned, Is.True, $"pawn {id.Value}");
                 Assert.That(pane.Tabs, Is.Empty, $"pawn {id.Value} grew tabs");
                 Assert.That(pane.Commands, Is.Empty, $"pawn {id.Value} grew commands");
-                Assert.That(pane.ShowsFace || pane.ShowsColonistBody, Is.False, $"pawn {id.Value}");
+                Assert.That(pane.ShowsColonistBody, Is.False, $"pawn {id.Value}");
+                Assert.That(pane.ShowsFace, Is.EqualTo(id == Raider), $"pawn {id.Value}: a person keeps a face, an animal a badge");
             }
 
             // The control: a colonist's tombstone is the colonist's pane, greyed.

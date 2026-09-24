@@ -189,14 +189,14 @@ namespace Odyssey.Sim.Pawns
         /// The debug-spawned hostile person (design 33 §1): a person species under the Hostile
         /// faction. Claimed by the combat contracts step.
         /// </summary>
-        public const int Marauder = 3;
+        public const int Bandit = 3;
         public const int Count = 4;
     }
 
     /// <summary>
     /// Whose side a kind is on (design 33 §3): <b>hostility comes from the kind</b>, so no pawn
     /// carries a saved field for it. The colony's own people are <see cref="Colony"/>; animals are
-    /// <see cref="Wild"/> until something tames one; a marauder is <see cref="Hostile"/> and fights
+    /// <see cref="Wild"/> until something tames one; a bandit is <see cref="Hostile"/> and fights
     /// on sight.
     /// </summary>
     public enum Faction : byte
@@ -218,7 +218,7 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public enum Motive : byte
     {
-        /// <summary>Came for nothing but the fight: with nobody to fight and nothing to break, it idles. Every kind but the marauder.</summary>
+        /// <summary>Came for nothing but the fight: with nobody to fight and nothing to break, it idles. Every kind but the bandit.</summary>
         None = 0,
 
         /// <summary>Carries off the nearest stack it can lift and leaves the board with it.</summary>
@@ -714,7 +714,7 @@ namespace Odyssey.Sim.Pawns
         /// carries (design 29 §4). A hog is <see cref="TraverseMode.Animal"/>: no ladders and no
         /// doors it must open. A rat climbs anything but does not swim, so it is
         /// <see cref="TraverseMode.Climber"/>. A kind may override it
-        /// (<see cref="PawnKindDef.traverseMode"/>): the marauder does.
+        /// (<see cref="PawnKindDef.traverseMode"/>): the bandit does.
         /// </summary>
         public TraverseMode traverseMode = TraverseMode.Colonist;
 
@@ -786,20 +786,23 @@ namespace Odyssey.Sim.Pawns
         public Faction faction = Faction.Colony;
 
         /// <summary>
-        /// The weapon this kind arrives holding, by item defName, or empty for bare hands (design
-        /// 33 §1: the marauder is "debug-spawned, armed"). Resolved once, by name, into
-        /// <see cref="PawnContent.KindWeapon"/>; a kind naming an item the content does not have,
-        /// or one with no <see cref="ItemDef.weapon"/> block, fails the load. What puts it in the
-        /// hand is <see cref="IWeaponRules.ArmOnSpawn"/>, which the registry calls for every pawn it
-        /// spawns whose kind names one — so the colonist and the two animals cost one comparison.
+        /// The weapons this kind may arrive holding, by item defName, or none for bare hands (design
+        /// 33 §1: the bandit is "debug-spawned, armed"). One is dealt per pawn by
+        /// <see cref="PawnContent.WeaponFor"/> — a crowbar or a bat for a bandit (owner,
+        /// 2026-09-24: <i>"not swords - not their style"</i>, <c>docs/design/42-bandits.md</c>).
+        /// Resolved once, by name, into <see cref="PawnContent.KindWeapons"/>; a kind naming an item
+        /// the content does not have, or one with no <see cref="ItemDef.weapon"/> block, fails the
+        /// load. What puts it in the hand is <see cref="IWeaponRules.ArmOnSpawn"/>, which the
+        /// registry calls for every pawn it spawns whose kind names one — so the colonist and the
+        /// two animals cost one comparison.
         /// </summary>
-        public string weapon = string.Empty;
+        public string[] weapons = System.Array.Empty<string>();
 
         /// <summary>
         /// How this kind traverses the graph, by <see cref="TraverseMode"/> name, when it is not
         /// its species' way (design 33 §16); empty takes <see cref="SpeciesDef.traverseMode"/>. A
-        /// marauder is a person who does not open the colony's doors, so it is
-        /// <see cref="TraverseMode.Marauder"/> on the kind while its species stays the colonist's.
+        /// bandit is a person who does not open the colony's doors, so it is
+        /// <see cref="TraverseMode.Bandit"/> on the kind while its species stays the colonist's.
         /// Resolved once, by name, into <see cref="PawnContent.KindMode"/>; a name the enum does not
         /// have fails the load. Read through <see cref="Pawn.OwnMode"/>, never here.
         /// </summary>
@@ -807,7 +810,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// What a hostile of this kind came for (design 33 §17): <see cref="Motive.Loot"/> for the
-        /// marauder, <see cref="Motive.None"/> for everybody else. Resolved once into
+        /// bandit, <see cref="Motive.None"/> for everybody else. Resolved once into
         /// <see cref="PawnContent.KindMotive"/>; read through <see cref="PawnContent.MotiveOf"/>.
         /// </summary>
         public Motive motive = Motive.None;
@@ -1076,14 +1079,39 @@ namespace Odyssey.Sim.Pawns
         public int[] KindSpecies = System.Array.Empty<int>();
 
         /// <summary>
-        /// The item def each kind arrives holding (<see cref="PawnKindDef.weapon"/>), or -1 for
-        /// bare hands. Read through <see cref="WeaponOf"/>.
+        /// The item defs each kind may arrive holding (<see cref="PawnKindDef.weapons"/>), empty
+        /// for bare hands. Read through <see cref="ArmsOnSpawn"/> and <see cref="WeaponFor"/>.
         /// </summary>
-        public int[] KindWeapon = System.Array.Empty<int>();
+        public int[][] KindWeapons = System.Array.Empty<int[]>();
 
-        /// <summary>The item def a pawn of this kind is spawned holding, or -1 — and -1 for a content set with no table.</summary>
-        public int WeaponOf(int kind) =>
-            (uint)kind < (uint)KindWeapon.Length ? KindWeapon[kind] : -1;
+        /// <summary>Whether a pawn of this kind is spawned holding anything — false for a content set with no table.</summary>
+        public bool ArmsOnSpawn(int kind) =>
+            (uint)kind < (uint)KindWeapons.Length && KindWeapons[kind].Length > 0;
+
+        /// <summary>
+        /// The item def this one pawn of this kind is spawned holding, or -1.
+        ///
+        /// <para><b>A pure hash of the pawn, never a draw from the world's random stream</b>
+        /// (<c>docs/design/42-bandits.md</c> §3). Drawing would move every roll after it, so a
+        /// colony that meets a bandit would diverge from one that does not in ways that have
+        /// nothing to do with the bandit. The id is unique per world and the roll seed is the
+        /// pawn's own, so two bandits side by side are dealt independently.</para>
+        /// </summary>
+        public int WeaponFor(int kind, int pawnId, uint rollSeed)
+        {
+            if (!ArmsOnSpawn(kind)) return -1;
+            int[] choices = KindWeapons[kind];
+            if (choices.Length == 1) return choices[0];
+            unchecked
+            {
+                uint h = rollSeed ^ 0x7F4A7C15u;
+                h ^= (uint)pawnId * 2654435761u;
+                h ^= h >> 16;
+                h *= 2246822519u;
+                h ^= h >> 13;
+                return choices[(int)(h % (uint)choices.Length)];
+            }
+        }
 
         /// <summary>
         /// The traverse mode each kind moves in: its own <see cref="PawnKindDef.traverseMode"/> where
@@ -1279,7 +1307,7 @@ namespace Odyssey.Sim.Pawns
                 "Job_LayConduit", "Job_RemoveConduit", "Job_Refuel",
                 // The combat line, claimed together by its contracts step (design 33 §5).
                 "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue",
-                // A marauder carrying something off the board (design 33 §17).
+                // A bandit carrying something off the board (design 33 §17).
                 "Job_Steal");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
@@ -1313,7 +1341,7 @@ namespace Odyssey.Sim.Pawns
             content.Kinds = ByName<PawnKindDef>(defs,
                 "PawnKind_Colonist", "PawnKind_MiddenHog", "PawnKind_DuctRat",
                 // The debug-spawned hostile person (design 33 §1), appended.
-                "PawnKind_Marauder");
+                "PawnKind_Bandit");
             content.Species = ByName<SpeciesDef>(defs,
                 "Species_Person", "Species_MiddenHog", "Species_DuctRat");
             content.KindSpecies = new int[content.Kinds.Length];
@@ -1332,20 +1360,24 @@ namespace Odyssey.Sim.Pawns
             // The weapon a kind arrives holding (design 33 §1), by name, once — after the items,
             // which this reads. A name the content does not have, or an item that is not a weapon,
             // fails the load rather than a spawn.
-            content.KindWeapon = new int[content.Kinds.Length];
+            content.KindWeapons = new int[content.Kinds.Length][];
             for (int k = 0; k < content.Kinds.Length; k++)
             {
-                string wanted = content.Kinds[k].weapon;
-                content.KindWeapon[k] = -1;
-                if (string.IsNullOrEmpty(wanted)) continue;
-                for (int i = 0; i < content.Items.Length; i++)
-                    if (content.Items[i].defName == wanted) { content.KindWeapon[k] = i; break; }
-                if (content.KindWeapon[k] < 0)
-                    throw new DefLoadException(
-                        $"PawnKindDef '{content.Kinds[k].defName}' names weapon '{wanted}', which the content does not have.");
-                if (content.Items[content.KindWeapon[k]].weapon == null)
-                    throw new DefLoadException(
-                        $"PawnKindDef '{content.Kinds[k].defName}' names weapon '{wanted}', which has no weapon block.");
+                string[] wanted = content.Kinds[k].weapons ?? System.Array.Empty<string>();
+                var resolved = new int[wanted.Length];
+                for (int w = 0; w < wanted.Length; w++)
+                {
+                    resolved[w] = -1;
+                    for (int i = 0; i < content.Items.Length; i++)
+                        if (content.Items[i].defName == wanted[w]) { resolved[w] = i; break; }
+                    if (resolved[w] < 0)
+                        throw new DefLoadException(
+                            $"PawnKindDef '{content.Kinds[k].defName}' names weapon '{wanted[w]}', which the content does not have.");
+                    if (content.Items[resolved[w]].weapon == null)
+                        throw new DefLoadException(
+                            $"PawnKindDef '{content.Kinds[k].defName}' names weapon '{wanted[w]}', which has no weapon block.");
+                }
+                content.KindWeapons[k] = resolved;
             }
             // How each kind moves (design 33 §16): its own mode by name, or its species'. After the
             // species, which this reads. A name the enum does not have fails the load.

@@ -19,13 +19,13 @@ locations / attack something"* — animals, colonists, buildings and enemies —
 | Unit | What | Design | State |
 |---|---|---|---|
 | **C1** draft and move | the drafted state and hold, T and the pane's button, right-click to move, the spread, the four-hour release, the run, the deeper red, the draw sound | §2 | played, merged (PR #176) |
-| **C2** health and melee | hit points by species, downed at 0 and dead at −50 %, the swing, hit, dodge and damage rolls, the chase, revenge and self-defence, a debug marauder that hunts, corpses, the health tab, floating text, the clip layer | §3, §6A–§6C | played, merged (PR #180) |
+| **C2** health and melee | hit points by species, downed at 0 and dead at −50 %, the swing, hit, dodge and damage rolls, the chase, revenge and self-defence, a debug bandit that hunts, corpses, the health tab, floating text, the clip layer | §3, §6A–§6C | played, merged (PR #180) |
 | **C3** weapons | bat, crowbar, machete, sci-fi blade; stun from blunt; equip by right-click; drawn at the hip and in the hand; *Arm every colonist* | §4, §6D, §8b, §9c | played, merged (PR #180) |
 | **CB** blood | a spurt and a mark per hit, a pool under the fallen, a fade by the tick, at most 19 draw calls | §10 | played (*"it seems great"*), merged (PR #182) |
 | **C4** rescue | carried in the arms to her own or the nearest free bed, in it until whole; *No bed for the wounded* | §11 | merged (PR #194), awaiting play |
 | **C5** friendly fire | Ctrl-attack, self-defence, being attacked and a death felt as memories | §12 | merged (PR #194), awaiting play |
 | **C6** buildings as targets | hit points per edifice, the attack's building mode, demolished with no refund at zero | §13 | merged (PR #194), awaiting play |
-| The owner's rounds | a marauder breaks in (§14b), the blow against the material (§14d), drafted colonists help within eight cells (§15), doors hold marauders and beds are spared (§16), marauders steal and leave (§17), the ring means an order and a colonist's response — fight back, defend, flee (§18), the stall at a one-sided wall and the squad upstairs (§19), the landing ring and dragging across the roster (§20) | §14–§20 | merged (PR #194), awaiting play |
+| The owner's rounds | a bandit breaks in (§14b), the blow against the material (§14d), drafted colonists help within eight cells (§15), doors hold bandits and beds are spared (§16), bandits steal and leave (§17), the ring means an order and a colonist's response — fight back, defend, flee (§18), the stall at a one-sided wall and the squad upstairs (§19), the landing ring and dragging across the roster (§20) | §14–§20 | merged (PR #194), awaiting play |
 | **C7** the gate | the ten-day gate with and without hostiles, the benchmark rows, these records | §21 | **this branch** |
 
 Reactions, criticals and knockback (§9a–§9b), health on the cards (§9f), the sound of a blow (§9g),
@@ -36,7 +36,7 @@ spreading spawns (§9h) and the debug tab for a fight (§9i) came out of the pla
 | Part | Requirement | Result |
 |---|---|---|
 | 1 | A colony survives ten headless days, three seeds, no hostiles | **Green.** `SoakRunTests.TenDays` on seeds 1–3 and `TenDaysOnAField`, unchanged on today's `main`. |
-| 2 | The same with hostiles, invariants every hour | **Green.** `MarauderSoakTests.TheGateWithRaids` on seeds 1–3: seven raids, thirteen marauders, every hourly and per-tick invariant held (§21b lists them). |
+| 2 | The same with hostiles, invariants every hour | **Green.** `BanditSoakTests.TheGateWithRaids` on seeds 1–3: seven raids, thirteen bandits, every hourly and per-tick invariant held (§21b lists them). |
 | 3 | Same seed, same hash | **Green, every hour.** A lockstep twin hashes the same for all 240 hours on each seed. |
 | 4 | Save mid-raid, load, same hash a day on | **Green after one fix** (§3). |
 | 5 | Goldens unchanged | **Green.** `Golden.cs` untouched; the three golden cases pass in the fast and Long tiers. |
@@ -44,13 +44,13 @@ spreading spawns (§9h) and the debug tab for a fight (§9i) came out of the pla
 
 Per seed, with hostiles:
 
-| Seed | Drafts | Swings at pawns | Downed (colonists) | Died | Got up | Rescues (failed) | Buildings broken | Thefts | Marauders left on the board | Colonists at day ten |
+| Seed | Drafts | Swings at pawns | Downed (colonists) | Died | Got up | Rescues (failed) | Buildings broken | Thefts | Bandits left on the board | Colonists at day ten |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 1 | 4 | 220 | 7 (5) | 0 | 1 | 5 (1) | 16 of 16 | 12 | 1 | 0 up, 5 down |
 | 2 | 9 | 420 | 14 (5) | 0 | 4 | 5 (1) | 16 of 16 | 8 | 5 | 0 up, 5 down |
 | 3 | 6 | 327 | 12 (5) | 0 | 3 | 5 (2) | 16 of 16 | 7 | 6 | 2 up, 3 down |
 
-The longest any marauder stood on *Fighting* at a building without a step or a swing was **95 ticks**
+The longest any bandit stood on *Fighting* at a building without a step or a swing was **95 ticks**
 (bound 500, the owner's §19 report was 3,245). No attacker stood on a target already gone for more
 than a tick. The longest a downed colonist lay rescuable and unrescued was **2,500 ticks** (bound
 5,000). Nobody was freed from a wall. Nobody died.
@@ -89,7 +89,7 @@ target laptop):
 
 | Test | Without | With | Draw calls | Where the difference is |
 |---|---|---|---|---|
-| `TheFrameWithAFightInView` (15 colonists, 10 marauders brawling) | 1.79 ms | 2.24 ms | 738 → 762 | Figures 0.111 → 0.238 ms, Overlays 0.010 → 0.033 |
+| `TheFrameWithAFightInView` (15 colonists, 10 bandits brawling) | 1.79 ms | 2.24 ms | 738 → 762 | Figures 0.111 → 0.238 ms, Overlays 0.010 → 0.033 |
 | `TheBloodAtItsCap` (200 marks) | 1.87 ms | 1.95 ms | 738 → 741 (3 of blood) | Overlays 0.010 → 0.089 |
 
 The C2 integration read the same brawl at 2.06 → 2.29 ms (§6E); both frames are faster today and the
@@ -107,7 +107,7 @@ exception in its log; the only warnings are the stylesheet's pseudo-classes, whi
 ## 5. Open
 
 **The colony loses.** Ten days of raids leave two seeds of three with every colonist down; on seed 1
-an armed, drafted squad of four gathered at the start lost to three marauders on day one. Every
+an armed, drafted squad of four gathered at the start lost to three bandits on day one. Every
 number in the fight is invented (§1), so this reads the tuning and is the owner's to judge.
 
 **Blocked on the owner, not built:**
@@ -118,7 +118,7 @@ number in the fight is invented (§1), so this reads the tuning and is the owner
   cracks, a crash and dust when it falls, the lock-on ring round it.
 - **The Thoughts tab**: the friendly-fire memories move mood with no name on screen (§12).
 - **Kidnap** is seamed and does what theft does (§17f).
-- The questions at the end of §15i, §17i, §18h and §20e, and whether a marauder that can reach no
+- The questions at the end of §15i, §17i, §18h and §20e, and whether a bandit that can reach no
   side of any colonist should break a building instead of queueing (§19d).
 
 **Recorded, not fixed:** a thief climbs a ladder with a load a hauler would not (§17c); a patient

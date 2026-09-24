@@ -111,12 +111,12 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// A marauder's whole purpose (design 33 §1, §14b; the owner: <i>"kill colonists, destroy
+    /// A bandit's whole purpose (design 33 §1, §14b; the owner: <i>"kill colonists, destroy
     /// base"</i>): hunt the nearest reachable colonist who is standing, and attack. A downed colonist
     /// is not hunted. <b>With no colonist to reach</b> — walled out, or every one down — it attacks
     /// the nearest colony building it can reach (<see cref="BuildingTargets.TryNearestColonyTarget"/>),
     /// unforced, so it thinks again every <see cref="CombatDef.rechooseTicks"/> and a colonist who
-    /// can be reached comes first again. <b>With neither</b>, a marauder that came for something
+    /// can be reached comes first again. <b>With neither</b>, a bandit that came for something
     /// (<see cref="Pawn.Motive"/>) steals it and leaves the board (<see cref="Theft.TryFill"/>,
     /// design 33 §17); one that cannot reach an edge falls through to idling. The attack it starts re-chooses after
     /// <see cref="CombatDef.rechooseTicks"/>, so a nearer colonist is noticed. <b>A colonist who
@@ -140,12 +140,12 @@ namespace Odyssey.Sim.Pawns
             if (foe != null) return AttackJob.Fill(pawn, foe, job, mode);
 
             // Nobody to reach: the base (design 33 §14b). Only here, so a building never draws a
-            // marauder from a colonist it could get to.
+            // bandit from a colonist it could get to.
             if (BuildingTargets.TryNearestColonyTarget(ctx, pawn, mode, out BuildingTarget building))
                 return AttackJob.FillBuilding(ctx, pawn, building, job, mode);
 
             // Nobody to fight and nothing to break: what it came for (design 33 §17). Last, so a
-            // stack of meals never draws a marauder from a colonist or a wall.
+            // stack of meals never draws a bandit from a colonist or a wall.
             return Theft.TryFill(ctx, pawn, mode, job);
         }
 

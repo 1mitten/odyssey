@@ -71,7 +71,7 @@ namespace Odyssey.Sim.Contracts
         public const int Rescue = 21;
 
         /// <summary>
-        /// A marauder with nobody to fight and nothing to break lifts the nearest stack and walks
+        /// A bandit with nobody to fight and nothing to break lifts the nearest stack and walks
         /// off the board with it (design 33 §17). Appended after the combat line's five; the job
         /// system hashes its counters only once one has run, so no golden moved for it.
         /// </summary>
@@ -271,13 +271,13 @@ namespace Odyssey.Sim.Contracts
         public const int ScrapDrop = 1;
 
         /// <summary>
-        /// A marauder carried a stack off the board (design 33 §17). Written down by the world when
+        /// A bandit carried a stack off the board (design 33 §17). Written down by the world when
         /// it happens and never fired: the bulletin carries the item and the amount.
         /// </summary>
         public const int Theft = 2;
 
-        /// <summary>A marauder with nothing to fight, break or take walked off the board empty-handed (design 33 §17).</summary>
-        public const int MarauderLeft = 3;
+        /// <summary>A bandit with nothing to fight, break or take walked off the board empty-handed (design 33 §17).</summary>
+        public const int BanditLeft = 3;
 
         public const int Count = 4;
     }

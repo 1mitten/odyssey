@@ -2057,6 +2057,7 @@ namespace Odyssey.Presentation.Rendering
             System.Array.Clear(_colonistCounts, 0, _colonistCounts.Length);
             System.Array.Clear(_hairCounts, 0, _hairCounts.Length);
             System.Array.Clear(_beardCounts, 0, _beardCounts.Length);
+            System.Array.Clear(_headCounts, 0, _headCounts.Length);
 
             var pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length; i++)
@@ -2083,7 +2084,7 @@ namespace Odyssey.Presentation.Rendering
                 // Asked once and carried. LookFor is For(...).Look, and the far form needs the
                 // whole appearance for the hair and the beard -- so asking for both cost every
                 // far colonist two snapshot aspect lookups and two dictionary hits a frame.
-                ColonistAppearance look = Cast.For(snapshot, pawns[i].Id);
+                ColonistAppearance look = Cast.For(snapshot, in pawns[i]);
                 int variant = look.Look;
                 if ((uint)variant >= (uint)_colonistModules.Length) variant = 0;
                 ResolvedModule colonist = ColonistModule(variant);
@@ -2114,10 +2115,20 @@ namespace Odyssey.Presentation.Rendering
                 if (colonist.HasHead && ColonistAttachments.Enabled)
                 {
                     Matrix4x4 head = placement * colonist.Head;
-                    if (Attachments.Hair(look.HairPiece).Usable)
-                        AppendPiece(look.HairPiece, head, _hairPlacements, _hairCounts);
-                    if (Attachments.Beard(look.BeardPiece).Usable)
-                        AppendPiece(look.BeardPiece, head, _beardPlacements, _beardCounts);
+                    // Under a helmet the hair and beard are the person's still, and not worn
+                    // (design 42): the far bandit wears the helmet, as the figure does.
+                    if (look.HidesHair)
+                    {
+                        if (Attachments.Headgear(look.HeadPiece).Usable)
+                            AppendPiece(look.HeadPiece, head, _headPlacements, _headCounts);
+                    }
+                    else
+                    {
+                        if (Attachments.Hair(look.HairPiece).Usable)
+                            AppendPiece(look.HairPiece, head, _hairPlacements, _hairCounts);
+                        if (Attachments.Beard(look.BeardPiece).Usable)
+                            AppendPiece(look.BeardPiece, head, _beardPlacements, _beardCounts);
+                    }
                 }
 
                 // No beacon over a real figure. It was there to make a grey box findable, and
@@ -2139,6 +2150,10 @@ namespace Odyssey.Presentation.Rendering
             for (int i = 0; i < _beardCounts.Length; i++)
                 if (_beardCounts[i] > 0)
                     SubmitPiece(Attachments.Beard(i), _beardPlacements[i], _beardCounts[i]);
+
+            for (int i = 0; i < _headCounts.Length; i++)
+                if (_headCounts[i] > 0)
+                    SubmitPiece(Attachments.Headgear(i), _headPlacements[i], _headCounts[i]);
 
             RenderThings(snapshot, lowest, highest, material, carried, tickAlpha, movePerTick, slice, activeLayer);
         }
@@ -2696,6 +2711,8 @@ namespace Odyssey.Presentation.Rendering
         int[] _hairCounts = System.Array.Empty<int>();
         Matrix4x4[][] _beardPlacements = System.Array.Empty<Matrix4x4[]>();
         int[] _beardCounts = System.Array.Empty<int>();
+        Matrix4x4[][] _headPlacements = System.Array.Empty<Matrix4x4[]>();
+        int[] _headCounts = System.Array.Empty<int>();
 
         /// <summary>
         /// The hair and beards a far colonist wears
@@ -2729,6 +2746,12 @@ namespace Odyssey.Presentation.Rendering
             _beardCounts = new int[Mathf.Max(1, Attachments.BeardCount)];
             _beardPlacements = new Matrix4x4[_beardCounts.Length][];
             for (int i = 0; i < _beardCounts.Length; i++) _beardPlacements[i] = new Matrix4x4[16];
+
+            // The bandit's helmet (design 42), a third bucket on the same terms: one draw per
+            // piece in use, however many wear it.
+            _headCounts = new int[Mathf.Max(1, Attachments.HeadgearCount)];
+            _headPlacements = new Matrix4x4[_headCounts.Length][];
+            for (int i = 0; i < _headCounts.Length; i++) _headPlacements[i] = new Matrix4x4[16];
         }
 
         static void AppendPiece(int index, in Matrix4x4 placement,
@@ -2784,6 +2807,9 @@ namespace Odyssey.Presentation.Rendering
             if (Recolours == null) return null;
             _colonistFarResolved[variant] = true;
 
+            if (ColonistAppearance.BanditCloth(Cast.Pools, variant, out Rgb24 red, out Rgb24 black))
+                return _colonistFar[variant] = BanditFarMaterials(variant, red, black);
+
             if (!ColonistAppearance.IssuedCloth(Cast.Pools, variant, out Rgb24 cloth, out Rgb24 cloth2))
                 return null;
 
@@ -2816,6 +2842,41 @@ namespace Odyssey.Presentation.Rendering
                 any |= painted[p] != null;
             }
             return _colonistFar[variant] = any ? painted : null;
+        }
+
+        /// <summary>
+        /// A far bandit's materials (design 42): the body in its own rectangles — skin, then black
+        /// for everything else — and the vest, a separate part because the library kept it apart
+        /// (<see cref="ModuleLibrary.IsOverlayMaterial"/>), in the vest's — red, straps black.
+        ///
+        /// <para>One material per body and never per person, so one red and one skin: the
+        /// palette's middle tone, where a colonist's far form keeps the pack's paint. The skin
+        /// slot has to be painted with <i>something</i> here, because the black behind it is the
+        /// whole atlas and an unpainted skin would go black with the trousers.</para>
+        /// </summary>
+        Material?[]? BanditFarMaterials(int variant, Rgb24 red, Rgb24 black)
+        {
+            ModuleCatalogue? catalogue = _model.Library.Catalogue;
+            if (catalogue == null) return null;
+            System.Collections.Generic.List<ModuleEntry> rows = catalogue.FindFamily(ModuleIds.ColonistBase);
+            if ((uint)variant >= (uint)rows.Count) return null;
+            ModuleEntry row = rows[variant];
+            AppearanceCells? body = row.appearance.Any ? row.appearance : null;
+            AppearanceCells? vest = row.overlayAppearance != null && row.overlayAppearance.Any ? row.overlayAppearance : null;
+
+            Rgb24 skin = ColonistPalette.Skin[ColonistPalette.Skin.Length / 2];
+            var look = new ColonistAppearance(variant, skin, default, red, black);
+
+            ModulePart[] parts = ColonistModule(variant).Parts;
+            var painted = new Material?[parts.Length];
+            bool any = false;
+            for (int p = 0; p < parts.Length; p++)
+            {
+                AppearanceCells? cells = _model.Library.IsOverlayMaterial(parts[p].Material) ? vest : body;
+                painted[p] = Recolours!.For(parts[p].Material, cells, look);
+                any |= painted[p] != null;
+            }
+            return any ? painted : null;
         }
 
         void AppendColonist(int variant, in Matrix4x4 placement)

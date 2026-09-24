@@ -117,7 +117,7 @@ namespace Odyssey.Hud
             foreach (PawnView view in snapshot.Pawns)
             {
                 // The colony's home is its own people (design 33 §5): not the animals, and not a
-                // marauder standing in the middle of it.
+                // bandit standing in the middle of it.
                 if (!view.IsColonist) continue;
                 sumX += view.Cell.X;
                 sumZ += view.Cell.Z;

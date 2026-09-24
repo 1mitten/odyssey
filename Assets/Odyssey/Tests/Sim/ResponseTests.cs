@@ -75,7 +75,7 @@ namespace Odyssey.Tests.Sim
         /// <summary>
         /// A victim drafted on the start, so she holds and the fight stays put; a helper
         /// <paramref name="away"/> cells west, undrafted, at <paramref name="response"/> and busy; and
-        /// every swing a miss. The marauder, four cells east of the victim, is the caller's.
+        /// every swing a miss. The bandit, four cells east of the victim, is the caller's.
         /// </summary>
         static (ColonyWorld colony, Pawn helper, Pawn victim, Whiffs rules) Scene(int away, HostilityResponse response)
         {
@@ -112,51 +112,51 @@ namespace Odyssey.Tests.Sim
             colony.Pawns.MeleeRules = new Whiffs();
             Pawn a = colony.Pawns.Pawns.All[0], victim = colony.Pawns.Pawns.All[1];
             Stand(colony, victim, Near(colony, 0, 0));
-            Pawn marauder;
+            Pawn bandit;
 
             switch (fight)
             {
                 case "ordered":
                     Stand(colony, a, Near(colony, -3, 0));
-                    marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 8, 0));
+                    bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 8, 0));
                     Assert.That(Draft(colony, a), Is.EqualTo(IntentRejection.None));
-                    Assert.That(Attack(colony, a, marauder), Is.EqualTo(IntentRejection.None));
+                    Assert.That(Attack(colony, a, bandit), Is.EqualTo(IntentRejection.None));
                     break;
                 case "hold":
-                    // Drafted, a marauder beside her: the hold strikes it, of her own accord.
+                    // Drafted, a bandit beside her: the hold strikes it, of her own accord.
                     Stand(colony, a, Near(colony, -8, 0));
                     Assert.That(Draft(colony, a), Is.EqualTo(IntentRejection.None));
-                    marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, -7, 0));
+                    bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, -7, 0));
                     break;
                 case "struck":
                     Stand(colony, a, Near(colony, -8, 0));
-                    marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, -7, 0));
-                    Strike(colony, marauder, a, 1_000);
+                    bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, -7, 0));
+                    Strike(colony, bandit, a, 1_000);
                     break;
                 case "joined":
                     Stand(colony, a, Near(colony, -5, 0));
                     Assert.That(Draft(colony, victim), Is.EqualTo(IntentRejection.None));
                     Assert.That(Draft(colony, a), Is.EqualTo(IntentRejection.None));
-                    marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 4, 0));
+                    bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 4, 0));
                     break;
                 default:
                     Stand(colony, a, Near(colony, -5, 0));
                     Assert.That(Draft(colony, victim), Is.EqualTo(IntentRejection.None));
                     Assert.That(Respond(colony, a, HostilityResponse.Defend), Is.EqualTo(IntentRejection.None));
-                    marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 4, 0));
+                    bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 4, 0));
                     break;
             }
 
-            for (int t = 0; t < 1_500 && a.CombatTarget != marauder.Id.Value; t++) Tick(colony, a, victim);
+            for (int t = 0; t < 1_500 && a.CombatTarget != bandit.Id.Value; t++) Tick(colony, a, victim);
             Tick(colony, a, victim);
-            Assert.That(a.CombatTarget, Is.EqualTo(marauder.Id.Value), "the control: she never took the marauder on");
+            Assert.That(a.CombatTarget, Is.EqualTo(bandit.Id.Value), "the control: she never took the bandit on");
             Assert.That(a.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.AttackMelee));
 
             bool ordered = fight == "ordered";
             Assert.That(a.CurrentJob!.PlayerForced, Is.EqualTo(ordered), "the scene is not the fight it says it is");
             Assert.That(Published(colony, a, CombatAspects.OrderTarget, out int target), Is.EqualTo(ordered),
                 ordered ? "the order's target was not published" : "a fight nobody ordered published an order target");
-            if (ordered) Assert.That(target, Is.EqualTo(marauder.Id.Value));
+            if (ordered) Assert.That(target, Is.EqualTo(bandit.Id.Value));
             Assert.That(Published(colony, a, CombatAspects.RescuePatient, out _), Is.False);
         }
 
@@ -222,7 +222,7 @@ namespace Odyssey.Tests.Sim
 
         /// <summary>
         /// Fight back by default, and published only once it is not; set by the intent, a no-op quiet,
-        /// and refused where it means nothing — a marauder, an animal, a number that is no response.
+        /// and refused where it means nothing — a bandit, an animal, a number that is no response.
         /// A drafted colonist may be given one, and keeps her hold.
         /// </summary>
         [Test]
@@ -245,9 +245,9 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(IntentRejection.NotPermitted));
             Assert.That(a.Response, Is.EqualTo(HostilityResponse.Defend), "a refused number changed it");
 
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 20, 20));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 20, 20));
             Pawn hog = Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, -20, 20));
-            Assert.That(Respond(colony, marauder, HostilityResponse.Flee), Is.EqualTo(IntentRejection.NotPermitted));
+            Assert.That(Respond(colony, bandit, HostilityResponse.Flee), Is.EqualTo(IntentRejection.NotPermitted));
             Assert.That(Respond(colony, hog, HostilityResponse.Flee), Is.EqualTo(IntentRejection.NotPermitted));
 
             Assert.That(Draft(colony, b), Is.EqualTo(IntentRejection.None));
@@ -320,9 +320,9 @@ namespace Odyssey.Tests.Sim
         // ---- Defend (§18d) ----------------------------------------------------------------------------
 
         /// <summary>
-        /// The heart of it. Undrafted and busy, five cells from a marauder on a colonist, she leaves
+        /// The heart of it. Undrafted and busy, five cells from a bandit on a colonist, she leaves
         /// her job, joins the fight exactly as a drafted colonist would — unforced, marked, the
-        /// marauder on the victim and out of her reach — swings, and when it is down goes back to
+        /// bandit on the victim and out of her reach — swings, and when it is down goes back to
         /// the tree's work. Never drafted. Twelve cells off, she stays on her job.
         /// </summary>
         [TestCase(5, true)]
@@ -333,18 +333,18 @@ namespace Odyssey.Tests.Sim
             for (int t = 0; t < 5; t++) Tick(colony, helper, victim);
             Assert.That(OnTheLongWait(helper), Is.True, "the control: nothing to join, and she is on her job");
 
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 4, 0));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 4, 0));
             int joinedAt = -1;
             for (int t = 0; t < 1_500; t++)
             {
                 Tick(colony, helper, victim);
                 Assert.That(helper.Drafted, Is.False, $"tick {t}: she drafted herself");
-                if (joinedAt >= 0 || helper.CombatTarget != marauder.Id.Value) continue;
+                if (joinedAt >= 0 || helper.CombatTarget != bandit.Id.Value) continue;
                 joinedAt = colony.World.CurrentTick;
-                Assert.That(IsJoining(helper, marauder), Is.True, "she took the marauder on, but not as a helper");
+                Assert.That(IsJoining(helper, bandit), Is.True, "she took the bandit on, but not as a helper");
                 Assert.That(helper.CurrentJob!.PlayerForced, Is.False, "nobody ordered it");
-                Assert.That(marauder.CombatTarget, Is.EqualTo(victim.Id.Value), "the marauder was not on the victim");
-                Assert.That(Melee.InReach(colony.Pawns, helper, marauder, TraverseMode.Colonist), Is.False,
+                Assert.That(bandit.CombatTarget, Is.EqualTo(victim.Id.Value), "the bandit was not on the victim");
+                Assert.That(Melee.InReach(colony.Pawns, helper, bandit, TraverseMode.Colonist), Is.False,
                     "it was beside her: a threat in reach, not somebody else's fight");
             }
 
@@ -352,15 +352,15 @@ namespace Odyssey.Tests.Sim
             {
                 Assert.That(joinedAt, Is.EqualTo(-1), "twelve cells off, she joined");
                 Assert.That(OnTheLongWait(helper), Is.True, "twelve cells off, she left her job");
-                Assert.That(rules.At(marauder, victim), Is.GreaterThan(0), "the control: the fight happened");
+                Assert.That(rules.At(bandit, victim), Is.GreaterThan(0), "the control: the fight happened");
                 return;
             }
 
             Assert.That(joinedAt, Is.GreaterThanOrEqualTo(0), "five cells from the fight, she never joined it");
-            Assert.That(rules.At(helper, marauder), Is.GreaterThan(0), "she joined but never swung");
+            Assert.That(rules.At(helper, bandit), Is.GreaterThan(0), "she joined but never swung");
 
-            Strike(colony, victim, marauder, marauder.HpMilli);
-            Assume.That(marauder.Downed, Is.True);
+            Strike(colony, victim, bandit, bandit.HpMilli);
+            Assume.That(bandit.Downed, Is.True);
             for (int t = 0; t < 30; t++) Tick(colony, helper, victim);
             Assert.That(helper.CurrentJob, Is.Not.Null, "she was given nothing after the fight");
             Assert.That(helper.CurrentJob!.DefIndex, Is.Not.EqualTo(JobIndex.AttackMelee), "she fought on after it was down");
@@ -379,19 +379,19 @@ namespace Odyssey.Tests.Sim
             var (colony, helper, victim, rules) = Scene(5, wasDefend ? HostilityResponse.Defend : HostilityResponse.FightBack);
             if (wasDefend) Assert.That(Respond(colony, helper, HostilityResponse.FightBack), Is.EqualTo(IntentRejection.None));
             Busy(colony, helper);
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 4, 0));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 4, 0));
             for (int t = 0; t < 1_500; t++)
             {
                 Tick(colony, helper, victim);
-                Assert.That(helper.CombatTarget, Is.Not.EqualTo(marauder.Id.Value), $"tick {t}: at Fight back, she joined");
+                Assert.That(helper.CombatTarget, Is.Not.EqualTo(bandit.Id.Value), $"tick {t}: at Fight back, she joined");
             }
             Assert.That(OnTheLongWait(helper), Is.True, "at Fight back, something took her off her job");
-            Assert.That(rules.At(marauder, victim), Is.GreaterThan(0), "the control: the fight happened");
+            Assert.That(rules.At(bandit, victim), Is.GreaterThan(0), "the control: the fight happened");
         }
 
         /// <summary>
         /// Defend is the drafted help's rule (§15b), so a colonist's fight with a colonist summons
-        /// nobody: a Ctrl-ordered attack four cells off leaves her on her job. The marauder's fight
+        /// nobody: a Ctrl-ordered attack four cells off leaves her on her job. The bandit's fight
         /// in the first Defend test is the control.
         /// </summary>
         [Test]
@@ -439,24 +439,24 @@ namespace Odyssey.Tests.Sim
             for (int t = 0; t < 4_000 && !sleeper.Asleep; t++) colony.World.Tick();
             Assume.That(sleeper.Asleep, Is.True, "she never fell asleep");
             // The fight is brought to her: the victim, still drafted, three cells from the bed she
-            // sleeps in, and the marauder three beyond.
+            // sleeps in, and the bandit three beyond.
             CellRef at = Size.FromIndex(sleeper.Cell);
             Stand(colony, victim, colony.Pawns.Cells.NearestWalkableInColumn(at.X + 3, at.Z, at.Y));
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, colony.Pawns.Cells.NearestWalkableInColumn(at.X + 6, at.Z, at.Y));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, colony.Pawns.Cells.NearestWalkableInColumn(at.X + 6, at.Z, at.Y));
 
             for (int t = 0; t < 600; t++)
             {
                 victim.BreakTicksLeft = 0;
                 colony.World.Tick();
-                Assert.That(sleeper.CombatTarget, Is.Not.EqualTo(marauder.Id.Value), $"tick {t}: a fight woke her");
+                Assert.That(sleeper.CombatTarget, Is.Not.EqualTo(bandit.Id.Value), $"tick {t}: a fight woke her");
             }
-            Assert.That(rules.At(marauder, victim), Is.GreaterThan(0), "the control: the fight happened");
+            Assert.That(rules.At(bandit, victim), Is.GreaterThan(0), "the control: the fight happened");
             Assert.That(sleeper.Asleep, Is.True, "something else woke her, so the test proves nothing");
 
             // The control: woken, and at Defend, she goes.
             Busy(colony, sleeper);
-            for (int t = 0; t < 600 && sleeper.CombatTarget != marauder.Id.Value; t++) Tick(colony, sleeper, victim);
-            Assert.That(sleeper.CombatTarget, Is.EqualTo(marauder.Id.Value), "the control: awake, she did not join");
+            for (int t = 0; t < 600 && sleeper.CombatTarget != bandit.Id.Value; t++) Tick(colony, sleeper, victim);
+            Assert.That(sleeper.CombatTarget, Is.EqualTo(bandit.Id.Value), "the control: awake, she did not join");
         }
 
         /// <summary>
@@ -471,25 +471,25 @@ namespace Odyssey.Tests.Sim
             ThingId blade = colony.Pawns.Items.Spawn(ItemIndex.ArcBlade, far);
             Assert.That(Send(colony, new Intent(IntentKind.OrderEquip, Size.FromIndex(far), helper.Id.Value, blade.Value)),
                 Is.EqualTo(IntentRejection.None));
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 4, 0));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 4, 0));
             for (int t = 0; t < 400 && helper.CurrentJob?.DefIndex == JobIndex.Equip; t++)
             {
                 Tick(colony, helper, victim);
                 Assert.That(helper.CombatTarget, Is.EqualTo(0), $"tick {t}: the fight took her off the player's order");
             }
-            Assert.That(rules.At(marauder, victim), Is.GreaterThan(0), "the control: the fight happened");
+            Assert.That(rules.At(bandit, victim), Is.GreaterThan(0), "the control: the fight happened");
         }
 
         // ---- Flee (§18d) -----------------------------------------------------------------------------
 
         /// <summary>
-        /// A colonist set to Flee, busy, with a marauder coming for her: she drops her job and runs,
+        /// A colonist set to Flee, busy, with a bandit coming for her: she drops her job and runs,
         /// never swinging while she has somewhere to run; when it is down she goes back to work. At
         /// Fight back the same colonist stays on her job until it reaches her — the control.
         /// </summary>
         [TestCase(HostilityResponse.Flee)]
         [TestCase(HostilityResponse.FightBack)]
-        public void FleeRunsFromAMarauderNearHerAndGoesBackToWork(HostilityResponse response)
+        public void FleeRunsFromABanditNearHerAndGoesBackToWork(HostilityResponse response)
         {
             var colony = Board(colonists: 2);
             colony.World.Tick(5);
@@ -501,7 +501,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(Draft(colony, other), Is.EqualTo(IntentRejection.None));
             if (response != HostilityResponse.FightBack) Assert.That(Respond(colony, runner, response), Is.EqualTo(IntentRejection.None));
             Busy(colony, runner);
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 7, 0));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 7, 0));
 
             bool fled = false;
             for (int t = 0; t < 30; t++)
@@ -517,7 +517,7 @@ namespace Odyssey.Tests.Sim
                 return;
             }
 
-            Assert.That(fled, Is.True, "a marauder seven cells off and she did not run");
+            Assert.That(fled, Is.True, "a bandit seven cells off and she did not run");
             int start = Near(colony, 0, 0);
             for (int t = 0; t < 300; t++)
             {
@@ -527,12 +527,12 @@ namespace Odyssey.Tests.Sim
             Assert.That(rules.By(runner), Is.EqualTo(0), "with somewhere to run, she swung");
             Assert.That(colony.Pawns.Distance(runner.Cell, start), Is.GreaterThan(0), "she ran nowhere");
 
-            Strike(colony, other, marauder, marauder.HpMilli);
-            Assume.That(marauder.Downed, Is.True);
+            Strike(colony, other, bandit, bandit.HpMilli);
+            Assume.That(bandit.Downed, Is.True);
             for (int t = 0; t < 600 && runner.CurrentJob?.DefIndex == JobIndex.Flee; t++) Tick(colony, runner, other);
             Tick(colony, runner, other);
             Assert.That(runner.CurrentJob, Is.Not.Null);
-            Assert.That(runner.CurrentJob!.DefIndex, Is.Not.EqualTo(JobIndex.Flee), "she ran on from a marauder that was down");
+            Assert.That(runner.CurrentJob!.DefIndex, Is.Not.EqualTo(JobIndex.Flee), "she ran on from a bandit that was down");
             Assert.That(runner.CurrentJob.DefIndex, Is.Not.EqualTo(JobIndex.AttackMelee), "she went back to fight it");
         }
 
@@ -554,19 +554,19 @@ namespace Odyssey.Tests.Sim
             ThingId blade = colony.Pawns.Items.Spawn(ItemIndex.ArcBlade, far);
             Assert.That(Send(colony, new Intent(IntentKind.OrderEquip, Size.FromIndex(far), a.Id.Value, blade.Value)),
                 Is.EqualTo(IntentRejection.None));
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 1, 0));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 1, 0));
             Tick(colony, a);
             Assert.That(a.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.Equip), "the control: danger beside her, the player's order stands");
 
             // Struck mid-stride she lands the step she was on before anything else (design 33 §2d).
-            Strike(colony, marauder, a, 1_000);
+            Strike(colony, bandit, a, 1_000);
             for (int t = 0; t < 300 && a.CurrentJob == null; t++) Tick(colony, a);
             Assert.That(a.CurrentJob?.DefIndex, Is.EqualTo(answer));
         }
 
         /// <summary>
         /// Cornered — danger beside her and nowhere to run — a colonist at Flee fights back as Fight
-        /// back would. She and the marauder are walled into two cells.
+        /// back would. She and the bandit are walled into two cells.
         /// </summary>
         [Test]
         public void CorneredSheFightsBack()
@@ -587,15 +587,15 @@ namespace Odyssey.Tests.Sim
                     Is.EqualTo(IntentRejection.None));
                 Assert.That(colony.Construction.Raise(colony.Pawns, cell), Is.True);
             }
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Size.Index(at.X + 1, at.Z, at.Y));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Size.Index(at.X + 1, at.Z, at.Y));
             Assert.That(Respond(colony, a, HostilityResponse.Flee), Is.EqualTo(IntentRejection.None));
-            Assert.That(FleeJobDriver.FindFleeCell(colony.Pawns, a, marauder.Cell, colony.Pawns.Content.Combat.fleeCells,
+            Assert.That(FleeJobDriver.FindFleeCell(colony.Pawns, a, bandit.Cell, colony.Pawns.Content.Combat.fleeCells,
                 TraverseMode.Colonist), Is.EqualTo(-1), "the control: there is somewhere to run");
 
-            Strike(colony, marauder, a, 1_000);
+            Strike(colony, bandit, a, 1_000);
             Tick(colony, a);
             Assert.That(a.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.AttackMelee), "cornered, she did not fight back");
-            Assert.That(a.CombatTarget, Is.EqualTo(marauder.Id.Value));
+            Assert.That(a.CombatTarget, Is.EqualTo(bandit.Id.Value));
         }
 
         /// <summary>
@@ -617,7 +617,7 @@ namespace Odyssey.Tests.Sim
             Pawn hog = Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, 3, 1));
             // Something hostile about, far off and stunned, so her notice is asking: what is under
             // test is whether the hog is danger, not whether anybody looked.
-            Pawn far = Spawn(colony, PawnKindIndex.Marauder, Near(colony, -25, -25));
+            Pawn far = Spawn(colony, PawnKindIndex.Bandit, Near(colony, -25, -25));
             Tick(colony, runner, victim);
             far.StunnedUntilTick = colony.World.CurrentTick + 100_000;
 
@@ -653,8 +653,8 @@ namespace Odyssey.Tests.Sim
             colony.Pawns.MeleeRules = new Whiffs();
             Pawn a = colony.Pawns.Pawns.All[0];
             Stand(colony, a, Near(colony, 0, 0));
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 1, 0));
-            Strike(colony, marauder, a, 1_000);
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 1, 0));
+            Strike(colony, bandit, a, 1_000);
             Tick(colony, a);
             Assert.That(a.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.AttackMelee), "the control: she fights back");
 
@@ -663,7 +663,7 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// The draft overrides the response (§18c). Drafted, a colonist at Flee with a marauder six
+        /// The draft overrides the response (§18c). Drafted, a colonist at Flee with a bandit six
         /// cells off holds — the notice leaves her hold alone, so no job starts under her — and when
         /// it comes beside her she strikes it from her hold, as any drafted colonist does.
         /// </summary>
@@ -679,9 +679,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(Draft(colony, a), Is.EqualTo(IntentRejection.None));
 
             // Six cells off and stunned where it stands: danger near her, and nothing in reach.
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 6, 0));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 6, 0));
             Tick(colony, a);
-            marauder.StunnedUntilTick = colony.World.CurrentTick + 100_000;
+            bandit.StunnedUntilTick = colony.World.CurrentTick + 100_000;
             // Her own hold, from her mind rather than the draft's order, which the notice would
             // leave alone for being forced.
             colony.Jobs.EndJob(a, JobStatus.Failed);
@@ -696,23 +696,23 @@ namespace Odyssey.Tests.Sim
             }
             Assert.That(colony.Jobs.JobsStarted, Is.EqualTo(started), "her response kept ending her hold");
 
-            marauder.StunnedUntilTick = 0;
-            Stand(colony, marauder, Near(colony, 1, 0));
+            bandit.StunnedUntilTick = 0;
+            Stand(colony, bandit, Near(colony, 1, 0));
             for (int t = 0; t < 30; t++)
             {
                 Tick(colony, a);
                 Assert.That(a.CurrentJob?.DefIndex, Is.Not.EqualTo(JobIndex.Flee), $"tick {t}: drafted, she ran");
             }
-            Assert.That(a.CombatTarget, Is.EqualTo(marauder.Id.Value), "drafted, she did not strike the marauder beside her");
+            Assert.That(a.CombatTarget, Is.EqualTo(bandit.Id.Value), "drafted, she did not strike the bandit beside her");
         }
 
         /// <summary>
-        /// Only danger that can reach her counts (§18d): behind a shut door a marauder four cells off
+        /// Only danger that can reach her counts (§18d): behind a shut door a bandit four cells off
         /// does not keep her off work. The control is the same room with an empty doorway.
         /// </summary>
         [TestCase(false)]
         [TestCase(true)]
-        public void AMarauderBehindAShutDoorIsNotDanger(bool open)
+        public void ABanditBehindAShutDoorIsNotDanger(bool open)
         {
             var colony = Board(colonists: 1, beds: 0);
             colony.World.Tick(5);
@@ -738,12 +738,12 @@ namespace Odyssey.Tests.Sim
             Assert.That(Respond(colony, a, HostilityResponse.Flee), Is.EqualTo(IntentRejection.None));
             Busy(colony, a);
 
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Size.Index(at.X + 5, at.Z, at.Y));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Size.Index(at.X + 5, at.Z, at.Y));
             Tick(colony, a);
             // Stunned where it stands, so neither the door nor her is ever reached: what is under
             // test is whether it is danger from there.
-            marauder.StunnedUntilTick = colony.World.CurrentTick + 100_000;
-            Assert.That(colony.Pawns.Reachable(marauder, a.Cell, marauder.OwnMode), Is.EqualTo(open),
+            bandit.StunnedUntilTick = colony.World.CurrentTick + 100_000;
+            Assert.That(colony.Pawns.Reachable(bandit, a.Cell, bandit.OwnMode), Is.EqualTo(open),
                 "the control: the doorway is not what the test says it is");
             Assert.That(door, Is.GreaterThanOrEqualTo(0));
 
@@ -757,7 +757,7 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// At Flee she does not go back for whoever struck her (§18d): run clear of a marauder that
+        /// At Flee she does not go back for whoever struck her (§18d): run clear of a bandit that
         /// hit her, with it standing out of range, she goes back to work rather than walking back to
         /// fight it with the blow still remembered. At Fight back, the control, she goes for it.
         /// </summary>
@@ -772,19 +772,19 @@ namespace Odyssey.Tests.Sim
             Stand(colony, a, Near(colony, 0, 0));
             if (response != HostilityResponse.FightBack) Assert.That(Respond(colony, a, response), Is.EqualTo(IntentRejection.None));
             Busy(colony, a);
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 20, 0));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 20, 0));
             Tick(colony, a);
             // Stunned twenty cells off, out of range: nothing is danger to her, and the blow is
             // remembered (Strike lands it as if from there).
-            marauder.StunnedUntilTick = colony.World.CurrentTick + 100_000;
-            Strike(colony, marauder, a, 1_000);
-            Assert.That(a.RetaliateAgainst, Is.EqualTo(marauder.Id.Value), "the control: she remembers the blow");
+            bandit.StunnedUntilTick = colony.World.CurrentTick + 100_000;
+            Strike(colony, bandit, a, 1_000);
+            Assert.That(a.RetaliateAgainst, Is.EqualTo(bandit.Id.Value), "the control: she remembers the blow");
 
             bool went = false;
             for (int t = 0; t < 300; t++)
             {
                 Tick(colony, a);
-                went |= a.CombatTarget == marauder.Id.Value;
+                went |= a.CombatTarget == bandit.Id.Value;
             }
             Assert.That(went, Is.EqualTo(response == HostilityResponse.FightBack),
                 response == HostilityResponse.FightBack ? "the control: at Fight back she did not go for it" : "at Flee, she went back to fight");
@@ -793,7 +793,7 @@ namespace Odyssey.Tests.Sim
         /// <summary>
         /// The notice is gated on anything hostile being about, found once a tick and forgotten when
         /// the next begins: a colonist at Defend whose first asking found nothing still notices the
-        /// marauder that comes later. (The first Defend test is the same claim in the round; this is
+        /// bandit that comes later. (The first Defend test is the same claim in the round; this is
         /// the gate's own.)
         /// </summary>
         [Test]
@@ -802,9 +802,9 @@ namespace Odyssey.Tests.Sim
             var (colony, helper, victim, rules) = Scene(5, HostilityResponse.Defend);
             for (int t = 0; t < 50; t++) Tick(colony, helper, victim);
             Assert.That(OnTheLongWait(helper), Is.True, "the control: nothing hostile, she works");
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 4, 0));
-            for (int t = 0; t < 1_500 && helper.CombatTarget != marauder.Id.Value; t++) Tick(colony, helper, victim);
-            Assert.That(helper.CombatTarget, Is.EqualTo(marauder.Id.Value), "the gate kept its first answer");
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 4, 0));
+            for (int t = 0; t < 1_500 && helper.CombatTarget != bandit.Id.Value; t++) Tick(colony, helper, victim);
+            Assert.That(helper.CombatTarget, Is.EqualTo(bandit.Id.Value), "the gate kept its first answer");
         }
     }
 }

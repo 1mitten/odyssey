@@ -1169,6 +1169,30 @@ namespace Odyssey.EditorTools
         /// <para>A beard is painted from the hair's own atlas cell, so it is the hair colour
         /// exactly and there is nothing here to colour it with.</para>
         /// </summary>
+        /// <summary>
+        /// The bandit gang's bodies, each with the armour vest its rig switches on
+        /// (<c>docs/design/42-bandits.md</c> §4). Chosen from contact sheets by the owner,
+        /// 2026-09-24: the topless male, whose camo trousers go black, and
+        /// <c>SportyFemale_02</c>, whose black trousers are already there and whose stripes,
+        /// shoulders and wristbands go black with them. The sports-bra body wears shorts and the
+        /// owner asked for trousers. One row per vest cut, so the cut is dealt with the body.
+        /// </summary>
+        static readonly (string Prefab, string Vest)[] BanditBodies =
+        {
+            ("Character_ToplessMale_01", "SM_Char_Attach_Male_Armor_01"),
+            ("Character_ToplessMale_01", "SM_Char_Attach_Male_Armor_02"),
+            ("Character_ToplessMale_01", "SM_Char_Attach_Male_Armor_03"),
+            ("Character_SportyFemale_02", "SM_Char_Attach_Female_Armor_01"),
+            ("Character_SportyFemale_02", "SM_Char_Attach_Female_Armor_02"),
+            ("Character_SportyFemale_02", "SM_Char_Attach_Female_Armor_03"),
+        };
+
+        /// <summary>
+        /// The bandit's headgear: Battle Royale's welding helmet, which the pack names
+        /// <c>Helmet_03</c> — picked off <c>Logs/bandit-heads.png</c> (design 42 §4).
+        /// </summary>
+        static readonly string[] HeadgearPieces = { "SM_Chr_Attach_Helmet_03" };
+
         static readonly string[] Beards =
         {
             "SM_Chr_Attach_Beard_02",
@@ -1717,6 +1741,35 @@ namespace Odyssey.EditorTools
             for (int variant = 0; variant < Hairs.Length; variant++) Hair(variant);
             for (int variant = 0; variant < Beards.Length; variant++) Beard(variant);
 
+            // The bandit gang's bodies (design 42), in the colonist family but **after** every
+            // colonist row, so no colonist's look index moves. Flagged bandit, which keeps them
+            // out of the lottery; each names the vest its rig switches on.
+            for (int b = 0; b < BanditBodies.Length; b++) BanditBody(Cast.Length + b, BanditBodies[b]);
+            for (int variant = 0; variant < HeadgearPieces.Length; variant++) Headgear(variant);
+
+            void BanditBody(int variant, (string Prefab, string Vest) body)
+            {
+                ModuleEntry row = PersonRow(variant, body.Prefab);
+                row.colonistPool = false;
+                row.uniform = false;
+                row.bandit = true;
+                row.overlayName = body.Vest;
+                rows.Add(row);
+            }
+
+            // The welding helmet, on the hair's terms: a rigid prop on the head bone. Not
+            // recoloured -- it is worn as the pack painted it (owner, 2026-09-24).
+            void Headgear(int variant)
+            {
+                rows.Add(new ModuleEntry
+                {
+                    moduleId = ModuleIds.Headgear(variant), shape = ModuleShape.Pillar,
+                    prefabName = HeadgearPieces[variant],
+                    recolours = false,
+                    centreXZ = false, baseAtY = false,
+                });
+            }
+
             // The animals (design 29): one row per kind, by the name ModuleIds keeps for it. The
             // art is the project's own (CC0, Assets/Art/Custom/Animals) rather than a pack's, so
             // these rows resolve on a machine with no Synty folder at all — the first figures
@@ -1789,7 +1842,16 @@ namespace Odyssey.EditorTools
             void Colonist(int variant)
             {
                 string prefab = Cast[variant].Prefab;
+                ModuleEntry row = PersonRow(variant, prefab);
+                row.colonistPool = Cast[variant].Pool;
+                row.uniform = IsUniform(prefab);
+                rows.Add(row);
+            }
 
+            // What every person row shares, colonist or bandit: the body, its sex, its pose and
+            // its gaits.
+            static ModuleEntry PersonRow(int variant, string prefab)
+            {
                 // The locomotion pack ships every clip masculine and feminine, and the packs name
                 // their characters, so the two can simply be matched up. It costs one string test
                 // and it is the difference between a colony of people and a colony of people half
@@ -1798,12 +1860,10 @@ namespace Odyssey.EditorTools
                                 || prefab.IndexOf("Girl", StringComparison.OrdinalIgnoreCase) >= 0;
                 string suffix = feminine ? "Femn" : "Masc";
 
-                rows.Add(new ModuleEntry
+                return new ModuleEntry
                 {
                     moduleId = ModuleIds.Colonist(variant), shape = ModuleShape.Pillar,
                     prefabName = prefab,
-                    colonistPool = Cast[variant].Pool,
-                    uniform = IsUniform(prefab),
                     sex = feminine ? BodySex.Female : BodySex.Male,
                     poseClipName = $"A_Idle_Standing_{suffix}",
                     // No sitClipName yet: no pack ships a seated clip, and the crouching idle
@@ -1825,7 +1885,7 @@ namespace Odyssey.EditorTools
                             speedFromClipName = $"A_Run_F_RootMotion_{suffix}",
                         },
                     },
-                });
+                };
             }
 
 

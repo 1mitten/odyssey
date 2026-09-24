@@ -169,7 +169,13 @@ namespace Odyssey.Presentation.Rendering
         /// The portrait of the colonist this seed and id describe, or null where one cannot be
         /// taken — no catalogue, no prefab for their look, or no graphics device.
         /// </summary>
-        public Texture2D? For(uint rollSeed, PawnId id)
+        public Texture2D? For(uint rollSeed, PawnId id) => For(rollSeed, id, PawnOutfit.Issued);
+
+        /// <summary>
+        /// The same, wearing <paramref name="outfit"/>: a bandit's portrait is their own face
+        /// under the welding helmet, in the gang's red (design 42 §2).
+        /// </summary>
+        public Texture2D? For(uint rollSeed, PawnId id, PawnOutfit outfit)
         {
             // Built from the catalogue, never from a row count. A book is not just a seed and a
             // number any more -- it carries the gendered pools of bodies, hair and beards -- so a
@@ -179,12 +185,15 @@ namespace Odyssey.Presentation.Rendering
             // runs before BuildSession has assigned the real book and this fallback answered for
             // it (docs/design/29-modular-colonists.md §8).
             ColonistAppearanceBook book = Appearances ??= AppearanceBooks.For(0u, _catalogue);
-            return For(book.For(id.Value, rollSeed));
+            return For(book.For(id.Value, rollSeed, outfit));
         }
 
-        /// <summary>The portrait of a colonist in the published frame.</summary>
+        /// <summary>
+        /// The portrait of a person in the published frame, in what they are wearing. One pawn at
+        /// a time: the outfit is found by a scan of the frame (<see cref="PawnOutfits.Of"/>).
+        /// </summary>
         public Texture2D? For(WorldSnapshot snapshot, PawnId id) =>
-            For(ColonistNames.RollSeedOf(snapshot, id), id);
+            For(ColonistNames.RollSeedOf(snapshot, id), id, PawnOutfits.Of(snapshot, id));
 
         /// <summary>
         /// The portrait of one appearance. **A miss is cached too**: a look with no prefab is a
@@ -519,6 +528,9 @@ namespace Odyssey.Presentation.Rendering
             // colonist would be wearing different things.
             ColonistAttachments.BareTheHead(instance);
 
+            // A bandit's vest back on (design 42), as the figure wears it.
+            ColonistAttachments.ShowOverlay(instance, row.overlayName);
+
             // Two empty slots on the head bone, for the hair and the beard this look will be
             // dressed in. Made with the subject and not per portrait, because the subject is kept
             // and reused across every colonist wearing this body
@@ -530,6 +542,8 @@ namespace Odyssey.Presentation.Rendering
             _hairRenderer = null;
             _beardMesh = null;
             _beardRenderer = null;
+            _headMesh = null;
+            _headRenderer = null;
             if (animator != null && animator.isHuman)
             {
                 Transform? head = animator.GetBoneTransform(HumanBodyBones.Head);
@@ -539,10 +553,14 @@ namespace Odyssey.Presentation.Rendering
                         out MeshFilter hf, out MeshRenderer hr);
                     ColonistAttachments.MakeSlot(head, "Beard", instance.layer,
                         out MeshFilter bf, out MeshRenderer br);
+                    ColonistAttachments.MakeSlot(head, "Headgear", instance.layer,
+                        out MeshFilter gf, out MeshRenderer gr);
                     _hairMesh = hf;
                     _hairRenderer = hr;
                     _beardMesh = bf;
                     _beardRenderer = br;
+                    _headMesh = gf;
+                    _headRenderer = gr;
                 }
             }
 
@@ -556,6 +574,8 @@ namespace Odyssey.Presentation.Rendering
         MeshRenderer? _hairRenderer;
         MeshFilter? _beardMesh;
         MeshRenderer? _beardRenderer;
+        MeshFilter? _headMesh;
+        MeshRenderer? _headRenderer;
 
         ColonistAttachments? _attachments;
 
@@ -573,11 +593,16 @@ namespace Odyssey.Presentation.Rendering
             AppearanceCells cells = row.appearance;
             AppearanceCells? usable = cells.Any ? cells : null;
 
+            // The figure's rule exactly: under a helmet the hair and beard are not worn.
+            bool covered = appearance.HidesHair;
             ColonistAttachments.Wear(_hairMesh, _hairRenderer,
-                Attachments.Hair(appearance.HairPiece), Materials, appearance);
+                covered ? default : Attachments.Hair(appearance.HairPiece), Materials, appearance);
             ColonistAttachments.Wear(_beardMesh, _beardRenderer,
-                Attachments.Beard(appearance.BeardPiece), Materials, appearance);
+                covered ? default : Attachments.Beard(appearance.BeardPiece), Materials, appearance);
+            ColonistAttachments.Wear(_headMesh, _headRenderer,
+                Attachments.Headgear(appearance.HeadPiece), Materials, appearance);
 
+            AppearanceCells? vest = row.overlayAppearance != null && row.overlayAppearance.Any ? row.overlayAppearance : null;
             var skins = subject.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true);
             for (int i = 0; i < skins.Length; i++)
             {
@@ -587,7 +612,9 @@ namespace Odyssey.Presentation.Rendering
                 // sharedMaterial rather than material: the second one instantiates a copy per
                 // renderer and the studio would leak one for every portrait it ever took.
                 Material? art = skin.sharedMaterial;
-                Material? painted = Materials.For(art, usable, appearance);
+                bool overlay = row.overlayName.Length > 0 &&
+                               string.Equals(skin.gameObject.name, row.overlayName, StringComparison.Ordinal);
+                Material? painted = Materials.For(art, overlay ? vest : usable, appearance);
                 if (painted != null) skin.sharedMaterial = painted;
             }
         }
