@@ -70,6 +70,11 @@ namespace Odyssey.Sim.Pawns
         {
             var content = _ctx.Content;
 
+            // The interval this pawn is on, which spends the fractional part of a trait's factor on
+            // a fall (Pawn.NeedFallPerInterval) and of a bed's on rest gain below. A pure function
+            // of the tick and the id, so nothing new is kept.
+            int intervalIndex = (tick + pawn.Id.Value) / interval;
+
             // The weather this colonist is standing in, refreshed once per interval for the
             // rates and the mood to read (design 28 §8). Everything downstream — work, rest,
             // severity, mood — uses this one number, so they cannot disagree about how cold the
@@ -78,7 +83,7 @@ namespace Odyssey.Sim.Pawns
                 pawn.AmbientTempC = _ctx.Temperature.CellTemp(pawn.Cell, tick);
 
             // ---- food: always falls, even asleep -------------------------------------------
-            Fall(pawn, NeedIndex.Food);
+            Fall(pawn, NeedIndex.Food, intervalIndex);
 
             // Starvation severity: the bar that fills while the pantry is empty and drains while
             // it is not, by the same number (WS3, design 17 §4c). Recovery being symmetric is
@@ -140,14 +145,13 @@ namespace Odyssey.Sim.Pawns
                 // gain — see Pawn.RestGainPerInterval for why a tier is worth nothing without it.
                 // Derived from the tick and the id, exactly as the phase spreading above is, so it
                 // is a pure function of state the world already keeps.
-                int intervalIndex = (tick + pawn.Id.Value) / interval;
                 pawn.Needs[NeedIndex.Rest] = System.Math.Min(
                     rest.max,
                     pawn.Needs[NeedIndex.Rest] + pawn.RestGainPerInterval(effectiveness, intervalIndex));
             }
             else
             {
-                Fall(pawn, NeedIndex.Rest);
+                Fall(pawn, NeedIndex.Rest, intervalIndex);
             }
 
             // ---- joy: paused asleep, topped up while idle ----------------------------------
@@ -165,7 +169,7 @@ namespace Odyssey.Sim.Pawns
                 }
                 else
                 {
-                    Fall(pawn, NeedIndex.Joy);
+                    Fall(pawn, NeedIndex.Joy, intervalIndex);
                 }
             }
 
@@ -173,9 +177,9 @@ namespace Odyssey.Sim.Pawns
             RollMentalBreak(pawn, tick, interval);
         }
 
-        void Fall(Pawn pawn, int needIndex)
+        void Fall(Pawn pawn, int needIndex, int intervalIndex)
         {
-            int value = pawn.Needs[needIndex] - pawn.NeedFallPerInterval(needIndex);
+            int value = pawn.Needs[needIndex] - pawn.NeedFallPerInterval(needIndex, intervalIndex);
             pawn.Needs[needIndex] = value < 0 ? 0 : value;
         }
 
@@ -197,6 +201,8 @@ namespace Odyssey.Sim.Pawns
             // factors read, and gone the moment the colonist warms up (design 28 §8).
             target += _ctx.Content.Temperature.MoodOffset(pawn.AmbientTempC);
             target += pawn.MemoryMoodOffset(tick);
+            // Who she is (design 41 §3.2): a standing offset, recomputed like the bands and never stored.
+            target += pawn.TraitOffset(TraitStat.Mood);
 
             if (target < 0) target = 0;
             if (target > mood.max) target = mood.max;

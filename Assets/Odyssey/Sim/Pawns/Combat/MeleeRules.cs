@@ -66,6 +66,8 @@ namespace Odyssey.Sim.Pawns
 
             AttackDef attack = armament.Attack;
             int damage = DamageMilli(attack, ctx, DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.MeleeDamage ^ who));
+            // The attacker's traits (design 41 §3.2), on the rolled figure and before the critical.
+            damage = (int)((long)damage * attacker.TraitFactorPerMille(TraitStat.MeleeDamage) / 1_000);
 
             int stun = 0;
             if (attack.damageKind == DamageKind.Blunt && attack.stunPerMille > 0 && attack.stunTicks > 0)

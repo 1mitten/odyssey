@@ -19,6 +19,10 @@ namespace Odyssey.Tests.Sim
             ScenarioDef scenario = ScenarioDef.Bare();
             scenario.colonists = colonists;
             scenario.beds = colonists;
+            // The fight's numbers are pinned against colonists with no traits and the legacy roll:
+            // a Scrapper or a Soft hands would move every spread and cooldown asserted here, and
+            // which one a seed deals is the draw's business, tested there (design 41 §4.4).
+            scenario.colonistProfile = RollProfile.Legacy;
             return ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: false);
         }
 

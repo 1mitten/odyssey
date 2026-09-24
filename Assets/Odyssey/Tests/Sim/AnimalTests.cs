@@ -509,7 +509,7 @@ namespace Odyssey.Tests.Sim
 
             int standard = person.Content.Movement.movePerTick * Rates.Scale;
             Assert.That(person.MoveRatePerMille(),
-                Is.EqualTo(standard * person.InnatePacePerMille() / 1_000 * person.ConditionPerMille() / 1_000),
+                Is.EqualTo(standard * person.PacePerMille() / 1_000 * person.ConditionPerMille() / 1_000),
                 "the species factor is exact for a person: no colonist's speed moved");
             Assert.That(hog.MoveRatePerMille(),
                 Is.EqualTo(standard * hog.InnatePacePerMille() / 1_000 * hog.ConditionPerMille() / 1_000 * 600 / 1_000));

@@ -23,6 +23,14 @@ the next session learns to ignore.
 
 ## Open
 
+- **Is the gamble fun, and is it worth taking?** (`claude/character-draw`, PR #193, design
+  `41-the-draw.md` §6.7.) New game → Creation: **Gamble** → Pull → Stop, three times, then Start.
+  The reels should spin at visibly different speeds, land left to right a beat apart, and a reel
+  heading for something big should crawl in pale amber first. A jackpot lights the frame and the
+  bulbs gold; a dud puts the bulbs out. Back and New game must bring the same pulls back. Then play
+  a Standard colony and hover a colonist's traits on the Needs tab. A wrong answer is a tease that
+  reads as the game being slow rather than as suspense, a white machine that looks like a hole in the
+  page, Gamble not tempting at +32%, or a dud that feels like a punishment rather than the game.
 - **Does the title screen's dock read well, and does Exit ask?** (`claude/settings-frame`, design
   40.) Press Play. A dark panel down the left edge with the layered mark and ODYSSEY, four
   coloured buttons and the build line at the foot, the starfield clear to the right. New game should

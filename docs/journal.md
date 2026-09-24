@@ -12090,3 +12090,70 @@ The owner ran the scenery benchmark in the player at 4K: with Full grass, the GP
 6.62 ms at 32 / 70 / 140 m with the scenery drawn from GPU buffers, against 6.12 / 8.31 / 7.04 chunk
 by chunk — a real 0.4–0.9 ms, and the whole look at 125–170 fps. The batch arm's 4–5 ms was the
 editor's inflation; design 38 §22a keeps the player's numbers as the ones to quote.
+
+## 2026-09-24 — The draw, designed
+
+The owner asked for colonist select in the reference's mould, with traits, balanced so that
+everyone averages out, and beside it a gamble: one pull per colonist from far wilder tables,
+presented as a fruit machine after *Alternate Reality: The Dungeon*'s stat strip. Two rounds of
+questions settled eight decisions (design 41 §2).
+
+**The one the owner pushed back on is the one that shaped the rest.** Asked whether the moment of
+pressing STOP should decide the result, they chose "rolled at the press" but added that *"if it's
+the same, what is the point"*: the gamble had to carry a real benefit. So Gamble is deliberately
+generous (a skill total about 32% above Standard's on average) and reaches a ceiling Standard never
+does (a 12+ skill on 6.8% of pulls, extreme traits only there), paid for in variance: about three
+pulls in ten come out worse than any Standard colonist and one in eleven is a dud.
+
+**The first draft of the table missed its own promise.** The owner had been shown ~7% stars; a
+200,000-pull simulation of the proposed weights gave 11.9%, so the 12–15 tail was thinned from
+25 to 14 tenths of a per cent before anything was written down. The design doc marks those figures
+as arithmetic and names the Long-tier test that will replace them with measurements.
+
+**Standard is stronger than today's roll**, about 12 levels over the five live skills against the
+legacy table's 8.1, and it replaces the roll every colonist uses. So the goldens will move with
+behaviour rather than with the hash, and the ten-day gate has to be re-run. A `Legacy` profile
+keeps old saves rolling as they did, because pace is re-derived from the seed on load.
+
+One naming call was made against the owner's list: the chopping reel is **CHP**, not CUT, because
+the skill is *Chopping* on every other surface. It is on the open list for the first play.
+
+## 2026-09-24 — The draw, built
+
+The owner read design 41 and came back with a Claude Design spec for the machine and one instruction:
+*"don't be super strict here — ensure it fits in the style/format of the game first"*. So Gamble went
+into the setup page that exists rather than into a panel of its own, and the page's own rules won
+every disagreement (design 41 §6.7 tables each one).
+
+**The roll change was a confound, not a bug, and it was measured before anything was edited.**
+Dealing every placed colonist Standard traits turned eleven simulation tests red — a swing cooldown,
+a damage spread, a felling's exact experience, two fight guards. Rather than read the eleven, one
+line forced placement back to Legacy and all seven mechanic tests went green, which said the fixtures
+had pinned numbers against trait-free colonists. They now ask for Legacy by name
+(`ScenarioDef.colonistProfile`), and the draw has its own tests for what traits do.
+
+**The simulation's numbers held.** The 100,000-pull Long test measured what the pre-design
+simulation promised to a tenth of a per cent (+32%, 9.0% duds, 6.7% stars), and the ten-day gate
+passed on the new roll. The golden probe against `main` showed the colonies doing more with more
+skill and nothing else moving: no deaths, no failed jobs, stores and needs unchanged.
+
+**The machine's one idea is where the answer goes.** A reel that must land on a value either jumps,
+speeds up, or is told the answer in time. Each reel here brakes at a constant rate, and at the moment
+it starts the rest point is rounded up to a whole symbol and the target is written into the strip
+there — two or more symbols out of the window, which a test checks for every reel. It then simply
+stops. `ReelMachineTests` lands every reel exactly at five frame rates on sixty seeds, and a
+withheld write turns that red.
+
+**The tests caught three of my own mistakes before Unity did.** Two reel speeds sat 1% from a 3:2
+ratio (they would have been seen to march together); three trait windows and the button came to 630
+px in a 618 px grid; and the stylesheet set a bold weight, which the sheet is not allowed to (type
+belongs to the roles). The HUD's three-letter rule also retired the "SPD" and "CHP" abbreviations
+the first design had leant on: the spec's full skill names made them unnecessary anyway.
+
+**And the end-to-end test paid for itself on its first run, on something that was not the draw's.**
+The colony built from three landed pulls had every skill at zero against the cards'. A fast-tier
+reproduction on the game's own scenario passed, so the diagnostic went into the PlayMode assertion
+instead of into more reasoning: *tick at start 30009*. The played scene starts at noon and the
+starting-skill roll fired only at tick zero, so no colonist in a played game has ever had starting
+skills — the setup page showed them and the colony did not have them. The rule now fires on the
+first tick it sees (P19).

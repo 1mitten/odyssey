@@ -176,6 +176,11 @@ namespace Odyssey.Sim.Pawns
                 // absent from an older save, which loads with no corpses and every building whole.
                 pawns.Corpses,
                 pawns.EdificeDamage,
+                // The draw (design 41 §3.5, §4.4): which tables each colonist was rolled from, and
+                // the traits she was dealt. Appended; a save from before has neither, and loads with
+                // every colonist on the legacy roll and nobody holding a trait — which is what it was.
+                new PawnProfileSection(pawns.Pawns),
+                new PawnTraitSection(pawns.Pawns),
             };
         }
 
@@ -419,7 +424,7 @@ namespace Odyssey.Sim.Pawns
 
             ScenarioDef scenario = request.Scenario;
             ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed,
-                scenario, request.Colonists);
+                scenario, request.Colonists, request.Profiles);
             int marked = ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenario);
             // The world's animals, after its people and before its first tick (design 30 §2):
             // the seeder reads the trees and the rock the generator left and the clearing the

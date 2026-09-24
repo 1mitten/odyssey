@@ -90,6 +90,8 @@
   <SkillDef ParentName="SkillBase">
     <defName>Skill_Hauling</defName>
     <label>hauling</label>
+    <!-- Outside every budget and off the reels (design 41 §4.1): a work type, not a skill, by decision. -->
+    <outsideBudget>true</outsideBudget>
   </SkillDef>
 
   <SkillDef ParentName="SkillBase">

@@ -97,9 +97,9 @@ namespace Odyssey.Presentation.Ui
         /// good at" — so the card carries the top few. The count comes from what fits, in
         /// <c>HudLayout</c>, rather than from a literal here.</para>
         /// </summary>
-        static Candidate RollCandidate(uint seed, int slot)
+        static Candidate RollCandidate(uint seed, int slot, RollProfile profile)
         {
-            Pawn rolled = ColonistDraw.Roll(seed, slot);
+            Pawn rolled = ColonistDraw.Roll(seed, slot, profile);
             PawnId id = ColonistDraw.IdForSlot(slot);
 
             // Every skill, in the same reading order the inspect pane's Skills tab uses, built into
@@ -137,9 +137,30 @@ namespace Odyssey.Presentation.Ui
             // Rolled, not Of: Of would answer from the name book, and slot 0's PawnId is the same
             // 1 the last colony's first colonist had — so a freshly dealt stranger would arrive
             // wearing the name somebody typed in a game that is already over.
+            // The draw (design 41): the traits, the pace and the tables the card was drawn from
+            // travel with it, so the page shows them and Start hands the world the same profile.
             return new Candidate(seed, ColonistNames.Rolled(seed, id),
-                ColonistIdentity.Age(seed, id), ColonistIdentity.Occupation(seed, id), rows);
+                ColonistIdentity.Age(seed, id), ColonistIdentity.Occupation(seed, id), rows,
+                rolled.Traits, rolled.PacePerMille(), profile);
         }
+
+        /// <summary>
+        /// The skills grid's rows with nobody in them: the names and which are live, no levels. What
+        /// the detail pane draws for a face-down gamble card, whose candidate is not yet anybody.
+        /// </summary>
+        static List<SkillRow> BlankSkillRows()
+        {
+            var rows = new List<SkillRow>();
+            foreach (SkillCatalogue.Entry entry in SkillCatalogue.ReadingOrder)
+                rows.Add(new SkillRow
+                {
+                    IconKey = entry.Key, Name = Registry.Label(entry.Key), Live = entry.Live,
+                    Reason = entry.Reason, Note = entry.Note,
+                });
+            return rows;
+        }
+
+        static List<SkillRow>? _blankSkillRows;
         readonly Dictionary<string, VisualElement> _startRowByKey = new Dictionary<string, VisualElement>();
 
         /// <summary>
@@ -497,6 +518,9 @@ namespace Odyssey.Presentation.Ui
             size.tooltip = "How much ground the colony has. Click to change";
             board.Add(size);
 
+            // Standard or Gamble (design 41 §5.1): one or the other, final at the first pull.
+            board.Add(BuildModeSwitch());
+
             page.Add(board);
 
             // ---- the people ------------------------------------------------------------
@@ -659,7 +683,11 @@ namespace Odyssey.Presentation.Ui
                 name.RegisterCallback<ClickEvent>(evt =>
                 {
                     evt.StopPropagation();
+                    if (MachineBusy) return;
                     _menu.Colonists!.Select(index);
+                    // A face-down or still-spinning gamble card has nobody on it to name yet.
+                    SlotState state = _menu.Colonists.StateOf(index);
+                    if (state == SlotState.Unpulled || state == SlotState.Spinning) return;
                     BeginRename(index);
                 });
                 name.tooltip = "Click to name them yourself";
@@ -669,7 +697,11 @@ namespace Odyssey.Presentation.Ui
 
                 card.Add(face);
                 card.Add(lines);
-                card.RegisterCallback<ClickEvent>(_ => _menu.Colonists!.Select(index));
+                card.RegisterCallback<ClickEvent>(_ =>
+                {
+                    // The machine is revealing one card; the page stays on it until it lands.
+                    if (!MachineBusy) _menu.Colonists!.Select(index);
+                });
                 _colonistCards.Add(card);
                 _colonistFaces.Add(face);
             }
@@ -757,6 +789,9 @@ namespace Odyssey.Presentation.Ui
             _colonistDetail.Add(_detailTraits);
 
             screen.Add(_colonistDetail);
+
+            // Gamble's parts (design 41 §6.5), built once and hidden in Standard.
+            BuildMachine(portrait);
             return screen;
         }
 
@@ -849,6 +884,10 @@ namespace Odyssey.Presentation.Ui
                 Candidate who = select.Cards[slot];
                 VisualElement lines = card[1];
 
+                // A face-down gamble card is nobody yet: RefreshDraw writes "Colonist 2" and its
+                // status over it, and no portrait is rendered for a seed that means nothing.
+                if (FaceDown(select, slot)) continue;
+
                 // The display name, not the card's: a colonist the player has renamed is called
                 // what the player called them everywhere on this page.
                 HudText.Set((Label)lines[0], select.DisplayNameAndAge(slot), HudTextRole.Name);
@@ -869,6 +908,16 @@ namespace Odyssey.Presentation.Ui
                     : "Show " + called;
             }
 
+            if (FaceDown(select, select.Selected))
+            {
+                // The grid keeps its names and liveness; the machine's windows say the rest.
+                _blankSkillRows ??= BlankSkillRows();
+                for (int i = 0; i < _blankSkillRows.Count && i < _detailSkillViews.Count; i++)
+                    SetSkillLine(_detailSkillViews, i, _blankSkillRows[i]);
+                RefreshDraw();
+                return;
+            }
+
             Candidate current = select.Current;
             HudText.Set(_detailName, select.DisplayNameAndAge(select.Selected), HudTextRole.Name);
             HudText.Set(_detailTrade, current.Occupation, HudTextRole.Body);
@@ -876,10 +925,11 @@ namespace Odyssey.Presentation.Ui
             _detailFace.SetFace(ColonistFace.Of(current.Seed, shown));
             _detailFace.SetPortrait(_boot!.Portraits.For(current.Seed, shown));
 
-            // Empty until M7, by the owner's decision. It says "—" rather than nothing, because a
-            // section that is absent and one that is empty look identical and only one of them is
-            // a promise. The word "Traits" is the heading's now, not this line's.
-            HudText.Set(_detailTraits, EmptySection, HudTextRole.Body);
+            // The traits the draw dealt (design 41 §3), by name, with what each does on the
+            // tooltip. "—" for a colonist with none, which a gamble can deal: a section that is
+            // absent and one that is empty look identical and only one of them is a promise.
+            HudText.Set(_detailTraits, TraitLine(current.Traits), HudTextRole.Body);
+            _detailTraits.tooltip = TraitTooltip(current.Traits);
 
             for (int i = 0; i < current.Skills.Count && i < _detailSkillViews.Count; i++)
                 SetSkillLine(_detailSkillViews, i, current.Skills[i]);
@@ -888,6 +938,41 @@ namespace Odyssey.Presentation.Ui
             // sitting there — the same answer the Start row gives an unusable seed.
             _colonistReroll.EnableInClassList("settings__row--off", !select.CanReroll);
             _colonistKeep.EnableInClassList("row--armed", select.IsLocked(select.Selected));
+            RefreshDraw();
+        }
+
+        /// <summary>Whether a slot is a gamble card nobody has been revealed on yet.</summary>
+        static bool FaceDown(ColonistSelect select, int slot)
+        {
+            if (select.Mode != CreationMode.Gamble) return false;
+            SlotState state = select.StateOf(slot);
+            return state == SlotState.Unpulled || state == SlotState.Spinning;
+        }
+
+        /// <summary>Whether the machine is mid-reveal, when the page stays on the card it is revealing.</summary>
+        bool MachineBusy => _machine.Phase == MachinePhase.Spinning || _machine.Phase == MachinePhase.Stopping;
+
+        /// <summary>"Diligent, Dour": the traits by their registry names, or the empty section's dash.</summary>
+        static string TraitLine(IReadOnlyList<int> traits)
+        {
+            if (traits.Count == 0) return EmptySection;
+            var names = new string[traits.Count];
+            for (int i = 0; i < traits.Count; i++) names[i] = Registry.Label(TraitHandle.KeyOf(traits[i]));
+            return string.Join(", ", names);
+        }
+
+        /// <summary>Each trait and what it does, one to a line, from the registry's descriptions.</summary>
+        static string TraitTooltip(IReadOnlyList<int> traits)
+        {
+            if (traits.Count == 0) return string.Empty;
+            var lines = new string[traits.Count];
+            for (int i = 0; i < traits.Count; i++)
+            {
+                string key = TraitHandle.KeyOf(traits[i]);
+                lines[i] = Registry.Label(key) + ": " + Registry.Describe(key);
+            }
+
+            return string.Join("\n", lines);
         }
 
         /// <summary>
@@ -915,7 +1000,8 @@ namespace Odyssey.Presentation.Ui
             // Drawn faint and inert rather than hidden: a Start that disappears while you are
             // mid-edit reads as a broken screen. MenuDirector.Start refuses as well — this is the
             // half the player can see, not the half that enforces it.
-            _startCommit.EnableInClassList("settings__row--off", !_menu.Seed.Usable);
+            _startCommit.EnableInClassList("settings__row--off",
+                !_menu.Seed.Usable || !(_menu.Colonists?.CanStart ?? true));
         }
 
         /// <summary>
@@ -1173,7 +1259,7 @@ namespace Odyssey.Presentation.Ui
         {
             MapSizes.Choice size = MapSizes.At(choice.Size);
             _boot!.BuildSession(choice.Seed, null, choice.Colonists, choice.Name,
-                new GridSize(size.X, size.Z, size.Y));
+                new GridSize(size.X, size.Z, size.Y), choice.Profiles);
 
             // After the build, because a name belongs to a colonist and there were none until the
             // line above. The seeds go with the names so the bootstrap can check it is naming the

@@ -601,6 +601,24 @@ fixture had just queued still going through. It landed on the dev machine and di
 
 ---
 
+### P19 — A rule keyed to the value every test uses, and the game uses another
+
+`StartingSkillsSystem` rolled every colonist's starting skills when `SimWorld.CurrentTick` read
+**zero**. Every headless run, every fixture and every golden starts its clock at zero. The played
+scene starts at **noon** (`ColonyRequest.StartTick`, tick 30,000), so from the day that went in
+**no colonist in any played game had starting skills**. The setup page showed the card's skills, the
+fast tier's `TheColonyIsTheColonistsTheScreenShowed` passed, and the colony had nothing.
+
+**Found by an end-to-end PlayMode test that compared the colony against the card** (the draw's,
+2026-09-24), with the tick printed beside both skill arrays — *tick at start 30009, real xp all
+zero*. A fast-tier reproduction on the played scenario passed, because it too started at zero.
+
+**The check:** for any rule that fires on a particular value of a clock, a counter or a size, ask
+what the *game* sets it to, not what the fixtures do. `git grep` the setter (`StartAtTick`,
+`StartTick`) and write one test at the game's value. Better still, key the rule to the event it
+means ("the first tick this system sees") rather than to a number that stood for it.
+`DrawTests.AColonyStartedAtNoonStillRollsItsColonistsSkills` is the test.
+
 ## The register
 
 ### 2026-09-24 — A stored graphics preference never reached a new game (P1, P2-adjacent)

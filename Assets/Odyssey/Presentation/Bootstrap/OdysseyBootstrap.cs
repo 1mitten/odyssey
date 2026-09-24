@@ -763,7 +763,7 @@ namespace Odyssey.Presentation.Bootstrap
         /// <c>WorldSave.Load</c> refuses a world of a different size anyway.</para>
         /// </summary>
         public void BuildSession(uint? seedOverride, SaveHeader? from, uint[]? colonists,
-            string? name, GridSize? sizeOverride)
+            string? name, GridSize? sizeOverride, RollProfile[]? profiles = null)
         {
             if (HasSession)
                 throw new System.InvalidOperationException(
@@ -859,6 +859,9 @@ namespace Odyssey.Presentation.Bootstrap
                 // Who they are (U40). Null for a loaded session, whose colonists come out of the
                 // file with their seeds already on them, and for every caller that never asked.
                 Colonists = from == null ? colonists : null,
+                // Which tables each was drawn from (design 41 §4.4): Gamble for a pulled colonist.
+                // Null for a loaded session, whose profiles come out of the save.
+                Profiles = from == null ? profiles : null,
 
                 // Noon, and it belongs to the build rather than to a call after it: a colony that
                 // starts at tick 0 starts at midnight, SimWorld.StartAtTick refuses a clock that

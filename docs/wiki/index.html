@@ -149,7 +149,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
 <li><a href="#commands">Commands<b>49</b></a></li>
 <li><a href="#work">Work and skills<b>42</b></a></li>
-<li><a href="#colonists">Colonists<b>46</b></a></li>
+<li><a href="#colonists">Colonists<b>64</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>42</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
@@ -162,9 +162,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>818</b><i>named entries</i></div>
+<div class="stat"><b>855</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>546</b><i>no art yet</i></div>
+<div class="stat m"><b>583</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1777,7 +1777,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">46 entries</em></h2>
+<h2>Colonists <em class="count">64 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -1927,6 +1927,118 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">In a mental break now<span class="need">Needs drawing: mood face, in a break</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M2</div>
+</div>
+</div>
+<h3 class="nsh">Traits</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.trait.diligent" data-hay="diligent ui.trait.diligent works 15% faster at everything " data-gap="1">
+<div class="nm">Diligent<span class="k">ui.trait.diligent</span></div>
+<div class="dsc">Works 15% faster at everything</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.idle" data-hay="idle ui.trait.idle works 15% slower at everything " data-gap="1">
+<div class="nm">Idle<span class="k">ui.trait.idle</span></div>
+<div class="dsc">Works 15% slower at everything</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.quickstudy" data-hay="quick study ui.trait.quickstudy learns 40% faster " data-gap="1">
+<div class="nm">Quick study<span class="k">ui.trait.quickstudy</span></div>
+<div class="dsc">Learns 40% faster</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.slowstudy" data-hay="slow study ui.trait.slowstudy learns 40% slower " data-gap="1">
+<div class="nm">Slow study<span class="k">ui.trait.slowstudy</span></div>
+<div class="dsc">Learns 40% slower</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.longstride" data-hay="long stride ui.trait.longstride walks 5% faster " data-gap="1">
+<div class="nm">Long stride<span class="k">ui.trait.longstride</span></div>
+<div class="dsc">Walks 5% faster</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.shortstride" data-hay="short stride ui.trait.shortstride walks 5% slower " data-gap="1">
+<div class="nm">Short stride<span class="k">ui.trait.shortstride</span></div>
+<div class="dsc">Walks 5% slower</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.sunny" data-hay="sunny ui.trait.sunny in a better mood than most, whatever happens " data-gap="1">
+<div class="nm">Sunny<span class="k">ui.trait.sunny</span></div>
+<div class="dsc">In a better mood than most, whatever happens</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.dour" data-hay="dour ui.trait.dour in a worse mood than most, whatever happens " data-gap="1">
+<div class="nm">Dour<span class="k">ui.trait.dour</span></div>
+<div class="dsc">In a worse mood than most, whatever happens</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.lighteater" data-hay="light eater ui.trait.lighteater gets hungry 20% slower " data-gap="1">
+<div class="nm">Light eater<span class="k">ui.trait.lighteater</span></div>
+<div class="dsc">Gets hungry 20% slower</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.bigappetite" data-hay="big appetite ui.trait.bigappetite gets hungry 20% faster " data-gap="1">
+<div class="nm">Big appetite<span class="k">ui.trait.bigappetite</span></div>
+<div class="dsc">Gets hungry 20% faster</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.scrapper" data-hay="scrapper ui.trait.scrapper hits 20% harder in a fight " data-gap="1">
+<div class="nm">Scrapper<span class="k">ui.trait.scrapper</span></div>
+<div class="dsc">Hits 20% harder in a fight</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.softhands" data-hay="soft hands ui.trait.softhands hits 20% softer in a fight " data-gap="1">
+<div class="nm">Soft hands<span class="k">ui.trait.softhands</span></div>
+<div class="dsc">Hits 20% softer in a fight</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.prodigy" data-hay="prodigy ui.trait.prodigy learns twice as fast. only a gamble deals it " data-gap="1">
+<div class="nm">Prodigy<span class="k">ui.trait.prodigy</span></div>
+<div class="dsc">Learns twice as fast. Only a gamble deals it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.wreck" data-hay="wreck ui.trait.wreck works at 60% of an ordinary pace. only a gamble deals it " data-gap="1">
+<div class="nm">Wreck<span class="k">ui.trait.wreck</span></div>
+<div class="dsc">Works at 60% of an ordinary pace. Only a gamble deals it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.tireless" data-hay="tireless ui.trait.tireless tires half as fast. only a gamble deals it " data-gap="1">
+<div class="nm">Tireless<span class="k">ui.trait.tireless</span></div>
+<div class="dsc">Tires half as fast. Only a gamble deals it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.bottomless" data-hay="bottomless ui.trait.bottomless gets hungry 60% faster. only a gamble deals it " data-gap="1">
+<div class="nm">Bottomless<span class="k">ui.trait.bottomless</span></div>
+<div class="dsc">Gets hungry 60% faster. Only a gamble deals it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.unshakeable" data-hay="unshakeable ui.trait.unshakeable in a far better mood than most, whatever happens. only a gamble deals it " data-gap="1">
+<div class="nm">Unshakeable<span class="k">ui.trait.unshakeable</span></div>
+<div class="dsc">In a far better mood than most, whatever happens. Only a gamble deals it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
+</div>
+<div class="row gap" id="ui.trait.butterfingers" data-hay="butterfingers ui.trait.butterfingers works at 75% and hits 30% softer. only a gamble deals it " data-gap="1">
+<div class="nm">Butterfingers<span class="k">ui.trait.butterfingers</span></div>
+<div class="dsc">Works at 75% and hits 30% softer. Only a gamble deals it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MS</div>
 </div>
 </div>
 <h3 class="nsh">Current activity</h3>
@@ -3668,7 +3780,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 818, "gaps": 546};</script>
+<script>window.WIKI={"total": 855, "gaps": 583};</script>
 <script>
 (function(){
   var D = window.WIKI;

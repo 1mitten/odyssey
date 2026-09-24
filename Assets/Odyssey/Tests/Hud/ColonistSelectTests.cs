@@ -224,7 +224,8 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void TheRollIsRequired()
         {
-            Assert.Throws<ArgumentNullException>(() => new ColonistSelect(null!));
+            Assert.Throws<ArgumentNullException>(() => new ColonistSelect((Func<uint, int, Candidate>)null!));
+            Assert.Throws<ArgumentNullException>(() => new ColonistSelect((Func<uint, int, Odyssey.Sim.Contracts.RollProfile, Candidate>)null!));
         }
 
         /// <summary>

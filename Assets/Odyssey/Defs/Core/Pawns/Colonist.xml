@@ -120,6 +120,53 @@
       <li>2</li>
       <li>1</li>
     </startingSkillLevelWeights>
+    <!--
+      The draw (design 41 §4). The table above is Legacy's, kept so a save from before the draw
+      rolls as it did, and it still deals hauling in every profile.
+
+      Standard: everyone averages out. Exactly this many levels across the budget skills, none past
+      the cap; each skill draws a weight from 1 to weightMax first, so the same total comes out a
+      specialist on one seed and a generalist on another. Pace in a narrow band. ASSUMED; the owner
+      chose "exactly 12", which is above the legacy table's mean of about 8.1 over the same skills.
+    -->
+    <standardSkillBudget>12</standardSkillBudget>
+    <standardSkillCap>8</standardSkillCap>
+    <standardSkillWeightMax>6</standardSkillWeightMax>
+    <standardPaceMinPerMille>950</standardPaceMinPerMille>
+    <standardPaceMaxPerMille>1050</standardPaceMaxPerMille>
+    <!--
+      Gamble: one pull, far wider. One independent draw per budget skill, index the level 0..15,
+      weights in tenths of a per cent. Tuned by a 200,000-pull simulation to the owner's figures
+      (design 41 §4.3): skill total mean 15.9 against Standard's 12, 9% duds (total 6 or less), 6.8%
+      with a 12+ skill. The first draft of this tail gave 12% stars and was thinned.
+    -->
+    <gambleSkillLevelWeights>
+      <li>300</li>
+      <li>120</li>
+      <li>100</li>
+      <li>90</li>
+      <li>82</li>
+      <li>72</li>
+      <li>62</li>
+      <li>52</li>
+      <li>42</li>
+      <li>32</li>
+      <li>22</li>
+      <li>12</li>
+      <li>7</li>
+      <li>4</li>
+      <li>2</li>
+      <li>1</li>
+    </gambleSkillLevelWeights>
+    <gamblePassionMajorPerCent>25</gamblePassionMajorPerCent>
+    <gamblePassionMinorPerCent>25</gamblePassionMinorPerCent>
+    <!-- The weight of being dealt 0, 1, 2 or 3 traits, from both pools. -->
+    <gambleTraitCountWeights>
+      <li>25</li>
+      <li>35</li>
+      <li>28</li>
+      <li>12</li>
+    </gambleTraitCountWeights>
   </PawnKindDef>
 
   <!--
