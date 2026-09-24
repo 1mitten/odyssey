@@ -1834,6 +1834,139 @@ namespace Odyssey.Tests.PlayMode
         /// moved the instance count, the queue arm really moved a material, the 4K arm really drew
         /// at 4K, and no reading was taken while the board was still re-meshing.</para>
         /// </summary>
+        /// <summary>
+        /// What rain costs, drawn the two ways the weather design weighs (design 43 §7, the
+        /// rain-look prototype), on the played board in one run.
+        ///
+        /// <para>Arms, at the batch view and at 3840 x 2160: <b>off</b>; <b>zero</b>, the rain
+        /// director asked to draw at intensity 0 — the negative control, which must submit nothing
+        /// and cost nothing (P18); <b>wet</b>, the ground's wetness term alone with no drops, which
+        /// prices the shader change every frame of rain pays; <b>particles</b>, the design as first
+        /// written (CPU <c>ParticleSystem</c>s, emitted and sampled every frame); <b>gpu</b> and
+        /// <b>gpu downpour</b>, the procedural streaks and splashes at 0.7 and 1.0.</para>
+        ///
+        /// <para>Both rain arms are fed from an <c>Update</c> every frame, as the game would, so
+        /// their CPU cost lands in the wall-clock frame this reads. (Fed from the camera's render
+        /// callback instead, the particle arm emitted nothing in PlayMode.) The procedural arm is
+        /// asserted to have drawn and the particle arm to have particles alive, or the arm measured
+        /// nothing.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheRainAgainstTheFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot);
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            SkyHeightMap? sky = null;
+            RainDirector? rain = null;
+            RainParticles? particles = null;
+            try
+            {
+                yield return TimeFrames("rain/warm", boot, WarmupFrames, _ => { });
+
+                cam = boot.cameraRig!.Camera;
+                sky = new SkyHeightMap(boot.Model!);
+                sky.Rebuild();
+                rain = new RainDirector();
+                if (!rain.Available) Assert.Ignore("Odyssey/Rain did not load, so there is no rain to price");
+                particles = new RainParticles(root.transform, sky);
+
+                string arm = "off";
+                SliceCameraRig rig = boot.cameraRig!;
+                RainDirector drawer = rain;
+                RainParticles emitter = particles;
+                UnityEngine.Camera shooting = cam;
+                root.AddComponent<RainFeed>().Frame = () =>
+                {
+                    drawer.Clock = Time.time;
+                    if (arm.StartsWith("gpu") || arm == "zero")
+                        drawer.Draw(shooting, rig.Focus, rig.TargetDistance, underground: false);
+                    else
+                        // Publishes the globals and zeroes the counters, draws nothing: an arm
+                        // that follows a drawing one must not read its predecessor's count.
+                        drawer.Draw(shooting, rig.Focus, rig.TargetDistance, underground: true);
+                    if (arm == "particles")
+                        emitter.Sync(rig.Focus, rig.TargetDistance, Time.deltaTime, underground: false);
+                };
+
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "rain-4k" };
+
+                var arms = new (string Name, float Rain, float Wet, float Puddles)[]
+                {
+                    ("off", 0f, 0f, 0f),
+                    ("zero", 0f, 0f, 0f),
+                    ("wet", 0f, 0.85f, 0.4f),
+                    ("particles", 0.7f, 0f, 0f),
+                    ("gpu", 0.7f, 0.85f, 0.4f),
+                    ("gpu downpour", 1f, 1f, 1f),
+                };
+                var lines = new List<string>();
+
+                foreach (bool big in new[] { false, true })
+                {
+                    cam.targetTexture = big ? fourK : previousTarget;
+                    string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                    foreach (var a in arms)
+                    {
+                        arm = a.Name;
+                        rain.Intensity = a.Name.StartsWith("gpu") ? a.Rain : 0f;
+                        rain.Wetness = a.Wet;
+                        rain.Puddles = a.Puddles;
+                        particles.Intensity = a.Name == "particles" ? a.Rain : 0f;
+                        if (a.Name != "particles") particles.Sync(rig.Focus, rig.TargetDistance, 0f, underground: true);
+
+                        float ms = 0f, gpu = 0f;
+                        var split = System.Array.Empty<double>();
+                        yield return TimeFrames($"rain/{resolution}/{a.Name}", boot, WarmupFrames,
+                            m => ms = m, s => split = s, g => gpu = g);
+
+                        if (a.Name == "zero" || a.Name == "off" || a.Name == "wet")
+                            Assert.That(rain.LastDrawCalls, Is.Zero, $"{a.Name} submitted rain");
+                        if (a.Name.StartsWith("gpu"))
+                            Assert.That(rain.LastDrawCalls, Is.EqualTo(2), $"{a.Name} drew no rain, so it measured nothing");
+                        if (a.Name == "particles")
+                            Assert.That(particles.LiveStreaks, Is.GreaterThan(0), "the particle arm had no drops alive");
+
+                        lines.Add($"{resolution} {a.Name}: frame {ms:0.00} ms, gpu " +
+                                  (gpu > 0f ? $"{gpu:0.00} ms" : "unavailable") +
+                                  $", submit {Sum(split):0.000} ms, {boot.Renderer?.DrawCalls ?? 0} world calls + " +
+                                  $"{rain.LastDrawCalls} rain calls ({rain.LastStreaks} streaks, {rain.LastSplashes} splashes), " +
+                                  $"{particles.LiveStreaks}+{particles.LiveSplashes} particles");
+                    }
+                }
+
+                Debug.Log($"[FrameTime] rain (camera {rig.TargetDistance:0} m from focus, " +
+                          $"{SystemInfo.graphicsDeviceName}, {SystemInfo.graphicsDeviceType}): " +
+                          string.Join("; ", lines));
+            }
+            finally
+            {
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                particles?.Dispose();
+                rain?.Dispose();
+                sky?.Dispose();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>Calls one action every frame: how the rain arm feeds itself, as the game would.</summary>
+        sealed class RainFeed : MonoBehaviour
+        {
+            public Action? Frame;
+            void Update() => Frame?.Invoke();
+        }
+
+        static double Sum(double[] split)
+        {
+            double total = 0d;
+            foreach (double d in split) total += d;
+            return total;
+        }
+
         [UnityTest]
         public IEnumerator TheGrassAgainstTheFrame()
         {

@@ -445,6 +445,7 @@ Shader "Odyssey/Foliage"
             #pragma target 3.5
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "OdysseyWeather.hlsl"
 
             struct Attributes
             {
@@ -531,7 +532,10 @@ Shader "Odyssey/Foliage"
                                           saturate(normalWS.y * 1.6 - 0.6) * 0.7);
                 surface.alpha = 1;
                 surface.metallic = 0;
-                surface.smoothness = _Smoothness;
+                // Wet leaves: darker and a little glossier, where the sky reaches (no puddles).
+                float wet = OdysseyWetAt(input.positionWS, float3(0, 1, 0)) * 0.8;
+                surface.albedo *= lerp(1.0, 0.72, wet);
+                surface.smoothness = lerp(_Smoothness, 0.45, wet);
                 surface.normalTS = half3(0, 0, 1);
                 surface.occlusion = 1;
 

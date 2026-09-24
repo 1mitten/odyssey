@@ -68,6 +68,26 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>How many times the ambient probe has been re-integrated. A cost counter.</summary>
         public int ProbeUpdates { get; private set; }
 
+        float _cloud;
+
+        /// <summary>
+        /// Cloud cover, 0 to 1, graded over the hour's light by <see cref="Overcast"/>. Setting it
+        /// forgets the last hour applied so the next <see cref="ApplyHour"/> writes, and the probe
+        /// with it: the ambient changes with the cover, not with the clock.
+        /// </summary>
+        public float Cloud
+        {
+            get => _cloud;
+            set
+            {
+                float v = Mathf.Clamp01(value);
+                if (Mathf.Approximately(v, _cloud)) return;
+                _cloud = v;
+                Hour = -1f;
+                _lastProbeHour = float.NegativeInfinity;
+            }
+        }
+
         /// <summary>Put the light where the tick says it should be.</summary>
         public void Apply(long tick) => ApplyHour(Daylight.HourOf(tick));
 
@@ -87,6 +107,7 @@ namespace Odyssey.Presentation.Rendering
 
             DaylightState state = Daylight.Sample(hour);
             if (Daylight.MeadowLight) state = Daylight.Meadow(state);
+            if (_cloud > 0f) state = Overcast.Grade(state, _cloud);
             Hour = hour;
 
             _sun.color = state.SunColour;

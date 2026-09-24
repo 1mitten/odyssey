@@ -12126,3 +12126,44 @@ figures are drawn 2.1 m to the head, so the arms are at 1.5 m and a carried head
 batch frames read the body mid-fall: a frame is a couple of milliseconds, so the test waits in real
 seconds. The Long soak caught the rule change on its own — a colonist rescued in a marauder soak
 healed past 15 % while down, which its invariant still forbade.
+
+## 2026-09-24 — Rain, photographed and timed (the rain-look prototype)
+
+The weather design (#190) drew rain with the campfire's shared particle systems. The review
+(`claude/weather-design-review`) argued for GPU-drawn rain and a wet ground, and this branch
+exists so the owner can choose by eye and by number rather than by argument. **Prototype, not the
+visuals PR**: presentation only, nothing in a cell, a save or the hash, and the cover map reads the
+render mirror, where the design will have the simulation own the column rule.
+
+**What is here.**
+- `Odyssey/Rain`: streaks and splashes from two `Graphics.RenderPrimitives` calls, with every drop
+  placed in the vertex shader.
+- `OdysseyWeather.hlsl`: the four globals and the wetness term, which `Odyssey/MeadowGround` and
+  `Odyssey/Foliage` now read.
+- `SkyHeightMap`: the height the rain stops at, per column, as a texture.
+- `Overcast` and `OvercastVolume`: the grey day.
+- `RainParticles`: §7 as written, kept as the control.
+- `RainCheck`: 8 variants × 4 framings.
+- `FrameTimeTests.TheRainAgainstTheFrame`: six arms with a zero-intensity control.
+- Research `d-20-rain-rendering.md`.
+
+**Three faults the pictures found that no test would have.**
+- `float3(column + drift, y)` packs the height into z, so every streak was placed below the ground.
+- URP flips the projection when it draws into a texture, so `UNITY_MATRIX_P._m11` is negative
+  there. A pixel size computed from it went negative and the visibility fade culled every splash.
+- A grey day that only dimmed the sun still looked sunny under the Meadow ambient. The ambient has
+  to fall too, and saturation needs a volume, because it is not a property of a light.
+
+Two diagnostic shots settled the first two. One drew a fixed quad in clip space, which proved the
+draw executed. The other coloured that quad by three conditions, which found the flipped projection.
+
+**Measured, one run, 5070 Ti, D3D11, with one other editor open.** At 640 × 480 nothing separates
+from the controls: off and zero differ by 0.11 ms. At 4K the controls themselves differ by 0.57 ms.
+The GPU arm at 0.7 lands between them (8.67 against 8.38 and 8.95); the downpour is 0.29 ms above
+the higher control; the particles are 0.54 ms above it with 30 % fewer drops than their target.
+GPU time is unavailable in a batch run, so the 0.5 ms budget is still owed to a Play session.
+
+**Not done.** The cut-away frame drew the roof it was meant to hide even after the grid was edited
+and the board re-meshed, so it was dropped rather than shipped wrong; how rain looks stopping at a
+hidden roof is unphotographed. Wet walls, roofs and paving need a shader we own. Pictures and the
+cost table: https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3
