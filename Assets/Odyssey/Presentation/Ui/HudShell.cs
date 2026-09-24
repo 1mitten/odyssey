@@ -130,7 +130,10 @@ namespace Odyssey.Presentation.Ui
         VisualElement _cardsHost = null!;
         readonly List<CardView> _cards = new List<CardView>();
         int _stripCapacity = int.MaxValue;
-        bool _sweepingRoster;
+        // A left press dragged across the cards (design 33 §20): the rule is the model's, and the
+        // page it covers is copied into the scratch list at the press.
+        readonly RosterSweep _rosterSweep = new RosterSweep();
+        readonly List<PawnId> _sweepPage = new List<PawnId>();
         VisualElement? _rosterPager;
         VisualElement? _prevPageBtn;
         VisualElement? _nextPageBtn;
@@ -928,8 +931,8 @@ namespace Odyssey.Presentation.Ui
 
             // The roster sweep ends when the button does, wherever the pointer happens to be when
             // it ends — a card's own PointerUp never arrives if the release landed off the strip.
-            if (_sweepingRoster && UnityEngine.InputSystem.Mouse.current?.leftButton.isPressed != true)
-                _sweepingRoster = false;
+            if (_rosterSweep.Active && UnityEngine.InputSystem.Mouse.current?.leftButton.isPressed != true)
+                FinishRosterSweep();
 
             if (_isRightDragging && UnityEngine.InputSystem.Mouse.current?.rightButton.isPressed != true)
             {
