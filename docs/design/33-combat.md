@@ -2603,3 +2603,11 @@ nothing to clean.
   **nothing**.
 - **Per frame it scales with the marks (at most 200) and the drops in the air (at most 512)**,
   never with the board or the colony (`process.md` §3).
+- **Measured** (`FrameTimeTests.TheBloodAtItsCap`, one run, 640 x 480, RTX 5070 Ti): 250 hits
+  laid round the start, 200 marks standing — **3 draw calls** and the frame **2.40 → 2.53 ms**, the
+  whole difference in `Overlays` (0.011 → 0.097 ms).
+- **The fight test reads the ground only once the air has emptied.** Drops fall in real seconds,
+  about 0.7 each, and a brawl in `TheFrameWithAFightInView` lasts well under one on this machine, so
+  read at once it found 54 drops up and no mark — and, with the refusal counters added to find out
+  why, **nothing refused**: the drops had simply not landed. `BloodDirector.Refused*` stay, as the
+  first thing to read when a fight leaves less blood than it should.

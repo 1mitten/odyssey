@@ -128,6 +128,20 @@ namespace Odyssey.Presentation.World
         /// <summary>Marks the last <see cref="Draw"/> submitted.</summary>
         public int LastMarksDrawn { get; private set; }
 
+        /// <summary>
+        /// Why landed blood left no mark, counted since the last <see cref="Clear"/>: off the board,
+        /// into something solid, into water, or over nothing to stand on. The first thing to read
+        /// when a fight leaves less blood than it should.
+        /// </summary>
+        public int RefusedOffBoard { get; private set; }
+        public int RefusedBlocked { get; private set; }
+        public int RefusedWater { get; private set; }
+        public int RefusedNoGround { get; private set; }
+
+        /// <summary>Where the last refused mark would have gone, and on which layer.</summary>
+        public Vector3 LastRefused { get; private set; }
+        public int LastRefusedLayer { get; private set; }
+
         // ---------------------------------------------------------------- the seam
 
         public void Spurt(Vector3 feet, Vector3 wound, Vector3 direction, float amount, bool sharp)
@@ -204,6 +218,7 @@ namespace Odyssey.Presentation.World
             _ledger.Clear();
             _dropCount = 0;
             _waitingCount = 0;
+            RefusedOffBoard = RefusedBlocked = RefusedWater = RefusedNoGround = 0;
         }
 
         // ---------------------------------------------------------------- the frame
@@ -259,7 +274,7 @@ namespace Odyssey.Presentation.World
             for (int i = _ledger.Count - 1; i >= 0; i--)
             {
                 BloodMarkRecord mark = _ledger[i];
-                if (!Stands(mark.X, mark.Z, mark.Layer, out _))
+                if (!Stands(mark.X, mark.Z, mark.Layer, out _, count: false))
                 {
                     _ledger.RemoveAt(i);
                     continue;
@@ -328,7 +343,12 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void Lay(Vector3 at, int layer, BloodShape shape, float radius, float stretch, float yaw)
         {
-            if (!Stands(at.x, at.z, layer, out int index)) return;
+            if (!Stands(at.x, at.z, layer, out int index))
+            {
+                LastRefused = at;
+                LastRefusedLayer = layer;
+                return;
+            }
             float floor = _model.Floor(index) != CoreContent.SlabNone ? CellMetrics.SlabLift : 0f;
             float lift = shape == BloodShape.Pool ? PoolLift : MarkLift;
             _ledger.Add(new BloodMarkRecord
@@ -350,20 +370,34 @@ namespace Odyssey.Presentation.World
         /// Whether the cell under a point on <paramref name="layer"/> has ground for blood to lie on:
         /// on the board, open, not water, and standing on a floor or on solid ground below.
         /// </summary>
-        bool Stands(float worldX, float worldZ, int layer, out int index)
+        bool Stands(float worldX, float worldZ, int layer, out int index, bool count = true)
         {
             int x = Mathf.FloorToInt(worldX / CellMetrics.SizeXZ);
             int z = Mathf.FloorToInt(worldZ / CellMetrics.SizeXZ);
             index = -1;
-            if (!_model.Size.Contains(x, z, layer)) return false;
+            if (!_model.Size.Contains(x, z, layer))
+            {
+                if (count) RefusedOffBoard++;
+                return false;
+            }
 
             index = _model.Index(x, z, layer);
-            if (_model.IsSolid(index) || _model.IsBlocking(index)) return false;
+            if (_model.IsSolid(index) || _model.IsBlocking(index))
+            {
+                if (count) RefusedBlocked++;
+                return false;
+            }
             // Water in the cell, or under it — the knockback's rule (CombatSystem.IsWater).
-            if (WaterLine.IsWater(_model, new CellRef(x, z, layer))) return false;
-            if (layer > 0 && WaterLine.IsWater(_model, new CellRef(x, z, layer - 1))) return false;
+            if (WaterLine.IsWater(_model, new CellRef(x, z, layer))
+                || layer > 0 && WaterLine.IsWater(_model, new CellRef(x, z, layer - 1)))
+            {
+                if (count) RefusedWater++;
+                return false;
+            }
             if (_model.Floor(index) != CoreContent.SlabNone) return true;
-            return layer > 0 && _model.IsSolid(_model.Index(x, z, layer - 1));
+            if (layer > 0 && _model.IsSolid(_model.Index(x, z, layer - 1))) return true;
+            if (count) RefusedNoGround++;
+            return false;
         }
 
         /// <summary>The layer a point on the ground belongs to, relief taken off.</summary>

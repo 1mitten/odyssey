@@ -524,6 +524,9 @@ namespace Odyssey.Presentation.Bootstrap
         public WorldRenderModel? Model => _model;
         public ChunkRenderer? Renderer => _renderer;
 
+        /// <summary>Blood on the ground and in the air (design 33 §10). For the frame tests that price it.</summary>
+        public BloodDirector? Blood => _blood;
+
         /// <summary>The colony's one audio director, for the presenter that applies the
         /// settings panel's faders to it live.</summary>
         public AudioDirector? Audio => _audio;

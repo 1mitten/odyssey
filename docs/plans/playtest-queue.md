@@ -23,6 +23,18 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does blood read as blood, and is it too much?** (`claude/combat-blood`, design 33 §10).
+  *Arm every colonist*, *Spawn 3 marauders*, and watch at the play camera's distance. Every landed
+  hit should throw a few red drops from the wound along the blow and leave one mark where they
+  land: a machete or arc blade a long splatter with drops thrown ahead, a bat, crowbar or fist a
+  smaller round spot. Somebody going down should get a pool under the middle of the body a moment
+  after they land, spreading over a few seconds; a death's pool is larger. Pause: the drops hang.
+  Run the day on at speed three: the marks thin and are gone by the next day. Slice down a layer:
+  they hide with it. A wrong answer is drops too small to see or so many they read as a particle
+  effect, a mark that looks like a hole or a shadow rather than blood, a pool at the feet rather
+  than under the body, marks sunk into a slope or floating over one, or a battlefield that is red
+  from edge to edge after one fight (the cap is 200, oldest first).
+
 - **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
   Spawn a marauder, draft two colonists, select both and right-click it: a translucent red ring
   should appear wide round its feet and snap in, in a fifth of a second, flash once as it lands
