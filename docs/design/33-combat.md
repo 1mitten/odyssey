@@ -1,6 +1,8 @@
 # 33 — Combat: draft, move, melee
 
-**Status: C1 (draft and move) built and played 2026-09-23 — the owner's verdict: drafting, T,
+**Status (2026-09-24): every unit of the plan is built. C1–C6 and the owner's rounds after them are on
+`main` (PRs #176, #180, #182, #194); C7, the gate, is §21 and `docs/milestones/combat-report.md`. What
+follows is the history in the order it happened.** C1 (draft and move) built and played 2026-09-23 — the owner's verdict: drafting, T,
 moving onto surfaces, the diamond and the four hours all work; the run (§2h) and the deeper red
 (§2g) came out of that playtest. C2 (health and melee) and C3 (weapons) built 2026-09-23 by four
 parallel lanes on the contracts of §5 (§6A–§6D) and integrated on `claude/combat-c2` (§6E): every
@@ -4714,3 +4716,15 @@ phase is 0.073–0.081 ms against 0.022–0.028 undrafted, because each drafted 
 every tick for a threat beside her or a fight to join (§15f) — fifty drafted is fifty scans of eighty
 pawns. It scales with drafted × pawns and is a tenth of a millisecond at this size; the day a colony
 drafts hundreds it is the number to watch.
+
+**The frame** (`FrameTimeTests`, measured inside the full PlayMode tier, which started with no other
+Unity process on the machine and the CPU at 7 %; 640 × 480, RTX 5070 Ti):
+
+- **A fight in view** (`TheFrameWithAFightInView`): peace **1.79 ms**, brawl **2.24 ms**, 738 → 762
+  draw calls. The difference is the figures (0.111 → 0.238 ms) and the overlays (0.010 → 0.033). At the
+  C2 integration the same arm read 2.06 → 2.29 (§6E): the frame is faster underneath and the fight
+  itself dearer by about 0.2 ms, which is the reactions, the draw and sheathe and the criticals the
+  playtest rounds added (§8b, §9a–§9c).
+- **Blood at its cap** (`TheBloodAtItsCap`, 200 marks): **1.87 → 1.95 ms**, 738 → 741 draw calls, three
+  of them blood — §10d's ceiling holding.
+- Not at a play resolution and not on the target laptop, like every frame number here.

@@ -40,7 +40,7 @@ spreading spawns (§9h) and the debug tab for a fight (§9i) came out of the pla
 | 3 | Same seed, same hash | **Green, every hour.** A lockstep twin hashes the same for all 240 hours on each seed. |
 | 4 | Save mid-raid, load, same hash a day on | **Green after one fix** (§3). |
 | 5 | Goldens unchanged | **Green.** `Golden.cs` untouched; the three golden cases pass in the fast and Long tiers. |
-| 6 | Tiers | Fast: Sim **1,476**, Hud **1,071**, 0 failed. Long **44**, 0 failed. Content gates: all three clean. Unity: §4. |
+| 6 | Tiers | **Green.** Fast Sim **1,476**, Hud **1,071**; Long **44**; content gates clean; EditMode **3,567 / 3,534 / 0 failed**; PlayMode **138 / 127 / 0 failed**; player build boots into a colony clean (§4). |
 
 Per seed, with hostiles:
 
@@ -70,7 +70,37 @@ thief mid-carry, and it takes an attacker in reach while still walking.
 
 ## 4. Measured
 
-MEASURED
+**The tick** (`TickBenchmarkTests`, Explicit, CoreCLR, the machine alone at 5 % CPU, two runs with
+identical swings). Colonies built by `ColonyWorld.Build` on the played map, **not** the class's room
+lattice, so the region counts (24,412 and 8,690) are a generated board's:
+
+| Board | At peace | Fifty against ten | Fifty drafted against ten |
+|---|---|---|---|
+| 250 × 250 × 40 | 0.096–0.108 ms | 0.158–0.187 | 0.186–0.189 |
+| Huge 240 × 240 × 16 | 0.093–0.098 | 0.117–0.125 | 0.160–0.174 |
+| 120 × 120 × 16, twenty against twenty (the older row) | 0.036 | 0.087 | 0.091 |
+
+A fight costs 0.02–0.09 ms a tick; the whole tick stays under 0.19 ms. The dearest part is the drafted
+hold, whose scan for a threat or a fight to join scales with drafted × pawns (design 33 §21e).
+
+**The frame** (`FrameTimeTests`, inside the full PlayMode tier, which started with no other Unity
+process on the machine and the CPU at 7 %; 640 × 480, RTX 5070 Ti; not a play resolution and not the
+target laptop):
+
+| Test | Without | With | Draw calls | Where the difference is |
+|---|---|---|---|---|
+| `TheFrameWithAFightInView` (15 colonists, 10 marauders brawling) | 1.79 ms | 2.24 ms | 738 → 762 | Figures 0.111 → 0.238 ms, Overlays 0.010 → 0.033 |
+| `TheBloodAtItsCap` (200 marks) | 1.87 ms | 1.95 ms | 738 → 741 (3 of blood) | Overlays 0.010 → 0.089 |
+
+The C2 integration read the same brawl at 2.06 → 2.29 ms (§6E); both frames are faster today and the
+fight now costs 0.45 ms rather than 0.23, all of it in the figures. That is the swing and reaction
+work the playtest rounds added (§9a–§9c), and it is inside the 5 ms budget with room.
+
+**The tiers**, all on this branch: fast Sim **1,476**, Hud **1,071**, 0 failed; Long **44**, 0 failed
+(3 m 03 s); the three content gates clean; EditMode **3,567 total, 3,534 passed, 0 failed**; PlayMode
+**138 total, 127 passed, 0 failed** (7 explicit, 11 ignored — the click-harness tests CLAUDE.md
+names). The player build compiled, and booted straight into a colony for 45 s with no error or
+exception in its log; the only warnings are the stylesheet's pseudo-classes, which predate combat.
 
 ## 5. Open
 
