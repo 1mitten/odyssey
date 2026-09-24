@@ -116,7 +116,19 @@ namespace Odyssey.Presentation.Rendering
             return ChunkWorldBounds(x0, z0, y, x1, z1);
         }
 
-        static Bounds ChunkWorldBounds(int x0, int z0, int y, int x1, int z1)
+        Bounds ChunkWorldBounds(int x0, int z0, int y, int x1, int z1)
+        {
+            Bounds bounds = ChunkWorldBoundsCore(x0, z0, y, x1, z1);
+            // A rim chunk's skin runs ApronMetres past the board's edge, down or up to the
+            // surround; its box has to hold that or the cull drops the apron at the screen edge.
+            if (GroundSkin.Enabled && (x0 == 0 || z0 == 0 || x1 >= _model.Size.SizeX || z1 >= _model.Size.SizeZ))
+            {
+                bounds.Expand(new Vector3(2f * ApronMetres, 2f * CellMetrics.SizeY, 2f * ApronMetres));
+            }
+            return bounds;
+        }
+
+        static Bounds ChunkWorldBoundsCore(int x0, int z0, int y, int x1, int z1)
         {
             float relief = ReliefReach();
             var bounds = new Bounds();
@@ -611,6 +623,15 @@ namespace Odyssey.Presentation.Rendering
             at.y += SkinRise(x, z, surface.y, at.x, at.z);
             AddBody(batch, family[which], tint, Matrix4x4.TRS(
                 at, Quaternion.Euler(0f, yaw, 0f), new Vector3(scale, scale, scale)));
+
+            // Where the bush stands and how wide, for the renderer's "is this thing under a bush"
+            // (design 38 §19): the half-diagonal of its footprint, so any bearing is covered.
+            if (kind == MeadowDressing.Kind.Bush)
+            {
+                Vector3 extent = _model.Library[family[which]].Bounds.extents * scale;
+                batch.BushDiscs.Add(new Vector3(at.x, at.z,
+                    Mathf.Sqrt(extent.x * extent.x + extent.z * extent.z)));
+            }
         }
 
         /// <summary>
@@ -874,6 +895,76 @@ namespace Odyssey.Presentation.Rendering
             return _rampCache.HeightAt(u, v) * CellMetrics.SizeY + (_rampCacheIsRamp ? GroundSkin.RampLift : 0f);
         }
 
+        /// <summary>
+        /// The layer the surround's ground stands on (<c>TerrainSkirt.SurfaceLayer</c>), or -1 when
+        /// there is no surround. Set by the renderer before it meshes; the skin's apron at the
+        /// board's rim runs down (or up) to it.
+        /// </summary>
+        public int SurroundLevel { get; set; } = -1;
+
+        /// <summary>
+        /// How far the skin runs past the board's edge to meet the surround, in metres. Two cells: a
+        /// rim one layer above the surround then slopes at about 30 degrees, which the ground shader
+        /// still paints as grass, where a wall at the edge read as a brown line round the board
+        /// from far out (owner's report via the look pass, design 38 §20).
+        /// </summary>
+        public const float ApronMetres = 5f;
+
+        /// <summary>
+        /// The skin's apron beyond each side of a rim cell that is the board's edge: a strip from the
+        /// cell's own edge, at the heights it was drawn at, to the surround's ground at the apron's
+        /// outer edge, so the meadow runs off the board instead of stopping at a step.
+        /// </summary>
+        void EmitApron(GroundSkinMesh skin, ModulePart part, int tint, int x, int z,
+            Vector3 c0, Vector3 c1, Vector3 c2, Vector3 c3)
+        {
+            if (SurroundLevel < 0) return;
+            var size = _model.Size;
+            bool west = x == 0, east = x == size.SizeX - 1, south = z == 0, north = z == size.SizeZ - 1;
+            if (!west && !east && !south && !north) return;
+
+            Vector3[] corners = _apronCorners;
+            corners[0] = c0; corners[1] = c1; corners[2] = c2; corners[3] = c3;
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int dx = Directions.DeltaX[dir], dz = Directions.DeltaZ[dir];
+                if (size.Contains(x + dx, z + dz, 0)) continue;
+                Vector3 a = corners[EdgeFirst[dir]], b = corners[EdgeSecond[dir]];
+                var outward = new Vector3(dx, 0f, dz) * ApronMetres;
+                Vector3 a2 = SurroundPoint(a + outward);
+                Vector3 b2 = SurroundPoint(b + outward);
+                skin.Triangle(part.Material, tint, part.IsFallback, a, b, b2, Vector3.up);
+                skin.Triangle(part.Material, tint, part.IsFallback, a, b2, a2, Vector3.up);
+            }
+
+            // At a corner of the board the two strips leave a square between them: fill it.
+            if ((west || east) && (south || north))
+            {
+                int cx = east ? 1 : 0, cz = north ? 1 : 0;
+                int corner = cx == 0 ? (cz == 0 ? 0 : 3) : (cz == 0 ? 1 : 2);
+                Vector3 c = corners[corner];
+                var ox = new Vector3(east ? ApronMetres : -ApronMetres, 0f, 0f);
+                var oz = new Vector3(0f, 0f, north ? ApronMetres : -ApronMetres);
+                Vector3 px = SurroundPoint(c + ox), pz = SurroundPoint(c + oz), pxz = SurroundPoint(c + ox + oz);
+                skin.Triangle(part.Material, tint, part.IsFallback, c, px, pxz, Vector3.up);
+                skin.Triangle(part.Material, tint, part.IsFallback, c, pxz, pz, Vector3.up);
+            }
+        }
+
+        readonly Vector3[] _apronCorners = new Vector3[4];
+
+        /// <summary>A point outside the board, on the surround's ground: its level plus its field.</summary>
+        Vector3 SurroundPoint(Vector3 at)
+        {
+            var size = _model.Size;
+            float boardX = size.SizeX * CellMetrics.SizeXZ, boardZ = size.SizeZ * CellMetrics.SizeXZ;
+            float outX = Mathf.Max(0f, Mathf.Max(-at.x, at.x - boardX));
+            float outZ = Mathf.Max(0f, Mathf.Max(-at.z, at.z - boardZ));
+            float outside = Mathf.Sqrt(outX * outX + outZ * outZ);
+            float y = (SurroundLevel + 1) * CellMetrics.SizeY + GroundRelief.SurroundHeightAt(at.x, at.z, outside);
+            return new Vector3(at.x, y, at.z);
+        }
+
         /// <summary>The flat earth this ground is made of, as the material its turf box wore.</summary>
         ModulePart? GroundPart(ushort terrain)
         {
@@ -915,6 +1006,7 @@ namespace Odyssey.Presentation.Rendering
                 skin.Triangle(part.Material, tint, part.IsFallback, c1, c3, c2, Vector3.up);
             }
             batch.InstanceCount++;
+            EmitApron(skin, part, tint, x, z, c0, c1, c2, c3);
 
             // Skirts. A neighbouring ramp meets this one exactly and a solid neighbour is a wall of
             // its own, so only an open neighbour lower than the edge needs closing — the flat cell
@@ -1009,6 +1101,7 @@ namespace Odyssey.Presentation.Rendering
                 skin.Triangle(part.Material, tint, part.IsFallback, c1, c3, c2, Vector3.up);
             }
             batch.InstanceCount++;
+            EmitApron(skin, part, tint, x, z, c0, c1, c2, c3);
             if (!dips) return;
 
             // The wall under each open side, from the dipped edge down to the bed the water lies

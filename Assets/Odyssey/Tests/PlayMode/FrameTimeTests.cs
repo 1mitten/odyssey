@@ -2521,6 +2521,36 @@ namespace Odyssey.Tests.PlayMode
                     boot.Renderer!.FadeEveryTreeForAPhotograph = true;
                     yield return Photograph(prefix + "wide-faded", boot, target);
                     boot.Renderer!.FadeEveryTreeForAPhotograph = false;
+
+                    // design 38 §19: a stack dropped beside a bush and a colonist lying in the
+                    // grass, before (the old 0.55 m ring, no body ring, no bush fade) and after.
+                    yield return PhotographTheGround(boot, target, prefix);
+                    // And an unselected colonist standing behind a tree, with the see-through for
+                    // selected colonists only (before) and for every colonist (after).
+                    yield return PhotographBehindATree(boot, target, prefix);
+
+                    // The surround at the camera's farthest pull, from the rim of the board looking
+                    // out (design 38 §19): the land beyond should read wooded, not bare.
+                    // The board's south-west corner, so two sides of the surround are in frame; the
+                    // old surround first (finest level, thin wood, no bushes), then the new.
+                    boot.cameraRig!.FocusOn(new CellRef(1, 1, frame.Pawns[0].Cell.Y),
+                        boot.cameraRig.maxDistance);
+                    TerrainSkirt.NearWoodLevel = 0;
+                    TerrainSkirt.BushBesideTree = 0f;
+                    SkirtLayout.TreeFarDensity = 0.15f;
+                    SkirtLayout.FarTreeNearDensity = 0.30f;
+                    SkirtLayout.FarTreeFarDensity = 0.07f;
+                    boot.Renderer!.Skirt.Build();
+                    for (int i = 0; i < 150; i++) yield return null;
+                    yield return Photograph(prefix + "horizon-before", boot, target);
+                    TerrainSkirt.NearWoodLevel = TerrainSkirt.DefaultNearWoodLevel;
+                    TerrainSkirt.BushBesideTree = 0.75f;
+                    SkirtLayout.TreeFarDensity = SkirtLayout.DefaultTreeFarDensity;
+                    SkirtLayout.FarTreeNearDensity = SkirtLayout.DefaultFarTreeNearDensity;
+                    SkirtLayout.FarTreeFarDensity = SkirtLayout.DefaultFarTreeFarDensity;
+                    boot.Renderer!.Skirt.Build();
+                    for (int i = 0; i < 30; i++) yield return null;
+                    yield return Photograph(prefix + "horizon", boot, target);
                 }
 
                 // And the wide framing again under the Meadow demo's own grade, where it resolved.
@@ -2770,6 +2800,193 @@ namespace Odyssey.Tests.PlayMode
             UnityEngine.Object.Destroy(image);
         }
 
+        /// <summary>
+        /// What the wooded surround costs (design 38 §19): the same board, its surround built the
+        /// old way (finest level, thin wood, no bushes) and the new way, at 3840 x 2160 at the
+        /// camera's farthest pull over the rim, one run. And the see-through for every colonist with
+        /// 50 colonists about the start, its lines and its frame against see-through off.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheWoodedSurroundAgainstTheFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            var lines = new List<string>();
+            try
+            {
+                yield return TimeFrames("surround/warm", boot, WarmupFrames, _ => { });
+                ChunkRenderer renderer = boot.Renderer!;
+                if (renderer.Skirt.TreeInstances == 0)
+                    Assert.Ignore("no surround wood resolved on this machine");
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "surround-4k" };
+                cam.targetTexture = fourK;
+                var size = boot.World!.Size;
+                CellRef start = boot.World.Views.Current.Pawns[0].Cell;
+                boot.cameraRig!.FocusOn(new CellRef(size.SizeX / 2, 2, start.Y), boot.cameraRig.maxDistance);
+
+                foreach (bool wooded in new[] { false, true, false, true })
+                {
+                    TerrainSkirt.NearWoodLevel = wooded ? TerrainSkirt.DefaultNearWoodLevel : 0;
+                    TerrainSkirt.BushBesideTree = wooded ? 0.75f : 0f;
+                    SkirtLayout.TreeFarDensity = wooded ? SkirtLayout.DefaultTreeFarDensity : 0.15f;
+                    SkirtLayout.FarTreeNearDensity = wooded ? SkirtLayout.DefaultFarTreeNearDensity : 0.30f;
+                    SkirtLayout.FarTreeFarDensity = wooded ? SkirtLayout.DefaultFarTreeFarDensity : 0.07f;
+                    renderer.Skirt.Build();
+                    float ms = 0f;
+                    double[] split = Array.Empty<double>();
+                    yield return TimeFrames($"surround/{(wooded ? "wooded" : "old")}", boot, WarmupFrames,
+                        m => ms = m, p => split = p);
+                    lines.Add($"{(wooded ? "wooded" : "old")}: frame {ms:0.00} ms, surround section " +
+                              $"{Section(split, OdysseyBootstrap.FrameSection.Surround):0.000} ms, " +
+                              $"{renderer.Skirt.DrawCalls} surround calls, {renderer.Skirt.TreeInstances} near + " +
+                              $"{renderer.Skirt.FarTreeInstances} far trees, {renderer.Skirt.BushInstances} bushes");
+                }
+
+                // Every colonist gets a line: 50 of them about the start, focus on them.
+                for (int i = 0; boot.World.Views.Current.Pawns.Length < 50 && i < 200; i++)
+                {
+                    boot.World.Intents.Submit(new Intent(IntentKind.SpawnPawn,
+                        new CellRef(start.X - 4 + i % 9, start.Z - 4 + (i / 9) % 9, start.Y), 0));
+                    boot.World.Tick();
+                }
+                boot.cameraRig!.FocusOn(start, 70f);
+                foreach (bool every in new[] { false, true, false, true })
+                {
+                    boot.seeThroughToEveryColonist = every;
+                    float ms = 0f;
+                    double[] split = Array.Empty<double>();
+                    yield return TimeFrames($"sight/{(every ? "every" : "selected")}", boot, WarmupFrames,
+                        m => ms = m, p => split = p);
+                    lines.Add($"sight {(every ? "every colonist" : "selected only")} with " +
+                              $"{boot.World.Views.Current.Pawns.Length} pawns: frame {ms:0.00} ms, sight section " +
+                              $"{Section(split, OdysseyBootstrap.FrameSection.Sight):0.000} ms, world " +
+                              $"{Section(split, OdysseyBootstrap.FrameSection.World):0.000} ms, " +
+                              $"{boot.SightLinesLastFrame} lines, {renderer.InstancesFaded} faded");
+                }
+            }
+            finally
+            {
+                TerrainSkirt.NearWoodLevel = TerrainSkirt.DefaultNearWoodLevel;
+                TerrainSkirt.BushBesideTree = 0.75f;
+                SkirtLayout.TreeFarDensity = SkirtLayout.DefaultTreeFarDensity;
+                SkirtLayout.FarTreeNearDensity = SkirtLayout.DefaultFarTreeNearDensity;
+                SkirtLayout.FarTreeFarDensity = SkirtLayout.DefaultFarTreeFarDensity;
+                boot.seeThroughToEveryColonist = true;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+            Debug.Log("[FrameTime] wooded surround and every-colonist sight at 3840x2160: " + string.Join("; ", lines));
+        }
+
+        IEnumerator PhotographTheGround(OdysseyBootstrap boot, RenderTexture target, string prefix)
+        {
+            ChunkRenderer renderer = boot.Renderer!;
+            WorldSnapshot frame = boot.World!.Views.Current;
+            PawnView first = frame.Pawns[0];
+            Vector3 feet = CellMetrics.FloorCentre(first.Cell);
+            if (!renderer.TryNearestBush(feet, first.Cell.Y - 1, out Vector3 bush))
+            {
+                Debug.Log("[Look] ground: no bush meshed near the colony, shot skipped");
+                yield break;
+            }
+
+            // A stack of wood at the bush, and the colony paused so nobody hauls it away.
+            var cell = new CellRef(Mathf.FloorToInt(bush.x / CellMetrics.SizeXZ),
+                Mathf.FloorToInt(bush.z / CellMetrics.SizeXZ), first.Cell.Y);
+            boot.World.Intents.Submit(new Intent(IntentKind.GiveResource, cell,
+                Odyssey.Sim.Pawns.ItemIndex.Wood, 30));
+            boot.World.Tick();
+            boot.World.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+            boot.World.Tick();
+
+            boot.cameraRig!.FocusOn(cell, 22f);
+            renderer.ForceLyingForAPhotograph = true;
+            if (boot.Figures != null) boot.Figures.ForceSleep = 1f;
+            float margin = renderer.ItemMargin, lying = renderer.LyingClearance;
+            try
+            {
+                renderer.ItemMargin = 0f;
+                renderer.LyingClearance = 0f;
+                boot.seeThroughToGround = false;
+                for (int i = 0; i < 120; i++) yield return null;
+                yield return Photograph(prefix + "ground-before", boot, target);
+
+                renderer.ItemMargin = margin;
+                renderer.LyingClearance = lying;
+                boot.seeThroughToGround = true;
+                for (int i = 0; i < 30; i++) yield return null;
+                yield return Photograph(prefix + "ground-after", boot, target);
+            }
+            finally
+            {
+                renderer.ItemMargin = margin;
+                renderer.LyingClearance = lying;
+                boot.seeThroughToGround = true;
+                renderer.ForceLyingForAPhotograph = false;
+                if (boot.Figures != null) boot.Figures.ForceSleep = null;
+            }
+        }
+
+        IEnumerator PhotographBehindATree(OdysseyBootstrap boot, RenderTexture target, string prefix)
+        {
+            var colony = boot.Colony!;
+            var size = colony.Grid.Size;
+            WorldSnapshot frame = boot.World!.Views.Current;
+            CellRef start = frame.Pawns[0].Cell;
+            Vector3 forward = boot.cameraRig!.transform.forward;
+            forward.y = 0f;
+            forward.Normalize();
+
+            // A tree near the colony, and a cell two beyond it along the camera's view: a colonist
+            // there stands behind the crown from where the camera looks.
+            for (int r = 2; r < 18; r++)
+            for (int dz = -r; dz <= r; dz++)
+            for (int dx = -r; dx <= r; dx++)
+            {
+                if (Math.Max(Math.Abs(dx), Math.Abs(dz)) != r) continue;
+                int x = start.X + dx, z = start.Z + dz;
+                if (!size.Contains(x, z, start.Y)) continue;
+                ushort edifice = boot.Model!.EdificeDef(size.Index(x, z, start.Y));
+                if (!Odyssey.Sim.Worldgen.Natural.NaturalContent.IsTree(edifice)) continue;
+
+                var behind = new CellRef(x + Mathf.RoundToInt(forward.x * 2f),
+                    z + Mathf.RoundToInt(forward.z * 2f), start.Y);
+                if (!size.Contains(behind.X, behind.Z, behind.Y)) continue;
+
+                boot.World.Intents.Submit(new Intent(IntentKind.SpawnPawn, behind, 0));
+                boot.World.Tick();
+                boot.World.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                boot.World.Tick();
+                boot.Directors?.Selection?.Clear();
+                boot.cameraRig!.FocusOn(behind, 26f);
+
+                try
+                {
+                    boot.seeThroughToEveryColonist = false;
+                    for (int i = 0; i < 120; i++) yield return null;
+                    yield return Photograph(prefix + "tree-before", boot, target);
+                    boot.seeThroughToEveryColonist = true;
+                    for (int i = 0; i < 30; i++) yield return null;
+                    yield return Photograph(prefix + "tree-after", boot, target);
+                    Debug.Log($"[Look] tree: {boot.SightLinesLastFrame} sight lines, " +
+                              $"{boot.Renderer!.InstancesFaded} instances faded");
+                }
+                finally
+                {
+                    boot.seeThroughToEveryColonist = true;
+                }
+                yield break;
+            }
+            Debug.Log("[Look] tree: no tree near the colony, shot skipped");
+        }
+
         IEnumerator Photograph(string name, OdysseyBootstrap boot, RenderTexture target)
         {
             for (int i = 0; i < 8; i++) yield return null;
@@ -2785,7 +3002,9 @@ namespace Odyssey.Tests.PlayMode
             SliceCameraRig rig = boot.cameraRig!;
             Debug.Log($"[Look] {name}: {path}; distance {rig.TargetDistance:0.0} m, focus {rig.Focus}; " +
                       $"{boot.Renderer?.DrawCalls ?? -1} calls, {boot.Renderer?.InstancesDrawn ?? -1} instances, " +
-                      $"{boot.Renderer?.ChunksDrawn ?? -1} chunks");
+                      $"{boot.Renderer?.ChunksDrawn ?? -1} chunks; surround " +
+                      $"{boot.Renderer?.Skirt.TreeInstances ?? -1} near + {boot.Renderer?.Skirt.FarTreeInstances ?? -1} far trees, " +
+                      $"{boot.Renderer?.Skirt.DrawCalls ?? -1} calls");
         }
 
         /// <summary>

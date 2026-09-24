@@ -384,11 +384,19 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public readonly GroundSkinMesh Skin = new GroundSkinMesh();
 
+        /// <summary>
+        /// Every bush this chunk's dressing placed, as (world x, world z, radius in metres) — so
+        /// the renderer can ask whether a thing on the ground is under one without a second copy of
+        /// the dressing rule (design 38 §19). Filled by the mesher, cleared with the buckets.
+        /// </summary>
+        public readonly List<Vector3> BushDiscs = new List<Vector3>();
+
         public void Clear()
         {
             for (int i = 0; i < Body.Count; i++) Body[i].Clear();
             for (int i = 0; i < Roof.Count; i++) Roof[i].Clear();
             Skin.Clear();
+            BushDiscs.Clear();
             InstanceCount = 0;
         }
 

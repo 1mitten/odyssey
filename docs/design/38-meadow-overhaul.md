@@ -829,3 +829,66 @@ back inside ~40 s, are worth quoting:
 So 18c and 18f together are **about 1.2 ms of GPU at 4K**, the proxy and the cascades about 0.3 each,
 and the rest the dressing's levels — to be confirmed. `PlayerBench` now pauses the world and holds
 noon for every arm (`Still`); one more run is owed, with the owner's go.
+
+## 19. Polish: flattened grass, bushes that fade, every colonist, and the wooded surround (2026-09-24)
+
+The owner, after playing the look and its performance round: *"when someone has fallen to the ground
+or place item, would it be ok to flatten grass so items can be seen clearer, also there is no trees
+in the surrounding landscape, happy to put some random cheap trees for effect as it looks a touch
+barer."* Built on `claude/meadow-look-polish` (from `claude/meadow-perf`).
+
+### 19a. The grass lies flat round what is on the ground
+
+- **An item's ring is its footprint plus half a metre** (`ChunkRenderer.ItemRing`, `ItemMargin`),
+  never less than the old 0.55 m. A heap's footprint is its recipe's spread plus 0.3 m; a single
+  prop's is its module's half-diagonal. A thing on a shelf keeps the small ring — it is off the ground.
+- **A body on the ground clears 1.4 m** (`LyingClearance`): a colonist downed, asleep somewhere
+  that is not a bed (`WorldRenderModel.BedHeadAt`), or dead (`snapshot.Corpses`). One rule for all
+  three, `ChunkRenderer.LiesOnTheGround`, stamped by `StampLying` into the same clearance field.
+- **A bush cannot lie flat, so it fades.** The mesher records each bush's disc on its chunk
+  (`ChunkBatch.BushDiscs`), the renderer answers `UnderBush`, and the root gives what lies under one —
+  a body, a corpse, a loose item — a line of sight, so the bush ghosts through the existing pass.
+- Presentation only: nothing here is in a cell, a save or the hash.
+
+### 19b. See-through for every colonist, and what it cost
+
+The owner decided trees fade for *every* colonist (§17c); `UpdateSightLines` still drew lines to
+the selection only. It now draws, in order: up to 8 selected colonists, then the **16 colonists
+nearest the camera's focus**, then the **16 nearest things under a bush** — bounded, so the cost is
+flat whatever the colony. Lines aim at mid height, so the turf under a body is never ghosted.
+
+**The first cut cost 1.9 ms of `World` at 4K with fifty colonists**, almost all of it testing every
+ground box in the touched chunks against thirty-two lines. `SightLines.Primary` now marks the
+selected lines: only those fade walls, rock and storeys, as before; the rest fade **trees and bushes
+only**, which is what they are for. Measured in one run (`TheWoodedSurroundAgainstTheFrame`, 50
+colonists, 3840 x 2160): `World` 1.73–1.93 ms selected-only against 2.02–2.03 every colonist, so
+**+0.1–0.3 ms**, 16 lines, the sight section 0.02 ms. Photographed: an unselected colonist behind a
+birch stand is hidden before and plain after (`2026-09-24-polish-tree-*.png`).
+
+### 19c. The surround
+
+**It was not bare in our photographs.** At the camera's farthest pull over the board's corner the
+surround already carried 3,184 near and 2,577 far trees (`2026-09-24-polish-horizon-before.png`). What
+it lacked against the board was **undergrowth and depth**: trees on bare lawn, thinning to 15% by
+90 m. So, cheaply:
+
+- the near wood thins only to **45%** (was 15%), the far wood runs **50% → 10%** (was 30% → 7%);
+- **a bush beside three trees in four** in the near wood, batched by place, never casting;
+- the near wood draws **its third level of detail** and the far wood **the card**, which is design
+  §3's "the surround's wood takes the card LODs", never built until now.
+
+Measured in one run at 3840 x 2160 over the rim: surround calls **266 → 297**, trees 5,761 → 7,862
+plus 1,427 bushes, the surround's CPU section **flat** (0.34–0.40 → 0.33–0.36 ms), and the frame no
+worse within this machine's noise (two other sessions' Unity runs were live). The coarser levels pay
+for the extra wood. **If the owner still sees a bare surround, the first thing to check is Settings →
+Graphics → Surround**, which the Low preset switches off, and then a screenshot — our photographs do
+not reproduce "no trees".
+
+### 19d. What is owed
+
+- The owner's eye on all three, especially whether 1.4 m is enough round a body and whether the
+  surround now reads wooded at his camera.
+- `LiesOnTheGround` decides "a bed" by the bed's head cell; a body in a bed's foot cell reads as
+  lying on the ground and flattens a ring round the bed. Harmless (the ring is under the bed), noted.
+- The brown line along the board's rim in the horizon shots is the ground skin's edge (M9), not
+  this work.
