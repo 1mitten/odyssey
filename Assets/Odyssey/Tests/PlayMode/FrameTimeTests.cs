@@ -2525,10 +2525,25 @@ namespace Odyssey.Tests.PlayMode
 
                     // The surround at the camera's farthest pull, from the rim of the board looking
                     // out (design 38 §19): the land beyond should read wooded, not bare.
-                    var size = boot.World!.Size;
-                    boot.cameraRig!.FocusOn(new CellRef(size.SizeX / 2, 2, frame.Pawns[0].Cell.Y),
+                    // The board's south-west corner, so two sides of the surround are in frame; the
+                    // old surround first (finest level, thin wood, no bushes), then the new.
+                    boot.cameraRig!.FocusOn(new CellRef(1, 1, frame.Pawns[0].Cell.Y),
                         boot.cameraRig.maxDistance);
+                    TerrainSkirt.NearWoodLevel = 0;
+                    TerrainSkirt.BushBesideTree = 0f;
+                    SkirtLayout.TreeFarDensity = 0.15f;
+                    SkirtLayout.FarTreeNearDensity = 0.30f;
+                    SkirtLayout.FarTreeFarDensity = 0.07f;
+                    boot.Renderer!.Skirt.Build();
                     for (int i = 0; i < 150; i++) yield return null;
+                    yield return Photograph(prefix + "horizon-before", boot, target);
+                    TerrainSkirt.NearWoodLevel = TerrainSkirt.DefaultNearWoodLevel;
+                    TerrainSkirt.BushBesideTree = 0.75f;
+                    SkirtLayout.TreeFarDensity = SkirtLayout.DefaultTreeFarDensity;
+                    SkirtLayout.FarTreeNearDensity = SkirtLayout.DefaultFarTreeNearDensity;
+                    SkirtLayout.FarTreeFarDensity = SkirtLayout.DefaultFarTreeFarDensity;
+                    boot.Renderer!.Skirt.Build();
+                    for (int i = 0; i < 30; i++) yield return null;
                     yield return Photograph(prefix + "horizon", boot, target);
                 }
 
