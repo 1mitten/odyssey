@@ -29,7 +29,7 @@ Every decision below was the owner's in the interview of 2026-09-23 unless it sa
 | Death | the corpse stays where it fell, drawn lying in the death pose, clickable as "Corpse of X"; not haulable yet; a dead colonist leaves the roster |
 | Retaliation | a hostile always fights; an animal rolls its species' revenge chance on every hit (a hog usually turns, a rat usually runs); a colonist struck by a colonist fights back |
 | Friendly fire | the victim remembers being attacked (−8, one day); any colonist's death is felt by every colonist (−6, three days); no opinions yet |
-| Drafting | the reference's rules: work stops, the colonist holds its position, needs fall but it will not eat or sleep, it hits a hostile on an adjacent cell by itself, and it undrafts itself after **four in-game hours** with no order and no threat; going down or breaking ends the draft |
+| Drafting | the reference's rules: work stops, the colonist holds its position, needs fall but it will not eat or sleep, it hits a hostile on an adjacent cell by itself, and it undrafts itself after **four in-game hours** with no order and no threat; going down or breaking ends the draft. *Since §15 (2026-09-24): holding, it also joins another colonist's fight within eight cells* |
 | Controls | **T** toggles the draft (R stays slice-up, owner's call) as does the pane's Draft button; right-click ground **moves**; right-click an animal, hostile or building **attacks**; **Ctrl+right-click** a colonist attacks it; right-click a downed colonist **rescues**; right-click a weapon **equips** |
 | Weapons | fists by default; **bat and crowbar** (blunt, a chance to stun), **machete and sci-fi blade** (sharp); real items, one hand slot, drawn in the right hand; one or two in the starting kit and any from the debug Spawn tab; our own names in the wiki |
 | Numbers | Melee becomes a live skill: hit 50 % at level 0, 80 % at 10, 90 % at 20; dodge 0 / 10 / 30 % by the *defender's* level; fists about 4 damage every 2 s, weapons 7–10 every 1.6–2.4 s; experience per swing; all of it in Defs, tuned after the first play |
@@ -648,7 +648,7 @@ lets C5 and C6 assert the goldens unchanged.
 | Node | Does |
 |---|---|
 | `DownedThinkNode` | down → `Job_Downed`; one branch for anybody standing |
-| `DraftedThinkNode` (`Draft.cs`) | a threat in reach → the blow (not forced, so never chased), and the four quiet hours start again; else the hold. **The hold itself ends when a threat comes into reach**, since a holding colonist never thinks |
+| `DraftedThinkNode` (`Draft.cs`) | a threat in reach → the blow (not forced, so never chased), and the four quiet hours start again; else the hold. **The hold itself ends when a threat comes into reach**, since a holding colonist never thinks. *Since §15: or another colonist's fight nearby, which she joins* |
 | `SelfDefenceThinkNode` | the colonist who struck her while `RetaliateAgainst` holds; else a threat beside her |
 | `HostileThinkNode` | the nearest reachable standing colonist; nobody standing → idle |
 | `AnimalCombatThinkNode` | carries a revenge on across thinks; the roll itself is at the blow |
@@ -3326,3 +3326,237 @@ Each rule was withheld and its test run and seen to fail, then restored:
   the two damage columns;
 - `PawnContentDefTests.ContentFingerprint`, 13836212755718261116 → 5393620802301053337, for
   `renewsOnRepeat`.
+
+## 15. Drafted colonists help (2026-09-24)
+
+**The owner, after playtesting, 2026-09-24:** *"if a colonist attack - by default they will fight
+back. If I draft colonist/colonists by default - if there is any fight going on nearby (another
+colonist is being attack) they will help and start attacking the attacker and help other colonists
+by default. Buildings work fine"*
+
+Built on `claude/combat-drafted-help`, from `claude/combat-owner-round` at `cd53b5cf`, on the fast
+and Long tiers only, with no Unity. **Simulation only; no Presentation, Hud or Editor file was
+touched.** **No golden moved**: nothing new happens unless a colonist is drafted, and no golden
+window drafts anybody. The content fingerprint moved once, for the one new number.
+
+### 15a. What was there
+
+- **Fighting back when struck** was built by C2 and needed nothing. Undrafted, a colonist struck
+  remembers who struck her and her self-defence answers (`CombatSystem.React`,
+  `SelfDefenceThinkNode`, §6A.6). Drafted, her hold strikes any threat beside her — a hostile, or
+  anybody attacking her (§2b). `AColonistAttackedFightsBackDraftedOrNot` now holds both halves of
+  the owner's first sentence in one place.
+- **The hold never chased** (§6A.2, §6A.6). A drafted colonist three cells from a colonist being
+  beaten stood and watched until the marauder came to her. That is the gap the owner found.
+- *"Buildings work fine"* is the verdict on C6 (§13). It closes that playtest row and changes
+  nothing.
+
+### 15b. The rule
+
+A drafted colonist **on her hold** joins a fight nearby. "On her hold" is exactly where the rule is
+asked: by `DraftHoldJobDriver` every tick and by `DraftedThinkNode` at each think. So it is never
+asked of a colonist who is:
+
+- walking a move order (`Job_Goto`);
+- already on an attack, equip or rescue order;
+- stunned or knocked down (her job is paused and she does not think, §5c);
+- downed or broken (either ends the draft);
+- undrafted. **Undrafted colonists keep today's behaviour**: they fight back only when struck
+  themselves.
+
+She joins when all of these hold:
+
+1. **Another colonist is being attacked.** The one answer is `Melee.ColonistUnderAttackBy`: the
+   attacker's own melee job and `CombatTarget`, which is the thing that swings at her. It is the
+   same signal the fight guard and the side rule (§7c, §8c) read. A fight in which every swing
+   misses is still a fight, because the question is the job, not a blow that landed.
+2. **The attacker is a marauder or an animal.** A colonist attacking a colonist summons nobody.
+   That covers both the player's Ctrl order (§12) and the blows the victim takes back.
+3. **The victim and her attacker are both within `CombatDef.helpRadiusCells`** — eight cells,
+   INVENTED (20 m). The distance is Chebyshev across the layer, on the same layer or one either
+   side, so a fight on the terrace step above counts and one three storeys down does not.
+   - Both, not just the victim: a marauder hunting a colonist from across the board is not "a
+     fight going on nearby". She goes once it has come within eight cells.
+4. **She can reach the attacker** in her own mode (`PawnContext.Reachable`, two array reads).
+
+**Which fight:** the nearest victim's attacker, by squared distance in cells, which is how
+`ChooseSide` measures. A tie goes to the lower victim id, then the lower attacker id.
+
+**The threat beside her comes first**, unchanged: one pass over the pawns
+(`Melee.HoldTarget`) returns the first threat in reach exactly as `AdjacentThreat` did, and she
+strikes it from where she stands. Only with no threat in reach does she look for a fight to join.
+Several drafted colonists may join one fight. Each takes a side of her own by the one guard for
+every fighter (§8c).
+
+### 15c. The job
+
+**The existing `Job_AttackMelee`, not a fork.** The Drafted node starts it just as it starts the
+blow at a threat beside her: unforced, named on the pawn, the four quiet hours restarted. The one
+difference is a mark: `Job.DestCell = AttackMeleeJobDriver.Joining` (2).
+
+- **The mark is what lets her chase.** The driver treats an unforced attack by a drafted colonist
+  as the hold's blow, which never leaves its cell. With the mark she is a chaser like any other
+  attacker. She walks to a side (`ChooseSide`) and re-plans at the chase cadence.
+- **Why `DestCell`:** for an attack on a pawn it already means "how this attack ends"
+  (`ToTheDeath`), and it is saved and hashed. So there is no new field, no new state and no
+  save-format change. A save taken mid-join resumes as a join.
+- **Why unforced:** it is her own idea, like the blow beside her. A forced attack is never
+  re-chosen and would follow its target across the board. Nothing a player's order does applies:
+  - a knockback does not give it back (§9b);
+  - the order-cell aspect ignores it;
+  - the four-hour release is not an order's reset.
+
+**It ends** as any unforced attack on a pawn ends:
+
+- the attacker down, dead or gone: success;
+- the attacker unreachable: failure;
+- `rechooseTicks` (300) at a step boundary: the node looks again. It finds the same fight, or a
+  nearer one, or — standing beside a hostile — the blow from where she stands.
+
+**And one ending is new: the attacker on no colonist any more.** The job ends at a step boundary.
+
+- *Why:* an animal's revenge runs out. A hog rooting about is not a threat, and without this she
+  chased it for up to 300 ticks. Her blow would then have started the fight again.
+- A marauder that turns on her is still on a colonist, so she fights on.
+- A marauder that goes to beat a wall is on no colonist, so she would let it go. In practice this
+  hardly arises: a marauder turns to a building only when it can reach no colonist (§14b), and a
+  helper who can reach it is a colonist it can reach.
+
+**She holds where the fight ended.** When the job ends the Drafted node gives the hold, and the hold
+has no cell of its own to go back to. So she stands where the fight left her, still drafted, and
+the next fight within eight cells of *there* is the one she joins.
+
+### 15d. The quiet hours: a swing is activity
+
+**Found by the test, and fixed.** A swing at a building restarted the draft's quiet clock (§13); a
+swing at a pawn did not. Only the start of a fight did — the node, or the order.
+
+- An attacker standing on her side in reach never re-thinks, so a fight longer than four hours ran
+  the clock out.
+- The draft then let go on the tick the fight ended.
+- That was true of the hold's own blow before this unit, and it would have been true of every
+  join.
+
+`AttackMeleeJobDriver.StartSwing` now restarts the clock for a drafted attacker, as
+`StartSwingAtBuilding` already did. It applies to every drafted swing at a pawn, forced or not.
+`AFightLongerThanFourHoursKeepsTheDraft` failed without it: undrafted and wandering ten ticks after
+the marauder went down.
+
+### 15e. What is drawn
+
+Nothing new, and nothing was touched outside the simulation.
+
+- A helper publishes `odyssey.pawn.order.target` as the hold's own blow does. The aspect means
+  *whom she is attacking*, not whose idea it was (§7b).
+- So a **selected** helper wears the lock-on ring under the marauder, with the order line to it.
+- **The request assumed a self-started fight would not light the ring. The blow beside her already
+  does, by §7b's decision, and following that, so does the help.** Filtering it would need a second
+  aspect, which is simulation state bought for a colour. §15i puts it to the owner.
+
+### 15f. What it costs
+
+- **Nothing while nobody is drafted.** The scan is asked only by a drafted colonist on her hold,
+  every tick, and at her thinks.
+- **It is still one pass.** The threat scan the hold already made per tick is now `HoldTarget`, one
+  pass over the pawns.
+  - A pawn at peace costs one integer comparison more (its target is nought).
+  - A pawn in an attack costs a lookup by id and a content row.
+  - A reachability test (two array reads) is made only for a candidate nearer than the best so far.
+- **It scales with the pawns on the board, per drafted colonist on her hold.** A colonist already in
+  a fight or walking an order does not scan.
+
+`TickBenchmarkTests.TwentyAgainstTwenty` (explicit) gained a third arm, *twenty drafted against
+twenty*: every colonist drafted, so all twenty scan on every tick they hold. Two runs on the Windows
+dev machine, with the join and with it withheld (`HoldTarget` answering the threat only), each
+against the other arms in the same run:
+
+| Arm | Tick, mean | Pawns phase, mean | Swings |
+|---|---|---|---|
+| twenty undrafted against twenty | 0.101–0.168 ms | 0.020–0.038 ms | 307 |
+| twenty drafted against twenty, with the join | 0.165–0.217 ms | 0.072–0.095 ms | 361 |
+| the same, the join withheld | 0.164–0.183 ms | 0.075–0.082 ms | 361 |
+
+The join costs nothing measurable. In this arm the marauders come to the drafted line, so the fight
+is the same, swing for swing, with and without it. What the drafted arm costs over the undrafted one
+is the hold's own per-tick scan, which was there before this unit (§6A.9).
+
+### 15g. Do not undo by tidying
+
+- **The mark is on the job, not the pawn.** It dies with the job. A flag on the pawn would outlive
+  the fight and would be new saved, hashed state.
+- **The victim and the attacker both within the radius.** Dropping the attacker's half sends a
+  helper across the board after a marauder that is still hunting from afar.
+- **A colonist's fight with a colonist summons nobody.** The attacker's side is what is asked, not
+  the victim's.
+- **A move order is not diverted.** The rule lives in the hold and the node, never in the walk.
+- **The blow beside her comes first, in the same pass.** `HoldTarget` returns the first threat in
+  reach in list order, which is `AdjacentThreat`'s answer. A helper who walked past a hostile
+  beside her to reach another fight would be wrong.
+- **The on-nobody ending is for a join only.** The hold's blow and every other attack keep their
+  own endings.
+
+### 15h. Tests, and the controls seen to fail
+
+Fast tier: Sim **1,416** (from 1,401), Hud **1,003** (unchanged). Long **41**, all green.
+`GoldenMasterTests` is green without a re-bake. `PawnContentDefTests.ContentFingerprint` moved once,
+deliberately: 5393620802301053337 → 1636227730504628602, for `helpRadiusCells`. All three content
+gates are clean, because no name was added.
+
+| Test (`DraftedHelpTests`) | Claim |
+|---|---|
+| `AHoldingColonistJoinsAFightNearbyAndNotOneFarOff` (5, 12) | five cells from a marauder on a colonist she joins — unforced, marked, the marauder on the victim, out of her reach — swings and has left her cell; twelve cells off she holds, and the fight happened |
+| `OneWalkingAMoveOrderDoesNotTurnAsideAndJoinsOnceSheHolds` | sent across the radius mid-fight, she walks to the cell she was sent to; holding there, she joins |
+| `AnUndraftedColonistLeavesAFightNearbyAlone` | undrafted, five cells off, she never takes the marauder on |
+| `AColonistFightingAColonistSummonsNobody` | a Ctrl attack and the blows taken back, four cells off: nobody comes |
+| `WhenTheAttackerIsDownSheHoldsWhereTheFightEnded` | on the hold, on the cell the fight ended on, for 600 ticks, still drafted |
+| `SheJoinsAgainstAnAnimalAndLetsItGoWhenItIsOnNobody` | a hog on a colonist is joined; its revenge spent, she holds and does not follow it |
+| `TwoHelpersNeverShareATile` | two from one side, the fight guard after every tick; both joined and swung |
+| `AFightLongerThanFourHoursKeepsTheDraft` | twelve thousand ticks of fighting, still drafted; the quiet hours count from the fight's end |
+| `TheRadiusHoldsTheVictimAndHerAttacker` (three cases) | 7/8 in; victim 8 attacker 9 out; victim 9 attacker 8 out |
+| `TheNearestVictimsAttackerFirstAndATieToTheLowerVictim` | three cells beats six; on a tie the lower victim wins though her attacker has the higher id |
+| `AColonistAttackedFightsBackDraftedOrNot` (two cases) | the owner's first sentence, which C2 already did |
+
+**Long:** `FightGuardTests.MixedBrawlsOnManySeeds` now counts the pawn-ticks spent joining, and
+asserts there are some. Its drafted colonists join the fights round them once their own orders are
+done: 4,134 pawn-ticks over twelve seeds, 1,460 swings against 1,448 with the join
+withheld. The guard held on every tick. `MarauderSoakTests` drafts nobody, and its log is identical
+line for line. Every other Long test is unchanged.
+
+Each rule was withheld, its tests run and seen to fail, then restored:
+
+| Withheld | Failed |
+|---|---|
+| the victim's half of the radius | `TheRadiusHoldsTheVictimAndHerAttacker(9,8)` |
+| the attacker's half of the radius | `TheRadiusHoldsTheVictimAndHerAttacker(8,9)` |
+| a colonist attacker summons nobody | `AColonistFightingAColonistSummonsNobody` |
+| the join's mark in the driver (treated as the hold's blow) | `…JoinsAFightNearby…(5)`, `…WhenTheAttackerIsDown…`, `…AgainstAnAnimal…`, `TwoHelpers…`, `AFightLonger…` |
+| the hold's scan (the threat only, as before) | the same five |
+| the whole join (`HoldTarget` never joining) | all eight positive cases and `MixedBrawlsOnManySeeds` |
+| a move order diverted by the scan | `OneWalkingAMoveOrder…` |
+| undrafted colonists scanning too (self-defence asks `HoldTarget`) | `AnUndraftedColonistLeavesAFightNearbyAlone` |
+| the on-nobody ending | `SheJoinsAgainstAnAnimalAndLetsItGoWhenItIsOnNobody` |
+| the on-nobody ending and the down ending together | `…WhenTheAttackerIsDown…`, `…AgainstAnAnimal…`, `AFightLonger…` |
+| the side mask ignoring other attackers | `TwoHelpersNeverShareATile` |
+| a swing as activity for the draft | `AFightLongerThanFourHoursKeepsTheDraft` |
+| nearest first (farthest instead) | `TheNearestVictimsAttackerFirst…` |
+| the tie to the lower victim (to the attacker's id instead) | `TheNearestVictimsAttackerFirst…` |
+| self-defence (C2's rule) | `AColonistAttackedFightsBackDraftedOrNot(False)` |
+| the threat in reach first (C2's rule) | `AColonistAttackedFightsBackDraftedOrNot(True)`, `AColonistFightingAColonistSummonsNobody` |
+
+**The down ending alone did not fail anything.** A downed attacker is not in an attack, so the
+on-nobody ending ends the join as well. Both endings stay: the down ending is every attack's, and
+the on-nobody ending is the join's own.
+
+**Not tested:** the layer half of the radius (one layer either side). The bare board is flat, and a
+pawn put on another layer by hand is unreachable anyway, so a test could not tell the radius from
+the reachability.
+
+### 15i. Open for the owner
+
+- **The ring and the line on a helper.** A selected helper wears the lock-on ring under the
+  marauder she joined, as she does under one she hits beside her (§7b). If the ring should mean
+  "an order I gave" only, that is a second aspect. Say so.
+- **Eight cells** (20 m) is invented. If helpers come from too far or not far enough, it is one
+  number in `Combat.xml`.
+- **Undrafted colonists** still help nobody, as asked; they fight back only when struck. Say if a
+  colonist at work should drop it for a friend being beaten beside her.

@@ -23,6 +23,29 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do drafted colonists come to help?** (`claude/combat-drafted-help`, design 33 §15.)
+  - *Set-up.* Draft two or three colonists and leave them standing within about eight cells of a
+    colonist who is **not** drafted. Spawn a marauder beside her from the debug menu.
+  - *Expect.* As soon as it is on her, the drafted ones run to it and fight it, each on a free side.
+    When it goes down they stand where they are, still drafted.
+  - *Also check:*
+    - a drafted colonist further off than about eight cells stays where she is;
+    - one walking to a cell you clicked keeps walking, and joins only once she has stopped, if the
+      fight is within eight cells of where she stopped;
+    - an undrafted colonist nearby carries on with her own business;
+    - a Ctrl-attack between two colonists draws nobody.
+  - A wrong answer looks like any of these:
+    - drafted colonists who watch a colonist being beaten a few cells away;
+    - helpers who come from across the map;
+    - two helpers on one tile;
+    - a helper who walks back to where she stood before the fight;
+    - one who chases a hog that has calmed down;
+    - one who undrafts herself the moment a long fight ends.
+  - Two numbers to judge.
+    - A **selected** helper shows the red lock-on ring under the marauder, as she already does when
+      she strikes one beside her. Say if the ring should mean only orders you gave.
+    - Eight cells (20 m): say if it is too far or not far enough.
+
 - **Does a marauder break in, and do the weapons feel different on wood and stone?**
   (`claude/combat-owner-round`, design 33 §14b, §14d.)
   - *Break in.* Build a small room of wooden walls with **no door** round a colonist, or down
@@ -112,16 +135,6 @@ the next session learns to ignore.
   reads as a glitch, a hold so faint it is lost on grass or at night, a red you confuse with the
   draft's dark red over their heads or the salmon diamond over the marauder, or a ring sunk into a
   slope or floating on a terrace step.
-
-- **Does beating a wall down feel like an order carried out?** (C6, `claude/combat-buildings`,
-  design 33 §13.) Draft two colonists, right-click a wooden wall: both walk to it, stand on two
-  sides and swing; a red number floats off the wall per blow and it comes down after about 75 fist
-  blows (a stone one takes half as long again). Nothing comes back, and they hold, still drafted,
-  beside where it stood. Right-click a floored cell, grass or a tree: still a move. A wrong answer
-  is a wall that takes so long you give up, blood from a wall, colonists stacked on one tile, a right-click on a
-  door or bed you meant as a move (they are targets now — say if that is wrong), or a colonist
-  undrafted the moment a long fight ends. **Nothing draws the wall's damage yet**: no bar and no
-  cracks, only the numbers, which is the question — is the wall's state readable without them?
 
 - **Does the context menu make taking up a weapon clear?** (design 33 §7a, `claude/combat-menu`).
   Select a colonist, undrafted, and right-click the machete: a small menu opens at the pointer with
@@ -851,6 +864,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-24 | **Beating a wall down** (C6, `claude/combat-buildings`, `docs/design/33-combat.md` §13) | working — owner: *"Buildings work fine"* | none. The row's own question, whether a wall reads without a damage bar, was not raised, so none is built. The break-in row (§14b, §14d) stays open: it was built after that playtest |
 | 2026-09-24 | **What grass costs on the GPU at 4K** (PR #183, `docs/design/38-meadow-overhaul.md` §13) | measured — owner: *"6–7 ms on gpu (sometimes bit lower) without grass tufts. On — 7 ish — spikes up to 8 moving around"* | about 0.5–1 ms, peaks ~1.5; under the 2 ms line, so M4 plans for full cover; agrees with the batch arm |
 | 2026-09-24 | **Combat C2 + C3 and the three rounds after play** (PR #180, `docs/design/33-combat.md` §3–§9) | working — owner: *"it seems great ... weapons sit at hips, have a battle with tons and tons of characters - was hovering 3.5ms ... it flowed really well"* | closes the brawl and fight rows; 3.5 ms is inside the 5 ms budget on the dev GPU, unmeasured on the target laptop; the ring, menu and grip rows stay open for the "more testing later" |
 | 2026-09-24 | **The Inventory tab, restyled** (PR #177, `docs/design/35-inventory-tab.md` §5a) | working — owner: *"it's good"* | none; ready to merge |
