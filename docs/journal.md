@@ -11644,6 +11644,105 @@ against both parents, per combat's lesson of the same morning, and the campfire 
 main added to every row. `Seated` stayed a bool beside `Asleep` because `PawnFlags` is full and is
 the fight's. Design 31 §19.
 
+## 2026-09-24 — The Meadow overhaul: explored, interviewed, researched (design 38)
+
+The owner asked to overhaul the graphics with Synty's Meadow Forest pack — grass, flowers and trees
+replaced, the terraces replaced by a landscape that carries real heights, with culling, occlusion,
+performance and a loading screen all in view — and to be interviewed after the exploration. The
+package they downloaded turned out to be **already imported**: the same 182 prefabs sit under
+`Assets/Synty/PolygonNatureBiomes`, and the grass tufts and the grass ground have been Meadow assets
+for a week. So this is a wiring job, and the package's own `PolygonGeneric` — Battle Royale's GUID
+trap again — is never touched.
+
+Twenty questions in five rounds (`meadow-interview.md`). The landscape decision is the one with
+reach: **a smooth skin drawn over the unchanged simulation layers**, generalising the banks, rather
+than Unity Terrain (one surface, fighting the slice, digging and cut faces) or finer simulation
+heights (ADR 0002). Mid-interview the owner added *"completely full of grass … also consider
+performance"*, which replaced the 2026-09-22 answer that density should follow the land.
+
+Four research lanes, each capped. **d-18 found the thing that reorders the work**: as the project is
+configured, every foliage instance is drawn up to six times a frame — the SSAO DepthNormals prepass,
+the forward pass, and four shadow cascades — with depth priming off, so the forward pass gains
+nothing from the prepass it already pays for. Full-cover grass is decided there before it is decided
+by clump counts, so a new first unit measures priming and grass shadows before any art moves.
+**e-09 found the fact the renderer rests on**: every Meadow LOD child and FBX node is identity, so
+one matrix per plant draws every part of every level, and the wind weights are already in the vertex
+colours. **d-16 found the player starts on DX11**, which decides which warm-up exists, and recommends
+measuring for hitches before building any. **d-17** settled the skin's shading on two texture arrays
+filled on the GPU.
+
+A planning agent checked the three risky mechanisms against the code and found what the first sketch
+had missed: stand heights have about fifteen owners that already disagree on banks; the slice
+assumes one surface layer, which eight layers of hills would break; a naive corner rule caps pits the
+simulation can fill; and a per-chunk grass count pops at the 62.5 m seam unless the shader fades by
+the same rank. All four are in design 38.
+
+PR #174 (frustum culling) is green but conflicts with `main` as of today and needs an approving
+review; it gates M1.
+
+## 2026-09-24 — Meadow M1: the grass is drawn once, and costs about a millisecond at 4K
+
+M1 was written to test d-18's prediction that every foliage instance is drawn up to six times a
+frame — prepass, forward, four shadow cascades — and to measure depth priming against it. Reading
+the code before writing the arm dissolved the premise: `ChunkRenderer.FoliageCastsShadows` is off,
+and foliage is drawn in queue 2501, past the opaque range so the outline never inks it, which also
+keeps it out of the opaque-only DepthNormals prepass. Grass is drawn once. Depth priming, which only
+reaches the opaque range, could never have touched it. The prediction holds for trees.
+
+So the arm measured what grass does cost, at the owner's resolution: `TheGrassAgainstTheFrame`, one
+world, none / shipped / full cover / full cover in the opaque queue, at 640 x 480 and with the camera
+drawing into a 3840 x 2160 target, every control asserted to have applied. Twice, because the first
+run's full-cover step looked large: **+1.24 and +1.11 ms for the shipped grass, +1.78 and +0.83 for
+five times the clumps.** The cost is in having grass at all, and the step to full cover is inside a
+half-millisecond noise floor — two other batch Unity runs shared the machine throughout. The opaque
+queue was 0.18–0.19 ms cheaper both times, the back-to-front sort of the transparent range showing,
+and is not worth grass under the ink. The queue stays and priming is dropped.
+
+`GpuFrameMs` reads unavailable in a batch run on Direct3D 11, so the frame stood in for the GPU (it
+is GPU-bound at 4K: submission is 1.6–2.0 ms of 7.4–9.2). One reading is owed from the owner's
+overlay, and the playtest queue carries it. Design 38 §13; d-18 carries a correction note.
+
+A third reading came from the full PlayMode tier, busier than either filtered run, and it moved one
+conclusion. The shipped grass held at +1.27 ms — three runs, 1.11 to 1.27 — but the opaque queue came
+out **2.51 ms** cheaper than full cover in 2501 where the quiet runs had it at 0.18 and 0.19. Three of
+three in one direction is not noise, and a gap that grows with load is what a sort order would do.
+So the queue is kept for now rather than settled, and design 38 §13 names the lever if the GPU
+reading confirms it: keep grass out of the outline by a rendering-layer mask and draw it opaque,
+front to back, instead of relying on the queue to hide it from the ink.
+
+The owner took the one reading only Play could: at 3840 x 2160 the overlay's `gpu` read 6–7 ms with
+the tufts off and about 7, spiking to 8 while moving, with them on. Half a millisecond to one and a
+half of GPU for the shipped grass, which is the batch arm's answer by an independent instrument.
+
+## 2026-09-24 — Meadow M2: levels of detail through instancing, and why they ship off
+
+The world is drawn with `RenderMeshInstanced`, so a prefab's `LODGroup` never runs, and the library
+kept each prefab's finest level only. M2 keeps every level. It rests on e-09's one fact — every
+Meadow LOD child sits on the prefab's origin — so a module whose parts all share one local transform
+is emitted into a single bucket and drawn from it with whichever level's parts the chunk's distance
+chooses. Art that breaks the rule is not an error; it keeps drawing its finest level, as before.
+
+The arm on the played meadow gave two answers at once. The mechanism works — the three Meadow grass
+tufts qualify, and switched on, 4,403 of the ~4,800 on screen drop a level — and that is exactly why
+it ships off: the pack's switch heights assume a camera near the ground, and at 60–160 m every tuft
+is past its first switch. With levels off the counts are M1's to the instance, which is the proof
+the one-bucket path changed nothing. The saving is for the Meadow trees in M5, which will turn
+levels on with a bias chosen against them and a person looking.
+
+## 2026-09-24 — Meadow M3: the grass drawn by our own shader
+
+`Odyssey/Foliage` draws the Meadow grass from the art's own leaf texture, with this project's wind,
+clearing and colour: the wind is a function of the tick, so a paused meadow holds still; items and
+order marks push the grass back through the clearance field the closed grass branch built, now
+centred on what the camera looks at rather than where it stands; and the green is lifted towards
+the spring lime the owner asked for on 2026-09-22. Measured against the pack's own shader on the
+same meshes in one run, ours is half a millisecond cheaper at 4K and level at the batch view.
+
+The first attempt died on a full disk — D: had 0.1 GB left across sixty worktrees' Library folders —
+before Unity compiled a line; the unit moved into M2's warm worktree once there was room. The
+shader compiled clean on its first real run and every foliage test passed; the player build keeps
+it, and its log carries no fallback warning.
+
 ## 2026-09-24 — Rescue (C4)
 
 The owner answered three questions first: a rescued colonist stays in bed **until whole**; with no
