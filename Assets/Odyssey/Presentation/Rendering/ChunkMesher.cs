@@ -847,6 +847,7 @@ namespace Odyssey.Presentation.Rendering
         // and a clump or two of dressing, and each would otherwise re-run the ramp's neighbour scan.
         int _rampCacheIndex = -1;
         bool _rampCacheHas;
+        bool _rampCacheIsRamp;
         BankLayout.Ramp _rampCache;
 
         /// <summary>
@@ -864,12 +865,13 @@ namespace Odyssey.Presentation.Rendering
             if (index != _rampCacheIndex)
             {
                 _rampCacheIndex = index;
-                _rampCacheHas = BankLayout.RampCorners(_model, x, z, layer, out _rampCache);
+                _rampCacheHas = BankLayout.GroundCorners(_model, x, z, layer, out _rampCache);
+                _rampCacheIsRamp = _rampCacheHas && BankLayout.RampCorners(_model, x, z, layer, out _);
             }
             if (!_rampCacheHas) return 0f;
             float u = Mathf.Clamp01((worldX - x * CellMetrics.SizeXZ) / CellMetrics.SizeXZ);
             float v = Mathf.Clamp01((worldZ - z * CellMetrics.SizeXZ) / CellMetrics.SizeXZ);
-            return _rampCache.HeightAt(u, v) * CellMetrics.SizeY + GroundSkin.RampLift;
+            return _rampCache.HeightAt(u, v) * CellMetrics.SizeY + (_rampCacheIsRamp ? GroundSkin.RampLift : 0f);
         }
 
         /// <summary>The flat earth this ground is made of, as the material its turf box wore.</summary>
@@ -967,7 +969,8 @@ namespace Odyssey.Presentation.Rendering
             if (!GroundSkin.Enabled) return false;
             var size = _model.Size;
             if (y + 1 >= size.SizeY) return false;
-            if (ExposedSides(x, z, y) != 0) return false;
+            // A side open onto water only: a stream bank, drawn as skin sloping down into it.
+            if (ExposedSides(x, z, y) != 0) return BankLayout.BankDips(_model, x, z, y, out _);
             int above = index + size.LayerStride;
             if (_model.IsSolid(above)) return false;
             if (y > 0 && !_model.IsSolid(index - size.LayerStride)) return false;
@@ -977,20 +980,54 @@ namespace Odyssey.Presentation.Rendering
             return true;
         }
 
-        /// <summary>The flat top of an earth cell, as two triangles of skin.</summary>
+        /// <summary>
+        /// The top of an earth cell as two triangles of skin — flat, or dipping at the corners that
+        /// touch water (<see cref="BankLayout.BankDips"/>) — and, on a stream bank, a wall down each
+        /// open side to the bed under the water.
+        /// </summary>
         internal void SinkSkinTop(ChunkBatch batch, int module, int tint, int x, int z, int y)
         {
             ModulePart[] parts = _model.Library[module].Parts;
             if (parts.Length == 0) return;
             ModulePart part = parts[0];
-            float plane = (y + 1) * CellMetrics.SizeY;
-            Vector3 c0 = SkinCorner(x, z, plane, 0, 0f);
-            Vector3 c1 = SkinCorner(x, z, plane, 1, 0f);
-            Vector3 c2 = SkinCorner(x, z, plane, 2, 0f);
-            Vector3 c3 = SkinCorner(x, z, plane, 3, 0f);
-            batch.Skin.Triangle(part.Material, tint, part.IsFallback, c0, c2, c1, Vector3.up);
-            batch.Skin.Triangle(part.Material, tint, part.IsFallback, c0, c3, c2, Vector3.up);
+            bool dips = BankLayout.BankDips(_model, x, z, y, out BankLayout.Ramp dip);
+            float h = CellMetrics.SizeY;
+            float plane = (y + 1) * h;
+            Vector3 c0 = SkinCorner(x, z, plane, 0, dips ? dip.R0 * h : 0f);
+            Vector3 c1 = SkinCorner(x, z, plane, 1, dips ? dip.R1 * h : 0f);
+            Vector3 c2 = SkinCorner(x, z, plane, 2, dips ? dip.R2 * h : 0f);
+            Vector3 c3 = SkinCorner(x, z, plane, 3, dips ? dip.R3 * h : 0f);
+            GroundSkinMesh skin = batch.Skin;
+            if (!dips || dip.SplitZeroTwo)
+            {
+                skin.Triangle(part.Material, tint, part.IsFallback, c0, c2, c1, Vector3.up);
+                skin.Triangle(part.Material, tint, part.IsFallback, c0, c3, c2, Vector3.up);
+            }
+            else
+            {
+                skin.Triangle(part.Material, tint, part.IsFallback, c0, c3, c1, Vector3.up);
+                skin.Triangle(part.Material, tint, part.IsFallback, c1, c3, c2, Vector3.up);
+            }
             batch.InstanceCount++;
+            if (!dips) return;
+
+            // The wall under each open side, from the dipped edge down to the bed the water lies
+            // on: seen through the water, as the box's side was.
+            var size = _model.Size;
+            float bed = y * h;
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
+                if (!size.Contains(nx, nz, y) || _model.IsSolid(size.Index(nx, nz, y))) continue;
+                int a = EdgeFirst[dir], b = EdgeSecond[dir];
+                Vector3 topA = SkinCorner(x, z, plane, a, dip.Corner(a) * h);
+                Vector3 topB = SkinCorner(x, z, plane, b, dip.Corner(b) * h);
+                Vector3 lowA = SkinCorner(x, z, bed, a, 0f);
+                Vector3 lowB = SkinCorner(x, z, bed, b, 0f);
+                var outward = new Vector3(Directions.DeltaX[dir], 0f, Directions.DeltaZ[dir]);
+                skin.Triangle(part.Material, tint, part.IsFallback, topA, topB, lowB, outward, vertical: true);
+                skin.Triangle(part.Material, tint, part.IsFallback, topA, lowB, lowA, outward, vertical: true);
+            }
         }
 
         /// <summary>

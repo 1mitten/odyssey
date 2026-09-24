@@ -3157,7 +3157,7 @@ namespace Odyssey.Presentation.Bootstrap
             // bit 0 for +x and bit 1 for +z, the ramp's is anticlockwise from (−x,−z).
             if (GroundSkin.Enabled)
             {
-                if (BankLayout.RampCorners(_model, cell.X, cell.Z, cell.Y, out BankLayout.Ramp ramp))
+                if (BankLayout.GroundCorners(_model, cell.X, cell.Z, cell.Y, out BankLayout.Ramp ramp))
                 {
                     float h = CellMetrics.SizeY;
                     _bracketRises[0] = ramp.R0 * h;

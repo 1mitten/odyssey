@@ -2461,6 +2461,12 @@ namespace Odyssey.Tests.PlayMode
             bool groundWas = MeadowLook.GroundEnabled;
             MeadowLook.GroundEnabled = !stock;
             string prefix = stock ? "stock-" : string.Empty;
+            // ODYSSEY_LOOK_BOXES=1 photographs the ground as boxes and bank wedges, the ground skin
+            // off (design 38 §20), for the same before-and-after under identical conditions.
+            bool boxes = Environment.GetEnvironmentVariable("ODYSSEY_LOOK_BOXES") == "1";
+            bool skinWas = GroundSkin.Enabled;
+            GroundSkin.Enabled = !boxes;
+            if (boxes) prefix += "boxes-";
 
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
                 out OdysseyBootstrap boot);
@@ -2527,6 +2533,7 @@ namespace Odyssey.Tests.PlayMode
             }
             finally
             {
+                GroundSkin.Enabled = skinWas;
                 MeadowLook.GroundEnabled = groundWas;
                 if (cam != null) cam.targetTexture = previousTarget;
                 if (target != null) target.Release();

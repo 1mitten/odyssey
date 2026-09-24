@@ -1357,6 +1357,8 @@ namespace Odyssey.Presentation.Rendering
         Vector3 OnGround(Vector3 point, CellRef cell) =>
             GroundRelief.Lift(point) + Vector3.up * BankLayout.RiseAt(_model, cell, point.x, point.z);
 
+        static readonly Matrix4x4[] SkinIdentity = { Matrix4x4.identity };
+
         /// <summary>Skin triangles submitted last frame, for the measurement arms (design 38 §20).</summary>
         public int SkinTrianglesDrawn { get; private set; }
 
@@ -1383,7 +1385,9 @@ namespace Odyssey.Presentation.Rendering
                     receiveShadows = !ghost,
                     shadowCastingMode = ShadowCastingMode.Off,
                 };
-                if (SubmitToGpu) Graphics.RenderMesh(rp, mesh, g, Matrix4x4.identity);
+                // Through the instanced path the boxes took, one instance at the identity, rather
+                // than RenderMesh: the two light the ground differently (measured, design 38 §20).
+                if (SubmitToGpu) Graphics.RenderMeshInstanced(rp, mesh, g, SkinIdentity, 1);
                 DrawCalls++;
             }
             SkinTrianglesDrawn += skin.TriangleCount;

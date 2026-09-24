@@ -347,6 +347,17 @@ namespace Odyssey.Presentation.Rendering
             if (!Enabled || !cell.ShowsAFace || !GroundLook.IsEarth(cell.Terrain)) return false;
 
             int variant = GroundLook.Variant(cell.X, cell.Z, cell.Y);
+
+            // Nothing but its top can be seen — or its only open sides are water, a stream bank —
+            // and nothing built stands on it: it goes into the chunk's ground skin rather than a box
+            // (design 38 §20).
+            if (sink.SkinsTop(cell))
+            {
+                sink.SkinTop(cell.Model.EarthModule(cell.Terrain, variant, showsAFace: false),
+                    cell.Tint, cell.X, cell.Z, cell.Y);
+                return true;
+            }
+
             int exposed = cell.ExposedSides();
 
             float yaw;
@@ -354,13 +365,6 @@ namespace Odyssey.Presentation.Rendering
             if (exposed == 0)
             {
                 earth = cell.Model.EarthModule(cell.Terrain, variant, showsAFace: false);
-                // Nothing but its top can be seen, and nothing built stands on it: the top goes
-                // into the chunk's ground skin rather than a box (design 38 §20).
-                if (sink.SkinsTop(cell))
-                {
-                    sink.SkinTop(earth, cell.Tint, cell.X, cell.Z, cell.Y);
-                    return true;
-                }
                 yaw = GroundLook.Yaw(cell.X, cell.Z, cell.Y);
             }
             else

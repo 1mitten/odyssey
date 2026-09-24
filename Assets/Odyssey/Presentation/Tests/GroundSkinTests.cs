@@ -167,6 +167,46 @@ namespace Odyssey.Tests.Presentation
             Assert.That(checkedVertices, Is.GreaterThan(0), "no ramp vertices were compared, so this proves nothing");
         }
 
+        /// <summary>A stream one cell wide at layer 1 (x = 5) with grass banks either side, its bed at layer 0.</summary>
+        static RenderTestWorld Stream()
+        {
+            var world = new RenderTestWorld(Side, Side, 4);
+            for (int z = 0; z < Side; z++)
+            for (int x = 0; x < Side; x++)
+            {
+                world.Solid(x, z, 0, NaturalContent.TerrainGrass);
+                if (x == 5) world.Surface(x, z, 1, NaturalContent.TerrainShallowWater);
+                else world.Solid(x, z, 1, NaturalContent.TerrainGrass);
+            }
+            return world.Publish();
+        }
+
+        /// <summary>
+        /// A stream bank runs down into the water instead of stopping at a square rim: the corners
+        /// on the water side drop to just above the water line, and a colonist on the bank is drawn
+        /// on that slope.
+        /// </summary>
+        [Test]
+        public void AStreamBankSlopesIntoTheWater()
+        {
+            RenderTestWorld world = Stream();
+            Assert.That(BankLayout.BankDips(world.Model, 4, 4, 1, out BankLayout.Ramp dip), Is.True, "the bank does not dip");
+            float drop = -BankLayout.WaterBankDrop / CellMetrics.SizeY;
+            Assert.That(new[] { dip.R0, dip.R1, dip.R2, dip.R3 }, Is.EqualTo(new[] { 0f, drop, drop, 0f }),
+                "the water-side corners (+x) should drop and the far side stay at the top");
+            Assert.That(BankLayout.BankDips(world.Model, 2, 4, 1, out _), Is.False, "a cell away from the water dips");
+
+            // The air over the bank is where a colonist walks: drawn at the top on the dry side and
+            // just above the water line at the edge.
+            float dry = BankLayout.RiseAt(world.Model, new CellRef(4, 4, 2), 4 * CellMetrics.SizeXZ + 0.01f, 4.5f * CellMetrics.SizeXZ);
+            float edge = BankLayout.RiseAt(world.Model, new CellRef(4, 4, 2), 5 * CellMetrics.SizeXZ - 0.01f, 4.5f * CellMetrics.SizeXZ);
+            Assert.That(dry, Is.EqualTo(0f).Within(1e-2f));
+            Assert.That(edge, Is.EqualTo(-BankLayout.WaterBankDrop).Within(1e-2f));
+            float waterLine = ChunkMesher.WaterSurface * CellMetrics.SizeY;
+            Assert.That(2 * CellMetrics.SizeY + edge, Is.GreaterThan(CellMetrics.SizeY + waterLine),
+                "the bank went under the water it slopes into");
+        }
+
         [Test]
         public void TheSkinReplacesTheBoxesAndOffGivesThemBack()
         {

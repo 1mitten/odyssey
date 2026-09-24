@@ -193,7 +193,7 @@ namespace Odyssey.Presentation.Rendering
             // the same corners and the same triangulation, so a figure stands on the drawn slope.
             if (GroundSkin.Enabled)
             {
-                if (!RampCorners(model, cell.X, cell.Z, cell.Y, out Ramp ramp)) return 0f;
+                if (!GroundCorners(model, cell.X, cell.Z, cell.Y, out Ramp ramp)) return 0f;
                 Vector3 corner = CellMetrics.FloorCentre(cell) - new Vector3(CellMetrics.HalfXZ, 0f, CellMetrics.HalfXZ);
                 float u = Mathf.Clamp01((worldX - corner.x) / CellMetrics.SizeXZ);
                 float v = Mathf.Clamp01((worldZ - corner.z) / CellMetrics.SizeXZ);
@@ -293,6 +293,109 @@ namespace Odyssey.Presentation.Rendering
             }
 
             ramp = new Ramp(r0, r1, r2, r3, split02);
+            return true;
+        }
+
+        /// <summary>
+        /// How far a stream bank's water-side corners drop below its top, in metres: to just above
+        /// the water line of the layer (<see cref="ChunkMesher.WaterSurface"/>), so the meadow runs
+        /// down into the stream rather than stopping at a square rim.
+        /// </summary>
+        public static float WaterBankDrop =>
+            CellMetrics.SizeY * (1f - ChunkMesher.WaterSurface) - 0.05f;
+
+        /// <summary>
+        /// The skin's bank down into water: a solid earth cell whose every open side is water at its
+        /// own layer (a stream or pond bank one layer above its bed), with each corner that touches
+        /// open water lowered by <see cref="WaterBankDrop"/>. Rises are negative, in cell heights,
+        /// measured from the cell's top — the floor of the cell above it, where a colonist walks.
+        ///
+        /// <para>False where the cell keeps its box: a riser with dry air beside it, a cut face,
+        /// something built on it (the ground levels under anything built), or no water at a corner.
+        /// The simulation never hears of it: the cell above is walkable at its floor as always, and
+        /// a figure or an item there is drawn on the slope through <see cref="RiseAt"/>.</para>
+        /// </summary>
+        public static bool BankDips(WorldRenderModel model, int x, int z, int y, out Ramp dip)
+        {
+            dip = default;
+            if (!GroundSkin.Enabled) return false;
+            GridSize size = model.Size;
+            if (!size.Contains(x, z, y) || y + 1 >= size.SizeY) return false;
+
+            int index = size.Index(x, z, y);
+            if (!model.IsSolid(index) || !model.IsEarth(index) || model.IsCutFace(index)) return false;
+            int above = index + size.LayerStride;
+            if (model.IsSolid(above) || model.Floor(above) != CoreContent.SlabNone) return false;
+            // Air over it, where a colonist walks. The bed under a stream is earth beside water too
+            // — the next stretch down a cascade — and dipping it pulled the water above it down with
+            // it (measured: SlicePickerBoardTests lost the water on every cascade).
+            if (model.Terrain(above) != CoreContent.TerrainAir) return false;
+            ushort edifice = model.EdificeDef(above);
+            if (edifice != 0 && !Odyssey.Sim.Worldgen.Natural.NaturalContent.IsTree(edifice)) return false;
+            if (y > 0 && !model.IsSolid(index - size.LayerStride)) return false;
+
+            // Every open side must be water: a dry riser beside it is a terrace, not a bank.
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
+                if (!size.Contains(nx, nz, y)) continue;
+                int n = size.Index(nx, nz, y);
+                if (!model.IsSolid(n) && !OpenWater(model, n)) return false;
+            }
+
+            float drop = -WaterBankDrop / CellMetrics.SizeY;
+            float r0 = CornerWet(model, x, z, y, 0) ? drop : 0f;
+            float r1 = CornerWet(model, x, z, y, 1) ? drop : 0f;
+            float r2 = CornerWet(model, x, z, y, 2) ? drop : 0f;
+            float r3 = CornerWet(model, x, z, y, 3) ? drop : 0f;
+            int low = (r0 < 0f ? 1 : 0) + (r1 < 0f ? 1 : 0) + (r2 < 0f ? 1 : 0) + (r3 < 0f ? 1 : 0);
+            if (low == 0) return false;
+
+            dip = new Ramp(r0, r1, r2, r3, SplitFor(r0, r1, r2, r3));
+            return true;
+        }
+
+        /// <summary>
+        /// The shape of the ground a colonist stands on in air cell (x, z, y): the ramp in it, or
+        /// the bank dipping in the cell under it, as rises from that cell's floor.
+        /// </summary>
+        public static bool GroundCorners(WorldRenderModel model, int x, int z, int y, out Ramp shape)
+        {
+            if (RampCorners(model, x, z, y, out shape)) return true;
+            return y > 0 && BankDips(model, x, z, y - 1, out shape);
+        }
+
+        static bool OpenWater(WorldRenderModel model, int index) =>
+            !model.IsSolid(index) && Odyssey.Sim.Worldgen.Natural.NaturalContent.IsWater(model.Terrain(index));
+
+        static bool CornerWet(WorldRenderModel model, int x, int z, int y, int corner)
+        {
+            GridSize size = model.Size;
+            int cx = CornerX[corner], cz = CornerZ[corner];
+            for (int k = 0; k < 3; k++)
+            {
+                int dx = k == 1 ? 0 : cx, dz = k == 0 ? 0 : cz;
+                int nx = x + dx, nz = z + dz;
+                if (!size.Contains(nx, nz, y)) continue;
+                if (OpenWater(model, size.Index(nx, nz, y))) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// The diagonal a quad is cut on: through the odd corner when one or three corners differ
+        /// from the rest, along the pair when two opposite corners do, else 0–2.
+        /// </summary>
+        static bool SplitFor(float r0, float r1, float r2, float r3)
+        {
+            bool odd0 = r0 != r1 && r0 != r3;
+            bool odd1 = r1 != r0 && r1 != r2;
+            bool odd2 = r2 != r1 && r2 != r3;
+            bool odd3 = r3 != r2 && r3 != r0;
+            int odd = (odd0 ? 1 : 0) + (odd1 ? 1 : 0) + (odd2 ? 1 : 0) + (odd3 ? 1 : 0);
+            if (odd == 1) return odd0 || odd2;
+            // Two opposite corners share a value unlike the other two: cut along that pair.
+            if (r0 == r2 && r1 == r3 && r0 != r1) return r0 > r1;
             return true;
         }
 
