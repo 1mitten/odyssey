@@ -23,6 +23,15 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the ground read like the Meadow screenshots now?** (`claude/meadow-look-ground`, design 38
+  §17a, integrated into the look PR). New game, default camera, then watch a day go by. Look for:
+  the ground painted in patches — grass, clover, yellow flowers here and there — with no grid of
+  tiles, in a bright yellow-green rather than lime; shade soft and cool rather than dark. **A wrong
+  answer looks like:** a repeating pattern you can see at the default zoom (the 4 m repeat is too
+  small); flowers everywhere rather than in patches; the ground washing out or turning too bright
+  at midday (the Meadow light is too strong — one number, `Daylight.MeadowSunScale`); or dawn and
+  dusk looking different from before (they should not have moved at all).
+
 - **Does the Meadow grass read as grass, and is this the grass to judge?** (PR for
   `claude/meadow-m3-foliage`, design 38 §16) **This is the first branch to test grass in.** New game,
   play camera. Three things: (1) the meadow reads as grass and the green is the lighter spring green

@@ -410,3 +410,76 @@ submission rather than fill. Draw calls and instances are identical in every pai
 The pack's graph computes three noise colours and a frosting term per pixel; ours samples one
 texture and does the wind in the vertex stage. Same caveat as §13: other batch runs shared the
 machine, so only the in-run pairs mean anything.
+
+## 17. The look pass (owner, 2026-09-24)
+
+The owner, shown M3 and M6: *"I said the grass to be lush — and I expected it to look the
+screenshots from the synty pack … as currently it looks nothing like it."* Decisions the same day:
+the target is Synty's screenshot #13 **at the play camera**; scenery first, simulation after;
+**Synty's own colours**; Ultra matches the screenshot and High holds 60 fps at 4K. The pass is two
+halves on two branches, integrated into one: *dressing* (what stands on the ground) and *ground and
+light*. `FrameTimeTests.TheLookAtThePlayCamera` photographs the played meadow for both.
+
+### 17a. Ground and light (`claude/meadow-look-ground`)
+
+**What the ground was.** One instanced box per cell wearing `Mat_Grass_Textures_01`, one texture
+repeat per 2.5 m cell, multiplied by `StuffPalette`'s grass lift (1.04, 1.30, 1.55): a single olive
+texture pushed towards a turquoise-lime it was never painted as, tiled into a visible lattice.
+
+**What it is.** `Odyssey/MeadowGround`, a clean-room URP shader, draws every grass cell. It blends six
+of the pack's terrain textures — two grasses, clover, flowers, leaf litter, and earth on faces that
+stand up — by value noise in **world space**, at a 4 m texture repeat (the pack's own terrain-layer
+tiling) and patches tens of metres across, with a slow drift of brightness and warmth. Neighbouring
+cells are continuous by construction: they sample the same world. The coarser layers branch, and
+their gradients are taken outside the branches (d-17 §4). Nothing about it is simulated — no cell, no
+save, no hash — and the renderer's tints (depth shade, tilled, stored, the zone washes) still
+multiply in through `_BaseColor`. The grass lift is dropped over it (`StuffPalette.TerrainTint`).
+
+**Where the art comes from.** `MeadowLook`, a committed `Resources` asset of GUID references into the
+gitignored packs, rebuilt by `MeadowLookBuilder` (menu, or `scripts/unity.sh exec
+Odyssey.EditorTools.MeadowLookBuilder.Build`), which refuses to write without the packs. A clone
+without them resolves nothing and draws the stock ground exactly as before.
+
+**The light, and why it had to move.** The first painted frame was *darker* than the stock one: the
+pack paints its terrain muted olive, and its screenshots are bright because of how the demo scene
+lights them — an orange key at intensity 3 over a heavy trilight ambient (sky 0.62/0.84/1.30,
+equator 0.71/0.84/0.88, ground 0.69/0.60/0.42) at an ambient intensity of 1.6. Our noon had a
+near-white key at 2.15 over an ambient a third as bright. `Daylight.Meadow` moves the sampled state
+towards the demo's **by daylight only** — the weight is the sun's elevation over 30°, so dawn, dusk
+and night keep the palettes the owner judged — warming the key and scaling it ×1.35, and taking the
+three ambient terms 85 % of the way to the demo's (its 1.6 folded in as ×1.5). It is a transform of
+the sampled state, not new keys, so the table and `DaylightTests` are untouched, and
+`Daylight.MeadowLight` off gives exactly the old light. On by default.
+
+**The grade: ours, not the demo's.** The demo's own URP profile is loaded at runtime from
+`MeadowLook.grade` for comparison only. It pulls the grass yellower, which is towards #13, but its
+bloom (threshold 0.81, intensity 2.19, a lens-dirt texture at 8.07) haloes every white thing — the
+colonists and stone glow — and it costs **~8 ms at 4K**. The golden-hour grade stays. (The pack's
+`Meadows_Post_Processing_01` is Post Processing v2, built-in pipeline only, and cannot be used.)
+
+**Measured** (`FrameTimeTests.TheMeadowGroundAgainstTheFrame`, played meadow, one run, RTX 5070 Ti):
+
+| | 640 × 480 | 3840 × 2160 |
+|---|---|---|
+| stock ground, golden hour | 2.34 ms | 13.26 ms |
+| painted ground, golden hour | 2.43 ms | **11.92 ms** |
+| painted ground, demo grade | 3.69 ms | 20.00 ms |
+
+The painted ground is **no dearer within the noise** (a single run's noise here is about a
+millisecond, and it came in under the stock ground). No `Texture2DArray` was needed for the first cut:
+six slots, at most five samples on a patch edge and two on plain grass.
+
+**Pictures**: `docs/reference/screenshots/look/ground-before-start.jpg` (stock ground, the Play
+scene's grade), `ground-after-start.jpg`, `ground-after-close.jpg`, and
+`ground-after-close-demo-grade.jpg` for the grade comparison.
+
+**Owed.**
+- **Leaf litter under trees** is on noise, not on where trees stand: the mirror knows the tree
+  cells, and a cheap signal (a per-cell weight in vertex colour or a small board texture) would put
+  the litter where the canopy is. Not built, recorded.
+- **A terrain-detail rung** in M6's presets waits for texture arrays, which the first cut did not need.
+- **The dirt, gravel and marsh terrains** keep their tiled textures; they sit oddly beside a painted
+  meadow only where they meet it, which is the M9 skin's business.
+- **The day's other hours** under the Meadow light are unphotographed: the harness shoots noon.
+- The teal tufts in every picture are the M3 grass shader's grade on one tuft variant, not the
+  ground — the dressing half owns them.
