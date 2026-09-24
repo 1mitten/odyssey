@@ -248,7 +248,7 @@ namespace Odyssey.Tests.Sim
         // only once it has run (JobSystem.HashedAlways).
         //
         // Moved a twenty-sixth time, deliberately, 2026-09-24, by the bandit (design 42): the kind
-        // renamed PawnKind_Marauder -> PawnKind_Bandit (index 3 unchanged, so no save moves), its
+        // renamed PawnKind_Bandit -> PawnKind_Bandit (index 3 unchanged, so no save moves), its
         // traverse mode likewise, and PawnKindDef.weapon became weapons, the bandit's being a
         // crowbar or a bat where it was a machete. No golden moved: no golden has a bandit.
         const ulong ContentFingerprint = 9430633263010007866UL;

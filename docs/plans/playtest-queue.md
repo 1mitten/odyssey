@@ -59,6 +59,17 @@ the next session learns to ignore.
   or a bush that vanishes at the screen's edge or pops in late; grass that flickers while panning; a stutter
   when a colonist digs, builds or a crop grows; or no smoother than before at the far zoom.
 
+- **Should four armed colonists lose to three bandits?** (`claude/combat-c7`, design 33 §21d,
+  `docs/milestones/combat-report.md` §5.) **Every combat row from here down is on `main` since PR
+  #194**, whatever branch it names; the combat plan is done and these are what is left of it.
+  - *Set-up.* New game, five colonists. Debug menu: *Arm every colonist*, then draft them all and
+    move them together. *Spawn 3 bandits* about twenty cells off.
+  - *What the gate saw.* On one seed of three the gathered squad of four lost to the three; on the
+    other two the squads downed nine and seven bandits over ten days. Every number in the fight is
+    invented, so this is the tuning speaking.
+  - *A wrong answer looks like* an armed squad that feels hopeless against three (the bandits too
+    strong — their level, the machete, or the colonists' weapon roll), or three bandits that never
+    get a colonist down (too weak). Say which, and roughly how many a squad of four should beat.
 - **Does the landing ring read, and does a drag across the roster select the squad?**
   (`claude/draft-ring-roster-drag`, design 33 §20.)
   - *Set-up.* Any colony with four or more colonists. Draft them all.

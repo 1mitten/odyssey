@@ -32,7 +32,7 @@ namespace Odyssey.Tests.Sim.Events
         // Incident_BanditLeft (Neutral) appended at 2 and 3, both naming the Recorded worker —
         // written down by the world when a bandit leaves the board, never fired. Default gates.
         //
-        // 2026-09-24, the bandit (design 42): Incident_MarauderLeft renamed Incident_BanditLeft,
+        // 2026-09-24, the bandit (design 42): Incident_BanditLeft renamed Incident_BanditLeft,
         // its label and bulletin key with it. Index 3 unchanged; the ledger keeps indices.
         const ulong ContentFingerprint = 10166985357465790265UL;
 

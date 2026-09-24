@@ -5,7 +5,9 @@ word was renamed everywhere live, this file included; the journal keeps the old 
 there that says "marauder" means the bandit. Kind index 3, `TraverseMode` 3 and incident index 3
 are unchanged. A bandit carries a crowbar or a bat (design 42 §3), not the machete §5b gave it.
 
-**Status: C1 (draft and move) built and played 2026-09-23 — the owner's verdict: drafting, T,
+**Status (2026-09-24): every unit of the plan is built. C1–C6 and the owner's rounds after them are on
+`main` (PRs #176, #180, #182, #194); C7, the gate, is §21 and `docs/milestones/combat-report.md`. What
+follows is the history in the order it happened.** C1 (draft and move) built and played 2026-09-23 — the owner's verdict: drafting, T,
 moving onto surfaces, the diamond and the four hours all work; the run (§2h) and the deeper red
 (§2g) came out of that playtest. C2 (health and melee) and C3 (weapons) built 2026-09-23 by four
 parallel lanes on the contracts of §5 (§6A–§6D) and integrated on `claude/combat-c2` (§6E): every
@@ -4574,3 +4576,160 @@ call in them is one the same files already make — `ChunkRenderer.DrawRing`, `G
 compilation, not an API shape. **Nothing tests that the pointer reaches the cards** (CLAUDE.md): in
 particular, that `PointerEnterEvent` reaches the other cards while the left button is held. The old
 Shift-sweep relied on the same, and was never reported broken.
+
+## 21. The gate (C7, 2026-09-24, `claude/combat-c7`)
+
+The last unit of the plan: the ten-day gate with and without hostiles, the benchmark rows, the
+records. Built from `main` at `3ca5098c` (PR #194, every combat unit and playtest round in).
+
+### 21a. Without hostiles
+
+`SoakRunTests.TenDays` on seeds 1, 2 and 3 holds on today's `main` with nothing changed: every
+colonist alive and published, no need at zero past 2,000 ticks, the reservation table agreeing every
+1,000 ticks, a haul, a meal and a sleep completed. **No golden moved** in this unit — `Golden.cs`
+is untouched and `GoldenMasterTests` is green in both the fast and Long tiers. The numbers are in
+`docs/milestones/soak-runs.md`.
+
+### 21b. With hostiles: `BanditSoakTests.TheGateWithRaids`
+
+There is no storyteller (owner's call), so the test is the storyteller. On the soak's own board and
+colony (120 × 120 × 16, `Scenario_Bare`, five colonists, five beds, nine stockpile cells):
+
+- **Armed by the debug menu's own row**, `DebugArmColonists`, so every colonist holds one of the
+  four weapons, dealt by her seed.
+- **A hut**: a five-by-five ring of wooden walls with a door on the side facing the start, eight
+  cells off it, raised outright — sixteen colony buildings and a door (§16) beside the scenario's
+  beds.
+- **Seven raids** through the debug spawn, a quarter into days 0, 1, 3, 4, 6, 7 and 9: one bandit
+  or three, alternately, twenty cells out on a heading that turns. Thirteen bandits.
+- **A party of three is answered**: every colonist on her feet is drafted (`SetDrafted`) and sent
+  to the start with one `OrderMove` each, as a box selection sends a squad; the spread (§2d) stands
+  them together and the four quiet hours (§2b) let them go. A lone bandit is left to each
+  colonist's own response (§18). *Why*: unanswered, every seed was all down by day two and eight
+  days of the gate were theft; drafted where each stood, five colonists across a 120-cell board met
+  the party of three one at a time and lost every fight three to one. Gathered, they fight as a
+  squad, which is the fight a player has.
+
+**Asked every in-game hour**, in the invariants both soaks now share (`Invariants`, extended rather
+than forked):
+
+- nobody dead still on the board, nobody over the pool, nobody at or under nought standing;
+- nobody down past the line she gets up at — whole for a colonist (§11c), the content's for an
+  animal — and every downed pawn on `Job_Downed`, never drafted;
+- **a carried pawn** is carried by a pawn that exists, is on `Job_Rescue`, names her, and stands
+  where she is (§11a, §11f);
+- **nobody inside anything solid** — the `TrappedPawnSystem` test: solid or blocked and not
+  enterable in her own mode;
+- **every claim a pawn believes it holds is in the table under its name**, and the table's count
+  is the pawns' — together, "no reservation held by a pawn that has gone".
+
+**Asked every tick** (scales with the pawns):
+
+- **no attacker on a target already gone** for more than one tick: a pawn despawned, dead, or down
+  when the attack was not to the death; a building no longer standing. The driver ends the job on
+  the tick it sees one, so one tick — the fight's pass downing a target after the jobs ran — is the
+  bound.
+- **no bandit on *Fighting* at a building** without a step or a swing for more than **500
+  ticks**: every unforced attack thinks again at `rechooseTicks` (300), and since §19b one whose
+  every side is held ends at once, so the owner's "said they were fighting but kinda stood around"
+  is at most a re-choice, the longest cooldown (144) and §19b's 183-tick hop. The same stand at a
+  **colonist** is printed and not bound: a bandit that can get no side of her queues a ring back
+  by design (§7c), which §19d measured at 2,506 ticks and left for the owner.
+
+**Asked every hour, a rescue**: a downed colonist out of bed who could be carried — nothing hostile
+standing, a free bed she can reach, and a colonist on her feet, undrafted, unbroken, awake and **not
+already carrying somebody** — may lie like that for at most **two hours**. Rescue is emergency work
+taken at the rescuer's next think (§11b). The first cut counted a rescuer already carrying someone
+as free, and seed 1 read 12,500 ticks: one colonist left standing working through four patients in
+turn, each carry 2,500–4,000 ticks. That is one rescuer at a time, not a fault, and the predicate
+says so now. On failure it prints every standing colonist's job, reach, bed and claim.
+
+**Determinism, twice.** A **lockstep twin** — the same seed, the same raids, built beside it — must
+hash the same **every hour** for ten days, which is stronger than "the same final hash" and says
+where two runs part if they ever do. And **a save at the first swing of day one's raid** (at a
+colonist or a building, from the combat tape) is loaded into a fresh world and run a day on: it must
+come to the original's hash. Day one because it is the one fight every seed has; by day four seed
+1's colony is all down and its hut broken, so that party only steals.
+
+**Accounted for at the end**, as the soak does: every bandit is on the board, dead with its corpse,
+or off the edge with a ledger entry (§17e); every death has its corpse; `Job_Downed` never failed;
+**no colonist died** — an unordered fight ends in downs (§3).
+
+### 21c. What it found: a step lost across a load
+
+The save round trip failed on seeds 1 and 2 at first. The lockstep twin agreed every hour, so the
+fault was the round trip and not the simulation. One tick after the load a drafted colonist who had
+joined a fight (§15) had not moved: every saved and hashed field matched, her progress through a
+step 69,050 in the loaded world and 71,304 in the other.
+
+`Job_AttackMelee` has five branches that **let a step already under way land** before they decide
+(`if (!boundary) return Ongoing`): the join ended, in reach, the hold out of reach, and the building
+mode's in-reach and every-side-held. They rely on the mover to finish the step along the path she
+holds. **A path is never saved** (`MovementSystem`), and a driver that walks re-asks for one through
+`GotoCell` — but these branches wait rather than walk, so a pawn loaded in reach part way through a
+step held no path, nothing asked for one, and she stood frozen until her target moved away.
+
+**Fixed**: `LandTheStep` asks for the path again when she has none and none is pending; it is served
+before anybody steps in the same tick. A world that was never loaded always holds one there, so it
+changes nothing in play: **no golden moved, and the gate's three final hashes were identical to the
+digit before and after the fix.** `AttackDriverTests.ASaveTakenMidStepInReachResumesTheSame` finds
+that moment in a three-against-two fight and saves there; without the fix it fails one tick on (the
+loaded attacker 2,096 into the step against 4,192). `docs/bug-patterns.md`, 2026-09-24.
+
+Nothing else broke. No invariant failed on any seed, nobody was freed from a wall, and nobody died.
+
+### 21d. The numbers
+
+| Seed | Drafts | Swings at pawns | Downed (colonists) | Died | Got up | Rescues (failed) | Buildings broken | Thefts | Colonists at day ten | Longest at a building | Longest unrescued |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 4 | 220 | 7 (5) | 0 | 1 | 5 (1) | 16 of 16 | 12 | 0 up, 5 down | 95 | 0 |
+| 2 | 9 | 420 | 14 (5) | 0 | 4 | 5 (1) | 16 of 16 | 8 | 0 up, 5 down | 95 | 2,500 |
+| 3 | 6 | 327 | 12 (5) | 0 | 3 | 5 (2) | 16 of 16 | 7 | 2 up, 3 down | 95 | 0 |
+
+22–62 s a seed for the colony and its twin, on a machine that was not quiet, so the Long tier grew from 41 tests in 1 m 44 s to
+44 in 3 m 03 s. The final hashes are in `docs/milestones/soak-runs.md`.
+
+**The colony loses, and that is for the owner.** Ten days of raids leave two seeds of three with
+every colonist down. On seed 1 an armed, drafted squad of four gathered at the start lost to three
+bandits on day one; the other two seeds' squads downed nine and seven bandits over the run. Every
+number in the fight is INVENTED (§1), so this reads the tuning, not the code: a bandit carries a
+machete and is dealt its level like anybody, and a colonist's weapon is a roll. Whether three
+bandits should beat four armed colonists is a playtest question (the queue).
+
+**What the gate does not cover**: animals in the fight (the bare board has none), a colonist
+ordered to kill (every death here would be a fault), kidnap (seamed, §17f), and anything drawn — the
+frame is §21e.
+
+### 21e. What a fight costs
+
+**The tick** (`TickBenchmarkTests.FiftyAgainstTenOnTheBigBoards`, new, and `TwentyAgainstTwenty` beside
+it; Explicit; the Windows dev machine, AMD Ryzen 7 9800X3D, CoreCLR, **alone** — no Unity process and
+the CPU at 5 % when it started; two runs, the swings identical to the digit and the times within the
+spread shown). **Not the room lattice**: these colonies are built by `ColonyWorld.Build` on the played
+map (barren and wooded), so the region counts — 24,412 on the scale target, 8,690 on Huge — are a
+generated board's, and the figures compare with the game rather than with the class's lattice arms.
+Fifty colonists and the board's own animals (23 and 20):
+
+| Board | At peace | Fifty against ten | Fifty drafted against ten | Fight over peace |
+|---|---|---|---|---|
+| 250 × 250 × 40 | 0.096–0.108 ms | 0.158–0.187 | 0.186–0.189 | +0.05–0.09 ms |
+| Huge 240 × 240 × 16 | 0.093–0.098 | 0.117–0.125 | 0.160–0.174 | +0.02–0.03 ms |
+| 120 × 120 × 16, twenty against twenty (bare, the older row) | 0.036 | 0.087 | 0.091 | +0.05 ms |
+
+The whole tick stays under **0.19 ms** in every arm. The dearest part is the drafted hold: its Pawns
+phase is 0.073–0.081 ms against 0.022–0.028 undrafted, because each drafted colonist scans the pawns
+every tick for a threat beside her or a fight to join (§15f) — fifty drafted is fifty scans of eighty
+pawns. It scales with drafted × pawns and is a tenth of a millisecond at this size; the day a colony
+drafts hundreds it is the number to watch.
+
+**The frame** (`FrameTimeTests`, measured inside the full PlayMode tier, which started with no other
+Unity process on the machine and the CPU at 7 %; 640 × 480, RTX 5070 Ti):
+
+- **A fight in view** (`TheFrameWithAFightInView`): peace **1.79 ms**, brawl **2.24 ms**, 738 → 762
+  draw calls. The difference is the figures (0.111 → 0.238 ms) and the overlays (0.010 → 0.033). At the
+  C2 integration the same arm read 2.06 → 2.29 (§6E): the frame is faster underneath and the fight
+  itself dearer by about 0.2 ms, which is the reactions, the draw and sheathe and the criticals the
+  playtest rounds added (§8b, §9a–§9c).
+- **Blood at its cap** (`TheBloodAtItsCap`, 200 marks): **1.87 → 1.95 ms**, 738 → 741 draw calls, three
+  of them blood — §10d's ceiling holding.
+- Not at a play resolution and not on the target laptop, like every frame number here.

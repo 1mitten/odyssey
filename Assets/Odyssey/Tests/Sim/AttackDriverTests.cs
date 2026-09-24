@@ -326,5 +326,59 @@ namespace Odyssey.Tests.Sim
                 "the fight resumed differently");
             Assert.That(restored.Pawns.Pawns.Get(b.Id)!.HpMilli, Is.EqualTo(b.HpMilli));
         }
+
+        /// <summary>
+        /// A save taken while an attacker is <b>in reach and part way through a step</b> resumes on the
+        /// same ticks (found by the combat gate, C7). The driver lets a step under way land before it
+        /// decides, and the mover lands it along the path she holds — but a path is never saved, so the
+        /// loaded attacker held none, nothing asked for one, and she stood frozen part way through the
+        /// step while the world that was saved walked on. Three bandits on two drafted colonists: the
+        /// first tick with an attacker in that state is the save.
+        /// </summary>
+        [Test]
+        public void ASaveTakenMidStepInReachResumesTheSame()
+        {
+            var colony = Board();
+            colony.World.Tick();
+            Pawn a = colony.Pawns.Pawns.All[0], b = colony.Pawns.Pawns.All[1];
+            Stand(colony, a, Near(colony, 0, 0));
+            Stand(colony, b, Near(colony, 1, 0));
+            Assert.That(Draft(colony, a), Is.EqualTo(IntentRejection.None));
+            Assert.That(Draft(colony, b), Is.EqualTo(IntentRejection.None));
+            for (int i = 0; i < 3; i++) Spawn(colony, PawnKindIndex.Bandit, Near(colony, 9, -2 + 2 * i));
+
+            // The moment: an attacker on its target, in reach of it, holding a path with a step well
+            // under way — the branch that waits for the step to land.
+            Pawn? walker = null;
+            for (int t = 0; t < 3_000 && walker == null; t++)
+            {
+                colony.World.Tick();
+                foreach (Pawn pawn in colony.Pawns.Pawns.All)
+                {
+                    if (pawn.CurrentJob?.DefIndex != JobIndex.AttackMelee || pawn.CombatTarget == 0 || !pawn.HasPath) continue;
+                    if (pawn.MoveProgress < pawn.MoveRatePerMille()) continue;
+                    Pawn? target = colony.Pawns.Pawns.Get(new PawnId(pawn.CombatTarget));
+                    if (target != null && Melee.InReach(colony.Pawns, pawn, target, pawn.CurrentJob.Mode)) walker = pawn;
+                }
+            }
+            Assert.That(walker, Is.Not.Null, "the control: no attacker was ever in reach part way through a step");
+
+            byte[] saved = colony.Save();
+            var restored = Board();
+            restored.Load(saved);
+            Pawn back = restored.Pawns.Pawns.Get(walker!.Id)!;
+            Assert.That(back.HasPath, Is.False, "the control: a path is not saved, so the loaded attacker holds none");
+            Assert.That(back.MoveProgress, Is.EqualTo(walker.MoveProgress), "the control: her progress through the step is");
+
+            colony.World.Tick();
+            restored.World.Tick();
+            Assert.That(back.MoveProgress == walker.MoveProgress && back.Cell == walker.Cell, Is.True,
+                $"one tick on, the loaded attacker is at {back.Cell} with {back.MoveProgress} and the saved one at " +
+                $"{walker.Cell} with {walker.MoveProgress}: the step under way did not go on");
+            colony.World.Tick(600);
+            restored.World.Tick(600);
+            Assert.That(restored.World.ComputeStateHash().Value, Is.EqualTo(colony.World.ComputeStateHash().Value),
+                "the fight resumed differently");
+        }
     }
 }
