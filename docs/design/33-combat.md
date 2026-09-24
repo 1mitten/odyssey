@@ -3721,4 +3721,188 @@ Each rule was withheld and the tests run and seen to fail, then restored:
 - *The city's materials at ×1*: unchanged. It is (b)'s question, which stays forgotten for now.
 - *With every colonist down, a marauder breaks the beds*: it no longer does (§16d). A marauder
   with nothing to hunt and nothing else to break now **idles**. Leaving is a separate question for
-  the owner, not taken here.
+  the owner, not taken here. *(Answered 2026-09-24: it steals and leaves, §17.)*
+
+## 17. Marauders steal and leave (2026-09-24)
+
+§16h left one thing to the owner: with every colonist down and nothing left it may break, a
+marauder idled for ever. Asked whether it should leave, the owner answered:
+
+> *"It will thieve items or kidnap people depending on their motivation creating a negative event
+> (but they could be rescued later) - seam this later but for now - thieve items"*
+
+Built on `claude/combat-thieves`, from `claude/combat-owner-round` at `2e01d57e`, on the fast and
+Long tiers only, with no Unity. **No golden moved.** One Presentation file was touched and has
+never been compiled (§17g).
+
+### 17a. The decisions
+
+| Question | Decision |
+|---|---|
+| When does a marauder steal? | When its mind finds **no colonist standing that it can reach and no colony building it may break** (§14b's fallback finds nothing; beds are spared, §16d). Theft is the **last** thing the mind reaches for |
+| What does it take? | **The nearest stack it can reach and lift**, on the ground or in a store. There is no value yet, so nearest is the whole of the choice; **a tie goes to the lower item id**, the older stack |
+| Where does it go? | **The nearest edge cell it can reach from the stack**, on a layer it can stand on, and it leaves the board there |
+| And with nothing to take? | It leaves **empty-handed** by the edge nearest itself |
+| And with no edge to reach? | It **stays**, takes nothing, and thinks again as it did before |
+| Leaving is? | **Removal, not death**: no corpse, no `Died` report, no hook, nobody mourns. **The stack goes with it**, out of the colony's things, and so does its weapon |
+| Struck down carrying it? | It **drops the load where it falls** (`DropCarried`), as every carrier does. Killed, the same, and the corpse is the death's |
+| A colonist it can reach again? | It **drops the load and goes back to the fight**, within one look (§17c) |
+| The negative event? | A **Theft** row on the Events panel, in the blow's red, with its chime: *Theft · Meal × 12*. An empty-handed leaving is a neutral **Marauder left** |
+| Kidnap? | A **motive** on the kind: `Loot` or `Kidnap`. Only `Loot` is acted on; **`Kidnap` does exactly what `Loot` does today** (§17f) |
+
+### 17b. The mind
+
+`HostileThinkNode` now chooses in this order:
+
+1. the colonist who struck it, while it remembers her (§6A.6);
+2. the nearest standing colonist it can reach;
+3. the nearest colony building it may break (§14b, less beds, §16d);
+4. **what it came for** (`Theft.TryFill`), if it came for anything and an edge can be reached;
+5. otherwise it idles, as before.
+
+The first two are one method now, `ColonistToFight`, so the think and the thief's look (§17c) ask
+exactly the same question. `HostileThinkNode.HasAFight` is the first three without filling a job.
+
+**What it came for is the kind's** (`PawnKindDef.motive`, resolved into `PawnContent.KindMotive`
+and read through `Pawn.Motive`). `PawnKind_Marauder` names `Loot`; every other kind is `None`,
+so a colonist or an animal is untouched. It is on the kind, as the weapon and the way of walking
+are, because nothing yet rolls a marauder's reason for coming. The owner's *"depending on their
+motivation"* reads as per marauder; the day a raid rolls one, it becomes a field on the pawn,
+saved and hashed only while set, and the kind's value is its default.
+
+### 17c. The job
+
+**`Job_Steal`**, handle 22, `StealJobDriver`, four toils:
+
+1. **Walk to the stack** (`Job.TargetItem`, lying at `Job.TargetCell`). Taken, eaten or moved
+   before it gets there: the job fails and it thinks again.
+2. **Lift it** through `LiftToil`, the hauler's own stoop, grasp and rise. The load is the job's
+   `CarriedItem`, so it is published on the carry aspects and **drawn in its arms for nothing**,
+   and the activity line reads *Stealing · Meal × 12* by `JobLabels.Carrying`.
+3. **Walk to the edge** (`Job.DestCell`), chosen at the think as the nearest reachable edge cell
+   **from the stack**, so the job is fixed from the start and a save resumes it exactly.
+4. **Leave**: on the edge cell, `Theft.Leave` runs at the end of the tick (`ctx.Defer`), for
+   death's reason — `PawnRegistry.Despawn` shifts the list every pawn loop walks.
+
+With no stack, the first two are skipped. The job reserves the stack (`ReservationTargetKind.Item`),
+so a hauler never sets off for the thing a thief has chosen, and a stack a hauler has claimed is
+passed over.
+
+- **In its own mode** (`TraverseMode.Marauder`) all the way, so it opens no door with its arms full
+  either. **It climbs a ladder with a load**, which a hauler does not (`TraverseMode.Hauler`). A
+  mode that was both would be a sixth district flood on every nav rebuild, on every board, for the
+  sake of a thief (§16b's argument); recorded rather than built.
+- **It walks.** `UrgencyPerMille` runs only an attack and a flight. A thief that ran would be hard
+  to catch; the playtest decides.
+- **No expiry.** An expiry ends the job, and ending it drops the load, so a long walk to the edge
+  would put the loot down and pick it up again.
+- **It looks up while it goes.** Once every `rechooseTicks` (300) of the job, at a step boundary, it
+  asks `HostileThinkNode.HasAFight`; if there is a colonist it can reach or a building it may break,
+  the job fails, `Cleanup` drops the load, and the next think fights. A hunt re-chooses by ending
+  its job on the same cadence; a thief cannot, or it would drop the load every three hundred ticks.
+  **`Job.WorkTicks` counts the looks taken** — a theft has no duration for it to override — so the
+  cadence is saved and hashed with the job, and a load resumes it on the same tick.
+- **A colonist who strikes it** turns it at once, as she turns any marauder not fighting beside it
+  (`CombatSystem.React`): the job is interrupted and the load dropped.
+- **Every end but the leaving drops the load** (`Cleanup` → `DropCarried`): downed, killed, knocked
+  back, a look that finds a fight, a failed walk.
+
+**The stack**, `Theft.NearestLoot`: every thing on the three listers a hauler walks (loose, stored,
+contained) that has a place (`WhereIs`), can be carried, is not claimed by anybody else and can be
+reached, nearest by `PawnContext.Distance`, a tie to the lower id. **A forbidden thing is taken
+too**: forbidding is the colony's word to its own people. A weapon in a hand and a load in somebody's
+arms have no place and are passed over. A stack from which no edge can be reached is no loot (a
+drop into a pocket can be one way), and it leaves empty-handed instead.
+
+### 17d. Leaving the board
+
+`Theft.Leave`, deferred, asks again that it is still a thief standing on its edge — the fight's pass
+runs between the driver and the end of the tick, and a thief downed there has already dropped its
+load. Then, in order:
+
+1. the load out of the job and **despawned** — out of the colony's things;
+2. **its weapon despawned too**. `PawnRegistry.Despawn` puts a held weapon down where the pawn
+   stood, which is right for a death and for a pawn that is simply gone; a marauder walking off
+   with its machete has not been disarmed, and leaving one at the edge for every thief would arm
+   the colony for free;
+3. the ledger entry (§17e);
+4. the job ended (`EndJob`, a success) and the pawn despawned through `PawnRegistry.Despawn`, the
+   one way off the board: it ends every attack on the thief, releases its reservations and any bed.
+
+**Not a death**: no corpse (`CorpseRegistry` untouched), no `Died` on the combat log, no
+`CombatHooks.RaiseDied`, so the friendly-fire listener's *a colonist died* memory never fires.
+Nobody mourns a marauder that walked off.
+
+### 17e. The negative event
+
+**The ledger, not a new channel.** Design 23 §5 made the incident ledger the colony's memory of
+what has happened and the Events panel its reader, and a theft is a thing that happened. Two
+incident Defs, appended at 2 and 3:
+
+| Def | Bulletin | Favourability | Row |
+|---|---|---|---|
+| `Incident_Theft` | `ui.bulletin.theft` *Theft* | **Bad**: red ink, the negative chime | *Theft · Meal × 12* |
+| `Incident_MarauderLeft` | `ui.bulletin.marauderleft` *Marauder left* | Neutral | *Marauder left* |
+
+- **Written down, never fired.** Both name a new worker, **`Recorded`** (`RecordedIncidentWorker`):
+  `CanFireNow` is false, so `InvokeIncident` refuses it, and `Fireable` is false, so **the debug
+  menu's Events tab leaves it off its list** — the one Presentation line in this unit. A worker
+  rather than a flag on the Def, because every Def names one and the loader refuses a Def that names
+  none.
+- **What was taken rides beside the entry, not in it.** Design 23 §8 foresaw that an entry wanting
+  more than `(id, tick, def, cell)` would add fields and bump the save format. It does neither: the
+  ledger keeps a **sparse detail row** per entry that is about a thing (`IncidentLedger.Detail`: id,
+  item def, amount), saved in its own section, **`odyssey.incidents.detail`**, appended to
+  `ColonyWorld.SaveComponents`, and hashed only while it has a row. A save from before it loads
+  with no detail, which is what it had. **Save format unchanged.**
+- **Published on the bulletin**: `BulletinView` gained `Subject` and `Amount` (−1 and 0 by default),
+  and `BulletinModel.Title` writes *name · thing × n*, as the activity line writes a load (one of
+  a thing has no count). Both names are the registry's; only the separator and the sign are written
+  in C#.
+- **Where**: the entry's cell is the edge cell the thief left from, so clicking the row jumps the
+  camera to where it went.
+
+### 17f. The kidnap seam (not built)
+
+`Motive.Kidnap` exists, is loaded, and **does exactly what `Loot` does today** — the switch in
+`Theft.TryFill` says so, and `TheftTests.AKidnapperStealsAsALooterDoes` holds the two to the same
+hash every hundred ticks of a whole theft. How kidnap would work, when it is built:
+
+- **What it takes**: the nearest **downed colonist** it can reach, in place of the nearest stack.
+  `RescueRules` already answers who is downed, not carried and not claimed, and the rescuer's
+  `ReservationTargetKind.Pawn` claim keeps a rescuer and a kidnapper off one body.
+- **How it carries her**: C4's cradle (§11). `Pawn.CarriedBy` and the carried patient's cell riding
+  her carrier's are the rescue's, and the kidnapper's job reuses them, with `Cleanup` putting her
+  down on every end that is not the leaving, as the rescue's does.
+- **Leaving with her**: the colonist is **not despawned into nothing**. She leaves the board into a
+  record — *held by the raiders* — that a later unit reads: a rescue, a ransom, or a raid on the
+  camp. That record is new saved state, and the unit that builds it decides its shape.
+- **The event**: a *Kidnapped* bulletin naming her (a `ui.bulletin.*` key, and a detail row whose
+  subject is a pawn rather than an item; the row's shape already allows it).
+- **Which it does**: a rolled motive per marauder once raids arrive (§17b), with `Kidnap` chosen
+  only when there is somebody down to take, falling back to `Loot`.
+
+### 17g. What was touched
+
+- **Simulation**: `Theft` and `StealJobDriver` (new); `HostileThinkNode` (the order, `HasAFight`);
+  `Job_Steal` in `Jobs.xml`, `JobIndex`, the driver pool; `Motive`, `PawnKindDef.motive`,
+  `KindMotive`, `Pawn.Motive`, `<motive>Loot</motive>` on the marauder; `EdgeTarget.Find`, shared
+  with the animal's leaving walk and unchanged for it; the ledger's detail rows and section;
+  `RecordedIncidentWorker`, `IncidentWorker.Fireable`; two incident Defs.
+- **The hash**: `JobSystem.HashedAlways` (22). A job def below it hashes its counters as it always
+  did; one appended at or after it is hashed **only once it has a count**, with its index. The
+  contracts step moved every golden once for ten zeros (§5h); this is what let `Job_Steal` arrive
+  without doing that again, and the next job inherits it.
+- **Contracts**: `JobHandle.Steal` 22 (`Count` 23), `IncidentHandle.Theft` 2 and `MarauderLeft` 3
+  (`Count` 4), `BulletinView.Subject` and `Amount`.
+- **Interface**: `JobLabels` (*Stealing*), `IncidentLabels` (the two bulletins), `BulletinModel.Title`.
+- **Presentation, never compiled**: `HudShell.Debug.cs`, one line skipping a worker that is not
+  `Fireable`.
+- **Registry**: `ui.status.stealing`, `ui.bulletin.theft`, `ui.bulletin.marauderleft`, with two
+  icon-map gap rows for the bulletins. All three content gates clean.
+
+**Cost** (`docs/process.md` §3): nothing per tick, and nothing at all while there is no marauder.
+The theft scan runs on a marauder's think only when it has nobody to fight and nothing to break,
+and scales with **the item stacks on the board** (a branch and a reservation probe each, a
+reachability test for each nearer than the best so far) plus the edge search, bounded by the
+board's side. A thief's look is one colonist scan and one building scan per `rechooseTicks`.
