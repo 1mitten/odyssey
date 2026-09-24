@@ -49,7 +49,9 @@ namespace Odyssey.Presentation.Rendering
             batch.ChunkIndex = chunkIndex;
             batch.Layer = y;
             _rampCacheIndex = -1;
+            _dipIndex = -1;
             batch.Bounds = ChunkWorldBounds(x0, z0, y, x1, z1);
+            if (GroundSkin.Enabled) FillCornerRelief(x0, z0, x1, z1);
             batch.Clear();
             _bodyIndex.Clear();
             _roofIndex.Clear();
@@ -853,15 +855,41 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
+        // The relief at every cell corner of the chunk being meshed, sampled once each. A corner is
+        // shared by up to six triangles and the relief is four sine waves: sampling per vertex was
+        // most of what made a skinned chunk dearer to mesh than a boxed one (design 38 §20).
+        float[] _cornerRelief = System.Array.Empty<float>();
+        int _reliefX0, _reliefZ0, _reliefSpan;
+
+        void FillCornerRelief(int x0, int z0, int x1, int z1)
+        {
+            _reliefX0 = x0;
+            _reliefZ0 = z0;
+            _reliefSpan = Mathf.Max(x1 - x0, z1 - z0) + 1;
+            int count = _reliefSpan * _reliefSpan;
+            if (_cornerRelief.Length < count) _cornerRelief = new float[count];
+            for (int j = 0; j < _reliefSpan; j++)
+            for (int i = 0; i < _reliefSpan; i++)
+                _cornerRelief[i + j * _reliefSpan] = GroundRelief.HeightAt(
+                    (x0 + i) * CellMetrics.SizeXZ, (z0 + j) * CellMetrics.SizeXZ);
+        }
+
+        float CornerRelief(int cx, int cz)
+        {
+            int i = cx - _reliefX0, j = cz - _reliefZ0;
+            if ((uint)i < (uint)_reliefSpan && (uint)j < (uint)_reliefSpan)
+                return _cornerRelief[i + j * _reliefSpan];
+            return GroundRelief.HeightAt(cx * CellMetrics.SizeXZ, cz * CellMetrics.SizeXZ);
+        }
+
         /// <summary>
         /// A corner of the skin in world space: the cell's corner at a rise above a plane, on the
         /// relief sampled at the corner itself so two cells meeting there agree to the bit.
         /// </summary>
-        static Vector3 SkinCorner(int x, int z, float planeY, int corner, float rise)
+        Vector3 SkinCorner(int x, int z, float planeY, int corner, float rise)
         {
-            float wx = (x + SkinCornerX[corner]) * CellMetrics.SizeXZ;
-            float wz = (z + SkinCornerZ[corner]) * CellMetrics.SizeXZ;
-            return new Vector3(wx, planeY + rise + GroundRelief.HeightAt(wx, wz), wz);
+            int cx = x + SkinCornerX[corner], cz = z + SkinCornerZ[corner];
+            return new Vector3(cx * CellMetrics.SizeXZ, planeY + rise + CornerRelief(cx, cz), cz * CellMetrics.SizeXZ);
         }
 
         // The last cell a point was lifted onto a ramp for: a meadow cell asks for up to three tufts
@@ -952,6 +980,11 @@ namespace Odyssey.Presentation.Rendering
         }
 
         readonly Vector3[] _apronCorners = new Vector3[4];
+
+        // The last cell SkinsTop asked BankDips about, so SinkSkinTop does not ask again.
+        int _dipIndex = -1;
+        bool _dipHas;
+        BankLayout.Ramp _dip;
 
         /// <summary>A point outside the board, on the surround's ground: its level plus its field.</summary>
         Vector3 SurroundPoint(Vector3 at)
@@ -1062,7 +1095,12 @@ namespace Odyssey.Presentation.Rendering
             var size = _model.Size;
             if (y + 1 >= size.SizeY) return false;
             // A side open onto water only: a stream bank, drawn as skin sloping down into it.
-            if (ExposedSides(x, z, y) != 0) return BankLayout.BankDips(_model, x, z, y, out _);
+            if (ExposedSides(x, z, y) != 0)
+            {
+                _dipIndex = index;
+                _dipHas = BankLayout.BankDips(_model, x, z, y, out _dip);
+                return _dipHas;
+            }
             int above = index + size.LayerStride;
             if (_model.IsSolid(above)) return false;
             if (y > 0 && !_model.IsSolid(index - size.LayerStride)) return false;
@@ -1082,7 +1120,11 @@ namespace Odyssey.Presentation.Rendering
             ModulePart[] parts = _model.Library[module].Parts;
             if (parts.Length == 0) return;
             ModulePart part = parts[0];
-            bool dips = BankLayout.BankDips(_model, x, z, y, out BankLayout.Ramp dip);
+            int cellIndex = _model.Size.Index(x, z, y);
+            bool dips;
+            BankLayout.Ramp dip;
+            if (cellIndex == _dipIndex) { dips = _dipHas; dip = _dip; }
+            else dips = BankLayout.BankDips(_model, x, z, y, out dip);
             float h = CellMetrics.SizeY;
             float plane = (y + 1) * h;
             Vector3 c0 = SkinCorner(x, z, plane, 0, dips ? dip.R0 * h : 0f);

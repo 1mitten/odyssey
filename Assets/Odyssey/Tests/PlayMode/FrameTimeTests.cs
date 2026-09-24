@@ -3044,9 +3044,15 @@ namespace Odyssey.Tests.PlayMode
                         {
                             GroundSkin.Enabled = on;
 
-                            // A whole-board re-mesh in one frame, budget off, to time the meshing itself.
+                            // A whole-board re-mesh in one frame, budget off, to time the meshing
+                            // itself — twice, timing the second: the first after a switch creates
+                            // every chunk's skin mesh and uploads it cold, a one-off the steady cost
+                            // of a re-mesh never pays again.
                             int budget = renderer.MeshBudgetPerFrame;
                             renderer.MeshBudgetPerFrame = 0;
+                            boot.Model!.Remesh();
+                            yield return null;
+                            for (int settle = 0; settle < 10; settle++) yield return null;
                             boot.Model!.Remesh();
                             yield return null;
                             float meshFrame = Time.unscaledDeltaTime * 1000f;

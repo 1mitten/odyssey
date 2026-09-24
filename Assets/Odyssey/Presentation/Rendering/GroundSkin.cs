@@ -78,9 +78,26 @@ namespace Odyssey.Presentation.Rendering
             _tints.Clear();
             _fallback.Clear();
             _groupIndex.Clear();
+            _lastGroup = -1;
+            _lastMaterial = null;
         }
 
+        // The group the last triangle went into. A cell's triangles, and most of a chunk's, share
+        // one (material, tint), and the dictionary's key comparison is a Unity object equality —
+        // a native call — so asking it once per triangle was a measurable share of meshing.
+        Material? _lastMaterial;
+        int _lastTint, _lastGroup = -1;
+
         int Group(Material material, int tint, bool fallback)
+        {
+            if (_lastGroup >= 0 && tint == _lastTint && ReferenceEquals(material, _lastMaterial)) return _lastGroup;
+            _lastMaterial = material;
+            _lastTint = tint;
+            _lastGroup = GroupSlow(material, tint, fallback);
+            return _lastGroup;
+        }
+
+        int GroupSlow(Material material, int tint, bool fallback)
         {
             if (_groupIndex.TryGetValue((material, tint), out int group)) return group;
             group = _materials.Count;
