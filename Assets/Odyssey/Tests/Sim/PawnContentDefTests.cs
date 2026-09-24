@@ -219,7 +219,13 @@ namespace Odyssey.Tests.Sim
         // jobs keep drivers 14-16, so the combat five move from 14-18 to 17-21 (nothing combat shipped
         // had saved them). Neither side's number covers the merged pack, so it is re-taken from a
         // freshly loaded pack rather than adopted from either.
-        const ulong ContentFingerprint = 7311169109491343133UL;
+        //
+        // Moved a twenty-first time, 2026-09-24, by C5, friendly fire (design 33 §12): two thoughts
+        // appended at indices 6 and 7 — Thought_AttackedByColonist (-80, one day, once) and
+        // Thought_ColonistDied (-60, three days, three deep), the owner's -8 and -6 on our scale of
+        // thousandths. No golden moved: no golden window has a colonist hurt by a colonist or a
+        // death, and a memory is hashed only once a pawn has one.
+        const ulong ContentFingerprint = 13836212755718261116UL;
 
 
         [Test]
