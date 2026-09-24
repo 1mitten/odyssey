@@ -39,6 +39,14 @@ namespace Odyssey.Hud
         };
 
         /// <summary>
+        /// What this moment leaves: <see cref="For(CombatEventKind)"/>, except that <b>a building
+        /// never bleeds</b> (design 33 §13i) — a blow reported against target 0 is a blow at a
+        /// wall, a door or a bed. The one question <c>CombatFeedback.Bleed</c> asks.
+        /// </summary>
+        public static BloodMark For(in CombatEventView combatEvent) =>
+            combatEvent.Target.IsValid ? For(combatEvent.Kind) : BloodMark.None;
+
+        /// <summary>
         /// A pool's size as a fraction of the largest: a death's is the whole, a down's most of
         /// it. INVENTED; the next unit scales its decal by this and by the body's own size.
         /// </summary>

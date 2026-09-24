@@ -18,7 +18,7 @@ combat adds save sections, not a format bump.
 | CB | Blood: spurts, a mark per hit, pools under the fallen, a fade by the tick (design 33 §10) | **▶ playtest** | **none** — presentation only | **built 2026-09-24, PR #182** |
 | C4 | Rescue and healing in bed: carried in the arms to her own or the nearest free bed, in it until whole, *No bed for the wounded* (design 33 §11) | **▶ playtest** | **none since the contracts step** | **built 2026-09-24, `claude/combat-rescue`** |
 | C5 | Friendly fire and its mood: the two memories (design 33 §12); Ctrl-attack and self-defence were C2's, now tested end to end | **▶ playtest** | **none**, asserted; content fingerprint moved once | **built 2026-09-24 on `claude/combat-friendly-fire`** (fast and Long tiers; no Unity needed, nothing drawn) |
-| C6 | Buildings as targets | — | **none, asserted** | designed |
+| C6 | Buildings as targets: `EdificeDamage` filled, the attack driver's building mode, `OrderAttack` with `B = 0`, demolition through `ConstructionGrid.Demolish` with no refund, the right-click (`CombatOrders.RouteBuilding`), hit points for the campfire and power's three | **▶ playtest** | **none, asserted** (building fingerprint moved once) | **built 2026-09-24, `claude/combat-buildings`, design 33 §13 — awaiting the integrator's Unity run and the owner's playtest** |
 | C7 | Ten-day gate with and without hostiles, benchmark rows, records, wiki republish | — | — | — |
 
 ## Running C2–C7 with several agents

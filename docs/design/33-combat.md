@@ -2841,3 +2841,250 @@ test reaches them.
 - Is **three** the right cap on mourning, and should a death weigh more for somebody close — which
   waits for opinions?
 - Should a swing that **missed** a colonist be remembered as an attack?
+
+## 13. Buildings as targets (C6, built 2026-09-24, `claude/combat-buildings`)
+
+**The owner's MVP named buildings as targets from the first interview** (§1: "walls, doors,
+furniture"), and §4 gave the shape: *hit points per placed edifice in a sparse store, demolished at
+zero with no refund.* Simulation and interface model only, fast and Long tiers, no Unity. **No
+golden moved**: nothing new is hashed while no building has been struck, and no golden window
+fights.
+
+### 13a. What was there, and what C6 adds
+
+| Already there (§5) | Added here |
+|---|---|
+| `EdificeDamage` (`odyssey.edificedamage`): a sorted sparse store, saved and hashed only while it has a row, nothing calling it | the calls, a row per struck building, cleared by the one removal path; an indexer for the publish |
+| `BuildingDef.maxHitPoints` on seven rows, INVENTED | the campfire, conduit, generator and heater given theirs; the material's `hitPointsFactorPerMille` read at last |
+| `HandleOrderAttack` refusing `B = 0` | the building branch: accepted for a drafted colonist on a cell a target stands in |
+| the attack driver failing a job with no `CombatTarget` ("C6's branch") | the building mode: stand beside, swing on the weapon's cadence, done when the building is gone |
+| `CombatEventView.Target` "default when the target is a building" | reported so; one new kind, `Demolished` |
+| `odyssey.pawn.order.cell` named for a building target (§5d) | published for it |
+| `CombatOrders.Route` falling through to the move for a building | `CombatOrders.RouteBuilding`, after the context menu and before the move |
+
+### 13b. What is a target
+
+**An edifice standing in the cell whose building row has hit points** — `BuildingTargets.TryFind`,
+the one owner. That is a wall, a door, a ladder, a bed, a shelf, a campfire, a generator and a
+heater. Never:
+
+- **a floor or a deck plate**, which is a slab at the cell's lower boundary and not an edifice
+  (§5j), although both rows carry `maxHitPoints`;
+- **a conduit**, which lives in the power grid's own layer and is not an edifice either. It was
+  given its number with the other three power rows, and nothing reads it;
+- **a tree** (edifices 10 and 11), which has no building row at all, and nor has anything else the
+  ruined city stamps but its walls and doors (windows, pillars, stairs, vault walls, taps);
+- **a site**, which is an order, not a building.
+
+**The ruined city's walls and doors are targets**, because they are walls and doors: the rule the
+owner gave names what a thing is, not who built it. Deconstruct asks `PlacedEdifice.Built` because
+its refund is a yield and the city's yields are Reclaim's and Salvage's; a blow yields nothing, so
+the argument does not carry across. *Our call*, and on the list for the owner (§13j). The scene
+loads the meadow, so no player meets it yet.
+
+### 13c. Hit points
+
+- **A building's pool is its row's `maxHitPoints` times its material's `hitPointsFactorPerMille`**,
+  in thousandths like a pawn's (`BuildingTargets.MaxMilliOf`). That factor had been in the stuff
+  table since U27 — wood 1,000, stone 1,500, the reference's own wood-to-stone relation — waiting
+  for "a durability stat" to consume it, and this is that stat. So a wooden wall stands 300 and a
+  stone one 450; the city's concrete and steel carry the default 1,000.
+- **The row is keyed on the record's own cell** — a two-cell bed or generator on its head, whichever
+  half was struck — which is what `EdificeDamage` asked of its caller.
+- **A building nobody has struck has no row**, and reads as whole.
+- **The new numbers**, all INVENTED: campfire 60 (three stuff and a ring of stones, the cheapest
+  thing in the table), conduit 40 (unread, above), generator 300 (the first expensive thing, a wall's
+  worth), heater 100. `ConstructionContentDefTests.BuildingFingerprint` moved once for them.
+
+### 13d. The order
+
+`OrderAttack(cell, A, B = 0)` — the cell any cell of the building — is accepted for a drafted,
+standing colonist of ours when a target stands there and she is beside it or can reach a cell beside
+it. Otherwise `NotPermitted`.
+
+- **The job carries the building by its record handle, not its cell** (`Job.DestCell`). Handles are
+  never reused (`ConstructionGrid.Demolish` keeps the slot), so a wall pulled down and another raised
+  on the same cell is a new building, and the old order ends rather than carrying on into it.
+  `Job.TargetCell` is the building's cell she is striking at — what `WorkFocus` turns the figure to
+  during the wind-up, and what the order line is drawn to. `Pawn.CombatTarget` stays 0, which is what
+  says "a building" everywhere.
+- **The same building again is `AlreadyInThatState`**, as the same pawn is (§6A.8).
+- A building order is only ever an order: nothing unordered — the hold, the hunt, a revenge, a
+  self-defence — chooses a building.
+
+### 13e. The driver's building mode
+
+`AttackMeleeJobDriver.TickBuilding`, taken at the branch point lane A left.
+
+- **Where she stands is the deconstructor's stance**: on the building's layer, within one cell of
+  any cell of it, never inside it (`BuildingTargets.InReach`). A wall fills its cell, so beside is
+  the only place to strike it from; a door, bed or shelf is struck from beside it too, so the rule is
+  one rule. Diagonals count, as they do for taking a wall apart.
+- **On a side nobody else holds** (`BuildingTargets.ChooseSide`): of the cells in reach that she can
+  stand on and reach, the one no other fighter holds (`Melee.Holds`) and nearest her, on the fixed
+  scan the pawn sides use (§7c). Nowhere free: she waits where she is and looks again every
+  `chaseRepathTicks`. No cell in reach can be reached at all: the order fails.
+- **`Melee.IsInAnAttack` is widened to any standing pawn in `Job_AttackMelee`**, a building attack
+  included, so a building attacker holds her side against every other fighter. It used to require a
+  pawn target; with nothing else ever in the job but a pawn attack, the widening is a no-op there.
+- **A building never moves**, so the side is not chosen again while she walks: she chooses when the
+  attack is new, when she arrives in reach on a cell somebody else holds, and, waiting, at the chase
+  cadence.
+- **It ends in success when the building is gone** — demolished by her, by another attacker, or
+  taken apart by a deconstructor. Only an order ever starts one, so it is always forced and never
+  re-chosen on `rechooseTicks`. A job naming neither a pawn nor a building (`DestCell` −1) still
+  fails on its first tick, which is the stub's contract `CombatContractTests` holds.
+- **Every swing at a building is activity for the draft's quiet clock** (`DraftQuietSinceTick`).
+  Without it a colonist who took more than four hours to beat down a stone wall with her fists
+  (450 points at 4 a blow, a blow every 120 ticks, is 13,500 ticks) would undraft the tick it fell.
+  An ordered fight with a pawn has the same gap; it is recorded here and not changed, since no
+  player has met it.
+- **A knockback keeps the building order**, as it keeps a pawn order (§9b): a drafted colonist
+  knocked off her side by a marauder gets up and goes back to the wall.
+
+### 13f. The blow
+
+**A blow at a building always lands, for its damage in the spread, and nothing else** — no miss, no
+dodge, no stun, no critical, no knockback. A building cannot step aside or be staggered, and a wall
+is the one thing nobody misses: the reference treats a target that cannot move as always hit, and
+that is the rule taken. The one roll is damage, on the pawn's own `MeleeDamage` stream
+(`BuildingTargets.Resolve`, through `MeleeRules.DamageMilli`), decided when the wind-up begins and
+held on the pawn to the impact (§9g). Not through `IMeleeRules.Resolve`: that decides a swing
+between two pawns and reads the defender at every step, and a new interface member would break every
+implementation of the seam.
+
+**Experience per swing, as for any swing** (§6A.1). The design's rule has no exception for what is
+struck. It does mean a drafted colonist can train Melee on her own wall; that is on the owner's list.
+
+### 13g. The impact, and demolition
+
+- **`CombatSystem.StrikeBuilding` is the building's `ApplySwing`**: the one method a building loses a
+  hit point through. It reports `Hit` with `Target` 0 and the struck cell — so the floating number
+  and the thud already work — and writes what is left into `EdificeDamage`.
+- **No hooks.** `DamageReport` names a pawn, and every listener (the weapon drop, C4, C5) is about
+  pawns.
+- **At nought the building is demolished, with no refund**: `Demolished` is reported at once (amount
+  = the edifice id, so presentation knows what came down) and `ConstructionGrid.Demolish` — **the call
+  deconstruction makes** — runs at the end of the tick (`ctx.Defer`), for death's reason: a removal
+  inside the pawn loop edits what the loop is reading. Everything the building held is Demolish's
+  list, exactly as for a deconstruct: the door's nav flag, the bed out of the bed index (its owner
+  with the record), the power device and its hopper, the shelf's contents spilt where the board
+  takes them and lost where it does not — a consequence, as for a building falling on them — the
+  chunks, navigation, support and the ladder connectors. What is not called is
+  `DeconstructJobDriver.TakeApart`'s salvage, which is the refund.
+- **Only the blow that crosses nought demolishes**: a second blow the same tick finds nothing left.
+
+### 13h. One owner for "the building has gone"
+
+**`ConstructionGrid.Demolish` clears the damage row, and any deconstruct order on the building's
+cells.** It is the one way an edifice leaves the world (a collapse erases slabs, never an edifice —
+checked, `SupportSystem.ApplyConsequences`), so the row cannot outlive the building by any route:
+deconstructed, demolished, or anything later that calls it. The deconstruct driver still clears its
+own order before deferring; clearing twice is harmless, and a demolished wall no longer leaves a
+dangling order drawn on an empty cell.
+
+### 13i. What presentation and the interface read
+
+- **`WorldSnapshot.EdificeDamage`**, a row per struck building (`EdificeDamageView`: cell, edifice,
+  hit points and pool, in thousandths), and **`WorldSnapshot.EdificeHitPoints(edifice)`**, the
+  content's base points per edifice id, nought where it is not a target. Both published by
+  `EdificeDamageContributor`; neither saved nor hashed. The table is 17 numbers a publish and is how
+  the interface learns which edifices are targets without a copy of the rule.
+- **The order line**: a building attack publishes `odyssey.pawn.order.cell` (§5d), the struck cell.
+- **`CombatEventKind.Demolished`**, appended.
+- **No blood from a building** — `BloodModel.For(in CombatEventView)` answers none for a target of 0,
+  and `CombatFeedback.Bleed` asks it (a Presentation line, never compiled here).
+- **`CombatFeedbackModel.BuildingHealthBar`** answers a struck building's bar from the rows, for
+  lane B to draw.
+
+**The right-click** (`CombatOrders.RouteBuilding`, from `OrderModel.RightClick`):
+
+1. the pawn half first (`Route`) — a pawn under the pointer wins over the cell it stands in;
+2. then the context menu — **a weapon on a shelf opens the menu** rather than the shelf being
+   attacked, since equipping is the answer the owner asked for on a weapon (§7a);
+3. then the building: with **no pawn under the pointer**, a cell whose edifice has hit points is
+   attacked by every selected drafted colonist (`OrderAttack`, `B = 0`);
+4. then the move — **a floored cell, bare ground, a tree and a site all still move**.
+
+The interface cannot see the grid, so **which edifice stands in the clicked cell is supplied by the
+presenter from the render mirror** (`WorldRenderModel.EdificeDef`), as it supplies the pawn under the
+pointer and Ctrl; **which edifices are targets is the snapshot's**, so the rule has one owner. A
+selection with nobody drafted sends nothing, and the move then sends nothing either.
+
+### 13j. Open for the owner
+
+- **Do marauders attack buildings?** Design 33 does not say so, so they do not: a marauder hunts
+  colonists (§6A.6). A raider that breaks a door down to reach you is the natural next step.
+- **The ruined city's walls are targets** (§13b). Say if the city should stay Reclaim's alone.
+- **A ladder is a target**, having hit points and standing in its cell; a door and a bed are too.
+  So a right-click on a door, a bed or a ladder is now an attack, where it was a move on to it.
+- **Melee trains on a building** (§13f), which makes a wall a practice dummy.
+- **Every weapon strikes a wall alike.** Blunt against stone, sharp against wood, or fists doing
+  nothing to a wall, is a material table nobody has asked for yet.
+- **The numbers**: campfire 60, generator 300, heater 100, and the seven from §5b, all INVENTED.
+
+### 13k. Owed to drawing
+
+Nothing is drawn yet but what the fight already drew off the log — the floating number over the
+struck cell, the swing, the thud, and the order line to the cell. Owed:
+
+- a hit-point bar over a struck building (`BuildingHealthBar` is the answer);
+- the building's hit points on the tile pane;
+- a damaged look — cracks, or a darker tint — once it is struck;
+- a crash and dust on `Demolished`, and a sound of its own for a blow on wood and on stone;
+- the lock-on ring (§7b) round a building target.
+
+### 13l. What it costs
+
+A colony that is not fighting a building pays one branch a pawn a tick (`CombatTarget == 0` on a
+pawn already in `Job_AttackMelee`, which is nobody) and publishes a 17-entry table. A building
+attacker costs a constant reach test a tick; choosing a side costs at most ten candidate cells ×
+(one pass over the pawns for `Holds`, plus a reachability query), asked at the chase cadence and not
+per tick. The publish scales with the buildings that have been struck.
+
+### 13m. Tests, and the controls seen to fail
+
+Fast tier: Sim **1,370** (from 1,349), Hud **985** (from 979), Long **41**, all green;
+`GoldenMasterTests` green without a re-bake. Three content gates clean. Never run in Unity: the
+two Presentation lines below are **uncompiled** until the integrator's run.
+
+`BuildingTargetTests` (Sim, 21): what a target is, both halves of a bed and a generator keyed on
+the head, a deck plate and bare ground not; which edifice ids have hit points; the pool times the
+material; a wall beaten down with no refund, the row gone and she holds again; every blow lands for
+its damage alone at melee 0; the refusals; a wall with no reachable side; the same wall again; two
+on one wall on two sides; the draft outlasting a stone wall; the building going ending the attack; a
+rebuilt wall not the one she was sent at; `Demolish` clearing the row and the order, by fight and by
+deconstruction; a demolished bed and door leaving nothing pointing at them; only the blow that
+crosses nought; the order line; the publish; the hash only once struck; a save mid-blow at a wall
+(with its own forgetful control); a knockback keeping the order. `CombatOrdersTests` (Hud, five, in
+place of the C2 case "a walled cell is still a move" — it is an attack now): a building attacked by
+every drafted colonist; **a floored cell still moves**, and so do a tree and an edifice the table
+does not name; a pawn under the pointer wins; no draft, no fight; a weapon on a shelf opens the
+menu. `BloodModelTests` +1, `CombatFeedbackModelTests` +1.
+
+Each rule was withheld and its test run and seen to fail, then restored:
+
+| Withheld | Failed |
+|---|---|
+| `Demolish` clearing the damage row | four, the row outliving the wall |
+| `Demolish` clearing the deconstruct order | `DemolishClearsTheRowAndTheDeconstructOrder` |
+| `IsInAnAttack` counting a building attack | `TwoOnOneWallStandOnTwoSides` |
+| the quiet clock refreshed by a blow | `TheDraftDoesNotLapseWhileSheBeatsAWall` |
+| a blow that always lands (a hit roll put back) | `EveryBlowAtABuildingLandsForItsDamageAlone` |
+| the knockback keeping a building order | `AKnockedBackColonistGoesBackToTheWall` |
+| the record handle (the cell asked instead) | `ARebuiltWallIsNotTheOneSheWasSentAt` |
+| the material's factor | `APoolIsTheRowTimesItsMaterial` |
+| a pawn under the pointer winning | `APawnUnderThePointerWinsOverTheBuildingItStandsOn` |
+| the interface asking the published table | `AClickOnAFlooredCellIsStillAMove` |
+| the menu before the building | `AWeaponOnAShelfOpensTheMenuRatherThanAnAttack` |
+| no blood from a building | `ABuildingNeverBleeds` |
+| only the blow that crosses nought | `OnlyTheBlowThatCrossesNoughtDemolishes` |
+| no refund (`TakeApart` called instead) | `ADraftedColonistBeatsAWallDownAndGetsNothingBack` |
+| the order line for a building | `TheOrderLineIsDrawnToTheBuilding` |
+| refusing a wall nobody can reach | `AWallWithNoSideAnybodyCanReachIsRefused` |
+| the same wall again changing nothing | `TheSameWallAgainChangesNothing` |
+| the contributor registered | `StruckBuildingsArePublishedAndTheTableNamesTheTargets` |
+
+**Presentation, never compiled here:** `SelectionPresenter.Order` reads the edifice in the clicked
+cell off `WorldRenderModel.EdificeDef` and passes it on; `CombatFeedback.Bleed` asks
+`BloodModel.For(combatEvent)`.

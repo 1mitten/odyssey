@@ -112,6 +112,18 @@ namespace Odyssey.Sim.Pawns
             SwingOutcome held = attacker.HeldSwing;
             swing.EndSwing();
 
+            // A building (design 33 §13g): it cannot step away, so the blow lands on it if it still
+            // stands and she is still beside it, and falls on nothing if it has gone.
+            if (attacker.CombatTarget == 0)
+            {
+                Job job = attacker.CurrentJob!;
+                if (!BuildingTargets.TryStanding(_ctx, job.DestCell, out BuildingTarget building)) return;
+                if (!BuildingTargets.InReach(_ctx, attacker.Cell, building)) return;
+                SwingOutcome blow = decided ? held : BuildingTargets.Resolve(attacker, armament, _ctx, tick);
+                StrikeBuilding(attacker, building, BuildingTargets.StruckCell(_ctx, attacker.Cell, building), armament, blow, tick);
+                return;
+            }
+
             Pawn? target = _ctx.Pawns.Get(new PawnId(attacker.CombatTarget));
             if (target == null) return;
 

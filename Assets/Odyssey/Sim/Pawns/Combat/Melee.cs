@@ -74,12 +74,14 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Is <paramref name="pawn"/> in a melee attack — on anybody — and on its feet? Only these
-        /// hold a side (design 33 §7c).
+        /// Is <paramref name="pawn"/> in a melee attack — on anybody, or on a building — and on its
+        /// feet? Only these hold a side (design 33 §7c). <b>A building attack counts</b> (§13e): its
+        /// target is 0, and asking for a pawn target here let two ordered on one wall stand on one
+        /// tile. The job, not the target, is the question: the rescue names its patient in the same
+        /// field and is not an attack.
         /// </summary>
         public static bool IsInAnAttack(Pawn pawn) =>
-            pawn.CombatTarget != 0 && pawn.CurrentJob != null
-            && pawn.CurrentJob.DefIndex == JobIndex.AttackMelee && IsStanding(pawn);
+            pawn.CurrentJob != null && pawn.CurrentJob.DefIndex == JobIndex.AttackMelee && IsStanding(pawn);
 
         /// <summary>
         /// The side an attacker holds (design 33 §7c): the cell she is walking to, else the one she

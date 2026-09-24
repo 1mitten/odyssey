@@ -120,6 +120,7 @@ namespace Odyssey.Sim.Pawns
             Job? job = target.CurrentJob;
             bool ordered = job != null && job.DefIndex == JobIndex.AttackMelee && job.PlayerForced;
             int foe = target.CombatTarget, toTheDeath = job?.DestCell ?? -1;
+            int struck = job?.TargetCell ?? -1;
             TraverseMode mode = job?.Mode ?? TraverseMode.Colonist;
 
             int from = target.Cell;
@@ -141,6 +142,18 @@ namespace Odyssey.Sim.Pawns
                 again.Mode = mode;
                 again.PlayerForced = true;
                 if (!_jobs.StartJob(target, again, tick)) target.CombatTarget = 0;
+            }
+            // An order on a building outlives the fall the same way (design 33 §13e): target 0, the
+            // building by its record handle, which the job carried in DestCell.
+            else if (ordered && foe == 0 && BuildingTargets.TryStanding(_ctx, toTheDeath, out _))
+            {
+                Job again = target.JobBuffer;
+                again.Reset(JobIndex.AttackMelee);
+                again.TargetCell = struck;
+                again.DestCell = toTheDeath;
+                again.Mode = mode;
+                again.PlayerForced = true;
+                _jobs.StartJob(target, again, tick);
             }
 
             _ctx.CombatLog.Report(CombatEventKind.KnockedBack, attacker.Id, target.Id, _ctx.Size.FromIndex(land), tick,

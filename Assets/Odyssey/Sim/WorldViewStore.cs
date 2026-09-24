@@ -88,6 +88,12 @@ namespace Odyssey.Sim
 
         /// <summary>Publish one corpse. See <see cref="CorpseView"/>.</summary>
         public void AddCorpse(in CorpseView view) => _target.AddCorpse(view);
+
+        /// <summary>Publish one struck building (design 33 §13i). See <see cref="EdificeDamageView"/>.</summary>
+        public void AddEdificeDamage(in EdificeDamageView view) => _target.AddEdificeDamage(view);
+
+        /// <summary>Publish the content's hit points for one edifice id: nought is "not a target".</summary>
+        public void SetEdificeHitPoints(int edifice, int points) => _target.SetEdificeHitPoints(edifice, points);
     }
 
     /// <summary>

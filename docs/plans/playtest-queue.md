@@ -80,6 +80,16 @@ the next session learns to ignore.
   draft's dark red over their heads or the salmon diamond over the marauder, or a ring sunk into a
   slope or floating on a terrace step.
 
+- **Does beating a wall down feel like an order carried out?** (C6, `claude/combat-buildings`,
+  design 33 §13.) Draft two colonists, right-click a wooden wall: both walk to it, stand on two
+  sides and swing; a red number floats off the wall per blow and it comes down after about 75 fist
+  blows (a stone one takes half as long again). Nothing comes back, and they hold, still drafted,
+  beside where it stood. Right-click a floored cell, grass or a tree: still a move. A wrong answer
+  is a wall that takes so long you give up, blood from a wall, colonists stacked on one tile, a right-click on a
+  door or bed you meant as a move (they are targets now — say if that is wrong), or a colonist
+  undrafted the moment a long fight ends. **Nothing draws the wall's damage yet**: no bar and no
+  cracks, only the numbers, which is the question — is the wall's state readable without them?
+
 - **Does the context menu make taking up a weapon clear?** (design 33 §7a, `claude/combat-menu`).
   Select a colonist, undrafted, and right-click the machete: a small menu opens at the pointer with
   *Equip machete* and *Cancel*, and nothing happens until a row is picked. Pick Equip: a line runs

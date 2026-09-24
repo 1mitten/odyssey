@@ -198,6 +198,9 @@ namespace Odyssey.Sim.Pawns
                 .AddSnapshotContributor(pawns.Corpses)
                 // The telling of every fight, for presentation: never saved, never hashed.
                 .AddSnapshotContributor(pawns.CombatLog)
+                // The struck buildings and which edifices are targets (design 33 §13i): neither
+                // saved nor hashed, a report of the damage store and of the content.
+                .AddSnapshotContributor(new EdificeDamageContributor(pawns))
                 // The world's own answer to "what is this cell", beside the pawn registry's
                 // answer to "who is here". Every colony gets it, so a click is answered in any
                 // build rather than the ones that remembered to attach the question.
