@@ -11691,3 +11691,25 @@ the clock back to 271 rather than raise the ceiling. And the **catalogue** was c
 against both parents, per combat's lesson of the same morning, and the campfire row given the fields
 main added to every row. `Seated` stayed a bool beside `Asleep` because `PawnFlags` is full and is
 the fight's. Design 31 §19.
+
+## 2026-09-24 — The orange suits were the uniform past the figure cap
+
+The 2026-09-23 entry above ruled out three causes and left the report unreproduced. The cause was
+none of the three. **"Past a certain number" is the 64-figure cap**, and past it a colonist is drawn
+in the baked far form, which wears the pack's own paint. The issued uniform is a recolour the live
+figure applies and the far form never did. PolygonGeneric's jumpsuit is painted burnt orange:
+`#B06F24`, sampled off the atlas at the uniform row's own cloth rectangle, with the unflipped sample
+landing on grey as the control. So every colonist beyond the nearest 64 was in an orange suit, and
+panning the camera moved people in and out of the nearest 64. That is the "switching".
+
+The investigation before this one asked whether the orange *stand-in* was drawn, correctly found it
+was not, and stopped. The lesson: **a report's colour matching a debug colour is a hypothesis, not an
+identification**, and "past a certain number" in this project should send you to the caps first
+(`FigureCeiling`, `MaxFigures`), because behaviour changes form there.
+
+The fix is `ColonistAppearance.IssuedCloth`, which says whether a *body* has one colour for everybody.
+That is the uniform, and only while it is issued. `ChunkRenderer` draws those two far bodies through
+the shared `ColonistMaterials` with the cloth rectangles alone. It is one material per body and adds no
+draw calls. Skin and hair still keep the pack's paint across the cap; that is recorded as a decision
+in design 29-modular-colonists §13a, not a fix. The spawn ceiling of 200 on this branch stays, as the
+rail it always said it was.

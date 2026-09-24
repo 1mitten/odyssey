@@ -2609,3 +2609,26 @@ hold, the draft and the move order all ask it. `docs/design/33-combat.md` §8c.
 the actor that prompted it.* `SideBySideTests` checked attackers against attackers, and all of
 them passed. `FightGuardTests` checks everyone in the fight, on every tick. Each hole it found was
 seen to fail with its fix withheld.
+
+### 2026-09-24 — Colonists past the figure cap wore an orange suit (P1)
+
+**Symptom.** Past a certain number of colonists, some were "in an orange suit" and textures "kept
+switching".
+
+**Cause.** Two drawers of one colonist gave two answers. The live figure paints the issued uniform
+white, but the baked far form (past the 64-figure cap) draws each body in the pack's own paint, and
+that jumpsuit is painted burnt orange. The nearest-64 set follows the camera, so people changed
+clothes as it panned.
+
+**How it hid.** The first investigation matched the report's colour to the orange stand-in cube,
+measured that no stand-in was drawn, and stopped with the report unreproduced. The measurement was
+right; it answered a different question.
+
+**Fix.** `ColonistAppearance.IssuedCloth` says which bodies wear one colour for everybody, and
+`ChunkRenderer.FarMaterials` paints those bodies' cloth through the shared `ColonistMaterials`.
+Design 29-modular-colonists §13a.
+
+**The check this earns.** *When a symptom starts "past a certain number", look at the caps first*.
+Behaviour changes form at a cap, and there is more than one drawer of a thing past it. And *a colour
+in a report is a hypothesis until the asset's own paint has been sampled*: one script that sampled the atlas
+answered what a 384-colonist sweep could not.

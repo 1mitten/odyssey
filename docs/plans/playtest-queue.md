@@ -23,14 +23,12 @@ the next session learns to ignore.
 
 ## Open
 
-- **The orange suits: editor or a built player, and roughly what number?** (Report 2026-09-23; the
-  investigation is in `docs/journal.md`.) The orange is the stand-in marker — a person-sized cube in
-  the actor orange, drawn when a colonist's body module does not resolve. **It could not be
-  reproduced**: a barren board at 384 colonists draws zero stand-ins, resolves two faces (the MC
-  uniform, by design) and holds flat at 23 materials, and a built player resolves its art. Two facts
-  would unblock it and only a person has them: **was it the editor or a build**, and **what number
-  did it start at**. A wrong answer looks like "it happens in the editor at any size", which would
-  mean the sweep's barren board is missing something the played world has.
+- **No more orange suits past 64 colonists?** (`claude/pawn-ceiling`, PR #175, design
+  `29-modular-colonists.md` §13a.) Spawn about 100 colonists from the debug menu, pull the camera out
+  and pan across the colony. Everyone should be in the white uniform, near and far. A wrong answer
+  looks like some colonists in burnt orange, or clothes flicking as you pan. Two things are expected
+  and are not faults: a far colonist's **skin tone and hair colour** can still change as they cross
+  the cap (recorded, not fixed), and the debug menu **stops spawning at 200**.
 - **Does the hearth read as a hearth?** (`claude/campfire-art`, PR #170, `docs/design/31-campfire-art-and-fire.md`
   §17–§18d.) Build a campfire, give the colony nothing to do, and watch for a game hour. Idlers
   should drift to it two times in three and **stay** once there, about half of them turned to face

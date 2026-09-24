@@ -109,6 +109,12 @@ namespace Odyssey.Sim.Pawns
         /// intent refused an unreachable column and nothing else, so the menu could add people
         /// until something gave way.</para>
         ///
+        /// <para><b>The orange suit was not a pawn count at all</b>, and was found the day after
+        /// this was written. The number was the 64-figure cap: past it, colonists are drawn in the
+        /// baked far form, and that form wore the pack's own paint on the uniform, which is burnt
+        /// orange. Fixed in presentation (<c>docs/design/29-modular-colonists.md</c> §13a). This
+        /// ceiling is kept as the rail it always said it was.</para>
+        ///
         /// <para><b>It is a rail, not a fix, and it is deliberately far above any real colony.</b>
         /// The audit's scale target is fifty; the figure ceiling is sixty-four; and a barren board
         /// was measured healthy at <b>384</b> colonists on 2026-09-23 — 3.90 ms a frame, no
