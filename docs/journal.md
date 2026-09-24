@@ -12280,3 +12280,19 @@ Unity runs, each a few minutes, against an afternoon of reasoning from screensho
 
 Measured in one run on Standard and Huge at 640 × 480 and 4K: draw calls identical, instances up by
 the banks, meshing 7–9% dearer a chunk. Design 38 §24.
+
+## 2026-09-25 — Water that can be clicked, and water that moves
+
+The owner played the shoreline and found two regressions. The first was not one. "I couldn't click on
+a lot of the water tiles anymore" was measured through the rig's own pick path before anything was
+read: 280 of 307 aimed points on the played board missed their water — and the control, the old
+square shore, missed exactly the same 280. The picker had always met water at its bed, two metres
+under the surface and two metres past the aim at the play camera's angle; the new shoreline only made
+the water inviting to click. **A report of a regression is a report of a bug, and the control is what
+says which.** Water is met on its surface now, and a shore bank on its fan through the same
+`HeightAt` the figures stand on, so one surface owner answers both.
+
+The second was real: the ripples lived in the normal, invisible at 48 degrees, which the falls had
+already taught once. Motion is carried by colour — streaks drifting along a flow derived from the
+water network, swells on still water, a breathing rim at the shore — on the game's clock, so a
+paused world holds still. Design 38 §24f.

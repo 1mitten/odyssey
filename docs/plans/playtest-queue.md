@@ -31,6 +31,14 @@ the next session learns to ignore.
   still visible along a diagonal stream; pale slivers or wedges at the water's edge; a colonist
   standing in the water or floating over a bank; a waterfall missing or cut short; or the water too
   dark to read as water at dusk.
+- **Can you click any water tile now, and does the water move?** (`claude/meadow-shorelines`,
+  design 38 §24f.) Click shallow water, deep water, a one-cell pool and the edge of a stream: each
+  should select the water tile. Click the grass beside it: that should still select the bank. Watch
+  a stream for a few seconds, then a pond, then pause. **Look for** light streaks drifting downstream,
+  gentle swells on ponds, a soft rim at the edge that slowly brightens and fades, and everything
+  holding still on pause. **A wrong answer looks like:** a click on water selecting the bank or the
+  tile beyond it; streaks flowing uphill or away from a fall; motion that reads as clouds or noise
+  rather than water; or water still moving while the game is paused.
 
 - **Does the title screen's dock read well, and does Exit ask?** (`claude/settings-frame`, design
   40.) Press Play. A dark panel down the left edge with the layered mark and ODYSSEY, four

@@ -1341,3 +1341,58 @@ water nearest the colony; ~40 s, takes the screen).
 
 Before / after: `docs/reference/screenshots/look/2026-09-24-shore-{before,after}-{near,wide,pond}.png`
 and `-after-start.png` (the start has no water; it is the regression shot).
+
+### 24f. After the first play: water that can be clicked, and water that moves (2026-09-25)
+
+The owner played #205 and reported two things.
+
+**"I couldn't click on a lot of the water tiles anymore."** Measured before diagnosing, through the
+rig's own pick path (`WaterPickTests`: the rig's private `CellAt`, so the camera's ray at a screen
+point into `SlicePicker` with the rig's slice), at the drawn water surface of every water cell on
+screen — its centre and four points a third of a cell out — from the play camera, framed on the
+nearest water and the widest. **280 of 307 points missed their water, and the square shore (the
+control) was exactly the same**, so the fan did not cause it; it made the water easier to aim at,
+and the owner noticed. The water claimed a click only where the ray crossed its **bed**, 2.16 m under
+the surface, which at 48 degrees is about two metres past the point aimed at: the next cell, the far
+bank, or the bed a layer down through the layer below. Two changes:
+
+- **Water is met on its surface**, inside its own footprint, the way a bed is met on its top. A
+  bridge slab over water still wins.
+- **A shore bank is met as its fan, not its block** — and so is the ground over one: the picker asks
+  `BankLayout`'s own `Ramp.HeightAt` along the ray (marched, then halved to a centimetre), so the
+  block no longer stands in front of the water seen over the sunk half of the cell, and one surface
+  owner answers both the figure and the click.
+
+After: **water 0 of 307 wrong; banks 6 of 61**, down from 20 (the rest are per-cell relief planes
+against the continuous draped ground, as old as the relief and not chased here).
+
+**"The water now looks like it isn't moving at all."** The ripples were in the normal, where the play
+camera's Fresnel is two per cent — the reason the falls' streaks were already carried by colour.
+Three things now move, by colour, in the one water pass:
+
+- **Flow along the streams.** `GroundField` builds a second board texture, the flow: an outlet is
+  water beside water a layer lower (a cascade), beside open air at its own layer (a fall), or at the
+  board's edge; a walk out from the outlets along water at the same layer gives each column its way
+  downhill, and a stretch no walk reaches is **still** — a pond. Speed falls with how open the water
+  is (the share of its 3 × 3 that is water), so a channel runs and a pool drifts. Rebuilt only when a
+  column's water changes. The shader carries a noise field along it in two phases half a cycle apart,
+  crossfaded, so the pattern travels without stretching; light streaks drift downstream.
+- **Swells on still water**: three slow crossed waves, lighter where they crest.
+- **The shore breathes**: a thin light rim at the water's edge that swells and ebbs.
+
+**On the game clock** (`WaterDirector`, like `WindDirector`): a paused world holds still, and at
+speed 3 the water runs three times as fast. `WaterDirector.MovesOnPause` is the one switch if the
+owner wants water moving through a pause; `WaterDirector.Motion` (0–2) is its strength. The ripples
+and the falls' streaks moved onto the same clock, so the falls now hold still on pause too.
+
+Seen: three frames of the nearest stream a second apart (`2026-09-25-water-flow-{0,1,2}.png`) change
+**12.3% of the picture each second**; the fall (`2026-09-25-shore-after-fall.png`, before with the
+square shore beside it) is drawn as before.
+
+**Cost** (`FrameTimeTests.TheWaterMotionAgainstTheFrame`, one run, Standard, world paused and the
+water let run, framed on the nearest stream at 36 m so water fills the frame, still / moving
+alternated twice): **draw calls identical** (803 at 640 × 480, 878 at 4K — it is a global and a few
+more instructions in a pass that already runs); 640 × 480 **2.26 / 2.03 / 2.09 / 1.97 ms**; 4K
+**8.35 / 9.08 / 8.65 / 8.63 ms**. The two stills disagree by 0.3 ms, and the motion sits inside that
+spread, so its cost is below what this machine can separate. The flow texture is built once and
+again only when water changes. The player bench (`-odyssey-bench-shore`) is still the real GPU figure.
