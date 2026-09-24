@@ -154,7 +154,11 @@ namespace Odyssey.Sim.Pawns
             int hp = pawn.HpMilli + amount;
             pawn.HpMilli = hp > pawn.HpMaxMilli ? pawn.HpMaxMilli : hp;
 
-            if (pawn.Downed && (long)pawn.HpMilli * 1_000 >= (long)pawn.HpMaxMilli * combat.downedRecoverAtPerMille)
+            // Up when whole, for a colonist (design 33 §11c, owner): she heals only in a bed, and a
+            // rescued colonist stays in it until she is. The content's threshold is the animals',
+            // which heal where they lie.
+            int recoverAt = pawn.IsColonist ? 1_000 : combat.downedRecoverAtPerMille;
+            if (pawn.Downed && (long)pawn.HpMilli * 1_000 >= (long)pawn.HpMaxMilli * recoverAt)
                 Recover(pawn, tick);
         }
 

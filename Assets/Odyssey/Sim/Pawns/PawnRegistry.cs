@@ -43,7 +43,8 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < _pawns.Count; i++)
             {
                 var p = _pawns[i];
-                if (p.Cell == cell && !p.HasPath) return true;
+                // A carried patient is in her carrier's arms, not standing (design 33 §11f).
+                if (p.Cell == cell && !p.HasPath && p.CarriedBy == 0) return true;
             }
             return false;
         }
@@ -475,6 +476,10 @@ namespace Odyssey.Sim.Pawns
                 if (hurt || pawn.IsPerson) writer.AddPawnAspect(pawn.Id, CombatAspects.HpMax, pawn.HpMaxMilli);
                 if (pawn.CombatTarget != 0)
                     writer.AddPawnAspect(pawn.Id, CombatAspects.OrderTarget, pawn.CombatTarget);
+                // Lying where she fell with no bed to be carried to (design 33 §11d): why nobody
+                // comes. Asked only of the downed, so a colony nobody has hurt pays one flag.
+                if (pawn.Downed && RescueRules.NeedsRescue(pawn, _ctx) && RescueRules.BedFor(pawn, pawn, _ctx) < 0)
+                    writer.AddPawnAspect(pawn.Id, CombatAspects.RescueNoBed, 1);
                 if (pawn.EquippedItem != 0)
                 {
                     var weapon = _ctx.Items.Get(new ThingId(pawn.EquippedItem));

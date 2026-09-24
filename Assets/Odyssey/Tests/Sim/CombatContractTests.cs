@@ -160,7 +160,7 @@ namespace Odyssey.Tests.Sim
         /// </summary>
         [TestCase(IntentKind.OrderAttack)]
         [TestCase(IntentKind.OrderEquip)]
-        [TestCase(IntentKind.OrderRescue)]
+        [TestCase(IntentKind.OrderRescue)]   // written (C4), and still refused here: nobody is down
         public void EachCombatOrderIsHandledAndRefusedUntilItsLaneWritesIt(IntentKind kind)
         {
             var colony = Board();
@@ -205,7 +205,7 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void TheRescueGiverIsAnEmergencyAndAnswersNoUntilC4()
+        public void TheRescueGiverIsAnEmergencyAndAnswersNoWhenNobodyIsDown()
         {
             var colony = Board();
             WorkGiver rescue = colony.Jobs.Givers.Single(g => g.Name == "Rescue");
@@ -461,6 +461,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(CombatAspects.HpMaxName, Is.EqualTo("odyssey.pawn.hp.max"));
             Assert.That(CombatAspects.WeaponName, Is.EqualTo("odyssey.pawn.weapon"));
             Assert.That(CombatAspects.OrderTargetName, Is.EqualTo("odyssey.pawn.order.target"));
+            Assert.That(CombatAspects.RescueNoBedName, Is.EqualTo("odyssey.pawn.rescue.nobed"));
         }
 
         /// <summary>

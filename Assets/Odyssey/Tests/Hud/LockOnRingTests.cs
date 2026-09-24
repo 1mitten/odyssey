@@ -174,6 +174,34 @@ namespace Odyssey.Tests.Hud
             return frame;
         }
 
+        /// <summary>
+        /// A rescue names its patient as the order's target, and the ring says <i>attack</i>: a
+        /// drafted colonist carrying somebody to a bed draws none (design 33 §11e). The control is
+        /// the same frame with the attack's job, which draws one.
+        /// </summary>
+        [Test]
+        public void ARescueDrawsNoRing()
+        {
+            static WorldSnapshot Carrying(int job)
+            {
+                WorldSnapshot frame = Odyssey.Tests.Hud.Frame.Write();
+                frame.AddPawn(new PawnView(Ada, new CellRef(1, 1, 1), 800, 800, 700, job,
+                    flags: PawnFlags.Person | PawnFlags.Drafted));
+                frame.AddPawn(new PawnView(Bo, new CellRef(1, 1, 1), 800, 800, 700, JobHandle.Downed,
+                    flags: PawnFlags.Person | PawnFlags.Downed | PawnFlags.Carried));
+                frame.AddPawnAspect(new PawnAspect(Ada, CombatAspectNames.OrderTargetKey, Bo.Value));
+                return frame;
+            }
+
+            var rings = new LockOnRings();
+            rings.Update(Carrying(JobHandle.Rescue), AdaOnly, 10f, World);
+            Assert.That(rings.Rings.Count, Is.Zero, "a rescue drew the attack's ring");
+
+            var control = new LockOnRings();
+            control.Update(Carrying(JobHandle.AttackMelee), AdaOnly, 10f, World);
+            Assert.That(control.Rings.Count, Is.EqualTo(1), "the control drew nothing, so the rescue case proves nothing");
+        }
+
         static readonly PawnId[] AdaOnly = { Ada };
         static readonly PawnId[] Both = { Ada, Bo };
         static readonly PawnId[] Nobody = { };

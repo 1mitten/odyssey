@@ -2611,3 +2611,128 @@ nothing to clean.
   read at once it found 54 drops up and no mark — and, with the refusal counters added to find out
   why, **nothing refused**: the drops had simply not landed. `BloodDirector.Refused*` stay, as the
   first thing to read when a fight leaves less blood than it should.
+
+## 11. Rescue (C4, built 2026-09-24, `claude/combat-rescue`)
+
+A downed colonist heals only in a bed (§1), and until this unit nothing could carry her to one, so a
+colonist who went down stayed down. Built to the owner's answers of 2026-09-24:
+
+| Question | Owner's answer |
+|---|---|
+| How long does a rescued colonist stay in bed? | **Until whole.** Not up at 15 %: a 15 hp colonist does not walk back into the fight |
+| No free bed? | **Leave her**, and say why. Building a bed is the player's answer |
+| How is she carried? | **Cradled in the arms**, the downed body lifted to the carry cradle |
+
+### 11a. The job
+
+`Job_Rescue` (handle 21, `RescueJobDriver`), four toils, walked in **`TraverseMode.Hauler`** like a
+haul, because a colonist with a body in her arms does not climb a ladder:
+
+1. **Walk to the patient.** The patient is the rescuer's `Pawn.CombatTarget` (saved and hashed, the
+   field the contracts put there for this); the job's `TargetCell` follows her if she is moved.
+2. **Lift**: 45 ticks (INVENTED) stooped over her; then `patient.CarriedBy = rescuer`.
+3. **Carry to the bed** (`Job.DestCell`, the bed's head cell). A carried patient is **where her
+   carrier is**: her `Cell` is set to the carrier's every tick and she has no path of her own.
+4. **Lay her down**: 45 ticks; she is set on the head cell, `CarriedBy` goes back to nought, and the
+   **bed reservation passes to her** (§11c).
+
+Every other end (a failure, a knockback, the carrier downed or killed, a draft toggle, a forced job)
+runs the driver's `Cleanup`, which puts a carried patient down on the carrier's cell, or the nearest
+standable cell if that one is mid-step, and clears `CombatTarget`. **Nobody is left in a pair of
+arms.** A patient who dies or recovers on the way fails the job.
+
+### 11b. Who, and to which bed
+
+- **Only a downed colonist is rescued.** An animal recovers where it lies; a downed marauder stays
+  down until killed (§1). Capturing one is a later unit.
+- **The bed**: the patient's own bed if it is free, else the **nearest free unowned bed**, measured
+  from the patient; never a bed somebody else owns. *Free* means nobody holds its cell reservation,
+  which after §11c includes a patient lying in it. Reachable from the rescuer to the patient and
+  from the patient to the bed, both in the hauler's mode.
+- **Two rescuers never take one patient**: a new reservation kind, `ReservationTargetKind.Pawn`,
+  keyed on the patient's id. Additive; no save holds one before this unit.
+- **The order** (`OrderRescue`, right-click a downed colonist with drafted colonists selected;
+  already routed to the nearest by `CombatOrders.Route`): a drafted, standing, unbroken colonist;
+  a downed colonist who is not already carried or claimed. After it she is still drafted, and
+  holds where she laid the patient.
+- **The automatic rescue** (`RescueWorkGiver`, the emergency giver in the Rescue column): the
+  nearest downed colonist the scanner can reach and bed. It answers no, touching nothing, when
+  nobody is down — so a colony that never fought scans one flag per pawn and no golden moves.
+
+### 11c. In the bed until whole
+
+- **A downed colonist lying in a bed gets up when whole**, not at `downedRecoverAtPerMille`. That
+  threshold is now the **animals'** rule alone: a colonist heals only in a bed, so "up at 15 %"
+  could only ever have happened there. No new state, no new job: while she is down her needs are
+  paused (§5c), she heals at `bedHealPerDay`, and at 100 % the combat pass stands her up
+  (`Recovered`) exactly as before. **Five days at today's invented rate.**
+- **The bed is hers while she lies in it.** The rescuer's cell reservation on the bed passes to the
+  patient on the lay (`Reservations.Reserve` in her name, added to her `HeldReservations`, which
+  are saved, hashed and re-reserved on load). `Job_Downed` holds it until she gets up, when
+  `EndJob` releases it like any other. So `TrySleep` and the next rescuer both see it taken. Without
+  it, the next tired colonist would have climbed in beside her.
+- **Ownership is not claimed.** A patient in an unowned bed is not given it; `BedOwnershipChanged`
+  wakes sleepers, and a sickbed is not a bedroom.
+
+### 11d. No bed: say why
+
+A downed colonist, not carried and not in a bed, for whom no bed is free, publishes
+`odyssey.pawn.rescue.nobed`. The alert model raises **`ui.alert.norescuebed`** — *No bed for the
+wounded* — once per colonist, and it clears the moment a bed frees or is built. The order is refused
+(`NotPermitted`) and the giver answers no, so she stays where she fell (owner). The aspect is
+computed at publish for downed colonists only: a colony with nobody down pays one flag test a pawn.
+
+### 11e. What is drawn
+
+- **Cradled.** A carried patient's figure is placed at the carrier's carry cradle
+  (`CarryPose.Cradle`, measured off the palms), lying across the arms at right angles to the
+  carrier's facing, in the lying pose. The carrier's arms take the item carry's scoop. The carrier
+  is found from the patient's side: the pawn on `Job_Rescue` whose order target she is.
+- **In the bed.** A downed colonist on a bed's head cell is laid in the bed with the sleep pose
+  (`AimSleep`), rather than playing the downed loop on the floor through the frame.
+- **No lock-on ring.** `LockOnRings` asks the rescuer's job and draws nothing for a rescue: the ring
+  says *attack*.
+- **Words.** *Rescuing* (`ui.status.rescuing`) is on the activity line; the patient's stays *Downed*.
+  Whether a colonist healing in bed for five days should read *Downed* is the playtest's question.
+
+### 11f. Do not undo by tidying
+
+- **A carried patient's `Cell` is her carrier's.** Everything that asks who is in a cell scans pawns
+  and reads `Cell`; a patient at `-1` would be off the board to all of them. `IsCellOccupiedByStandingPawn`,
+  `PawnEviction.Occupant` and `TrappedPawnSystem` skip a carried pawn: she is not standing there.
+- **`Cleanup` puts her down on every exit.** `CarriedBy` is saved; a patient left with it set after
+  her carrier's job ended would be carried by nobody, for ever.
+
+### 11g. Measured (2026-09-24)
+
+- **The pose, under the real bootstrap** (`RescueFigureTests`, the head bone, on a figure whose
+  standing head is 2.10–2.15 m): **0.18–0.20 m** over the ground downed on the floor; **1.63–1.66 m
+  over the carrier's feet and 1.07 m to her side** in the arms, mid-walk; **1.02–1.04 m** over the
+  ground in the bed against a mattress top of 0.70. The arms are the load's scoop, which holds the
+  palms level with the chest (1.52 m on this figure), so she lies at chest height with her head
+  half a body to one side: a cradle carry, and the playtest's to judge. `CradleSink` and the scoop
+  are the two levers.
+- **Three readings of the carry were the test's, not the pose's**, and each is why the test reads
+  as it does now. Against the ground of her cell, a carrier climbing a terrace ramp is drawn up the
+  riser before the cell changes (2.93 m). At speed three a bed four cells off is reached inside the
+  sample's wait, so "carried" was her head on the pillow (1.04 m, 0.05 m from the carrier). And one
+  second after the lift caught the scoop still easing in (1.27 m). The test measures against the
+  carrier's feet, at speed one, asserting she is still carried and the carrier still walking.
+- **Controls seen to fail**: the carried-patient pass off leaves her on the ground at the carrier's
+  feet (0.36 m); a bed not counted as a cradle plays the floor loop through the bed frame (0.21 m).
+  In the simulation: the bed not passed, no set-down, no patient reservation, the 15 % threshold and
+  no carried sync each fail their test; the alert with no rows built fails its.
+- **Read in real seconds, not frames.** A batch frame is a couple of milliseconds, so ninety frames
+  read the body mid-fall, and one second after the lift read 1.27 m on one run and 1.79 on another as
+  the scoop eased in. The test waits in real time (`docs/lessons.md`, a frame is not a tick).
+- **A Long soak saw it first.** `MarauderSoakTests` carried a downed colonist to bed and she healed
+  past 15 % while down, which its invariant forbade; the invariant now takes the new line.
+
+### 11h. Known and left
+
+- **A carried patient beyond the 64-figure cap** is drawn by the baked far form, standing at her
+  carrier's cell, as a downed pawn out there already is (§6F).
+- **A patient's needs are paused for the whole of her bed rest** (five days at today's rate), because
+  she is down; nobody feeds a patient yet. A later unit, if the playtest wants it.
+- **She reads *Downed* while she heals in bed.** Whether that should say something else is the
+  playtest's question (§11e).

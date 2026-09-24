@@ -27,9 +27,13 @@ namespace Odyssey.Hud
         /// <summary>The <see cref="PawnId"/> value this pawn is ordered to attack or rescue.</summary>
         public const string OrderTarget = "odyssey.pawn.order.target";
 
+        /// <summary>Present on a downed colonist with no free bed to be carried to (design 33 §11d).</summary>
+        public const string RescueNoBed = "odyssey.pawn.rescue.nobed";
+
         public static readonly AspectKey HpKey = AspectKey.Of(Hp);
         public static readonly AspectKey HpMaxKey = AspectKey.Of(HpMax);
         public static readonly AspectKey WeaponKey = AspectKey.Of(Weapon);
         public static readonly AspectKey OrderTargetKey = AspectKey.Of(OrderTarget);
+        public static readonly AspectKey RescueNoBedKey = AspectKey.Of(RescueNoBed);
     }
 }

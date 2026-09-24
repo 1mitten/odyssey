@@ -35,6 +35,12 @@ namespace Odyssey.Sim.Pawns
         /// so two do not each carry a full stack to a hopper with room for one.
         /// </summary>
         Device = 4,
+
+        /// <summary>
+        /// A pawn, keyed on its <c>PawnId</c>: a downed colonist somebody is already coming to carry
+        /// (design 33 §11b), so two rescuers never set out for one patient.
+        /// </summary>
+        Pawn = 5,
     }
 
     /// <summary>

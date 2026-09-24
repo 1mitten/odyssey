@@ -32,6 +32,8 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public static int KnockbackCell(PawnContext ctx, Pawn attacker, Pawn target)
         {
+            // A body in somebody's arms is not knocked out of them (design 33 §11a).
+            if (target.CarriedBy != 0) return -1;
             GridSize size = ctx.Size;
             CellRef a = size.FromIndex(attacker.Cell), t = size.FromIndex(target.Cell);
             if (a.Y != t.Y) return -1;
