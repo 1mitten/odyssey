@@ -51,6 +51,26 @@ namespace Odyssey.Presentation.World
 
         public float Intensity { get; set; }
 
+        bool _running = true;
+
+        /// <summary>
+        /// Whether the world is advancing: false holds every drop where it is, as the campfire's
+        /// <see cref="FireDirector.Running"/> holds its flame, by the particle systems' own speed.
+        /// </summary>
+        public bool Running
+        {
+            get => _running;
+            set
+            {
+                if (_running == value) return;
+                _running = value;
+                if (_streaks == null || _splashes == null) return;
+                ParticleSystem.MainModule a = _streaks.main, b = _splashes.main;
+                a.simulationSpeed = value ? 1f : 0f;
+                b.simulationSpeed = value ? 1f : 0f;
+            }
+        }
+
         /// <summary>Streaks alive at full intensity, matched to <see cref="RainDirector.MaxStreaks"/>.</summary>
         public int TargetStreaks { get; set; } = 24_000;
 
@@ -70,6 +90,7 @@ namespace Odyssey.Presentation.World
                 return;
             }
 
+            if (!_running) return;
             _sinceEmit += dt;
             if (_sinceEmit < EmitInterval) return;
             float span = _sinceEmit;

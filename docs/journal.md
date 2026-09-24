@@ -12298,3 +12298,35 @@ GPU time is unavailable in a batch run, so the 0.5 ms budget is still owed to a 
 and the board re-meshed, so it was dropped rather than shipped wrong; how rain looks stopping at a
 hidden roof is unphotographed. Wet walls, roofs and paving need a shader we own. Pictures and the
 cost table: https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3
+
+## 2026-09-24 — The rain in Play: a Weather tab on the debug menu
+
+The owner merged the reviewed plan and asked to be able to test the rain. There was nothing to
+test yet: the simulation has no weather, and the prototype ran only inside `RainCheck`.
+
+**What is new.** The debug menu has a fourth tab, Weather. It has five presets (Clear, Overcast,
+Drizzle, Rain, Downpour) and a toggle that draws the same rain with §7's CPU particles.
+`WeatherLook` owns everything drawn: the cover map, the GPU rain, the particle arm and the grey
+volume. The bootstrap calls it once a frame with the preset. A preset is a target, not a switch:
+- cloud and rain close on it over about two game seconds;
+- the ground wets over about eight and dries three times slower;
+- the whole tab runs on game time, so pausing holds the sky and speed 3 moves it three times as fast.
+
+The cover map now follows the world. `SkyHeightMap.SyncDirty` compares every chunk's version once
+a frame (a few hundred integer comparisons) and re-walks only the columns of the chunks that
+changed. It runs only while there is rain or wet ground to mask.
+
+**One cost found and guarded.** Setting `DaylightDirector.Cloud` forced an ambient-probe update.
+While cloud eased in, that would have re-integrated the probe every frame for two seconds, and
+that call is too expensive to run every frame. The probe now follows cover in steps of 0.1.
+
+**For the weather core.** The simulation already has a column rule, `CellGrid.SkyLanding(x, z)`,
+which the supply drop uses to find where something falling lands. It is the natural owner of
+design 43 §6's rain-stop height. Build that on it rather than beside it (P1).
+
+**Tests.**
+- `DebugDirectorTests`: two new tests of the preset table and its events, in the fast tier.
+- `WeatherTabTests` (PlayMode): sets the downpour on the director the rows call, waits for game
+  time and checks two rain calls at full count. Then it checks that the particle toggle stops them
+  and the particles live, and that Clear stops the rain while the ground stays wet.
+- It cannot press the row itself, for the standing reason that no test here can click.

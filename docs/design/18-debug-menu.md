@@ -21,7 +21,8 @@ because the two cannot be open together.
 
 ## What is on it
 
-Two tabs since 2026-09-20 (owner: events want a tab of their own), in Settings' tab idiom.
+Four tabs, in Settings' tab idiom: Cheats and Events since 2026-09-20 (owner: events want a tab
+of their own), Spawn since 2026-09-22, and Weather since 2026-09-24.
 `DebugDirector.Tab` holds which is showing and opens on Cheats, because the overlay toggle is the
 row backtick was bound to for a day.
 
@@ -47,6 +48,27 @@ worker, ignoring the gates on purpose (design 23 §3). Today that is one row:
 | Skip one month | The same, twelve days at a time (~2.4 s), so **the year can be walked through**. Added 2026-09-22 with temperature: Rime is month five of six, and at a day a press the season the whole thermal model exists for was sixty presses away — which is not a playtest anybody runs. Six presses now take you Wash → Glare → Rime and back | `DebugSkipTicks` again, sized `Content.DayTicks * Calendar.DaysPerMonth` — both read rather than written, so a retuned calendar cannot leave this row skipping some other amount |
 | Skip to morning | Skips the night and hands the clock back at dawn, with a whole watchable day ahead — the harvest happens on screen, not inside the skip | `OdysseyBootstrap.DebugSkipToMorning` — the same batch tick, sized to the next dawn |
 | Ripen crops | Brings every standing crop to ripeness at once, daylight window and all — the harvest half without the four-day wait | `IntentKind.DebugRipen` → `GrowingZones.RipenAll`, refused with AlreadyInThatState when nothing stands |
+
+**Weather** (2026-09-24; owner: *"we need to be able to test it"*). This tab is drawing only. The
+simulation has no weather until design 43's `weather-core`, so these rows set the look and nothing
+else: no cell, no save, no hash. `DebugDirector.WeatherPresets` holds the rows, and the fast tier
+tests them. The bootstrap reads `DebugDirector.CurrentWeather` each frame and hands it to
+`WeatherLook`, which moves cloud and rain towards the preset over about two game seconds. The ground
+wets over about eight game seconds and dries three times slower. The whole tab runs on game time, so
+pausing holds the sky and speed 3 moves it three times as fast.
+
+| Row | Cloud · rain · wet · puddles | Backed by |
+|---|---|---|
+| Clear | 0 · 0 · 0 · 0: the game as drawn without weather, and the default | `WeatherLook` → `DaylightDirector.Cloud`, `OvercastVolume`, `RainDirector` |
+| Overcast | 0.8 · 0 · 0 · 0 | the same |
+| Drizzle | 0.6 · 0.25 · 0.45 · 0 | the same |
+| Rain | 0.85 · 0.7 · 0.85 · 0.4 | the same |
+| Downpour | 1 · 1 · 1 · 1 | the same |
+| Draw as particles (toggle) | draws the same rain with the weather design's first-draft CPU particles, so the two can be compared moving; the wet ground stays either way | `RainParticles` |
+
+When the weather system lands, `weather-core`'s force-weather rows (design 43 §8) replace these
+presets. `WeatherLook.Sync` then takes its numbers from the simulation instead of from a preset.
+`WeatherTabTests` (PlayMode) follows a preset through the real bootstrap into the draw calls.
 
 ### "Near the camera" is a column, not a cell (corrected 2026-09-19)
 

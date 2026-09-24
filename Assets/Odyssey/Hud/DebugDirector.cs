@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
 {
-    /// <summary>The debug menu's two sections (owner, 2026-09-20: events want a tab of their own).</summary>
+    /// <summary>The debug menu's sections (owner, 2026-09-20: events want a tab of their own).</summary>
     public enum DebugTab
     {
         /// <summary>The overlay toggle and the grants: things done to the colony that exists.</summary>
@@ -15,6 +15,12 @@ namespace Odyssey.Hud
 
         /// <summary>Colonists, animals, the marauder and the weapons, placed near the camera (owner, 2026-09-22: a tab of its own).</summary>
         Spawn,
+
+        /// <summary>
+        /// The sky set by hand (owner, 2026-09-24: "we need to be able to test it"). Drawing only:
+        /// nothing here reaches the simulation, which has no weather yet (design 43 §8).
+        /// </summary>
+        Weather,
     }
 
     /// <summary>
@@ -40,6 +46,7 @@ namespace Odyssey.Hud
         public const string CheatsKey = "ui.debug.tab.cheats";
         public const string EventsKey = "ui.debug.tab.events";
         public const string SpawnTabKey = "ui.debug.tab.spawn";
+        public const string WeatherTabKey = "ui.debug.tab.weather";
         public const string SpawnPawnKey = "ui.debug.spawnpawn";
 
         /// <summary>The two animals (design 29 §7): the same intent as the colonist's, with a kind.</summary>
@@ -115,6 +122,58 @@ namespace Odyssey.Hud
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey,
             SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
+            WeatherTabKey, WeatherClearKey, WeatherOvercastKey, WeatherDrizzleKey, WeatherRainKey,
+            WeatherDownpourKey, RainParticlesKey,
+        };
+
+        public const string WeatherClearKey = "ui.debug.weather.clear",
+            WeatherOvercastKey = "ui.debug.weather.overcast",
+            WeatherDrizzleKey = "ui.debug.weather.drizzle",
+            WeatherRainKey = "ui.debug.weather.rain",
+            WeatherDownpourKey = "ui.debug.weather.downpour";
+
+        /// <summary>Draw the rain as the weather design's §7 first wrote it (CPU particles), to compare.</summary>
+        public const string RainParticlesKey = "ui.debug.rainparticles";
+
+        /// <summary>
+        /// One sky the Weather tab can set: how much cloud, how hard it rains, and how wet and
+        /// puddled the ground ends up, each 0 to 1. <b>These are the rain-look prototype's
+        /// numbers, not the weather design's</b> (design 43 §4 owns intensity in per-mille and
+        /// rolls it); they are the five skies <c>RainCheck</c> photographed, so what the tab shows
+        /// in Play is what the contact sheet showed.
+        /// </summary>
+        public readonly struct WeatherPreset
+        {
+            public readonly string Key;
+            public readonly string Tooltip;
+            public readonly float Cloud, Rain, Wet, Puddles;
+
+            public WeatherPreset(string key, string tooltip, float cloud, float rain, float wet, float puddles)
+            {
+                Key = key;
+                Tooltip = tooltip;
+                Cloud = cloud;
+                Rain = rain;
+                Wet = wet;
+                Puddles = puddles;
+            }
+
+            /// <summary>No cloud and no rain: the day exactly as it is drawn without any weather.</summary>
+            public bool IsClear => Cloud <= 0f && Rain <= 0f && Wet <= 0f;
+        }
+
+        /// <summary>The Weather tab, top to bottom. The first is the game as it draws without weather.</summary>
+        public static readonly WeatherPreset[] WeatherPresets =
+        {
+            new WeatherPreset(WeatherClearKey, "No cloud and no rain: the day as the clock has it", 0f, 0f, 0f, 0f),
+            new WeatherPreset(WeatherOvercastKey,
+                "A grey day with no rain: the sun and its shadows faded, the sky and the colour drained", 0.8f, 0f, 0f, 0f),
+            new WeatherPreset(WeatherDrizzleKey, "Light rain under a thin cloud; the ground turns half wet over a few seconds",
+                0.6f, 0.25f, 0.45f, 0f),
+            new WeatherPreset(WeatherRainKey, "Steady rain under full cloud; the ground wets and puddles start to gather",
+                0.85f, 0.7f, 0.85f, 0.4f),
+            new WeatherPreset(WeatherDownpourKey, "The heaviest rain there is: 24,000 streaks, the ground soaked and puddled",
+                1f, 1f, 1f, 1f),
         };
 
         /// <summary>The marauder (design 33 §1): a hostile person, the same intent as the colonist's with a kind.</summary>
@@ -223,6 +282,7 @@ namespace Odyssey.Hud
         public static string TabKey(DebugTab tab) =>
             tab == DebugTab.Events ? EventsKey
             : tab == DebugTab.Spawn ? SpawnTabKey
+            : tab == DebugTab.Weather ? WeatherTabKey
             : CheatsKey;
 
         public bool Open { get; private set; }
@@ -250,6 +310,33 @@ namespace Odyssey.Hud
             if (Tab == tab) return;
             Tab = tab;
             TabChanged?.Invoke(tab);
+        }
+
+        /// <summary>Which of <see cref="WeatherPresets"/> is set. 0, clear, until somebody picks another.</summary>
+        public int Weather { get; private set; }
+
+        /// <summary>The preset <see cref="Weather"/> names.</summary>
+        public WeatherPreset CurrentWeather => WeatherPresets[Weather];
+
+        /// <summary>Whether the rain is drawn by the particle control arm rather than the GPU.</summary>
+        public bool RainAsParticles { get; private set; }
+
+        /// <summary>Raised when the preset or the drawing changes, and only then.</summary>
+        public event Action? WeatherChanged;
+
+        /// <summary>Set the sky. An index off the end of the table is ignored rather than clamped.</summary>
+        public void SetWeather(int preset)
+        {
+            if (preset < 0 || preset >= WeatherPresets.Length || preset == Weather) return;
+            Weather = preset;
+            WeatherChanged?.Invoke();
+        }
+
+        public void SetRainAsParticles(bool on)
+        {
+            if (RainAsParticles == on) return;
+            RainAsParticles = on;
+            WeatherChanged?.Invoke();
         }
     }
 }

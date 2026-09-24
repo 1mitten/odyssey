@@ -99,6 +99,45 @@ namespace Odyssey.Presentation.Rendering
             Upload();
         }
 
+        int[]? _seen;
+
+        /// <summary>
+        /// Rebuild the columns of every chunk that has changed since the last call, on any layer —
+        /// a roof built, a tree felled, a floor fallen in. The first call rebuilds the whole board.
+        /// Cost: one integer comparison per chunk (a few hundred), and a column walk only for what
+        /// moved. Returns how many chunks were found changed.
+        /// </summary>
+        public int SyncDirty()
+        {
+            int count = _model.Chunks.Count;
+            if (_seen == null || _seen.Length != count)
+            {
+                _seen = new int[count];
+                for (int i = 0; i < count; i++) _seen[i] = _model.ChunkVersion(i);
+                Rebuild();
+                return count;
+            }
+
+            int x0 = int.MaxValue, z0 = int.MaxValue, x1 = -1, z1 = -1, changed = 0;
+            for (int i = 0; i < count; i++)
+            {
+                int version = _model.ChunkVersion(i);
+                if (version == _seen[i]) continue;
+                _seen[i] = version;
+                changed++;
+                _model.ChunkBounds(i, out int cx0, out int cz0, out _, out int cx1, out int cz1);
+                x0 = Math.Min(x0, cx0);
+                z0 = Math.Min(z0, cz0);
+                x1 = Math.Max(x1, cx1 - 1);
+                z1 = Math.Max(z1, cz1 - 1);
+            }
+            if (changed > 0) RebuildChunkColumns(x0, z0, x1, z1);
+            return changed;
+        }
+
+        /// <summary>Forget what has been seen, so the next <see cref="SyncDirty"/> rebuilds everything.</summary>
+        public void Invalidate() => _seen = null;
+
         void Column(int x, int z)
         {
             int columnIndex = z * _model.Size.SizeX + x;

@@ -467,6 +467,46 @@ namespace Odyssey.Tests.Hud
             Assert.That(debug.Open, Is.False);
             Assert.That(raised, Is.EqualTo(2));
         }
+
+        [Test]
+        public void TheWeatherTabStartsClearAndAnnouncesEachChange()
+        {
+            var debug = new DebugDirector();
+            int raised = 0;
+            debug.WeatherChanged += () => raised++;
+
+            Assert.That(debug.Weather, Is.Zero);
+            Assert.That(debug.CurrentWeather.IsClear, Is.True, "a session starts with the day as the clock has it");
+            Assert.That(debug.RainAsParticles, Is.False, "the GPU rain is the proposal, the particles the control");
+
+            debug.SetWeather(3);
+            Assert.That(debug.CurrentWeather.Key, Is.EqualTo(DebugDirector.WeatherRainKey));
+            debug.SetWeather(3);
+            debug.SetWeather(DebugDirector.WeatherPresets.Length);
+            debug.SetWeather(-1);
+            Assert.That(raised, Is.EqualTo(1), "the same preset, and one off either end, say nothing");
+
+            debug.SetRainAsParticles(true);
+            debug.SetRainAsParticles(true);
+            Assert.That(raised, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void EveryWeatherPresetIsInRangeAndOnlyTheFirstIsClear()
+        {
+            DebugDirector.WeatherPreset[] presets = DebugDirector.WeatherPresets;
+            Assert.That(presets[0].IsClear, Is.True);
+            for (int i = 0; i < presets.Length; i++)
+            {
+                DebugDirector.WeatherPreset p = presets[i];
+                foreach (float v in new[] { p.Cloud, p.Rain, p.Wet, p.Puddles })
+                    Assert.That(v, Is.InRange(0f, 1f), p.Key);
+                if (i > 0) Assert.That(p.IsClear, Is.False, $"{p.Key} would draw nothing different from Clear");
+                if (p.Rain > 0f) Assert.That(p.Cloud, Is.GreaterThan(0f), $"{p.Key} rains out of a clear sky");
+                Assert.That(DebugDirector.IconKeys, Does.Contain(p.Key), $"{p.Key} is not held to the naming CSV");
+            }
+            Assert.That(DebugDirector.TabKey(DebugTab.Weather), Is.EqualTo(DebugDirector.WeatherTabKey));
+        }
     }
 }
 

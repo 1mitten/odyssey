@@ -69,11 +69,16 @@ namespace Odyssey.Presentation.Rendering
         public int ProbeUpdates { get; private set; }
 
         float _cloud;
+        float _probedCloud;
+
+        /// <summary>How far the cover must move before the ambient probe is re-integrated for it.</summary>
+        public const float ProbeUpdateCloud = 0.1f;
 
         /// <summary>
         /// Cloud cover, 0 to 1, graded over the hour's light by <see cref="Overcast"/>. Setting it
-        /// forgets the last hour applied so the next <see cref="ApplyHour"/> writes, and the probe
-        /// with it: the ambient changes with the cover, not with the clock.
+        /// forgets the last hour applied so the next <see cref="ApplyHour"/> writes the light. The
+        /// probe follows the cover in steps of <see cref="ProbeUpdateCloud"/>, not every frame: a
+        /// sky easing in over two seconds would otherwise re-integrate it a hundred times.
         /// </summary>
         public float Cloud
         {
@@ -84,7 +89,6 @@ namespace Odyssey.Presentation.Rendering
                 if (Mathf.Approximately(v, _cloud)) return;
                 _cloud = v;
                 Hour = -1f;
-                _lastProbeHour = float.NegativeInfinity;
             }
         }
 
@@ -137,8 +141,11 @@ namespace Odyssey.Presentation.Rendering
                 _sky.SetColor(GroundColour, state.BelowHorizon);
             }
 
-            if (Mathf.Abs(hour - _lastProbeHour) < ProbeUpdateHours) return;
+            bool coverMoved = Mathf.Abs(_cloud - _probedCloud) >= ProbeUpdateCloud
+                              || (_cloud == 0f && _probedCloud != 0f);
+            if (Mathf.Abs(hour - _lastProbeHour) < ProbeUpdateHours && !coverMoved) return;
             _lastProbeHour = hour;
+            _probedCloud = _cloud;
             ProbeUpdates++;
             DynamicGI.UpdateEnvironment();
         }
