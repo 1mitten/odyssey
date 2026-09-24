@@ -83,8 +83,18 @@ namespace Odyssey.Sim.Pathing
         /// <summary>No ladders, no manipulable doors, and no water: a hog.</summary>
         Animal = 2,
 
-        /// <summary>Raiders and bashers: a closed door is a cost, not an obstacle.</summary>
-        IgnoreDoors = 3,
+        /// <summary>
+        /// As Colonist — ladders, stairs, the hop, the wade — but <b>a closed door is a wall</b>: a
+        /// marauder (design 33 §16). It does not open the colony's doors, so a door between it and
+        /// the colonists leaves them unreachable and it breaks the door down instead (§14b). An
+        /// open door — one a colonist is walking through — it may pass.
+        ///
+        /// <para>Slot 3 was <c>IgnoreDoors</c>, "a closed door is a cost, not an obstacle", which no
+        /// pawn, Def or test ever used. It was repurposed rather than a sixth mode added, because
+        /// every mode costs a district flood on every nav rebuild whether any pawn walks in it or
+        /// not (§16b).</para>
+        /// </summary>
+        Marauder = 3,
 
         /// <summary>
         /// As Colonist — ladders, stairs, the hop — but no water: a rat (design 29 §4). The two
@@ -112,6 +122,15 @@ namespace Odyssey.Sim.Pathing
         /// <summary>The two animal modes: no water, and no hop that is not a terrace ramp.</summary>
         public static bool IsAnimal(TraverseMode mode) =>
             mode == TraverseMode.Animal || mode == TraverseMode.Climber;
+
+        /// <summary>
+        /// May this mode open a closed door? Everyone but the hog and the marauder (design 33 §16).
+        /// The rat opens doors, as it always has: <see cref="TraverseMode.Climber"/> was
+        /// "as Colonist, no water", and a door was never part of the difference. The one owner of
+        /// the rule; <see cref="NavGrid.CanEnter"/> is its only caller.
+        /// </summary>
+        public static bool OpensDoors(TraverseMode mode) =>
+            mode != TraverseMode.Animal && mode != TraverseMode.Marauder;
 
         /// <summary>
         /// The bits every mode has; the animal modes are stripped by
@@ -260,11 +279,13 @@ namespace Odyssey.Sim.Pathing
         public const int LiftUp = 400;
         public const int LiftDown = 400;
 
-        /// <summary>Added when entering a closed door a mode is able to open.</summary>
+        /// <summary>
+        /// Added when entering a closed door a mode is able to open. There is no price for walking
+        /// through one a mode cannot open: it cannot (design 33 §16). <c>DoorBash</c>, which priced
+        /// that for the old <c>IgnoreDoors</c> mode, went with it — the cell search charged it and
+        /// the region graph did not, a disagreement nothing was walking into.
+        /// </summary>
         public const int DoorOpening = 60;
-
-        /// <summary>Added when entering a closed door a mode has to break.</summary>
-        public const int DoorBash = 400;
 
         public const int HazardPenalty = 500;
 
@@ -478,7 +499,7 @@ namespace Odyssey.Sim.Pathing
             if (CostClass[index] == Worldgen.Natural.NaturalContent.CostClassShallowWater
                 && !TraverseModes.Swims(mode)) return false;
             if ((f & NavFlags.Door) == 0 || (f & NavFlags.DoorOpen) != 0) return true;
-            return mode != TraverseMode.Animal;
+            return TraverseModes.OpensDoors(mode);
         }
 
         /// <summary>
@@ -505,9 +526,11 @@ namespace Odyssey.Sim.Pathing
             if (diagonal && terrainExtra > 0)
                 terrainExtra = (terrainExtra * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
             int cost = baseCost + terrainExtra;
+            // Only a mode that opens doors ever pays this: CanEnter refuses a closed door to the
+            // rest. One price for everyone, which is what NavGraph.StepCost charges too.
             if ((f & NavFlags.Door) != 0 && (f & NavFlags.DoorOpen) == 0)
             {
-                int doorCost = mode == TraverseMode.IgnoreDoors ? MoveCost.DoorBash : MoveCost.DoorOpening;
+                int doorCost = MoveCost.DoorOpening;
                 if (diagonal) doorCost = (doorCost * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
                 cost += doorCost;
             }

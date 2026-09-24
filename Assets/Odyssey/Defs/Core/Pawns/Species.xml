@@ -141,6 +141,10 @@
     <!-- Armed from the moment it arrives (design 33 section 1). The hand is filled by
          IWeaponRules.ArmOnSpawn, lane D's; until that is written the marauder fights with fists. -->
     <weapon>Item_Machete</weapon>
+    <!-- A person who does not open the colony's doors (design 33 section 16; owner, 2026-09-24:
+         "do what you recommend"). Ladders, stairs, the hop and the wade as a colonist, but a
+         closed door is a wall: with the colonists behind one, it breaks the door down. -->
+    <traverseMode>Marauder</traverseMode>
   </PawnKindDef>
 
 </Defs>

@@ -21,7 +21,7 @@ namespace Odyssey.Sim.Pawns
         {
             if (!pawn.Downed) return false;
             job.Reset(JobIndex.Downed);
-            job.Mode = pawn.Species.traverseMode;
+            job.Mode = pawn.OwnMode;
             return true;
         }
     }
@@ -110,7 +110,7 @@ namespace Odyssey.Sim.Pawns
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
             if (pawn.Downed) return false;
-            TraverseMode mode = pawn.Species.traverseMode;
+            TraverseMode mode = pawn.OwnMode;
 
             if (pawn.RetaliateAgainst != 0 && ctx.CurrentTick < pawn.RetaliateUntilTick)
             {
@@ -161,7 +161,7 @@ namespace Odyssey.Sim.Pawns
             Pawn? foe = ctx.Pawns.Get(new PawnId(pawn.RetaliateAgainst));
             if (foe == null || !Melee.IsStanding(foe)) return false;
 
-            TraverseMode mode = pawn.Species.traverseMode;
+            TraverseMode mode = pawn.OwnMode;
             if (!ctx.Reachable(pawn, foe.Cell, mode)) return false;
             return AttackJob.Fill(pawn, foe, job, mode);
         }

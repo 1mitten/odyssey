@@ -282,7 +282,23 @@ namespace Odyssey.Sim.Pawns
         /// most twelve rows for anything she did, and a reachability test of at most ten cells for
         /// each one nearer than the best so far. Asked on a marauder's think when no colonist can be
         /// reached, never per tick.</para>
+        ///
+        /// <para><b>A bed is passed over</b> (<see cref="IsMarauderTarget"/>, design 33 §16), so a
+        /// colony with everybody down still has somewhere to be carried to and get up from.
+        /// <b>Nearest to the marauder</b> is still the whole of the choice: the wall between it and
+        /// a colonist, or a price for walking through walls, is deferred until play asks for it.</para>
         /// </summary>
+        /// <summary>
+        /// May a marauder choose this edifice for itself (design 33 §16; owner, 2026-09-24: "do what
+        /// you recommend")? Everything that is a target (§13b) but a bed. A bed is where a downed
+        /// colonist is carried to and recovers in (§11), and in the §14 soak a marauder left with
+        /// nobody standing broke the beds first and nobody got up again. <b>Only the marauder's own
+        /// choice asks this</b>: a player's order may still strike a bed (§13d, C6 answer (c)), and
+        /// <see cref="TryStanding"/> — what a target is — is unchanged. One owner, so a medical bed
+        /// or a cot later joins here.
+        /// </summary>
+        public static bool IsMarauderTarget(ushort edifice) => edifice != CoreContent.EdificeBed;
+
         public static bool TryNearestColonyTarget(PawnContext ctx, Pawn pawn, TraverseMode mode, out BuildingTarget nearest)
         {
             nearest = default;
@@ -296,6 +312,7 @@ namespace Odyssey.Sim.Pawns
             {
                 PlacedEdifice placed = records[handle];
                 if (placed.Removed || !placed.Built) continue;
+                if (!IsMarauderTarget(placed.Def)) continue;
                 int distance = ctx.Distance(pawn.Cell, placed.CellIndex);
                 if (distance >= bestDistance) continue;
                 if (!TryStanding(ctx, handle, out BuildingTarget target)) continue;

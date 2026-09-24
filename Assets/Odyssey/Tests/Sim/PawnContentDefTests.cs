@@ -230,7 +230,12 @@ namespace Odyssey.Tests.Sim
         // (design 33 §14e): ThoughtDef gained renewsOnRepeat, false everywhere but
         // Thought_AttackedByColonist, so a second swing renews the day rather than being dropped.
         // No golden moved: no other thought renews, and no golden window has friendly fire.
-        const ulong ContentFingerprint = 5393620802301053337UL;
+        //
+        // Moved a twenty-third time, deliberately, 2026-09-24, by doors holding marauders out
+        // (design 33 §16): PawnKindDef gained traverseMode, empty everywhere but PawnKind_Marauder
+        // (Marauder), and PawnContent the resolved KindMode table. No golden moved: no golden has a
+        // marauder, and every other kind resolves to its species' mode exactly as before.
+        const ulong ContentFingerprint = 9855151047521430616UL;
 
 
         [Test]

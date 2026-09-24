@@ -46,7 +46,7 @@ namespace Odyssey.Sim.Pawns
             int beyond = size.Index(x, z, t.Y);
             if (IsWater(ctx, beyond)) return -1;
 
-            TraverseMode mode = target.Species.traverseMode;
+            TraverseMode mode = target.OwnMode;
             int land;
             if (ctx.Nav.IsLegalStep(target.Cell, beyond, mode))
             {
@@ -121,7 +121,7 @@ namespace Odyssey.Sim.Pawns
             bool ordered = job != null && job.DefIndex == JobIndex.AttackMelee && job.PlayerForced;
             int foe = target.CombatTarget, toTheDeath = job?.DestCell ?? -1;
             int struck = job?.TargetCell ?? -1;
-            TraverseMode mode = job?.Mode ?? TraverseMode.Colonist;
+            TraverseMode mode = job?.Mode ?? target.OwnMode;
 
             int from = target.Cell;
             _jobs.EndJob(target, JobStatus.Failed);

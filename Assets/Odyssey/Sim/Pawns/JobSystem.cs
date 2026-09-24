@@ -946,6 +946,9 @@ namespace Odyssey.Sim.Pawns
             if (WanderTarget.Fill(pawn, ctx, job)) return true;
 
             job.Reset(JobIndex.Wait);
+            // The pawn's own mode, so a waiting marauder is a marauder to everything that asks
+            // pawn.Mode (design 33 §16). A colonist's is Colonist, which Reset already set.
+            job.Mode = pawn.OwnMode;
             return true;
         }
     }
@@ -988,17 +991,17 @@ namespace Odyssey.Sim.Pawns
                     // On the edge: stand, and the level-keeper takes it from here on its next
                     // rare tick. Another leg from here would be a walk along the edge for ever.
                     job.Reset(JobIndex.Wait);
-                    job.Mode = species.traverseMode;
+                    job.Mode = pawn.OwnMode;
                     job.WorkTicks = (int)TickGroup.Rare;
                     return true;
                 }
-                if (EdgeTarget.Fill(pawn, ctx, job, species.traverseMode)) return true;
+                if (EdgeTarget.Fill(pawn, ctx, job, pawn.OwnMode)) return true;
             }
 
             bool active = IsNight(ctx) == species.nocturnal;
             int legPerCent = active ? LegPerCent : LegPerCent / OffHoursFactor;
             if (rng.NextInt(100) < legPerCent &&
-                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, species.traverseMode, avoidSlopes: true))
+                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, pawn.OwnMode, avoidSlopes: true))
                 return true;
 
             int span = species.restTicksMax > species.restTicksMin
@@ -1006,7 +1009,7 @@ namespace Odyssey.Sim.Pawns
                 : species.restTicksMin;
             if (!active) span *= OffHoursFactor;
             job.Reset(JobIndex.Wait);
-            job.Mode = species.traverseMode;
+            job.Mode = pawn.OwnMode;
             job.WorkTicks = span > 0 ? span : 1;
             return true;
         }
@@ -1195,8 +1198,14 @@ namespace Odyssey.Sim.Pawns
 
     static class WanderTarget
     {
+        /// <summary>
+        /// A person's wander — the mental break's, and an idler's — under the pawn's own mode: a
+        /// colonist's is <see cref="TraverseMode.Colonist"/>, as it always was, and a marauder with
+        /// nothing to hunt wanders without opening a door (design 33 §16). It was Colonist for
+        /// everybody, which would have walked an idle marauder through the colony's front door.
+        /// </summary>
         public static bool Fill(Pawn pawn, PawnContext ctx, Job job) =>
-            Fill(pawn, ctx, job, ctx.Content.Break.wanderRadius, TraverseMode.Colonist, avoidSlopes: false);
+            Fill(pawn, ctx, job, ctx.Content.Break.wanderRadius, pawn.OwnMode, avoidSlopes: false);
 
         /// <summary>
         /// The same pick under a given radius and traverse mode (design 29 §3, §4). The mode goes
