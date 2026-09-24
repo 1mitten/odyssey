@@ -23,6 +23,20 @@ the next session learns to ignore.
 
 ## Open
 
+- **Can you see a colonist through a tree now?** (`claude/meadow-look-fixes`, design 38 §17c). Walk
+  a colonist behind a tree and a bush: the leaves should fade to a faint ghost (about 15%) with the
+  trunk, soft rather than dotted, and come back when the colonist leaves. **A wrong answer looks
+  like:** the crown still hiding the colonist (the ghost is not reaching it), a dotted screen-door
+  pattern, or the tree flickering as a colonist walks along its edge.
+- **Are the lines gone from the terraces?** (same). The steps, banks and stream edges should have no
+  black line; colonists, walls, furniture, piles and rock outcrops keep theirs. **A wrong answer looks
+  like:** a black line still along a step (a terrain left off the ground shader), or a colonist or a
+  pile that has lost its outline (something missing from the normals prepass).
+- **Is there enough colour in the trees?** (same). Mostly greens, with gold and orange stands and
+  the odd red, varying tree to tree. **A wrong answer looks like:** trees all one colour again, the
+  autumn reading as brown or olive, or colour changing tree by tree so evenly it looks like confetti
+  rather than stands.
+
 - **Does the meadow look like the Synty screenshot now?** (`claude/meadow-look-dressing` with the
   ground-and-light half, design 38 §17). New game; zoom out to about the reference's height. Look
   for: Meadow trees in stands (birches in autumn colour, round meadow trees), round bushes across the

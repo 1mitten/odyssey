@@ -25,6 +25,13 @@
 //
 // The tint the renderer resolves (depth shade, tilled, stored, the zone washes) multiplies the
 // finished albedo through _BaseColor, exactly as it did the stock material this replaces.
+//
+// **Every natural terrain is drawn by this shader, not only grass** (the owner's first look,
+// design 38 §17c). With _Single on it is one texture — earth, gravel, mud, sand, rock — projected
+// from world position like the grass, and it exists for one reason besides the lattice: the
+// DepthNormals pass marks the pixel as terrain in the normals texture's spare channel, and the ink
+// line reads that mark and leaves terrain alone (OdysseyOutline.shader). The pack's own terrain
+// materials cannot write the mark, so terrain that stayed on them kept its ink.
 Shader "Odyssey/MeadowGround"
 {
     Properties
@@ -50,6 +57,10 @@ Shader "Odyssey/MeadowGround"
         _MacroStrength("Macro strength", Range(0, 0.5)) = 0.14
         _Warmth("Warm patches", Range(0, 1)) = 0.45
         _Smoothness("Smoothness", Range(0, 1)) = 0.05
+
+        // One texture rather than the meadow's blend: _GrassA on the tops, _Earth on the faces.
+        // How earth, gravel, sand and rock are drawn, so that they carry the terrain mark too.
+        _Single("Single texture", Float) = 0
     }
 
     SubShader
@@ -76,7 +87,13 @@ Shader "Odyssey/MeadowGround"
             float _MacroStrength;
             float _Warmth;
             float _Smoothness;
+            float _Single;
         CBUFFER_END
+
+        // What the DepthNormals pass writes into the normals texture's alpha: this pixel's visible
+        // surface is terrain, so the ink line leaves it alone. Everything else writes 0 there — the
+        // URP and Shader Graph passes do, and so do ours. Read by OdysseyOutline.shader.
+        #define ODYSSEY_TERRAIN_MARK 1.0
 
         TEXTURE2D(_GrassA);  SAMPLER(sampler_GrassA);
         TEXTURE2D(_GrassB);
@@ -141,6 +158,15 @@ Shader "Odyssey/MeadowGround"
             float2 dxL = ddx(uvL), dyL = ddy(uvL);
 
             float3 grass = Sample(TEXTURE2D_ARGS(_GrassA, sampler_GrassA), uvA, dxA, dyA);
+
+            // One texture, with only the slow drift over it: earth, gravel, sand, rock.
+            [branch] if (_Single > 0.5)
+            {
+                float drift = MeadowField(xz / max(_MacroMetres, 0.01) + 5.3);
+                grass *= lerp(1.0 - 0.5 * _MacroStrength, 1.0 + _MacroStrength, drift);
+            }
+            else
+            {
             float wB = smoothstep(0.35, 0.65, MeadowField(xz / patch));
             [branch] if (wB > 0.001)
                 grass = lerp(grass, Sample(TEXTURE2D_ARGS(_GrassB, sampler_GrassA), uvB, dxB, dyB), wB);
@@ -163,6 +189,7 @@ Shader "Odyssey/MeadowGround"
             grass *= lerp(1.0 - 0.5 * _MacroStrength, 1.0 + _MacroStrength, macro);
             float warm = smoothstep(0.55, 0.80, MeadowField(xz / 45.0 + 2.2)) * _Warmth;
             grass = lerp(grass, grass * float3(1.08, 1.03, 0.82), warm);
+            }
 
             // Faces that stand up take the earth texture on their own plane. The gradients are
             // taken out here with the others, for the same reason.
@@ -354,7 +381,8 @@ Shader "Odyssey/MeadowGround"
             half4 DepthNormalsFragment(NormalsVaryings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                return half4(NormalizeNormalPerPixel(input.normalWS), 0);
+                // The terrain mark in the spare channel: see ODYSSEY_TERRAIN_MARK.
+                return half4(NormalizeNormalPerPixel(input.normalWS), ODYSSEY_TERRAIN_MARK);
             }
             ENDHLSL
         }

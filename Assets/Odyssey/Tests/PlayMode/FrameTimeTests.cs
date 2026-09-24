@@ -2486,6 +2486,12 @@ namespace Odyssey.Tests.PlayMode
                     boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, 70f);
                     for (int i = 0; i < 150; i++) yield return null;
                     yield return Photograph(prefix + "wide", boot, target);
+
+                    // The same framing with every tree and bush drawn as though it stood between the
+                    // camera and a colonist, so the fade can be judged by looking (design 38 §17c).
+                    boot.Renderer!.FadeEveryTreeForAPhotograph = true;
+                    yield return Photograph(prefix + "wide-faded", boot, target);
+                    boot.Renderer!.FadeEveryTreeForAPhotograph = false;
                 }
 
                 // And the wide framing again under the Meadow demo's own grade, where it resolved.

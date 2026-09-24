@@ -387,6 +387,30 @@ namespace Odyssey.Presentation.Rendering
         public const float DefaultSightFadeAlpha = 0.22f;
 
         /// <summary>
+        /// What a Meadow crown and its trunk fade to when they stand between the camera and a
+        /// colonist: a dithered 15%, a faint ghost of the crown (owner, 2026-09-24; design 38 §17c).
+        /// Drawn by our foliage shader, cut-out kept — the translucent stand-in drew every leaf card
+        /// as a whole pane, and forty overlapping panes at 22% blocked the view as well as a crown.
+        /// </summary>
+        public float SightLeafFade { get; set; } = DefaultSightLeafFade;
+
+        public const float DefaultSightLeafFade = 0.15f;
+
+        /// <summary>How strongly a Meadow tree's leaves take the stand colours (design 38 §17c).</summary>
+        public float TreeStandVariety { get; set; } = DefaultTreeStandVariety;
+
+        public const float DefaultTreeStandVariety = 1f;
+
+        /// <summary>The same for a bush: a lighter touch, so the meadow's undergrowth stays green.</summary>
+        public float BushStandVariety { get; set; } = 0.45f;
+
+        /// <summary>
+        /// Draw every tree and bush as though it stood in a colonist's line of sight, for a
+        /// photograph of the fade. A seam for the look harness, never set by the game.
+        /// </summary>
+        public bool FadeEveryTreeForAPhotograph { get; set; }
+
+        /// <summary>
         /// How far above its own layer a chunk may hold geometry, in metres.
         ///
         /// <para>A chunk's bounds are one layer high, and the tallest thing rooted in a layer is a
@@ -886,8 +910,9 @@ namespace Odyssey.Presentation.Rendering
 
                 // Once per bucket, not per part: it splits the bucket's matrices, which every part
                 // of a level shares.
-                int faded = sight && !NeverFades(bucket.Tint) ? Partition(bucket) : 0;
+                int faded = (sight || (FadeEveryTreeForAPhotograph && TintCode.IsTree(bucket.Tint))) && !NeverFades(bucket.Tint) ? Partition(bucket) : 0;
                 bool proxyCasts = false;
+                float variety = TintCode.IsDressing(bucket.Tint) ? BushStandVariety : TreeStandVariety;
 
                 for (int k = 0; k < drawnParts; k++)
                 {
@@ -906,7 +931,7 @@ namespace Odyssey.Presentation.Rendering
                     bool meadowTree = !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
                                       && FoliageLook.IsMeadowFoliage(part.Material);
                     Material? painted = meadowTree
-                        ? _materials.GetTree(part.Material, tint)
+                        ? _materials.GetTree(part.Material, tint, 1f, variety)
                         : !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
                             ? _materials.Trees.For(part.Material, TintCode.TreeSpeciesOf(bucket.Tint), shade)
                             : null;
@@ -970,8 +995,13 @@ namespace Odyssey.Presentation.Rendering
                     // still reads as the tree or the wall it is, rather than as a grey pane. The
                     // ghost material is the translucent stand-in the x-rayed storeys use; the pack's
                     // own shaders are alpha-clipped and cannot be turned transparent from script.
+                    // A Meadow crown fades by our shader's dither, cut-out and all (SightLeafFade);
+                    // anything else by the translucent stand-in, as before.
+                    Material? fadedMeadow = meadowTree
+                        ? _materials.GetTree(part.Material, tint, SightLeafFade, variety)
+                        : null;
                     var ghostParams = new RenderParams(
-                        _materials.Get(part.Material, tint, emission, ghost: true, SightFadeAlpha))
+                        fadedMeadow ?? _materials.Get(part.Material, tint, emission, ghost: true, SightFadeAlpha))
                     {
                         worldBounds = batch.Bounds,
                         layer = GameObjectLayer,
@@ -1077,7 +1107,26 @@ namespace Odyssey.Presentation.Rendering
         int Partition(InstanceBucket bucket)
         {
             ResolvedModule module = _model.Library[bucket.Module];
-            if (module.IsEmpty || Sight == null) return 0;
+            if (module.IsEmpty) return 0;
+
+            // The photograph of the fade: every tree and bush in the way, nothing solid.
+            if (FadeEveryTreeForAPhotograph && TintCode.IsTree(bucket.Tint))
+            {
+                if (_faded.Length < bucket.Count)
+                {
+                    int grown = Mathf.NextPowerOfTwo(bucket.Count);
+                    _faded = new Matrix4x4[grown];
+                    _solid = new Matrix4x4[grown];
+                }
+                System.Array.Copy(bucket.Matrices, _faded, bucket.Count);
+                _solidBarkDeep.Clear();
+                _solidBarkWarm.Clear();
+                _solidLeafDeep.Clear();
+                _solidLeafFresh.Clear();
+                return bucket.Count;
+            }
+
+            if (Sight == null) return 0;
 
             Matrix4x4 unplace = module.Parts[bucket.Part].Local.inverse;
             Bounds local = module.Bounds;

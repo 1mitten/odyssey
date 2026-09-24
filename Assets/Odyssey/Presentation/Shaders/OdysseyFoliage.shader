@@ -83,6 +83,18 @@ Shader "Odyssey/Foliage"
         _ShrinkEnd("Shrink complete by, metres", Float) = 0
 
         _Smoothness("Smoothness", Range(0, 1)) = 0.1
+
+        // The stand colours (design 38 §17c): how strongly the leaves take the green, gold,
+        // orange or red their tree is dealt from its position. 0 is the art's own colour.
+        _StandVariety("Stand colours", Range(0, 1)) = 0
+
+        // The ghost a crown becomes over a colonist (design 38 §17c): blended at _Fade, after a
+        // depth pass so only the front-most leaf card shows. The cache sets these on the ghost's
+        // material and nowhere else; on every other material the ghost depth pass is disabled.
+        [HideInInspector] _Ghost("Ghost", Float) = 0
+        [HideInInspector] _SrcBlend("Source blend", Float) = 1
+        [HideInInspector] _DstBlend("Destination blend", Float) = 0
+        [HideInInspector] _ZWrite("Depth write", Float) = 1
     }
 
     SubShader
@@ -149,6 +161,11 @@ Shader "Odyssey/Foliage"
             float _ShrinkStart;
             float _ShrinkEnd;
             float _Smoothness;
+            float _StandVariety;
+            float _Ghost;
+            float _SrcBlend;
+            float _DstBlend;
+            float _ZWrite;
         CBUFFER_END
 
         // Globals from WindDirector. All-zero is still air, so foliage drawn before anything sets
@@ -255,6 +272,44 @@ Shader "Odyssey/Foliage"
             return lerp(lerp(a, b, u.x), lerp(c, d, u.x), u.y);
         }
 
+        // The colour a tree is dealt from where it stands (owner, 2026-09-24; design 38 §17c): like
+        // the reference, mostly fresh greens and yellow-greens, with patches of gold and orange and
+        // the odd red — varying tree to tree but grouped in stands, because the choice leans on a
+        // field about fifty metres across as well as on the tree's own hash. rgb is the colour
+        // (linear), a how strongly it is taken: the greens gently, so a green tree keeps the art's
+        // own green; autumn fully. **Mirrored by LeafVariety.cs**, which the tests count — change
+        // one, change both (LeafVarietyTests reads these constants out of this file).
+        half4 FoliageStandColour(float3 rootWS)
+        {
+            float2 xz = rootWS.xz;
+            float s  = FoliageNoise(xz * 0.018 + 3.1);
+            float h  = FoliageHash(xz * 0.731 + 11.3);
+            float h2 = FoliageHash(xz * 1.917 + 3.7);
+            float t = s * 0.7 + h * 0.3;
+            if (h2 > 0.965) return half4(0.477, 0.040, 0.013, 1.0);
+            if (t > 0.58) return h2 < 0.5 ? half4(0.787, 0.479, 0.033, 1.0)
+                                          : half4(0.787, 0.214, 0.020, 1.0);
+            // The greens take a little, so each species keeps most of its own painted colour and the
+            // stand colours are what add to it rather than what replace it (photographed: at 0.6 the
+            // fruit trees' own orange went green, and the meadow had fewer colours than before).
+            if (h > 0.8) return half4(0.477, 0.604, 0.051, 0.45);
+            return half4(lerp(float3(0.133, 0.342, 0.027), float3(0.319, 0.479, 0.033), h2), 0.3);
+        }
+
+        // A leaf colour moved to the stand colour's hue, keeping its own lightness: the art's light
+        // and dark survive, only the colour changes — tint, not flatten.
+        half3 FoliageRecolour(half3 albedo, half4 stand)
+        {
+            if (_StandVariety <= 0.001) return albedo;
+            const half3 lumaWeights = half3(0.2126, 0.7152, 0.0722);
+            half luma = dot(albedo, lumaWeights);
+            half target = max(dot(stand.rgb, lumaWeights), 1e-3);
+            // Half the art's own light and dark, half the stand colour's: at the art's lightness
+            // alone an orange dealt to a dark crown read as brown, and gold as olive (photographed).
+            half3 recoloured = min(stand.rgb * lerp(1.0, luma / target, 0.5), 1.0);
+            return lerp(albedo, recoloured, saturate(_StandVariety * stand.a));
+        }
+
         // The flat leaf colour at a world position and a height up the plant: the base colour at
         // the root, rising to the noise colours at the tip (vertex red is the height gradient, 0 at
         // the root and about 0.5 at a crown), which from above is what shows — so a clump seen
@@ -307,7 +362,8 @@ Shader "Odyssey/Foliage"
         void FoliageClip(half alpha, float4 positionCS)
         {
             clip(alpha - _Cutoff);
-            if (_Fade < 0.999) clip(_Fade - FoliageDither(positionCS));
+            // The dither is for a fade drawn opaque; a ghost is blended instead (see the ghost pass).
+            if (_Ghost < 0.5 && _Fade < 0.999) clip(_Fade - FoliageDither(positionCS));
         }
 
         // Patch drift from the root, so a whole clump moves together.
@@ -324,7 +380,10 @@ Shader "Odyssey/Foliage"
             Name "FoliageForward"
             Tags { "LightMode" = "UniversalForward" }
 
-            ZWrite On
+            // One and Zero and On for everything but a ghost, which blends at _Fade over the depth
+            // its own ghost pass laid down, so it only ever shades its front-most card.
+            Blend [_SrcBlend] [_DstBlend]
+            ZWrite [_ZWrite]
             // Both sides: a card seen from behind is still grass.
             Cull Off
 
@@ -369,6 +428,8 @@ Shader "Odyssey/Foliage"
                 half3  leaf       : TEXCOORD3;
                 half   fogFactor  : TEXCOORD4;
                 half3  vertexSH   : TEXCOORD5;
+                // The tree's stand colour, dealt once per vertex from the instance's position.
+                half4  stand      : TEXCOORD6;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -398,6 +459,7 @@ Shader "Odyssey/Foliage"
                 output.leaf = half3(input.colour.b, FoliagePatch(rootWS), input.colour.r);
                 output.fogFactor = ComputeFogFactor(output.positionCS.z);
                 output.vertexSH = SampleSH(normalize(lerp(normalWS, float3(0, 1, 0), _NormalUp)));
+                output.stand = FoliageStandColour(rootWS);
                 return output;
             }
 
@@ -408,6 +470,7 @@ Shader "Odyssey/Foliage"
 
                 half4 art = FoliageSample(input.uv, input.leaf.x, input.positionWS, input.leaf.z);
                 FoliageClip(art.a, input.positionCS);
+                if (input.leaf.x > 0.5) art.rgb = FoliageRecolour(art.rgb, input.stand);
 
                 // A card lit from behind would go black; its back face takes the flipped normal,
                 // then both are pulled towards up so the clump lights as one mass.
@@ -423,7 +486,7 @@ Shader "Odyssey/Foliage"
                 surface.albedo = art.rgb * _BaseColor.rgb * drift * hue;
                 // The sunlit tops of a canopy: leaves facing up take the art's frosting colour.
                 if (_Frost > 0.5 && input.leaf.x > 0.5)
-                    surface.albedo = lerp(surface.albedo, _FrostColour.rgb * _BaseColor.rgb,
+                    surface.albedo = lerp(surface.albedo, FoliageRecolour(_FrostColour.rgb, input.stand) * _BaseColor.rgb,
                                           saturate(normalWS.y * 1.6 - 0.6) * 0.7);
                 surface.alpha = 1;
                 surface.metallic = 0;
@@ -443,7 +506,7 @@ Shader "Odyssey/Foliage"
 
                 half4 colour = UniversalFragmentPBR(inputData, surface);
                 colour.rgb = MixFog(colour.rgb, inputData.fogCoord);
-                colour.a = 1;
+                colour.a = _Ghost > 0.5 ? _Fade : 1;
                 return colour;
             }
             ENDHLSL
@@ -518,6 +581,65 @@ Shader "Odyssey/Foliage"
             }
 
             half4 ShadowFragment(ShadowVaryings input) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                FoliageClip(FoliageSample(input.uv, input.leafMask, float3(0, 0, 0), 1.0).a, input.positionCS);
+                return 0;
+            }
+            ENDHLSL
+        }
+
+        // The ghost's depth, drawn just before its colour (URP draws SRPDefaultUnlit ahead of
+        // UniversalForward for one object). With it the blended colour pass that follows passes the
+        // depth test on the front-most leaf card only, so a crown of forty cards fades to one faint
+        // layer instead of stacking forty 15% panes back into a solid crown — which is what the
+        // translucent stand-in did (the owner: "the leaves you cannot [see through]"). Disabled on
+        // every material but a ghost's (MaterialCache), so a solid crown never draws it.
+        Pass
+        {
+            Name "FoliageGhostDepth"
+            Tags { "LightMode" = "SRPDefaultUnlit" }
+
+            ZWrite On
+            ColorMask 0
+            Cull Off
+
+            HLSLPROGRAM
+            #pragma vertex GhostVertex
+            #pragma fragment GhostFragment
+            #pragma multi_compile_instancing
+            #pragma target 3.5
+
+            struct GhostAttributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS   : NORMAL;
+                float4 colour     : COLOR;
+                float2 uv         : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct GhostVaryings
+            {
+                float4 positionCS : SV_POSITION;
+                float2 uv         : TEXCOORD0;
+                half   leafMask   : TEXCOORD1;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            GhostVaryings GhostVertex(GhostAttributes input)
+            {
+                GhostVaryings output = (GhostVaryings)0;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                output.positionCS = TransformWorldToHClip(
+                    FoliageDisplace(input.positionOS.xyz, input.normalOS, input.colour));
+                output.uv = input.uv;
+                output.leafMask = input.colour.b;
+                return output;
+            }
+
+            half4 GhostFragment(GhostVaryings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 FoliageClip(FoliageSample(input.uv, input.leafMask, float3(0, 0, 0), 1.0).a, input.positionCS);
