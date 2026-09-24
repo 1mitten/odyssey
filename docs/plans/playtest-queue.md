@@ -23,6 +23,27 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the landing ring read, and does a drag across the roster select the squad?**
+  (`claude/draft-ring-roster-drag`, design 33 §20.)
+  - *Set-up.* Any colony with four or more colonists. Draft them all.
+  - *Expect.* Select the squad and right-click the ground: under each colonist's own destination a
+    **pale ring** snaps in from wide, flashes once as it lands, stays faint while she walks, and
+    fades as she arrives. Sent somewhere else mid-walk, the old ring fades as the new one snaps.
+    Undraft mid-walk and it fades. The red attack ring (right-click a marauder) still looks like
+    the same family in a different colour.
+  - *Then the roster.* With no tool armed, press on one card and drag across three more: all four
+    are selected, the first as the one in the pane, and the camera does not move. Drag back: the
+    cards behind the pointer drop out. A plain click still selects one and jumps the camera, **on
+    the release now rather than the press**. Shift-drag adds to what was selected. Right-drag still
+    swaps two cards.
+  - A wrong answer looks like any of these:
+    - the ring lost on grass, snow or a lit floor, or read as the selection cursor;
+    - a ring that pops rather than snaps, never flashes, or hangs about after she has arrived;
+    - a pale ring and a red line that read as two unrelated marks;
+    - a drag that selects only the first and last card, or toggles cards out;
+    - the camera swinging to the first card during a drag, or a click that no longer jumps;
+    - a right-drag that selects instead of reordering.
+
 - **Do three marauders all get to work, and does a squad go upstairs?** (`claude/combat-stall-fix`,
   design 33 §19.)
   - *Set-up.* Load a save with a building on a terrace (the owner's `the-latest-tim` will do), wall

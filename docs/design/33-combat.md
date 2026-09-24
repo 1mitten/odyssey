@@ -191,7 +191,7 @@ the carry aspects, the two spellings are held together by a test on each side.
   All three draft marks share the one hue; the selection brackets are untouched.
 - **An order line** from a moving drafted colonist to its destination, with a floor bracket on the
   destination cell, for the **selected** colonists only. Twenty lines across the board is noise; the
-  ones you are commanding are signal.
+  ones you are commanding are signal. **The bracket is now a ring** (§20, 2026-09-24).
 
 Both are drawn through `ChunkRenderer`'s bracket material, like the selection cursor, and cost one
 submission per drafted colonist. That scales with the number drafted, never with the board.
@@ -4378,3 +4378,194 @@ Fast tier: Sim **1,475** (from 1,470), Hud **1,016** (unchanged). Long **41**, a
 is: its wall is written straight into the grid and nothing marks the graph dirty in either world, so
 the original is exactly as stale as the copy and the hashes agree. The new test raises its walls
 through `Raise`, which marks the graph, so the original is right and the copy is compared with it.
+
+## 20. The landing ring and dragging across the roster (2026-09-24)
+
+**The owner's words:** *"instead of using a square to indicate where to land when drafting people,
+can it be a ring that flashes temporarily or has a transition effect that makes sense. Also when
+I'm in default mode and I want to select many colonists, I should be drag the across their roster
+profile and select them all this as well."*
+
+Two interface changes, both presentation only. **No golden moved**: nothing here reaches a cell, a
+save or the hash, and the simulation is untouched. Built on `claude/draft-ring-roster-drag` from
+`claude/combat-owner-round` (`0c868710`).
+
+### 20a. The decisions (told to the owner, built as told)
+
+| Ask | Decision |
+|---|---|
+| A ring, not a square, where a drafted colonist is sent | **A ring on each colonist's own destination**, replacing the floor bracket of §2g. A squad is spread over several cells (§2d), so one ring per colonist. The Equip order (§7a) shares the marker and gets the ring too. |
+| *"flashes temporarily or has a transition effect that makes sense"* | **The lock-on ring's transition** (§7b), so the two read as one family: it snaps in from 1.6 times its size over 0.2 s, flashes once as it lands, holds faint while she walks, and fades when she arrives, the order changes or she is undrafted. |
+| Its colour | **Pale and neutral, not red**, so it can never be read as the red attack ring: `OrderColours.Move`, `#dce4ec`. |
+| The order line and the diamond | **Unchanged.** The line keeps the draft's deep red and ends on the ring. |
+| Drag across the roster | **A left press on a card dragged across others selects every card passed over**, as the box does in the world. A click without a drag still selects one; **Shift** adds to the selection; **right-drag still reorders** the cards; paging is untouched, and dragging off the end of a page does not page. |
+
+### 20b. The landing ring
+
+**What starts one.** The frame a **selected** colonist's published order cell
+(`odyssey.pawn.order.cell`, §2e) changes to a new cell — read off the frame, not the click, exactly
+as the lock-on is, so a refused move draws nothing and the same move clicked twice is quiet. The
+order cell is published for a drafted move, a forced Equip and an attack on a building (§13i), and
+the ring follows it in all three, as the bracket did. **An order already under way when the player
+first sees it** — a colonist selected mid-walk, a world just loaded — is adopted at rest, faint,
+with no snap.
+
+**One ring per colonist, keyed on her and the cell.** Sent somewhere else mid-walk, the old ring
+fades where it was while the new one snaps in on the new cell; for the length of the fade both are
+drawn. Sent back to a cell whose ring is still fading, it snaps again, because that is a new order.
+
+**What ends one.** The cell stops being published — she arrived, she was undrafted (a drafted move
+needs the draft), the order became something else — or she is deselected, since only the
+selection's orders are drawn (§2g).
+
+**The clock is the lock-on's, not a copy of it.** `LandingRings` evaluates every frame through
+`LockOnRing.Evaluate` and quantises through `LockOnRing.Quantise`: the snap from
+`StartScale` 1.6 over `SnapSeconds` 0.2, the flash to `FlashAlpha` at the landing, the settle over
+`FlashSeconds` 0.18 to `HoldAlpha` 0.35, and the linear fade over `FadeSeconds` **0.25 s**. The owner
+was told "about 0.3 s" for the fade; the lock-on's 0.25 is inside that, and a second fade constant
+would have been a second clock. A retune of the lock-on retunes this ring too, and
+`LandingRingTests.TheRingRunsOnTheLockOnsClock` fails on any curve of its own.
+
+**Its own numbers, in `LandingRings`, INVENTED for the playtest:**
+
+| Number | Value | Why |
+|---|---|---|
+| `Radius` | 0.8 m (1.6 m across) | inside the 2.5 m cell and wider than a person's lock-on ring (0.575 m), so it reads as a *place* rather than a body |
+| `OrderColours.Move` | `#dce4ec` | a cool near-white a step under the interface's ink (`TextPrimary` `#eef3f6`) |
+| lift | 2 cm | the lock-on's `LockOnRingLift`, shared |
+
+**The colour** has one owner, `OrderColours` (CLAUDE.md), and a test:
+`OrderColoursTests.TheMoveRingIsPaleAndNeutralAndNoRed` holds it 80 points (the board's threshold)
+from the attack red, the draft red, the hostile marker's salmon and every order hue, then pale (no
+channel under `0xc0`) and neutral (channels within 24). It is **not** held apart from the selection
+cursor's white: the cursor is brackets round a colonist and the ring lies on an empty cell, and a
+rule the design does not need is a rule a later retune would fight.
+
+**How it is drawn.** `OdysseyBootstrap.DrawLandingRings`, called straight after the draft marks:
+`PrimitiveMeshes.UnitRing` through `ChunkRenderer.DrawRing` in the bracket material, draped with
+`GroundRelief.Drape` on the destination cell's floor centre — the placement the bracket had — and
+scaled by `Radius × scale`. A ring on a layer the slice does not draw is not drawn, the lock-on's
+rule. **Cost**: one submission per ring, one ring per selected colonist under orders (two for a
+fade's length after a re-order); it scales with the selection, never the board. The alpha is
+quantised, so the animation reuses at most 33 cached materials for the hue. `DrawOrderLine` no
+longer draws the bracket.
+
+### 20c. Dragging across the roster
+
+**The rule** is `Odyssey.Hud.RosterSweep`, Unity-free and fast-tier tested. A left press on a card
+starts a sweep, and copies the page's cards in slot order.
+
+- **A range, as the box is an area.** The sweep covers the cards from the one pressed to the one
+  under the pointer, inclusive. Dragged back, it lets go of the cards it no longer spans. A flick
+  that never lands on the cards in between still covers them, which is only sound because the strip
+  is always **one row** (`HudLayout.StripRowsAllowed`, owner 2026-09-18) — a second row would need
+  a rectangle instead.
+- **Without Shift** the covered cards are the selection, the **pressed card first**, so the inspect
+  pane shows whom the drag began on.
+- **With Shift** they are added to the selection held at the press, which stays ahead of them.
+- **A press that covers no other card is a click.** Without Shift, that colonist; with Shift, she is
+  toggled in or out, as a Shift-click does in the world. Once a sweep has covered a second card it
+  is a sweep for good: dragging back on to the pressed card leaves her selected rather than
+  toggling her out, and is not taken for a click.
+- **Only the page the press was on.** A card that was not on it covers nothing.
+
+**What moved from the press to the release.** A plain click on a card was `ChooseColonist` on the
+**press**: select her, put the slice on her layer and take the camera to her. A press cannot know
+yet whether it is a click or the start of a drag, and a drag that swung the camera to its first card
+would be a lurch nobody asked for. So the press now selects the card at once (the visible answer)
+and **the slice change and the camera jump wait for the release**, and happen only for a plain
+click. A Shift-click still never jumps.
+
+**What was there.** The strip already had a Shift-drag (`_sweepingRoster`) that **toggled** every
+card it entered — the catalogue's A2 "drag-select a range" (`10-ui-panel-catalogue.md`), built as a
+toggle. It is replaced: a Shift-drag now adds, which is what Shift means on the world's box
+(`SelectionDirector.PickMany`, additive). A drag that re-entered a card toggled it back out; a
+range cannot.
+
+**The view** (`HudShell.Panels.cs`, `NewCard`): the press copies `_cards`' ids into a scratch list
+and calls `Press`; `PointerEnterEvent` on a card calls `Over` and, when it moved, writes the sweep's
+selection through `SelectionDirector.PickMany` (non-additive, since the model already carries
+Shift's base) with `SelectionChange.Boxed`; the press uses `Chosen`, or `Toggled` with Shift. The
+release is the card's own `PointerUpEvent`, or `HudShell.Update` seeing the left button up wherever
+the pointer is (the old sweep's rule, since a release off the strip never reaches a card).
+A `PointerCancelEvent` drops the sweep with no jump. The left press does **not** capture the
+pointer, or the other cards would never see it enter. Right-drag (button 2) is untouched code.
+
+**Not gated on the tool.** The owner said "in default mode", describing where he meets it; the
+card's click was never gated on the armed tool, and gating the drag alone would make a click and a
+drag behave differently with a tool in hand.
+
+### 20d. Do not undo by tidying
+
+- **The landing ring calls `LockOnRing.Evaluate`.** A curve of its own is a second clock.
+- **It starts off the frame, not the click**, for the lock-on's reason: a click draws an order the
+  simulation may have refused.
+- **The camera jump is on the release.** Moving it back to the press makes every drag swing the
+  camera to its first card.
+- **The sweep is a range, not the cards entered.** Entered cards leave gaps on a quick flick.
+
+### 20e. Open, for the playtest
+
+- Whether the pale ring reads against **snow, pale stone and a lit floor** at night; it is drawn
+  lit, like the bracket was.
+- Whether 1.6 m across is the right size, and whether the hold at 0.35 is too faint to find a
+  squad's destinations on grass.
+- The draft-red line ending on a pale ring: whether the two read as one mark.
+- **An attack on a building also rides the order cell** (§13i), so it now wears the pale ring at the
+  struck cell, as it wore the bracket. The lock-on ring round a building target is owed (§13k); until
+  then the pale ring there says "going here", not "hitting that".
+- Whether the jump on release (rather than press) is noticed.
+
+### 20f. Tests, and the controls seen to fail
+
+Fast tier: Sim **1,475** (unchanged), Hud **1,038** (from 1,016: `LandingRingTests` 12,
+`RosterSweepTests` 9, `OrderColoursTests` one). Long **41**, all green. No golden moved.
+
+| Test | Claim |
+|---|---|
+| `LandingRingTests.TheRingStartsOnTheFrameTheCellIsPublishedAndLandsWithAFlash` | nothing for a refused move; starts at 1.6; lands at 0.2 s on the flash; holds faint |
+| `…TheRingRunsOnTheLockOnsClock` | every frame of the snap, the flash and the fade equals `LockOnRing.Evaluate` |
+| `…ArrivingFadesTheRingAndThenItIsGone` | the cell unpublished: lets go where it was, fades, gone after `FadeSeconds` |
+| `…EachColonistOfASquadWearsARingOnHerOwnCell` | two colonists, two cells, two snapping rings |
+| `…SentElsewhereTheOldRingFadesAndTheNewOneSnaps` | re-ordered: the old fades, the new snaps, then only the new |
+| `…AnUnselectedColonistsOrderDrawsNothing`, `…DeselectingFadesTheRing` | only the selection's orders |
+| `…AnOrderAlreadyUnderWayIsAdoptedAtRestNotSnapped` | a load, a selection mid-walk and a new world object adopt at rest |
+| `…TheSameOrderAgainDoesNotSnapAgain`, `…SentBackToAFadingRingSnapsAgain` | quiet on a repeat; a new order on a fading ring snaps |
+| `…AnEquipOrderWearsTheRingAndAMarauderNever` | an undrafted colonist's Equip cell wears it; a hostile's published cell does not |
+| `…TheRingIsAPlaceWiderThanAPersonAndInsideItsCell` | 0.575 m < `Radius`, 2 × `Radius` < 2.5 m |
+| `OrderColoursTests.TheMoveRingIsPaleAndNeutralAndNoRed` | 80 from both reds, the salmon and every order hue; pale; neutral |
+| `RosterSweepTests.AClickWithoutADragSelectsOneAndIsAClick` | a press replaces the selection with her, and the release is a click |
+| `…DraggingAcrossCardsSelectsEveryCardPassedOver` | the owner's case: the range, pressed first, the held selection dropped, a sweep |
+| `…AFlickPastCardsCoversThemAll`, `…DraggingLeftwardsCoversTheRangeWithThePressedCardFirst` | the range is filled and runs either way |
+| `…DraggingBackLetsGoOfTheCardsNoLongerSpanned` | the range shrinks; home on the pressed card is still a sweep |
+| `…ShiftAddsTheSweepToTheSelectionHeld` | Shift keeps the held selection ahead and adds the range |
+| `…AShiftClickTogglesAndAShiftDragOnlyAdds` | Shift-click toggles in and out; a Shift-drag re-adds the pressed card |
+| `…ACardOffThePageOrAfterTheReleaseChangesNothing`, `…ThePageIsTheOneThePressSaw` | nothing idle, off the page, after the release, or from a page refilled under the drag |
+
+| Withheld | Failed |
+|---|---|
+| the snap (every ring adopted) | five `LandingRingTests`: the start, the clock, the squad, the re-order, the fading re-order |
+| the release (rings held for ever) | `Arriving…`, `Deselecting…`, `SentElsewhere…`, `…LockOnsClock` |
+| keyed on the colonist alone (the ring moved to the new cell) | `SentElsewhere…` |
+| a fade of its own at 0.3 s | `…LockOnsClock` |
+| the colonist check | `…AndAMarauderNever` |
+| `Move` a pale pink `#f4c8cc`; the attack red; a mid grey `#9098a0` | `TheMoveRingIsPaleAndNeutralAndNoRed`, each |
+| the range filled (only its two ends) | five `RosterSweepTests`, `AFlick…` among them |
+| Shift ignored | `ShiftAdds…`, `AShiftClickToggles…` |
+| every release a click | `DraggingAcross…`, `DraggingBack…`, `ShiftAdds…` |
+| `Dragged` not sticky | `DraggingBack…` |
+| every press composed as a click (Shift toggling the pressed card out) | seven `RosterSweepTests` |
+| a plain drag keeping the held selection | `DraggingAcross…` |
+| the page read live rather than copied | `ThePageIsTheOneThePressSaw` |
+
+### 20g. Never compiled here
+
+The fast tier does not build Presentation and Unity was not run. **Never compiled:**
+`OdysseyBootstrap.cs` (`DrawLandingRings`, the two-argument `DrawOrderLine`), `HudShell.cs` and
+`HudShell.Panels.cs` (`ApplyRosterSweep`, `FinishRosterSweep`, the card callbacks). Every Unity
+call in them is one the same files already make — `ChunkRenderer.DrawRing`, `GroundRelief.Drape`,
+`CellMetrics.FloorCentre`, `Time.unscaledTime`, `PointerDownEvent.shiftKey`, `PointerEnterEvent`,
+`PointerUpEvent.button`, `SelectionDirector.PickMany` — so what is unverified is the
+compilation, not an API shape. **Nothing tests that the pointer reaches the cards** (CLAUDE.md): in
+particular, that `PointerEnterEvent` reaches the other cards while the left button is held. The old
+Shift-sweep relied on the same, and was never reported broken.
