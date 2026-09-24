@@ -9,6 +9,7 @@ using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -796,6 +797,21 @@ namespace Odyssey.Tests.PlayMode
 
                 WorldSnapshot frame = boot.World.Views.Current;
                 int hostiles = Hostiles(frame);
+                // Blood is drawn from the same events (design 33 §10): a fight that bled nothing
+                // means the seam is not wired to the director, or every mark missed the ground.
+                // The drops fall in real seconds, about 0.7 each, and this whole brawl is well under
+                // one on a fast machine, so the ground is read once the air has had time to empty
+                // (2026-09-24: read at once, it found 54 drops up and no mark, none refused).
+                Odyssey.Presentation.World.BloodDirector? blood = boot.Blood;
+                for (float until = Time.realtimeSinceStartup + 3f;
+                     blood != null && blood.Marks.Count == 0 && Time.realtimeSinceStartup < until;)
+                    yield return null;
+                Debug.Log($"[FrameTime] fight blood: {blood?.Marks.Count ?? -1} marks, {blood?.DropsInFlight ?? -1} drops, " +
+                          $"{blood?.PoolsWaiting ?? -1} pools waiting, {blood?.LastDrawCalls ?? -1} draw calls; refused " +
+                          $"{blood?.RefusedOffBoard ?? -1} off the board, {blood?.RefusedBlocked ?? -1} blocked, " +
+                          $"{blood?.RefusedWater ?? -1} water, {blood?.RefusedNoGround ?? -1} no ground, the last at " +
+                          $"{blood?.LastRefused.ToString("F2") ?? "-"} on layer {blood?.LastRefusedLayer ?? -1}; " +
+                          $"a colonist stands on layer {frame.Pawns[0].Cell.Y} at {frame.Pawns[0].Cell}");
                 Debug.Log($"[FrameTime] fight: peace {peace:0.00} ms ({peaceDraws} draw calls), " +
                           $"brawl {fight:0.00} ms ({boot.Renderer?.DrawCalls ?? 0} draw calls), " +
                           $"{frame.Pawns.Length} pawns ({hostiles} hostile), {boot.Figures?.FigureCount ?? 0} figures, " +
@@ -803,6 +819,8 @@ namespace Odyssey.Tests.PlayMode
 
                 Assert.That(hostiles + frame.Corpses.Length, Is.GreaterThan(0), "no marauder was ever spawned");
                 Assert.That(events, Is.GreaterThan(0), "nothing fought in the timed window: this timed a peace");
+                Assert.That(blood, Is.Not.Null, "the bootstrap built no blood director");
+                Assert.That(blood!.Marks.Count, Is.GreaterThan(0), "a fight of ten against ten left no blood on the ground");
                 Assert.That(fight, Is.LessThan(CeilingMs), "a fight of ten against ten takes longer than a 30 Hz frame");
             }
             finally
@@ -817,6 +835,61 @@ namespace Odyssey.Tests.PlayMode
             int count = 0;
             foreach (PawnView pawn in frame.Pawns) if (pawn.IsHostile) count++;
             return count;
+        }
+
+        /// <summary>
+        /// Blood at its cap against none (design 33 §10d), one run: two hundred and fifty hits laid
+        /// round the start where the camera is, left to land, then the same frame timed again. The
+        /// claim is that marks cost draws in fade steps and a frame that walks two hundred of them,
+        /// so it asserts the draw ceiling and prints the difference; about time it asserts only
+        /// the class's 30 Hz ceiling.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBloodAtItsCap()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+                Odyssey.Presentation.World.BloodDirector? blood = boot.Blood;
+                Assert.That(blood, Is.Not.Null, "the bootstrap built no blood director");
+
+                float none = 0f;
+                yield return TimeFrames("blood/none", boot, WarmupFrames, x => none = x);
+                int noneCalls = boot.Renderer?.DrawCalls ?? 0;
+
+                CellRef start = boot.Colony!.Start;
+                for (int i = 0; i < 250; i++)
+                {
+                    int x = start.X - 3 + i % 7, z = start.Z - 3 + (i / 7) % 7;
+                    Vector3 feet = GroundRelief.Lift(CellMetrics.FloorCentre(x, z, start.Y));
+                    Vector3 blow = (i % 4) switch { 0 => Vector3.right, 1 => Vector3.forward, 2 => Vector3.left, _ => Vector3.back };
+                    if (i % 6 == 0) blood!.Pool(new PawnId(10_000 + i), feet, 1f, 1.8f);
+                    else blood!.Spurt(feet, feet + Vector3.up * 1.3f, blow, 6f + i % 15, sharp: i % 2 == 0);
+                }
+                // Bounded by real seconds, not frames: the drops fall for about 0.7 s and a pool waits 1.2 s,
+                // and the CI runner draws a frame in about a millisecond, so 600 frames was 0.6 s there.
+                for (float until = Time.realtimeSinceStartup + 5f;
+                     (blood!.DropsInFlight > 0 || blood.PoolsWaiting > 0) && Time.realtimeSinceStartup < until;)
+                    yield return null;
+
+                float full = 0f;
+                yield return TimeFrames("blood/full", boot, 30, x => full = x);
+                Debug.Log($"[FrameTime] blood: none {none:0.00} ms ({noneCalls} draw calls), " +
+                          $"{blood!.Marks.Count} marks {full:0.00} ms ({boot.Renderer?.DrawCalls ?? 0} draw calls, " +
+                          $"{blood.LastDrawCalls} of them blood), {blood.DropsInFlight} drops still up");
+
+                Assert.That(blood.Marks.Count, Is.GreaterThan(150), "most of the hits missed the ground round the start");
+                Assert.That(blood.LastDrawCalls, Is.LessThanOrEqualTo(3 * Odyssey.Hud.BloodLedger.FadeSteps + 1),
+                    "blood cost draws per mark");
+                Assert.That(full, Is.LessThan(CeilingMs), "two hundred marks take longer than a 30 Hz frame");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
         }
 
         /// <summary>The id of the newest combat moment in the frame, 0 before the first.</summary>
@@ -864,26 +937,46 @@ namespace Odyssey.Tests.PlayMode
             boot.World!.Tick();
         }
 
+        /// <summary>
+        /// Grow the colony to <paramref name="wanted"/> pawns, or as near as the board allows.
+        ///
+        /// <para><b>Straight into the registry, not through the spawn intent.</b> The intent is
+        /// the debug menu's, and it refuses past <see cref="PawnRegistry.PawnCeiling"/> (200). These
+        /// sweeps measure past it on purpose, because 384 is where the crowd scan's quadratic
+        /// was found. Worldgen and the scenario take this same path, and it is the one the
+        /// ceiling's own comment leaves unbounded.</para>
+        ///
+        /// <para><b>The attempts are counted apart from the placement index.</b> The index goes
+        /// back to zero when it walks off the board, so it could not also be the escape. When the
+        /// ceiling first refused this loop's intents, the index kept resetting before it reached
+        /// its limit, and the loop never yielded. That hung CI's PlayMode tier for thirty
+        /// minutes on PR #175.</para>
+        /// </summary>
         IEnumerator GrowColonyTo(OdysseyBootstrap boot, int wanted)
         {
-            GridSize size = boot.Colony!.Grid.Size;
+            ColonyWorld colony = boot.Colony!;
+            GridSize size = colony.Grid.Size;
+            PawnRegistry pawns = colony.Pawns.Pawns;
             int side = Mathf.CeilToInt(Mathf.Sqrt(wanted)) + 1;
             int step = Mathf.Max(1, (size.SizeX / 2) / side);
             int at = 0;
+            int attempts = 0;
 
-            while (boot.World!.Views.Current.Pawns.Length < wanted)
+            while (pawns.Count < wanted && attempts++ < wanted * 8)
             {
                 int x = size.SizeX / 4 + (at % side) * step;
                 int z = size.SizeZ / 4 + (at / side) * step;
                 at++;
-                if (at > wanted * 4) break;   // the board refused; measure what took
                 if (x >= size.SizeX - 1 || z >= size.SizeZ - 1) { at = 0; continue; }
 
-                boot.World!.Intents.Submit(new Intent(IntentKind.SpawnPawn,
-                    new CellRef(x, z, size.SizeY - 2), 0));
-                boot.World!.Tick();
+                int cell = colony.Grid.NearestWalkableInColumn(x, z, size.SizeY - 2);
+                if (cell < 0) continue;   // the board refused this column; measure what took
+                Pawn pawn = pawns.Spawn(cell);
+                pawn.RollPassions();
             }
 
+            // One tick publishes them, as the intent path's own tick did.
+            boot.World!.Tick();
             yield return null;
         }
 

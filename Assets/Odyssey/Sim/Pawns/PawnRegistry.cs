@@ -98,12 +98,48 @@ namespace Odyssey.Sim.Pawns
         /// <see cref="StartingSkillsSystem"/> rolls them for any pawn still at the constructor's
         /// zero, on the very next tick, which this pawn is.</para>
         /// </summary>
+        /// <summary>
+        /// The most pawns a world will hold, and a hard ceiling in the same sense
+        /// <c>PawnFigureDirector.FigureCeiling</c> is one: **moving it is a measurement, not an
+        /// edit**, and <c>PawnCeilingTests</c> fails on anything that raises it.
+        ///
+        /// <para><b>Why it exists</b> (owner, 2026-09-23). Spawning colonists from the debug menu
+        /// past a certain number produced colonists "in an orange suit", textures that "kept
+        /// switching", and a session that "got buggy". Nothing in the game stopped that: the spawn
+        /// intent refused an unreachable column and nothing else, so the menu could add people
+        /// until something gave way.</para>
+        ///
+        /// <para><b>The orange suit was not a pawn count at all</b>, and was found the day after
+        /// this was written. The number was the 64-figure cap: past it, colonists are drawn in the
+        /// baked far form, and that form wore the pack's own paint on the uniform, which is burnt
+        /// orange. Fixed in presentation (<c>docs/design/29-modular-colonists.md</c> §13a). This
+        /// ceiling is kept as the rail it always said it was.</para>
+        ///
+        /// <para><b>It is a rail, not a fix, and it is deliberately far above any real colony.</b>
+        /// The audit's scale target is fifty; the figure ceiling is sixty-four; and a barren board
+        /// was measured healthy at <b>384</b> colonists on 2026-09-23 — 3.90 ms a frame, no
+        /// stand-ins drawn, 23 materials, two faces. So this number is not where things were found
+        /// to break. It is four times the scale target, and its whole job is that a debug command
+        /// cannot run a session into a state nobody designed for.</para>
+        ///
+        /// <para><b>A refusal, never a clamp.</b> The same rule the rest of this class follows: a
+        /// caller asking for one more than the world holds has misunderstood something, and
+        /// silently declining to spawn while reporting success is how a debug menu comes to lie.
+        /// Only the <i>intent</i> path is bounded — <see cref="Spawn(int, int)"/> itself is what
+        /// worldgen and the scenario call, and a starting colony is never anywhere near this.</para>
+        /// </summary>
+        public const int PawnCeiling = 200;
+
         public IntentRejection HandleSpawnPawn(Intent intent)
         {
             // A is the kind (design 29 §7): 0 is the colonist this intent always made, so nothing
             // that sends it today changed; a kind this build does not have is refused, not clamped.
             int kind = intent.A;
             if (kind < 0 || kind >= KindCount) return IntentRejection.NotPermitted;
+
+            // The ceiling. Refused rather than clamped, and refused before anything is built, so a
+            // caller that has asked for one too many is told so rather than quietly ignored.
+            if (Count >= PawnCeiling) return IntentRejection.NotPermitted;
 
             CellRef cell = intent.Cell;
             if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;

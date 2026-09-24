@@ -80,6 +80,16 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public ColonistAppearanceBook? Appearances { get; set; }
 
+        /// <summary>
+        /// The colonist recolours, the <b>same object</b> the figures and the portraits paint
+        /// through, so the far form and the live figure share one material per look.
+        ///
+        /// <para>Used for one thing only: the issued uniform on a far body
+        /// (<see cref="ColonistAppearance.IssuedCloth"/>). Null draws the far form in the pack's
+        /// own paint, which is what a harness with no bootstrap gets.</para>
+        /// </summary>
+        public ColonistMaterials? Recolours { get; set; }
+
         /// <summary>The book, or one dealt from seed 0 so an editor harness still gets variety.</summary>
         ColonistAppearanceBook Cast =>
             Appearances ??= AppearanceBooks.For(0u, _model.Library.Catalogue);
@@ -1714,7 +1724,8 @@ namespace Odyssey.Presentation.Rendering
             for (int variant = 0; variant < _colonistCounts.Length; variant++)
                 if (_colonistCounts[variant] > 0)
                     SubmitInstances(ColonistModule(variant),
-                        _colonistPlacements[variant], _colonistCounts[variant], ref _actorMatrices);
+                        _colonistPlacements[variant], _colonistCounts[variant], ref _actorMatrices,
+                        FarMaterials(variant));
 
             for (int i = 0; i < _hairCounts.Length; i++)
                 if (_hairCounts[i] > 0)
@@ -2259,6 +2270,8 @@ namespace Odyssey.Presentation.Rendering
             _colonistModules = new int[variants];
             _colonistCounts = new int[variants];
             _colonistPlacements = new Matrix4x4[variants][];
+            _colonistFar = new Material?[]?[variants];
+            _colonistFarResolved = new bool[variants];
             for (int i = 0; i < variants; i++)
             {
                 // Unresolved. Resolving a colonist means instantiating a rigged character and
@@ -2331,6 +2344,71 @@ namespace Odyssey.Presentation.Rendering
                 _colonistModules[variant] =
                     _model.Library.Resolve(ModuleIds.Colonist(variant), ModuleShape.Pillar);
             return _model.Library[_colonistModules[variant]];
+        }
+
+        Material?[]?[] _colonistFar = System.Array.Empty<Material?[]?>();
+        bool[] _colonistFarResolved = System.Array.Empty<bool>();
+
+        /// <summary>
+        /// The materials a far body is drawn in, one per part, or null for the pack's own paint.
+        ///
+        /// <para>Non-null only for the issued uniform's bodies. The far form is one material per
+        /// <b>body</b> and never per colonist (<c>docs/design/29-modular-colonists.md</c> §13), so
+        /// it can wear a colour only when the colour belongs to the body, and the uniform's is
+        /// the only one that does. Only the cloth rectangles are painted: skin and hair keep the
+        /// pack's paint, as the rest of the far form does. Before this, the far form drew the
+        /// jumpsuit in the pack's own burnt orange, so a colonist past the figure cap changed
+        /// clothes on crossing it.</para>
+        ///
+        /// <para>Resolved once per body and only after the recolours exist. It costs no draw
+        /// calls, because the bucket is still the body, and one material per uniform body, because
+        /// <see cref="ColonistMaterials"/> keys on the source and the cells.</para>
+        /// </summary>
+        public Material?[]? FarMaterialsFor(int variant)
+        {
+            EnsureColonistModules();
+            return (uint)variant < (uint)_colonistFar.Length ? FarMaterials(variant) : null;
+        }
+
+        /// <summary>The same, for the actor pass, which has already sized the arrays.</summary>
+        Material?[]? FarMaterials(int variant)
+        {
+            if (_colonistFarResolved[variant]) return _colonistFar[variant];
+            if (Recolours == null) return null;
+            _colonistFarResolved[variant] = true;
+
+            if (!ColonistAppearance.IssuedCloth(Cast.Pools, variant, out Rgb24 cloth, out Rgb24 cloth2))
+                return null;
+
+            ModuleCatalogue? catalogue = _model.Library.Catalogue;
+            if (catalogue == null) return null;
+            System.Collections.Generic.List<ModuleEntry> rows = catalogue.FindFamily(ModuleIds.ColonistBase);
+            if ((uint)variant >= (uint)rows.Count) return null;
+            AppearanceCells cells = rows[variant].appearance;
+            if (!cells.Any || cells.cloth.Length == 0) return null;
+
+            // Cloth only. An empty rectangle is one no UV is inside, so the skin and hair slots
+            // are switched off and paint nothing, whatever colour the look carries for them.
+            var clothOnly = new AppearanceCells
+            {
+                cloth = cells.cloth,
+                cloth2 = cells.cloth2,
+                clothVerts = cells.clothVerts,
+                cloth2Verts = cells.cloth2Verts,
+                totalVerts = cells.totalVerts,
+                quality = cells.quality,
+            };
+            var look = new ColonistAppearance(variant, default, default, cloth, cloth2);
+
+            ModulePart[] parts = ColonistModule(variant).Parts;
+            var painted = new Material?[parts.Length];
+            bool any = false;
+            for (int p = 0; p < parts.Length; p++)
+            {
+                painted[p] = Recolours.For(parts[p].Material, clothOnly, look);
+                any |= painted[p] != null;
+            }
+            return _colonistFar[variant] = any ? painted : null;
         }
 
         void AppendColonist(int variant, in Matrix4x4 placement)
@@ -2407,7 +2485,7 @@ namespace Odyssey.Presentation.Rendering
         }
 
         void SubmitInstances(ResolvedModule module, Matrix4x4[] placements, int count,
-            ref Matrix4x4[] scratch)
+            ref Matrix4x4[] scratch, Material?[]? painted = null)
         {
             if (count == 0) return;
             if (scratch.Length < count) scratch = new Matrix4x4[count];
@@ -2420,8 +2498,10 @@ namespace Odyssey.Presentation.Rendering
                     scratch[i] = placements[i] * part.Local;
 
                 // Through the cache, not the pack material directly: the clone is what carries
-                // GPU instancing, and a pack material does not have it switched on.
-                Material material = _materials.Get(
+                // GPU instancing, and a pack material does not have it switched on. A painted
+                // material (the far uniform, FarMaterials) is instanced already.
+                Material? own = painted != null && p < painted.Length ? painted[p] : null;
+                Material material = own != null ? own : _materials.Get(
                     part.Material, Color.white, Color.black, ghost: false, alpha: 1f);
 
                 var rp = new RenderParams(material)
@@ -3380,6 +3460,36 @@ namespace Odyssey.Presentation.Rendering
             if (SubmitToGpu) Graphics.RenderMesh(rp, PrimitiveMeshes.UnitCube, 0, diamond);
             DrawCalls++;
             InstancesDrawn++;
+        }
+
+        /// <summary>
+        /// Instances of one mesh lying on the ground in one colour, lit and translucent, with no
+        /// glow: the blood marks and the drops in the air (design 33 §10d). One instanced call per
+        /// <see cref="MaxInstancesPerCall"/>, counted, so a caller that buckets by colour pays in
+        /// colours and never in marks (P10). The material is the bracket's translucent base with the
+        /// caller's colour and alpha, cached, so no new shader has to survive the player build.
+        /// </summary>
+        public void DrawGroundInstances(Mesh mesh, Color colour, Matrix4x4[] matrices, int count)
+        {
+            if (count <= 0) return;
+            Material material = _materials.Get(_model.Library.FallbackMaterial, colour, Color.black,
+                ghost: true, alpha: colour.a);
+            var rp = new RenderParams(material)
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = true,
+            };
+
+            int sent = 0;
+            while (sent < count)
+            {
+                int n = Mathf.Min(MaxInstancesPerCall, count - sent);
+                if (SubmitToGpu) Graphics.RenderMeshInstanced(rp, mesh, 0, matrices, n, sent);
+                DrawCalls++;
+                InstancesDrawn += n;
+                sent += n;
+            }
         }
 
         /// <summary>

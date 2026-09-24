@@ -11535,6 +11535,54 @@ walls rather than being overruled by them — the ladder's rule would have left 
 against every wall. Which way the air-conditioner's front looks was read off the mesh (its detail is
 at +Z, the pivot on the plain back face), not seen, and is the first thing to look at. Design 32 §14c.
 
+## 2026-09-23 — the orange suits: what was ruled out, and a rail that is not a fix
+
+Owner, playing after the frame work: past a certain number of colonists, some "spawned in an orange
+suit", textures "kept switching" and the session "got buggy". They asked whether colonists should be
+hard capped, including on the debug menu.
+
+**The orange is identified and it is not a texture.** `OdysseyBootstrap` paints `_actorMaterial`
+`Color(0.98, 0.36, 0.20)`, and `ChunkRenderer`'s fallback branch draws
+`new Vector3(1.4f, 2.6f, 1.4f)` in it — a person-sized cube. A colonist is drawn that way when
+`!colonist.UsesArt || colonist.IsEmpty`, so the report names one branch exactly: **those colonists'
+body modules did not resolve.**
+
+**Two hypotheses, both mine, both refuted by measurement.** This is the record of what it is *not*,
+which is worth as much as a diagnosis would have been.
+
+1. *Faces failing to bake as the colony grows.* `ColonistModule` resolves lazily — instantiating a
+   rigged character and baking its skinned meshes — so I supposed a growing colony touched more
+   faces until something gave way. Instrumented (`ColonistStandIns`, `ColonistLooksUsed`) and swept
+   8 to 384 colonists: **zero stand-ins at every size**, and the lottery resolves **two** faces, not
+   more. Two is the MC uniform working as designed — everyone wears the issued jumpsuit, so there is
+   a male body and a female body, and identity is carried by face, hair and beard. The mechanism I
+   proposed does not exist.
+2. *The recoloured material cache leaking per colonist.* `ColonistMaterials` keys on
+   `(source, cells, skin, hair, cloth, cloth2)` and those colours are per colonist, so it looked
+   unbounded. Measured: **flat at 22–23 materials from 8 colonists to 384.** No leak.
+
+**A third, checked and weakened.** `Odyssey/Character` missing from a build would draw colonists "in
+the pack's own colours", which is the right shape — but it is in `ShaderInclusion`'s always-included
+list. A player was built and smoke-run: `162/179 rows have art`, no colonist module in the fallback
+list, no missing-shader warning. I briefly read `colonist cast seed 1 over 73 faces, the fallback
+only` as a fault; it is the healthy state — the cast seed *is* only a fallback when every colonist
+has their own roll seed.
+
+**So the editor is clean on every axis I can measure at 384 colonists** — 3.90 ms, no stand-ins, 23
+materials, two faces — and I could not reproduce the report. What remains needs two facts only the
+owner has: whether this was the editor or a built player, and roughly what number it began at. A
+number near 61 would have meant faces; it is not faces. A sharp round number points somewhere I have
+not looked.
+
+**The ceiling is built anyway, and is deliberately not presented as the fix.** `PawnRegistry.PawnCeiling`
+is 200, enforced on the spawn *intent* as a refusal rather than a clamp, in the same shape as
+`PawnFigureDirector.FigureCeiling`: a test pins the number and moving it is a measurement. It is four
+times the audit's scale target and three times the figure ceiling, and **384 was measured healthy**,
+so it is not where anything was found to break. Its whole job is that a debug command cannot run a
+session into a state nobody designed for. `PawnCeilingTests` carries the negative control that
+matters — under the ceiling nothing is refused — because a rail that started governing ordinary play
+would be worse than the fault it guards.
+
 ## 2026-09-24 — Power merged with main
 
 Temperature (#164) merged, and main had taken combat's draft, wildlife and the stockpile outline
@@ -11644,6 +11692,38 @@ against both parents, per combat's lesson of the same morning, and the campfire 
 main added to every row. `Seated` stayed a bool beside `Asleep` because `PawnFlags` is full and is
 the fight's. Design 31 §19.
 
+## 2026-09-24 — The orange suits were the uniform past the figure cap
+
+The 2026-09-23 entry above ruled out three causes and left the report unreproduced. The cause was
+none of the three. **"Past a certain number" is the 64-figure cap**, and past it a colonist is drawn
+in the baked far form, which wears the pack's own paint. The issued uniform is a recolour the live
+figure applies and the far form never did. PolygonGeneric's jumpsuit is painted burnt orange:
+`#B06F24`, sampled off the atlas at the uniform row's own cloth rectangle, with the unflipped sample
+landing on grey as the control. So every colonist beyond the nearest 64 was in an orange suit, and
+panning the camera moved people in and out of the nearest 64. That is the "switching".
+
+The investigation before this one asked whether the orange *stand-in* was drawn, correctly found it
+was not, and stopped. The lesson: **a report's colour matching a debug colour is a hypothesis, not an
+identification**, and "past a certain number" in this project should send you to the caps first
+(`FigureCeiling`, `MaxFigures`), because behaviour changes form there.
+
+The fix is `ColonistAppearance.IssuedCloth`, which says whether a *body* has one colour for everybody.
+That is the uniform, and only while it is issued. `ChunkRenderer` draws those two far bodies through
+the shared `ColonistMaterials` with the cloth rectangles alone. It is one material per body and adds no
+draw calls. Skin and hair still keep the pack's paint across the cap; that is recorded as a decision
+in design 29-modular-colonists §13a, not a fix. The spawn ceiling of 200 on this branch stays, as the
+rail it always said it was.
+
+**The ceiling also hung CI**, which is why PR #175's Unity tier was red: *timed out after 1800s with
+no results*, where `main` takes about six minutes. `FrameTimeTests.GrowColonyTo` grew its sweeps to
+256 and 384 through the spawn intent, and its escape was `at > wanted * 4`. But `at` goes back to
+zero whenever the placement walks off the board, and for 384 that happens at about 650, below the
+escape at 1,536. Before the ceiling every spawn took, so the loop reached its count first. After it,
+every intent past 200 was refused, the index cycled for ever, and the coroutine never yielded. The
+harness now counts attempts apart from the index and spawns straight into the registry, the path
+worldgen and the scenario use and that the ceiling deliberately leaves open, so the 256 and 384 arms
+still measure what they say.
+
 ## 2026-09-24 — The Meadow overhaul: explored, interviewed, researched (design 38)
 
 The owner asked to overhaul the graphics with Synty's Meadow Forest pack — grass, flowers and trees
@@ -11742,6 +11822,34 @@ The first attempt died on a full disk — D: had 0.1 GB left across sixty worktr
 before Unity compiled a line; the unit moved into M2's warm worktree once there was room. The
 shader compiled clean on its first real run and every foliage test passed; the player build keeps
 it, and its log carries no fallback warning.
+
+## 2026-09-24 — Blood
+
+The unit design 33 §7d cut the seam for, built to the owner's rules there (§10). Two tests on PR
+#180 had to go green first, and neither was combat's fault: both counted frames across a tick the
+bootstrap paces by real time, and the CI runner draws a frame in a millisecond (`docs/lessons.md`).
+
+**The seam changed shape**, because the first thing to implement it needed two facts it did not
+carry: the drops need ground to land on, so a spurt now takes the struck pawn's feet beside the
+wound; and a pool has to go under a body that has not fallen yet when the event arrives, so it
+takes who it is under. **Which way a body falls is a clip's decision, not the simulation's**, so no
+place computed at the event could be right. The pool waits 1.2 s and then asks: the corpse's own
+drawn box once it is at rest, and halfway from the figure's feet to its head while it is still
+falling or merely downed — a midpoint that is on the body whichever way it went.
+
+**One mark per hit, not per drop.** A sharp hit throws up to sixteen drops; a mark each would have
+filled the owner's cap of two hundred in a dozen blows. The splatter's satellite drops are built
+into its shape instead, ahead along the blow.
+
+**A floor taken away takes its blood with it**, rather than letting the stain fall: every mark
+asks, each frame, whether it still has ground, which is two hundred cheap reads. And nothing is laid
+over a drop, into water (in the cell or under it, the knockback's rule) or against a wall.
+
+**Cost.** Marks are bucketed by shape and one of six fade steps and go out through the renderer's
+cached translucent material, so no new shader has to survive the player build. The ceiling is 19
+calls whatever the fight, and a colony with no blood submits nothing. Negative controls seen to
+fail: the cap dropping the newest, the fade brightening before its hold ends, the fans wound face
+down, the per-frame ground check off, the water rule off.
 
 ## 2026-09-24 — Meadow M6: quality presets, and preferences that never reached a session
 

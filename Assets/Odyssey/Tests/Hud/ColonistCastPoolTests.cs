@@ -286,6 +286,48 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
+        public void TheBodyAColonistIsIssuedSaysTheColourTheyWear()
+        {
+            // The far form asks the body, not the person, which colour to draw. It is one
+            // material per body. For that to be the colonist the figure draws, every colonist
+            // dealt a uniform body must be wearing exactly what the body says is issued. When the
+            // far form asked nobody, it drew the pack's own orange (2026-09-24).
+            ColonistCastPools pools = Issued();
+            foreach (char gender in new[] { 'm', 'f', 'n' })
+                for (int i = 1; i <= 200; i++)
+                {
+                    ColonistAppearance a = ColonistAppearance.Of(13u, i, pools, gender, 30);
+                    Assert.That(ColonistAppearance.IssuedCloth(pools, a.Look, out Rgb24 cloth, out Rgb24 cloth2),
+                        Is.True, $"body {a.Look} was issued to pawn {i} but does not say so");
+                    Assert.That(cloth, Is.EqualTo(a.Cloth));
+                    Assert.That(cloth2, Is.EqualTo(a.Cloth2));
+                }
+        }
+
+        [Test]
+        public void NoBodyButTheUniformClaimsAColour()
+        {
+            // Every other colour is rolled per colonist, so a body that claimed one would put the
+            // whole far crowd in it. Negative control: without a uniform, the uniform's own
+            // index claims nothing either.
+            ColonistCastPools pools = Issued();
+            foreach (int body in new[] { 3, 7, 11, 19, 4, 8, 12, 0 })
+                Assert.That(ColonistAppearance.IssuedCloth(pools, body, out _, out _), Is.False, $"body {body}");
+            Assert.That(ColonistAppearance.IssuedCloth(pools, ColonistCastPools.NoUniform, out _, out _), Is.False);
+
+            ColonistCastPools plain = ColonistCastPools.AllBodies(48);
+            for (int body = 0; body < 48; body++)
+                Assert.That(ColonistAppearance.IssuedCloth(plain, body, out _, out _), Is.False, $"body {body}");
+
+            var femaleOnly = new ColonistCastPools(new[] { 3 }, new[] { 4 },
+                System.Array.Empty<int>(), System.Array.Empty<int>(), System.Array.Empty<int>(),
+                uniformFemale: 41);
+            Assert.That(ColonistAppearance.IssuedCloth(femaleOnly, ColonistCastPools.NoUniform, out _, out _),
+                Is.False, "an absent male uniform is not a body everyone wears");
+            Assert.That(ColonistAppearance.IssuedCloth(femaleOnly, 41, out _, out _), Is.True);
+        }
+
+        [Test]
         public void TheUniformIsNotPureWhiteButIsCloseToIt()
         {
             // Pure white has nowhere to go under the grading and reads as a hole in the frame.

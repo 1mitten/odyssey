@@ -23,6 +23,24 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does blood read as blood, and is it too much?** (`claude/combat-blood`, design 33 §10).
+  *Arm every colonist*, *Spawn 3 marauders*, and watch at the play camera's distance. Every landed
+  hit should throw a few red drops from the wound along the blow and leave one mark where they
+  land: a machete or arc blade a long splatter with drops thrown ahead, a bat, crowbar or fist a
+  smaller round spot. Somebody going down should get a pool under the middle of the body a moment
+  after they land, spreading over a few seconds; a death's pool is larger. Pause: the drops hang.
+  Run the day on at speed three: the marks thin and are gone by the next day. Slice down a layer:
+  they hide with it. A wrong answer is drops too small to see or so many they read as a particle
+  effect, a mark that looks like a hole or a shadow rather than blood, a pool at the feet rather
+  than under the body, marks sunk into a slope or floating over one, or a battlefield that is red
+  from edge to edge after one fight (the cap is 200, oldest first).
+- **No more orange suits past 64 colonists?** (`claude/pawn-ceiling`, PR #175, design
+  `29-modular-colonists.md` §13a.) Spawn about 100 colonists from the debug menu, pull the camera out
+  and pan across the colony. Everyone should be in the white uniform, near and far. A wrong answer
+  looks like some colonists in burnt orange, or clothes flicking as you pan. Two things are expected
+  and are not faults: a far colonist's **skin tone and hair colour** can still change as they cross
+  the cap (recorded, not fixed), and the debug menu **stops spawning at 200**.
+
 - **Bushes stay, and grass at distance is cheaper** (`claude/meadow-grass-perf`, design 38 §21).
   Walk colonists through and past bushes: **the bush stays solid** — if it fades or vanishes, the
   dressing is still in the sight fade. Then Settings → Graphics → Grass → **Full**, overlay on
