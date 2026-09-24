@@ -12166,3 +12166,31 @@ figures are drawn 2.1 m to the head, so the arms are at 1.5 m and a carried head
 batch frames read the body mid-fall: a frame is a couple of milliseconds, so the test waits in real
 seconds. The Long soak caught the rule change on its own — a colonist rescued in a marauder soak
 healed past 15 % while down, which its invariant still forbade.
+
+## 2026-09-24 — CI chooses its tiers by what a PR touches (process §5)
+
+The owner asked for tests to run only for the area a change touched, because every PR retested
+everything. Measured before designing anything, from the runner's own results: EditMode was 91 s and
+87.5 of them were the Sim tests the fast tier had run on Linux minutes before; PlayMode was 260 s and
+141 of them `FrameTimeTests`, most of it arms that assert only that they measured something; and
+every merge re-ran the whole Unity tier on `main` against a tree its PR had already tested, since
+branch protection is strict. PRs were taking 20–40 minutes, mostly queued behind the one runner.
+Over the week's 80 merged PRs, 43 touched the simulation, 31 only the Unity side and 5 only words.
+
+What went in: `tools/ci/tiers.py` maps changed paths to assemblies and picks tiers; a path it does
+not know runs everything. The Sim tests skip both tiers when no Sim path changed; the Long tier runs
+beside the unit tests rather than after them; eighteen timing-only arms carry `Category("Measurement")`
+and run nightly or on `ci:perf`; a push to `main` no longer touches the runner, and a nightly on
+`main` runs everything and skips itself when `main` has not moved. Replayed over the same 80 PRs the
+selector runs everything on 48, the Unity side only on 26 and no test tier on 6.
+
+**Rejected: choosing tests within a tier by feature.** It was the literal ask, and it would save
+seconds out of a fast tier that takes twenty while removing exactly the tests that fail far from
+their edit — the goldens moving on a new job def, `RegistryTests` catching the campfire's missing
+shape. Assembly edges are proven by the compiler; feature edges are a guess.
+
+**What stays open.** `HudGeometryTests.TheBuildHeaderIsOneRowInEveryLayout` is 35 s of the gate,
+nearly all of it `Settle`'s 0.4 s of wall clock repeated 63 times; the wait exists because the HUD's
+cadence buckets run on wall-clock time, so shortening it needs a Unity run to prove, not a guess.
+And "a skipped job passes a required check" is what the whole scheme rests on; *Fast tier* is an
+aggregator that fails when the selector does, so a broken selector cannot skip its way to a merge.

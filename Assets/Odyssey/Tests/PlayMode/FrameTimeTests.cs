@@ -30,6 +30,14 @@ namespace Odyssey.Tests.PlayMode
     /// frame, so <c>Time.unscaledDeltaTime</c> here is the figure the player would see.
     ///
     /// This is the first test in the PlayMode gate, which had passed vacuously until now.
+    ///
+    /// <para><b>An arm whose only verdict is a timing carries <c>Category("Measurement")</c></b>, and
+    /// a pull request does not run it: CI runs those nightly on main and on the label
+    /// <c>ci:perf</c> (<c>docs/process.md</c> §5). "Only a timing" means every assert is a check that
+    /// the arm measured something (a world was built, the control applied, the camera drew at 4K)
+    /// or the 30 Hz ceiling. An arm that also asserts a structural claim — draws in colours, the
+    /// picture unchanged, the budget held — stays untagged, because that claim is a test. The two
+    /// canaries stay untagged too: they are the gate's one check that the game draws a frame at all.</para>
     /// </summary>
     public class FrameTimeTests
     {
@@ -66,7 +74,7 @@ namespace Odyssey.Tests.PlayMode
         /// the crop meshes, and its log line is the number <c>22-growing.md</c> records
         /// against the frame budget.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator ATwoThousandCellFieldRendersInsideAFrame() =>
             Measure(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true, "field", SeedField);
 
@@ -91,7 +99,7 @@ namespace Odyssey.Tests.PlayMode
         /// same meadow before and after the orders go down cancels all of that: the difference is
         /// the pass, whatever the machine is doing.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheMarkPassCostsWhatItSubmits()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -417,7 +425,7 @@ namespace Odyssey.Tests.PlayMode
         /// a different run is not a control. Alternating catches a drift that happens to fall
         /// between the two halves.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheAttachmentsCostWhatTheyDraw()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -483,7 +491,7 @@ namespace Odyssey.Tests.PlayMode
         /// linear scan on its own — which is the open question the plan asked to answer on the
         /// way. At 192 and 384 the quadratic term is what is being measured.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheCrowdScanCostsWhatItVisits()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -545,7 +553,7 @@ namespace Odyssey.Tests.PlayMode
         /// shape <c>TheAttachmentsCostWhatTheyDraw</c> established, because this machine drifts by
         /// more between runs than most passes cost.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheAspectLookupCostsWhatItScans()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -615,7 +623,7 @@ namespace Odyssey.Tests.PlayMode
         /// does not build one: the sweep is unconditional, so a colony that has never seen a fire
         /// was paying for looking for one.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheCampfireSweepCostsWhatItVisits()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
@@ -669,7 +677,7 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheFrameAgainstColonySize()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -1010,7 +1018,7 @@ namespace Odyssey.Tests.PlayMode
         /// machine; what it asserts is that each board really was built and really was designated,
         /// because a world that failed to generate reports a beautifully fast frame.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheBoardSizeAgainstTheFrame()
         {
             (string Label, int X, int Z, int Y)[] boards =
@@ -1642,7 +1650,7 @@ namespace Odyssey.Tests.PlayMode
         /// the shipped sizes in a <c>finally</c> because they are process-wide statics and a test
         /// that leaked one would silently retune every arm that ran afterwards.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheSurroundSectorSweep()
         {
             (string Label, float Near, float Far, int Variants)[] sizes =
@@ -1730,7 +1738,7 @@ namespace Odyssey.Tests.PlayMode
         /// tufts and a surround to take away, because a board that generated neither reports a
         /// beautifully cheap frame and a difference of zero.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheDecorationAgainstTheFrame()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
@@ -1834,7 +1842,7 @@ namespace Odyssey.Tests.PlayMode
         /// moved the instance count, the queue arm really moved a material, the 4K arm really drew
         /// at 4K, and no reading was taken while the board was still re-meshing.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheGrassAgainstTheFrame()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -1940,7 +1948,7 @@ namespace Odyssey.Tests.PlayMode
         /// <c>MaterialCache.OwnFoliageShader</c> with the clones dropped between arms, and the arm
         /// asserts the drop reached something, so it cannot compare a shader with itself (P18).</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheFoliageShaderAgainstThePacks()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -2017,7 +2025,7 @@ namespace Odyssey.Tests.PlayMode
         /// <para>Ignored where no drawn module has levels, which is a clone without the packs: the
         /// catalogue resolves to primitives there, and a primitive has one level.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheLevelsOfDetailAgainstTheFrame()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -2098,7 +2106,7 @@ namespace Odyssey.Tests.PlayMode
         /// count rose with the rung, the camera drew at 4K, and nothing was timed mid-re-mesh —
         /// and ignores itself where no dressing art resolved, which is a clone without the packs.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheDressingAgainstTheFrame()
         {
             var lines = new List<string>();
@@ -2189,7 +2197,7 @@ namespace Odyssey.Tests.PlayMode
         ///
         /// <para>Ignored where the look did not resolve — a clone without the packs, the runner.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheMeadowGroundAgainstTheFrame()
         {
             if (MeadowLook.Loaded == null || !MeadowLook.Loaded.HasGround)
@@ -2528,7 +2536,7 @@ namespace Odyssey.Tests.PlayMode
         /// 3840 x 2160 target. Only differences inside the run are quoted. And the worst regather: a
         /// whole-board re-mesh dirties every layer, which is the most the buffers are ever rebuilt at once.
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheIndirectSceneryAgainstTheFrame()
         {
             var lines = new List<string>();
@@ -3505,7 +3513,7 @@ namespace Odyssey.Tests.PlayMode
         /// camera's farthest pull over the rim, one run. And the see-through for every colonist with
         /// 50 colonists about the start, its lines and its frame against see-through off.
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheWoodedSurroundAgainstTheFrame()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -3713,7 +3721,7 @@ namespace Odyssey.Tests.PlayMode
         /// <para>Asserts only that the controls applied: the skin drew triangles when on and none
         /// when off, the instance count fell, the camera drew at 4K, nothing was timed mid-re-mesh.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheSkinAgainstTheBoxes()
         {
             bool skinWas = GroundSkin.Enabled;
