@@ -2781,13 +2781,15 @@ thought is on (a night on the ground −40, a fall −60). A day is `Calendar.Ti
 
 **Decisions, and why** (each ours, not the owner's, unless it says so):
 
-- **A blow that lands is an attack; a miss or a dodge is not remembered.** The hooks report only
+- *(Superseded by §14f: a miss, a dodge and a blow on air are remembered too.)* **A blow that
+  lands is an attack; a miss or a dodge is not remembered.** The hooks report only
   hit points taken (`DamageApplied`), and a memory of an attack that never touched her would need a
   fourth hook for one thought. The smallest reading of "being attacked".
 - **Colonist on colonist only.** A marauder's blow or an animal's bite is not friendly fire and
   gives nothing; a colonist hurting an animal or a marauder gives nothing. A broken, drafted or
   downed colonist is still a colonist on both sides.
-- **The same attack again neither stacks nor renews** (stack limit 1). That is how every thought in
+- *(Superseded by §14e: it renews now, so the day runs from the latest blow.)* **The same attack
+  again neither stacks nor renews** (stack limit 1). That is how every thought in
   the game behaves: `Pawn.AddMemory` drops a copy past the limit rather than refreshing one. So the
   day runs from the **first** blow she remembers; a blow after the memory has gone makes a new one.
   A second attacker is the same memory, because a memory names no other pawn — that is what
@@ -2839,13 +2841,14 @@ test reaches them.
 | `TheListenerIsRegisteredOnceAfterTheWeaponDrop` | the order `CombatListeners` promises |
 | `ACtrlAttackOnAnUndraftedColonistIsFoughtBackAndRemembered` | the order, the answering blow, the memory |
 
-### 12d. Open for the owner
+### 12d. Open for the owner — answered 2026-09-24 (§14)
 
-- Should a second attack within the day **renew** the memory, so the day runs from the last blow?
-- Should the colonist who **started** a fight remember the blows she takes back?
-- Is **three** the right cap on mourning, and should a death weigh more for somebody close — which
-  waits for opinions?
-- Should a swing that **missed** a colonist be remembered as an attack?
+- ~~Should a second attack within the day **renew** the memory, so the day runs from the last
+  blow?~~ Yes, on our recommendation (§14e).
+- ~~Should the colonist who **started** a fight remember the blows she takes back?~~ Yes, as built.
+- ~~Is **three** the right cap on mourning?~~ Keep. Whether a death should weigh more for somebody
+  close still waits for opinions.
+- ~~Should a swing that **missed** a colonist be remembered as an attack?~~ Yes (§14f).
 
 ## 13. Buildings as targets (C6, built 2026-09-24, `claude/combat-buildings`)
 
@@ -2915,7 +2918,8 @@ it. Otherwise `NotPermitted`.
   says "a building" everywhere.
 - **The same building again is `AlreadyInThatState`**, as the same pawn is (§6A.8).
 - A building order is only ever an order: nothing unordered — the hold, the hunt, a revenge, a
-  self-defence — chooses a building.
+  self-defence — chooses a building. *(Superseded in part by §14b: a marauder with no colonist
+  to reach now chooses a colony building. The hold, a revenge and a self-defence still never do.)*
 
 ### 13e. The driver's building mode
 
@@ -2958,8 +2962,9 @@ held on the pawn to the impact (§9g). Not through `IMeleeRules.Resolve`: that d
 between two pawns and reads the defender at every step, and a new interface member would break every
 implementation of the seam.
 
-**Experience per swing, as for any swing** (§6A.1). The design's rule has no exception for what is
-struck. It does mean a drafted colonist can train Melee on her own wall; that is on the owner's list.
+*(Superseded by §14c: a blow at a building trains nothing.)* **Experience per swing, as for any
+swing** (§6A.1). The design's rule has no exception for what is struck. It does mean a drafted
+colonist can train Melee on her own wall; that is on the owner's list.
 
 ### 13g. The impact, and demolition
 
@@ -3016,17 +3021,14 @@ presenter from the render mirror** (`WorldRenderModel.EdificeDef`), as it suppli
 pointer and Ctrl; **which edifices are targets is the snapshot's**, so the rule has one owner. A
 selection with nobody drafted sends nothing, and the move then sends nothing either.
 
-### 13j. Open for the owner
+### 13j. Open for the owner — answered 2026-09-24 (§14)
 
-- **Do marauders attack buildings?** Design 33 does not say so, so they do not: a marauder hunts
-  colonists (§6A.6). A raider that breaks a door down to reach you is the natural next step.
-- **The ruined city's walls are targets** (§13b). Say if the city should stay Reclaim's alone.
-- **A ladder is a target**, having hit points and standing in its cell; a door and a bed are too.
-  So a right-click on a door, a bed or a ladder is now an attack, where it was a move on to it.
-- **Melee trains on a building** (§13f), which makes a wall a practice dummy.
-- **Every weapon strikes a wall alike.** Blunt against stone, sharp against wood, or fists doing
-  nothing to a wall, is a material table nobody has asked for yet.
-- **The numbers**: campfire 60, generator 300, heater 100, and the seven from §5b, all INVENTED.
+- ~~**Do marauders attack buildings?**~~ Yes: *"kill colonists, destroy base"* (§14b).
+- ~~**The ruined city's walls are targets** (§13b).~~ *"Forget for now."*
+- ~~**A ladder is a target**, and so are a door and a bed.~~ Yes, as built.
+- ~~**Melee trains on a building** (§13f).~~ No (§14c).
+- ~~**Every weapon strikes a wall alike.**~~ No: blunt against stone, sharp against wood (§14d).
+- ~~**The numbers**~~: placeholders, to be tuned after play.
 
 ### 13k. Owed to drawing
 
@@ -3093,3 +3095,177 @@ Each rule was withheld and its test run and seen to fail, then restored:
 **Presentation, never compiled here:** `SelectionPresenter.Order` reads the edifice in the clicked
 cell off `WorldRenderModel.EdificeDef` and passes it on; `CombatFeedback.Bleed` asks
 `BloodModel.For(combatEvent)`.
+
+## 14. The owner's answers to Phase 4 (2026-09-24)
+
+The owner answered §12d and §13j on 2026-09-24. Built on `claude/combat-owner-round`, from
+`claude/combat-phase4` at `99ead9a2`, on the fast and Long tiers only, with no Unity. **No golden
+moved.** Nothing new is hashed. The one behaviour a colony at peace could reach is a thought's renewal,
+and that is off for every thought but the friendly-fire one, which no golden window gives (§14e).
+
+### 14a. The answers
+
+| Question | The owner's answer | Built |
+|---|---|---|
+| C6 (a) Do marauders attack buildings? | **Yes**: *"that is the goal: kill colonists, destroy base"* | §14b |
+| C6 (b) Are the ruined city's walls targets? | *"Forget for now"* | nothing. They stay targets for an order (§13b), and a marauder passes them over (§14b) |
+| C6 (c) Doors, beds and ladders as targets? | **Yes, as built** | nothing |
+| C6 (d) Does Melee train on a building? | **No** | §14c |
+| C6 (e) Blunt against stone, sharp against wood? | **Yes** | §14d |
+| C6 (f) The hit-point numbers | placeholders, tuned after play | nothing |
+| C5 (a) Does a second attack in the day renew the memory? | *"Whatever you recommend"*. We recommended **renewing it**, so the day runs from the latest blow | §14e |
+| C5 (b) Does the one who started a fight remember the blows she takes back? | **Yes**, as built | nothing new. The end-to-end test now asserts it (§14h) |
+| C5 (c) Three stacked deaths? | **Keep** | nothing |
+| C5 (d) Does a missed swing count as being attacked? | **Yes** | §14f |
+
+### 14b. A marauder breaks in
+
+`HostileThinkNode` now chooses in this order:
+
+1. the colonist who struck it, while it remembers her (§6A.6);
+2. the nearest standing colonist it can reach;
+3. **only when there is neither: the nearest colony building it can reach that is a target**;
+4. otherwise it idles, as before.
+
+So walls and doors never draw a marauder away from a colonist it can get to. Walling the colony
+in, or losing every colonist to a fall, turns it on the base.
+
+- **A colony building** is one a colonist raised (`PlacedEdifice.Built`) and that is a target by
+  §13b's one rule (`BuildingTargets.TryStanding`): a wall, a door, a ladder, a bed, a shelf, the
+  campfire, a generator or a heater.
+  - The ruined city's walls and doors are passed over. *"Destroy base"* names the colony's own,
+    and the owner's (b) leaves the city for now. A player's order may still strike a city wall,
+    as before (§13b).
+- **It can reach a building** if it already stands in reach of it (§13e, the deconstructor's
+  stance), or if one of the cells beside it can be entered and reached in the marauder's own
+  mode.
+  - This is cheaper than `ChooseSide`: there is no pass over the pawns to see which sides are held.
+  - A held side is the driver's to sort out. It waits and looks again, as a player's attacker does.
+- **Nearest** is `PawnContext.Distance` from the marauder to the building's own cell (a two-cell
+  thing's head). It is the travel estimate every work giver orders its candidates by.
+- **A tie goes to the lower record handle**, which is the older building. The edifice list is
+  saved in handle order, so the choice is the same after a load.
+- **The job is C6's building mode (§13e), unforced.** It carries the record handle in
+  `Job.DestCell`, with `CombatTarget` at 0 and `PlayerForced` false. It chooses a side, strikes
+  with a blow that always lands (§13f, with §14d's multiplier), goes through `StrikeBuilding`, and
+  demolishes at nought with no refund. None of that was written twice.
+- **It looks again every `rechooseTicks` (300)**, between swings, whether it is in reach or not.
+  The building attack ends in success, the think runs again, and a colonist who can now be reached
+  comes first.
+  - This differs from a hunt on a pawn, which re-chooses only while it is chasing. A marauder
+    beating on a wall never chases, so without this it would not look up until the wall fell.
+  - A swing in the air always lands first. The swing clock lives on the pawn, so a re-think costs
+    no blow.
+  - It also looks again **at once** when the building goes (success, then a think) or when a
+    colonist strikes it (`CombatSystem.React` interrupts a marauder that is not fighting a pawn
+    beside it, and a building is not a pawn).
+  - Three hundred ticks is the cadence at which the hunt already notices a nearer colonist. It is
+    the number to tune if play says a marauder is slow to notice a door left open.
+- **A player's order on a building is unchanged.** It is forced, so it is never re-chosen and runs
+  until the building has gone (§13e).
+- **No new state.** `DestCell`, `JobStartTick` and `WorkTicks` are all saved already.
+- **Cost** (`docs/process.md` §3): nothing per tick, and nothing at all while there is no marauder.
+  - The building scan runs only on a marauder's think when no colonist can be reached. While it is
+    at a building, that is at most once per `rechooseTicks`, plus once each time a building attack
+    ends.
+  - The scan scales with the **edifice records**: every edifice ever placed, trees included, with
+    removed ones keeping their slots.
+    - Anything not colony-built costs one branch.
+    - A colony building costs a content lookup of at most twelve rows.
+    - A candidate nearer than the best so far costs a reachability test on at most ten cells, two
+      array reads each.
+
+**Found on the way, and not changed: a marauder opens the colony's doors as a colonist does.** A
+marauder walks as `TraverseMode.Colonist`, and a door can be entered in every mode but an animal's
+(`NavGrid.CanEnter`). So a wall keeps a marauder out and a door does not. The owner's example, *"a
+door broken open"*, assumes a door holds.
+
+Making a door a wall to a hostile is a navigation change and the owner's call (§14g). The mode for
+it half exists: `TraverseMode.IgnoreDoors` is described as "raiders and bashers" and prices a
+closed door as a cost, not an obstacle.
+
+### 14c. No Melee from a building
+
+`CombatSystem.StrikeBuilding` no longer grants experience. A swing at a pawn still trains Melee,
+landed or not (§6A.1). A wall is no longer a practice dummy, and §13f's paragraph on experience is
+superseded.
+
+### 14d. The blow's kind against the material
+
+- **`StuffDef` gains `sharpDamagePerMille` and `bluntDamagePerMille`**, both 1,000 by default,
+  beside `hitPointsFactorPerMille` in `Buildings.xml` and in the code oracle.
+  - Why the material and not the building row: the owner's rule is wood against stone, so a wooden
+    door and a wooden wall answer alike.
+- **The kind** is the armament's `AttackDef.damageKind`. Fists are blunt (`Combat.xml`).
+- **The values are INVENTED** and are the owner's own examples:
+
+  | Material | Sharp | Blunt |
+  |---|---|---|
+  | wood | ×1.25 | ×1.0 |
+  | stone | ×0.5 | ×1.25 |
+  | concrete, steel, composite, nothing | ×1 | ×1 |
+
+  The city's materials are left at the default under (b). **A building with no material, or one
+  the table does not know, takes ×1.**
+- **Applied in `BuildingTargets.Resolve`**, to the rolled damage, on the tick the wind-up begins.
+  The held outcome, the floating number and the hit points taken are therefore one figure.
+  - The arithmetic is integer: damage × per-mille ÷ 1,000, rounded down.
+  - A blow at a pawn is untouched, because a pawn has no material.
+- **What it does to a wall.** Pools are wood 300 and stone 450; the damage is before the ±20 %
+  spread.
+
+  | Weapon | Wooden wall | Stone wall |
+  |---|---|---|
+  | machete, 8 sharp every 96 ticks | 10 a blow, about 30 blows, ~2,900 ticks | 4 a blow, about 113 blows, ~10,800 ticks |
+  | bat, 7 blunt every 120 ticks | 7 a blow, about 43 blows, ~5,200 ticks | 8.75 a blow, about 52 blows, ~6,200 ticks |
+  | fists, 4 blunt every 120 ticks | 4 a blow, 75 blows, 9,000 ticks | 5 a blow, 90 blows, 10,800 ticks |
+
+  So a machete is the tool for a wooden wall, a bat for a stone one, and stone costs a marauder
+  with a machete nearly four times what wood does.
+- `ConstructionContentDefTests.StuffFingerprint` moved once, deliberately.
+
+### 14e. A second blow renews the memory
+
+- **`ThoughtDef.renewsOnRepeat`**, false by default. When a thought that renews is added at its
+  stack limit, the copy that would expire soonest is pushed out to a full duration from now. It is
+  never shortened.
+- **Only `Thought_AttackedByColonist` sets it.** Every other thought behaves exactly as before:
+  `Thought_AteMeal` at its limit of two is still dropped rather than refreshed. That is what keeps
+  the goldens still, and a test holds it.
+- Still one copy, still −80. **The day now runs from the latest blow** rather than the first.
+- `PawnContentDefTests.ContentFingerprint` moved once, deliberately.
+
+### 14f. A missed swing is an attack
+
+- **A new hook, `ICombatListener.SwingResolved(in SwingReport)`.** `CombatSystem.ApplySwing`
+  raises it once for every swing that reaches a pawn: a hit, a miss, a dodge, and a blow that falls
+  on air because she stepped out of reach during the wind-up.
+  - It is raised **before the outcome is applied**, so for a hit it comes before `DamageApplied`.
+  - It is **not** raised for a blow at a building, since `StrikeBuilding` raises no hooks (§13g).
+  - It is **not** raised for a swing lost in the air to the attacker's own stun or fall, which
+    never reaches `ApplySwing` (§6A.1).
+- **`FriendlyFireListener` gives the memory on `SwingResolved`, and no longer on `DamageApplied`.**
+  That keeps one rule with one owner: the attack is remembered where the attack is heard, whatever
+  came of it. `DamageApplied` keeps its meaning (hit points taken) for the weapon drop and for
+  anything later.
+- **A blow falling on air counts.** It was aimed at her, and the player sees a *miss* float over
+  her head.
+- A target already past the death line when the swing arrives remembers nothing, because the dead
+  feel nothing (§12b).
+- Colonist on colonist only, as before (§12b).
+- §12b's first bullet is superseded.
+
+### 14g. Open for the owner
+
+- **Should a door stop a marauder?** Today it walks through a closed door as a colonist does
+  (§14b). Suppose "walled in" should include "behind a closed door". Then a hostile needs a mode
+  that climbs ladders and opens no door, and the door becomes the thing it breaks.
+- **Does a marauder go for the right building?** It picks the building nearest *itself*. A raider
+  that picked the wall between it and a colonist would read as smarter and would need a path
+  search to find that wall. Worth asking after the first play.
+- **The city's concrete, steel and composite take every blow at ×1.** They would need numbers if
+  (b) comes back.
+
+### 14h. Tests, and the controls seen to fail
+
+*To be filled in as the work lands.*
