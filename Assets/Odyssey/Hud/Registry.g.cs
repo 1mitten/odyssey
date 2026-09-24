@@ -30,6 +30,7 @@ namespace Odyssey.Hud
             { "ui.alert.mentalbreak", "Mental break" },
             { "ui.alert.nobed", "No bed" },
             { "ui.alert.nofood", "No food" },
+            { "ui.alert.nofuel", "Out of fuel" },
             { "ui.alert.nomedicine", "No medicine" },
             { "ui.alert.powerloss", "Power failure" },
             { "ui.alert.prisonerescape", "Prisoner escaping" },
@@ -119,6 +120,7 @@ namespace Odyssey.Hud
             { "ui.arch.tool.tile", "Tile" },
             { "ui.arch.tool.trap", "Trap" },
             { "ui.arch.tool.turret", "Turret" },
+            { "ui.arch.tool.unwire", "Remove conduit" },
             { "ui.arch.tool.vent", "Vent" },
             { "ui.arch.tool.viewscreen", "Viewscreen" },
             { "ui.arch.tool.wall", "Wall" },
@@ -136,6 +138,7 @@ namespace Odyssey.Hud
             { "ui.bulletin.refugee", "Refugee" },
             { "ui.bulletin.research", "Research complete" },
             { "ui.bulletin.salvage", "Salvage found" },
+            { "ui.bulletin.scrapdrop", "Scrap drop" },
             { "ui.bulletin.supplydrop", "Supply drop" },
             { "ui.bulletin.trader", "Trader" },
             { "ui.bulletin.wanderer", "Wanderer" },
@@ -191,6 +194,7 @@ namespace Odyssey.Hud
             { "ui.command.unequip", "Unequip" },
             { "ui.command.uninstall", "Uninstall" },
             { "ui.command.wear", "Wear" },
+            { "ui.debug.finishresearch", "Finish research" },
             { "ui.debug.givefood", "Give food" },
             { "ui.debug.givestone", "Give stone" },
             { "ui.debug.givewood", "Give wood" },
@@ -235,6 +239,19 @@ namespace Odyssey.Hud
             { "ui.health.stomach", "Stomach" },
             { "ui.health.torso", "Torso" },
             { "ui.health.wound", "Wound" },
+            { "ui.inventory.hud.empty", "Nothing is in a store yet." },
+            { "ui.inventory.hud.go", "Go" },
+            { "ui.inventory.hud.goto", "Go to {place}" },
+            { "ui.inventory.hud.hint", "Go moves the camera to that place and selects it. Clicking the item row itself goes to the place holding the most." },
+            { "ui.inventory.hud.inplace", "{category}, in 1 place" },
+            { "ui.inventory.hud.inplaces", "{category}, in {count} places" },
+            { "ui.inventory.hud.item", "Item" },
+            { "ui.inventory.hud.nomatch", "No item matches." },
+            { "ui.inventory.hud.places", "Places" },
+            { "ui.inventory.hud.qty", "Count" },
+            { "ui.inventory.hud.search", "Find an item" },
+            { "ui.inventory.hud.total", "Total" },
+            { "ui.inventory.hud.where", "Where" },
             { "ui.item.axe", "Axe" },
             { "ui.item.bedroll", "Bedroll" },
             { "ui.item.binoculars", "Binoculars" },
@@ -277,9 +294,11 @@ namespace Odyssey.Hud
             { "ui.keys.forward", "Camera forward" },
             { "ui.keys.frame", "Frame the map" },
             { "ui.keys.growzone", "Growing zone tool" },
+            { "ui.keys.inventory", "Inventory tab" },
             { "ui.keys.left", "Camera left" },
             { "ui.keys.mine", "Mine tool" },
             { "ui.keys.pause", "Pause" },
+            { "ui.keys.research", "Research tab" },
             { "ui.keys.right", "Camera right" },
             { "ui.keys.slicedown", "Slice down" },
             { "ui.keys.sliceup", "Slice up" },
@@ -575,7 +594,7 @@ namespace Odyssey.Hud
             { "ui.res.rebar", "Rebar" },
             { "ui.res.relic", "Relic" },
             { "ui.res.rubble", "Rubble" },
-            { "ui.res.scrap", "Scrap" },
+            { "ui.res.scrap", "Scrap metal" },
             { "ui.res.seed", "Seed" },
             { "ui.res.smokes", "Smokes" },
             { "ui.res.stimulant", "Stimulant" },
@@ -583,6 +602,32 @@ namespace Odyssey.Hud
             { "ui.res.tallow", "Tallow" },
             { "ui.res.wire", "Wire" },
             { "ui.res.wood", "Wood" },
+            { "ui.research.category.furniture", "Furniture" },
+            { "ui.research.category.power", "Power" },
+            { "ui.research.hud.cost", "Cost" },
+            { "ui.research.hud.idle", "Nothing being researched. Pick a project." },
+            { "ui.research.hud.leadsto", "Leads to" },
+            { "ui.research.hud.meta", "{category}, cost {cost}" },
+            { "ui.research.hud.needs", "Needs" },
+            { "ui.research.hud.needsfirst", "Needs {project} first." },
+            { "ui.research.hud.none", "None" },
+            { "ui.research.hud.now", "Current" },
+            { "ui.research.hud.pause", "Pause" },
+            { "ui.research.hud.project", "Project" },
+            { "ui.research.hud.queue", "Queue" },
+            { "ui.research.hud.research", "Research" },
+            { "ui.research.hud.status", "Status" },
+            { "ui.research.hud.then", "then {list}" },
+            { "ui.research.hud.unlocks", "Unlocks" },
+            { "ui.research.hud.unqueue", "Unqueue" },
+            { "ui.research.project.electricity", "Electricity" },
+            { "ui.research.project.generator", "Generator" },
+            { "ui.research.project.ladder", "Ladder" },
+            { "ui.research.project.powerlines", "Power lines" },
+            { "ui.research.status.available", "Available" },
+            { "ui.research.status.done", "Done" },
+            { "ui.research.status.locked", "Locked" },
+            { "ui.research.status.researching", "Researching" },
             { "ui.schedule.anything", "Anything" },
             { "ui.schedule.eat", "Eat" },
             { "ui.schedule.meditate", "Meditate" },
@@ -664,6 +709,7 @@ namespace Odyssey.Hud
             { "ui.status.idle", "Idle" },
             { "ui.status.mining", "Mining" },
             { "ui.status.recreating", "Recreating" },
+            { "ui.status.refuelling", "Refuelling" },
             { "ui.status.resting", "Resting" },
             { "ui.status.sleeping", "Sleeping" },
             { "ui.status.sowing", "Sowing" },
@@ -683,6 +729,7 @@ namespace Odyssey.Hud
             { "ui.tab.build", "Build" },
             { "ui.tab.colonists", "Colonists" },
             { "ui.tab.factions", "Factions" },
+            { "ui.tab.inventory", "Inventory" },
             { "ui.tab.menu", "Menu" },
             { "ui.tab.research", "Research" },
             { "ui.tab.schedule", "Schedule" },
@@ -747,5 +794,21 @@ namespace Odyssey.Hud
         /// </summary>
         public static string Label(string key) =>
             Labels.TryGetValue(key, out string? label) ? label : key;
+
+        /// <summary>
+        /// The description column, for the few namespaces whose description is drawn as
+        /// well as their name (emit_labels.py, DESCRIBED).
+        /// </summary>
+        public static readonly Dictionary<string, string> Descriptions = new Dictionary<string, string>
+        {
+            { "ui.research.project.electricity", "How current is made and carried. It builds nothing by itself; power lines and the generator both start here." },
+            { "ui.research.project.generator", "A burner that turns fuel into current. Loud and hungry, and the first power a colony can count on." },
+            { "ui.research.project.ladder", "A way up that takes one cell. Slow to climb and cheap to build." },
+            { "ui.research.project.powerlines", "Lines that carry current from where it is made to where it is wanted, through walls and between floors." },
+        };
+
+        /// <summary>A key's description, or empty when the registry draws none for it.</summary>
+        public static string Describe(string key) =>
+            Descriptions.TryGetValue(key, out string? text) ? text : string.Empty;
     }
 }

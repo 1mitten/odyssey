@@ -289,6 +289,8 @@ namespace Odyssey.Presentation.Ui
             SetBuildPalette(false);
             ToggleMenu(false);
             _directors?.Work.SetOpen(false);
+            _directors?.Inventory.SetOpen(false);
+            _directors?.Research.SetOpen(false);
             _directors?.Selection.Clear();
             _animalsDrawnPage = -1;
             _animalsDrawnSort = (AnimalsSort)(-1);

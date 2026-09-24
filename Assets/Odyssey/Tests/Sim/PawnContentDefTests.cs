@@ -174,7 +174,22 @@ namespace Odyssey.Tests.Sim
         // wildlife tuning, this branch's has TemperatureDef - so it is re-taken from a freshly
         // loaded pack rather than adopted from either. Third pass of the same resolution in one
         // day; main is moving under this branch faster than it is being reviewed.
-        const ulong ContentFingerprint = 8058600451355972608UL;
+        //
+        // 2026-09-23, power (design 32): three JobDefs appended — Job_LayConduit (driver 14),
+        // Job_RemoveConduit (15) and Job_Refuel (16), after the draft's two. The first two train construction and settle
+        // as building does; refuelling trains hauling. Every golden moved with them, because the
+        // job system hashes a completed and failed counter for every def — measured to be those
+        // six zeros and nothing else (Golden.cs).
+        //
+        // 2026-09-23, the same branch's second interview (design 32 §14): Item_Salvage is scrap
+        // metal now — labelled so, and stacking to 50 where it lay one to a cell — because power
+        // lines and machines are built from it. No golden moved: the starting kit's scatter still
+        // places one piece to an empty cell, which is what it always placed.
+        //
+        // Moved again, 2026-09-24, merging main (combat, wildlife, temperature) into power: the
+        // draft's two jobs keep drivers 12 and 13 and power's three follow at 14-16. Neither
+        // side's number covers the merged pack, so it is re-taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 5505190820075516158UL;
 
 
         [Test]

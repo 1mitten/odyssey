@@ -891,6 +891,8 @@ namespace Odyssey.Presentation.Ui
             // corner where the rule is already stated twice.
             if (open) _directors?.Work.SetOpen(false);
             if (open) _directors?.Animals.SetOpen(false);
+            if (open) _directors?.Inventory.SetOpen(false);
+            if (open) _directors?.Research.SetOpen(false);
 
             _buildPanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
 

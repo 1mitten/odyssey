@@ -54,7 +54,7 @@ namespace Odyssey.Sim.Temperature
 
         /// <summary>
         /// How much of a heat source's <c>radiantC</c> survives each cell of distance, per mille
-        /// (design 31 §15). 550 means a little over half at one cell and under a third at two.
+        /// (design 36). 550 means a little over half at one cell and under a third at two.
         ///
         /// <para>Structural rather than content, unlike <c>radiantC</c> itself: how fast radiance
         /// falls with distance is a fact about distance, and a second heat source tuned to a

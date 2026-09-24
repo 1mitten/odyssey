@@ -820,6 +820,11 @@
 
 .ord__btn:hover { background-color: rgba(255, 255, 255, 0.07); }
 
+/* The views strip (design 32 §14): the orders strip's own box and buttons, a gap below it in the
+   same gutter. Its buttons are switches, lit while their view is on, in the accent rather than an
+   order's hue, because showing the lines is not an order. */
+.views { margin-top: 9px; }
+
 /* ---------------------------------------------------------------- A9/A10 inspect */
 
 /* Docked to the left edge with the stores panel above it. Its bottom sits flush against the command
@@ -1353,6 +1358,9 @@
 
 .menu__row:hover { background-color: rgba(255, 255, 255, 0.07); }
 .menu__row--off { opacity: 0.42; }
+/* An overlay that is showing (design 32 §9: the power row). The accent at the pressed-chip
+   strength, so an overlay left on is visible in the menu that turns it off. */
+.menu__row--on { background-color: rgba(111, 211, 227, 0.14); }
 .menu__row--off:hover { background-color: rgba(0, 0, 0, 0); }
 
 .menu__label {
@@ -2642,6 +2650,38 @@
 }
 
 .inspect__row--pick:hover .inspect__rowvalue { color: rgb(238, 250, 253); }
+
+/* An order's own action dressed as the button it is (owner, 2026-09-23: "colour the cancel button
+   a red theme with white text to make it clear it cancels"). Danger is a filled red with white
+   ink — #a8352b under white is 6.6:1, where the cancel tool's own #e06a5c would be 3.2 and fail
+   small text — and the tool's red is kept for the border so the two read as one colour. Warn is
+   taking a laid line up: the remove tool's amber, filled, with the panel's dark ink on it. Both
+   come after the pick rules above, which they replace at the same specificity. */
+.inspect__row--danger .inspect__rowbox {
+    background-color: rgb(168, 53, 43);
+    border-color: rgb(224, 106, 92);
+}
+.inspect__row--danger .inspect__rowvalue,
+.inspect__row--danger .inspect__rowchevron { color: rgb(255, 255, 255); }
+.inspect__row--danger:hover .inspect__rowbox {
+    background-color: rgb(196, 66, 54);
+    border-color: rgb(255, 255, 255);
+}
+.inspect__row--danger:hover .inspect__rowvalue,
+.inspect__row--danger:hover .inspect__rowchevron { color: rgb(255, 255, 255); }
+
+.inspect__row--warn .inspect__rowbox {
+    background-color: rgb(232, 181, 92);
+    border-color: rgb(232, 181, 92);
+}
+.inspect__row--warn .inspect__rowvalue,
+.inspect__row--warn .inspect__rowchevron { color: rgb(11, 17, 22); }
+.inspect__row--warn:hover .inspect__rowbox {
+    background-color: rgb(244, 204, 132);
+    border-color: rgb(255, 255, 255);
+}
+.inspect__row--warn:hover .inspect__rowvalue,
+.inspect__row--warn:hover .inspect__rowchevron { color: rgb(11, 17, 22); }
 
 .inspect__rowglyph { margin-right: 1px; }
 

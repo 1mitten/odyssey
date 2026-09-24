@@ -269,6 +269,78 @@
   </BuildingDef>
 
   <!--
+    A POWER LINE (design 32 §3, §14). conduit true: not an edifice, so the order goes to the power
+    grid and the line into a layer of its own, where it can run through a wall or under a floor.
+    All part and no material: partItem 1 is Item_Salvage, scrap metal, one a cell. workToBuild 40
+    is a-07's 35 rounded to the table's tens.
+  -->
+  <BuildingDef>
+    <defName>Building_Conduit</defName>
+    <label>conduit</label>
+    <edifice>0</edifice>
+    <conduit>true</conduit>
+    <blocking>false</blocking>
+    <costCount>0</costCount>
+    <partItem>1</partItem>
+    <partCount>1</partCount>
+    <workToBuild>40</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.conduit</iconKey>
+  </BuildingDef>
+
+  <!--
+    THE WOOD-FIRED GENERATOR (design 32 §6). edifice 15 is CoreContent.EdificeGenerator.
+
+    powerOutputW 1000, fuelCapacity 75 and fuelPerDay 22 are a-07's; the burn is in proportion to
+    load (the owner's departure), so 22 is the ceiling. fuelItem 2 is Item_Wood, and 75 is exactly
+    one stack of it. heatPerPass 400 is the heat at full load, scaled by load like the burn and
+    owned by the power grid rather than the thermal pass's table. Two cells, rotatable, blocking,
+    wanting a clear cell. 30 stuff and 600 ticks: the first expensive thing in the table.
+  -->
+  <BuildingDef>
+    <defName>Building_Generator</defName>
+    <label>generator</label>
+    <edifice>15</edifice>
+    <blocking>true</blocking>
+    <footprint>2</footprint>
+    <rotates>true</rotates>
+    <needsClearCell>true</needsClearCell>
+    <powerOutputW>1000</powerOutputW>
+    <fuelItem>2</fuelItem>
+    <fuelCapacity>75</fuelCapacity>
+    <fuelPerDay>22</fuelPerDay>
+    <heatPerPass>400</heatPerPass>
+    <costCount>30</costCount>
+    <partItem>1</partItem>
+    <partCount>20</partCount>
+    <workToBuild>600</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.generator</iconKey>
+  </BuildingDef>
+
+  <!--
+    THE ELECTRIC HEATER (design 32 §7). edifice 16 is CoreContent.EdificeHeater. a-07's 175 W, and
+    heatPerPass 1000 into its room only while powered and switched on. One cell, blocking, wanting
+    a clear cell; 10 stuff and 240 ticks.
+  -->
+  <BuildingDef>
+    <defName>Building_Heater</defName>
+    <label>heater</label>
+    <edifice>16</edifice>
+    <blocking>true</blocking>
+    <rotates>true</rotates>
+    <needsClearCell>true</needsClearCell>
+    <powerDrawW>175</powerDrawW>
+    <heatPerPass>1000</heatPerPass>
+    <costCount>10</costCount>
+    <partItem>1</partItem>
+    <partCount>5</partCount>
+    <workToBuild>240</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.heater</iconKey>
+  </BuildingDef>
+
+  <!--
     The four stuffs with no item are what the ruined city is MADE OF, not what a colony builds
     with: nothing produces them, no colonist can carry one, and offering them would be offering an
     order that can never be filled. They keep their indices, because every stamped wall in the city

@@ -200,6 +200,9 @@ namespace Odyssey.Sim.Pawns
             new HarvestJobDriver(),
             new DraftHoldJobDriver(),
             new GotoJobDriver(),
+            new LayConduitJobDriver(),
+            new RemoveConduitJobDriver(),
+            new RefuelJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------

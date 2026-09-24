@@ -935,6 +935,11 @@ namespace Odyssey.Presentation.Bootstrap
                 ScatterDensity = grassScatter,
                 Appearances = appearances,
             };
+            // The power lines (design 32 §9): their own pass, outside the chunk meshes, so showing
+            // and hiding them costs no re-mesh. A new session starts unwatched, because its view
+            // store does.
+            _powerLines = new PowerLinePass { GameObjectLayer = gameObject.layer };
+            _watchingPower = false;
             _renderer.Skirt.Enabled = terrainSkirt;
             _renderer.Skirt.TreeDensityPercent = skirtTreeDensity;
             _renderer.Skirt.HillTrees = skirtHillTrees;
@@ -1317,6 +1322,7 @@ namespace Odyssey.Presentation.Bootstrap
             // the column and the layer was dead to every tool, which is what the cancel tool could
             // not cancel on 2026-09-18.
             _model.SetSites(_world.Views.Current.Sites);
+            _model.SetLines(_world.Views.Current.Conduits);
             int movePerTick = MovePerTick;
             MarkSection(FrameSection.Mirror);
 
@@ -1421,6 +1427,9 @@ namespace Odyssey.Presentation.Bootstrap
             // gathered by colour and go out as one instanced call each. They were one submission
             // per cell, counted nowhere - P10.
             _renderer.FlushCellPlates();
+            // After the plates: the lines are drawn over everything and go last among the world's
+            // overlays, before the brackets that are the pointer's.
+            DrawPowerLines(_world.Views.Current, activeLayer);
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             DrawDraftMarks(_world.Views.Current, movePerTick);
             MarkSection(FrameSection.Overlays);
@@ -1941,6 +1950,18 @@ namespace Odyssey.Presentation.Bootstrap
 
             int index = _grid.Index(cell);
             BuildingDef what = ConstructionContent.BuildingAt(building);
+
+            // A line has no module — it is not a thing standing in the cell but a rod through it
+            // (design 32 §9) — so its ghost is the cell's plate in the build accent, or red where
+            // it would be refused: the same plate an ordered line's run is judged by.
+            if (what.conduit)
+            {
+                _renderer.DrawCellMark(cell, refused
+                    ? PreviewRefusedColour
+                    : Ui.HudTokens.Convert(OrderColours.Cursor(DesignateTool.Build)));
+                return;
+            }
+
             ushort material = ConstructionContent.StuffAt(stuff).stuff;
             int module = GhostModuleFor(index, what, material);
 
@@ -1987,6 +2008,17 @@ namespace Odyssey.Presentation.Bootstrap
                         pillow && _model != null ? _model.BedPillowModule : module,
                         partTint, BedShape.Part(root, facing, part));
                 }
+                return;
+            }
+
+            // Power's machines, when their art resolved: once, at the middle of the footprint,
+            // turned — PropShape, the mesher's own answer (design 32 §14).
+            if ((what.edifice == CoreContent.EdificeGenerator || what.edifice == CoreContent.EdificeHeater)
+                && _model != null && _model.Library[module].Shape == ModuleShape.Pillar)
+            {
+                int drawn = what.edifice == CoreContent.EdificeHeater
+                    ? _model.BackedFacing(_model.Size.Index(cell.X, cell.Z, cell.Y), facing) : facing;
+                _renderer.DrawGhost(module, tint, PropShape.Root(cell.X, cell.Z, cell.Y, drawn, what.footprint));
                 return;
             }
 
@@ -2330,6 +2362,18 @@ namespace Odyssey.Presentation.Bootstrap
             //
             // So: draw the thing, in red. A red ladder standing in a wall is odd-looking and says
             // exactly what is true — that is where the order would go, and it would be refused.
+            // A line's cursor is its cell's plate (design 32 §9): it has no module to ghost, and
+            // without this the pointer went blank and the log said "no module resolved" every time
+            // the line tool crossed a new cell.
+            if (what.conduit)
+            {
+                _renderer.DrawCellMark(at, allowed
+                    ? Ui.HudTokens.Convert(OrderColours.Cursor(DesignateTool.Build))
+                    : PreviewRefusedColour);
+                WhyNoCursor(null);
+                return;
+            }
+
             ushort material = ConstructionContent.StuffAt(director.Stuff).stuff;
             int module = GhostModuleFor(cell, what, material);
 
@@ -2553,6 +2597,43 @@ namespace Odyssey.Presentation.Bootstrap
         const int MaxSightLines = 8;
 
         readonly SightLines _sight = new SightLines();
+
+        PowerLinePass? _powerLines;
+
+        /// <summary>Whether this session last told the world it was watching the lines — so the
+        /// watch intent is sent on the change, not every frame.</summary>
+        bool _watchingPower;
+
+        /// <summary>The lines' draw calls last frame, for the frame budget (design 32 §11).</summary>
+        public int PowerLineDrawCalls => _powerLines?.LastDrawCalls ?? 0;
+
+        /// <summary>
+        /// Decide whether the lines are shown and draw them (design 32 §9). The decision is
+        /// <see cref="PowerLinesVisibility"/>'s: a power tool, deconstruct or cancel armed, a power
+        /// building selected, or the overlay on. When it changes, the world is told — built lines
+        /// are published only while watched (process §3) — and a paused world answers at once,
+        /// because <c>WatchPower</c> applies while paused.
+        /// </summary>
+        void DrawPowerLines(WorldSnapshot snapshot, int activeLayer)
+        {
+            if (_powerLines == null || _world == null) return;
+
+            bool selected = Directors?.Selection?.Cell is CellRef cell
+                            && snapshot.Size.Contains(cell)
+                            && snapshot.TryGetPowerDevice(snapshot.Size.Index(cell), out _);
+            bool overlay = Directors?.Overlays?.PowerVisible ?? false;
+            bool visible = _designate != null
+                ? PowerLinesVisibility.Visible(_designate.Director, selected, overlay)
+                : selected || overlay;
+
+            if (visible != _watchingPower)
+            {
+                _watchingPower = visible;
+                _world.Intents.Submit(new Intent(IntentKind.WatchPower, default, visible ? 1 : 0));
+            }
+
+            _powerLines.Draw(snapshot, visible, activeLayer);
+        }
 
         /// <summary>
         /// The draft on the board (design 33 §2g): a diamond over every drafted colonist's head, and
@@ -3324,6 +3405,8 @@ namespace Odyssey.Presentation.Bootstrap
             if (_portraits != null) _portraits.Materials = null;
             _colonistMaterials?.Dispose();
             _renderer?.Dispose();
+            _powerLines?.Dispose();
+            _powerLines = null;
             // The library owns every mesh it baked or merged, and a Mesh made in code is a GPU
             // allocation Unity never collects. Leaving Play mode without this leaked the whole
             // cast, every session, until the graphics device was reset out from under the editor.

@@ -24,7 +24,11 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         PlaceBuilding,
 
-        /// <summary>Take a building site off a cell, refunding whatever was delivered to it.</summary>
+        /// <summary>
+        /// Take the orders off a cell, refunding whatever was delivered to them: the building site
+        /// and any power line order or removal mark (design 32 §3). <c>A</c> = 1 takes the building
+        /// site alone — the building pane's Cancel, which names one order rather than a cell.
+        /// </summary>
         CancelBuilding,
 
         /// <summary>
@@ -213,6 +217,38 @@ namespace Odyssey.Sim.Contracts
         /// a <c>PawnId</c> value. Refused for a colonist who is not drafted.
         /// </summary>
         OrderMove,
+
+        /// <summary>
+        /// Mark the built line in <see cref="Intent.Cell"/> for a colonist to take up (design 32
+        /// §3). Its own kind rather than a <see cref="Designate"/>, because a designation is one
+        /// byte per cell and a cell with a line in it very often has a wall or a floor in it too,
+        /// which the deconstruct designation already names. Named at the ground, the line
+        /// standing on it.
+        /// </summary>
+        RemoveConduit,
+
+        /// <summary>
+        /// Switch the power building in <see cref="Intent.Cell"/> on (<c>A</c> = 1) or off
+        /// (<c>A</c> = 0). Either cell of a two-cell building names it. Applied at once, with no
+        /// colonist sent to do it (design 32 §5).
+        /// </summary>
+        SetPowerSwitch,
+
+        /// <summary>
+        /// Start (<c>A</c> = 1) or stop (<c>A</c> = 0) publishing the built power lines — the
+        /// interface is showing them (design 32 §9). <b>A question, not a command</b>, exactly as
+        /// <see cref="QueryCell"/> is: it changes no state the simulation owns, nothing saved and
+        /// nothing hashed, so a paused world answers it at once.
+        /// </summary>
+        WatchPower,
+
+        /// <summary>
+        /// Take back the line order or the removal mark in <see cref="Intent.Cell"/>, and nothing
+        /// else in the cell (design 32 §14). The pane's Cancel for a line; narrower than
+        /// <see cref="CancelBuilding"/>, which also takes a building order standing in the same
+        /// cell — right for a cancel drag, wrong for a button that names one thing.
+        /// </summary>
+        CancelConduit,
     }
 
     /// <summary>
@@ -282,6 +318,14 @@ namespace Odyssey.Sim.Contracts
             // the thing a player pauses to give — a fight is planned with the clock stopped.
             IntentKind.SetDrafted => true,
             IntentKind.OrderMove => true,
+            // Taking a line up and throwing a switch are orders over a cell like any other: the
+            // player authored them and nothing needs to run to make them true (design 32).
+            IntentKind.RemoveConduit => true,
+            IntentKind.SetPowerSwitch => true,
+            // A view question, like QueryCell: the lines appear the moment the tool is armed,
+            // paused or not.
+            IntentKind.WatchPower => true,
+            IntentKind.CancelConduit => true,
             _ => false,
         };
     }

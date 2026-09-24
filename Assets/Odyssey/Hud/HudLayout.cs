@@ -57,6 +57,9 @@ namespace Odyssey.Hud
         OrdersStrip,
         Inspect,
         CommandBar,
+
+        /// <summary>The views strip: switches for what the board shows, under the orders (design 32 §14).</summary>
+        ViewsStrip,
     }
 
     /// <summary>
@@ -588,8 +591,22 @@ namespace Odyssey.Hud
         public static float OrdersHeight =>
             Frame + OrdersPadTop + OrdersCount * (OrderButton + OrderGap);
 
-        /// <summary>The whole right-hand gutter under the rail: the gap and the strip.</summary>
-        public static float OrdersBlock => RailToOrders + OrdersHeight;
+        /// <summary>
+        /// The whole right-hand gutter under the rail: the gap and the orders strip, then the gap
+        /// and the views strip under it (owner, 2026-09-23). Both are fixed buttons; the rail is the
+        /// region that gives, here as everywhere.
+        /// </summary>
+        public static float OrdersBlock => RailToOrders + OrdersHeight + OrdersToViews + ViewsHeight;
+
+        /// <summary>Orders strip to views strip: the ordinary gap between two panels in a column.</summary>
+        public const int OrdersToViews = Gap;
+
+        /// <summary>How many views the strip draws — <see cref="HudViews.Keys"/>, read rather than written down.</summary>
+        public static int ViewsCount => HudViews.Keys.Length;
+
+        /// <summary>The views strip's height: the orders strip's buttons and padding, for <see cref="ViewsCount"/>.</summary>
+        public static float ViewsHeight =>
+            Frame + OrdersPadTop + ViewsCount * (OrderButton + OrderGap);
 
         // ------------------------------------------------------------------ build palette
 
@@ -1370,6 +1387,11 @@ namespace Odyssey.Hud
             boxes[HudRegion.OrdersStrip] = new HudRect(
                 width - Edge - OrdersWidth, Edge + railHeight + RailToOrders,
                 OrdersWidth, OrdersHeight);
+
+            // ---- the views strip, under the orders in the same gutter, for the same reason
+            boxes[HudRegion.ViewsStrip] = new HudRect(
+                width - Edge - OrdersWidth, Edge + railHeight + RailToOrders + OrdersHeight + OrdersToViews,
+                OrdersWidth, ViewsHeight);
 
             // ---- clock, just inside the rail
             float clockX = width - Edge - RailWidth - RailToClock - ClockWidth;

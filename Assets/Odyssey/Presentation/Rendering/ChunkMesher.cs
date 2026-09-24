@@ -680,6 +680,22 @@ namespace Odyssey.Presentation.Rendering
                 case CoreContent.EdificeShelf:
                     EmitShelf(batch, module, tint, index, x, z, y);
                     return;
+                // Power's machines, drawn from pack art once from the head at the middle of their
+                // footprint (design 32 §14). Only when the art resolved: a clone without the packs
+                // has the tinted block, which is drawn per cell below as it always was.
+                case CoreContent.EdificeGenerator:
+                case CoreContent.EdificeHeater:
+                    if (shape == ModuleShape.Pillar)
+                    {
+                        // The generator's facing is where its second cell lies, so it is the
+                        // player's; the heater's is drawing only, and backs on to a wall (§14c).
+                        if (_model.EdificeHead(index))
+                            AddBody(batch, module, TintCode.Stuff(CoreContent.StuffNone), def == CoreContent.EdificeGenerator
+                                ? PropShape.Root(x, z, y, _model.EdificeFacing(index), 2)
+                                : PropShape.Root(x, z, y, _model.BackedFacing(index), 1));
+                        return;
+                    }
+                    break;
                 case CoreContent.EdificePillar:
                 case CoreContent.EdificeUtilityTap:
                     AddBody(batch, module, tint,

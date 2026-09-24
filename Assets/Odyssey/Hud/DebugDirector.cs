@@ -53,6 +53,9 @@ namespace Odyssey.Hud
         public const string SkipMorningKey = "ui.debug.skipmorning";
         public const string RipenCropsKey = "ui.debug.ripen";
 
+        /// <summary>Completes the project in hand, which is how a Research tab project becomes done until the mechanism exists (design 34).</summary>
+        public const string FinishResearchKey = "ui.debug.finishresearch";
+
         /// <summary>
         /// Spend a whole game month at once, so the year can be walked through.
         ///
@@ -107,7 +110,7 @@ namespace Odyssey.Hud
         {
             PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey,
-            SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, MarkTraceKey, TraceKey,
+            SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
         };
 
         public static string TabKey(DebugTab tab) =>

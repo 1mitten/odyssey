@@ -29,6 +29,7 @@ namespace Odyssey.Hud
             "ui.terrain.tree.conifer", "ui.terrain.tree.broadleaf",
             "ui.arch.tool.bed", "ui.arch.tool.shelf",
             "ui.arch.tool.campfire",
+            "ui.arch.tool.generator", "ui.arch.tool.heater",
         };
 
         public static string IconKey(int edifice) =>

@@ -40,6 +40,8 @@ namespace Odyssey.Hud
         /// always one with nothing behind it.
         /// </summary>
         F1,
+        F2,
+        F3,
         F5,
         F6,
         F9,
@@ -105,6 +107,11 @@ namespace Odyssey.Hud
         /// shifts.
         /// </summary>
         Draft,
+        /// <summary>Open or close the Inventory tab (design 35), on F2. Appended, so no stored binding shifts.</summary>
+        InventoryTab,
+
+        /// <summary>Open or close the Research tab (design 34), on the F3 the bar has advertised since M1.</summary>
+        ResearchTab,
     }
 
     /// <summary>What came of offering a key to a listening slot.</summary>
@@ -193,6 +200,8 @@ namespace Odyssey.Hud
             (HotkeyAction.WorkTab,          HudKey.F1,        HudKey.None),
             (HotkeyAction.AnimalsTab,       HudKey.F5,        HudKey.None),
             (HotkeyAction.Almanac,          HudKey.F9,        HudKey.None),
+            (HotkeyAction.InventoryTab,     HudKey.F2,        HudKey.None),
+            (HotkeyAction.ResearchTab,      HudKey.F3,        HudKey.None),
         };
 
         /// <summary>
@@ -376,6 +385,8 @@ namespace Odyssey.Hud
             HotkeyAction.AnimalsTab => "ui.keys.animals",
             HotkeyAction.Almanac => "ui.keys.almanac",
             HotkeyAction.Draft => "ui.keys.draft",
+            HotkeyAction.InventoryTab => "ui.keys.inventory",
+            HotkeyAction.ResearchTab => "ui.keys.research",
             _ => KeysKey,
         };
 

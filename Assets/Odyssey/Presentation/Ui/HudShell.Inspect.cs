@@ -855,7 +855,10 @@ namespace Odyssey.Presentation.Ui
                 CellRowView captured = view;
                 view.Root.RegisterCallback<ClickEvent>(_ =>
                 {
-                    if (captured.IsPick) ToggleBedPicker(captured.Root);
+                    if (!captured.IsPick) return;
+                    if (captured.IsSwitch) ThrowPowerSwitch();
+                    else if (captured.IsOrderAction) ActOnOrder();
+                    else ToggleBedPicker(captured.Root);
                 });
 
                 _cellRowsGrid.Add(view.Root);
@@ -882,7 +885,9 @@ namespace Odyssey.Presentation.Ui
                 // The storage row is a fact again, not a control: the settings are a tab of their
                 // own now, so a row that opened a popover would be a second way in to the same
                 // thing and the one a player found by accident.
-                bool pick = row.Name == "owner" && _inspect.BedUnderPane;
+                bool switchPick = row.Name == InspectModel.PowerSwitchRow && _inspect.PowerSwitchUnderPane;
+                bool linePick = row.Name == InspectModel.OrderActionRow && _inspect.OrderActionUnderPane;
+                bool pick = (row.Name == "owner" && _inspect.BedUnderPane) || switchPick || linePick;
                 // The pickable row's value is set in the heavier Row role, which is where weight
                 // lives: the stylesheet may not set type (TheSheetSetsNoTypeAtAll), so "make the
                 // assign button bolder" is a role here rather than a font-style there.
@@ -897,26 +902,61 @@ namespace Odyssey.Presentation.Ui
                     view.LastTint = null;
                 }
 
-                // The value's colour, where the fact carries one — a quality tier, and nothing
-                // else so far. Null means the row keeps the colour the stylesheet gives it, which
-                // is what "Normal: no change" asks for, so the style is cleared rather than set to
-                // a colour of our own.
-                if (view.LastTint?.Hex != row.Tint?.Hex)
+                // An order's action is a button in its own colours (design 32 §14): Cancel filled
+                // red with white ink, taking a line up filled amber. The stylesheet owns both, so
+                // the row's tint is not written inline over it — an inline colour would win.
+                bool actionRow = row.Name == InspectModel.OrderActionRow && _inspect.OrderActionUnderPane;
+                bool danger = actionRow && row.Tint != null && _inspect.OrderAction != IntentKind.RemoveConduit;
+                bool warn = actionRow && row.Tint != null && _inspect.OrderAction == IntentKind.RemoveConduit;
+                HudColour? tintNow = actionRow ? null : row.Tint;
+
+                // The value's colour, where the fact carries one — a quality tier, a power state.
+                // Null means the row keeps the colour the stylesheet gives it, which is what
+                // "Normal: no change" asks for, so the style is cleared rather than set to a colour
+                // of our own.
+                if (view.LastTint?.Hex != tintNow?.Hex)
                 {
-                    view.LastTint = row.Tint;
-                    if (row.Tint is HudColour tint) view.Value.style.color = HudTokens.Convert(tint);
+                    view.LastTint = tintNow;
+                    if (tintNow is HudColour tint) view.Value.style.color = HudTokens.Convert(tint);
                     else view.Value.style.color = StyleKeyword.Null;
                 }
+                view.Root.EnableInClassList("inspect__row--danger", danger);
+                view.Root.EnableInClassList("inspect__row--warn", warn);
 
-                if (view.IsPick != pick)
+                if (view.IsPick != pick || view.IsSwitch != switchPick || view.IsOrderAction != linePick)
                 {
                     view.IsPick = pick;
+                    view.IsSwitch = switchPick;
+                    view.IsOrderAction = linePick;
                     view.Root.EnableInClassList("inspect__row--pick", pick);
                     view.Chevron.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
-                    view.Glyph.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
-                    view.Root.tooltip = pick ? "Choose whose bed this is" : null;
+                    // The bed's glyph is a bed: the switch and line rows wear the chevron alone.
+                    view.Glyph.style.display = pick && !switchPick && !linePick ? DisplayStyle.Flex : DisplayStyle.None;
+                    view.Root.tooltip = switchPick ? "Switch it on or off — at once, nobody is sent"
+                        : linePick ? row.Value + " — at once, nobody is sent"
+                        : pick ? "Choose whose bed this is" : null;
                 }
             }
+        }
+
+        /// <summary>
+        /// The order under the pane's own action (design 32 §14): cancel a building order, cancel a
+        /// line's order or its removal mark, or mark a laid line to come up. An intent like every
+        /// command, applied while paused.
+        /// </summary>
+        void ActOnOrder()
+        {
+            _boot?.World?.Intents.Submit(new Intent(_inspect.OrderAction, _inspect.Cell, _inspect.OrderActionA));
+        }
+
+        /// <summary>
+        /// Throw the switch of the power building under the pane (design 32 §5): an intent, like
+        /// every command, applied while paused and at once — no colonist walks over to do it.
+        /// </summary>
+        void ThrowPowerSwitch()
+        {
+            _boot?.World?.Intents.Submit(new Intent(IntentKind.SetPowerSwitch, _inspect.Cell,
+                _inspect.PowerSwitchOn ? 0 : 1));
         }
 
         // ---- the bed's owner picker: the pane's first interactive fact ------------------------
@@ -1656,8 +1696,8 @@ namespace Odyssey.Presentation.Ui
             element.style.flexShrink = 0;
             element.style.paddingLeft = 10;
             element.style.paddingRight = 10;
-            element.style.backgroundColor =
-                new Color(hue.R / 255f, hue.G / 255f, hue.B / 255f, empty ? 0.045f : 0.09f);
+            element.style.backgroundColor = new Color(hue.R / 255f, hue.G / 255f, hue.B / 255f,
+                empty ? HudTheme.ItemCategoryWashEmpty : HudTheme.ItemCategoryWash);
 
             // The caret column exists whether or not this row has a caret, so every box below it
             // starts at the same x. An empty category has none at all, which is how it says it
@@ -1679,7 +1719,7 @@ namespace Odyssey.Presentation.Ui
             element.Add(StorageCheckbox(row.State, hue, 10));
 
             var icon = new HudGlyph(CategoryGlyph(row.Category), StorageGlyph,
-                HudTokens.Convert(empty ? hue.WithAlpha(0.45f) : hue));
+                HudTokens.Convert(empty ? hue.WithAlpha(HudTheme.ItemCategoryEmptyInk) : hue));
             icon.style.marginLeft = 10;
             element.Add(icon);
 
@@ -1689,7 +1729,7 @@ namespace Odyssey.Presentation.Ui
             // next heading somewhere else is capitalised by hand and the two drift apart.
             Label text = HudText.Make(row.Label, HudTextRole.ListHeading);
             text.style.marginLeft = 10;
-            text.style.color = HudTokens.Convert(empty ? hue.WithAlpha(0.45f) : hue);
+            text.style.color = HudTokens.Convert(empty ? hue.WithAlpha(HudTheme.ItemCategoryEmptyInk) : hue);
             element.Add(text);
 
             // The member count, a step up and set as a figure (owner, 2026-09-21: "make the

@@ -178,4 +178,36 @@
     <casuallyInterruptible>false</casuallyInterruptible>
   </JobDef>
 
+  <!--
+    Power (design 32). Laying a line fetches its one wood and lays it in one job, priced by
+    ConstructionContent.WorkFor like any build, so there is no workTicks here - Job_Build's argument.
+    Taking one up is priced like deconstructing. Both train construction and settle as building
+    does. Refuelling is a carry, and trains and prices as hauling does.
+  -->
+  <JobDef>
+    <defName>Job_LayConduit</defName>
+    <driver>14</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>3</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_RemoveConduit</defName>
+    <driver>15</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>3</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Refuel</defName>
+    <driver>16</driver>
+    <expiryTicks>6000</expiryTicks>
+    <trainsSkill>0</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+  </JobDef>
+
 </Defs>

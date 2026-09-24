@@ -490,6 +490,32 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// The views strip (design 32 §14) stands directly under the orders in the same gutter and
+        /// still ends above the command bar — on the deep board at 720p too, which is the case the
+        /// rail's squeeze now has to leave room for twice.
+        /// </summary>
+        [Test]
+        public void TheViewsStripStandsUnderTheOrdersAndAboveTheBar()
+        {
+            foreach ((int width, int height) in Resolutions)
+            foreach (HudContent content in Cases())
+            {
+                var boxes = HudLayout.Solve(width, height, content);
+                HudRect orders = boxes[HudRegion.OrdersStrip];
+                HudRect views = boxes[HudRegion.ViewsStrip];
+                HudRect bar = boxes[HudRegion.CommandBar];
+
+                Assert.That(views.Right, Is.EqualTo(orders.Right).Within(0.01f), "one gutter");
+                Assert.That(views.Y, Is.EqualTo(orders.Bottom + HudLayout.OrdersToViews).Within(0.01f),
+                    "the views strip is not directly under the orders");
+                Assert.That(views.Height, Is.EqualTo(HudLayout.ViewsHeight).Within(0.01f));
+                Assert.That(views.Bottom, Is.LessThanOrEqualTo(bar.Y + 0.01f),
+                    $"the views strip ends at {views.Bottom:0.#} and the command bar starts at " +
+                    $"{bar.Y:0.#} at {width}x{height} on a {content.Layers}-layer board");
+            }
+        }
+
+        /// <summary>
         /// Every order has a button, and the strip is as tall as it has orders.
         ///
         /// <para>The point of moving them out of the palette header was that a fifth order costs

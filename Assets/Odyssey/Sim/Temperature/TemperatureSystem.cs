@@ -99,12 +99,14 @@ namespace Odyssey.Sim.Temperature
         /// </summary>
         readonly int[] _heatByEdificeDef;
 
+        /// <summary>Edifice ids whose heat the power grid decides (design 32 §7), indexed as the table above.</summary>
+        readonly bool[] _powerDef;
         /// <summary><c>radiantC</c> by edifice id, built once from the content beside
         /// <see cref="_heatByEdificeDef"/> and for the same reason.</summary>
         readonly int[] _radiantByEdificeDef;
 
         /// <summary>
-        /// Where the warm things are and how warm, refreshed by each pass (design 31 §15).
+        /// Where the warm things are and how warm, refreshed by each pass (design 36).
         ///
         /// <para>This is the whole of what radiance costs in storage: a handful of entries, not a
         /// field over 2.5 M cells. <see cref="CellTemp"/> walks it, so a board with no fire on it
@@ -140,12 +142,23 @@ namespace Odyssey.Sim.Temperature
             for (int i = 1; i < table.Count; i++)
                 if (table[i].edifice > widest) widest = table[i].edifice;
             _heatByEdificeDef = new int[widest + 1];
+            _powerDef = new bool[widest + 1];
+            for (int i = 1; i < table.Count; i++)
+                if (table[i].IsPowered && table[i].heatPerPass != 0) _powerDef[table[i].edifice] = true;
+            // A power building's heat is not in this table: it is gated on the building being
+            // powered, or burning, and the power grid owns that answer (design 32 §7). Its row
+            // stays zero here so an unpowered heater never warms a room through the back door.
+            for (int i = 1; i < table.Count; i++)
+                if (table[i].heatPerPass != 0 && !table[i].IsPowered)
+                    _heatByEdificeDef[table[i].edifice] = table[i].heatPerPass;
+            // Radiance is its own table and deliberately does NOT re-fill the heat one above.
+            // The first cut of this merge did, and main's own
+            // PowerHeatTests.ARoomWarmsOnlyWhileItsHeaterIsPowered caught it: writing every
+            // building's heatPerPass back over that array undoes the gate on the line above it,
+            // and an unpowered heater warms its room through the back door.
             _radiantByEdificeDef = new int[widest + 1];
             for (int i = 1; i < table.Count; i++)
-            {
-                if (table[i].heatPerPass != 0) _heatByEdificeDef[table[i].edifice] = table[i].heatPerPass;
                 if (table[i].radiantC != 0) _radiantByEdificeDef[table[i].edifice] = table[i].radiantC;
-            }
 
             // Rooms resolve their starting temperature the moment they are built, not at the
             // next pass, while the ledger of what their cells used to be is fresh. A room from
@@ -252,7 +265,7 @@ namespace Odyssey.Sim.Temperature
         ///
         /// <para><b>Ask for this when you mean the room, and <see cref="CellTemp"/> when you mean
         /// what it is like to stand somewhere.</b> The two were one method until radiance arrived
-        /// (design 31 §15), and the day they parted four tests of the air model started failing —
+        /// (design 36), and the day they parted four tests of the air model started failing —
         /// not because the air had changed but because they were reading a cell with a fire in it
         /// and getting the fire as well. That is the right answer to the question
         /// <c>CellTemp</c> asks and the wrong answer to the one they were asking, which is why
@@ -267,7 +280,7 @@ namespace Odyssey.Sim.Temperature
 
         /// <summary>
         /// What standing here adds on top of the room's air, in centi-degrees: the radiance of
-        /// every heat source close enough to shine on this cell (design 31 §15).
+        /// every heat source close enough to shine on this cell (design 36).
         ///
         /// <para><b>Design 28 models the air and this does not.</b> That model is one scalar per
         /// room and refuses — correctly — to store anything per cell, because per-cell is what
@@ -363,10 +376,21 @@ namespace Odyssey.Sim.Temperature
 
                 // The air half: energy into the room (design 28 §7).
                 int heat = _heatByEdificeDef[placed.Def];
+
+                // A power building's heat is the power grid's answer — a heater's while it is
+                // powered, a generator's in proportion to its load (design 32 §6–§7). Asked only
+                // of a building the table left at zero, so the woodland's trees cost one read.
+                if (heat == 0 && _ctx.Power != null && _powerDef[placed.Def]) heat = _ctx.Power.HeatOf(e);
                 if (heat != 0 && _slotByKey.TryGetValue(room, out int slot)) _sources[slot] += heat;
 
                 // And the radiant half, which is not room-bound and is remembered rather than
-                // applied: CellTemp asks it per cell, on the way out (design 31 §15).
+                // applied: CellTemp asks it per cell, on the way out (design 36).
+                //
+                // Deliberately NOT gated on power, unlike the air half above. radiantC is what
+                // a thing is like to stand beside, and a campfire — the only source that has
+                // one today — burns whether or not there is a grid. The day a heater wants a
+                // radiant ring it will want it only while powered, and that is the moment to
+                // gate this too rather than now, on a guess.
                 int radiant = _radiantByEdificeDef[placed.Def];
                 if (radiant != 0) _radiant.Add(new RadiantSource(placed.CellIndex, room, radiant));
             }

@@ -23,7 +23,11 @@ namespace Odyssey.Tests.Sim.Events
         // Moved the same day, after the first look: fallTicks 120 to 360, because two seconds
         // landed almost before it had been seen falling, and a description, which is the debug
         // menu's Events tab tooltip.
-        const ulong ContentFingerprint = 18026134764698235758UL;
+        //
+        // 2026-09-23, power (design 32 §14): Incident_ScrapDrop appended at index 1 — the supply
+        // drop's own worker with scrap metal for cargo, fifteen to thirty, weight 60, the supply
+        // drop's gates otherwise. The owner's second source of scrap metal beside the wreckage.
+        const ulong ContentFingerprint = 15479437417230274748UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

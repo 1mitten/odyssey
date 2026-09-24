@@ -188,6 +188,22 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
+        /// Select a cell outright, without a pick and without the thing lying in it: the Inventory
+        /// tab's Go (design 35). A pick on a stockpile cell selects the pile first, because that
+        /// is what a click there usually means; Go is asking for the <i>store</i>, and the pane
+        /// leads with the store only when the subject is the cell.
+        /// </summary>
+        public void ChooseCell(CellRef cell)
+        {
+            _pawns.Clear();
+            Cell = cell;
+            Thing = ThingId.None;
+            ThingDef = -1;
+            _missingFrames = 0;
+            Changed?.Invoke(SelectionChange.Chosen);
+        }
+
+        /// <summary>
         /// Shift-click: the colonist goes in if they were out and out if they were in. Removing
         /// the last colonist empties the selection — the same click that builds it has to be able
         /// to take it apart again.

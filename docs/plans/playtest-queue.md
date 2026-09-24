@@ -23,6 +23,33 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does power read?** (`claude/power`, PR #173, `docs/design/32-power.md`; merged with `main` 2026-09-24.)
+  Lines, generators and heaters now take **scrap metal** (design 32 §14): a new game scatters ten
+  piles of wreckage over the board, fifteen or more cells from the start, and the debug menu's
+  Events tab has a **Scrap drop**. Grant wood too, then open Build → **Power**. Drag a **Conduit**
+  run from open ground *through a wall* into a room; put a **Heater** beside the run inside and a
+  **Generator** beside it outside. Click an ordered line: the pane should title it *Conduit* and
+  offer **Cancel**; a laid one, while the lines are shown, **Remove conduit**. The **Power** button
+  under the orders strip keeps the lines shown whatever is armed. Run *Odyssey → Presentation →
+  Rebuild module catalogue* once first, or the generator and heater are still blocks. Watch the lines appear the moment the tool is armed and vanish when it is put
+  down; a hauler should fill the generator unasked; the heater's pane should go from *not
+  connected* to *powered*, and the room should warm. Then build a sixth heater on the same net and
+  watch the whole net go dark and the *Power failure* alert rise.
+
+  Four things only a keyboard decides. Whether **a line drawn through walls reads as inside the
+  wall** or as a glitch floating over it — a wrong answer is a player thinking the line runs across
+  the roof. Whether **a dark net reads as dark without opening the pane** — red lines and the alert
+  should be enough; a wrong answer is clicking heaters to find out why the room is cold. Whether
+  **five heaters to a generator** is the right size — a wrong answer is never needing a second
+  generator, or needing one for the first room. And whether **the Remove conduit tool** is where a
+  player looks for it, or whether they reach for Deconstruct and are surprised it leaves the line.
+  And whether **scrap metal is scarce in the right way** — a wrong answer is the wreckage never
+  being worth the walk, or ten piles being all the power a colony ever needs.
+  And (§14c) whether **the machines sit flush**: the generator filling both its cells, a heater
+  put beside a wall turning its back to it, R choosing the wall in a corner. A wrong answer is
+  the stretched generator reading as distorted, or the air-conditioner's grille facing the wall
+  (its front was read off the mesh, not seen).
+
 - **Can you see a stockpile, and does its outline read?** (`claude/stockpile-drawn`,
   `docs/design/26-storage.md` §13.) Paint a stockpile on grass and one on a built floor, and two
   at once. It had been created and not drawn since 2026-09-21 unless something else re-meshed its
@@ -701,6 +728,8 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-24 | **The Inventory tab, restyled** (PR #177, `docs/design/35-inventory-tab.md` §5a) | working — owner: *"it's good"* | none; ready to merge |
+| 2026-09-23 | **The Research tab** (PR #177, `docs/design/34-research-tab.md`) | working — owner: *"the research control is fine"*, after the list was cut to what the game has | the list became Electricity, Power lines, Generator, Ladder (34 §2) |
 | 2026-09-23 | **Drafting and moving** (C1, `claude/combat-mvp`, `docs/design/33-combat.md` §2) | working — owner: *"the drafting, T and moving onto surfaces, diamond and 4 hours all seemed to work"* | two asks: a drafted colonist runs (§2h), the marks a deeper translucent red (§2g); both built, re-queued above |
 | 2026-09-20 | **Head turning and gaze** (PR #128, `docs/design/23-head-turning-and-gaze.md`) | working — owner: *"gaze … is all working now"* | none; the design doc stands |
 | 2026-09-20 | **The flush selection cursor** (PR #127, `docs/design/23-flush-selection-cursor.md`) | working | none; the design doc stands |

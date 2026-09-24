@@ -415,6 +415,16 @@ namespace Odyssey.Sim.Worldgen
         public const ushort EdificeCampfire = 14;
 
         /// <summary>
+        /// The wood-fired generator (design 32 §6): the first thing that makes power, and like the
+        /// bed two cells along its facing. 15, the next free id after the campfire, spelled as a
+        /// literal for the reason the bed's is.
+        /// </summary>
+        public const ushort EdificeGenerator = 15;
+
+        /// <summary>The electric heater (design 32 §7): the first thing that spends power.</summary>
+        public const ushort EdificeHeater = 16;
+
+        /// <summary>
         /// The city's ten, which are the first ten of the one table. Loaded from
         /// <c>Defs/Core/World/Terrain.xml</c> like everything else: this class used to build them
         /// in code and the XML mirrored it, which meant every terrain was written twice.

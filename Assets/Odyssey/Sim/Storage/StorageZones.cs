@@ -556,13 +556,22 @@ namespace Odyssey.Sim.Storage
 
         public void Contribute(SimWorld world, SnapshotWriter writer)
         {
+            // Each zone's number once, not once per cell: OrdinalOf walks every store, and a
+            // warehouse is thousands of cells over a few dozen zones.
+            _ordinals.Clear();
+            for (int slot = 0; slot < _zones.Count; slot++) _ordinals.Add(OrdinalOf(slot));
+
             IReadOnlyList<int> cells = _zones.Cells;
             for (int i = 0; i < cells.Count; i++)
             {
                 int index = cells[i];
                 int slot = _zones.SlotAt(index);
-                writer.AddStore(new StoreView(index, slot, (byte)_settings[_zones.TagOf(slot)].Priority));
+                writer.AddStore(new StoreView(index, slot, (byte)_settings[_zones.TagOf(slot)].Priority,
+                    _ordinals[slot]));
             }
         }
+
+        /// <summary>Reused by <see cref="Contribute"/> so a publish allocates nothing.</summary>
+        readonly List<int> _ordinals = new List<int>();
     }
 }

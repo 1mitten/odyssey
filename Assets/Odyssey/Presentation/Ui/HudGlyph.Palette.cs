@@ -247,6 +247,15 @@ namespace Odyssey.Presentation.Ui
                     Rect(painter, p(9, 8), p(15, 16));
                     return;
 
+                // Taking a conduit up (design 32 §10): the conduit's own run and box, cut by a
+                // slash, so the tool reads as the conduit's undoing rather than as a new thing.
+                case HudGlyphKind.ToolUnwire:
+                    Polyline(painter, true, p(3, 12), p(9, 12));
+                    Polyline(painter, true, p(15, 12), p(21, 12));
+                    Rect(painter, p(9, 8), p(15, 16));
+                    Polyline(painter, true, p(5, 20), p(19, 4));
+                    return;
+
                 // A battery: a cell with a terminal and a charge bar.
                 case HudGlyphKind.ToolBattery:
                     Rect(painter, p(3, 7), p(19, 17));
@@ -262,6 +271,14 @@ namespace Odyssey.Presentation.Ui
                         p(11, 17), p(15, 12), p(12, 12));
                     painter.ClosePath();
                     painter.Stroke();
+                    return;
+
+                // A heater (design 32 §7): a squat housing with heat rising off it in two waves.
+                case HudGlyphKind.ToolHeater:
+                    Rect(painter, p(4, 13), p(20, 20));
+                    Polyline(painter, true, p(8, 16.5f), p(16, 16.5f));
+                    Polyline(painter, true, p(9, 10.5f), p(10.5f, 8.5f), p(9, 6.5f), p(10.5f, 4.5f));
+                    Polyline(painter, true, p(14, 10.5f), p(15.5f, 8.5f), p(14, 6.5f), p(15.5f, 4.5f));
                     return;
 
                 // A reactor: a core with a ring around it.
@@ -502,8 +519,10 @@ namespace Odyssey.Presentation.Ui
             { "ui.arch.tool.campfire", HudGlyphKind.ToolCampfire },
 
             { "ui.arch.tool.conduit", HudGlyphKind.ToolConduit },
+            { "ui.arch.tool.unwire", HudGlyphKind.ToolUnwire },
             { "ui.arch.tool.battery", HudGlyphKind.ToolBattery },
             { "ui.arch.tool.generator", HudGlyphKind.ToolGenerator },
+            { "ui.arch.tool.heater", HudGlyphKind.ToolHeater },
             { "ui.arch.tool.reactor", HudGlyphKind.ToolReactor },
 
             { "ui.arch.tool.turret", HudGlyphKind.ToolTurret },
