@@ -897,7 +897,7 @@ namespace Odyssey.Presentation.World
         public int LookForCorpse(in CorpseView corpse) =>
             (corpse.Flags & PawnFlags.Person) == 0
                 ? AnimalLookIndex(corpse.Kind)
-                : Appearances.LookFor(corpse.Pawn.Value, corpse.RollSeed);
+                : Appearances.LookFor(corpse.Pawn.Value, corpse.RollSeed, PawnOutfits.For(corpse));
 
         /// <summary>Whether this corpse can be drawn as a body at all; if not, a marker stands in.</summary>
         public bool CanDrawCorpse(in CorpseView corpse)
@@ -920,6 +920,7 @@ namespace Odyssey.Presentation.World
             Figure figure = Free(look) ?? Create(look);
             figure.Borrowed = true;
             figure.Pawn = -1;
+            figure.Outfit = PawnOutfits.For(corpse);
             Repaint(figure, corpse.Pawn, corpse.RollSeed);
             figure.Fight.Forget();
             figure.WorkWeight = 0f;

@@ -23,6 +23,13 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
+  Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest
+  over bare arms and black trousers, and carry a crowbar or a bat; click one and the pane shows a
+  name, "bandit" under it and a masked portrait. Zoom out past the figure cap (or spawn a crowd):
+  a far bandit keeps the helmet and the red. A wrong answer is hair or a beard poking through the
+  helmet, a vest that is still camo, trousers that are red, a far bandit in camo or the white
+  jumpsuit, or three bandits you cannot tell from colonists at play distance.
 - **Does the title screen's dock read well, and does Exit ask?** (`claude/settings-frame`, design
   40.) Press Play. A dark panel down the left edge with the layered mark and ODYSSEY, four
   coloured buttons and the build line at the foot, the starfield clear to the right. New game should

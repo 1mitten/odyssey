@@ -258,6 +258,40 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// Never on to the tile of the one it is itself fighting. <see cref="Melee.Holds"/> does not
+        /// count a pawn's own claims against her, and her target's tile is held only by her claim,
+        /// so the knockback could lay her on it — and a knocked-down fighter lies where she lands.
+        /// Found by <c>FightGuardTests.MixedBrawlsOnManySeeds</c> once bandits carried crowbars
+        /// (design 42): a drafted colonist beating a rat was knocked on to the rat by a bandit's
+        /// critical and lay there 90 ticks. The control is the same colonist behind her, not being
+        /// fought, whose tile the blow does knock her on to.
+        /// </summary>
+        [TestCase(true)]
+        [TestCase(false)]
+        public void NeverOnToTheTileOfTheOneItIsFighting(bool fighting)
+        {
+            // A rat, as in the sweep: it does not fight back, so its tile is held by her claim
+            // alone. A colonist behind her would turn on her and hold its own side.
+            var colony = Board(colonists: 2);
+            colony.World.Tick();
+            Pawn a = colony.Pawns.Pawns.All[0], t = colony.Pawns.Pawns.All[1];
+            foreach (Pawn p in new[] { a, t }) Assert.That(Draft(colony, p), Is.EqualTo(IntentRejection.None));
+            Stand(colony, a, At(colony, 0, 0));
+            Stand(colony, t, At(colony, 1, 0));
+            Pawn c = Spawn(colony, PawnKindIndex.DuctRat, At(colony, 2, 0));
+            if (fighting)
+            {
+                Assert.That(Attack(colony, t, c), Is.EqualTo(IntentRejection.None));
+                Assume.That(Melee.IsInAnAttack(t) && t.Cell == At(colony, 1, 0) && c.Cell == At(colony, 2, 0), Is.True,
+                    "the fixture: she is not fighting the rat behind her");
+                Assume.That(Melee.IsInAnAttack(c), Is.False, "the fixture: the rat fights back");
+            }
+            Blow(colony, a, t, Knock());
+            if (fighting) Assert.That(t.Cell, Is.EqualTo(At(colony, 1, 0)), "knocked on to the tile of the one she fights");
+            else Assert.That(t.Cell, Is.EqualTo(At(colony, 2, 0)), "the control: nobody she fights stands there");
+        }
+
+        /// <summary>
         /// The downed and the dead are not knocked back: the fall and the death are resolved first.
         /// The control is the same blow one thousandth short of downing.
         /// </summary>

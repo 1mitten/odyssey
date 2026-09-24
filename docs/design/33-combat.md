@@ -1,5 +1,10 @@
 # 33 — Combat: draft, move, melee
 
+**The hostile this document calls the bandit was the marauder until 2026-09-24** (design 42). The
+word was renamed everywhere live, this file included; the journal keeps the old word, so an entry
+there that says "marauder" means the bandit. Kind index 3, `TraverseMode` 3 and incident index 3
+are unchanged. A bandit carries a crowbar or a bat (design 42 §3), not the machete §5b gave it.
+
 **Status: C1 (draft and move) built and played 2026-09-23 — the owner's verdict: drafting, T,
 moving onto surfaces, the diamond and the four hours all work; the run (§2h) and the deeper red
 (§2g) came out of that playtest. C2 (health and melee) and C3 (weapons) built 2026-09-23 by four
