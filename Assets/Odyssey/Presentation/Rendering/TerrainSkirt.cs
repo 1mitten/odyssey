@@ -737,7 +737,7 @@ namespace Odyssey.Presentation.Rendering
 
                 // A bush beside most of them, as the board's wood edges have (design 38 §19): the
                 // wood out here was trees on bare grass, and read barer than the board it frames.
-                AddBushBeside(x, z, standY, board, tree.MuteStep, sector);
+                AddBushBeside(x, z, standY, board, tree.MuteStep, SectorOf(x, z, 1, 0));
             }
 
             // Counted before the far wood is added, so the two numbers are separable in the log
