@@ -2717,8 +2717,7 @@ namespace Odyssey.Presentation.Bootstrap
                 if (!pawns[i].IsColonist) continue;
                 if (selection != null && selection.HasPawn && Selected(selection.Pawns, pawns[i].Id)) continue;
                 Vector3 feet = FeetOf(pawns[i], movePerTick);
-                bool lying = _renderer.LiesOnTheGround(in pawns[i]);
-                _sightCandidates.Add((Flat(feet - focus), feet + Vector3.up * (lying ? 0.2f : lift)));
+                _sightCandidates.Add((Flat(feet - focus), feet + Vector3.up * lift));
             }
             lines += AddNearest(eye, MaxColonistSightLines);
 
@@ -2731,13 +2730,13 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 if (!_renderer.LiesOnTheGround(in pawns[i])) continue;
                 Vector3 at = FeetOf(pawns[i], movePerTick);
-                if (_renderer.UnderBush(at, pawns[i].Cell.Y)) _sightCandidates.Add((Flat(at - focus), at + Vector3.up * 0.2f));
+                if (_renderer.UnderBush(at, pawns[i].Cell.Y)) _sightCandidates.Add((Flat(at - focus), at + Vector3.up * lift));
             }
             System.ReadOnlySpan<CorpseView> corpses = snapshot.Corpses;
             for (int i = 0; i < corpses.Length; i++)
             {
                 Vector3 at = CellMetrics.FloorCentre(corpses[i].Cell);
-                if (_renderer.UnderBush(at, corpses[i].Cell.Y)) _sightCandidates.Add((Flat(at - focus), at + Vector3.up * 0.2f));
+                if (_renderer.UnderBush(at, corpses[i].Cell.Y)) _sightCandidates.Add((Flat(at - focus), at + Vector3.up * lift));
             }
             System.ReadOnlySpan<ThingView> things = snapshot.Things;
             for (int i = 0; i < things.Length; i++)
@@ -2745,7 +2744,7 @@ namespace Odyssey.Presentation.Bootstrap
                 if (things[i].Contained) continue;
                 Vector3 at = CellMetrics.FloorCentre(things[i].Cell);
                 if (Flat(at - focus) > GrassClearance.WindowMetres * GrassClearance.WindowMetres * 0.25f) continue;
-                if (_renderer.UnderBush(at, things[i].Cell.Y)) _sightCandidates.Add((Flat(at - focus), at + Vector3.up * 0.2f));
+                if (_renderer.UnderBush(at, things[i].Cell.Y)) _sightCandidates.Add((Flat(at - focus), at + Vector3.up * lift));
             }
             AddNearest(eye, MaxGroundSightLines);
             SightLinesLastFrame = _sight.Count;
