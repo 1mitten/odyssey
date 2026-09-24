@@ -31,6 +31,16 @@ namespace Odyssey.Hud
         /// changing depth is the specialist one, so it is the specialist that asks.</para>
         /// </summary>
         CutAwayCeiling,
+
+        /// <summary>
+        /// Lower the walls to a stump and hide the built storeys above the slice, so a player can
+        /// see who is inside a building and what they are doing (design 42).
+        ///
+        /// <para><b>On by default</b> (owner, 2026-09-24), and overruled while the player is
+        /// building: <see cref="WallsView.Lowered"/> is the whole rule. Drawn, never simulated,
+        /// like everything else here.</para>
+        /// </summary>
+        WallsDown,
     }
 
     /// <summary>
@@ -300,6 +310,10 @@ namespace Odyssey.Hud
         /// their words and the preference are one thing and the clock owns it.</summary>
         public const string AutosaveKey = AutosaveClock.SettingKey;
 
+        /// <summary>The registry key naming the walls-down option, which the depth rail's button
+        /// is labelled with as well as the settings row (design 42 §7).</summary>
+        public const string WallsDownKey = "ui.settings.wallsdown";
+
         static readonly GraphicsOption[] Order =
         {
             GraphicsOption.Shadows,
@@ -308,6 +322,7 @@ namespace Odyssey.Hud
             GraphicsOption.GroundRelief,
             GraphicsOption.SeeThrough,
             GraphicsOption.CutAwayCeiling,
+            GraphicsOption.WallsDown,
         };
 
         /// <summary>
@@ -332,6 +347,7 @@ namespace Odyssey.Hud
             "ui.settings.relief",
             "ui.settings.seethrough",
             "ui.settings.cutaway",
+            WallsDownKey,
             "ui.settings.volume.master",
             "ui.settings.volume.music",
             "ui.settings.volume.ambience",
@@ -798,6 +814,7 @@ namespace Odyssey.Hud
             GraphicsOption.GroundRelief => "ui.settings.relief",
             GraphicsOption.SeeThrough => "ui.settings.seethrough",
             GraphicsOption.CutAwayCeiling => "ui.settings.cutaway",
+            GraphicsOption.WallsDown => WallsDownKey,
             _ => "ui.settings.panel",
         };
 

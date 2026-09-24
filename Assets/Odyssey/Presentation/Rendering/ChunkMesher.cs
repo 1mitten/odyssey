@@ -38,6 +38,8 @@ namespace Odyssey.Presentation.Rendering
     {
         readonly Dictionary<long, int> _bodyIndex = new Dictionary<long, int>();
         readonly Dictionary<long, int> _roofIndex = new Dictionary<long, int>();
+        readonly Dictionary<long, int> _wallIndex = new Dictionary<long, int>();
+        readonly Dictionary<long, int> _stumpIndex = new Dictionary<long, int>();
         readonly WorldRenderModel _model;
 
         public ChunkMesher(WorldRenderModel model) => _model = model;
@@ -52,10 +54,16 @@ namespace Odyssey.Presentation.Rendering
             batch.Clear();
             _bodyIndex.Clear();
             _roofIndex.Clear();
+            _wallIndex.Clear();
+            _stumpIndex.Clear();
             for (int i = 0; i < batch.Body.Count; i++)
                 _bodyIndex[KeyOf(batch.Body[i])] = i;
             for (int i = 0; i < batch.Roof.Count; i++)
                 _roofIndex[KeyOf(batch.Roof[i])] = i;
+            for (int i = 0; i < batch.Walls.Count; i++)
+                _wallIndex[KeyOf(batch.Walls[i])] = i;
+            for (int i = 0; i < batch.Stumps.Count; i++)
+                _stumpIndex[KeyOf(batch.Stumps[i])] = i;
 
             var size = _model.Size;
             for (int z = z0; z < z1; z++)
@@ -708,6 +716,10 @@ namespace Odyssey.Presentation.Rendering
                     }
                     break;
                 case CoreContent.EdificePillar:
+                    AddWall(batch, module, tint,
+                        GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)));
+                    EmitPillarStump(batch, module, tint, x, z, y);
+                    return;
                 case CoreContent.EdificeUtilityTap:
                     AddBody(batch, module, tint,
                         GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)));
@@ -723,6 +735,79 @@ namespace Odyssey.Presentation.Rendering
 
             EmitFacePanels(batch, module, tint, index, x, z, y);
             EmitWallCore(batch, tint, def, x, z, y);
+            EmitWallStump(batch, tint, x, z, y);
+        }
+
+        /// <summary>
+        /// A wall as it stands while the walls are down (design 42 §4): the core block, cut to
+        /// <see cref="CellMetrics.StumpHeight"/> and draped exactly as the core is, in the wall's
+        /// own tint. One per wall cell whatever its faces, and a window gets one too — a window is
+        /// part of the wall line, and a gap in the stumps would read as a doorway.
+        ///
+        /// <para>Meshed beside the full wall rather than instead of it, into its own list, so the
+        /// toggle is a choice of list at draw time and never a re-mesh. The block's pivot is at
+        /// its base, so scaling it in y shortens it from the top down and it stays on the
+        /// floor.</para>
+        /// </summary>
+        void EmitWallStump(ChunkBatch batch, int tint, int x, int z, int y)
+        {
+            int core = _model.WallCoreModule;
+            if (core == 0) return;
+
+            AddStump(batch, core, tint, GroundRelief.Drape(
+                CellMetrics.FloorCentre(x, z, y) - Vector3.up * CoreRecess) * StumpScale);
+        }
+
+        /// <summary>The core block's height scaled to a stump's, about its base.</summary>
+        static readonly Matrix4x4 StumpScale =
+            Matrix4x4.Scale(new Vector3(1f, CellMetrics.StumpHeight / CellMetrics.SizeY, 1f));
+
+        /// <summary>
+        /// How far along the wall line each jamb of a lowered doorway runs, in metres. Wide enough
+        /// to read as a post from the play camera, narrow enough that the opening between the two
+        /// is most of the cell — which is what makes it read as a way through.
+        /// </summary>
+        public const float JambWidth = 0.35f;
+
+        /// <summary>How thick a jamb is across the wall line: the thickness of the door frame.</summary>
+        public const float JambDepth = 0.25f;
+
+        /// <summary>
+        /// A doorway as it stands while the walls are down: two short jambs, one at each end of
+        /// the frame, in the frame's own face and turn (design 42 §4). The leaf is not drawn at
+        /// all then — <c>DoorDirector</c> asks the same slice question — so the gap between the
+        /// jambs is the doorway.
+        /// </summary>
+        void EmitDoorStump(ChunkBatch batch, int tint, int dir, int x, int z, int y)
+        {
+            int core = _model.WallCoreModule;
+            if (core == 0) return;
+
+            Matrix4x4 face = GroundRelief.Drape(CellMetrics.FaceCentre(x, z, y, dir)) *
+                             Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f));
+            var size = new Vector3(JambWidth / CellMetrics.SizeXZ, CellMetrics.StumpHeight / CellMetrics.SizeY,
+                JambDepth / CellMetrics.SizeXZ);
+            float along = CellMetrics.HalfXZ - JambWidth * 0.5f;
+            AddStump(batch, core, tint, face * Matrix4x4.Translate(new Vector3(-along, 0f, 0f)) * Matrix4x4.Scale(size));
+            AddStump(batch, core, tint, face * Matrix4x4.Translate(new Vector3(along, 0f, 0f)) * Matrix4x4.Scale(size));
+        }
+
+        /// <summary>
+        /// A pillar as it stands while the walls are down: the core block cut to the pillar's own
+        /// footprint and to a stump's height, so a colonnade still reads as a colonnade.
+        /// </summary>
+        void EmitPillarStump(ChunkBatch batch, int module, int tint, int x, int z, int y)
+        {
+            int core = _model.WallCoreModule;
+            if (core == 0) return;
+
+            Vector3 footprint = _model.Library[module].Bounds.size;
+            var size = new Vector3(
+                Mathf.Clamp01(footprint.x / CellMetrics.SizeXZ),
+                CellMetrics.StumpHeight / CellMetrics.SizeY,
+                Mathf.Clamp01(footprint.z / CellMetrics.SizeXZ));
+            if (size.x <= 0f || size.z <= 0f) size.x = size.z = 0.3f;
+            AddStump(batch, core, tint, GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) * Matrix4x4.Scale(size));
         }
 
         /// <summary>
@@ -765,7 +850,7 @@ namespace Odyssey.Presentation.Rendering
             int core = _model.WallCoreModule;
             if (core == 0) return;
 
-            AddBody(batch, core, tint, GroundRelief.Drape(
+            AddWall(batch, core, tint, GroundRelief.Drape(
                 CellMetrics.FloorCentre(x, z, y) - Vector3.up * CoreRecess));
         }
 
@@ -799,7 +884,7 @@ namespace Odyssey.Presentation.Rendering
             {
                 int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
                 if (size.Contains(nx, nz, y) && _model.OccludesFace(size.Index(nx, nz, y))) continue;
-                AddBody(batch, module, tint,
+                AddWall(batch, module, tint,
                     GroundRelief.Drape(CellMetrics.FaceCentre(x, z, y, dir)) *
                     Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f)));
             }
@@ -808,9 +893,10 @@ namespace Odyssey.Presentation.Rendering
         void EmitDoor(ChunkBatch batch, int module, int tint, int index, int x, int z, int y)
         {
             int dir = _model.DoorFacing(x, z, y);
-            AddBody(batch, module, tint,
+            AddWall(batch, module, tint,
                 GroundRelief.Drape(CellMetrics.FaceCentre(x, z, y, dir)) *
                 Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f)));
+            EmitDoorStump(batch, tint, dir, x, z, y);
         }
 
         void EmitStair(ChunkBatch batch, int module, int tint, ushort def, int x, int z, int y)
@@ -978,6 +1064,12 @@ namespace Odyssey.Presentation.Rendering
 
         void AddRoof(ChunkBatch batch, int module, int tint, in Matrix4x4 placement) =>
             Add(batch.Roof, _roofIndex, batch, module, tint, placement);
+
+        void AddWall(ChunkBatch batch, int module, int tint, in Matrix4x4 placement) =>
+            Add(batch.Walls, _wallIndex, batch, module, tint, placement);
+
+        void AddStump(ChunkBatch batch, int module, int tint, in Matrix4x4 placement) =>
+            Add(batch.Stumps, _stumpIndex, batch, module, tint, placement);
 
         void Add(List<InstanceBucket> list, Dictionary<long, int> lookup, ChunkBatch batch,
             int module, int tint, in Matrix4x4 placement)

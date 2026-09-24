@@ -920,6 +920,7 @@ namespace Odyssey.Presentation.Ui
             {
                 HotkeyAction.SliceUp, HotkeyAction.SliceDown,
                 HotkeyAction.CycleAbove, HotkeyAction.FrameMap,
+                HotkeyAction.WallsDown,
             }),
             ("Time", new[]
             {

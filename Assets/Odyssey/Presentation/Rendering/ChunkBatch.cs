@@ -252,6 +252,19 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Is this bucket a tree, and so coloured from <see cref="TreePalette"/>?</summary>
         public static bool IsTree(int code) => (code & TreeBase) != 0;
 
+        /// <summary>
+        /// Is this the landscape rather than something built — ground, rock, water, a bank, grass,
+        /// a crop or a tree? Walls-down hides everything built above the slice and keeps this
+        /// (design 42 §4), because the landscape is never cut away (06 §3b).
+        ///
+        /// <para>A tint answers it because the mesher already sorts the two apart when it picks
+        /// one: anything built wears a plain stuff tint, the linen tint or the store edge, none
+        /// of which carries any of these bits, and a stored wash on the ground keeps the terrain
+        /// bit it was laid over.</para>
+        /// </summary>
+        public static bool IsLandscape(int code) =>
+            (code & (TerrainBase | FoliageBase | WaterBase | TreeBase | WholeBase)) != 0;
+
         /// <summary>Is this bucket open to the sky, and so exempt from the depth shade?</summary>
         public static bool IsDaylit(int code) => (code & DaylitBase) != 0;
 
@@ -358,11 +371,27 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The mirror version this batch was meshed from. Stale means remesh.</summary>
         public int Version = -1;
 
-        /// <summary>Walls, doors, pillars, stairs, ladders and solid strata.</summary>
+        /// <summary>Stairs, ladders, furniture, trees and solid strata: whatever stands and does
+        /// not lower.</summary>
         public readonly List<InstanceBucket> Body = new List<InstanceBucket>();
 
         /// <summary>Slabs and ground surfaces — everything the cut-away drops.</summary>
         public readonly List<InstanceBucket> Roof = new List<InstanceBucket>();
+
+        /// <summary>
+        /// Walls, windows, vault walls, door frames and pillars at full height: everything
+        /// walls-down lowers (design 42 §4). Drawn instead of <see cref="Stumps"/> whenever the
+        /// walls are up.
+        /// </summary>
+        public readonly List<InstanceBucket> Walls = new List<InstanceBucket>();
+
+        /// <summary>
+        /// The same things as stumps, meshed with them and drawn instead of <see cref="Walls"/>
+        /// while the walls are down. Both forms are always here, so the toggle — which flips every
+        /// time the Build palette opens — is a choice of list and never a re-mesh, exactly as the
+        /// roof is.
+        /// </summary>
+        public readonly List<InstanceBucket> Stumps = new List<InstanceBucket>();
 
         public int InstanceCount;
 
@@ -370,6 +399,8 @@ namespace Odyssey.Presentation.Rendering
         {
             for (int i = 0; i < Body.Count; i++) Body[i].Clear();
             for (int i = 0; i < Roof.Count; i++) Roof[i].Clear();
+            for (int i = 0; i < Walls.Count; i++) Walls[i].Clear();
+            for (int i = 0; i < Stumps.Count; i++) Stumps[i].Clear();
             InstanceCount = 0;
         }
     }

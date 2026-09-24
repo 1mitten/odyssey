@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-110 entries, 84 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+111 entries, 85 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -112,6 +112,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Ground relief** | `ui.settings.relief` | The roll of the drawn ground. The cells underneath stay flat | no art | M1 |
 | **See through to selection** | `ui.settings.seethrough` | Fade whatever stands between the camera and a selected colonist | no art | M1 |
 | **Cut away the ceiling** | `ui.settings.cutaway` | See into rooms on this layer. Off shows the floor above you | no art | M3 |
+| **Walls down** | `ui.settings.wallsdown` | Lower walls to a stump and hide the storeys above, so you can see inside. Building shows them in full | no art | M3 |
 | **Keys** | `ui.settings.keys` | Every key the game reads, and what each one may be changed to | no art | M3 |
 | **Reset keys to defaults** | `ui.settings.resetkeys` | Put every action back on the key it shipped with | no art | M3 |
 | **Audio** | `ui.settings.audio` | How loud each part of the game is. Stored on the machine, in decibels | no art | M3 |

@@ -923,6 +923,7 @@ namespace Odyssey.Presentation.Ui
             UpdateArmedBanner();
             MarkOrders();
             MarkViews();
+            MarkWalls();
             ReadBarKeys();
             UpdateContextMenu();
 

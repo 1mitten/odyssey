@@ -122,7 +122,13 @@ namespace Odyssey.Presentation.CameraRig
                 // your head stays pickable, the floor slab that was meshed away does not.
                 bool floors = !(slice != null && layer == activeLayer + 1 && slice.SuppressCeilingAt(activeLayer));
 
-                if (!PickOnLayer(ray, model, layer, floors, out CellRef hit, out float t, out bool thing))
+                // Walls down (design 42 §5): a click meets a lowered wall only where its stump is
+                // drawn, and on a storey whose building is hidden it meets only the landscape.
+                bool lowered = slice != null && slice.LowersWallsOn(activeLayer, layer);
+                bool builtHidden = slice != null && slice.HidesBuiltOn(activeLayer, layer);
+
+                if (!PickOnLayer(ray, model, layer, floors, out CellRef hit, out float t, out bool thing,
+                        lowered, builtHidden))
                     continue;
 
                 // Strictly nearer, or the same surface with something standing on it. The second
@@ -181,7 +187,8 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         static bool PickOnLayer(
             Ray ray, WorldRenderModel model, int layer, bool floors,
-            out CellRef cell, out float hitAt, out bool thing)
+            out CellRef cell, out float hitAt, out bool thing,
+            bool lowered = false, bool builtHidden = false)
         {
             cell = default;
             hitAt = float.MaxValue;
@@ -231,7 +238,13 @@ namespace Odyssey.Presentation.CameraRig
                 int index = size.Index(x, z, layer);
                 float tCellEnd = tEnter + Mathf.Min(tMaxX, tMaxZ);
 
-                if (model.OccludesFace(index) || model.EdificeDef(index) == CoreContent.EdificeDoor)
+                // What walls-down has taken out of the picture is not in the way of a click either.
+                // Solid rock is terrain and is never built, so it is left standing by both rules.
+                bool stump = lowered && model.Lowers(index);
+                bool hidden = builtHidden && !model.IsSolid(index) && model.IsBuiltAt(index);
+
+                if (!stump && !hidden
+                    && (model.OccludesFace(index) || model.EdificeDef(index) == CoreContent.EdificeDoor))
                 {
                     cell = new CellRef(x, z, layer);
                     thing = model.EdificeDef(index) != 0;
@@ -269,7 +282,9 @@ namespace Odyssey.Presentation.CameraRig
                 // crosses that plane *inside this cell's own footprint*, which is what the two
                 // bounds say — so a bed shadows the sliver of ground behind it exactly as it is
                 // drawn to, and nothing else changes.
-                float stand = model.StandHeight(index);
+                // A stump is picked the way a bed is: on its own top, inside its own cell, and only
+                // there — so a click over it reaches the floor behind, which is what is drawn there.
+                float stand = hidden ? 0f : stump ? CellMetrics.StumpHeight : model.StandHeight(index);
                 if (stand > 0f)
                 {
                     float tTop = FloorCrossing(ray, floorY + stand);
@@ -289,7 +304,7 @@ namespace Odyssey.Presentation.CameraRig
                 float tFloor = floors ? FloorCrossing(ray, floorY) : float.MaxValue;
 
                 if (tFloor >= t - 1e-4f && tFloor <= tCellEnd
-                    && Owner(model, index, layer, out CellRef owner, out thing))
+                    && Owner(model, index, layer, out CellRef owner, out thing, builtHidden))
                 {
                     cell = owner;
                     hitAt = tFloor;
@@ -357,11 +372,40 @@ namespace Odyssey.Presentation.CameraRig
         ///
         /// <para>Nothing under it at all is a hole, and a click through a hole selects nothing.</para>
         /// </summary>
-        static bool Owner(WorldRenderModel model, int index, int layer, out CellRef cell, out bool thing)
+        static bool Owner(WorldRenderModel model, int index, int layer, out CellRef cell, out bool thing,
+            bool builtHidden = false)
         {
             var size = model.Size;
             thing = false;
             cell = default;
+
+            // A storey walls-down is hiding owns nothing a click can land on — not its building,
+            // its floor, its orders or its lines — and the ray goes on to whatever the landscape
+            // offers under it (design 42 §5). A tree is not built, so it keeps its click.
+            if (builtHidden)
+            {
+                bool tree = NaturalContent.IsTree(model.EdificeDef(index));
+                if (tree)
+                {
+                    cell = size.FromIndex(index);
+                    thing = true;
+                    return true;
+                }
+
+                if (NaturalContent.IsWater(model.Terrain(index)) && model.Floor(index) == 0)
+                {
+                    cell = size.FromIndex(index);
+                    return true;
+                }
+
+                if (layer > 0 && model.IsSolid(index - size.LayerStride))
+                {
+                    cell = size.FromIndex(index - size.LayerStride);
+                    return true;
+                }
+
+                return false;
+            }
 
             if (model.EdificeDef(index) != 0)
             {

@@ -134,6 +134,46 @@ namespace Odyssey.Presentation.CameraRig
         public bool suppressActiveCeiling;
 
         /// <summary>
+        /// Walls are drawn as stumps and the built storeys above the slice are hidden, this frame
+        /// (design 42).
+        ///
+        /// <para><b>Written once a frame by the composition root and by nothing else</b>, from
+        /// <c>Odyssey.Hud.WallsView.Lowered</c> — the player's choice with build mode taken out of
+        /// it. It is the answer rather than the choice, so nothing downstream ever works out build
+        /// mode for itself: the renderer, the picker, the order marks, the door leaves and every
+        /// actor pass ask the three questions below and agree by construction (P1).</para>
+        ///
+        /// <para>Not serialised: it is the state of this frame, not a setting of the scene. The
+        /// choice itself is kept by the settings store.</para>
+        /// </summary>
+        [NonSerialized] public bool wallsLowered;
+
+        /// <summary>
+        /// Are this layer's walls, doors and pillars drawn as stumps? The active layer and
+        /// everything below it — a storey beneath is under the active floor and seen only down a
+        /// shaft or over a terrace, and there the same plan should read the same way.
+        /// </summary>
+        public bool LowersWallsOn(int activeLayer, int layer) => wallsLowered && layer <= activeLayer;
+
+        /// <summary>
+        /// Is everything <em>built</em> on this layer hidden, leaving the landscape? Above the
+        /// slice, and only where the layers above are drawn solid (design 42 §3). Underground the
+        /// one layer above is already an x-ray, a ghost nobody can click, and it is left as it is.
+        /// </summary>
+        public bool HidesBuiltOn(int activeLayer, int layer) =>
+            wallsLowered && layer > activeLayer && !GhostsAbove(activeLayer);
+
+        /// <summary>
+        /// Is something standing in this cell hidden with the storey it stands on? A colonist on
+        /// the upper floor of a house goes with the house; one on a hilltop above the slice stands
+        /// on landscape and stays (design 42 §5). The one question every actor pass asks.
+        /// </summary>
+        public bool HidesStandingAt(int activeLayer, Odyssey.Sim.Contracts.CellRef cell,
+            Odyssey.Presentation.World.WorldRenderModel? model) =>
+            model != null && HidesBuiltOn(activeLayer, cell.Y)
+            && model.Size.Contains(cell.X, cell.Z, cell.Y) && model.IsBuiltAt(model.Size.Index(cell));
+
+        /// <summary>
         /// Below the opacity at which a ghosted layer is not drawn at all.
         ///
         /// <para>It lived as a literal in <c>ChunkRenderer</c>'s loop. It is named here because

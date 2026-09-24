@@ -818,6 +818,21 @@
     margin-top: 6px;
 }
 
+/* The walls-down switch under the hint (design 42 §7). A cell's width, lit from C# in the accent
+   while on, the way the views strip's switches are. */
+.rail__walls {
+    width: 26px;
+    height: 22px;
+    margin-top: 4px;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-radius: 4px;
+}
+
+.rail__walls:hover { background-color: rgba(255, 255, 255, 0.07); }
+
 /* ---------------------------------------------------------------- the orders strip
 
    The four verbs a player applies to what is already on the board, in the gutter under the rail.

@@ -1,5 +1,6 @@
 #nullable enable
 using Odyssey.Hud;
+using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Worldgen;
@@ -265,7 +266,10 @@ namespace Odyssey.Presentation.World
         /// the marks bucketed by shape and fade step, and the drops in one call. A mark whose ground
         /// has gone — a floor taken up, a wall built on it — goes with it (§10c).
         /// </summary>
-        public void Draw(ChunkRenderer renderer, int lowest, int highest)
+        /// <param name="slice">When given, a mark on a storey walls-down is hiding goes with it
+        /// (design 42 §5).</param>
+        public void Draw(ChunkRenderer renderer, int lowest, int highest,
+            SliceSettings? slice = null, int activeLayer = 0)
         {
             int callsBefore = renderer.DrawCalls;
             System.Array.Clear(_bucketCounts, 0, Buckets);
@@ -280,6 +284,9 @@ namespace Odyssey.Presentation.World
                     continue;
                 }
                 if (!BloodLedger.Visible(mark.Layer, lowest, highest)) continue;
+                if (slice != null && slice.HidesStandingAt(activeLayer, new CellRef(
+                        Mathf.FloorToInt(mark.X / CellMetrics.SizeXZ), Mathf.FloorToInt(mark.Z / CellMetrics.SizeXZ),
+                        mark.Layer), _model)) continue;
 
                 long age = _now - mark.Born;
                 int step = BloodLedger.FadeStep(age);

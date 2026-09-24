@@ -550,6 +550,12 @@ namespace Odyssey.Hud
         /// <summary>The "R / F" hint under the rail.</summary>
         public const int RailHint = 14;
 
+        /// <summary>The walls-down switch under the hint (design 42 §7): as wide as a rail cell.</summary>
+        public const int RailToggle = 22;
+
+        /// <summary>The gap between the hint and the walls-down switch.</summary>
+        public const int RailToggleGap = 4;
+
         /// <summary>The rail's label row, which is shorter than a panel header because it carries
         /// no control opposite it.</summary>
         public const int RailLabel = 14;
@@ -1547,7 +1553,7 @@ namespace Odyssey.Hud
         /// <summary>
         /// The rail's chrome: everything that is not a cell.
         /// </summary>
-        public const float RailChrome = Frame + Pad + RailLabel + RailHint + Pad;
+        public const float RailChrome = Frame + Pad + RailLabel + RailHint + RailToggleGap + RailToggle + Pad;
 
         /// <summary>
         /// The smallest a cell and its gap may be squeezed to. Four pixels of cell is still a

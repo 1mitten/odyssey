@@ -68,6 +68,10 @@ namespace Odyssey.Presentation.World
             _root.layer = layer;
         }
 
+        /// <summary>How many door leaves the last <see cref="Sync"/> placed: the drawn ones, which walls-down
+        /// leaves out (design 42 §5).</summary>
+        public int LeavesPlaced => _placementCount;
+
         public int ActiveDoorCount
         {
             get
@@ -149,6 +153,12 @@ namespace Odyssey.Presentation.World
                 }
 
                 _states[cellIndex] = state;
+
+                // Walls down (design 42 §5): the leaf is not drawn where the frame is a pair of
+                // jambs or the storey is hidden. The door still opens, closes and sounds above —
+                // only the drawing stops — so raising the walls finds it where it would have been.
+                if (slice.LowersWallsOn(activeLayer, cell.Y) || slice.HidesBuiltOn(activeLayer, cell.Y))
+                    continue;
 
                 Matrix4x4 root = GroundRelief.Drape(faceFloor) *
                                  Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f));
