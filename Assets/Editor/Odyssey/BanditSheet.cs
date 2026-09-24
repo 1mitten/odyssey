@@ -158,6 +158,28 @@ namespace Odyssey.EditorTools
                 }
                 Write("bandit-dressed.png", dressed, 6, BodyWidth, BodyHeight, report);
 
+                // ---- the game's own path: twelve bandits dealt by the book from the committed
+                //      catalogue and photographed by PortraitStudio, each beside the same person
+                //      in the uniform — the pane's masked portrait and who is under it.
+                var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(PlayScene.CataloguePath);
+                if (catalogue != null)
+                {
+                    using var studio = new PortraitStudio(catalogue, materials)
+                    {
+                        Appearances = AppearanceBooks.For(20260924u, catalogue),
+                    };
+                    var people = new List<(string, Texture2D?)>();
+                    for (int pawn = 1; pawn <= 12; pawn++)
+                    {
+                        uint roll = (uint)(pawn * 2654435761u % 900000 + 1000);
+                        ColonistAppearance bandit = studio.Appearances!.For(pawn, roll, PawnOutfit.Bandit);
+                        ColonistAppearance person = studio.Appearances!.For(pawn, roll, PawnOutfit.Issued);
+                        people.Add(($"pawn {pawn} bandit: {bandit}", Copy(studio.For(bandit))));
+                        people.Add(($"pawn {pawn} person: {person}", Copy(studio.For(person))));
+                    }
+                    Write("bandit-portraits.png", people, 8, PortraitStudio.Size, PortraitStudio.Size, report);
+                }
+
                 Debug.Log(report.ToString());
             }
             catch (Exception e)
@@ -225,6 +247,19 @@ namespace Odyssey.EditorTools
         }
 
         static Rect Pad(Rect r) => Rect.MinMaxRect(r.xMin - 0.0012f, r.yMin - 0.0012f, r.xMax + 0.0012f, r.yMax + 0.0012f);
+
+        /// <summary>
+        /// A copy of a studio portrait. The studio owns its textures and <see cref="Write"/>
+        /// destroys what it is handed, so the sheet takes its own.
+        /// </summary>
+        static Texture2D? Copy(Texture2D? shot)
+        {
+            if (shot == null) return null;
+            var copy = new Texture2D(shot.width, shot.height, TextureFormat.RGBA32, false);
+            copy.SetPixels32(shot.GetPixels32());
+            copy.Apply();
+            return copy;
+        }
 
         static AppearanceCells Copy(AppearanceCells c) => new AppearanceCells
         {

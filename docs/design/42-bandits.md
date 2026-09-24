@@ -119,6 +119,40 @@ the issued jumpsuit already rolled the person and laid the uniform over them.
   `ShowsColonistBody` and `ShowsTabBox` stay a colonist's: no needs, skills, Health tab or Draft.
 - A bandit's corpse is "Corpse of *name*".
 
+## 6a. Verified, 2026-09-24
+
+- **Fast tier:** 1,479 Sim + 1,090 Hud. **Long tier:** 45 of 45.
+- **Unity EditMode:** 3,611 total, 3,579 passed, **0 failed**.
+- **Unity PlayMode:** 140 total, 129 passed, **0 failed**, run alone.
+- **Goldens:** no golden was re-baked and none failed. No golden spawns a bandit.
+- **Player build:** boots into a colony clean, with 79 faces (73 colonists plus the gang's 6).
+
+What the new tests prove:
+
+| Test | Proves |
+|---|---|
+| `BanditOutfitTests` | The dressing is a pure layer over the person. |
+| `FarBanditTests` | The gang's rows, the helmet, and the far form's red and black, vest kept apart. |
+| `BanditLookTests` (PlayMode) | Under the real bootstrap: helmet on, one vest, no hair or beard, colonist control in neither. |
+| `BanditArmsTests` | Crowbar or bat, never a blade, both dealt across a gang. |
+
+`Logs/bandit-portraits.png` shows twelve bandits through `PortraitStudio`, each beside the same
+person in the uniform.
+
+**The frame cost is not measured.** The far form adds one instanced call per helmet piece in use
+(one piece) and one per vest part per gang body drawn. The live figure adds one disabled slot to
+every figure.
+
+**One test is inconclusive and was so before this branch.** `ABanditSpawnedOnAPileIsStillArmed`
+assumes the spawn lands on the pile, and the spawn spread moves it. `main` skips it too, as
+`AMarauderSpawnedOnAPileIsStillArmed`.
+
+**A knockback fix fell out.** `FightGuardTests.MixedBrawlsOnManySeeds` failed once bandits carried
+blunt weapons. `Melee.Holds` leaves a pawn's own claims to her, so a critical could lay a colonist
+on the rat she was beating, where she lay for 90 ticks. `CombatSystem.KnockbackCell` now refuses
+the side of the one the target fights. The regression test is
+`KnockbackTests.NeverOnToTheTileOfTheOneItIsFighting`, with an unfought rat as the control.
+
 ## 7. Out of scope, recorded
 
 - **Savage behaviour**: executing the downed, raiding, fleeing when hurt. It is its own unit.
