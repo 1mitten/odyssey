@@ -321,13 +321,10 @@ namespace Odyssey.Presentation.Ui
         {
             var footer = new VisualElement();
             footer.AddToClassList("title__footer");
-            Label version = HudText.Make(TitleLayout.VersionLine(Application.version), HudTextRole.Meta,
+            Label version = HudText.Make(TitleLayout.VersionLine(TitleLayout.Version), HudTextRole.Meta,
                 numeric: true, ussClass: "title__cap");
             version.style.fontSize = 11;
             footer.Add(version);
-            _titleResolution = HudText.Make(string.Empty, HudTextRole.Meta, numeric: true, ussClass: "title__cap");
-            _titleResolution.style.fontSize = 11;
-            footer.Add(_titleResolution);
             return footer;
         }
 
@@ -402,7 +399,7 @@ namespace Odyssey.Presentation.Ui
             });
 
             // The logo holds its place down the screen (18.5% of the height, never under 96 px), the
-            // wordmark gives up tracking before it would overflow, and the footer names the screen.
+            // wordmark gives up tracking before it would overflow.
             dock.RegisterCallback<GeometryChangedEvent>(_ => LayOutTitle());
         }
 
@@ -415,12 +412,6 @@ namespace Odyssey.Presentation.Ui
             float word = _titleWordmark.layout.width;
             if (word > 0f && word + TitleLayout.MarkWidth + TitleLayout.MarkGap > TitleLayout.ContentWidth)
                 _titleWordmark.style.letterSpacing = TitleLayout.WordmarkSize * TitleLayout.WordmarkTrackingTight;
-
-            if (_titleResolutionShown.x != Screen.width || _titleResolutionShown.y != Screen.height)
-            {
-                _titleResolutionShown = new Vector2Int(Screen.width, Screen.height);
-                HudText.Set(_titleResolution, TitleLayout.ResolutionLine(Screen.width, Screen.height), HudTextRole.Meta);
-            }
         }
 
         /// <summary>Put focus on a title button a moment after the screen shows, when it can take
@@ -437,12 +428,10 @@ namespace Odyssey.Presentation.Ui
 
         VisualElement _titleLogo = null!;
         Label _titleWordmark = null!;
-        Label _titleResolution = null!;
         VisualElement _titleRing = null!;
         bool _titlePointer;
         string? _titleReturnKey;
         MenuScreen _titlePrevScreen = MenuScreen.Root;
-        Vector2Int _titleResolutionShown;
 
         /// <summary>
         /// A plain row of the New game screen: the same icon-and-label row as every other, with an
@@ -1106,7 +1095,7 @@ namespace Odyssey.Presentation.Ui
             {
                 var empty = new VisualElement();
                 empty.AddToClassList("save");
-                empty.Add(HudText.Make(Registry.Label("ui.start.empty"), HudTextRole.Row,
+                empty.Add(HudText.Make(Registry.Label("ui.start.empty"), HudTextRole.Name,
                     ussClass: "save__name"));
                 _startList.Add(empty);
                 return;
@@ -1118,15 +1107,30 @@ namespace Odyssey.Presentation.Ui
 
                 var row = new VisualElement();
                 row.AddToClassList("save");
-                row.Add(HudText.Make(save.Name, HudTextRole.Row, ussClass: "save__name"));
+                // The title at the name step, 19/600 (owner, 2026-09-24: "make the title label
+                // for the saved game bigger").
+                row.Add(HudText.Make(save.Name, HudTextRole.Name, ussClass: "save__name"));
 
                 // The colony, the day and when it was written — the line that tells two saves
-                // apart once the title is a name the player chose. Asked for by the owner after
-                // playing it (2026-09-17). A figure, so mono, like every other figure on this
-                // screen.
-                row.Add(HudText.Make(
-                    save.Readable ? $"{save.Colony} · Day {save.Day} · {save.When}" : save.Problem,
-                    HudTextRole.Meta, numeric: save.Readable, "save__meta"));
+                // apart once the title is a name the player chose (owner, 2026-09-17). Three
+                // labels rather than one string, so the day and the date stand in columns
+                // whatever the colony is called: the date was one string's tail, and it moved
+                // with the length of the name in front of it (owner, 2026-09-24: "date is
+                // misaligned"). The colony is a word, so the reading face; the day and the date
+                // are figures, so mono.
+                var meta = new VisualElement { pickingMode = PickingMode.Ignore };
+                meta.AddToClassList("save__line");
+                if (save.Readable)
+                {
+                    meta.Add(HudText.Make(save.Colony, HudTextRole.Row, ussClass: "save__meta"));
+                    meta.Add(HudText.Make("Day " + save.Day, HudTextRole.Row, numeric: true, "save__day"));
+                    meta.Add(HudText.Make(save.When, HudTextRole.Row, numeric: true, "save__when"));
+                }
+                else
+                {
+                    meta.Add(HudText.Make(save.Problem, HudTextRole.Row, ussClass: "save__meta"));
+                }
+                row.Add(meta);
 
                 if (save.Readable)
                 {

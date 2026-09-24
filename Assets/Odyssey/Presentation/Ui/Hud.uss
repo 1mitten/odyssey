@@ -2486,7 +2486,7 @@
     width: 560px;
     padding: 0 48px;
     flex-direction: column;
-    background-color: rgb(12, 16, 20);
+    background-color: rgba(12, 16, 20, 0.72);
     border-width: 0;
     border-right-width: 1px;
     border-right-color: rgba(255, 255, 255, 0.13);
@@ -2547,14 +2547,35 @@
 .title__btn:hover > .title__edge,
 .title__btn:focus > .title__edge { display: flex; }
 
-.title__words { margin-left: 16px; }
+/* The name and the line under it, as one block centred on the icon. Each line is an explicit box
+   with its text centred in it and no margin or padding of its own, because a label left to size
+   itself takes a line box twice its point size and the block then sits on the renderer's metrics
+   rather than on the icon (owner, 2026-09-24: "all out of whack"). */
+.title__words {
+    margin-left: 16px;
+    flex-grow: 1;
+    flex-direction: column;
+    justify-content: center;
+}
 
-.title__name { color: rgb(238, 243, 246); }
+.title__name {
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-left;
+    white-space: nowrap;
+    color: rgb(238, 243, 246);
+}
 
 .title__name--ink { color: rgb(224, 106, 92); }
 
 .title__desc {
+    height: 16px;
+    margin: 0;
     margin-top: 6px;
+    padding: 0;
+    -unity-text-align: middle-left;
+    white-space: nowrap;
     color: rgba(255, 255, 255, 0.66);
 }
 
@@ -2611,26 +2632,65 @@
 .save {
     flex-direction: column;
     justify-content: center;
-    height: 44px;
-    margin-bottom: 4px;
-    padding: 0 8px;
-    border-radius: 3px;
+    height: 64px;
+    margin-bottom: 10px;
+    padding: 0 14px;
 }
 
 .save:hover { background-color: rgba(255, 255, 255, 0.07); }
 
+/* Every line an explicit box with its text centred in it and no margin or padding of its own, so
+   the title and the line under it start at one x and the row does not sit on the renderer's line
+   box (owner, 2026-09-24: "make sure all the elements are aligned"). */
 .save__name {
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-left;
     color: #eef3f6;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
 }
 
-/* Day, map, and — for a file this build cannot open — the reason. Listed rather than hidden: a
-   save that vanishes from the list is a colony the player concludes is gone. */
+/* Colony, day, date: the day at a fixed width and the date right-aligned, so the two figures stand
+   in columns down the list whatever each colony is called. */
+.save__line {
+    height: 20px;
+    margin-top: 4px;
+    flex-direction: row;
+    align-items: center;
+}
+
 .save__meta {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-left;
     color: rgba(255, 255, 255, 0.66);
     white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.save__day {
+    width: 80px;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-left;
+    color: rgba(255, 255, 255, 0.66);
+}
+
+.save__when {
+    flex-shrink: 0;
+    margin: 0;
+    margin-left: 12px;
+    padding: 0;
+    -unity-text-align: middle-right;
+    color: rgba(255, 255, 255, 0.66);
 }
 
 .save--bad { opacity: 0.42; }

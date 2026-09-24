@@ -56,6 +56,12 @@ namespace Odyssey.Hud
 
         public const int FooterBottom = 28;
 
+        /// <summary>A button's name and description lines, each an explicit box with its text
+        /// centred in it, so the pair has a height of its own and centres on the icon rather than
+        /// on the renderer's line box, which is twice the point size (<c>HudText.LineBoxFactor</c>).</summary>
+        public const int NameLine = 24;
+        public const int DescriptionLine = 16;
+
         /// <summary>A button's fill on hover and focus, and when pressed, as a share of its colour.
         /// The first is the Settings rail's selected row.</summary>
         public const float HoverFill = SettingsLayout.SelectedFill;
@@ -68,11 +74,16 @@ namespace Odyssey.Hud
         public static int LogoTop(float screenHeight) =>
             Math.Max(LogoTopMin, (int)Math.Round(screenHeight * LogoTopShare));
 
-        /// <summary>The build line at the foot of the dock.</summary>
-        public static string VersionLine(string version) => "prototype " + version;
+        /// <summary>
+        /// The game's version, semantic (owner, 2026-09-24: "just keep the version 0.0.1 for now").
+        /// Here rather than in the player setting (<c>bundleVersion</c>, still 0.1.0), because that
+        /// lives in <c>ProjectSettings.asset</c>, which an open editor writes back over; moving it
+        /// there is one line when a build needs to carry it.
+        /// </summary>
+        public const string Version = "0.0.1";
 
-        /// <summary>The resolution at the foot of the dock: "1920 x 1080".</summary>
-        public static string ResolutionLine(int width, int height) => width + " x " + height;
+        /// <summary>The version at the foot of the dock, prefixed: "V0.0.1".</summary>
+        public static string VersionLine(string version) => "V" + version;
 
         // ------------------------------------------------------------------ the buttons
 

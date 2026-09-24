@@ -82,9 +82,7 @@ namespace Odyssey.Tests.Hud
                 foreach (char c in button.Description + Registry.Label(button.Key))
                     Assert.That(c, Is.LessThan((char)128), $"{button.Key} writes a non-ASCII character");
             }
-            foreach (char c in TitleLayout.VersionLine("0.1.0") + TitleLayout.ResolutionLine(1920, 1080))
-                Assert.That(c, Is.LessThan((char)128));
-            Assert.That(TitleLayout.ResolutionLine(1920, 1080), Is.EqualTo("1920 x 1080"));
+            Assert.That(TitleLayout.VersionLine("0.0.1"), Is.EqualTo("V0.0.1"));
         }
     }
 }

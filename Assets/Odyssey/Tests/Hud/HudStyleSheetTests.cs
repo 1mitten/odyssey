@@ -127,7 +127,7 @@ namespace Odyssey.Tests.Hud
             // B18, the start screen. The scrim is the only colour this screen introduces; every
             // other line here is the screen proving it introduced none.
             (".modal-scrim", "background-color", () => HudTheme.ModalScrim, "modal scrim"),
-            (".panel.startscreen", "background-color", () => HudTheme.PanelFill, "panel fill"),
+            (".panel.startscreen", "background-color", () => HudTheme.DockFill, "the dock's fill"),
             (".panel.startscreen", "border-right-color", () => HudTheme.PanelBorder, "panel border"),
             (".title__divider", "background-color", () => HudTheme.PanelBorder, "panel border"),
             (".title__wordmark", "color", () => HudTheme.TextPrimary, "text primary"),
@@ -351,6 +351,8 @@ namespace Odyssey.Tests.Hud
             (".title__btn", "margin-bottom", () => TitleLayout.ButtonGap, "between title buttons"),
             (".title__words", "margin-left", () => TitleLayout.IconTextGap, "icon to name"),
             (".title__desc", "margin-top", () => TitleLayout.DescriptionGap, "name to description"),
+            (".title__name", "height", () => TitleLayout.NameLine, "a button's name line"),
+            (".title__desc", "height", () => TitleLayout.DescriptionLine, "a button's description line"),
             (".title__edge", "width", () => TitleLayout.LitEdge, "the lit edge"),
             (".title__footer", "margin-bottom", () => TitleLayout.FooterBottom, "the footer"),
             (".save", "height", () => HudLayout.StartSaveRow, "a save row"),

@@ -172,6 +172,11 @@ namespace Odyssey.Hud
         /// (designs 39 and 40): one colour for the one destination.</summary>
         public static readonly HudColour Violet = new HudColour(0xb9, 0xa8, 0xe0);
 
+        /// <summary>The title screen's dock (design 40): the panel fill, translucent, so the
+        /// starfield carries on faintly behind it rather than stopping at a wall (owner,
+        /// 2026-09-24: "it looks solid").</summary>
+        public static readonly HudColour DockFill = new HudColour(12, 16, 20, 0.72f);
+
         // ------------------------------------------------------------------ controls (design 39)
 
         /// <summary>The border of a control that can be pressed: a segment, a select, a key chip,

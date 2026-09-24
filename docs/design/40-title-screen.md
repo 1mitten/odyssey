@@ -14,8 +14,8 @@ The start screen's scrim is still there and still takes the pointer, but it is c
 (`#start-scrim`); the dock carries its own contrast.
 
 From the top: the **Strata mark** (five slabs, the middle one lit in the accent, 70 x 60) and the
-**wordmark** on one row; a rule; the four buttons; and at the foot the build line
-(`prototype <Application.version>`) and the screen's resolution, in 11 mono at `--cap`.
+**wordmark** on one row; a rule; the four buttons; and at the foot the version, `V0.0.1`, in 11
+mono at `--cap`.
 
 ## 2. Numbers
 
@@ -104,3 +104,29 @@ lost its placeholder square too.
 The dock's width and edge were measured on the test runner's own game view only, which has a panel
 scale near 0.39; the brief's three resolutions are not set up for a no-colony screen in PlayMode.
 The dock is a constant width in panel units, so a resolution changes nothing but that rounding.
+
+## 10. After the first look (2026-09-24)
+
+The owner, on first sight: *"make the title screen left hand menu translucent as it looks solid.
+Remove the resolution label. Just keep the version 0.0.1 for now — replace prototype with V. Align
+the labels like New game vertically with the icons."* And of the load list: *"bigger text and more
+spacing between the entries … date is misaligned … make the title label for the saved game bigger."*
+
+- **The dock is translucent**: `HudTheme.DockFill`, the panel colour at .72, so the starfield runs on
+  faintly behind it.
+- **The footer is the version alone**, `V0.0.1`. The number is `TitleLayout.Version`, not the player
+  setting (`bundleVersion`, still 0.1.0): that lives in `ProjectSettings.asset`, which an open editor
+  writes back over, and nothing else reads it yet. Moving it is one line when a build must carry it.
+- **A button's words centre on its icon.** A label left to size itself takes a line box twice its
+  point size (`HudText.LineBoxFactor`), so the name and description sat on the renderer's metrics,
+  not on the icon. Each line is an explicit box now — 24 and 16, text centred in it, no margin or
+  padding — and the pair is centred in the button. `HudShotTests.PhotographTheTitleScreen` asserts
+  the words' centre is the icon's to a pixel and that every name and description start at one x,
+  and writes `Logs/title-shot.png`.
+- **The load list** rows are 64 high and 10 apart (`HudLayout.StartSaveRow` 44 → 64,
+  `StartSaveGap` 4 → 10). The title is at the name step, 19/600; the line under it is 14. **The date
+  was one string's tail** — "colony · Day N · when" — so it moved with the colony's name. It is three
+  labels: the colony (reading face, ellipsised), the day at a fixed 80 px, and the date right-aligned,
+  so the day and the date stand in columns. The same test hands the menu three made-up saves (never
+  the real saves folder) with names of three lengths, asserts the columns, and writes
+  `Logs/load-shot.png`. The middle dot is gone with the string, which also makes the line ASCII.

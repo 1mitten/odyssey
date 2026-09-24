@@ -1,7 +1,9 @@
 #nullable enable
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
+using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
@@ -45,6 +47,98 @@ namespace Odyssey.Tests.PlayMode
         /// <summary>The close-up of the top-left corner, which is where A1 Resources sits.</summary>
         const int CloseWidth = 420;
         const int CloseHeight = 320;
+
+        /// <summary>
+        /// The title screen (design 40), photographed with no colony, so the dock's translucency and
+        /// the line-up of each button's icon and words can be judged from a picture rather than
+        /// reasoned about. Cleared to a mid blue so the translucency shows. Asserts that each
+        /// button's words are centred on its icon to a pixel, which is what the owner reported
+        /// "out of whack" on 2026-09-24.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator PhotographTheTitleScreen()
+        {
+            GameObject root = Build(out OdysseyBootstrap _, buildOnPlay: false);
+            try
+            {
+                yield return new WaitForSecondsRealtime(0.5f);
+                for (int i = 0; i < 20; i++) yield return null;
+
+                var doc = root.GetComponentInChildren<UIDocument>();
+                var settings = Object.Instantiate(doc.panelSettings);
+                var target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32,
+                    RenderTextureReadWrite.sRGB);
+                settings.clearColor = true;
+                settings.colorClearValue = new Color(0.20f, 0.30f, 0.45f);
+                settings.targetTexture = target;
+                doc.panelSettings = settings;
+                for (int i = 0; i < 10; i++) yield return null;
+
+                foreach (VisualElement button in doc.rootVisualElement.Query(className: "title__btn").ToList())
+                {
+                    VisualElement icon = button.Q<PathGlyph>()!;
+                    VisualElement words = button.Q(className: "title__words")!;
+                    VisualElement name = button.Q(className: "title__name")!;
+                    VisualElement description = button.Q(className: "title__desc")!;
+                    float textCentre = (name.worldBound.yMin + description.worldBound.yMax) / 2f;
+                    Assert.That(textCentre, Is.EqualTo(icon.worldBound.center.y).Within(1f),
+                        "a button's words are not centred on its icon");
+                    Assert.That(name.worldBound.xMin, Is.EqualTo(description.worldBound.xMin).Within(0.5f),
+                        "a button's name and description do not start at the same x");
+                    Assert.That(words.worldBound.xMin, Is.EqualTo(
+                        doc.rootVisualElement.Q(className: "title__words")!.worldBound.xMin).Within(0.5f),
+                        "the four buttons' words do not start at the same x");
+                }
+
+                RenderTexture previous = RenderTexture.active;
+                RenderTexture.active = target;
+                var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+                image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                image.Apply();
+                RenderTexture.active = previous;
+                Directory.CreateDirectory(Path.GetFullPath("Logs"));
+                File.WriteAllBytes(Path.GetFullPath("Logs/title-shot.png"), image.EncodeToPNG());
+
+                // The load list, from rows handed to the menu rather than files on disk: the saves
+                // folder is the player's own, and a test has no business writing into it. Colony
+                // names of three lengths, because the fault reported was a date that moved with
+                // the name in front of it.
+                HudShell shell = root.GetComponentInChildren<HudShell>();
+                shell.Menu.ShowSaves(new[]
+                {
+                    new SaveRow("a", "Ashford", 12, "Standard", problem: string.Empty, when: "24 Sep 17:20", colony: "Ashford"),
+                    new SaveRow("b", "Before the winter", 3, "Large", problem: string.Empty, when: "2 Sep 09:05", colony: "Blackwater Reach"),
+                    new SaveRow("c", "Hx", 140, "Small", problem: string.Empty, when: "19 Aug 23:59", colony: "Hx"),
+                });
+                for (int i = 0; i < 10; i++) yield return null;
+
+                List<VisualElement> days = doc.rootVisualElement.Query(className: "save__day").ToList();
+                List<VisualElement> whens = doc.rootVisualElement.Query(className: "save__when").ToList();
+                Assert.That(days, Has.Count.EqualTo(3), "the load list did not draw the three saves");
+                foreach (VisualElement day in days)
+                    Assert.That(day.worldBound.xMin, Is.EqualTo(days[0].worldBound.xMin).Within(0.5f),
+                        "the day moves with the colony's name");
+                foreach (VisualElement when in whens)
+                    Assert.That(when.worldBound.xMax, Is.EqualTo(whens[0].worldBound.xMax).Within(0.5f),
+                        "the dates do not end in one column");
+                foreach (VisualElement row in doc.rootVisualElement.Query(className: "save").ToList())
+                    Assert.That(row.Q(className: "save__name")!.worldBound.xMin,
+                        Is.EqualTo(row.Q(className: "save__line")!.worldBound.xMin).Within(0.5f),
+                        "a save's title and its line under it do not start at one x");
+
+                RenderTexture.active = target;
+                image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                image.Apply();
+                RenderTexture.active = previous;
+                File.WriteAllBytes(Path.GetFullPath("Logs/load-shot.png"), image.EncodeToPNG());
+                Object.Destroy(image);
+                target.Release();
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
 
         [UnityTest]
         public IEnumerator PhotographTheHud()
@@ -236,7 +330,9 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>The play scene's HUD stack, as <c>HudSmokeTests</c> builds it.</summary>
-        static GameObject Build(out OdysseyBootstrap boot)
+        static GameObject Build(out OdysseyBootstrap boot) => Build(out boot, buildOnPlay: true);
+
+        static GameObject Build(out OdysseyBootstrap boot, bool buildOnPlay)
         {
             var root = new GameObject("HudShot");
 
@@ -261,7 +357,7 @@ namespace Odyssey.Tests.PlayMode
             boot = bootObject.AddComponent<OdysseyBootstrap>();
             // Explicitly, not by default: since U38 pressing Play lands on the start screen, and
             // what this rig is asserting is that a session exists.
-            boot.buildOnPlay = true;
+            boot.buildOnPlay = buildOnPlay;
             boot.sizeX = 60;
             boot.sizeZ = 60;
             boot.layers = 8;
