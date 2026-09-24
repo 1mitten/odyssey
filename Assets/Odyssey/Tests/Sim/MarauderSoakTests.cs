@@ -38,6 +38,7 @@ namespace Odyssey.Tests.Sim
             colony.Pawns.MeleeRules = rules;
 
             int spawned = 0, recovered = 0;
+            var ids = new System.Collections.Generic.List<int>();
             ulong resumed = 0, original = 0;
             byte[]? midway = null;
             var tape = new CombatFixture.Tape();
@@ -53,7 +54,11 @@ namespace Odyssey.Tests.Sim
                 colony.World.Intents.Submit(new Intent(IntentKind.SpawnPawn,
                     new CellRef(at.X + dx, at.Z + dz, at.Y), PawnKindIndex.Marauder));
                 colony.World.Tick();
-                if (colony.Pawns.Pawns.Count == before + 1) spawned++;
+                if (colony.Pawns.Pawns.Count == before + 1)
+                {
+                    spawned++;
+                    ids.Add(colony.Pawns.Pawns.All[colony.Pawns.Pawns.Count - 1].Id.Value);
+                }
 
                 if (day == 5)
                 {
@@ -91,8 +96,23 @@ namespace Odyssey.Tests.Sim
                 if (pawn.Downed) downed++; else standing++;
             }
 
+            // Where every marauder went (design 33 §17): still on the board, dead, or off the edge. A
+            // marauder that left is a ledger entry, a theft or an empty-handed leaving, and nothing
+            // else takes one off the board.
+            int dead = 0, departed = 0;
+            foreach (int id in ids)
+            {
+                if (colony.Pawns.Pawns.Get(new PawnId(id)) != null) continue;
+                bool corpse = false;
+                for (int c = 0; c < colony.Pawns.Corpses.Count; c++) corpse |= colony.Pawns.Corpses[c].Pawn == id;
+                if (corpse) dead++; else departed++;
+            }
+            var ledger = colony.Incidents.Ledger;
+            int thefts = ledger.Fires(IncidentHandle.Theft), empty = ledger.Fires(IncidentHandle.MarauderLeft);
+
             TestContext.WriteLine(
                 $"marauder soak: {watch.Elapsed.TotalSeconds:F1} s wall; {spawned} marauders spawned, {marauders} left on the board; " +
+                $"{dead} killed, {thefts} left with a stack and {empty} empty-handed (design 33 §17); " +
                 $"{rules.Swings.Count} swings resolved, {tape.Of(CombatEventKind.Hit).Count} hits, " +
                 $"{hooks.DownedCount} downed, {hooks.DiedCount} died, {recovered} got up; " +
                 $"{tape.Of(CombatEventKind.Demolished).Count} buildings broken down (design 33 §14b); " +
@@ -106,6 +126,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Pawns.Corpses.Count, Is.EqualTo(hooks.DiedCount), "a death without its corpse, or a corpse without a death");
             Assert.That(colony.Jobs.FailedOf(JobIndex.Downed), Is.EqualTo(0), "Job_Downed failed: somebody got up by the wrong door");
             Assert.That(resumed, Is.EqualTo(original), "a save taken mid-fight did not resume the same");
+            Assert.That(departed, Is.EqualTo(thefts + empty), "a marauder left the board without the ledger saying so, or the ledger says one left that did not");
+            Assert.That(marauders + dead + departed, Is.EqualTo(spawned), "a marauder is unaccounted for");
         }
 
         static void Invariants(ColonyWorld colony, int day)
