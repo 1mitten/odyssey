@@ -23,6 +23,34 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does a marauder steal and leave?** (`claude/combat-thieves`, design 33 §17.)
+  - *Set-up.* Let a marauder down every colonist, with no walls, doors or other buildings of yours
+    about (beds are fine: it leaves them alone), and a few stacks lying around — the starting meals
+    will do.
+  - *Expect.* It walks to the nearest stack, stoops and lifts it, and walks off with it in its
+    arms to the nearest edge of the board. Its activity line reads *Stealing · Meal × 12*. At the
+    edge it vanishes, with no body, and the Events panel shows a red **Theft · Meal × 12** row with
+    the negative chime; clicking it jumps the camera to where it left.
+  - *Also check:*
+    - with nothing on the board to take, it walks off empty-handed and the panel says **Marauder
+      left**, in the neutral colour;
+    - knock it down while it carries something and the stack is dropped where it falls;
+    - spawn a colonist from the debug menu while it is walking off: within about five seconds it
+      drops the stack and goes for her;
+    - the debug menu's Events tab lists the two drops and nothing new.
+  - A wrong answer looks like any of these:
+    - a marauder that stands about for ever with everybody down and stacks lying in the open;
+    - one that takes a stack while a colonist it could reach stands in the open, or while it has
+      a wall of yours to break;
+    - the stack still drawn on the ground after it is lifted, or nothing in its arms;
+    - a body left at the edge, or colonists upset as if somebody had died;
+    - the stack still in the colony's stock after it has gone.
+  - Three things to judge.
+    - **It walks, it does not run.** A thief that ran would be hard to catch. Say which.
+    - **Its machete goes with it.** Say if a thief should drop its weapon at the edge instead.
+    - **It takes the nearest stack, whatever it is**: a pile of stone is as good as the meals.
+      There is no value yet; say if the choice reads as stupid.
+
 - **Do drafted colonists come to help?** (`claude/combat-drafted-help`, design 33 §15.)
   - *Set-up.* Draft two or three colonists and leave them standing within about eight cells of a
     colonist who is **not** drafted. Spawn a marauder beside her from the debug menu.

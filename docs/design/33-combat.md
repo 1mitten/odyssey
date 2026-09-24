@@ -3906,3 +3906,78 @@ The theft scan runs on a marauder's think only when it has nobody to fight and n
 and scales with **the item stacks on the board** (a branch and a reservation probe each, a
 reachability test for each nearer than the best so far) plus the edge search, bounded by the
 board's side. A thief's look is one colonist scan and one building scan per `rechooseTicks`.
+
+### 17h. Tests, the soak, and the controls seen to fail
+
+Fast tier: Sim **1,439** (from 1,427), Hud **1,004** (from 1,003). Long **41**, all green.
+`GoldenMasterTests` is green without a re-bake. Two fingerprints moved once, deliberately, with the
+reason beside each: `PawnContentDefTests.ContentFingerprint` 6953925138484699291 →
+12926174003015880195 (`Job_Steal`, `PawnKindDef.motive`), and `IncidentContentTests`
+15479437417230274748 → 17580740474630100120 (the two recorded incidents). `CombatContractTests`
+holds the new handle at 22 and the pool's driver. All three content gates are clean.
+
+| Test (`TheftTests` unless named) | Claim |
+|---|---|
+| `WithEveryoneDownItCarriesOffTheNearestStackAndLeaves` | the nearer of two stacks, stood on and lifted, carried to the edge nearest it; the stack and the machete despawned, the other stack untouched; one pawn fewer, no corpse, no `Died`, no mourning. 3,267 ticks on the 60 × 60 board |
+| `TheLedgerRecordsTheTheftAndTheBulletinSaysWhat` | one `Theft` entry at the edge it left from, the detail Meal × 12, and the published bulletin carrying both, in the blow's favourability |
+| `WithNothingToStealItLeavesEmptyHanded` | by the edge nearest itself; `MarauderLeft`, with no detail |
+| `OnATieItTakesTheOlderStack` | two stacks the same distance off: the lower id |
+| `AColonistThenABuildingComeBeforeTheft` | a standing colonist first, then a wall, never the meal beside it; with both gone, it steals |
+| `AThiefThatCanReachAColonistAgainDropsTheLoadAndFights` | a colonist spawned mid-carry: the load is dropped, on the ground, within one look, and it goes for her |
+| `DownedWhileCarryingItDropsTheLoad` | the load beside it, not despawned; a downed thief never leaves and records nothing |
+| `KilledWhileCarryingItDropsTheLoad` | the load dropped, one corpse, no theft recorded |
+| `WithNoEdgeToReachItStays` | ringed by walls it may not break: 3,000 ticks without a theft or the meal lifted; a gap opened, and it leaves with the meal |
+| `AKidnapperStealsAsALooterDoes` | the same hash every hundred ticks of a whole theft; one that came for nothing stays |
+| `AJobAppendedAfterTheCombatLineIsHashedOnlyOnceItHasRun` | an unrun `Job_Steal` hashes as the goldens were baked; a run one is in the hash |
+| `ATheftSavedMidCarryResumesIdentically` | the job, the stack in its arms and the hash after the load; the same edge and tick on leaving; the ledger's detail through a second save |
+| `BulletinModelTests.ATheftSaysWhatWasTakenAndHowMany` (Hud) | *Theft · Meal × 12*, no count for one, *Marauder left* alone, and the blow's chime |
+| `MarauderDoorTests.AMarauderLeavesABedAloneAndBreaksTheWallInstead` (changed) | its marauder comes for nothing, in that colony's own content record: a looter would carry off the scenario's meals and be gone before the wall went up |
+
+**The soak** (`MarauderSoakTests`, Long) now accounts for every marauder — still on the board,
+killed, or off the edge — and asserts that the ones off the edge are exactly the ledger's thefts and
+empty-handed leavings. It reads **7 left with a stack, 0 empty-handed, 3 still on the board (down),
+391 swings, 211 hits, 12 downed, 0 died, 4 got up**, and every colonist down at the end. With the
+theft withheld (the kind's `<motive>` line removed) the same run reads **377 swings, 165 hits, 11
+downed, 0 died, 3 got up** and ten marauders on the board, which is §16f number for number: the
+change reached nothing but what a marauder does once nobody is standing. The fights that follow a
+theft differ because seven marauders are no longer standing about the colony when its colonists
+get up.
+
+Each rule was withheld, its tests run and seen to fail, then restored:
+
+| Withheld | Failed |
+|---|---|
+| theft before the building | `AColonistThenABuildingComeBeforeTheft` |
+| theft before the colonist | the same, and `AThiefThatCanReachAColonistAgain…` |
+| the nearest stack (the farthest instead) | `WithEveryoneDown…` |
+| the tie to the lower id | `OnATieItTakesTheOlderStack` |
+| the edge nearest the stack (the thief's instead) | `WithEveryoneDown…` |
+| the stack despawned on leaving | `WithEveryoneDown…` |
+| the weapon despawned on leaving (left to `Despawn`, which drops it) | `WithEveryoneDown…` |
+| leaving as removal (`Kill` instead) | `WithEveryoneDown…`, `WithNothingToSteal…`, `AJobAppended…` |
+| the ledger entry | `TheLedgerRecords…`, `WithNothingToSteal…`, `ATheftSaved…` |
+| the detail row | `TheLedgerRecords…`, `ATheftSaved…` |
+| the detail section in the save | `ATheftSaved…` |
+| the drop on every other end | `AThiefThatCanReachAColonistAgain…`, `DownedWhileCarrying…`, `KilledWhileCarrying…` |
+| the look while stealing | `AThiefThatCanReachAColonistAgain…` |
+| no edge, no theft (its own cell taken as the edge) | `WithNoEdgeToReachItStays` |
+| `Kidnap` as `Loot` (kidnap doing nothing) | `AKidnapperStealsAsALooterDoes` |
+| `None` doing nothing (looting too) | `AKidnapperStealsAsALooterDoes` |
+| the marauder's motive (the XML line) | eleven of the twelve; the soak back to §16f's numbers |
+| the sparse job hash (every counter hashed) | the three `GoldenMasterTests` hashes, `AJobAppended…` |
+| the bed test's motive set aside | `AMarauderLeavesABedAlone…` |
+| the row's thing and count (Hud) | `ATheftSaysWhatWasTakenAndHowMany` |
+
+**Not tested**: the debug menu leaving a recorded incident off its Events tab (Presentation, never
+compiled); a stack in a shelf (the contained lister is walked exactly as a hauler walks it, and
+`LiftToil`'s reach into a shelf is the haul's own); and the thief's look finding a building rather
+than a colonist, which is `HasAFight`'s second half and the think's own rule.
+
+### 17i. Open for the owner
+
+- **It walks.** A thief that ran would be hard to catch; one that walks can be run down by a
+  colonist who gets up. Say which.
+- **Its machete goes with it.** Say if a thief should drop its weapon at the edge instead.
+- **Nearest, whatever it is.** A pile of stone is as good as the meals. There is no value on a
+  thing yet; say if the choice reads as stupid, because that is what a value would answer.
+- **A thief climbs a ladder with a load**, which a hauler does not (§17c). Say if it looks wrong.
