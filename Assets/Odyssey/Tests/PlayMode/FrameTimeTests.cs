@@ -1227,6 +1227,34 @@ namespace Odyssey.Tests.PlayMode
                         $"moved {noise * 100f:0.00}%: it is not only skipping submissions the " +
                         "camera could not see. The blind control moved " +
                         $"{blinded * 100f:0.00}%, so the instrument can certainly see a real change");
+
+                    // **And again under a low sun** (design 38 §18). The shadow margin sweeps
+                    // towards the sun, and a sun near the horizon throws the longest shadows the
+                    // day has, from the furthest casters — the case a sweep that was too short
+                    // would get wrong. Evening, about nine degrees up, held through the root's
+                    // seam because the root re-applies the hour every frame (P18).
+                    boot.DaylightHourOverride = 19.5f;
+                    for (int i = 0; i < 60; i++) yield return null;
+                    boot.Renderer!.CullToFrustum = false;
+                    Color32[] lowOff = null!, lowAgain = null!, lowOn = null!;
+                    yield return Shoot("low-off", boot, target, p => lowOff = p);
+                    int lowShellChunks = boot.Renderer!.ChunksDrawn;
+                    yield return Shoot("low-again", boot, target, p => lowAgain = p);
+                    boot.Renderer!.CullToFrustum = true;
+                    yield return Shoot("low-on", boot, target, p => lowOn = p);
+                    int lowSweptChunks = boot.Renderer!.ChunksDrawn;
+                    boot.DaylightHourOverride = null;
+
+                    float lowNoise = Difference(lowOff, lowAgain);
+                    float lowCulled = Difference(lowOff, lowOn);
+                    Debug.Log($"[FrameTime] cull proof, low sun (19.5 h): the same shot twice moved " +
+                              $"{lowNoise * 100f:0.00}%, culling moved {lowCulled * 100f:0.00}%; " +
+                              $"{lowShellChunks} chunks unculled, {lowSweptChunks} culled");
+                    Assert.That(lowNoise, Is.LessThan(0.02f), "the low-sun shots have no floor to measure against");
+                    Assert.That(lowCulled, Is.LessThanOrEqualTo(lowNoise + 0.002f),
+                        $"under a low sun culling moved {lowCulled * 100f:0.00}% of pixels against a floor of " +
+                        $"{lowNoise * 100f:0.00}%: the sun-ward sweep is dropping a caster whose long shadow " +
+                        "reaches the view");
                 }
                 finally
                 {
@@ -2178,6 +2206,7 @@ namespace Odyssey.Tests.PlayMode
                     ("no dressing or tufts", 0, true, true, 0f),
                     ("no dressing or tufts, nothing handed to Unity", 0, false, true, 0f),
                     ("look, no shadow casters", shipped, true, false, 0f),
+                    ("look, shadow margin as a shell", shipped, true, true, -1f),
                     // The High preset's shadow distance, on a runtime copy of the pipeline asset so
                     // the committed one is never dirtied (DisplaySettingsApplier's rule).
                     ("look, 120 m shadows", shipped, true, true, 120f),
@@ -2204,6 +2233,8 @@ namespace Odyssey.Tests.PlayMode
                         }
                         renderer.SubmitToGpu = arm.Submit;
                         renderer.CastShadows = arm.Shadows;
+                        // -1 marks the arm that measures the old margin: a shell in every direction.
+                        renderer.SweepShadowMargin = arm.ShadowMetres >= 0f;
                         if (copy != null)
                         {
                             float metres = arm.ShadowMetres > 0f ? arm.ShadowMetres : pipeline!.shadowDistance;
@@ -2237,7 +2268,12 @@ namespace Odyssey.Tests.PlayMode
             }
             finally
             {
-                if (boot.Renderer != null) { boot.Renderer.SubmitToGpu = true; boot.Renderer.CastShadows = true; }
+                if (boot.Renderer != null)
+                {
+                    boot.Renderer.SubmitToGpu = true;
+                    boot.Renderer.CastShadows = true;
+                    boot.Renderer.SweepShadowMargin = true;
+                }
                 if (cam != null) cam.targetTexture = previousTarget;
                 if (fourK != null) fourK.Release();
                 UnityEngine.Object.Destroy(root);

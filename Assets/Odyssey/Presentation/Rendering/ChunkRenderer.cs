@@ -324,6 +324,35 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public float ShadowCasterMarginMetres { get; set; } = 120f;
 
+        /// <summary>
+        /// The direction the key light travels (its <c>transform.forward</c>), or null when there
+        /// is no key light to ask. With it, the shadow margin is a **sweep towards the sun** rather
+        /// than a shell in every direction (<c>docs/design/38-meadow-overhaul.md</c> §18,
+        /// <c>docs/research/d-19</c> §3).
+        ///
+        /// <para>A caster can only darken what lies along the light's path from it, so a chunk
+        /// matters to the picture only if its box, swept along this direction, reaches the frustum.
+        /// The sweep is as long as the light can travel before it falls below the lowest drawn
+        /// layer — the drop from the chunk's tallest possible top, over the sine of the sun's
+        /// elevation — capped at <see cref="ShadowCasterMarginMetres"/>, the old bound, which a low
+        /// sun therefore still reaches. Measured on the played meadow at 4K, the old shell kept
+        /// every chunk of a Standard board (26 on screen, 104 submitted); the sweep keeps those up
+        /// sun of the view and drops the rest.</para>
+        ///
+        /// <para>Null keeps the shell, which is never wrong, only slower. The root writes it every
+        /// frame, so a test that wants a sun of its own sets the light, not this (P18).</para>
+        /// </summary>
+        public Vector3? ShadowLightDirection { get; set; }
+
+        /// <summary>Whether the margin sweeps towards the sun (on, the game) or keeps the shell in
+        /// every direction (off). A measurement seam the root never writes, so one run can time
+        /// both; see <see cref="ShadowLightDirection"/>.</summary>
+        public bool SweepShadowMargin { get; set; } = true;
+
+        /// <summary>The bottom of the lowest drawn layer this frame: where a shadow ray stops
+        /// mattering, because nothing below it is drawn. Set by <see cref="Render"/>.</summary>
+        float _lowestReceiverY = float.NegativeInfinity;
+
         /// <summary>How solid an occluder in the way is left. Zero would be invisible; this is a
         /// hint of what is there, in the same idiom as a ghosted storey above the slice.</summary>
         public float SightFadeAlpha { get; set; } = DefaultSightFadeAlpha;
@@ -394,12 +423,46 @@ namespace Odyssey.Presentation.Rendering
             Vector3 size = bounds.size;
             centre.y += TallestModuleMetres * 0.5f;
             size.y += TallestModuleMetres;
+            // And sideways by whatever overhangs a chunk's box — a crown wider than its cell —
+            // so both the picture and the shadow sweep start from what is really drawn.
+            float overhang = _mesher.OverhangResolved;
+            if (overhang > 0f) { size.x += overhang * 2f; size.z += overhang * 2f; }
 
-            // And outwards, so an off-screen caster keeps its shadow on screen.
+            // And outwards, so an off-screen caster keeps its shadow on screen: along the light
+            // when the key light is known, in every direction when it is not.
             float margin = ShadowCasterMarginMetres;
+            if (margin > 0f && SweepShadowMargin && ShadowLightDirection is Vector3 light && light.sqrMagnitude > 1e-6f)
+            {
+                light.Normalize();
+                float top = centre.y + size.y * 0.5f;
+                float drop = Mathf.Max(0f, top - _lowestReceiverY);
+                float sinElevation = -light.y;
+                float length = sinElevation > 1e-3f ? Mathf.Min(margin, drop / sinElevation) : margin;
+                return SweptInside(ActiveFrustum!, centre, size * 0.5f, light * length);
+            }
             if (margin > 0f) size += new Vector3(margin * 2f, margin * 2f, margin * 2f);
 
             return GeometryUtility.TestPlanesAABB(ActiveFrustum, new Bounds(centre, size));
+        }
+
+        /// <summary>
+        /// Whether a box swept along <paramref name="sweep"/> — the convex hull of the box and the
+        /// box moved by it — touches every plane's inside, by the same separating-plane rule
+        /// <c>GeometryUtility.TestPlanesAABB</c> applies to a box: it is outside a plane only if
+        /// both ends of the sweep are. Planes face inwards, as <c>CalculateFrustumPlanes</c>
+        /// returns them.
+        /// </summary>
+        public static bool SweptInside(Plane[] planes, Vector3 centre, Vector3 extents, Vector3 sweep)
+        {
+            for (int i = 0; i < planes.Length; i++)
+            {
+                Vector3 n = planes[i].normal;
+                float reach = Vector3.Dot(n, centre) + planes[i].distance
+                              + Mathf.Abs(n.x) * extents.x + Mathf.Abs(n.y) * extents.y + Mathf.Abs(n.z) * extents.z
+                              + Mathf.Max(0f, Vector3.Dot(n, sweep));
+                if (reach < 0f) return false;
+            }
+            return true;
         }
 
         /// <summary>Scratch, reused every frame: the instances of one bucket that are in the way,
@@ -574,6 +637,8 @@ namespace Odyssey.Presentation.Rendering
             int highest = Mathf.Min(size.SizeY - 1, slice.HighestDrawnLayer(activeLayer, size.SizeY));
             highest = Mathf.Max(activeLayer, Mathf.Min(highest, _model.HighestOccupiedLayer));
             int chunksPerLayer = _model.Chunks.ChunksX * _model.Chunks.ChunksZ;
+            // The floor of what is drawn, padded as a chunk's own box is, for the shadow sweep.
+            _lowestReceiverY = _mesher.BoundsOf(lowest * chunksPerLayer).min.y;
 
             for (int layer = lowest; layer <= highest; layer++)
             {

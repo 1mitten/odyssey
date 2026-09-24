@@ -460,6 +460,26 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public float TallestResolved { get; private set; }
 
+        /// <summary>
+        /// How far past its chunk's box, sideways, anything resolved so far can reach: a tree crown
+        /// or a bush wider than its cell, turned, scaled and jittered off its cell centre, less the
+        /// half cell and the padding the box already allows. The frustum test grows a chunk's box
+        /// by this in x and z (design 38 §18) — the sun-ward shadow sweep starts from the box, and
+        /// a 17 m crown whose edge overhangs it cast a shadow the sweep did not see. Zero until
+        /// something wide has resolved.
+        /// </summary>
+        public float OverhangResolved { get; private set; }
+
+        void NoteReach(int module, float scale, float jitter)
+        {
+            Bounds b = _model.Library[module].Bounds;
+            float x = Mathf.Max(Mathf.Abs(b.min.x), Mathf.Abs(b.max.x));
+            float z = Mathf.Max(Mathf.Abs(b.min.z), Mathf.Abs(b.max.z));
+            float reach = Mathf.Sqrt(x * x + z * z) * scale + jitter;
+            OverhangResolved = Mathf.Max(OverhangResolved,
+                reach - CellMetrics.SizeXZ * 0.5f - BoundsPadding);
+        }
+
         /// <summary>How many dressing families resolved to real art. Zero on a checkout without the
         /// packs, which is how a measurement knows there is no dressing to price.</summary>
         public int DressingFamiliesWithArt
@@ -608,6 +628,11 @@ namespace Odyssey.Presentation.Rendering
             _dressModules = any ? families : System.Array.Empty<int[]>();
             foreach (int bush in families[(int)MeadowDressing.Kind.Bush])
                 TallestResolved = Mathf.Max(TallestResolved, _model.Library[bush].Bounds.max.y);
+            // Every family, turned, at MeadowDressing.Placement's largest scale (1.2) and furthest
+            // jitter (half the widest spread, 0.7, of a cell).
+            foreach (int[] family in families)
+                foreach (int module in family)
+                    NoteReach(module, 1.2f, 0.35f * CellMetrics.SizeXZ);
         }
 
         int[] ResolveFamily(string[] ids)
@@ -644,7 +669,10 @@ namespace Odyssey.Presentation.Rendering
             int[] result = variants.ToArray();
             _treeVariants[module] = result;
             foreach (int m in result)
+            {
                 TallestResolved = Mathf.Max(TallestResolved, _model.Library[m].Bounds.max.y * 1.15f);
+                NoteReach(m, 1.15f, 0f);
+            }
             return result;
         }
 

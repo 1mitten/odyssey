@@ -212,6 +212,17 @@ namespace Odyssey.Presentation.Bootstrap
         MenuAmbience? _menuBed;
         DaylightDirector? _daylight;
 
+        /// <summary>The key light the day moves, kept so the renderer's shadow margin can sweep
+        /// towards it (design 38 §18).</summary>
+        Light? _keyLight;
+
+        /// <summary>
+        /// Holds the day at this hour instead of following the clock. A measurement seam: the root
+        /// re-applies the hour every frame, so a test that moved the sun itself would be undone on
+        /// the next one (P18). Null in the game.
+        /// </summary>
+        public float? DaylightHourOverride { get; set; }
+
         /// <summary>The wind the foliage reads, on the game clock (design 38 §4): a paused meadow
         /// holds still and a meadow at speed 3 hurries with everything else.</summary>
         readonly WindDirector _wind = new WindDirector();
@@ -1041,6 +1052,7 @@ namespace Odyssey.Presentation.Bootstrap
             // because the scene builder already places it and two directional lights is a
             // doubled key nobody would think to look for.
             Light? key = sun != null ? sun : FindKeyLight();
+            _keyLight = key;
             if (daylightCycle && key != null)
             {
                 _daylight = new DaylightDirector(key, RenderSettings.skybox);
@@ -1211,7 +1223,8 @@ namespace Odyssey.Presentation.Bootstrap
             // The light follows the clock every frame, not every tick: at speed 3 several ticks
             // retire in one frame and the sky would step, and when the game is paused the hour
             // stops with it, which is right — a paused world should not go on getting dark.
-            _daylight?.Apply(_world.CurrentTick);
+            if (DaylightHourOverride is float hour) _daylight?.ApplyHour(hour);
+            else _daylight?.Apply(_world.CurrentTick);
 
             // And the wind on the same clock, for the same reason: a paused meadow holds still.
             _wind.Apply(_world.CurrentTick);
@@ -1423,6 +1436,11 @@ namespace Odyssey.Presentation.Bootstrap
                     // a chunk must be before dropping it is invisible.
                     _renderer.ShadowCasterMarginMetres =
                         _renderer.CastShadows ? QualitySettings.shadowDistance : 0f;
+                    // And which way the shadows fall, so the margin sweeps towards the sun rather
+                    // than out in every direction (design 38 §18).
+                    _renderer.ShadowLightDirection = _keyLight != null
+                        ? _keyLight.transform.forward
+                        : (Vector3?)null;
                 }
 
                 _renderer.Render(activeLayer, slice);
