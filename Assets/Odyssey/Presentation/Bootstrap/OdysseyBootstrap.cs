@@ -189,6 +189,7 @@ namespace Odyssey.Presentation.Bootstrap
 
         /// <summary>The dead, drawn (design 33 §5). Built, synced and disposed beside the doors; lane B's to fill.</summary>
         CorpseDirector? _corpses;
+        BloodDirector? _blood;
 
         /// <summary>The one reader of the fight's events (design 33 §5).</summary>
         readonly CombatFeedback _combatFeedback = new CombatFeedback();
@@ -1002,6 +1003,10 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 _doors = new DoorDirector(_model, moduleCatalogue, transform, gameObject.layer);
                 _corpses = new CorpseDirector(_model, moduleCatalogue, _figures, transform, gameObject.layer);
+                // Blood (design 33 §10): what the seam hands on, drawn. It asks the corpses and
+                // the figures where a fallen body lies, for the pool under it.
+                _blood = new BloodDirector(_model, FindBody);
+                _combatFeedback.Blood = _blood;
             }
 
             // Which family each weapon swings in (design 33 §5j), read once off the content, so a
@@ -1450,10 +1455,14 @@ namespace Odyssey.Presentation.Bootstrap
             // then the moments since last frame, handed on once each, and the words they float.
             DrawCombatMarks(_world.Views.Current, movePerTick, activeLayer, slice);
             _combatFeedback.Floaters.Step(_world.Views.Current.Running ? Time.deltaTime : 0f);
+            int bloodLowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model?.LowestOutdoorLayer ?? int.MaxValue));
+            int bloodHighest = slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY);
+            // Blood ages to this tick before the frame's hits are handed on, so a mark made now is
+            // born now; it is drawn after them, so a hit this frame throws its drops this frame.
+            _blood?.Step(_world.Views.Current.Running ? Time.deltaTime : 0f, _world.Views.Current.Tick);
             _combatFeedback.Consume(_world.Views.Current, _world, _figures, _audio,
-                Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model?.LowestOutdoorLayer ?? int.MaxValue)),
-                slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY),
-                _tickAlpha, ticksPerSecond);
+                bloodLowest, bloodHighest, _tickAlpha, ticksPerSecond);
+            _blood?.Draw(_renderer, bloodLowest, bloodHighest);
             _floaterView?.Draw(_combatFeedback.Floaters,
                 cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);
@@ -2744,6 +2753,24 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>
+        /// Where a fallen body's middle is, for the pool under it (design 33 §10c): a dead body at
+        /// rest is the corpse's own drawn box; one still falling, or a downed one, is halfway from
+        /// its figure's feet to its head, which is on the body whichever way it went. No answer
+        /// with neither, and the pool goes at the feet it was given.
+        /// </summary>
+        bool FindBody(PawnId who, out Vector3 middle)
+        {
+            if (_corpses != null && _corpses.TryGetMiddle(who, out middle)) return true;
+            if (_figures != null && _figures.TryGetFeet(who, out Vector3 feet) && _figures.TryGetHead(who, out Vector3 head))
+            {
+                middle = new Vector3((feet.x + head.x) * 0.5f, feet.y, (feet.z + head.z) * 0.5f);
+                return true;
+            }
+            middle = default;
+            return false;
+        }
+
+        /// <summary>
         /// The fight's marks over the pawns (design 33 §1): a health bar where
         /// <see cref="CombatFeedbackModel.HealthBar"/> owes one — the hurt, the downed and the
         /// drafted — and the red marker over a hostile. What is owed is the model's, the bar's
@@ -3634,10 +3661,12 @@ namespace Odyssey.Presentation.Bootstrap
             // teardown, which a pause on a death and a load reached (review, 2026-09-23).
             _corpses?.Dispose();
             _figures?.Dispose();
+            _blood = null;
             _doors?.Dispose();
             _floaterView?.Dispose();
             _combatFeedback.Floaters.Clear();
             _combatFeedback.Blood.Clear();
+            _combatFeedback.Blood = NoBloodEffects.Instance;
             _combatFeedback.Sounds.Clear();
 
             // The pictures go with the materials that painted them — a portrait outlives a colony

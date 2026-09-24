@@ -54,6 +54,7 @@ namespace Odyssey.Presentation.World
         sealed class Body
         {
             public int Id;
+            public PawnId Pawn;
             public CellRef Cell;
             public GameObject? Object;
             public readonly List<Mesh> Meshes = new List<Mesh>();
@@ -182,6 +183,7 @@ namespace Odyssey.Presentation.World
             var body = new Body
             {
                 Id = corpse.Id,
+                Pawn = corpse.Pawn,
                 Cell = corpse.Cell,
                 Visible = visible,
                 Floor = GroundRelief.Lift(CellMetrics.FloorCentre(corpse.Cell)),
@@ -282,6 +284,24 @@ namespace Odyssey.Presentation.World
                 return true;
             }
             box = default;
+            return false;
+        }
+
+        /// <summary>
+        /// The middle of a dead pawn's body once it has come to rest — the centre of what is drawn
+        /// lying there — for the pool under it (design 33 §10c). No answer while it is still
+        /// falling, when the box is a stand-in: the figure it borrowed is the one to ask then.
+        /// A walk over the bodies, which a pool asks once.
+        /// </summary>
+        public bool TryGetMiddle(PawnId pawn, out Vector3 middle)
+        {
+            foreach (Body body in _bodies.Values)
+            {
+                if (body.Pawn != pawn || body.Loan != null) continue;
+                middle = body.Box.center;
+                return true;
+            }
+            middle = default;
             return false;
         }
 
