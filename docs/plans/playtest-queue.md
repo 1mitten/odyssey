@@ -23,6 +23,13 @@ the next session learns to ignore.
 
 ## Open
 
+- **Which rain reads as a rainy day: §7's particles, or GPU rain with wet ground?** (`claude/rain-look`,
+  #203; design 43 §7, #202.) No Play needed. Open https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3, pick
+  the Play framing, and wipe between “§7 as written” and “+ wet ground”; then try the Far framing
+  with the downpour, and the Close framing for splashes on grass. A wrong answer is preferring the
+  particles (then §7 keeps the emitters and only the wet ground carries over), rain that reads as fog
+  at the far zoom, or a meadow that looks hailed on. Also owed: one Play session reading the
+  overlay's `gpu` line at 4K with rain off and on, once the visuals PR draws it in the game.
 - **Does the title screen's dock read well, and does Exit ask?** (`claude/settings-frame`, design
   40.) Press Play. A dark panel down the left edge with the layered mark and ODYSSEY, four
   coloured buttons and the build line at the foot, the starfield clear to the right. New game should
