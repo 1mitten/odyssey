@@ -76,6 +76,15 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Per mille applied once per copy beyond the first.</summary>
         public int stackMultiplierPerMille = 750;
+
+        /// <summary>
+        /// Added again at its <see cref="stackLimit"/>, does the memory <b>renew</b> — the copy
+        /// that would lapse soonest pushed out to a full <see cref="durationTicks"/> from now — rather
+        /// than the repeat being dropped? False, the rule every thought had before it, unless the
+        /// content says otherwise (design 33 §14e: the friendly-fire memory, so the day runs from the
+        /// latest blow). Read by <see cref="Pawn.AddMemory"/> and nothing else.
+        /// </summary>
+        public bool renewsOnRepeat;
     }
 
     public static class ThoughtIndex

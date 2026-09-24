@@ -225,7 +225,12 @@ namespace Odyssey.Tests.Sim
         // Thought_ColonistDied (-60, three days, three deep), the owner's -8 and -6 on our scale of
         // thousandths. No golden moved: no golden window has a colonist hurt by a colonist or a
         // death, and a memory is hashed only once a pawn has one.
-        const ulong ContentFingerprint = 13836212755718261116UL;
+        //
+        // Moved a twenty-second time, deliberately, 2026-09-24, by the owner's answers to Phase 4
+        // (design 33 §14e): ThoughtDef gained renewsOnRepeat, false everywhere but
+        // Thought_AttackedByColonist, so a second swing renews the day rather than being dropped.
+        // No golden moved: no other thought renews, and no golden window has friendly fire.
+        const ulong ContentFingerprint = 5393620802301053337UL;
 
 
         [Test]

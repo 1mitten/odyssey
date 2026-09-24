@@ -904,15 +904,34 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// Remember something. Copies beyond the stack limit are dropped rather than queued: the
         /// limit is the point, and a queue behind it would only delay the same saturation.
+        ///
+        /// <para><b>Unless the thought renews</b> (<see cref="ThoughtDef.renewsOnRepeat"/>, design 33
+        /// §14e): then the copy that would lapse soonest — the first of them on a tie — is pushed out
+        /// to a full duration from now, and never brought in. Only the friendly-fire memory does, so
+        /// every other thought, and every golden, is exactly as before.</para>
         /// </summary>
         public virtual void AddMemory(int thoughtIndex, int currentTick)
         {
             var def = Content.Thoughts[thoughtIndex];
-            int copies = 0;
+            int copies = 0, soonest = -1;
             for (int i = 0; i < Memories.Count; i++)
-                if (Memories[i].ThoughtIndex == thoughtIndex) copies++;
-            if (copies >= def.stackLimit) return;
-            Memories.Add(new Memory { ThoughtIndex = thoughtIndex, ExpiryTick = currentTick + def.durationTicks });
+            {
+                if (Memories[i].ThoughtIndex != thoughtIndex) continue;
+                copies++;
+                if (soonest < 0 || Memories[i].ExpiryTick < Memories[soonest].ExpiryTick) soonest = i;
+            }
+
+            int expiry = currentTick + def.durationTicks;
+            if (copies < def.stackLimit)
+            {
+                Memories.Add(new Memory { ThoughtIndex = thoughtIndex, ExpiryTick = expiry });
+                return;
+            }
+
+            if (!def.renewsOnRepeat || soonest < 0 || Memories[soonest].ExpiryTick >= expiry) return;
+            Memory renewed = Memories[soonest];
+            renewed.ExpiryTick = expiry;
+            Memories[soonest] = renewed;
         }
 
         /// <summary>

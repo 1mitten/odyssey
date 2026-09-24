@@ -42,12 +42,14 @@ namespace Odyssey.Tests.Sim
             Assert.That(attacked.moodOffset, Is.EqualTo(-80));
             Assert.That(attacked.durationTicks, Is.EqualTo(Calendar.TicksPerDay));
             Assert.That(attacked.stackLimit, Is.EqualTo(1));
+            Assert.That(attacked.renewsOnRepeat, Is.True, "a second blow renews the day (§14e)");
 
             ThoughtDef died = content.Thoughts[ThoughtIndex.ColonistDied];
             Assert.That(died.defName, Is.EqualTo("Thought_ColonistDied"));
             Assert.That(died.moodOffset, Is.EqualTo(-60));
             Assert.That(died.durationTicks, Is.EqualTo(3 * Calendar.TicksPerDay));
             Assert.That(died.stackLimit, Is.EqualTo(3));
+            Assert.That(died.renewsOnRepeat, Is.False);
 
             Assert.That(content.Thoughts, Has.Length.EqualTo(ThoughtIndex.Count));
         }
@@ -101,24 +103,54 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// Stack limit one, as every thought is added (<c>Pawn.AddMemory</c> drops a copy past the
-        /// limit): a second blow later in the day neither adds a copy nor moves the day on (§12b).
+        /// A second blow in the day renews the memory (design 33 §14e; the owner left it to us and we
+        /// recommended it): still one copy, still -80, but the day runs from the latest blow. The
+        /// thought's <c>renewsOnRepeat</c> does it, not a change to how every thought is added.
         /// </summary>
         [Test]
-        public void ASecondBlowNeitherStacksNorRenews()
+        public void ASecondBlowRenewsTheDay()
         {
             var colony = Board(colonists: 2);
             colony.World.Tick(5);
             Pawn victim = colony.Pawns.Pawns.All[0], by = colony.Pawns.Pawns.All[1];
             int first = colony.World.CurrentTick;
             Strike(colony, by, victim, 1_000);
+            Assert.That(ExpiryOf(victim, ThoughtIndex.AttackedByColonist), Is.EqualTo(first + Calendar.TicksPerDay),
+                "the control: the first blow's day");
             colony.World.Tick(100);
-            Assert.That(colony.World.CurrentTick, Is.GreaterThan(first));
+            int second = colony.World.CurrentTick;
+            Assert.That(second, Is.GreaterThan(first));
 
             Strike(colony, by, victim, 1_000);
-            Assert.That(Copies(victim, ThoughtIndex.AttackedByColonist), Is.EqualTo(1));
-            Assert.That(ExpiryOf(victim, ThoughtIndex.AttackedByColonist), Is.EqualTo(first + Calendar.TicksPerDay),
-                "the second blow renewed the day");
+            Assert.That(Copies(victim, ThoughtIndex.AttackedByColonist), Is.EqualTo(1), "a second blow stacked");
+            Assert.That(ExpiryOf(victim, ThoughtIndex.AttackedByColonist), Is.EqualTo(second + Calendar.TicksPerDay),
+                "the second blow did not renew the day");
+            Assert.That(OffsetOf(victim, ThoughtIndex.AttackedByColonist, second), Is.EqualTo(-80));
+        }
+
+        /// <summary>
+        /// Renewal is the friendly-fire memory's alone (design 33 §14e): every other thought is added
+        /// exactly as before — a meal at its limit of two is dropped, and the two it had keep their
+        /// days. That is what keeps the goldens, which eat, where they were.
+        /// </summary>
+        [Test]
+        public void NoOtherThoughtRenews()
+        {
+            PawnContent content = ContentPack.Pawns();
+            for (int i = 0; i < content.Thoughts.Length; i++)
+                Assert.That(content.Thoughts[i].renewsOnRepeat, Is.EqualTo(i == ThoughtIndex.AttackedByColonist),
+                    content.Thoughts[i].defName);
+
+            var colony = Board(colonists: 1);
+            colony.World.Tick(5);
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            pawn.Memories.Clear();
+            pawn.AddMemory(ThoughtIndex.AteMeal, 100);
+            pawn.AddMemory(ThoughtIndex.AteMeal, 200);
+            pawn.AddMemory(ThoughtIndex.AteMeal, 300);
+            int meal = content.Thoughts[ThoughtIndex.AteMeal].durationTicks;
+            Assert.That(pawn.Memories.Select(m => m.ExpiryTick).ToArray(), Is.EqualTo(new[] { 100 + meal, 200 + meal }),
+                "a meal past its limit renewed or stacked");
         }
 
         /// <summary>

@@ -8,8 +8,9 @@ namespace Odyssey.Sim.Pawns
     /// <list type="bullet">
     /// <item><b>Attacked</b> (<see cref="ThoughtIndex.AttackedByColonist"/>): a colonist whose hit
     /// points a colonist's blow took. A miss or a dodge is not heard here and is not remembered.
-    /// Added through <see cref="Pawn.AddMemory"/>, so the thought's stack limit of one decides a
-    /// second blow: no second copy, and no renewal — the rule every thought already has.</item>
+    /// Added through <see cref="Pawn.AddMemory"/>, so the thought decides a second blow: no second
+    /// copy (its stack limit is one), and the day renewed from the latest blow (its
+    /// <c>renewsOnRepeat</c>, design 33 §14e).</item>
     /// <item><b>Died</b> (<see cref="ThoughtIndex.ColonistDied"/>): a colonist died, and every
     /// other colonist on the board remembers it — standing, downed, drafted or broken. A marauder's
     /// or an animal's death is felt by nobody, and nobody but a colonist feels anything.</item>
