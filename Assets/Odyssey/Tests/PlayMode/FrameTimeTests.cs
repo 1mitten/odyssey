@@ -984,6 +984,103 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What eight layers of hills cost the frame, at 16, 20 and 24 layers deep, against today's
+        /// board — the frame half of the board-depth measurement
+        /// (<c>docs/design/38-meadow-overhaul.md</c> §7, M7; the simulation half is
+        /// <c>BoardDepthTests</c>).
+        ///
+        /// <para>Every board the menu offers, each at today's relief and height and then at ±4 on
+        /// 16, 20 and 24 layers, on the played wooded meadow, each timed at the batch view and with
+        /// the camera drawing into 3840 x 2160. <b>Only readings inside this one test compare</b>
+        /// (§6c). Frustum culling is on, as it is on <c>main</c>.</para>
+        ///
+        /// <para>It asserts that each control applied: the board is the height asked for, the hills
+        /// are taller than today's, the 4K arm drew at 4K, and something was drawn. Never a time.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBoardDepthAgainstTheFrame()
+        {
+            (string Label, int X, int Z, int ShippedY)[] boards =
+            {
+                ("small", 80, 80, 16),
+                ("standard", 120, 120, 16),
+                ("large", 180, 180, 24),
+                ("huge", 240, 240, 16),
+            };
+            var lines = new List<string>();
+
+            foreach (var board in boards)
+            {
+                (string Label, int Relief, int Layers)[] configs =
+                {
+                    ($"today +-2 @{board.ShippedY}", 2, board.ShippedY),
+                    ("+-4 @16", 4, 16),
+                    ("+-4 @20", 4, 20),
+                    ("+-4 @24", 4, 24),
+                };
+                int todaySpan = -1;
+
+                foreach (var config in configs)
+                {
+                    GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                        out OdysseyBootstrap boot, board.X, board.Z, config.Layers, config.Relief);
+                    UnityEngine.Camera? cam = null;
+                    RenderTexture? previousTarget = null;
+                    RenderTexture? fourK = null;
+                    try
+                    {
+                        float small = 0f, big = 0f;
+                        double[] smallSplit = Array.Empty<double>(), bigSplit = Array.Empty<double>();
+                        string name = $"depth/{board.Label}/{config.Label}";
+                        yield return TimeFrames(name + "/batch", boot, WarmupFrames,
+                            m => small = m, p => smallSplit = p);
+                        ChunkRenderer renderer = boot.Renderer!;
+                        int smallCalls = renderer.DrawCalls, smallChunks = renderer.ChunksDrawn;
+
+                        cam = boot.cameraRig!.Camera;
+                        previousTarget = cam.targetTexture;
+                        fourK = new RenderTexture(3840, 2160, 24) { name = "depth-4k" };
+                        cam.targetTexture = fourK;
+                        yield return TimeFrames(name + "/4k", boot, WarmupFrames,
+                            m => big = m, p => bigSplit = p);
+                        int bigCalls = renderer.DrawCalls, bigChunks = renderer.ChunksDrawn;
+
+                        Assert.That(cam.pixelWidth, Is.EqualTo(3840), $"{name}: the 4K arm drew at the batch size");
+                        Assert.That(boot.Colony, Is.Not.Null, $"{name}: no colony was built");
+                        Assert.That(boot.Colony!.Grid.Size.SizeY, Is.EqualTo(config.Layers),
+                            $"{name}: the board is not the height asked for");
+                        Assert.That(smallChunks, Is.GreaterThan(0), $"{name}: nothing was drawn");
+                        var report = boot.Colony.Outcome.Natural!.Report;
+                        int span = report.SurfaceMaxY - report.SurfaceMinY;
+                        if (config.Relief == 2) todaySpan = span;
+                        else if (todaySpan >= 0)
+                            Assert.That(span, Is.GreaterThan(todaySpan),
+                                $"{name}: the hills are no taller than today's, so the relief seam did not take");
+
+                        lines.Add($"{board.Label} {config.Label}: " +
+                                  $"batch {small:0.00} ms (World {Section(smallSplit, OdysseyBootstrap.FrameSection.World):0.000}, " +
+                                  $"{smallCalls} calls, {smallChunks} chunks); " +
+                                  $"4K {big:0.00} ms (World {Section(bigSplit, OdysseyBootstrap.FrameSection.World):0.000}, " +
+                                  $"{bigCalls} calls, {bigChunks} chunks); surface {report.SurfaceMinY}..{report.SurfaceMaxY}");
+                    }
+                    finally
+                    {
+                        if (cam != null) cam.targetTexture = previousTarget;
+                        if (fourK != null) fourK.Release();
+                        UnityEngine.Object.Destroy(root);
+                    }
+
+                    // The old world's arrays go before the next is built, as the board-size arm does.
+                    yield return null;
+                    GC.Collect();
+                    yield return null;
+                }
+            }
+
+            foreach (string line in lines) Debug.Log("[FrameTime] board depth " + line);
+        }
+
+        /// <summary>
         /// What frustum culling is worth, measured with a control inside one run, on the board
         /// where it matters.
         ///
@@ -1887,7 +1984,7 @@ namespace Odyssey.Tests.PlayMode
         /// <summary>The play scene's objects, built by hand: a camera with the rig, a sun, the bootstrap.</summary>
         static GameObject Build(Odyssey.Sim.Worldgen.Natural.MapType mapType, bool barren,
                                 out OdysseyBootstrap boot,
-                                int sizeX = 120, int sizeZ = 120, int layers = 16)
+                                int sizeX = 120, int sizeZ = 120, int layers = 16, int relief = -1)
         {
             var root = new GameObject("FrameTime");
 
@@ -1936,6 +2033,7 @@ namespace Odyssey.Tests.PlayMode
             boot.mapType = mapType;
             boot.barrenMap = barren;
             boot.grassScatter = 60;
+            boot.surfaceReliefOverride = relief;
             boot.cameraRig = rig;
 #if UNITY_EDITOR
             // Real art when the packs are present, the same way the scene gets it. A clone without
