@@ -140,6 +140,10 @@ namespace Odyssey.Tests.Hud
             foreach (GraphicsOption option in SettingsDirector.All)
                 Assert.That(SettingsDirector.IconKeys, Does.Contain(SettingsDirector.KeyOf(option)),
                     "an option the panel can draw but the registry test does not cover is a label nobody checks");
+            foreach (GraphicsLadder ladder in SettingsDirector.AllLadders)
+                Assert.That(SettingsDirector.IconKeys, Does.Contain(SettingsDirector.KeyOf(ladder)),
+                    "a ladder the panel can draw but the registry test does not cover is a label nobody checks");
+            Assert.That(SettingsDirector.IconKeys, Does.Contain(SettingsDirector.QualityKey));
         }
 
         /// <summary>

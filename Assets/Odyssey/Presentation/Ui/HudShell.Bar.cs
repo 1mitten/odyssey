@@ -653,24 +653,19 @@ namespace Odyssey.Presentation.Ui
             columns.Add(leftCol);
             columns.Add(rightCol);
 
+            // The quality row goes across the top of the tab, over both groups, because a preset
+            // sets levers in both (design 38 §9). Custom is drawn and lit like any rung but picking
+            // it does nothing: it is a statement about the levers, not a thing to choose.
+            BuildLadderRow(_graphicsSection, SettingsDirector.QualityKey, SettingsDirector.Presets,
+                SettingsDirector.PresetLabel, SettingsDirector.PresetTooltip,
+                preset => _directors?.Settings.ApplyPreset(preset), _presetRungs, numeric: false,
+                rowTooltip: "Sets every lever it owns at once. Moving one by hand makes it Custom");
+
             leftCol.Add(HudText.Make(Registry.Label(SettingsDirector.DisplayGroupKey),
                 HudTextRole.Meta, ussClass: "settings__section"));
 
-            foreach (GraphicsLadder ladder in SettingsDirector.AllLadders)
-            {
-                var rungs = new Dictionary<int, Label>();
-                GraphicsLadder captured = ladder;
-                _ladderRungs[ladder] = rungs;
-                _ladderViews[ladder] = BuildLadderRow(leftCol,
-                    SettingsDirector.KeyOf(ladder),
-                    SettingsDirector.RungsOf(ladder),
-                    rung => SettingsDirector.RungLabel(captured, rung),
-                    rung => SettingsDirector.RungTooltip(captured, rung),
-                    rung => _directors?.Settings.SetValue(captured, rung),
-                    rungs,
-                    numeric: true,
-                    rowTooltip: RowCostOf(ladder));
-            }
+            foreach (GraphicsLadder ladder in SettingsDirector.DisplayLadders)
+                BuildGraphicsLadder(leftCol, ladder);
 
             // The display mode is the editor's other blind spot, for the same reason the
             // resolution is: the Game view is not a window the game owns.
@@ -687,6 +682,10 @@ namespace Odyssey.Presentation.Ui
 
             rightCol.Add(HudText.Make(Registry.Label(SettingsDirector.DetailGroupKey),
                 HudTextRole.Meta, ussClass: "settings__section"));
+
+            // The grass ladders lead the Detail group: how much grass, and how far out.
+            foreach (GraphicsLadder ladder in SettingsDirector.DetailLadders)
+                BuildGraphicsLadder(rightCol, ladder);
 
             foreach (GraphicsOption option in SettingsDirector.All)
             {
@@ -729,7 +728,35 @@ namespace Odyssey.Presentation.Ui
         static string RowCostOf(GraphicsLadder ladder) =>
             SettingsDirector.CostsAHitch(ladder)
                 ? "Rebuilds the frame buffers when it changes, once"
-                : "Takes effect on the next frame";
+                : SettingsDirector.NeedsRedraw(ladder)
+                    ? "Redraws the board when it changes, over a few frames"
+                    : "Takes effect on the next frame";
+
+        /// <summary>One number ladder's row, in either group, kept where its rungs can be lit.</summary>
+        void BuildGraphicsLadder(VisualElement column, GraphicsLadder ladder)
+        {
+            var rungs = new Dictionary<int, Label>();
+            GraphicsLadder captured = ladder;
+            _ladderRungs[ladder] = rungs;
+            _ladderViews[ladder] = BuildLadderRow(column,
+                SettingsDirector.KeyOf(ladder),
+                SettingsDirector.RungsOf(ladder),
+                rung => SettingsDirector.RungLabel(captured, rung),
+                rung => SettingsDirector.RungTooltip(captured, rung),
+                rung => _directors?.Settings.SetValue(captured, rung),
+                rungs,
+                // The grass rungs are words, set in the reading face; the rest are figures.
+                numeric: ladder != GraphicsLadder.VegetationDensity,
+                rowTooltip: RowCostOf(ladder));
+        }
+
+        /// <summary>Light the preset the levers are on, or Custom. Asked whenever a lever moves,
+        /// never per frame.</summary>
+        void RefreshPresetRow()
+        {
+            if (_directors == null) return;
+            LightRung(_presetRungs, _directors.Settings.Preset);
+        }
 
         /// <summary>
         /// The resolution dropdown row.
@@ -1141,6 +1168,7 @@ namespace Odyssey.Presentation.Ui
                 LightRung(rungs, _directors.Settings.Value(ladder));
 
             if (ladder == GraphicsLadder.VSync) RefreshFrameCapRow();
+            RefreshPresetRow();
         }
 
         /// <summary>
@@ -1372,6 +1400,7 @@ namespace Odyssey.Presentation.Ui
             if (_directors == null) return;
             if (!_settingRows.TryGetValue(option, out VisualElement? row)) return;
             row.EnableInClassList("settings__row--on", _directors.Settings.IsOn(option));
+            RefreshPresetRow();
         }
 
         // ============================================================ formatting

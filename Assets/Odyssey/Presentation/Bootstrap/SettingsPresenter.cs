@@ -42,10 +42,10 @@ namespace Odyssey.Presentation.Bootstrap
         /// because this is what has an <c>OnDestroy</c> to give the copy back in.</summary>
         DisplaySettingsApplier? _display;
 
-        // What "on" means for the two levers that carry an amount rather than a state. Captured
-        // from the scene at startup so that turning grass back on restores the density this board
-        // was built with, not a number invented here.
-        int _grassDensity = 60;
+        // What "on" means for relief, the lever that carries an amount rather than a state.
+        // Captured from the scene at startup so that turning it back on restores the amplitude
+        // this board was built with, not a number invented here. The grass used to be the other
+        // one; since M6 its amount is the vegetation ladder's rung and needs no memory here.
         float _reliefAmplitude = GroundRelief.BoardAmplitude;
 
         void Awake()
@@ -241,7 +241,6 @@ namespace Odyssey.Presentation.Bootstrap
             // falls back to the field's own default rather than to nothing at all.
             if (_bootstrap != null)
             {
-                if (_bootstrap.grassScatter > 0) _grassDensity = _bootstrap.grassScatter;
                 if (_bootstrap.groundRelief > 0f) _reliefAmplitude = _bootstrap.groundRelief;
 
                 // The interface scale is seeded from the screen rather than from the scene,
@@ -252,7 +251,7 @@ namespace Odyssey.Presentation.Bootstrap
 
                 director.Seed(GraphicsOption.Shadows, _bootstrap.castShadows);
                 director.Seed(GraphicsOption.Surround, _bootstrap.terrainSkirt);
-                director.Seed(GraphicsOption.GrassTufts, _bootstrap.grassScatter > 0);
+                director.SeedValue(GraphicsLadder.VegetationDensity, _bootstrap.grassScatter);
                 director.Seed(GraphicsOption.GroundRelief, _bootstrap.groundRelief > 0f);
                 director.Seed(GraphicsOption.SeeThrough, _bootstrap.seeThroughToSelection);
                 director.Seed(GraphicsOption.CutAwayCeiling,
@@ -265,6 +264,7 @@ namespace Odyssey.Presentation.Bootstrap
             _display = new DisplaySettingsApplier(director);
 
             director.OptionChanged += Apply;
+            director.LadderChanged += ApplyLadder;
             director.UiScaleChanged += ApplyScale;
             director.CameraSpeedChanged += ApplyCameraSpeed;
             director.DeveloperOverlayChanged += ApplyDeveloperOverlay;
@@ -316,6 +316,7 @@ namespace Odyssey.Presentation.Bootstrap
         {
             if (_director == null) return;
             _director.OptionChanged -= Apply;
+            _director.LadderChanged -= ApplyLadder;
             _director.UiScaleChanged -= ApplyScale;
             _director.CameraSpeedChanged -= ApplyCameraSpeed;
             _director.DeveloperOverlayChanged -= ApplyDeveloperOverlay;
@@ -362,11 +363,6 @@ namespace Odyssey.Presentation.Bootstrap
                     renderer.Skirt.Enabled = on;
                     break;
 
-                case GraphicsOption.GrassTufts:
-                    renderer.ScatterDensity = on ? _grassDensity : 0;
-                    Redraw(renderer);
-                    break;
-
                 case GraphicsOption.GroundRelief:
                     // A static, because relief is a drawing offset the mesher and the picker both
                     // consult rather than a property of any one object. The picker reads the field
@@ -384,12 +380,68 @@ namespace Odyssey.Presentation.Bootstrap
                         _bootstrap.cameraRig.slice.suppressActiveCeiling = on;
                     break;
 
+                case GraphicsOption.FoliageShadows:
+                    // Read per bucket as the frame is submitted, like the shadows themselves.
+                    renderer.FoliageCastsShadows = on;
+                    break;
+
                 case GraphicsOption.SeeThrough:
                     // Read once a frame while the sight lines are rebuilt, so this is the whole
                     // change and it takes effect on the next frame with no remesh.
                     if (_bootstrap != null) _bootstrap.seeThroughToSelection = on;
                     break;
             }
+        }
+
+        /// <summary>
+        /// The two ladders that belong to the renderer rather than to the pipeline asset. The
+        /// display ladders are <see cref="DisplaySettingsApplier"/>'s and it hears the same event;
+        /// each side ignores the other's.
+        /// </summary>
+        void ApplyLadder(GraphicsLadder ladder)
+        {
+            ChunkRenderer? renderer = _bootstrap?.Renderer;
+            if (renderer == null || _director == null) return;
+
+            switch (ladder)
+            {
+                case GraphicsLadder.VegetationDensity:
+                    if (renderer.ScatterDensity == _director.Value(ladder)) return;
+                    renderer.ScatterDensity = _director.Value(ladder);
+                    // Re-meshed through the meshing budget, so a board-wide change lands over a
+                    // few frames and never in one (06-rendering-and-camera.md §6c.7).
+                    Redraw(renderer);
+                    break;
+
+                case GraphicsLadder.GrassDistance:
+                    renderer.FoliageDrawDistance = DrawDistanceOf(_director.Value(ladder));
+                    break;
+            }
+        }
+
+        static float DrawDistanceOf(int rung) =>
+            rung == SettingsDirector.Unlimited ? float.PositiveInfinity : rung;
+
+        /// <summary>
+        /// Put every renderer-bound preference on a renderer that has just been built: shadows,
+        /// grass shadows, the surround, the grass density and its distance.
+        ///
+        /// <para><b>The one owner of what a preference means to the renderer</b>, called by the
+        /// composition root as a session's renderer is made and before its board is meshed, so a
+        /// new game arrives drawn as the player chose rather than as the scene's fields say. Until
+        /// 2026-09-24 nothing did this: the presenter attaches at the start screen, when there is no
+        /// renderer, so a stored "shadows off" was applied to nothing and every session came up
+        /// with the scene's shadows — which a Low preset that came back as High after a restart
+        /// would have made impossible to miss. The live handlers above set the same fields the
+        /// same way; the ladders' amounts are read from the director, never remembered here.</para>
+        /// </summary>
+        public static void ApplyRendererLevers(ChunkRenderer renderer, SettingsDirector settings)
+        {
+            renderer.CastShadows = settings.IsOn(GraphicsOption.Shadows);
+            renderer.FoliageCastsShadows = settings.IsOn(GraphicsOption.FoliageShadows);
+            renderer.Skirt.Enabled = settings.IsOn(GraphicsOption.Surround);
+            renderer.ScatterDensity = settings.Value(GraphicsLadder.VegetationDensity);
+            renderer.FoliageDrawDistance = DrawDistanceOf(settings.Value(GraphicsLadder.GrassDistance));
         }
 
         void Redraw(ChunkRenderer renderer)

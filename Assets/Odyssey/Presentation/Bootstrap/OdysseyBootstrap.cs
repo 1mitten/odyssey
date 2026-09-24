@@ -958,7 +958,11 @@ namespace Odyssey.Presentation.Bootstrap
             _renderer.Skirt.Enabled = terrainSkirt;
             _renderer.Skirt.TreeDensityPercent = skirtTreeDensity;
             _renderer.Skirt.HillTrees = skirtHillTrees;
-            if (terrainSkirt)
+            // The player's graphics preferences over the scene's fields, before anything is meshed
+            // or built, so the board arrives drawn as chosen. Only once a store is attached — the
+            // settings presenter does that — so a harness that sets these fields keeps them.
+            if (Preferences.HasStore) SettingsPresenter.ApplyRendererLevers(_renderer, Preferences);
+            if (_renderer.Skirt.Enabled)
             {
                 _renderer.Skirt.Build();
                 Debug.Log($"[Odyssey] surround: {_renderer.Skirt.GroundInstances} ground tiles, " +
@@ -1636,6 +1640,8 @@ namespace Odyssey.Presentation.Bootstrap
                 foreach (Odyssey.Hud.GraphicsLadder ladder in Odyssey.Hud.SettingsDirector.AllLadders)
                     pairs.Add(("gfx." + ladder, settings.Value(ladder)
                         .ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                // Which tier the trace was taken on, so a comparison can say so in one word.
+                pairs.Add(("gfx.preset", settings.Preset.ToString()));
             }
 
             return pairs;

@@ -260,6 +260,10 @@ namespace Odyssey.Presentation.Ui
         /// and the two display rows can be greyed in the editor.</summary>
         readonly Dictionary<GraphicsLadder, LadderView> _ladderViews = new();
 
+        /// <summary>The quality row's rungs, one per preset and Custom, lit by whichever the levers
+        /// are on (<c>SettingsDirector.Preset</c>).</summary>
+        readonly Dictionary<QualityPreset, Label> _presetRungs = new();
+
         /// <summary>The resolution dropdown selector. Built once the machine's sizes are known.
         /// See <c>BuildResolutionRow</c>.</summary>
         DropdownField? _resolutionDropdown;
