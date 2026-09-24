@@ -696,6 +696,11 @@ namespace Odyssey.Tests.Sim
         /// about that; five seeds per board is the cheapest thing that does, and it costs about a
         /// second in the fast tier.</para>
         ///
+        /// <para><b>On the map the game builds</b>, via <see cref="PlayedMap"/> — not on
+        /// <c>NaturalMapGenDef.For</c>, which is the unmodified default def and which this arm
+        /// used until 2026-09-21. The two are different boards, and the counts below are the
+        /// ones a player would see.</para>
+        ///
         /// <para>It prints rather than budgets. The one assertion is that every pass ran and the
         /// board is not empty of the things a colony needs — a generator that quietly produced a
         /// featureless plain would otherwise report beautiful timings.</para>
@@ -711,7 +716,7 @@ namespace Odyssey.Tests.Sim
             {
                 var grid = new CellGrid(size);
                 var watch = Stopwatch.StartNew();
-                last = NaturalMapGenerator.Generate(grid, seed, NaturalMapGenDef.For(size));
+                last = NaturalMapGenerator.Generate(grid, seed, PlayedMap.Def(size));
                 watch.Stop();
                 times.Add(watch.ElapsedMilliseconds);
 

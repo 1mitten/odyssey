@@ -122,6 +122,9 @@ namespace Odyssey.Presentation.Bootstrap
         public ModuleCatalogue? moduleCatalogue;
         public AudioCatalogue? audioCatalogue;
         public SliceCameraRig? cameraRig;
+
+        /// <summary>The six frustum planes, refilled every frame. Allocated once; see the call site.</summary>
+        readonly Plane[] _frustumPlanes = new Plane[6];
         public bool castShadows = true;
 
         [Tooltip("The sun to move through the day. Left empty, the cycle finds the first directional light in the scene.")]
@@ -186,6 +189,7 @@ namespace Odyssey.Presentation.Bootstrap
         DesignatePresenter? _designate;
         AudioDirector? _audio;
         DoorDirector? _doors;
+        FireDirector? _fires;
 
         /// <summary>The dead, drawn (design 33 §5). Built, synced and disposed beside the doors; lane B's to fill.</summary>
         CorpseDirector? _corpses;
@@ -208,6 +212,10 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         MenuAmbience? _menuBed;
         DaylightDirector? _daylight;
+
+        /// <summary>The wind the foliage reads, on the game clock (design 38 §4): a paused meadow
+        /// holds still and a meadow at speed 3 hurries with everything else.</summary>
+        readonly WindDirector _wind = new WindDirector();
         Material? _actorMaterial;
         ColonistMaterials? _colonistMaterials;
 
@@ -277,6 +285,9 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         public PawnFigureDirector? Figures => _figures;
         public DoorDirector? Doors => _doors;
+
+        /// <summary>The flame, smoke and light on every drawn campfire (design 31).</summary>
+        public FireDirector? Fires => _fires;
         readonly Stopwatch _frameTimer = new Stopwatch();
         double _renderMs;
         double _tickMs;
@@ -946,6 +957,9 @@ namespace Odyssey.Presentation.Bootstrap
                 GameObjectLayer = gameObject.layer,
                 ScatterDensity = grassScatter,
                 Appearances = appearances,
+                // The same materials the figures paint through, so a far colonist wears the
+                // issued uniform rather than the pack's orange (design 29-modular-colonists §13a).
+                Recolours = _colonistMaterials,
             };
             // The power lines (design 32 §9): their own pass, outside the chunk meshes, so showing
             // and hiding them costs no re-mesh. A new session starts unwatched, because its view
@@ -1005,6 +1019,8 @@ namespace Odyssey.Presentation.Bootstrap
             if (_model != null)
             {
                 _doors = new DoorDirector(_model, moduleCatalogue, transform, gameObject.layer);
+                _fires = new FireDirector(_model, transform, gameObject.layer,
+                    _colony?.Construction.Edifices.Records);
                 _corpses = new CorpseDirector(_model, moduleCatalogue, _figures, transform, gameObject.layer);
                 // Blood (design 33 §10): what the seam hands on, drawn. It asks the corpses and
                 // the figures where a fallen body lies, for the pool under it.
@@ -1034,6 +1050,10 @@ namespace Odyssey.Presentation.Bootstrap
                 _daylight = new DaylightDirector(key, RenderSettings.skybox);
                 _daylight.Apply(_world.CurrentTick);
             }
+
+            // The wind, unconditionally: it is not part of the day and night cycle, and a board
+            // built with the cycle off still wants its grass moving.
+            _wind.Apply(_world.CurrentTick);
             if (_figures != null)
             {
                 _figures.BlowLanded += OnBlowLanded;
@@ -1196,6 +1216,9 @@ namespace Odyssey.Presentation.Bootstrap
             // retire in one frame and the sky would step, and when the game is paused the hour
             // stops with it, which is right — a paused world should not go on getting dark.
             _daylight?.Apply(_world.CurrentTick);
+
+            // And the wind on the same clock, for the same reason: a paused meadow holds still.
+            _wind.Apply(_world.CurrentTick);
         }
 
         /// <summary>
@@ -1219,6 +1242,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (_world == null || count <= 0) return;
             _world.Tick(count);
             _daylight?.Apply(_world.CurrentTick);
+            _wind.Apply(_world.CurrentTick);
         }
 
         /// <summary>
@@ -1339,6 +1363,11 @@ namespace Odyssey.Presentation.Bootstrap
             if (cameraRig != null)
             {
                 _renderer.ViewerPosition = cameraRig.transform.position;
+                // A level of detail is judged by the screen height a module fills, which the
+                // field of view decides as much as the distance does.
+                if (cameraRig.Camera != null) _renderer.ViewerFieldOfView = cameraRig.Camera.fieldOfView;
+                // The clearance window follows what the camera looks at, not where it stands.
+                _renderer.ClearanceFocus = cameraRig.Focus;
                 // And the figure director wants it for one decision of its own: which colonists
                 // keep a live figure when there are more of them than the cap allows.
                 if (_figures != null) _figures.ViewerPosition = cameraRig.transform.position;
@@ -1382,6 +1411,24 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 _renderer.FallingItems.UpdateSnapshot(_world.Views.Current);
                 _renderer.FallingItems.Advance(Time.deltaTime);
+
+                // The camera's frustum, handed to the renderer the way the sight lines are, so
+                // that class still knows nothing about a Camera. Recomputed every frame into the
+                // same six planes rather than allocated: the non-allocating overload exists for
+                // exactly this call site, and the rig's camera is cached behind its property.
+                if (cameraRig != null)
+                {
+                    GeometryUtility.CalculateFrustumPlanes(cameraRig.Camera, _frustumPlanes);
+                    _renderer.Frustum = _frustumPlanes;
+
+                    // The shadow margin follows the setting, because the player can move it: a
+                    // caster further from the camera than the shadow distance casts nothing the
+                    // pipeline will draw, so that distance is exactly how far outside the frustum
+                    // a chunk must be before dropping it is invisible.
+                    _renderer.ShadowCasterMarginMetres =
+                        _renderer.CastShadows ? QualitySettings.shadowDistance : 0f;
+                }
+
                 _renderer.Render(activeLayer, slice);
             }
             MarkSection(FrameSection.World);
@@ -1437,6 +1484,15 @@ namespace Odyssey.Presentation.Bootstrap
             _doors?.Sync(_world.Views.Current, activeLayer, slice, Time.deltaTime, _audio);
             _corpses?.Sync(_world.Views.Current, activeLayer, slice, Time.deltaTime);
             MarkSection(FrameSection.Doors);
+
+            // The campfires burn after the doors and before the marks, with the figures'
+            // own reading of whether the world is advancing: a paused game holds the flame
+            // and the flicker where they are rather than burning on (design 31 §8).
+            if (_fires != null)
+            {
+                _fires.Running = _figures?.Running ?? true;
+                _fires.Sync(activeLayer, slice, Time.deltaTime, _audio);
+            }
 
             DrawStandingOrders(_world.Views.Current);
             DrawZones(_world.Views.Current);
@@ -3659,6 +3715,7 @@ namespace Odyssey.Presentation.Bootstrap
             }
             _audio?.Dispose();
             _daylight?.Dispose();
+            _wind.Dispose();
             // The corpses before the figures: a body still falling hands its lent figure back as
             // it goes, and after the figures that indexed a cleared list and threw out of the
             // teardown, which a pause on a death and a load reached (review, 2026-09-23).
@@ -3666,6 +3723,7 @@ namespace Odyssey.Presentation.Bootstrap
             _figures?.Dispose();
             _blood = null;
             _doors?.Dispose();
+            _fires?.Dispose();
             _floaterView?.Dispose();
             _combatFeedback.Floaters.Clear();
             _combatFeedback.Blood.Clear();
@@ -3698,6 +3756,7 @@ namespace Odyssey.Presentation.Bootstrap
             _daylight = null;
             _figures = null;
             _doors = null;
+            _fires = null;
             _corpses = null;
             _floaterView = null;
             _colonistMaterials = null;

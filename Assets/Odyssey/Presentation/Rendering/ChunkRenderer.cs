@@ -80,6 +80,16 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public ColonistAppearanceBook? Appearances { get; set; }
 
+        /// <summary>
+        /// The colonist recolours, the <b>same object</b> the figures and the portraits paint
+        /// through, so the far form and the live figure share one material per look.
+        ///
+        /// <para>Used for one thing only: the issued uniform on a far body
+        /// (<see cref="ColonistAppearance.IssuedCloth"/>). Null draws the far form in the pack's
+        /// own paint, which is what a harness with no bootstrap gets.</para>
+        /// </summary>
+        public ColonistMaterials? Recolours { get; set; }
+
         /// <summary>The book, or one dealt from seed 0 so an editor harness still gets variety.</summary>
         ColonistAppearanceBook Cast =>
             Appearances ??= AppearanceBooks.For(0u, _model.Library.Catalogue);
@@ -89,6 +99,54 @@ namespace Odyssey.Presentation.Rendering
         /// everything, which is what a headless measurement wants.
         /// </summary>
         public Vector3? ViewerPosition { get; set; }
+
+        /// <summary>
+        /// Whether a module drawn by level (<see cref="ResolvedModule.DrawsByLevel"/>) takes a
+        /// coarser level with distance. **Off by default**, and off means exactly the finest level
+        /// everywhere, which is what every module drew before levels existed.
+        ///
+        /// <para>Off because the pack's own switch heights were authored for a camera near the
+        /// ground: a 1.9 m grass clump leaves its finest level at a tenth of the screen, which at
+        /// this camera's 40° is about 25 m, and the play camera stands 60 to 160 m off the ground —
+        /// so with the numbers as shipped, every tuft on screen would be its crudest card. Each
+        /// unit that brings art in turns it on with <see cref="LodBias"/> set against that art and
+        /// a person looking at it (design 38 §11, M4 and M5).</para>
+        /// </summary>
+        public bool UseLods { get; set; }
+
+        /// <summary>Multiplies the screen height a module is judged at, as Unity's own
+        /// <c>QualitySettings.lodBias</c> does: above one keeps finer levels further away.</summary>
+        public float LodBias { get; set; } = 1f;
+
+        /// <summary>The camera's vertical field of view in degrees, which the screen height of a
+        /// level is measured against. The root writes it every frame beside
+        /// <see cref="ViewerPosition"/>; 40 is the play camera's.</summary>
+        public float ViewerFieldOfView { get; set; } = 40f;
+
+        /// <summary>Instances drawn last frame at a level coarser than the finest. The only way to
+        /// tell "levels are on and doing nothing" from "levels are on and working".</summary>
+        public int InstancesAtCoarserLevels { get; private set; }
+
+        int LevelFor(ResolvedModule module, float distance) =>
+            UseLods ? LevelFor(module, distance, ViewerFieldOfView, LodBias) : 0;
+
+        /// <summary>
+        /// The level a module is drawn at from a distance, by the rule Unity's <c>LODGroup</c>
+        /// applies: the fraction of the screen's height the module fills, times the bias, against
+        /// each level's switch height, finest first. Past the last switch the last level is kept —
+        /// the pack's final number is a cull, and nothing here culls by size.
+        /// </summary>
+        public static int LevelFor(ResolvedModule module, float distance, float fieldOfView, float bias)
+        {
+            ModuleLod[] lods = module.Lods;
+            if (lods.Length < 2 || distance <= 0f || module.LodSize <= 0f) return 0;
+
+            float screen = module.LodSize * bias
+                           / (2f * distance * Mathf.Tan(0.5f * fieldOfView * Mathf.Deg2Rad));
+            for (int i = 0; i < lods.Length - 1; i++)
+                if (screen >= lods[i].ScreenHeight) return i;
+            return lods.Length - 1;
+        }
         /// <summary>
         /// This frame's crowd buckets, or null for the plain scan.
         ///
@@ -182,6 +240,100 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public SightLines? Sight { get; set; }
 
+        /// <summary>
+        /// The camera's frustum planes, six of them, or null for "draw the whole band".
+        ///
+        /// <para>Set per frame by the composition root, the same way <see cref="Sight"/> is, so
+        /// this class still knows nothing about a <c>Camera</c>. Null is the ordinary case for a
+        /// headless or probe render and costs one null test per chunk.</para>
+        /// </summary>
+        public Plane[]? Frustum { get; set; }
+
+        /// <summary>
+        /// A frustum for a test to impose, which the composition root cannot overwrite. Null in
+        /// play, and null is the whole of the ordinary path.
+        ///
+        /// <para><b>It exists because a control that does not apply is worse than no control.</b>
+        /// <c>FrameTimeTests.CullingDoesNotChangeThePicture</c> proves the cull is invisible by
+        /// also rendering a frustum that admits *nothing* and checking that this moves a great
+        /// many pixels — if it does not, the comparison cannot see the board and its other
+        /// assertion means nothing. That control was written against <see cref="Frustum"/> and
+        /// silently did nothing, because the root assigns <see cref="Frustum"/> every frame
+        /// (<c>OdysseyBootstrap.LateUpdate</c>) and overwrote the test's planes before the
+        /// capture. <b>The tell was two readings with identical chunk, instance and draw
+        /// counts</b> — 126 / 57,818 / 1,744 for both the culled shot and the blind one, when the
+        /// blind one should have submitted nothing at all.</para>
+        ///
+        /// <para>That is the second time the same fault has been found in this one test file: the
+        /// first was <see cref="ShadowCasterMarginMetres"/>, re-derived per frame from
+        /// <c>QualitySettings.shadowDistance</c>, and it is written up as <c>P18</c> in
+        /// <c>docs/bug-patterns.md</c>. A field the root writes every frame cannot be set by a
+        /// test; it needs a seam of its own.</para>
+        /// </summary>
+        public Plane[]? FrustumOverride { get; set; }
+
+        /// <summary>The planes actually used this frame: the override if a test imposed one.</summary>
+        Plane[]? ActiveFrustum => FrustumOverride ?? Frustum;
+
+        /// <summary>
+        /// Whether a chunk outside <see cref="Frustum"/> is actually skipped, or merely counted.
+        ///
+        /// <para><b>The off state is a measurement rather than a stub.</b> With it off every
+        /// chunk is submitted exactly as before and <see cref="ChunksOutsideFrustum"/> reports
+        /// what culling *would* have saved; with it on the same test skips them. One flag, two
+        /// readings, taken seconds apart inside one run — which is the only comparison this
+        /// machine supports, and the same shape as <see cref="InstanceCellPlates"/>.</para>
+        ///
+        /// <para><b>On since 2026-09-23, once the proof could prove anything.</b> It shipped off
+        /// for two days because <c>FrameTimeTests.CullingDoesNotChangeThePicture</c> failed its
+        /// own control and nobody could say whether the cull was wrong or the test was blind. It
+        /// was the test: its "frustum admitting nothing" was imposed on <see cref="Frustum"/>,
+        /// which the composition root rewrites every frame. With that fixed and the scene stilled,
+        /// the answer is exact — <b>a repeat of the same shot moves 0.00% of pixels, culling moves
+        /// 0.00%, and a frustum admitting nothing moves 98.21%</b>. Culling changes what is
+        /// submitted and provably not what is seen.</para>
+        ///
+        /// <para>Measured on 2026-09-23 at the 40 m shadow margin: <b>Standard</b> 33 of 104
+        /// chunks culled, frame 3.43 → 2.86 ms, 1,360 → 996 draw calls; <b>Huge</b> 317 of 443,
+        /// frame 8.89 → 3.84 ms, 5,083 → 1,744 draw calls, and <c>FrameSection.World</c> 5.613 →
+        /// 1.687 ms. <b>The saving follows the player's shadow distance</b>, because
+        /// <see cref="ShadowCasterMarginMetres"/> is that distance: at a 120 m setting Standard
+        /// culls nothing at all and Huge culls 74 of 443. That is correct rather than
+        /// disappointing — a caster inside the shadow distance may cast into the frustum, so it
+        /// has to be submitted — but it means this is a saving on the default settings and not a
+        /// promise on every one.</para>
+        /// </summary>
+        public bool CullToFrustum { get; set; } = true;
+
+        /// <summary>Chunks the frustum test rejected last frame, whether or not they were skipped.</summary>
+        public int ChunksOutsideFrustum { get; private set; }
+
+        /// <summary>
+        /// How far outside the frustum a chunk must be before it may be skipped, in metres.
+        ///
+        /// <para><b>This is the shadow correction, and without it culling is a visible
+        /// regression.</b> A wall outside the camera's frustum still casts into it: the sun sits
+        /// at 30 degrees in play and sweeps lower at both ends of the day, so a twelve-metre wall
+        /// throws twenty-one metres of shadow at noon and far more at dusk. Skipping its
+        /// submission removes it from the shadow map as well as from the picture, and what a
+        /// player sees is shadows appearing and vanishing at the screen edge as they pan.</para>
+        ///
+        /// <para><b>The bound is the shadow distance, not the sun angle</b>, which is what makes
+        /// this simple: the pipeline renders no shadow at all from a caster further from the
+        /// camera than <c>shadowDistance</c>, so however long a low sun makes a shadow, a caster
+        /// beyond that distance contributes nothing. The margin therefore never needs to exceed
+        /// it, and no trigonometry is involved.</para>
+        ///
+        /// <para>Terrain never casts and foliage does not cast by default, which is why the
+        /// existing <c>FoliageDrawDistance</c> cull needed none of this. Walls, buildings and
+        /// stairs do. <b>Raising the shadow distance makes culling worth less</b>, which is a real
+        /// trade and is measured rather than assumed — see <c>FrameTimeTests</c>.</para>
+        ///
+        /// <para>Defaults to the widest rung the settings offer, so a caller that sets
+        /// <see cref="Frustum"/> and forgets this one is merely slower and never wrong.</para>
+        /// </summary>
+        public float ShadowCasterMarginMetres { get; set; } = 120f;
+
         /// <summary>How solid an occluder in the way is left. Zero would be invisible; this is a
         /// hint of what is there, in the same idiom as a ghosted storey above the slice.</summary>
         public float SightFadeAlpha { get; set; } = DefaultSightFadeAlpha;
@@ -198,6 +350,37 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const float TallestModuleMetres = 12f;
 
+        /// <summary>
+        /// Whether a chunk's box, grown upwards, meets the camera's frustum.
+        ///
+        /// <para><b>Grown by <see cref="TallestModuleMetres"/>, and that is the load-bearing part.</b>
+        /// A chunk's bounds are one layer plus padding — about seven metres — while a tree rooted
+        /// in that layer carries its crown twelve metres up. The box therefore does not contain
+        /// everything drawn from the chunk, which is the same gap <see cref="Sight"/> allows for
+        /// and the reason that constant exists.</para>
+        ///
+        /// <para>Growing it makes this test <b>strictly more conservative than the one Unity is
+        /// already applying</b>: <c>RenderParams.worldBounds</c> is <c>batch.Bounds</c> unpadded at
+        /// both submission sites, so anything this rejects, the GPU-side cull was rejecting
+        /// already. The change can only remove work, never a picture. <b>Do not "tidy" the
+        /// allowance away</b> — without it a chunk whose tree tops are on screen and whose ground
+        /// is not would stop drawing, and that is a horrible fault to find because the geometry is
+        /// provably correct.</para>
+        /// </summary>
+        bool InFrustum(in Bounds bounds)
+        {
+            Vector3 centre = bounds.center;
+            Vector3 size = bounds.size;
+            centre.y += TallestModuleMetres * 0.5f;
+            size.y += TallestModuleMetres;
+
+            // And outwards, so an off-screen caster keeps its shadow on screen.
+            float margin = ShadowCasterMarginMetres;
+            if (margin > 0f) size += new Vector3(margin * 2f, margin * 2f, margin * 2f);
+
+            return GeometryUtility.TestPlanesAABB(ActiveFrustum, new Bounds(centre, size));
+        }
+
         /// <summary>Scratch, reused every frame: the instances of one bucket that are in the way,
         /// and the ones that are not. Partitioning in place would corrupt the mesher's array.</summary>
         Matrix4x4[] _solid = new Matrix4x4[64];
@@ -210,6 +393,36 @@ namespace Odyssey.Presentation.Rendering
         public int ChunksDrawn { get; private set; }
         public int ChunksMeshedThisFrame { get; private set; }
         public int MaterialCount => _materials.MaterialCount;
+
+        /// <summary>See <see cref="MaterialCache.RequeueFoliage"/>. A measurement seam: the game
+        /// draws foliage in <see cref="MaterialCache.DefaultFoliageQueue"/>.</summary>
+        public int RequeueFoliage(int queue) => _materials.RequeueFoliage(queue);
+
+        /// <summary>See <see cref="MaterialCache.ForgetFoliage"/>. A measurement seam.</summary>
+        public int ForgetFoliageMaterials() => _materials.ForgetFoliage();
+
+        /// <summary>
+        /// Where the grass is pushed back, so nothing lying on the floor is hidden by it
+        /// (<c>docs/design/38-meadow-overhaul.md</c> §4). See <see cref="GrassClearance"/> for why it
+        /// is a field rather than something the mesher does: items and order marks live in the
+        /// per-frame snapshot, not in the mirror the mesher reads.
+        /// </summary>
+        public GrassClearance Clearance { get; } = new GrassClearance();
+
+        /// <summary>
+        /// Where the clearance window is centred: the camera rig's focus, which the root writes every
+        /// frame. <b>Not the camera's position</b> — at a 48° pitch the camera stands well back from
+        /// what it looks at, and a window centred on it leaves the far half of the view uncleared.
+        /// </summary>
+        public Vector3? ClearanceFocus { get; set; }
+
+        /// <summary>How far an item pushes the grass back: clear of the thing and no more (the
+        /// 2026-09-22 grass interview, answer 12).</summary>
+        public float ItemClearance { get; set; } = 0.55f;
+
+        /// <summary>The same for an order mark, which covers a cell face and so wants a wider ring
+        /// than a stack of logs does.</summary>
+        public float MarkClearance { get; set; } = 1.1f;
 
         /// <summary>Instances drawn ghosted last frame because they stood in a line of sight.</summary>
         public int InstancesFaded { get; private set; }
@@ -294,12 +507,22 @@ namespace Odyssey.Presentation.Rendering
 
         public void Render(int activeLayer, SliceSettings slice)
         {
+            // **Last frame's field, published first.** The grass is submitted below and the items
+            // and marks that clear it are drawn after, so a field gathered and uploaded in one
+            // frame would depend on a global landing between a submission and its execution. One
+            // frame of latency on where grass parts is invisible; the alternative is a race.
+            Clearance.Publish();
+            Clearance.Begin(ClearanceFocus ?? ViewerPosition ?? CellMetrics.Centre(
+                _model.Size.SizeX / 2, _model.Size.SizeZ / 2, activeLayer));
+
             DrawCalls = 0;
             InstancesDrawn = 0;
             ChunksDrawn = 0;
             ChunksMeshedThisFrame = 0;
             InstancesFaded = 0;
             ChunksSightTested = 0;
+            ChunksOutsideFrustum = 0;
+            InstancesAtCoarserLevels = 0;
             CellPlatesDrawn = 0;
             ChunksMeshDeferred = 0;
             _meshedThisFrame = 0;
@@ -359,8 +582,30 @@ namespace Odyssey.Presentation.Rendering
                 int first = layer * chunksPerLayer;
                 for (int i = 0; i < chunksPerLayer; i++)
                 {
-                    ChunkBatch batch = BatchFor(first + i);
+                    int index = first + i;
+
+                    // Off-screen chunks, asked *before* BatchFor. Asked after it, a stale chunk
+                    // behind the camera was meshed first and culled second, so it spent the
+                    // meshing budget on geometry nobody would see, and a panning camera could
+                    // leave on-screen chunks deferred behind off-screen ones. The box is the one
+                    // Mesh would write — a function of the footprint only — so the answer is the
+                    // same as before and the picture cannot move. An off-screen chunk simply stays
+                    // stale until it is on screen, which is what deferral already means.
+                    bool outside = ActiveFrustum != null && !InFrustum(_mesher.BoundsOf(index));
+                    if (outside && CullToFrustum)
+                    {
+                        // Counted as before: only chunks known to hold something.
+                        ChunkBatch? known = _batches[index];
+                        if (known != null && known.InstanceCount > 0) ChunksOutsideFrustum++;
+                        continue;
+                    }
+
+                    ChunkBatch batch = BatchFor(index);
                     if (batch.InstanceCount == 0) continue;
+
+                    // Culling off: counted, and drawn anyway, so the off state stays a measurement.
+                    if (outside) ChunksOutsideFrustum++;
+
                     ChunksDrawn++;
 
                     // The coarse half of the sight test, asked once for the whole chunk. A layer
@@ -370,8 +615,12 @@ namespace Odyssey.Presentation.Rendering
                                  && Sight.Touches(batch.Bounds, TallestModuleMetres);
                     if (sight) ChunksSightTested++;
 
-                    DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight);
-                    if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight);
+                    // Once per chunk: every bucket's level of detail is chosen against it.
+                    float distance = ViewerPosition.HasValue
+                        ? Mathf.Sqrt(batch.Bounds.SqrDistance(ViewerPosition.Value))
+                        : 0f;
+                    DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight, distance);
+                    if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight, distance);
                 }
             }
         }
@@ -437,104 +686,124 @@ namespace Odyssey.Presentation.Rendering
         }
 
         void DrawBuckets(ChunkBatch batch, System.Collections.Generic.List<InstanceBucket> buckets,
-            float shade, bool ghost, float alpha, bool sight = false)
+            float shade, bool ghost, float alpha, bool sight = false, float distance = 0f)
         {
             for (int b = 0; b < buckets.Count; b++)
             {
                 InstanceBucket bucket = buckets[b];
                 if (bucket.Count == 0) continue;
 
-                ModulePart part = _model.Library[bucket.Module].Parts[bucket.Part];
-                ResolveColour(bucket.Tint, part.IsFallback, shade, out Color tint, out Color emission);
+                ResolvedModule resolved = _model.Library[bucket.Module];
 
-                // A tree is the one bucket whose colour is not a tint: it is four colours painted
-                // into four cells of the pack atlas, which needs its own shader and its own cache.
-                // Everything else — and a ghosted tree, which is drawn by the translucent stand-in
-                // and has no atlas to repaint — goes the ordinary way. A null from the tree cache
-                // means there was no shader or no art, and the fallback is exactly what a tree
-                // drew before this feature existed.
-                Material? painted = !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
-                    ? _materials.Trees.For(part.Material, TintCode.TreeSpeciesOf(bucket.Tint), shade)
-                    : null;
-                Material material = painted ?? _materials.Get(part.Material, tint, emission, ghost, alpha,
-                    foliage: TintCode.IsFoliage(bucket.Tint),
-                    water: TintCode.IsWater(bucket.Tint));
-
-                // Terrain receives shadows but never casts them, and that is not a saving so much
-                // as a correctness fix. Ground is a contiguous mass of cell-sized boxes; letting
-                // each box cast meant the surface shadowed itself, and with a shadow map stretched
-                // over a 300 m board the texel is far larger than a cell, so every ground tile
-                // acned against its neighbours. The result was a dark cross-hatch over the whole
-                // map that read as filth on the grass rather than as light.
-                //
-                // Nothing worth seeing is lost: a colonist, a wall or a tree still casts onto the
-                // ground, which is what actually tells the eye where something is standing. It
-                // also takes 14,400 instances per layer out of the shadow pass.
-                //
-                // Foliage is the same argument a second time, and a bigger one. A meadow is
-                // seventeen thousand clumps, each of which would be drawn again into the shadow
-                // map to cast a shadow a few centimetres long onto grass of the same colour. The
-                // reference art has no per-tuft shadows either — its ground is evenly lit and the
-                // shadows that matter are the ones people and buildings cast onto it.
-                // Water is terrain, so it already inherits terrain's "receives but never casts".
-                bool terrain = TintCode.IsTerrain(bucket.Tint);
-                bool foliage = TintCode.IsFoliage(bucket.Tint);
-
-                if (foliage && ViewerPosition.HasValue
-                    && batch.Bounds.SqrDistance(ViewerPosition.Value) > FoliageDrawDistance * FoliageDrawDistance)
-                    continue;
-                bool casts = CastShadows && !ghost && !terrain && (!foliage || FoliageCastsShadows);
-
-                var rp = new RenderParams(material)
+                // A module drawn by level keeps one bucket whose matrices serve every part of every
+                // level; the chunk's distance chooses which level's parts are submitted from it
+                // (docs/design/38-meadow-overhaul.md §3). Anything else is one part per bucket.
+                ModulePart[]? levelParts = null;
+                if (resolved.DrawsByLevel)
                 {
-                    worldBounds = batch.Bounds,
-                    layer = GameObjectLayer,
-                    receiveShadows = !ghost,
-                    shadowCastingMode = casts ? ShadowCastingMode.On : ShadowCastingMode.Off,
-                };
-
-                // The per-instance colours of a tree, which is what lets every colour in a chunk
-                // share one draw. Built once per meshing rather than once a frame, and only when
-                // the material that reads them is the one actually drawing.
-                bool coloured = painted != null && bucket.IsColoured;
-
-                int faded = sight && !NeverFades(bucket.Tint) ? Partition(bucket) : 0;
-                if (faded == 0)
-                {
-                    if (coloured)
-                        SubmitColoured(rp, part, bucket.Matrices, bucket.Count,
-                            bucket.BarkDeep!, bucket.BarkWarm!, bucket.LeafDeep!, bucket.LeafFresh!,
-                            PropsOf(bucket));
-                    else
-                        Submit(rp, part, bucket.Matrices, bucket.Count);
-                    InstancesDrawn += bucket.Count;
-                    continue;
+                    int level = LevelFor(resolved, distance);
+                    levelParts = resolved.Lods[level].Parts;
+                    if (level > 0) InstancesAtCoarserLevels += bucket.Count;
                 }
+                int drawnParts = levelParts?.Length ?? 1;
 
-                // Ghosted with the same tint the solid draw would have had, so what shows through
-                // still reads as the tree or the wall it is, rather than as a grey pane. The
-                // ghost material is the translucent stand-in the x-rayed storeys use; the pack's
-                // own shaders are alpha-clipped and cannot be turned transparent from script.
-                var ghostParams = new RenderParams(
-                    _materials.Get(part.Material, tint, emission, ghost: true, SightFadeAlpha))
+                // Once per bucket, not per part: it splits the bucket's matrices, which every part
+                // of a level shares.
+                int faded = sight && !NeverFades(bucket.Tint) ? Partition(bucket) : 0;
+
+                for (int k = 0; k < drawnParts; k++)
                 {
-                    worldBounds = batch.Bounds,
-                    layer = GameObjectLayer,
-                    receiveShadows = false,
-                    shadowCastingMode = ShadowCastingMode.Off,
-                };
-                Submit(ghostParams, part, _faded, faded);
-                // The solid half is a *filtered* subsequence, so its colours have to be gathered in
-                // the same order — which Partition does as it splits, into scratch lists that are
-                // reused. The ghosted half needs none: it is drawn by the translucent stand-in,
-                // which has no atlas to repaint.
-                if (coloured)
-                    SubmitColoured(rp, part, _solid, bucket.Count - faded,
-                        _solidBarkDeep, _solidBarkWarm, _solidLeafDeep, _solidLeafFresh, SolidProps());
-                else
-                    Submit(rp, part, _solid, bucket.Count - faded);
-                InstancesDrawn += bucket.Count;
-                InstancesFaded += faded;
+                    ModulePart part = levelParts != null ? levelParts[k] : resolved.Parts[bucket.Part];
+                    ResolveColour(bucket.Tint, part.IsFallback, shade, out Color tint, out Color emission);
+
+                    // A tree is the one bucket whose colour is not a tint: it is four colours painted
+                    // into four cells of the pack atlas, which needs its own shader and its own cache.
+                    // Everything else — and a ghosted tree, which is drawn by the translucent stand-in
+                    // and has no atlas to repaint — goes the ordinary way. A null from the tree cache
+                    // means there was no shader or no art, and the fallback is exactly what a tree
+                    // drew before this feature existed.
+                    Material? painted = !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
+                        ? _materials.Trees.For(part.Material, TintCode.TreeSpeciesOf(bucket.Tint), shade)
+                        : null;
+                    Material material = painted ?? _materials.Get(part.Material, tint, emission, ghost, alpha,
+                        foliage: TintCode.IsFoliage(bucket.Tint),
+                        water: TintCode.IsWater(bucket.Tint));
+
+                    // Terrain receives shadows but never casts them, and that is not a saving so much
+                    // as a correctness fix. Ground is a contiguous mass of cell-sized boxes; letting
+                    // each box cast meant the surface shadowed itself, and with a shadow map stretched
+                    // over a 300 m board the texel is far larger than a cell, so every ground tile
+                    // acned against its neighbours. The result was a dark cross-hatch over the whole
+                    // map that read as filth on the grass rather than as light.
+                    //
+                    // Nothing worth seeing is lost: a colonist, a wall or a tree still casts onto the
+                    // ground, which is what actually tells the eye where something is standing. It
+                    // also takes 14,400 instances per layer out of the shadow pass.
+                    //
+                    // Foliage is the same argument a second time, and a bigger one. A meadow is
+                    // seventeen thousand clumps, each of which would be drawn again into the shadow
+                    // map to cast a shadow a few centimetres long onto grass of the same colour. The
+                    // reference art has no per-tuft shadows either — its ground is evenly lit and the
+                    // shadows that matter are the ones people and buildings cast onto it.
+                    // Water is terrain, so it already inherits terrain's "receives but never casts".
+                    bool terrain = TintCode.IsTerrain(bucket.Tint);
+                    bool foliage = TintCode.IsFoliage(bucket.Tint);
+
+                    if (foliage && ViewerPosition.HasValue
+                        && batch.Bounds.SqrDistance(ViewerPosition.Value) > FoliageDrawDistance * FoliageDrawDistance)
+                        continue;
+                    bool casts = CastShadows && !ghost && !terrain && (!foliage || FoliageCastsShadows);
+
+                    var rp = new RenderParams(material)
+                    {
+                        worldBounds = batch.Bounds,
+                        layer = GameObjectLayer,
+                        receiveShadows = !ghost,
+                        shadowCastingMode = casts ? ShadowCastingMode.On : ShadowCastingMode.Off,
+                    };
+
+                    // The per-instance colours of a tree, which is what lets every colour in a chunk
+                    // share one draw. Built once per meshing rather than once a frame, and only when
+                    // the material that reads them is the one actually drawing.
+                    bool coloured = painted != null && bucket.IsColoured;
+
+                    if (faded == 0)
+                    {
+                        if (coloured)
+                            SubmitColoured(rp, part, bucket.Matrices, bucket.Count,
+                                bucket.BarkDeep!, bucket.BarkWarm!, bucket.LeafDeep!, bucket.LeafFresh!,
+                                PropsOf(bucket));
+                        else
+                            Submit(rp, part, bucket.Matrices, bucket.Count);
+                        InstancesDrawn += bucket.Count;
+                        continue;
+                    }
+
+                    // Ghosted with the same tint the solid draw would have had, so what shows through
+                    // still reads as the tree or the wall it is, rather than as a grey pane. The
+                    // ghost material is the translucent stand-in the x-rayed storeys use; the pack's
+                    // own shaders are alpha-clipped and cannot be turned transparent from script.
+                    var ghostParams = new RenderParams(
+                        _materials.Get(part.Material, tint, emission, ghost: true, SightFadeAlpha))
+                    {
+                        worldBounds = batch.Bounds,
+                        layer = GameObjectLayer,
+                        receiveShadows = false,
+                        shadowCastingMode = ShadowCastingMode.Off,
+                    };
+                    Submit(ghostParams, part, _faded, faded);
+                    // The solid half is a *filtered* subsequence, so its colours have to be gathered in
+                    // the same order — which Partition does as it splits, into scratch lists that are
+                    // reused. The ghosted half needs none: it is drawn by the translucent stand-in,
+                    // which has no atlas to repaint.
+                    if (coloured)
+                        SubmitColoured(rp, part, _solid, bucket.Count - faded,
+                            _solidBarkDeep, _solidBarkWarm, _solidLeafDeep, _solidLeafFresh, SolidProps());
+                    else
+                        Submit(rp, part, _solid, bucket.Count - faded);
+                    InstancesDrawn += bucket.Count;
+                    InstancesFaded += faded;
+                }
             }
         }
 
@@ -989,7 +1258,8 @@ namespace Odyssey.Presentation.Rendering
             for (int variant = 0; variant < _colonistCounts.Length; variant++)
                 if (_colonistCounts[variant] > 0)
                     SubmitInstances(ColonistModule(variant),
-                        _colonistPlacements[variant], _colonistCounts[variant], ref _actorMatrices);
+                        _colonistPlacements[variant], _colonistCounts[variant], ref _actorMatrices,
+                        FarMaterials(variant));
 
             for (int i = 0; i < _hairCounts.Length; i++)
                 if (_hairCounts[i] > 0)
@@ -1045,6 +1315,10 @@ namespace Odyssey.Presentation.Rendering
             {
                 CellRef cell = things[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
+
+                // A stack of logs is shorter than a blade of grass. Stamped from the drawn set, so
+                // an item three storeys down does not bald the meadow above it.
+                Clearance.Stamp(CellMetrics.Centre(cell.X, cell.Z, cell.Y), ItemClearance);
 
                 int def = things[i].DefIndex;
                 ResolvedModule? module = ItemModule(def);
@@ -1459,6 +1733,8 @@ namespace Odyssey.Presentation.Rendering
             _colonistModules = new int[variants];
             _colonistCounts = new int[variants];
             _colonistPlacements = new Matrix4x4[variants][];
+            _colonistFar = new Material?[]?[variants];
+            _colonistFarResolved = new bool[variants];
             for (int i = 0; i < variants; i++)
             {
                 // Unresolved. Resolving a colonist means instantiating a rigged character and
@@ -1531,6 +1807,71 @@ namespace Odyssey.Presentation.Rendering
                 _colonistModules[variant] =
                     _model.Library.Resolve(ModuleIds.Colonist(variant), ModuleShape.Pillar);
             return _model.Library[_colonistModules[variant]];
+        }
+
+        Material?[]?[] _colonistFar = System.Array.Empty<Material?[]?>();
+        bool[] _colonistFarResolved = System.Array.Empty<bool>();
+
+        /// <summary>
+        /// The materials a far body is drawn in, one per part, or null for the pack's own paint.
+        ///
+        /// <para>Non-null only for the issued uniform's bodies. The far form is one material per
+        /// <b>body</b> and never per colonist (<c>docs/design/29-modular-colonists.md</c> §13), so
+        /// it can wear a colour only when the colour belongs to the body, and the uniform's is
+        /// the only one that does. Only the cloth rectangles are painted: skin and hair keep the
+        /// pack's paint, as the rest of the far form does. Before this, the far form drew the
+        /// jumpsuit in the pack's own burnt orange, so a colonist past the figure cap changed
+        /// clothes on crossing it.</para>
+        ///
+        /// <para>Resolved once per body and only after the recolours exist. It costs no draw
+        /// calls, because the bucket is still the body, and one material per uniform body, because
+        /// <see cref="ColonistMaterials"/> keys on the source and the cells.</para>
+        /// </summary>
+        public Material?[]? FarMaterialsFor(int variant)
+        {
+            EnsureColonistModules();
+            return (uint)variant < (uint)_colonistFar.Length ? FarMaterials(variant) : null;
+        }
+
+        /// <summary>The same, for the actor pass, which has already sized the arrays.</summary>
+        Material?[]? FarMaterials(int variant)
+        {
+            if (_colonistFarResolved[variant]) return _colonistFar[variant];
+            if (Recolours == null) return null;
+            _colonistFarResolved[variant] = true;
+
+            if (!ColonistAppearance.IssuedCloth(Cast.Pools, variant, out Rgb24 cloth, out Rgb24 cloth2))
+                return null;
+
+            ModuleCatalogue? catalogue = _model.Library.Catalogue;
+            if (catalogue == null) return null;
+            System.Collections.Generic.List<ModuleEntry> rows = catalogue.FindFamily(ModuleIds.ColonistBase);
+            if ((uint)variant >= (uint)rows.Count) return null;
+            AppearanceCells cells = rows[variant].appearance;
+            if (!cells.Any || cells.cloth.Length == 0) return null;
+
+            // Cloth only. An empty rectangle is one no UV is inside, so the skin and hair slots
+            // are switched off and paint nothing, whatever colour the look carries for them.
+            var clothOnly = new AppearanceCells
+            {
+                cloth = cells.cloth,
+                cloth2 = cells.cloth2,
+                clothVerts = cells.clothVerts,
+                cloth2Verts = cells.cloth2Verts,
+                totalVerts = cells.totalVerts,
+                quality = cells.quality,
+            };
+            var look = new ColonistAppearance(variant, default, default, cloth, cloth2);
+
+            ModulePart[] parts = ColonistModule(variant).Parts;
+            var painted = new Material?[parts.Length];
+            bool any = false;
+            for (int p = 0; p < parts.Length; p++)
+            {
+                painted[p] = Recolours.For(parts[p].Material, clothOnly, look);
+                any |= painted[p] != null;
+            }
+            return _colonistFar[variant] = any ? painted : null;
         }
 
         void AppendColonist(int variant, in Matrix4x4 placement)
@@ -1607,7 +1948,7 @@ namespace Odyssey.Presentation.Rendering
         }
 
         void SubmitInstances(ResolvedModule module, Matrix4x4[] placements, int count,
-            ref Matrix4x4[] scratch)
+            ref Matrix4x4[] scratch, Material?[]? painted = null)
         {
             if (count == 0) return;
             if (scratch.Length < count) scratch = new Matrix4x4[count];
@@ -1620,8 +1961,10 @@ namespace Odyssey.Presentation.Rendering
                     scratch[i] = placements[i] * part.Local;
 
                 // Through the cache, not the pack material directly: the clone is what carries
-                // GPU instancing, and a pack material does not have it switched on.
-                Material material = _materials.Get(
+                // GPU instancing, and a pack material does not have it switched on. A painted
+                // material (the far uniform, FarMaterials) is instanced already.
+                Material? own = painted != null && p < painted.Length ? painted[p] : null;
+                Material material = own != null ? own : _materials.Get(
                     part.Material, Color.white, Color.black, ghost: false, alpha: 1f);
 
                 var rp = new RenderParams(material)
@@ -2357,6 +2700,11 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         void GatherCellPlate(Color colour, in Matrix4x4 place)
         {
+            // Every mark on the floor comes through here — chop crosses, mine marks, build and
+            // deconstruct plates — and a mark painted flat on the ground is exactly what tall
+            // grass covers.
+            Clearance.Stamp(place.GetColumn(3), MarkClearance);
+
             PlateBucket? bucket = null;
             for (int i = 0; i < _plateBucketCount; i++)
                 if (_plateBuckets[i]!.Colour == colour) { bucket = _plateBuckets[i]; break; }
@@ -2710,6 +3058,7 @@ namespace Odyssey.Presentation.Rendering
         {
             Skirt.Dispose();
             _materials.Dispose();
+            Clearance.Dispose();
         }
     }
 }

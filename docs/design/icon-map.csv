@@ -237,7 +237,7 @@ ui.arch.tool.chair,03,,,stool or bench,med,mapped
 ui.arch.tool.lamp,08,,,light bulb,high,mapped
 ui.arch.tool.shelf,08,,,metal shelving or case,low,mapped
 ui.arch.tool.locker,08,,,metal footlocker,med,mapped
-ui.arch.tool.brazier,03,,,campfire,high,mapped
+ui.arch.tool.campfire,03,,,campfire,high,mapped
 ui.arch.tool.cooler,-,,,a cooling unit,-,gap
 ui.arch.tool.heater,-,,,"a heating unit, distinct from the brazier",-,gap
 ui.arch.tool.vent,04,,,length of pipe,med,shared

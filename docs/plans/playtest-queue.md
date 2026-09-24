@@ -34,6 +34,31 @@ the next session learns to ignore.
   effect, a mark that looks like a hole or a shadow rather than blood, a pool at the feet rather
   than under the body, marks sunk into a slope or floating over one, or a battlefield that is red
   from edge to edge after one fight (the cap is 200, oldest first).
+- **No more orange suits past 64 colonists?** (`claude/pawn-ceiling`, PR #175, design
+  `29-modular-colonists.md` §13a.) Spawn about 100 colonists from the debug menu, pull the camera out
+  and pan across the colony. Everyone should be in the white uniform, near and far. A wrong answer
+  looks like some colonists in burnt orange, or clothes flicking as you pan. Two things are expected
+  and are not faults: a far colonist's **skin tone and hair colour** can still change as they cross
+  the cap (recorded, not fixed), and the debug menu **stops spawning at 200**.
+- **Does the Meadow grass read as grass, and is this the grass to judge?** (PR for
+  `claude/meadow-m3-foliage`, design 38 §16) **This is the first branch to test grass in.** New game,
+  play camera. Three things: (1) the meadow reads as grass and the green is the lighter spring green
+  you asked for — if it reads as grey fuzz or olive, the grade is the one number to move; (2) it
+  sways, and **stops dead when you pause** — if it keeps moving, the wind is on wall time; (3) drop
+  or haul a stack onto grass, and designate a tree: **the grass clears in a small ring round each** —
+  if a log disappears into the grass, the clearance is not reaching the drawn view. Density is
+  unchanged (full cover is M4), and trees are still the old ones (M5).
+
+- **Does the hearth read as a hearth?** (`claude/campfire-art`, PR #170, `docs/design/31-campfire-art-and-fire.md`
+  §17–§18d.) Build a campfire, give the colony nothing to do, and watch for a game hour. Idlers
+  should drift to it two times in three and **stay** once there, about half of them turned to face
+  the flames. **The crouch was judged 2026-09-24** — *"sneaking/crawling and not sat down"* — and
+  taken off (design 31 §18e); a real seated clip is owed. Left to judge: whether the ring **reads
+  as people at a fire rather than a queue** — a wrong answer is idlers you cannot tell from
+  colonists waiting on a job. **And since the merge with combat (design 31 §19)**: the right-hand
+  column is **271 px, down from 296**, so check the outdoor temperature on the clock still clears the
+  speed buttons beside it — a wrong answer is the reading touching or running under them again; and
+  spawn a marauder with nobody to fight near a campfire — a wrong answer is it settling at the fire.
 
 - **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
   Spawn a marauder, draft two colonists, select both and right-click it: a translucent red ring
@@ -761,9 +786,10 @@ the next session learns to ignore.
   at 16, 17 and 30 px while ADR 0007 says not to draw pixel art below 32 — measured, 30 px reads,
   17 px loses the grooves, 16 px goes to noise.
 - **The 29 proposed proper nouns** in `docs/design/proper-nouns.csv` await approval or veto.
-- **The Synty junction chain wants inverting.** The only real copy of the licensed packs sits inside
-  `D:\code\odyssey-audio`, a worktree on a merged branch; the main checkout junctions to it. See
-  `docs/lessons.md` — do not prune a worktree without checking.
+- ~~**The Synty junction chain wants inverting.**~~ **Done, and verified 2026-09-23.** The real
+  copy is `D:\code\odyssey\Assets\Synty`, a real directory, and every worktree junctions straight
+  to it in one hop; `D:\code\odyssey-audio` no longer exists. The standing rule is unchanged and
+  is in `docs/lessons.md` — do not prune a worktree without checking for reparse points first.
 
 
 ## Judged
@@ -772,6 +798,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-24 | **What grass costs on the GPU at 4K** (PR #183, `docs/design/38-meadow-overhaul.md` §13) | measured — owner: *"6–7 ms on gpu (sometimes bit lower) without grass tufts. On — 7 ish — spikes up to 8 moving around"* | about 0.5–1 ms, peaks ~1.5; under the 2 ms line, so M4 plans for full cover; agrees with the batch arm |
 | 2026-09-24 | **Combat C2 + C3 and the three rounds after play** (PR #180, `docs/design/33-combat.md` §3–§9) | working — owner: *"it seems great ... weapons sit at hips, have a battle with tons and tons of characters - was hovering 3.5ms ... it flowed really well"* | closes the brawl and fight rows; 3.5 ms is inside the 5 ms budget on the dev GPU, unmeasured on the target laptop; the ring, menu and grip rows stay open for the "more testing later" |
 | 2026-09-24 | **The Inventory tab, restyled** (PR #177, `docs/design/35-inventory-tab.md` §5a) | working — owner: *"it's good"* | none; ready to merge |
 | 2026-09-23 | **The Research tab** (PR #177, `docs/design/34-research-tab.md`) | working — owner: *"the research control is fine"*, after the list was cut to what the game has | the list became Electricity, Power lines, Generator, Ladder (34 §2) |

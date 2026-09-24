@@ -49,7 +49,10 @@ namespace Odyssey.Tests.Sim
             Settle();
             long before = GC.GetTotalMemory(true);
 
-            ColonyWorld colony = ColonyWorld.Build(size, seed: 4242u, ScenarioDef.Bare());
+            // wooded: true, because the default is false and that gets MakeBarren() -- a board
+            // with no trees and no water, which is not what anybody plays.
+            ColonyWorld colony = ColonyWorld.Build(size, seed: 4242u, ScenarioDef.Bare(),
+                barren: true, wooded: true);
 
             Settle();
             long after = GC.GetTotalMemory(true);

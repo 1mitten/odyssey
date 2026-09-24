@@ -74,7 +74,7 @@ namespace Odyssey.Tests.Sim
 
             public void Passes(int count) { for (int i = 0; i < count; i++) Pass(); }
 
-            public int Temp(int x, int z, int y = 0) => Temperature.CellTemp(Cell(x, z, y), World.CurrentTick);
+            public int Temp(int x, int z, int y = 0) => Temperature.RoomTempC(Cell(x, z, y), World.CurrentTick);
 
             public void BuildWall(int x, int z, int y = 0)
             {

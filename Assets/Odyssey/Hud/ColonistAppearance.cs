@@ -334,6 +334,30 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly Rgb24 UniformTrim = Rgb24.FromHex(0xA8B2C2);
 
+        /// <summary>
+        /// Whether everybody drawn in body <paramref name="look"/> wears the same cloth, and which.
+        ///
+        /// <para>True for the issued uniform's bodies while a uniform is issued, and for nothing
+        /// else: every other colour is rolled per colonist. This is what lets the baked far form
+        /// wear the uniform. That form is one material per body, never per colonist
+        /// (<c>docs/design/29-modular-colonists.md</c> §13), so it can wear a colour only
+        /// when the colour belongs to the body rather than to the person. Until 2026-09-24 it wore the
+        /// pack's own paint, and that jumpsuit's paint is **burnt orange** (<c>#B06F24</c>, sampled
+        /// off the atlas at the uniform row's cloth rectangle). So every colonist past the 64-figure
+        /// cap changed into an orange suit, and changed back on coming near the camera.</para>
+        ///
+        /// <para>Beside <see cref="Of"/>, which applies the same two constants on the same
+        /// condition, so the two cannot come to disagree about what the uniform is.</para>
+        /// </summary>
+        public static bool IssuedCloth(ColonistCastPools pools, int look, out Rgb24 cloth, out Rgb24 cloth2)
+        {
+            bool issued = pools.HasUniform && look != ColonistCastPools.NoUniform &&
+                          (look == pools.UniformMale || look == pools.UniformFemale);
+            cloth = issued ? UniformCloth : default;
+            cloth2 = issued ? UniformTrim : default;
+            return issued;
+        }
+
         static Rgb24 Pick(Rgb24[] table, uint seed, int pawnId, uint stream) =>
             table[(int)(Mix(seed, pawnId, stream) % (uint)table.Length)];
 

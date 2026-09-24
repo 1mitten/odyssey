@@ -102,6 +102,17 @@ namespace Odyssey.Presentation.Rendering
             return amplitude + GroundRelief.MaxSlope(amplitude) * CellMetrics.SizeXZ;
         }
 
+        /// <summary>
+        /// The box <see cref="Mesh"/> gives a chunk, without meshing it. It depends on the chunk's
+        /// footprint and nothing inside it, which is what lets the renderer ask the frustum before
+        /// deciding whether the chunk is worth meshing at all.
+        /// </summary>
+        public Bounds BoundsOf(int chunkIndex)
+        {
+            _model.ChunkBounds(chunkIndex, out int x0, out int z0, out int y, out int x1, out int z1);
+            return ChunkWorldBounds(x0, z0, y, x1, z1);
+        }
+
         static Bounds ChunkWorldBounds(int x0, int z0, int y, int x1, int z1)
         {
             float relief = ReliefReach();
@@ -283,6 +294,21 @@ namespace Odyssey.Presentation.Rendering
                 // through it (`PavingProbe`, 2026-09-17, U42). The kind is not examined, because a
                 // built floor, a stamped deck and a deck plate all equally hide what is beneath.
                 if (_model.Floor(above) != CoreContent.SlabNone) return;
+
+                // Or something the colony BUILT standing in it (owner, 2026-09-23: "make sure the
+                // grass tufts are removed when campfire is placed down"). Same argument a third
+                // time, and the same picture: a campfire drew correctly with grass growing up
+                // through the middle of it.
+                //
+                // **Built, and not a tree, which is the whole of the rule.** A tree is an edifice
+                // in this cell too, and a woodland floor with no grass under the canopy would be
+                // a bald patch around every trunk — trees are exactly what the tufts are *for*
+                // standing among. Anything a colonist raised is different: it sits on the ground
+                // rather than growing out of it, and the ground under it is not somewhere grass
+                // still is. That covers the campfire the owner asked about and the bed and the
+                // shelf, which have had the same fault since they landed and nobody had looked.
+                ushort built = _model.EdificeDef(above);
+                if (built != CoreContent.EdificeNone && !NaturalContent.IsTree(built)) return;
             }
 
             EnsureScatterModules();
@@ -919,7 +945,7 @@ namespace Odyssey.Presentation.Rendering
 
             var parts = _model.Library[module].Parts;
             int tint = TintCode.Tree(species);
-            for (int p = 0; p < parts.Length; p++)
+            for (int p = 0; p < BucketsPerPlacement(module); p++)
             {
                 InstanceBucket bucket = BucketFor(batch.Body, _bodyIndex, module, p, tint);
                 bucket.Add(placement * parts[p].Local,
@@ -957,11 +983,25 @@ namespace Odyssey.Presentation.Rendering
             int module, int tint, in Matrix4x4 placement)
         {
             var parts = _model.Library[module].Parts;
-            for (int p = 0; p < parts.Length; p++)
+            for (int p = 0; p < BucketsPerPlacement(module); p++)
             {
                 BucketFor(list, lookup, module, p, tint).Add(placement * parts[p].Local);
                 batch.InstanceCount++;
             }
+        }
+
+        /// <summary>
+        /// One bucket for a module drawn by level, whatever its part count; one per part otherwise.
+        ///
+        /// <para>A module drawn by level has every part of every level at the local transform of its
+        /// first part (<see cref="ResolvedModule.DrawsByLevel"/>), so the first part's bucket holds
+        /// the only matrix array it needs and the renderer draws the chosen level's parts from it.
+        /// A bucket per part as well would draw the finest level twice over.</para>
+        /// </summary>
+        int BucketsPerPlacement(int module)
+        {
+            ResolvedModule resolved = _model.Library[module];
+            return resolved.DrawsByLevel ? 1 : resolved.Parts.Length;
         }
 
         static InstanceBucket BucketFor(List<InstanceBucket> list, Dictionary<long, int> lookup,

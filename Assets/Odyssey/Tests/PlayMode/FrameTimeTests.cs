@@ -1,12 +1,15 @@
 #nullable enable
 using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -592,6 +595,80 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// What finding the campfires costs, against the sweep it replaced, in one run.
+        ///
+        /// <para><b>The owner reported the frame going from 1.5 to 4.5 ms and thought the machine
+        /// might have been under load.</b> Both can be true, and only a control inside one run can
+        /// separate them — this machine drifted the city canary from 2.01 to 4.01 ms in an
+        /// afternoon on what a sibling worktree was doing (CLAUDE.md).</para>
+        ///
+        /// <para><b>The bug the control exists to price.</b> <c>FireDirector.RefreshCells</c>
+        /// caches which cells hold a fire against <c>WorldRenderModel.Version</c>, and its comment
+        /// claimed the board was therefore swept "once per structural change rather than once a
+        /// frame". <c>RefreshDirty</c> bumps that version whenever <b>any chunk remeshes</b>, so
+        /// in a colony doing anything the sweep ran most frames — 230,400 cells on the played
+        /// board, to find at most a handful of fires. <c>Rescans</c> against the frame count is
+        /// the tell, and it is logged.</para>
+        ///
+        /// <para><b>It is paid with no campfire on the board at all</b>, which is why this arm
+        /// does not build one: the sweep is unconditional, so a colony that has never seen a fire
+        /// was paying for looking for one.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCampfireSweepCostsWhatItVisits()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+                Assert.That(boot.Fires, Is.Not.Null, "the bootstrap never built a fire director");
+
+                int cells = boot.World!.Views.Current.Size.CellCount;
+
+                // No fire, one fire, then eight, each measured twice with the two lookup modes
+                // alternating. The zero row is the control the other two are read against, and it
+                // is in the same run because this machine moves more between runs than the pass
+                // costs.
+                foreach (int fires in new[] { 0, 1, 8 })
+                {
+                    Light(boot, fires);
+
+                    foreach (FireDirector.Find mode in new[]
+                             { FireDirector.Find.Edifices, FireDirector.Find.Cells })
+                    {
+                        FireDirector.Mode = mode;
+
+                        int rescansBefore = boot.Fires!.Rescans;
+                        long visitsBefore = boot.Fires.RescanVisits;
+
+                        float ms = 0f;
+                        var split = System.Array.Empty<double>();
+                        yield return TimeFrames($"campfire/{fires}/{mode}", boot, 30,
+                            x => ms = x, s => split = s);
+
+                        int rescans = boot.Fires.Rescans - rescansBefore;
+                        long visits = boot.Fires.RescanVisits - visitsBefore;
+
+                        Debug.Log($"[FrameTime] campfire {fires} lit ({boot.Fires.LitFires} drawn), " +
+                                  $"{mode}: frame {ms:0.000} ms, " +
+                                  $"{rescans} rescans over {TimedFrames} frames, " +
+                                  $"{visits:N0} records visited " +
+                                  $"({(rescans > 0 ? visits / rescans : 0):N0} a rescan, " +
+                                  $"board {cells:N0} cells), " +
+                                  $"{boot.Renderer?.DrawCalls ?? 0} draw calls");
+                    }
+                }
+            }
+            finally
+            {
+                FireDirector.Mode = FireDirector.Find.Edifices;
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
         [UnityTest]
         public IEnumerator TheFrameAgainstColonySize()
         {
@@ -822,26 +899,80 @@ namespace Odyssey.Tests.PlayMode
         /// Spawn colonists until the colony is this big, spread over the middle of the board so
         /// they do not all arrive in one column and stand on each other.
         /// </summary>
-        IEnumerator GrowColonyTo(OdysseyBootstrap boot, int wanted)
+
+        /// <summary>
+        /// Put <paramref name="wanted"/> campfires on the board, near the middle where the camera
+        /// is, raised directly rather than ordered — a site has to be walked to and built, and
+        /// this arm is measuring the drawn fire rather than the colony's willingness to make one.
+        /// </summary>
+        static void Light(OdysseyBootstrap boot, int wanted)
         {
             GridSize size = boot.Colony!.Grid.Size;
+            var ctx = boot.Colony.Pawns;
+
+            int placed = 0;
+            for (int i = 0; i < wanted * 40 && placed < wanted; i++)
+            {
+                int x = size.SizeX / 2 + (i % 8) * 2;
+                int z = size.SizeZ / 2 + (i / 8) * 2;
+                if (x >= size.SizeX - 1 || z >= size.SizeZ - 1) break;
+
+                int cell = boot.Colony.Grid.NearestWalkableInColumn(x, z, size.SizeY - 2);
+                if (cell < 0) continue;
+
+                // Place THEN raise: RaiseWhenClear returns at once unless a site for that
+                // building is already queued at the cell, which Place is what queues.
+                if (boot.Colony.Construction.Place(size.FromIndex(cell),
+                        BuildingHandle.Campfire, StuffHandle.Wood) != IntentRejection.None) continue;
+
+                boot.Colony.Construction.RaiseWhenClear(ctx, cell, BuildingHandle.Campfire);
+                placed++;
+            }
+
+            // A tick to let the raise reach the mirror, and a frame to let the director see it.
+            boot.World!.Tick();
+        }
+
+        /// <summary>
+        /// Grow the colony to <paramref name="wanted"/> pawns, or as near as the board allows.
+        ///
+        /// <para><b>Straight into the registry, not through the spawn intent.</b> The intent is
+        /// the debug menu's, and it refuses past <see cref="PawnRegistry.PawnCeiling"/> (200). These
+        /// sweeps measure past it on purpose, because 384 is where the crowd scan's quadratic
+        /// was found. Worldgen and the scenario take this same path, and it is the one the
+        /// ceiling's own comment leaves unbounded.</para>
+        ///
+        /// <para><b>The attempts are counted apart from the placement index.</b> The index goes
+        /// back to zero when it walks off the board, so it could not also be the escape. When the
+        /// ceiling first refused this loop's intents, the index kept resetting before it reached
+        /// its limit, and the loop never yielded. That hung CI's PlayMode tier for thirty
+        /// minutes on PR #175.</para>
+        /// </summary>
+        IEnumerator GrowColonyTo(OdysseyBootstrap boot, int wanted)
+        {
+            ColonyWorld colony = boot.Colony!;
+            GridSize size = colony.Grid.Size;
+            PawnRegistry pawns = colony.Pawns.Pawns;
             int side = Mathf.CeilToInt(Mathf.Sqrt(wanted)) + 1;
             int step = Mathf.Max(1, (size.SizeX / 2) / side);
             int at = 0;
+            int attempts = 0;
 
-            while (boot.World!.Views.Current.Pawns.Length < wanted)
+            while (pawns.Count < wanted && attempts++ < wanted * 8)
             {
                 int x = size.SizeX / 4 + (at % side) * step;
                 int z = size.SizeZ / 4 + (at / side) * step;
                 at++;
-                if (at > wanted * 4) break;   // the board refused; measure what took
                 if (x >= size.SizeX - 1 || z >= size.SizeZ - 1) { at = 0; continue; }
 
-                boot.World!.Intents.Submit(new Intent(IntentKind.SpawnPawn,
-                    new CellRef(x, z, size.SizeY - 2), 0));
-                boot.World!.Tick();
+                int cell = colony.Grid.NearestWalkableInColumn(x, z, size.SizeY - 2);
+                if (cell < 0) continue;   // the board refused this column; measure what took
+                Pawn pawn = pawns.Spawn(cell);
+                pawn.RollPassions();
             }
 
+            // One tick publishes them, as the intent path's own tick did.
+            boot.World!.Tick();
             yield return null;
         }
 
@@ -939,6 +1070,325 @@ namespace Odyssey.Tests.PlayMode
             Assert.That(chunks[2], Is.GreaterThan(chunks[0]),
                 "the huge board drew no more chunks than the standard one, so the size seam did " +
                 "not take and all three readings are the same board");
+        }
+
+        /// <summary>
+        /// What frustum culling is worth, measured with a control inside one run, on the board
+        /// where it matters.
+        ///
+        /// <para><b>The same world timed twice, seconds apart</b>, with
+        /// <c>ChunkRenderer.CullToFrustum</c> the only thing that changes between the readings —
+        /// the shape <c>TheMarkPassCostsWhatItSubmits</c> established, and the only comparison a
+        /// machine running several editors supports. The off arm also reports
+        /// <c>ChunksOutsideFrustum</c>, so the saving can be predicted from the chunk count and
+        /// then checked against the clock rather than inferred from it.</para>
+        ///
+        /// <para>Huge, because that is where the cost is: the board is 600 m across and the camera
+        /// reaches 160 m, so most of what the band admits cannot be on screen. On Standard the
+        /// whole board is nearly in view and the honest expectation is that this buys little —
+        /// which is the point, and why the standard reading is taken too.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator WhatFrustumCullingIsWorth()
+        {
+            foreach ((string label, int x, int z, int y) in new[]
+                     { ("standard", 120, 120, 16), ("huge", 240, 240, 16) })
+            {
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                    out OdysseyBootstrap boot, x, z, y);
+                try
+                {
+                    yield return SeedOrders(boot);
+
+                    float margin = boot.Renderer!.ShadowCasterMarginMetres;
+
+                    boot.Renderer!.CullToFrustum = false;
+                    float off = 0f;
+                    yield return TimeFrames($"cull/{label}/off", boot, WarmupFrames, m => off = m);
+
+                    int drawn = boot.Renderer!.ChunksDrawn;
+                    int outside = boot.Renderer!.ChunksOutsideFrustum;
+                    int callsOff = boot.Renderer!.DrawCalls;
+
+                    // As it would actually ship: the margin keeps off-screen shadow casters.
+                    boot.Renderer!.CullToFrustum = true;
+                    float on = 0f;
+                    yield return TimeFrames($"cull/{label}/on", boot, WarmupFrames, m => on = m);
+                    int callsOn = boot.Renderer!.DrawCalls;
+
+                    // What the top shadow rung costs, which is the player-facing version of the
+                    // same question: a longer shadow distance means a wider margin, so fewer
+                    // chunks are culled AND more of them cast. Driven through the setting rather
+                    // than through the renderer, because the bootstrap re-derives the margin from
+                    // QualitySettings every frame — an earlier version of this arm set the margin
+                    // directly, was silently overwritten, and reported two identical readings with
+                    // the same draw-call count as though they were a comparison.
+                    float wasShadowDistance = QualitySettings.shadowDistance;
+                    float farShadows = 0f;
+                    int callsFarShadows;
+                    int outsideFarShadows;
+                    try
+                    {
+                        QualitySettings.shadowDistance = 120f;   // the top rung the settings offer
+                        yield return TimeFrames($"cull/{label}/shadows120", boot, WarmupFrames, m => farShadows = m);
+                        callsFarShadows = boot.Renderer!.DrawCalls;
+                        outsideFarShadows = boot.Renderer!.ChunksOutsideFrustum;
+                    }
+                    finally
+                    {
+                        QualitySettings.shadowDistance = wasShadowDistance;
+                    }
+
+                    Debug.Log($"[FrameTime] cull {label} {x}x{z}x{y}: " +
+                              $"{outside} of {drawn} chunks outside the frustum " +
+                              $"({(drawn > 0 ? 100f * outside / drawn : 0f):0.0}%) at a {margin:0} m " +
+                              $"shadow margin; frame {off:0.00} -> {on:0.00} ms " +
+                              $"(saves {off - on:0.00}); draw calls {callsOff} -> {callsOn}. " +
+                              $"At a 120 m shadow distance {farShadows:0.00} ms, " +
+                              $"{outsideFarShadows} culled, {callsFarShadows} calls");
+
+                    Assert.That(margin, Is.GreaterThan(0f),
+                        "the shadow margin is zero, so this arm measured a cull that would drop " +
+                        "off-screen shadow casters and is not the one that would ship");
+
+                    // The control. If the test never rejected a chunk it measured the same thing
+                    // twice and the difference is this machine's mood, not the cull.
+                    Assert.That(outside, Is.GreaterThan(0),
+                        $"{label}: no chunk was outside the frustum, so the two readings are the " +
+                        "same submission and the comparison is meaningless");
+                    Assert.That(callsOn, Is.LessThan(callsOff),
+                        $"{label}: culling did not reduce draw calls, so CullToFrustum is not " +
+                        "reaching the submission path");
+                }
+                finally
+                {
+                    UnityEngine.Object.Destroy(root);
+                }
+
+                yield return null;
+                GC.Collect();
+                yield return null;
+            }
+        }
+
+        /// <summary>
+        /// Culling changes what is submitted and not what is seen — proved against pixels, with
+        /// **two** controls: one that must show a difference, and one that must not.
+        ///
+        /// <para><b>Why this test has to exist.</b> The saving is enormous — most of a Huge
+        /// board's chunks are outside the frustum — and a broken frustum that rejected everything
+        /// would report exactly the same triumph. Nothing else here looks at the picture:
+        /// <c>FrameTimeTests</c> times frames, the Unity tier asserts no pixels, and the fault
+        /// this guards against is invisible in a still and only shows as shadows and geometry
+        /// popping at the screen edge while panning.</para>
+        ///
+        /// <para><b>Its first two versions both proved nothing, and the reasons are the whole
+        /// value of this comment.</b></para>
+        ///
+        /// <para><i>One — the positive control did not apply.</i> "A frustum admitting nothing"
+        /// was imposed by assigning <c>ChunkRenderer.Frustum</c>, which the composition root
+        /// rewrites every frame, so the blind shot was simply a second copy of the culled one.
+        /// Run on 2026-09-23, the two reported <b>identical</b> counts — 126 chunks, 57,818
+        /// instances, 1,744 calls — where the blind one should have submitted nothing whatever.
+        /// It now goes through <c>ChunkRenderer.FrustumOverride</c>, which the root does not
+        /// touch. <b>This is the second time in this one file that a test set a field the root
+        /// re-derives per frame</b>; the first was <c>ShadowCasterMarginMetres</c>, and both are
+        /// <c>P18</c> in <c>docs/bug-patterns.md</c>.</para>
+        ///
+        /// <para><i>Two — the scene was moving underneath it.</i> The shots were taken seconds
+        /// apart on a live colony, so colonists walked and the light drifted between them, and
+        /// <b>2 to 3 per cent of pixels moved whatever was being compared</b>. Culling's own
+        /// difference is supposed to be nought, and it was being asked to stand out against a
+        /// noise floor several times its own size. The world is paused for the captures now, and
+        /// the noise floor is no longer assumed — the test takes a <i>repeat</i> of the identical
+        /// configuration and asserts on that too.</para>
+        ///
+        /// <para>So: <b>repeat</b> must match (the instrument is quiet), <b>blind</b> must not
+        /// (the instrument can see), and only then does <b>culled</b> matching mean anything.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CullingDoesNotChangeThePicture()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot, 240, 240, 16);
+            var target = new RenderTexture(320, 240, 24) { name = "cull-proof" };
+            try
+            {
+                yield return SeedOrders(boot);
+
+                // **Stop the world before photographing it.** A walking colonist and a drifting
+                // sun move more pixels than the thing being measured; see the remarks above.
+                // **Submitted until it takes, not submitted once and hoped for.** An intent goes
+                // on a bus with a capacity and is drained on a tick boundary, and the thousand
+                // designations `SeedOrders` has just queued can still be going through. Submitted
+                // once and waited four frames, this passed on this machine and **failed on the CI
+                // runner**, where the speed was still 1 — a machine-dependent flake in a test whose
+                // whole job is to be believed.
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+
+                Assert.That(boot.World!.GameSpeed, Is.Zero, "the world would not pause, so the " +
+                    "shots below are of a moving scene and cannot measure a still difference");
+
+                // **And stop the clock presentation draws on, which pausing the simulation does
+                // not.** Pausing stops the ticks, so nobody walks — but the water still scrolls
+                // its streaks and foam, the figures still advance their animation graphs, and the
+                // daylight rig still moves, because all of those run on `Time.deltaTime` and the
+                // shaders on `_Time`. Measured: with the simulation paused and this left alone,
+                // two captures of the identical configuration still differed by **1.29%** of
+                // pixels, which is most of the way to culling's own 2.13% and made the two
+                // impossible to tell apart. `timeScale` is what `_Time` is derived from, so this
+                // one line stills the shaders as well as the scripts.
+                float previousScale = Time.timeScale;
+                Time.timeScale = 0f;
+
+                // **Let it settle before the first shot, generously.** Run on its own the floor
+                // below is 0.00%; run inside the whole PlayMode tier it was 0.77%, on the same
+                // commit. A busy run is still finishing things off — shader variants, texture
+                // streaming, the post stack's first frames — and eight frames between captures is
+                // not enough for that to be over. This wait is once, before anything is compared.
+                for (int i = 0; i < 120; i++) yield return null;
+
+                UnityEngine.Camera cam = boot.cameraRig!.Camera;
+                RenderTexture previousTarget = cam.targetTexture;
+                cam.targetTexture = target;
+                try
+                {
+                    boot.Renderer!.CullToFrustum = false;
+                    Color32[] off = null!;
+                    yield return Shoot("off", boot, target, p => off = p);
+
+                    // The negative control: the same configuration again. Whatever this moves is
+                    // the instrument's own noise, and every other number is read against it.
+                    Color32[] again = null!;
+                    yield return Shoot("again", boot, target, p => again = p);
+
+                    boot.Renderer!.CullToFrustum = true;
+                    Color32[] on = null!;
+                    yield return Shoot("on", boot, target, p => on = p);
+
+                    // The positive control: a frustum nothing can be inside, through the seam the
+                    // root does not overwrite.
+                    var nowhere = new Plane[6];
+                    for (int i = 0; i < nowhere.Length; i++)
+                        nowhere[i] = new Plane(Vector3.up, -1e6f);
+                    boot.Renderer!.FrustumOverride = nowhere;
+                    Color32[] blind = null!;
+                    yield return Shoot("blind", boot, target, p => blind = p);
+                    boot.Renderer!.FrustumOverride = null;
+
+                    float noise = Difference(off, again);
+                    float culled = Difference(off, on);
+                    float blinded = Difference(off, blind);
+                    Debug.Log($"[FrameTime] cull proof: the same shot twice moved {noise * 100f:0.00}%, " +
+                              $"culling moved {culled * 100f:0.00}%, " +
+                              $"a frustum admitting nothing moved {blinded * 100f:0.00}%");
+
+                    // **The floor has to be small enough to conclude anything from**, but it is
+                    // not required to be nought: see the settle above. Two per cent still leaves
+                    // the blind control fifty times clear of it.
+                    Assert.That(noise, Is.LessThan(0.02f),
+                        $"two captures of the identical configuration differ by {noise * 100f:0.00}% " +
+                        "of pixels, so this comparison has no floor to measure against. The world " +
+                        "is meant to be paused and the clock stopped for these shots - check " +
+                        "Logs/cull-off.png against Logs/cull-again.png for a colonist who moved, " +
+                        "water that scrolled or a sun that drifted");
+
+                    Assert.That(blinded, Is.GreaterThan(0.05f),
+                        $"rejecting every chunk moved only {blinded * 100f:0.00}% of pixels, so this " +
+                        "comparison cannot see a difference and its other assertion proves " +
+                        "nothing. Compare the chunk counts logged during each capture: equal counts " +
+                        "for 'on' and 'blind' mean the override is not reaching the submission " +
+                        "path, which is exactly how this test failed on 2026-09-23");
+
+                    // **Judged against the floor measured in this same run, not against a constant.**
+                    // The claim is that culling is indistinguishable from doing nothing, and the
+                    // repeat shot is precisely what "doing nothing" costs on this machine, in this
+                    // run, at this moment. A fixed tolerance would be a guess at that, and would
+                    // either fail honestly-quiet runs or pass noisy ones - it did the first of
+                    // those inside the full tier on 2026-09-23 while passing alone.
+                    float allowed = noise + 0.002f;
+                    Assert.That(culled, Is.LessThanOrEqualTo(allowed),
+                        $"culling moved {culled * 100f:0.00}% of pixels where doing nothing twice " +
+                        $"moved {noise * 100f:0.00}%: it is not only skipping submissions the " +
+                        "camera could not see. The blind control moved " +
+                        $"{blinded * 100f:0.00}%, so the instrument can certainly see a real change");
+                }
+                finally
+                {
+                    Time.timeScale = previousScale;
+                    cam.targetTexture = previousTarget;
+                    boot.Renderer!.FrustumOverride = null;
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+                target.Release();
+                UnityEngine.Object.Destroy(target);
+            }
+        }
+
+        /// <summary>
+        /// Let the normal loop draw into the target, read it back, and say what the renderer did
+        /// while it was drawing.
+        ///
+        /// <para><b>The counters and the file are why this is not a guessing game.</b> The first
+        /// run of <see cref="CullingDoesNotChangeThePicture"/> failed on its own control: a
+        /// frustum admitting nothing moved 3.22% of pixels, which is not a difference between two
+        /// pictures of a world — it is what two pictures of *nearly nothing* look like. Chunk
+        /// counts taken during the capture separate "the cull is wrong" from "the capture never
+        /// saw the board", and the written frame lets a person settle it in one look, which is
+        /// what this project does with anything that is about how something appears.</para>
+        /// </summary>
+        IEnumerator Shoot(string name, OdysseyBootstrap boot, RenderTexture target, Action<Color32[]> pixels)
+        {
+            // Several frames: the submission is rebuilt every frame and the post stack settles.
+            for (int i = 0; i < 8; i++) yield return null;
+
+            int chunks = boot.Renderer?.ChunksDrawn ?? -1;
+            int instances = boot.Renderer?.InstancesDrawn ?? -1;
+            int calls = boot.Renderer?.DrawCalls ?? -1;
+
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = target;
+            var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+            image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+            image.Apply();
+            RenderTexture.active = previous;
+
+            Color32[] read = image.GetPixels32();
+            long sum = 0;
+            for (int i = 0; i < read.Length; i++) sum += read[i].r + read[i].g + read[i].b;
+
+            Directory.CreateDirectory(Path.GetFullPath("Logs"));
+            File.WriteAllBytes(Path.GetFullPath($"Logs/cull-{name}.png"), image.EncodeToPNG());
+            Debug.Log($"[FrameTime] cull shot {name}: {chunks} chunks, {instances} instances, " +
+                      $"{calls} calls while capturing; mean channel " +
+                      $"{(read.Length > 0 ? sum / (double)(read.Length * 3) : 0):0.0} " +
+                      $"-> Logs/cull-{name}.png");
+
+            pixels(read);
+            UnityEngine.Object.Destroy(image);
+        }
+
+        /// <summary>The fraction of pixels that differ by more than a channel of noise.</summary>
+        static float Difference(Color32[] a, Color32[] b)
+        {
+            if (a.Length != b.Length) return 1f;
+            int moved = 0;
+            for (int i = 0; i < a.Length; i++)
+            {
+                int dr = Mathf.Abs(a[i].r - b[i].r);
+                int dg = Mathf.Abs(a[i].g - b[i].g);
+                int db = Mathf.Abs(a[i].b - b[i].b);
+                if (dr + dg + db > 12) moved++;
+            }
+
+            return a.Length == 0 ? 0f : (float)moved / a.Length;
         }
 
         static double Section(double[] split, OdysseyBootstrap.FrameSection section) =>
@@ -1321,6 +1771,282 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What grass costs at the play resolution as well as the batch one: the first unit of the
+        /// Meadow overhaul (<c>docs/design/38-meadow-overhaul.md</c> §11, M1), taken before any
+        /// art moves.
+        ///
+        /// <para><b>Why it is not the arm the design first asked for.</b> d-18 predicted that
+        /// every foliage instance is drawn up to six times a frame — the SSAO DepthNormals
+        /// prepass, the forward pass and four shadow cascades — and proposed depth priming. Read
+        /// against the code it does not hold for grass: <c>ChunkRenderer.FoliageCastsShadows</c>
+        /// is off, and foliage is drawn in <see cref="MaterialCache.DefaultFoliageQueue"/>, just
+        /// past the opaque range so the outline never inks it, which also keeps it out of the
+        /// opaque-only depth prepass. Grass is drawn once, and depth priming cannot reach it.</para>
+        ///
+        /// <para><b>What the queue does cost is the order.</b> 2501 is in URP's transparent range,
+        /// which is sorted back to front — the worst order for alpha-clipped cards over
+        /// alpha-clipped cards, since the far clumps are shaded first and then covered. The
+        /// alpha-test queue (2450) is opaque, sorted front to back, but joins the DepthNormals
+        /// prepass and is inked by the outline. The fourth arm of each resolution prices that
+        /// trade; it is a measurement, not a proposal to change the look.</para>
+        ///
+        /// <para><b>One world, eight readings.</b> None, the shipped density, full cover
+        /// (<see cref="GroundScatter.MaxPerCell"/> tufts on every grass cell, the most the scatter
+        /// can place today) and full cover in the alpha-test queue — at the batch game view and
+        /// with the camera drawing into a 3840 x 2160 target, which is the owner's resolution and
+        /// the only one at which fill is honestly priced. Only differences inside this run are
+        /// quoted (§6c). The GPU figure is <c>OdysseyBootstrap.GpuFrameMs</c> and is reported as
+        /// unavailable rather than as zero where the platform will not say.</para>
+        ///
+        /// <para>It asserts no times. It asserts that each control applied: the density really
+        /// moved the instance count, the queue arm really moved a material, the 4K arm really drew
+        /// at 4K, and no reading was taken while the board was still re-meshing.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheGrassAgainstTheFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            int previousQueue = MaterialCache.FoliageQueue;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            try
+            {
+                yield return TimeFrames("grass/warm", boot, WarmupFrames, _ => { });
+
+                ChunkRenderer renderer = boot.Renderer!;
+                int shipped = renderer.ScatterDensity;
+                Assert.That(shipped, Is.GreaterThan(0), "this board strews no grass, so there is nothing to price");
+                int full = GroundScatter.MaxPerCell * 100;
+
+                // Asked of the art, not of the catalogue: a clone without the packs resolves every
+                // tuft to a primitive, the scatter drops those, and no foliage material is ever made
+                // — so there is no grass to price, and the arm says so rather than failing on it.
+                // The CI runner is that machine (CLAUDE.md, "ask whether the art resolved").
+                if (renderer.RequeueFoliage(MaterialCache.DefaultFoliageQueue) == 0)
+                    Assert.Ignore("no grass art resolved on this machine, so there is no grass to price");
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "grass-4k" };
+
+                var arms = new (string Name, int Density, int Queue)[]
+                {
+                    ("none", 0, MaterialCache.DefaultFoliageQueue),
+                    ("shipped", shipped, MaterialCache.DefaultFoliageQueue),
+                    ("full", full, MaterialCache.DefaultFoliageQueue),
+                    ("full, alpha-test queue", full, (int)RenderQueue.AlphaTest),
+                };
+                var lines = new List<string>();
+                var instances = new Dictionary<string, int>();
+
+                foreach (bool big in new[] { false, true })
+                {
+                    cam.targetTexture = big ? fourK : previousTarget;
+                    string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                    foreach (var arm in arms)
+                    {
+                        // Density is meshed into the chunks, so moving it is a re-mesh; the
+                        // warm-up inside TimeFrames outlasts the meshing budget's instalments.
+                        if (renderer.ScatterDensity != arm.Density)
+                        {
+                            renderer.ScatterDensity = arm.Density;
+                            boot.Model!.Remesh();
+                        }
+                        int moved = renderer.RequeueFoliage(arm.Queue);
+
+                        float ms = 0f, gpu = 0f;
+                        yield return TimeFrames($"grass/{resolution}/{arm.Name}", boot, WarmupFrames,
+                            m => ms = m, gpu: g => gpu = g);
+
+                        Assert.That(renderer.ChunksMeshDeferred, Is.Zero,
+                            $"{resolution} {arm.Name} was timed while the board was still re-meshing");
+                        if (big)
+                            Assert.That(cam.pixelWidth, Is.EqualTo(3840),
+                                "the camera was not drawing at 4K, so this arm measured the batch view");
+                        if (arm.Density > 0)
+                            Assert.That(moved, Is.GreaterThan(0),
+                                "no foliage material was re-queued, so the queue arm compared a queue with itself");
+
+                        instances[$"{resolution}/{arm.Name}"] = renderer.InstancesDrawn;
+                        lines.Add($"{resolution} {arm.Name}: frame {ms:0.00} ms, gpu " +
+                                  (gpu > 0f ? $"{gpu:0.00} ms" : "unavailable") +
+                                  $", {renderer.DrawCalls} calls, {renderer.InstancesDrawn} instances");
+                    }
+                }
+
+                Debug.Log($"[FrameTime] grass (shipped density {shipped}, full {full}, " +
+                          $"{SystemInfo.graphicsDeviceName}, {SystemInfo.graphicsDeviceType}): " +
+                          string.Join("; ", lines));
+
+                string small = $"{Screen.width}x{Screen.height}";
+                Assert.That(instances[$"{small}/shipped"], Is.GreaterThan(instances[$"{small}/none"]),
+                    "the shipped density drew no more than none, so the grass never appeared");
+                Assert.That(instances[$"{small}/full"], Is.GreaterThan(instances[$"{small}/shipped"]),
+                    "full cover drew no more than the shipped density, so the full arm measured nothing new");
+            }
+            finally
+            {
+                // The queue is a static every later MaterialCache reads, so it goes back whatever
+                // happened; so does the camera's target, before the world is destroyed.
+                MaterialCache.FoliageQueue = previousQueue;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// What <c>Odyssey/Foliage</c> costs against the pack's own foliage shader, on the same grass
+        /// in the same run (<c>docs/design/38-meadow-overhaul.md</c> §4, M3).
+        ///
+        /// <para>Two shaders over the same meshes and textures, at the shipped density and at full
+        /// cover, at the batch view and at 3840 x 2160. Ours adds a clearance fetch and a rotation per
+        /// vertex and drops the pack's noise colouring; whether that is cheaper or dearer is the
+        /// question, and M1's arm (§13) is the scale it is read against. The switch is
+        /// <c>MaterialCache.OwnFoliageShader</c> with the clones dropped between arms, and the arm
+        /// asserts the drop reached something, so it cannot compare a shader with itself (P18).</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheFoliageShaderAgainstThePacks()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            try
+            {
+                yield return TimeFrames("foliage/warm", boot, WarmupFrames, _ => { });
+
+                ChunkRenderer renderer = boot.Renderer!;
+                if (renderer.RequeueFoliage(MaterialCache.DefaultFoliageQueue) == 0)
+                    Assert.Ignore("no grass art resolved on this machine, so there is no foliage to price");
+
+                int shipped = renderer.ScatterDensity;
+                int full = GroundScatter.MaxPerCell * 100;
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "foliage-4k" };
+
+                var lines = new List<string>();
+                foreach (bool big in new[] { false, true })
+                {
+                    cam.targetTexture = big ? fourK : previousTarget;
+                    string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                    foreach (int density in new[] { shipped, full })
+                    {
+                        if (renderer.ScatterDensity != density)
+                        {
+                            renderer.ScatterDensity = density;
+                            boot.Model!.Remesh();
+                        }
+                        foreach (bool ours in new[] { false, true })
+                        {
+                            MaterialCache.OwnFoliageShader = ours;
+                            int dropped = renderer.ForgetFoliageMaterials();
+                            float ms = 0f;
+                            yield return TimeFrames($"foliage/{resolution}/{density}/{(ours ? "ours" : "pack")}",
+                                boot, WarmupFrames, m => ms = m);
+                            Assert.That(dropped, Is.GreaterThan(0),
+                                "no foliage clone was dropped, so this arm drew the previous shader again");
+                            Assert.That(renderer.ChunksMeshDeferred, Is.Zero, "timed while still re-meshing");
+                            lines.Add($"{resolution} density {density} {(ours ? "ours" : "pack")}: " +
+                                      $"frame {ms:0.00} ms, {renderer.DrawCalls} calls, {renderer.InstancesDrawn} instances");
+                        }
+                    }
+                }
+
+                Debug.Log("[FrameTime] foliage shader (" + SystemInfo.graphicsDeviceName + "): " +
+                          string.Join("; ", lines));
+            }
+            finally
+            {
+                MaterialCache.OwnFoliageShader = true;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// What levels of detail do to the frame on the played meadow, with the pack's own switch
+        /// heights (<c>docs/design/38-meadow-overhaul.md</c> §3, M2).
+        ///
+        /// <para><b>A control for the mechanism, not the saving it exists for.</b> The saving is
+        /// the Meadow trees (M5), which are 5,000 to 45,000 triangles each; today's board has
+        /// PolygonGeneric trees with no levels, and the only art with levels is the grass, which is
+        /// cheap already (§13). What this proves is that the levels really are chosen and drawn in a
+        /// running world — <c>InstancesAtCoarserLevels</c> above zero with them on and at zero with
+        /// them off — and what the pack's numbers do at this camera, which is the reason
+        /// <c>UseLods</c> ships off.</para>
+        ///
+        /// <para>Ignored where no drawn module has levels, which is a clone without the packs: the
+        /// catalogue resolves to primitives there, and a primitive has one level.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheLevelsOfDetailAgainstTheFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            try
+            {
+                yield return TimeFrames("lod/warm", boot, WarmupFrames, _ => { });
+
+                ChunkRenderer renderer = boot.Renderer!;
+                ModuleLibrary library = boot.Model!.Library;
+                int withLevels = 0;
+                for (int i = 0; i < library.Count; i++)
+                    if (library[i].DrawsByLevel) withLevels++;
+                if (withLevels == 0)
+                    Assert.Ignore("no module on this board resolved with levels of detail — no art on this machine");
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "lod-4k" };
+
+                var lines = new List<string>();
+                int coarserWhenOn = 0, coarserWhenOff = -1;
+                foreach (bool big in new[] { false, true })
+                {
+                    cam.targetTexture = big ? fourK : previousTarget;
+                    string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                    foreach (bool on in new[] { false, true })
+                    {
+                        renderer.UseLods = on;
+                        float ms = 0f;
+                        yield return TimeFrames($"lod/{resolution}/{(on ? "on" : "off")}", boot, WarmupFrames,
+                            m => ms = m);
+                        int coarser = renderer.InstancesAtCoarserLevels;
+                        if (on) coarserWhenOn = Math.Max(coarserWhenOn, coarser);
+                        else coarserWhenOff = Math.Max(coarserWhenOff, coarser);
+                        lines.Add($"{resolution} levels {(on ? "on" : "off")}: frame {ms:0.00} ms, " +
+                                  $"{renderer.DrawCalls} calls, {renderer.InstancesDrawn} instances, " +
+                                  $"{coarser} at a coarser level");
+                    }
+                }
+
+                Debug.Log($"[FrameTime] levels of detail ({withLevels} modules with levels, bias " +
+                          $"{renderer.LodBias}, fov {renderer.ViewerFieldOfView:0}): " + string.Join("; ", lines));
+
+                Assert.That(coarserWhenOff, Is.Zero, "levels were chosen with UseLods off");
+                Assert.That(coarserWhenOn, Is.GreaterThan(0),
+                    "levels were on and nothing was drawn at a coarser level, so the pick never ran");
+            }
+            finally
+            {
+                if (boot.Renderer != null) boot.Renderer.UseLods = false;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// Designate the board row-major until a thousand orders stand, the same walk and the
         /// same draining <see cref="SeedField"/> uses and for the same reasons: the meadow
         /// refuses what stands on it, and the intent bus has a capacity.
@@ -1458,12 +2184,12 @@ namespace Odyssey.Tests.PlayMode
         /// difference, which is the only figure this machine can be trusted for.</para>
         /// </summary>
         IEnumerator TimeFrames(string label, OdysseyBootstrap boot, int warmup, Action<float> mean,
-                               Action<double[]>? sections = null)
+                               Action<double[]>? sections = null, Action<float>? gpu = null)
         {
             for (int i = 0; i < warmup; i++) yield return null;
 
             float total = 0f, worst = 0f;
-            double tick = 0d, submit = 0d;
+            double tick = 0d, submit = 0d, gpuTotal = 0d;
             var sectionTotals = new double[(int)OdysseyBootstrap.FrameSection.Count];
             for (int i = 0; i < TimedFrames; i++)
             {
@@ -1476,12 +2202,16 @@ namespace Odyssey.Tests.PlayMode
                 // orders costs the work givers as well as the renderer.
                 tick += boot.TickMs;
                 submit += boot.SubmitMs;
+                // Smoothed by the bootstrap over ~20 frames, which the warm-up absorbs; 0 where
+                // the platform will not say, and the caller reports that rather than a zero.
+                gpuTotal += boot.GpuFrameMs;
                 System.ReadOnlySpan<double> split = boot.FrameSectionMs;
                 for (int k = 0; k < sectionTotals.Length && k < split.Length; k++) sectionTotals[k] += split[k];
             }
 
             float meanMs = total / TimedFrames;
             mean(meanMs);
+            gpu?.Invoke((float)(gpuTotal / TimedFrames));
 
             ChunkRenderer? renderer = boot.Renderer;
             // Resolution matters to the reading: a fullscreen pass or a sky costs per pixel,
