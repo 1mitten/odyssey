@@ -23,14 +23,6 @@ the next session learns to ignore.
 
 ## Open
 
-- **Does a brawl read as a brawl?** (design 33 §8c, `claude/combat-guard`). The tests prove
-  that nobody in a fight shares a tile. Whether it looks right is for a person to judge. Spawn four
-  marauders round two undrafted colonists standing side by side, and watch the fight form. Then
-  draft two colonists standing on one tile, and spawn a marauder by them. One of them should
-  step onto the next tile, and both should fight from where they stand. A wrong answer is a spread that
-  reads as a queue or a dance rather than a scrum. A drafted colonist's step off a shared tile
-  that looks like a twitch, or like leaving her post, is also wrong.
-
 - **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
   Spawn a marauder, draft two colonists, select both and right-click it: a translucent red ring
   should appear wide round its feet and snap in, in a fifth of a second, flash once as it lands
@@ -52,18 +44,9 @@ the next session learns to ignore.
   arrow or off the screen edge, one that will not close, a move or attack that now asks, or Equip
   still unclear — in which case say what would make it clear (the colonist's name on the row?).
 
-- **Does a fight read, and does it end the way it should?** (checkpoint 2, C2 —
-  `claude/combat-c2`, `docs/plans/combat-c2-handover.md`, design 33 §3, §6A–§6C, §6E). Spawn a
-  marauder (backtick → Spawn) beside two colonists and do not draft: it should walk to the nearer,
-  swing, and she should stop work and fight back, numbers floating off both. Then watch a swing
-  land: the blade should reach the target on the instant the number floats. Fight until someone is
-  down — she lies on the ground, *Downed* lingers, the marauder turns to the next colonist standing
-  — then draft a colonist and right-click the downed marauder to finish it; the corpse stays lying
-  and a click says *Corpse of a marauder*. A wrong answer is a marauder that idles, a swing into the
-  air beside its target, a number well off the blow, a heavy swing that reads as a twitch, or a
-  body that vanishes. **And decide one rule:** an unattended fight ends in downs, never deaths,
-  because only an order strikes a body on the ground — say if that is wrong. Silent by design for
-  now: the five combat sounds have no clips.
+- **Should an unattended fight end in downs, never deaths?** (design 33 §3, PR #180). Only an
+  order strikes a body on the ground, so a marauder left alone downs a colonist and turns to the
+  next; nobody dies unless you send someone to finish it. Say if that is wrong.
 
 - **Is a weapon held and dropped where it should be?** (checkpoint 3, C3 — `claude/combat-c2`,
   design 33 §6D–§6E). A new game lays a bat and a machete beside the food: they should lie flat and
@@ -777,6 +760,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-24 | **Combat C2 + C3 and the three rounds after play** (PR #180, `docs/design/33-combat.md` §3–§9) | working — owner: *"it seems great ... weapons sit at hips, have a battle with tons and tons of characters - was hovering 3.5ms ... it flowed really well"* | closes the brawl and fight rows; 3.5 ms is inside the 5 ms budget on the dev GPU, unmeasured on the target laptop; the ring, menu and grip rows stay open for the "more testing later" |
 | 2026-09-24 | **The Inventory tab, restyled** (PR #177, `docs/design/35-inventory-tab.md` §5a) | working — owner: *"it's good"* | none; ready to merge |
 | 2026-09-23 | **The Research tab** (PR #177, `docs/design/34-research-tab.md`) | working — owner: *"the research control is fine"*, after the list was cut to what the game has | the list became Electricity, Power lines, Generator, Ladder (34 §2) |
 | 2026-09-23 | **Drafting and moving** (C1, `claude/combat-mvp`, `docs/design/33-combat.md` §2) | working — owner: *"the drafting, T and moving onto surfaces, diamond and 4 hours all seemed to work"* | two asks: a drafted colonist runs (§2h), the marks a deeper translucent red (§2g); both built, re-queued above |

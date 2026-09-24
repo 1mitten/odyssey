@@ -11450,3 +11450,33 @@ The content fingerprint and all three goldens were re-taken rather than adopted,
 side's numbers came from the merged code. `GoldenColonyProbe` on the merge and on `origin/main`
 diffs clean on every board. The wiki and label registry were regenerated from the merged CSVs, not
 merged by hand.
+
+## 2026-09-24 — Combat C2 and C3 merged with main, and the verdict
+
+The owner played round three and the spawn and debug-menu changes and called it: *"it seems great.
+Happy to merge in and do more testing later ... have a battle with tons and tons of characters - was
+hovering 3.5ms."* 3.5 ms is inside the 5 ms budget, but it is the RTX 5070 Ti, not the 2022 laptop,
+and the 64-figure animation ceiling is what keeps a crowd cheap to draw. So it is a good number on
+this machine and an open one for the target.
+
+Main had taken power and the Research and Inventory tabs meanwhile: 46 commits, 26 files in
+conflict. **The job table collided again, the other way round from power's own merge.** Power's
+three jobs are on `main`, so they keep 14–16 and combat's five move from 14–18 to 17–21. Nothing
+combat shipped had saved those numbers, so moving them breaks no save. The same applies to the
+intents: combat's three orders and the debug arming now follow power's four.
+
+Two faults were invisible to the fast tier. `SettingsPresenter` called an `Escape` with ten
+arguments, because main added the Inventory and Research panels and combat added the context menu,
+each with its own overload and neither with all ten. Only Presentation's compile found it, so the
+combined overload now has a test. And the textual merge of `ModuleCatalogue.asset` kept both sides'
+rows but dropped main's four `fit*` fields from every one of them. Rebuilding the catalogue in Unity
+put them back; a module-id comparison with both parents then showed nothing was lost. Rebuild a
+serialized asset rather than trust git's merge of it (`docs/lessons.md`).
+
+A third fault was already on `main`. `Odyssey/PowerLine` is found at runtime and was never added to
+the always-included shader list, so the player build guard refuses `main` as it stands. The fix is
+one line, from `ShaderInclusion.Apply`, in its own commit on PR #180.
+
+The fingerprints and all six goldens were re-taken from the merged code, since both sides had moved
+each of them. `GoldenColonyProbe`, reading the first seventeen job defs so the same file runs on
+both sides, gives identical output on `main` 54df119a and on the merge for all three boards.

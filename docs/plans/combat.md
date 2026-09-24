@@ -132,6 +132,8 @@ per lane, so the two never edit one file.
   - **C4 rescue:** the driver and giver fill Phase 1's stubs; the carry cradle comes from `CarryPose`.
   - **C5 friendly fire:** Ctrl-attack, self-defence and two thoughts. **Goldens asserted unchanged.**
   - **C6 buildings:** fill `EdificeDamage`, add the attack driver's building mode, demolish at zero.
+    The campfire and power's conduit, generator and heater arrived from `main` with no
+    `maxHitPoints` (0); give them one here, not before — nothing strikes a building until C6.
     **Goldens asserted unchanged.**
 - **Then C7, one agent:**
   - the ten-day gate with and without hostiles;

@@ -2610,3 +2610,13 @@ The four, and what each is the only one able to see:
 And the player build is the fifth thing, which is not a tier and proves what none of them do: that
 a stripped shader and a runtime path under `Assets/` survive. Two green tiers say nothing about
 whether the game runs.
+
+## Rebuild a serialized asset after a merge; do not trust git's text merge of it (2026-09-24)
+
+`ModuleCatalogue.asset` merged without a conflict and was wrong: git kept both branches' rows and
+dropped the four `fit*` fields that one side had added to *every* row, because each hunk only
+touched the other side's rows. Nothing fails. The editor fills a missing field with its default, so
+main's machines would have silently lost their footprint fit. After any merge that touches a
+generated asset, regenerate it (`unity.sh exec Odyssey.EditorTools.PlayScene.RebuildCatalogue`,
+then `CharacterSwatches.Classify` and `AudioSetup.Build`). Then compare its ids against both parents
+before trusting it.
