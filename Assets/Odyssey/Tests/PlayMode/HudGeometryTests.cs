@@ -456,17 +456,97 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
-        /// <summary>The readout beside one fader: the label row above it in the Audio
-        /// section.</summary>
-        static Label ReadoutOf(VisualElement fader)
+        /// <summary>The readout beside one fader: the figure after it in the same control
+        /// (design 39 §6).</summary>
+        static Label ReadoutOf(VisualElement fader) =>
+            fader.parent.Q<Label>(className: "settings__value")!;
+
+        /// <summary>
+        /// The settings window is one box, centred, on every tab and at every screen size
+        /// (design 39): the acceptance the redesign was for. Its size is measured in the panel's
+        /// own units, so it is 1240 x 720 whatever the screen; its position against the panel's
+        /// centre, so a window that drifted with its content would fail here. Also the things the
+        /// old panel got wrong: the game's actions once, in the rail; no placeholder box in front
+        /// of any row; a switch that says its state in a word; and a Keys tab that fits.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheSettingsWindowIsOneCentredBoxOnEveryTab()
         {
-            VisualElement? row = null;
-            foreach (VisualElement child in fader.parent.Children())
+            foreach (Vector2Int resolution in Resolutions)
             {
-                if (child == fader) break;
-                row = child;
+                GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, resolution);
+                try
+                {
+                    yield return Settle(doc);
+                    Assert.That(boot.Directors, Is.Not.Null, "the bootstrap never built its directors");
+                    SettingsDirector settings = boot.Directors!.Settings;
+                    settings.SetOpen(true);
+                    yield return null;
+
+                    VisualElement window = doc.rootVisualElement.Q(name: "settings")!;
+                    Assert.That(window, Is.Not.Null, "there is no settings window");
+                    Rect canvas = doc.rootVisualElement.worldBound;
+                    Rect? first = null;
+
+                    foreach (SettingsTab tab in SettingsLayout.Tabs)
+                    {
+                        settings.SetTab(tab);
+                        yield return null;
+                        yield return null;
+
+                        Rect box = window.worldBound;
+                        first ??= box;
+                        Assert.That(box.x, Is.EqualTo(first.Value.x).Within(0.01f), $"{tab} moved the window at {resolution}");
+                        Assert.That(box.y, Is.EqualTo(first.Value.y).Within(0.01f), $"{tab} moved the window at {resolution}");
+                        Assert.That(box.width, Is.EqualTo(first.Value.width).Within(0.01f), $"{tab} resized the window at {resolution}");
+                        Assert.That(box.height, Is.EqualTo(first.Value.height).Within(0.01f), $"{tab} resized the window at {resolution}");
+
+                        Assert.That(window.layout.width, Is.EqualTo(SettingsLayout.Width).Within(0.5f));
+                        Assert.That(window.layout.height, Is.EqualTo(SettingsLayout.Height).Within(0.5f));
+                        Assert.That(box.center.x, Is.EqualTo(canvas.center.x).Within(1f), $"not centred across at {resolution}");
+                        Assert.That(box.center.y, Is.EqualTo(canvas.center.y).Within(1f), $"not centred down at {resolution}");
+
+                        // Nothing on the open page runs off the foot of its column.
+                        window.Query(className: "sw__column").ForEach(column =>
+                        {
+                            if (column.resolvedStyle.display == DisplayStyle.None || column.childCount == 0) return;
+                            if (column.parent.resolvedStyle.display == DisplayStyle.None) return;
+                            VisualElement last = column[column.childCount - 1];
+                            Assert.That(last.layout.yMax, Is.LessThanOrEqualTo(column.layout.height + 0.5f),
+                                $"a column on {tab} is taller than the frame gives it at {resolution}");
+                        });
+                    }
+
+                    // Every key sits inside its chip's padding. A chip that was a label holding its
+                    // dashed outline was no longer sized by its text, and "Space" ran into its edges.
+                    settings.SetTab(SettingsTab.Keys);
+                    yield return null;
+                    yield return null;
+                    foreach (VisualElement chip in window.Query(className: "sw__chip").ToList())
+                    {
+                        VisualElement key = chip.Q(className: "sw__chip-key")!;
+                        Assert.That(key.layout.width, Is.LessThanOrEqualTo(
+                                chip.layout.width - chip.resolvedStyle.paddingLeft - chip.resolvedStyle.paddingRight
+                                - chip.resolvedStyle.borderLeftWidth - chip.resolvedStyle.borderRightWidth + 0.5f),
+                            $"the key \"{((Label)key).text}\" is wider than its chip leaves room for at {resolution}");
+                    }
+
+                    Assert.That(window.Query(className: "sw__action").ToList(),
+                        Has.Count.EqualTo(SessionCommands.For(SessionContext.InGame).Count),
+                        "the game's actions are not each in the rail once");
+                    Assert.That(window.Query<IconBadge>().ToList(), Is.Empty,
+                        "a placeholder box is still drawn in front of a row");
+                    foreach (Label word in window.Query<Label>(className: "sw__switch-word").ToList())
+                        Assert.That(word.text, Is.EqualTo("On").Or.EqualTo("Off"), "a switch does not say its state");
+
+                    settings.SetOpen(false);
+                }
+                finally
+                {
+                    Object.Destroy(root);
+                }
+                yield return null;
             }
-            return row!.Q<Label>(className: "settings__value")!;
         }
 
         /// <summary>

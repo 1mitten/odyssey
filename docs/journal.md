@@ -11851,6 +11851,43 @@ calls whatever the fight, and a colony with no blood submits nothing. Negative c
 fail: the cap dropping the newest, the fade brightening before its hold ends, the fans wound face
 down, the per-frame ground check off, the water rule off.
 
+## 2026-09-24 — The settings window: one fixed, centred frame
+
+The owner brought an approved design (the rail layout, mockups 14a-14e) and one instruction on top:
+keep it centred and keep its size. The old panel sized itself to the open tab and carried the five
+session rows under every tab, so the box moved on every click. It is 1240 x 720 now, centred by
+fixed offsets, with the session actions once in the rail (`docs/design/39-settings-window.md`).
+
+**The "empty checkbox" on every row was `IconBadge`'s placeholder glyph.** No settings key has art,
+so every row drew the "no art yet" square. Nothing was wrong with the badge; the settings rows were
+the wrong place for one. The new rows carry no badge and a PlayMode test says so.
+
+Two things the brief asked for did not exist: a reset on every tab (only Keys had one) and Backspace
+clearing a key slot (the hint promised it; nothing did it). Both are small director methods with
+fast-tier tests. The window is a modal now, which reverses the B17 decision that it should not be;
+the reason is the size of the thing, recorded in design 39 section 2.
+
+Two UI Toolkit gaps shaped the build: no `outline` (one focus ring for the window, moved to the
+focused control and drawn last) and no dashed border (a painted `DashedOutline`). The icons are the
+brief's SVG paths, flattened once by `SvgPath` and stroked by `PathGlyph`, so no mark on the window
+is a font glyph.
+
+## 2026-09-24 — The title screen: a dock on the left
+
+Folded into the settings branch on the owner's word. The centred 420 x 384 card became a 560 px
+dock, flush left, full height, with the Strata mark and the wordmark at the top and four buttons that
+are the Settings rail's own icons and inks (`docs/design/40-title-screen.md`). Two things are worth
+keeping. **The brief's width estimate was wrong**: the tracked wordmark does not fit at .3em, and the
+dock measures it after layout and falls back to .26em, which the brief allowed (460 px of 464).
+**And Exit game stopped arming**: it raises the leave prompt in a no-colony form, so
+`SessionCommands` no longer asks twice on the main screen, and the four director tests that used Quit
+as their example of arming were retired with it.
+
+Before this, the first play of the settings window found that Settings opened from the main menu
+showed but took no clicks. The start screen's scrim is built after the window and is pickable; the
+window is brought to the front when it opens now, and a pick at its centre is asserted, with a
+negative control that fails on `start-scrim`.
+
 ## 2026-09-24 — Meadow M6: quality presets, and preferences that never reached a session
 
 The Graphics tab gained a Quality row — Low, Medium, High, Ultra, and Custom whenever the levers

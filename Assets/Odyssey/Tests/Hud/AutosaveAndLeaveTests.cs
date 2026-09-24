@@ -159,11 +159,34 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void WithNothingToLoseThereIsNothingToAsk()
         {
-            // Leaving from the main screen is a different act and keeps its arm-twice row.
+            // Ask() is the colony form; the title screen asks through AskToExit instead.
             var prompt = new LeavePrompt();
             Assert.That(prompt.Ask(LeaveTo.MainMenu, null), Is.False);
             Assert.That(prompt.Ask(LeaveTo.MainMenu, "  "), Is.False);
             Assert.That(prompt.Showing, Is.False);
+        }
+
+        /// <summary>The title screen's Exit game (design 40): the same prompt with nothing to
+        /// save. It goes to the desktop, and a press on the save answer cannot write anything.</summary>
+        [Test]
+        public void ExitingFromTheTitleScreenAsksWithNothingToSave()
+        {
+            var prompt = new LeavePrompt();
+            LeaveTo? went = null;
+            bool? saved = null;
+            prompt.Confirmed += (to, save) => { went = to; saved = save; };
+
+            prompt.AskToExit();
+            Assert.That(prompt.Showing, Is.True);
+            Assert.That(prompt.HasColony, Is.False);
+            Assert.That(prompt.TitleKey, Is.EqualTo(LeavePrompt.ToDesktopTitleKey));
+
+            prompt.Choose(save: true);
+            Assert.That(went, Is.EqualTo(LeaveTo.Desktop));
+            Assert.That(saved, Is.False, "there is no colony to write");
+
+            Assert.That(prompt.Ask(LeaveTo.MainMenu, "ashford"), Is.True);
+            Assert.That(prompt.HasColony, Is.True, "a colony question after an exit question forgot the colony");
         }
 
         [Test]

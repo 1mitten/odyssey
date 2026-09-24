@@ -236,60 +236,7 @@ namespace Odyssey.Presentation.Ui
         // ---- panels over the board
         VisualElement _buildPanel = null!;
 
-        VisualElement _settingsPanel = null!;
         VisualElement _debugPanel = null!;
-        VisualElement _interfaceSection = null!;
-        VisualElement _graphicsSection = null!;
-        VisualElement _audioSection = null!;
-        VisualElement _keysSection = null!;
-        VisualElement _gameplaySection = null!;
-        readonly Dictionary<int, Label> _autosaveRungs = new();
-        VisualElement _exitRow = null!;
-        Label _exitLabel = null!;
-        readonly Dictionary<GraphicsOption, VisualElement> _settingRows = new();
-        readonly Dictionary<SettingsTab, Label> _settingTabs = new();
-        readonly Dictionary<int, Label> _scaleRungs = new();
-        readonly Dictionary<int, Label> _cameraRungs = new();
-        readonly Dictionary<BuildPaletteLayout, Label> _layoutRungs = new();
-
-        /// <summary>One rank of rung labels per number ladder, so a value that moves lights its
-        /// own rung and nothing else is touched.</summary>
-        readonly Dictionary<GraphicsLadder, Dictionary<int, Label>> _ladderRungs = new();
-
-        /// <summary>Each ladder's row and rank, kept so the frame cap can be greyed behind VSync
-        /// and the two display rows can be greyed in the editor.</summary>
-        readonly Dictionary<GraphicsLadder, LadderView> _ladderViews = new();
-
-        /// <summary>The quality row's rungs, one per preset and Custom, lit by whichever the levers
-        /// are on (<c>SettingsDirector.Preset</c>).</summary>
-        readonly Dictionary<QualityPreset, Label> _presetRungs = new();
-
-        /// <summary>The resolution dropdown selector. Built once the machine's sizes are known.
-        /// See <c>BuildResolutionRow</c>.</summary>
-        DropdownField? _resolutionDropdown;
-        VisualElement? _resolutionRow;
-
-        /// <summary>Where the resolution dropdown row goes once the machine's sizes are known. See
-        /// <c>BuildResolutionRow</c>.</summary>
-        VisualElement _resolutionSlot = null!;
-        readonly Dictionary<SettingsBus, FaderView> _busFaders = new();
-        readonly Dictionary<HotkeyAction, KeyRowView> _keyRows = new();
-
-        /// <summary>One volume row: its fader and the readout beside it, refreshed when the
-        /// bus's value moves and never per frame.</summary>
-        sealed class FaderView
-        {
-            public Slider Fader = null!;
-            public Label Value = null!;
-        }
-
-        /// <summary>One binding row: its root and the caps of its two slots, for
-        /// event-driven refresh. Strings are rebuilt on click, never per frame.</summary>
-        sealed class KeyRowView
-        {
-            public VisualElement Root = null!;
-            public readonly Label[] Caps = new Label[HotkeyDirector.SlotCount];
-        }
 
         /// <summary>The command-bar Build cap and its item, so a rebind can move the legend
         /// with the key it names.</summary>

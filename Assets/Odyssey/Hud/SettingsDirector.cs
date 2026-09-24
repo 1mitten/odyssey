@@ -614,7 +614,9 @@ namespace Odyssey.Hud
             },
             GraphicsLadder.FrameCap => rung == Uncapped ? "Uncapped" : rung.ToString(),
             GraphicsLadder.RenderScale => rung + "%",
-            GraphicsLadder.AntiAliasing => rung <= 1 ? "Off" : rung + "\u00d7",
+            // "x" rather than the multiplication sign: every string in the settings window is
+            // ASCII (design 39 \u00a72), so nothing on it depends on what a face happens to carry.
+            GraphicsLadder.AntiAliasing => rung <= 1 ? "Off" : rung + "x",
             GraphicsLadder.ShadowDistance => rung + " m",
             GraphicsLadder.DisplayMode => rung switch
             {
@@ -1112,6 +1114,45 @@ namespace Odyssey.Hud
         }
 
         public void Toggle(GraphicsOption option) => Set(option, !IsOn(option));
+
+        /// <summary>
+        /// Where the interface scale goes back to on a reset. The screen's own answer
+        /// (<see cref="DefaultScaleFor"/>), told by the presenter that can see the screen; 100
+        /// until it is.
+        /// </summary>
+        public int DefaultUiScale { get; set; } = 100;
+
+        /// <summary>
+        /// Put one tab's settings back where they ship (design 39 §5): the footer's
+        /// "Reset &lt;tab&gt; to defaults".
+        ///
+        /// <para><b>Through the same setters a press uses</b>, so every lever that moves raises its
+        /// own event and writes its own preference, and one that is already at its default says
+        /// nothing. The resolution is left alone: its rungs are the machine's and there is no
+        /// default to go back to. Keys are the hotkey director's, which has had its own reset since
+        /// the Keys tab landed; this does not reach into it.</para>
+        /// </summary>
+        public void ResetTab(SettingsTab tab)
+        {
+            switch (tab)
+            {
+                case SettingsTab.Interface:
+                    SetUiScale(DefaultUiScale);
+                    SetCameraSpeed(100);
+                    SetBuildPaletteLayout(BuildPaletteModel.Default);
+                    break;
+                case SettingsTab.Graphics:
+                    foreach (GraphicsLadder ladder in LadderOrder) SetValue(ladder, DefaultOf(ladder));
+                    foreach (GraphicsOption option in Order) Set(option, DefaultOn(option));
+                    break;
+                case SettingsTab.Audio:
+                    foreach (SettingsBus bus in Buses) SetBusDb(bus, UnityDb);
+                    break;
+                case SettingsTab.Gameplay:
+                    SetAutosaveDays(AutosaveClock.DefaultDays);
+                    break;
+            }
+        }
 
         // ======================================================================== the autosave
 
