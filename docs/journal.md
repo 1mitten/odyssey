@@ -12130,7 +12130,10 @@ healed past 15 % while down, which its invariant still forbade.
 ## 2026-09-24 — The stair gait
 
 The third attempt at making a bank crossing read as climbing rather than as an escalator,
-designed as `40-stair-gait.md` after reviewing the owner's plan against the code. The two
+designed as `41-stair-gait.md` — written 40; `main` took 39 for the settings window and
+40 for the title screen while this was in review, so it moved with every place that cited
+it, by the meadow rule that a number resolves to one pattern — after reviewing the owner's
+plan against the code. The two
 rejections (`HopArc`'s header) were failures of shape, not of ambition: the parabola lifted
 where the ground did not, and the strides were four rectangular holds with velocity edges. The
 stair is a smoothed sawtooth **added to the ramp** — cosine treads, C1 by construction, zero at

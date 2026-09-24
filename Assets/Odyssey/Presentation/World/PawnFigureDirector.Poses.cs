@@ -199,7 +199,7 @@ namespace Odyssey.Presentation.World
                 float left = Footing.Correction(leftAt.y, leftGround) * planted;
                 float right = Footing.Correction(rightAt.y, rightGround) * planted;
 
-                // The stair climber's knee lift (design 40): a swing foot is raised to clear the
+                // The stair climber's knee lift (design 41): a swing foot is raised to clear the
                 // tread it is being carried over. Faded in over exactly the band where the
                 // correction above fades out, so a foot the planter is holding down — the planted
                 // one, or a swing foot still near the ground — is untouched, and only a foot the

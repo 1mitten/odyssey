@@ -1916,7 +1916,7 @@ namespace Odyssey.Presentation.World
                 if (figure.WorkWeight <= 0.5f) figure.Style = StyleFor(pawn.JobDef);
             }
             // The stair the figure is on, if it is climbing a bank: asked of StairGait so the
-            // footing pass and the pose agree on which steps are stairs (design 40). Cleared
+            // footing pass and the pose agree on which steps are stairs (design 41). Cleared
             // for anything else — the flat, the water, a ladder, a sheer face — because zero
             // is the footing pass's whole gate.
             figure.StairTread = StairGait.IsClimbing(World, in pawn)

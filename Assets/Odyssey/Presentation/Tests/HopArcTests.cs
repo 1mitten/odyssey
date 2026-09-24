@@ -220,7 +220,7 @@ namespace Odyssey.Tests.Presentation
             // strides quantised off it, not an arc over it. Every departure from this has been
             // reported: a parabola read as jumping, strides read as jolting.
             //
-            // **This is the glide's own claim, pinned with the stair off** (design 40): the stair
+            // **This is the glide's own claim, pinned with the stair off** (design 41): the stair
             // gait departs from the surface on purpose, by up to two thirds of a tread between
             // treads, and its own surface relationship — never inside, touching down at every
             // tread boundary — lives in `StairGaitTests`, asked with the stair on. What this
@@ -247,7 +247,7 @@ namespace Odyssey.Tests.Presentation
             // distance. This measures the *variation* and not just the maximum, because a
             // hold-and-push rhythm passes a maximum test and is exactly what was complained about.
             //
-            // **The glide's claim, pinned with the stair off** (design 40): a stair gait is a
+            // **The glide's claim, pinned with the stair off** (design 41): a stair gait is a
             // rhythm on purpose — the owner's plan asked for steps — so the variation bound here
             // would forbid the feature rather than guard it. The stair's own frame budget, the
             // 50 mm teleport ceiling that predates it, is what `StairGaitTests` holds it to.

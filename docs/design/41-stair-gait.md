@@ -1,9 +1,12 @@
-# 40 — The stair gait: banks crossed as steps, not escalators
+# 41 — The stair gait: banks crossed as steps, not escalators
 
 **Status: designed and built 2026-09-24, from the owner's plan for "stair-gait animation for
 terraced terrain" (reviewed against the code first — see §2).** Branch `claude/stair-gait`,
-worktree `D:\code\odyssey-stairgait`. Ground: `main` at `3a39dd8d`. Numbered 40 because 37 is
-`claude/medical-supplies`, 38 is meadow and 39 is weather, all in flight.
+worktree `D:\code\odyssey-stairgait`. Ground: `main` at `3a39dd8d`, merged to `3ca5098c` while in review. **Numbered 41,
+written as 40**: 37 is medical supplies and 38 is meadow, both in flight when this
+started, and by the time this merged, `main` had given 39 to the settings window and
+40 to the title screen — so this moved, with every place that cited it. The weather
+design on PR #190 (written as 39) must move past 41 when it lands.
 
 **Read first:** `HopArc.cs`'s header (the two rejections this must not repeat),
 `28-temperature.md` nothing — rather `PawnPose.cs` `OnTheDrawnGround` (the branch this lives

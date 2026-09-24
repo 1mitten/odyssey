@@ -545,7 +545,7 @@ namespace Odyssey.Presentation.Rendering
                     ? CellMetrics.FloorCentre(over).y + BankLayout.RiseAt(world, over, along.x, along.z)
                     : pace.GroundAt(s);
 
-                // **The stair gait, added to the surface rather than in place of it** (design 40).
+                // **The stair gait, added to the surface rather than in place of it** (design 41).
                 // A smoothed sawtooth per tread, phased to whichever half of the step climbs or
                 // descends: never below the ramp, never downhill on a climb nor uphill on a
                 // descent, and zero on a flat half, at both ends and at every tread boundary — so
