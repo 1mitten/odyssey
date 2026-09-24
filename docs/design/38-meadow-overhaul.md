@@ -1177,3 +1177,54 @@ real GPU** and 16–27% of the draw calls. That is smaller than the batch arm's 
 the figure to quote: the batch arm runs inside the editor beside other sessions, which inflates every
 frame, and it cannot read the GPU at all. The largest block of calls left is the trees (M5's work
 and the next lever).
+
+## 23. Trees: grouped, and simpler far away (2026-09-24)
+
+**The question** (owner): would trees on the GPU-driven path be better for everyone? Measured first
+(`FrameTimeTests.TheTreesAgainstTheFrame`, trees on and off in one run): trees cost the CPU 0.28 ms
+(Standard, default zoom) to 0.94–1.33 ms (Huge at 140 m) at 640 × 480, and 25–42% of a 1080p frame,
+most of it the fill of their leaf cards. A board's trees went out **four and a half to five a call**,
+because every chunk submitted its own. So the CPU part was a batching problem, and the GPU part was a
+level-of-detail problem that GPU-driven drawing would not have touched. The owner chose both fixes
+below; full GPU-driven trees stay unbuilt.
+
+**Grouped** (`ChunkRenderer.GroupTrees`). Every submission a board-tree bucket makes below the blended
+queue — its crowns at the level chosen for the chunk and its shadow proxy — is gathered for the frame
+and sent once per (material, mesh, submesh, shadow mode) at the end of the chunk walk. Every decision
+stays per chunk (the frustum and sun-side cull, the level, the sight fade), so only the submission
+changes. A faded crown's ghost blends (queue 3000) and keeps its own submission. **The first cut
+grouped nothing in the game** and passed its EditMode test: it took only the opaque range (≤ 2500), and
+the solid Meadow crowns sit in the foliage queue, 2501, like the grass. The picture proof caught it
+(957 calls with grouping on and off), not the unit test, whose trees were primitives.
+
+**Simpler far away** (`SimplerFarTrees`). Within `FarTreeNear` (60 m) of the camera a tree keeps
+`TreeLodBias` (3) exactly; beyond it the bias eases to `FarTreeLodBias` (1) by `FarTreeFar` (120 m),
+so levels coarsen gradually with distance rather than at a line. Not a preset lever: at every framing
+the change is below what the eye separates (next table), so every preset has it.
+
+**Proof** (`GroupingTheTreesDoesNotChangeThePicture`, paused, the hour held, per framing and hour):
+
+| Framing | Floor | Grouping moved | Tree calls | Simpler far trees moved |
+|---|---|---|---|---|
+| start, noon / 19.5 h | 0.00% | **0.00%** | 274 → 55 / 277 → 57 | **0.00%** |
+| 70 m | 0.00% | 0.00% | 463 → 87 / 393 → 84 | 0.52% / 0.32% |
+| 140 m | 0.01% / 0.00% | 0.01% / 0.00% | 563 → 62 / 534 → 62 | 4.67% / 2.00% |
+
+Taking the trees away moved 23.63%, so they are in the shots. The 70 m photographs with and without
+simpler far trees (`TheLookAtThePlayCamera`, `ODYSSEY_LOOK_ALLFINE=1` for the before) cannot be told
+apart by eye.
+
+**Measured**, one run, before (chunk by chunk, every tree at today's detail) → after (grouped,
+simpler far); frame in ms (editor batch, only the differences count; another session's batch run
+was live):
+
+| Board, zoom | Tree calls | CPU submit @640×480 | Frame @640×480 | @1080p | @4K |
+|---|---|---|---|---|---|
+| Standard, default | 276 → 55 | 1.43 → 1.35 | 1.93 → 1.81 | 8.66 → 7.35 | 8.93 → 7.71 |
+| Standard, 140 m | 564–618 → 62 | 2.08 → 1.94 | 2.74 → 2.48 | 15.02 → 11.12 | 14.45 → 13.91 |
+| Huge, default | 479–545 → 42–43 | 2.06 → 2.01 | 2.62 → 2.49 | 10.59 → 7.72 | 12.77 → 8.94 |
+| Huge, 140 m | 1,008–1,169 → 41 | **3.62 → 2.95** | **4.52 → 3.53** | **20.12 → 13.78** | 21.32 → 19.35 |
+
+Tree calls fall 80–96%; the most is won where the owner asked about it, big boards zoomed out. The
+real GPU figure comes from the player: `-odyssey-bench -odyssey-bench-trees`
+(`PlayerBench.TreeArms`: as shipped, chunk by chunk, grouped only, no trees, at 32 / 70 / 140 m).
