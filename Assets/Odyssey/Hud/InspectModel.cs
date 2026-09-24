@@ -158,10 +158,10 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The pane's avatar slot shows this pawn's own face (and portrait) rather than a keyed
-        /// badge. A colonist's, and nobody else's: an animal and a bandit wear their kind's
-        /// badge (design 33 §5f, lane C).
+        /// badge. A person's: a colonist's, and a bandit's own portrait with the helmet on (design
+        /// 42 §2 — "they need to be their own character"). An animal wears its kind's badge.
         /// </summary>
-        public bool ShowsFace => Subject == InspectSubject.Colonist && !IsAnimal && !IsHostile;
+        public bool ShowsFace => Subject == InspectSubject.Colonist && !IsAnimal;
 
         /// <summary>
         /// The needs, the skills, the Health tab's values and the mood in the state line are
@@ -479,8 +479,8 @@ namespace Odyssey.Hud
         /// "Corpse of Wrenn" — "Corpse of a midden hog" — what it was, and when it died (design 33
         /// §1). A colonist is named as she was named alive: <see cref="ColonistNames.Of(uint, PawnId)"/>
         /// over the seed and id the corpse kept, which answers a player's own name first, so the
-        /// roster she left and the body she left agree. Nothing else has a name, so an animal and a
-        /// bandit are called by their kind.
+        /// roster she left and the body she left agree. A bandit is a person with a name too
+        /// (design 42 §2), and keeps it; only an animal is called by its kind.
         /// </summary>
         void DescribeCorpse(in CorpseView corpse)
         {
@@ -491,11 +491,11 @@ namespace Odyssey.Hud
             bool hostile = (corpse.Flags & PawnFlags.Hostile) != 0;
             CorpseKindKey = PawnKindLabels.IconKey(corpse.Kind);
             CorpseWasAnimal = (corpse.Flags & PawnFlags.Person) == 0;
-            string of = colonist
+            string of = !CorpseWasAnimal
                 ? ColonistNames.Of(corpse.RollSeed, corpse.Pawn)
                 : WithArticle(PawnKindLabels.Label(corpse.Kind).ToLowerInvariant());
             Title = Registry.Label(CorpseKey) + " of " + of;
-            Subtitle = colonist ? ColonistWord : hostile ? HostileWord : AnimalWord;
+            Subtitle = colonist ? ColonistWord : hostile ? HostileKindWord(corpse.Kind) : AnimalWord;
             Job = Registry.Label(DeadKey) + " · since " + GameClock.HourOfDay(corpse.Tick).ToString("00")
                 + "h, day " + GameClock.DayOfMonth(corpse.Tick) + " of " + GameClock.MonthName(corpse.Tick);
         }
@@ -508,6 +508,13 @@ namespace Odyssey.Hud
         static readonly string ColonistWord = Registry.Label(PawnKindLabels.Colonist).ToLowerInvariant();
         static readonly string HostileWord = Registry.Label("ui.pawn.hostile").ToLowerInvariant();
         static readonly string AnimalWord = Registry.Label("ui.pawn.animal").ToLowerInvariant();
+        static readonly string BanditWord = PawnKindLabels.Label(PawnKindLabels.Bandit).ToLowerInvariant();
+
+        /// <summary>
+        /// The word under a hostile person's name: "bandit" for the bandit (design 42 §2), the
+        /// generic "hostile" for any hostile kind that comes after it and has no word of its own.
+        /// </summary>
+        static string HostileKindWord(int kind) => kind == PawnKindLabels.Bandit ? BanditWord : HostileWord;
 
         static string WithArticle(string noun) =>
             noun.Length > 0 && "aeiou".IndexOf(noun[0]) >= 0 ? "an " + noun : "a " + noun;
@@ -614,7 +621,10 @@ namespace Odyssey.Hud
                     }
                     Tombstoned = false;
                     KindIconKey = PawnKindLabels.IconKey(pawn.Kind);
-                    Title = PawnKindLabels.Label(pawn.Kind);
+                    // A bandit is a person with a name of their own, dealt from the colonist
+                    // pool by the same seed and id (design 42 §2: "they need to be their own
+                    // character"); an animal is called by its kind.
+                    Title = IsAnimal ? PawnKindLabels.Label(pawn.Kind) : ColonistNames.Of(snapshot, pawn.Id);
                     if (IsAnimal)
                     {
                         Subtitle = AnimalWord;
@@ -630,8 +640,9 @@ namespace Odyssey.Hud
                     }
                     else
                     {
-                        // A bandit's job is a person's job — fighting, mostly — in a person's words.
-                        Subtitle = HostileWord;
+                        // A bandit's job is a person's job — fighting, mostly — in a person's words,
+                        // under the kind's word where the name would otherwise leave you guessing.
+                        Subtitle = HostileKindWord(pawn.Kind);
                         SetJob(snapshot, pawn);
                         JobIconKey = JobLabels.IconKey(pawn.JobDef);
                     }

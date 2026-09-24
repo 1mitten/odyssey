@@ -108,16 +108,24 @@ namespace Odyssey.Hud
         /// </summary>
         public uint Pinned { get; set; }
 
-        public ColonistAppearance For(int pawnId, uint rollSeed)
+        public ColonistAppearance For(int pawnId, uint rollSeed) => For(pawnId, rollSeed, PawnOutfit.Issued);
+
+        /// <summary>
+        /// The appearance of a pawn wearing <paramref name="outfit"/>
+        /// (<c>docs/design/42-bandits.md</c> §5). The person is the same whatever the outfit;
+        /// what they wear is laid over them.
+        /// </summary>
+        public ColonistAppearance For(int pawnId, uint rollSeed, PawnOutfit outfit)
         {
             if (_overrides.TryGetValue(pawnId, out ColonistAppearance chosen)) return chosen;
 
             uint seed = Pinned != 0u ? Pinned : rollSeed != 0u ? rollSeed : Seed;
 
-            // Keyed on the pawn and checked against the seed. A pawn's roll seed does not change
-            // once it has one, so in the ordinary case this is a plain hit — but a figure asked
-            // for before the aspect arrived would otherwise be cached on the fallback for ever.
-            if (_cache.TryGetValue(pawnId, out Entry cached) && cached.Seed == seed)
+            // Keyed on the pawn and checked against the seed and the outfit. A pawn's roll seed
+            // does not change once it has one, so in the ordinary case this is a plain hit — but a
+            // figure asked for before the aspect arrived would otherwise be cached on the fallback
+            // for ever, and a bandit taken prisoner changes clothes without changing who they are.
+            if (_cache.TryGetValue(pawnId, out Entry cached) && cached.Seed == seed && cached.Outfit == outfit)
                 return cached.Appearance;
 
             // Gender and age come from the same roll seed the name and the trade do, so a
@@ -128,17 +136,29 @@ namespace Odyssey.Hud
             ColonistAppearance made = ColonistAppearance.Of(
                 seed, pawnId, Pools,
                 ColonistNames.GenderOf(seed, id),
-                ColonistIdentity.Age(seed, id));
-            _cache[pawnId] = new Entry(seed, made);
+                ColonistIdentity.Age(seed, id),
+                outfit);
+            _cache[pawnId] = new Entry(seed, outfit, made);
             return made;
         }
 
         /// <summary>Which body a pawn wears. Shorthand for <c>For(pawnId, rollSeed).Look</c>.</summary>
         public int LookFor(int pawnId, uint rollSeed) => For(pawnId, rollSeed).Look;
 
-        /// <summary>The appearance of a pawn in the published frame — the ordinary way to ask.</summary>
+        /// <summary>Which body a pawn wearing <paramref name="outfit"/> wears.</summary>
+        public int LookFor(int pawnId, uint rollSeed, PawnOutfit outfit) => For(pawnId, rollSeed, outfit).Look;
+
+        /// <summary>
+        /// The appearance of a pawn in the published frame, looked up by id. <b>Scans the frame's
+        /// pawns for the outfit</b>, so for one pawn at a time; a drawer walking every pawn holds
+        /// the view and passes it (<see cref="For(WorldSnapshot, in PawnView)"/>).
+        /// </summary>
         public ColonistAppearance For(WorldSnapshot snapshot, PawnId pawn) =>
-            For(pawn.Value, ColonistNames.RollSeedOf(snapshot, pawn));
+            For(pawn.Value, ColonistNames.RollSeedOf(snapshot, pawn), PawnOutfits.Of(snapshot, pawn));
+
+        /// <summary>The appearance of a pawn whose view the caller already holds — the far form's and the figures' way.</summary>
+        public ColonistAppearance For(WorldSnapshot snapshot, in PawnView pawn) =>
+            For(pawn.Id.Value, ColonistNames.RollSeedOf(snapshot, pawn.Id), PawnOutfits.For(pawn));
 
         /// <summary>Which body a pawn in the published frame wears.</summary>
         public int LookFor(WorldSnapshot snapshot, PawnId pawn) =>
@@ -147,11 +167,13 @@ namespace Odyssey.Hud
         readonly struct Entry
         {
             public readonly uint Seed;
+            public readonly PawnOutfit Outfit;
             public readonly ColonistAppearance Appearance;
 
-            public Entry(uint seed, ColonistAppearance appearance)
+            public Entry(uint seed, PawnOutfit outfit, ColonistAppearance appearance)
             {
                 Seed = seed;
+                Outfit = outfit;
                 Appearance = appearance;
             }
         }
