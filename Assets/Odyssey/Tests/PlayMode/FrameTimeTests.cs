@@ -869,7 +869,11 @@ namespace Odyssey.Tests.PlayMode
                     if (i % 6 == 0) blood!.Pool(new PawnId(10_000 + i), feet, 1f, 1.8f);
                     else blood!.Spurt(feet, feet + Vector3.up * 1.3f, blow, 6f + i % 15, sharp: i % 2 == 0);
                 }
-                for (int i = 0; i < 600 && (blood!.DropsInFlight > 0 || blood.PoolsWaiting > 0); i++) yield return null;
+                // Bounded by real seconds, not frames: the drops fall for about 0.7 s and a pool waits 1.2 s,
+                // and the CI runner draws a frame in about a millisecond, so 600 frames was 0.6 s there.
+                for (float until = Time.realtimeSinceStartup + 5f;
+                     (blood!.DropsInFlight > 0 || blood.PoolsWaiting > 0) && Time.realtimeSinceStartup < until;)
+                    yield return null;
 
                 float full = 0f;
                 yield return TimeFrames("blood/full", boot, 30, x => full = x);

@@ -1521,7 +1521,7 @@ namespace Odyssey.Presentation.Bootstrap
             _blood?.Step(_world.Views.Current.Running ? Time.deltaTime : 0f, _world.Views.Current.Tick);
             _combatFeedback.Consume(_world.Views.Current, _world, _figures, _audio,
                 bloodLowest, bloodHighest, _tickAlpha, ticksPerSecond);
-            _blood?.Draw(_renderer, bloodLowest, bloodHighest);
+            if (_renderer != null) _blood?.Draw(_renderer, bloodLowest, bloodHighest);
             _floaterView?.Draw(_combatFeedback.Floaters,
                 cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);
