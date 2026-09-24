@@ -41,6 +41,10 @@ namespace Odyssey.Presentation.Bootstrap
         /// path (design 38 §22), Full grass, at the start, 70 m and 140 m.</summary>
         public const string SceneryArgument = "-odyssey-bench-scenery";
 
+        /// <summary>With <see cref="Argument"/>: the trees grouped and simpler far away against the
+        /// chunk path (design 38 §23), at the start, 70 m and 140 m.</summary>
+        public const string TreesArgument = "-odyssey-bench-trees";
+
         static bool Has(string wanted)
         {
             foreach (string argument in Environment.GetCommandLineArgs())
@@ -158,6 +162,13 @@ namespace Odyssey.Presentation.Bootstrap
             _table.AppendLine("|---|---|---|---|---|" + PassRule());
 
             ChunkRenderer renderer = _boot.Renderer!;
+            if (Has(TreesArgument))
+            {
+                yield return TreeArms(renderer);
+                Log("[Bench] table:\n" + _table);
+                Quit("[Bench] done");
+                yield break;
+            }
             if (Has(SceneryArgument))
             {
                 yield return SceneryArms(renderer);
@@ -296,6 +307,29 @@ namespace Odyssey.Presentation.Bootstrap
                 Log($"[Bench] {at}: {renderer.IndirectDrawCalls} indirect calls, {renderer.IndirectInstances} instances in the buffers");
                 yield return Arm($"full {at}, chunk by chunk", () => renderer.UseIndirectScenery = false,
                     () => renderer.UseIndirectScenery = true);
+            }
+        }
+
+        /// <summary>
+        /// The trees grouped and simpler far away against the chunk path (design 38 §23), at the
+        /// start, 70 m and 140 m: as shipped, both off, grouping alone, and no trees at all, so the
+        /// table carries what the trees cost as well as what the two changes recovered of it.
+        /// </summary>
+        IEnumerator TreeArms(ChunkRenderer renderer)
+        {
+            Odyssey.Sim.Contracts.CellRef? focus = FirstPawnCell();
+            foreach (float framing in new[] { 32f, 70f, 140f })
+            {
+                if (focus.HasValue && _boot.cameraRig != null) _boot.cameraRig.FocusOn(focus.Value, framing);
+                yield return Settle();
+                string at = $"@{framing:0} m";
+                yield return Arm($"trees {at}, as shipped (grouped, simpler far)", null, null);
+                yield return Arm($"trees {at}, chunk by chunk, all fine",
+                    () => { renderer.GroupTrees = false; renderer.SimplerFarTrees = false; },
+                    () => { renderer.GroupTrees = true; renderer.SimplerFarTrees = true; });
+                yield return Arm($"trees {at}, grouped, all fine", () => renderer.SimplerFarTrees = false,
+                    () => renderer.SimplerFarTrees = true);
+                yield return Arm($"{at}, no trees", () => renderer.DrawTrees = false, () => renderer.DrawTrees = true);
             }
         }
 

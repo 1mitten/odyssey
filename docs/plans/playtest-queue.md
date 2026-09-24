@@ -39,6 +39,12 @@ the next session learns to ignore.
   the camera should not pan and the game should not pause while it does. A wrong answer is a window
   that shifts as you change tab, a Keys tab with a scrollbar, a ring that jumps two rows for one
   arrow press (the engine moving focus as well as us), or Space pausing the game from a switch.
+- **Trees grouped and simpler far away** (`claude/meadow-trees`, design 38 §23). On Huge, zoom right
+  out and pan across woods, then back in. **Look for** a smoother frame when zoomed out and trees
+  that look the same up close. **A wrong answer looks like:** trees flickering or missing at the
+  screen edge, a visible pop as distant trees change detail while you zoom, or a felled tree that stays
+  standing for a frame.
+
 - **Does zooming out over Full grass feel smoother, and does anything flicker or vanish?**
   (`claude/meadow-grass-perf`, PR #195, design 38 §22). Grass → Full, zoom slowly from the start out to the
   farthest pull and pan along the board's edge, watching the overlay's `frame` and `gpu`. The scenery

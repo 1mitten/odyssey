@@ -207,3 +207,10 @@ bootstrap's fields. A stored "shadows off" was lost at every new game. `ApplyRen
 one mapping, called by the root as it builds a renderer (before the board is meshed, so it arrives
 as chosen) whenever a store is attached — a test harness has none and keeps its fields.
 `docs/bug-patterns.md` has the register entry.
+
+### Trees grouped and simpler far away (2026-09-24, design 38 §23)
+
+Neither is a lever. Grouping changes how trees are submitted and not what is drawn (proved at
+0.00%), and the simpler far trees move 0.00% of the start framing and under 1% at 70 m, below what
+the eye separates, so every preset has both. `ChunkRenderer.GroupTrees` and `SimplerFarTrees` stay as
+measurement switches.

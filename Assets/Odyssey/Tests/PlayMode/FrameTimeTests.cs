@@ -2668,6 +2668,250 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// Grouping the trees across chunks changes how they are submitted and not what is drawn
+        /// (design 38 §23), proved the way the culling and the indirect scenery were: per framing and
+        /// hour, the per-chunk path twice (the floor) and grouped once, with the world paused and the
+        /// hour held; and a positive control, the trees taken away, which must move the picture.
+        ///
+        /// <para>It also photographs what <see cref="ChunkRenderer.SimplerFarTrees"/> does, which is
+        /// meant to change the picture far out and not near: the difference is logged per framing,
+        /// asserted small at the start framing (the near meadow) and only reported further out.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator GroupingTheTreesDoesNotChangeThePicture()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            var target = new RenderTexture(480, 270, 24) { name = "tree-group-proof" };
+            float previousScale = Time.timeScale;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            try
+            {
+                yield return null;
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+                Assert.That(boot.World!.GameSpeed, Is.Zero, "the world would not pause, so the shots cannot be still");
+                Time.timeScale = 0f;
+                ChunkRenderer renderer = boot.Renderer!;
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                cam.targetTexture = target;
+                WorldSnapshot frame = boot.World!.Views.Current;
+                CellRef at = frame.Pawns.Length > 0 ? frame.Pawns[0].Cell : default;
+
+                var lines = new List<string>();
+                foreach ((string Name, float Distance) framing in new[] { ("start", 0f), ("wide", 70f), ("far", 140f) })
+                foreach (float hour in new[] { 12f, 19.5f })
+                {
+                    boot.DaylightHourOverride = hour;
+                    if (framing.Distance > 0f) boot.cameraRig!.FocusOn(at, framing.Distance);
+                    // Settled means the board has finished meshing in **and the camera has stopped**.
+                    // Waiting on the meshing alone let the first shot at 70 m be taken while the rig
+                    // was still easing in from the last framing: on the CI runner the floor read 0.46%
+                    // and the grouped shot, taken later, 0.71% — drift, not a difference (357 of the
+                    // 563 pixels it "moved" were pixels the floor had already moved).
+                    Transform eye = cam!.transform;
+                    Vector3 lastPosition = eye.position;
+                    Quaternion lastRotation = eye.rotation;
+                    for (int i = 0, quiet = 0; i < 1500 && (i < 150 || quiet < 30); i++)
+                    {
+                        yield return null;
+                        bool still = (eye.position - lastPosition).sqrMagnitude < 1e-8f
+                                     && Quaternion.Angle(eye.rotation, lastRotation) < 1e-3f;
+                        lastPosition = eye.position;
+                        lastRotation = eye.rotation;
+                        quiet = still && renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
+                    }
+
+                    // Off, on, off again: the floor spans the grouped shot, so any drift left in the
+                    // scene is inside the floor rather than counted against the grouping.
+                    long tickBefore = boot.World!.CurrentTick;
+                    Color32[] chunk = null!, again = null!, grouped = null!, nearOnly = null!;
+                    int chunkCalls = 0, groupedCalls = 0;
+                    renderer.GroupTrees = false;
+                    yield return Shoot($"treegroup-{framing.Name}-{hour:0.#}-off", boot, target, px => chunk = px);
+                    chunkCalls = renderer.ChunkCallsByKind[0];
+                    Assert.That(renderer.TreeInstances, Is.GreaterThan(0), $"{framing.Name}: no trees in view, so there is nothing to compare");
+                    renderer.GroupTrees = true;
+                    yield return Shoot($"treegroup-{framing.Name}-{hour:0.#}-on", boot, target, px => grouped = px);
+                    groupedCalls = renderer.ChunkCallsByKind[0];
+                    renderer.GroupTrees = false;
+                    yield return Shoot($"treegroup-{framing.Name}-{hour:0.#}-off-again", boot, target, px => again = px);
+                    renderer.GroupTrees = true;
+
+                    // What the simpler far trees change, against the same still frame.
+                    bool simplerWas = renderer.SimplerFarTrees;
+                    renderer.SimplerFarTrees = !simplerWas;
+                    yield return Shoot($"treegroup-{framing.Name}-{hour:0.#}-farlod-{(simplerWas ? "off" : "on")}", boot, target,
+                        px => nearOnly = px);
+                    renderer.SimplerFarTrees = simplerWas;
+
+                    Assert.That(boot.World!.CurrentTick, Is.EqualTo(tickBefore),
+                        "the world ticked between the shots, so nothing can be compared");
+
+                    float noise = Difference(chunk, again);
+                    // Against both neighbours, so a difference cannot hide on one side of the drift.
+                    float moved = Mathf.Max(Difference(chunk, grouped), Difference(grouped, again));
+                    float farLod = Difference(grouped, nearOnly);
+                    lines.Add($"{framing.Name} {hour:0.#} h: floor {noise * 100f:0.00}%, grouping moved {moved * 100f:0.00}%, " +
+                              $"tree calls {chunkCalls} -> {groupedCalls}; simpler far trees moved {farLod * 100f:0.00}%");
+                    Assert.That(noise, Is.LessThan(0.02f), $"{framing.Name} {hour} h: the repeated shot has no floor");
+                    Assert.That(groupedCalls, Is.LessThan(chunkCalls),
+                        $"{framing.Name} {hour} h: grouping did not reduce the tree calls");
+                    Assert.That(moved, Is.LessThanOrEqualTo(noise + 0.002f),
+                        $"{framing.Name} {hour} h: grouping moved {moved * 100f:0.00}% of pixels against a floor of " +
+                        $"{noise * 100f:0.00}%: it is not drawing what the chunk path drew");
+                    if (framing.Name == "start")
+                        Assert.That(farLod, Is.LessThanOrEqualTo(noise + 0.01f),
+                            $"{hour} h: the simpler far trees moved {farLod * 100f:0.00}% of the start framing, " +
+                            "which is the near meadow and was meant not to change");
+                }
+
+                // The positive control: the trees taken away must move the picture.
+                boot.DaylightHourOverride = 12f;
+                boot.cameraRig!.FocusOn(at, 32f);
+                for (int i = 0; i < 120; i++) yield return null;
+                Color32[] withTrees = null!, bare = null!;
+                yield return Shoot("treegroup-control-on", boot, target, px => withTrees = px);
+                renderer.DrawTrees = false;
+                yield return Shoot("treegroup-control-off", boot, target, px => bare = px);
+                renderer.DrawTrees = true;
+                float trees = Difference(withTrees, bare);
+
+                Debug.Log("[FrameTime] tree grouping proof: " + string.Join("; ", lines) +
+                          $"; taking the trees away moved {trees * 100f:0.00}%");
+                Assert.That(trees, Is.GreaterThan(0.01f),
+                    "taking the trees away changed nothing, so the trees are not in these shots and the comparison proves nothing");
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                boot.DaylightHourOverride = null;
+                if (boot.Renderer != null) { boot.Renderer.GroupTrees = true; boot.Renderer.DrawTrees = true; }
+                if (cam != null) cam.targetTexture = previousTarget;
+                UnityEngine.Object.Destroy(root);
+                target.Release();
+            }
+        }
+
+        /// <summary>
+        /// What the board's trees cost the frame, CPU-bound — the measurement that decides whether
+        /// trees belong on the GPU-driven path (owner, 2026-09-24; design 38 §23). Explicit: an
+        /// instrument, run by name.
+        ///
+        /// <para>At 640 x 480 the frame is the CPU's, which is where a draw call's price shows and
+        /// where a laptop's weaker processor lives; 1920 x 1080 is the laptop's own resolution. On
+        /// Standard and Huge, at the default zoom and pulled back to 140 m, with the world paused and
+        /// the hour held so only the trees move between arms: trees drawn, then not. Logs the frame,
+        /// the submit, the tree draw calls and how thinly the trees are spread (instances per
+        /// bucket). Only differences inside the run are quoted.</para>
+        /// </summary>
+        [UnityTest, Explicit("an instrument for a decision, not a test")]
+        public IEnumerator TheTreesAgainstTheFrame()
+        {
+            var lines = new List<string>();
+            foreach ((string board, int side) in new[] { ("standard", 120), ("huge", 240) })
+            {
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                    out OdysseyBootstrap boot, side, side, 16);
+                UnityEngine.Camera? cam = null;
+                RenderTexture? previousTarget = null;
+                RenderTexture? hd = null, uhd = null;
+                try
+                {
+                    yield return TimeFrames($"trees/{board}/warm", boot, WarmupFrames, _ => { });
+                    for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                    {
+                        boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                        yield return null;
+                    }
+                    Assert.That(boot.World!.GameSpeed, Is.Zero, "the world would not pause");
+                    boot.DaylightHourOverride = 12f;
+
+                    ChunkRenderer renderer = boot.Renderer!;
+                    cam = boot.cameraRig!.Camera;
+                    previousTarget = cam.targetTexture;
+                    hd = new RenderTexture(1920, 1080, 24) { name = "trees-1080" };
+                    uhd = new RenderTexture(3840, 2160, 24) { name = "trees-2160" };
+                    WorldSnapshot frame = boot.World!.Views.Current;
+                    CellRef focus = frame.Pawns.Length > 0 ? frame.Pawns[0].Cell : default;
+
+                    foreach ((string zoom, float distance) in new[] { ("default", 0f), ("140m", 140f) })
+                    {
+                        if (distance > 0f)
+                        {
+                            boot.cameraRig!.FocusOn(focus, distance);
+                            for (int i = 0; i < 150; i++) yield return null;
+                        }
+                        foreach ((string res, RenderTexture? rt) in new (string, RenderTexture?)[]
+                                 { ($"{Screen.width}x{Screen.height}", null), ("1920x1080", hd), ("3840x2160", uhd) })
+                        {
+                            cam.targetTexture = rt ?? previousTarget;
+                            var arms = new (string Name, bool Trees, bool Group, bool FarLod)[]
+                            {
+                                ("before", true, false, false),
+                                ("grouped", true, true, false),
+                                ("after", true, true, true),
+                                ("no trees", false, true, true),
+                            };
+                            var summary = new List<string>();
+                            foreach (var arm in arms)
+                            {
+                                renderer.DrawTrees = arm.Trees;
+                                renderer.GroupTrees = arm.Group;
+                                renderer.SimplerFarTrees = arm.FarLod;
+                                float ms = 0f;
+                                double submit = 0;
+                                yield return TimeFrames($"trees/{board}/{zoom}/{res}/{arm.Name}", boot, WarmupFrames,
+                                    m => ms = m, p => submit = SubmitOf(p));
+                                int treeCalls = renderer.ChunkCallsByKind[0];
+                                int trees = renderer.TreeInstances;
+                                if (arm.Trees)
+                                    Assert.That(trees, Is.GreaterThan(0), $"{board} {zoom}: no trees were drawn, so there is nothing to price");
+                                summary.Add($"{arm.Name} {ms:0.00} ms (submit {submit:0.00}, calls {renderer.DrawCalls}, " +
+                                            $"tree calls {treeCalls}" +
+                                            (arm.Trees && treeCalls > 0 ? $", {trees / (float)treeCalls:0.0} trees a call" : "") + ")");
+                            }
+                            renderer.DrawTrees = true;
+                            renderer.GroupTrees = true;
+                            renderer.SimplerFarTrees = true;
+                            lines.Add($"{board} {zoom} {res}: " + string.Join(", ", summary) +
+                                      $"; {renderer.TreeInstances} trees in {renderer.TreeBuckets} buckets");
+                        }
+                    }
+                }
+                finally
+                {
+                    if (boot.Renderer != null)
+                    {
+                        boot.Renderer.DrawTrees = true;
+                        boot.Renderer.GroupTrees = true;
+                        boot.Renderer.SimplerFarTrees = true;
+                    }
+                    boot.DaylightHourOverride = null;
+                    if (cam != null) cam.targetTexture = previousTarget;
+                    if (hd != null) hd.Release();
+                    if (uhd != null) uhd.Release();
+                    UnityEngine.Object.Destroy(root);
+                }
+                yield return null;
+            }
+            Debug.Log($"[FrameTime] trees ({SystemInfo.graphicsDeviceName}): " + string.Join("; ", lines));
+        }
+
+        static double SubmitOf(double[] split)
+        {
+            double total = 0;
+            for (int i = 0; i < split.Length; i++) total += split[i];
+            return total;
+        }
+
+        /// <summary>
         /// Photographs the played meadow from the play camera, for judging the look against the
         /// Meadow Forest reference (owner, 2026-09-24: screenshot #13, design 38 §17). Explicit:
         /// never part of a tier, run by name.
@@ -2693,6 +2937,10 @@ namespace Odyssey.Tests.PlayMode
             bool skinWas = GroundSkin.Enabled;
             GroundSkin.Enabled = !boxes;
             if (boxes) prefix += "boxes-";
+            // ODYSSEY_LOOK_ALLFINE=1 photographs every tree at today's level of detail, the simpler
+            // far trees off (design 38 §23), for the same before-and-after.
+            bool allFine = Environment.GetEnvironmentVariable("ODYSSEY_LOOK_ALLFINE") == "1";
+            if (allFine) prefix += "allfine-";
 
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
                 out OdysseyBootstrap boot);
@@ -2703,6 +2951,7 @@ namespace Odyssey.Tests.PlayMode
             {
                 // Long enough for the board to mesh out under the budget and the post stack to settle.
                 for (int i = 0; i < 180; i++) yield return null;
+                if (allFine && boot.Renderer != null) boot.Renderer.SimplerFarTrees = false;
 
                 cam = boot.cameraRig!.Camera;
                 previousTarget = cam.targetTexture;
@@ -3808,8 +4057,12 @@ namespace Odyssey.Tests.PlayMode
 #if UNITY_EDITOR
             // Real art when the packs are present, the same way the scene gets it. A clone without
             // them renders primitives, which is still a frame worth timing.
-            boot.moduleCatalogue = UnityEditor.AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(
-                "Assets/Odyssey/Presentation/ModuleCatalogue.asset");
+            // ODYSSEY_NO_ART=1 withholds the catalogue, so this machine draws what the CI runner (no
+            // Assets/Synty) draws: every module its primitive stand-in. For reproducing a runner-only
+            // failure here rather than guessing at it.
+            if (Environment.GetEnvironmentVariable("ODYSSEY_NO_ART") != "1")
+                boot.moduleCatalogue = UnityEditor.AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(
+                    "Assets/Odyssey/Presentation/ModuleCatalogue.asset");
 #endif
             bootObject.SetActive(true);
 
