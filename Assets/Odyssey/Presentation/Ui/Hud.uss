@@ -439,11 +439,13 @@
    twenty pixels below a strip beside it that started at zero, and the two read as misaligned
    because they were. It is not against the right edge — the depth rail is, and this column sits
    inside it — so only its top corners are squared. */
+/* Width is HudLayout.ClockWidth said again in the language the panel is actually laid out in.
+   Nothing checks that the two agree; change them together. */
 .column-right {
     position: absolute;
     right: 56px;
     top: 0;
-    width: 266px;
+    width: 271px;
 }
 
 .clock.panel {
@@ -469,6 +471,17 @@
 .clock__date {
     color: rgba(255, 255, 255, 0.66);
     height: 28px;
+    -unity-text-align: middle-right;
+}
+
+/* The outdoor temperature, third on the clock's row. Yellow so a reading that matters is
+   findable at a glance without being an alarm - the alert colours are Warn's orange and Bad's
+   red, and a temperature that is merely being read must not be mistaken for either. It keeps the
+   row's own 28 px so the clock's height, and the coverage budget, are unchanged. */
+.clock__temp {
+    color: rgba(240, 214, 122, 0.92);
+    height: 28px;
+    margin-left: 8px;
     -unity-text-align: middle-right;
 }
 

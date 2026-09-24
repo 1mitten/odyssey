@@ -15,7 +15,7 @@ the terraced platforms — how do we make that transition to have a landscape th
 heights and replace the terraced tiles."* And, mid-interview: *"Could we also make the terrain
 completely full of grass to make it lush? also consider performance."*
 
-**Read next:** `docs/design/36-meadow-overhaul.md` (the design these answers decide), and the four
+**Read next:** `docs/design/38-meadow-overhaul.md` (the design these answers decide), and the four
 research files `e-09`, `d-16`, `d-17`, `d-18`.
 
 ## 1. What the exploration found, put to the owner before the first question
@@ -48,7 +48,7 @@ research files `e-09`, `d-16`, `d-17`, `d-18`.
 | 4 | What replaces the two trees? | **All Meadow, more species.** |
 | 5 | Do the 2026-09-22 grass answers still hold? | **Yes — but "really lush on every tile if possible considering performance".** Never hides items, spring/lime, ~1.1 m, all kept; *follow the land* gives way to *full cover everywhere*. |
 | 6 | Flowers? | **Decoration now, sim later**: drawn only, placed by a rule the simulation could later own. |
-| 7 | Which species exist in the sim? | **Birch, the giant meadow tree, bushes as sim things, fruit trees** — *"For MVP — can miss 2 for now"*. Read as **fruit-bearing deferred** (option 2); fruit trees exist as a shape. **To be confirmed at the M5 gate** (design 36 §11). |
+| 7 | Which species exist in the sim? | **Birch, the giant meadow tree, bushes as sim things, fruit trees** — *"For MVP — can miss 2 for now"*. Read as **fruit-bearing deferred** (option 2); fruit trees exist as a shape. **To be confirmed at the M5 gate** (design 38 §11). |
 | 8 | Rocks, mushrooms, leaves, lilies…? | **Some become sim things.** |
 | 9 | Board depth for 8 layers of hills on a 16-layer board? | **Measure first** (16 against 20–24 tall, all four boards), then the owner picks. |
 | 10 | Which settings? | **All four groups**: quality presets, vegetation density + distance, tree and foliage detail (LOD bias, foliage shadows, wind), terrain detail. |
@@ -88,8 +88,8 @@ rule the project already has a simulation twin for (`BankLayout` ↔ `TerraceFoo
 
 ## 5. What this does not settle
 
-- **Whether fruit-bearing is in the MVP** (question 7's note) — confirm at M5 (design 36 §11).
-- **The board height**, until M7 measures it (design 36 §7).
+- **Whether fruit-bearing is in the MVP** (question 7's note) — confirm at M5 (design 38 §11).
+- **The board height**, until M7 measures it (design 38 §7).
 - **Whether the Meadow post-processing profile beats the golden hour** — it arrives as an option to
   flick between, the way the Look switch was designed.
 - **PR #174** conflicts with `main` as of this date and needs a merge-up and an approving review

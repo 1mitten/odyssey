@@ -197,11 +197,30 @@ namespace Odyssey.Sim.World
             bool isIndoors = _enclosure?.IsIndoors(cell) ?? false;
 
             // The tile's own answer to "how warm is it here": its room's air where it is in a
-            // room, the outdoor curve where it is not. Read from the thermal system — the same
-            // one source the needs system and the growth pass ask — so the pane cannot disagree
-            // with the simulation about what a colonist is standing in.
+            // room, the outdoor curve where it is not, plus the radiance of any heat source near
+            // enough to shine on it (design 32). Read from the thermal system — the same one
+            // source the needs system and the growth pass ask — so the pane cannot disagree with
+            // the simulation about what a colonist is standing in.
+            //
+            // **Asked of the cell a colonist would STAND in, which is one up from a solid one.**
+            // A click on open ground lands on the SOLID cell it is drawn on, exactly as a click
+            // on a field does — the lift the zone read above performs for the same reason. The
+            // air, the rooms and the heat sources all live in the cell above that, so asking the
+            // clicked cell directly reported the outdoor curve while standing indoors, and
+            // reported no warmth at all beside a campfire: the fire is in the air cell and
+            // radiance does not cross layers, so the ground under it is a different storey.
+            // Reported as "the surrounding tiles of the campfire didn't seem to happen"
+            // (owner, 2026-09-23). Measured, it was worse than reported: with this lift
+            // removed the fire's own tile, the one beside it and one six cells away all read
+            // 1067 — the bare outdoor curve, identically. Nothing was reading the air at all,
+            // indoors or out; the surrounding tiles were the visible half of a larger silence.
+            //
             // No thermal system, nothing to say — the field's own silence, not a reading of 0 °C.
-            int ambientTempC = _temperature?.CellTemp(cell, world.CurrentTick) ?? int.MinValue;
+            int warmthCell = cell;
+            if (_grid.IsSolidTerrain(cell) && cell + _grid.Size.LayerStride < _grid.Terrain.Length)
+                warmthCell += _grid.Size.LayerStride;
+
+            int ambientTempC = _temperature?.CellTemp(warmthCell, world.CurrentTick) ?? int.MinValue;
 
             writer.AddCellDetail(new CellDetail(
                 cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,

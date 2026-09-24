@@ -83,6 +83,16 @@ namespace Odyssey.Presentation.Audio
         readonly GridSize _size;
         readonly GameObject _root;
         readonly AudioSource[] _voices = new AudioSource[VoiceCount];
+
+        /// <summary>
+        /// Looping sounds that belong to a thing at a place, by sound id — the third kind of
+        /// emitter, which <c>SoundIds.Campfire</c> has been waiting for since its clip was
+        /// imported. Separate voices from the one-shot pool on purpose: a loop holds its voice
+        /// for as long as the thing exists, and a fire burning for an hour must not be able to
+        /// starve the axe.
+        /// </summary>
+        readonly Dictionary<string, LoopEmitters> _loops =
+            new Dictionary<string, LoopEmitters>(System.StringComparer.Ordinal);
         readonly double[] _busyUntil = new double[VoiceCount];
         readonly int[] _voicePriority = new int[VoiceCount];
         readonly float[] _voiceGain = new float[VoiceCount];
@@ -404,6 +414,64 @@ namespace Odyssey.Presentation.Audio
             OneShotsPlayed++;
             return true;
         }
+
+        /// <summary>
+        /// Bring one looping sound's voices into line with the things making it.
+        ///
+        /// <para>Called once a frame by whoever owns those things — <c>FireDirector</c> for
+        /// campfires — with everything of that kind that is currently <b>drawn</b>. Visibility is
+        /// the caller's business, not this class's: a fire on a hidden storey is not audible for
+        /// the same reason it is not lit, and the caller is the one that already knows.</para>
+        ///
+        /// <para>An unknown id, or one whose clips are all missing, is silent rather than an
+        /// exception — the same bargain <see cref="PlayOneShot"/> makes, and the reason the game
+        /// runs with no clips at all.</para>
+        /// </summary>
+        /// <returns>How many voices are sounding.</returns>
+        public int SyncLoops(string id, IReadOnlyList<LoopPoint> points)
+        {
+            if (!_byId.TryGetValue(id, out AudioCatalogue.SoundDef def)) return 0;
+
+            if (!_loops.TryGetValue(id, out LoopEmitters pool))
+            {
+                pool = new LoopEmitters();
+                _loops[id] = pool;
+            }
+
+            if (points.Count == 0)
+            {
+                pool.StopAll();
+                return 0;
+            }
+
+            AudioClip? clip = PickClip(def.Clips);
+            if (clip == null)
+            {
+                ClipMissing++;
+                pool.StopAll();
+                return 0;
+            }
+
+            pool.Sync(points, _listener,
+                () => Voice($"Loop {id}"),
+                source =>
+                {
+                    source.clip = clip;
+                    source.pitch = 1f;
+                    source.volume = Mathf.Clamp01(def.Volume) * AudioMath.DbToLinear(GainDb(def.Bus));
+                    source.spatialBlend = def.SpatialBlend;
+                    source.minDistance = def.MinDistance;
+                    source.maxDistance = def.MaxDistance;
+                    source.priority = def.Priority;
+                    source.dopplerLevel = 0f;
+                });
+
+            return pool.Sounding;
+        }
+
+        /// <summary>How many voices one looping sound has going. Diagnostic; a test counts it.</summary>
+        public int LoopsSounding(string id) =>
+            _loops.TryGetValue(id, out LoopEmitters pool) ? pool.Sounding : 0;
 
         /// <summary>
         /// An alert: the chime, and the duck that makes room for it. Alerts ride their own bus,

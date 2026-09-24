@@ -74,7 +74,7 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>
         /// Every level of detail the art ships, finest first; <c>Lods[0].Parts</c> is
         /// <see cref="Parts"/>. A module without levels — or whose levels could not be drawn from
-        /// one matrix — has exactly one (<c>docs/design/36-meadow-overhaul.md</c> §3).
+        /// one matrix — has exactly one (<c>docs/design/38-meadow-overhaul.md</c> §3).
         /// </summary>
         public ModuleLod[] Lods { get; }
 
@@ -405,7 +405,7 @@ namespace Odyssey.Presentation.Rendering
         /// <para><b>Null unless one matrix can draw every level</b> — one LOD group, and every part
         /// of every level at the same local transform as the finest level's first part. That is
         /// what the renderer relies on to keep a single matrix array per placement and swap only
-        /// the meshes (<c>docs/design/36-meadow-overhaul.md</c> §3). A prefab that breaks it is not
+        /// the meshes (<c>docs/design/38-meadow-overhaul.md</c> §3). A prefab that breaks it is not
         /// an error: it draws its finest level, as everything did before levels existed.</para>
         ///
         /// <para>A level holds the renderers its <c>LOD</c> names plus every renderer no level

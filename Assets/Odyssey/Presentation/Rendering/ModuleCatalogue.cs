@@ -353,6 +353,19 @@ namespace Odyssey.Presentation.Rendering
         public List<CombatClipEntry> combat = new List<CombatClipEntry>();
 
         /// <summary>
+        /// The settled idle a live figure blends into while it sits beside a fire (design 31
+        /// §18d, <c>SitPose</c>). Not a gait: gaits are chosen by speed and a sitter has none, so
+        /// this is its own input on the figure's mixer, weighted by how far down she is.
+        ///
+        /// <para>Null on every row that cannot sit, and on a clone without the packs; either way
+        /// the figure stands at the fire, which is what it did before this existed.</para>
+        /// </summary>
+        public AnimationClip? sitClip;
+
+        [Tooltip("The settled idle this row sits in, by asset name. Used to rebuild the reference.")]
+        public string sitClipName = string.Empty;
+
+        /// <summary>
         /// Lay a <b>computed</b> four-legged gait over this row's idle (design 29 §8a,
         /// <c>QuadrupedGait</c>). The stride is measured off the rig's own legs at build, not
         /// declared here. Off, the default, means the row's clips are its whole locomotion. On for

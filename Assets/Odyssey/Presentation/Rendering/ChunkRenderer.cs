@@ -100,7 +100,7 @@ namespace Odyssey.Presentation.Rendering
         /// this camera's 40° is about 25 m, and the play camera stands 60 to 160 m off the ground —
         /// so with the numbers as shipped, every tuft on screen would be its crudest card. Each
         /// unit that brings art in turns it on with <see cref="LodBias"/> set against that art and
-        /// a person looking at it (design 36 §11, M4 and M5).</para>
+        /// a person looking at it (design 38 §11, M4 and M5).</para>
         /// </summary>
         public bool UseLods { get; set; }
 
@@ -653,7 +653,7 @@ namespace Odyssey.Presentation.Rendering
 
                 // A module drawn by level keeps one bucket whose matrices serve every part of every
                 // level; the chunk's distance chooses which level's parts are submitted from it
-                // (docs/design/36-meadow-overhaul.md §3). Anything else is one part per bucket.
+                // (docs/design/38-meadow-overhaul.md §3). Anything else is one part per bucket.
                 ModulePart[]? levelParts = null;
                 if (resolved.DrawsByLevel)
                 {

@@ -9,7 +9,7 @@ namespace Odyssey.Tests.Presentation
 {
     /// <summary>
     /// Levels of detail drawn through instancing, where no <see cref="LODGroup"/> ever runs
-    /// (<c>docs/design/36-meadow-overhaul.md</c> §3, M2).
+    /// (<c>docs/design/38-meadow-overhaul.md</c> §3, M2).
     ///
     /// <para>The world is drawn with <c>RenderMeshInstanced</c>, so a prefab's LOD group does
     /// nothing at draw time and the library used to keep its finest level only. These pin the two
@@ -183,7 +183,7 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>Off unless a unit turns it on: the pack's numbers put every tuft on screen at its
-        /// crudest card from this camera (design 36 §3).</summary>
+        /// crudest card from this camera (design 38 §3).</summary>
         [Test]
         public void LevelsAreOffUntilAUnitTurnsThemOn()
         {
