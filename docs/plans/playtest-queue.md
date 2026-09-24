@@ -23,14 +23,38 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does a marauder break in, and do the weapons feel different on wood and stone?**
+  (`claude/combat-owner-round`, design 33 §14b, §14d.)
+  - *Break in.* Build a small room of wooden walls with **no door** round a colonist, or down
+    every colonist. Then spawn a marauder from the debug menu. It should walk to the nearest wall
+    you built and beat it down: floating numbers, the thud, and the wall gone with nothing left
+    behind.
+  - *Look up.* Take down another wall of the room yourself, or send a colonist out. Within a few
+    seconds it should leave the wall and go for her.
+  - *Weapons.* Order a drafted colonist with a machete on to a wooden wall, then on to a stone
+    one; do the same with a bat.
+    - The machete should chew through wood (about 10 a blow) and barely mark stone (about 4).
+    - The bat should do better on stone (about 9) than on wood (about 7).
+    - Her Melee should not rise while she does it.
+  - A wrong answer looks like any of these:
+    - a marauder that idles beside your walls;
+    - one that attacks a wall while a colonist it could reach stands in the open;
+    - one that keeps at a wall for a long time after a way in has opened;
+    - one that goes for a ruined-city wall;
+    - the same numbers from every weapon on every wall.
+  - Expected and not a fault:
+    - a marauder walks straight through a **closed door**. Doors do not stop it yet, which is an
+      open question (§14g).
+    - with everyone down it will break the **beds** (§14g).
+
 - **Does friendly fire feel like anything?** (C5, `claude/combat-phase4`, design 33 §12). Draft a
   colonist, Ctrl + right-click another: she is attacked, fights back, and her mood drops by about 8
   points for a day (the Needs panel's mood; the Thoughts tab that would name it is still disabled).
   Let a colonist die: every other colonist's mood drops by about 6 for three days, and a
   marauder's death moves nobody. A wrong answer is no drop, a drop for a marauder, or a drop that
-  stacks up on every blow. Open for the owner (§12): should a second attack renew the day; should
-  the one who started it remember the blows she takes back; is three stacked deaths the right cap;
-  should a miss count?
+  stacks up on every blow. **Since the owner's answers (§14, `claude/combat-owner-round`)**: a
+  swing that misses or is dodged gives the drop too, and a second swing renews the day rather than
+  stacking. Both sides of a fight carry it.
 
 - **Does blood read as blood, and is it too much?** (`claude/combat-blood`, design 33 §10).
   *Arm every colonist*, *Spawn 3 marauders*, and watch at the play camera's distance. Every landed

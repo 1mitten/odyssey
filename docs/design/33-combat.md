@@ -2772,7 +2772,7 @@ index rides every saved memory), and one listener, `FriendlyFireListener`, regis
 
 | Thought | Given to | When | Mood | Lasts | Stacks |
 |---|---|---|---|---|---|
-| `Thought_AttackedByColonist` | the colonist hurt | a blow by a colonist takes her hit points (`DamageApplied`) | −80 | one day, 60,000 ticks | once |
+| `Thought_AttackedByColonist` | the colonist swung at | a colonist's swing reaches her, landed or not (`SwingResolved`, since §14f; it was `DamageApplied`) | −80 | one day, 60,000 ticks, renewed by a second swing (§14e) | once |
 | `Thought_ColonistDied` | every other colonist on the board | a colonist dies (`Died`) | −60 | three days, 180,000 ticks | three times, at the usual 750 ‰ each |
 
 **The owner's −8 and −6 are points on a mood of a hundred; ours is thousandths of a thousand**
@@ -3265,7 +3265,64 @@ superseded.
   search to find that wall. Worth asking after the first play.
 - **The city's concrete, steel and composite take every blow at ×1.** They would need numbers if
   (b) comes back.
+- **With every colonist down, a marauder breaks the beds.** A bed is the nearest colony building
+  to a fight more often than not. In the soak's ten days (below) it broke five buildings, and no
+  colonist got back up, against three who did before the change.
+  - That is the owner's rule working as asked, since a bed is a target (c).
+  - It also means a marauder left alone destroys the one thing a rescue needs.
+  - Say if the base should exclude beds, or if a marauder should leave while nobody is standing.
 
 ### 14h. Tests, and the controls seen to fail
 
-*To be filled in as the work lands.*
+Fast tier: Sim **1,401** (from 1,391), Hud **1,003** (unchanged), Long **41**, all green.
+`GoldenMasterTests` is green without a re-bake. All three content gates are clean: no name was
+added, so there is no wiki row. Never run in Unity, and **no Presentation or Editor file was
+touched**.
+
+| Test | Claim |
+|---|---|
+| `BuildingTargetTests.ABlowAtABuildingTrainsNoMelee` | the one method and a whole order give no Melee; a swing at a pawn still trains (the control) |
+| `BuildingTargetTests.TheBlowsKindMeetsTheMaterial` | the four numbers and the defaults in content; `Resolve` multiplies the rolled damage by them |
+| `BuildingTargetTests.EveryBlowAtABuildingLandsForItsDamageAlone` (changed) | fists on stone now land at ×1.25 |
+| `BuildingTargetTests.AMarauderWithNobodyToReachBreaksInThroughTheNearestWall` | a colonist sealed in eight walls: the nearest wall, unforced, only that one struck, and the colonist once it is down |
+| `BuildingTargetTests.AMarauderGoesForAColonistItCanReachBeforeAnyBuilding` | the order of the rule |
+| `BuildingTargetTests.WithEveryColonistDownItTakesTheNearestColonyBuildingAndTheOlderOnATie` | all down; a tie to the older record; a nearer city wall passed over |
+| `BuildingTargetTests.ABuildingItCannotGetBesideIsPassedOver` | a nearer shelf sealed in city walls against a reachable wall further off |
+| `BuildingTargetTests.AMarauderAtAWallLooksUpWhenAColonistCanBeReached` | a way in opened while it strikes: on her 104 ticks later, the wall still standing |
+| `FriendlyFireTests.ASecondBlowRenewsTheDay` (replaces `…NeitherStacksNorRenews`) | one copy, the latest blow's day |
+| `FriendlyFireTests.NoOtherThoughtRenews` | the flag is the friendly-fire memory's alone; a meal past its limit is still dropped |
+| `FriendlyFireTests.AMaraudersBlowIsNotFriendlyFire` (replaces `…AndAMissAreNotFriendlyFire`) | a marauder's hit or miss, and a colonist hitting a marauder, give nothing |
+| `FriendlyFireTests.AColonistsSwingThatMissesIsRememberedToo` | a miss and a dodge each give the memory; a miss then a hit is one memory; the dead remember nothing |
+| `FriendlyFireTests.EverySwingAtAPawnIsHeardOnceAndNoneAtABuilding` | the hook's order (a swing before its damage) and that a building blow raises none |
+| `FriendlyFireTests.ACtrlAttackOnAnUndraftedColonistIsFoughtBackAndRemembered` (changed) | the one who started it remembers the swing she takes back (C5 (b)) |
+| `HostileTests.WithNobodyStandingAndNothingBuiltAMarauderIdles` (renamed) | idling needs no building on the board now; the board has no bed |
+
+**The soak** (`MarauderSoakTests`, Long) now logs the buildings broken down. Over ten days it
+broke five. It resolved 231 pawn swings against 377 before, 7 colonists went down against 11, and
+none got up against 3 (§14g). Every invariant held, and the mid-fight save resumed equal.
+
+Each rule was withheld and its test run and seen to fail, then restored:
+
+| Withheld | Failed |
+|---|---|
+| no Melee from a building (the grant put back) | `ABlowAtABuildingTrainsNoMelee` |
+| the material multiplier | `TheBlowsKindMeetsTheMaterial`, `EveryBlowAtABuildingLandsForItsDamageAlone` |
+| the XML and the code oracle agreeing (stone sharp 501 in the XML only) | `TheXmlIsTheSameContentAsTheCodeOracle` and the two fingerprint tests |
+| renewal (`AddMemory` as it was) | `ASecondBlowRenewsTheDay` |
+| renewal only where the thought says (the flag ignored) | `NoOtherThoughtRenews` |
+| the memory on the swing (heard on `DamageApplied` only) | `AColonistsSwingThatMissesIsRememberedToo`, and the starter's line of `ACtrlAttack…` |
+| the dead remember nothing | `AColonistsSwingThatMissesIsRememberedToo` |
+| the building fallback (the node as it was) | `…BreaksInThroughTheNearestWall`, `WithEveryColonistDown…`, `…LooksUpWhenAColonistCanBeReached` |
+| the unforced re-look (the driver as it was) | `…LooksUpWhenAColonistCanBeReached` |
+| a building only when no colonist (the building first) | `…GoesForAColonistItCanReachBeforeAnyBuilding`, `…BreaksIn…`, `…LooksUp…` |
+| the tie to the lower handle (`>` for `>=`) | `WithEveryColonistDown…OlderOnATie` |
+| colony-built only | `WithEveryColonistDown…`, `ABuildingItCannotGetBesideIsPassedOver` |
+| a side it can reach | `ABuildingItCannotGetBesideIsPassedOver` |
+| the re-look for unforced attacks only (applied to a player's order too) | six of C6's order tests, `TheDraftDoesNotLapseWhileSheBeatsAWall` among them |
+
+**Content fingerprints, each moved once, deliberately:**
+
+- `ConstructionContentDefTests.StuffFingerprint`, 4054578596745551293 → 3846353424243238969, for
+  the two damage columns;
+- `PawnContentDefTests.ContentFingerprint`, 13836212755718261116 → 5393620802301053337, for
+  `renewsOnRepeat`.
