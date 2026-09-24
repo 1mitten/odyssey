@@ -275,6 +275,13 @@ namespace Odyssey.Sim.Pawns
                 // and a figure that swings an axe while walking is worse than one that glides.
                 int workFocus = pawn.Driver != null ? pawn.Driver.WorkFocus : -1;
 
+                // Sitting by a fire, and which fire: the figure faces it (design 31 §18d). The
+                // cell rides in WorkCell, which is otherwise the pawn's own cell when idle.
+                bool seated = pawn.CurrentJob != null && pawn.CurrentJob.Seated;
+                CellRef faces = workFocus >= 0 ? size.FromIndex(workFocus)
+                    : seated ? size.FromIndex(pawn.CurrentJob!.DestCell)
+                    : cell;
+
                 writer.AddPawn(new PawnView(
                     pawn.Id,
                     cell,
@@ -285,13 +292,14 @@ namespace Odyssey.Sim.Pawns
                     nextCell,
                     movePercent,
                     workFocus >= 0,
-                    workFocus >= 0 ? size.FromIndex(workFocus) : cell,
+                    faces,
                     pawn.Gesture,
                     pawn.GestureSerial,
                     pawn.Asleep,
                     movePerMille,
                     moveDeltaPerMille,
-                    pawn.Kind));
+                    pawn.Kind,
+                    seated));
 
                 // An animal publishes its kind and its pace and nothing else of what follows
                 // (design 29 §2): it has no skills, no work, no schedule, no name and nothing in

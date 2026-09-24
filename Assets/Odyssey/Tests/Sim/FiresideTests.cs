@@ -226,6 +226,176 @@ namespace Odyssey.Tests.Sim
                 "constantly and read as the milling this was written to stop");
         }
 
+        /// <summary>
+        /// The settles an idler makes at the hearth over a stretch of ticks, held in the ring.
+        /// Only the waits: a shuffle is a walk, and is what the tests above are about.
+        /// </summary>
+        static System.Collections.Generic.List<Job> Settles(ColonyWorld colony, Pawn pawn, int ring, int ticks)
+        {
+            var settles = new System.Collections.Generic.List<Job>();
+            for (int i = 0; i < ticks; i++)
+            {
+                colony.World.Tick();
+                pawn.Cell = ring;
+                var job = new Job();
+                if (!new IdleThinkNode().TryGiveJob(pawn, colony.Pawns, job)) continue;
+                if (colony.Pawns.Content.Jobs[job.DefIndex].driver == JobIndex.Wait) settles.Add(job);
+            }
+            return settles;
+        }
+
+        /// <summary>
+        /// Some settles are seated and some stand, so a ring of idlers alternates between the two
+        /// (owner, 2026-09-23: *"they sit by the fire or stand by the fire for a bit and then sit
+        /// down and vice versa — for variation so you can tell easily who is idle"*).
+        ///
+        /// <para>Both halves are asserted to be a real share rather than merely present. A ring
+        /// where one colonist in fifty ever sits is a ring that stands, and the test should say
+        /// so rather than pass on a single lucky roll.</para>
+        /// </summary>
+        [Test]
+        public void AtTheHearthSomeSettlesSitAndSomeStand()
+        {
+            ColonyWorld colony = Board(colonists: 1, beds: 0);
+            int fire = Fire(colony, 12, 12);
+            colony.World.Tick(Odyssey.Sim.Temperature.TemperatureSystem.IntervalTicks * 2);
+
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            var settles = Settles(colony, pawn, FiresideRing(fire), 400);
+
+            int seated = 0;
+            foreach (Job job in settles) if (job.Seated) seated++;
+            int standing = settles.Count - seated;
+
+            Assert.That(settles.Count, Is.GreaterThan(100), "she hardly settled at all");
+            Assert.That(seated, Is.GreaterThan(settles.Count / 4),
+                $"only {seated} of {settles.Count} settles at the hearth were seated");
+            Assert.That(standing, Is.GreaterThan(settles.Count / 4),
+                $"only {standing} of {settles.Count} settles at the hearth stood");
+        }
+
+        /// <summary>
+        /// A seat names the fire it is beside, which is what the figure turns to face. Without it
+        /// a colonist who walked in from the far side would sit with her back to the flames — the
+        /// same reason <c>WorkCell</c> exists for an axe and a tree.
+        /// </summary>
+        [Test]
+        public void ASeatFacesTheFireItIsBeside()
+        {
+            ColonyWorld colony = Board(colonists: 1, beds: 0);
+            int fire = Fire(colony, 12, 12);
+            colony.World.Tick(Odyssey.Sim.Temperature.TemperatureSystem.IntervalTicks * 2);
+
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            int seats = 0;
+            foreach (Job job in Settles(colony, pawn, FiresideRing(fire), 200))
+            {
+                if (!job.Seated) continue;
+                seats++;
+                Assert.That(job.DestCell, Is.EqualTo(fire), "a seat faces somewhere other than the fire");
+            }
+            Assert.That(seats, Is.GreaterThan(0), "nobody sat, so nothing here was asked");
+        }
+
+        /// <summary>
+        /// Sitting down is a longer stay than standing about. Every seated settle outlasts every
+        /// standing one, so the alternation reads as <i>stand for a bit, then sit</i> rather than
+        /// as bobbing up and down.
+        /// </summary>
+        [Test]
+        public void ASeatedSettleOutlastsAStandingOne()
+        {
+            ColonyWorld colony = Board(colonists: 1, beds: 0);
+            int fire = Fire(colony, 12, 12);
+            colony.World.Tick(Odyssey.Sim.Temperature.TemperatureSystem.IntervalTicks * 2);
+
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            int shortestSeat = int.MaxValue, longestStand = 0;
+            foreach (Job job in Settles(colony, pawn, FiresideRing(fire), 400))
+            {
+                if (job.Seated) shortestSeat = System.Math.Min(shortestSeat, job.WorkTicks);
+                else longestStand = System.Math.Max(longestStand, job.WorkTicks);
+            }
+
+            Assert.That(shortestSeat, Is.Not.EqualTo(int.MaxValue), "nobody sat, so nothing here was asked");
+            Assert.That(shortestSeat, Is.GreaterThan(longestStand),
+                $"a seat of {shortestSeat} ticks is no longer than a stand of {longestStand}");
+        }
+
+        /// <summary>
+        /// Nobody sits anywhere but at a fire. A wait with nothing to face — the stand-down, the
+        /// idler with nowhere to wander — is a stand, and on a board with no fire every wait is
+        /// one. The control, and with the golden boards all fireless, the reason none moved.
+        /// </summary>
+        [Test]
+        public void WithNoFireNobodySits()
+        {
+            ColonyWorld colony = Board(colonists: 1, beds: 0);
+            colony.World.Tick(Odyssey.Sim.Temperature.TemperatureSystem.IntervalTicks * 2);
+
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            foreach (Job job in Settles(colony, pawn, pawn.Cell, 400))
+                Assert.That(job.Seated, Is.False, "a colonist sat down with no fire on the board");
+
+            var standDown = new Job();
+            standDown.Reset(JobIndex.Wait);
+            Assert.That(standDown.Seated, Is.False, "a bare wait counts as a seat");
+        }
+
+        /// <summary>
+        /// The view carries it, left to run with nobody holding her anywhere: somewhere in a few
+        /// idle hours she walks to the fire and sits, and on every tick the view says she is
+        /// seated she is in the ring and facing the fire's own cell.
+        /// </summary>
+        [Test]
+        public void TheViewSaysSheIsSeatedAndFacesTheFire()
+        {
+            ColonyWorld colony = Board(colonists: 1, beds: 0);
+            int fire = Fire(colony, 12, 12);
+            CellRef fireCell = Size.FromIndex(fire);
+
+            int seatedTicks = 0;
+            for (int i = 0; i < 6_000; i++)
+            {
+                colony.World.Tick();
+                foreach (PawnView view in colony.World.Views.Current.Pawns)
+                {
+                    if (!view.Seated) continue;
+                    seatedTicks++;
+                    Assert.That(Adjacent(Size.Index(view.Cell.X, view.Cell.Z, view.Cell.Y), fire), Is.True,
+                        $"the view says she is seated at {view.Cell}, which is not beside the fire");
+                    Assert.That(view.WorkCell, Is.EqualTo(fireCell), "a seated view faces somewhere else");
+                    Assert.That(view.Working, Is.False, "sitting by the fire is not work");
+                }
+            }
+
+            Assert.That(seatedTicks, Is.GreaterThan(0), "in 6,000 idle ticks she never sat at the fire");
+        }
+
+        /// <summary>
+        /// A seat is part of the job, so it is saved and hashed with it and a colonist loaded
+        /// mid-sit is still sitting. Asserted because the obvious place to add a flag would have
+        /// been a field the save does not carry.
+        /// </summary>
+        [Test]
+        public void ASeatSurvivesASave()
+        {
+            ColonyWorld colony = Board(colonists: 1, beds: 0);
+            int fire = Fire(colony, 12, 12);
+
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            for (int i = 0; i < 6_000 && !(pawn.CurrentJob?.Seated ?? false); i++) colony.World.Tick();
+            Assume.That(pawn.CurrentJob?.Seated ?? false, Is.True, "she never sat, which the test above reports");
+
+            ColonyWorld restored = Board(colonists: 1, beds: 0);
+            restored.Load(colony.Save());
+            Job? job = restored.Pawns.Pawns.All[0].CurrentJob;
+
+            Assert.That(job?.Seated ?? false, Is.True, "a colonist loaded mid-sit is standing");
+            Assert.That(job!.DestCell, Is.EqualTo(fire));
+            Assert.That(restored.World.ComputeStateHash().Value, Is.EqualTo(colony.World.ComputeStateHash().Value));
+        }
+
         /// <summary>The first free cell of a fire's ring — where a colonist at the hearth stands.</summary>
         static int FiresideRing(int fire)
         {

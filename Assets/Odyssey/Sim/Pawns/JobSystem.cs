@@ -807,6 +807,24 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int ShufflePerMille = 125;
 
+        /// <summary>
+        /// How often a settle at the hearth is taken sitting down, per mille (design 31 §18d).
+        ///
+        /// <para>Rolled afresh on every settle, so consecutive settles give the owner's *"stand by
+        /// the fire for a bit and then sit down and vice versa"* without any memory of the last
+        /// one. An even split because the point is that both are seen: a sitter is the clearest
+        /// tell on the board that somebody has nothing to do. INVENTED; a playtest number.</para>
+        /// </summary>
+        public const int SitPerMille = 500;
+
+        /// <summary>
+        /// How many times longer a seated settle lasts than a standing one. Sitting down is a
+        /// longer stay than standing about, and a ring that bobs up and down every few seconds is
+        /// its own kind of milling. With the linger's spread this makes every seat outlast every
+        /// stand. INVENTED; a playtest number.
+        /// </summary>
+        public const int SeatedLingerFactor = 2;
+
         /// <summary>How long a settle lasts, in ticks, before she thinks again.</summary>
         public const int LingerTicks = 240;
 
@@ -836,9 +854,8 @@ namespace Odyssey.Sim.Pawns
             // stays. A hearth people keep leaving is not a hearth.
             if (fireside == pawn.Cell)
             {
-                // Mostly stand. Sometimes shift to another place in the ring, so a group round a
-                // fire is a group rather than a frieze — the variation the owner asked for, with
-                // the pose it wants still owed (§17f).
+                // Sometimes shift to another place in the ring, so a group round a fire is a
+                // group rather than a frieze.
                 if (rng.NextInt(0, 1_000) < ShufflePerMille)
                 {
                     int along = FiresideTarget.Find(pawn, ctx, reserve: false, excludeOwn: true);
@@ -853,6 +870,18 @@ namespace Odyssey.Sim.Pawns
 
                 job.Reset(JobIndex.Wait);
                 job.WorkTicks = LingerTicks + rng.NextInt(0, LingerVarianceTicks);
+
+                // Otherwise stand, or sit down facing the fire (design 31 §18d). The fire goes in
+                // the wait's destination, which is what makes the job a seat.
+                if (rng.NextInt(0, 1_000) < SitPerMille)
+                {
+                    int fire = FiresideTarget.FireBeside(pawn.Cell, ctx);
+                    if (fire >= 0)
+                    {
+                        job.DestCell = fire;
+                        job.WorkTicks *= SeatedLingerFactor;
+                    }
+                }
                 return true;
             }
 
@@ -1088,6 +1117,29 @@ namespace Odyssey.Sim.Pawns
             }
 
             return best;
+        }
+
+        /// <summary>
+        /// The heat source in the ring round <paramref name="cell"/> — one of the eight beside it
+        /// on its own layer — or -1. The first in the thermal system's own order when a cell is
+        /// beside two, so the answer is the same on every machine.
+        /// </summary>
+        public static int FireBeside(int cell, PawnContext ctx)
+        {
+            var warmth = ctx.Temperature;
+            if (warmth == null) return -1;
+
+            GridSize size = ctx.Size;
+            CellRef at = size.FromIndex(cell);
+            for (int i = 0; i < warmth.HeatSourceCount; i++)
+            {
+                int source = warmth.HeatSourceCell(i);
+                CellRef fire = size.FromIndex(source);
+                if (fire.Y != at.Y || source == cell) continue;
+                if (System.Math.Abs(fire.X - at.X) <= 1 && System.Math.Abs(fire.Z - at.Z) <= 1) return source;
+            }
+
+            return -1;
         }
     }
 
