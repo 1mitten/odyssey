@@ -173,7 +173,13 @@ namespace Odyssey.Tests.Sim
         public sealed class HookCounter : ICombatListener
         {
             public readonly List<string> Heard = new List<string>();
-            public int DamageCount, DownedCount, DiedCount, LastCorpse;
+            public int SwingCount, DamageCount, DownedCount, DiedCount, LastCorpse;
+
+            public void SwingResolved(in SwingReport report)
+            {
+                SwingCount++;
+                Heard.Add("swing:" + report.Target.Id.Value);
+            }
 
             public void DamageApplied(in DamageReport report)
             {

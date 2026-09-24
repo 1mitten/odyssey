@@ -858,6 +858,7 @@ namespace Odyssey.Tests.Sim
                 _heard = heard;
             }
 
+            public void SwingResolved(in SwingReport report) { }
             public void DamageApplied(in DamageReport report) => _heard.Add(_name + ":damage");
             public void Downed(Pawn pawn, Pawn? by, int tick) => _heard.Add(_name + ":downed");
             public void Died(Pawn pawn, Pawn? by, int corpseId, int tick) => _heard.Add(_name + ":died");

@@ -75,11 +75,11 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// The controls on the attack: a marauder's blow is not friendly fire, a swing that missed
-        /// is not remembered, and a colonist hitting a marauder gives nobody anything.
+        /// The controls on the attack: a marauder's blow — landed or missed — is not friendly fire,
+        /// and a colonist hitting a marauder gives nobody anything. Colonist on colonist only (§12b).
         /// </summary>
         [Test]
-        public void AMaraudersBlowAndAMissAreNotFriendlyFire()
+        public void AMaraudersBlowIsNotFriendlyFire()
         {
             var colony = Board(colonists: 2);
             colony.World.Tick(5);
@@ -88,11 +88,8 @@ namespace Odyssey.Tests.Sim
             int tick = colony.World.CurrentTick;
 
             Strike(colony, marauder, victim, 1_000);
-            Assert.That(Copies(victim, ThoughtIndex.AttackedByColonist), Is.EqualTo(0), "a marauder's blow was remembered");
-
-            colony.Pawns.Combat!.ApplySwing(by, victim, Fists(colony.Pawns), new SwingOutcome(CombatEventKind.Miss), tick);
-            colony.Pawns.Combat!.ApplySwing(by, victim, Fists(colony.Pawns), new SwingOutcome(CombatEventKind.Dodge), tick);
-            Assert.That(Copies(victim, ThoughtIndex.AttackedByColonist), Is.EqualTo(0), "a swing that never landed was remembered");
+            colony.Pawns.Combat!.ApplySwing(marauder, victim, Fists(colony.Pawns), new SwingOutcome(CombatEventKind.Miss), tick);
+            Assert.That(Copies(victim, ThoughtIndex.AttackedByColonist), Is.EqualTo(0), "a marauder's swing was remembered");
 
             Strike(colony, by, marauder, 1_000);
             Assert.That(Copies(marauder, ThoughtIndex.AttackedByColonist), Is.EqualTo(0));
@@ -100,6 +97,68 @@ namespace Odyssey.Tests.Sim
 
             Strike(colony, by, victim, 1_000);
             Assert.That(Copies(victim, ThoughtIndex.AttackedByColonist), Is.EqualTo(1), "the control: a colonist's blow that lands");
+        }
+
+        /// <summary>
+        /// A colonist's swing at a colonist is an attack whatever came of it (design 33 §14f; the
+        /// owner: a missed swing counts) — a miss, a dodge and a hit alike give the memory, once. A
+        /// swing arriving at a colonist already past the death line gives nothing: the dead feel
+        /// nothing (§12b).
+        /// </summary>
+        [Test]
+        public void AColonistsSwingThatMissesIsRememberedToo()
+        {
+            var colony = Board(colonists: 4);
+            colony.World.Tick(5);
+            Pawn by = colony.Pawns.Pawns.All[0], missed = colony.Pawns.Pawns.All[1], dodged = colony.Pawns.Pawns.All[2];
+            Pawn dead = colony.Pawns.Pawns.All[3];
+            int tick = colony.World.CurrentTick;
+
+            colony.Pawns.Combat!.ApplySwing(by, missed, Fists(colony.Pawns), new SwingOutcome(CombatEventKind.Miss), tick);
+            colony.Pawns.Combat!.ApplySwing(by, dodged, Fists(colony.Pawns), new SwingOutcome(CombatEventKind.Dodge), tick);
+            Assert.That(missed.HpMilli, Is.EqualTo(missed.HpMaxMilli), "the control: the miss took nothing");
+            Assert.That(Copies(missed, ThoughtIndex.AttackedByColonist), Is.EqualTo(1), "a missed swing was not remembered");
+            Assert.That(Copies(dodged, ThoughtIndex.AttackedByColonist), Is.EqualTo(1), "a dodged swing was not remembered");
+            Assert.That(ExpiryOf(missed, ThoughtIndex.AttackedByColonist), Is.EqualTo(tick + Calendar.TicksPerDay));
+            Assert.That(Copies(by, ThoughtIndex.AttackedByColonist), Is.EqualTo(0), "the one who swung was not swung at");
+
+            colony.Pawns.Combat!.ApplySwing(by, missed, Fists(colony.Pawns), Blow(1_000), tick);
+            Assert.That(Copies(missed, ThoughtIndex.AttackedByColonist), Is.EqualTo(1), "a miss and then a hit are one memory");
+
+            Strike(colony, by, dead, Fatal(dead));
+            dead.Memories.Clear();
+            colony.Pawns.Combat!.ApplySwing(by, dead, Fists(colony.Pawns), new SwingOutcome(CombatEventKind.Miss), tick);
+            Assert.That(Copies(dead, ThoughtIndex.AttackedByColonist), Is.EqualTo(0), "the dead remembered a swing");
+        }
+
+        /// <summary>
+        /// The hook the memory is heard on (design 33 §14f): <c>SwingResolved</c>, once for every swing
+        /// that reaches a pawn — a hit, a miss or a dodge — before <c>DamageApplied</c> for a hit; and
+        /// never for a blow at a building, which raises no hooks (§13g).
+        /// </summary>
+        [Test]
+        public void EverySwingAtAPawnIsHeardOnceAndNoneAtABuilding()
+        {
+            var colony = Board(colonists: 2);
+            colony.World.Tick(5);
+            Pawn a = colony.Pawns.Pawns.All[0], b = colony.Pawns.Pawns.All[1];
+            var hooks = new HookCounter();
+            colony.Pawns.CombatHooks.Add(hooks);
+            int tick = colony.World.CurrentTick;
+
+            colony.Pawns.Combat!.ApplySwing(a, b, Fists(colony.Pawns), new SwingOutcome(CombatEventKind.Miss), tick);
+            colony.Pawns.Combat!.ApplySwing(a, b, Fists(colony.Pawns), new SwingOutcome(CombatEventKind.Dodge), tick);
+            colony.Pawns.Combat!.ApplySwing(a, b, Fists(colony.Pawns), Blow(1_000), tick);
+            Assert.That(hooks.Heard, Is.EqualTo(new[]
+                { "swing:" + b.Id.Value, "swing:" + b.Id.Value, "swing:" + b.Id.Value, "damage:" + b.Id.Value }));
+
+            int cell = Near(colony, 6, 0);
+            Assert.That(colony.Construction.Place(Size.FromIndex(cell), BuildingHandle.Wall,
+                StuffHandle.Wood, 0), Is.EqualTo(IntentRejection.None));
+            Assert.That(colony.Construction.Raise(colony.Pawns, cell), Is.True);
+            Assert.That(BuildingTargets.TryFind(colony.Pawns, cell, out BuildingTarget wall), Is.True);
+            colony.Pawns.Combat!.StrikeBuilding(a, wall, cell, Fists(colony.Pawns), Blow(1_000), tick);
+            Assert.That(hooks.SwingCount, Is.EqualTo(3), "a blow at a wall was heard as a swing at a pawn");
         }
 
         /// <summary>
@@ -278,6 +337,16 @@ namespace Odyssey.Tests.Sim
             Assert.That(rules.TicksOf(b).Count, Is.GreaterThan(0), "the one attacked never struck back");
             Assert.That(rules.Swings.Where(s => s.Attacker == b.Id.Value).All(s => s.Target == a.Id.Value), Is.True);
             Assert.That(Copies(b, ThoughtIndex.AttackedByColonist), Is.EqualTo(1), "she does not remember it");
+            // The one who started it remembers the blows she takes back (design 33 §14a, C5 (b): the
+            // owner, yes) — any swing, landed or not (§14f). Her answer was decided when its wind-up
+            // began (§9g); it reaches her when the wind-up ends.
+            for (int t = 0; t < 200 && Copies(a, ThoughtIndex.AttackedByColonist) == 0; t++)
+            {
+                a.BreakTicksLeft = 0;
+                b.BreakTicksLeft = 0;
+                colony.World.Tick();
+            }
+            Assert.That(Copies(a, ThoughtIndex.AttackedByColonist), Is.EqualTo(1), "the one who started it remembers nothing");
         }
     }
 }

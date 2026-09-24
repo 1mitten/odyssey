@@ -32,6 +32,14 @@ namespace Odyssey.Sim.Pawns
             CellRef at = _ctx.Size.FromIndex(target.Cell);
             int weapon = armament.ItemDef;
 
+            // Every swing that reaches her is heard, whatever came of it (design 33 §14f: a missed
+            // swing is an attack), from here and nowhere else — before the outcome, so a hit's
+            // DamageApplied follows it.
+            CombatEventKind result = !outcome.Landed && outcome.Result == CombatEventKind.Dodge
+                ? CombatEventKind.Dodge
+                : outcome.Landed ? CombatEventKind.Hit : CombatEventKind.Miss;
+            _ctx.CombatHooks.RaiseSwingResolved(new SwingReport(target, attacker, result, weapon, tick));
+
             if (!outcome.Landed)
             {
                 CombatEventKind kind = outcome.Result == CombatEventKind.Dodge ? CombatEventKind.Dodge : CombatEventKind.Miss;
