@@ -32,10 +32,12 @@ namespace Odyssey.Presentation.Rendering
             readonly bool _foliage;
             readonly bool _water;
             readonly bool _unlit;
+            readonly bool _ours;
 
             public Key(Material baseMaterial, uint tint, uint emission, bool ghost, bool foliage, bool water,
-                bool unlit = false)
+                bool unlit = false, bool ours = false)
             {
+                _ours = ours;
                 _base = baseMaterial;
                 _tint = tint;
                 _emission = emission;
@@ -51,7 +53,7 @@ namespace Odyssey.Presentation.Rendering
             public bool Equals(Key other) =>
                 ReferenceEquals(_base, other._base) && _tint == other._tint &&
                 _emission == other._emission && _ghost == other._ghost &&
-                _unlit == other._unlit &&
+                _unlit == other._unlit && _ours == other._ours &&
                 _foliage == other._foliage && _water == other._water;
 
             public bool Foliage => _foliage;
@@ -59,7 +61,7 @@ namespace Odyssey.Presentation.Rendering
             public override bool Equals(object? obj) => obj is Key other && Equals(other);
 
             public override int GetHashCode() =>
-                unchecked(((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_base) * 397) ^ (int)_tint) * 397 ^ (int)_emission) * 397 ^ (_ghost ? 1 : 0) ^ (_foliage ? 1 << 30 : 0) ^ (_water ? 1 << 29 : 0);
+                unchecked(((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_base) * 397) ^ (int)_tint) * 397 ^ (int)_emission) * 397 ^ (_ghost ? 1 : 0) ^ (_foliage ? 1 << 30 : 0) ^ (_water ? 1 << 29 : 0) ^ (_ours ? 1 << 28 : 0);
         }
 
         readonly Dictionary<Key, Material> _cache = new Dictionary<Key, Material>();
@@ -67,6 +69,8 @@ namespace Odyssey.Presentation.Rendering
         Material? _ghostBase;
         Material? _unlitBase;
         Material? _waterBase;
+        Material? _foliageBase;
+        bool _foliageBaseMissing;
         TreeMaterials? _trees;
 
         public int MaterialCount => _owned.Count;
@@ -130,6 +134,35 @@ namespace Odyssey.Presentation.Rendering
         public const int DefaultFoliageQueue = (int)RenderQueue.GeometryLast + 1;
 
         /// <summary>
+        /// Whether Meadow foliage is drawn by <c>Odyssey/Foliage</c> rather than by a clone of the
+        /// pack's own material (<c>docs/design/38-meadow-overhaul.md</c> §4, M3). On in the game;
+        /// settable so one measurement run can price the two against each other, with
+        /// <see cref="ForgetFoliage"/> to drop the clones already made.
+        /// </summary>
+        public static bool OwnFoliageShader { get; set; } = true;
+
+        /// <summary>
+        /// Drop every foliage clone, so the next draw builds them again under whatever
+        /// <see cref="OwnFoliageShader"/> now says. For a measurement arm. Returns how many went,
+        /// so the arm can check it reached something (<c>docs/bug-patterns.md</c> P18).
+        /// </summary>
+        public int ForgetFoliage()
+        {
+            var gone = new List<Key>();
+            foreach (KeyValuePair<Key, Material> pair in _cache)
+                if (pair.Key.Foliage) gone.Add(pair.Key);
+            foreach (Key key in gone)
+            {
+                Material material = _cache[key];
+                _cache.Remove(key);
+                _owned.Remove(material);
+                if (Application.isPlaying) UnityEngine.Object.Destroy(material);
+                else UnityEngine.Object.DestroyImmediate(material);
+            }
+            return gone.Count;
+        }
+
+        /// <summary>
         /// Moves foliage to another queue, including every foliage clone this cache has already
         /// built — <see cref="FoliageQueue"/> alone is read only when a clone is made, so setting
         /// it on a running world moves nothing. For a measurement arm, not for the game.
@@ -167,11 +200,19 @@ namespace Odyssey.Presentation.Rendering
         public Material Get(Material baseMaterial, Color tint, Color emission, bool ghost, float alpha,
             bool foliage = false, bool water = false, bool unlit = false)
         {
-            Material source = unlit ? UnlitBase : ghost ? GhostBase : water ? WaterBase : baseMaterial;
+            // Meadow foliage is drawn by our own shader from the art's textures (§4 of design 38);
+            // anything else foliage-tinted — a crop, a pack without a leaf slot — keeps its own.
+            bool ours = foliage && !ghost && !unlit && !water && OwnFoliageShader
+                        && FoliageLook.IsMeadowFoliage(baseMaterial) && FoliageBase != null;
+            Material source = unlit ? UnlitBase : ghost ? GhostBase : water ? WaterBase
+                : ours ? FoliageBase! : baseMaterial;
             var colour = new Color(tint.r, tint.g, tint.b, ghost || unlit ? alpha : water ? tint.a : 1f);
             // Keyed on the material reference rather than its instance id: identity is what we
             // actually mean, and it avoids an API whose name changed between Unity versions.
-            var key = new Key(source, Pack(colour), Pack(emission), ghost, foliage, water, unlit);
+            // Keyed on the art material when ours draws it, or every Meadow material would share
+            // the first one's textures.
+            var key = new Key(ours ? baseMaterial : source, Pack(colour), Pack(emission), ghost, foliage,
+                water, unlit, ours);
             if (_cache.TryGetValue(key, out Material cached)) return cached;
 
             var material = new Material(source)
@@ -188,7 +229,8 @@ namespace Odyssey.Presentation.Rendering
                 if (material.HasProperty(AlphaClipThresholdId)) material.SetFloat(AlphaClipThresholdId, FoliageClipThreshold);
                 if (material.HasProperty(CutoffId)) material.SetFloat(CutoffId, FoliageClipThreshold);
                 material.renderQueue = FoliageQueue;
-                GradeSyntyFoliage(material, source, colour);
+                if (ours) FoliageLook.Dress(material, baseMaterial);
+                else GradeSyntyFoliage(material, source, colour);
             }
 
             _cache.Add(key, material);
@@ -297,6 +339,29 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
+        /// The material every Meadow foliage clone is made from, or null when <c>Odyssey/Foliage</c>
+        /// is not there — a player build that stripped it — in which case the pack's own material
+        /// draws as it did before M3 rather than nothing drawing at all.
+        /// </summary>
+        Material? FoliageBase
+        {
+            get
+            {
+                if (_foliageBase != null || _foliageBaseMissing) return _foliageBase;
+                Shader? shader = Shader.Find("Odyssey/Foliage");
+                if (shader == null)
+                {
+                    _foliageBaseMissing = true;
+                    Debug.LogWarning("Odyssey/Foliage shader not found; Meadow foliage draws with the pack's own shader.");
+                    return null;
+                }
+                _foliageBase = new Material(shader) { name = "Odyssey/Foliage", enableInstancing = true };
+                _owned.Add(_foliageBase);
+                return _foliageBase;
+            }
+        }
+
+        /// <summary>
         /// The one material a flat-colour overlay is cloned from: URP's unlit shader, so the
         /// colour is the colour on every tilt and under every light. A lit overlay - the ghost
         /// path - shades each differently-tilted tile differently, and on rolled ground that
@@ -374,6 +439,8 @@ namespace Odyssey.Presentation.Rendering
             _cache.Clear();
             _ghostBase = null;
             _waterBase = null;
+            _foliageBase = null;
+            _foliageBaseMissing = false;
             _trees?.Dispose();
             _trees = null;
         }

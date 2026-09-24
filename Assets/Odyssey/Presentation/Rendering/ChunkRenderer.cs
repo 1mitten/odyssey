@@ -388,6 +388,32 @@ namespace Odyssey.Presentation.Rendering
         /// draws foliage in <see cref="MaterialCache.DefaultFoliageQueue"/>.</summary>
         public int RequeueFoliage(int queue) => _materials.RequeueFoliage(queue);
 
+        /// <summary>See <see cref="MaterialCache.ForgetFoliage"/>. A measurement seam.</summary>
+        public int ForgetFoliageMaterials() => _materials.ForgetFoliage();
+
+        /// <summary>
+        /// Where the grass is pushed back, so nothing lying on the floor is hidden by it
+        /// (<c>docs/design/38-meadow-overhaul.md</c> §4). See <see cref="GrassClearance"/> for why it
+        /// is a field rather than something the mesher does: items and order marks live in the
+        /// per-frame snapshot, not in the mirror the mesher reads.
+        /// </summary>
+        public GrassClearance Clearance { get; } = new GrassClearance();
+
+        /// <summary>
+        /// Where the clearance window is centred: the camera rig's focus, which the root writes every
+        /// frame. <b>Not the camera's position</b> — at a 48° pitch the camera stands well back from
+        /// what it looks at, and a window centred on it leaves the far half of the view uncleared.
+        /// </summary>
+        public Vector3? ClearanceFocus { get; set; }
+
+        /// <summary>How far an item pushes the grass back: clear of the thing and no more (the
+        /// 2026-09-22 grass interview, answer 12).</summary>
+        public float ItemClearance { get; set; } = 0.55f;
+
+        /// <summary>The same for an order mark, which covers a cell face and so wants a wider ring
+        /// than a stack of logs does.</summary>
+        public float MarkClearance { get; set; } = 1.1f;
+
         /// <summary>Instances drawn ghosted last frame because they stood in a line of sight.</summary>
         public int InstancesFaded { get; private set; }
 
@@ -471,6 +497,14 @@ namespace Odyssey.Presentation.Rendering
 
         public void Render(int activeLayer, SliceSettings slice)
         {
+            // **Last frame's field, published first.** The grass is submitted below and the items
+            // and marks that clear it are drawn after, so a field gathered and uploaded in one
+            // frame would depend on a global landing between a submission and its execution. One
+            // frame of latency on where grass parts is invisible; the alternative is a race.
+            Clearance.Publish();
+            Clearance.Begin(ClearanceFocus ?? ViewerPosition ?? CellMetrics.Centre(
+                _model.Size.SizeX / 2, _model.Size.SizeZ / 2, activeLayer));
+
             DrawCalls = 0;
             InstancesDrawn = 0;
             ChunksDrawn = 0;
@@ -1270,6 +1304,10 @@ namespace Odyssey.Presentation.Rendering
             {
                 CellRef cell = things[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
+
+                // A stack of logs is shorter than a blade of grass. Stamped from the drawn set, so
+                // an item three storeys down does not bald the meadow above it.
+                Clearance.Stamp(CellMetrics.Centre(cell.X, cell.Z, cell.Y), ItemClearance);
 
                 int def = things[i].DefIndex;
                 ResolvedModule? module = ItemModule(def);
@@ -2582,6 +2620,11 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         void GatherCellPlate(Color colour, in Matrix4x4 place)
         {
+            // Every mark on the floor comes through here — chop crosses, mine marks, build and
+            // deconstruct plates — and a mark painted flat on the ground is exactly what tall
+            // grass covers.
+            Clearance.Stamp(place.GetColumn(3), MarkClearance);
+
             PlateBucket? bucket = null;
             for (int i = 0; i < _plateBucketCount; i++)
                 if (_plateBuckets[i]!.Colour == colour) { bucket = _plateBuckets[i]; break; }
@@ -2905,6 +2948,7 @@ namespace Odyssey.Presentation.Rendering
         {
             Skirt.Dispose();
             _materials.Dispose();
+            Clearance.Dispose();
         }
     }
 }
