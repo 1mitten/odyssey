@@ -69,6 +69,10 @@ namespace Odyssey.EditorTools
             // falls back to the pack's own, so the meadow draws but its wind runs on wall time.
             "Odyssey/Foliage",
 
+            // The painted meadow floor (design 38 §17). Without it a player strips the shader and
+            // the grass terrain falls back to the pack's single tiled texture.
+            "Odyssey/MeadowGround",
+
             // The sky, and it was not on the first draft of this list — `ShaderInclusionTests`
             // found it on the run that was meant to confirm the fix, along with `Standard` below.
             // Worth recording rather than quietly adding: a list of runtime-found shaders

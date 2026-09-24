@@ -64,6 +64,21 @@ namespace Odyssey.EditorTools
         static string PathFor(string shaderName) =>
             Folder + "/" + shaderName.Replace('/', '_') + ".mat";
 
+        /// <summary>
+        /// Keyword variants the renderer turns on at runtime, on materials it clones in code, which
+        /// stripping can therefore never see used: each gets a keep-alive of its own with the keyword
+        /// on. The scenery drawn from GPU buffers (design 38 §22) is <c>Odyssey/Foliage</c> under
+        /// <c>ODYSSEY_INDIRECT</c>; without its own keep-alive the player keeps only the base variant,
+        /// which reads no buffer, and every indirect clump draws at the origin.
+        /// </summary>
+        public static readonly (string Shader, string Keyword)[] KeywordVariants =
+        {
+            ("Odyssey/Foliage", "ODYSSEY_INDIRECT"),
+        };
+
+        static string PathFor(string shaderName, string keyword) =>
+            Folder + "/" + shaderName.Replace('/', '_') + "_" + keyword + ".mat";
+
         [MenuItem("Odyssey/Build/Fix instancing keep-alive materials")]
         public static void Apply()
         {
@@ -103,6 +118,18 @@ namespace Odyssey.EditorTools
                 made.Add(name);
             }
 
+            foreach ((string name, string keyword) in KeywordVariants)
+            {
+                string path = PathFor(name, keyword);
+                if (File.Exists(path)) continue;
+                Shader? shader = Shader.Find(name);
+                if (shader == null) continue;
+                var material = new Material(shader) { enableInstancing = true };
+                material.EnableKeyword(keyword);
+                AssetDatabase.CreateAsset(material, path);
+                made.Add(name + " + " + keyword);
+            }
+
             created = made.ToArray();
             if (created.Length == 0) return false;
 
@@ -118,6 +145,9 @@ namespace Odyssey.EditorTools
         /// </summary>
         public static string[] Missing() =>
             Required.Where(name => Shader.Find(name) != null && !File.Exists(PathFor(name)))
+                    .Concat(KeywordVariants
+                        .Where(v => Shader.Find(v.Shader) != null && !File.Exists(PathFor(v.Shader, v.Keyword)))
+                        .Select(v => v.Shader + " + " + v.Keyword))
                     .ToArray();
 
         /// <summary>

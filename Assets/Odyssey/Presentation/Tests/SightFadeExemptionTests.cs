@@ -27,11 +27,21 @@ namespace Odyssey.Tests.Presentation
     /// </summary>
     public class SightFadeExemptionTests
     {
+        // The bucket path's exemptions, pinned with the ground skin off (design 38 §20): the skin
+        // itself is never partitioned for a sight line at all — ChunkRenderer.DrawSkin has no fade.
         [SetUp]
-        public void Reset() => BankLayout.Reset();
+        public void Reset()
+        {
+            BankLayout.Reset();
+            GroundSkin.Enabled = false;
+        }
 
         [TearDown]
-        public void Restore() => BankLayout.Reset();
+        public void Restore()
+        {
+            BankLayout.Reset();
+            GroundSkin.Enabled = true;
+        }
 
         static ChunkRenderer RendererFor(RenderTestWorld world)
         {

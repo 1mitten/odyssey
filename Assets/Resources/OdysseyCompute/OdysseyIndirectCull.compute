@@ -1,0 +1,60 @@
+// The per-instance cull for the indirect scenery path (design 38 §22; the tufts-only cut was §18).
+//
+// One dispatch per group of instances that share a module, a part, a tint and a layer. The renderer
+// has already decided, per segment (one chunk's bucket), exactly what the chunk path decides per
+// bucket: whether the chunk is drawn at all, which level of detail it takes, and how many of its
+// rank-sorted clumps survive the distance thinning (the first `submitted` of the segment). This pass
+// applies that per instance, drops an instance whose bounding sphere is outside the frustum (these
+// kinds cast no shadows, so an off-screen instance can never be seen), and appends the survivors'
+// indices to the list for their level. The renderer copies each list's count into the indirect
+// arguments of that level's draws.
+//
+// The planes are inward-facing, as GeometryUtility.CalculateFrustumPlanes returns them.
+#pragma kernel Cull
+
+struct SegmentParam
+{
+    int start;
+    int submitted;
+    int level;
+    int pad;
+};
+
+StructuredBuffer<float4x4> _Instances;
+StructuredBuffer<uint> _InstanceSegment;
+StructuredBuffer<SegmentParam> _Segments;
+AppendStructuredBuffer<uint> _Visible0;
+AppendStructuredBuffer<uint> _Visible1;
+AppendStructuredBuffer<uint> _Visible2;
+AppendStructuredBuffer<uint> _Visible3;
+
+float4 _Planes[6];        // xyz the inward normal, w the distance, as UnityEngine.Plane
+float4 _CentreRadius;     // xyz the finest level's bounds centre in object space, w its radius there
+uint _Count;
+
+[numthreads(64, 1, 1)]
+void Cull(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= _Count) return;
+
+    SegmentParam segment = _Segments[_InstanceSegment[i]];
+    if ((int)i - segment.start >= segment.submitted) return;
+
+    float4x4 m = _Instances[i];
+    float3 centre = mul(m, float4(_CentreRadius.xyz, 1.0)).xyz;
+    // Uniform scale: the length of any basis column is the scale.
+    float scale = length(float3(m._m00, m._m10, m._m20));
+    float radius = _CentreRadius.w * scale;
+
+    [unroll]
+    for (int p = 0; p < 6; p++)
+    {
+        if (dot(_Planes[p].xyz, centre) + _Planes[p].w < -radius) return;
+    }
+
+    if (segment.level == 0) _Visible0.Append(i);
+    else if (segment.level == 1) _Visible1.Append(i);
+    else if (segment.level == 2) _Visible2.Append(i);
+    else _Visible3.Append(i);
+}
