@@ -23,13 +23,6 @@ the next session learns to ignore.
 
 ## Open
 
-- **What does grass cost on the GPU at your resolution?** (`claude/meadow-m1-grass-cost`, design 36
-  §13). One reading, not a look, and it sizes the lush grass in M4. At 3840 x 2160 on a New game,
-  press backtick for the developer overlay and note the `gpu` figure; then Settings -> Graphics ->
-  Grass tufts off, wait a few seconds, and note it again. The batch arm measured about 1 ms of frame
-  between the two but cannot read the GPU timer itself; **if the gap is well over 2 ms**, full
-  cover is not affordable at taller clumps and M4 starts from a lower density.
-
 - **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
   Spawn a marauder, draft two colonists, select both and right-click it: a translucent red ring
   should appear wide round its feet and snap in, in a fifth of a second, flash once as it lands
@@ -767,6 +760,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-24 | **What grass costs on the GPU at 4K** (PR #183, `docs/design/36-meadow-overhaul.md` §13) | measured — owner: *"6–7 ms on gpu (sometimes bit lower) without grass tufts. On — 7 ish — spikes up to 8 moving around"* | about 0.5–1 ms, peaks ~1.5; under the 2 ms line, so M4 plans for full cover; agrees with the batch arm |
 | 2026-09-24 | **Combat C2 + C3 and the three rounds after play** (PR #180, `docs/design/33-combat.md` §3–§9) | working — owner: *"it seems great ... weapons sit at hips, have a battle with tons and tons of characters - was hovering 3.5ms ... it flowed really well"* | closes the brawl and fight rows; 3.5 ms is inside the 5 ms budget on the dev GPU, unmeasured on the target laptop; the ring, menu and grip rows stay open for the "more testing later" |
 | 2026-09-24 | **The Inventory tab, restyled** (PR #177, `docs/design/35-inventory-tab.md` §5a) | working — owner: *"it's good"* | none; ready to merge |
 | 2026-09-23 | **The Research tab** (PR #177, `docs/design/34-research-tab.md`) | working — owner: *"the research control is fine"*, after the list was cut to what the game has | the list became Electricity, Power lines, Generator, Ladder (34 §2) |

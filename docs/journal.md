@@ -11670,3 +11670,7 @@ three in one direction is not noise, and a gap that grows with load is what a so
 So the queue is kept for now rather than settled, and design 36 §13 names the lever if the GPU
 reading confirms it: keep grass out of the outline by a rendering-layer mask and draw it opaque,
 front to back, instead of relying on the queue to hide it from the ink.
+
+The owner took the one reading only Play could: at 3840 x 2160 the overlay's `gpu` read 6–7 ms with
+the tufts off and about 7, spiking to 8 while moving, with them on. Half a millisecond to one and a
+half of GPU for the shipped grass, which is the batch arm's answer by an independent instrument.

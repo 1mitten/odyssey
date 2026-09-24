@@ -232,7 +232,7 @@ measurements here.
 | Unit | What | Gate |
 |---|---|---|
 | **M0** | This document, the interview, four research files. | Owner reads. |
-| **M1** | **Measured 2026-09-24** (§13): what grass costs at 640 × 480 and 3840 × 2160, none / shipped / full cover / full cover in the opaque queue. | Done; one GPU reading owed from Play. |
+| **M1** | **Measured 2026-09-24** (§13): what grass costs at 640 × 480 and 3840 × 2160, none / shipped / full cover / full cover in the opaque queue. | Done; the owner's GPU reading agrees (§13). |
 | **M2** | Instanced LOD (§3) and the derived tallest bound. | Tests; LOD on/off arm. |
 | **M3** | `Odyssey/Foliage` (§4). | Tests; keep-alive in a player build. |
 | **M4** | Lush grass and flowers on today's ground (§5). | **First Play.** 2.0 ms at 4K. |
@@ -301,6 +301,13 @@ At 640 × 480 the same arms cost +0.12 to +0.31 ms, all of it submission.
 - **The noise floor is about half a millisecond** on this machine with two other batch runs going
   (a sibling worktree and the CI runner, both runs). Anything finer than that — taller clumps, the
   next rung of density — is decided with the GPU timer in a Play session, not by another batch run.
+
+**The GPU reading, from Play (owner, 2026-09-24, 3840 × 2160, the shipped density).** *"6–7 ms on
+gpu (sometimes bit lower) without grass tufts. On — 7 ish — spikes up to 8 moving around — this is
+an approximation."* So the shipped grass is **about 0.5–1 ms of GPU, peaking near 1.5 while the
+camera moves**, which agrees with the batch arm's frame-time stand-in and sits well under the 2 ms
+line the playtest row set. M4 plans for full cover. The opaque-queue question stays with M3: a
+reading by eye off a smoothed overlay cannot resolve a 0.2 ms difference.
 
 **What it does not say.** Nothing about Meadow's own clumps drawn by `Odyssey/Foliage` (M3–M4):
 taller and broader cards are more fill per instance, which is exactly what this measured as cheap
