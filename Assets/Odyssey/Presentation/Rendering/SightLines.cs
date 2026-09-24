@@ -69,7 +69,7 @@ namespace Odyssey.Presentation.Rendering
         public void Clear()
         {
             _lines.Clear();
-            Primary = 0;
+            Primary = -1;
         }
 
         /// <summary>
@@ -78,11 +78,13 @@ namespace Odyssey.Presentation.Rendering
         /// every other colonist and to what lies under a bush, and there are up to thirty-two of
         /// them, so testing every ground box against them cost 1.9 ms at 4K with fifty colonists.
         /// </summary>
-        public int Primary { get; set; }
+        public int Primary { get; set; } = -1;
 
-        /// <summary>Whether any of the first <see cref="Primary"/> lines crosses the box.</summary>
+        /// <summary>Whether any of the first <see cref="Primary"/> lines crosses the box; every line
+        /// when <see cref="Primary"/> was never set (negative), which is how a caller that knows
+        /// nothing of the distinction keeps the old behaviour.</summary>
         public bool BlocksPrimary(in Bounds worldBounds) =>
-            HitsAny(worldBounds.min, worldBounds.max, Primary);
+            HitsAny(worldBounds.min, worldBounds.max, Primary < 0 ? _lines.Count : Primary);
 
         /// <summary>
         /// A line of sight from the eye to a point on a figure.
