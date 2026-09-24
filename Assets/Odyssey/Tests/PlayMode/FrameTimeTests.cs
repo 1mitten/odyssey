@@ -2668,6 +2668,101 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What the board's trees cost the frame, CPU-bound — the measurement that decides whether
+        /// trees belong on the GPU-driven path (owner, 2026-09-24; design 38 §23). Explicit: an
+        /// instrument, run by name.
+        ///
+        /// <para>At 640 x 480 the frame is the CPU's, which is where a draw call's price shows and
+        /// where a laptop's weaker processor lives; 1920 x 1080 is the laptop's own resolution. On
+        /// Standard and Huge, at the default zoom and pulled back to 140 m, with the world paused and
+        /// the hour held so only the trees move between arms: trees drawn, then not. Logs the frame,
+        /// the submit, the tree draw calls and how thinly the trees are spread (instances per
+        /// bucket). Only differences inside the run are quoted.</para>
+        /// </summary>
+        [UnityTest, Explicit("an instrument for a decision, not a test")]
+        public IEnumerator TheTreesAgainstTheFrame()
+        {
+            var lines = new List<string>();
+            foreach ((string board, int side) in new[] { ("standard", 120), ("huge", 240) })
+            {
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                    out OdysseyBootstrap boot, side, side, 16);
+                UnityEngine.Camera? cam = null;
+                RenderTexture? previousTarget = null;
+                RenderTexture? hd = null;
+                try
+                {
+                    yield return TimeFrames($"trees/{board}/warm", boot, WarmupFrames, _ => { });
+                    for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                    {
+                        boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                        yield return null;
+                    }
+                    Assert.That(boot.World!.GameSpeed, Is.Zero, "the world would not pause");
+                    boot.DaylightHourOverride = 12f;
+
+                    ChunkRenderer renderer = boot.Renderer!;
+                    cam = boot.cameraRig!.Camera;
+                    previousTarget = cam.targetTexture;
+                    hd = new RenderTexture(1920, 1080, 24) { name = "trees-1080" };
+                    WorldSnapshot frame = boot.World!.Views.Current;
+                    CellRef focus = frame.Pawns.Length > 0 ? frame.Pawns[0].Cell : default;
+
+                    foreach ((string zoom, float distance) in new[] { ("default", 0f), ("140m", 140f) })
+                    {
+                        if (distance > 0f)
+                        {
+                            boot.cameraRig!.FocusOn(focus, distance);
+                            for (int i = 0; i < 150; i++) yield return null;
+                        }
+                        foreach (bool big in new[] { false, true })
+                        {
+                            cam.targetTexture = big ? hd : previousTarget;
+                            string res = big ? "1920x1080" : $"{Screen.width}x{Screen.height}";
+                            float onMs = 0f, offMs = 0f;
+                            double onSubmit = 0, offSubmit = 0;
+                            renderer.DrawTrees = true;
+                            yield return TimeFrames($"trees/{board}/{zoom}/{res}/on", boot, WarmupFrames,
+                                m => onMs = m, p => onSubmit = SubmitOf(p));
+                            int calls = renderer.DrawCalls, treeCalls = renderer.ChunkCallsByKind[0];
+                            int buckets = renderer.TreeBuckets, instances = renderer.TreeInstances;
+                            Assert.That(instances, Is.GreaterThan(0), $"{board} {zoom}: no trees were drawn, so there is nothing to price");
+
+                            renderer.DrawTrees = false;
+                            yield return TimeFrames($"trees/{board}/{zoom}/{res}/off", boot, WarmupFrames,
+                                m => offMs = m, p => offSubmit = SubmitOf(p));
+                            Assert.That(renderer.ChunkCallsByKind[0], Is.Zero, "trees were still submitted with DrawTrees off");
+                            int offCalls = renderer.DrawCalls;
+                            renderer.DrawTrees = true;
+
+                            lines.Add($"{board} {zoom} {res}: frame {onMs:0.00} -> {offMs:0.00} ms without trees " +
+                                      $"(trees {onMs - offMs:0.00}), submit {onSubmit:0.00} -> {offSubmit:0.00}; " +
+                                      $"calls {calls} -> {offCalls} (tree calls {treeCalls}), " +
+                                      $"{instances} trees in {buckets} buckets ({(buckets > 0 ? instances / (float)buckets : 0):0.0} a bucket)");
+                        }
+                    }
+                }
+                finally
+                {
+                    if (boot.Renderer != null) boot.Renderer.DrawTrees = true;
+                    boot.DaylightHourOverride = null;
+                    if (cam != null) cam.targetTexture = previousTarget;
+                    if (hd != null) hd.Release();
+                    UnityEngine.Object.Destroy(root);
+                }
+                yield return null;
+            }
+            Debug.Log($"[FrameTime] trees ({SystemInfo.graphicsDeviceName}): " + string.Join("; ", lines));
+        }
+
+        static double SubmitOf(double[] split)
+        {
+            double total = 0;
+            for (int i = 0; i < split.Length; i++) total += split[i];
+            return total;
+        }
+
+        /// <summary>
         /// Photographs the played meadow from the play camera, for judging the look against the
         /// Meadow Forest reference (owner, 2026-09-24: screenshot #13, design 38 §17). Explicit:
         /// never part of a tier, run by name.

@@ -383,6 +383,20 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public readonly int[] ChunkCallsByKind = new int[CallKindNames.Length];
 
+        /// <summary>
+        /// Whether the board's trees are drawn at all. A measurement seam, like
+        /// <see cref="UseIndirectScenery"/>: off is the arm that prices what trees cost the frame
+        /// (the question of whether trees belong on the GPU path, design 38 §23). The game draws them.
+        /// </summary>
+        public bool DrawTrees { get; set; } = true;
+
+        /// <summary>Tree buckets the chunk path met last frame, and the instances in them: how thinly a
+        /// board's trees are spread across draws (instances per bucket).</summary>
+        public int TreeBuckets { get; private set; }
+
+        /// <summary>See <see cref="TreeBuckets"/>.</summary>
+        public int TreeInstances { get; private set; }
+
         public static readonly string[] CallKindNames =
             { "trees", "bushes", "grass dressing", "other dressing", "tufts", "terrain", "water", "skin", "other" };
 
@@ -958,6 +972,8 @@ namespace Odyssey.Presentation.Rendering
             _solidLayers.Clear();
             _renderStamp++;
             System.Array.Clear(ChunkCallsByKind, 0, ChunkCallsByKind.Length);
+            TreeBuckets = 0;
+            TreeInstances = 0;
             if (_chunkDrawnStamp.Length != _batches.Length)
             {
                 _chunkDrawnStamp = new int[_batches.Length];
@@ -1187,6 +1203,12 @@ namespace Odyssey.Presentation.Rendering
                 InstanceBucket bucket = buckets[b];
                 if (bucket.Count == 0) continue;
                 _currentKind = CallKindOf(bucket.Tint, bucket.Module);
+                if (_currentKind == 0)
+                {
+                    TreeBuckets++;
+                    TreeInstances += bucket.Count;
+                    if (!DrawTrees) continue;
+                }
                 // Drawn by the indirect path instead (design 38 §22); a ghosted layer keeps this one.
                 if (_indirectActive && !ghost && body && IsIndirectKind(bucket)) continue;
 
