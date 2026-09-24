@@ -35,6 +35,9 @@ namespace Odyssey.Sim.Pawns
         /// so two do not each carry a full stack to a hopper with room for one.
         /// </summary>
         Device = 4,
+
+        /// <summary>A pawn being cared for: a patient one doctor is treating (design 37). Keyed by <c>PawnId</c> value.</summary>
+        Pawn = 5,
     }
 
     /// <summary>

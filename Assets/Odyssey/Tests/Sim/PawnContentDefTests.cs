@@ -223,7 +223,11 @@ namespace Odyssey.Tests.Sim
         // Moved again, 2026-09-24, by medical supplies (design 37, MD1): Item_MedicalSupplies appended
         // at item 11 (Medicine, stackLimit 10, healPerUnit 40), and ItemDef gained healPerUnit, zero
         // on every other item. Taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 10719137451086071672UL;
+        //
+        // And again the same day by MD2 (design 37): Skill_Medicine, Work_Doctor (rateSkill 6 on
+        // growing's curve), Job_Treat (driver 22, 600 work ticks, trains medicine) and Job_Patient
+        // (driver 23), and CombatDef's eight treatment integers. Taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 17440679233709904344UL;
 
 
         [Test]

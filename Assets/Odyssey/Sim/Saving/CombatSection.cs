@@ -40,7 +40,7 @@ namespace Odyssey.Sim.Saving
         /// the combat contracts step's: C1's four, then the eight combat fields. 3 appends the
         /// knock-down clock and the pending swing (design 33 §9b, §9g).
         /// </summary>
-        public const int Layout = 3;
+        public const int Layout = 4;
 
         const int FlagDrafted = 1;
         const int FlagDowned = 2;
@@ -86,6 +86,9 @@ namespace Odyssey.Sim.Saving
                 writer.Write(pawn.PendingSwing);
                 writer.Write(pawn.PendingDamageMilli);
                 writer.Write(pawn.PendingStunTicks);
+
+                // Layout 4: medical supplies (design 37).
+                writer.Write(pawn.TreatedUntilTick);
             }
             _scratch.Clear();
         }
@@ -123,6 +126,9 @@ namespace Odyssey.Sim.Saving
                 int pendingDamage = three ? reader.ReadInt() : 0;
                 int pendingStun = three ? reader.ReadInt() : 0;
 
+                // Layout 4: nobody had been treated before medicine existed.
+                int treatedUntil = layout >= 4 ? reader.ReadInt() : 0;
+
                 Pawn? pawn = _pawns.Get(new Contracts.PawnId(id));
                 if (pawn == null) continue;
 
@@ -142,6 +148,7 @@ namespace Odyssey.Sim.Saving
                 pawn.PendingSwing = pendingSwing;
                 pawn.PendingDamageMilli = pendingDamage;
                 pawn.PendingStunTicks = pendingStun;
+                pawn.TreatedUntilTick = treatedUntil;
 
                 // A step an order interrupted, rebuilt as the one-step path it was (design 33
                 // §2d). The pawn section has already restored the progress into it, and

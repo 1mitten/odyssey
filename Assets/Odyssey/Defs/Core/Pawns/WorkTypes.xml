@@ -118,4 +118,19 @@
     <order>5</order>
   </WorkTypeDef>
 
+  <!--
+    Treating the hurt (design 37): the ui.work.doctor column. Its giver is an emergency one, like
+    rescue's, so the order only matters among ordinary types, which it never is. Medicine buys
+    speed on cutting's and growing's curve - a novice treats at six tenths of the tuned pace and
+    each level buys a tenth more - because a difference would be a claim needing a measurement.
+  -->
+  <WorkTypeDef>
+    <defName>Work_Doctor</defName>
+    <label>doctor</label>
+    <order>6</order>
+    <rateSkill>6</rateSkill>
+    <workRateBasePerMille>600</workRateBasePerMille>
+    <workRateSlopePerLevel>100</workRateSlopePerLevel>
+  </WorkTypeDef>
+
 </Defs>

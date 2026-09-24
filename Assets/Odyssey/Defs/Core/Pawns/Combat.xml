@@ -66,6 +66,29 @@
     -->
     <downedRecoverAtPerMille>150</downedRecoverAtPerMille>
 
+    <!--
+      Treatment (design 37 section 4). The heal itself is the item's (Item_MedicalSupplies'
+      healPerUnit, 40); these say how far it may go and who may give it.
+      treatCapPerMille 800: a treatment never lifts a pawn past four fifths of its pool, so the
+        last fifth is bed rest's (owner).
+      selfHealPerMille 500 and selfCapPerMille 600: treating yourself heals half, never past 60 per
+        cent (owner). selfWorkFactor 3: and takes three times as long (owner).
+      bareHeal 10: a doctor with no supplies dresses the wound with what is at hand (owner's "about
+        +10"), under the same cap.
+      patientBelowPerMille 500 and patientReleasePerMille 800: a colonist under half goes to bed,
+        and gets up at the treatment cap (INVENTED).
+      treatedCooldownTicks 15000: a quarter of a day before the same pawn may be treated again, so
+        a pile of supplies cannot stand in for rest (INVENTED).
+    -->
+    <treatCapPerMille>800</treatCapPerMille>
+    <selfHealPerMille>500</selfHealPerMille>
+    <selfCapPerMille>600</selfCapPerMille>
+    <selfWorkFactor>3</selfWorkFactor>
+    <bareHeal>10</bareHeal>
+    <patientBelowPerMille>500</patientBelowPerMille>
+    <patientReleasePerMille>800</patientReleasePerMille>
+    <treatedCooldownTicks>15000</treatedCooldownTicks>
+
     <!-- A chase re-plans to a moving target once a second. INVENTED; a cost figure as much as a feel. -->
     <chaseRepathTicks>60</chaseRepathTicks>
 

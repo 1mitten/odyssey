@@ -71,7 +71,7 @@ ui.skill.cutting,Chopping,ui.skill,M2,"Felling trees. How fast the axe comes dow
 ui.skill.animals,Animals,ui.skill,M2,"Taming, training and husbandry"
 ui.skill.crafting,Crafting,ui.skill,M2,Bench work and item quality
 ui.skill.fabrication,Fabrication,ui.skill,M2,Advanced production. Gates the best gear
-ui.skill.medicine,Medicine,ui.skill,M2,"Tending, surgery and survival odds"
+ui.skill.medicine,Medicine,ui.skill,M2,How fast a colonist treats the hurt
 ui.skill.social,Social,ui.skill,M2,"Negotiation, recruitment and warden work"
 ui.skill.shooting,Shooting,ui.skill,M2,Ranged accuracy
 ui.skill.melee,Melee,ui.skill,M2,"Close combat, hit and parry"
@@ -114,6 +114,8 @@ ui.status.fighting,Fighting,ui.status,CB,Closing on a target and swinging at it
 ui.status.fleeing,Fleeing,ui.status,CB,Running from whatever hurt it
 ui.status.equipping,Equipping,ui.status,CB,Fetching a weapon to hold
 ui.status.rescuing,Rescuing,ui.status,CB,Carrying the downed to a bed
+ui.status.treating,Treating,ui.status,M3,"Tending the hurt, or herself"
+ui.status.patient,Resting as a patient,ui.status,M3,In bed until the wound allows getting up
 ui.combat.miss,Miss,ui.combat,CB,A swing that did not land
 ui.combat.dodge,Dodge,ui.combat,CB,A swing the target stepped out of
 ui.combat.stunned,Stunned,ui.combat,CB,"Knocked senseless by a blunt blow, for a moment"
@@ -129,7 +131,7 @@ ui.combat.athip,At the hip,ui.combat,CB,"Sheathed at the left hip until there is
 ui.work.firefighting,Firefighting,ui.work,M7,Put out fires. Always first
 ui.work.patient,Patient,ui.work,M7,Accept treatment when hurt
 ui.work.bedrest,Bed rest,ui.work,M7,Stay in bed while recovering
-ui.work.doctor,Doctor,ui.work,M7,Tend the injured and operate
+ui.work.doctor,Doctor,ui.work,M3,"Treat the hurt, with medical supplies or without"
 ui.work.warden,Warden,ui.work,M7,"Feed, talk to and recruit prisoners"
 ui.work.handling,Handling,ui.work,M7,"Tame, train and feed animals"
 ui.work.cooking,Cooking,ui.work,M7,Prepare meals and butcher

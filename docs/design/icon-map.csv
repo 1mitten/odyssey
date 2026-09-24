@@ -117,6 +117,8 @@ ui.work.fabrication,06,,,gears tile,med,shared
 ui.work.art,06,,,paint brush tile,low,shared
 ui.work.operating,04,,,gear,high,shared
 ui.work.rescue,-,,,carrying a casualty. Blocked on the missing human figure,-,gap
+ui.status.treating,-,,,"hands dressing a wound. Blocked on the missing human figure",-,gap
+ui.status.patient,-,,,"a figure lying in bed. Blocked on the missing human figure",-,gap
 ui.health.brain,07,,,brain,high,mapped
 ui.health.head,07,,,skull,high,shared
 ui.health.eye,07,,,eyeball,high,mapped

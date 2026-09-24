@@ -70,7 +70,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Carry a downed colonist to a bed (C4).</summary>
         public const int Rescue = 21;
 
-        public const int Count = 22;
+        /// <summary>Treat a patient, with medical supplies or without, or treat yourself (design 37).</summary>
+        public const int Treat = 22;
+
+        /// <summary>A hurt colonist lying in a bed until she is well enough to get up (design 37).</summary>
+        public const int Patient = 23;
+
+        public const int Count = 24;
     }
 
     /// <summary>
@@ -123,7 +129,10 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Rescue = 5;
 
-        public const int Count = 6;
+        /// <summary>Treating the hurt (design 37): the ui.work.doctor column. An emergency giver.</summary>
+        public const int Doctor = 6;
+
+        public const int Count = 7;
 
         /// <summary>What a work type the simulation does not run answers to. Never sent.</summary>
         public const int None = -1;

@@ -1883,6 +1883,19 @@ namespace Odyssey.EditorTools
                 scale = new Vector3(1.5f, 1.5f, 1.5f),
             });
 
+            // Medical supplies (design 37 §5): the Battle Royale first-aid case, 0.48 x 0.13 x 0.39
+            // at source and drawn as authored — one small box, the ore lumps' size band, so the heap
+            // pass scatters several for a stack and a shelf bay holds them without burying the rack.
+            // Chosen from MedicalBoxSheet over MedicalBox_02 and Crate_Medical_01: both are olive
+            // and vanish into the grass, where the red case reads at play distance.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemMedicalSupplies, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_MedicalBox_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1f, 1f, 1f),
+            });
+
             AddCombatRows(rows);
 
             return rows;

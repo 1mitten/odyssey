@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-46 entries, 28 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+48 entries, 30 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -69,6 +69,8 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Fleeing** | `ui.status.fleeing` | Running from whatever hurt it | no art | CB |
 | **Equipping** | `ui.status.equipping` | Fetching a weapon to hold | no art | CB |
 | **Rescuing** | `ui.status.rescuing` | Carrying the downed to a bed | no art | CB |
+| **Treating** | `ui.status.treating` | Tending the hurt, or herself <br>**Needs:** hands dressing a wound. Blocked on the missing human figure | no art | M3 |
+| **Resting as a patient** | `ui.status.patient` | In bed until the wound allows getting up <br>**Needs:** a figure lying in bed. Blocked on the missing human figure | no art | M3 |
 
 ---
 

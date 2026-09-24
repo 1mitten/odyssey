@@ -72,15 +72,16 @@ namespace Odyssey.Tests.Sim
             // until the merge with main put power's three jobs first; nothing combat shipped had saved them.
             Assert.That(new[] { JobHandle.AttackMelee, JobHandle.Flee, JobHandle.Downed, JobHandle.Equip, JobHandle.Rescue },
                 Is.EqualTo(new[] { 17, 18, 19, 20, 21 }));
-            Assert.That(JobHandle.Count, Is.EqualTo(22));
+            // 24 since medical supplies appended Job_Treat and Job_Patient at 22 and 23 (design 37).
+            Assert.That(JobHandle.Count, Is.EqualTo(24));
             Assert.That(new[] { ItemHandle.Bat, ItemHandle.Crowbar, ItemHandle.Machete, ItemHandle.ArcBlade },
                 Is.EqualTo(new[] { 7, 8, 9, 10 }));
             // 12 since medical supplies were appended at 11 (design 37).
             Assert.That(ItemHandle.Count, Is.EqualTo(12));
             Assert.That(WorkHandle.Rescue, Is.EqualTo(5));
-            Assert.That(WorkHandle.Count, Is.EqualTo(6));
+            Assert.That(WorkHandle.Count, Is.EqualTo(7));
             Assert.That(SkillIndex.Melee, Is.EqualTo(5));
-            Assert.That(SkillIndex.Count, Is.EqualTo(6));
+            Assert.That(SkillIndex.Count, Is.EqualTo(7));
             Assert.That(PawnKindIndex.Marauder, Is.EqualTo(3));
             Assert.That(PawnKindIndex.Count, Is.EqualTo(4));
 
@@ -97,7 +98,7 @@ namespace Odyssey.Tests.Sim
         public void EveryTableIsFilledByNameInHandleOrder()
         {
             PawnContent content = ContentPack.Pawns();
-            Assert.That(content.Jobs.Skip(17).Select(j => j.defName), Is.EqualTo(new[]
+            Assert.That(content.Jobs.Skip(17).Take(5).Select(j => j.defName), Is.EqualTo(new[]
                 { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue" }));
             for (int i = 0; i < content.Jobs.Length; i++)
                 Assert.That(content.Jobs[i].driver, Is.EqualTo(i), content.Jobs[i].defName + " names another driver");
@@ -307,6 +308,7 @@ namespace Odyssey.Tests.Sim
             Moves("a weapon", () => pawn.EquippedItem = 5, () => pawn.EquippedItem = 0);
             Moves("an order's target", () => pawn.CombatTarget = 2, () => pawn.CombatTarget = 0);
             Moves("a carrier", () => pawn.CarriedBy = 2, () => pawn.CarriedBy = 0);
+            Moves("a treatment cooldown", () => pawn.TreatedUntilTick = 99, () => pawn.TreatedUntilTick = 0);
             Moves("a struck building", () => colony.Pawns.EdificeDamage.Set(123, 4_000),
                 () => colony.Pawns.EdificeDamage.Clear(123));
 
@@ -331,6 +333,7 @@ namespace Odyssey.Tests.Sim
             a.EquippedItem = 77;
             a.CombatTarget = b.Id.Value;
             a.CarriedBy = b.Id.Value;
+            a.TreatedUntilTick = 15_030; // layout 4, medical supplies (design 37)
             colony.Pawns.Corpses.Add(b, 31, 5);
             colony.Pawns.EdificeDamage.Set(1_234, 55_000);
             colony.Pawns.EdificeDamage.Set(99, 1);
@@ -348,6 +351,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(back.EquippedItem, Is.EqualTo(77));
             Assert.That(back.CombatTarget, Is.EqualTo(b.Id.Value));
             Assert.That(back.CarriedBy, Is.EqualTo(b.Id.Value));
+            Assert.That(back.TreatedUntilTick, Is.EqualTo(15_030));
 
             Assert.That(restored.Pawns.Corpses.Count, Is.EqualTo(1));
             Assert.That(restored.Pawns.Corpses[0].Pawn, Is.EqualTo(b.Id.Value));

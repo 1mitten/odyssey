@@ -155,6 +155,8 @@ namespace Odyssey.Sim.Pawns
         public const int Downed = JobHandle.Downed;
         public const int Equip = JobHandle.Equip;
         public const int Rescue = JobHandle.Rescue;
+        public const int Treat = JobHandle.Treat;
+        public const int Patient = JobHandle.Patient;
         public const int Count = JobHandle.Count;
     }
 
@@ -279,6 +281,9 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int Rescue = WorkHandle.Rescue;
 
+        /// <summary>Treating the hurt (design 37). An emergency giver, like rescue's.</summary>
+        public const int Doctor = WorkHandle.Doctor;
+
         public const int Count = WorkHandle.Count;
 
         /// <summary>
@@ -292,7 +297,7 @@ namespace Odyssey.Sim.Pawns
         /// than a missing aspect — which is why growing is in both or in neither.</para>
         /// </summary>
         public static readonly string[] Names =
-            { "haul", "cutting", "mining", "construction", "growing", "rescue" };
+            { "haul", "cutting", "mining", "construction", "growing", "rescue", "doctor" };
     }
 
     /// <summary>
@@ -317,7 +322,10 @@ namespace Odyssey.Sim.Pawns
         /// Claimed by the combat contracts step.
         /// </summary>
         public const int Melee = 5;
-        public const int Count = 6;
+
+        /// <summary>Treating the hurt (design 37): buys speed at it and nothing else.</summary>
+        public const int Medicine = 6;
+        public const int Count = 7;
 
         /// <summary>
         /// The names skills are published under, parallel to the indices above.
@@ -327,7 +335,7 @@ namespace Odyssey.Sim.Pawns
         /// assembly or sharing an enum with it. The prefix is the project's, the middle is this
         /// feature's, and the leaf is the value — the same shape as an icon key.</para>
         /// </summary>
-        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee" };
+        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee", "medicine" };
     }
 
     /// <summary>
@@ -1199,18 +1207,24 @@ namespace Odyssey.Sim.Pawns
                 // Power (design 32), appended for the same reason.
                 "Job_LayConduit", "Job_RemoveConduit", "Job_Refuel",
                 // The combat line, claimed together by its contracts step (design 33 §5).
-                "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue");
+                "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue",
+                // Medical supplies (design 37).
+                "Job_Treat", "Job_Patient");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",
                 // Appended with the combat line (design 33 §5): a pawn's priority array is indexed
                 // by this order, so it is a save contract like the rest.
-                "Work_Rescue");
+                "Work_Rescue",
+                // Medical supplies (design 37).
+                "Work_Doctor");
             content.Skills = ByName<SkillDef>(defs,
                 "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction",
                 "Skill_Growing",
                 // Appended with the combat line (design 33 §5).
-                "Skill_Melee");
+                "Skill_Melee",
+                // Medical supplies (design 37).
+                "Skill_Medicine");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal",
                 // Appended, never inserted: an item handle is stored in every stack, every haul

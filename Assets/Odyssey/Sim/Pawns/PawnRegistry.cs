@@ -310,6 +310,9 @@ namespace Odyssey.Sim.Pawns
             new DownedJobDriver(),
             new EquipJobDriver(),
             new RescueJobDriver(),
+            // Medical supplies (design 37): 22 and 23.
+            new TreatJobDriver(),
+            new PatientJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------

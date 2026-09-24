@@ -46,6 +46,8 @@ namespace Odyssey.Hud
             // fleeing, lying downed, fetching a weapon, carrying the downed to bed.
             "ui.status.fighting", "ui.status.fleeing", "ui.status.downed",
             "ui.status.equipping", "ui.status.rescuing",
+            // Medical supplies (design 37): Job_Treat and Job_Patient, 22 and 23.
+            "ui.status.treating", "ui.status.patient",
         };
 
         public static string IconKey(int jobDef) =>

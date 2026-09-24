@@ -262,6 +262,14 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The <see cref="PawnId"/> value of whoever is carrying this pawn, or 0 (C4).</summary>
         public int CarriedBy { get; internal set; }
 
+        /// <summary>
+        /// Treated recently: no treatment is given to this pawn before this tick (design 37 §4), so
+        /// a pile of medical supplies cannot stand in for bed rest. Nought for a pawn never treated.
+        /// Saved in the combat section (layout 4) and hashed only while set, so a colony that has
+        /// never treated anybody saves and hashes as it did before medicine existed.
+        /// </summary>
+        public int TreatedUntilTick { get; internal set; }
+
         /// <summary>Stunned right now, at <paramref name="tick"/>.</summary>
         public bool StunnedAt(int tick) => StunnedUntilTick > tick;
 
@@ -327,7 +335,7 @@ namespace Odyssey.Sim.Pawns
         public bool HasCombatState =>
             HpMilli != HpMaxMilli || Downed || NextSwingTick != 0 || StunnedUntilTick != 0
             || RetaliateAgainst != 0 || EquippedItem != 0 || CombatTarget != 0 || CarriedBy != 0
-            || KnockedDownUntilTick != 0 || PendingSwing != 0;
+            || KnockedDownUntilTick != 0 || PendingSwing != 0 || TreatedUntilTick != 0;
 
         /// <summary>Cell index, layer included. Always layer-aware; there is no 2D form of this.</summary>
         public int Cell { get; set; }
@@ -1007,7 +1015,8 @@ namespace Odyssey.Sim.Pawns
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
             hash.Add(Kind | (Leaving ? 1 << 16 : 0) | (Drafted ? 1 << 17 : 0)
                 | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0)
-                | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0));
+                | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
+                | (TreatedUntilTick != 0 ? 1 << 22 : 0));
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             if (combat)
@@ -1022,6 +1031,7 @@ namespace Odyssey.Sim.Pawns
                 hash.Add(CombatTarget);
                 hash.Add(CarriedBy);
                 if (knocked) hash.Add(KnockedDownUntilTick);
+                if (TreatedUntilTick != 0) hash.Add(TreatedUntilTick);
                 if (swinging)
                 {
                     hash.Add(PendingSwing);

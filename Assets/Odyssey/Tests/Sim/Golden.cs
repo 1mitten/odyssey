@@ -421,6 +421,17 @@ namespace Odyssey.Tests.Sim
         /// the reason given above. <b>Measured</b>: <c>GoldenColonyProbe</c>, reading the first
         /// seventeen job defs so it runs unchanged on both sides, was run on <c>main</c> (54df119a)
         /// and on the merge; the outputs are identical on all three boards.</para>
+        ///
+        /// <para><b>All six moved again on 2026-09-24, with medical supplies (design 37).</b>
+        /// Every colonist carries a seventh work priority (<c>Work_Doctor</c>) and a seventh skill
+        /// (<c>Skill_Medicine</c>), and the job system two more counter pairs (<c>Job_Treat</c>,
+        /// <c>Job_Patient</c>); all are hashed. The twelfth item moved nothing: none of these
+        /// colonies has a storage zone, so no allow list grew. The
+        /// treatment cooldown is hashed only while set and nobody in these windows is hurt, so it
+        /// moved nothing, and neither did the starting kit, which Bare does not carry.
+        /// <b>Measured</b>: <c>GoldenColonyProbe</c> run on <c>main</c> (52f53112) and on this
+        /// branch; the outputs are identical on all three boards, experience and passions
+        /// included. The hash sees more; no colony does anything different.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -431,8 +442,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 10212350739386668344UL,
-            Simulated = 8860197422024298715UL,
+            Generated = 6045123471689814645UL,
+            Simulated = 1856404441052394208UL,
         };
 
         /// <summary>
@@ -457,8 +468,8 @@ namespace Odyssey.Tests.Sim
             // zeros in the job counters; the probe diffs clean.
             // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
             // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
-            Generated = 16337376216538696172UL,
-            Simulated = 16703233559271607928UL,
+            Generated = 16765407320084916726UL,
+            Simulated = 17580394282528145421UL,
         };
 
         /// <summary>
@@ -497,8 +508,8 @@ namespace Odyssey.Tests.Sim
             // 2026-09-23, wildlife (design 30): the ruin is seeded with its rats and hogs.
             // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
             // 2026-09-23, the combat contracts step; the widened probe diffs clean.
-            Generated = 16106640289945334159UL,
-            Simulated = 9493899456924685757UL,
+            Generated = 9697163389190815735UL,
+            Simulated = 6061768179668941337UL,
         };
     }
 }

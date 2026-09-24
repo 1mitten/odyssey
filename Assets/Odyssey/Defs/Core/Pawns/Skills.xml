@@ -128,4 +128,14 @@
     <label>melee</label>
   </SkillDef>
 
+  <!--
+    Treating the hurt (design 37). Buys speed only: Work_Doctor's rateSkill reads it, and the heal
+    a treatment gives is the supplies' and the MedicalDef's, never the doctor's (owner, 2026-09-24).
+    Treating trains it, and so does treating yourself.
+  -->
+  <SkillDef ParentName="SkillBase">
+    <defName>Skill_Medicine</defName>
+    <label>medicine</label>
+  </SkillDef>
+
 </Defs>
