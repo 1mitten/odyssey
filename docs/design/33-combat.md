@@ -2536,3 +2536,70 @@ items, enemies ... also include an option to wield every colonist with a random 
   - A colonist who already holds a weapon keeps it, a downed one and animals are skipped, and a
     second click arms nobody (`AlreadyInThatState`).
   - `DebugArmColonistsTests` fail with the handler unregistered.
+
+## 10. Blood (built 2026-09-24, `claude/combat-blood`)
+
+The unit §7d names, built to the owner's rules there and to the seven points it hands on. Nothing
+here reaches a cell, a save, the hash or the simulation: a load starts clean and a player has
+nothing to clean.
+
+### 10a. What is drawn
+
+- **A spurt** on every landed hit: a handful of drops thrown from the wound along the blow, falling
+  under gravity. **Sharp** throws more and faster drops in a narrower fan, **blunt** fewer and
+  slower. Where the lead drop lands it leaves **one mark**: a sharp hit an elongated **splatter**
+  laid along the blow, with its satellite drops built into the shape; a blunt hit a smaller, round
+  **spot**. One mark per hit, not one per drop, or the cap would be a dozen hits.
+- **A pool** under a body gone down (0.6 of the size) or dead (the whole): it waits for the fall,
+  then spreads to full size over about 8 s of game time.
+- **Misses, dodges, swings, stuns and recoveries draw nothing** — `BloodModel.For`, unchanged.
+
+### 10b. The numbers (all INVENTED, for the playtest)
+
+| | Sharp | Blunt |
+|---|---|---|
+| Drops | 4 + damage/2, at most 16 | 1 + damage/4, at most 5 |
+| Throw | 2.5–4.5 m/s, ±30° | 1–2 m/s, ±60° |
+| Mark | radius 0.22 + 0.02 × damage, at most 0.55 m; 1.7 × as long as wide | radius 0.12 + 0.01 × damage, at most 0.28 m; round |
+
+- **A pool**: radius 0.45 × the body's length × the size factor — 0.81 m for a person's death,
+  0.27 m for a rat's. The body's length is the animal's drawn box, or 1.8 m for a person.
+- **The fade**: a mark holds full strength for the first quarter of a day (15,000 ticks), then
+  thins to nothing at 60,000, **by the simulation's tick**. A pause holds it, and speed three fades
+  it three times as fast (§7d point 3).
+- **The cap**: 200 marks, oldest first (point 4).
+- **Colours**: drops and splatter a deep red, pools darker, both translucent enough for the grass to
+  show through a thin mark.
+
+### 10c. Decisions this unit made
+
+- **The seam changed shape**, because the first implementation of it needed two things it did not
+  carry. `Spurt` now takes the struck pawn's **feet** beside the wound (the drops need a ground to
+  land on), and `Pool` takes **who** it is under and **the body's length** (point 2, and point 7
+  below). The seam is presentation's own; nothing outside `CombatFeedback` calls it.
+- **Where a death's pool goes (point 7).** When the event arrives the body has not fallen, and which
+  way it falls is decided by a clip, not the simulation. So a pool **waits 1.2 s of game time**,
+  then asks the figures where the body is: the midpoint of its feet and its head, which is under the
+  torso whichever way it fell. With no figure (a pawn beyond the figure cap, a checkout without
+  the art) it falls back to the feet it was given.
+- **A mark stands on what is under it (point 6).** A drop that lands over a cell with nothing to
+  stand on (off a terrace edge, into water, against a wall) leaves no mark. And every mark is asked
+  again each frame: **a floor taken away takes its blood with it**, rather than leaving a stain
+  hanging in the air. It does not fall, because a stain that falls three metres and lands intact is
+  stranger than one that goes.
+- **The slice hides a mark on a layer not drawn**, by the corpses' own rule (`LowestDrawnLayer`
+  to `HighestVisibleLayer`). The mark is kept, and shows again when its layer is drawn. Drops in the
+  air are hidden the same way.
+- **Draped, not lifted.** A mark is ground-fixed, so it is placed with `GroundRelief.Drape` and
+  lies along the relief (the standing rule).
+- **Drops move by real time while the game runs**, like the floating words, and freeze on a pause.
+  They are half a second long; the marks they leave are timed by the tick.
+
+### 10d. What it costs
+
+- **Draws in fade steps, never in marks** (`bug-patterns.md` P10). Marks are bucketed by shape
+  (splatter, spot, pool) and by one of six fade steps, each bucket one instanced call; drops are one
+  more. The ceiling is **19 calls** whatever the fight, and a colony with no blood submits
+  **nothing**.
+- **Per frame it scales with the marks (at most 200) and the drops in the air (at most 512)**,
+  never with the board or the colony (`process.md` §3).
