@@ -2710,28 +2710,39 @@ namespace Odyssey.Tests.PlayMode
                 {
                     boot.DaylightHourOverride = hour;
                     if (framing.Distance > 0f) boot.cameraRig!.FocusOn(at, framing.Distance);
+                    // Settled means the board has finished meshing in **and the camera has stopped**.
+                    // Waiting on the meshing alone let the first shot at 70 m be taken while the rig
+                    // was still easing in from the last framing: on the CI runner the floor read 0.46%
+                    // and the grouped shot, taken later, 0.71% — drift, not a difference (357 of the
+                    // 563 pixels it "moved" were pixels the floor had already moved).
+                    Transform eye = cam!.transform;
+                    Vector3 lastPosition = eye.position;
+                    Quaternion lastRotation = eye.rotation;
                     for (int i = 0, quiet = 0; i < 1500 && (i < 150 || quiet < 30); i++)
                     {
                         yield return null;
-                        quiet = renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
+                        bool still = (eye.position - lastPosition).sqrMagnitude < 1e-8f
+                                     && Quaternion.Angle(eye.rotation, lastRotation) < 1e-3f;
+                        lastPosition = eye.position;
+                        lastRotation = eye.rotation;
+                        quiet = still && renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
                     }
 
+                    // Off, on, off again: the floor spans the grouped shot, so any drift left in the
+                    // scene is inside the floor rather than counted against the grouping.
                     long tickBefore = boot.World!.CurrentTick;
-                    renderer.GroupTrees = false;
                     Color32[] chunk = null!, again = null!, grouped = null!, nearOnly = null!;
-                    int chunkCalls = 0;
-                    for (int attempt = 0; attempt < 10; attempt++)
-                    {
-                        yield return Shoot($"treegroup-{framing.Name}-{hour:0.#}-off", boot, target, px => chunk = px);
-                        chunkCalls = renderer.ChunkCallsByKind[0];
-                        yield return Shoot($"treegroup-{framing.Name}-{hour:0.#}-off-again", boot, target, px => again = px);
-                        if (Difference(chunk, again) < 0.005f) break;
-                        for (int i = 0; i < 60; i++) yield return null;
-                    }
+                    int chunkCalls = 0, groupedCalls = 0;
+                    renderer.GroupTrees = false;
+                    yield return Shoot($"treegroup-{framing.Name}-{hour:0.#}-off", boot, target, px => chunk = px);
+                    chunkCalls = renderer.ChunkCallsByKind[0];
                     Assert.That(renderer.TreeInstances, Is.GreaterThan(0), $"{framing.Name}: no trees in view, so there is nothing to compare");
                     renderer.GroupTrees = true;
                     yield return Shoot($"treegroup-{framing.Name}-{hour:0.#}-on", boot, target, px => grouped = px);
-                    int groupedCalls = renderer.ChunkCallsByKind[0];
+                    groupedCalls = renderer.ChunkCallsByKind[0];
+                    renderer.GroupTrees = false;
+                    yield return Shoot($"treegroup-{framing.Name}-{hour:0.#}-off-again", boot, target, px => again = px);
+                    renderer.GroupTrees = true;
 
                     // What the simpler far trees change, against the same still frame.
                     bool simplerWas = renderer.SimplerFarTrees;
@@ -2744,7 +2755,8 @@ namespace Odyssey.Tests.PlayMode
                         "the world ticked between the shots, so nothing can be compared");
 
                     float noise = Difference(chunk, again);
-                    float moved = Difference(chunk, grouped);
+                    // Against both neighbours, so a difference cannot hide on one side of the drift.
+                    float moved = Mathf.Max(Difference(chunk, grouped), Difference(grouped, again));
                     float farLod = Difference(grouped, nearOnly);
                     lines.Add($"{framing.Name} {hour:0.#} h: floor {noise * 100f:0.00}%, grouping moved {moved * 100f:0.00}%, " +
                               $"tree calls {chunkCalls} -> {groupedCalls}; simpler far trees moved {farLod * 100f:0.00}%");
@@ -4045,8 +4057,12 @@ namespace Odyssey.Tests.PlayMode
 #if UNITY_EDITOR
             // Real art when the packs are present, the same way the scene gets it. A clone without
             // them renders primitives, which is still a frame worth timing.
-            boot.moduleCatalogue = UnityEditor.AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(
-                "Assets/Odyssey/Presentation/ModuleCatalogue.asset");
+            // ODYSSEY_NO_ART=1 withholds the catalogue, so this machine draws what the CI runner (no
+            // Assets/Synty) draws: every module its primitive stand-in. For reproducing a runner-only
+            // failure here rather than guessing at it.
+            if (Environment.GetEnvironmentVariable("ODYSSEY_NO_ART") != "1")
+                boot.moduleCatalogue = UnityEditor.AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(
+                    "Assets/Odyssey/Presentation/ModuleCatalogue.asset");
 #endif
             bootObject.SetActive(true);
 
