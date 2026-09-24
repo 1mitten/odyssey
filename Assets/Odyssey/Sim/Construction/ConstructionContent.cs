@@ -267,6 +267,21 @@ namespace Odyssey.Sim.Construction
         public int hitPointsFactorPerMille = 1000;
 
         /// <summary>
+        /// How hard a <b>sharp</b> blow bites a thing built of this, in thousandths of the blow's
+        /// rolled damage (design 33 §14d; the owner, 2026-09-24: blunt against stone, sharp against
+        /// wood). Read by <c>BuildingTargets.DamageFactorPerMille</c> and nothing else.
+        ///
+        /// <para><b>On the material, not the building row</b>, because the owner's rule is wood
+        /// against stone: a wooden door and a wooden wall answer a machete alike. Defaults to the
+        /// blow as it comes, which is every material the rule has no opinion on — the ruined
+        /// city's, left for now (§14a (b)).</para>
+        /// </summary>
+        public int sharpDamagePerMille = 1000;
+
+        /// <summary>As <see cref="sharpDamagePerMille"/>, for a <b>blunt</b> blow — a bat, a crowbar or fists.</summary>
+        public int bluntDamagePerMille = 1000;
+
+        /// <summary>
         /// The material's effect on how much heat crosses a wall made of it, in thousandths of
         /// the standard material's conductance (design 28 §6).
         ///
@@ -647,6 +662,9 @@ namespace Odyssey.Sim.Construction
                     item = ItemHandle.Wood, workFactorPerMille = 1000, workOffsetTicks = 0,
                     hitPointsFactorPerMille = 1000, iconKey = "ui.res.wood",
                     thermalConductancePerMille = 600,
+                    // Design 33 §14d, INVENTED: an edge bites wood, a club does no better on it
+                    // than on anything else.
+                    sharpDamagePerMille = 1250, bluntDamagePerMille = 1000,
                 },
 
                 // 1.7x the work and 1.5x the hit points: the reference's own relation between a
@@ -667,6 +685,8 @@ namespace Odyssey.Sim.Construction
                     item = ItemHandle.Stone, workFactorPerMille = 1700, workOffsetTicks = 15,
                     hitPointsFactorPerMille = 1500, iconKey = "ui.res.stone",
                     thermalConductancePerMille = 1000,
+                    // Design 33 §14d, INVENTED: an edge turns on stone, a club breaks it.
+                    sharpDamagePerMille = 500, bluntDamagePerMille = 1250,
                 },
             };
         }

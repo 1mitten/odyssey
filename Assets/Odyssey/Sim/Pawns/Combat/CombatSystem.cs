@@ -119,7 +119,7 @@ namespace Odyssey.Sim.Pawns
                 Job job = attacker.CurrentJob!;
                 if (!BuildingTargets.TryStanding(_ctx, job.DestCell, out BuildingTarget building)) return;
                 if (!BuildingTargets.InReach(_ctx, attacker.Cell, building)) return;
-                SwingOutcome blow = decided ? held : BuildingTargets.Resolve(attacker, armament, _ctx, tick);
+                SwingOutcome blow = decided ? held : BuildingTargets.Resolve(attacker, armament, building, _ctx, tick);
                 StrikeBuilding(attacker, building, BuildingTargets.StruckCell(_ctx, attacker.Cell, building), armament, blow, tick);
                 return;
             }

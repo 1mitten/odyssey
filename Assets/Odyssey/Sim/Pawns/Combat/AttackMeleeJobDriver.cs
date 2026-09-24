@@ -301,7 +301,7 @@ namespace Odyssey.Sim.Pawns
             Armament armament = ctx.WeaponRules.ArmamentOf(Pawn, ctx);
             Pawn.NextSwingTick = tick + armament.Attack.cooldownTicks;
             Pawn.BeginGesture(PawnGesture.Strike);
-            Pawn.HoldSwing(BuildingTargets.Resolve(Pawn, armament, ctx, tick));
+            Pawn.HoldSwing(BuildingTargets.Resolve(Pawn, armament, target, ctx, tick));
             if (Pawn.Drafted) Pawn.DraftQuietSinceTick = tick;
 
             Job.TargetCell = BuildingTargets.StruckCell(ctx, Pawn.Cell, target);

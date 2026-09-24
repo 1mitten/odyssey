@@ -146,6 +146,55 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Pawns.EdificeDamage.Count, Is.Zero);
         }
 
+        /// <summary>
+        /// Blunt against stone, sharp against wood (design 33 §14d; the owner: yes). The numbers are
+        /// the material's, in content — wood ×1.25 sharp and ×1 blunt, stone ×0.5 sharp and ×1.25
+        /// blunt, everything else ×1 — and <see cref="BuildingTargets.Resolve"/> applies them to the
+        /// rolled damage, so the figure held for the impact is the multiplied one. Fists are blunt.
+        /// </summary>
+        [Test]
+        public void TheBlowsKindMeetsTheMaterial()
+        {
+            var woodDef = ConstructionContent.StuffAt(StuffHandle.Wood);
+            var stoneDef = ConstructionContent.StuffAt(StuffHandle.Stone);
+            Assert.That(woodDef.sharpDamagePerMille, Is.EqualTo(1_250));
+            Assert.That(woodDef.bluntDamagePerMille, Is.EqualTo(1_000));
+            Assert.That(stoneDef.sharpDamagePerMille, Is.EqualTo(500));
+            Assert.That(stoneDef.bluntDamagePerMille, Is.EqualTo(1_250));
+            foreach (int other in new[] { StuffHandle.None, StuffHandle.Concrete, StuffHandle.Steel, StuffHandle.Composite })
+            {
+                var def = ConstructionContent.StuffAt(other);
+                Assert.That(def.sharpDamagePerMille, Is.EqualTo(1_000), def.defName);
+                Assert.That(def.bluntDamagePerMille, Is.EqualTo(1_000), def.defName);
+            }
+            Assert.That(BuildingTargets.DamageFactorPerMille(DamageKind.Sharp, woodDef.stuff), Is.EqualTo(1_250));
+            Assert.That(BuildingTargets.DamageFactorPerMille(DamageKind.Blunt, stoneDef.stuff), Is.EqualTo(1_250));
+            Assert.That(BuildingTargets.DamageFactorPerMille(DamageKind.Sharp, 0xFFFF), Is.EqualTo(1_000),
+                "a material the table does not know takes the blow as it comes");
+
+            var (colony, a, _, woodWall) = AWall(StuffHandle.Wood);
+            int stoneWall = Raise(colony, BuildingHandle.Wall, 6, 4, StuffHandle.Stone);
+            PawnContext ctx = colony.Pawns;
+            Assert.That(BuildingTargets.TryFind(ctx, woodWall, out BuildingTarget wood), Is.True);
+            Assert.That(BuildingTargets.TryFind(ctx, stoneWall, out BuildingTarget stone), Is.True);
+            Assert.That(ctx.Content.Combat.fists.damageKind, Is.EqualTo(DamageKind.Blunt), "fists are blunt");
+
+            int tick = colony.World.CurrentTick;
+            Armament machete = Weapon(ctx, ItemIndex.Machete), fists = Fists(ctx);
+            Assert.That(machete.Attack.damageKind, Is.EqualTo(DamageKind.Sharp));
+            int Raw(in Armament armament) => MeleeRules.DamageMilli(armament.Attack, ctx,
+                DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.MeleeDamage ^ (uint)a.Id.Value));
+
+            Assert.That(BuildingTargets.Resolve(a, machete, wood, ctx, tick).DamageMilli, Is.EqualTo(Raw(machete) * 1_250 / 1_000),
+                "sharp against wood");
+            Assert.That(BuildingTargets.Resolve(a, machete, stone, ctx, tick).DamageMilli, Is.EqualTo(Raw(machete) * 500 / 1_000),
+                "sharp against stone");
+            Assert.That(BuildingTargets.Resolve(a, fists, wood, ctx, tick).DamageMilli, Is.EqualTo(Raw(fists)),
+                "blunt against wood");
+            Assert.That(BuildingTargets.Resolve(a, fists, stone, ctx, tick).DamageMilli, Is.EqualTo(Raw(fists) * 1_250 / 1_000),
+                "blunt against stone");
+        }
+
         // ---- the order and the fight ------------------------------------------------------------
 
         /// <summary>
@@ -216,10 +265,13 @@ namespace Odyssey.Tests.Sim
                          CombatEventKind.Critical, CombatEventKind.KnockedBack, CombatEventKind.SwingCritical })
                 Assert.That(tape.Of(none), Is.Empty, $"a building took a {none}");
 
+            // Fists are blunt and the wall is stone, so every blow is its roll times the material's
+            // ×1.25 (design 33 §14d).
             int figure = colony.Pawns.Content.Combat.fists.damage * 1_000;
             int spread = figure * colony.Pawns.Content.Combat.damageSpreadPerMille / 1_000;
+            int factor = ConstructionContent.StuffAt(StuffHandle.Stone).bluntDamagePerMille;
             foreach (CombatEventView hit in tape.By(a, CombatEventKind.Hit))
-                Assert.That(hit.Amount, Is.InRange(figure - spread, figure + spread));
+                Assert.That(hit.Amount, Is.InRange((figure - spread) * factor / 1_000, (figure + spread) * factor / 1_000));
 
             Assert.That(rules.Swings, Is.Empty, "a blow at a building was decided as a swing at a pawn");
 

@@ -372,6 +372,12 @@
     carries one, and ConstructionContent.IsBuildable is what keeps them off the menu. A salvage
     line that turned rubble into steel would give one an item and put it there, with no other
     change anywhere.
+
+    sharpDamagePerMille and bluntDamagePerMille (design 33 section 14d; the owner, 2026-09-24:
+    blunt against stone, sharp against wood) scale a blow at a thing built of the material, in
+    thousandths of its rolled damage, by the weapon's damage kind; fists are blunt. INVENTED: wood
+    1250 sharp and 1000 blunt, stone 500 sharp and 1250 blunt. The city's four take the default
+    1000 - the owner left the city for now - and so does anything the table does not know.
   -->
   <StuffDef>
     <defName>Stuff_None</defName>
@@ -420,6 +426,8 @@
     <hitPointsFactorPerMille>1000</hitPointsFactorPerMille>
     <iconKey>ui.res.wood</iconKey>
     <thermalConductancePerMille>600</thermalConductancePerMille>
+    <sharpDamagePerMille>1250</sharpDamagePerMille>
+    <bluntDamagePerMille>1000</bluntDamagePerMille>
   </StuffDef>
 
   <!--
@@ -446,6 +454,8 @@
     <hitPointsFactorPerMille>1500</hitPointsFactorPerMille>
     <iconKey>ui.res.stone</iconKey>
     <thermalConductancePerMille>1000</thermalConductancePerMille>
+    <sharpDamagePerMille>500</sharpDamagePerMille>
+    <bluntDamagePerMille>1250</bluntDamagePerMille>
   </StuffDef>
 
 </Defs>

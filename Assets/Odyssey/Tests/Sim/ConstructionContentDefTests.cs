@@ -117,8 +117,13 @@ namespace Odyssey.Tests.Sim
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone
         /// 15). Update this only when you meant to change a material's numbers, and say what moved
         /// in the commit message.
+        ///
+        /// <para>Moved once, deliberately, 2026-09-24 (design 33 §14d; the owner: blunt against
+        /// stone, sharp against wood): <c>sharpDamagePerMille</c> and <c>bluntDamagePerMille</c>,
+        /// wood 1,250 and 1,000, stone 500 and 1,250, the city's four and nothing at the default
+        /// 1,000 — all INVENTED, in the XML and the code oracle together. Nothing else moved.</para>
         /// </summary>
-        const ulong StuffFingerprint = 4054578596745551293UL;
+        const ulong StuffFingerprint = 3846353424243238969UL;
 
         /// <summary>
         /// The quality tiers as they stand: Poor 85, Normal 100, Decent 112, Uber 125, Epic 140

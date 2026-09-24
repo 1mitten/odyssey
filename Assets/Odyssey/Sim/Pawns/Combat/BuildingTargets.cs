@@ -29,13 +29,17 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Its pool, in thousandths: the row's points times its material's factor.</summary>
         public readonly int MaxMilli;
 
-        public BuildingTarget(int handle, int anchor, int second, ushort edifice, int maxMilli)
+        /// <summary>What it is built of, as the record's raw <c>Stuff*</c> value — what a blow's kind meets (design 33 §14d).</summary>
+        public readonly ushort Stuff;
+
+        public BuildingTarget(int handle, int anchor, int second, ushort edifice, int maxMilli, ushort stuff = 0)
         {
             Handle = handle;
             Anchor = anchor;
             Second = second;
             Edifice = edifice;
             MaxMilli = maxMilli;
+            Stuff = stuff;
         }
 
         /// <summary>Is <paramref name="cell"/> one of the building's own cells?</summary>
@@ -120,8 +124,23 @@ namespace Odyssey.Sim.Pawns
             if (max <= 0) return false;
 
             int second = EdificeFootprint.SecondCell(placed.CellIndex, placed.Def, placed.Facing, ctx.Size);
-            target = new BuildingTarget(handle, placed.CellIndex, second, placed.Def, max);
+            target = new BuildingTarget(handle, placed.CellIndex, second, placed.Def, max, placed.Stuff);
             return true;
+        }
+
+        /// <summary>
+        /// How much of a blow of this kind a thing built of <paramref name="stuff"/> takes, in
+        /// thousandths (design 33 §14d; the owner, 2026-09-24: blunt against stone, sharp against
+        /// wood): the material's <see cref="StuffDef.sharpDamagePerMille"/> or
+        /// <see cref="StuffDef.bluntDamagePerMille"/>. A material the table does not know — or
+        /// none — takes the blow as it comes, 1,000. The one place the rule is read.
+        /// </summary>
+        public static int DamageFactorPerMille(DamageKind kind, ushort stuff)
+        {
+            int handle = ConstructionContent.StuffForValue(stuff);
+            if (handle == StuffHandle.None) return 1_000;
+            StuffDef def = ConstructionContent.StuffAt(handle);
+            return kind == DamageKind.Sharp ? def.sharpDamagePerMille : def.bluntDamagePerMille;
         }
 
         /// <summary>What is left of it, in thousandths: its row in <c>EdificeDamage</c>, or its whole pool if it has none.</summary>
@@ -225,14 +244,18 @@ namespace Odyssey.Sim.Pawns
         /// lands, for its damage in the spread, and nothing else</b> — a building cannot step aside,
         /// dodge, be stunned, be knocked back or take a critical. The one roll is the damage, on the
         /// pawn's own <see cref="PawnPurpose.MeleeDamage"/> stream salted by her id, exactly as a
-        /// blow at a pawn draws it (<see cref="MeleeRules.DamageMilli"/>). Changes nothing: the
-        /// driver holds the outcome on the pawn to the impact, and
-        /// <see cref="CombatSystem.StrikeBuilding"/> applies it.
+        /// blow at a pawn draws it (<see cref="MeleeRules.DamageMilli"/>) — then <b>scaled by the
+        /// blow's kind against the building's material</b> (<see cref="DamageFactorPerMille"/>,
+        /// design 33 §14d), rounding down, so the figure held for the impact, the floating number
+        /// and the hit points taken are one number. Changes nothing: the driver holds the outcome
+        /// on the pawn to the impact, and <see cref="CombatSystem.StrikeBuilding"/> applies it.
         /// </summary>
-        public static SwingOutcome Resolve(Pawn attacker, in Armament armament, PawnContext ctx, int tick)
+        public static SwingOutcome Resolve(Pawn attacker, in Armament armament, in BuildingTarget target, PawnContext ctx, int tick)
         {
             var roll = DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.MeleeDamage ^ (uint)attacker.Id.Value);
-            return new SwingOutcome(CombatEventKind.Hit, MeleeRules.DamageMilli(armament.Attack, ctx, roll));
+            int damage = MeleeRules.DamageMilli(armament.Attack, ctx, roll);
+            long scaled = (long)damage * DamageFactorPerMille(armament.Attack.damageKind, target.Stuff) / 1_000;
+            return new SwingOutcome(CombatEventKind.Hit, scaled > int.MaxValue ? int.MaxValue : (int)scaled);
         }
     }
 }
