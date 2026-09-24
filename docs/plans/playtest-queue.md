@@ -23,6 +23,14 @@ the next session learns to ignore.
 
 ## Open
 
+- **Is the settings window one steady box, and can it be driven from the keyboard?**
+  (`claude/settings-frame`, design 39.) Open Menu > Settings and click through all five tabs: the
+  window should not move or change size at all, and should sit dead centre. Save, Save as, Load,
+  Quit to main menu and Exit game appear once, at the foot of the rail. Then press Tab and use the
+  arrows, Enter and Space to change a setting without the mouse: a white ring should follow you, and
+  the camera should not pan and the game should not pause while it does. A wrong answer is a window
+  that shifts as you change tab, a Keys tab with a scrollbar, a ring that jumps two rows for one
+  arrow press (the engine moving focus as well as us), or Space pausing the game from a switch.
 - **Does blood read as blood, and is it too much?** (`claude/combat-blood`, design 33 §10).
   *Arm every colonist*, *Spawn 3 marauders*, and watch at the play camera's distance. Every landed
   hit should throw a few red drops from the wound along the blow and leave one mark where they

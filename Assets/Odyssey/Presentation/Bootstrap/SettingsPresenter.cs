@@ -101,6 +101,9 @@ namespace Odyssey.Presentation.Bootstrap
             if (hotkeys != null && hotkeys.Listening != null)
             {
                 if (keys.escapeKey.wasPressedThisFrame) hotkeys.ConsumeEscape();
+                // Backspace empties the slot rather than binding it (design 39 §6): the second
+                // binding is optional, and this is how a player says so.
+                else if (keys.backspaceKey.wasPressedThisFrame) hotkeys.ClearListening();
                 else Capture(keys, hotkeys);
                 return;
             }
@@ -249,6 +252,7 @@ namespace Odyssey.Presentation.Bootstrap
                 // the board. The owner's report on 2026-09-16 was that the HUD read too small on
                 // a 4K panel; SettingsDirector.DefaultScaleFor is where that judgement lives.
                 director.SeedUiScale(SettingsDirector.DefaultScaleFor(Screen.height));
+                director.DefaultUiScale = SettingsDirector.DefaultScaleFor(Screen.height);
 
                 director.Seed(GraphicsOption.Shadows, _bootstrap.castShadows);
                 director.Seed(GraphicsOption.Surround, _bootstrap.terrainSkirt);

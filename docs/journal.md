@@ -11850,3 +11850,24 @@ cached translucent material, so no new shader has to survive the player build. T
 calls whatever the fight, and a colony with no blood submits nothing. Negative controls seen to
 fail: the cap dropping the newest, the fade brightening before its hold ends, the fans wound face
 down, the per-frame ground check off, the water rule off.
+
+## 2026-09-24 — The settings window: one fixed, centred frame
+
+The owner brought an approved design (the rail layout, mockups 14a-14e) and one instruction on top:
+keep it centred and keep its size. The old panel sized itself to the open tab and carried the five
+session rows under every tab, so the box moved on every click. It is 1240 x 720 now, centred by
+fixed offsets, with the session actions once in the rail (`docs/design/39-settings-window.md`).
+
+**The "empty checkbox" on every row was `IconBadge`'s placeholder glyph.** No settings key has art,
+so every row drew the "no art yet" square. Nothing was wrong with the badge; the settings rows were
+the wrong place for one. The new rows carry no badge and a PlayMode test says so.
+
+Two things the brief asked for did not exist: a reset on every tab (only Keys had one) and Backspace
+clearing a key slot (the hint promised it; nothing did it). Both are small director methods with
+fast-tier tests. The window is a modal now, which reverses the B17 decision that it should not be;
+the reason is the size of the thing, recorded in design 39 section 2.
+
+Two UI Toolkit gaps shaped the build: no `outline` (one focus ring for the window, moved to the
+focused control and drawn last) and no dashed border (a painted `DashedOutline`). The icons are the
+brief's SVG paths, flattened once by `SvgPath` and stroked by `PathGlyph`, so no mark on the window
+is a font glyph.

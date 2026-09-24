@@ -1075,6 +1075,7 @@ namespace Odyssey.Presentation.Ui
         Label _leaveTitle = null!;
         Label _leaveNote = null!;
         Label _leaveSaveLabel = null!;
+        VisualElement? _leaveCancel;
 
         /// <summary>Whether the leave prompt is up, for whoever owns the Escape key.</summary>
         public bool LeavePromptOpen => _leave.Showing;
@@ -1102,6 +1103,8 @@ namespace Odyssey.Presentation.Ui
 
             // The header's own label, so the title can say which of the two leavings this is.
             _leaveTitle = _leaveModal.Panel.Q<Label>(className: "panel__label");
+            // A question at the page title's step (design 39 §7), not a panel label in capitals.
+            HudText.Apply(_leaveTitle, HudTextRole.Name);
 
             _leaveNote = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "prompt__note");
             _leaveModal.Panel.Add(_leaveNote);
@@ -1111,6 +1114,7 @@ namespace Odyssey.Presentation.Ui
 
             var saveAndLeave = new VisualElement();
             saveAndLeave.AddToClassList("prompt__answer");
+            saveAndLeave.AddToClassList("prompt__answer--save");
             _leaveSaveLabel = HudText.Make(Registry.Label(LeavePrompt.SaveAndLeaveKey), HudTextRole.Row);
             saveAndLeave.Add(_leaveSaveLabel);
             saveAndLeave.RegisterCallback<ClickEvent>(_ => _leave.Choose(save: true));
@@ -1118,14 +1122,25 @@ namespace Odyssey.Presentation.Ui
 
             var leave = new VisualElement();
             leave.AddToClassList("prompt__answer");
+            leave.AddToClassList("prompt__answer--leave");
             leave.Add(HudText.Make(Registry.Label(LeavePrompt.LeaveKey), HudTextRole.Row));
             leave.RegisterCallback<ClickEvent>(_ => _leave.Choose(save: false));
             answers.Add(leave);
 
             var cancel = new VisualElement();
             cancel.AddToClassList("prompt__answer");
+            cancel.AddToClassList("prompt__answer--cancel");
             cancel.Add(HudText.Make(Registry.Label(LeavePrompt.CancelKey), HudTextRole.Row));
             cancel.RegisterCallback<ClickEvent>(_ => _leave.Cancel());
+            // Focus lands on the answer that loses nothing, and Enter presses it.
+            cancel.focusable = true;
+            cancel.RegisterCallback<KeyDownEvent>(evt =>
+            {
+                if (evt.keyCode != KeyCode.Return && evt.keyCode != KeyCode.KeypadEnter) return;
+                _leave.Cancel();
+                evt.StopPropagation();
+            });
+            _leaveCancel = cancel;
             answers.Add(cancel);
 
             _leaveModal.Panel.Add(answers);
@@ -1152,12 +1167,14 @@ namespace Odyssey.Presentation.Ui
             _leaveModal.Show(_leave.Showing);
             if (!_leave.Showing) return;
 
-            HudText.Set(_leaveTitle, Registry.Label(_leave.TitleKey), HudTextRole.PanelLabel);
+            HudText.Set(_leaveTitle, Registry.Label(_leave.TitleKey) + "?", HudTextRole.Name);
             HudText.Set(_leaveNote,
-                _boot?.BoundSavePath == null
+                "Unsaved progress since the last save will be lost. " +
+                (_boot?.BoundSavePath == null
                     ? "This colony has never been saved. Saving writes a new file, " + _leave.Target
-                    : "Saving writes over " + _leave.Target,
+                    : "Saving writes over " + _leave.Target),
                 HudTextRole.Meta);
+            _leaveModal.Panel.schedule.Execute(() => _leaveCancel?.Focus());
         }
 
         /// <summary>

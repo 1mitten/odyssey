@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-110 entries, 84 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+121 entries, 95 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -135,6 +135,17 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Ambience volume** | `ui.settings.volume.ambience` | The sound of the place itself | no art | M3 |
 | **Effects volume** | `ui.settings.volume.effects` | Axes, picks and the noises of work | no art | M3 |
 | **Alerts volume** | `ui.settings.volume.alerts` | What asks for attention | no art | M3 |
+| **Scale** | `ui.settings.group.scale` | How large the interface is drawn | no art | M3 |
+| **Camera** | `ui.settings.group.camera` | How the camera moves, and the keys that move it | no art | M3 |
+| **Build palette** | `ui.settings.group.palette` | The shape of the Build palette | no art | M3 |
+| **Performance** | `ui.settings.group.performance` | What the frame costs to draw | no art | M3 |
+| **Volume** | `ui.settings.group.volume` | The loudness of the game and its music and ambience | no art | M3 |
+| **Cues** | `ui.settings.group.cues` | The loudness of work and of what asks for attention | no art | M3 |
+| **Saving** | `ui.settings.group.saving` | When the colony is written to disk without being asked | no art | M3 |
+| **Game** | `ui.settings.group.game` | Saving, loading and leaving, pinned under the tabs | no art | M3 |
+| **View** | `ui.settings.group.view` | The keys that move the slice and frame the map | no art | M3 |
+| **Tools** | `ui.settings.group.tools` | The keys that arm an order | no art | M3 |
+| **Time** | `ui.settings.group.time` | The keys that pause the game and set its speed | no art | M3 |
 
 ## The Inventory tab's words
 
