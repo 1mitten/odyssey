@@ -108,3 +108,5 @@ measurement by name when it is the thing being measured.
 pass to a required check — which is what lets a docs PR merge without the runner, and is also how a
 broken selector would skip every job and merge a PR on nothing. So *Fast tier* waits for the hosted
 jobs and fails if the selector failed.
+
+<!-- CI proof: a docs-only change; this PR is closed, never merged. -->
