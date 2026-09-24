@@ -67,6 +67,9 @@ namespace Odyssey.Tests.Sim
             /// <summary>Kinds seen in a fight, as a bit per kind.</summary>
             public int Kinds;
 
+            /// <summary>Pawn-ticks a drafted colonist spent joining another colonist's fight (design 33 §15).</summary>
+            public int JoiningTicks;
+
             public readonly List<string> Violations = new List<string>();
 
             /// <summary>Pairs found sharing a tile, over every tick watched.</summary>
@@ -114,6 +117,7 @@ namespace Odyssey.Tests.Sim
                 {
                     Pawn p = pawns[i];
                     if (!Melee.IsInAnAttack(p)) continue;
+                    if (p.CurrentJob!.DestCell == AttackMeleeJobDriver.Joining && p.CombatTarget != 0) JoiningTicks++;
                     Add(p);
                     Pawn? target = colony.Pawns.Pawns.Get(new PawnId(p.CombatTarget));
                     if (target != null) Add(target);
@@ -541,7 +545,7 @@ namespace Odyssey.Tests.Sim
         [Test, Category("Long")]
         public void MixedBrawlsOnManySeeds()
         {
-            int kinds = 0, swings = 0;
+            int kinds = 0, swings = 0, joining = 0;
             for (uint seed = 1; seed <= 12; seed++)
             {
                 var roll = new System.Random((int)seed * 7919);
@@ -572,9 +576,14 @@ namespace Odyssey.Tests.Sim
                 guard.AssertClean($"seed {seed}");
                 kinds |= guard.Kinds;
                 swings += rules.Swings;
+                joining += guard.JoiningTicks;
             }
 
+            // Drafted colonists help (design 33 §15): the sweep's drafted colonists join the fights
+            // round them once their own order is done, so the rule is guarded here too.
+            TestContext.WriteLine($"mixed brawls: {swings} swings over twelve seeds; {joining} pawn-ticks joining another colonist's fight");
             Assert.That(swings, Is.GreaterThan(200), "the control: the fights never happened");
+            Assert.That(joining, Is.GreaterThan(0), "the control: no drafted colonist joined a fight");
             Assert.That(kinds, Is.EqualTo((1 << PawnKindIndex.Count) - 1), "the control: not every kind fought");
         }
     }
