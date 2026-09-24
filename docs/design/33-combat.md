@@ -2627,7 +2627,8 @@ it. Otherwise `NotPermitted`.
   cadence.
 - **It ends in success when the building is gone** — demolished by her, by another attacker, or
   taken apart by a deconstructor. Only an order ever starts one, so it is always forced and never
-  re-chosen on `rechooseTicks`.
+  re-chosen on `rechooseTicks`. A job naming neither a pawn nor a building (`DestCell` −1) still
+  fails on its first tick, which is the stub's contract `CombatContractTests` holds.
 - **Every swing at a building is activity for the draft's quiet clock** (`DraftQuietSinceTick`).
   Without it a colonist who took more than four hours to beat down a stone wall with her fists
   (450 points at 4 a blow, a blow every 120 ticks, is 13,500 ticks) would undraft the tick it fell.
@@ -2735,3 +2736,50 @@ pawn already in `Job_AttackMelee`, which is nobody) and publishes a 17-entry tab
 attacker costs a constant reach test a tick; choosing a side costs at most ten candidate cells ×
 (one pass over the pawns for `Holds`, plus a reachability query), asked at the chase cadence and not
 per tick. The publish scales with the buildings that have been struck.
+
+### 13m. Tests, and the controls seen to fail
+
+Fast tier: Sim **1,370** (from 1,349), Hud **985** (from 979), Long **41**, all green;
+`GoldenMasterTests` green without a re-bake. Three content gates clean. Never run in Unity: the
+two Presentation lines below are **uncompiled** until the integrator's run.
+
+`BuildingTargetTests` (Sim, 21): what a target is, both halves of a bed and a generator keyed on
+the head, a deck plate and bare ground not; which edifice ids have hit points; the pool times the
+material; a wall beaten down with no refund, the row gone and she holds again; every blow lands for
+its damage alone at melee 0; the refusals; a wall with no reachable side; the same wall again; two
+on one wall on two sides; the draft outlasting a stone wall; the building going ending the attack; a
+rebuilt wall not the one she was sent at; `Demolish` clearing the row and the order, by fight and by
+deconstruction; a demolished bed and door leaving nothing pointing at them; only the blow that
+crosses nought; the order line; the publish; the hash only once struck; a save mid-blow at a wall
+(with its own forgetful control); a knockback keeping the order. `CombatOrdersTests` (Hud, five, in
+place of the C2 case "a walled cell is still a move" — it is an attack now): a building attacked by
+every drafted colonist; **a floored cell still moves**, and so do a tree and an edifice the table
+does not name; a pawn under the pointer wins; no draft, no fight; a weapon on a shelf opens the
+menu. `BloodModelTests` +1, `CombatFeedbackModelTests` +1.
+
+Each rule was withheld and its test run and seen to fail, then restored:
+
+| Withheld | Failed |
+|---|---|
+| `Demolish` clearing the damage row | four, the row outliving the wall |
+| `Demolish` clearing the deconstruct order | `DemolishClearsTheRowAndTheDeconstructOrder` |
+| `IsInAnAttack` counting a building attack | `TwoOnOneWallStandOnTwoSides` |
+| the quiet clock refreshed by a blow | `TheDraftDoesNotLapseWhileSheBeatsAWall` |
+| a blow that always lands (a hit roll put back) | `EveryBlowAtABuildingLandsForItsDamageAlone` |
+| the knockback keeping a building order | `AKnockedBackColonistGoesBackToTheWall` |
+| the record handle (the cell asked instead) | `ARebuiltWallIsNotTheOneSheWasSentAt` |
+| the material's factor | `APoolIsTheRowTimesItsMaterial` |
+| a pawn under the pointer winning | `APawnUnderThePointerWinsOverTheBuildingItStandsOn` |
+| the interface asking the published table | `AClickOnAFlooredCellIsStillAMove` |
+| the menu before the building | `AWeaponOnAShelfOpensTheMenuRatherThanAnAttack` |
+| no blood from a building | `ABuildingNeverBleeds` |
+| only the blow that crosses nought | `OnlyTheBlowThatCrossesNoughtDemolishes` |
+| no refund (`TakeApart` called instead) | `ADraftedColonistBeatsAWallDownAndGetsNothingBack` |
+| the order line for a building | `TheOrderLineIsDrawnToTheBuilding` |
+| refusing a wall nobody can reach | `AWallWithNoSideAnybodyCanReachIsRefused` |
+| the same wall again changing nothing | `TheSameWallAgainChangesNothing` |
+| the contributor registered | `StruckBuildingsArePublishedAndTheTableNamesTheTargets` |
+
+**Presentation, never compiled here:** `SelectionPresenter.Order` reads the edifice in the clicked
+cell off `WorldRenderModel.EdificeDef` and passes it on; `CombatFeedback.Bleed` asks
+`BloodModel.For(combatEvent)`.

@@ -17,7 +17,7 @@ combat adds save sections, not a format bump.
 | C3 | Weapons: bat, crowbar, machete, sci-fi blade; the equip job and order; stun; starting kit; held prop | **▶ playtest** | moved once, in the contracts step; **none since** | **built 2026-09-23 (lane D; the held prop at the integration) — awaiting playtest, with C2** |
 | C4 | Rescue and healing in bed | — | moved once, in the contracts step | designed |
 | C5 | Friendly fire and its mood | — | **none, asserted** | designed |
-| C6 | Buildings as targets | — | **none, asserted** | designed |
+| C6 | Buildings as targets: `EdificeDamage` filled, the attack driver's building mode, `OrderAttack` with `B = 0`, demolition through `ConstructionGrid.Demolish` with no refund, the right-click (`CombatOrders.RouteBuilding`), hit points for the campfire and power's three | **▶ playtest** | **none, asserted** (building fingerprint moved once) | **built 2026-09-24, `claude/combat-buildings`, design 33 §13 — awaiting the integrator's Unity run and the owner's playtest** |
 | C7 | Ten-day gate with and without hostiles, benchmark rows, records, wiki republish | — | — | — |
 
 ## Running C2–C7 with several agents
