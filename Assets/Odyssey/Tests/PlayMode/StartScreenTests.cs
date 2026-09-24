@@ -626,6 +626,23 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(Shown(Scrim(doc)), Is.True,
                     "the scrim went with the menu, so the settings panel is no longer modal");
 
+                // And it can be clicked. The menu's scrim is built after the settings window, so
+                // unless the window is raised over it every click lands on the scrim and the
+                // window shown on top does nothing (owner, 2026-09-24). Picked at the centre and
+                // at a rail tab, the way a pointer would be.
+                VisualElement settings = doc.rootVisualElement.Q("settings")!;
+                foreach (Vector2 at in new[]
+                         {
+                             settings.worldBound.center,
+                             settings.Q(className: "sw__tab")!.worldBound.center,
+                         })
+                {
+                    VisualElement? hit = settings.panel.Pick(at);
+                    Assert.That(hit != null && (hit == settings || settings.Contains(hit)), Is.True,
+                        $"a click on the settings window at {at} landed on {hit?.name ?? "nothing"} " +
+                        $"({(hit == null ? "" : string.Join(" ", hit.GetClasses()))}), not on the window");
+                }
+
                 // And back, by the panel's own close — not by the row that opened it, because the
                 // ways out of that panel already existed and this has to be all of them.
                 boot.Preferences.SetOpen(false);

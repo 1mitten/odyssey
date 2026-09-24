@@ -1148,6 +1148,13 @@ namespace Odyssey.Presentation.Ui
 
             if (open)
             {
+                // Raised over everything built after it — the main screen's scrim above all, which
+                // is built later and pickable, and took every click meant for the window when
+                // Settings was opened from the main screen (owner, 2026-09-24). The two prompts
+                // that can be raised from the rail both close this window first, so raising it
+                // never puts it over one of them.
+                _settingsScrim.BringToFront();
+                _settingsPanel.BringToFront();
                 ToggleMenu(false);
                 _directors?.Debug.SetOpen(false);
                 if (_resolutionDropdown == null)

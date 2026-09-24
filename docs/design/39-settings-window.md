@@ -47,6 +47,13 @@ it was a narrow box you watched the board through — but a window this size ove
 a misclick waiting to happen, and the brief asks for the scrim. On the main screen the menu's own
 scrim is already up, so the window adds none.
 
+**It is raised to the front every time it opens** (`BringToFront` on the scrim and the window). The
+main screen's scrim is built after it and is pickable, so on the first play (2026-09-24) Settings
+opened from the main menu *showed* but every click landed on that scrim and did nothing. Measured
+with a negative control: without the raise, `StartScreenTests.OptionsOpensTheSettingsPanelWithNoColonyRunning`
+picks `start-scrim` at the window's centre; with it, the window. The two prompts the rail can raise
+both close the window first, so raising it never covers one of them.
+
 ## 3. Colour
 
 Only the brief's tokens. The new ones went into `HudTheme` beside the old: `ControlBorder` (.26),
