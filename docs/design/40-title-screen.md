@@ -95,8 +95,8 @@ lost its placeholder square too.
 | Wordmark tracked .3em | .26em, chosen at runtime | .3em overflows the 464 px measured; the brief's own fallback (§2) |
 | Hover inset shadow 3 px | a 3 px edge element | UI Toolkit has no box-shadow |
 | Keyboard outline via CSS | one drawn ring | UI Toolkit has no outline |
-| Resolution line "if easily available" | shown, `Screen.width x Screen.height`, refreshed on a geometry change | it was |
-| Version from "the existing version source" | `Application.version` (0.1.0), as "prototype 0.1.0" | the project's only version source is the player setting |
+| Resolution line "if easily available" | none | shown at first, then removed on the owner's word (§10) |
+| Version from "the existing version source" | `V0.0.1`, from `TitleLayout.Version` | the owner's number and prefix (§10); the player setting is left alone |
 | Nothing said about the load list | in the dock under the rule | the card it lived in is gone |
 
 ## 9. Not verified
