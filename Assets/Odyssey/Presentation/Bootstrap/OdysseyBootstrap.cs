@@ -148,6 +148,9 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Fade whatever stands between the camera and a selected colonist, so a tree cannot hide the person you are watching.")]
         public bool seeThroughToSelection = true;
 
+        [Tooltip("See-through for every colonist on screen, not only the selected ones (design 38 §19).")]
+        public bool seeThroughToEveryColonist = true;
+
         [Tooltip("How wide the beam to a selected colonist is, in metres. It stands for the width of the person, not the thickness of the line.")]
         [Range(0.2f, 3f)]
         public float seeThroughRadius = SightLines.DefaultRadius;
@@ -212,6 +215,17 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         MenuAmbience? _menuBed;
         DaylightDirector? _daylight;
+
+        /// <summary>The key light the day moves, kept so the renderer's shadow margin can sweep
+        /// towards it (design 38 §18).</summary>
+        Light? _keyLight;
+
+        /// <summary>
+        /// Holds the day at this hour instead of following the clock. A measurement seam: the root
+        /// re-applies the hour every frame, so a test that moved the sun itself would be undone on
+        /// the next one (P18). Null in the game.
+        /// </summary>
+        public float? DaylightHourOverride { get; set; }
 
         /// <summary>The wind the foliage reads, on the game clock (design 38 §4): a paused meadow
         /// holds still and a meadow at speed 3 hurries with everything else.</summary>
@@ -425,6 +439,9 @@ namespace Odyssey.Presentation.Bootstrap
         static bool DefaultTracing() =>
             !Application.isBatchMode && (Application.isEditor || Debug.isDebugBuild);
 
+        bool _sceneryPathLogged;
+        int _framesRendered;
+
         /// <summary>The trace this session is writing, or null when it is not writing one.</summary>
         public Diagnostics.PerfTracer? Trace => _tracer;
 
@@ -553,6 +570,9 @@ namespace Odyssey.Presentation.Bootstrap
             _menuBed = new MenuAmbience(audioCatalogue, transform, gameObject.layer);
 
             if (buildOnPlay || StartedFromTheCommandLine()) BuildSession();
+            // The player benchmark (design 38 §18e): a development player told -odyssey-bench
+            // times its arms on the colony it just built, writes the table to the log and quits.
+            if (PlayerBench.Requested()) StartCoroutine(new PlayerBench(this).Run());
         }
 
         /// <summary>The switch that boots a player straight into a colony. See below.</summary>
@@ -957,6 +977,9 @@ namespace Odyssey.Presentation.Bootstrap
                 GameObjectLayer = gameObject.layer,
                 ScatterDensity = grassScatter,
                 Appearances = appearances,
+                // The colony's clearing stays free of bushes and stones: it is where the first
+                // buildings go (design 38 §17). Before any meshing, so the first frame has it.
+                DressingClearing = new Vector2Int(outcome.StartCell.X, outcome.StartCell.Z),
                 // The same materials the figures paint through, so a far colonist wears the
                 // issued uniform rather than the pack's orange (design 29-modular-colonists §13a).
                 Recolours = _colonistMaterials,
@@ -969,7 +992,11 @@ namespace Odyssey.Presentation.Bootstrap
             _renderer.Skirt.Enabled = terrainSkirt;
             _renderer.Skirt.TreeDensityPercent = skirtTreeDensity;
             _renderer.Skirt.HillTrees = skirtHillTrees;
-            if (terrainSkirt)
+            // The player's graphics preferences over the scene's fields, before anything is meshed
+            // or built, so the board arrives drawn as chosen. Only once a store is attached — the
+            // settings presenter does that — so a harness that sets these fields keeps them.
+            if (Preferences.HasStore) SettingsPresenter.ApplyRendererLevers(_renderer, Preferences);
+            if (_renderer.Skirt.Enabled)
             {
                 _renderer.Skirt.Build();
                 Debug.Log($"[Odyssey] surround: {_renderer.Skirt.GroundInstances} ground tiles, " +
@@ -1045,6 +1072,7 @@ namespace Odyssey.Presentation.Bootstrap
             // because the scene builder already places it and two directional lights is a
             // doubled key nobody would think to look for.
             Light? key = sun != null ? sun : FindKeyLight();
+            _keyLight = key;
             if (daylightCycle && key != null)
             {
                 _daylight = new DaylightDirector(key, RenderSettings.skybox);
@@ -1215,7 +1243,8 @@ namespace Odyssey.Presentation.Bootstrap
             // The light follows the clock every frame, not every tick: at speed 3 several ticks
             // retire in one frame and the sky would step, and when the game is paused the hour
             // stops with it, which is right — a paused world should not go on getting dark.
-            _daylight?.Apply(_world.CurrentTick);
+            if (DaylightHourOverride is float hour) _daylight?.ApplyHour(hour);
+            else _daylight?.Apply(_world.CurrentTick);
 
             // And the wind on the same clock, for the same reason: a paused meadow holds still.
             _wind.Apply(_world.CurrentTick);
@@ -1427,9 +1456,24 @@ namespace Odyssey.Presentation.Bootstrap
                     // a chunk must be before dropping it is invisible.
                     _renderer.ShadowCasterMarginMetres =
                         _renderer.CastShadows ? QualitySettings.shadowDistance : 0f;
+                    // And which way the shadows fall, so the margin sweeps towards the sun rather
+                    // than out in every direction (design 38 §18).
+                    _renderer.ShadowLightDirection = _keyLight != null
+                        ? _keyLight.transform.forward
+                        : (Vector3?)null;
                 }
 
                 _renderer.Render(activeLayer, slice);
+
+                // Once per session, a few hundred frames in: which way the scenery went on this
+                // machine's API, so a player log says whether the GPU path ran (design 38 §22).
+                if (!_sceneryPathLogged && ++_framesRendered == 300)
+                {
+                    _sceneryPathLogged = true;
+                    Debug.Log($"[Scenery] {SystemInfo.graphicsDeviceType}: {_renderer.IndirectDrawCalls} indirect calls " +
+                              $"of {_renderer.DrawCalls}, {_renderer.IndirectInstances} instances in the GPU buffers " +
+                              $"(indirect {(_renderer.UseIndirectScenery ? "on" : "off")})");
+                }
             }
             MarkSection(FrameSection.World);
 
@@ -1508,6 +1552,8 @@ namespace Odyssey.Presentation.Bootstrap
             DrawPowerLines(_world.Views.Current, activeLayer);
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             DrawDraftMarks(_world.Views.Current, movePerTick);
+            // The landing ring on the cell each selected colonist was sent to (design 33 §20).
+            DrawLandingRings(_world.Views.Current, activeLayer, slice);
             // The lock-on ring under whoever the selection is attacking (design 33 §7b).
             DrawLockOnRings(_world.Views.Current, movePerTick, activeLayer, slice);
             // The fight (design 33 §1): a bar over the hurt and the drafted, the hostile marker,
@@ -1668,6 +1714,8 @@ namespace Odyssey.Presentation.Bootstrap
                 foreach (Odyssey.Hud.GraphicsLadder ladder in Odyssey.Hud.SettingsDirector.AllLadders)
                     pairs.Add(("gfx." + ladder, settings.Value(ladder)
                         .ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                // Which tier the trace was taken on, so a comparison can say so in one word.
+                pairs.Add(("gfx.preset", settings.Preset.ToString()));
             }
 
             return pairs;
@@ -2664,29 +2712,100 @@ namespace Odyssey.Presentation.Bootstrap
             _renderer.SightFadeAlpha = seeThroughAlpha;
             _sight.Radius = seeThroughRadius;
 
+            // The player's See-through switch governs all of it.
             if (!seeThroughToSelection || cameraRig == null) return;
-            SelectionDirector? selection = Directors?.Selection;
-            if (selection == null || !selection.HasPawn) return;
 
             Vector3 eye = cameraRig.transform.position;
-            var selected = selection.Pawns;
-            for (int i = 0; i < selected.Count && i < MaxSightLines; i++)
+            Vector3 focus = cameraRig.Focus;
+            float lift = colonistCursor.y * 0.5f;
+
+            // Selected colonists first: they are who the player is watching, and they must never
+            // lose their line to a closer stranger.
+            SelectionDirector? selection = Directors?.Selection;
+            int lines = 0;
+            if (selection != null && selection.HasPawn)
             {
-                if (!snapshot.TryGetPawn(selected[i], out PawnView pawn)) continue;
-                if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
-                _sight.Add(eye, feet + Vector3.up * (colonistCursor.y * 0.5f));
+                var selected = selection.Pawns;
+                for (int i = 0; i < selected.Count && lines < MaxSightLines; i++)
+                {
+                    if (!snapshot.TryGetPawn(selected[i], out PawnView pawn)) continue;
+                    _sight.Add(eye, FeetOf(pawn, movePerTick) + Vector3.up * lift);
+                    lines++;
+                }
             }
+
+            // Lines past this point fade only trees and bushes (SightLines.Primary).
+            _sight.Primary = _sight.Count;
+
+            // Then every other colonist on screen, nearest the focus first, up to a fixed count
+            // (owner, 2026-09-24: trees fade for every colonist). Bounded so the cost does not
+            // grow with the colony: each line is a slab test per instance in the chunks it crosses.
+            _sightCandidates.Clear();
+            System.ReadOnlySpan<PawnView> pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length && seeThroughToEveryColonist; i++)
+            {
+                if (!pawns[i].IsColonist) continue;
+                if (selection != null && selection.HasPawn && Selected(selection.Pawns, pawns[i].Id)) continue;
+                Vector3 feet = FeetOf(pawns[i], movePerTick);
+                _sightCandidates.Add((Flat(feet - focus), feet + Vector3.up * lift));
+            }
+            lines += AddNearest(eye, MaxColonistSightLines);
+
+            // Bushes never fade (owner, 2026-09-24: "walking through / past a bush shouldn't make it
+            // disappear, keep it there — it's fine to walk through bushes"), for a colonist or for
+            // anything lying under one; grass still lies flat round an item or a body
+            // (ChunkRenderer.StampLying and the item ring). Design 38 §21.
+            SightLinesLastFrame = _sight.Count;
         }
 
+        Vector3 FeetOf(in PawnView pawn, int movePerTick)
+        {
+            if (_figures != null && _figures.TryGetFeet(pawn.Id, out Vector3 feet)) return feet;
+            return PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+        }
+
+        static float Flat(Vector3 v) => v.x * v.x + v.z * v.z;
+
+        static bool Selected(IReadOnlyList<PawnId> selected, PawnId id)
+        {
+            for (int i = 0; i < selected.Count; i++) if (selected[i].Equals(id)) return true;
+            return false;
+        }
+
+        /// <summary>Add a line to the nearest <paramref name="most"/> candidates, by distance from the
+        /// focus. A partial selection, not a sort: the count is small and the list is reused.</summary>
+        int AddNearest(Vector3 eye, int most)
+        {
+            int added = 0;
+            for (; added < most && _sightCandidates.Count > 0; added++)
+            {
+                int best = 0;
+                for (int i = 1; i < _sightCandidates.Count; i++)
+                    if (_sightCandidates[i].Distance < _sightCandidates[best].Distance) best = i;
+                _sight.Add(eye, _sightCandidates[best].Target);
+                _sightCandidates[best] = _sightCandidates[_sightCandidates.Count - 1];
+                _sightCandidates.RemoveAt(_sightCandidates.Count - 1);
+            }
+            return added;
+        }
+
+        readonly List<(float Distance, Vector3 Target)> _sightCandidates = new List<(float, Vector3)>();
+
         /// <summary>
-        /// The most lines of sight drawn at once. A box selection can hold the whole colony, and
-        /// each line costs a slab test per instance in every chunk any of them crosses — so the
-        /// cost of the feature would grow with the size of the selection, which is the one thing
-        /// it must not do. Beyond this many the player is commanding a crowd rather than watching
-        /// a person, and the first few are the ones the camera is on.
+        /// The most lines of sight drawn at once for selected colonists. A box selection can hold
+        /// the whole colony, and each line costs a slab test per instance in every chunk any of
+        /// them crosses — so the cost of the feature would grow with the size of the selection,
+        /// which is the one thing it must not do.
         /// </summary>
         const int MaxSightLines = 8;
+
+        /// <summary>The most unselected colonists given a line, nearest the focus first (design 38
+        /// §19). With <see cref="MaxSightLines"/> it caps the sight test at a fixed cost whatever the
+        /// colony's size.</summary>
+        public const int MaxColonistSightLines = 16;
+
+        /// <summary>How many lines of sight were drawn last frame, for the frame measurement.</summary>
+        public int SightLinesLastFrame { get; private set; }
 
         readonly SightLines _sight = new SightLines();
 
@@ -2730,15 +2849,16 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>
         /// The draft on the board (design 33 §2g): a diamond over every drafted colonist's head, and
         /// for the <i>selected</i> ones that are walking under orders, a line to where they were
-        /// sent and a floor bracket on it. Twenty lines across the board would be noise; the ones
+        /// sent. The cell at its end wears the landing ring (§20, <see cref="DrawLandingRings"/>),
+        /// which replaced a floor bracket there. Twenty lines across the board would be noise; the ones
         /// being commanded are signal. One walk of the aspects finds them all
         /// (<see cref="OrderModel.CollectDrafted"/>), and the cost is a submission or three per
         /// drafted colonist — it scales with the draft, never with the board.
         ///
         /// <para><b>An undrafted colonist sent for a weapon gets the same line</b> (design 33 §7a,
         /// the context menu's Equip): the simulation publishes the weapon's cell as her order cell,
-        /// the same walk of <c>OrderModel.CollectDrafted</c> finds it, and the line and bracket are
-        /// drawn exactly as a drafted move's — without the diamond, which says "drafted".</para>
+        /// the same walk of <c>OrderModel.CollectDrafted</c> finds it, and the line is drawn
+        /// exactly as a drafted move's — without the diamond, which says "drafted".</para>
         /// </summary>
         void DrawDraftMarks(WorldSnapshot snapshot, int movePerTick)
         {
@@ -2762,7 +2882,7 @@ namespace Odyssey.Presentation.Bootstrap
                 _renderer.DrawMarker(feet + Vector3.up * (colonistCursor.y + DraftMarkerLift), DraftMarkerSize, hue);
 
                 if (mark.OrderCell < 0 || selection == null || !IsSelected(selection, pawn.Id)) continue;
-                DrawOrderLine(feet, mark.OrderCell, hue, line);
+                DrawOrderLine(feet, mark.OrderCell, line);
             }
 
             for (int i = 0; i < _undraftedOrders.Count; i++)
@@ -2773,18 +2893,67 @@ namespace Odyssey.Presentation.Bootstrap
 
                 if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
                     feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
-                DrawOrderLine(feet, order.OrderCell, hue, line);
+                DrawOrderLine(feet, order.OrderCell, line);
             }
         }
 
-        /// <summary>The order line from a colonist's feet to the cell she was sent to, and a bracket on it.</summary>
-        void DrawOrderLine(Vector3 feet, int orderCell, Color bracket, Color line)
+        /// <summary>
+        /// The order line from a colonist's feet to the cell she was sent to. The cell itself is
+        /// marked by the landing ring (<see cref="DrawLandingRings"/>), not here: the floor bracket
+        /// that stood on it until design 33 §20 is gone.
+        /// </summary>
+        void DrawOrderLine(Vector3 feet, int orderCell, Color line)
         {
             CellRef dest = _world!.Size.FromIndex(orderCell);
             Vector3 to = GroundRelief.Drape(CellMetrics.FloorCentre(dest)).GetPosition() + Vector3.up * 0.12f;
             _renderer!.DrawSegment(feet + Vector3.up * 0.12f, to, DraftLineThickness, line);
-            _renderer.DrawFloorBracket(dest, bracket);
         }
+
+        /// <summary>
+        /// The landing ring (design 33 §20; owner, 2026-09-24: <i>"instead of using a square to
+        /// indicate where to land when drafting people, can it be a ring that flashes temporarily
+        /// or has a transition effect that makes sense"</i>): a flat, pale ring on the cell each
+        /// selected colonist was sent to — a drafted move or a weapon fetched from the menu, the
+        /// order cell the line above ends on. Which rings and how far through their animation are
+        /// <see cref="LandingRings"/>' — fast-tier tested, on the lock-on ring's own clock — and
+        /// this only places and draws them.
+        ///
+        /// <para>Draped on the destination cell's floor, as the bracket it replaced was, and 2 cm
+        /// clear of it. A ring on a layer the slice does not draw is not drawn, the lock-on's rule.
+        /// One submission per ring, one ring per selected colonist under orders (and for a fade's
+        /// length, the one she left): it scales with the selection, never the board. Its opacity is
+        /// quantised by the model, so the animation reuses a bounded set of cached materials.</para>
+        /// </summary>
+        void DrawLandingRings(WorldSnapshot snapshot, int activeLayer, SliceSettings slice)
+        {
+            if (_renderer == null || _model == null || _world == null) return;
+
+            SelectionDirector? selection = Directors?.Selection;
+            IReadOnlyList<PawnId> selected = selection != null ? selection.Pawns : Array.Empty<PawnId>();
+            _landing.Update(snapshot, selected, Time.unscaledTime, _world);
+
+            IReadOnlyList<LandingRings.Ring> rings = _landing.Rings;
+            if (rings.Count == 0) return;
+
+            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model.LowestOutdoorLayer));
+            int highest = slice.HighestVisibleLayer(activeLayer, snapshot.Size.SizeY);
+
+            for (int i = 0; i < rings.Count; i++)
+            {
+                LandingRings.Ring ring = rings[i];
+                if (ring.Alpha <= 0f || ring.Cell < 0 || ring.Cell >= snapshot.Size.CellCount) continue;
+                CellRef dest = snapshot.Size.FromIndex(ring.Cell);
+                if (dest.Y < lowest || dest.Y > highest) continue;
+
+                float radius = LandingRings.Radius * ring.Scale;
+                Matrix4x4 at = GroundRelief.Drape(CellMetrics.FloorCentre(dest));
+                at.m13 += LockOnRingLift;
+                Color colour = Ui.HudTokens.Convert(OrderColours.Move.WithAlpha(ring.Alpha));
+                _renderer.DrawRing(at * Matrix4x4.Scale(new Vector3(radius, 1f, radius)), colour);
+            }
+        }
+
+        readonly LandingRings _landing = new LandingRings();
 
         /// <summary>
         /// A blade drawn, once, on the frame the snapshot first shows a colonist drafted (design 33
@@ -3156,6 +3325,24 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            // The skin's ramp, by its own corners (design 38 §20): the bracket's corner order is
+            // bit 0 for +x and bit 1 for +z, the ramp's is anticlockwise from (−x,−z).
+            if (GroundSkin.Enabled)
+            {
+                if (BankLayout.GroundCorners(_model, cell.X, cell.Z, cell.Y, out BankLayout.Ramp ramp))
+                {
+                    float h = CellMetrics.SizeY;
+                    _bracketRises[0] = ramp.R0 * h;
+                    _bracketRises[1] = ramp.R1 * h;
+                    _bracketRises[2] = ramp.R3 * h;
+                    _bracketRises[3] = ramp.R2 * h;
+                    _renderer.DrawFloorBracket(GroundRelief.Drape(CellMetrics.FloorCentre(cell)), colour, _bracketRises);
+                    return;
+                }
+                _renderer.DrawFloorBracket(cell, colour);
+                return;
+            }
+
             BankLayout.Bank bank = BankLayout.At(_model, cell);
             if (bank.Exists)
             {
@@ -3184,6 +3371,9 @@ namespace Odyssey.Presentation.Bootstrap
 
             _renderer.DrawFloorBracket(cell, colour);
         }
+
+        /// <summary>The ramp bracket's four corner rises, reused so the cursor allocates nothing a frame.</summary>
+        readonly float[] _bracketRises = new float[4];
 
         void OnGUI()
         {

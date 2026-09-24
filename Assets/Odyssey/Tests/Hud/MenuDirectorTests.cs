@@ -357,23 +357,24 @@ namespace Odyssey.Tests.Hud
 
         // ------------------------------------------------------------------ asking twice
 
+        /// <summary>
+        /// Exit game goes on the first press (design 40): the title screen raises the leave prompt
+        /// in its no-colony form on <c>QuitRequested</c>, and the prompt is the question. Until
+        /// 2026-09-24 this row armed and left on the second press, and the four tests that pinned
+        /// the arming used it as their subject; no row on the main screen arms now, so they went
+        /// with it. The arming itself is <see cref="MenuDirector.Armed"/>, kept for the next row
+        /// that needs it.
+        /// </summary>
         [Test]
-        public void QuitArmsOnTheFirstPressAndLeavesOnTheSecond()
+        public void ExitGameAsksThroughThePromptRatherThanArming()
         {
             MenuDirector menu = Showing();
-            int quits = 0, armings = 0;
+            int quits = 0;
             menu.QuitRequested += () => quits++;
-            menu.ArmedChanged += () => armings++;
-
-            Assert.That(menu.Choose(SessionCommands.QuitKey), Is.False, "asked, not done");
-            Assert.That(menu.Armed, Is.EqualTo(SessionCommands.QuitKey));
-            Assert.That(quits, Is.Zero);
-            Assert.That(armings, Is.EqualTo(1));
 
             Assert.That(menu.Choose(SessionCommands.QuitKey), Is.True);
-            Assert.That(quits, Is.EqualTo(1), "exactly once, on the second press");
-            Assert.That(menu.Armed, Is.Null, "the question is answered and the row stands down");
-            Assert.That(armings, Is.EqualTo(2));
+            Assert.That(quits, Is.EqualTo(1), "one press raises the question");
+            Assert.That(menu.Armed, Is.Null, "nothing is left armed behind the prompt");
         }
 
         [Test]
@@ -384,71 +385,6 @@ namespace Odyssey.Tests.Hud
             Assert.That(menu.Choose(SessionCommands.NewGameKey), Is.True);
             Assert.That(menu.Screen, Is.EqualTo(MenuScreen.NewGame));
             Assert.That(menu.Armed, Is.Null, "nothing was ever armed");
-        }
-
-        /// <summary>
-        /// <b>The negative control.</b> An armed "quit?" that survived its own screen would be a
-        /// trap armed across the whole interface — press Quit, go and look at your saves, come back
-        /// and press Quit meaning to ask the question, and the game closes. It is the exact rule
-        /// <see cref="SettingsDirector.SetOpen"/> keeps for its exit row, and it is the one thing
-        /// here that would still look completely correct with the behaviour removed.
-        ///
-        /// <para><b>Confirmed to fail without it.</b> Deleting the <c>Disarm()</c> call from
-        /// <c>MenuDirector.GoTo</c> and running <c>scripts/test-fast.sh</c> failed this test on the
-        /// <c>Is.Null</c> line — "Expected: null, But was: \"ui.settings.exit\"" — and failed
-        /// nothing else, so the assertion is load-bearing on its own.</para>
-        /// </summary>
-        [Test]
-        public void AnArmedRowStandsDownWhenTheScreenChangesUnderIt()
-        {
-            MenuDirector menu = Showing();
-            int quits = 0;
-            menu.QuitRequested += () => quits++;
-
-            menu.Choose(SessionCommands.QuitKey);
-            Assert.That(menu.Armed, Is.EqualTo(SessionCommands.QuitKey));
-
-            menu.ShowSaves(TwoSaves());
-            Assert.That(menu.Armed, Is.Null, "the question belonged to the screen it was asked on");
-
-            menu.Back();
-            Assert.That(menu.Choose(SessionCommands.QuitKey), Is.False,
-                "coming back asks again rather than answering");
-            Assert.That(quits, Is.Zero);
-        }
-
-        [Test]
-        public void AnArmedRowStandsDownWhenTheScreenIsPutAway()
-        {
-            MenuDirector menu = Showing();
-            int quits = 0, armings = 0;
-            menu.QuitRequested += () => quits++;
-            menu.ArmedChanged += () => armings++;
-
-            menu.Choose(SessionCommands.QuitKey);
-            menu.Hide();
-
-            Assert.That(menu.Armed, Is.Null);
-            Assert.That(armings, Is.EqualTo(2), "the stand-down is announced, not silent");
-
-            menu.Show();
-            Assert.That(menu.Choose(SessionCommands.QuitKey), Is.False);
-            Assert.That(quits, Is.Zero);
-        }
-
-        [Test]
-        public void PressingAnotherRowStandsTheArmedOneDownRatherThanAnsweringIt()
-        {
-            MenuDirector menu = Showing();
-            int quits = 0;
-            menu.QuitRequested += () => quits++;
-
-            menu.Choose(SessionCommands.QuitKey);
-            Assert.That(menu.Choose(SessionCommands.NewGameKey), Is.True);
-
-            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.NewGame));
-            Assert.That(quits, Is.Zero, "only the row that is asking can answer");
-            Assert.That(menu.Armed, Is.Null);
         }
 
         // ------------------------------------------------------------- the New game screen (U39)

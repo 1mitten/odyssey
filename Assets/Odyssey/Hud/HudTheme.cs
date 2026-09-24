@@ -168,6 +168,36 @@ namespace Odyssey.Hud
         public static readonly HudColour Good = new HudColour(0x7f, 0xc9, 0x8c);
         public static readonly HudColour Info = new HudColour(0x8f, 0xd0, 0xe3);
 
+        /// <summary>The settings window's Graphics hue and the title screen's Settings button
+        /// (designs 39 and 40): one colour for the one destination.</summary>
+        public static readonly HudColour Violet = new HudColour(0xb9, 0xa8, 0xe0);
+
+        /// <summary>The title screen's dock (design 40): the panel fill, translucent, so the
+        /// starfield carries on faintly behind it rather than stopping at a wall (owner,
+        /// 2026-09-24: "it looks solid").</summary>
+        public static readonly HudColour DockFill = new HudColour(12, 16, 20, 0.72f);
+
+        // ------------------------------------------------------------------ controls (design 39)
+
+        /// <summary>The border of a control that can be pressed: a segment, a select, a key chip,
+        /// a switch that is off. A step brighter than <see cref="PanelBorder"/>, so a control
+        /// reads as a thing to press rather than as a rule.</summary>
+        public static readonly HudColour ControlBorder = new HudColour(255, 255, 255, 0.26f);
+
+        /// <summary>The rule under a settings row: quieter than a divider, because there are
+        /// many of them and each only says where one row ends.</summary>
+        public static readonly HudColour RowRule = new HudColour(255, 255, 255, 0.07f);
+
+        /// <summary>The track of a switch that is off.</summary>
+        public static readonly HudColour SwitchOffTrack = new HudColour(255, 255, 255, 0.10f);
+
+        /// <summary>The dashed outline of a key slot with nothing bound to it.</summary>
+        public static readonly HudColour EmptySlot = new HudColour(255, 255, 255, 0.22f);
+
+        /// <summary>The wash behind the settings window. Lighter than <see cref="ModalScrim"/>,
+        /// because the window's graphics levers are pulled while watching the board.</summary>
+        public static readonly HudColour SettingsScrim = new HudColour(6, 10, 12, 0.58f);
+
         // ------------------------------------------------------------------ quality
 
         /// <summary>

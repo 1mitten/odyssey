@@ -662,7 +662,7 @@ namespace Odyssey.Hud
                 }
 
                 AddColonistTabs();
-                AddColonistCommands(!Tombstoned && OrderModel.IsDrafted(snapshot, Pawn));
+                AddColonistCommands(!Tombstoned && OrderModel.IsDrafted(snapshot, Pawn), ResponseModel.Of(snapshot, Pawn));
                 RefreshSkills(snapshot);
                 return;
             }
@@ -1609,9 +1609,17 @@ namespace Odyssey.Hud
         /// <summary>Whether the colonist on the pane is drafted: which face the Draft button shows.</summary>
         public bool Drafted { get; private set; }
 
-        void AddColonistCommands(bool drafted)
+        /// <summary>
+        /// The colonist's response to danger (<see cref="ResponseModel"/>, design 33 §18e): which
+        /// face the response button shows. A colonist gone from the frame reads as the default,
+        /// with the button off.
+        /// </summary>
+        public int Response { get; private set; }
+
+        void AddColonistCommands(bool drafted, int response)
         {
             Drafted = drafted;
+            Response = response;
             Commands.Add(new InspectCommand
             {
                 IconKey = "ui.command.inspect", Label = "Inspect",
@@ -1631,6 +1639,15 @@ namespace Odyssey.Hud
                 IconKey = key, Label = Registry.Label(key),
                 Enabled = !Tombstoned,
                 Reason = drafted ? "give back to the work list (T)" : "take direct control: right-click to move (T)",
+            });
+            // Her response to danger (design 33 §18e), beside Draft. A setting rather than an
+            // action, so the face is the response she has, and a press moves it round the three.
+            string respond = ResponseModel.KeyOf(response);
+            Commands.Add(new InspectCommand
+            {
+                IconKey = respond, Label = Registry.Label(respond),
+                Enabled = !Tombstoned,
+                Reason = ResponseModel.Describe(response),
             });
         }
     }

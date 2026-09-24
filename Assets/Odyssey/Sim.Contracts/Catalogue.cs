@@ -70,7 +70,14 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Carry a downed colonist to a bed (C4).</summary>
         public const int Rescue = 21;
 
-        public const int Count = 22;
+        /// <summary>
+        /// A marauder with nobody to fight and nothing to break lifts the nearest stack and walks
+        /// off the board with it (design 33 §17). Appended after the combat line's five; the job
+        /// system hashes its counters only once one has run, so no golden moved for it.
+        /// </summary>
+        public const int Steal = 22;
+
+        public const int Count = 23;
     }
 
     /// <summary>
@@ -263,7 +270,16 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A stack of scrap metal falling out of the sky (design 32 §14): the supply drop's worker, another cargo.</summary>
         public const int ScrapDrop = 1;
 
-        public const int Count = 2;
+        /// <summary>
+        /// A marauder carried a stack off the board (design 33 §17). Written down by the world when
+        /// it happens and never fired: the bulletin carries the item and the amount.
+        /// </summary>
+        public const int Theft = 2;
+
+        /// <summary>A marauder with nothing to fight, break or take walked off the board empty-handed (design 33 §17).</summary>
+        public const int MarauderLeft = 3;
+
+        public const int Count = 4;
     }
 
     /// <summary>

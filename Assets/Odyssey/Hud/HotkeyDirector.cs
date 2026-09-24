@@ -513,6 +513,19 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
+        /// Empty the slot that is waiting for its key, and stop waiting: Backspace in the Keys
+        /// tab (design 39 §6). The second slot is optional, and this is how a player says so
+        /// without a key to spare. Nothing happens when no slot is listening.
+        /// </summary>
+        public void ClearListening()
+        {
+            if (Listening == null) return;
+            (HotkeyAction action, int slot) = Listening.Value;
+            CancelListen();
+            ClearSlot(action, slot);
+        }
+
+        /// <summary>
         /// Put every action back on its default keys, and write the defaults down, so the
         /// store cannot hold a half-reset.
         /// </summary>

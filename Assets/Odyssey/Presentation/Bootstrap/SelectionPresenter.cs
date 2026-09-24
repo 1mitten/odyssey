@@ -154,8 +154,16 @@ namespace Odyssey.Presentation.Bootstrap
             PawnId under = cell.HasValue ? PawnUnderRay(snapshot, ray, cell.Value.Y) : PawnId.None;
             bool ctrl = Keyboard.current?.ctrlKey.isPressed == true;
 
+            // What stands in the clicked cell, off the render mirror, for the building half of the
+            // order (C6, design 33 §13i): the model cannot see the grid, and which edifices are
+            // targets is the snapshot's, so this is a fact handed over like the pawn and Ctrl.
+            Odyssey.Presentation.World.WorldRenderModel? mirror = _bootstrap?.Model;
+            int edifice = cell.HasValue && mirror != null && snapshot.Size.Contains(cell.Value.X, cell.Value.Z, cell.Value.Y)
+                ? mirror.EdificeDef(snapshot.Size.Index(cell.Value))
+                : EdificeHandle.None;
+
             _orders.Clear();
-            OrderModel.RightClick(selection, snapshot, cell, under, ctrl, _orders, _menu);
+            OrderModel.RightClick(selection, snapshot, cell, under, ctrl, _orders, _menu, edifice);
             if (_menu.Count > 0)
             {
                 if (_shell == null) _shell = GetComponent<Ui.HudShell>();

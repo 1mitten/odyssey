@@ -99,6 +99,13 @@ namespace Odyssey.Sim.Events
         /// </summary>
         public virtual void Validate(IncidentDef def, PawnContent pawns) { }
 
+        /// <summary>
+        /// Can anything fire this at all — a storyteller or the debug menu? True for everything but
+        /// an incident the world writes down when it happens (<see cref="RecordedIncidentWorker"/>,
+        /// design 33 §17), which the debug menu's Events tab leaves off its list.
+        /// </summary>
+        public virtual bool Fireable => true;
+
         public abstract bool CanFireNow(IncidentContext ctx, in IncidentParms parms);
 
         public abstract bool TryExecute(IncidentContext ctx, in IncidentParms parms);

@@ -304,6 +304,9 @@ ui.command.gift,08,,,wrapped parcel or crate,low,mapped
 ui.command.evacuate,-,,,clear this area now,-,gap
 ui.command.hunt,06,,,spear and hunt tile,high,shared
 ui.command.strip,-,,,taking everything a pawn carries,-,gap
+ui.command.fightback,-,,,raised fists,-,gap
+ui.command.defend,-,,,a shield over a figure,-,gap
+ui.command.flee,-,,,a figure running away,-,gap
 ui.overlay.temperature,06,,,flame tile,med,shared
 ui.overlay.light,06,,,torch tile,med,mapped
 ui.overlay.beauty,06,,,paint brush tile,low,shared
@@ -367,6 +370,8 @@ ui.bulletin.crash,-,,,a crashed ship or drop pod,-,gap
 ui.bulletin.supplydrop,-,,,"a stack falling from the sky. Our own concept",-,gap
 ui.bulletin.scrapdrop,-,,,"scrap metal falling from the sky. Our own concept",-,gap
 ui.bulletin.birth,-,,,a newborn animal,-,gap
+ui.bulletin.theft,-,,,"a figure carrying a sack off the edge. Our own concept",-,gap
+ui.bulletin.marauderleft,-,,,"a figure walking off the edge. Our own concept",-,gap
 ui.weather.clear,-,,,clear sky or sun,-,gap
 ui.weather.cloudy,-,,,cloud,-,gap
 ui.weather.rain,06,,,water drop tile,med,shared

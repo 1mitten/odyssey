@@ -880,15 +880,20 @@ namespace Odyssey.Tests.Hud
             Assert.That(SettingsDirector.DefaultOn(GraphicsOption.Shadows), Is.True);
             Assert.That(SettingsDirector.DefaultOn(GraphicsOption.SeeThrough), Is.True);
             Assert.That(SettingsDirector.DefaultOn(GraphicsOption.CutAwayCeiling), Is.False,
-                "the cut-away hides the floor overhead, so it is the one option that starts off");
+                "the cut-away hides the floor overhead, so it starts off");
+            Assert.That(SettingsDirector.DefaultOn(GraphicsOption.FoliageShadows), Is.False,
+                "grass has never cast shadows; turning them on is a choice, not the baseline");
 
             // Three are read as the frame is submitted; two are baked into the instance matrices
             // when a chunk is meshed, and the panel has to know which it is holding.
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.Shadows), Is.False);
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.Surround), Is.False);
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.SeeThrough), Is.False);
-            Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.GrassTufts), Is.True);
+            Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.FoliageShadows), Is.False);
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.GroundRelief), Is.True);
+            // The grass is a ladder now, and it is the one ladder baked into the chunks.
+            Assert.That(SettingsDirector.NeedsRedraw(GraphicsLadder.VegetationDensity), Is.True);
+            Assert.That(SettingsDirector.NeedsRedraw(GraphicsLadder.GrassDistance), Is.False);
         }
 
         [Test]
@@ -912,12 +917,12 @@ namespace Odyssey.Tests.Hud
             var settings = new SettingsDirector();
             var store = new FakeSettingsStore();
 
-            // The scene was built with no grass. Seeding says so without raising anything, so a
+            // The scene was built with no relief. Seeding says so without raising anything, so a
             // panel cannot change the board merely by existing.
             var changed = new System.Collections.Generic.List<GraphicsOption>();
             settings.OptionChanged += changed.Add;
-            settings.Seed(GraphicsOption.GrassTufts, false);
-            Assert.That(settings.IsOn(GraphicsOption.GrassTufts), Is.False);
+            settings.Seed(GraphicsOption.GroundRelief, false);
+            Assert.That(settings.IsOn(GraphicsOption.GroundRelief), Is.False);
             Assert.That(changed, Is.Empty, "seeding is a record of what is, not a request");
 
             // This machine was told once to keep the shadows off. That outranks the scene.
@@ -927,7 +932,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(settings.IsOn(GraphicsOption.Shadows), Is.False);
             Assert.That(changed, Is.EqualTo(new[] { GraphicsOption.Shadows }),
                 "only the stored value that differed had to be applied to the board");
-            Assert.That(settings.IsOn(GraphicsOption.GrassTufts), Is.False,
+            Assert.That(settings.IsOn(GraphicsOption.GroundRelief), Is.False,
                 "an option the store has never heard of keeps what the scene gave it");
         }
 

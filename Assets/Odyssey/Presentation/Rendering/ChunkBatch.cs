@@ -203,6 +203,17 @@ namespace Odyssey.Presentation.Rendering
 
         public static int StoreEdge() => StoreEdgeBase;
 
+        /// <summary>
+        /// Bit 29 marks a bucket as <b>Meadow dressing</b> — scenery the simulation never heard of
+        /// (design 38 §17) — so the drawing can treat a bush apart from a tree that wears the same
+        /// tree path. Says nothing about colour.
+        /// </summary>
+        public const int DressingBase = 1 << 29;
+
+        public static int Dressing(int code) => code | DressingBase;
+
+        public static bool IsDressing(int code) => (code & DressingBase) != 0;
+
         public static int Stuff(int stuff) => stuff;
 
         /// <summary>Bedding: one fixed colour, ignoring whatever material is passed beside it.</summary>
@@ -366,11 +377,29 @@ namespace Odyssey.Presentation.Rendering
 
         public int InstanceCount;
 
+        /// <summary>
+        /// The ground skin in this chunk (<see cref="GroundSkin"/>): ramps, flat tops and the skirts
+        /// between them, as one mesh. Drawn with <see cref="Body"/>; owned here and destroyed with
+        /// the batch.
+        /// </summary>
+        public readonly GroundSkinMesh Skin = new GroundSkinMesh();
+
+        /// <summary>
+        /// Every bush this chunk's dressing placed, as (world x, world z, radius in metres) — so
+        /// the renderer can ask whether a thing on the ground is under one without a second copy of
+        /// the dressing rule (design 38 §19). Filled by the mesher, cleared with the buckets.
+        /// </summary>
+        public readonly List<Vector3> BushDiscs = new List<Vector3>();
+
         public void Clear()
         {
             for (int i = 0; i < Body.Count; i++) Body[i].Clear();
             for (int i = 0; i < Roof.Count; i++) Roof[i].Clear();
+            Skin.Clear();
+            BushDiscs.Clear();
             InstanceCount = 0;
         }
+
+        public void Dispose() => Skin.Dispose();
     }
 }
