@@ -169,8 +169,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (Has(ShoreArgument))
             {
                 yield return ShoreArms();
-                Log("[Bench] table:
-" + _table);
+                Log("[Bench] table:\n" + _table);
                 Quit("[Bench] done");
                 yield break;
             }
