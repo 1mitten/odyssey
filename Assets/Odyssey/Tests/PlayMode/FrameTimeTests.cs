@@ -1958,6 +1958,72 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// Photographs the played meadow from the play camera, for judging the look against the
+        /// Meadow Forest reference (owner, 2026-09-24: screenshot #13, design 38 §17). Explicit:
+        /// never part of a tier, run by name.
+        ///
+        /// <para>Two framings at 1920 x 1080 — the camera as a new game opens it, and closer in on
+        /// the first colonist — written to <c>Logs/look/start.png</c> and <c>Logs/look/close.png</c>,
+        /// with the draw counts beside them in the log. It asserts nothing about the picture; it
+        /// exists so that the person or agent changing the look can see what they changed without
+        /// pressing Play, which until now only the owner could do.</para>
+        /// </summary>
+        [UnityTest, Explicit("a photograph for judging the look, not a test")]
+        public IEnumerator TheLookAtThePlayCamera()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            RenderTexture? target = null;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            try
+            {
+                // Long enough for the board to mesh out under the budget and the post stack to settle.
+                for (int i = 0; i < 180; i++) yield return null;
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                target = new RenderTexture(1920, 1080, 24) { name = "look" };
+                cam.targetTexture = target;
+                Directory.CreateDirectory(Path.GetFullPath("Logs/look"));
+
+                yield return Photograph("start", boot, target);
+
+                WorldSnapshot frame = boot.World!.Views.Current;
+                if (frame.Pawns.Length > 0)
+                {
+                    boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, 28f);
+                    for (int i = 0; i < 120; i++) yield return null;
+                    yield return Photograph("close", boot, target);
+                }
+            }
+            finally
+            {
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (target != null) target.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        IEnumerator Photograph(string name, OdysseyBootstrap boot, RenderTexture target)
+        {
+            for (int i = 0; i < 8; i++) yield return null;
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = target;
+            var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+            image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+            image.Apply();
+            RenderTexture.active = previous;
+            string path = Path.GetFullPath($"Logs/look/{name}.png");
+            File.WriteAllBytes(path, image.EncodeToPNG());
+            UnityEngine.Object.Destroy(image);
+            SliceCameraRig rig = boot.cameraRig!;
+            Debug.Log($"[Look] {name}: {path}; distance {rig.TargetDistance:0.0} m, focus {rig.Focus}; " +
+                      $"{boot.Renderer?.DrawCalls ?? -1} calls, {boot.Renderer?.InstancesDrawn ?? -1} instances, " +
+                      $"{boot.Renderer?.ChunksDrawn ?? -1} chunks");
+        }
+
+        /// <summary>
         /// Designate the board row-major until a thousand orders stand, the same walk and the
         /// same draining <see cref="SeedField"/> uses and for the same reasons: the meadow
         /// refuses what stands on it, and the intent bus has a capacity.
