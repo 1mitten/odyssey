@@ -303,6 +303,32 @@ namespace Odyssey.Sim.Pawns
         /// needs, because it is the only map with storeys to climb between.</param>
         /// <param name="wooded">With <paramref name="barren"/>: keep the woodland, which is what
         /// the scene loads since 2026-09-16. False is the bare board the tests baseline on.</param>
+        /// <summary>
+        /// Which generator definition a colony is built from — <b>the one owner of that choice</b>.
+        ///
+        /// <para>Extracted 2026-09-21, because it had two. This method was four lines inside
+        /// <see cref="Build"/>, and every per-board measurement in the test assembly reached for
+        /// <c>MapGenerator.DefaultDef</c> instead and so measured the *unmodified* def while the
+        /// played scene (<c>barrenMap: 1, woodedMap: 1</c>) gets <see cref="NaturalMapGenDef.MakeWooded"/>
+        /// applied on top. Two owners, silently disagreeing, for two days — the shape
+        /// <c>docs/bug-patterns.md</c> keeps meeting. Now there is one, and
+        /// <c>Odyssey.Tests.Sim.PlayedMap</c> calls it rather than re-deriving it.</para>
+        ///
+        /// <para>The def is mutable and is mutated here, so a caller gets a fresh one each time
+        /// and must not cache it.</para>
+        /// </summary>
+        public static MapGenDef DefFor(MapType map, GridSize size, bool barren, bool wooded)
+        {
+            MapGenDef gen = MapGenerator.DefaultDef(map, size);
+            if (barren && gen is NaturalMapGenDef natural)
+            {
+                if (wooded) natural.MakeWooded();
+                else natural.MakeBarren();
+            }
+
+            return gen;
+        }
+
         public static ColonyWorld Build(GridSize size, uint seed, ScenarioDef scenario, bool barren = true,
             ChunkGrid? chunks = null, MapType mapType = MapType.Natural, bool wooded = false) =>
             Build(new ColonyRequest
@@ -333,12 +359,7 @@ namespace Odyssey.Sim.Pawns
             uint seed = request.Seed;
             ChunkGrid? chunks = request.Chunks;
 
-            MapGenDef gen = MapGenerator.DefaultDef(request.Map, size);
-            if (request.Barren && gen is NaturalMapGenDef natural)
-            {
-                if (request.Wooded) natural.MakeWooded();
-                else natural.MakeBarren();
-            }
+            MapGenDef gen = DefFor(request.Map, size, request.Barren, request.Wooded);
             if (!request.Wildlife)
             {
                 gen.wildlife = System.Array.Empty<Wildlife.WildlifeEntry>();

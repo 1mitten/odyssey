@@ -11025,6 +11025,108 @@ pass by never having built one. That version fails on the mutation.
 while it stood the aspect scan looked like a constant and the whole bend was attributed to the larger
 term. One pass held two quadratics. **After fixing a quadratic, measure the same pass again rather
 than declaring it linear.**
+### The arms were measuring a board nobody plays, and a play log found it
+
+The owner pasted a console log while playing — not a bug report, just context for a question about
+whether the editor felt slow. Their 120 × 120 × 16 session read `patches 0, trees 1598`. Every
+measurement arm written that day had been reporting `patches 2210, trees 1222` for the same board.
+
+**Two owners for one choice.** `Assets/Scenes/Play.unity` carries `barrenMap: 1, woodedMap: 1`, so
+`ColonyWorld.Build` applied `MakeWooded()` on top of `MapGenerator.DefaultDef`. Every arm —
+worldgen, nav statistics, save — reached for `NaturalMapGenDef.For(size)`, which *is*
+`DefaultDef`, and got the def without it. `BoardMemoryTests` was further out again:
+`ColonyWorld.Build`'s `wooded` parameter defaults to `false`, and `false` means `MakeBarren()` — a
+board with no trees and no water at all. So the memory figures were for a bare board, the rest for
+a half-wooded one, and the game plays neither.
+
+**The fix was to delete the second owner rather than copy the first.** `ColonyWorld.DefFor` is now
+the one place that decision is made; `Build` calls it and `PlayedMap` calls it. A copy would have
+been quicker and would have re-created the fault the moment either side moved — which is the shape
+`HopCost` and `OrderColours` already exist to prevent, and now the third instance of it.
+
+**The first guard was itself wrong, and the guard caught that too.** The obvious oracle is to hash a
+grid built by `PlayedMap` against one built by `ColonyWorld.Build` and assert they match. They do
+not: `Build` also applies the scenario's placements, so it compares far more than the def. The test
+failed, and the failure was the instrument rather than the subject — twice in one day. What replaced
+it holds the helper to an *observable property* of `MakeWooded` — trees present, patches zero —
+with a negative control that fails if the helper ever becomes a synonym for the plain default.
+
+**What it moved was less than feared, and saying so is part of the record.** Live regions and links
+came out **identical on every board**: 2,110/1,477, 7,360/3,511, 8,406/6,180, 24,141/6,772. Trees and
+surface patches do not change how the region graph carves a 10 × 10 block, so the region counts, the
+edit tick and the whole ceiling argument stand. Huge is 0.865 ms an edited cell against the 0.883
+first reported — noise, on the same structure. What did move: generation time (24 / 77 / 104 ms),
+the feature counts, memory by about 2 B/cell, save size by a few per cent.
+
+One finding sharpened rather than softened. Water shapes across the four boards are **2, 4, 7 and
+5** — Huge has *fewer* than Large while covering nearly twice the ground, because `streamCount` is a
+per-map absolute. That was a theory in §4 and is now a number, and a better playtest question for it.
+
+**The uncomfortable part.** `docs/bug-patterns.md` P14 — *an instrument that cannot see the thing it
+is comparing, and passes* — was written one commit earlier, in this same branch, about two other
+faults of the same shape found the same afternoon. It was not applied to the arms it was written
+about. Writing the pattern down is not the same as running it over the work in hand, and the thing
+that actually caught this was a person pasting a log.
+
+Three instrument faults in one day, none found by a failing assertion: one found by a control, one
+by noticing two "different" readings printed the same draw-call count, and one by an owner's console
+output. The rule that covers all three is already written — **assert on the deterministic half** —
+and the arms now do: `MineOneCell.Mined == Ticks`, `callsOn < callsOff`, trees present and patches
+zero. A millisecond never catches a fixture that has stopped doing its job.
+
+## 2026-09-23 — the cull comes off hold, and the instrument that could not see
+
+`claude/frustum-culling` had been sitting closed since 2026-09-21 as a deliberate draft. The work was
+done and measured; what held it was that its proof, `CullingDoesNotChangeThePicture`, **failed its
+own control** — a frustum admitting nothing moved 3.22% of pixels, which is not a difference between
+two pictures of a world but what two pictures of nearly nothing look like. The previous session added
+diagnostics to settle it and never re-ran them. Merging the branch up 134 commits and running it took
+about a minute and settled it in one line.
+
+**The blind shot reported counts identical to the culled one** — 126 chunks, 57,818 instances, 1,744
+calls — where a frustum admitting nothing should submit nothing at all. The control never applied.
+It assigned `ChunkRenderer.Frustum`, and `OdysseyBootstrap.LateUpdate` assigns that field every
+frame, so the test's planes were overwritten before the capture. The comparison was the culled shot
+against itself.
+
+**That is the second time in one file a test set a field the root re-derives per frame**; the first,
+one commit earlier in the same branch, was `ShadowCasterMarginMetres` off `QualitySettings.shadowDistance`.
+The tell was identical counters both times. The lesson had been written down and not applied to the
+field beside it. `ChunkRenderer.FrustumOverride` is a seam the root does not touch.
+
+**The diagnostics also killed my own hypothesis**, which is exactly what they were for. I had reasoned
+from §6c that forcing a camera `targetTexture` in batch is pathological and guessed the capture never
+saw the board. Mean channel 130.6 says it saw it perfectly well. Third time today that reading-derived
+reasoning lost to a cheap measurement.
+
+**A second fault was hiding underneath the first.** With the control working, two captures of the
+identical configuration still differed by 1.29% against culling's 2.13% — a difference meant to be
+nought, asked to stand out against a floor most of its own size. Pausing the simulation is not enough:
+it stops the ticks so nobody walks, but the water scrolls its streaks, the figures advance their
+animation graphs and the daylight rig moves, because those run on `Time.deltaTime` and the shaders on
+`_Time`. `Time.timeScale = 0` stills the shaders as well as the scripts. And the floor is no longer
+assumed — the test takes a *repeat* of the identical configuration and asserts on it, so there is now
+a control that must show a difference and one that must not.
+
+    the same shot twice           0.00%
+    culling                       0.00%
+    a frustum admitting nothing  98.21%
+
+So the cull is exactly invisible, and on `main` it is worth: Standard 33 of 104 chunks, 3.43 → 2.86 ms,
+1,360 → 996 calls; Huge 317 of 443, 8.89 → 3.84 ms, 5,083 → 1,744 calls, `World` 5.613 → 1.687.
+`CullToFrustum` is on by default from today.
+
+**One honest qualification recorded beside the good number.** The saving follows the player's shadow
+distance, because the margin *is* that distance — a caster nearer than it may cast into the frustum
+and has to be submitted. At a 120 m setting Standard culls nothing at all and Huge culls 74 of 443.
+The mechanism is right; the headline is a default-settings number.
+
+**And the merge brought two things that were not culling.** `ColonyWorld.DefFor` — the one-owner fix
+for a wrong-map fault where every per-board measurement arm read the unmodified default def while the
+played scene applies `MakeWooded()` — which never reached `main` and is worth having on its own. And a
+`P14` collision: the branch's new pattern arrived as `P14`, which `main` already used. Renumbered to
+`P17` on merge, with its three citations, and the catalogue now says plainly that a third collision
+gets renumbered rather than kept.
 
 **The first draft playtest, the same afternoon.** The owner played C1: *"the drafting, T and moving
 onto surfaces, diamond and 4 hours all seemed to work."* Two asks came back. The first was that a
@@ -11480,3 +11582,25 @@ one line, from `ShaderInclusion.Apply`, in its own commit on PR #180.
 The fingerprints and all six goldens were re-taken from the merged code, since both sides had moved
 each of them. `GoldenColonyProbe`, reading the first seventeen job defs so the same file runs on
 both sides, gives identical output on `main` 54df119a and on the merge for all three boards.
+
+## 2026-09-24 — The cull merged up to main, and asked before the mesher
+
+PR #174 had fallen 169 commits behind `main` (power, the research tab, combat, wildlife). Three
+conflicts, none of them in the cull: `ColonyWorld` (this branch's `DefFor` against main's wildlife
+switch on the same lines — both kept, the switch after `DefFor`), and the status and journal files,
+where both sides had appended. The merge created one more collision: main had given `P17` to the
+flickering bar while this branch had renamed its pattern to `P17`, so the branch's pattern is `P18`
+now, with every citation — the catalogue's own rule for a third collision.
+
+One real fault went in with it, found while planning the Meadow overhaul: the frustum was asked
+*after* `BatchFor`, so a stale chunk behind the camera was meshed first and culled second, and a
+graphics toggle spent the eleven-chunk budget on the board in index order rather than on what was on
+screen. The test now goes first, against `ChunkMesher.BoundsOf` — the box `Mesh` writes, a function
+of the footprint only — so the picture cannot move, and the proof agrees: the same shot twice moved
+0.03%, culling 0.02%, a frustum admitting nothing 98.22%. The budget arm shows it directly: an
+unbudgeted whole-board re-mesh on Huge meshed **227 chunks in 51 ms**, the ones on screen, where it
+meshed all 900 in 156 ms before. `28-map-size.md` §10.1.
+
+Tiers on the merge: fast 1,322 Sim + 977 Hud, Long 41, content gates clean; EditMode 3,222 / 3,191
+/ 0; PlayMode 115 / 110 / 0. Culling at a 40 m margin, same run: Standard 2.74 -> 2.33 ms (33 of 104
+chunks, 1,363 -> 999 calls), Huge 7.05 -> 3.43 ms (317 of 443, 5,086 -> 1,747).
