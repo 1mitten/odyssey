@@ -2778,6 +2778,91 @@ namespace Odyssey.Tests.PlayMode
             UnityEngine.Object.Destroy(image);
         }
 
+        /// <summary>
+        /// What the wooded surround costs (design 38 §19): the same board, its surround built the
+        /// old way (finest level, thin wood, no bushes) and the new way, at 3840 x 2160 at the
+        /// camera's farthest pull over the rim, one run. And the see-through for every colonist with
+        /// 50 colonists about the start, its lines and its frame against see-through off.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheWoodedSurroundAgainstTheFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            var lines = new List<string>();
+            try
+            {
+                yield return TimeFrames("surround/warm", boot, WarmupFrames, _ => { });
+                ChunkRenderer renderer = boot.Renderer!;
+                if (renderer.Skirt.TreeInstances == 0)
+                    Assert.Ignore("no surround wood resolved on this machine");
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "surround-4k" };
+                cam.targetTexture = fourK;
+                var size = boot.World!.Size;
+                CellRef start = boot.World.Views.Current.Pawns[0].Cell;
+                boot.cameraRig!.FocusOn(new CellRef(size.SizeX / 2, 2, start.Y), boot.cameraRig.maxDistance);
+
+                foreach (bool wooded in new[] { false, true, false, true })
+                {
+                    TerrainSkirt.NearWoodLevel = wooded ? TerrainSkirt.DefaultNearWoodLevel : 0;
+                    TerrainSkirt.BushBesideTree = wooded ? 0.75f : 0f;
+                    SkirtLayout.TreeFarDensity = wooded ? SkirtLayout.DefaultTreeFarDensity : 0.15f;
+                    SkirtLayout.FarTreeNearDensity = wooded ? SkirtLayout.DefaultFarTreeNearDensity : 0.30f;
+                    SkirtLayout.FarTreeFarDensity = wooded ? SkirtLayout.DefaultFarTreeFarDensity : 0.07f;
+                    renderer.Skirt.Build();
+                    float ms = 0f;
+                    double[] split = Array.Empty<double>();
+                    yield return TimeFrames($"surround/{(wooded ? "wooded" : "old")}", boot, WarmupFrames,
+                        m => ms = m, p => split = p);
+                    lines.Add($"{(wooded ? "wooded" : "old")}: frame {ms:0.00} ms, surround section " +
+                              $"{Section(split, OdysseyBootstrap.FrameSection.Surround):0.000} ms, " +
+                              $"{renderer.Skirt.DrawCalls} surround calls, {renderer.Skirt.TreeInstances} near + " +
+                              $"{renderer.Skirt.FarTreeInstances} far trees, {renderer.Skirt.BushInstances} bushes");
+                }
+
+                // Every colonist gets a line: 50 of them about the start, focus on them.
+                for (int i = 0; boot.World.Views.Current.Pawns.Length < 50 && i < 200; i++)
+                {
+                    boot.World.Intents.Submit(new Intent(IntentKind.SpawnPawn,
+                        new CellRef(start.X - 4 + i % 9, start.Z - 4 + (i / 9) % 9, start.Y), 0));
+                    boot.World.Tick();
+                }
+                boot.cameraRig!.FocusOn(start, 70f);
+                foreach (bool every in new[] { false, true, false, true })
+                {
+                    boot.seeThroughToEveryColonist = every;
+                    float ms = 0f;
+                    double[] split = Array.Empty<double>();
+                    yield return TimeFrames($"sight/{(every ? "every" : "selected")}", boot, WarmupFrames,
+                        m => ms = m, p => split = p);
+                    lines.Add($"sight {(every ? "every colonist" : "selected only")} with " +
+                              $"{boot.World.Views.Current.Pawns.Length} pawns: frame {ms:0.00} ms, sight section " +
+                              $"{Section(split, OdysseyBootstrap.FrameSection.Sight):0.000} ms, world " +
+                              $"{Section(split, OdysseyBootstrap.FrameSection.World):0.000} ms, " +
+                              $"{boot.SightLinesLastFrame} lines, {renderer.InstancesFaded} faded");
+                }
+            }
+            finally
+            {
+                TerrainSkirt.NearWoodLevel = TerrainSkirt.DefaultNearWoodLevel;
+                TerrainSkirt.BushBesideTree = 0.75f;
+                SkirtLayout.TreeFarDensity = SkirtLayout.DefaultTreeFarDensity;
+                SkirtLayout.FarTreeNearDensity = SkirtLayout.DefaultFarTreeNearDensity;
+                SkirtLayout.FarTreeFarDensity = SkirtLayout.DefaultFarTreeFarDensity;
+                boot.seeThroughToEveryColonist = true;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+            Debug.Log("[FrameTime] wooded surround and every-colonist sight at 3840x2160: " + string.Join("; ", lines));
+        }
+
         IEnumerator PhotographTheGround(OdysseyBootstrap boot, RenderTexture target, string prefix)
         {
             ChunkRenderer renderer = boot.Renderer!;
