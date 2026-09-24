@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-46 entries, 28 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+64 entries, 46 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -41,6 +41,29 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Strained** | `ui.mood.strained` | Mood is falling. Watch this one <br>**Needs:** mood face, strained | no art | M2 |
 | **Breaking** | `ui.mood.breaking` | At the threshold of a mental break <br>**Needs:** mood face, at the break threshold | no art | M2 |
 | **Breaking down** | `ui.mood.broken` | In a mental break now <br>**Needs:** mood face, in a break | no art | M2 |
+
+## Traits
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Diligent** | `ui.trait.diligent` | Works 15% faster at everything | no art | MS |
+| **Idle** | `ui.trait.idle` | Works 15% slower at everything | no art | MS |
+| **Quick study** | `ui.trait.quickstudy` | Learns 40% faster | no art | MS |
+| **Slow study** | `ui.trait.slowstudy` | Learns 40% slower | no art | MS |
+| **Long stride** | `ui.trait.longstride` | Walks 5% faster | no art | MS |
+| **Short stride** | `ui.trait.shortstride` | Walks 5% slower | no art | MS |
+| **Sunny** | `ui.trait.sunny` | In a better mood than most, whatever happens | no art | MS |
+| **Dour** | `ui.trait.dour` | In a worse mood than most, whatever happens | no art | MS |
+| **Light eater** | `ui.trait.lighteater` | Gets hungry 20% slower | no art | MS |
+| **Big appetite** | `ui.trait.bigappetite` | Gets hungry 20% faster | no art | MS |
+| **Scrapper** | `ui.trait.scrapper` | Hits 20% harder in a fight | no art | MS |
+| **Soft hands** | `ui.trait.softhands` | Hits 20% softer in a fight | no art | MS |
+| **Prodigy** | `ui.trait.prodigy` | Learns twice as fast. Only a gamble deals it | no art | MS |
+| **Wreck** | `ui.trait.wreck` | Works at 60% of an ordinary pace. Only a gamble deals it | no art | MS |
+| **Tireless** | `ui.trait.tireless` | Tires half as fast. Only a gamble deals it | no art | MS |
+| **Bottomless** | `ui.trait.bottomless` | Gets hungry 60% faster. Only a gamble deals it | no art | MS |
+| **Unshakeable** | `ui.trait.unshakeable` | In a far better mood than most, whatever happens. Only a gamble deals it | no art | MS |
+| **Butterfingers** | `ui.trait.butterfingers` | Works at 75% and hits 30% softer. Only a gamble deals it | no art | MS |
 
 ## Current activity
 

@@ -571,6 +571,38 @@ ui.newgame.traits,Traits,ui.newgame,MS,"What this candidate is like. Empty until
 ui.colonists.title,Your colonists,ui.colonists,MS,"The three people you take into the game"
 ui.colonists.reroll,Reroll,ui.colonists,MS,"Deal a new set. Anyone you have kept stays"
 ui.colonists.lock,Keep,ui.colonists,MS,"Hold on to this colonist through a reroll"
+ui.newgame.mode.standard,Standard,ui.newgame,MS,"Reroll and keep until you like them. Everyone is dealt the same total: twelve skill levels, one major and one minor passion, one good trait and one bad"
+ui.newgame.mode.gamble,Gamble,ui.newgame,MS,"One pull per colonist, and it is kept. Better on average and far wider: a star or a dud"
+ui.draw.pull,Pull,ui.draw,MS,Set the reels spinning for this colonist
+ui.draw.stop,Stop,ui.draw,MS,Stop the reels. Whatever lands is who you get
+ui.draw.locked,Locked,ui.draw,MS,"Pulled, and kept for good. The name can still be changed"
+ui.draw.reel.face,Face,ui.draw,MS,Who they are
+ui.draw.reel.name,Name,ui.draw,MS,What they are called
+ui.draw.reel.cutting,CHP,ui.draw,MS,Chopping
+ui.draw.reel.mining,MIN,ui.draw,MS,Mining
+ui.draw.reel.construction,CON,ui.draw,MS,Construction
+ui.draw.reel.growing,GRO,ui.draw,MS,Growing
+ui.draw.reel.melee,MEL,ui.draw,MS,Melee
+ui.draw.reel.pace,SPD,ui.draw,MS,"Walking pace, as a per cent of an ordinary colonist's"
+ui.draw.reel.trait,Trait,ui.draw,MS,"Something about them that moves how they work, learn, eat, sleep or fight"
+ui.trait.diligent,Diligent,ui.trait,MS,Works 15% faster at everything
+ui.trait.idle,Idle,ui.trait,MS,Works 15% slower at everything
+ui.trait.quickstudy,Quick study,ui.trait,MS,Learns 40% faster
+ui.trait.slowstudy,Slow study,ui.trait,MS,Learns 40% slower
+ui.trait.longstride,Long stride,ui.trait,MS,Walks 5% faster
+ui.trait.shortstride,Short stride,ui.trait,MS,Walks 5% slower
+ui.trait.sunny,Sunny,ui.trait,MS,"In a better mood than most, whatever happens"
+ui.trait.dour,Dour,ui.trait,MS,"In a worse mood than most, whatever happens"
+ui.trait.lighteater,Light eater,ui.trait,MS,Gets hungry 20% slower
+ui.trait.bigappetite,Big appetite,ui.trait,MS,Gets hungry 20% faster
+ui.trait.scrapper,Scrapper,ui.trait,MS,Hits 20% harder in a fight
+ui.trait.softhands,Soft hands,ui.trait,MS,Hits 20% softer in a fight
+ui.trait.prodigy,Prodigy,ui.trait,MS,Learns twice as fast. Only a gamble deals it
+ui.trait.wreck,Wreck,ui.trait,MS,Works at 60% of an ordinary pace. Only a gamble deals it
+ui.trait.tireless,Tireless,ui.trait,MS,Tires half as fast. Only a gamble deals it
+ui.trait.bottomless,Bottomless,ui.trait,MS,Gets hungry 60% faster. Only a gamble deals it
+ui.trait.unshakeable,Unshakeable,ui.trait,MS,"In a far better mood than most, whatever happens. Only a gamble deals it"
+ui.trait.butterfingers,Butterfingers,ui.trait,MS,Works at 75% and hits 30% softer. Only a gamble deals it
 ui.occupation.nepo-rich-kid,Nepo Rich Kid,ui.occupation,MS,
 ui.occupation.sofa-surfer,Sofa Surfer,ui.occupation,MS,
 ui.occupation.carpenter,Carpenter,ui.occupation,MS,

@@ -11850,3 +11850,30 @@ cached translucent material, so no new shader has to survive the player build. T
 calls whatever the fight, and a colony with no blood submits nothing. Negative controls seen to
 fail: the cap dropping the newest, the fade brightening before its hold ends, the fans wound face
 down, the per-frame ground check off, the water rule off.
+
+## 2026-09-24 — The draw, designed
+
+The owner asked for colonist select in the reference's mould, with traits, balanced so that
+everyone averages out, and beside it a gamble: one pull per colonist from far wilder tables,
+presented as a fruit machine after *Alternate Reality: The Dungeon*'s stat strip. Two rounds of
+questions settled eight decisions (design 41 §2).
+
+**The one the owner pushed back on is the one that shaped the rest.** Asked whether the moment of
+pressing STOP should decide the result, they chose "rolled at the press" but added that *"if it's
+the same, what is the point"*: the gamble had to carry a real benefit. So Gamble is deliberately
+generous (a skill total about 32% above Standard's on average) and reaches a ceiling Standard never
+does (a 12+ skill on 6.8% of pulls, extreme traits only there), paid for in variance: about three
+pulls in ten come out worse than any Standard colonist and one in eleven is a dud.
+
+**The first draft of the table missed its own promise.** The owner had been shown ~7% stars; a
+200,000-pull simulation of the proposed weights gave 11.9%, so the 12–15 tail was thinned from
+25 to 14 tenths of a per cent before anything was written down. The design doc marks those figures
+as arithmetic and names the Long-tier test that will replace them with measurements.
+
+**Standard is stronger than today's roll**, about 12 levels over the five live skills against the
+legacy table's 8.1, and it replaces the roll every colonist uses. So the goldens will move with
+behaviour rather than with the hash, and the ten-day gate has to be re-run. A `Legacy` profile
+keeps old saves rolling as they did, because pace is re-derived from the seed on load.
+
+One naming call was made against the owner's list: the chopping reel is **CHP**, not CUT, because
+the skill is *Chopping* on every other surface. It is on the open list for the first play.
