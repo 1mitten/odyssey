@@ -122,14 +122,14 @@ namespace Odyssey.Sim.Pawns
             // Joined to help a colonist: once the attacker is on no colonist — gone to a building,
             // between minds, or its revenge spent — the reason is over, and she holds where she is.
             if (joining && Melee.ColonistUnderAttackBy(ctx, target) == null)
-                return boundary ? JobStatus.Succeeded : JobStatus.Ongoing;
+                return boundary ? JobStatus.Succeeded : LandTheStep(ctx);
 
             bool inReach = Melee.InReach(ctx, Pawn, target, mode);
 
             if (inReach)
             {
                 // Land a step that is well under way; stop on one that has barely begun.
-                if (!boundary) return JobStatus.Ongoing;
+                if (!boundary) return LandTheStep(ctx);
 
                 // Side by side (design 33 §7c): she stops here only if it is a side of her own. The
                 // hold too (§8c): she strikes from where she stands unless another fighter holds
@@ -146,7 +146,7 @@ namespace Odyssey.Sim.Pawns
             }
 
             // The hold never chases: out of reach, she holds again.
-            if (hold && !inReach) return boundary ? JobStatus.Succeeded : JobStatus.Ongoing;
+            if (hold && !inReach) return boundary ? JobStatus.Succeeded : LandTheStep(ctx);
 
             // A hunt, a revenge or a self-defence thinks again now and then.
             if (!Job.PlayerForced && boundary && tick - Pawn.JobStartTick >= ctx.Content.Combat.rechooseTicks) return JobStatus.Succeeded;
@@ -184,6 +184,24 @@ namespace Odyssey.Sim.Pawns
 
             JobStatus walk = GotoCell(ctx, dest);
             return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
+        }
+
+        /// <summary>
+        /// A step is under way and the answer waits for it to land. The mover lands it along the path
+        /// she holds — and <b>a path is never saved</b> (<see cref="MovementSystem"/>), so after a load
+        /// she holds none, nothing asked for one, and she stood frozen part way through the step while
+        /// the world that was saved walked on (found by the combat gate, C7:
+        /// <c>AttackDriverTests.ASaveTakenMidStepInReachResumesTheSame</c>). Asked again here, the
+        /// path is served before anybody steps in the same tick, so the step lands on the same tick
+        /// either way. In a world that was never loaded she always holds one, so this does nothing
+        /// there and no golden moved. A walk that can no longer be planned drops the step, so she is
+        /// at a boundary next tick rather than part way through one for ever.
+        /// </summary>
+        JobStatus LandTheStep(PawnContext ctx)
+        {
+            if (Pawn.HasPath || Pawn.PathPending) return JobStatus.Ongoing;
+            if (Pawn.Destination < 0 || GotoCell(ctx, Pawn.Destination) == JobStatus.Failed) Pawn.ClearPath();
+            return JobStatus.Ongoing;
         }
 
         /// <summary>
@@ -276,7 +294,7 @@ namespace Odyssey.Sim.Pawns
 
             if (inReach)
             {
-                if (!boundary) return JobStatus.Ongoing;
+                if (!boundary) return LandTheStep(ctx);
                 if (MayStrikeFromHere(ctx, tick))
                 {
                     Pawn.ClearPath();
@@ -302,7 +320,7 @@ namespace Odyssey.Sim.Pawns
                     // the owner's three at a wall on a terrace edge, which had one side. Two can
                     // choose one side in the same tick, before either has walked to it; this is
                     // what sorts them out.
-                    if (!Job.PlayerForced) return boundary ? JobStatus.Succeeded : JobStatus.Ongoing;
+                    if (!Job.PlayerForced) return boundary ? JobStatus.Succeeded : LandTheStep(ctx);
 
                     // A player's order waits where she is and looks again.
                     Pawn.ClearPath();
