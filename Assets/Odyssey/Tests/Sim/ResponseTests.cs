@@ -390,6 +390,36 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// Defend is the drafted help's rule (§15b), so a colonist's fight with a colonist summons
+        /// nobody: a Ctrl-ordered attack four cells off leaves her on her job. The marauder's fight
+        /// in the first Defend test is the control.
+        /// </summary>
+        [Test]
+        public void DefendIgnoresAColonistFightingAColonist()
+        {
+            var colony = Board(colonists: 3);
+            colony.World.Tick(5);
+            var rules = new Whiffs();
+            colony.Pawns.MeleeRules = rules;
+            Pawn helper = colony.Pawns.Pawns.All[0], by = colony.Pawns.Pawns.All[1], victim = colony.Pawns.Pawns.All[2];
+            Stand(colony, victim, Near(colony, 0, 0));
+            Stand(colony, by, Near(colony, 3, 0));
+            Stand(colony, helper, Near(colony, -4, 0));
+            Assert.That(Draft(colony, victim), Is.EqualTo(IntentRejection.None));
+            Assert.That(Draft(colony, by), Is.EqualTo(IntentRejection.None));
+            Assert.That(Respond(colony, helper, HostilityResponse.Defend), Is.EqualTo(IntentRejection.None));
+            Busy(colony, helper);
+            Assert.That(Attack(colony, by, victim), Is.EqualTo(IntentRejection.None));
+            for (int t = 0; t < 1_000; t++)
+            {
+                Tick(colony, helper, by, victim);
+                Assert.That(helper.CombatTarget, Is.EqualTo(0), $"tick {t}: a colonist's fight with a colonist drew her in");
+            }
+            Assert.That(OnTheLongWait(helper), Is.True);
+            Assert.That(rules.At(by, victim), Is.GreaterThan(0), "the control: the fight happened");
+        }
+
+        /// <summary>
         /// A fight nearby does not wake a sleeper set to Defend (§18d); she sleeps on. The control is
         /// the same colonist awake, who goes.
         /// </summary>
@@ -585,6 +615,11 @@ namespace Odyssey.Tests.Sim
             Assert.That(Respond(colony, runner, HostilityResponse.Flee), Is.EqualTo(IntentRejection.None));
             Busy(colony, runner);
             Pawn hog = Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, 3, 1));
+            // Something hostile about, far off and stunned, so her notice is asking: what is under
+            // test is whether the hog is danger, not whether anybody looked.
+            Pawn far = Spawn(colony, PawnKindIndex.Marauder, Near(colony, -25, -25));
+            Tick(colony, runner, victim);
+            far.StunnedUntilTick = colony.World.CurrentTick + 100_000;
 
             for (int t = 0; t < 300; t++)
             {
@@ -647,7 +682,12 @@ namespace Odyssey.Tests.Sim
             Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 6, 0));
             Tick(colony, a);
             marauder.StunnedUntilTick = colony.World.CurrentTick + 100_000;
+            // Her own hold, from her mind rather than the draft's order, which the notice would
+            // leave alone for being forced.
+            colony.Jobs.EndJob(a, JobStatus.Failed);
             Tick(colony, a);
+            Assert.That(a.CurrentJob is { DefIndex: JobIndex.DraftHold, PlayerForced: false }, Is.True,
+                "the control: she is not on a hold of her own");
             int started = colony.Jobs.JobsStarted;
             for (int t = 0; t < 60; t++)
             {
