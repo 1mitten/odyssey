@@ -192,7 +192,7 @@ namespace Odyssey.Tests.Sim
         // U46 put the first crop in. The one number to re-check by hand when this moves is
         // growTicks: 130,000 inside the daylight window is four game days to a full field, which
         // is the pace the start flow's pantry was tuned against.
-        const ulong PlantFingerprint = 11064235165183955100UL;
+        const ulong PlantFingerprint = 7107735981392633136UL;
 
         [Test]
         public void ThePlantsAreStillWhatTheyWere()

@@ -773,7 +773,14 @@ namespace Odyssey.Presentation.Rendering
         public static void ResolveColour(int tintCode, bool fallback, float shade, out Color tint, out Color emission)
         {
             int value = TintCode.Value(tintCode);
-            if (TintCode.IsLinen(tintCode))
+            if (TintCode.IsStoreEdge(tintCode))
+            {
+                // The store's own hue, flat: the line says where the store ends, so it is the
+                // order colour itself rather than the ground pulled a third of the way towards it.
+                tint = StoredGrade;
+                emission = Color.black;
+            }
+            else if (TintCode.IsLinen(tintCode))
             {
                 // One colour, whatever art or stuff is underneath: bedding is bedding.
                 tint = StuffPalette.Linen;

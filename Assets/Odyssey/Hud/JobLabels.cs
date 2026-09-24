@@ -39,7 +39,10 @@ namespace Odyssey.Hud
             // drafted, because what the player needs from the line is that this colonist is
             // theirs to command and not the work list's.
             "ui.status.drafted", "ui.status.drafted",
-            // The combat line's five (design 33 §5), in JobHandle order 14 to 18: attacking,
+            // Power (design 32): laying a line is building, taking one up is deconstructing, and
+            // feeding a generator has a word of its own.
+            "ui.status.building", "ui.status.deconstructing", "ui.status.refuelling",
+            // The combat line's five (design 33 §5), in JobHandle order 17 to 21, after power's three: attacking,
             // fleeing, lying downed, fetching a weapon, carrying the downed to bed.
             "ui.status.fighting", "ui.status.fleeing", "ui.status.downed",
             "ui.status.equipping", "ui.status.rescuing",

@@ -40,26 +40,37 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A drafted colonist walking to the cell the player named (design 33 §2c).</summary>
         public const int Goto = 13;
 
+        /// <summary>Fetch one wood and lay an ordered power line with it (design 32 §3).</summary>
+        public const int LayConduit = 14;
+
+        /// <summary>Take up a power line marked for removal.</summary>
+        public const int RemoveConduit = 15;
+
+        /// <summary>Carry fuel to a generator below half and fill it (design 32 §6).</summary>
+        public const int Refuel = 16;
+
         // The combat line's five (design 33 §5), claimed together by the contracts step so that
-        // no two lanes can each append a job and both call it 14. Every one exists from this
-        // commit; the drivers behind them are stubs that fail until their lane fills them.
+        // no two lanes could each append a job and both call it 14. **Renumbered 14-18 -> 17-21 at
+        // the merge with main (2026-09-24)**: power's three shipped first and a shipped handle is a
+        // save contract, so the unshipped ones moved. Saves taken on the combat branches before this
+        // merge do not load; no save from main is affected.
 
         /// <summary>Close on a target and swing at it until one of the two goes down (C2).</summary>
-        public const int AttackMelee = 14;
+        public const int AttackMelee = 17;
 
         /// <summary>Run from whatever hurt it (C2): an animal that did not turn on its attacker.</summary>
-        public const int Flee = 15;
+        public const int Flee = 18;
 
         /// <summary>Lying where it fell, at nought hit points or less, until healed, rescued or dead (C2).</summary>
-        public const int Downed = 16;
+        public const int Downed = 19;
 
         /// <summary>Walk to a weapon and take it into the hand (C3).</summary>
-        public const int Equip = 17;
+        public const int Equip = 20;
 
         /// <summary>Carry a downed colonist to a bed (C4).</summary>
-        public const int Rescue = 18;
+        public const int Rescue = 21;
 
-        public const int Count = 19;
+        public const int Count = 22;
     }
 
     /// <summary>
@@ -249,7 +260,10 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A stack of meals falling out of the sky on to whatever is under it.</summary>
         public const int SupplyDrop = 0;
 
-        public const int Count = 1;
+        /// <summary>A stack of scrap metal falling out of the sky (design 32 §14): the supply drop's worker, another cargo.</summary>
+        public const int ScrapDrop = 1;
+
+        public const int Count = 2;
     }
 
     /// <summary>
@@ -324,7 +338,20 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Shelf = 13;
 
-        public const int Count = 14;
+        /// <summary>The campfire, the third id the interface names that no generator stamps:
+        /// 14, after the shelf, and like it the reason <c>CoreContent.EdificeCampfire</c> spells
+        /// the literal beside the ones it must not collide with (design 28 §7).</summary>
+        public const int Campfire = 14;
+
+        /// <summary>The wood-fired generator (design 32 §6): two cells, the first thing that makes
+        /// power. 15, after the campfire; see <c>CoreContent.EdificeGenerator</c>.</summary>
+        public const int Generator = 15;
+
+        /// <summary>The electric heater (design 32 §7): one cell, the first thing that spends
+        /// power. See <c>CoreContent.EdificeHeater</c>.</summary>
+        public const int Heater = 16;
+
+        public const int Count = 17;
     }
 
     /// <summary>
@@ -387,7 +414,31 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Shelf = 7;
 
-        public const int Count = 8;
+        /// <summary>The first heat source (design 28 §7): one cell, blocking, and the one
+        /// building whose <c>heatPerPass</c> is not zero.
+        ///
+        /// <para>Eight because the shelf reached main first and took seven, the same
+        /// rule the shelf's own note records against the door. Handle order is the save
+        /// contract and positions are append-only.</para>
+        /// </summary>
+        public const int Campfire = 8;
+
+        /// <summary>
+        /// A power line (design 32 §3). <b>Not an edifice</b>: a line lives in its own per-cell
+        /// layer, so it can run through a wall or under a floor, and the order for one is handed
+        /// to the power grid rather than taking a construction site of its own. It is a building
+        /// handle all the same because it is armed, ghosted, dragged and ordered exactly as a wall
+        /// is — one intent, one cursor, one palette row.
+        /// </summary>
+        public const int Conduit = 9;
+
+        /// <summary>The wood-fired generator (design 32 §6).</summary>
+        public const int Generator = 10;
+
+        /// <summary>The electric heater (design 32 §7).</summary>
+        public const int Heater = 11;
+
+        public const int Count = 12;
     }
 
     /// <summary>

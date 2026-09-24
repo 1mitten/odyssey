@@ -107,6 +107,21 @@ namespace Odyssey.Sim.Pawns
         public World.EnclosureGrid? Enclosure { get; set; }
 
         /// <summary>
+        /// The thermal pass (design 28), when the world has one. Null in a bare pawn fixture,
+        /// exactly as <see cref="Enclosure"/> is — a fixture that never meant to be cold reads
+        /// the outdoor curve and nothing here is the wiser.
+        /// </summary>
+        public Temperature.TemperatureSystem? Temperature { get; set; }
+
+        /// <summary>
+        /// The power grid (design 32): lines, the orders for them, the buildings that make and
+        /// spend power, and the nets between. Null in a bare pawn fixture, exactly as
+        /// <see cref="Temperature"/> is — a fixture that never meant to wire anything has nothing
+        /// to lay and nothing to refuel.
+        /// </summary>
+        public Power.PowerGrid? Power { get; set; }
+
+        /// <summary>
         /// The structure of this cell changed, so the boundary above it has to be re-judged.
         ///
         /// <para>Both the cell and the one above it, always, because they are two different

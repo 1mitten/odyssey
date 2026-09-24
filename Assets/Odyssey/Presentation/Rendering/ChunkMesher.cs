@@ -66,6 +66,7 @@ namespace Odyssey.Presentation.Rendering
                 EmitBank(batch, index, x, z, y);
                 EmitScatter(batch, index, x, z, y);
                 EmitFloor(batch, index, x, z, y);
+                EmitStoreEdge(batch, index, x, z, y);
                 EmitEdifice(batch, index, x, z, y);
                 EmitCrop(batch, index, x, z, y);
             }
@@ -583,6 +584,32 @@ namespace Odyssey.Presentation.Rendering
                 GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) * CellMetrics.FloorTile);
         }
 
+        /// <summary>
+        /// The line round a stockpile (owner, 2026-09-23: "wash + edge outline"): a strip on each
+        /// side of a stored cell whose neighbour on that side is not stored, so it follows the
+        /// zone's <i>outer</i> edge and never draws the interior grid — the interior borders were
+        /// what the owner objected to in the growing zone's old cover.
+        ///
+        /// <para>Baked into the chunk like the wash, so it costs one bucket per chunk that holds a
+        /// store and nothing per frame (P10). Emitted at the store's own cell, which is where a
+        /// slab would be drawn, so one placement serves bare ground and a built floor alike. A
+        /// neighbour joining or leaving changes this cell's line, which is why
+        /// <c>StorageZones.Mark</c> dirties the four neighbours' chunks as well as its own.</para>
+        /// </summary>
+        void EmitStoreEdge(ChunkBatch batch, int index, int x, int z, int y)
+        {
+            if (!_model.IsStoredHere(index)) return;
+            var size = _model.Size;
+            int tint = TintCode.Daylit(TintCode.StoreEdge(), _model.OpenToTheSky(index, y));
+            Matrix4x4 at = GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y));
+            int module = _model.StoreEdgeModule;
+
+            if (x + 1 >= size.SizeX || !_model.IsStoredHere(index + 1)) AddRoof(batch, module, tint, at * CellMetrics.StoreEdge(0));
+            if (x == 0 || !_model.IsStoredHere(index - 1)) AddRoof(batch, module, tint, at * CellMetrics.StoreEdge(1));
+            if (z + 1 >= size.SizeZ || !_model.IsStoredHere(index + size.SizeX)) AddRoof(batch, module, tint, at * CellMetrics.StoreEdge(2));
+            if (z == 0 || !_model.IsStoredHere(index - size.SizeX)) AddRoof(batch, module, tint, at * CellMetrics.StoreEdge(3));
+        }
+
         void EmitEdifice(ChunkBatch batch, int index, int x, int z, int y)
         {
             ushort def = _model.EdificeDef(index);
@@ -638,6 +665,22 @@ namespace Odyssey.Presentation.Rendering
                 case CoreContent.EdificeShelf:
                     EmitShelf(batch, module, tint, index, x, z, y);
                     return;
+                // Power's machines, drawn from pack art once from the head at the middle of their
+                // footprint (design 32 §14). Only when the art resolved: a clone without the packs
+                // has the tinted block, which is drawn per cell below as it always was.
+                case CoreContent.EdificeGenerator:
+                case CoreContent.EdificeHeater:
+                    if (shape == ModuleShape.Pillar)
+                    {
+                        // The generator's facing is where its second cell lies, so it is the
+                        // player's; the heater's is drawing only, and backs on to a wall (§14c).
+                        if (_model.EdificeHead(index))
+                            AddBody(batch, module, TintCode.Stuff(CoreContent.StuffNone), def == CoreContent.EdificeGenerator
+                                ? PropShape.Root(x, z, y, _model.EdificeFacing(index), 2)
+                                : PropShape.Root(x, z, y, _model.BackedFacing(index), 1));
+                        return;
+                    }
+                    break;
                 case CoreContent.EdificePillar:
                 case CoreContent.EdificeUtilityTap:
                     AddBody(batch, module, tint,

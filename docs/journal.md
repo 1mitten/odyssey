@@ -9324,6 +9324,40 @@ built, and that the collector does not run at all while the panel sits open.
 
 It logs its baseline and says to read that first, because the last timing test to fail on this
 machine failed to contention and not to a regression.
+## 2026-09-21 — temperature lands (design 28, the a-06 model)
+
+The M4 core pulled forward on the owner's ask. The model is the one `a-06` recommended and the
+design doc restates: per-room scalars, one pass per 120 ticks, conductances in per-mille, buoyancy
+as one asymmetric number on vertical openings, the ground as a boundary that damps the season by
+depth. Three things the implementation itself found, all now amendments in §3 and §4 of the
+design doc:
+
+**The quarter clamp strangled the fire.** ONI's rule bounds how fast two temperatures may
+approach each other; the first cut clamped the room's whole step with it, and a fired room at
+one with the outdoors had a driving difference of zero — a limit of zero — and could never warm.
+Sources are now clamped by nothing; the exchanges alone carry the bound.
+
+**A cellar with a way up was not a room.** The 100%-roofed rule read a ladder shaft as a hole in
+the roof, so any room with a stairwell or a hatch read the outdoor curve — the buoyancy feature
+dead on arrival, the cellar being the whole point. The shaft rule: a hole into *the room above*
+still counts as roofed, and the model carries it as an Opening surface. Rooms then needed the
+sweep to run ascending to fixed point, because each sweep pulls one more layer of a shaft chain
+to life — found as a round-trip divergence, a played world and a loaded one disagreeing about
+which caverns existed three layers down, which is also why rooms resolve their starting
+temperature at solve time rather than at the next pass: the warm half of a split room was
+snapping to the outdoors between the two.
+
+**Heat rises, read the right way round.** The buoyancy experiment's first assertion demanded the
+loft *warmer* than a fired hall below, which equilibrium forbids — the source is downstairs. What
+the 4:1 actually buys is the *gradient*: driven from below, the fast upward coupling keeps the
+loft close behind; driven from above, the slow downward one leaves the cellar far below. The test
+asserts the separation between the two, which is a-06's tie-breaker stated properly.
+
+Balance note: the first climate made a Wash night "bad-band" cold and the session round trip
+found a colony that hauled nothing — 5.8 °C nights against band edges tuned for autumn. The
+shipped table lifts Wash (mean 15/19 °C, ±5 swing) and widens the mild band so spring nights are
+full-rate work and mild mood; Rime still crosses the floor. The numbers are the owner's to tune;
+the shapes are pinned by tests.
 
 ---
 
@@ -10327,6 +10361,60 @@ enough not to be worth one.
 **What is not measured, said out loud:** the write is synchronous and lands inside one frame. On a
 large colony that is a hitch every game morning, and it is the first thing to look at if a daily
 stutter is ever reported.
+
+## 2026-09-21 — temperature reviewed: nine findings, the playtest held
+
+PR #164 reviewed on its own worktree with `main` merged in (seven conflicts, all docs, the wiki
+and one fingerprint; the code merged clean). The method was the one this project keeps having to
+relearn: **a probe test per suspicion, before believing any of them** — nine were written, one
+passed for a reason that turned out to be the probe's own (an unroofed gap), and after that fix
+all nine fail on the branch. They are `[Explicit]` in `TemperatureReviewProbes.cs`; a fix turns
+its probe into a test. The findings and the numbers are `docs/design/28-temperature.md` §12.
+
+The one that would have decided the playtest on its own: the severity bar fills in fourteen
+game-minutes at a Candle night, against the four hours every comment promises — a per-mille
+applied per centi-degree, so the shipped 300 is ten to twenty times the intent, and the test
+that pins it says "three" in its message while pinning 300. The two that matter for the record
+are both load divergences the round trip cannot see because it runs in Wash: the fixed-point
+sweep only re-solves the layers the edit marked, so a house roofed last has a cellar that is a
+room after a load and not before; and a re-sealed room resumes its old temperature in play and
+resolves from the outdoors after a load, because only live rooms are saved. And a surface one
+that the buoyancy test hides: a shared slab is charged to the sky *and* to the room above, so
+building upstairs makes downstairs colder.
+
+The cost was measured because the benchmark could not: `TickBenchmarkTests`' edit arm marks nav
+alone, so the enclosure has never been in the edit tick. Same probe on both, one after the
+other: the per-edit solve is up 1.6× (0.56 → 0.92 ms Standard, 2.6 → 4.3 ms Huge), the initial
+solve 5–6× on the wooded boards (37 ms and 106 ms), the worst single edit on Huge 11 ms — and
+the enclosure was already most of a real edit's cost on Huge before this branch, invisible.
+
+Nothing was fixed; the owner asked for a review. The merge with `main` is pushed to the branch,
+the playtest row is held until F1–F4 are in, and the PR carries the review.
+
+## 2026-09-21 — the nine fixed, and the goldens measured before they were re-baked
+
+The temperature review's findings (design 28 §12), fixed in the order the review ranked them and
+recorded in §12a. The one restructure is the enclosure solve: identity top-down with dirtiness
+carried downward on change, surfaces built once after — which is both the correctness fix (the
+cellar under a house roofed last) and the cost fix (no fixed-point sweep). The rest are a number,
+a mark, a ledger that counts a room's own votes, a ceiling that is not sky when a room is above it,
+a remainder that is kept, and a field that is saved.
+
+Two things worth writing down about the method. **The fastest way to know what moved a golden is
+to hash its components separately** — cells, pawns, edifices, the thermal section — before and
+after, on the same worlds: five minutes, and it turned "the Simulated hash changed on two boards"
+into "only the thermal section changed, the colony did nothing different" with no reasoning at
+all. And **disable the new hash fields and re-run before believing a tick-zero move is only the
+hash seeing more**; it was, on all three, and now the sentence in `Golden.cs` can say so.
+
+The playtest row is un-held. The residual and the saved ambient are two more hashed fields; the
+severity slope is one content line; the enclosure's first solve on a wooded board is back near
+what it was.
+
+The edit-tick benchmark ran with the enclosure in it for the first time: Standard's lattice world
+3.86 → 5.76 ms per tick, nav alone against nav and the enclosure. The 0.298 ms `28-map-size.md`
+quotes for Standard is the generated board and never was this arm — one more number that meant a
+different world from the one it was read as.
 ## 2026-09-21 — Two reports: sealed in a wall, and a building that takes a second to appear
 
 The owner asked to be interviewed before either was fixed, which was the right instinct for the
@@ -11073,3 +11161,292 @@ Measured, alone on the machine: EditMode 2,823 / 2,797 / 0 failed, PlayMode 106 
 1,161 + 795, Long 39. No golden moved and the colony probe is identical to the contracts commit's.
 A fight in view costs 2.29 ms against 2.06 at peace, in one run. The player build boots into a colony
 clean. Design 33 §6E has the rest.
+
+## 2026-09-22 — Temperature merged with main: the campfire renumbers, and the season becomes reachable
+
+`main` moved twice under PR #164 while it sat in review — the shelf (#158) and floating crops
+(#163) — and the merge turned out to be the interesting part rather than a formality. **Both
+branches had appended at the same two slots.** The shelf reached `main` first and took edifice 13
+and `BuildingHandle` 7; the campfire had both. The rule for that is already written down in two
+places (`BuildingHandle.Bed`'s own comment records the bed moving from 2 to 5 for exactly this),
+so the campfire moves to 14 and 8. It is only safe because no save with a campfire in it has ever
+left the branch, and that sentence is the whole of the argument.
+
+Eighteen files conflicted. Seventeen were a union — one branch appending a row, the other
+appending a different row to the same table — and resolving them was mechanical. **The interesting
+ones are the two tables that did not conflict at all.** `BuildShapes.Cells` is parallel to
+`BuildingHandle`, and both branches had added a `1` to it; git took one of the two, so the merged
+table was one entry short and the campfire had no shape. `EdificeHandle.Count` and
+`BuildingHandle.Count` likewise merged clean and were both wrong by one.
+
+`RegistryTests.EveryBuildableHasAShapeOfItsOwn` caught the shape table. That test exists *because
+of this exact failure* — its own comment records the day the bed's handle moved from 2 to 5, the
+three-entry table merged in silence, and the bed became a one-cell thing that could not be turned
+while three `DesignateDirector` tests failed and none of them named the cause. It has now earned
+its keep twice, on the same fault, two months apart. **The lesson it teaches is not about shapes:
+a merge conflict marks where two branches wrote different text, and the dangerous case is where
+they wrote the *same* text for different reasons.** Every hand-maintained parallel table in this
+codebase has that property, and only the ones with a length assertion are defended.
+
+**The goldens and the building fingerprint were re-baked, and measured before they were.** A merge
+of two branches that each moved a golden leaves neither side's number right, so taking either
+would have committed a number nothing had produced. `GoldenColonyProbe` — committed by the shelf
+work for exactly this — was run on the merged branch, on the branch head and on `main`, and the
+three outputs **diff clean**: all nine census numbers identical on all three boards across all
+three commits. The hash sees more; no colony does anything different. Which also says something
+quieter and worth writing down: **in the ten-thousand-tick golden windows, temperature changes
+nothing at all**, because those windows sit in the work band, nobody sleeps in them, and the
+boards have no crops. The goldens are not evidence the model bites, and were never going to be.
+
+### Three findings, and one of them is not about code
+
+**The pass is O(standing edifices) and its own summary said it was not.** `TemperatureSystem`
+claimed *"O(rooms + surfaces), never O(cells)"*. Measured with the edifice count printed beside
+the time, the shape is the opposite of the claim: 250 × 250 × 40 barren — 2.5 M cells, 0 rooms,
+**5 edifices** — costs 0.0054 ms, while 240 × 240 × 16 wooded — 69 rooms, **6,311 edifices** —
+costs 0.17 ms. The sweep for heat sources has to visit every standing thing to find the warm ones,
+a wooded board is mostly trees, and it was calling `BuildingForEdifice` — *a linear scan of the
+building table* — once per tree. A scan inside a sweep. Precomputing the answer by edifice id in
+the constructor took it to 0.051 and 0.013 ms, both arms in one run.
+
+The number is not the point. **The point is that a complexity claim in a doc comment is not a
+measurement, and this one had survived a nine-finding review.** It reads as true because the room
+half of the sentence is true, and the half that is not is the half that grows. `P10` in
+`bug-patterns.md` is the drawing-side version of the same thing — a pass that costs once per cell,
+which reviews cannot see — and this is its tick-side twin: a pass that costs once per *thing*,
+hidden behind a cadence that makes the amortised figure look like nothing.
+
+**The form of a temperature had two owners.** The pane's tile row and the clock's outdoor reading
+each carried their own copy of centi-degrees-to-one-signed-decimal, in two assemblies, agreeing by
+luck. P1 again. `TemperatureLabels.Describe` is the one owner now, and the guard **reads the C#
+files** rather than asserting behaviour, because two copies of a rule that happen to agree cannot
+be caught by running either of them. It immediately found `AlmanacCatalogue` writing `20°C` where
+the pane writes `20.0 °C` — prose rather than a second implementation, so exempted, but the
+exemption says what it is leaving unchecked instead of quietly widening the rule to fit.
+
+**And the finding that mattered most was not a bug.** This work's headline sentence is *"Rime
+kills"*, and Rime is months four and five of six. The debug menu offered **Skip one day**. Reaching
+the season the entire model exists for was therefore sixty presses — and the branch's own "still
+owed" note asked only whether *Wash's* chill reads as mild. That is what a question looks like when
+the interesting one cannot be asked: the scope of a playtest had been silently set by the tooling
+rather than by the work. **Skip one month** is one new row using the day row's own mechanism, and
+six presses now walk the year.
+
+Worth keeping as a habit: before handing something over, ask what the playtest instruction actually
+is, and then try to *follow it*. "Fast forward into Rime" was already written in the queue, by
+somebody who had not counted the presses.
+
+**What was deliberately left alone.** `WeatherOffsetC` is a settable seam with nothing setting it,
+so a cold snap cannot be reached in any season — and a debug row for it would have been one line.
+It was not written. The incident that owns weather is deferred work with a design behind it, and a
+debug switch that sets a field an incident is supposed to own is how a seam quietly becomes an
+interface. If the playtest comes back wanting the cold snap first, that is the moment to
+reconsider, and the reason will be on record rather than reconstructed.
+
+## 2026-09-23 — A stockpile you could not see (design 26 §13)
+
+Reported three ways in an evening — *"I can't seem to create stockpiles anymore"*, *"There is no
+visual to the stockpile"*, and then *"big delay and in another case didn't appear"*, *"having more
+than one stockpile - seemed to not draw the other one"*. One fault: the zone was made and its chunk
+was not re-meshed. On grass a store's cell is the air over the ground and its wash is on the ground's
+top face, meshed a layer down; `StorageZones.Mark` dirtied only the store's own chunk, which stopped
+being enough when chunks got their own versions on 2026-09-21. A stockpile showed only when
+something else re-meshed its ground — a felled tree, a job nearby — which is exactly a delay, a
+never, and one of two. Found on `claude/research-tab`, measured both ways there, and split out here
+because it is on `main` and every branch the owner plays inherits it.
+
+**Two lessons.** *"Was it made"* and *"is it on screen"* are two questions; the first test asked only
+the first and sent the diagnosis to the pointer for a round. And the last two reports came from
+sessions in other worktrees (`odyssey-power`, `odyssey-review-164`) that did not have the fix — the
+editor log's project path is the first thing to read before chasing a second cause.
+
+The owner's interview added an outline round the zone's outer edge, baked into the chunk: one bucket
+per chunk with a store, nothing per frame.
+## 2026-09-23 — The Research and Inventory tabs (designs 34, 35)
+
+Two owner specs in one afternoon, both for windows docked in the Work tab's corner, so one PR.
+Research (F3) was asked for as **interface only** — *"only include power for now but we'll create
+the mechanism later"* — and Inventory (F2) was folded in mid-session.
+
+**Research is a placeholder state, said plainly.** There is no research system, so the project in
+hand, the queue and what is done live in `ResearchDirector` on the interface side: session state,
+unsaved, unhashed. Progress never moves; the debug menu's *Finish research* is the only way a
+project becomes done. That is deliberate, and the seam the bench will drive (`Advance`) is tested
+now so the mechanism unit starts from a contract rather than a guess. Wiring starts done because
+the power branch builds conduit with no research at all.
+
+**A project's description needed a route to the screen**, and the rule is that content is written
+once. The registry emitted names only, so `emit_labels.py` now also emits the description column
+for the `ui.research.project` namespace (`Registry.Describe`). One namespace rather than all seven
+hundred rows, so the generated file does not carry tooltip seeds nothing draws.
+
+**Inventory needed a store's name, and the name had one owner in the simulation.** "Stockpile 3"
+is `StorageZones.OrdinalOfCell`, one series across zones and shelves in cell order, and it reached
+the interface only for the one selected cell. The HUD could have re-derived it from the published
+rows — the zone cells are sorted, so the first row of a zone is its first cell — and that would
+have been P1 (one rule, two owners) written on purpose. It is published on `StoreView` and
+`StorageUnitView` instead, once per zone per publish, and `StoreOrdinalTests` holds the published
+number to the pane's. Views are not hashed, so nothing moved.
+
+**Go selects the cell, not the pile.** A pick on a stockpile cell selects what lies there first,
+because that is what a click usually means; Go is asking for the store, and the pane leads with
+the store only when the cell is the subject. So `SelectionDirector.ChooseCell` exists, and
+`HudDirectors.ChooseStore` moves the slice as the roster does rather than keeping it as the
+Animals tab does: a store may be underground.
+
+**Where the specs were not followed, the design docs say so** (34 §5, 35 §5): the shipped bar
+rather than a 44 px one, the shipped wash and rule tokens, the contrast-corrected category hues,
+and six place rows. The new windows are flat with a 22 px close as specced, which leaves them
+different from Work and Animals — an inconsistency for the owner to settle, not one to tidy
+silently.
+
+**First look, the same evening: the list was invented, and it was cut to the game.** Five Power
+projects including batteries, lamps and solar arrays, none of which the game has, was a list
+written to fill a table. The owner asked for only what exists: Electricity, which opens Power
+lines and the Generator, and the Ladder under Furniture. Nothing starts done. The lesson is the
+one the registry exists for — a name on screen is a promise that the thing is in the game.
+
+**The same look reported that a stockpile drag painted nothing.** The log from that session had
+the Fell drag reaching the simulation (308 refusals, all correct) and not one stockpile order
+refused — so the orders were never sent. `StockpileDragTests` hands the presenter's own drag and
+click handlers a stockpile box and asserts a zone is published: that half passes, which puts the
+fault on the pointer side of the presenter, a side this branch does not touch. The pointer side
+cannot be driven in a batch run (CLAUDE.md, known gaps), so the next measurement is a Play session
+on `main` doing the same drag, to learn whether the fault came with this branch at all.
+
+**Then the stockpile had its interview.** The owner's second report — *"There is no visual to the
+stockpile"* — was the true one: the zone existed and was not drawn, because the ground under a store
+on grass is meshed a layer down and only the store's own chunk was being marked, which stopped
+being enough when chunks got their own versions. The answers that followed: the drag's preview had
+shown (so the pointer was never at fault, and the earlier "fault is on the input side" was wrong
+reasoning from an incomplete test that had only asked whether a zone was *published*), keep the
+wash, add a line round the outer edge, and nothing about priority or fullness. The outline is baked
+into the chunk, one bucket per chunk with a store. The lesson for the test: **"was it made" and "is
+it on screen" are two questions, and the second is the one a player asks.** `26-storage.md` §13.
+
+**The Inventory's first look, and a palette that was only safe for most eyes.** The owner asked for
+the Inventory's rows to match the stockpile pane and to be checked for accessibility, and asked
+whether many colours or one was better. Measured before answering: every category hue cleared
+contrast easily, and three of them were one colour under deuteranopia. The answer given — and taken —
+was many colours as a second cue behind a glyph and a name, which is what the stockpile pane already
+did; the hues were re-tuned within their families until every pair stayed apart under all three
+dichromacies, and a test now simulates them. Contrast ratios are what accessibility checks usually
+stop at; they said nothing here about the fault that mattered. Design 35 §5a.
+
+## 2026-09-23 — Power: a generator, the lines, a heater
+
+The owner asked for power in the RimWorld mould — a wood generator, lines to what needs
+electricity, the lines hidden except while being worked on — and was interviewed before anything
+was built (design 32 §2 holds the eleven answers). A clean-room research pass (a-07) backed all of
+them and supplied the reference's numbers: 1,000 W, a 75-wood hopper, 22 wood a day, 175 W heaters.
+Built on `origin/claude/temperature-core`, because the local checkout was 115 commits behind its
+own remote — found by the design agent reading the wrong tree, which is this project's standing
+lesson about checkouts arriving at the next session unannounced.
+
+**A line is not an edifice, and that decision shaped everything after it.** "Anywhere, under
+anything" means a cell holds a wall and a line at once, and the edifice slot holds one thing. So
+lines live in their own layer (`PowerGrid`, a bitset and a sorted list), with their own order lane
+— a wall order and a line order share a cell — and their own claim kind, so a builder on the wall
+does not lock out the colonist laying the line. The order still arrives as `PlaceBuilding`, and the
+construction grid's `Allows`, `WhereItWouldLand` and `RunLayerFor` all delegate to one rule, so the
+cursor and the order cannot drift: the P1 lesson taken before the fault rather than after.
+
+**Deconstruct does not take lines**, and that was a default taken without asking (§2a). It takes
+one thing a cell — the building, then our floor — so folding lines in would make rerouting a wire
+under a floor cost the floor. Lines get their own *Remove conduit* tool instead. The playtest row
+asks whether a player looks for it there.
+
+**The net solve was measured seven times too slow and rewritten before merge.** The first cut
+flooded outward with a binary search per face: 3.1 ms for one edit at 10,000 lines, the audit's
+`NavGraph.Rebuild` fault in a new costume. A union-find over the sorted list, each face found from
+its lower side by a pointer that only ever moves forward, is linear with no search: 0.43 ms at
+10,000, 0.08 ms at 2,000. The measurement was the only thing that could have said so; the code
+read as linear both times.
+
+**Whole-net-dark needs demand to count what is switched on, not what is powered** — a-07's
+observation, and the reason the reference's shedding flickers. Counting only the powered would let
+a dark net drop its demand, relight, and go dark again every solve.
+
+**The goldens moved once, and the proof was sharper than the census.** Three job defs add three
+counter pairs to the job system's hash. Rather than compare colony censuses, the hash was cut back
+(uncommitted) to the first twelve defs, and all three boards then matched the *previous* goldens
+exactly — so the new givers never fired and the new scan order changed no job anywhere. And
+`JobSystem.Load` stopped refusing a save with fewer job defs than the build: defs are append-only,
+so a shorter list is simply an older save, and the refusal had made every save older than the last
+new job unloadable for a reason that was never true.
+
+**Two side-findings.** `WorkGiverRegistrationTests` walked every permutation of the givers; eleven
+givers made that 11! and two minutes for one test, and a twelfth would have made it twenty. It
+samples orders now — every rotation, every reversal, five thousand seeded shuffles — which is the
+same question at a fixed price, with `NoTwoGiversCanTieInTheSort` still guarding the total order
+that makes the answer true. And a line in open air two storeys above anything standable is accepted
+and never laid, the same answer a slab in mid-air gets; recorded in design 32 §3 rather than guarded.
+
+## 2026-09-23 — Power, second round: scrap metal, and a line you can click again
+
+The owner's first look found an ordered line could not be selected again — so there was no way
+back to it to cancel it — and asked for lines to be built of scrap metal. Interviewed again (design
+32 §14): the existing *Scrap* item, relabelled *Scrap metal*; wreckage on the board and a scrap
+drop for more; a line 1, a generator 20 beside its 30 wood or stone, a heater 5 beside its 10; and
+a Cancel on the selected line's pane.
+
+**Why the click missed** is the picker's own rule meeting a second channel: a waiting order is a
+pointer target because `WorldRenderModel` is told the frame's building sites, and a line order is
+not a building site — it is in the power grid's own channel. The click fell through to the grass
+under it. Lines now go into the same answer (`SetLines`, `HasLine`), which is the fix and not a
+workaround: the picker's argument for sites — a waiting order has a cell, an order and a pane — is
+word for word true of a line.
+
+**A building paid for twice** is the one real mechanism in the round. `partItem`/`partCount` sit
+beside the chosen material, a site banks them apart, the delivery giver carries the material first
+and then the parts, a site is a frame only when both are in, and cancel, botch and deconstruct give
+each back by its own rule. The count is saved in a section of its own, so there is still no
+save-format bump. The pane's Cancel for a line got a narrow intent (`CancelConduit`) of its own:
+the cancel drag's `CancelBuilding` rightly takes every order in a cell, and a button that names one
+line must not also take the wall order standing beside it.
+
+**The first run moved every golden, and it was a real change, not a hash change.** Scrap metal
+stacking to fifty let the bare scenario's starting scatter drop a second piece on to an earlier
+one's cell — "room" had quietly become a different question — so the starting kit itself differed.
+The scatter asks for an empty cell with room now, which is what it always placed, and every golden
+and the scenario placement signature came back exactly. The wreckage goes through the Playtest
+scenario only, for the reason the stone and wood piles do: the bare scenario is what the goldens
+stand on.
+
+One Long-tier run failed `ATickThatDoesNothingAllocatesNextToNothing` once and passed three times
+after it, at the documented 1.6 and 3.3 bytes a tick. Recorded rather than retried away: a
+GC-sensitive figure on a machine running several editors is exactly where a one-off lives, and if
+it comes back, the per-tick allocations of the new power paths are the place to look first.
+
+## 2026-09-23 — Power, third look: the machines stand flush
+
+The owner found the generator and heater standing off their walls "with spacing that is awkward",
+and that neither would turn. Measured rather than reasoned: the two FBX files were read for their
+vertex bounds (0.61 x 0.58 x 0.91 m and 0.94 x 0.70 x 0.64 m), which showed the uniform fit had left
+the generator 3.1 m long in 5 m of footprint and the heater centred. The heater also did not rotate
+at all — `rotates` was false in the content — and the generator does, so "doesn't rotate" was
+probably the heater.
+
+The generator now fills its footprint (a stretch along its length), and the heater stands with its
+back on the back edge of its cell and faces away from a wall where there is one, R choosing among
+walls rather than being overruled by them — the ladder's rule would have left "doesn't rotate" true
+against every wall. Which way the air-conditioner's front looks was read off the mesh (its detail is
+at +Z, the pivot on the plain back face), not seen, and is the first thing to look at. Design 32 §14c.
+
+## 2026-09-24 — Power merged with main
+
+Temperature (#164) merged, and main had taken combat's draft, wildlife and the stockpile outline
+meanwhile: 77 commits, nineteen files in conflict. **The only real collision was the job table.**
+The draft appended `DraftHold` and `Goto` at 12 and 13, and power had appended its three at the same
+slots. A job def's number is a save contract and main's is already shipped to anyone playing `main`,
+so the draft keeps 12 and 13 and power moves to 14–16, in `JobHandle`, `Jobs.xml`, the driver list
+and the name list alike. Both sides had independently relaxed `JobSystem.Load` to accept a shorter
+job list, for the same reason and in almost the same words; main's copy was kept. The intents, the
+job labels, the bootstrap's draw passes and the catalogue's new fields were side-by-side additions,
+kept whole. Every other handle was checked for a silent collision — anything main numbered since
+the fork — and there was none.
+
+The content fingerprint and all three goldens were re-taken rather than adopted, since neither
+side's numbers came from the merged code. `GoldenColonyProbe` on the merge and on `origin/main`
+diffs clean on every board. The wiki and label registry were regenerated from the merged CSVs, not
+merged by hand.

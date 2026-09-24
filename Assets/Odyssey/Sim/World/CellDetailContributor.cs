@@ -35,12 +35,15 @@ namespace Odyssey.Sim.World
         readonly Storage.StorageUnits? _units;
         readonly Pawns.ColonyItems? _items;
 
+        readonly Temperature.TemperatureSystem? _temperature;
+
         readonly int[] _costByClass = new int[256];
 
         public CellDetailContributor(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices,
             Growing.GrowingZones? zones = null, EnclosureGrid? enclosure = null,
             Storage.StorageZones? storage = null, Storage.StorageUnits? units = null,
-            Pawns.ColonyItems? items = null)
+            Pawns.ColonyItems? items = null,
+            Temperature.TemperatureSystem? temperature = null)
         {
             _grid = grid;
             _edifices = edifices;
@@ -49,6 +52,7 @@ namespace Odyssey.Sim.World
             _storage = storage;
             _units = units;
             _items = items;
+            _temperature = temperature;
             NaturalContent.ApplyCostClasses(_costByClass);
         }
 
@@ -191,12 +195,21 @@ namespace Odyssey.Sim.World
             }
 
             bool isIndoors = _enclosure?.IsIndoors(cell) ?? false;
+
+            // The tile's own answer to "how warm is it here": its room's air where it is in a
+            // room, the outdoor curve where it is not. Read from the thermal system — the same
+            // one source the needs system and the growth pass ask — so the pane cannot disagree
+            // with the simulation about what a colonist is standing in.
+            // No thermal system, nothing to say — the field's own silence, not a reading of 0 °C.
+            int ambientTempC = _temperature?.CellTemp(cell, world.CurrentTick) ?? int.MinValue;
+
             writer.AddCellDetail(new CellDetail(
                 cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,
                 quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors,
                 storageZone, storagePriority, storageCells, storageOrdinal,
                 storeKind, storedStacks, storeSlots, storedDef, storedUnits,
-                storeKind == CellDetail.StoreNone ? -1 : storeCell));
+                storeKind == CellDetail.StoreNone ? -1 : storeCell,
+                ambientTempC));
         }
     }
 }

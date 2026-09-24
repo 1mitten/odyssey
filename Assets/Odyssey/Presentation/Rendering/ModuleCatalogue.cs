@@ -192,6 +192,34 @@ namespace Odyssey.Presentation.Rendering
         public Vector3 scale = Vector3.one;
 
         /// <summary>
+        /// Fit the model into this rectangle, in metres — <c>x</c> across, <c>y</c> along the
+        /// facing, the model's own +Z being its front — scaled uniformly unless
+        /// <see cref="fitStretch"/> says otherwise (design 32 §14, §14c). Zero is off, which every row before power is. It exists because a pack
+        /// prop is modelled at whatever size its artist chose, and a row that had to carry a
+        /// measured scale would be a number nobody could check without opening the editor.
+        /// </summary>
+        public Vector2 fitFootprint;
+
+        /// <summary>With <see cref="fitFootprint"/>: never taller than this, in metres. Zero is no ceiling.</summary>
+        public float fitHeight;
+
+        /// <summary>
+        /// With <see cref="fitFootprint"/>: scale each axis on its own so the model <b>fills</b>
+        /// the rectangle and the height, rather than fitting its tightest axis and leaving gaps on
+        /// the other two. For a machine that is two cells long (design 32 §14c): fitted uniformly,
+        /// the generator stood 3.1 m long in 5 m of footprint with a metre of daylight at each end.
+        /// </summary>
+        public bool fitStretch;
+
+        /// <summary>
+        /// With <see cref="fitFootprint"/>: stand the model's back on the back edge of the
+        /// rectangle rather than centring it, so a thing placed beside a wall stands against it
+        /// (design 32 §14c). The back is the model's −Z; its front looks out along the facing.
+        /// </summary>
+        public bool fitAgainstBack;
+
+
+        /// <summary>
         /// May a colonist be dealt this body?
         ///
         /// <para><b>False does not mean the row is dead.</b> The Farm, Sci-Fi City and Western
@@ -597,6 +625,25 @@ namespace Odyssey.Presentation.Rendering
         public const string Bed = Prefix + "bed";
 
         /// <summary>
+        /// The campfire. As the bed is: no catalogue row owed, the plain block placeholder in
+        /// the stuff's tint until real art lands — a ring of stones reads fine as a low block,
+        /// and the fire's warmth is a number the pane carries, not a thing the mesh does. One
+        /// row on this id upgrades every campfire when the art arrives.
+        /// </summary>
+        public const string Campfire = Prefix + "campfire";
+
+        /// <summary>
+        /// The wood-fired generator and the heater (design 32). The campfire's deal: no catalogue
+        /// row owed yet, the plain block in the stuff's tint until the owner picks art — whether a
+        /// generator is running is a colour on the lines and a row on the pane, not a thing the
+        /// mesh does. One row on either id upgrades every one of them when the art arrives.
+        /// </summary>
+        public const string Generator = Prefix + "generator";
+
+        /// <summary>See <see cref="Generator"/>.</summary>
+        public const string Heater = Prefix + "heater";
+
+        /// <summary>
         /// The bed's pillow, which is a module of its own so it can be a different shape and a
         /// different colour from the rest of the bed. Bedding is linen whatever the frame is made
         /// of: a stone bed has a white pillow, exactly as a wooden one does.
@@ -611,6 +658,13 @@ namespace Odyssey.Presentation.Rendering
         /// the day real art lands.
         /// </summary>
         public const string Shelf = Prefix + "shelf";
+
+        /// <summary>
+        /// The line round a stockpile's outer edge (owner, 2026-09-23: "wash + edge outline"). No
+        /// art is meant to exist for it: it resolves to the plain slab primitive, which the edge
+        /// tint colours flat, the way the bed's placeholder is a box the tint colours.
+        /// </summary>
+        public const string StoreEdge = Prefix + "storeedge";
 
         /// <summary>
         /// The colonist figures. Not placed in a cell by worldgen or the mesher: pawns move every

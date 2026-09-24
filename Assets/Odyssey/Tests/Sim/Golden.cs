@@ -30,6 +30,17 @@ namespace Odyssey.Tests.Sim
     /// commit message what you changed and why the numbers moved. A golden updated without that
     /// sentence is a golden that has stopped being a test.</para>
     ///
+    /// <para><b>All six moved again on 2026-09-21, the temperature review's fixes (design 28
+    /// §12), and here is the sentence.</b> Two more fields entered the hash — a colonist's
+    /// last-felt ambient (F8) and each room's energy residual (F7) — which is the whole of the
+    /// <c>Generated</c> move on all three: with those two lines disabled every tick-zero hash
+    /// came back to the committed value. <c>Simulated</c> moved on the two boards that have
+    /// caverns and not on the barren one, and it was measured component by component: cells,
+    /// pawns and edifices hash identically before and after on all three; only the thermal
+    /// section differs, because a cavern now converges instead of stopping a cell count short
+    /// (the residual) and a cavern under a cavern is no longer charged to the sky (F6). Nothing
+    /// a colonist did changed.</para>
+    ///
     /// <para><b>All six numbers moved on 2026-09-17, and here is the sentence.</b> The list of
     /// standing buildings entered the state hash (<c>EdificeSaveSection</c>): what a wall is made
     /// of was outside it until then, so a wooden wall and a stone wall in the same cell hashed
@@ -356,6 +367,26 @@ namespace Odyssey.Tests.Sim
         /// <c>GoldenColonyProbe</c> run on <c>claude/wildlife</c> and on this branch: the two
         /// outputs diff clean for all three colonies.</para>
         ///
+        /// <para><b>Re-baked an eighth time, 2026-09-23, by power (design 32) — the first kind
+        /// again.</b> Three job defs were appended (lay a line, take one up, refuel), and the job
+        /// system hashes a completed and a failed counter for every def, so every board's walk
+        /// gains six zeros and all six numbers move before a tick runs. The power grid itself adds
+        /// nothing: it is empty on all three boards, and an empty grid contributes nothing to the
+        /// hash by design (<c>PowerTests.AnEmptyGridAddsNothingToTheHashAndOneLineDoes</c>).</para>
+        ///
+        /// <para><b>Measured by the sharpest instrument available rather than the census:</b> the
+        /// job system's hash was cut back, uncommitted, to the first twelve defs — the pre-power
+        /// set — and all three boards then matched the <i>previous</i> committed values exactly,
+        /// generated and simulated. So nothing but those six zeros moved: the new givers never
+        /// fired and the new scan order changed no colonist's job on any board.</para>
+        ///
+        /// <para><b>Re-baked again on 2026-09-24, merging main into power.</b> Main had re-baked
+        /// for the draft's two jobs and this branch for power's three; the merged job table has
+        /// all five (drafting keeps 12 and 13, power follows at 14 to 16), so neither side's
+        /// numbers were produced by the merged code. <c>GoldenColonyProbe</c> run on the merge and
+        /// on <c>origin/main</c> (ee1f9fdc) <b>diffs clean</b> on all three boards: the hash sees
+        /// three more pairs of zeros, and no colony does anything different.</para>
+        ///
         /// <para><b>Re-baked an eighth time, 2026-09-23, by the combat contracts step (design 33
         /// §5) — the first kind again, and the last time the combat line moves these.</b> Every
         /// handle the line needs was claimed at once: five job defs (ten more zeros in the job
@@ -370,7 +401,28 @@ namespace Odyssey.Tests.Sim
         /// so the file runs unchanged on both sides), was run on <c>origin/main</c> (33525521) and
         /// on this branch: the two outputs diff clean for all three colonies. From here every
         /// combat lane asserts these six numbers unchanged (<c>docs/plans/combat-contracts.md</c>).</para>
+        /// <para><b>All six moved again on 2026-09-23, on the merge of temperature into a main
+        /// that had gained animals, and neither side's numbers were right for the merged code.</b>
+        /// Both branches had moved all six — main for the pawn's kind entering the hash, this one
+        /// for the colonist's last-felt ambient and each room's energy residual — so taking either
+        /// side would have committed a number nothing had produced. Re-baked afresh, which is the
+        /// only honest resolution of a golden conflict.</para>
+        ///
+        /// <para><b>Measured before they were written.</b> <c>GoldenColonyProbe</c> run on the
+        /// merged branch and on <c>main</c>: the two outputs <b>diff clean</b>. Every census
+        /// number — live things, per-def stacks, item cells, the two lister counts, pawn cells,
+        /// total food, total rest, standing orders, zones — is identical on all three boards. The
+        /// hash sees more; no colony does anything different.</para>
+        ///
+        /// <para><b>All six moved again on 2026-09-24, merging main (power, research) into the
+        /// combat line's second and third units.</b> Both sides had moved them: main for power's
+        /// three job defs (the job system hashes a completed and failed counter for every def),
+        /// this branch for the combat state it hashes. Re-baked afresh from the merged code, for
+        /// the reason given above. <b>Measured</b>: <c>GoldenColonyProbe</c>, reading the first
+        /// seventeen job defs so it runs unchanged on both sides, was run on <c>main</c> (54df119a)
+        /// and on the merge; the outputs are identical on all three boards.</para>
         /// </remarks>
+
         public static readonly Case Meadow = new Case
         {
             Name = "meadow 60x60x16 barren, seed 4242, 5,000 ticks",
@@ -379,8 +431,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 11937131597458600852UL,
-            Simulated = 8975469227685500991UL,
+            Generated = 10212350739386668344UL,
+            Simulated = 8860197422024298715UL,
         };
 
         /// <summary>
@@ -405,8 +457,8 @@ namespace Odyssey.Tests.Sim
             // zeros in the job counters; the probe diffs clean.
             // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
             // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
-            Generated = 15580267997334477270UL,
-            Simulated = 9335640233082031256UL,
+            Generated = 16337376216538696172UL,
+            Simulated = 16703233559271607928UL,
         };
 
         /// <summary>
@@ -445,8 +497,8 @@ namespace Odyssey.Tests.Sim
             // 2026-09-23, wildlife (design 30): the ruin is seeded with its rats and hogs.
             // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
             // 2026-09-23, the combat contracts step; the widened probe diffs clean.
-            Generated = 17033198106188971448UL,
-            Simulated = 161591351707358587UL,
+            Generated = 16106640289945334159UL,
+            Simulated = 9493899456924685757UL,
         };
     }
 }

@@ -27,6 +27,11 @@ namespace Odyssey.Hud
 
         /// <summary>Whether the Animals tab is open (design 30 §6). Session state, likewise.</summary>
         public AnimalsDirector Animals { get; } = new AnimalsDirector();
+        /// <summary>Whether the Inventory tab is open (design 35). Session state, likewise.</summary>
+        public InventoryDirector Inventory { get; } = new InventoryDirector();
+
+        /// <summary>Whether the Research tab is open, and the research until the mechanism exists (design 34).</summary>
+        public ResearchDirector Research { get; } = new ResearchDirector();
 
         /// <summary>Whether the Almanac reference browser is open, and what entry it shows.</summary>
         public AlmanacDirector Almanac { get; } = new AlmanacDirector();
@@ -114,6 +119,19 @@ namespace Odyssey.Hud
             Selection.Choose(id);
             Camera.JumpTo(view.Cell);
             return true;
+        }
+
+        /// <summary>
+        /// The Inventory tab's Go (design 35): a store may be on any layer, so this is the roster's
+        /// path rather than the Animals tab's — the slice to its layer first, since the picker and
+        /// the pane will not look through a floor, then the cell as the selection, so the pane
+        /// opens on the store, then the camera.
+        /// </summary>
+        public void ChooseStore(CellRef cell)
+        {
+            Slice.SetLayer(cell.Y);
+            Selection.ChooseCell(cell);
+            Camera.JumpTo(cell);
         }
 
         /// <summary>

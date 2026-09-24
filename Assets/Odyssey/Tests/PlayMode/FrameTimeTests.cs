@@ -129,6 +129,72 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What showing the power lines costs (design 32 §11): two thousand lines on the ground
+        /// across the drawn band, the frame with them hidden against the frame with the overlay
+        /// on, seconds apart in one session so that whatever the machine is doing cancels out.
+        ///
+        /// <para>The draw-call half is the one that is a gate: hidden, the pass submits nothing;
+        /// shown, it submits in colours — a handful of calls — never one per line
+        /// (<c>docs/bug-patterns.md</c> P10). The milliseconds are logged for design 32 §11 and
+        /// asserted against nothing, for the reason <c>CLAUDE.md</c> gives about every frame number
+        /// on a machine running several editors at once.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ThePowerLinesCostWhatTheySubmit()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.Colony, Is.Not.Null, "the bootstrap never built a colony");
+                var colony = boot.Colony!;
+                var power = colony.Pawns.Power!;
+                var grid = colony.Grid;
+                var size = grid.Size;
+
+                // Straight runs along X on the surface, one row in every two, so the rows stay
+                // separate nets and the links are real: two thousand cells.
+                int laid = 0;
+                for (int z = 2; z < size.SizeZ - 2 && laid < PowerLines; z += 2)
+                for (int x = 2; x < size.SizeX - 2 && laid < PowerLines; x++)
+                {
+                    int top = -1;
+                    for (int y = size.SizeY - 2; y >= 0; y--)
+                        if ((grid.Flags[size.Index(x, z, y)] & CellFlags.SolidTerrain) != 0) { top = y; break; }
+                    if (top < 0 || top + 1 >= size.SizeY) continue;
+                    power.AddLine(size.Index(x, z, top + 1));
+                    laid++;
+                }
+                boot.World!.Tick();
+
+                float hidden = 0f;
+                yield return TimeFrames("power/hidden", boot, WarmupFrames, x => hidden = x);
+                Assert.That(boot.PowerLineDrawCalls, Is.Zero, "hidden lines are not submitted");
+
+                boot.Directors!.Overlays.SetPower(true);
+                // The watch goes out on the next frame and is answered on the tick after it.
+                for (int i = 0; i < 4; i++) { yield return null; boot.World!.Tick(); }
+
+                float shown = 0f;
+                yield return TimeFrames("power/shown", boot, WarmupFrames, x => shown = x);
+                int calls = boot.PowerLineDrawCalls;
+
+                Debug.Log($"[FrameTime] power lines: {laid} lines, hidden {hidden:0.00} ms, " +
+                          $"shown {shown:0.00} ms (+{shown - hidden:0.00}), {calls} draw calls");
+
+                Assert.That(calls, Is.GreaterThan(0), "the overlay drew nothing, so this measured nothing");
+                Assert.That(calls, Is.LessThanOrEqualTo(24), "two thousand lines must cost draws in colours, not in lines");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        const int PowerLines = 2_000;
+
+        /// <summary>
         /// What a warehouse costs to draw: forty shelves holding eight stacks each, against the
         /// same three hundred and twenty stacks lying on the floor, in one world.
         ///

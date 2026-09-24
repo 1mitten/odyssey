@@ -265,6 +265,15 @@ namespace Odyssey.Tests.Hud
                 Is.EqualTo(EscapeAction.CloseMenu), "the control: without it the order is as it was");
             Assert.That(settings.Escape(false, false, false, false, false, false, false, null),
                 Is.EqualTo(EscapeAction.OpenPanel));
+
+            // And over the two panels main added beside it (the merge of 2026-09-24), which is the
+            // overload the presenter actually calls.
+            Assert.That(settings.Escape(true, false, false, false, false, false, false, true, true, null),
+                Is.EqualTo(EscapeAction.CloseContextMenu), "the inventory or research panel unwound before the menu");
+            Assert.That(settings.Escape(false, false, false, false, false, false, false, true, false, null),
+                Is.EqualTo(EscapeAction.CloseInventory), "the control: with the menu shut the inventory closes");
+            Assert.That(settings.Escape(false, false, false, false, false, false, false, false, true, null),
+                Is.EqualTo(EscapeAction.CloseResearch));
         }
 
         [Test]

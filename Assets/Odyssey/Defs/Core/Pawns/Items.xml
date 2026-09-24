@@ -25,15 +25,18 @@
   </ItemDef>
 
   <!--
-    A heap in its own right, one to a cell, until the things line decides what it is made of.
+    Scrap metal (design 32 §14): what power lines and machines are built from, and what the
+    wreckage on the board and the scrap drop pay out. It was a heap in its own right, one to a
+    cell, until power gave it a use; 50 to a stack is a run of line's worth in one armful.
 
-    Filed under Materials rather than Items: it is what the reclaimer eats, and the wiki has
-    described it as "mixed unsorted salvage" since before the reclaimer was designed. A player
-    ticking Materials means "the raw stuff", and this is raw stuff.
+    Filed under Materials rather than Items: it is raw stuff, and what the reclaimer will eat.
+    The defName stays Item_Salvage because an item handle is a save contract; the name a player
+    reads is the registry's (ui.res.scrap, "Scrap metal").
   -->
   <ItemDef>
     <defName>Item_Salvage</defName>
-    <label>salvage</label>
+    <label>scrap metal</label>
+    <stackLimit>50</stackLimit>
     <category>Materials</category>
   </ItemDef>
 

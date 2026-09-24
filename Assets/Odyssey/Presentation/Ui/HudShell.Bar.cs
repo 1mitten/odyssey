@@ -92,6 +92,11 @@ namespace Odyssey.Presentation.Ui
             Label capLabel = HudText.Make(command.Hotkey, HudTextRole.Hotkey, ussClass: "cmd__key");
             item.Add(capLabel);
 
+            // The Inventory and Research items are washed while their tabs are open, as Build is
+            // while the palette is.
+            if (command.Key == HudCommands.InventoryKey) _inventoryItem = item;
+            if (command.Key == HudCommands.ResearchKey) _researchItem = item;
+
             // Build is the one cap on the bar that names a binding rather than a promise: it
             // follows the binding map when the player moves the key.
             // The Animals item is washed while its tab is open, as Build is while the palette is.
@@ -127,6 +132,8 @@ namespace Odyssey.Presentation.Ui
         {
             if (key == HudCommands.BuildKey) SetBuildPalette(!BuildPaletteOpen);
             else if (key == HudCommands.WorkKey) _directors?.Work.Toggle();
+            else if (key == HudCommands.InventoryKey) _directors?.Inventory.Toggle();
+            else if (key == HudCommands.ResearchKey) _directors?.Research.Toggle();
             else if (key == HudCommands.AnimalsKey) _directors?.Animals.Toggle();
             else if (key == HudCommands.AlmanacKey) ToggleAlmanac();
             else if (key == HudCommands.MenuKey) ToggleMenu();
@@ -159,6 +166,11 @@ namespace Odyssey.Presentation.Ui
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.AnimalsTab))
                 _directors?.Animals.Toggle();
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.InventoryTab))
+                _directors?.Inventory.Toggle();
+
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ResearchTab))
+                _directors?.Research.Toggle();
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Almanac))
                 ToggleAlmanac();
@@ -247,6 +259,11 @@ namespace Odyssey.Presentation.Ui
             _barDivider.style.display = DisplayStyle.Flex;
         }
 
+        const string PowerOverlayKey = "ui.overlay.power";
+
+        /// <summary>The Menu's power row, lit while the overlay is on.</summary>
+        VisualElement? _powerOverlayRow;
+
         static readonly string[] OverlayKeys =
         {
             "ui.overlay.temperature", "ui.overlay.light", "ui.overlay.beauty", "ui.overlay.cleanliness",
@@ -274,12 +291,31 @@ namespace Odyssey.Presentation.Ui
             {
                 var overlay = new VisualElement();
                 overlay.AddToClassList("menu__row");
-                overlay.AddToClassList("menu__row--off");
                 var icon = new IconBadge(key, IconBadge.BarSize);
                 icon.Inherit(HudTokens.TextMeta);
                 overlay.Add(icon);
                 overlay.Add(HudText.Make(Registry.Label(key), HudTextRole.Row, ussClass: "menu__label"));
-                overlay.tooltip = Registry.Label(key) + " — overlay channels arrive with M4";
+
+                // Power is the first channel that renders (design 32 §9): every conduit, shown
+                // whatever is armed, until the row is pressed again. The rest stay disabled with
+                // their reason, which is the catalogue's rule for a control that is not ready.
+                if (key == PowerOverlayKey)
+                {
+                    overlay.tooltip = Registry.Label(key) + " — show every conduit, whatever is armed";
+                    _powerOverlayRow = overlay;
+                    overlay.RegisterCallback<ClickEvent>(_ =>
+                    {
+                        if (_directors == null) return;
+                        _directors.Overlays.TogglePower();
+                        overlay.EnableInClassList("menu__row--on", _directors.Overlays.PowerVisible);
+                        MarkViews();
+                    });
+                }
+                else
+                {
+                    overlay.AddToClassList("menu__row--off");
+                    overlay.tooltip = Registry.Label(key) + " — overlay channels arrive with M4";
+                }
                 _menuPopup.Add(overlay);
             }
 
@@ -896,7 +932,8 @@ namespace Odyssey.Presentation.Ui
             }),
             ("Interface", new[]
             {
-                HotkeyAction.BuildPalette, HotkeyAction.WorkTab, HotkeyAction.AnimalsTab, HotkeyAction.DebugMenu,
+                HotkeyAction.BuildPalette, HotkeyAction.WorkTab, HotkeyAction.InventoryTab,
+                HotkeyAction.ResearchTab, HotkeyAction.AnimalsTab, HotkeyAction.DebugMenu,
             }),
         };
 

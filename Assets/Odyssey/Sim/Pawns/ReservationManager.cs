@@ -22,6 +22,19 @@ namespace Odyssey.Sim.Pawns
         /// machinery on the day a shelf is measured to be a bottleneck.</para>
         /// </summary>
         Container = 2,
+
+        /// <summary>
+        /// A power line's cell — its order or its removal mark (design 32 §3). A kind of its own
+        /// rather than <see cref="Cell"/>, because a cell can hold a wall order and a line order at
+        /// once, and a builder on the one must not lock out the colonist laying the other.
+        /// </summary>
+        Conduit = 3,
+
+        /// <summary>
+        /// A power building, keyed on its edifice index: one colonist feeding a generator at a time,
+        /// so two do not each carry a full stack to a hopper with room for one.
+        /// </summary>
+        Device = 4,
     }
 
     /// <summary>

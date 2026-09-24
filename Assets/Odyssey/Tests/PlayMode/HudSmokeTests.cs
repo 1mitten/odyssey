@@ -86,10 +86,12 @@ namespace Odyssey.Tests.PlayMode
                 // "leaveprompt" is the confirmation asked on the way out of a colony
                 // (2026-09-21): a modal built beside "saveprompt" at startup and hidden until
                 // Quit or Quit to main menu raises it, so it joins the list on the same terms.
+                // "views" is the views strip under the orders (design 32 §14, 2026-09-23): a row
+                // of switches that stay where they are put, Power first, built whatever the colony.
                 string[] expected =
                 {
-                    "stores", "clock", "alerts", "bulletins", "toasts", "rail", "orders", "inspect",
-                    "build", "menu", "settings", "debug", "work", "animals", "start", "saveprompt",
+                    "stores", "clock", "alerts", "bulletins", "toasts", "rail", "orders", "views", "inspect",
+                    "build", "menu", "settings", "debug", "work", "inventory", "research", "animals", "start", "saveprompt",
                     "leaveprompt", "almanac-panel",
                 };
                 var regions = doc.rootVisualElement.Query(className: "region").ToList();

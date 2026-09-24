@@ -62,15 +62,17 @@ namespace Odyssey.Tests.Sim
         {
             // Every number a save already depends on, unmoved.
             Assert.That(JobHandle.Goto, Is.EqualTo(13));
+            Assert.That(JobHandle.Refuel, Is.EqualTo(16));
             Assert.That(ItemHandle.Carrots, Is.EqualTo(6));
             Assert.That(WorkHandle.Growing, Is.EqualTo(4));
             Assert.That(SkillIndex.Growing, Is.EqualTo(4));
             Assert.That(PawnKindIndex.DuctRat, Is.EqualTo(2));
 
-            // And the combat line's, at the end, in the order the plan claims them.
+            // And the combat line's, at the end, in the order the plan claims them. They were 14-18
+            // until the merge with main put power's three jobs first; nothing combat shipped had saved them.
             Assert.That(new[] { JobHandle.AttackMelee, JobHandle.Flee, JobHandle.Downed, JobHandle.Equip, JobHandle.Rescue },
-                Is.EqualTo(new[] { 14, 15, 16, 17, 18 }));
-            Assert.That(JobHandle.Count, Is.EqualTo(19));
+                Is.EqualTo(new[] { 17, 18, 19, 20, 21 }));
+            Assert.That(JobHandle.Count, Is.EqualTo(22));
             Assert.That(new[] { ItemHandle.Bat, ItemHandle.Crowbar, ItemHandle.Machete, ItemHandle.ArcBlade },
                 Is.EqualTo(new[] { 7, 8, 9, 10 }));
             Assert.That(ItemHandle.Count, Is.EqualTo(11));
@@ -81,17 +83,20 @@ namespace Odyssey.Tests.Sim
             Assert.That(PawnKindIndex.Marauder, Is.EqualTo(3));
             Assert.That(PawnKindIndex.Count, Is.EqualTo(4));
 
-            // IntentKind is an enum whose numbers an intent log carries: the three are the last.
-            Assert.That((int)IntentKind.OrderAttack, Is.EqualTo((int)IntentKind.OrderMove + 1));
-            Assert.That((int)IntentKind.OrderEquip, Is.EqualTo((int)IntentKind.OrderMove + 2));
-            Assert.That((int)IntentKind.OrderRescue, Is.EqualTo((int)IntentKind.OrderMove + 3));
+            // IntentKind is an enum whose numbers an intent log carries: the three orders are
+            // together and after everything main shipped first (power's four, since the merge of
+            // 2026-09-24), and the debug arming follows them as the last.
+            Assert.That((int)IntentKind.OrderAttack, Is.EqualTo((int)IntentKind.CancelConduit + 1));
+            Assert.That((int)IntentKind.OrderEquip, Is.EqualTo((int)IntentKind.OrderAttack + 1));
+            Assert.That((int)IntentKind.OrderRescue, Is.EqualTo((int)IntentKind.OrderAttack + 2));
+            Assert.That((int)IntentKind.DebugArmColonists, Is.EqualTo((int)IntentKind.OrderAttack + 3));
         }
 
         [Test]
         public void EveryTableIsFilledByNameInHandleOrder()
         {
             PawnContent content = ContentPack.Pawns();
-            Assert.That(content.Jobs.Skip(14).Select(j => j.defName), Is.EqualTo(new[]
+            Assert.That(content.Jobs.Skip(17).Select(j => j.defName), Is.EqualTo(new[]
                 { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue" }));
             for (int i = 0; i < content.Jobs.Length; i++)
                 Assert.That(content.Jobs[i].driver, Is.EqualTo(i), content.Jobs[i].defName + " names another driver");

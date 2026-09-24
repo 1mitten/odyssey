@@ -347,7 +347,28 @@ namespace Odyssey.Sim.Storage
         void Mark(int index)
         {
             if (_chunks == null) return;
-            _chunks.MarkDirty(_grid.Size.FromIndex(index));
+            CellRef cell = _grid.Size.FromIndex(index);
+            _chunks.MarkDirty(cell);
+
+            // **And the layer below, which is where the wash is drawn on natural ground.** A
+            // store's cell there is the air over the ground (StoreCellOf), but the ground's top
+            // face is meshed by the terrain cell under it, which washes itself when the cell
+            // above is stored (WorldRenderModel.IsStoredAbove) — a different chunk, because a
+            // chunk is one layer. Marking only the store's own chunk was enough while one mark
+            // re-meshed the whole board; since chunks keep their own versions (2026-09-21) it
+            // left every stockpile on grass undrawn (owner, 2026-09-23: "There is no visual to
+            // the stockpile"). docs/bug-patterns.md P15.
+            if (cell.Y > 0) _chunks.MarkDirty(new CellRef(cell.X, cell.Z, cell.Y - 1));
+
+            // And the four neighbours' chunks, which differ from this one only at a chunk's edge:
+            // the line round a store is drawn on the side of each stored cell that faces an
+            // unstored one, so a cell joining or leaving redraws its neighbours' lines too
+            // (ChunkMesher.EmitStoreEdge).
+            GridSize size = _grid.Size;
+            if (cell.X + 1 < size.SizeX) _chunks.MarkDirty(new CellRef(cell.X + 1, cell.Z, cell.Y));
+            if (cell.X > 0) _chunks.MarkDirty(new CellRef(cell.X - 1, cell.Z, cell.Y));
+            if (cell.Z + 1 < size.SizeZ) _chunks.MarkDirty(new CellRef(cell.X, cell.Z + 1, cell.Y));
+            if (cell.Z > 0) _chunks.MarkDirty(new CellRef(cell.X, cell.Z - 1, cell.Y));
         }
 
         // ---- the intent seam ---------------------------------------------------------------------
@@ -535,13 +556,22 @@ namespace Odyssey.Sim.Storage
 
         public void Contribute(SimWorld world, SnapshotWriter writer)
         {
+            // Each zone's number once, not once per cell: OrdinalOf walks every store, and a
+            // warehouse is thousands of cells over a few dozen zones.
+            _ordinals.Clear();
+            for (int slot = 0; slot < _zones.Count; slot++) _ordinals.Add(OrdinalOf(slot));
+
             IReadOnlyList<int> cells = _zones.Cells;
             for (int i = 0; i < cells.Count; i++)
             {
                 int index = cells[i];
                 int slot = _zones.SlotAt(index);
-                writer.AddStore(new StoreView(index, slot, (byte)_settings[_zones.TagOf(slot)].Priority));
+                writer.AddStore(new StoreView(index, slot, (byte)_settings[_zones.TagOf(slot)].Priority,
+                    _ordinals[slot]));
             }
         }
+
+        /// <summary>Reused by <see cref="Contribute"/> so a publish allocates nothing.</summary>
+        readonly List<int> _ordinals = new List<int>();
     }
 }

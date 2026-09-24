@@ -106,6 +106,9 @@ namespace Odyssey.Sim.Pawns
             // shelf — the panel opens and closes again, which is the shape of fault design 20 §8
             // records as "Assign did nothing, three times".
             storage.Units = units;
+            // And the numbering, which both kinds of store share: the Inventory tab names shelves
+            // and stockpiles side by side off the published rows (design 35).
+            units.Zones = storage;
             // U29: the seam through which a job that edits the world says the structure changed.
             // Taken off the system rather than passed in beside it, so the solver a collapse is
             // computed from and the solver a wall marks dirty cannot be two different objects.
@@ -117,6 +120,18 @@ namespace Odyssey.Sim.Pawns
             pawns.Doors = doors;
             var enclosure = new World.EnclosureGrid(pawns.Cells, edifices);
             pawns.Enclosure = enclosure;
+            // The thermal pass, after the enclosure it reads rooms from and after the items and
+            // construction it reads sources through. Built here for the same argument as every
+            // other seam on the context: an optional one is how a caller forgets it, and a
+            // colony that forgot it would be a colony where nothing is ever cold.
+            var temperature = new Temperature.TemperatureSystem(pawns, edifices, Worldgen.WorldContent.Climate);
+            pawns.Temperature = temperature;
+            // Power (design 32). Built here for the same argument again, and handed to the
+            // construction grid because that is where a line order arrives: a colony that forgot
+            // it would have a Power category whose every tool silently did nothing.
+            var power = new Power.PowerGrid(pawns.Cells, edifices);
+            pawns.Power = power;
+            construction.Power = power;
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
             builder
                 // The world itself, first: it is what everything below reads, and it ticks
@@ -165,6 +180,13 @@ namespace Odyssey.Sim.Pawns
                 // line of this chain it sits on, which is the whole point of the schedule.
                 .AddSystem(_ => new PlantGrowthSystem(pawns, growing))
                 .AddSystem(_ => doors)
+                // The thermal pass, beside the other world systems: Order 50 puts it after the
+                // enclosure solve (30) whatever line of this chain it sits on.
+                .AddSystem(_ => temperature)
+                // The burn, and the lazy solve behind it. Order 45 puts it before the thermal pass
+                // (50), which asks it for heat on the same tick.
+                .AddSystem(_ => power)
+                .AddSnapshotContributor(power)
                 .AddTickable(_ => new SkillSystem(pawns))
                 .AddTickable(_ => pawns.Pawns)
                 // The dead and the struck buildings (design 33 §5): hashed only while either holds
@@ -180,7 +202,8 @@ namespace Odyssey.Sim.Pawns
                 // answer to "who is here". Every colony gets it, so a click is answered in any
                 // build rather than the ones that remembered to attach the question.
                 .AddSnapshotContributor(new CellDetailContributor(
-                    pawns.Cells, edifices, growing, enclosure, storage, units, pawns.Items))
+                    pawns.Cells, edifices, growing, enclosure, storage, units, pawns.Items,
+                    temperature))
                 .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden)
                 // The one command that names a colonist rather than only a cell. It belongs to the
                 // pipeline because starting and ending jobs is what the pipeline is, and because a
@@ -207,7 +230,22 @@ namespace Odyssey.Sim.Pawns
                 // a debug-only wiring path a real colony would not otherwise get.
                 .AddIntentHandler(IntentKind.SpawnPawn, pawns.Pawns.HandleSpawnPawn)
                 .AddIntentHandler(IntentKind.DebugArmColonists, pawns.Pawns.HandleDebugArmColonists)
-                .AddIntentHandler(IntentKind.GiveResource, intent => pawns.Items.HandleGiveResource(intent, pawns.Cells));
+                .AddIntentHandler(IntentKind.GiveResource, intent => pawns.Items.HandleGiveResource(intent, pawns.Cells))
+                // The two power commands that are not a build (design 32): taking a line up, and
+                // throwing a building's switch. Both belong to the power grid, the one owner of both.
+                .AddIntentHandler(IntentKind.RemoveConduit, intent =>
+                    pawns.Cells.Size.Contains(intent.Cell)
+                        ? power.MarkRemoval(pawns.Cells.Size.Index(intent.Cell))
+                        : IntentRejection.OutOfBounds)
+                .AddIntentHandler(IntentKind.CancelConduit, intent =>
+                    pawns.Cells.Size.Contains(intent.Cell)
+                        ? (power.CancelAt(pawns.Cells.Size.Index(intent.Cell))
+                            ? IntentRejection.None : IntentRejection.AlreadyInThatState)
+                        : IntentRejection.OutOfBounds)
+                .AddIntentHandler(IntentKind.SetPowerSwitch, intent =>
+                    pawns.Cells.Size.Contains(intent.Cell)
+                        ? power.SetSwitch(pawns.Cells.Size.Index(intent.Cell), intent.A != 0)
+                        : IntentRejection.OutOfBounds);
             designations.Attach(builder);
             construction.Attach(builder);
 

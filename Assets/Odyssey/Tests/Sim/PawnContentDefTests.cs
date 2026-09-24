@@ -169,6 +169,26 @@ namespace Odyssey.Tests.Sim
         // draftedPacePerMille (2,000 — a drafted colonist runs; owner: "when you are drafted you
         // should walk faster/run"). No golden moved: nobody in a golden window is drafted.
         //
+        // Moved again, 2026-09-23, merging temperature into a main that had taken combat and
+        // wildlife. Neither side's number covers the merged pack - main's has the combat and
+        // wildlife tuning, this branch's has TemperatureDef - so it is re-taken from a freshly
+        // loaded pack rather than adopted from either. Third pass of the same resolution in one
+        // day; main is moving under this branch faster than it is being reviewed.
+        //
+        // 2026-09-23, power (design 32): three JobDefs appended — Job_LayConduit (driver 14),
+        // Job_RemoveConduit (15) and Job_Refuel (16), after the draft's two. The first two train construction and settle
+        // as building does; refuelling trains hauling. Every golden moved with them, because the
+        // job system hashes a completed and failed counter for every def — measured to be those
+        // six zeros and nothing else (Golden.cs).
+        //
+        // 2026-09-23, the same branch's second interview (design 32 §14): Item_Salvage is scrap
+        // metal now — labelled so, and stacking to 50 where it lay one to a cell — because power
+        // lines and machines are built from it. No golden moved: the starting kit's scatter still
+        // places one piece to an empty cell, which is what it always placed.
+        //
+        // Moved again, 2026-09-24, merging main (combat, wildlife, temperature) into power: the
+        // draft's two jobs keep drivers 12 and 13 and power's three follow at 14-16. Neither
+        // side's number covers the merged pack, so it is re-taken from a freshly loaded pack.
         // Moved a seventeenth time, 2026-09-23, by the combat contracts step (design 33 §5), which
         // claims every handle the combat line needs at once: five jobs (Job_AttackMelee, Job_Flee,
         // Job_Downed, Job_Equip, Job_Rescue at drivers 14 to 18), Skill_Melee, Work_Rescue, four
@@ -194,7 +214,12 @@ namespace Odyssey.Tests.Sim
         // critPerMillePerFourLevels 10, critDamagePerMille 1,500, knockbackPerMille 500,
         // knockbackBluntPerMille 750 — and knockedDownTicks 90. No golden moved: no golden window
         // fights, so no swing is ever decided in one.
-        const ulong ContentFingerprint = 17656075869051477129UL;
+        //
+        // Moved again, 2026-09-24, merging main (power, research) into the combat line: power's three
+        // jobs keep drivers 14-16, so the combat five move from 14-18 to 17-21 (nothing combat shipped
+        // had saved them). Neither side's number covers the merged pack, so it is re-taken from a
+        // freshly loaded pack rather than adopted from either.
+        const ulong ContentFingerprint = 7311169109491343133UL;
 
 
         [Test]

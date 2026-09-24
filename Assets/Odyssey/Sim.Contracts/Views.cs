@@ -849,8 +849,17 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public float Progress => WorkTotal <= 0 ? 0f : (float)WorkDone / WorkTotal;
 
-        /// <summary>Has every unit arrived, so that the thing can be worked on?</summary>
-        public bool IsFrame => Delivered >= Cost;
+        /// <summary>Has every unit arrived — the material and the parts — so that the thing can be worked on?</summary>
+        public bool IsFrame => Delivered >= Cost && PartsDelivered >= PartsCost;
+
+        /// <summary>Units of the part item that have arrived — the second payment (design 32 §14).</summary>
+        public readonly ushort PartsDelivered;
+
+        /// <summary>Units of the part item the site wants; 0 for anything paid for in its material alone.</summary>
+        public readonly ushort PartsCost;
+
+        /// <summary>The <see cref="ItemHandle"/> the parts are paid in, or -1.</summary>
+        public readonly short PartsItem;
 
         /// <summary>
         /// The rotation the order was placed at, 0–3 — meaningful only while
@@ -864,8 +873,12 @@ namespace Odyssey.Sim.Contracts
 
         public SiteView(int cellIndex, byte building, byte stuff,
             ushort delivered, ushort cost, int workDone, int workTotal,
-            byte facing = 0, byte footprint = 1)
+            byte facing = 0, byte footprint = 1,
+            ushort partsDelivered = 0, ushort partsCost = 0, short partsItem = -1)
         {
+            PartsDelivered = partsDelivered;
+            PartsCost = partsCost;
+            PartsItem = partsItem;
             CellIndex = cellIndex;
             Building = building;
             Stuff = stuff;
@@ -932,11 +945,24 @@ namespace Odyssey.Sim.Contracts
         /// <summary>The zone's <c>StoragePriority</c>, 0 to 4. Drawn as a strength, not a hue.</summary>
         public readonly byte Priority;
 
-        public StoreView(int cellIndex, int zone, byte priority)
+        /// <summary>
+        /// The zone's place among the colony's stores, from 1: the "3" of "Stockpile 3".
+        ///
+        /// <para>Published rather than derived on the interface side, because
+        /// <c>StorageZones.OrdinalOfCell</c> is the one owner of that rule and the inspect pane
+        /// already reads it through <see cref="CellDetail.StorageOrdinal"/>. The Inventory tab
+        /// (design 35) names every store at once, and a second copy of the count in the HUD would
+        /// be the tab and the pane able to disagree about which store is which. 0 where no
+        /// numbering was given.</para>
+        /// </summary>
+        public readonly int Ordinal;
+
+        public StoreView(int cellIndex, int zone, byte priority, int ordinal = 0)
         {
             CellIndex = cellIndex;
             Zone = zone;
             Priority = priority;
+            Ordinal = ordinal;
         }
     }
 
@@ -964,12 +990,16 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Ordered taken apart, so its contents should be leaving.</summary>
         public readonly bool Emptying;
 
-        public StorageUnitView(int cellIndex, byte stacks, byte slots, bool emptying)
+        /// <summary>The store's place in the same series zones are numbered in: the "3" of "Shelf 3". See <see cref="StoreView.Ordinal"/>.</summary>
+        public readonly int Ordinal;
+
+        public StorageUnitView(int cellIndex, byte stacks, byte slots, bool emptying, int ordinal = 0)
         {
             CellIndex = cellIndex;
             Stacks = stacks;
             Slots = slots;
             Emptying = emptying;
+            Ordinal = ordinal;
         }
     }
 
@@ -1170,13 +1200,23 @@ namespace Odyssey.Sim.Contracts
         public const byte StoreZone = 1;
         public const byte StoreShelf = 2;
 
+        /// <summary>
+        /// How warm it is here, in centi-degrees (1,250 is 12.5 °C): the room's air where the
+        /// cell is in an enclosed room, the outdoor curve where it is not. Every cell has an
+        /// answer in a world with a thermal pass, which every colony has; <see cref="int.MinValue"/>
+        /// is the one "nothing to say" — a hand-built detail from a fixture that never asked,
+        /// and the pane stays silent for it exactly as it does for a wall's quality.
+        /// </summary>
+        public readonly int AmbientTempC;
+
         public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
             ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0,
             byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue, byte zoneYield = 0,
             bool isIndoors = false, int storageZone = -1, byte storagePriority = 0,
             int storageCells = 0, int storageOrdinal = 0,
             byte storeKind = StoreNone, byte storedStacks = 0, byte storeSlots = 0,
-            byte storedDef = 255, int storedUnits = 0, int storeCellIndex = -1)
+            byte storedDef = 255, int storedUnits = 0, int storeCellIndex = -1,
+            int ambientTempC = int.MinValue)
         {
             StoreCellIndex = storeCellIndex;
             StorageZone = storageZone;
@@ -1188,6 +1228,7 @@ namespace Odyssey.Sim.Contracts
             StoreSlots = storeSlots;
             StoredDef = storedDef;
             StoredUnits = storedUnits;
+            AmbientTempC = ambientTempC;
             CellIndex = cellIndex;
             Terrain = terrain;
             Edifice = edifice;
@@ -1228,6 +1269,9 @@ namespace Odyssey.Sim.Contracts
         CellDetail[] _cellDetails = Array.Empty<CellDetail>();
         BulletinView[] _bulletins = Array.Empty<BulletinView>();
         FallingView[] _falling = Array.Empty<FallingView>();
+        ConduitView[] _conduits = Array.Empty<ConduitView>();
+        PowerDeviceView[] _powerDevices = Array.Empty<PowerDeviceView>();
+        PowerNetView[] _powerNets = Array.Empty<PowerNetView>();
         CombatEventView[] _combatEvents = Array.Empty<CombatEventView>();
         CorpseView[] _corpses = Array.Empty<CorpseView>();
 
@@ -1306,6 +1350,57 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many things are in the air right now. Nearly always zero.</summary>
         public int FallingCount { get; private set; }
 
+        /// <summary>How many line cells this frame carries — see <see cref="ConduitView"/> for which.</summary>
+        public int ConduitCount { get; private set; }
+
+        /// <summary>How many power buildings this frame carries.</summary>
+        public int PowerDeviceCount { get; private set; }
+
+        /// <summary>How many power nets this frame carries.</summary>
+        public int PowerNetCount { get; private set; }
+
+        /// <summary>
+        /// Moves whenever anything a drawing of the lines shows has changed — a line, an order, a
+        /// mark, a net going live or dark (design 32 §9). A reader that caches what it built from
+        /// <see cref="Conduits"/> rebuilds only when this differs from what it built against.
+        /// </summary>
+        public int PowerVersion { get; private set; }
+
+        /// <summary>Line cells, in cell-index order within each kind. See <see cref="ConduitView"/>.</summary>
+        public ReadOnlySpan<ConduitView> Conduits => new ReadOnlySpan<ConduitView>(_conduits, 0, ConduitCount);
+
+        /// <summary>Every power building, in edifice order. See <see cref="PowerDeviceView"/>.</summary>
+        public ReadOnlySpan<PowerDeviceView> PowerDevices =>
+            new ReadOnlySpan<PowerDeviceView>(_powerDevices, 0, PowerDeviceCount);
+
+        /// <summary>Every power net, in key order. See <see cref="PowerNetView"/>.</summary>
+        public ReadOnlySpan<PowerNetView> PowerNets => new ReadOnlySpan<PowerNetView>(_powerNets, 0, PowerNetCount);
+
+        /// <summary>The power building standing in this cell, either of its cells. A scan of a handful.</summary>
+        public bool TryGetPowerDevice(int cell, out PowerDeviceView view)
+        {
+            for (int i = 0; i < PowerDeviceCount; i++)
+            {
+                if (!_powerDevices[i].Covers(cell)) continue;
+                view = _powerDevices[i];
+                return true;
+            }
+            view = default;
+            return false;
+        }
+
+        /// <summary>The net with this key.</summary>
+        public bool TryGetPowerNet(int key, out PowerNetView view)
+        {
+            for (int i = 0; i < PowerNetCount; i++)
+            {
+                if (_powerNets[i].Key != key) continue;
+                view = _powerNets[i];
+                return true;
+            }
+            view = default;
+            return false;
+        }
         /// <summary>How many fight events this frame carries: the newest, up to <see cref="CombatEventView.PublishedTail"/>.</summary>
         public int CombatEventCount { get; private set; }
 
@@ -1583,6 +1678,10 @@ namespace Odyssey.Sim.Contracts
             CellDetailCount = 0;
             BulletinCount = 0;
             FallingCount = 0;
+            ConduitCount = 0;
+            PowerDeviceCount = 0;
+            PowerNetCount = 0;
+            PowerVersion = 0;
             CombatEventCount = 0;
             CorpseCount = 0;
         }
@@ -1598,6 +1697,26 @@ namespace Odyssey.Sim.Contracts
             Grow(ref _corpses, CorpseCount + 1);
             _corpses[CorpseCount++] = view;
         }
+
+        internal void AddConduit(in ConduitView view)
+        {
+            Grow(ref _conduits, ConduitCount + 1);
+            _conduits[ConduitCount++] = view;
+        }
+
+        internal void AddPowerDevice(in PowerDeviceView view)
+        {
+            Grow(ref _powerDevices, PowerDeviceCount + 1);
+            _powerDevices[PowerDeviceCount++] = view;
+        }
+
+        internal void AddPowerNet(in PowerNetView view)
+        {
+            Grow(ref _powerNets, PowerNetCount + 1);
+            _powerNets[PowerNetCount++] = view;
+        }
+
+        internal void SetPowerVersion(int version) => PowerVersion = version;
 
         internal void AddBulletin(in BulletinView view)
         {

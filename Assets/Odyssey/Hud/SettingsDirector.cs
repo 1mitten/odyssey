@@ -107,6 +107,12 @@ namespace Odyssey.Hud
         /// </summary>
         CloseAlmanac,
 
+        /// <summary>Close the Inventory tab, which docks where the Work tab docks and unwinds at its rung.</summary>
+        CloseInventory,
+
+        /// <summary>Close the Research tab, likewise.</summary>
+        CloseResearch,
+
         /// <summary>Close the Menu popover.</summary>
         CloseMenu,
 
@@ -1331,18 +1337,43 @@ namespace Odyssey.Hud
         /// </summary>
         public EscapeAction Escape(bool contextMenuOpen, bool toolArmed, bool paletteOpen, bool menuOpen,
             bool workOpen, bool almanacOpen, bool animalsOpen, MenuScreen? startScreen) =>
+            Escape(contextMenuOpen, toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
+                inventoryOpen: false, researchOpen: false, startScreen);
+
+        /// <summary>
+        /// The whole rule: the context menu above everything, then the ladder with the inventory and
+        /// research panels in it. The one the presenter calls; the shorter overloads are this with
+        /// the panels a caller does not know about shut.
+        /// </summary>
+        public EscapeAction Escape(bool contextMenuOpen, bool toolArmed, bool paletteOpen, bool menuOpen,
+            bool workOpen, bool almanacOpen, bool animalsOpen, bool inventoryOpen, bool researchOpen,
+            MenuScreen? startScreen) =>
             contextMenuOpen
                 ? EscapeAction.CloseContextMenu
-                : Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen, startScreen);
+                : Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
+                    inventoryOpen, researchOpen, startScreen);
 
         public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen,
-            bool almanacOpen, bool animalsOpen, MenuScreen? startScreen)
+            bool almanacOpen, bool animalsOpen, MenuScreen? startScreen) =>
+            Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
+                inventoryOpen: false, researchOpen: false, startScreen);
+
+        /// <summary>
+        /// The same rule with the Inventory and Research tabs in it (designs 35 and 34). Both dock
+        /// in the Work tab's corner beside Animals and the shell closes each when another opens,
+        /// so they unwind at its rung and their order among themselves is not observable.
+        /// </summary>
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen,
+            bool almanacOpen, bool animalsOpen, bool inventoryOpen, bool researchOpen,
+            MenuScreen? startScreen)
         {
             if (toolArmed) return EscapeAction.DisarmTool;
             if (menuOpen) return EscapeAction.CloseMenu;
             if (paletteOpen) return EscapeAction.ClosePalette;
             if (workOpen) return EscapeAction.CloseWork;
             if (animalsOpen) return EscapeAction.CloseAnimals;
+            if (inventoryOpen) return EscapeAction.CloseInventory;
+            if (researchOpen) return EscapeAction.CloseResearch;
             if (almanacOpen) return EscapeAction.CloseAlmanac;
             if (Open) return EscapeAction.ClosePanel;
 

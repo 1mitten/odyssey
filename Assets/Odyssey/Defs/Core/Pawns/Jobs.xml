@@ -179,8 +179,40 @@
   </JobDef>
 
   <!--
+    Power (design 32). Laying a line fetches its one wood and lays it in one job, priced by
+    ConstructionContent.WorkFor like any build, so there is no workTicks here - Job_Build's argument.
+    Taking one up is priced like deconstructing. Both train construction and settle as building
+    does. Refuelling is a carry, and trains and prices as hauling does.
+  -->
+  <JobDef>
+    <defName>Job_LayConduit</defName>
+    <driver>14</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>3</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_RemoveConduit</defName>
+    <driver>15</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>3</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Refuel</defName>
+    <driver>16</driver>
+    <expiryTicks>6000</expiryTicks>
+    <trainsSkill>0</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+  </JobDef>
+
+  <!--
     The combat line (design 33 section 5), claimed together by its contracts step so that no two
-    lanes can each append a job and both call it 14. The drivers are stubs that fail until their
+    lanes can each append a job and both call it 14 (renumbered to 17-21, after power's three, at the merge with main). The drivers are stubs that fail until their
     lane fills them; nothing starts any of these yet.
 
     None may be taken away by a casual think: a fight, a flight, a body on the ground, a weapon
@@ -196,34 +228,34 @@
   -->
   <JobDef>
     <defName>Job_AttackMelee</defName>
-    <driver>14</driver>
+    <driver>17</driver>
     <casuallyInterruptible>false</casuallyInterruptible>
     <trainsSkill>5</trainsSkill>
   </JobDef>
 
   <JobDef>
     <defName>Job_Flee</defName>
-    <driver>15</driver>
+    <driver>18</driver>
     <casuallyInterruptible>false</casuallyInterruptible>
     <expiryTicks>1200</expiryTicks>
   </JobDef>
 
   <JobDef>
     <defName>Job_Downed</defName>
-    <driver>16</driver>
+    <driver>19</driver>
     <casuallyInterruptible>false</casuallyInterruptible>
   </JobDef>
 
   <JobDef>
     <defName>Job_Equip</defName>
-    <driver>17</driver>
+    <driver>20</driver>
     <casuallyInterruptible>false</casuallyInterruptible>
     <expiryTicks>6000</expiryTicks>
   </JobDef>
 
   <JobDef>
     <defName>Job_Rescue</defName>
-    <driver>18</driver>
+    <driver>21</driver>
     <casuallyInterruptible>false</casuallyInterruptible>
     <expiryTicks>12000</expiryTicks>
   </JobDef>

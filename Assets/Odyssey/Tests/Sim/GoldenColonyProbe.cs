@@ -99,10 +99,10 @@ namespace Odyssey.Tests.Sim
                 }
             }
 
-            // What the colony did, job by job, over the fourteen job defs every build since the
-            // draft has — the same reasoning as the skills above.
+            // What the colony did, job by job, over the seventeen job defs every build since
+            // power has — the same reasoning as the skills above.
             var jobs = new StringBuilder();
-            const int SharedJobs = 14;
+            const int SharedJobs = 17;
             for (int j = 0; j < SharedJobs && j < ctx.Content.Jobs.Length; j++)
             {
                 int done = colony.Jobs.CompletedOf(j), failed = colony.Jobs.FailedOf(j);

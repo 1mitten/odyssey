@@ -64,8 +64,14 @@ SECTIONS = [
      "often enough that clearing it by hand would become a chore. Alerts and bulletins carry the "
      "layer they occurred on and jump the camera there, which a flat colony sim never has to think "
      "about."),
+    ("research", "Research", ["ui.research.category", "ui.research.project", "ui.research.status",
+                              "ui.research.hud"],
+     "What the colony can learn, grouped by field, and the words the Research tab uses about it. "
+     "A project's description here is the body of its detail pane: the screen reads this column, "
+     "so correcting a line here corrects the game. Only Power is listed yet, and the projects are "
+     "placeholders until the research mechanism exists (design 34)."),
     ("world", "World and interface", ["ui.terrain", "ui.weather", "ui.overlay", "ui.layer",
-                                      "ui.tab", "ui.speed", "ui.settings"],
+                                      "ui.tab", "ui.speed", "ui.settings", "ui.inventory.hud"],
      "Weather, the data overlays, the layer controls and the rest of the interface furniture. The "
      "six layer visibility modes are decided: see ADR 0006."),
 ]
@@ -81,6 +87,9 @@ NS_TITLES = {
     "ui.weather": "Weather",
     "ui.overlay": "Overlays", "ui.layer": "Layer controls", "ui.tab": "Tabs",
     "ui.speed": "Game speed", "ui.settings": "Settings",
+    "ui.research.category": "Fields", "ui.research.project": "Projects",
+    "ui.research.status": "Project states", "ui.research.hud": "The Research tab's words",
+    "ui.inventory.hud": "The Inventory tab's words",
 }
 SHEET_NAMES = {
     "01": "raw materials", "02": "food", "03": "camp and crafting", "04": "manufactured",
