@@ -55,11 +55,18 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const string OrderTargetName = "odyssey.pawn.order.target";
 
+        /// <summary>
+        /// 1 on a downed colonist lying where she fell for whom no bed is free, so nobody can be
+        /// sent to carry her; absent otherwise (design 33 §11d). What the "no bed" alert reads.
+        /// </summary>
+        public const string RescueNoBedName = "odyssey.pawn.rescue.nobed";
+
         public static readonly AspectKey Drafted = AspectKey.Of(DraftedName);
         public static readonly AspectKey OrderCell = AspectKey.Of(OrderCellName);
         public static readonly AspectKey Hp = AspectKey.Of(HpName);
         public static readonly AspectKey HpMax = AspectKey.Of(HpMaxName);
         public static readonly AspectKey Weapon = AspectKey.Of(WeaponName);
         public static readonly AspectKey OrderTarget = AspectKey.Of(OrderTargetName);
+        public static readonly AspectKey RescueNoBed = AspectKey.Of(RescueNoBedName);
     }
 }
