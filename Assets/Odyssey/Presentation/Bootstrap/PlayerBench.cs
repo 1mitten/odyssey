@@ -45,6 +45,10 @@ namespace Odyssey.Presentation.Bootstrap
         /// chunk path (design 38 §23), at the start, 70 m and 140 m.</summary>
         public const string TreesArgument = "-odyssey-bench-trees";
 
+        /// <summary>With <see cref="Argument"/>: the shoreline against the square shore (design 38
+        /// §24), framed on the water nearest the colony at 32, 70 and 140 m.</summary>
+        public const string ShoreArgument = "-odyssey-bench-shore";
+
         static bool Has(string wanted)
         {
             foreach (string argument in Environment.GetCommandLineArgs())
@@ -162,6 +166,14 @@ namespace Odyssey.Presentation.Bootstrap
             _table.AppendLine("|---|---|---|---|---|" + PassRule());
 
             ChunkRenderer renderer = _boot.Renderer!;
+            if (Has(ShoreArgument))
+            {
+                yield return ShoreArms();
+                Log("[Bench] table:
+" + _table);
+                Quit("[Bench] done");
+                yield break;
+            }
             if (Has(TreesArgument))
             {
                 yield return TreeArms(renderer);
@@ -331,6 +343,47 @@ namespace Odyssey.Presentation.Bootstrap
                     () => renderer.SimplerFarTrees = true);
                 yield return Arm($"{at}, no trees", () => renderer.DrawTrees = false, () => renderer.DrawTrees = true);
             }
+        }
+
+        /// <summary>
+        /// The shoreline against the square shore (design 38 §24), framed on the water nearest the
+        /// colony. The square arm re-meshes the board with <see cref="WaterShore.Enabled"/> off and
+        /// back; marsh keeps the painted material it resolved with, so the arm is the geometry, the
+        /// water over the banks and the field-driven shading, not the marsh tiles.
+        /// </summary>
+        IEnumerator ShoreArms()
+        {
+            Odyssey.Sim.Contracts.CellRef? focus = NearestWater() ?? FirstPawnCell();
+            Log($"[Bench] shore framed on {focus?.ToString() ?? "nothing"}");
+            foreach (float framing in new[] { 32f, 70f, 140f })
+            {
+                if (focus.HasValue && _boot.cameraRig != null) _boot.cameraRig.FocusOn(focus.Value, framing);
+                yield return Settle();
+                string at = $"@{framing:0} m";
+                yield return Arm($"shore {at}, as shipped (shoreline)", null, null);
+                yield return Arm($"shore {at}, square shore",
+                    () => { WaterShore.Enabled = false; _boot.Model!.Remesh(); },
+                    () => { WaterShore.Enabled = true; _boot.Model!.Remesh(); });
+            }
+        }
+
+        Odyssey.Sim.Contracts.CellRef? NearestWater()
+        {
+            var model = _boot.Model;
+            Odyssey.Sim.Contracts.CellRef? from = FirstPawnCell();
+            if (model == null || !from.HasValue) return null;
+            var size = model.Size;
+            Odyssey.Sim.Contracts.CellRef? best = null;
+            int bestDistance = int.MaxValue;
+            for (int y = 0; y < size.SizeY; y++)
+            for (int z = 0; z < size.SizeZ; z++)
+            for (int x = 0; x < size.SizeX; x++)
+            {
+                if (!Odyssey.Sim.Worldgen.Natural.NaturalContent.IsWater(model.Terrain(size.Index(x, z, y)))) continue;
+                int d = Math.Abs(x - from.Value.X) + Math.Abs(z - from.Value.Z);
+                if (d < bestDistance) { bestDistance = d; best = new Odyssey.Sim.Contracts.CellRef(x, z, y); }
+            }
+            return best;
         }
 
         Odyssey.Sim.Contracts.CellRef? FirstPawnCell()
