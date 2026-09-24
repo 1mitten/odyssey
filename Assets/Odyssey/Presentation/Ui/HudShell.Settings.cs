@@ -78,7 +78,7 @@ namespace Odyssey.Presentation.Ui
 
         /// <summary>The key chip a keyboard player opened, to be handed focus back when the
         /// rebind ends. A chip opened with the mouse is not refocused.</summary>
-        Label? _refocusChip;
+        VisualElement? _refocusChip;
 
         /// <summary>True between a pointer press on the window and the frame after it is
         /// released: focus that arrives then came from the mouse, and is not ringed.</summary>
@@ -123,10 +123,12 @@ namespace Odyssey.Presentation.Ui
             public Label Value = null!;
         }
 
-        /// <summary>One binding row: the chips of its two slots, for event-driven refresh.</summary>
+        /// <summary>One binding row: the chips of its two slots and the key written in each, for
+        /// event-driven refresh.</summary>
         sealed class KeyRowView
         {
-            public readonly Label[] Caps = new Label[HotkeyDirector.SlotCount];
+            public readonly VisualElement[] Caps = new VisualElement[HotkeyDirector.SlotCount];
+            public readonly Label[] Keys = new Label[HotkeyDirector.SlotCount];
             public readonly DashedOutline[] Empty = new DashedOutline[HotkeyDirector.SlotCount];
         }
 
@@ -808,8 +810,16 @@ namespace Odyssey.Presentation.Ui
                         {
                             HotkeyAction capturedAction = action;
                             int capturedSlot = slot;
-                            Label chip = HudText.Make(string.Empty, HudTextRole.Meta, numeric: true, "sw__chip");
-                            chip.AddToClassList(HudText.KeyCapClass);
+                            // A box holding the key and the dashed outline side by side, not a
+                            // label with the outline inside it: a label with a child is no longer
+                            // sized by its text, and every chip shrank to its 36 px floor with
+                            // "Space" and "PgUp" running into its edges.
+                            var chip = new VisualElement();
+                            chip.AddToClassList("sw__chip");
+                            Label text = HudText.Make(string.Empty, HudTextRole.Meta, numeric: true, "sw__chip-key");
+                            text.AddToClassList(HudText.KeyCapClass);
+                            text.pickingMode = PickingMode.Ignore;
+                            chip.Add(text);
                             var empty = new DashedOutline();
                             chip.Add(empty);
 
@@ -817,6 +827,7 @@ namespace Odyssey.Presentation.Ui
                                 _directors?.Hotkeys.Listen(capturedAction, capturedSlot));
                             KeyStop(chip, () => ListenFromKeyboard(chip, capturedAction, capturedSlot));
                             view.Caps[slot] = chip;
+                            view.Keys[slot] = text;
                             view.Empty[slot] = empty;
                             chips.Add(chip);
                         }
@@ -832,7 +843,7 @@ namespace Odyssey.Presentation.Ui
         /// that opened it is not also taken as the key to bind; and the chip gives up focus while
         /// it waits, so Escape reaches the rebind and not the window.
         /// </summary>
-        void ListenFromKeyboard(Label chip, HotkeyAction action, int slot)
+        void ListenFromKeyboard(VisualElement chip, HotkeyAction action, int slot)
         {
             _refocusChip = chip;
             chip.Blur();
@@ -856,9 +867,9 @@ namespace Odyssey.Presentation.Ui
                     HudKey key = hotkeys.Key(action, slot);
                     bool listening = hotkeys.Listening == (action, slot);
                     bool empty = key == HudKey.None && !listening;
-                    Label cap = view.Caps[slot];
+                    VisualElement cap = view.Caps[slot];
 
-                    cap.text = listening ? "..." : HotkeyDirector.Display(key);
+                    view.Keys[slot].text = listening ? "..." : HotkeyDirector.Display(key);
                     cap.EnableInClassList("sw__chip--listening", listening);
                     cap.EnableInClassList("sw__chip--empty", empty);
                     view.Empty[slot].style.display = empty ? DisplayStyle.Flex : DisplayStyle.None;
@@ -876,7 +887,7 @@ namespace Odyssey.Presentation.Ui
             // later so the key that ended it is not read by the window too.
             if (_refocusChip != null && hotkeys.Listening == null && _directors.Settings.Open)
             {
-                Label chip = _refocusChip;
+                VisualElement chip = _refocusChip;
                 _refocusChip = null;
                 _settingsPanel.schedule.Execute(() => chip.Focus()).ExecuteLater(120);
             }

@@ -150,3 +150,24 @@ leave answer in the bad red, and **focus lands on Cancel**. Escape still cancels
 - **Tab from nothing focused** goes wherever the panel's focus ring starts, which should be the
   window because nothing else focusable is on screen while it is open. Not tested by a key press:
   nothing here can press a key in a PlayMode test (`CLAUDE.md`, known gaps).
+
+## 11. On merging main (2026-09-24)
+
+`main` brought the Meadow look's settings (design 38 §9) into the old Graphics tab code, which this
+window replaced, so they were ported rather than merged: the **Quality** row (Low, Medium, High,
+Ultra, and Custom when the levers match none), full width in a band across the top of Graphics
+because a preset sets levers in both columns; the **Grass** and **Grass distance** ladders leading
+Detail, beside the new **Grass shadows** switch; the "redraws the board" tooltip; and the resolution
+select offering the current size when the monitor does not list it (it threw at 960 x 540). The
+tallest Graphics column is 390 px of 502. `SettingsLayoutTests` now holds Display and Performance to
+the director's display ladders, so a ladder added there cannot fall off the page.
+
+Read from the photographs before merge (`HudShotTests`, which had silently skipped the settings
+pictures since the rebuild — it looked the window up by a class it no longer carries):
+
+- **A note now sits under its label, not beside it.** Beside it, a greyed row with five segments cut
+  both short: "Frame rate cap" / "Paced by VSync" drew as "Frame ...". A 38 px row holds both lines.
+  This departs from the brief's "same baseline".
+- **A key chip is a box holding its key, not a label holding its outline.** A label with a child is
+  no longer sized by its text, so every chip shrank to its 36 px floor and "Space", "PgUp" and "Home"
+  ran into their edges. `HudGeometryTests` now asserts every key fits inside its chip's padding.

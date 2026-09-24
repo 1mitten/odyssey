@@ -2184,18 +2184,24 @@
 /* Disabled: the whole row at 45%, and its note says why. */
 .sw__row--off { opacity: 0.45; }
 
+/* The label, and under it the note a greyed row gives its reason in. Under rather than beside it,
+   as the brief drew it, because beside it the two cut each other short on a row with five segments
+   ("Frame rate cap" and "Paced by VSync" came out "Frame ..."), and a 38 px row holds both lines. */
 .sw__words {
     flex-grow: 1;
     flex-shrink: 1;
     min-width: 0;
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    margin-right: 12px;
     overflow: hidden;
 }
 
 .sw__label {
-    flex-shrink: 1;
-    min-width: 0;
+    height: 20px;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-left;
     color: rgb(238, 243, 246);
     white-space: nowrap;
     overflow: hidden;
@@ -2203,8 +2209,10 @@
 }
 
 .sw__note {
-    margin-left: 9px;
-    flex-shrink: 0;
+    height: 14px;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-left;
     color: rgba(255, 255, 255, 0.66);
     white-space: nowrap;
 }
@@ -2383,9 +2391,17 @@
     height: 26px;
     padding: 0 8px;
     margin-left: 6px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.26);
     color: rgb(238, 243, 246);
+}
+
+.sw__chip-key {
+    margin: 0;
+    padding: 0;
     -unity-text-align: middle-center;
 }
 

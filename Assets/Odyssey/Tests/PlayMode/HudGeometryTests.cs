@@ -517,6 +517,20 @@ namespace Odyssey.Tests.PlayMode
                         });
                     }
 
+                    // Every key sits inside its chip's padding. A chip that was a label holding its
+                    // dashed outline was no longer sized by its text, and "Space" ran into its edges.
+                    settings.SetTab(SettingsTab.Keys);
+                    yield return null;
+                    yield return null;
+                    foreach (VisualElement chip in window.Query(className: "sw__chip").ToList())
+                    {
+                        VisualElement key = chip.Q(className: "sw__chip-key")!;
+                        Assert.That(key.layout.width, Is.LessThanOrEqualTo(
+                                chip.layout.width - chip.resolvedStyle.paddingLeft - chip.resolvedStyle.paddingRight
+                                - chip.resolvedStyle.borderLeftWidth - chip.resolvedStyle.borderRightWidth + 0.5f),
+                            $"the key \"{((Label)key).text}\" is wider than its chip leaves room for at {resolution}");
+                    }
+
                     Assert.That(window.Query(className: "sw__action").ToList(),
                         Has.Count.EqualTo(SessionCommands.For(SessionContext.InGame).Count),
                         "the game's actions are not each in the rail once");

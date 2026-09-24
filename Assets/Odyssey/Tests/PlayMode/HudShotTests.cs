@@ -252,11 +252,16 @@ namespace Odyssey.Tests.PlayMode
                 // panel whose whole purpose is to be judged by eye — every look decision this
                 // project has made ended wanting the owner's eye in the play scene, and this is
                 // the surface that turns a session per question into a question per session.
-                var panel = doc.rootVisualElement.Q(className: "settings");
+                // By name: the window stopped carrying a "settings" class when it was rebuilt
+                // (design 39), and a lookup by class found nothing and skipped these pictures
+                // silently. Opened through the director so it is raised, scrimmed and laid out as a
+                // player sees it.
+                var panel = doc.rootVisualElement.Q("settings");
+                Assert.That(panel, Is.Not.Null, "there is no settings window to photograph");
                 if (panel != null)
                 {
                     if (palette != null) palette.style.display = DisplayStyle.None;
-                    panel.style.display = DisplayStyle.Flex;
+                    boot.Directors!.Settings.SetOpen(true);
                     for (int i = 0; i < 10; i++) yield return null;
 
                     RenderTexture.active = target;
