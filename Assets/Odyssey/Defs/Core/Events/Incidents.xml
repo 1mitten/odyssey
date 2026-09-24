@@ -61,5 +61,29 @@
     <stackMax>30</stackMax>
     <fallTicks>360</fallTicks>
   </IncidentDef>
+  <!--
+    Medical supplies from the sky (design 37 section 5): the supply drop's worker with a third
+    cargo, and the colony's only source of supplies after the starting kit. Four to eight is under
+    a stack of ten, so one haul (owner's numbers). Weight 40, rarer than either other drop, is
+    INVENTED and read by nothing until a storyteller exists.
+  -->
+  <IncidentDef>
+    <defName>Incident_MedicalDrop</defName>
+    <label>medical drop</label>
+    <description>Drops a few medical supplies from the sky somewhere on the board. Lands on the next tick, so unpause to see it</description>
+    <bulletinKey>ui.bulletin.medicaldrop</bulletinKey>
+    <favourability>Good</favourability>
+    <category>Misc</category>
+    <worker>SupplyDrop</worker>
+    <earliestDay>1</earliestDay>
+    <minRefireDays>2</minRefireDays>
+    <weight>40</weight>
+    <minColonists>1</minColonists>
+    <maxFires>0</maxFires>
+    <item>Item_MedicalSupplies</item>
+    <stackMin>4</stackMin>
+    <stackMax>8</stackMax>
+    <fallTicks>360</fallTicks>
+  </IncidentDef>
 
 </Defs>

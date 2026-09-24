@@ -75,7 +75,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(JobHandle.Count, Is.EqualTo(22));
             Assert.That(new[] { ItemHandle.Bat, ItemHandle.Crowbar, ItemHandle.Machete, ItemHandle.ArcBlade },
                 Is.EqualTo(new[] { 7, 8, 9, 10 }));
-            Assert.That(ItemHandle.Count, Is.EqualTo(11));
+            // 12 since medical supplies were appended at 11 (design 37).
+            Assert.That(ItemHandle.Count, Is.EqualTo(12));
             Assert.That(WorkHandle.Rescue, Is.EqualTo(5));
             Assert.That(WorkHandle.Count, Is.EqualTo(6));
             Assert.That(SkillIndex.Melee, Is.EqualTo(5));
@@ -106,7 +107,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(content.WorkTypes[WorkTypeIndex.Rescue].defName, Is.EqualTo("Work_Rescue"));
             Assert.That(WorkTypeIndex.Names[WorkTypeIndex.Rescue], Is.EqualTo("rescue"));
             Assert.That(SkillIndex.Names[SkillIndex.Melee], Is.EqualTo("melee"));
-            Assert.That(content.Items.Skip(7).Select(i => i.defName), Is.EqualTo(new[]
+            Assert.That(content.Items.Skip(7).Take(4).Select(i => i.defName), Is.EqualTo(new[]
                 { "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade" }));
             Assert.That(content.Kinds[PawnKindIndex.Marauder].defName, Is.EqualTo("PawnKind_Marauder"));
         }

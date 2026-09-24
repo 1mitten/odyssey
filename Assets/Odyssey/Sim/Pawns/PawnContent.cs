@@ -561,6 +561,7 @@ namespace Odyssey.Sim.Pawns
         public const int Crowbar = ItemHandle.Crowbar;
         public const int Machete = ItemHandle.Machete;
         public const int ArcBlade = ItemHandle.ArcBlade;
+        public const int MedicalSupplies = ItemHandle.MedicalSupplies;
         public const int Count = ItemHandle.Count;
     }
 
@@ -593,6 +594,14 @@ namespace Odyssey.Sim.Pawns
         /// Read through <c>IWeaponRules</c>, never directly, so the lookup has one owner.
         /// </summary>
         public AttackDef? weapon;
+
+        /// <summary>
+        /// Hit points one unit restores when a doctor treats with it (design 37 §4), in whole
+        /// points. Zero means it is not medicine. Self-treatment and the treatment cap scale and
+        /// clamp it (<c>MedicalDef</c>); the amount itself is the item's, so a weaker item is one
+        /// Def row.
+        /// </summary>
+        public int healPerUnit;
     }
 
     /// <summary>Movement tuning. One unit of cost is 1/100 of a flat orthogonal cell crossing.</summary>
@@ -1209,7 +1218,9 @@ namespace Odyssey.Sim.Pawns
                 // (docs/design/22-growing.md §2).
                 "Item_Carrots",
                 // The four melee weapons (design 33 §1, C3), appended together.
-                "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade");
+                "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade",
+                // What a doctor treats with (design 37), appended.
+                "Item_MedicalSupplies");
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");
             content.Break = One<MentalBreakDef>(defs, "Break_Wander");

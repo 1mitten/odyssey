@@ -198,7 +198,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Sharp, and the best thing a colonist can hold.</summary>
         public const int ArcBlade = 10;
 
-        public const int Count = 11;
+        /// <summary>
+        /// A box of dressings and drugs: what a doctor treats with (design 37). Category
+        /// Medicine, ten to a stack, so a stack is one shelf bay.
+        /// </summary>
+        public const int MedicalSupplies = 11;
+
+        public const int Count = 12;
     }
 
     /// <summary>
@@ -263,7 +269,10 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A stack of scrap metal falling out of the sky (design 32 §14): the supply drop's worker, another cargo.</summary>
         public const int ScrapDrop = 1;
 
-        public const int Count = 2;
+        /// <summary>Medical supplies from the sky (design 37 §5): the supply drop's worker, another cargo.</summary>
+        public const int MedicalDrop = 2;
+
+        public const int Count = 3;
     }
 
     /// <summary>

@@ -103,6 +103,7 @@ namespace Odyssey.Sim.Events
         {
             "Incident_SupplyDrop",
             "Incident_ScrapDrop",
+            "Incident_MedicalDrop",
         };
 
         public IncidentDef[] Defs = System.Array.Empty<IncidentDef>();

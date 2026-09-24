@@ -27,7 +27,10 @@ namespace Odyssey.Tests.Sim.Events
         // 2026-09-23, power (design 32 §14): Incident_ScrapDrop appended at index 1 — the supply
         // drop's own worker with scrap metal for cargo, fifteen to thirty, weight 60, the supply
         // drop's gates otherwise. The owner's second source of scrap metal beside the wreckage.
-        const ulong ContentFingerprint = 15479437417230274748UL;
+        //
+        // 2026-09-24, medical supplies (design 37 §5): Incident_MedicalDrop appended at index 2 — the
+        // supply drop's worker again, four to eight medical supplies, weight 40 (invented).
+        const ulong ContentFingerprint = 1152802879463547546UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

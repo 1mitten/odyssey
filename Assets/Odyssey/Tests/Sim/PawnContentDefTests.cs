@@ -219,7 +219,11 @@ namespace Odyssey.Tests.Sim
         // jobs keep drivers 14-16, so the combat five move from 14-18 to 17-21 (nothing combat shipped
         // had saved them). Neither side's number covers the merged pack, so it is re-taken from a
         // freshly loaded pack rather than adopted from either.
-        const ulong ContentFingerprint = 7311169109491343133UL;
+        //
+        // Moved again, 2026-09-24, by medical supplies (design 37, MD1): Item_MedicalSupplies appended
+        // at item 11 (Medicine, stackLimit 10, healPerUnit 40), and ItemDef gained healPerUnit, zero
+        // on every other item. Taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 10719137451086071672UL;
 
 
         [Test]

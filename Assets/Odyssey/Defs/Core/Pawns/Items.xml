@@ -170,4 +170,18 @@
     </weapon>
   </ItemDef>
 
+  <!--
+    Medical supplies (design 37): what a doctor treats with. One unit is one treatment, and it
+    restores healPerUnit (40, the owner's number) under the treatment cap in Combat.xml's
+    MedicalDef. Ten to a stack, so a stack is one shelf bay and a starting kit of six is one pile.
+    The label a player reads is the registry's (ui.res.medkit, "Medical supplies").
+  -->
+  <ItemDef>
+    <defName>Item_MedicalSupplies</defName>
+    <label>medical supplies</label>
+    <stackLimit>10</stackLimit>
+    <category>Medicine</category>
+    <healPerUnit>40</healPerUnit>
+  </ItemDef>
+
 </Defs>
