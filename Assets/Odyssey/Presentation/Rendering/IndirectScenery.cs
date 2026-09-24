@@ -423,7 +423,7 @@ namespace Odyssey.Presentation.Rendering
         /// many are drawn, and that count never comes back to the CPU).
         /// </summary>
         public int DrawLayer(int layer, Plane[] frustum, Func<Group, Segment, Decision> decide,
-            Func<Group, ModulePart, Material> materialFor, int gameObjectLayer, Bounds worldBounds, bool submit,
+            Func<Group, ModulePart, Material?> materialFor, int gameObjectLayer, Bounds worldBounds, bool submit,
             out int offered, out int atCoarserLevels, out int thinnedAway)
         {
             offered = atCoarserLevels = thinnedAway = 0;
@@ -480,7 +480,12 @@ namespace Odyssey.Presentation.Rendering
                         GraphicsBuffer.CopyCount(g.Visible[l]!, g.Args!,
                             entry * GraphicsBuffer.IndirectDrawIndexedArgs.size + sizeof(uint));
                         ModulePart part = parts[k];
-                        var rp = new RenderParams(IndirectMaterial(materialFor(g, part)))
+                        // A material the chunk path could not give (its shader switched away mid-frame)
+                        // draws nothing rather than throwing; the next frame's eligibility check sends
+                        // the kind back to the chunk path.
+                        Material? source = materialFor(g, part);
+                        if (source == null) continue;
+                        var rp = new RenderParams(IndirectMaterial(source))
                         {
                             worldBounds = worldBounds,
                             layer = gameObjectLayer,

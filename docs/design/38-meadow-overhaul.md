@@ -1131,6 +1131,25 @@ the indirect path culls each instance to the camera. At the start framing the ga
 machine's noise. **The GPU's own numbers are owed from the player bench**
 (`-odyssey-bench -odyssey-bench-scenery`), which takes the screen and needs the owner's go.
 
+### 22d-bis. In the player, and the variant stripping would have dropped
+
+**The indirect variant needs a keep-alive of its own.** `ODYSSEY_INDIRECT` is switched on by a material
+cloned in code, which stripping never sees used, so the player would have kept only the base variant —
+which reads no buffer — and drawn every clump at the origin with a green log. `InstancingKeepAlive` now
+makes a keep-alive per (shader, runtime keyword) (`Odyssey_Foliage_ODYSSEY_INDIRECT.mat`). The tufts-only
+cut of §18b had the same gap and never met it because it shipped off.
+
+**Smoke test** (player build, `-odyssey-newgame`, windowed 960 × 540): the session logs once which way
+the scenery went — `[Scenery] Direct3D11: 151 indirect calls of 953, 14643 instances in the GPU buffers
+(indirect on)`, the editor's counts exactly — and nothing throws. It found one fault older than this
+work: the resolution dropdown threw on a window size the monitor does not list (a windowed player at a
+size of its own), taking the settings panel down; the current size is now offered as a choice.
+
+**A second fault the full tier found:** `TheFoliageShaderAgainstThePacks` switches Meadow foliage to the
+pack's shader mid-session, and a kind already judged indirect then asked for a material that no longer
+existed (`ArgumentNullException`). The remembered answers now follow that switch, and a missing material
+draws nothing rather than throwing.
+
 ### 22e. What is owed
 
 - The player bench's scenery table (the owner's go; it quits itself within 180 s).

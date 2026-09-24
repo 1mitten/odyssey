@@ -800,6 +800,15 @@ namespace Odyssey.Presentation.Ui
 
             SettingsDirector.Mode current = _directors?.Settings.Resolution ?? default;
             string initial = current.Width > 0 ? (current.Width + "\u00d7" + current.Height) : (choices.Count > 0 ? choices[0] : "");
+            // A window the monitor does not list as a display mode (a windowed player at a size of its
+            // own) is still the resolution in use: offered as a choice rather than refused, because
+            // DropdownField throws on a default that is not in its list and took the settings panel
+            // down with it (found by the scenery smoke test at 960 x 540, design 38 §22).
+            if (initial.Length > 0 && !choices.Contains(initial))
+            {
+                choices.Insert(0, initial);
+                modeMap[initial] = current;
+            }
 
             var dropdown = new DropdownField(choices, initial);
             dropdown.AddToClassList("settings__dropdown");

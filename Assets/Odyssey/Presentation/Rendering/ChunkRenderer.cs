@@ -429,7 +429,7 @@ namespace Odyssey.Presentation.Rendering
         float[] _chunkSqrDistance = System.Array.Empty<float>();
         readonly System.Collections.Generic.Dictionary<(int, int, int), bool> _indirectKinds =
             new System.Collections.Generic.Dictionary<(int, int, int), bool>();
-        (bool, bool, bool) _indirectKindSignature;
+        (bool, bool, bool, bool) _indirectKindSignature;
         readonly System.Collections.Generic.List<(int Layer, float Shade)> _solidLayers =
             new System.Collections.Generic.List<(int Layer, float Shade)>();
 
@@ -965,7 +965,9 @@ namespace Odyssey.Presentation.Rendering
                 _chunkSqrDistance = new float[_batches.Length];
             }
             // A setting that moves which kinds go the indirect way regathers everything.
-            var signature = (CastShadows, DressingCastsShadows, FoliageCastsShadows);
+            // Including which shader draws Meadow foliage: switched to the pack's, no kind can read
+            // the buffers, so every kind falls back to the chunk path.
+            var signature = (CastShadows, DressingCastsShadows, FoliageCastsShadows, MaterialCache.OwnFoliageShader);
             if (_indirect != null && signature != _indirectKindSignature)
             {
                 _indirectKindSignature = signature;
@@ -1111,7 +1113,7 @@ namespace Odyssey.Presentation.Rendering
                 if (!indirect.HasLayer(layer)) continue;
                 float layerShade = shade;
                 int calls = indirect.DrawLayer(layer, ActiveFrustum!, DecideSegment,
-                    (group, part) => IndirectMaterialFor(group.Tint, part, layerShade)!,
+                    (group, part) => IndirectMaterialFor(group.Tint, part, layerShade),
                     GameObjectLayer, board, SubmitToGpu,
                     out int offered, out int coarser, out int thinned);
                 IndirectDrawCalls += calls;

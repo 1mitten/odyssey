@@ -439,6 +439,9 @@ namespace Odyssey.Presentation.Bootstrap
         static bool DefaultTracing() =>
             !Application.isBatchMode && (Application.isEditor || Debug.isDebugBuild);
 
+        bool _sceneryPathLogged;
+        int _framesRendered;
+
         /// <summary>The trace this session is writing, or null when it is not writing one.</summary>
         public Diagnostics.PerfTracer? Trace => _tracer;
 
@@ -1461,6 +1464,16 @@ namespace Odyssey.Presentation.Bootstrap
                 }
 
                 _renderer.Render(activeLayer, slice);
+
+                // Once per session, a few hundred frames in: which way the scenery went on this
+                // machine's API, so a player log says whether the GPU path ran (design 38 §22).
+                if (!_sceneryPathLogged && ++_framesRendered == 300)
+                {
+                    _sceneryPathLogged = true;
+                    Debug.Log($"[Scenery] {SystemInfo.graphicsDeviceType}: {_renderer.IndirectDrawCalls} indirect calls " +
+                              $"of {_renderer.DrawCalls}, {_renderer.IndirectInstances} instances in the GPU buffers " +
+                              $"(indirect {(_renderer.UseIndirectScenery ? "on" : "off")})");
+                }
             }
             MarkSection(FrameSection.World);
 
