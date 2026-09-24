@@ -231,6 +231,31 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// A blow at a building trains nothing (design 33 §14c; the owner: no — a wall is not a
+        /// practice dummy). Asked of the one method and of a whole order carried to the wall's fall.
+        /// The control is a swing at a pawn, which trains Melee landed or not (§6A.1).
+        /// </summary>
+        [Test]
+        public void ABlowAtABuildingTrainsNoMelee()
+        {
+            var (colony, a, b, wall) = AWall();
+            SetMelee(a, 0);
+            int before = a.Skills[SkillIndex.Melee];
+            BuildingTargets.TryFind(colony.Pawns, wall, out BuildingTarget target);
+
+            colony.Pawns.Combat!.StrikeBuilding(a, target, wall, Fists(colony.Pawns), Blow(5_000), colony.World.CurrentTick);
+            Assert.That(a.Skills[SkillIndex.Melee], Is.EqualTo(before), "a blow at a wall trained Melee");
+
+            Assert.That(AttackCell(colony, a, wall), Is.EqualTo(IntentRejection.None));
+            TickUntil(colony, () => colony.Grid.Edifice[wall] < 0, 20_000, "the wall never came down");
+            Assert.That(a.Skills[SkillIndex.Melee], Is.EqualTo(before), "beating a wall down trained Melee");
+
+            colony.Pawns.Combat!.ApplySwing(a, b, Fists(colony.Pawns), new SwingOutcome(CombatEventKind.Miss),
+                colony.World.CurrentTick);
+            Assert.That(a.Skills[SkillIndex.Melee], Is.GreaterThan(before), "the control: a swing at a pawn trains");
+        }
+
+        /// <summary>
         /// Refused (design 33 §13d) for an undrafted colonist, a cell with nothing standing in it, a
         /// deck plate, and a cell off the board. Accepted — the control — for the wall.
         /// </summary>

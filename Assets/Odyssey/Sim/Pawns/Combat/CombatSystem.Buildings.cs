@@ -8,9 +8,9 @@ namespace Odyssey.Sim.Pawns
     public partial class CombatSystem
     {
         /// <summary>
-        /// Apply one blow to a building — the one method (design 33 §13g). In order:
+        /// Apply one blow to a building — the one method (design 33 §13g).
+        /// <b>No experience</b>: a blow at a building trains nothing (design 33 §14c). In order:
         /// <list type="number">
-        /// <item>the attacker's melee experience for the swing, as for any swing (a person only);</item>
         /// <item><see cref="CombatEventKind.Hit"/> reported against target 0 at
         /// <paramref name="struckCell"/>, with the armament's item def — so the floating number
         /// and the thud a landed blow already has play for a wall;</item>
@@ -32,8 +32,8 @@ namespace Odyssey.Sim.Pawns
             int before = BuildingTargets.HpMilli(_ctx, building);
             if (before <= 0 || !outcome.Landed) return;
 
-            if (attacker.IsPerson && armament.Attack.experiencePerSwing > 0)
-                attacker.GainExperience(SkillIndex.Melee, armament.Attack.experiencePerSwing, tick);
+            // No experience (design 33 §14c; the owner, 2026-09-24): a wall is not a practice
+            // dummy. A swing at a pawn still trains, in ApplySwing.
 
             int weapon = armament.ItemDef;
             int after = before - outcome.DamageMilli;
