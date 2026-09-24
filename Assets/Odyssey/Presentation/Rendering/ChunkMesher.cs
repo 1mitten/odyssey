@@ -320,6 +320,10 @@ namespace Odyssey.Presentation.Rendering
         /// measurement seam, as <see cref="Dressing"/>: on in the game.</summary>
         public bool Tufts { get; set; } = true;
 
+        /// <summary>Which dressing kinds are strewn, one bit per <see cref="MeadowDressing.Kind"/>.
+        /// A measurement seam (design 38 §21: what each kind costs at distance): all on in the game.</summary>
+        public int DressingKinds { get; set; } = ~0;
+
         int[] _scatterModules = System.Array.Empty<int>();
 
         /// <summary>Whether a module is one of the grass tufts the scatter strews — the kind the
@@ -637,6 +641,7 @@ namespace Odyssey.Presentation.Rendering
         {
             int[] family = _dressModules[(int)kind];
             if (family.Length == 0) return;
+            if ((DressingKinds & (1 << (int)kind)) == 0) return;
             uint salt = MeadowDressing.SaltOf(kind) + (uint)slot * 104729u;
             int which = MeadowDressing.VariantFor(x, z, salt, family.Length);
             MeadowDressing.Placement(x, z, salt, spread,

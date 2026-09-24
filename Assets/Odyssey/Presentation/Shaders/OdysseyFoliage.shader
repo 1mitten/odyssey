@@ -186,8 +186,8 @@ Shader "Odyssey/Foliage"
         SAMPLER(sampler_OdysseyClearTex);
         float4 _OdysseyClear;
 
-        // The grass thinning from ChunkRenderer (design 38 §21): x where it starts, y where it
-        // reaches the far keep, both metres from the camera; z the far keep fraction; w on.
+        // The grass thinning from ChunkRenderer (design 38 §21): x the metres from the camera where
+        // it starts, y the least fraction kept, w on. Mirrors GrassThinning.Keep.
         float4 _OdysseyThin;
 
         #define ODYSSEY_FOLIAGE_MAX_BOW 0.6
@@ -219,8 +219,8 @@ Shader "Odyssey/Foliage"
         {
             if (_OdysseyThin.w < 0.5 || _Thinnable < 0.5) return 1;
             float span = distance(_WorldSpaceCameraPos.xyz, rootWS);
-            float t = saturate((span - _OdysseyThin.x) / max(_OdysseyThin.y - _OdysseyThin.x, 1e-3));
-            float keep = lerp(1.0, _OdysseyThin.z, t);
+            float r = _OdysseyThin.x / max(span, _OdysseyThin.x);
+            float keep = max(_OdysseyThin.y, r * r);
             return saturate((keep - FoliageRank(rootWS.xz)) / ODYSSEY_THIN_SOFT);
         }
 

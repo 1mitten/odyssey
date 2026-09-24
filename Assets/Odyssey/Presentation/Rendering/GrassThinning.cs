@@ -51,23 +51,21 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>
         /// The fraction of clumps kept at a distance from the camera: all of them out to
-        /// <paramref name="near"/>, falling linearly to <paramref name="farKeep"/> by
-        /// <paramref name="far"/>, and <paramref name="farKeep"/> beyond.
+        /// <paramref name="near"/>, then falling as the square of near over distance — the rate that
+        /// keeps the number of clumps per pixel of screen roughly constant, since a clump's image
+        /// shrinks with the square of its distance — and never below <paramref name="floor"/>.
+        ///
+        /// <para>Every rung is thinned, Meadow included: measured at the farthest pull, the cost of
+        /// grass was having it at all (Meadow cost what Full did), not how much of it there was, so a
+        /// rule that only thinned the rungs above Meadow bought nothing where the owner saw the drop
+        /// (design 38 §21).</para>
         /// </summary>
-        public static float Keep(float distance, float near, float far, float farKeep)
+        public static float Keep(float distance, float near, float floor)
         {
-            if (farKeep >= 1f) return 1f;
-            if (far <= near) return distance <= near ? 1f : farKeep;
-            float t = Mathf.Clamp01((distance - near) / (far - near));
-            return Mathf.Lerp(1f, farKeep, t);
+            if (distance <= near || near <= 0f) return 1f;
+            float r = near / distance;
+            return Mathf.Max(floor, r * r);
         }
-
-        /// <summary>
-        /// The far field's keep fraction for a density: the far field is drawn at the Meadow rung's
-        /// density whatever the rung, so Meadow and below are never thinned and Full keeps a fifth.
-        /// </summary>
-        public static float FarKeepFor(int density, int farDensity) =>
-            density <= farDensity || density <= 0 ? 1f : (float)farDensity / density;
 
         /// <summary>
         /// How many of a bucket's first <paramref name="count"/> matrices — sorted by rank — have a

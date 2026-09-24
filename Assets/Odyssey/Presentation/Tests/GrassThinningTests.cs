@@ -47,24 +47,20 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
-        public void TheKeepIsFullNearFallsLinearlyAndHoldsFar()
+        public void TheKeepIsFullNearThenFallsAsTheSquareOfDistanceToAFloor()
         {
-            Assert.That(GrassThinning.Keep(10f, 70f, 160f, 0.2f), Is.EqualTo(1f));
-            Assert.That(GrassThinning.Keep(70f, 70f, 160f, 0.2f), Is.EqualTo(1f));
-            Assert.That(GrassThinning.Keep(115f, 70f, 160f, 0.2f), Is.EqualTo(0.6f).Within(1e-4f));
-            Assert.That(GrassThinning.Keep(160f, 70f, 160f, 0.2f), Is.EqualTo(0.2f).Within(1e-5f));
-            Assert.That(GrassThinning.Keep(900f, 70f, 160f, 0.2f), Is.EqualTo(0.2f).Within(1e-5f));
-            Assert.That(GrassThinning.Keep(900f, 70f, 160f, 1f), Is.EqualTo(1f), "a keep of one never thins");
-        }
-
-        [Test]
-        public void TheFarFieldIsDrawnAtTheMeadowRung()
-        {
-            Assert.That(GrassThinning.FarKeepFor(60, 60), Is.EqualTo(1f), "Meadow is never thinned");
-            Assert.That(GrassThinning.FarKeepFor(30, 60), Is.EqualTo(1f), "nor anything sparser");
-            Assert.That(GrassThinning.FarKeepFor(300, 60), Is.EqualTo(0.2f).Within(1e-6f),
-                "Full keeps a fifth far out, which is the Meadow rung's density");
-            Assert.That(GrassThinning.FarKeepFor(0, 60), Is.EqualTo(1f));
+            Assert.That(GrassThinning.Keep(10f, 70f, 0.1f), Is.EqualTo(1f));
+            Assert.That(GrassThinning.Keep(70f, 70f, 0.1f), Is.EqualTo(1f));
+            Assert.That(GrassThinning.Keep(140f, 70f, 0.1f), Is.EqualTo(0.25f).Within(1e-5f),
+                "twice as far keeps a quarter: the same clumps per pixel of screen");
+            Assert.That(GrassThinning.Keep(1000f, 70f, 0.1f), Is.EqualTo(0.1f).Within(1e-6f), "never below the floor");
+            float previous = 1f;
+            for (float d = 70f; d < 400f; d += 5f)
+            {
+                float k = GrassThinning.Keep(d, 70f, 0.1f);
+                Assert.That(k, Is.LessThanOrEqualTo(previous), "the keep must never rise with distance");
+                previous = k;
+            }
         }
 
         [Test]
@@ -97,7 +93,8 @@ namespace Odyssey.Tests.Presentation
             string shader = File.ReadAllText("Assets/Odyssey/Presentation/Shaders/OdysseyFoliage.shader");
             foreach (string token in new[] { "747796405u", "2891336453u", "277803737u", "(word >> 22u) ^ word",
                          "floor(xz.x * 16.0)", "floor(xz.y * 16.0)", "FoliagePcg(ix + FoliagePcg(iz))",
-                         "(h >> 8) * (1.0 / 16777216.0)", "#define ODYSSEY_THIN_SOFT 0.05" })
+                         "(h >> 8) * (1.0 / 16777216.0)", "#define ODYSSEY_THIN_SOFT 0.05",
+                         "float keep = max(_OdysseyThin.y, r * r);" })
                 Assert.That(shader, Does.Contain(token), $"the shader's rank no longer mirrors GrassThinning: {token}");
             Assert.That(GrassThinning.Soft, Is.EqualTo(0.05f));
         }

@@ -32,6 +32,17 @@ namespace Odyssey.Presentation.Bootstrap
     public sealed class PlayerBench
     {
         public const string Argument = "-odyssey-bench";
+
+        /// <summary>With <see cref="Argument"/>: the grass-at-distance arms of design 38 §21 instead
+        /// of the look's (Full grass, the wide and farthest framings).</summary>
+        public const string GrassArgument = "-odyssey-bench-grass";
+
+        static bool Has(string wanted)
+        {
+            foreach (string argument in Environment.GetCommandLineArgs())
+                if (argument == wanted) return true;
+            return false;
+        }
         // About 110 s for the whole run, well inside LimitSeconds.
         const float SettleSeconds = 1.5f;
         const float MeasureSeconds = 4f;
@@ -143,6 +154,13 @@ namespace Odyssey.Presentation.Bootstrap
             _table.AppendLine("|---|---|---|---|---|" + PassRule());
 
             ChunkRenderer renderer = _boot.Renderer!;
+            if (Has(GrassArgument))
+            {
+                yield return GrassArms(renderer);
+                Log("[Bench] table:\n" + _table);
+                Quit("[Bench] done");
+                yield break;
+            }
             yield return Arm("look as shipped", null, null);
 
             // Design 38 §18c and §18f, before and after in this run: each change taken back alone,
@@ -213,6 +231,43 @@ namespace Odyssey.Presentation.Bootstrap
 
             Log("[Bench] table:\n" + _table);
             Quit("[Bench] done");
+        }
+
+        /// <summary>
+        /// Full grass at the wide and farthest framings (design 38 §21): as shipped, then each of
+        /// the distance techniques taken back, then the tufts, the dressing and all grass taken away,
+        /// so the GPU's own time says where Full's cost at distance is and what §21 bought.
+        /// </summary>
+        IEnumerator GrassArms(ChunkRenderer renderer)
+        {
+            renderer.ScatterDensity = GroundScatter.MaxPerCell * 100;
+            _boot.Model!.Remesh();
+            yield return Settle();
+            // A span cannot live in an iterator, so the focus cell is read out first.
+            Odyssey.Sim.Contracts.CellRef? focus = FirstPawnCell();
+            foreach (float framing in new[] { 70f, 140f })
+            {
+                if (focus.HasValue && _boot.cameraRig != null) _boot.cameraRig.FocusOn(focus.Value, framing);
+                yield return Settle();
+                string at = $"@{framing:0} m";
+                yield return Arm($"full {at}, as shipped", null, null);
+                yield return Arm($"full {at}, no thinning", () => renderer.ThinGrass = false, () => renderer.ThinGrass = true);
+                yield return Arm($"full {at}, no thinning or tuft levels",
+                    () => { renderer.ThinGrass = false; renderer.TuftLevels = false; },
+                    () => { renderer.ThinGrass = true; renderer.TuftLevels = true; });
+                yield return Arm($"full {at}, no tufts", () => { renderer.Tufts = false; _boot.Model!.Remesh(); },
+                    () => { renderer.Tufts = true; _boot.Model!.Remesh(); });
+                yield return Arm($"full {at}, no dressing", () => { renderer.Dressing = false; _boot.Model!.Remesh(); },
+                    () => { renderer.Dressing = true; _boot.Model!.Remesh(); });
+                yield return Arm($"{at}, no grass", () => { renderer.ScatterDensity = 0; _boot.Model!.Remesh(); },
+                    () => { renderer.ScatterDensity = GroundScatter.MaxPerCell * 100; _boot.Model!.Remesh(); });
+            }
+        }
+
+        Odyssey.Sim.Contracts.CellRef? FirstPawnCell()
+        {
+            var pawns = _boot.World!.Views.Current.Pawns;
+            return pawns.Length > 0 ? pawns[0].Cell : (Odyssey.Sim.Contracts.CellRef?)null;
         }
 
         /// <summary>

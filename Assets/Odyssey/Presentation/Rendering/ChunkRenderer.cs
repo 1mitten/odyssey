@@ -373,6 +373,9 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>See <see cref="ChunkMesher.Tufts"/>. Meshed, so a change needs a re-mesh.</summary>
         public bool Tufts { get => _mesher.Tufts; set => _mesher.Tufts = value; }
 
+        /// <summary>See <see cref="ChunkMesher.DressingKinds"/>. Meshed, so a change needs a re-mesh.</summary>
+        public int DressingKinds { get => _mesher.DressingKinds; set => _mesher.DressingKinds = value; }
+
         IndirectFoliage? _indirect;
         bool? _indirectAvailable;
         bool _indirectActive;
@@ -491,28 +494,25 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>
         /// Whether grass thins with distance from the camera (owner, 2026-09-24: "the biggest
         /// performance hit I can see is actually grass, especially when full at distance"; design 38
-        /// §21). Full cover out to <see cref="GrassThinNear"/>, falling to the density of
-        /// <see cref="GrassFarDensity"/> by <see cref="GrassThinFar"/>, clump by clump without a pop
-        /// (<see cref="GrassThinning"/>). Rungs at or below that density are never thinned.
+        /// §21). Full cover out to <see cref="GrassThinNear"/>, then fewer clumps as the square of the
+        /// distance, down to <see cref="GrassThinFloor"/>, clump by clump without a pop
+        /// (<see cref="GrassThinning"/>).
         /// </summary>
         public bool ThinGrass { get; set; } = true;
 
         /// <summary>Metres from the camera at which grass starts to thin.</summary>
         public float GrassThinNear { get; set; } = DefaultGrassThinNear;
 
-        /// <summary>Metres from the camera by which grass is down to <see cref="GrassFarDensity"/>.</summary>
-        public float GrassThinFar { get; set; } = DefaultGrassThinFar;
-
-        /// <summary>The far field's density, in tufts per hundred cells: the Meadow rung.</summary>
-        public int GrassFarDensity { get; set; } = 60;
+        /// <summary>The least fraction of clumps kept however far away.</summary>
+        public float GrassThinFloor { get; set; } = DefaultGrassThinFloor;
 
         public const float DefaultGrassThinNear = 70f;
-        public const float DefaultGrassThinFar = 160f;
+        public const float DefaultGrassThinFloor = 0.1f;
 
         /// <summary>Grass clumps the thinning left unsubmitted last frame (the rest shrink in the shader).</summary>
         public int GrassInstancesThinned { get; private set; }
 
-        float _grassFarKeep = 1f;
+        bool _thinning;
         static readonly int ThinId = Shader.PropertyToID("_OdysseyThin");
 
         /// <summary>
@@ -526,9 +526,6 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The bias the tufts are judged at; see <see cref="TuftLevels"/>.</summary>
         public float TuftLodBias { get; set; } = 8f;
 
-        /// <summary>Whether far grass is drawn solid, without the see-through edge (design 38 §21):
-        /// see <c>FoliageThin</c> in <c>Odyssey/Foliage</c>.</summary>
-        public bool SolidFarGrass { get; set; }
 
         /// <summary>
         /// Whether a chunk's box, grown upwards, meets the camera's frustum.
@@ -761,11 +758,8 @@ namespace Odyssey.Presentation.Rendering
             IndirectDrawCalls = 0;
             InstancesAtCoarserLevels = 0;
             GrassInstancesThinned = 0;
-            _grassFarKeep = ThinGrass && ViewerPosition.HasValue
-                ? GrassThinning.FarKeepFor(ScatterDensity, GrassFarDensity)
-                : 1f;
-            Shader.SetGlobalVector(ThinId, new Vector4(GrassThinNear, GrassThinFar, _grassFarKeep,
-                _grassFarKeep < 1f ? 1f : 0f));
+            _thinning = ThinGrass && ViewerPosition.HasValue;
+            Shader.SetGlobalVector(ThinId, new Vector4(GrassThinNear, GrassThinFloor, 0f, _thinning ? 1f : 0f));
             SkinTrianglesDrawn = 0;
             CellPlatesDrawn = 0;
             ChunksMeshDeferred = 0;
@@ -1032,9 +1026,9 @@ namespace Odyssey.Presentation.Rendering
                 // prefix can survive anywhere in this chunk — the keep at its nearest point is the most
                 // any clump in it gets. The shader shrinks the rest of the way, clump by clump.
                 int submitted = bucket.Count;
-                if (_grassFarKeep < 1f && !ghost && TintCode.IsFoliage(bucket.Tint) && _mesher.IsGrassModule(bucket.Module))
+                if (_thinning && !ghost && TintCode.IsFoliage(bucket.Tint) && _mesher.IsGrassModule(bucket.Module))
                 {
-                    float keep = GrassThinning.Keep(distance, GrassThinNear, GrassThinFar, _grassFarKeep);
+                    float keep = GrassThinning.Keep(distance, GrassThinNear, GrassThinFloor);
                     submitted = GrassThinning.CountBelow(bucket.Matrices, bucket.Count, keep);
                     GrassInstancesThinned += bucket.Count - submitted;
                     if (submitted == 0) continue;

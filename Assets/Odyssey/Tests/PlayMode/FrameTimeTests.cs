@@ -2796,7 +2796,7 @@ namespace Odyssey.Tests.PlayMode
         /// differences inside one board's run are quoted (§6c). Explicit: a measurement, minutes
         /// long, run by name.
         /// </summary>
-        [UnityTest, Explicit("a measurement, run by name")]
+        [UnityTest, Explicit("a measurement, run by name"), Timeout(3600000)]
         public IEnumerator TheGrassAtDistanceAgainstTheFrame()
         {
             var lines = new List<string>();
@@ -2830,50 +2830,64 @@ namespace Odyssey.Tests.PlayMode
                     int full = GroundScatter.MaxPerCell * 100;
                     WorldSnapshot frame = boot.World!.Views.Current;
                     CellRef focusCell = frame.Pawns.Length > 0 ? frame.Pawns[0].Cell : default;
-                    float startDistance = boot.cameraRig!.TargetDistance;
 
-                    foreach (float framing in new[] { startDistance, 70f, 140f })
+                    foreach (float framing in new[] { 70f, 140f })
                     {
                         if (frame.Pawns.Length > 0) boot.cameraRig!.FocusOn(focusCell, framing);
-                        var conditions = new List<(string Name, int Density, float Cut, Action On, Action Off)>
+                        bool thinWas = renderer.ThinGrass, levelsWas = renderer.TuftLevels;
+                        Action none = () => { renderer.ThinGrass = false; renderer.TuftLevels = false; };
+                        Action restore = () => { renderer.ThinGrass = thinWas; renderer.TuftLevels = levelsWas; renderer.Tufts = true; renderer.Dressing = true; };
+                        var conditions = new List<(string Name, int Density, Action On, Action Off, bool Remesh)>
                         {
-                            ("off", 0, float.PositiveInfinity, () => { }, () => { }),
-                            ("meadow", shipped, float.PositiveInfinity, () => { }, () => { }),
-                            ("full", full, float.PositiveInfinity, () => { }, () => { }),
-                            ($"full, cut {framing + 25f:0} m", full, framing + 25f, () => { }, () => { }),
-                            ($"full, cut {framing + 60f:0} m", full, framing + 60f, () => { }, () => { }),
+                            ("off", 0, none, restore, false),
+                            ("meadow, none of §21", shipped, none, restore, false),
+                            ("meadow, tufts only", shipped, () => { none(); renderer.Dressing = false; }, restore, true),
+                            ("meadow, dressing only", shipped, () => { none(); renderer.Tufts = false; }, restore, true),
+                            ("meadow, as shipped", shipped, () => { }, () => { }, false),
+                            ("full, none of §21", full, none, restore, false),
+                            ("full, as shipped", full, () => { }, () => { }, false),
                         };
-                        foreach (var c in GrassTechniqueArms(renderer)) conditions.Add(c);
+                        if (framing > 100f)
+                            foreach (MeadowDressing.Kind kind in new[] { MeadowDressing.Kind.TallGrass, MeadowDressing.Kind.Bush,
+                                         MeadowDressing.Kind.Flower, MeadowDressing.Kind.Cover, MeadowDressing.Kind.Sunflower,
+                                         MeadowDressing.Kind.Rock })
+                            {
+                                MeadowDressing.Kind k = kind;
+                                conditions.Add(($"meadow, dressing only: {k}", shipped,
+                                    () => { none(); renderer.Tufts = false; renderer.DressingKinds = 1 << (int)k; },
+                                    () => { restore(); renderer.DressingKinds = ~0; }, true));
+                            }
 
+                        // Twice round, and the lower of the two kept: the owner's editor shares the GPU
+                        // and a single reading moved by more than the thing being measured.
+                        var best = new Dictionary<string, (float Ms, string Line)>();
+                        for (int pass = 0; pass < 2; pass++)
                         foreach (var c in conditions)
                         {
-                            if (renderer.ScatterDensity != c.Density)
-                            {
-                                renderer.ScatterDensity = c.Density;
-                                boot.Model!.Remesh();
-                            }
-                            float cutWas = renderer.FoliageDrawDistance;
-                            renderer.FoliageDrawDistance = c.Cut;
+                            if (renderer.ScatterDensity != c.Density) { renderer.ScatterDensity = c.Density; boot.Model!.Remesh(); }
                             c.On();
-                            // Out of the meshing budget's instalments before the clock starts.
+                            if (c.Remesh) boot.Model!.Remesh();
                             for (int i = 0, quiet = 0; i < 1200 && (i < 30 || quiet < 20); i++)
                             {
                                 yield return null;
                                 quiet = renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
                             }
                             float ms = 0f;
-                            yield return TimeFrames($"grass-distance/{board}/{framing:0}m/{c.Name}", boot, WarmupFrames, m => ms = m);
+                            yield return TimeFrames($"grass-distance/{board}/{framing:0}m/{c.Name}/{pass}", boot, WarmupFrames, m => ms = m);
                             Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
-                            lines.Add($"{board} @{framing:0} m {c.Name}: frame {ms:0.00} ms, {renderer.DrawCalls} calls, " +
-                                      $"{renderer.InstancesDrawn} instances, {renderer.InstancesAtCoarserLevels} coarser, " +
-                                      $"{renderer.GrassInstancesThinned} thinned");
+                            string line = $"{board} @{framing:0} m {c.Name}: frame {ms:0.00} ms, {renderer.DrawCalls} calls, " +
+                                          $"{renderer.InstancesDrawn} instances, {renderer.InstancesAtCoarserLevels} coarser, " +
+                                          $"{renderer.GrassInstancesThinned} thinned";
+                            if (!best.TryGetValue(c.Name, out var b0) || ms < b0.Ms) best[c.Name] = (ms, line);
                             c.Off();
-                            renderer.FoliageDrawDistance = cutWas;
+                            if (c.Remesh) boot.Model!.Remesh();
                         }
+                        foreach (var c in conditions) lines.Add(best[c.Name].Line);
                     }
                 }
                 finally
                 {
+                    if (renderer != null) { renderer.Tufts = true; renderer.Dressing = true; renderer.DressingKinds = ~0; }
                     if (cam != null) cam.targetTexture = previousTarget;
                     if (fourK != null) fourK.Release();
                     UnityEngine.Object.Destroy(root);
@@ -2886,9 +2900,9 @@ namespace Odyssey.Tests.PlayMode
         /// <summary>
         /// Photographs Full grass at distance for tuning and for the owner (design 38 §21): the
         /// world paused and the clock stilled, at the start, wide and farthest framings, with none of
-        /// §21, with thinning, with thinning and the tufts' levels at several biases, and — where
-        /// built — with solid far grass; each against the untouched picture as a fraction of pixels
-        /// moved. Written to <c>Logs/look/grass/</c>. Explicit: photographs, not a test.
+        /// §21, with thinning, with thinning and a coarser tuft bias, and as shipped; each against the
+        /// untouched picture as a fraction of pixels moved. Written to <c>Logs/look/grass/</c>.
+        /// Explicit: photographs, not a test.
         /// </summary>
         [UnityTest, Explicit("photographs for tuning the grass at distance, not a test")]
         public IEnumerator TheGrassAtDistanceAtThePlayCamera()
@@ -2900,13 +2914,13 @@ namespace Odyssey.Tests.PlayMode
             RenderTexture? previousTarget = null;
             float previousScale = Time.timeScale;
             ChunkRenderer renderer = null!;
-            bool thinWas = true, levelsWas = true, solidWas = false;
+            bool thinWas = true, levelsWas = true;
             float biasWas = 8f;
             try
             {
                 yield return null;
                 renderer = boot.Renderer!;
-                thinWas = renderer.ThinGrass; levelsWas = renderer.TuftLevels; solidWas = renderer.SolidFarGrass;
+                thinWas = renderer.ThinGrass; levelsWas = renderer.TuftLevels;
                 biasWas = renderer.TuftLodBias;
                 for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
                 {
@@ -2940,22 +2954,19 @@ namespace Odyssey.Tests.PlayMode
                 foreach (var framing in framings)
                 {
                     if (framing.Distance > 0f) boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, framing.Distance);
-                    var conditions = new List<(string Name, bool Thin, bool Levels, float Bias, bool Solid)>
+                    var conditions = new List<(string Name, bool Thin, bool Levels, float Bias)>
                     {
-                        ("none", false, false, biasWas, false),
-                        ("thin", true, false, biasWas, false),
-                        ("thin-levels-16", true, true, 16f, false),
-                        ("thin-levels-8", true, true, 8f, false),
-                        ("thin-levels-4", true, true, 4f, false),
-                        ("shipped", thinWas, levelsWas, biasWas, solidWas),
+                        ("none", false, false, biasWas),
+                        ("thin", true, false, biasWas),
+                        ("thin-levels-4", true, true, 4f),
+                        ("shipped", thinWas, levelsWas, biasWas),
                     };
-                    if (!solidWas) conditions.Add(("shipped-solid", thinWas, levelsWas, biasWas, true));
 
                     Color32[] none = null!;
                     foreach (var c in conditions)
                     {
                         renderer.ThinGrass = c.Thin; renderer.TuftLevels = c.Levels;
-                        renderer.TuftLodBias = c.Bias; renderer.SolidFarGrass = c.Solid;
+                        renderer.TuftLodBias = c.Bias;
                         for (int i = 0, quiet = 0; i < 1200 && (i < 40 || quiet < 20); i++)
                         {
                             yield return null;
@@ -2977,7 +2988,7 @@ namespace Odyssey.Tests.PlayMode
                 if (renderer != null)
                 {
                     renderer.ThinGrass = thinWas; renderer.TuftLevels = levelsWas;
-                    renderer.SolidFarGrass = solidWas; renderer.TuftLodBias = biasWas;
+                    renderer.TuftLodBias = biasWas;
                 }
                 if (cam != null) cam.targetTexture = previousTarget;
                 if (target != null) target.Release();
@@ -2997,29 +3008,6 @@ namespace Odyssey.Tests.PlayMode
             File.WriteAllBytes(Path.GetFullPath($"Logs/look/{folder}/{name}.png"), image.EncodeToPNG());
             pixels(image.GetPixels32());
             UnityEngine.Object.Destroy(image);
-        }
-
-        /// <summary>The design 38 §21 techniques as measurement conditions, each switched on over
-        /// Full and back off, cumulatively in the order they were built.</summary>
-        static IEnumerable<(string Name, int Density, float Cut, Action On, Action Off)> GrassTechniqueArms(ChunkRenderer renderer)
-        {
-            int full = GroundScatter.MaxPerCell * 100;
-            bool thinWas = renderer.ThinGrass, levelsWas = renderer.TuftLevels, solidWas = renderer.SolidFarGrass;
-            int farWas = renderer.GrassFarDensity;
-            Action restore = () =>
-            {
-                renderer.ThinGrass = thinWas; renderer.TuftLevels = levelsWas;
-                renderer.SolidFarGrass = solidWas; renderer.GrassFarDensity = farWas;
-            };
-            yield return ("full, none of §21", full, float.PositiveInfinity,
-                () => { renderer.ThinGrass = false; renderer.TuftLevels = false; renderer.SolidFarGrass = false; }, restore);
-            yield return ("full, thinned to Meadow (60)", full, float.PositiveInfinity,
-                () => { renderer.ThinGrass = true; renderer.GrassFarDensity = 60; renderer.TuftLevels = false; renderer.SolidFarGrass = false; }, restore);
-            yield return ("full, thinned to Lush (150)", full, float.PositiveInfinity,
-                () => { renderer.ThinGrass = true; renderer.GrassFarDensity = 150; renderer.TuftLevels = false; renderer.SolidFarGrass = false; }, restore);
-            yield return ("full, thinned to Meadow + tuft levels", full, float.PositiveInfinity,
-                () => { renderer.ThinGrass = true; renderer.GrassFarDensity = 60; renderer.TuftLevels = true; renderer.SolidFarGrass = false; }, restore);
-            yield return ("full, as shipped", full, float.PositiveInfinity, () => { }, () => { });
         }
 
         IEnumerator Snap(string name, OdysseyBootstrap boot, RenderTexture target, Action<Color32[]> pixels)
