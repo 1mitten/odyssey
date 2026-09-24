@@ -421,8 +421,8 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~55 s, no Unity): **1,476 Sim + 1,071 Hud**
-  (2026-09-24, `claude/combat-c7`); Long tier **44** in about three minutes, a third of it the
+- **Fast tier** (`scripts/test-fast.sh`, ~55 s, no Unity): **1,476 Sim + 1,076 Hud**
+  (2026-09-24, `claude/combat-c7` merged with `main`); Long tier **48** in about three minutes, a third of it the
   combat gate's three seeds (`MarauderSoakTests.TheGateWithRaids`, each run beside a lockstep twin).
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look. It cost two
@@ -430,7 +430,7 @@ invisible where the game is played.
   `List<>` went in without its `using` — the fast tier was green in twenty seconds both times and
   the second one put the editor into Safe Mode.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-24 on
-  `claude/combat-c7` (the combat gate, off `main` after #194), alone on the machine: EditMode
+  `claude/combat-c7` (the combat gate, off `main` after #194, before merging #186/#197/#199), alone on the machine: EditMode
   **3,567 total, 3,534 passed, 0 failed**; PlayMode **138 total, 127 passed, 0 failed**; the player
   build boots into a colony with a clean log. Before that, 2026-09-23 on
   `claude/research-tab` after merging `main` (#173, power): EditMode **2,788 total, 2,759 passed,

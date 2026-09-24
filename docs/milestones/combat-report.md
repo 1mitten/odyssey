@@ -40,7 +40,7 @@ spreading spawns (§9h) and the debug tab for a fight (§9i) came out of the pla
 | 3 | Same seed, same hash | **Green, every hour.** A lockstep twin hashes the same for all 240 hours on each seed. |
 | 4 | Save mid-raid, load, same hash a day on | **Green after one fix** (§3). |
 | 5 | Goldens unchanged | **Green.** `Golden.cs` untouched; the three golden cases pass in the fast and Long tiers. |
-| 6 | Tiers | **Green.** Fast Sim **1,476**, Hud **1,071**; Long **44**; content gates clean; EditMode **3,567 / 3,534 / 0 failed**; PlayMode **138 / 127 / 0 failed**; player build boots into a colony clean (§4). |
+| 6 | Tiers | **Green.** Fast Sim **1,476**, Hud **1,076**; Long **48** (after merging `main`); content gates clean; EditMode **3,567 / 3,534 / 0 failed**; PlayMode **138 / 127 / 0 failed**; player build boots into a colony clean (§4). |
 
 Per seed, with hostiles:
 
@@ -96,8 +96,10 @@ The C2 integration read the same brawl at 2.06 → 2.29 ms (§6E); both frames a
 fight now costs 0.45 ms rather than 0.23, all of it in the figures. That is the swing and reaction
 work the playtest rounds added (§9a–§9c), and it is inside the 5 ms budget with room.
 
-**The tiers**, all on this branch: fast Sim **1,476**, Hud **1,071**, 0 failed; Long **44**, 0 failed
-(3 m 03 s); the three content gates clean; EditMode **3,567 total, 3,534 passed, 0 failed**; PlayMode
+**The tiers**, on this branch merged with `main` (walls-down, Meadow M7 and selective CI came in
+after the gate was written): fast Sim **1,476**, Hud **1,076**, 0 failed; Long **48**, 0 failed, every gate
+number and final hash identical to the run before the merge; the three content gates clean. Before
+the merge, alone on the machine: EditMode **3,567 total, 3,534 passed, 0 failed**; PlayMode
 **138 total, 127 passed, 0 failed** (7 explicit, 11 ignored — the click-harness tests CLAUDE.md
 names). The player build compiled, and booted straight into a colony for 45 s with no error or
 exception in its log; the only warnings are the stylesheet's pseudo-classes, which predate combat.
