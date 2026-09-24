@@ -243,7 +243,7 @@ measurements here.
 | **M6** | **Built 2026-09-24** (§15): quality presets, the grass ladders, grass shadows; preferences now reach a new session. | Unity tiers owed (disk); owner's look at 4K and on a laptop. |
 | **M7** | The board-depth measurement (§7). | **Owner picks.** |
 | **M8** | Hills worldgen and the per-column slice. | Goldens measured. |
-| **M9** | The ground skin and its shader (§6). | **Third Play.** |
+| **M9** | **Built 2026-09-24** (§20): the ground skin — ramps, flat tops, stream banks and an apron to the surround — on `claude/meadow-skin`. The ground keeps the `MeadowGround` shader. | **Third Play.** |
 | **M10** | The surround continues the skin (§7). | Seam-free at the rim. |
 | **M11** | Loading and warm-up (§8). | No compile after hand-over. |
 | **M12** | Atmosphere (§10). | Play. |
@@ -892,3 +892,98 @@ not reproduce "no trees".
   lying on the ground and flattens a ring round the bed. Harmless (the ring is under the bed), noted.
 - The brown line along the board's rim in the horizon shots is the ground skin's edge (M9), not
   this work.
+
+## 20. M9: the ground skin, built (2026-09-24)
+
+Branch `claude/meadow-skin`, worktree `D:\code\odyssey-meadow-skin`. §6 as designed, with the
+deviations below, and three things §6 did not foresee: the draw path, the stream banks, and the rim.
+
+### 20a. What it is
+
+- **Ramps.** A terrace's foot cell draws a ramp in a per-chunk mesh (`GroundSkinMesh`, owned by its
+  `ChunkBatch`), its corners set by one rule (`BankLayout.RampCorners`): a corner rises to the rim
+  where any of the three cells meeting it is a step. The three old bank shapes are its special cases —
+  straight lifts two corners, an inner corner three (max(u, v)), an outer corner one (min(u, v)) — and
+  neighbouring ramps meet exactly, because they ask the same cells about the corner they share.
+- **Flat tops.** Earth whose only visible face is its top, with nothing built on it (a tree is not
+  built), leaves its instanced box for the same mesh. Anything with a side showing, under a slab or a
+  building, or with a cave under it keeps its box: that is §6's "levelling under built things", taken
+  as *keep the drape* rather than as new levelled vertices plus skirts — the box already matches the
+  slab's drape to the millimetre, and a skin chord would part from it by up to ~15 mm.
+- **Stream banks** (not in §6). A bank one layer above its bed — earth with air over it whose every
+  open side is water — drops its water-side corners to just above the water line
+  (`BankLayout.BankDips`, `WaterBankDrop` 0.79 m), drawn as skin with walls down to the bed under the
+  water, so the meadow runs into the stream instead of ending in a square rim. **Air over it** is part
+  of the rule: the bed under a cascade's upper stretch is earth beside water too, and dipping it pulled
+  the water above it down (found by `SlicePickerBoardTests`).
+- **The apron** (not in §6). Every skinned rim cell runs `ChunkMesher.ApronMetres` (5 m) past the
+  board's edge, sloping from its own edge to the surround's ground at `TerrainSkirt.SurfaceLayer`,
+  corners filled. The brown line round the board seen from far out was the surround's deep tiles'
+  earth sides showing at a one-layer step; the rim boxes had hidden some of it and the skin, having
+  removed them, showed all of it. Photographed: no line (`2026-09-24-skin-after-horizon.png`).
+- **The one surface owner.** `BankLayout.RiseAt` reads the ramp or the dip back through the same
+  corners and triangulation (`GroundCorners`). Grass tufts and dressing (a one-cell cache in the
+  mesher), items and heaps (`ChunkRenderer.OnGround`), the picker (`SlicePicker`, at the cell's centre)
+  and the ramp cursor (`OdysseyBootstrap`) now stand on it, beside the pawn pose and the water line that
+  already asked it. `GroundSkinTests.TheHeightOfASlopeHasOneOwner` fails on a new reader of the old
+  per-shape function outside the owner.
+- **P15 fixed on the render side.** A cell edit re-meshes every chunk beneath it in its column
+  (`WorldRenderModel.RefreshDirty`), because open-to-the-sky is a column question; chunks below the
+  drawn band are never meshed, so it costs only what is on screen.
+
+### 20b. What did not change, deliberately
+
+- **The simulation, and every golden.** The cells that get a ramp are exactly the cells `BankLayout.At`
+  and its sim twin `TerraceFoot` already mark. §6 expected `TerraceFoot` to be generalised and the
+  goldens re-baked; neither was needed, because the corner rule changes a ramp's *shape*, never *which
+  cells* have one.
+- **A trench, a pit, a cell ringed by steps** — all four corners high — stays flat rather than being
+  capped flush with the ground above (hiding a hole the simulation has); a skirt closes the edge beside
+  it. It is still a foot cell to the simulation (the nav slope class and the tree guard), which is
+  harmless.
+- **`GroundSkin.Enabled` off** gives the boxes and bank wedges exactly as before: the measurement
+  arm's control, and the path `BankMeshTests` and `SightFadeExemptionTests` now pin.
+
+### 20c. A finding about the draw path
+
+**The same material lights differently drawn with `Graphics.RenderMesh` than with
+`RenderMeshInstanced`.** The first skin was drawn with `RenderMesh` and the meadow came out brighter and
+yellower; a same-run photograph pair (`ODYSSEY_LOOK_BOXES=1` in the look harness) proved it was the
+path, not the mesh. Drawn through `RenderMeshInstanced` with one identity instance it matches the boxes.
+The likely cause is per-object lighting data (ambient probe) differing between the SRP Batcher path and
+the instancing path; it was not chased further, and anything else this renderer draws with `RenderMesh`
+is worth checking the same way.
+
+### 20d. Measured
+
+`FrameTimeTests.TheSkinAgainstTheBoxes`, played meadow, RTX 5070 Ti, one run on a quiet machine:
+
+| | Standard boxes | Standard skin | Huge boxes | Huge skin |
+|---|---|---|---|---|
+| frame, 640 × 480 | 2.00 ms | 2.01 ms | 2.79 ms | 2.72 ms |
+| frame, 3840 × 2160 | 9.89 ms | 10.34 ms | 10.88 ms | 10.40 ms |
+| instances (4K) | 34,823 | 29,930 | 41,434 | 32,219 |
+| draw calls (4K) | 1,185 | 1,132 | 1,751 | 1,616 |
+| whole-board re-mesh, a chunk | 0.203 ms | **0.408 ms** | 0.273 ms | **0.439 ms** |
+
+- **The frame is level within noise**; instances fall by 5–9k and calls by 50–135. The per-frame
+  matrix upload for the turf the skin replaced is gone, which the GPU-bound 4K frame does not show.
+- **Meshing a chunk costs about 0.2 ms more.** It was 0.49 before three cuts: relief sampled once per
+  chunk corner instead of per triangle vertex, `BankDips` asked once a cell, and consecutive triangles
+  skipping the group dictionary (its key comparison is a native Unity object equality). At the
+  11-chunk budget a board-wide re-mesh burst now spends ~4.5 ms a frame against ~2.5. **Owed:** profile
+  what remains (the mesh upload and the ramp checks are the suspects) or size the budget on the new
+  number (§6c.7's arithmetic).
+
+### 20e. What is owed
+
+- **The per-column slice for M8's taller hills** (§7): the skin draws any relief the generator makes,
+  but `SliceSettings.BelowSurface` still reads one surface layer.
+- **The stream's zigzag** — a diagonal stream across a square grid — and the pale fringe terrain along
+  it are the terrain's, not the skin's.
+- **The foot IK and body lean in `PawnFigureDirector`** still read the relief only; a figure's feet
+  on a ramp are placed by the pose, not by the ramp.
+- **A rim lower than the surround** runs its apron *up* under the surround's tiles, which then hide it
+  and show their own side above the rim; the apron fixes the (common) higher rim only. Meeting the rim
+  column by column is M10's.
+- Meshing cost, above.

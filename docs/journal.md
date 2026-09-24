@@ -11874,3 +11874,24 @@ The surround was the surprise: photographed from the board's corner it was alrea
 lacked was undergrowth and depth, so the wood thins less, the far wood is denser, three trees in
 four have a bush beside them — and all of it is drawn at coarse levels of detail and the card, which
 design §3 promised and nobody had built. More trees, 31 more draw calls, the same CPU. Design 38 §19.
+
+## 2026-09-24 — Meadow M9: the terraces drawn as a skin
+
+The terraces were a box per cell and a wedge per bank. They are now a mesh per chunk: a ramp in each
+terrace foot cell, its corners set by one rule (a corner rises where any of the three cells meeting it
+is a step), the flat ground around it out of its boxes, stream banks sloping into their water, and an
+apron at the board's edge that meets the surround. The simulation did not move and neither did a
+golden: the rule changes a ramp's shape, never which cells have one, and those are exactly the cells
+`TerraceFoot` already knew.
+
+Three findings came from photographs rather than tests. The skin first drew the meadow yellow; a
+same-run pair with the skin switched off proved the draw path, not the mesh — `RenderMesh` lights the
+ground differently from `RenderMeshInstanced`, and the skin now takes the instanced path. The stream
+banks were the most terraced thing left on screen, and are not foot cells at all (a stream cell is
+water, not air), so they needed a rule of their own; `SlicePickerBoardTests` then caught that rule
+dipping the bed under a cascade and dragging the water down with it. And the brown line round the
+board turned out to be the surround's deep tiles showing at a one-layer step, which the skin, having
+removed the rim boxes, showed more of — hence the apron.
+
+It costs the frame nothing measurable and meshing about 0.2 ms more a chunk, after three cuts. Design
+38 §20.

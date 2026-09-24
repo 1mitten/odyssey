@@ -23,6 +23,13 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do the terraces read as slopes?** (`claude/meadow-skin`, design 38 §20). New game; walk the
+  camera along a hillside and a stream. The steps between terraces should read as grassy slopes, the
+  stream banks should run down into the water, and there should be no line where the board meets the
+  land around it. **A wrong answer looks like:** a gap or a dark crack between cells; a slope that
+  flickers where it meets flat ground; a colonist, item or tuft of grass sunk into a slope or floating
+  over it; a click on a slope picking the wrong cell; the meadow a different green from before.
+
 - **Is a dropped stack or a fallen colonist easy to see now?** (`claude/meadow-look-polish`,
   design 38 §19a). Drop a stack on long grass and next to a bush; let a colonist sleep outdoors (or
   get downed). The grass should lie flat in a ring round each, and a bush over one should fade to a
