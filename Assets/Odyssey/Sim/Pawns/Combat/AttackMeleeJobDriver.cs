@@ -25,7 +25,7 @@ namespace Odyssey.Sim.Pawns
     /// <see cref="WorkFocus"/> reports — and while approaching, the target's cell the side was
     /// chosen against), <see cref="Job.WorkTicks"/> (the tick of the last re-plan,
     /// the precedent <c>BuildJobDriver</c> set for a driver's own use of that field),
-    /// <see cref="Job.DestCell"/> (<see cref="ToTheDeath"/> or -1), and on the pawn the target,
+    /// <see cref="Job.DestCell"/> (<see cref="ToTheDeath"/>, <see cref="Joining"/> or -1), and on the pawn the target,
     /// the swing clock, the destination and the step progress. No decision reads the path, which
     /// is not saved, so a save taken mid-swing resumes on the same ticks.</para>
     ///
@@ -39,12 +39,15 @@ namespace Odyssey.Sim.Pawns
     ///
     /// <para><b>When it ends.</b> The target gone, dead, or — unless the job was ordered on a pawn
     /// already down — down (the owner's "until one of them goes down"); unreachable; out of reach
-    /// for a drafted colonist's hold-attack, which never chases; and, for any attack nobody
+    /// for a drafted colonist's hold-attack, which never chases; for a drafted colonist who joined
+    /// a fight nearby (<see cref="Joining"/>, design 33 §15), which does chase, when the attacker is
+    /// on no colonist any more; and, for any attack nobody
     /// ordered, after <see cref="CombatDef.rechooseTicks"/> at a step boundary, so a hunt or a revenge picks
     /// its target again rather than chasing the first one across the board for ever.</para>
     ///
-    /// <para><b>Buildings are C6's.</b> A job with no <see cref="Pawn.CombatTarget"/> is the
-    /// building branch and fails until C6 writes it — the one line marked below.</para>
+    /// <para><b>A building</b> (C6, design 33 §13e): a job with no <see cref="Pawn.CombatTarget"/>
+    /// is an order on a building, carried by its record handle in <see cref="Job.DestCell"/> —
+    /// <see cref="TickBuilding"/>, taken at the top of <see cref="Tick"/>.</para>
     /// </summary>
     public class AttackMeleeJobDriver : JobDriver
     {
@@ -56,6 +59,14 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary><see cref="Job.DestCell"/> for an order given on a pawn already down: carry on until it is dead.</summary>
         public const int ToTheDeath = 1;
+
+        /// <summary>
+        /// <see cref="Job.DestCell"/> for a drafted colonist who left her hold to join a fight
+        /// nearby (design 33 §15): unforced, but she goes to the attacker, which the hold's own blow
+        /// never does. Ends as any unforced attack ends, and also once the attacker is no longer
+        /// fighting a colonist.
+        /// </summary>
+        public const int Joining = 2;
 
         public override bool TryMakeReservations(PawnContext ctx) => true;
 
@@ -82,8 +93,8 @@ namespace Odyssey.Sim.Pawns
 
         public override JobStatus Tick(PawnContext ctx)
         {
-            // C6: a building target. The branch point the brief asks lane A to leave.
-            if (Pawn.CombatTarget == 0) return JobStatus.Failed;
+            // C6: a building target (design 33 §13e), at the branch point lane A left.
+            if (Pawn.CombatTarget == 0) return TickBuilding(ctx);
 
             Pawn? target = ctx.Pawns.Get(new PawnId(Pawn.CombatTarget));
             if (target == null || Melee.IsDead(target)) return JobStatus.Succeeded;
@@ -104,7 +115,15 @@ namespace Odyssey.Sim.Pawns
             bool boundary = Pawn.MoveProgress < Pawn.MoveRatePerMille();
 
             // A drafted colonist's own blow at an adjacent threat: she strikes from where she stands.
-            bool hold = Pawn.Drafted && !Job.PlayerForced;
+            // Not when she left her hold to join a fight nearby (design 33 §15): she goes to it.
+            bool joining = Job.DestCell == Joining;
+            bool hold = Pawn.Drafted && !Job.PlayerForced && !joining;
+
+            // Joined to help a colonist: once the attacker is on no colonist — gone to a building,
+            // between minds, or its revenge spent — the reason is over, and she holds where she is.
+            if (joining && Melee.ColonistUnderAttackBy(ctx, target) == null)
+                return boundary ? JobStatus.Succeeded : JobStatus.Ongoing;
+
             bool inReach = Melee.InReach(ctx, Pawn, target, mode);
 
             if (inReach)
@@ -192,11 +211,16 @@ namespace Odyssey.Sim.Pawns
         /// (<see cref="Pawn.HeldSwing"/>) until the impact applies exactly that. A critical that will
         /// land is published as <see cref="CombatEventKind.SwingCritical"/> in place of
         /// <see cref="CombatEventKind.Swing"/>.
+        /// <para><b>A swing is activity for the draft</b> (design 33 §15), as it already was at a
+        /// building (<see cref="StartSwingAtBuilding"/>): an attacker standing on her side in reach
+        /// never re-thinks, so the quiet clock set when the fight began would otherwise run out
+        /// under a long fight and let the draft go the tick it ended.</para>
         /// </summary>
         void StartSwing(PawnContext ctx, Pawn target, int tick)
         {
             Armament armament = ctx.WeaponRules.ArmamentOf(Pawn, ctx);
             Pawn.NextSwingTick = tick + armament.Attack.cooldownTicks;
+            if (Pawn.Drafted) Pawn.DraftQuietSinceTick = tick;
             Pawn.BeginGesture(PawnGesture.Strike);
             SwingOutcome outcome = ctx.MeleeRules.Resolve(Pawn, target, armament, ctx, tick);
             Pawn.HoldSwing(outcome);
@@ -204,6 +228,125 @@ namespace Odyssey.Sim.Pawns
             ctx.CombatLog.Report(kind, Pawn.Id, target.Id, ctx.Size.FromIndex(target.Cell), tick,
                 armament.Attack.windupTicks, armament.ItemDef);
             Job.TargetCell = target.Cell;
+            ToilIndex = Windup;
+            ToilProgress = 0;
+        }
+
+        /// <summary>
+        /// The building mode (design 33 §13e). The building never moves, so it is simpler than the
+        /// chase: stand beside it on a side nobody else holds, and swing on the weapon's cadence
+        /// until it has gone. Everything it decides with is saved — the handle and struck cell on
+        /// the job, the tick of the last look in <see cref="Job.WorkTicks"/>, and on the pawn the
+        /// cells, the destination, the step and the swing clock.
+        /// <list type="bullet">
+        /// <item><b>Gone</b> — demolished by anyone, taken apart, or its cell given to a new record —
+        /// is success.</item>
+        /// <item><b>In reach at a step boundary on a cell nobody else holds</b>: stop, and swing
+        /// when the clock allows.</item>
+        /// <item>Otherwise <b>choose a side</b> when the attack is new, when she is in reach on a
+        /// held cell, or, waiting, every <see cref="CombatDef.chaseRepathTicks"/>; not while walking,
+        /// since nothing she walks to can move. No side she can reach at all: the order fails.
+        /// Every side held: a player's order waits, a marauder's own choice thinks again (§19).</item>
+        /// </list>
+        /// </summary>
+        JobStatus TickBuilding(PawnContext ctx)
+        {
+            // A job naming neither a pawn nor a building is nobody's order: it fails, as the stub did.
+            if (Job.DestCell < 0) return JobStatus.Failed;
+            if (!BuildingTargets.TryStanding(ctx, Job.DestCell, out BuildingTarget target)) return JobStatus.Succeeded;
+
+            if (ToilIndex == Windup)
+            {
+                ToilProgress += Rates.Scale;
+                return JobStatus.Ongoing;
+            }
+
+            int tick = ctx.CurrentTick;
+            TraverseMode mode = Job.Mode;
+            bool boundary = Pawn.MoveProgress < Pawn.MoveRatePerMille();
+
+            // A marauder's own choice (design 33 §14b) thinks again every rechooseTicks, between
+            // swings and in reach or not — unlike a hunt, which re-chooses only while chasing,
+            // because one beating on a wall never chases and would not look up till it fell. A
+            // player's order is forced and runs until the building has gone.
+            if (!Job.PlayerForced && boundary && tick - Pawn.JobStartTick >= ctx.Content.Combat.rechooseTicks)
+                return JobStatus.Succeeded;
+
+            bool inReach = BuildingTargets.InReach(ctx, Pawn.Cell, target);
+
+            if (inReach)
+            {
+                if (!boundary) return JobStatus.Ongoing;
+                if (MayStrikeFromHere(ctx, tick))
+                {
+                    Pawn.ClearPath();
+                    Pawn.Destination = -1;
+                    if (Job.WorkTicks == 0) Job.WorkTicks = tick;
+                    if (tick >= Pawn.NextSwingTick) StartSwingAtBuilding(ctx, target, tick);
+                    return JobStatus.Ongoing;
+                }
+            }
+
+            int dest = Pawn.Destination;
+            bool due = tick - Job.WorkTicks >= ctx.Content.Combat.chaseRepathTicks;
+            if (dest < 0 && (inReach || due || Job.WorkTicks == 0))
+            {
+                Job.WorkTicks = tick;
+                dest = BuildingTargets.ChooseSide(ctx, Pawn, target, mode, out bool reachable);
+                if (!reachable) return JobStatus.Failed;
+                if (dest < 0)
+                {
+                    // Every side held. A marauder's own choice thinks again at once (design 33
+                    // §19): the choice takes only a building with a side free, so it goes to the
+                    // next one rather than standing on "Fighting" behind the one who got the side —
+                    // the owner's three at a wall on a terrace edge, which had one side. Two can
+                    // choose one side in the same tick, before either has walked to it; this is
+                    // what sorts them out.
+                    if (!Job.PlayerForced) return boundary ? JobStatus.Succeeded : JobStatus.Ongoing;
+
+                    // A player's order waits where she is and looks again.
+                    Pawn.ClearPath();
+                    Pawn.Destination = -1;
+                    return JobStatus.Ongoing;
+                }
+            }
+
+            if (dest < 0) return JobStatus.Ongoing;
+
+            JobStatus walk = GotoCell(ctx, dest);
+            return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
+        }
+
+        /// <summary>
+        /// May she strike the building from the cell she is on? Not from a cell another fighter
+        /// holds (<see cref="Melee.Holds"/>); standing on a side she took and waiting out her swing
+        /// clock, it is still hers, so she is not asked every tick — as <see cref="MayFightFrom"/>.
+        /// </summary>
+        bool MayStrikeFromHere(PawnContext ctx, int tick)
+        {
+            if (Pawn.Destination < 0 && tick < Pawn.NextSwingTick && Job.WorkTicks != 0) return true;
+            return !Melee.Holds(ctx, Pawn, Pawn.Cell);
+        }
+
+        /// <summary>
+        /// A blow at a building begins (design 33 §13f): the clock forward by the attack's cooldown,
+        /// the strike gesture, the outcome decided now (<see cref="BuildingTargets.Resolve"/>) and
+        /// held on the pawn to the impact, the <see cref="CombatEventKind.Swing"/> reported against
+        /// target 0 at the cell she strikes. <b>A swing is activity for the draft</b>: the quiet
+        /// clock starts again, or a colonist who took more than four hours over a stone wall would
+        /// undraft the tick it fell.
+        /// </summary>
+        void StartSwingAtBuilding(PawnContext ctx, in BuildingTarget target, int tick)
+        {
+            Armament armament = ctx.WeaponRules.ArmamentOf(Pawn, ctx);
+            Pawn.NextSwingTick = tick + armament.Attack.cooldownTicks;
+            Pawn.BeginGesture(PawnGesture.Strike);
+            Pawn.HoldSwing(BuildingTargets.Resolve(Pawn, armament, target, ctx, tick));
+            if (Pawn.Drafted) Pawn.DraftQuietSinceTick = tick;
+
+            Job.TargetCell = BuildingTargets.StruckCell(ctx, Pawn.Cell, target);
+            ctx.CombatLog.Report(CombatEventKind.Swing, Pawn.Id, default, ctx.Size.FromIndex(Job.TargetCell), tick,
+                armament.Attack.windupTicks, armament.ItemDef);
             ToilIndex = Windup;
             ToilProgress = 0;
         }

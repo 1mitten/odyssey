@@ -25,6 +25,25 @@ namespace Odyssey.Tests.Hud
                 Assert.That(BloodModel.For(quiet), Is.EqualTo(BloodMark.None), $"a {quiet} bled");
         }
 
+        /// <summary>
+        /// A wall does not bleed (design 33 §13i): a hit on a building — target 0 — leaves nothing,
+        /// and so does its demolition. The control is the same hit on a pawn.
+        /// </summary>
+        [Test]
+        public void ABuildingNeverBleeds()
+        {
+            var onAWall = new CombatEventView(1, 10, CombatEventKind.Hit, new PawnId(1), PawnId.None,
+                new CellRef(2, 2, 1), 4_000, -1);
+            var onAPawn = new CombatEventView(2, 10, CombatEventKind.Hit, new PawnId(1), new PawnId(2),
+                new CellRef(2, 2, 1), 4_000, -1);
+            var down = new CombatEventView(3, 10, CombatEventKind.Demolished, new PawnId(1), PawnId.None,
+                new CellRef(2, 2, 1), EdificeHandle.Wall, -1);
+
+            Assert.That(BloodModel.For(onAWall), Is.EqualTo(BloodMark.None), "a wall bled");
+            Assert.That(BloodModel.For(down), Is.EqualTo(BloodMark.None));
+            Assert.That(BloodModel.For(onAPawn), Is.EqualTo(BloodMark.Spurt), "the control: a pawn");
+        }
+
         [Test]
         public void ADownAndADeathLeaveAPoolAndADeathsIsTheLarger()
         {

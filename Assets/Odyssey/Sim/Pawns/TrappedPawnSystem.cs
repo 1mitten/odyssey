@@ -56,6 +56,8 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < pawns.Count; i++)
             {
                 Pawn pawn = pawns[i];
+                // In somebody's arms: where the carrier is, which is the carrier's to be freed from.
+                if (pawn.CarriedBy != 0) continue;
 
                 // **Filled, not merely unwalkable**, and the difference is the whole of the
                 // rule's safety. "Not walkable" is true of a great deal a colonist may legally

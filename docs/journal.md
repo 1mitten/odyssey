@@ -12103,6 +12103,30 @@ passed — it took only the opaque queue, and the Meadow crowns sit at 2501 like
 picture proof, not the unit test, said so. Tree calls fell 80–96%, the frame most on Huge zoomed out
 (20.1 → 13.8 ms at 1080p in the editor), and neither change moved the near picture.
 
+## 2026-09-24 — Rescue (C4)
+
+The owner answered three questions first: a rescued colonist stays in bed **until whole**; with no
+free bed, **leave her** and say why; and she is **cradled** in the arms (design 33 §11).
+
+**"Until whole" needed no new state.** A colonist heals only in a bed, and a downed pawn's needs
+pause, so the whole rule is the recovery line: a colonist gets up at 100 %, and the content's 15 % is
+the animals' alone. What it did need was **a bed that stays hers**: the rescuer's reservation ended
+with its job, and the next tired colonist would have climbed in beside her. The lay passes the
+reservation to the patient, whose `Job_Downed` holds it until she gets up.
+
+**The carry is the item carry's, from the outside in.** The lift and the lay use the item's
+`LiftTicks` and its Lift and Stow gestures, so the stoop is already drawn; the carrier takes the
+load's scoop; and the body is laid on the cradle the load uses, measured off the palms, by a third
+pass after the loads for the reason the second exists — the palms are final only then. The sleep
+pose, which can be aimed at a head point, a direction and a surface, lays her across the arms and on
+the mattress; the pack's floor loop could only lie on whatever floor the root stood on.
+
+**Two measurements corrected guesses.** The test's first bounds assumed a person-sized figure; the
+figures are drawn 2.1 m to the head, so the arms are at 1.5 m and a carried head at 1.8. And ninety
+batch frames read the body mid-fall: a frame is a couple of milliseconds, so the test waits in real
+seconds. The Long soak caught the rule change on its own — a colonist rescued in a marauder soak
+healed past 15 % while down, which its invariant still forbade.
+
 ## 2026-09-24 — CI chooses its tiers by what a PR touches (process §5)
 
 The owner asked for tests to run only for the area a change touched, because every PR retested

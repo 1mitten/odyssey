@@ -25,10 +25,9 @@ namespace Odyssey.Hud
     /// <see cref="ContextMenuModel"/>, asked by <see cref="OrderModel.RightClick"/> after this —
     /// whose <i>Equip</i> row sends the same <see cref="IntentKind.OrderEquip"/> for the same
     /// primary colonist, drafted or not.</para>
-    /// <para><b>Anything else falls through</b> to the context menu and then to
-    /// <see cref="OrderModel.RightClick"/>'s move, and
-    /// that includes a click on a building: routing one to an attack is C6's, and then only for an
-    /// edifice that occupies the cell, never a floor or a slab. A pawn under the pointer wins over
+    /// <para><b>Anything else falls through</b> to the context menu, then to the building half
+    /// (<see cref="RouteBuilding"/>, C6: an edifice that occupies the cell and has hit points,
+    /// never a floor or a slab), and then to <see cref="OrderModel.RightClick"/>'s move. A pawn under the pointer wins over
     /// the cell it stands in, because the pawn is what the player pointed at; a colonist under the
     /// pointer with no Ctrl claims nothing, so the click is the move it was in C1.</para>
     ///
@@ -58,6 +57,39 @@ namespace Odyssey.Hud
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// The building half of a right-click (C6, design 33 §5j, §13i): with <b>no pawn under the
+        /// pointer</b>, a cell whose standing edifice has hit points is attacked by every selected
+        /// drafted colonist — <see cref="IntentKind.OrderAttack"/> with <c>B = 0</c> and the cell
+        /// clicked. Asked by <see cref="OrderModel.RightClick"/> <b>after</b> <see cref="Route"/>
+        /// and the context menu, so a pawn on a bed is the pawn, and a weapon on a shelf opens the
+        /// menu to be equipped rather than the shelf being smashed; and before the move.
+        ///
+        /// <para><paramref name="edifice"/> is what stands in the clicked cell, an
+        /// <see cref="EdificeHandle"/> value the presenter reads off its render mirror, as it reads
+        /// the pawn under the pointer — this assembly cannot see the grid. <b>Which edifices are
+        /// targets is the simulation's</b>, published as
+        /// <see cref="WorldSnapshot.EdificeHitPoints"/>: a wall, a door, a bed, a shelf, a ladder,
+        /// a campfire, a generator, a heater, and never a tree. A floor is not an edifice at all,
+        /// so the presenter reports none and the click moves.</para>
+        /// </summary>
+        public static bool RouteBuilding(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot,
+            CellRef? cell, PawnId under, int edifice, List<Intent> into)
+        {
+            if (cell == null || under.IsValid || edifice == EdificeHandle.None) return false;
+            if (snapshot.EdificeHitPoints(edifice) <= 0) return false;
+
+            bool any = false;
+            for (int i = 0; i < selection.Count; i++)
+            {
+                PawnId pawn = selection[i];
+                if (!CanFight(snapshot, pawn, out _)) continue;
+                into.Add(new Intent(IntentKind.OrderAttack, cell.Value, pawn.Value, 0));
+                any = true;
+            }
+            return any;
         }
 
         /// <summary>

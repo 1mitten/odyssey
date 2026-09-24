@@ -76,6 +76,15 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Per mille applied once per copy beyond the first.</summary>
         public int stackMultiplierPerMille = 750;
+
+        /// <summary>
+        /// Added again at its <see cref="stackLimit"/>, does the memory <b>renew</b> — the copy
+        /// that would lapse soonest pushed out to a full <see cref="durationTicks"/> from now — rather
+        /// than the repeat being dropped? False, the rule every thought had before it, unless the
+        /// content says otherwise (design 33 §14e: the friendly-fire memory, so the day runs from the
+        /// latest blow). Read by <see cref="Pawn.AddMemory"/> and nothing else.
+        /// </summary>
+        public bool renewsOnRepeat;
     }
 
     public static class ThoughtIndex
@@ -93,7 +102,14 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>The same, hot side.</summary>
         public const int SleptHot = 5;
-        public const int Count = 6;
+
+        /// <summary>Hurt by a colonist's blow (design 33 §12, friendly fire). Given by
+        /// <c>FriendlyFireListener</c>; appended, as every thought is.</summary>
+        public const int AttackedByColonist = 6;
+
+        /// <summary>A colonist died; felt by every other colonist (design 33 §12).</summary>
+        public const int ColonistDied = 7;
+        public const int Count = 8;
     }
 
     /// <summary>
@@ -155,6 +171,7 @@ namespace Odyssey.Sim.Pawns
         public const int Downed = JobHandle.Downed;
         public const int Equip = JobHandle.Equip;
         public const int Rescue = JobHandle.Rescue;
+        public const int Steal = JobHandle.Steal;
         public const int Count = JobHandle.Count;
     }
 
@@ -187,6 +204,31 @@ namespace Odyssey.Sim.Pawns
         Colony = 0,
         Wild = 1,
         Hostile = 2,
+    }
+
+    /// <summary>
+    /// What a hostile came for, once there is nobody left standing to fight and nothing left to
+    /// break (design 33 §17; the owner, 2026-09-24: <i>"It will thieve items or kidnap people
+    /// depending on their motivation creating a negative event (but they could be rescued later) -
+    /// seam this later but for now - thieve items"</i>). On the kind, as its weapon and its way of
+    /// walking are. <b>Only <see cref="Loot"/> is acted on</b>: <see cref="Kidnap"/> does exactly
+    /// what <see cref="Loot"/> does today, and <c>TheftTests.AKidnapperStealsAsALooterDoes</c>
+    /// says so. Appended, never inserted: a content name, and the day a motive is rolled per pawn
+    /// it is saved.
+    /// </summary>
+    public enum Motive : byte
+    {
+        /// <summary>Came for nothing but the fight: with nobody to fight and nothing to break, it idles. Every kind but the marauder.</summary>
+        None = 0,
+
+        /// <summary>Carries off the nearest stack it can lift and leaves the board with it.</summary>
+        Loot = 1,
+
+        /// <summary>
+        /// Carries off a downed colonist, for the colony to get back later. <b>The seam, not built</b>:
+        /// today it loots, exactly as <see cref="Loot"/> does (design 33 §17f).
+        /// </summary>
+        Kidnap = 2,
     }
 
     /// <summary>A job names a driver; the driver runs toils. This is the naming half.</summary>
@@ -670,7 +712,9 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// How this species traverses the graph — the mask every link and portal edge already
         /// carries (design 29 §4). A hog is <see cref="TraverseMode.Animal"/>: no ladders and no
-        /// doors it must open. A rat climbs anything, so it is <see cref="TraverseMode.Colonist"/>.
+        /// doors it must open. A rat climbs anything but does not swim, so it is
+        /// <see cref="TraverseMode.Climber"/>. A kind may override it
+        /// (<see cref="PawnKindDef.traverseMode"/>): the marauder does.
         /// </summary>
         public TraverseMode traverseMode = TraverseMode.Colonist;
 
@@ -750,6 +794,23 @@ namespace Odyssey.Sim.Pawns
         /// spawns whose kind names one — so the colonist and the two animals cost one comparison.
         /// </summary>
         public string weapon = string.Empty;
+
+        /// <summary>
+        /// How this kind traverses the graph, by <see cref="TraverseMode"/> name, when it is not
+        /// its species' way (design 33 §16); empty takes <see cref="SpeciesDef.traverseMode"/>. A
+        /// marauder is a person who does not open the colony's doors, so it is
+        /// <see cref="TraverseMode.Marauder"/> on the kind while its species stays the colonist's.
+        /// Resolved once, by name, into <see cref="PawnContent.KindMode"/>; a name the enum does not
+        /// have fails the load. Read through <see cref="Pawn.OwnMode"/>, never here.
+        /// </summary>
+        public string traverseMode = string.Empty;
+
+        /// <summary>
+        /// What a hostile of this kind came for (design 33 §17): <see cref="Motive.Loot"/> for the
+        /// marauder, <see cref="Motive.None"/> for everybody else. Resolved once into
+        /// <see cref="PawnContent.KindMotive"/>; read through <see cref="PawnContent.MotiveOf"/>.
+        /// </summary>
+        public Motive motive = Motive.None;
 
         public int startingMood = 600;
         public int[] startingNeeds = { 800, 800, 800 };
@@ -1025,6 +1086,31 @@ namespace Odyssey.Sim.Pawns
             (uint)kind < (uint)KindWeapon.Length ? KindWeapon[kind] : -1;
 
         /// <summary>
+        /// The traverse mode each kind moves in: its own <see cref="PawnKindDef.traverseMode"/> where
+        /// it names one, else its species'. Read through <see cref="ModeOf"/>.
+        /// </summary>
+        public TraverseMode[] KindMode = System.Array.Empty<TraverseMode>();
+
+        /// <summary>
+        /// The traverse mode a pawn of this kind moves in (design 33 §16) — and its species' for a
+        /// content set with no table. The one owner of "how does this pawn walk between jobs, and in
+        /// every job it chooses for itself"; <see cref="Pawn.OwnMode"/> is how it is asked.
+        /// </summary>
+        public TraverseMode ModeOf(int kind) =>
+            (uint)kind < (uint)KindMode.Length ? KindMode[kind] : SpeciesOf(kind).traverseMode;
+
+        /// <summary>
+        /// What each kind came for (<see cref="PawnKindDef.motive"/>), copied out of the Defs into
+        /// this record's own array, so a test that wants a kidnapper sets it here and never writes
+        /// through a Def every other record shares. Read through <see cref="MotiveOf"/>.
+        /// </summary>
+        public Motive[] KindMotive = System.Array.Empty<Motive>();
+
+        /// <summary>What a pawn of this kind came for (design 33 §17) — <see cref="Motive.None"/> for a content set with no table.</summary>
+        public Motive MotiveOf(int kind) =>
+            (uint)kind < (uint)KindMotive.Length ? KindMotive[kind] : Motive.None;
+
+        /// <summary>
         /// The one species a content set built in code has: a person. Content from Defs always
         /// carries a table and never reaches this.
         /// </summary>
@@ -1178,7 +1264,9 @@ namespace Odyssey.Sim.Pawns
             content.Thoughts = ByName<ThoughtDef>(defs,
                 "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround", "Thought_Fell",
                 // Appended, never inserted: a thought index rides every saved memory.
-                "Thought_SleptCold", "Thought_SleptHot");
+                "Thought_SleptCold", "Thought_SleptHot",
+                // Friendly fire (design 33 §12).
+                "Thought_AttackedByColonist", "Thought_ColonistDied");
             content.Jobs = ByName<JobDef>(defs,
                 "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine",
                 "Job_Deliver", "Job_Build", "Job_Deconstruct",
@@ -1190,7 +1278,9 @@ namespace Odyssey.Sim.Pawns
                 // Power (design 32), appended for the same reason.
                 "Job_LayConduit", "Job_RemoveConduit", "Job_Refuel",
                 // The combat line, claimed together by its contracts step (design 33 §5).
-                "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue");
+                "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue",
+                // A marauder carrying something off the board (design 33 §17).
+                "Job_Steal");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",
@@ -1257,6 +1347,28 @@ namespace Odyssey.Sim.Pawns
                     throw new DefLoadException(
                         $"PawnKindDef '{content.Kinds[k].defName}' names weapon '{wanted}', which has no weapon block.");
             }
+            // How each kind moves (design 33 §16): its own mode by name, or its species'. After the
+            // species, which this reads. A name the enum does not have fails the load.
+            content.KindMode = new TraverseMode[content.Kinds.Length];
+            for (int k = 0; k < content.Kinds.Length; k++)
+            {
+                string wanted = content.Kinds[k].traverseMode;
+                if (string.IsNullOrEmpty(wanted))
+                {
+                    content.KindMode[k] = content.Species[content.KindSpecies[k]].traverseMode;
+                    continue;
+                }
+                if (!System.Enum.TryParse(wanted, ignoreCase: false, out TraverseMode mode)
+                    || !System.Enum.IsDefined(typeof(TraverseMode), mode))
+                    throw new DefLoadException(
+                        $"PawnKindDef '{content.Kinds[k].defName}' names traverse mode '{wanted}', which is not one.");
+                content.KindMode[k] = mode;
+            }
+
+            // What each kind came for (design 33 §17), into the record's own array.
+            content.KindMotive = new Motive[content.Kinds.Length];
+            for (int k = 0; k < content.Kinds.Length; k++) content.KindMotive[k] = content.Kinds[k].motive;
+
             if (!content.SpeciesOf(0).person)
                 throw new DefLoadException("kind 0 must be a person: it is what every pawn from before the kind table reads as.");
 

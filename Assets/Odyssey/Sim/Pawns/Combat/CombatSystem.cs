@@ -112,6 +112,18 @@ namespace Odyssey.Sim.Pawns
             SwingOutcome held = attacker.HeldSwing;
             swing.EndSwing();
 
+            // A building (design 33 §13g): it cannot step away, so the blow lands on it if it still
+            // stands and she is still beside it, and falls on nothing if it has gone.
+            if (attacker.CombatTarget == 0)
+            {
+                Job job = attacker.CurrentJob!;
+                if (!BuildingTargets.TryStanding(_ctx, job.DestCell, out BuildingTarget building)) return;
+                if (!BuildingTargets.InReach(_ctx, attacker.Cell, building)) return;
+                SwingOutcome blow = decided ? held : BuildingTargets.Resolve(attacker, armament, building, _ctx, tick);
+                StrikeBuilding(attacker, building, BuildingTargets.StruckCell(_ctx, attacker.Cell, building), armament, blow, tick);
+                return;
+            }
+
             Pawn? target = _ctx.Pawns.Get(new PawnId(attacker.CombatTarget));
             if (target == null) return;
 
@@ -154,7 +166,11 @@ namespace Odyssey.Sim.Pawns
             int hp = pawn.HpMilli + amount;
             pawn.HpMilli = hp > pawn.HpMaxMilli ? pawn.HpMaxMilli : hp;
 
-            if (pawn.Downed && (long)pawn.HpMilli * 1_000 >= (long)pawn.HpMaxMilli * combat.downedRecoverAtPerMille)
+            // Up when whole, for a colonist (design 33 §11c, owner): she heals only in a bed, and a
+            // rescued colonist stays in it until she is. The content's threshold is the animals',
+            // which heal where they lie.
+            int recoverAt = pawn.IsColonist ? 1_000 : combat.downedRecoverAtPerMille;
+            if (pawn.Downed && (long)pawn.HpMilli * 1_000 >= (long)pawn.HpMaxMilli * recoverAt)
                 Recover(pawn, tick);
         }
 
