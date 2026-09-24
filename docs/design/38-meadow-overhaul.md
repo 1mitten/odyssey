@@ -184,12 +184,16 @@ simulation does not change. Validated against the code (planning agent, 2026-09-
   bedrock (three today); at 20 it has four, for 25% more cells (Huge 70.6 → 87.1 MiB); at 24, eight,
   for 50% more (Huge 104 MiB). The Huge edit tick follows the relief, not the depth (1.21 → 1.48 ms
   at 20, 1.62 at 24).
-  **Recommendation, ranked: 20 layers, then 24, never 16.** Twenty gives the mine back with a layer
-  to spare at the smallest cost that does; 24 buys a deeper mine the design has not asked for with
-  another 25% of cells; 16 deletes the mine under every valley. **The tie-breaker between 20 and 24
-  is the frame at 4K on Huge** — whether four more layers show up in `World` when the camera looks
-  at hills — and `FrameTimeTests.TheBoardDepthAgainstTheFrame` is the experiment, written and waiting
-  on disk space to run. If 24 costs the frame nothing measurable, the deeper mine is free and 24 wins.
+  **The tie-breaker was the frame, and it is run: depth costs the frame nothing** — 20 and 24
+  layers draw the same calls and chunks on every board, `World` within noise (`28-map-size.md` §11).
+  **Recommendation, ranked: 24 layers, then 20, never 16.** With the frame equal, 24 buys a mine
+  twice as deep as 20's (8 rock layers under the lowest valley against 4) and matches Large, which
+  already ships 24; what it costs is memory alone, Huge 87 → 104 MiB simulation-side (~129 with the
+  render mirror) and 606 KB saves. **What would flip it to 20:** the RTX 3050/3060 laptop's memory
+  budget, if a Huge board at ~130 MiB turns out to matter there. 16 deletes the mine under every
+  valley.
+  **The relief, not the depth, is what costs the frame**: ±4 adds ~600 draw calls and 0.6–0.75 ms
+  of `World` on Standard and Huge. M9's ground skin is the lever and is measured against that table.
 - **The board's height is measured before it is chosen.** 8 layers of relief on a 16-layer board
   leaves ground at `SizeY − 1 − 3 − 4`. The arms are 16, 20 and 24 tall on all four boards, for tick,
   memory, meshing and frame. The owner picks.
@@ -248,7 +252,7 @@ measurements here.
 | **M4** | Lush grass and flowers on today's ground (§5). | **First Play.** 2.0 ms at 4K. |
 | **M5** | Meadow trees and bushes as sim species; the topple; goldens measured; wiki. Confirm fruit-bearing. | **Second Play.** |
 | **M6** | Settings and presets (§9). | Each preset measured. |
-| **M7** | **Measured 2026-09-24** (§7, `28-map-size.md` §11): no cliffs at ±4; 20 layers recommended over 24, never 16. Frame arm written, not run (disk full). | **Owner picks.** |
+| **M7** | **Measured 2026-09-24** (§7, `28-map-size.md` §11): no cliffs at ±4; depth costs the frame nothing, relief ~600 calls; 24 layers recommended, then 20, never 16. | **Owner picks.** |
 | **M8** | Hills worldgen and the per-column slice. | Goldens measured. |
 | **M9** | The ground skin and its shader (§6). | **Third Play.** |
 | **M10** | The surround continues the skin (§7). | Seam-free at the rim. |

@@ -613,7 +613,27 @@ mirror, §2).
 - **Cavern and ore counts did not change with depth** (Standard 4 / 100 on every row). The arm counts
   deposits, not whether they sit where a colonist can reach them; that is not established.
 
-**The frame half is written and not yet run.** `FrameTimeTests.TheBoardDepthAgainstTheFrame` times
-every row above at the batch view and at 3840 × 2160 (the `World` section, calls and chunks), but the
-Unity tier could not run on 2026-09-24: drive D: was full (`ENOSPC` during package import), which is
-a machine problem and not this branch's. It is the tie-breaker below.
+**The frame** (`FrameTimeTests.TheBoardDepthAgainstTheFrame`, one run, RTX 5070 Ti on DX11, culling
+on, played wooded meadow; another session's PlayMode run and the CI runner shared the machine, so
+only differences inside the table are read):
+
+| Board | Config | Batch frame (`World`) | 4K frame (`World`) | Calls at 4K | Chunks at 4K |
+|---|---|---|---|---|---|
+| Small | today ±2 @16 | 1.95 (0.531) | 10.36 (0.791) | 660 | 55 |
+| | ±4 @16 / @20 / @24 | 2.47 / 2.43 / 2.26 (0.825 / 0.795 / 0.753) | 11.34 / 9.98 / 10.08 | 876 / 869 / 869 | 70 / 70 / 68 |
+| Standard | today ±2 @16 | 2.30 (0.699) | 9.88 (0.882) | 877 | 76 |
+| | ±4 @16 / @20 / @24 | 3.38 / 3.34 / 3.17 (1.443 / 1.435 / 1.348) | 15.77 / 12.08 / 12.06 | 1,520 / 1,489 / 1,478 | 126 / 123 / 118 |
+| Large | today ±2 @24 | 2.46 (1.274) | 10.57 (1.358) | 1,092 | 108 |
+| | ±4 @16 / @20 / @24 | 3.12 / 3.13 / 3.02 (1.828 / 1.826 / 1.774) | 13.68 / 14.46 / 15.98 | 1,678 / 1,662 / 1,652 | 143 / 139 / 136 |
+| Huge | today ±2 @16 | 2.72 (1.504) | 10.59 (1.814) | 1,443 | 139 |
+| | ±4 @16 / @20 / @24 | 3.45 / 3.49 / 3.41 (2.075 / 2.095 / 2.051) | 13.59 / 12.43 / 12.19 | 2,078 / 2,064 / 2,064 | 169 / 165 / 165 |
+
+- **Depth costs the frame nothing.** From 16 to 20 to 24 layers the calls and chunks are identical
+  or fall, and `World` moves inside the noise on every board. The camera draws the layers it can
+  see, and extra rock under the valleys is not among them.
+- **Relief costs the frame, and that is the finding.** ±2 → ±4 adds **~600 draw calls and 0.6–0.75
+  ms of `World`** on Standard and Huge (Standard 877 → ~1,490 calls, `World` 0.70 → 1.44 ms at the
+  batch view): taller hills put more layers of chunks in view. At 4K the frame moves 2–3 ms on
+  Standard and Huge, a figure noisier than `World` because the frame is GPU-bound there. **"Performance
+  doesn't suffer" is breached by the relief, not the depth**, and the lever is M9's ground skin, which
+  replaces ~625 turf instances a surface chunk with one mesh — measure it against this table.

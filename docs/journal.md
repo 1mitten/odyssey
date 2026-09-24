@@ -11696,3 +11696,11 @@ valley — and twenty is recommended over twenty-four, with the 4K frame as the 
 That tie-breaker could not be run: drive D: filled to zero bytes during this session and Unity's
 package import failed with `ENOSPC`. The arm is written. Every worktree on D: and the CI runner share
 the drive, so the next Unity run anywhere will fail the same way until space is freed.
+
+The frame arm ran the same day, in another worktree's warm Library once space was found, and it
+reversed the recommendation. Depth costs the frame nothing — 20 and 24 layers draw identical calls
+and chunks on every board — so the deeper mine is free at the frame and 24 is recommended, with
+memory the only price. What the frame *does* feel is the relief: ±4 hills add about 600 draw calls
+and 0.6–0.75 ms of `World` on Standard and Huge, because taller hills put more layers of chunks in
+view. So the owner's "make sure performance doesn't suffer" is a question for the ground skin (M9),
+not for the board height. EditMode 3,261 / 3,229 / 0, PlayMode 117 / 112 / 0.
