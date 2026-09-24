@@ -1123,6 +1123,9 @@ namespace Odyssey.Presentation.World
             {
                 CellRef cell = pawns[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
+                // Walls down: gone with the storey they stand on (design 42 §5). Skipped here and
+                // in the baked pass alike, so a hidden colonist does not fall through to a stand-in.
+                if (slice.HidesStandingAt(activeLayer, cell, World)) continue;
 
                 // A face that did not resolve is not drawn here at all: the pawn falls through to
                 // the baked path, which will draw whatever that row does resolve to (a marker, if

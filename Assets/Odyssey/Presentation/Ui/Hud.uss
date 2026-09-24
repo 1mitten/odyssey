@@ -811,12 +811,20 @@
     background-color: #e8b55c;
 }
 
-.rail__hint {
-    color: rgba(255, 255, 255, 0.50);
-    -unity-text-align: middle-center;
-    height: 14px;
-    margin-top: 6px;
+/* The walls-down switch under the cells (design 42 §7), where the "R / F" hint was. A cell's
+   width, lit from C# in the accent while on, the way the views strip's switches are. */
+.rail__walls {
+    width: 26px;
+    height: 22px;
+    margin-top: 4px;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-radius: 4px;
 }
+
+.rail__walls:hover { background-color: rgba(255, 255, 255, 0.07); }
 
 /* ---------------------------------------------------------------- the orders strip
 

@@ -158,6 +158,38 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
+        /// Walls down on the played board (design 42 §3a): the colony opens on the top terrace, and
+        /// every lower terrace must count as ground rather than as a tunnel, or the layer above it
+        /// is drawn as an x-ray — the see-through building the owner reported on 2026-09-24.
+        /// Measured on the generated board rather than asserted from a remembered number.
+        /// </summary>
+        [Test]
+        public void WithTheWallsDownEveryTerraceIsAboveGround()
+        {
+            using Board board = Generate(1u);
+            SliceSettings slice = board.Slice;
+            slice.landscapeFloor = board.Model.LowestOutdoorLayer;
+
+            TestContext.WriteLine($"[WallsDown] seed 1: opens on L{board.StartLayer}, " +
+                                  $"landscape floor (topmost rock of the lowest column) L{board.Model.LowestOutdoorLayer}");
+            Assert.That(board.Model.LowestOutdoorLayer, Is.LessThan(board.StartLayer - 1),
+                "the fixture has lower terraces to stand on");
+
+            for (int layer = board.Model.LowestOutdoorLayer + 1; layer < board.StartLayer; layer++)
+            {
+                slice.wallsLowered = false;
+                Assert.That(slice.BelowSurface(layer), Is.True, $"walls up, L{layer}: the rule as it was");
+                slice.wallsLowered = true;
+                Assert.That(slice.BelowSurface(layer), Is.False, $"walls down, L{layer}: a terrace is ground");
+                Assert.That(slice.GhostsAbove(layer), Is.False, $"walls down, L{layer}: nothing above is see-through");
+            }
+
+            slice.wallsLowered = true;
+            Assert.That(slice.BelowSurface(board.Model.LowestOutdoorLayer), Is.True,
+                "beneath the lowest ground is still underground");
+        }
+
+        /// <summary>
         /// Underground is untouched. The cap is already off downwards there, and a landscape floor
         /// that lifted it would hide the working the player went down to look at.
         /// </summary>

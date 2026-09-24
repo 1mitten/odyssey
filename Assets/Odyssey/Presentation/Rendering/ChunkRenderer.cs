@@ -998,8 +998,18 @@ namespace Odyssey.Presentation.Rendering
 
         readonly System.Diagnostics.Stopwatch _surroundTimer = new System.Diagnostics.Stopwatch();
 
+        /// <summary>
+        /// The slice this frame's world was drawn with, kept for the passes drawn after it — the
+        /// order marks — so a mark sits on what was drawn rather than on what would have been.
+        /// </summary>
+        SliceSettings? _drawnSlice;
+        int _drawnLayer;
+
         public void Render(int activeLayer, SliceSettings slice)
         {
+            _drawnSlice = slice;
+            _drawnLayer = activeLayer;
+
             // **Last frame's field, published first.** The grass is submitted below and the items
             // and marks that clear it are drawn after, so a field gathered and uploaded in one
             // frame would depend on a global landing between a submission and its execution. One
@@ -1110,6 +1120,12 @@ namespace Odyssey.Presentation.Rendering
                 if (above && aboveMode == AboveMode.RoofsOff) drawRoof = false;
                 else if (steps == 1 && slice.SuppressCeilingAt(activeLayer)) drawRoof = false;
 
+                // Walls down (design 42 §4): which form of the walls this layer draws, and whether
+                // its upper storeys are drawn at all. Both are a choice of list or of bucket, made
+                // here every frame — nothing is re-meshed when the Build palette opens or closes.
+                bool stumps = slice.LowersWallsOn(activeLayer, layer);
+                bool hideStacked = slice.HidesStackedOn(activeLayer, layer);
+
                 int first = layer * chunksPerLayer;
                 for (int i = 0; i < chunksPerLayer; i++)
                 {
@@ -1155,9 +1171,14 @@ namespace Odyssey.Presentation.Rendering
                         _chunkDistance[index] = distance;
                         _chunkSqrDistance[index] = sqrDistance;
                     }
-                    DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight, distance, body: true);
+                    DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight, distance, body: true,
+                        hideStacked: hideStacked);
                     DrawSkin(batch, shade, ghost, alpha);
-                    if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight, distance);
+                    if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight, distance,
+                        hideStacked: hideStacked);
+                    // Walls down (design 42 §4): one form of the walls or the other, never both.
+                    DrawBuckets(batch, stumps ? batch.Stumps : batch.Walls, shade, ghost, alpha, sight, distance,
+                        hideStacked: hideStacked);
                     _currentKind = OtherKind;
                 }
             }
@@ -1348,13 +1369,20 @@ namespace Odyssey.Presentation.Rendering
             return batch;
         }
 
+        /// <param name="hideStacked">
+        /// Skip the buckets of upper storeys — whatever is built on top of something built.
+        /// Walls-down asks it of the layers above the slice (design 42 §4); the landscape and a
+        /// building's ground floor are drawn either way.
+        /// </param>
         void DrawBuckets(ChunkBatch batch, System.Collections.Generic.List<InstanceBucket> buckets,
-            float shade, bool ghost, float alpha, bool sight = false, float distance = 0f, bool body = false)
+            float shade, bool ghost, float alpha, bool sight = false, float distance = 0f, bool body = false,
+            bool hideStacked = false)
         {
             for (int b = 0; b < buckets.Count; b++)
             {
                 InstanceBucket bucket = buckets[b];
                 if (bucket.Count == 0) continue;
+                if (hideStacked && bucket.Stacked) continue;
                 _currentKind = CallKindOf(bucket.Tint, bucket.Module);
                 _groupingTrees = GroupTrees && _currentKind == 0;
                 if (_currentKind == 0)
@@ -2035,6 +2063,9 @@ namespace Odyssey.Presentation.Rendering
             {
                 var cell = pawns[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
+                // Walls down: somebody on the upper storey of a house goes with the house
+                // (design 42 §5). One on a hilltop above the slice stands on landscape and stays.
+                if (slice.HidesStandingAt(activeLayer, cell, _model)) continue;
                 if (drawnAsFigures != null && drawnAsFigures.Contains(pawns[i].Id.Value)) continue;
 
                 // An animal is drawn only as a figure (design 29): this pass deals every pawn a
@@ -2109,7 +2140,7 @@ namespace Odyssey.Presentation.Rendering
                 if (_beardCounts[i] > 0)
                     SubmitPiece(Attachments.Beard(i), _beardPlacements[i], _beardCounts[i]);
 
-            RenderThings(snapshot, lowest, highest, material, carried, tickAlpha, movePerTick);
+            RenderThings(snapshot, lowest, highest, material, carried, tickAlpha, movePerTick, slice, activeLayer);
         }
 
         /// <summary>
@@ -2204,7 +2235,8 @@ namespace Odyssey.Presentation.Rendering
         /// crate on a map that will eventually hold thousands of them.
         /// </summary>
         void RenderThings(WorldSnapshot snapshot, int lowest, int highest,
-            Material fallback, ICarriedLoads? carried, float tickAlpha, int movePerTick)
+            Material fallback, ICarriedLoads? carried, float tickAlpha, int movePerTick,
+            SliceSettings? slice = null, int activeLayer = 0)
         {
             System.ReadOnlySpan<ThingView> things = snapshot.Things;
             StampLying(snapshot, lowest, highest);
@@ -2216,6 +2248,7 @@ namespace Odyssey.Presentation.Rendering
             {
                 CellRef cell = things[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
+                if (slice != null && slice.HidesStandingAt(activeLayer, cell, _model)) continue;
 
                 int def = things[i].DefIndex;
                 ResolvedModule? module = ItemModule(def);
@@ -3113,8 +3146,13 @@ namespace Odyssey.Presentation.Rendering
         {
             int index = _model.Index(cell.X, cell.Z, cell.Y);
 
+            // Walls down (design 42 §5): a mark on a hidden storey goes with it, and a mark on a
+            // lowered wall sits on its stump rather than over the air where the wall was.
+            if (_drawnSlice != null && _drawnSlice.HidesStandingAt(_drawnLayer, cell, _model)) return;
+            bool lowered = _drawnSlice != null && _drawnSlice.LowersWallsOn(_drawnLayer, cell.Y);
+
             Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(cell));
-            centre.y += _model.MarkHeight(index) + MarkLift;
+            centre.y += _model.MarkHeight(index, lowered) + MarkLift;
 
             var size = new Vector3(
                 CellMetrics.SizeXZ - inset * 2f, MarkThickness, CellMetrics.SizeXZ - inset * 2f);

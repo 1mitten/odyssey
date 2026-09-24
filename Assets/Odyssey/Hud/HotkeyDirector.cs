@@ -112,6 +112,13 @@ namespace Odyssey.Hud
 
         /// <summary>Open or close the Research tab (design 34), on the F3 the bar has advertised since M1.</summary>
         ResearchTab,
+
+        /// <summary>
+        /// Lower the walls to a stump, or raise them again (design 42), on H. Appended, so no
+        /// stored binding shifts; beside the slice keys in the panel, because it is part of the
+        /// same question of what the player can see.
+        /// </summary>
+        WallsDown,
     }
 
     /// <summary>What came of offering a key to a listening slot.</summary>
@@ -183,6 +190,7 @@ namespace Odyssey.Hud
             (HotkeyAction.SliceDown, HudKey.F,       HudKey.PageDown),
             (HotkeyAction.CycleAbove, HudKey.V,      HudKey.None),
             (HotkeyAction.FrameMap,  HudKey.Home,    HudKey.None),
+            (HotkeyAction.WallsDown, HudKey.H,       HudKey.None),
 
             (HotkeyAction.Pause,  HudKey.Space,  HudKey.None),
             (HotkeyAction.Speed1, HudKey.Digit1, HudKey.None),
@@ -387,6 +395,7 @@ namespace Odyssey.Hud
             HotkeyAction.Draft => "ui.keys.draft",
             HotkeyAction.InventoryTab => "ui.keys.inventory",
             HotkeyAction.ResearchTab => "ui.keys.research",
+            HotkeyAction.WallsDown => "ui.keys.wallsdown",
             _ => KeysKey,
         };
 

@@ -373,6 +373,7 @@ namespace Odyssey.Presentation.World
             {
                 CellRef cell = _model.Size.FromIndex(_cells[i]);
                 if (cell.Y < lowest || cell.Y > highest) continue;
+                if (slice.HidesStandingAt(activeLayer, cell, _model)) continue;
 
                 Vector3 floor = GroundRelief.Drape(
                     CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y)).GetColumn(3);
