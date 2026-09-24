@@ -207,7 +207,7 @@ MonoBehaviour:
     Clips:
     - {fileID: 8300000, guid: a97e41f278ac2b14b94ec85c94a90269, type: 3}
     Bus: 2
-    Volume: 0.55
+    Volume: 0.45
     VolumeVariance: 0
     PitchVariance: 0
     SpatialBlend: 1

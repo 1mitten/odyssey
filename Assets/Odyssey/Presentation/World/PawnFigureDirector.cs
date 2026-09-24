@@ -552,6 +552,12 @@ namespace Odyssey.Presentation.World
             public Vector3 Scale;
             public LocomotionEntry[] Gaits = Array.Empty<LocomotionEntry>();
 
+            /// <summary>
+            /// The settled idle to sit in, or null. When present it is the mixer's last input,
+            /// after every gait. See <see cref="SitPose"/>.
+            /// </summary>
+            public AnimationClip? Sit;
+
             /// <summary>Gait speeds as drawn, i.e. after Scale. See <see cref="GroundSpeeds"/>.</summary>
             public float[] Speeds = Array.Empty<float>();
 
@@ -929,6 +935,7 @@ namespace Odyssey.Presentation.World
                     Scale = row.scale,
                     Gaits = gaits,
                     Speeds = GroundSpeeds(gaits, row.scale),
+                    Sit = row.sitClip,
                     Feminine = row.sex == BodySex.Female,
                 };
             }
@@ -1344,6 +1351,12 @@ namespace Odyssey.Presentation.World
         /// game's own answer, which is what the pawn says.
         /// </summary>
         public float? ForceSleep { get; set; }
+
+        /// <summary>
+        /// Force every figure to a sit weight, for a harness. Null is the game's own answer,
+        /// which is what the pawn says.
+        /// </summary>
+        public float? ForceSit { get; set; }
 
         /// <summary>Add a world-space pitch to a bone, leaving the rest of its pose alone.</summary>
         static void Pitch(Transform? bone, Vector3 axis, float degrees)
@@ -1793,14 +1806,20 @@ namespace Odyssey.Presentation.World
                 : SleepPose.Settle(figure.SleepWeight, pawn.Asleep || figure.Fight.Lying ? 1f : 0f, deltaTime);
             if (figure.SleepWeight > 0.001f) AimSleep(figure, in pawn);
 
+            // Sitting by a fire (design 31 §18d). Eased like sleep; the blend itself is in Blend,
+            // because a sit is an input on the mixer rather than angles over it.
+            figure.SitWeight = ForceSit.HasValue
+                ? ForceSit.Value
+                : SitPose.Settle(figure.SitWeight, pawn.Seated ? 1f : 0f, deltaTime);
             // The weapon in the right hand, now that the tool, the load and the lie are known.
             ShowWeapon(figure, in pawn, carrying: carryDef >= 0, deltaTime);
 
             // Face the work. A pawn that has stopped walking has no heading left — that is what
             // makes PawnPose hand back a zero vector — so without the work cell the figure would
             // swing at whatever it happened to be facing when it arrived, which is as often as
-            // not straight past the tree.
-            if (pawn.Working)
+            // not straight past the tree. A sitter faces the fire for the same reason: the view
+            // names it in the same field, or she sits wherever she arrived facing.
+            if (pawn.Working || pawn.Seated)
             {
                 // Lifted before differencing: position is on the drawn ground, so a flat work
                 // cell would put a spurious rise into the vector. It is flattened straight
@@ -2002,9 +2021,20 @@ namespace Odyssey.Presentation.World
             speed *= 1f - Mathf.Clamp01(figure.SwimWeight);
 
             GaitBlend blend = GaitBlend.Solve(look.Speeds, speed);
+
+            // A sitter's weight is taken from the gaits rather than laid over them, so the mixer
+            // still sums to one: the figure is exactly as much sitter as it is not walker.
+            float sit = look.Sit != null ? Mathf.Clamp01(figure.SitWeight) : 0f;
+            if (look.Sit != null)
+            {
+                int seat = look.Gaits.Length;
+                figure.Mixer.SetInputWeight(seat, sit);
+                figure.Clips[seat].SetSpeed(running ? 1f : 0f);
+            }
+
             for (int i = 0; i < look.Gaits.Length; i++)
             {
-                figure.Mixer.SetInputWeight(i, blend.WeightOf(i));
+                figure.Mixer.SetInputWeight(i, blend.WeightOf(i) * (1f - sit));
                 // Under a computed gait the idle underneath is frozen as the gait fades in: an
                 // idle that shifts its weight and paws the ground is noise under a trot, and
                 // its pose at the frozen frame is a perfectly good stance to trot from.
@@ -2425,14 +2455,24 @@ namespace Odyssey.Presentation.World
 
             var graph = PlayableGraph.Create($"Odyssey pawn {_figures.Count}");
             graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
-            var mixer = AnimationMixerPlayable.Create(graph, face.Gaits.Length);
-            var clips = new AnimationClipPlayable[face.Gaits.Length];
+            // One input per gait, and the seat after them when the row has one (design 31 §18d).
+            int inputs = face.Gaits.Length + (face.Sit != null ? 1 : 0);
+            var mixer = AnimationMixerPlayable.Create(graph, inputs);
+            var clips = new AnimationClipPlayable[inputs];
 
             for (int i = 0; i < face.Gaits.Length; i++)
             {
                 clips[i] = AnimationClipPlayable.Create(graph, face.Gaits[i].clip);
                 graph.Connect(clips[i], 0, mixer, i);
                 mixer.SetInputWeight(i, i == 0 ? 1f : 0f);
+            }
+
+            if (face.Sit != null)
+            {
+                int seat = face.Gaits.Length;
+                clips[seat] = AnimationClipPlayable.Create(graph, face.Sit);
+                graph.Connect(clips[seat], 0, mixer, seat);
+                mixer.SetInputWeight(seat, 0f);
             }
 
             // The fight's clip layer over the gaits (design 33 §5f), for a person when the pack is

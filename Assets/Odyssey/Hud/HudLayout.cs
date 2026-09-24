@@ -466,9 +466,49 @@ namespace Odyssey.Hud
 
         // ------------------------------------------------------------------ clock and alerts
 
-        public const int ClockWidth = 266;
+        /// <summary>
+        /// The width of the whole right-hand column: the clock, and the alerts, bulletins and
+        /// toasts stacked under it, which all take their width from here so the column reads as
+        /// one edge rather than three.
+        ///
+        /// <para><b>266 -> 296 on 2026-09-23</b>, to give the clock room for the outdoor
+        /// temperature beside the date (owner: widen it "respecting the layout of the ui
+        /// (including events - widen this up to match)"). The events panels come with it for
+        /// free, which is what "match" means here.</para>
+        ///
+        /// <para><b>296 and not more, because the coverage budget is what is left.</b> Every
+        /// pixel of width here is 91 px of area in the resting HUD, and
+        /// <see cref="CoverageCeiling"/> had about 0.32% of a 1280x720 canvas spare — 32 px.
+        /// 300 came to 20.02% and failed. Raising the ceiling is the obvious alternative and is
+        /// deliberately not taken: this number's own history records that it "is the owner's to
+        /// reverse", and that the colonist name pool nearly took it to 0.21 and the owner
+        /// declined. Going wider than this is that decision again, not a tweak.</para>
+        ///
+        /// <para><b>This number is written twice.</b> <c>.column-right</c> in <c>Hud.uss</c>
+        /// carries the same width, because the model here is what the fast tier reasons about and
+        /// the stylesheet is what the panel is actually laid out by. Nothing checks that the two
+        /// agree — the hazard CLAUDE.md names — so change them together.
+        /// <c>HudGeometryTests.TheModelDescribesTheScreenTheShellActuallyBuilds</c> is the test
+        /// that would eventually notice, and it is a PlayMode test rather than a rule.</para>
+        /// <para><b>296 -> 271 on 2026-09-24</b>, on the merge with combat, which spent the same
+        /// 0.3% on a health bar under every roster card (<see cref="CardHeight"/>). Together they came
+        /// to 20.20%. The owner chose to hand the width back rather than raise the ceiling: 271 is
+        /// the widest the two can share. Whether the outdoor temperature still clears the speed
+        /// controls at 271 is a look, not a test.</para>
+        /// </summary>
+        public const int ClockWidth = 271;
 
-        /// <summary>The clock's own baseline row: 24 px of mono with room to sit in.</summary>
+        /// <summary>
+        /// The clock's one row: the time, the date and the outdoor temperature side by side.
+        ///
+        /// <para><b>One row, and it was nearly two.</b> The temperature was appended to the date
+        /// string and pushed this row over the controls beside it (owner, 2026-09-23). A row of
+        /// its own was the obvious fix and cost 20 px of screen the HUD does not have:
+        /// <c>HudLayoutTests.TheStripIsAlwaysOneRowAndNoFurther</c> caps the resting interface at
+        /// 20% of the viewport and it came to 20.27% at 1280x720. Dropping the word "outdoors",
+        /// which is what the owner asked for, bought back more width than the reading needs, so
+        /// the reading is a third element on this row instead and the height is unchanged.</para>
+        /// </summary>
         public const int ClockRow = 28;
 
         /// <summary>One of the four speed buttons.</summary>
