@@ -11679,3 +11679,22 @@ the same rank. All four are in design 38.
 
 PR #174 (frustum culling) is green but conflicts with `main` as of today and needs an approving
 review; it gates M1.
+
+## 2026-09-24 — Meadow M6: quality presets, and preferences that never reached a session
+
+The Graphics tab gained a Quality row — Low, Medium, High, Ultra, and Custom whenever the levers
+match none — and the grass became a ladder (Off to Full) in place of the tufts toggle, with a grass
+distance and a grass-shadows toggle beside it. The preset is read off the levers every time and
+never stored, so it cannot disagree with them. High is what ships; Ultra adds full cover, the one
+step up M1 measured; the lower tiers only take things away.
+
+Building it found a bug older than the unit. Nothing put the player's stored graphics preferences
+on a session's renderer: the settings presenter attaches at the start screen, when there is no
+renderer, so its `Apply` returned early, and the renderer was then built from the bootstrap's own
+fields. A stored "shadows off" has been lost at every new game since the panel existed — and a
+preset that came back as High after a restart would have made it impossible to miss.
+`SettingsPresenter.ApplyRendererLevers` is now the one mapping, and the root calls it as it builds a
+renderer, before meshing, whenever a store is attached.
+
+The Unity tiers were not run: drive D: filled during the first import in this worktree. The fast
+tier (1,345 + 988), the Long tier (41) and the three content gates pass.
