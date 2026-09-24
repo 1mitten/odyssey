@@ -11761,3 +11761,24 @@ renderer, before meshing, whenever a store is attached.
 
 The Unity tiers were not run: drive D: filled during the first import in this worktree. The fast
 tier (1,345 + 988), the Long tier (41) and the three content gates pass.
+
+## 2026-09-24 — The look pass, the dressing: a meadow of the reference's own parts
+
+The owner looked at M3's grass and said it looked nothing like Synty's screenshots. The screenshot
+at the play camera's angle (their #13) is not a grass setting: it is bushes everywhere, trees in
+stands, tall grass in mats, flowers in sweeps, stones and warm light. So the first thing built was
+an instrument — `TheLookAtThePlayCamera`, which photographs the played meadow three ways — and
+everything after it was decided by looking.
+
+It found things reasoning would not have. Two of the three tuft tints lifted blue 2.2 times for the
+pack's shader and turned the grass teal under ours. The pack colours a leaf from material values,
+not from its texture — base at the root, two noise colours at the tip, frosting on the sunlit top —
+and the birches' autumn lives there; `FoliageLook` now reads those off the art at runtime as it
+reads the textures. Meadow trees in the opaque queue were inked leaf by leaf into black scribbles.
+The flat flower cards and pebble piles read as lilac confetti from above and were dropped.
+
+The measurement found the money in shadows: every Meadow crown and bush drawing its finest mesh
+into four cascades. Trees now cast from a coarse proxy level (1.5 ms at 4K) and bushes cast nothing;
+the dressing costs about 2 ms at High and 3 at Full on Standard. Huge at High was over the 60 fps
+line in a run shared with other Unity processes and at the asset's 250 m of shadow; the owner's GPU
+reading decides it. Design 38 §17.

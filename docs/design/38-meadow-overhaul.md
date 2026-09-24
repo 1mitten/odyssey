@@ -410,3 +410,90 @@ submission rather than fill. Draw calls and instances are identical in every pai
 The pack's graph computes three noise colours and a frosting term per pixel; ours samples one
 texture and does the wind in the vertex stage. Same caveat as §13: other batch runs shared the
 machine, so only the in-run pairs mean anything.
+
+## 17. The look pass — the dressing (2026-09-24)
+
+**Why.** The owner's first look at M3's grass: *"I said the grass to be lush — and I expected it to
+look [like] the screenshots from the Synty pack … as currently it looks nothing like it."* The
+reference is Synty's own screenshot of the Meadow demo from above (their #13), and read carefully it
+is not a grass setting: it is **bushes everywhere, Meadow trees in stands, grass in tall mats rather
+than tufts, flowers in sweeps, stones, painted ground, and warm light**. Decided with the owner the
+same day: target #13 at the play camera; **scenery first, simulation after** (bushes, flowers and
+stones drawn only; the two tree species keep their simulation and wear Meadow art); **Synty's own
+colours**; **Ultra is the screenshot**, High holds 60 fps at 4K. This section is the half that stands
+on the ground; the ground's paint and the light are the other half (`claude/meadow-look-ground`).
+
+**The instrument came first.** `FrameTimeTests.TheLookAtThePlayCamera` (explicit, never in a tier)
+photographs the played meadow at 1920 × 1080 from the camera a new game opens with, closer in, and
+pulled back to about the reference's framing (`Logs/look/start|close|wide.png`). Every decision
+below was taken by looking at those, not by reasoning about a shader. Before and after are in
+`docs/reference/screenshots/look/`.
+
+**What changed, and why each.**
+
+- **The teal tufts** were two of the three foliage tints — red ×0.55/0.45, blue ×2.2/1.8, tuned
+  against the pack's own straw-coloured shader — multiplied straight onto the art by
+  `Odyssey/Foliage`. The tints are neutral now, a whisper of variety and no more.
+- **The art's own colour, read at runtime.** The pack does not colour a leaf from its texture: with
+  its flat-colour switch on (grass and most trees), a leaf takes a base colour at the root rising to
+  two world-noise colours at the tip, with a frosting colour on sunlit tops. `FoliageLook` now reads
+  those values off the art material at runtime — exactly as it reads the textures, never into this
+  repository — and `Odyssey/Foliage` applies them with its own noise, keyed on the vertex colour's
+  height gradient. The birches' autumn is the art's own. M3's lime grade is neutral (`LeafGrade`).
+- **Meadow trees.** The conifer slot is Birch 01–03, the broadleaf slot Meadow_02 and Fruit 01–03 with
+  the fifteen-metre Meadow_01 as a rare fifth (one in forty), chosen per cell by hash with a turn and
+  a size of their own (`ChunkMesher.EmitTree`, `MeadowDressing.TreeVariant`). They are drawn by level
+  (M2) on a bias of their own (`TreeLevels`, `TreeLodBias` 3), by our shader, **late in the foliage
+  queue**: in the opaque queue the outline inked every cut-out leaf and a crown read as a black
+  scribble. Their normals are only lightly pulled up (`TreeNormalUp` 0.2) so a crown has a lit and a
+  shaded side. `ChunkRenderer.TallestModuleMetres` is measured from what resolved, never under 12.
+- **The dressing** (`MeadowDressing`, `ChunkMesher.EmitDressing`): tall-grass mats (Tall_Clump_04/05)
+  on a checkerboard, bushes (Bush_01–03) on one cell in four and gathered at wood edges, wildflowers,
+  ground cover, the odd sunflower, and stones gathered by rock — each kind dense where its own
+  low-frequency noise field is high, so it reads as stands and sweeps rather than confetti. Pure
+  functions of the cell, drawn only, in no save or hash. Never on a cell with a floor, a building, a
+  zone or anything solid on it; the big pieces also need a clear ring of neighbours; bushes and
+  stones keep out of a four-cell clearing round where the colony started. All of it scales with M6's
+  grass ladder: Off is none, Meadow the shipped rung, Full is Ultra.
+- **Grass parts round what lies in it, per blade.** M3 cleared a clump by sampling its root; a
+  six-metre mat hid a log two metres off its root. The clearance is now asked where each vertex is,
+  and blades near an item or a mark lie flat.
+- **Tried and dropped, by looking:** the flat flower cards (read as lilac pebbles from above) and
+  the small pebble piles (lilac confetti).
+
+**Measured** (`FrameTimeTests.TheDressingAgainstTheFrame`, 3840 × 2160, RTX 5070 Ti, the URP asset's
+own 250 m shadow distance — M6's High preset uses 120 m — with a CI runner and an idle editor on the
+machine; in-run differences only):
+
+| Standard | Frame | Calls |
+|---|---|---|
+| grass Off (Meadow trees, no dressing) | 11.40 ms | 1,394 |
+| **Meadow, the shipped rung (High)** | **13.36 ms** | 2,065 |
+| — casting from the finest level | 14.84 ms | 1,793 |
+| — with the bushes casting | 13.70 ms | 2,065 |
+| — no shadow casters at all | 9.96 ms | 770 |
+| Full (Ultra) | 14.58 ms | 2,135 |
+| **Huge**: Off / Meadow / Full | 14.27 / **19.10** / 19.04 ms | 2,277 / 3,489 / 3,627 |
+
+- **Shadows were the money.** An earlier, noisier run put the Meadow rung 7 ms over "no casters";
+  the Meadow trees and bushes were drawing their finest meshes into four cascades. **A tree now casts
+  from a proxy** — the last mesh before its card, shadows only (`TreeShadowProxy`) — which is worth
+  1.5 ms here, and **bushes cast no shadow** (`DressingCastsShadows`, a further 0.3 ms). Tree level of
+  detail for the *drawn* mesh barely moved the frame (−0.1 ms at bias 1 against 3).
+- **The dressing costs about 2 ms at High and 3.2 at Full on Standard**; the Meadow trees themselves
+  about 3.5 over M1's old-tree baseline. **Standard High is under the 16.7 ms line; Huge High is over
+  it in this run**, at 250 m of shadow and with other Unity processes on the machine. The owner's
+  GPU reading at 4K on High decides it (playtest queue).
+
+**Owed.**
+
+- **Colour balance with the light.** Under today's golden-hour sun the art's colours read dark and
+  olive against a bright lime ground; the reference is lit by a warm sun at intensity 3 with a
+  contrast and saturation lift. That is the ground-and-light half, judged together at integration.
+- **Bushes are scenery**: colonists walk through them. They fade when they stand between the camera
+  and a colonist (the tree path's sight fade), but they are not obstacles; making them simulated
+  things, with berries, is the owner's later unit, with loose stones and mushrooms (§1).
+- **The clearing is where the colony started**, not where it has since built; bushes and stones
+  are kept off anything built, zoned or floored, but not off an order mark or a stockpile's
+  neighbourhood beyond one cell.
+- **Huge at High** needs the owner's GPU reading before the High preset is signed off.

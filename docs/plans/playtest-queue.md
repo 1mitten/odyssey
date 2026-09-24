@@ -23,6 +23,16 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the meadow look like the Synty screenshot now?** (`claude/meadow-look-dressing` with the
+  ground-and-light half, design 38 §17). New game; zoom out to about the reference's height. Look
+  for: Meadow trees in stands (birches in autumn colour, round meadow trees), round bushes across the
+  meadow and at wood edges, tall-grass stands, wildflowers, stones by rock — as patches, not a
+  sprinkle. Then at 3840 x 2160 on **High** on a **Huge** board, backtick for the overlay: **`gpu`
+  under about 16 ms** holds 60 fps; the batch arm read 19 ms with other Unity runs on the machine.
+  **A wrong answer looks like:** trees or bushes with black scribbled edges (ink on the leaves);
+  a sprinkle of the same bush in rows; grass hiding a dropped item (it should part round it); the
+  colours dark and olive (that is the light, judged with the ground half); Huge High well over 16 ms.
+
 - **Does the Meadow grass read as grass, and is this the grass to judge?** (PR for
   `claude/meadow-m3-foliage`, design 38 §16) **This is the first branch to test grass in.** New game,
   play camera. Three things: (1) the meadow reads as grass and the green is the lighter spring green

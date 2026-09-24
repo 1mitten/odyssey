@@ -1910,6 +1910,10 @@ namespace Odyssey.Tests.PlayMode
 
                 ChunkRenderer renderer = boot.Renderer!;
                 ModuleLibrary library = boot.Model!.Library;
+                // Trees choose their level by a switch of their own since the look pass (design
+                // 38 §17); this arm prices the general one, so the trees' is off for its control.
+
+                renderer.TreeLevels = false;
                 int withLevels = 0;
                 for (int i = 0; i < library.Count; i++)
                     if (library[i].DrawsByLevel) withLevels++;
@@ -1950,11 +1954,99 @@ namespace Odyssey.Tests.PlayMode
             }
             finally
             {
-                if (boot.Renderer != null) boot.Renderer.UseLods = false;
+                if (boot.Renderer != null) { boot.Renderer.UseLods = false; boot.Renderer.TreeLevels = true; }
                 if (cam != null) cam.targetTexture = previousTarget;
                 if (fourK != null) fourK.Release();
                 UnityEngine.Object.Destroy(root);
             }
+        }
+
+        /// <summary>
+        /// What the Meadow look costs (the look pass, design 38 §17): the played meadow with its
+        /// Meadow trees, at 3840 x 2160, on Standard and Huge, with the grass ladder at Off (no
+        /// tufts, no dressing), Meadow (the shipped rung, High) and Full (Ultra). One world per
+        /// board, three readings each, only the differences quoted.
+        ///
+        /// <para>It asserts that the controls applied — the dressing resolved to art, the instance
+        /// count rose with the rung, the camera drew at 4K, and nothing was timed mid-re-mesh —
+        /// and ignores itself where no dressing art resolved, which is a clone without the packs.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheDressingAgainstTheFrame()
+        {
+            var lines = new List<string>();
+            foreach ((string board, int side) in new[] { ("standard", 120), ("huge", 240) })
+            {
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                    out OdysseyBootstrap boot, side, side, 16);
+                UnityEngine.Camera? cam = null;
+                RenderTexture? previousTarget = null;
+                RenderTexture? fourK = null;
+                try
+                {
+                    yield return TimeFrames($"dressing/{board}/warm", boot, WarmupFrames, _ => { });
+                    ChunkRenderer renderer = boot.Renderer!;
+                    if (renderer.DressingFamiliesWithArt == 0)
+                        Assert.Ignore("no Meadow dressing resolved to art on this machine, so there is none to price");
+
+                    cam = boot.cameraRig!.Camera;
+                    previousTarget = cam.targetTexture;
+                    fourK = new RenderTexture(3840, 2160, 24) { name = "dressing-4k" };
+                    cam.targetTexture = fourK;
+
+                    int shipped = renderer.ScatterDensity;
+                    int previousInstances = -1;
+                    foreach ((string rung, int density) in new[] { ("off", 0), ("meadow", shipped), ("full", GroundScatter.MaxPerCell * 100) })
+                    {
+                        if (renderer.ScatterDensity != density)
+                        {
+                            renderer.ScatterDensity = density;
+                            boot.Model!.Remesh();
+                        }
+                        float ms = 0f;
+                        yield return TimeFrames($"dressing/{board}/{rung}", boot, WarmupFrames, m => ms = m);
+                        Assert.That(renderer.ChunksMeshDeferred, Is.Zero, $"{board} {rung} was timed mid-re-mesh");
+                        Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
+                        Assert.That(renderer.InstancesDrawn, Is.GreaterThan(previousInstances),
+                            $"{board} {rung} drew no more than the rung below it, so the dressing never changed");
+                        previousInstances = renderer.InstancesDrawn;
+                        lines.Add($"{board} {rung}: frame {ms:0.00} ms, {renderer.DrawCalls} calls, " +
+                                  $"{renderer.InstancesDrawn} instances, {renderer.InstancesAtCoarserLevels} at a coarser level");
+
+                        // Where the Meadow rung's cost is, on the Standard board: the trees' level
+                        // of detail and the shadow casters, each taken away in turn.
+                        if (board == "standard" && rung == "meadow")
+                        {
+                            renderer.TreeShadowProxy = false;
+                            float fullShadows = 0f;
+                            yield return TimeFrames("dressing/standard/meadow, no shadow proxy", boot, WarmupFrames, m => fullShadows = m);
+                            lines.Add($"standard meadow casting from the finest level: frame {fullShadows:0.00} ms, {renderer.DrawCalls} calls");
+                            renderer.TreeShadowProxy = true;
+
+                            renderer.DressingCastsShadows = true;
+                            float bushShadows = 0f;
+                            yield return TimeFrames("dressing/standard/meadow, bushes casting", boot, WarmupFrames, m => bushShadows = m);
+                            lines.Add($"standard meadow with the bushes casting: frame {bushShadows:0.00} ms, {renderer.DrawCalls} calls");
+                            renderer.DressingCastsShadows = false;
+
+                            bool casts = renderer.CastShadows;
+                            renderer.CastShadows = false;
+                            float noShadows = 0f;
+                            yield return TimeFrames("dressing/standard/meadow, no casters", boot, WarmupFrames, m => noShadows = m);
+                            lines.Add($"standard meadow with no shadow casters: frame {noShadows:0.00} ms, {renderer.DrawCalls} calls");
+                            renderer.CastShadows = casts;
+                        }
+                    }
+                }
+                finally
+                {
+                    if (cam != null) cam.targetTexture = previousTarget;
+                    if (fourK != null) fourK.Release();
+                    UnityEngine.Object.Destroy(root);
+                }
+                yield return null;
+            }
+            Debug.Log($"[FrameTime] dressing at 3840x2160 ({SystemInfo.graphicsDeviceName}): " + string.Join("; ", lines));
         }
 
         /// <summary>
@@ -1995,6 +2087,12 @@ namespace Odyssey.Tests.PlayMode
                     boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, 28f);
                     for (int i = 0; i < 120; i++) yield return null;
                     yield return Photograph("close", boot, target);
+
+                    // Pulled back to about the reference screenshot's own framing, which is the
+                    // view the composition of the meadow is judged at.
+                    boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, 70f);
+                    for (int i = 0; i < 150; i++) yield return null;
+                    yield return Photograph("wide", boot, target);
                 }
             }
             finally
