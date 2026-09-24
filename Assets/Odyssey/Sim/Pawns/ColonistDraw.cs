@@ -44,12 +44,21 @@ namespace Odyssey.Sim.Pawns
         /// <see cref="Pawn.SkillLevel"/> and <see cref="Pawn.Passions"/> off it and nothing
         /// else.</para>
         /// </summary>
-        public static Pawn Roll(uint seed, int slot, PawnContent content)
+        public static Pawn Roll(uint seed, int slot, PawnContent content) =>
+            Roll(seed, slot, RollProfile.Standard, content);
+
+        /// <summary>
+        /// A candidate drawn from a profile's tables (design 41 §4.4): the same methods, in the same
+        /// order, that placement and the first tick call — passions and traits at placement, then
+        /// skills — so the card cannot disagree with the colonist it becomes.
+        /// </summary>
+        public static Pawn Roll(uint seed, int slot, RollProfile profile, PawnContent content)
         {
             // Cell -1: it is nowhere, and a real index would be a lie that some later reader could
             // act on. Nothing here walks, paths or is drawn.
-            var pawn = new Pawn(IdForSlot(slot), cell: -1, content) { RollSeed = seed };
+            var pawn = new Pawn(IdForSlot(slot), cell: -1, content) { RollSeed = seed, Profile = profile };
             pawn.RollPassions();
+            pawn.RollTraits();
             pawn.RollStartingSkills();
             return pawn;
         }
@@ -60,5 +69,8 @@ namespace Odyssey.Sim.Pawns
         /// no world exists yet.
         /// </summary>
         public static Pawn Roll(uint seed, int slot) => Roll(seed, slot, ContentPack.Pawns());
+
+        public static Pawn Roll(uint seed, int slot, RollProfile profile) =>
+            Roll(seed, slot, profile, ContentPack.Pawns());
     }
 }

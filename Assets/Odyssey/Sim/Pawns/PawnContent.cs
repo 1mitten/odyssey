@@ -379,6 +379,14 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Gains beyond the cap are scaled by this, per mille. a-01: ×0.2.</summary>
         public int overCapGainPerMille = 200;
 
+        /// <summary>
+        /// Rolled from the legacy table in every profile, and never counted in a budget or put on a
+        /// reel (design 41 §4.1). Hauling's, because hauling is a work type and not a skill by
+        /// decision (design 15 §6.2): a jackpot on a number the design means to delete would be a
+        /// jackpot on nothing.
+        /// </summary>
+        public bool outsideBudget;
+
         /// <summary>The first level that decays. a-01: level 10 and up.</summary>
         public int decayFromLevel = 10;
 
@@ -813,6 +821,92 @@ namespace Odyssey.Sim.Pawns
         /// visibly skilled starting colonist is rare rather than routine.
         /// </summary>
         public int[] startingSkillLevelWeights = { 40, 20, 14, 10, 6, 4, 3, 2, 1 };
+
+        // ---- the draw (design 41 §4) ---------------------------------------------------
+
+        /// <summary>Standard: the levels every colonist is dealt across the skills in the budget. ASSUMED.</summary>
+        public int standardSkillBudget = 12;
+
+        /// <summary>Standard: no budget skill is dealt past this level.</summary>
+        public int standardSkillCap = 8;
+
+        /// <summary>
+        /// Standard: each budget skill draws a weight from 1 to this before the points are dealt,
+        /// so the same total comes out as a specialist on one seed and a generalist on another.
+        /// </summary>
+        public int standardSkillWeightMax = 6;
+
+        /// <summary>Standard: the pace band, per mille. Narrower than the movement def's, which is Gamble's and Legacy's.</summary>
+        public int standardPaceMinPerMille = 950;
+
+        public int standardPaceMaxPerMille = 1_050;
+
+        /// <summary>
+        /// Gamble: one independent roll per budget skill, index the level, in tenths of a per cent.
+        /// ASSUMED, and tuned by simulation to the owner's figures (design 41 §4.3): about a third
+        /// above Standard on average, one pull in eleven a dud, one in fifteen a 12+ skill.
+        /// </summary>
+        public int[] gambleSkillLevelWeights = { 300, 120, 100, 90, 82, 72, 62, 52, 42, 32, 22, 12, 7, 4, 2, 1 };
+
+        /// <summary>Gamble: per skill, per cent.</summary>
+        public int gamblePassionMajorPerCent = 25;
+
+        public int gamblePassionMinorPerCent = 25;
+
+        /// <summary>Gamble: the weight of being dealt 0, 1, 2 or 3 traits, per cent.</summary>
+        public int[] gambleTraitCountWeights = { 25, 35, 28, 12 };
+    }
+
+    /// <summary>What a trait moves (design 41 §3.1). Closed and small on purpose.</summary>
+    public enum TraitStat
+    {
+        WorkSpeed,
+        MovePace,
+        Learning,
+        Mood,
+        RestFall,
+        HungerFall,
+        MeleeDamage,
+    }
+
+    /// <summary>Which draw may deal a trait: Standard only the mild ones, Gamble both.</summary>
+    public enum TraitPool
+    {
+        Mild,
+        Extreme,
+    }
+
+    /// <summary>One thing a trait does: a factor per mille on a stat, or an offset to it.</summary>
+    public class TraitEffect
+    {
+        public TraitStat stat;
+        public int factorPerMille = 1_000;
+        public int offset;
+    }
+
+    /// <summary>
+    /// Something about a colonist that moves a number the game already has (design 41 §3).
+    /// Authored in <c>Defs/Core/Pawns/Traits.xml</c>; its name is the registry key in
+    /// <see cref="Odyssey.Sim.Contracts.TraitHandle.Keys"/>, not a label here.
+    ///
+    /// <para><b>The seam for full traits is this Def, and nothing is declared ahead of it.</b>
+    /// Degrees, skill offsets, forbidden work and a wider conflict list are added fields the day
+    /// something reads them (§3.4). <see cref="opposite"/> is here because the roll reads it now.</para>
+    /// </summary>
+    public class TraitDef : Def
+    {
+        /// <summary>Signed balance value: mild ±2, extreme ±4. The Standard roll pairs on it.</summary>
+        public int worth;
+
+        public TraitPool pool;
+
+        /// <summary>Per-mille weight within whatever draw is choosing.</summary>
+        public int commonality = 1_000;
+
+        /// <summary>The defName this trait is never dealt beside, or empty.</summary>
+        public string opposite = string.Empty;
+
+        public System.Collections.Generic.List<TraitEffect> effects = new System.Collections.Generic.List<TraitEffect>();
     }
 
     /// <summary>
@@ -1001,6 +1095,15 @@ namespace Odyssey.Sim.Pawns
         public TemperatureDef Temperature = new TemperatureDef();
 
         /// <summary>
+        /// Every trait, in <see cref="Odyssey.Sim.Contracts.TraitHandle"/> order (design 41 §3).
+        /// Empty for a content set built in code, which therefore deals nobody a trait.
+        /// </summary>
+        public TraitDef[] Traits = System.Array.Empty<TraitDef>();
+
+        /// <summary>Each trait's <see cref="TraitDef.opposite"/> as a handle, or -1.</summary>
+        public int[] TraitOpposite = System.Array.Empty<int>();
+
+        /// <summary>
         /// Every kind a pawn can be, in handle order (design 29 §1). <b>Appended, never
         /// inserted</b>: a pawn's kind is saved by this index, so its number is a save contract,
         /// exactly as a job def index or an item handle is. The colonist is 0 and every pawn from
@@ -1153,7 +1256,8 @@ namespace Odyssey.Sim.Pawns
                 .Register<SpeciesDef>()
                 .Register<TemperatureDef>()
                 .Register<PawnTuningDef>()
-                .Register<CombatDef>();
+                .Register<CombatDef>()
+                .Register<TraitDef>();
 
         /// <summary>
         /// The same content, read from a loaded <see cref="DefDatabase"/> rather than built in
@@ -1276,6 +1380,21 @@ namespace Odyssey.Sim.Pawns
 
             content.Combat = One<CombatDef>(defs, "Combat_Default");
 
+            // The traits (design 41 §3), in the contract's order: the handle is what a save stores.
+            content.Traits = ByName<TraitDef>(defs, Odyssey.Sim.Contracts.TraitHandle.DefNames);
+            content.TraitOpposite = new int[content.Traits.Length];
+            for (int i = 0; i < content.Traits.Length; i++)
+            {
+                string wanted = content.Traits[i].opposite;
+                content.TraitOpposite[i] = -1;
+                if (string.IsNullOrEmpty(wanted)) continue;
+                for (int j = 0; j < content.Traits.Length; j++)
+                    if (content.Traits[j].defName == wanted) { content.TraitOpposite[i] = j; break; }
+                if (content.TraitOpposite[i] < 0)
+                    throw new DefLoadException(
+                        $"TraitDef '{content.Traits[i].defName}' names opposite '{wanted}', which the content does not have.");
+            }
+
             return content;
         }
 
@@ -1305,6 +1424,10 @@ namespace Odyssey.Sim.Pawns
         public const uint MentalBreak = 0x9E37_79B1;
         public const uint Wander = 0x85EB_CA6B;
         public const uint Passion = 0xC2B2_AE35;
+
+        /// <summary>Which traits a colonist is dealt (design 41 §3). Its own stream, so dealing
+        /// traits cannot shift a passion or a starting skill anywhere.</summary>
+        public const uint Trait = 0x7137_449A;
 
         /// <summary>
         /// An animal deciding between a leg and a rest, and how long the rest is (design 29 §3).

@@ -30,6 +30,19 @@ namespace Odyssey.Tests.Sim
     /// commit message what you changed and why the numbers moved. A golden updated without that
     /// sentence is a golden that has stopped being a test.</para>
     ///
+    /// <para><b>All six moved on 2026-09-24 with the draw (design 41), and this time the colonies
+    /// behave differently — which is the point, not a side effect.</b> Every colonist the game
+    /// places now rolls Standard: exactly twelve levels over the five budget skills (the legacy
+    /// table averaged about eight), one major and one minor passion, and one mild good and one mild
+    /// bad trait. The profile and the traits are assigned at placement, before <c>Generated</c> is
+    /// taken, so both numbers moved on all three. Measured with <c>GoldenColonyProbe</c> against
+    /// <c>main</c>: every item count and cell, the food in the stores and every need total are
+    /// unchanged to the unit or within a few points; nobody died and no job failed on any board.
+    /// What moved is what a more skilled, traited colony does — experience 84M → 133M on the
+    /// meadow, 62M → 164M in the city and 94M → 182M on the played board, and the mix of mining
+    /// and construction jobs (meadow 48 → 42, city 79 → 92, played board 105 → 89). Design 41 §7
+    /// has the full census.</para>
+    ///
     /// <para><b>All six moved again on 2026-09-21, the temperature review's fixes (design 28
     /// §12), and here is the sentence.</b> Two more fields entered the hash — a colonist's
     /// last-felt ambient (F8) and each room's energy residual (F7) — which is the whole of the
@@ -431,8 +444,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 10212350739386668344UL,
-            Simulated = 8860197422024298715UL,
+            Generated = 3637695822319453847UL,
+            Simulated = 7476646953584449511UL,
         };
 
         /// <summary>
@@ -457,8 +470,8 @@ namespace Odyssey.Tests.Sim
             // zeros in the job counters; the probe diffs clean.
             // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
             // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
-            Generated = 16337376216538696172UL,
-            Simulated = 16703233559271607928UL,
+            Generated = 18299279286602163216UL,
+            Simulated = 2557999242862658795UL,
         };
 
         /// <summary>
@@ -497,8 +510,8 @@ namespace Odyssey.Tests.Sim
             // 2026-09-23, wildlife (design 30): the ruin is seeded with its rats and hogs.
             // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
             // 2026-09-23, the combat contracts step; the widened probe diffs clean.
-            Generated = 16106640289945334159UL,
-            Simulated = 9493899456924685757UL,
+            Generated = 8894434455049572137UL,
+            Simulated = 8511704131548811332UL,
         };
     }
 }

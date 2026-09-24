@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Traits (design 41 §3). Each moves a number the game already has, through one aggregator on the
+  pawn; nothing reads a trait list but that. Names live in the registry, keyed by
+  TraitHandle.Keys, so they are not written here: the wiki is where a name is corrected.
+
+  The order the content reads these in is TraitHandle.DefNames, not this file's. That order is a
+  save contract; this file may be arranged for reading.
+
+  worth is the balance value the Standard roll pairs on: a mild good and a mild bad, which net to
+  zero. Extremes are Gamble's alone. Every magnitude is ASSUMED — invented for this game, clean
+  room — and is here to be tuned by play.
+-->
+<Defs>
+
+  <!-- Mild: Standard deals one good and one bad, never each other's opposite. -->
+
+  <TraitDef>
+    <defName>Trait_Diligent</defName>
+    <worth>2</worth>
+    <pool>Mild</pool>
+    <opposite>Trait_Idle</opposite>
+    <effects><li><stat>WorkSpeed</stat><factorPerMille>1150</factorPerMille></li></effects>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_Idle</defName>
+    <worth>-2</worth>
+    <pool>Mild</pool>
+    <opposite>Trait_Diligent</opposite>
+    <effects><li><stat>WorkSpeed</stat><factorPerMille>850</factorPerMille></li></effects>
+  </TraitDef>
+
+  <TraitDef>
+    <defName>Trait_QuickStudy</defName>
+    <worth>2</worth>
+    <pool>Mild</pool>
+    <opposite>Trait_SlowStudy</opposite>
+    <effects><li><stat>Learning</stat><factorPerMille>1400</factorPerMille></li></effects>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_SlowStudy</defName>
+    <worth>-2</worth>
+    <pool>Mild</pool>
+    <opposite>Trait_QuickStudy</opposite>
+    <effects><li><stat>Learning</stat><factorPerMille>600</factorPerMille></li></effects>
+  </TraitDef>
+
+  <TraitDef>
+    <defName>Trait_LongStride</defName>
+    <worth>2</worth>
+    <pool>Mild</pool>
+    <opposite>Trait_ShortStride</opposite>
+    <effects><li><stat>MovePace</stat><factorPerMille>1050</factorPerMille></li></effects>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_ShortStride</defName>
+    <worth>-2</worth>
+    <pool>Mild</pool>
+    <opposite>Trait_LongStride</opposite>
+    <effects><li><stat>MovePace</stat><factorPerMille>950</factorPerMille></li></effects>
+  </TraitDef>
+
+  <!-- Mood is 0..1000; an offset of 60 is a mild thought's worth, standing. -->
+  <TraitDef>
+    <defName>Trait_Sunny</defName>
+    <worth>2</worth>
+    <pool>Mild</pool>
+    <opposite>Trait_Dour</opposite>
+    <effects><li><stat>Mood</stat><offset>60</offset></li></effects>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_Dour</defName>
+    <worth>-2</worth>
+    <pool>Mild</pool>
+    <opposite>Trait_Sunny</opposite>
+    <effects><li><stat>Mood</stat><offset>-60</offset></li></effects>
+  </TraitDef>
+
+  <TraitDef>
+    <defName>Trait_LightEater</defName>
+    <worth>2</worth>
+    <pool>Mild</pool>
+    <opposite>Trait_BigAppetite</opposite>
+    <effects><li><stat>HungerFall</stat><factorPerMille>800</factorPerMille></li></effects>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_BigAppetite</defName>
+    <worth>-2</worth>
+    <pool>Mild</pool>
+    <opposite>Trait_LightEater</opposite>
+    <effects><li><stat>HungerFall</stat><factorPerMille>1200</factorPerMille></li></effects>
+  </TraitDef>
+
+  <TraitDef>
+    <defName>Trait_Scrapper</defName>
+    <worth>2</worth>
+    <pool>Mild</pool>
+    <opposite>Trait_SoftHands</opposite>
+    <effects><li><stat>MeleeDamage</stat><factorPerMille>1200</factorPerMille></li></effects>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_SoftHands</defName>
+    <worth>-2</worth>
+    <pool>Mild</pool>
+    <opposite>Trait_Scrapper</opposite>
+    <effects><li><stat>MeleeDamage</stat><factorPerMille>800</factorPerMille></li></effects>
+  </TraitDef>
+
+  <!-- Extreme: only a gamble deals these. Opposites for dealing, not mirrored effects. -->
+
+  <TraitDef>
+    <defName>Trait_Prodigy</defName>
+    <worth>4</worth>
+    <pool>Extreme</pool>
+    <opposite>Trait_Wreck</opposite>
+    <effects><li><stat>Learning</stat><factorPerMille>2000</factorPerMille></li></effects>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_Wreck</defName>
+    <worth>-4</worth>
+    <pool>Extreme</pool>
+    <opposite>Trait_Prodigy</opposite>
+    <effects><li><stat>WorkSpeed</stat><factorPerMille>600</factorPerMille></li></effects>
+  </TraitDef>
+
+  <TraitDef>
+    <defName>Trait_Tireless</defName>
+    <worth>4</worth>
+    <pool>Extreme</pool>
+    <opposite>Trait_Bottomless</opposite>
+    <effects><li><stat>RestFall</stat><factorPerMille>500</factorPerMille></li></effects>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_Bottomless</defName>
+    <worth>-4</worth>
+    <pool>Extreme</pool>
+    <opposite>Trait_Tireless</opposite>
+    <effects><li><stat>HungerFall</stat><factorPerMille>1600</factorPerMille></li></effects>
+  </TraitDef>
+
+  <TraitDef>
+    <defName>Trait_Unshakeable</defName>
+    <worth>4</worth>
+    <pool>Extreme</pool>
+    <opposite>Trait_Butterfingers</opposite>
+    <effects><li><stat>Mood</stat><offset>120</offset></li></effects>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_Butterfingers</defName>
+    <worth>-4</worth>
+    <pool>Extreme</pool>
+    <opposite>Trait_Unshakeable</opposite>
+    <effects>
+      <li><stat>WorkSpeed</stat><factorPerMille>750</factorPerMille></li>
+      <li><stat>MeleeDamage</stat><factorPerMille>700</factorPerMille></li>
+    </effects>
+  </TraitDef>
+
+</Defs>

@@ -57,6 +57,15 @@ namespace Odyssey.Sim.Pawns
         public IReadOnlyList<uint>? Colonists;
 
         /// <summary>
+        /// Which tables each chosen colonist was drawn from (design 41 §4.4), parallel to
+        /// <see cref="Colonists"/>: Standard or Gamble, as the select screen dealt them. Null, or
+        /// shorter than <see cref="Colonists"/>, means Standard — which is what every colonist the
+        /// game makes itself rolls, so the card and the colonist can only disagree if a caller
+        /// passes a seed from one table and names another.
+        /// </summary>
+        public IReadOnlyList<RollProfile>? Profiles;
+
+        /// <summary>
         /// Flat grass with no rock, ore or bare patches. False gives the full natural generator
         /// with hills, rock and ore.
         /// </summary>

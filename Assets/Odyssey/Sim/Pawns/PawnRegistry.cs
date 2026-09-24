@@ -91,12 +91,12 @@ namespace Odyssey.Sim.Pawns
         /// <see cref="Odyssey.Sim.World.CellGrid.NearestWalkableInColumn"/>, which is the one
         /// owner of that fall.</para>
         ///
-        /// <para>Passions are rolled here off <see cref="Spawn"/>'s own <c>RollSeed</c> (the world's,
-        /// since nothing here asks for one of its own — U40), exactly as
-        /// <see cref="ColonyScenario.Place"/> rolls them for a starting colonist — a debug-spawned
-        /// pawn is otherwise indistinguishable from one dealt at tick zero. Skill levels are not:
-        /// <see cref="StartingSkillsSystem"/> rolls them for any pawn still at the constructor's
-        /// zero, on the very next tick, which this pawn is.</para>
+        /// <para>A colonist is rolled here as <see cref="ColonyScenario.Place"/> rolls a starting one
+        /// — Standard, off <see cref="Spawn"/>'s own <c>RollSeed</c> — passions, traits and starting
+        /// skills, so a debug-spawned pawn is indistinguishable from one dealt at tick zero. The
+        /// skills are rolled here and not left to <see cref="StartingSkillsSystem"/>, which this
+        /// comment once claimed would do it "on the very next tick": that system fires only on
+        /// tick zero, so every colonist spawned later had no skills at all (design 41 §4.4).</para>
         /// </summary>
         /// <summary>
         /// The most pawns a world will hold, and a hard ceiling in the same sense
@@ -148,7 +148,13 @@ namespace Odyssey.Sim.Pawns
             index = FreeSpawnCell(index);
             Pawn pawn = Spawn(index, kind);
             // An animal has no skills to be passionate about (design 29 §2).
-            if (pawn.IsPerson) pawn.RollPassions();
+            if (pawn.IsPerson)
+            {
+                pawn.Profile = RollProfile.Standard;
+                pawn.RollPassions();
+                pawn.RollTraits();
+                pawn.RollStartingSkills();
+            }
             return IntentRejection.None;
         }
 
@@ -537,6 +543,13 @@ namespace Odyssey.Sim.Pawns
                 // could only ever give the second. Reinterpreted rather than converted — an aspect
                 // carries an int and a seed is a uint, and every bit of it matters.
                 writer.AddPawnAspect(pawn.Id, SkillAspects.RollSeed, unchecked((int)pawn.RollSeed));
+
+                // Her traits (design 41 §3.5), one slot a row, the handle plus one so zero is an
+                // empty slot. A trait shown on the start screen and never again would be a promise
+                // the game breaks; the inspect pane reads these.
+                for (int slot = 0; slot < TraitHandle.MaxPerPawn; slot++)
+                    writer.AddPawnAspect(pawn.Id, TraitHandle.Slot[slot],
+                        slot < pawn.Traits.Length ? pawn.Traits[slot] + 1 : 0);
 
                 // The rate she is paying work at right now (design 17 §3d), which is what the
                 // stroke clock is scaled by. Asked of the driver on the same terms as the view's

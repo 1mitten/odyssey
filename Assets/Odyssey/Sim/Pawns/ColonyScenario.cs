@@ -25,6 +25,15 @@ namespace Odyssey.Sim.Pawns
     {
         public int colonists = 5;
 
+        /// <summary>
+        /// Which tables a colonist this scenario places is rolled from when the select screen did
+        /// not say (design 41 §4.4). Standard, because the balance is the game's. A test that pins
+        /// another mechanic's exact numbers — a swing's cooldown, a hit's spread, a felling's
+        /// experience — names <see cref="RollProfile.Legacy"/> here, so it measures that mechanic
+        /// rather than whichever traits a seed happened to deal; the draw has tests of its own.
+        /// </summary>
+        public RollProfile colonistProfile = RollProfile.Standard;
+
         public int mealPiles = 12;
 
         /// <summary>
@@ -744,7 +753,7 @@ namespace Odyssey.Sim.Pawns
         /// there are, and this only decides who some of them are.</para>
         /// </param>
         public static Result Place(CellGrid grid, PawnContext pawns, CellRef start, uint seed,
-            ScenarioDef scenario, IReadOnlyList<uint>? chosen = null)
+            ScenarioDef scenario, IReadOnlyList<uint>? chosen = null, IReadOnlyList<RollProfile>? profiles = null)
         {
             var storeys = new Storeys(grid, pawns.Nav, start);
             storeys.Want(ColonistStorey, scenario.colonists);
@@ -778,7 +787,12 @@ namespace Odyssey.Sim.Pawns
                 // placed by itself keeps the world's, which Spawn has already given it. The order
                 // matters — the seed must be in place before either roll reads it.
                 if (chosen != null && i < chosen.Count) colonist.RollSeed = chosen[i];
+                // Every colonist the game places rolls Standard unless the select screen said
+                // Gamble (design 41 §4.4): the balance is the game's, not the start screen's. Set
+                // before any roll reads it, like the seed.
+                colonist.Profile = profiles != null && i < profiles.Count ? profiles[i] : scenario.colonistProfile;
                 colonist.RollPassions();
+                colonist.RollTraits();
                 AssignTrade(colonist, i, scenario);
                 placedColonists++;
             }

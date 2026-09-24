@@ -220,6 +220,9 @@ namespace Odyssey.Tests.Sim
             ScenarioDef scenario = ScenarioDef.Bare();
             scenario.colonists = 3;
             scenario.beds = 3;
+            // The experience is pinned against the passion alone; a Quick study would scale it
+            // (design 41 §3.2), and that has a test of its own.
+            scenario.colonistProfile = RollProfile.Legacy;
             ColonyWorld colony = ColonyWorld.Build(size, 1u, scenario, barren: true, wooded: true);
 
             // U37: the first tick of any colony rolls starting skills, so "never cut" no longer

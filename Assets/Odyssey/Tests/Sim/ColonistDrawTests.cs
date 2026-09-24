@@ -69,6 +69,10 @@ namespace Odyssey.Tests.Sim
                 Assert.That(real.Skills, Is.EqualTo(card.Skills),
                     $"slot {slot}: the colonist the player got is not the one on the card");
                 Assert.That(real.Passions, Is.EqualTo(card.Passions), $"slot {slot}: passions differ");
+                // The draw (design 41 §4.4): the profile, the traits and the pace are the card's too.
+                Assert.That(real.Profile, Is.EqualTo(card.Profile), $"slot {slot}: rolled from other tables");
+                Assert.That(real.Traits, Is.EqualTo(card.Traits), $"slot {slot}: traits differ");
+                Assert.That(real.InnatePacePerMille(), Is.EqualTo(card.InnatePacePerMille()), $"slot {slot}: pace differs");
             }
         }
 

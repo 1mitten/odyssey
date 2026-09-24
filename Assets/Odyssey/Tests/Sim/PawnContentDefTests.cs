@@ -219,7 +219,10 @@ namespace Odyssey.Tests.Sim
         // jobs keep drivers 14-16, so the combat five move from 14-18 to 17-21 (nothing combat shipped
         // had saved them). Neither side's number covers the merged pack, so it is re-taken from a
         // freshly loaded pack rather than adopted from either.
-        const ulong ContentFingerprint = 7311169109491343133UL;
+        //
+        // Moved again, 2026-09-24, by the draw (design 41): eighteen TraitDefs, hauling's
+        // outsideBudget, and the Standard and Gamble tables on the colonist kind. Deliberate.
+        const ulong ContentFingerprint = 3673186213264952397UL;
 
 
         [Test]

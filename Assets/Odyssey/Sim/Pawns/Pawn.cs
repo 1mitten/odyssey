@@ -74,6 +74,36 @@ namespace Odyssey.Sim.Pawns
 
         uint _rollSeed;
 
+        /// <summary>
+        /// Which tables this pawn's skills, passions, traits and pace were drawn from (design 41
+        /// §4.4). <see cref="RollProfile.Legacy"/> — the constructor's zero — unless somebody says
+        /// otherwise: placement and the debug spawn say Standard, the select screen says whatever
+        /// the player chose, and a save written before the draw says nothing, which is exactly what
+        /// it meant. Saved in <c>PawnProfileSection</c> and hashed.
+        ///
+        /// <para>The setter drops the cached pace for the reason <see cref="RollSeed"/>'s does: the
+        /// band is the profile's, and the profile arrives after the pawn on a load.</para>
+        /// </summary>
+        public RollProfile Profile
+        {
+            get => _profile;
+            set
+            {
+                _profile = value;
+                _innatePacePerMille = 0;
+            }
+        }
+
+        RollProfile _profile;
+
+        /// <summary>
+        /// The traits this pawn carries, as <see cref="TraitHandle"/> indices in the order they were
+        /// dealt (design 41 §3). <b>Read only through <see cref="TraitFactorPerMille"/> and
+        /// <see cref="TraitOffset"/></b>, which are the one owner of what traits add up to; a seam
+        /// that walked this itself would be the second. Saved in <c>PawnTraitSection</c> and hashed.
+        /// </summary>
+        public int[] Traits { get; set; } = System.Array.Empty<int>();
+
         public Pawn(PawnId id, int cell, PawnContent content, int kind = 0)
         {
             Id = id;
@@ -567,6 +597,36 @@ namespace Odyssey.Sim.Pawns
         public virtual int NeedFallPerInterval(int needIndex) =>
             Content.Needs[needIndex].FallPerInterval(Needs[needIndex]);
 
+        /// <summary>
+        /// The fall this interval with the trait's factor on it (design 41 §3.2): hunger for food,
+        /// tiredness for rest, nothing for joy.
+        ///
+        /// <para><b>Dithered on the interval, for the reason <see cref="RestGainPerInterval(int, int)"/>
+        /// is.</b> A band falls 1 to 4 a step, so ×1.2 on a 1 truncates to 1 and a Big appetite
+        /// would be worth nothing at all in the band a colonist spends most of her life in. The
+        /// fractional part is spent by a Bresenham step over the interval index, which the world
+        /// already stores, so nothing new is saved or hashed.</para>
+        /// </summary>
+        public int NeedFallPerInterval(int needIndex, int intervalIndex)
+        {
+            int fall = NeedFallPerInterval(needIndex);
+            int factor = needIndex == NeedIndex.Food ? TraitFactorPerMille(TraitStat.HungerFall)
+                : needIndex == NeedIndex.Rest ? TraitFactorPerMille(TraitStat.RestFall)
+                : 1_000;
+            return Dithered(fall * factor, intervalIndex);
+        }
+
+        /// <summary>A per-mille product as a whole number, its fraction spent over the intervals.</summary>
+        static int Dithered(int scaledPerMille, int intervalIndex)
+        {
+            int whole = scaledPerMille / 1_000;
+            int fraction = scaledPerMille % 1_000;
+            if (fraction == 0) return whole;
+            int accumulator = (int)((long)intervalIndex * fraction % 1_000);
+            if (accumulator < 0) accumulator += 1_000;
+            return accumulator < fraction ? whole + 1 : whole;
+        }
+
         /// <summary>Rest recovered per interval, scaled by what the pawn is lying on.</summary>
         public virtual int RestGainPerInterval(int bedEffectiveness) =>
             RestGainPerInterval(bedEffectiveness, 0);
@@ -633,6 +693,9 @@ namespace Odyssey.Sim.Pawns
             // curve said (design 28 §8). Composed here rather than in the drivers so every job
             // inherits it from the one seam, exactly as condition is.
             rate = rate * Content.Temperature.WorkPerMille(AmbientTempC) / 1_000;
+            // Then who she is (design 41 §3.2): design 17 §6's fifth factor, before the floor like
+            // every other, so a Wreck in a cold room is still paid at the floor and not below it.
+            rate = rate * TraitFactorPerMille(TraitStat.WorkSpeed) / 1_000;
             return rate < def.workRateFloorPerMille ? def.workRateFloorPerMille : rate;
         }
 
@@ -650,7 +713,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public virtual int MoveRatePerMille() =>
             Content.Movement.movePerTick * Rates.Scale
-                * InnatePacePerMille() / 1_000
+                * PacePerMille() / 1_000
                 * ConditionPerMille() / 1_000
                 * Species.movePerMille / 1_000
                 * UrgencyPerMille() / 1_000;
@@ -684,11 +747,35 @@ namespace Odyssey.Sim.Pawns
             {
                 var rng = DeterministicRandom.ForTick(RollSeed, Id.Value, PawnPurpose.MovePace);
                 var movement = Content.Movement;
-                _innatePacePerMille = movement.innatePaceMinPerMille
-                    + rng.NextInt(movement.innatePaceMaxPerMille - movement.innatePaceMinPerMille + 1);
+                // The band is the profile's (design 41 §4.2): Standard's is narrower, so everyone
+                // averages out on foot too. Legacy and Gamble keep the movement def's.
+                int min = movement.innatePaceMinPerMille;
+                int max = movement.innatePaceMaxPerMille;
+                if (Profile == RollProfile.Standard)
+                {
+                    min = Content.Kind.standardPaceMinPerMille;
+                    max = Content.Kind.standardPaceMaxPerMille;
+                }
+
+                _innatePacePerMille = min + rng.NextInt(max - min + 1);
             }
 
             return _innatePacePerMille;
+        }
+
+        /// <summary>
+        /// Her pace on foot: the pace she was dealt times what her traits make of it, <b>held
+        /// inside the movement def's band</b> (design 41 §3.2). The band is the walk cycle's limit
+        /// (design 17 §4b) — a stride drawn more than fifteen per cent off true looks wrong — and
+        /// that limit is about the drawn step, not about where the speed came from.
+        /// </summary>
+        public virtual int PacePerMille()
+        {
+            int pace = InnatePacePerMille() * TraitFactorPerMille(TraitStat.MovePace) / 1_000;
+            var movement = Content.Movement;
+            if (pace < movement.innatePaceMinPerMille) pace = movement.innatePaceMinPerMille;
+            if (pace > movement.innatePaceMaxPerMille) pace = movement.innatePaceMaxPerMille;
+            return pace;
         }
 
         int _innatePacePerMille;
@@ -774,10 +861,55 @@ namespace Odyssey.Sim.Pawns
         public Passion PassionFor(int skill) => (Passion)Passions[skill];
 
         /// <summary>
-        /// The global learning factor, per mille. 1,000 until traits exist; the reference adds
-        /// trait and implant offsets here, which is why it is a seam and not a constant.
+        /// The global learning factor, per mille: what her traits make of it (design 41 §3.2).
+        /// Implants and age are the reference's other terms here, and arrive in the same product.
         /// </summary>
-        public virtual int LearningFactorPerMille() => 1_000;
+        public virtual int LearningFactorPerMille() => TraitFactorPerMille(TraitStat.Learning);
+
+        // ---- traits (design 41 §3) --------------------------------------------------------
+
+        /// <summary>
+        /// Every trait's factor on one stat, multiplied, per mille; 1,000 for a pawn with none.
+        /// <b>The one reader of <see cref="Traits"/></b> with <see cref="TraitOffset"/> — every seam
+        /// asks here, so the day degrees or age factors arrive they arrive in one function.
+        /// </summary>
+        public int TraitFactorPerMille(TraitStat stat)
+        {
+            int factor = 1_000;
+            int[] traits = Traits;
+            TraitDef[] defs = Content.Traits;
+            for (int i = 0; i < traits.Length; i++)
+            {
+                int handle = traits[i];
+                if ((uint)handle >= (uint)defs.Length) continue;
+                var effects = defs[handle].effects;
+                for (int e = 0; e < effects.Count; e++)
+                    if (effects[e].stat == stat) factor = factor * effects[e].factorPerMille / 1_000;
+            }
+
+            return factor;
+        }
+
+        /// <summary>Every trait's offset to one stat, summed; 0 for a pawn with none.</summary>
+        public int TraitOffset(TraitStat stat)
+        {
+            int offset = 0;
+            int[] traits = Traits;
+            TraitDef[] defs = Content.Traits;
+            for (int i = 0; i < traits.Length; i++)
+            {
+                int handle = traits[i];
+                if ((uint)handle >= (uint)defs.Length) continue;
+                var effects = defs[handle].effects;
+                for (int e = 0; e < effects.Count; e++)
+                    if (effects[e].stat == stat) offset += effects[e].offset;
+            }
+
+            return offset;
+        }
+
+        /// <summary>Whether a skill is counted in the Standard and Gamble budgets (design 41 §4.1).</summary>
+        bool InBudget(int skill) => skill < Content.Skills.Length && !Content.Skills[skill].outsideBudget;
 
         /// <summary>
         /// Earn experience in a skill: the base amount, scaled by the learning factor and the
@@ -836,13 +968,61 @@ namespace Odyssey.Sim.Pawns
         {
             var kind = Content.Kind;
             var rng = DeterministicRandom.ForTick(RollSeed, Id.Value, PawnPurpose.Passion);
+            if (Profile == RollProfile.Standard)
+            {
+                RollStandardPassions(ref rng);
+                return;
+            }
+
+            // Legacy and Gamble are the same shape, one independent roll a skill, at their own odds.
+            int major = Profile == RollProfile.Gamble ? kind.gamblePassionMajorPerCent : kind.passionMajorPerCent;
+            int minor = Profile == RollProfile.Gamble ? kind.gamblePassionMinorPerCent : kind.passionMinorPerCent;
             for (int skill = 0; skill < Passions.Length; skill++)
             {
                 int roll = rng.NextInt(100);
-                if (roll < kind.passionMajorPerCent) Passions[skill] = (byte)Passion.Major;
-                else if (roll < kind.passionMajorPerCent + kind.passionMinorPerCent) Passions[skill] = (byte)Passion.Minor;
+                if (roll < major) Passions[skill] = (byte)Passion.Major;
+                else if (roll < major + minor) Passions[skill] = (byte)Passion.Minor;
                 else Passions[skill] = (byte)Passion.None;
             }
+        }
+
+        /// <summary>
+        /// Standard's passions (design 41 §4.2): exactly one major and one minor, on two different
+        /// budget skills, each drawn weighted by the level that skill will be dealt plus one — so
+        /// a passion tends to sit on what she is good at, and never on hauling. The levels are
+        /// computed here rather than read, because passions are rolled at placement and skills on
+        /// the first tick; <see cref="StandardLevels"/> is a pure function of the seed, so both see
+        /// the same numbers.
+        /// </summary>
+        void RollStandardPassions(ref DeterministicRandom rng)
+        {
+            for (int s = 0; s < Passions.Length; s++) Passions[s] = (byte)Passion.None;
+            if (Content.Skills.Length < Skills.Length) return;
+
+            var levels = new int[Skills.Length];
+            StandardLevels(levels);
+            int major = DrawBudgetSkill(ref rng, levels, exclude: -1);
+            if (major < 0) return;
+            Passions[major] = (byte)Passion.Major;
+            int minor = DrawBudgetSkill(ref rng, levels, exclude: major);
+            if (minor >= 0) Passions[minor] = (byte)Passion.Minor;
+        }
+
+        int DrawBudgetSkill(ref DeterministicRandom rng, int[] levels, int exclude)
+        {
+            int total = 0;
+            for (int s = 0; s < levels.Length; s++)
+                if (s != exclude && InBudget(s)) total += levels[s] + 1;
+            if (total <= 0) return -1;
+            int roll = rng.NextInt(total);
+            for (int s = 0; s < levels.Length; s++)
+            {
+                if (s == exclude || !InBudget(s)) continue;
+                roll -= levels[s] + 1;
+                if (roll < 0) return s;
+            }
+
+            return -1;
         }
 
         /// <summary>
@@ -871,6 +1051,12 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public virtual void RollStartingSkills()
         {
+            if (Profile != RollProfile.Legacy)
+            {
+                RollDrawnSkills();
+                return;
+            }
+
             var kind = Content.Kind;
             int[] weights = kind.startingSkillLevelWeights;
             if (weights.Length == 0) return;
@@ -897,6 +1083,154 @@ namespace Odyssey.Sim.Pawns
                 if (level > def.maxLevel) level = def.maxLevel;
                 Skills[skill] = def.ExperienceForLevel(level);
             }
+        }
+
+        /// <summary>
+        /// Standard's and Gamble's starting skills (design 41 §4), written into every skill still at
+        /// the constructor's zero — the rule <see cref="RollStartingSkills"/> keeps for the same
+        /// reason. Hauling, outside every budget, is drawn from the legacy table in both.
+        /// </summary>
+        void RollDrawnSkills()
+        {
+            if (Content.Skills.Length < Skills.Length) return;
+            var levels = new int[Skills.Length];
+            if (Profile == RollProfile.Standard) StandardLevels(levels);
+            else GambleLevels(levels);
+
+            for (int skill = 0; skill < Skills.Length; skill++)
+            {
+                if (Skills[skill] != 0) continue;
+                var def = Content.Skills[skill];
+                int level = levels[skill] > def.maxLevel ? def.maxLevel : levels[skill];
+                Skills[skill] = def.ExperienceForLevel(level);
+            }
+        }
+
+        /// <summary>
+        /// The levels Standard deals (design 41 §4.2), as a pure function of the seed and the id:
+        /// every budget skill draws a weight, then <see cref="PawnKindDef.standardSkillBudget"/>
+        /// points are dealt one at a time by weight, no skill past
+        /// <see cref="PawnKindDef.standardSkillCap"/>. The same total for everybody, and a
+        /// specialist or a generalist depending on the weights. Skills outside the budget draw from
+        /// the legacy table afterwards, on the same stream.
+        /// </summary>
+        public void StandardLevels(int[] into)
+        {
+            var kind = Content.Kind;
+            var rng = DeterministicRandom.ForTick(RollSeed, Id.Value, PawnPurpose.StartingSkill);
+            var weight = new int[into.Length];
+            for (int s = 0; s < into.Length; s++)
+            {
+                into[s] = 0;
+                if (InBudget(s)) weight[s] = 1 + rng.NextInt(kind.standardSkillWeightMax);
+            }
+
+            for (int point = 0; point < kind.standardSkillBudget; point++)
+            {
+                int total = 0;
+                for (int s = 0; s < into.Length; s++)
+                    if (InBudget(s) && into[s] < kind.standardSkillCap) total += weight[s];
+                if (total <= 0) break;
+                int roll = rng.NextInt(total);
+                for (int s = 0; s < into.Length; s++)
+                {
+                    if (!InBudget(s) || into[s] >= kind.standardSkillCap) continue;
+                    roll -= weight[s];
+                    if (roll < 0) { into[s]++; break; }
+                }
+            }
+
+            for (int s = 0; s < into.Length; s++)
+                if (s < Content.Skills.Length && !InBudget(s)) into[s] = DrawLevel(ref rng, kind.startingSkillLevelWeights);
+        }
+
+        /// <summary>Gamble's levels (design 41 §4.3): one independent draw a budget skill from the long-tailed table.</summary>
+        void GambleLevels(int[] into)
+        {
+            var kind = Content.Kind;
+            var rng = DeterministicRandom.ForTick(RollSeed, Id.Value, PawnPurpose.StartingSkill);
+            for (int s = 0; s < into.Length; s++)
+                into[s] = DrawLevel(ref rng, InBudget(s) ? kind.gambleSkillLevelWeights : kind.startingSkillLevelWeights);
+        }
+
+        /// <summary>One draw from a weight table indexed by level; 0 for an empty table.</summary>
+        static int DrawLevel(ref DeterministicRandom rng, int[] weights)
+        {
+            int total = 0;
+            for (int i = 0; i < weights.Length; i++) total += weights[i];
+            if (total <= 0) return 0;
+            int roll = rng.NextInt(total);
+            for (int l = 0; l < weights.Length; l++)
+            {
+                roll -= weights[l];
+                if (roll < 0) return l;
+            }
+
+            return weights.Length - 1;
+        }
+
+        /// <summary>
+        /// Deal this pawn's traits (design 41 §3, §4). Standard: one mild good and one mild bad,
+        /// never each other's opposite, netting to within one point of worth. Gamble: none to three
+        /// from both pools, no two the same, never both halves of an opposite pair. Legacy: none.
+        /// Its own stream, so it cannot shift a passion or a skill. <b>A pawn already carrying
+        /// traits is left alone</b>, which is what lets a load or a fixture set them first.
+        /// </summary>
+        public virtual void RollTraits()
+        {
+            if (Traits.Length != 0 || Profile == RollProfile.Legacy) return;
+            TraitDef[] defs = Content.Traits;
+            if (defs.Length == 0) return;
+
+            var rng = DeterministicRandom.ForTick(RollSeed, Id.Value, PawnPurpose.Trait);
+            if (Profile == RollProfile.Standard)
+            {
+                int good = DrawTrait(ref rng, t => defs[t].pool == TraitPool.Mild && defs[t].worth > 0);
+                if (good < 0) return;
+                int bad = DrawTrait(ref rng, t => defs[t].pool == TraitPool.Mild && defs[t].worth < 0
+                    && t != Content.TraitOpposite[good]
+                    && System.Math.Abs(defs[t].worth + defs[good].worth) <= 1);
+                Traits = bad < 0 ? new[] { good } : new[] { good, bad };
+                return;
+            }
+
+            int[] countWeights = Content.Kind.gambleTraitCountWeights;
+            int count = System.Math.Min(DrawLevel(ref rng, countWeights), TraitHandle.MaxPerPawn);
+            var dealt = new List<int>(count);
+            for (int i = 0; i < count; i++)
+            {
+                int next = DrawTrait(ref rng, t => !Conflicts(dealt, t));
+                if (next < 0) break;
+                dealt.Add(next);
+            }
+
+            Traits = dealt.ToArray();
+        }
+
+        bool Conflicts(List<int> dealt, int candidate)
+        {
+            for (int i = 0; i < dealt.Count; i++)
+                if (dealt[i] == candidate || Content.TraitOpposite[dealt[i]] == candidate) return true;
+            return false;
+        }
+
+        /// <summary>One trait drawn by commonality from those the filter admits, or -1.</summary>
+        int DrawTrait(ref DeterministicRandom rng, System.Func<int, bool> admits)
+        {
+            TraitDef[] defs = Content.Traits;
+            int total = 0;
+            for (int t = 0; t < defs.Length; t++)
+                if (admits(t)) total += defs[t].commonality;
+            if (total <= 0) return -1;
+            int roll = rng.NextInt(total);
+            for (int t = 0; t < defs.Length; t++)
+            {
+                if (!admits(t)) continue;
+                roll -= defs[t].commonality;
+                if (roll < 0) return t;
+            }
+
+            return -1;
         }
 
         // ---- thoughts --------------------------------------------------------------------
@@ -992,6 +1326,11 @@ namespace Odyssey.Sim.Pawns
             // U40. Saved state that is not derived belongs in the hash (OQ-50), and this decides
             // what a pawn is. Every Simulated golden moved when it arrived, deliberately.
             hash.Add(unchecked((int)RollSeed));
+            // Design 41 §3.5, §4.4: which tables she was rolled from, and what she was dealt. Both
+            // decide rates, so both are real state; every Simulated golden moved when they arrived.
+            hash.Add((int)Profile);
+            hash.Add(Traits.Length);
+            for (int i = 0; i < Traits.Length; i++) hash.Add(Traits[i]);
             // Design 29 §6. Every Simulated golden moved when it arrived, by the hash seeing one
             // more zero per colonist — measured to be that and nothing else.
             // Leaving rides in the kind's word: a colonist never leaves, so a board with no
