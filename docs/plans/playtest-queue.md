@@ -23,6 +23,14 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do the bat and the crowbar only swing?** (`claude/blunt-swings`, design 33 §22.) Debug menu >
+  Spawn 3 bandits, arm a colonist with a bat and another with a crowbar (*Arm every colonist*, or
+  right-click > Equip), draft them and order attacks. Watch several blows in a row: each should be
+  a big two-handed swing or overhead chop, cycling through three different ones. A wrong answer is
+  any blow that thrusts the weapon straight forward, a blow that lands before the swing reaches the
+  target (the third one especially, whose timing was broken until now), or the machete and blade
+  swinging differently from before.
+
 - **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
   Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest
   over bare arms and black trousers, and carry a crowbar or a bat; click one and the pane shows a
