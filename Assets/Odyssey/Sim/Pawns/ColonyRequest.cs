@@ -82,6 +82,14 @@ namespace Odyssey.Sim.Pawns
         public MapType Map = MapType.Natural;
 
         /// <summary>
+        /// A natural map's surface relief in layers, or -1 for the def's own. A measurement seam
+        /// for the board-depth arms (<c>docs/design/38-meadow-overhaul.md</c> §7); the game never
+        /// sets it, and it is <b>not saved</b> — a colony built with it would reload on the def's
+        /// own relief.
+        /// </summary>
+        public int SurfaceRelief = -1;
+
+        /// <summary>
         /// The presentation chunk grid, when a renderer will be attached, so the support system
         /// and the jobs that edit the world can mark chunks dirty. Null for a headless run.
         /// </summary>

@@ -581,7 +581,6 @@ namespace Odyssey.Tests.PlayMode
                     // Build palette's ESC hint would have been a fourth; a rule that has to be
                     // extended every time it is obeyed is a rule that eventually is not.
                     if (label.ClassListContains(HudText.KeyCapClass)) continue;
-                    if (label.ClassListContains("rail__hint")) continue;
 
                     bool shout = text.Length is 2 or 3 && text == text.ToUpperInvariant() &&
                                  System.Array.TrueForAll(text.ToCharArray(), char.IsLetter);

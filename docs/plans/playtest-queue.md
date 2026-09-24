@@ -59,6 +59,17 @@ the next session learns to ignore.
   or a bush that vanishes at the screen's edge or pops in late; grass that flickers while panning; a stutter
   when a colonist digs, builds or a crop grows; or no smoother than before at the far zoom.
 
+- **Should four armed colonists lose to three marauders?** (`claude/combat-c7`, design 33 §21d,
+  `docs/milestones/combat-report.md` §5.) **Every combat row from here down is on `main` since PR
+  #194**, whatever branch it names; the combat plan is done and these are what is left of it.
+  - *Set-up.* New game, five colonists. Debug menu: *Arm every colonist*, then draft them all and
+    move them together. *Spawn 3 marauders* about twenty cells off.
+  - *What the gate saw.* On one seed of three the gathered squad of four lost to the three; on the
+    other two the squads downed nine and seven marauders over ten days. Every number in the fight is
+    invented, so this is the tuning speaking.
+  - *A wrong answer looks like* an armed squad that feels hopeless against three (the marauders too
+    strong — their level, the machete, or the colonists' weapon roll), or three marauders that never
+    get a colonist down (too weak). Say which, and roughly how many a squad of four should beat.
 - **Does the landing ring read, and does a drag across the roster select the squad?**
   (`claude/draft-ring-roster-drag`, design 33 §20.)
   - *Set-up.* Any colony with four or more colonists. Draft them all.
@@ -1099,6 +1110,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-24 | **Walls down, both rounds** (PR #197, `docs/design/42-walls-down.md`) | working — owner, first look: *"works brilliantly but a few things"*; after the second round: *"excellent - get this ready for merge"* | the first look moved two things (the R / F label went; a lower terrace counts as ground and only upper storeys hide, §3a); ready to merge |
 | 2026-09-24 | **Beating a wall down** (C6, `claude/combat-buildings`, `docs/design/33-combat.md` §13) | working — owner: *"Buildings work fine"* | none. The row's own question, whether a wall reads without a damage bar, was not raised, so none is built. The break-in row (§14b, §14d) stays open: it was built after that playtest |
 | 2026-09-24 | **What grass costs on the GPU at 4K** (PR #183, `docs/design/38-meadow-overhaul.md` §13) | measured — owner: *"6–7 ms on gpu (sometimes bit lower) without grass tufts. On — 7 ish — spikes up to 8 moving around"* | about 0.5–1 ms, peaks ~1.5; under the 2 ms line, so M4 plans for full cover; agrees with the batch arm |
 | 2026-09-24 | **Combat C2 + C3 and the three rounds after play** (PR #180, `docs/design/33-combat.md` §3–§9) | working — owner: *"it seems great ... weapons sit at hips, have a battle with tons and tons of characters - was hovering 3.5ms ... it flowed really well"* | closes the brawl and fight rows; 3.5 ms is inside the 5 ms budget on the dev GPU, unmeasured on the target laptop; the ring, menu and grip rows stay open for the "more testing later" |

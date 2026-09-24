@@ -30,6 +30,14 @@ namespace Odyssey.Tests.PlayMode
     /// frame, so <c>Time.unscaledDeltaTime</c> here is the figure the player would see.
     ///
     /// This is the first test in the PlayMode gate, which had passed vacuously until now.
+    ///
+    /// <para><b>An arm whose only verdict is a timing carries <c>Category("Measurement")</c></b>, and
+    /// a pull request does not run it: CI runs those nightly on main and on the label
+    /// <c>ci:perf</c> (<c>docs/process.md</c> §5). "Only a timing" means every assert is a check that
+    /// the arm measured something (a world was built, the control applied, the camera drew at 4K)
+    /// or the 30 Hz ceiling. An arm that also asserts a structural claim — draws in colours, the
+    /// picture unchanged, the budget held — stays untagged, because that claim is a test. The two
+    /// canaries stay untagged too: they are the gate's one check that the game draws a frame at all.</para>
     /// </summary>
     public class FrameTimeTests
     {
@@ -66,7 +74,7 @@ namespace Odyssey.Tests.PlayMode
         /// the crop meshes, and its log line is the number <c>22-growing.md</c> records
         /// against the frame budget.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator ATwoThousandCellFieldRendersInsideAFrame() =>
             Measure(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true, "field", SeedField);
 
@@ -91,7 +99,7 @@ namespace Odyssey.Tests.PlayMode
         /// same meadow before and after the orders go down cancels all of that: the difference is
         /// the pass, whatever the machine is doing.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheMarkPassCostsWhatItSubmits()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -417,7 +425,7 @@ namespace Odyssey.Tests.PlayMode
         /// a different run is not a control. Alternating catches a drift that happens to fall
         /// between the two halves.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheAttachmentsCostWhatTheyDraw()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -483,7 +491,7 @@ namespace Odyssey.Tests.PlayMode
         /// linear scan on its own — which is the open question the plan asked to answer on the
         /// way. At 192 and 384 the quadratic term is what is being measured.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheCrowdScanCostsWhatItVisits()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -545,7 +553,7 @@ namespace Odyssey.Tests.PlayMode
         /// shape <c>TheAttachmentsCostWhatTheyDraw</c> established, because this machine drifts by
         /// more between runs than most passes cost.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheAspectLookupCostsWhatItScans()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -615,7 +623,7 @@ namespace Odyssey.Tests.PlayMode
         /// does not build one: the sweep is unconditional, so a colony that has never seen a fire
         /// was paying for looking for one.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheCampfireSweepCostsWhatItVisits()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
@@ -669,7 +677,7 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheFrameAgainstColonySize()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -1010,7 +1018,7 @@ namespace Odyssey.Tests.PlayMode
         /// machine; what it asserts is that each board really was built and really was designated,
         /// because a world that failed to generate reports a beautifully fast frame.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheBoardSizeAgainstTheFrame()
         {
             (string Label, int X, int Z, int Y)[] boards =
@@ -1074,6 +1082,103 @@ namespace Odyssey.Tests.PlayMode
             Assert.That(chunks[2], Is.GreaterThan(chunks[0]),
                 "the huge board drew no more chunks than the standard one, so the size seam did " +
                 "not take and all three readings are the same board");
+        }
+
+        /// <summary>
+        /// What eight layers of hills cost the frame, at 16, 20 and 24 layers deep, against today's
+        /// board — the frame half of the board-depth measurement
+        /// (<c>docs/design/38-meadow-overhaul.md</c> §7, M7; the simulation half is
+        /// <c>BoardDepthTests</c>).
+        ///
+        /// <para>Every board the menu offers, each at today's relief and height and then at ±4 on
+        /// 16, 20 and 24 layers, on the played wooded meadow, each timed at the batch view and with
+        /// the camera drawing into 3840 x 2160. <b>Only readings inside this one test compare</b>
+        /// (§6c). Frustum culling is on, as it is on <c>main</c>.</para>
+        ///
+        /// <para>It asserts that each control applied: the board is the height asked for, the hills
+        /// are taller than today's, the 4K arm drew at 4K, and something was drawn. Never a time.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBoardDepthAgainstTheFrame()
+        {
+            (string Label, int X, int Z, int ShippedY)[] boards =
+            {
+                ("small", 80, 80, 16),
+                ("standard", 120, 120, 16),
+                ("large", 180, 180, 24),
+                ("huge", 240, 240, 16),
+            };
+            var lines = new List<string>();
+
+            foreach (var board in boards)
+            {
+                (string Label, int Relief, int Layers)[] configs =
+                {
+                    ($"today +-2 @{board.ShippedY}", 2, board.ShippedY),
+                    ("+-4 @16", 4, 16),
+                    ("+-4 @20", 4, 20),
+                    ("+-4 @24", 4, 24),
+                };
+                int todaySpan = -1;
+
+                foreach (var config in configs)
+                {
+                    GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                        out OdysseyBootstrap boot, board.X, board.Z, config.Layers, config.Relief);
+                    UnityEngine.Camera? cam = null;
+                    RenderTexture? previousTarget = null;
+                    RenderTexture? fourK = null;
+                    try
+                    {
+                        float small = 0f, big = 0f;
+                        double[] smallSplit = Array.Empty<double>(), bigSplit = Array.Empty<double>();
+                        string name = $"depth/{board.Label}/{config.Label}";
+                        yield return TimeFrames(name + "/batch", boot, WarmupFrames,
+                            m => small = m, p => smallSplit = p);
+                        ChunkRenderer renderer = boot.Renderer!;
+                        int smallCalls = renderer.DrawCalls, smallChunks = renderer.ChunksDrawn;
+
+                        cam = boot.cameraRig!.Camera;
+                        previousTarget = cam.targetTexture;
+                        fourK = new RenderTexture(3840, 2160, 24) { name = "depth-4k" };
+                        cam.targetTexture = fourK;
+                        yield return TimeFrames(name + "/4k", boot, WarmupFrames,
+                            m => big = m, p => bigSplit = p);
+                        int bigCalls = renderer.DrawCalls, bigChunks = renderer.ChunksDrawn;
+
+                        Assert.That(cam.pixelWidth, Is.EqualTo(3840), $"{name}: the 4K arm drew at the batch size");
+                        Assert.That(boot.Colony, Is.Not.Null, $"{name}: no colony was built");
+                        Assert.That(boot.Colony!.Grid.Size.SizeY, Is.EqualTo(config.Layers),
+                            $"{name}: the board is not the height asked for");
+                        Assert.That(smallChunks, Is.GreaterThan(0), $"{name}: nothing was drawn");
+                        var report = boot.Colony.Outcome.Natural!.Report;
+                        int span = report.SurfaceMaxY - report.SurfaceMinY;
+                        if (config.Relief == 2) todaySpan = span;
+                        else if (todaySpan >= 0)
+                            Assert.That(span, Is.GreaterThan(todaySpan),
+                                $"{name}: the hills are no taller than today's, so the relief seam did not take");
+
+                        lines.Add($"{board.Label} {config.Label}: " +
+                                  $"batch {small:0.00} ms (World {Section(smallSplit, OdysseyBootstrap.FrameSection.World):0.000}, " +
+                                  $"{smallCalls} calls, {smallChunks} chunks); " +
+                                  $"4K {big:0.00} ms (World {Section(bigSplit, OdysseyBootstrap.FrameSection.World):0.000}, " +
+                                  $"{bigCalls} calls, {bigChunks} chunks); surface {report.SurfaceMinY}..{report.SurfaceMaxY}");
+                    }
+                    finally
+                    {
+                        if (cam != null) cam.targetTexture = previousTarget;
+                        if (fourK != null) fourK.Release();
+                        UnityEngine.Object.Destroy(root);
+                    }
+
+                    // The old world's arrays go before the next is built, as the board-size arm does.
+                    yield return null;
+                    GC.Collect();
+                    yield return null;
+                }
+            }
+
+            foreach (string line in lines) Debug.Log("[FrameTime] board depth " + line);
         }
 
         /// <summary>
@@ -1642,7 +1747,7 @@ namespace Odyssey.Tests.PlayMode
         /// the shipped sizes in a <c>finally</c> because they are process-wide statics and a test
         /// that leaked one would silently retune every arm that ran afterwards.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheSurroundSectorSweep()
         {
             (string Label, float Near, float Far, int Variants)[] sizes =
@@ -1730,7 +1835,7 @@ namespace Odyssey.Tests.PlayMode
         /// tufts and a surround to take away, because a board that generated neither reports a
         /// beautifully cheap frame and a difference of zero.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheDecorationAgainstTheFrame()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
@@ -1803,38 +1908,6 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// What grass costs at the play resolution as well as the batch one: the first unit of the
-        /// Meadow overhaul (<c>docs/design/38-meadow-overhaul.md</c> §11, M1), taken before any
-        /// art moves.
-        ///
-        /// <para><b>Why it is not the arm the design first asked for.</b> d-18 predicted that
-        /// every foliage instance is drawn up to six times a frame — the SSAO DepthNormals
-        /// prepass, the forward pass and four shadow cascades — and proposed depth priming. Read
-        /// against the code it does not hold for grass: <c>ChunkRenderer.FoliageCastsShadows</c>
-        /// is off, and foliage is drawn in <see cref="MaterialCache.DefaultFoliageQueue"/>, just
-        /// past the opaque range so the outline never inks it, which also keeps it out of the
-        /// opaque-only depth prepass. Grass is drawn once, and depth priming cannot reach it.</para>
-        ///
-        /// <para><b>What the queue does cost is the order.</b> 2501 is in URP's transparent range,
-        /// which is sorted back to front — the worst order for alpha-clipped cards over
-        /// alpha-clipped cards, since the far clumps are shaded first and then covered. The
-        /// alpha-test queue (2450) is opaque, sorted front to back, but joins the DepthNormals
-        /// prepass and is inked by the outline. The fourth arm of each resolution prices that
-        /// trade; it is a measurement, not a proposal to change the look.</para>
-        ///
-        /// <para><b>One world, eight readings.</b> None, the shipped density, full cover
-        /// (<see cref="GroundScatter.MaxPerCell"/> tufts on every grass cell, the most the scatter
-        /// can place today) and full cover in the alpha-test queue — at the batch game view and
-        /// with the camera drawing into a 3840 x 2160 target, which is the owner's resolution and
-        /// the only one at which fill is honestly priced. Only differences inside this run are
-        /// quoted (§6c). The GPU figure is <c>OdysseyBootstrap.GpuFrameMs</c> and is reported as
-        /// unavailable rather than as zero where the platform will not say.</para>
-        ///
-        /// <para>It asserts no times. It asserts that each control applied: the density really
-        /// moved the instance count, the queue arm really moved a material, the 4K arm really drew
-        /// at 4K, and no reading was taken while the board was still re-meshing.</para>
-        /// </summary>
-        /// <summary>
         /// What rain costs, drawn the two ways the weather design weighs (design 43 §7, the
         /// rain-look prototype), on the played board in one run.
         ///
@@ -1851,7 +1924,7 @@ namespace Odyssey.Tests.PlayMode
         /// asserted to have drawn and the particle arm to have particles alive, or the arm measured
         /// nothing.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheRainAgainstTheFrame()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
@@ -1967,7 +2040,39 @@ namespace Odyssey.Tests.PlayMode
             return total;
         }
 
-        [UnityTest]
+        /// <summary>
+        /// What grass costs at the play resolution as well as the batch one: the first unit of the
+        /// Meadow overhaul (<c>docs/design/38-meadow-overhaul.md</c> §11, M1), taken before any
+        /// art moves.
+        ///
+        /// <para><b>Why it is not the arm the design first asked for.</b> d-18 predicted that
+        /// every foliage instance is drawn up to six times a frame — the SSAO DepthNormals
+        /// prepass, the forward pass and four shadow cascades — and proposed depth priming. Read
+        /// against the code it does not hold for grass: <c>ChunkRenderer.FoliageCastsShadows</c>
+        /// is off, and foliage is drawn in <see cref="MaterialCache.DefaultFoliageQueue"/>, just
+        /// past the opaque range so the outline never inks it, which also keeps it out of the
+        /// opaque-only depth prepass. Grass is drawn once, and depth priming cannot reach it.</para>
+        ///
+        /// <para><b>What the queue does cost is the order.</b> 2501 is in URP's transparent range,
+        /// which is sorted back to front — the worst order for alpha-clipped cards over
+        /// alpha-clipped cards, since the far clumps are shaded first and then covered. The
+        /// alpha-test queue (2450) is opaque, sorted front to back, but joins the DepthNormals
+        /// prepass and is inked by the outline. The fourth arm of each resolution prices that
+        /// trade; it is a measurement, not a proposal to change the look.</para>
+        ///
+        /// <para><b>One world, eight readings.</b> None, the shipped density, full cover
+        /// (<see cref="GroundScatter.MaxPerCell"/> tufts on every grass cell, the most the scatter
+        /// can place today) and full cover in the alpha-test queue — at the batch game view and
+        /// with the camera drawing into a 3840 x 2160 target, which is the owner's resolution and
+        /// the only one at which fill is honestly priced. Only differences inside this run are
+        /// quoted (§6c). The GPU figure is <c>OdysseyBootstrap.GpuFrameMs</c> and is reported as
+        /// unavailable rather than as zero where the platform will not say.</para>
+        ///
+        /// <para>It asserts no times. It asserts that each control applied: the density really
+        /// moved the instance count, the queue arm really moved a material, the 4K arm really drew
+        /// at 4K, and no reading was taken while the board was still re-meshing.</para>
+        /// </summary>
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheGrassAgainstTheFrame()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -2073,7 +2178,7 @@ namespace Odyssey.Tests.PlayMode
         /// <c>MaterialCache.OwnFoliageShader</c> with the clones dropped between arms, and the arm
         /// asserts the drop reached something, so it cannot compare a shader with itself (P18).</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheFoliageShaderAgainstThePacks()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -2150,7 +2255,7 @@ namespace Odyssey.Tests.PlayMode
         /// <para>Ignored where no drawn module has levels, which is a clone without the packs: the
         /// catalogue resolves to primitives there, and a primitive has one level.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheLevelsOfDetailAgainstTheFrame()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -2231,7 +2336,7 @@ namespace Odyssey.Tests.PlayMode
         /// count rose with the rung, the camera drew at 4K, and nothing was timed mid-re-mesh —
         /// and ignores itself where no dressing art resolved, which is a clone without the packs.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheDressingAgainstTheFrame()
         {
             var lines = new List<string>();
@@ -2322,7 +2427,7 @@ namespace Odyssey.Tests.PlayMode
         ///
         /// <para>Ignored where the look did not resolve — a clone without the packs, the runner.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheMeadowGroundAgainstTheFrame()
         {
             if (MeadowLook.Loaded == null || !MeadowLook.Loaded.HasGround)
@@ -2661,7 +2766,7 @@ namespace Odyssey.Tests.PlayMode
         /// 3840 x 2160 target. Only differences inside the run are quoted. And the worst regather: a
         /// whole-board re-mesh dirties every layer, which is the most the buffers are ever rebuilt at once.
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheIndirectSceneryAgainstTheFrame()
         {
             var lines = new List<string>();
@@ -3638,7 +3743,7 @@ namespace Odyssey.Tests.PlayMode
         /// camera's farthest pull over the rim, one run. And the see-through for every colonist with
         /// 50 colonists about the start, its lines and its frame against see-through off.
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheWoodedSurroundAgainstTheFrame()
         {
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
@@ -3846,7 +3951,7 @@ namespace Odyssey.Tests.PlayMode
         /// <para>Asserts only that the controls applied: the skin drew triangles when on and none
         /// when off, the instance count fell, the camera drew at 4K, nothing was timed mid-re-mesh.</para>
         /// </summary>
-        [UnityTest]
+        [UnityTest, Category("Measurement")]
         public IEnumerator TheSkinAgainstTheBoxes()
         {
             bool skinWas = GroundSkin.Enabled;
@@ -4137,7 +4242,7 @@ namespace Odyssey.Tests.PlayMode
         /// <summary>The play scene's objects, built by hand: a camera with the rig, a sun, the bootstrap.</summary>
         static GameObject Build(Odyssey.Sim.Worldgen.Natural.MapType mapType, bool barren,
                                 out OdysseyBootstrap boot,
-                                int sizeX = 120, int sizeZ = 120, int layers = 16)
+                                int sizeX = 120, int sizeZ = 120, int layers = 16, int relief = -1)
         {
             var root = new GameObject("FrameTime");
 
@@ -4186,6 +4291,7 @@ namespace Odyssey.Tests.PlayMode
             boot.mapType = mapType;
             boot.barrenMap = barren;
             boot.grassScatter = 60;
+            boot.surfaceReliefOverride = relief;
             boot.cameraRig = rig;
 #if UNITY_EDITOR
             // Real art when the packs are present, the same way the scene gets it. A clone without

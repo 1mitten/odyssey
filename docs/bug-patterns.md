@@ -603,6 +603,38 @@ fixture had just queued still going through. It landed on the dev machine and di
 
 ## The register
 
+### 2026-09-24 — A wait that trusts a path the save does not keep (P14-adjacent; found by the gate)
+
+**Symptom, found by the combat gate before anybody played it.** A save taken at the first swing of
+a raid, loaded and run on for a day, came to a different hash from the world it was saved from, on
+two seeds of three. The lockstep twin in the same run agreed every hour, so the simulation was
+deterministic and the fault was in the round trip.
+
+**Cause.** One tick after the load, one drafted colonist who had joined a fight nearby had not
+moved: every field saved and hashed matched, but her progress through a step was 69,050 in the
+loaded world and 71,304 in the other. `Job_AttackMelee` has five branches that let **a step already
+under way land** before they decide (`if (!boundary) return Ongoing`), and they rely on the mover
+to finish it along the path she holds. A path is recomputed, never saved (`MovementSystem`), and a
+driver that walks asks for one through `GotoCell` every tick — but these branches do not walk, they
+wait. So a pawn loaded in reach, part way through a step, held no path, nothing asked for one, and
+she stood frozen until her target moved away.
+
+**How it hid.** Every existing round trip saved at a moment nobody was in that state: mid-swing
+(`ASaveTakenMidSwingResumesTheSame`), mid-carry, the soak's save the tick after a spawn. It needs an
+attacker in reach of its target and still walking, which is a crowd, which only a raid makes.
+
+**Fix.** `AttackMeleeJobDriver.LandTheStep` asks for the path again when the pawn has none and none
+is pending; it is served before anybody steps in the same tick. A world that was never loaded
+always holds a path there, so nothing changes in it: no golden moved, and the gate's final hashes
+were identical to the digit before and after. `AttackDriverTests.ASaveTakenMidStepInReachResumesTheSame`
+finds that moment in a three-against-two fight, saves there, and failed without the fix (the loaded
+attacker 2,096 into the step against 4,192 one tick on). `33-combat.md` §21.
+
+**The check this earns.** *A branch that returns "still going" without acting is trusting another
+system to move the world on. Ask whether that system's input survives a load.* Derived state —
+paths, caches, indexes — is rebuilt by whoever next asks for it, and a wait is a place where nobody
+asks.
+
 ### 2026-09-24 — A stored graphics preference never reached a new game (P1, P2-adjacent)
 
 Found by reading, while building the quality presets. `SettingsPresenter` attaches on the first

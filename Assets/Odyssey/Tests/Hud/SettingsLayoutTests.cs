@@ -77,7 +77,8 @@ namespace Odyssey.Tests.Hud
                 foreach (SettingsLayout.KeyGroup group in column)
                     foreach (HotkeyAction action in group.Actions)
                         Assert.That(seen.Add(action), Is.True, $"{action} is on the Keys tab twice");
-            Assert.That(seen.Count, Is.EqualTo(24), "the Keys tab lists the 24 actions it listed before the rebuild");
+            Assert.That(seen.Count, Is.EqualTo(25),
+                "the Keys tab lists the 24 actions it listed before the rebuild, and walls-down (H, design 42)");
         }
 
         [Test]

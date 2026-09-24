@@ -136,7 +136,8 @@ namespace Odyssey.Presentation.World
             for (int i = 0; i < corpses.Length; i++)
             {
                 CorpseView corpse = corpses[i];
-                bool visible = corpse.Cell.Y >= lowest && corpse.Cell.Y <= highest;
+                bool visible = corpse.Cell.Y >= lowest && corpse.Cell.Y <= highest
+                               && !slice.HidesStandingAt(activeLayer, corpse.Cell, _model);
                 if (!_bodies.TryGetValue(corpse.Id, out Body? body))
                 {
                     // Killed where it lay: it is already on the ground, so it is found lying

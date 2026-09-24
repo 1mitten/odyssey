@@ -95,12 +95,13 @@ namespace Odyssey.Tests.Presentation
                 var batch = new ChunkBatch();
                 mesher.Mesh(batch, WallLayer * chunksPerLayer + c);
 
-                int here = batch.Body.Count + batch.Roof.Count;
+                int here = batch.Body.Count + batch.Roof.Count + batch.Walls.Count;
                 buckets += here;
                 if (here > worstChunkBuckets) worstChunkBuckets = here;
 
                 Tally(batch.Body, kinds, tints, ref instances);
                 Tally(batch.Roof, kinds, tints, ref instances);
+                Tally(batch.Walls, kinds, tints, ref instances);
             }
 
             int exposed = ExposedSideFaces(world, walls);

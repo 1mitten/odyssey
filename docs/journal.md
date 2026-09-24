@@ -11823,6 +11823,46 @@ before Unity compiled a line; the unit moved into M2's warm worktree once there 
 shader compiled clean on its first real run and every foliage test passed; the player build keeps
 it, and its log carries no fallback warning.
 
+## 2026-09-24 — Walls down, after the first play
+
+*"Works brilliantly but a few things"*: the "R / F" label was still there, and at L10 — ground — the
+building above was see-through. The cause was not walls-down at all but the surface being one
+number: `surfaceLayer` is the layer the colony opened on (L12 on seed 1) while the lowest terrace
+is walked on L9 (its rock tops out at L8 — measured, after a first comment said L7), so L10 was
+"underground" and got the one-layer x-ray, which the first build left alone
+deliberately. The owner chose to fix it inside walls-down only: with the walls down, anything above
+`LowestOutdoorLayer` is ground. And the hiding narrowed from "everything built above" to "what is
+stacked" — built with no terrain beneath — because hiding everything built took the house on the
+next terrace with it. That became a bucket key bit rather than a tint test, so the renderer still
+only skips buckets. The label went; its keys went into the rail cells' tooltips. Design 42 §3a, §10.
+
+## 2026-09-24 — Walls down
+
+The owner could not see colonists inside their own buildings: at or above the surface every
+storey above the slice is drawn solid, and the working storey's walls are always 3 m tall. The
+request was a toggle by the R/F control, on by default, that **removes** the walls rather than
+making them translucent and leaves a low stump. Build mode ignores it. The interview settled the
+rest (design 42 §2): build mode is the palette or Build/Deconstruct; the stump is a 0.75 m block;
+built storeys above are hidden and the landscape is not; rock never lowers; H, a drawn icon under
+the rail, remembered per player.
+
+**Research backed removal over transparency** (`b-walls-down-cutaway.md`): every complaint thread
+found was about see-through or clickable leftovers. Nothing found says any game raises walls on its
+own in build mode, so that half is ours to judge in play.
+
+**It costs no re-meshing, and that decided the shape.** The toggle flips every time the Build
+palette opens, and a board re-mesh is seconds of visible arrival at eleven chunks a frame. So the
+chunk batch holds both forms: walls, door frames and pillars moved out of `Body` into `Walls`,
+their stumps into `Stumps`, and the renderer picks one as it draws — the principle the roof list
+was already built on. Above the slice, the storey is filtered by bucket tint: anything carrying a
+terrain, foliage, water, tree or whole-surface bit is landscape, and the rest is built.
+
+**One owner of the rule.** `WallsView.Lowered` (Hud, fast tier) is evaluated once a frame by the
+composition root and written to `SliceSettings.wallsLowered`. The renderer, picker, order marks,
+door leaves, colonists, items, corpses, fire, health bars, rings, blood and sites all ask the
+slice's three questions and nothing else (P1). Moving walls out of `Body` meant nine mesher tests
+that counted walls there were re-pointed at `Walls`, deliberately.
+
 ## 2026-09-24 — Blood
 
 The unit design 33 §7d cut the seam for, built to the owner's rules there (§10). Two tests on PR
@@ -12126,6 +12166,97 @@ figures are drawn 2.1 m to the head, so the arms are at 1.5 m and a carried head
 batch frames read the body mid-fall: a frame is a couple of milliseconds, so the test waits in real
 seconds. The Long soak caught the rule change on its own — a colonist rescued in a marauder soak
 healed past 15 % while down, which its invariant still forbade.
+
+## 2026-09-24 — CI chooses its tiers by what a PR touches (process §5)
+
+The owner asked for tests to run only for the area a change touched, because every PR retested
+everything. Measured before designing anything, from the runner's own results: EditMode was 91 s and
+87.5 of them were the Sim tests the fast tier had run on Linux minutes before; PlayMode was 260 s and
+141 of them `FrameTimeTests`, most of it arms that assert only that they measured something; and
+every merge re-ran the whole Unity tier on `main` against a tree its PR had already tested, since
+branch protection is strict. PRs were taking 20–40 minutes, mostly queued behind the one runner.
+Over the week's 80 merged PRs, 43 touched the simulation, 31 only the Unity side and 5 only words.
+
+What went in: `tools/ci/tiers.py` maps changed paths to assemblies and picks tiers; a path it does
+not know runs everything. The Sim tests skip both tiers when no Sim path changed; the Long tier runs
+beside the unit tests rather than after them; eighteen timing-only arms carry `Category("Measurement")`
+and run nightly or on `ci:perf`; a push to `main` no longer touches the runner, and a nightly on
+`main` runs everything and skips itself when `main` has not moved. Replayed over the same 80 PRs the
+selector runs everything on 48, the Unity side only on 26 and no test tier on 6.
+
+**Rejected: choosing tests within a tier by feature.** It was the literal ask, and it would save
+seconds out of a fast tier that takes twenty while removing exactly the tests that fail far from
+their edit — the goldens moving on a new job def, `RegistryTests` catching the campfire's missing
+shape. Assembly edges are proven by the compiler; feature edges are a guess.
+
+**What stays open.** `HudGeometryTests.TheBuildHeaderIsOneRowInEveryLayout` is 35 s of the gate,
+nearly all of it `Settle`'s 0.4 s of wall clock repeated 63 times; the wait exists because the HUD's
+cadence buckets run on wall-clock time, so shortening it needs a Unity run to prove, not a guess.
+And "a skipped job passes a required check" is what the whole scheme rests on; *Fast tier* is an
+aggregator that fails when the selector does, so a broken selector cannot skip its way to a merge.
+
+## 2026-09-24 — Meadow M7: what eight layers of hills cost, and a full disk
+
+The owner chose hills of about eight layers and asked that performance not suffer; the ground sits at
+`SizeY − 1 − 3 − relief`, so ±4 on a 16-layer board takes two layers out of the mine. The measurement
+went through the game's own chooser — `ColonyWorld.DefFor` gained a relief parameter, the one seam,
+so the measured board is the played meadow and differs only in relief and height.
+
+Two findings were not the expected ones. **±4 with today's noise produces no cliffs** on any board
+over five seeds — the worry that M8 would need slope spacing just to stay walkable was wrong. And the
+cost of depth is almost all memory: the edit tick on Huge follows the relief (more terrace links), not
+the extra layers of rock. **Sixteen layers is ruled out** — it leaves no rock at all under the lowest
+valley — and twenty is recommended over twenty-four, with the 4K frame as the tie-breaker.
+
+That tie-breaker could not be run: drive D: filled to zero bytes during this session and Unity's
+package import failed with `ENOSPC`. The arm is written. Every worktree on D: and the CI runner share
+the drive, so the next Unity run anywhere will fail the same way until space is freed.
+
+The frame arm ran the same day, in another worktree's warm Library once space was found, and it
+reversed the recommendation. Depth costs the frame nothing — 20 and 24 layers draw identical calls
+and chunks on every board — so the deeper mine is free at the frame and 24 is recommended, with
+memory the only price. What the frame *does* feel is the relief: ±4 hills add about 600 draw calls
+and 0.6–0.75 ms of `World` on Standard and Huge, because taller hills put more layers of chunks in
+view. So the owner's "make sure performance doesn't suffer" is a question for the ground skin (M9),
+not for the board height. EditMode 3,261 / 3,229 / 0, PlayMode 117 / 112 / 0.
+
+## 2026-09-24 — The combat gate (C7)
+
+The last unit of the combat plan: ten days with and without hostiles, on three seeds, and the
+records. Without hostiles nothing needed doing — `SoakRunTests.TenDays` holds on today's `main` and
+no golden moved. With them, the gate became `MarauderSoakTests.TheGateWithRaids`, and three things
+about writing it are worth keeping.
+
+**An unanswered colony is not a gate.** The first cut spawned the raids and left the colony alone,
+armed. Every seed was all down by day two, so eight of the ten days tested theft and nothing else.
+Drafting the colonists where they stood did not help: five colonists across a 120-cell board met a
+party of three one at a time and lost each fight three to one, which the probe showed as one
+marauder walking the board downing four drafted, armed colonists in turn. What a player does is
+draft **and gather**, so the gate answers each party of three with a draft and one move order to the
+start, and leaves a lone marauder to each colonist's own response. Then the squads fought: seeds 2
+and 3 downed nine and seven marauders. Seed 1's squad of four still lost to three on day one — the
+invented numbers, recorded for the owner rather than tuned here.
+
+**A bound on "rescuable" needs the rescuer to be free.** The first rescue invariant read 12,500 ticks
+on seed 1 and looked like a stuck rescue. The trace said otherwise: one colonist left standing,
+carrying four patients to bed one at a time, each carry 2,500–4,000 ticks. A rescuer already
+carrying somebody is not free, and the predicate says so now.
+
+**The save round trip found a real fault, and only a crowd could.** Saved at the first swing of day
+one's raid and loaded, two seeds of three came to a different hash a day later, while the lockstep
+twin agreed every hour — so the round trip, not the simulation. Per-pawn hashes named one drafted
+colonist who had joined a fight; every field matched except her progress through a step, which had
+not moved in the loaded world. Five branches of the attack driver let a step under way land before
+deciding and trust the mover to finish it on the pawn's path, and a path is never saved. The fix asks
+for the path again when a waiting pawn has none (`LandTheStep`); the regression test saves at exactly
+that moment in a three-against-two fight and failed without it. The gate's final hashes were
+identical to the digit before and after the fix, which is the cleanest evidence available that it
+reaches nothing but a loaded world. Every earlier round trip saved a duel mid-swing or a thief
+mid-carry; an attacker in reach while still walking needs several attackers on one target.
+
+The twin every hour is the thing to copy: "the same final hash" would have said the same, but an
+hourly comparison says *where* two runs part, and here it said they never did — which is what pointed
+at the save.
 
 ## 2026-09-24 — Rain, photographed and timed (the rain-look prototype)
 

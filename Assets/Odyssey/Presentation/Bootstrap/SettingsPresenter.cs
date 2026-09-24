@@ -389,6 +389,12 @@ namespace Odyssey.Presentation.Bootstrap
                     renderer.FoliageCastsShadows = on;
                     break;
 
+                case GraphicsOption.WallsDown:
+                    // Nothing to do here, and on purpose: the composition root reads the option
+                    // once a frame, takes build mode out of it (WallsView.Lowered) and writes the
+                    // answer to the slice. Setting the slice from here too would be a second owner.
+                    break;
+
                 case GraphicsOption.SeeThrough:
                     // Read once a frame while the sight lines are rebuilt, so this is the whole
                     // change and it takes effect on the next frame with no remesh.
