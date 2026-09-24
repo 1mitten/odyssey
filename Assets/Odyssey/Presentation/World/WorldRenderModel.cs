@@ -952,6 +952,62 @@ namespace Odyssey.Presentation.World
             return OccludesFace(index) ? CellMetrics.SizeY : StandHeight(index);
         }
 
+        /// <summary>
+        /// The same, with the walls down or not: a lowered wall is marked on top of its stump
+        /// rather than 2.25 m of nothing above it (design 42 §5).
+        /// </summary>
+        public float MarkHeight(int index, bool lowered) =>
+            lowered && Lowers(index) ? CellMetrics.StumpHeight : MarkHeight(index);
+
+        /// <summary>Is what stands in this cell drawn as a stump while the walls are down?</summary>
+        public bool Lowers(int index) => (uint)index < (uint)_edifice.Length && Lowers(_edifice[index]);
+
+        /// <summary>
+        /// The edifices that walls-down lowers (owner, 2026-09-24): walls and windows, the ruined
+        /// city's vault walls, doors and pillars. Natural rock is terrain and is never lowered, and
+        /// neither is anything a player walks up to use — a bed, a shelf, a heater.
+        /// </summary>
+        public static bool Lowers(ushort def) =>
+            def == CoreContent.EdificeWall || def == CoreContent.EdificeWindow
+            || def == CoreContent.EdificeVaultWall || def == CoreContent.EdificeDoor
+            || def == CoreContent.EdificePillar;
+
+        /// <summary>
+        /// Does this cell hold something <em>built</em> — a floor slab, or an edifice that is not a
+        /// tree? It is the difference between the upper storey of a house and a hilltop, and the
+        /// question walls-down asks of anything standing above the slice (design 42 §5).
+        /// </summary>
+        public bool IsBuiltAt(int index)
+        {
+            if ((uint)index >= (uint)_edifice.Length) return false;
+            if (_floor[index] != CoreContent.SlabNone) return true;
+            ushort def = _edifice[index];
+            return def != CoreContent.EdificeNone && !NaturalContent.IsTree(def);
+        }
+
+        /// <summary>
+        /// Does this cell rest on the ground — solid terrain directly beneath it? A building's
+        /// ground floor does, whether it stands on the slice or up on a terrace; an upper storey
+        /// rests on another floor or on the walls below it, and does not.
+        /// </summary>
+        public bool RestsOnGround(int index)
+        {
+            int below = index - Size.LayerStride;
+            return below >= 0 && IsSolid(below);
+        }
+
+        /// <summary>
+        /// Is what is built here <em>stacked</em> — an upper storey rather than a ground floor? The
+        /// thing walls-down hides above the slice (owner, 2026-09-24, design 42 §3): the first
+        /// floor of the house being looked into goes, the house on the terrace next to it stays.
+        ///
+        /// <para>It asks only about the cell underneath, so it is absolute rather than relative to
+        /// the slice, and the mesher can bake it into a bucket. What changes it is terrain changing
+        /// underneath, and digging a cell out already marks the chunk above it dirty
+        /// (<c>MineJob.MarkChunksAround</c>).</para>
+        /// </summary>
+        public bool IsStackedAt(int index) => IsBuiltAt(index) && !RestsOnGround(index);
+
         /// <summary>The module index for whatever edifice stands in this cell, or 0.</summary>
         public int EdificeModule(int index) => ModuleForEdificeAt(index, _edifice[index]);
 

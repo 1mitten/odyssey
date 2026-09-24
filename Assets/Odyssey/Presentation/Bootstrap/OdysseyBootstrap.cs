@@ -1373,6 +1373,24 @@ namespace Odyssey.Presentation.Bootstrap
                 "Odyssey > Presentation > Build play scene.");
         }
 
+        /// <summary>
+        /// Are the walls down this frame (design 42 §3)? The player's choice with build mode taken
+        /// out, asked here once and written to the slice, which every pass then reads — the one
+        /// place the rule is evaluated, so no two passes can disagree about it.
+        /// </summary>
+        bool WallsLoweredNow()
+        {
+            HudDirectors? directors = Directors;
+            if (directors == null) return false;
+            if (_hudShell == null) _hudShell = GetComponent<Ui.HudShell>();
+            return WallsView.Lowered(
+                directors.Settings.IsOn(GraphicsOption.WallsDown),
+                _hudShell != null && _hudShell.BuildPaletteOpen,
+                directors.Designate.Tool);
+        }
+
+        Ui.HudShell? _hudShell;
+
         void LateUpdate()
         {
             // Above the guard below, because the menus are exactly the state the guard returns
@@ -1384,6 +1402,8 @@ namespace Odyssey.Presentation.Bootstrap
             if (_renderer == null || _model == null || _world == null) return;
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
             SliceSettings slice = cameraRig != null ? cameraRig.slice : new SliceSettings();
+            slice.wallsLowered = WallsLoweredNow();
+            slice.landscapeFloor = _model.LowestOutdoorLayer;
 
             _frameTimer.Restart();
             System.Array.Clear(_sectionMs, 0, _sectionMs.Length);
@@ -1567,7 +1587,7 @@ namespace Odyssey.Presentation.Bootstrap
             _blood?.Step(_world.Views.Current.Running ? Time.deltaTime : 0f, _world.Views.Current.Tick);
             _combatFeedback.Consume(_world.Views.Current, _world, _figures, _audio,
                 bloodLowest, bloodHighest, _tickAlpha, ticksPerSecond);
-            if (_renderer != null) _blood?.Draw(_renderer, bloodLowest, bloodHighest);
+            if (_renderer != null) _blood?.Draw(_renderer, bloodLowest, bloodHighest, slice, activeLayer);
             _floaterView?.Draw(_combatFeedback.Floaters,
                 cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);
@@ -2002,6 +2022,10 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 CellRef cell = size.FromIndex(sites[i].CellIndex);
                 if (cell.Y < lowest || cell.Y > highest) continue;
+                // A site for an upper storey walls-down is hiding goes with that storey (design 42
+                // §5): anything ordered above the slice with no ground under it.
+                if (cameraRig.slice.HidesStackedOn(cameraRig.ActiveLayer, cell.Y)
+                    && !_model!.RestsOnGround(sites[i].CellIndex)) continue;
 
                 // **The shape and the progress, and nothing else** (owner, 2026-09-18: "just the
                 // shape/outline of what is going to be built because it's difficult to visualize
@@ -3029,6 +3053,7 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 PawnView pawn = pawns[i];
                 if (pawn.Cell.Y < lowest || pawn.Cell.Y > highest) continue;
+                if (slice.HidesStandingAt(activeLayer, pawn.Cell, _model)) continue;
 
                 bool bar = CombatFeedbackModel.HealthBar(snapshot, in pawn, out int hp, out int hpMax);
                 bool hostile = CombatFeedbackModel.HostileMarker(in pawn);
@@ -3113,6 +3138,8 @@ namespace Odyssey.Presentation.Bootstrap
                     _ringPlaces[ring.Target.Value] = RingPlaceOf(in pawn, movePerTick);
                 if (!_ringPlaces.TryGetValue(ring.Target.Value, out RingPlace place)) continue;
                 if (place.Layer < lowest || place.Layer > highest || ring.Alpha <= 0f) continue;
+                if (snapshot.TryGetPawn(ring.Target, out PawnView standing)
+                    && slice.HidesStandingAt(activeLayer, standing.Cell, _model)) continue;
 
                 float radius = place.Radius * ring.Scale;
                 Matrix4x4 at = GroundRelief.Drape(new Vector3(place.Centre.x, 0f, place.Centre.z));

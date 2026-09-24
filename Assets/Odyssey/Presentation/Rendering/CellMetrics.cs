@@ -21,6 +21,13 @@ namespace Odyssey.Presentation.Rendering
         public const float SizeY = 3.0f;
         public const float HalfXZ = SizeXZ * 0.5f;
 
+        /// <summary>
+        /// How tall a wall stands while the walls are down: a quarter of the storey (owner,
+        /// 2026-09-24, design 42 §2). Below a standing colonist's waist, so what they are doing
+        /// reads over it, and tall enough to read as a wall line from the play camera.
+        /// </summary>
+        public const float StumpHeight = 0.75f;
+
         /// <summary>The low corner of a cell: minimum x, minimum z, the cell's own floor level.</summary>
         public static Vector3 Corner(int x, int z, int y) =>
             new Vector3(x * SizeXZ, y * SizeY, z * SizeXZ);

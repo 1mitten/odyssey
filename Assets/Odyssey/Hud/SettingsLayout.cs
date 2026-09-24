@@ -219,6 +219,7 @@ namespace Odyssey.Hud
                 {
                     HotkeyAction.SliceUp, HotkeyAction.SliceDown,
                     HotkeyAction.CycleAbove, HotkeyAction.FrameMap,
+                    HotkeyAction.WallsDown,
                 }),
                 new KeyGroup(ToolsGroupKey, new[]
                 {
