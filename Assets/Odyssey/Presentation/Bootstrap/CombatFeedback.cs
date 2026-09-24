@@ -183,7 +183,8 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         void Bleed(in CombatEventView combatEvent, WorldSnapshot snapshot, PawnFigureDirector? figures, Vector3 at)
         {
-            switch (BloodModel.For(combatEvent.Kind))
+            // Asked of the whole event, not its kind: a blow at a building never bleeds (design 33 §13i).
+            switch (BloodModel.For(combatEvent))
             {
                 case BloodMark.Spurt:
                 {
