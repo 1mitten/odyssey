@@ -519,3 +519,87 @@ branch. **Measure it with a control before believing either way**, as §14 did.
   decision that makes the whole model affordable.
 - **Tuning the fire hotter to get the colour.** `heatPerPass` warms the *room*; raising it to make
   one tile red would cook the whole hut. The radiance term exists so the two can be tuned apart.
+
+
+## 17. The fireside — 2026-09-23
+
+Owner: *"Colonists should get drawn to campfires — especially if no beds — there will sleep next to
+the campfire. Also campfires by default very slowly regenerates heat so resting overnight next to
+also helps there. What do you think? … When colonists are idle they will tend to gravitate towards
+the fireplace … but sometimes they might walk around or even explore. Do what we can for now."*
+
+### 17a. What was already true, and is worth knowing before tuning anything
+
+**"Resting next to it helps" is already the arithmetic**, and nobody has to add it. Rest recovers at
+the bed's own effectiveness scaled by `TemperatureDef.SleepPerMille` of the air the sleeper is in
+(design 28 §8), and radiance (design 32) makes the ring round a fire warmer than the field. What
+that is worth depends entirely on the season, and the two ends are very different:
+
+| Night | Air | Beside a fire | Sleep band |
+|---|---|---|---|
+| Wash (~10 °C) | mild, ×0.9 | ~24 °C at one cell | **comfortable, ×1.0** |
+| Rime (~−13 °C) | **extreme, ×0.55**, and hypothermia severity building | ~1 °C at one cell | **bad, ×0.75**, and severity *not* building |
+
+So in spring the fire is a small comfort, and in deep winter it is the difference between waking up
+and not. That asymmetry is the mechanic doing what design 28 said it would, and it is the reason
+"sleep by the fire" is worth wiring rather than merely drawing.
+
+### 17b. What was built
+
+**`FiresideTarget`** — the nearest free cell *adjacent* to a standing heat source. Beside and never
+on: a campfire is `blocking` and wants a clear cell, so its own tile is the one nobody can occupy,
+which is also the right picture. People sit round a fire.
+
+It asks `TemperatureSystem` where the fires are rather than walking the edifices itself. The thing
+that makes a fireside worth going to is the thing that makes it warm, and that list already exists
+and is already refreshed by the pass. A second list of campfires in the job system could come to
+disagree with it about where a fire is — the fault this codebase keeps meeting under new names.
+
+**A bedless sleeper goes to it.** `TrySleep` fell back to `TargetCell = -1`, meaning *lie down where
+you stand*. It now looks for a fireside first and only lies in the rubble if there is none. A bed
+still wins outright: the fireside is what a colonist does instead of the mud, not instead of a bed.
+The spot is **reserved**, exactly as a bed is — she will be there for hours, and two sleepers in one
+cell is the fault the beds' reservations already prevent.
+
+**An idle colonist drifts to it, two times in three.** `IdleThinkNode` wandered at random; it now
+rolls `FiresidePerMille` (660) and heads for a fire when it wins. Not always, on the owner's own
+instinct: a colony where every idler stands in the same ring is a screensaver, and one where nobody
+does has no hearth.
+
+### 17c. No golden moved, and the control says why
+
+`FiresideTests.WithNoFireSheStillLiesWhereSheStands` is the assertion: with no heat source the
+chooser returns at `HeatSourceCount == 0` and every decision is exactly what it was. **Every golden
+board is that board**, which is why six hashes that a change to colonist wander would normally move
+did not — `WanderTarget`'s own comment warns that moving a colonist's wander moves every golden,
+and this moves it only where a fire exists.
+
+### 17d. Two things this got wrong on the way, both worth keeping
+
+**`ctx.Distance` is not in cells.** It is hundredths of one — 100 an orthogonal step, 141 a
+diagonal — and the first version of `FiresideTarget` compared it against a plain `24`, refusing
+anything more than a quarter of a cell away. Every existing caller uses `Distance` only to *rank*
+candidates against each other, where the unit cancels and never shows; this is the first to compare
+it against an absolute, which is exactly where it stops cancelling. The constant now says the unit.
+
+**A purpose needs its own salt.** The fireside roll first drew from `PawnPurpose.Wander`, on the
+same tick and the same pawn id as the wander itself — so the "do I go to the fire" roll and the
+wander's first coordinate would have been *the same number*. `PawnPurpose`'s own doc states the rule
+twice: two purposes sharing a salt is two streams that agree. `PawnPurpose.Fireside` is its own.
+
+### 17e. Still open, and one of them is a real tension
+
+**The warm spot is the one cell nobody can stand in.** Radiance is tuned so the fire's own tile
+clears the red band, and that tile is `blocking`. In Rime the ring one cell out sits around 1 °C —
+better than the −13 °C field and still in the *bad* sleep band. So a bedless colonist by a fire in
+deep winter survives rather than thrives. Whether that is right (a fire is shelter, not a bedroom)
+or wants the falloff widening so the ring is genuinely comfortable is a **tuning question for a
+playtest**, and `RadiantFalloffPerMille` is the one line.
+
+**Idlers gathering in hot weather is not obviously right.** A colonist drifting to a fire in Glare
+is drifting toward 45 °C. Today the draw is social rather than thermal and takes no account of
+season. The cheap fix if it looks silly is to skip the roll when the colonist is already above
+comfort, which is one condition — but it is a behaviour change and wants to be seen first.
+
+**Nobody sits.** They stand in the ring. A sitting pose round a fire is the thing that would make
+this read as a hearth rather than as a queue, and it is presentation work with no simulation in it.

@@ -286,6 +286,17 @@ namespace Odyssey.Sim.Temperature
         /// <para><b>Chebyshev</b>, so the ring is square and matches the grid the player is
         /// looking at. Radiance does not cross layers: a fire is not a floor heater.</para>
         /// </summary>
+        /// <summary>
+        /// How many heat sources are standing, as of the last pass. A fireside is somewhere warm
+        /// to be, and the thing that makes it warm is the thing this already tracks — so the job
+        /// system asks here rather than keeping a second list of campfires that could disagree
+        /// with this one about where the fires are (design 33 §2).
+        /// </summary>
+        public int HeatSourceCount => _radiant.Count;
+
+        /// <summary>The cell a standing heat source occupies.</summary>
+        public int HeatSourceCell(int index) => _radiant[index].Cell;
+
         public int RadianceAt(int cell, int room)
         {
             if (_radiant.Count == 0) return 0;

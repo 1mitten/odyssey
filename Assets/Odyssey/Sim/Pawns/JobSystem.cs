@@ -723,9 +723,29 @@ namespace Odyssey.Sim.Pawns
 
             job.Reset(JobIndex.Sleep);
 
+            if (own >= 0 || bestBed >= 0)
+            {
+                job.TargetCell = own >= 0 ? own : bestBed;
+                return true;
+            }
+
             // No bed within reach is not a failure: a tired colonist lies down in the rubble and
-            // remembers having done so.
-            job.TargetCell = own >= 0 ? own : bestBed;
+            // remembers having done so. But if there is a fire, she lies down beside THAT
+            // (owner, 2026-09-23: "especially if no beds — there will sleep next to the
+            // campfire").
+            //
+            // **It is not only the picture, it is the arithmetic.** Rest recovers at the bed's
+            // own effectiveness scaled by `TemperatureDef.SleepPerMille` of the air the sleeper
+            // is in (design 28 §8), and radiance makes the ring around a fire warmer than the
+            // field (design 32). On a Rime night that is the difference between the extreme band,
+            // where hypothermia severity builds while you sleep, and the bad one, where it does
+            // not — so a colonist with no bed who sleeps by the fire wakes up, and one who lies
+            // where she stood may not.
+            //
+            // Reserved, unlike the idler's: she is going to be there for hours, and a second
+            // sleeper lying in the same cell is the fault the beds' own reservations prevent.
+            int fireside = FiresideTarget.Find(pawn, ctx, reserve: true);
+            job.TargetCell = fireside;
             return true;
         }
     }
@@ -767,9 +787,37 @@ namespace Odyssey.Sim.Pawns
     {
         public override string Name => "Idle";
 
+        /// <summary>
+        /// How often an idle colonist heads for a fire rather than wandering, per mille.
+        ///
+        /// <para>Not always, on the owner's own instinct (2026-09-23: *"sometimes they might walk
+        /// around or even explore"*). A colony where every idler stands in the same ring is a
+        /// screensaver; one where nobody does has no hearth. Two in three splits it so the fire
+        /// is plainly the place people drift to while the board still looks alive.</para>
+        /// </summary>
+        public const int FiresidePerMille = 660;
+
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
             if (pawn.Asleep) return false;
+            // The hearth first, most of the time: an idle colony gathers round the fire, which
+            // is both the thing the owner asked for and the clearest signal on the board that
+            // nobody has anything to do (owner, 2026-09-23).
+            var rng = DeterministicRandom.ForTick(
+                ctx.Seed, ctx.CurrentTick, PawnPurpose.Fireside ^ (uint)pawn.Id.Value);
+
+            if (rng.NextInt(0, 1_000) < FiresidePerMille)
+            {
+                int fireside = FiresideTarget.Find(pawn, ctx, reserve: false);
+                if (fireside >= 0 && fireside != pawn.Cell)
+                {
+                    job.Reset(JobIndex.Wander);
+                    job.TargetCell = fireside;
+                    job.Mode = TraverseMode.Colonist;
+                    return true;
+                }
+            }
+
             if (WanderTarget.Fill(pawn, ctx, job)) return true;
 
             job.Reset(JobIndex.Wait);
@@ -898,6 +946,93 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>Picking somewhere nearby to drift to. Shared by idling, by the break and by an animal.</summary>
+    /// <summary>
+    /// A free cell beside a fire (owner, 2026-09-23: *"colonists should get drawn to campfires —
+    /// especially if no beds — there will sleep next to the campfire … when colonists are idle
+    /// they will tend to gravitate towards the fireplace"*).
+    ///
+    /// <para><b>Beside and never on.</b> A campfire is <c>blocking</c> and wants a clear cell, so
+    /// its own tile is the one nobody can occupy — which is also the right picture: people sit
+    /// round a fire, not in it. The ring is what this returns.</para>
+    ///
+    /// <para><b>It asks the thermal system where the fires are</b> rather than walking the
+    /// edifices itself. The thing that makes a fireside worth going to is the thing that makes it
+    /// warm, and that list already exists and is already refreshed by the pass. A second list of
+    /// campfires here could come to disagree with it about where a fire is, which is the fault
+    /// this codebase keeps meeting under different names.</para>
+    /// </summary>
+    static class FiresideTarget
+    {
+        /// <summary>How far a colonist will go out of her way to reach one, in cells.</summary>
+        public const int ReachCells = 24;
+
+        /// <summary>
+        /// The same distance in the unit <see cref="PawnContext.Distance"/> actually speaks:
+        /// <b>hundredths of a cell</b> — 100 an orthogonal step, 141 a diagonal.
+        ///
+        /// <para>Written out because the first version of this compared that estimate against a
+        /// plain 24 and so refused anything further than a quarter of one cell away. Every
+        /// existing caller uses <c>Distance</c> only to rank candidates against each other, where
+        /// the unit cancels and never shows; this is the first to compare it against an absolute,
+        /// which is exactly where the unit stops cancelling.</para>
+        /// </summary>
+        const int Reach = ReachCells * 100;
+
+        /// <summary>
+        /// The nearest free cell adjacent to a standing heat source, or -1.
+        /// </summary>
+        /// <param name="reserve">
+        /// True for a sleeper, who is going to lie there for hours and must not be lain on;
+        /// false for an idler, who is passing through. A reservation held by somebody merely
+        /// loitering would make the fireside a place one colonist could occupy for the night.
+        /// </param>
+        public static int Find(Pawn pawn, PawnContext ctx, bool reserve)
+        {
+            var warmth = ctx.Temperature;
+            if (warmth == null || warmth.HeatSourceCount == 0) return -1;
+
+            GridSize size = ctx.Size;
+            int best = -1;
+            int bestDistance = int.MaxValue;
+
+            for (int i = 0; i < warmth.HeatSourceCount; i++)
+            {
+                CellRef fire = size.FromIndex(warmth.HeatSourceCell(i));
+
+                // The eight around it, in a fixed order, so two colonists choosing on the same
+                // tick choose the same way and the hash does not depend on iteration luck.
+                for (int dz = -1; dz <= 1; dz++)
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    if (dx == 0 && dz == 0) continue;
+
+                    int x = fire.X + dx;
+                    int z = fire.Z + dz;
+                    if (!size.Contains(x, z, fire.Y)) continue;
+
+                    int cell = size.Index(x, z, fire.Y);
+                    if (cell == pawn.Cell) return cell;   // already there
+
+                    if (reserve)
+                    {
+                        long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
+                        if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
+                    }
+
+                    if (!ctx.Reachable(pawn, cell)) continue;
+
+                    int distance = ctx.Distance(pawn.Cell, cell);
+                    if (distance > Reach || distance >= bestDistance) continue;
+
+                    bestDistance = distance;
+                    best = cell;
+                }
+            }
+
+            return best;
+        }
+    }
+
     static class WanderTarget
     {
         public static bool Fill(Pawn pawn, PawnContext ctx, Job job) =>
