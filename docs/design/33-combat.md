@@ -2736,3 +2736,108 @@ computed at publish for downed colonists only: a colony with nobody down pays on
   she is down; nobody feeds a patient yet. A later unit, if the playtest wants it.
 - **She reads *Downed* while she heals in bed.** Whether that should say something else is the
   playtest's question (§11e).
+
+## 12. Friendly fire (C5, built 2026-09-24, `claude/combat-friendly-fire`)
+
+**The owner's rows (§1):** *friendly fire — the victim remembers being attacked (−8, one day); any
+colonist's death is felt by every colonist (−6, three days); no opinions yet*; *Ctrl+right-click a
+colonist attacks it*; *a colonist struck by a colonist fights back*. Built from `main` at
+`d1d64891`, fast tier and Long tier only, no Unity.
+
+### 12a. What was already there
+
+Two of C5's three parts arrived with C2 and were checked against the code rather than rebuilt:
+
+| Part | Where it lives | Already tested by |
+|---|---|---|
+| **Ctrl + right-click on a colonist is an attack** by every selected drafted colonist but her, and wins over the rescue | `CombatOrders.Route` (§6C), fed the Ctrl key by `SelectionPresenter.Order` | `CombatOrdersTests.CtrlRightClickOnAColonistAttacksAndWithoutCtrlItIsAMove`, `ACtrlClickedColonistDoesNotAttackHerself` |
+| **The order accepts a colonist as its target** — no flag, decided at the integration (§6E) | `JobSystem.HandleOrderAttack` (§6A.8) | `AttackDriverTests.TheAttackOrderIsForADraftedColonistAndAPawn`; the duel in that file is two colonists |
+| **A colonist struck by a colonist fights back** — by anybody, in fact, for `retaliationTicks` (§6A.6) | `CombatSystem.React`, `SelfDefenceThinkNode` | `HostileTests.AColonistStruckRetaliatesAndADraftedOneLeavesItToTheHold` |
+
+What nothing tested was the three **joined**: a Ctrl-attack from the order to the answering blow.
+`FriendlyFireTests.ACtrlAttackOnAnUndraftedColonistIsFoughtBackAndRemembered` sends the order, and
+the colonist she attacked — undrafted, at her own business — turns on her and swings, and carries
+the memory. Nothing in the order or the retaliation needed changing for it.
+
+### 12b. The two memories
+
+Two thoughts, appended to `Thoughts.xml` and `ThoughtIndex` (6 and 7; appended because a thought's
+index rides every saved memory), and one listener, `FriendlyFireListener`, registered in
+`CombatListeners.Register` after the weapon drop.
+
+| Thought | Given to | When | Mood | Lasts | Stacks |
+|---|---|---|---|---|---|
+| `Thought_AttackedByColonist` | the colonist hurt | a blow by a colonist takes her hit points (`DamageApplied`) | −80 | one day, 60,000 ticks | once |
+| `Thought_ColonistDied` | every other colonist on the board | a colonist dies (`Died`) | −60 | three days, 180,000 ticks | three times, at the usual 750 ‰ each |
+
+**The owner's −8 and −6 are points on a mood of a hundred; ours is thousandths of a thousand**
+(`MoodDef`: base 500, a break below 350), so they are −80 and −60 — the scale every existing
+thought is on (a night on the ground −40, a fall −60). A day is `Calendar.TicksPerDay`.
+
+**Decisions, and why** (each ours, not the owner's, unless it says so):
+
+- **A blow that lands is an attack; a miss or a dodge is not remembered.** The hooks report only
+  hit points taken (`DamageApplied`), and a memory of an attack that never touched her would need a
+  fourth hook for one thought. The smallest reading of "being attacked".
+- **Colonist on colonist only.** A marauder's blow or an animal's bite is not friendly fire and
+  gives nothing; a colonist hurting an animal or a marauder gives nothing. A broken, drafted or
+  downed colonist is still a colonist on both sides.
+- **The same attack again neither stacks nor renews** (stack limit 1). That is how every thought in
+  the game behaves: `Pawn.AddMemory` drops a copy past the limit rather than refreshing one. So the
+  day runs from the **first** blow she remembers; a blow after the memory has gone makes a new one.
+  A second attacker is the same memory, because a memory names no other pawn — that is what
+  "no opinions yet" means in the data. Renewing on a repeat would be a change to `AddMemory` for
+  every thought (and would move the goldens through `Thought_AteMeal`), so it is left to the owner.
+- **The one who started it remembers the blows she takes back.** She is a colonist hurt by a
+  colonist; which of two started a fight is not in the state, and putting it there is the start of
+  opinions. So both sides of a Ctrl-attack end the day at −80. Open for the owner.
+- **Every death is felt, to three.** One death costs every colonist −60; a second −45 more, a third
+  −33, and a fourth nothing further while the three last (−138 at most). The break line is 150
+  below the base, so a massacre brings a content colony to the edge and not over it on its own.
+  *INVENTED*: the limit is the owner's to tune after a play.
+- **The dead feel nothing; everybody else does** — standing, downed, drafted or broken, including a
+  colonist who struck the blow. The pawn is still in the registry when `Died` is heard (the hook's
+  promise, §5e), so the listener skips her by identity. A marauder's or an animal's death is felt by
+  nobody.
+- **Only deaths the hooks hear.** Every death in the game today is `CombatSystem.Kill`'s; a later
+  way to die (starvation, a fall) must raise `Died` or it will not be mourned.
+- **No name, so no wiki row.** No surface names a thought — the pane's Thoughts tab is disabled
+  "until the thought log", and none of the six thoughts before these has a key. The unit that
+  builds the log names all eight at once; adding two keys now would start a namespace a quarter
+  full. The three content gates were run and pass unmoved.
+
+**Cost** (`docs/process.md` §3): nothing per tick. `DamageApplied` is two comparisons and, on friendly
+fire, a walk of the victim's memories; `Died` is one pass over the pawns per colonist death.
+
+**The goldens did not move**, and could not: memories are hashed per pawn, and these two are added
+only by a colonist hurting a colonist or a colonist dying, which no golden window does. The content
+fingerprint moved once, for the two thoughts (the twenty-first move, `PawnContentDefTests`).
+
+### 12c. Tests (`FriendlyFireTests`, fast tier)
+
+Each was seen to fail with its rule withheld — fourteen breaks, one at a time: the attacker or the
+victim need not be a colonist; a miss raises the hook; the attacked thought stacks twice, renews, or
+is −79; the dead mourns herself; non-colonists mourn; the downed do not; any death is mourned;
+deaths stack four; the listener unregistered; the order refusing a colonist target; and a colonist
+not retaliating against a colonist. The last two are C2's rules, broken to show the end-to-end
+test reaches them.
+
+| Test | Claim |
+|---|---|
+| `TheTwoThoughtsAreTheOwnersNumbersOnOurScale` | −80 for a day, once; −60 for three days, three times |
+| `AColonistHurtByAColonistRemembersItForADay` | the memory, its expiry, its −80, gone at the day's end |
+| `AMaraudersBlowAndAMissAreNotFriendlyFire` | the controls: a marauder's blow, a miss, a colonist hitting a marauder |
+| `ASecondBlowNeitherStacksNorRenews` | one copy, the first blow's expiry |
+| `EveryOtherColonistFeelsAColonistsDeath` | the survivors, standing and downed, and not the marauder, the animal or the dead |
+| `AMaraudersDeathIsFeltByNobody` | the control |
+| `DeathsStackToThree` | three copies at most, −138 |
+| `TheListenerIsRegisteredOnceAfterTheWeaponDrop` | the order `CombatListeners` promises |
+| `ACtrlAttackOnAnUndraftedColonistIsFoughtBackAndRemembered` | the order, the answering blow, the memory |
+
+### 12d. Open for the owner
+
+- Should a second attack within the day **renew** the memory, so the day runs from the last blow?
+- Should the colonist who **started** a fight remember the blows she takes back?
+- Is **three** the right cap on mourning, and should a death weigh more for somebody close — which
+  waits for opinions?
+- Should a swing that **missed** a colonist be remembered as an attack?

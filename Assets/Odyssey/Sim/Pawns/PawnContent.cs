@@ -93,7 +93,14 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>The same, hot side.</summary>
         public const int SleptHot = 5;
-        public const int Count = 6;
+
+        /// <summary>Hurt by a colonist's blow (design 33 §12, friendly fire). Given by
+        /// <c>FriendlyFireListener</c>; appended, as every thought is.</summary>
+        public const int AttackedByColonist = 6;
+
+        /// <summary>A colonist died; felt by every other colonist (design 33 §12).</summary>
+        public const int ColonistDied = 7;
+        public const int Count = 8;
     }
 
     /// <summary>
@@ -1178,7 +1185,9 @@ namespace Odyssey.Sim.Pawns
             content.Thoughts = ByName<ThoughtDef>(defs,
                 "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround", "Thought_Fell",
                 // Appended, never inserted: a thought index rides every saved memory.
-                "Thought_SleptCold", "Thought_SleptHot");
+                "Thought_SleptCold", "Thought_SleptHot",
+                // Friendly fire (design 33 §12).
+                "Thought_AttackedByColonist", "Thought_ColonistDied");
             content.Jobs = ByName<JobDef>(defs,
                 "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine",
                 "Job_Deliver", "Job_Build", "Job_Deconstruct",

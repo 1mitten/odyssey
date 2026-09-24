@@ -63,4 +63,30 @@
     <durationTicks>20000</durationTicks>
   </ThoughtDef>
 
+  <!--
+    Design 33 §12, friendly fire (the owner's row: "the victim remembers being attacked (-8, one
+    day); any colonist's death is felt by every colonist (-6, three days); no opinions yet").
+    The owner's points are on a mood of a hundred and these are thousandths, so -8 is -80.
+
+    Attacked: given for a blow by a colonist that lands, and only once while it lasts - a second
+    blow neither stacks nor renews it, which is how AddMemory treats every thought. A memory names
+    no other pawn, so two attackers are one grievance; that is "no opinions yet" in the data.
+
+    Died: every other colonist, for three days (60000 ticks a day). Stacks three deep at the usual
+    diminishing multiplier (-60, -45, -33), so a massacre takes a content colony to the edge of a
+    break and not over it on its own. The limit is ours, to be tuned after a play.
+  -->
+  <ThoughtDef>
+    <defName>Thought_AttackedByColonist</defName>
+    <moodOffset>-80</moodOffset>
+    <durationTicks>60000</durationTicks>
+  </ThoughtDef>
+
+  <ThoughtDef>
+    <defName>Thought_ColonistDied</defName>
+    <moodOffset>-60</moodOffset>
+    <durationTicks>180000</durationTicks>
+    <stackLimit>3</stackLimit>
+  </ThoughtDef>
+
 </Defs>
