@@ -1157,3 +1157,23 @@ draws nothing rather than throwing.
   path for the chunks a colonist is behind, and an indirect shadow-caster draw culled by the sun-side
   sweep rather than the camera.
 - Stones, if they move to a shader that reads the buffers.
+
+### 22a. The real GPU, from the player (owner's run, 2026-09-24)
+
+The development player at 3840 x 2160 on the RTX 5070 Ti, Direct3D 11, Standard, grass at Full, the
+world paused and the hour held at noon (`-odyssey-bench -odyssey-bench-scenery`; it quit on its own,
+exit code 0). Each distance timed with the scenery drawn from the GPU buffers and chunk by chunk, in
+one run:
+
+| Camera distance | GPU, chunk by chunk → GPU buffers | Frame | Draw calls |
+|---|---|---|---|
+| 32 m (the default) | 6.12 → **5.44 ms** | 6.20 → 5.88 ms | 1,161 → 975 |
+| 70 m | 8.31 → **7.43 ms** | 8.37 → 7.90 ms | 1,796 → 1,377 |
+| 140 m | 7.04 → **6.62 ms** | 7.12 → 7.14 ms | 2,099 → 1,627 |
+
+**The whole Meadow look at Full runs at 5.9–7.9 ms a frame at 4K** — about 125–170 fps on this
+machine, well inside the Ultra bar of 60 fps at 3840 x 2160. The GPU buffers save **0.4–0.9 ms of
+real GPU** and 16–27% of the draw calls. That is smaller than the batch arm's 4–5 ms, and this is
+the figure to quote: the batch arm runs inside the editor beside other sessions, which inflates every
+frame, and it cannot read the GPU at all. The largest block of calls left is the trees (M5's work
+and the next lever).

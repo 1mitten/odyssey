@@ -12048,3 +12048,8 @@ moving only the tufts and bushes: the grass dressing is tinted as plain foliage,
 
 At 140 m the 4K frame is 4–5 ms lighter on Standard and Huge in two noisy runs; at the start framing the
 gain is inside the noise. The GPU's own numbers wait on the owner's go for the player bench.
+
+The owner ran the scenery benchmark in the player at 4K: with Full grass, the GPU is 5.44 / 7.43 /
+6.62 ms at 32 / 70 / 140 m with the scenery drawn from GPU buffers, against 6.12 / 8.31 / 7.04 chunk
+by chunk — a real 0.4–0.9 ms, and the whole look at 125–170 fps. The batch arm's 4–5 ms was the
+editor's inflation; design 38 §22a keeps the player's numbers as the ones to quote.
