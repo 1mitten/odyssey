@@ -1,5 +1,12 @@
 # d-18 — What dense foliage costs, and how to keep it cheap
 
+> **Correction, 2026-09-24 (design 38 §2, §13).** The "drawn up to six times" finding holds for
+> opaque shadow-casting foliage — the trees — and **not for the grass as the project draws it**:
+> `ChunkRenderer.FoliageCastsShadows` is off and foliage is drawn in queue 2501, past the opaque
+> range, so it is in neither the shadow pass nor the opaque-only DepthNormals prepass. Depth priming
+> cannot reach it. Measured afterwards: grass costs about 1 ms at 3840 × 2160 on an RTX 5070 Ti,
+> shipped or full cover. The findings below are left as written.
+
 *Researched 2026-09-24 for the meadow overhaul (owner: the ground "completely full of grass"). Caps:
 12 searches, 20 reads; 11 searches and 17 reads used, including four reads of this repository.*
 

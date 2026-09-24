@@ -23,6 +23,32 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does blood read as blood, and is it too much?** (`claude/combat-blood`, design 33 §10).
+  *Arm every colonist*, *Spawn 3 marauders*, and watch at the play camera's distance. Every landed
+  hit should throw a few red drops from the wound along the blow and leave one mark where they
+  land: a machete or arc blade a long splatter with drops thrown ahead, a bat, crowbar or fist a
+  smaller round spot. Somebody going down should get a pool under the middle of the body a moment
+  after they land, spreading over a few seconds; a death's pool is larger. Pause: the drops hang.
+  Run the day on at speed three: the marks thin and are gone by the next day. Slice down a layer:
+  they hide with it. A wrong answer is drops too small to see or so many they read as a particle
+  effect, a mark that looks like a hole or a shadow rather than blood, a pool at the feet rather
+  than under the body, marks sunk into a slope or floating over one, or a battlefield that is red
+  from edge to edge after one fight (the cap is 200, oldest first).
+- **No more orange suits past 64 colonists?** (`claude/pawn-ceiling`, PR #175, design
+  `29-modular-colonists.md` §13a.) Spawn about 100 colonists from the debug menu, pull the camera out
+  and pan across the colony. Everyone should be in the white uniform, near and far. A wrong answer
+  looks like some colonists in burnt orange, or clothes flicking as you pan. Two things are expected
+  and are not faults: a far colonist's **skin tone and hair colour** can still change as they cross
+  the cap (recorded, not fixed), and the debug menu **stops spawning at 200**.
+- **Does the Meadow grass read as grass, and is this the grass to judge?** (PR for
+  `claude/meadow-m3-foliage`, design 38 §16) **This is the first branch to test grass in.** New game,
+  play camera. Three things: (1) the meadow reads as grass and the green is the lighter spring green
+  you asked for — if it reads as grey fuzz or olive, the grade is the one number to move; (2) it
+  sways, and **stops dead when you pause** — if it keeps moving, the wind is on wall time; (3) drop
+  or haul a stack onto grass, and designate a tree: **the grass clears in a small ring round each** —
+  if a log disappears into the grass, the clearance is not reaching the drawn view. Density is
+  unchanged (full cover is M4), and trees are still the old ones (M5).
+
 - **Grass → Full: the first grass you can see change** (`claude/meadow-m6-presets`, design 38 §13,
   §15). New game on the default meadow, the camera at its starting zoom over the clearing. Settings
   → Graphics → **Grass**: press **Meadow** (today's grass), then **Full**, then **Off**, a few
@@ -792,6 +818,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-24 | **What grass costs on the GPU at 4K** (PR #183, `docs/design/38-meadow-overhaul.md` §13) | measured — owner: *"6–7 ms on gpu (sometimes bit lower) without grass tufts. On — 7 ish — spikes up to 8 moving around"* | about 0.5–1 ms, peaks ~1.5; under the 2 ms line, so M4 plans for full cover; agrees with the batch arm |
 | 2026-09-24 | **Combat C2 + C3 and the three rounds after play** (PR #180, `docs/design/33-combat.md` §3–§9) | working — owner: *"it seems great ... weapons sit at hips, have a battle with tons and tons of characters - was hovering 3.5ms ... it flowed really well"* | closes the brawl and fight rows; 3.5 ms is inside the 5 ms budget on the dev GPU, unmeasured on the target laptop; the ring, menu and grip rows stay open for the "more testing later" |
 | 2026-09-24 | **The Inventory tab, restyled** (PR #177, `docs/design/35-inventory-tab.md` §5a) | working — owner: *"it's good"* | none; ready to merge |
 | 2026-09-23 | **The Research tab** (PR #177, `docs/design/34-research-tab.md`) | working — owner: *"the research control is fine"*, after the list was cut to what the game has | the list became Electricity, Power lines, Generator, Ladder (34 §2) |

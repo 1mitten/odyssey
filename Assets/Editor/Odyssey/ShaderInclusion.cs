@@ -65,6 +65,10 @@ namespace Odyssey.EditorTools
             // The power lines (design 32 §9), drawn over everything. Found by name like the rest.
             "Odyssey/PowerLine",
 
+            // Meadow foliage (design 38 §4). Without it a player strips the shader and the cache
+            // falls back to the pack's own, so the meadow draws but its wind runs on wall time.
+            "Odyssey/Foliage",
+
             // The sky, and it was not on the first draft of this list — `ShaderInclusionTests`
             // found it on the run that was meant to confirm the fix, along with `Standard` below.
             // Worth recording rather than quietly adding: a list of runtime-found shaders

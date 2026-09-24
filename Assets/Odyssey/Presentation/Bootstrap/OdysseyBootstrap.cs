@@ -193,6 +193,7 @@ namespace Odyssey.Presentation.Bootstrap
 
         /// <summary>The dead, drawn (design 33 §5). Built, synced and disposed beside the doors; lane B's to fill.</summary>
         CorpseDirector? _corpses;
+        BloodDirector? _blood;
 
         /// <summary>The one reader of the fight's events (design 33 §5).</summary>
         readonly CombatFeedback _combatFeedback = new CombatFeedback();
@@ -211,6 +212,10 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         MenuAmbience? _menuBed;
         DaylightDirector? _daylight;
+
+        /// <summary>The wind the foliage reads, on the game clock (design 38 §4): a paused meadow
+        /// holds still and a meadow at speed 3 hurries with everything else.</summary>
+        readonly WindDirector _wind = new WindDirector();
         Material? _actorMaterial;
         ColonistMaterials? _colonistMaterials;
 
@@ -529,6 +534,9 @@ namespace Odyssey.Presentation.Bootstrap
         public HotkeyDirector Keys { get; } = new HotkeyDirector();
         public WorldRenderModel? Model => _model;
         public ChunkRenderer? Renderer => _renderer;
+
+        /// <summary>Blood on the ground and in the air (design 33 §10). For the frame tests that price it.</summary>
+        public BloodDirector? Blood => _blood;
 
         /// <summary>The colony's one audio director, for the presenter that applies the
         /// settings panel's faders to it live.</summary>
@@ -949,6 +957,9 @@ namespace Odyssey.Presentation.Bootstrap
                 GameObjectLayer = gameObject.layer,
                 ScatterDensity = grassScatter,
                 Appearances = appearances,
+                // The same materials the figures paint through, so a far colonist wears the
+                // issued uniform rather than the pack's orange (design 29-modular-colonists §13a).
+                Recolours = _colonistMaterials,
             };
             // The power lines (design 32 §9): their own pass, outside the chunk meshes, so showing
             // and hiding them costs no re-mesh. A new session starts unwatched, because its view
@@ -1015,6 +1026,10 @@ namespace Odyssey.Presentation.Bootstrap
                 _fires = new FireDirector(_model, transform, gameObject.layer,
                     _colony?.Construction.Edifices.Records);
                 _corpses = new CorpseDirector(_model, moduleCatalogue, _figures, transform, gameObject.layer);
+                // Blood (design 33 §10): what the seam hands on, drawn. It asks the corpses and
+                // the figures where a fallen body lies, for the pool under it.
+                _blood = new BloodDirector(_model, FindBody);
+                _combatFeedback.Blood = _blood;
             }
 
             // Which family each weapon swings in (design 33 §5j), read once off the content, so a
@@ -1039,6 +1054,10 @@ namespace Odyssey.Presentation.Bootstrap
                 _daylight = new DaylightDirector(key, RenderSettings.skybox);
                 _daylight.Apply(_world.CurrentTick);
             }
+
+            // The wind, unconditionally: it is not part of the day and night cycle, and a board
+            // built with the cycle off still wants its grass moving.
+            _wind.Apply(_world.CurrentTick);
             if (_figures != null)
             {
                 _figures.BlowLanded += OnBlowLanded;
@@ -1201,6 +1220,9 @@ namespace Odyssey.Presentation.Bootstrap
             // retire in one frame and the sky would step, and when the game is paused the hour
             // stops with it, which is right — a paused world should not go on getting dark.
             _daylight?.Apply(_world.CurrentTick);
+
+            // And the wind on the same clock, for the same reason: a paused meadow holds still.
+            _wind.Apply(_world.CurrentTick);
         }
 
         /// <summary>
@@ -1224,6 +1246,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (_world == null || count <= 0) return;
             _world.Tick(count);
             _daylight?.Apply(_world.CurrentTick);
+            _wind.Apply(_world.CurrentTick);
         }
 
         /// <summary>
@@ -1344,6 +1367,11 @@ namespace Odyssey.Presentation.Bootstrap
             if (cameraRig != null)
             {
                 _renderer.ViewerPosition = cameraRig.transform.position;
+                // A level of detail is judged by the screen height a module fills, which the
+                // field of view decides as much as the distance does.
+                if (cameraRig.Camera != null) _renderer.ViewerFieldOfView = cameraRig.Camera.fieldOfView;
+                // The clearance window follows what the camera looks at, not where it stands.
+                _renderer.ClearanceFocus = cameraRig.Focus;
                 // And the figure director wants it for one decision of its own: which colonists
                 // keep a live figure when there are more of them than the cap allows.
                 if (_figures != null) _figures.ViewerPosition = cameraRig.transform.position;
@@ -1490,10 +1518,14 @@ namespace Odyssey.Presentation.Bootstrap
             // then the moments since last frame, handed on once each, and the words they float.
             DrawCombatMarks(_world.Views.Current, movePerTick, activeLayer, slice);
             _combatFeedback.Floaters.Step(_world.Views.Current.Running ? Time.deltaTime : 0f);
+            int bloodLowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model?.LowestOutdoorLayer ?? int.MaxValue));
+            int bloodHighest = slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY);
+            // Blood ages to this tick before the frame's hits are handed on, so a mark made now is
+            // born now; it is drawn after them, so a hit this frame throws its drops this frame.
+            _blood?.Step(_world.Views.Current.Running ? Time.deltaTime : 0f, _world.Views.Current.Tick);
             _combatFeedback.Consume(_world.Views.Current, _world, _figures, _audio,
-                Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model?.LowestOutdoorLayer ?? int.MaxValue)),
-                slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY),
-                _tickAlpha, ticksPerSecond);
+                bloodLowest, bloodHighest, _tickAlpha, ticksPerSecond);
+            if (_renderer != null) _blood?.Draw(_renderer, bloodLowest, bloodHighest);
             _floaterView?.Draw(_combatFeedback.Floaters,
                 cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);
@@ -2786,6 +2818,24 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>
+        /// Where a fallen body's middle is, for the pool under it (design 33 §10c): a dead body at
+        /// rest is the corpse's own drawn box; one still falling, or a downed one, is halfway from
+        /// its figure's feet to its head, which is on the body whichever way it went. No answer
+        /// with neither, and the pool goes at the feet it was given.
+        /// </summary>
+        bool FindBody(PawnId who, out Vector3 middle)
+        {
+            if (_corpses != null && _corpses.TryGetMiddle(who, out middle)) return true;
+            if (_figures != null && _figures.TryGetFeet(who, out Vector3 feet) && _figures.TryGetHead(who, out Vector3 head))
+            {
+                middle = new Vector3((feet.x + head.x) * 0.5f, feet.y, (feet.z + head.z) * 0.5f);
+                return true;
+            }
+            middle = default;
+            return false;
+        }
+
+        /// <summary>
         /// The fight's marks over the pawns (design 33 §1): a health bar where
         /// <see cref="CombatFeedbackModel.HealthBar"/> owes one — the hurt, the downed and the
         /// drafted — and the red marker over a hostile. What is owed is the model's, the bar's
@@ -3671,16 +3721,19 @@ namespace Odyssey.Presentation.Bootstrap
             }
             _audio?.Dispose();
             _daylight?.Dispose();
+            _wind.Dispose();
             // The corpses before the figures: a body still falling hands its lent figure back as
             // it goes, and after the figures that indexed a cleared list and threw out of the
             // teardown, which a pause on a death and a load reached (review, 2026-09-23).
             _corpses?.Dispose();
             _figures?.Dispose();
+            _blood = null;
             _doors?.Dispose();
             _fires?.Dispose();
             _floaterView?.Dispose();
             _combatFeedback.Floaters.Clear();
             _combatFeedback.Blood.Clear();
+            _combatFeedback.Blood = NoBloodEffects.Instance;
             _combatFeedback.Sounds.Clear();
 
             // The pictures go with the materials that painted them — a portrait outlives a colony

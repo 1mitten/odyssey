@@ -202,13 +202,26 @@ namespace Odyssey.Presentation.Bootstrap
 
                     bool sharp = BloodSides.IsSharp(combatEvent.Weapon, attackerKind);
                     Vector3 wound = at + Vector3.up * WoundHeight(combatEvent.Target, snapshot, figures);
-                    Blood.Spurt(wound, direction, combatEvent.Amount / 1000f, sharp);
+                    Blood.Spurt(at, wound, direction, combatEvent.Amount / 1000f, sharp);
                     break;
                 }
                 case BloodMark.Pool:
-                    Blood.Pool(at, BloodModel.PoolSize(combatEvent.Kind));
+                    Blood.Pool(combatEvent.Target, at, BloodModel.PoolSize(combatEvent.Kind),
+                        BodyLength(combatEvent.Target, snapshot, figures));
                     break;
             }
+        }
+
+        /// <summary>
+        /// How long a body is lying down, for the pool under it (design 33 §10b): an animal's drawn
+        /// box, its longer side; anyone else a person's length.
+        /// </summary>
+        static float BodyLength(PawnId who, WorldSnapshot snapshot, PawnFigureDirector? figures)
+        {
+            if (who.IsValid && snapshot.TryGetPawn(who, out PawnView pawn) && pawn.IsAnimal
+                && figures != null && figures.TryGetAnimalBox(who, out _, out Vector3 box))
+                return Mathf.Max(box.x, box.z);
+            return BloodSpray.PersonLength;
         }
 
         /// <summary>How high on the struck body a blow lands: a person's chest, low on one lying down, an animal's flank.</summary>
