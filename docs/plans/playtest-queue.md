@@ -23,6 +23,16 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does a rescue read, and is a five-day bed rest right?** (`claude/combat-rescue`, design 33 §11).
+  Build a bed, let a marauder down a colonist, then draft another, select her and right-click the
+  one on the ground: she walks over, stoops, stands up with the body across her arms, carries it to
+  the bed and lays it down. Undrafted, with Rescue ticked on the Work tab, colonists do it by
+  themselves. With no free bed, *No bed for the wounded* appears and nobody comes. A wrong answer is
+  a body that floats beside the carrier or sinks into her, a carry too high or too low to read as
+  arms (head near the carrier's shoulder is the intent), a patient who stands up at 15 % or lies
+  on the floor through the bed, two colonists running for one body, or a colonist still *Downed*
+  on the card for five days when you expected something else.
+
 - **Does the hearth read as a hearth?** (`claude/campfire-art`, PR #170, `docs/design/31-campfire-art-and-fire.md`
   §17–§18d.) Build a campfire, give the colony nothing to do, and watch for a game hour. Idlers
   should drift to it two times in three and **stay** once there, about half of them turned to face

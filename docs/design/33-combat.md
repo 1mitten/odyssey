@@ -2627,3 +2627,37 @@ computed at publish for downed colonists only: a colony with nobody down pays on
   `PawnEviction.Occupant` and `TrappedPawnSystem` skip a carried pawn: she is not standing there.
 - **`Cleanup` puts her down on every exit.** `CarriedBy` is saved; a patient left with it set after
   her carrier's job ended would be carried by nobody, for ever.
+
+### 11g. Measured (2026-09-24)
+
+- **The pose, under the real bootstrap** (`RescueFigureTests`, the head bone, on a figure whose
+  standing head is 2.10–2.15 m): **0.18–0.20 m** over the ground downed on the floor; **1.63–1.66 m
+  over the carrier's feet and 1.07 m to her side** in the arms, mid-walk; **1.02–1.04 m** over the
+  ground in the bed against a mattress top of 0.70. The arms are the load's scoop, which holds the
+  palms level with the chest (1.52 m on this figure), so she lies at chest height with her head
+  half a body to one side: a cradle carry, and the playtest's to judge. `CradleSink` and the scoop
+  are the two levers.
+- **Three readings of the carry were the test's, not the pose's**, and each is why the test reads
+  as it does now. Against the ground of her cell, a carrier climbing a terrace ramp is drawn up the
+  riser before the cell changes (2.93 m). At speed three a bed four cells off is reached inside the
+  sample's wait, so "carried" was her head on the pillow (1.04 m, 0.05 m from the carrier). And one
+  second after the lift caught the scoop still easing in (1.27 m). The test measures against the
+  carrier's feet, at speed one, asserting she is still carried and the carrier still walking.
+- **Controls seen to fail**: the carried-patient pass off leaves her on the ground at the carrier's
+  feet (0.36 m); a bed not counted as a cradle plays the floor loop through the bed frame (0.21 m).
+  In the simulation: the bed not passed, no set-down, no patient reservation, the 15 % threshold and
+  no carried sync each fail their test; the alert with no rows built fails its.
+- **Read in real seconds, not frames.** A batch frame is a couple of milliseconds, so ninety frames
+  read the body mid-fall, and one second after the lift read 1.27 m on one run and 1.79 on another as
+  the scoop eased in. The test waits in real time (`docs/lessons.md`, a frame is not a tick).
+- **A Long soak saw it first.** `MarauderSoakTests` carried a downed colonist to bed and she healed
+  past 15 % while down, which its invariant forbade; the invariant now takes the new line.
+
+### 11h. Known and left
+
+- **A carried patient beyond the 64-figure cap** is drawn by the baked far form, standing at her
+  carrier's cell, as a downed pawn out there already is (§6F).
+- **A patient's needs are paused for the whole of her bed rest** (five days at today's rate), because
+  she is down; nobody feeds a patient yet. A later unit, if the playtest wants it.
+- **She reads *Downed* while she heals in bed.** Whether that should say something else is the
+  playtest's question (§11e).
