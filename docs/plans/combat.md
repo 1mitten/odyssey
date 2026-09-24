@@ -3,7 +3,7 @@
 **Approved by the owner 2026-09-23** after an interview of five rounds (every answer is in the
 decision table of `docs/design/33-combat.md` §1). **Done 2026-09-24.** C1 merged as PR #176, C2 and
 C3 as PR #180, blood as PR #182, and C4–C6 with the owner's rounds after them as PR #194. C7, the
-gate, is `claude/combat-c7`; its report is `docs/milestones/combat-report.md`. What is still open is
+gate, is PR #204 (`claude/combat-c7`); its report is `docs/milestones/combat-report.md`. What is still open is
 the owner's (the report's §5, the playtest queue).
 
 ## Units
