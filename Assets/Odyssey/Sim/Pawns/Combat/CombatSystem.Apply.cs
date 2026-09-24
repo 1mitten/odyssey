@@ -229,6 +229,9 @@ namespace Odyssey.Sim.Pawns
             target.RetaliateAgainst = attacker.Id.Value;
             target.RetaliateUntilTick = tick + combat.retaliationTicks;
 
+            // Set to Flee (design 33 §18d) she runs rather than fighting back: the interrupt below
+            // brings her to her self-defence, which asks her response first. The memory above is
+            // still written, for when she is cornered and fights back as Fight back would.
             if (!Melee.IsAttacking(target, attacker)) _jobs.Interrupt(target, JobStatus.Failed);
         }
 

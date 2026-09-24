@@ -462,6 +462,10 @@ namespace Odyssey.Tests.Sim
             Assert.That(CombatAspects.WeaponName, Is.EqualTo("odyssey.pawn.weapon"));
             Assert.That(CombatAspects.OrderTargetName, Is.EqualTo("odyssey.pawn.order.target"));
             Assert.That(CombatAspects.RescueNoBedName, Is.EqualTo("odyssey.pawn.rescue.nobed"));
+            // Design 33 §18: the response is read by the interface; the patient by presentation,
+            // which reads this constant itself.
+            Assert.That(CombatAspects.ResponseName, Is.EqualTo("odyssey.pawn.response"));
+            Assert.That(CombatAspects.RescuePatientName, Is.EqualTo("odyssey.pawn.rescue.patient"));
         }
 
         /// <summary>
@@ -490,9 +494,18 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(after.TryGetPawnAspect(a.Id, CombatAspects.Hp, out int hp) && hp == 40_000, Is.True);
             Assert.That(after.TryGetPawnAspect(a.Id, CombatAspects.HpMax, out int max) && max == 100_000, Is.True);
-            Assert.That(after.TryGetPawnAspect(a.Id, CombatAspects.OrderTarget, out int target) && target == b.Id.Value, Is.True);
             Assert.That(after.TryGetPawnAspect(a.Id, CombatAspects.Weapon, out int weapon) && weapon == ItemIndex.ArcBlade, Is.True);
             Assert.That(after.TryGetPawnAspect(b.Id, CombatAspects.Hp, out _), Is.False, "the whole one said something");
+
+            // A target with no order behind it publishes nothing since design 33 §18b: the aspect
+            // means an attack the player ordered. The order is the control.
+            Assert.That(after.TryGetPawnAspect(a.Id, CombatAspects.OrderTarget, out _), Is.False,
+                "a target nobody ordered was published as an order");
+            Assert.That(Send(colony, new Intent(IntentKind.SetDrafted, default, a.Id.Value, 1)), Is.EqualTo(IntentRejection.None));
+            Assert.That(Send(colony, new Intent(IntentKind.OrderAttack, colony.Pawns.Size.FromIndex(b.Cell), a.Id.Value, b.Id.Value)),
+                Is.EqualTo(IntentRejection.None));
+            Assert.That(colony.World.Views.Current.TryGetPawnAspect(a.Id, CombatAspects.OrderTarget, out int target)
+                && target == b.Id.Value, Is.True, "the order's target was not published");
         }
 
         /// <summary>

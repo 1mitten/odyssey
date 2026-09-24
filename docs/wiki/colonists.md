@@ -66,7 +66,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Wandering** | `ui.status.wandering` | An animal on a leg of its own: going somewhere nearby for no reason | no art | AN |
 | **Resting** | `ui.status.resting` | An animal between legs | no art | AN |
 | **Fighting** | `ui.status.fighting` | Closing on a target and swinging at it | no art | CB |
-| **Fleeing** | `ui.status.fleeing` | Running from whatever hurt it | no art | CB |
+| **Fleeing** | `ui.status.fleeing` | Running from danger, or from whatever hurt it | no art | CB |
 | **Equipping** | `ui.status.equipping` | Fetching a weapon to hold | no art | CB |
 | **Rescuing** | `ui.status.rescuing` | Carrying the downed to a bed | no art | CB |
 

@@ -172,6 +172,15 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int FinishingStepTo { get; internal set; } = -1;
 
+        /// <summary>
+        /// What she does about danger near her while undrafted (design 33 §18): fight back — the
+        /// default — defend, or flee. A standing setting the player chooses on her pane, not an
+        /// order. Set through <c>SetHostilityResponse</c>. Saved in <c>CombatSection</c>'s flags
+        /// word and folded into the hash beside the kind, <b>both only while it is not the
+        /// default</b>, so a colony that never touched it saves and hashes as it did before.
+        /// </summary>
+        public HostilityResponse Response { get; internal set; }
+
         /// <summary>The species this pawn's kind spawns as: what walks. See <see cref="SpeciesDef"/>.</summary>
         public SpeciesDef Species => Content.SpeciesOf(Kind);
 
@@ -1033,11 +1042,15 @@ namespace Odyssey.Sim.Pawns
             // there is any, so a colony that has never fought hashes exactly as before combat.
             // The knock-down and the swing in the air (design 33 §9b, §9g) have a bit each in it
             // too, so a pawn with neither hashes as it did before them.
+            // The response (design 33 §18c) is two bits of the same word, nought at the default, so
+            // a colony that never set one hashes as it did before. Bits 24 and 25: 22 and 23 are
+            // left free for the line building beside this one.
             bool combat = HasCombatState;
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
             hash.Add(Kind | (Leaving ? 1 << 16 : 0) | (Drafted ? 1 << 17 : 0)
                 | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0)
-                | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0));
+                | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
+                | ((int)Response << 24));
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             if (combat)

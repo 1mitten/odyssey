@@ -50,10 +50,26 @@ namespace Odyssey.Sim.Pawns
         public const string WeaponName = "odyssey.pawn.weapon";
 
         /// <summary>
-        /// The <c>PawnId</c> value of the pawn this one is under orders to attack or rescue;
-        /// absent otherwise. What the order line is drawn to (design 33 §2g).
+        /// The <c>PawnId</c> value of the pawn this one is <b>under the player's orders</b> to
+        /// attack; absent otherwise (design 33 §18b). Only a forced attack on a pawn
+        /// (<c>PawnRegistry.OrderTargetOf</c>): a fight she started herself — the hold's blow,
+        /// fighting back, a join — keeps its target on the pawn and publishes nothing, because
+        /// what reads this is the lock-on ring, and the ring means <i>you sent her</i>.
         /// </summary>
         public const string OrderTargetName = "odyssey.pawn.order.target";
+
+        /// <summary>
+        /// The <c>PawnId</c> value of the downed colonist this one is rescuing, ordered or of her
+        /// own accord; absent otherwise (design 33 §11e, §18b). What presentation finds a carrier
+        /// by. Its own aspect since §18, when the order target stopped meaning "or rescue".
+        /// </summary>
+        public const string RescuePatientName = "odyssey.pawn.rescue.patient";
+
+        /// <summary>
+        /// A colonist's <see cref="HostilityResponse"/> as its number, 1 Defend or 2 Flee; absent
+        /// at the default, Fight back (design 33 §18c). What the pane's button shows.
+        /// </summary>
+        public const string ResponseName = "odyssey.pawn.response";
 
         /// <summary>
         /// 1 on a downed colonist lying where she fell for whom no bed is free, so nobody can be
@@ -68,5 +84,7 @@ namespace Odyssey.Sim.Pawns
         public static readonly AspectKey Weapon = AspectKey.Of(WeaponName);
         public static readonly AspectKey OrderTarget = AspectKey.Of(OrderTargetName);
         public static readonly AspectKey RescueNoBed = AspectKey.Of(RescueNoBedName);
+        public static readonly AspectKey RescuePatient = AspectKey.Of(RescuePatientName);
+        public static readonly AspectKey Response = AspectKey.Of(ResponseName);
     }
 }

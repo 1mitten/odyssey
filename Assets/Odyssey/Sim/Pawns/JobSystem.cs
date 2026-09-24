@@ -194,6 +194,7 @@ namespace Odyssey.Sim.Pawns
         public void Tick(SimWorld world)
         {
             _ctx.Sync(world);
+            _hostilityKnown = false;
             GetOutOfTheWrongBed(world.CurrentTick);
             var pawns = _ctx.Pawns.All;
             for (int i = 0; i < pawns.Count; i++) TickPawn(pawns[i], world.CurrentTick);
@@ -340,6 +341,12 @@ namespace Odyssey.Sim.Pawns
             // pause; what this holds back is the tree, which would otherwise give it a job — and
             // an order given meanwhile starts, and waits here until it stands.
             if (pawn.StunnedAt(tick) || pawn.KnockedDownAt(tick)) return;
+
+            // A colonist set to Defend or Flee (design 33 §18d) notices a fight or danger near her
+            // while she works: the tree runs only between jobs, and a colonist felling a tree would
+            // otherwise see nothing until it fell. The job in hand ends, her step kept, and the
+            // tree below gives her the response's job this same tick.
+            if (ResponseActs(pawn)) Interrupt(pawn, JobStatus.Failed);
 
             if (pawn.CurrentJob != null)
             {
