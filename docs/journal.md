@@ -11858,3 +11858,19 @@ dusk with no visible seam, for the owner to judge. The bench after them was only
 not pause the colony or hold the hour, and two identical arms a minute apart differed by 2.7 ms. The
 first four arms, back to back, put the whole of 18c and 18f at about 1.2 ms of GPU at 4K. The bench
 pauses and holds noon now; one more run is owed. Design 38 §18c, §18f, §18g.
+
+## 2026-09-24 — Meadow polish: grass that lies flat, bushes that fade, every colonist, a thicker wood
+
+The owner asked for grass flattened round dropped things and fallen people, and trees in the land
+beyond the board. The first was a ring and a rule — footprint plus half a metre round an item, 1.4 m
+round a body downed, asleep off a bed or dead — and one thing more: a bush cannot lie flat, so a
+bush over a body or a stack now fades, found by discs the mesher records as it plants them. The
+owner's earlier decision that trees fade for *every* colonist had never reached the code; it does
+now, bounded to the sixteen nearest the camera's focus. Its first cut cost 1.9 ms of `World` at 4K
+with fifty colonists, nearly all of it ground boxes tested against thirty-two lines, so the lines to
+unselected colonists fade only trees and bushes and the cost fell to 0.1–0.3 ms.
+
+The surround was the surprise: photographed from the board's corner it was already wooded. What it
+lacked was undergrowth and depth, so the wood thins less, the far wood is denser, three trees in
+four have a bush beside them — and all of it is drawn at coarse levels of detail and the card, which
+design §3 promised and nobody had built. More trees, 31 more draw calls, the same CPU. Design 38 §19.

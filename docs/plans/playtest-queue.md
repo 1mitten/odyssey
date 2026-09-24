@@ -23,6 +23,19 @@ the next session learns to ignore.
 
 ## Open
 
+- **Is a dropped stack or a fallen colonist easy to see now?** (`claude/meadow-look-polish`,
+  design 38 §19a). Drop a stack on long grass and next to a bush; let a colonist sleep outdoors (or
+  get downed). The grass should lie flat in a ring round each, and a bush over one should fade to a
+  ghost. **A wrong answer looks like:** the stack or body still half-hidden (the ring is too small),
+  a bald patch much bigger than the thing, or a square of ghosted ground under it.
+- **Do trees fade for colonists you have not selected?** (design 38 §19b). Let colonists walk into a
+  wood with nothing selected. Crowns between the camera and any of them should ghost. **A wrong answer
+  looks like:** only selected colonists get the fade, or whole walls and ground ghost round unselected
+  ones.
+- **Does the land beyond the board read wooded?** (design 38 §19c). Zoom right out over an edge of
+  the board. **A wrong answer looks like:** bare lawn past the rim — then check Settings → Graphics →
+  Surround is on and send a screenshot, because our photographs show wood there.
+
 - **Can you see a colonist through a tree now?** (`claude/meadow-look-fixes`, design 38 §17c). Walk
   a colonist behind a tree and a bush: the leaves should fade to a faint ghost (about 15%) with the
   trunk, soft rather than dotted, and come back when the colonist leaves. **A wrong answer looks
