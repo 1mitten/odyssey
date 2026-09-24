@@ -29,7 +29,43 @@ the next session learns to ignore.
   the flames. **The crouch was judged 2026-09-24** — *"sneaking/crawling and not sat down"* — and
   taken off (design 31 §18e); a real seated clip is owed. Left to judge: whether the ring **reads
   as people at a fire rather than a queue** — a wrong answer is idlers you cannot tell from
-  colonists waiting on a job.
+  colonists waiting on a job. **And since the merge with combat (design 31 §19)**: the right-hand
+  column is **271 px, down from 296**, so check the outdoor temperature on the clock still clears the
+  speed buttons beside it — a wrong answer is the reading touching or running under them again; and
+  spawn a marauder with nobody to fight near a campfire — a wrong answer is it settling at the fire.
+
+- **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
+  Spawn a marauder, draft two colonists, select both and right-click it: a translucent red ring
+  should appear wide round its feet and snap in, in a fifth of a second, flash once as it lands
+  and stay faint under it until it goes down — then fade. Right-click a hog: its ring hugs the
+  hog's own length. Deselect them: it fades; reselect: it is back at rest, without the snap. A
+  wrong answer is a ring you notice only when it lands (the 0.2 s is too quick), a flash that
+  reads as a glitch, a hold so faint it is lost on grass or at night, a red you confuse with the
+  draft's dark red over their heads or the salmon diamond over the marauder, or a ring sunk into a
+  slope or floating on a terrace step.
+
+- **Does the context menu make taking up a weapon clear?** (design 33 §7a, `claude/combat-menu`).
+  Select a colonist, undrafted, and right-click the machete: a small menu opens at the pointer with
+  *Equip machete* and *Cancel*, and nothing happens until a row is picked. Pick Equip: a line runs
+  from her feet to the weapon with a bracket on it, her activity line says *Equipping*, and the line
+  goes when it is in her hand. Then check the closes — Escape, a click elsewhere, an orbit, clicking
+  another colonist — and that right-click on bare ground (drafted) still moves at once, and on a hog
+  still attacks at once, with no menu. Select only a downed colonist and right-click a weapon:
+  *Equip* is dim with *Downed* beside it. A wrong answer is a menu that opens under the pointer's
+  arrow or off the screen edge, one that will not close, a move or attack that now asks, or Equip
+  still unclear — in which case say what would make it clear (the colonist's name on the row?).
+
+- **Should an unattended fight end in downs, never deaths?** (design 33 §3, PR #180). Only an
+  order strikes a body on the ground, so a marauder left alone downs a colonist and turns to the
+  next; nobody dies unless you send someone to finish it. Say if that is wrong.
+
+- **Is a weapon held and dropped where it should be?** (checkpoint 3, C3 — `claude/combat-c2`,
+  design 33 §6D–§6E). A new game lays a bat and a machete beside the food: they should lie flat and
+  be recognisable. Select a colonist, undrafted, and right-click the bat: she walks over, stoops and
+  stands with it in her right hand, gripped at the handle. Swap it for the machete: the bat is put
+  down where she stands. A wrong answer is a weapon standing on end, hovering off the hand, held by
+  its head, through the forearm, far too big or small — the grip is measured from the mesh and
+  nobody has seen it — or a right-click on a weapon that does nothing without a draft.
 
 - **Does power read?** (`claude/power`, PR #173, `docs/design/32-power.md`; merged with `main` 2026-09-24.)
   Lines, generators and heaters now take **scrap metal** (design 32 §14): a new game scatters ten
@@ -736,6 +772,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-24 | **Combat C2 + C3 and the three rounds after play** (PR #180, `docs/design/33-combat.md` §3–§9) | working — owner: *"it seems great ... weapons sit at hips, have a battle with tons and tons of characters - was hovering 3.5ms ... it flowed really well"* | closes the brawl and fight rows; 3.5 ms is inside the 5 ms budget on the dev GPU, unmeasured on the target laptop; the ring, menu and grip rows stay open for the "more testing later" |
 | 2026-09-24 | **The Inventory tab, restyled** (PR #177, `docs/design/35-inventory-tab.md` §5a) | working — owner: *"it's good"* | none; ready to merge |
 | 2026-09-23 | **The Research tab** (PR #177, `docs/design/34-research-tab.md`) | working — owner: *"the research control is fine"*, after the list was cut to what the game has | the list became Electricity, Power lines, Generator, Ladder (34 §2) |
 | 2026-09-23 | **Drafting and moving** (C1, `claude/combat-mvp`, `docs/design/33-combat.md` §2) | working — owner: *"the drafting, T and moving onto surfaces, diamond and 4 hours all seemed to work"* | two asks: a drafted colonist runs (§2h), the marks a deeper translucent red (§2g); both built, re-queued above |

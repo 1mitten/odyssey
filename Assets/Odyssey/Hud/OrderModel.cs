@@ -33,9 +33,13 @@ namespace Odyssey.Hud
         static readonly AspectKey DraftedKey = AspectKey.Of(DraftedAspect);
         static readonly AspectKey OrderCellKey = AspectKey.Of(OrderCellAspect);
 
-        /// <summary>Is this pawn a colonist — the only thing the draft applies to today?</summary>
+        /// <summary>
+        /// Is this pawn a colonist — the only thing the draft applies to? Asked of the view's
+        /// flags (design 33 §5), not of its kind: a marauder is kind 3 and a person, and "kind 0"
+        /// would have been right for the wrong reason until the first hostile arrived.
+        /// </summary>
         public static bool IsColonist(WorldSnapshot snapshot, PawnId pawn) =>
-            snapshot.TryGetPawn(pawn, out PawnView view) && view.Kind == 0;
+            snapshot.TryGetPawn(pawn, out PawnView view) && view.IsColonist;
 
         public static bool IsDrafted(WorldSnapshot snapshot, PawnId pawn) =>
             snapshot.TryGetPawnAspect(pawn, DraftedKey, out int drafted) && drafted != 0;
@@ -72,13 +76,26 @@ namespace Odyssey.Hud
         /// <b>a pawn under the pointer included</b>: a colonist's hit box is 1.15 by 2.7 metres,
         /// which at the play camera covers most of the cell behind her, so ignoring a click that
         /// touched a pawn made every order just behind your own squad do nothing (review,
-        /// 2026-09-23). The attack and rescue orders will claim the pawns they are about — an
-        /// animal, a hostile, a downed colonist, a colonist under Ctrl — and leave the rest as
-        /// moves.
+        /// 2026-09-23). The fight's orders (<see cref="CombatOrders.Route"/>) claim the pawns
+        /// they are about — an animal, a hostile, a downed colonist, a colonist under Ctrl — and
+        /// act at once; a thing with a choice of answers, a weapon today, fills
+        /// <paramref name="menu"/> instead (<see cref="ContextMenuModel"/>, design 33 §7a) and
+        /// sends nothing until a row is chosen; the rest are moves, a building included until C6.
+        ///
+        /// <para><b>Exactly one of the two lists is filled, or neither.</b> The presenter opens
+        /// the menu when <paramref name="menu"/> has rows and submits <paramref name="into"/>
+        /// otherwise, so a click can never both act and ask.</para>
         /// </summary>
         public static void RightClick(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot,
-            CellRef? cell, PawnId under, bool ctrl, List<Intent> into)
+            CellRef? cell, PawnId under, bool ctrl, List<Intent> into, List<ContextMenuRow> menu)
         {
+            menu.Clear();
+
+            // The fight's orders claim the clicks they are about first (design 33 §5j): attack and
+            // rescue, at once. Then a thing that asks (§7a). What is left is the move it was in C1.
+            if (CombatOrders.Route(selection, snapshot, cell, under, ctrl, into)) return;
+            if (ContextMenuModel.Build(selection, snapshot, cell, under, menu)) return;
+
             if (cell == null) return;
 
             for (int i = 0; i < selection.Count; i++)
@@ -109,9 +126,22 @@ namespace Odyssey.Hud
         /// frame. The simulation publishes a colonist's order cell straight after its drafted row,
         /// which is what lets the second attach to the first without a search.
         /// </summary>
-        public static void CollectDrafted(WorldSnapshot snapshot, List<DraftedMark> into)
+        public static void CollectDrafted(WorldSnapshot snapshot, List<DraftedMark> into) =>
+            CollectDrafted(snapshot, into, null);
+
+        /// <summary>
+        /// The same walk, also collecting every colonist walking to an order cell <b>without</b>
+        /// being drafted into <paramref name="undraftedOrders"/> — today only one sent for a weapon
+        /// from the context menu (design 33 §7a), which the simulation publishes under the same
+        /// <see cref="OrderCellAspect"/> a drafted move uses, with no drafted row before it. The
+        /// board draws their order line exactly as a drafted colonist's, without the diamond, which
+        /// is the draft's own mark. One walk for both, because the board asks every frame.
+        /// </summary>
+        public static void CollectDrafted(WorldSnapshot snapshot, List<DraftedMark> into,
+            List<DraftedMark>? undraftedOrders)
         {
             into.Clear();
+            undraftedOrders?.Clear();
             ReadOnlySpan<PawnAspect> aspects = snapshot.PawnAspects;
             for (int i = 0; i < aspects.Length; i++)
             {
@@ -120,11 +150,32 @@ namespace Odyssey.Hud
                 {
                     if (aspect.Value != 0) into.Add(new DraftedMark(aspect.Pawn, -1));
                 }
-                else if (aspect.Key == OrderCellKey && into.Count > 0 && into[into.Count - 1].Pawn == aspect.Pawn)
+                else if (aspect.Key == OrderCellKey)
                 {
-                    into[into.Count - 1] = new DraftedMark(aspect.Pawn, aspect.Value);
+                    if (into.Count > 0 && into[into.Count - 1].Pawn == aspect.Pawn)
+                        into[into.Count - 1] = new DraftedMark(aspect.Pawn, aspect.Value);
+                    else
+                        undraftedOrders?.Add(new DraftedMark(aspect.Pawn, aspect.Value));
                 }
             }
+        }
+
+        /// <summary>
+        /// Is a right-click on the world worth hearing for this selection — does it hold a
+        /// colonist, drafted or not? The presenter's gate before it hit-tests.
+        ///
+        /// <para><b>Wider than <see cref="AnyDrafted"/>, and that is the point</b> (design 33 §5j):
+        /// a right-click on a weapon opens the context menu whose Equip row sends the primary
+        /// colonist for it whether drafted or not, so a selection with nobody drafted in it has to
+        /// be asked. Everything else a right-click does
+        /// still needs a draft, and <see cref="RightClick"/> sends nothing for an undrafted
+        /// selection pointing at anything but a weapon. An animal alone takes no orders.</para>
+        /// </summary>
+        public static bool HearsRightClick(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot)
+        {
+            for (int i = 0; i < selection.Count; i++)
+                if (IsColonist(snapshot, selection[i])) return true;
+            return false;
         }
 
         /// <summary>Does anything in the selection take orders — is a right-click worth hearing?</summary>

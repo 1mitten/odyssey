@@ -38,6 +38,24 @@ namespace Odyssey.Hud
         public int JobDef;      // JobHandle value, -1 idle
         public int Layer;       // Cell.Y
         public bool Selected;
+
+        /// <summary>
+        /// The health bar's fill, 0 to 1000 (design 33 §9f): hit points over the pool, clamped, as
+        /// the bar over her head reads them. <b>−1 when the frame publishes no pool</b>, which is a
+        /// frame from before combat or one built by hand: the card then draws the empty track and
+        /// no fill, rather than claiming a colonist it knows nothing about is whole or dying.
+        /// Nought while downed, whatever the hit points below nought say.
+        /// </summary>
+        public int Health;
+
+        /// <summary>The bar's ink: <see cref="CombatFeedbackModel.HealthBarColour"/>, red while downed.</summary>
+        public HudColour HealthInk;
+
+        /// <summary>Down and not dead (<see cref="PawnView.IsDowned"/>): the card says so over an empty red bar.</summary>
+        public bool Downed;
+
+        /// <summary>The word over the bar: <c>ui.status.downed</c> while <see cref="Downed"/>, else empty.</summary>
+        public string HealthWord;
     }
 
     /// <summary>
@@ -129,8 +147,10 @@ namespace Odyssey.Hud
             for (int i = 0; i < pawns.Length; i++)
             {
                 // The roster is the colony's people (design 29 §2): an animal has no card, no
-                // name and no slot to be dragged into, so it never enters the order at all.
-                if (pawns[i].Kind != 0) continue;
+                // name and no slot to be dragged into, so it never enters the order at all. Nor
+                // has a marauder, which is a person and not ours (design 33 §5): asked of the
+                // flags, never of the kind.
+                if (!pawns[i].IsColonist) continue;
                 PawnId id = pawns[i].Id;
                 if (!_customOrder.Contains(id))
                     _customOrder.Add(id);
@@ -158,6 +178,7 @@ namespace Odyssey.Hud
                 // slot on it. Two readings of one thing is how the bar and the card came to
                 // disagree in the first place.
                 uint seed = ColonistNames.RollSeedOf(snapshot, pawn.Id);
+                Health(snapshot, pawn, out int health, out HudColour healthInk, out bool downed);
 
                 Cards.Add(new RosterCard
                 {
@@ -170,8 +191,51 @@ namespace Odyssey.Hud
                     JobDef = pawn.JobDef,
                     Layer = pawn.Cell.Y,
                     Selected = isSelected,
+                    Health = health,
+                    HealthInk = healthInk,
+                    Downed = downed,
+                    HealthWord = downed ? Registry.Label(CombatFeedbackModel.DownedKey) : string.Empty,
                 });
             }
+        }
+
+        /// <summary>
+        /// A card's health bar (design 33 §9f, owner: <i>"Their health needs to be also displayed
+        /// on their colony stats as it appears above them"</i>). <b>Always drawn</b>, where the bar
+        /// over the head is drawn only while <c>odyssey.pawn.hp</c> is published, so it reads the
+        /// same two aspects with the Health tab's rule for the gap between them: the pool,
+        /// <c>odyssey.pawn.hp.max</c>, is published for every person always, and <b>a pool with no
+        /// hit points beside it is a whole colonist</b> (design 33 §5d). Nothing here is derived
+        /// that the simulation already says.
+        ///
+        /// <para>The ink is <see cref="CombatFeedbackModel.HealthBarColour"/>, the one owner of the
+        /// bar's colours, so the card and the bar over her head change colour on the same hit.
+        /// Downed is the flag's, not a reading of the hit points: an empty bar in the red, whatever
+        /// is left of the −50 % a downed pawn may sink to before it dies.</para>
+        ///
+        /// <para>Two O(1) aspect lookups and a flag test per card per refresh; no allocation.</para>
+        /// </summary>
+        public static void Health(WorldSnapshot snapshot, in PawnView pawn, out int perMille, out HudColour ink, out bool downed)
+        {
+            downed = pawn.IsDowned;
+            if (downed)
+            {
+                perMille = 0;
+                ink = CombatFeedbackModel.HealthBad;
+                return;
+            }
+
+            if (!snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpMaxKey, out int max) || max <= 0)
+            {
+                perMille = -1;
+                ink = CombatFeedbackModel.HealthGood;
+                return;
+            }
+
+            int hp = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpKey, out int published) ? published : max;
+            int shown = hp < 0 ? 0 : hp > max ? max : hp;
+            perMille = (int)((long)shown * 1000 / max);
+            ink = CombatFeedbackModel.HealthBarColour(shown, max);
         }
     }
 

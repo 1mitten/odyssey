@@ -23,6 +23,14 @@
     <restTicksMin>0</restTicksMin>
     <restTicksMax>0</restTicksMax>
     <figureKey></figureKey>
+    <!--
+      Combat (design 33 section 1; owner, 2026-09-23): 100 hit points, downed at nought, dead at
+      half the pool below it. A person has no natural attack - bare hands are Combat.xml's fists -
+      and no revenge chance or species melee level: a colonist's answer to being hit is her
+      faction's and her Melee skill's.
+    -->
+    <healthPoints>100</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
   </SpeciesDef>
 
   <!--
@@ -46,6 +54,23 @@
     <restTicksMin>300</restTicksMin>
     <restTicksMax>900</restTicksMax>
     <figureKey>animal.hog</figureKey>
+    <!--
+      Combat (design 33 section 1). The pool and the revenge are the owner's: 60 hit points, and a
+      hog usually turns on whoever hurt it - 700 in a thousand on every hit, else it runs. The
+      tusks and the melee level are INVENTED: a heavy animal that hits hard and slowly, about as
+      able as a colonist of level 6, which makes a hog a real fight for an unarmed novice.
+    -->
+    <healthPoints>60</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>700</revengePerMille>
+    <meleeSkill>6</meleeSkill>
+    <naturalAttack>
+      <damage>6</damage>
+      <cooldownTicks>150</cooldownTicks>
+      <windupTicks>30</windupTicks>
+      <damageKind>Blunt</damageKind>
+      <style>Bite</style>
+    </naturalAttack>
   </SpeciesDef>
 
   <!--
@@ -68,6 +93,22 @@
     <restTicksMin>120</restTicksMin>
     <restTicksMax>480</restTicksMax>
     <figureKey>animal.rat</figureKey>
+    <!--
+      Combat (design 33 section 1). The owner's: 15 hit points, and a rat usually runs - 50 in a
+      thousand turns, the rest flee. The bite and the level are INVENTED: quick and weak, a nip
+      every second and a half.
+    -->
+    <healthPoints>15</healthPoints>
+    <deathAtPerMille>-500</deathAtPerMille>
+    <revengePerMille>50</revengePerMille>
+    <meleeSkill>3</meleeSkill>
+    <naturalAttack>
+      <damage>2</damage>
+      <cooldownTicks>90</cooldownTicks>
+      <windupTicks>15</windupTicks>
+      <damageKind>Sharp</damageKind>
+      <style>Bite</style>
+    </naturalAttack>
   </SpeciesDef>
 
   <!--
@@ -77,11 +118,29 @@
   <PawnKindDef>
     <defName>PawnKind_MiddenHog</defName>
     <species>Species_MiddenHog</species>
+    <faction>Wild</faction>
   </PawnKindDef>
 
   <PawnKindDef>
     <defName>PawnKind_DuctRat</defName>
     <species>Species_DuctRat</species>
+    <faction>Wild</faction>
+  </PawnKindDef>
+
+  <!--
+    The marauder (design 33 section 1): a person under the Hostile faction, debug-spawned, armed,
+    hunting the nearest reachable colonist who is standing. Hostility comes from the kind, so no
+    pawn carries a saved field for it (section 3). A person species, so it is drawn with a
+    colonist's body and face; the red marker says which side it is on. Its needs do not tick
+    (Pawn.NeedsTick), so the needs fields below are the type's defaults and unread.
+  -->
+  <PawnKindDef>
+    <defName>PawnKind_Marauder</defName>
+    <species>Species_Person</species>
+    <faction>Hostile</faction>
+    <!-- Armed from the moment it arrives (design 33 section 1). The hand is filled by
+         IWeaponRules.ArmOnSpawn, lane D's; until that is written the marauder fights with fists. -->
+    <weapon>Item_Machete</weapon>
   </PawnKindDef>
 
 </Defs>

@@ -299,9 +299,43 @@ namespace Odyssey.Hud
         public const int CardNameBudget = CardWidth - 2 * CardPad;
 
         /// <summary>
-        /// How tall a roster card is: top padding, the 52 px avatar, name gap, 19 px name row, bottom padding.
+        /// How tall a roster card is: top padding, the 52 px avatar, name gap, 19 px name row, the
+        /// health bar and its gap, bottom padding.
+        ///
+        /// <para><b>89 until 2026-09-23, 94 since</b> (design 33 §9f, owner: <i>"Their health needs
+        /// to be also displayed on their colony stats as it appears above them"</i>). The card grew
+        /// by exactly <see cref="CardHealthGap"/> and <see cref="CardHealthBar"/> and by nothing
+        /// else, and is written as its parts so the next row added to it moves this number rather
+        /// than being squeezed into it.</para>
+        ///
+        /// <para><b>Five pixels is what the coverage ceiling had left.</b> A full one-row strip at
+        /// 1280 x 720 is 480.7 px wide, and the resting HUD there was 19.69% with 89 px cards
+        /// against <see cref="CoverageCeiling"/>'s 20%: 0.31% of that canvas is 2,857 px², which is
+        /// 5.9 px of card height. A first cut at 102 (a 10 px bar under a 3 px gap) measured
+        /// <b>20.37%</b> and failed <c>TheStripIsAlwaysOneRowAndNoFurther</c>; the owner declined
+        /// raising the ceiling for the name pool on 2026-09-18, so the bar took the room there was
+        /// rather than the room it wanted. At 94 the same HUD is <b>19.95%</b>, so <b>the roster
+        /// card now spends the last of the ceiling</b> and the next pixel added to any resting
+        /// region has to be paid for.</para>
         /// </summary>
-        public const int CardHeight = 89;
+        public const int CardHeight = CardPad + CardAvatar + CardNameGap + CardNameRow + CardHealthGap + CardHealthBar + CardPad;
+
+        /// <summary>Portrait to name on a card.</summary>
+        public const int CardNameGap = 2;
+
+        /// <summary>The name's line on a card: the 14 px row face with its leading.</summary>
+        public const int CardNameRow = 19;
+
+        /// <summary>Name to health bar on a card: one pixel, because the name's line already ends in its own leading.</summary>
+        public const int CardHealthGap = 1;
+
+        /// <summary>
+        /// The health bar on a card (design 33 §9f): the full width inside the padding and 4 px
+        /// tall, the inspect pane's need bar's thickness — as thick as the coverage ceiling allows
+        /// (<see cref="CardHeight"/>). Its colour is the reading; "Downed" is written across the
+        /// foot of the portrait rather than over a bar this thin.
+        /// </summary>
+        public const int CardHealthBar = 4;
 
         public const int CardGap = 7;
 
@@ -456,10 +490,14 @@ namespace Odyssey.Hud
         /// agree — the hazard CLAUDE.md names — so change them together.
         /// <c>HudGeometryTests.TheModelDescribesTheScreenTheShellActuallyBuilds</c> is the test
         /// that would eventually notice, and it is a PlayMode test rather than a rule.</para>
+        /// <para><b>296 -> 271 on 2026-09-24</b>, on the merge with combat, which spent the same
+        /// 0.3% on a health bar under every roster card (<see cref="CardHeight"/>). Together they came
+        /// to 20.20%. The owner chose to hand the width back rather than raise the ceiling: 271 is
+        /// the widest the two can share. Whether the outdoor temperature still clears the speed
+        /// controls at 271 is a look, not a test.</para>
         /// </summary>
-        public const int ClockWidth = 296;
+        public const int ClockWidth = 271;
 
-        /// <summary>The clock's own baseline row: 24 px of mono with room to sit in.</summary>
         /// <summary>
         /// The clock's one row: the time, the date and the outdoor temperature side by side.
         ///
@@ -1816,6 +1854,37 @@ namespace Odyssey.Hud
             float wanted = above + popoverHeight <= screenHeight ? above : below;
             float highest = Math.Max(0f, screenHeight - popoverHeight);
             return Math.Max(0f, Math.Min(wanted, highest));
+        }
+
+        /// <summary>
+        /// How far the context menu's corner stands off the pointer (design 33 §7a), in panel
+        /// pixels: enough that the pointer's own arrow does not sit on the first row's text, and
+        /// no more, so the menu still reads as raised by the click.
+        /// </summary>
+        public const int ContextMenuNudge = 2;
+
+        /// <summary>
+        /// Where the context menu's left edge goes: just right of the pointer, or — when that
+        /// would run off the right of the screen — just left of it, the way a desktop's menus
+        /// turn; and never off either edge. Measured in panel pixels, like everything here.
+        /// </summary>
+        public static float ContextMenuLeft(float pointerX, float menuWidth, float screenWidth) =>
+            ContextMenuEdge(pointerX, menuWidth, screenWidth);
+
+        /// <summary>
+        /// Where the context menu's top edge goes: just below the pointer, or just above it when
+        /// the rows would run off the bottom — a right-click low on the board opens upward, over
+        /// the board rather than under the command bar. Measured down from the top.
+        /// </summary>
+        public static float ContextMenuTop(float pointerY, float menuHeight, float screenHeight) =>
+            ContextMenuEdge(pointerY, menuHeight, screenHeight);
+
+        static float ContextMenuEdge(float pointer, float size, float screen)
+        {
+            float edge = pointer + ContextMenuNudge;
+            if (edge + size > screen) edge = pointer - ContextMenuNudge - size;
+            float widest = Math.Max(0f, screen - size);
+            return Math.Max(0f, Math.Min(edge, widest));
         }
 
         // ---------------------------------------------------------------- acceptance

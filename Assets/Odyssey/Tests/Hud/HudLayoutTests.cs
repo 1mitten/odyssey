@@ -412,6 +412,34 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// The context menu opens at the pointer (design 33 §7a), turns to the pointer's other
+        /// side where it would run off the right or the bottom, and never leaves the screen.
+        /// </summary>
+        [Test]
+        public void TheContextMenuOpensAtThePointerAndTurnsAtTheEdges()
+        {
+            const float screen = 1920f, tall = 1080f, menu = 200f, rows = 90f;
+            float nudge = HudLayout.ContextMenuNudge;
+
+            Assert.That(HudLayout.ContextMenuLeft(500f, menu, screen), Is.EqualTo(500f + nudge),
+                "in the open it hangs right of the pointer");
+            Assert.That(HudLayout.ContextMenuTop(400f, rows, tall), Is.EqualTo(400f + nudge),
+                "and below it");
+
+            Assert.That(HudLayout.ContextMenuLeft(1850f, menu, screen), Is.EqualTo(1850f - nudge - menu),
+                "near the right edge it turns to the pointer's left rather than being pushed under it");
+            Assert.That(HudLayout.ContextMenuTop(1050f, rows, tall), Is.EqualTo(1050f - nudge - rows),
+                "near the bottom it opens upward");
+
+            Assert.That(HudLayout.ContextMenuLeft(100f, 3000f, screen), Is.EqualTo(0f),
+                "a menu wider than the screen starts at the left edge");
+            Assert.That(HudLayout.ContextMenuTop(50f, 2000f, tall), Is.EqualTo(0f),
+                "and one taller than it at the top");
+            Assert.That(HudLayout.ContextMenuLeft(1f, menu, 150f), Is.EqualTo(0f),
+                "turned, it is still never off the left edge");
+        }
+
+        /// <summary>
         /// A popover lines up with the button that raised it, and is pushed back on to the screen
         /// rather than hanging off it.
         /// </summary>

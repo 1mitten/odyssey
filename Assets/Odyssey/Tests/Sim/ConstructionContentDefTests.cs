@@ -97,7 +97,18 @@ namespace Odyssey.Tests.Sim
         // `radiantC` is what a heat source is like to STAND BESIDE (design 36), against
         // `heatPerPass`, which is energy into the room's air. Two fields because they tune
         // apart: making one tile read hot by raising heatPerPass would cook the whole hut.
-        const ulong BuildingFingerprint = 9335970086811492122UL;
+        //
+        // 2026-09-23, the combat contracts step (design 33 §4, §5): BuildingDef gained
+        // `maxHitPoints`, what a finished thing has when it is struck (C6) — wall 300, floor 250,
+        // deck plate 150, ladder 80, bed 120, door 160, shelf 100, all INVENTED and C6's to tune.
+        // Added to the XML and the code oracle together, and taken from a freshly loaded pack.
+        // Moved again, 2026-09-24, merging main (power) into the combat line: neither side's number
+        // covers the merged table, so it is re-taken from a freshly loaded pack. Power's three rows
+        // and the campfire carry no maxHitPoints yet (0); C6 gives them one when anything strikes.
+        // Moved again, 2026-09-24, merging main (combat) into the campfire line: `radiantC` there
+        // and `maxHitPoints` here, so neither number covers the merged table. Re-taken from a
+        // freshly loaded pack.
+        const ulong BuildingFingerprint = 4989369424864157307UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

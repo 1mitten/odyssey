@@ -453,6 +453,27 @@ and both were believed; one of them was decorative. A test for an exactness clai
 deliberate break costs it and nothing more — the same lesson as *"A test that could not fail for the
 reason it named"* in the register below, reached from the opposite direction.
 
+### P17 — Two translucent draws that cover each other, ordered by a key that cannot tell them apart
+
+A translucent material writes no depth, so where two translucent draws cover the same pixels, the
+picture is whatever was drawn **last**. Unity picks that order by the distance from the camera to
+each draw's bounds centre. Two things built around one centre (a fill inside its track, a glow
+inside its core, a plate behind its label) tie on that key **exactly**. The sort then breaks the
+tie differently from frame to frame, depending on everything else in the translucent list. Two
+things whose centres differ only across the screen trade places when the object crosses the
+middle.
+
+**Measured, 2026-09-23** (design 33 §8a). The health bar's fill was a translucent box inside a
+translucent track. For a full bar the two centres tied on 480 frames out of 480 of a walk across
+the screen, and the fill showed at 0.62 of its colour one way round and 0.29 the other. The owner
+reported it as *"the bar above their heads flicker"*.
+
+**The check:** for any mark made of more than one translucent draw, ask *do any two of them cover
+the same pixels?* If they do, the look depends on the sort. Lay the pieces so they meet on edges and
+never overlap (`HealthBarLayout`, held by `NoTwoPiecesOfABarOverlapAtAnyFraction`), or merge them
+into one draw. Nudging one "a little nearer the camera" is not a fix: the lateral term in the
+distance is worth tens of centimetres at the play camera.
+
 ---
 
 ---
@@ -545,6 +566,19 @@ world *component by component* before and after — five minutes that turned "th
 into "only the thermal section moved".
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-23 — The bar over their heads flickers (P17)
+
+Owner: *"The bar above their heads flicker."* One candidate on each side of the seam was measured
+before anything was changed. On the simulation side the bar is owed exactly when the pawn's state
+says, tick after tick: `HealthBarPublishingTests` fought 3,000 ticks, and no bar changed on a tick
+its state did not. On the drawing side the fill was a translucent box inside a translucent track,
+and the sort key that orders them was an exact tie on every frame of a full bar, which is every
+drafted colonist nobody has hurt. The bar is now nine camera-facing pieces that never overlap.
+
+**What now stops it:** `HealthBarLayoutTests.NoTwoPiecesOfABarOverlapAtAnyFraction` and
+`ThePiecesTileTheWholeBar`. Both failed on the plate laid behind the fill as one rectangle.
+Design 33 §8a.
 
 ### 2026-09-23 — A stockpile drag paints nothing
 
@@ -2399,3 +2433,43 @@ that invalidates over a comment asking callers to remember.
 Its sibling is the same day's `ColonistAppearance.Equals`, which kept its old idea of "the same
 person" after two fields were added, so a portrait cache handed fifteen different hairstyles the
 same picture. Both are caches that were right until something underneath them moved.
+
+### 2026-09-23 — Two lanes, one health bar, two ladders; and a gate that still spoke C1 (P1)
+
+**Symptom, caught at the integration before anyone played.** Lane B coloured the health bar green,
+amber and red at 60 and 30 per cent; lane C had written `CombatFeedbackModel.HealthBarColour` at the
+need bar's 60 and 40 for lane B to call. And lane C's model sent an undrafted colonist for a weapon,
+while lane B's presenter returned before asking the model unless someone was drafted.
+
+**Cause.** Both are one rule with two owners, split across two lanes that each built their half in
+a separate worktree: what colour a bar is, and who hears a right-click. Each lane's tests were
+green, because each tested its own copy.
+
+**Fix.** The bar asks the model (`CombatMarks.BarInk` deleted); the presenter's gate is
+`OrderModel.HearsRightClick`. `docs/design/33-combat.md` §6E.
+
+**The check this earns.** *When lanes split a feature, list every question both sides answer, and
+give each one owner in the brief.* The contracts named which lane "writes" and which "calls" for the
+four fixed answers, and those four did not diverge. The bar colour was an answer lane C offered as
+optional, so lane B wrote its own; the gate was a rule the brief gave lane C in a file it gave lane B.
+
+### 2026-09-23 — Side by side held for attackers, and nobody else in the fight (P15)
+
+**Symptom, found by the guard before anyone played it.** The owner asked that fighters never
+share a tile, *"handled uniformly"*. §7c had given every attacker a side of its own. A test that
+walked every tick of mixed brawls then found fighters standing together for hundreds of ticks
+anyway. A marauder stood on a downed body a colonist was finishing off beside it. Two drafted
+colonists swung from one tile. A colonist ordered onto a marauder's tile was given it.
+
+**Cause.** The rule was written for one side of the relation. An attacker held its side, but a pawn
+being attacked held nothing. Three ways into a fight also had no rule at all: the drafted hold
+("strikes from where she stands"), drafting in place, and the move order's spread. Each was right
+for the pawns it had been written for, and none asked about the others.
+
+**Fix.** One answer, `Melee.Holds`: every fighter holds its `SideOf`, attacker or target. The
+hold, the draft and the move order all ask it. `docs/design/33-combat.md` §8c.
+
+**The check this earns.** *When a rule is about a relation, test it over the relation, not over
+the actor that prompted it.* `SideBySideTests` checked attackers against attackers, and all of
+them passed. `FightGuardTests` checks everyone in the fight, on every tick. Each hole it found was
+seen to fail with its fix withheld.

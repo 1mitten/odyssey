@@ -386,7 +386,21 @@ namespace Odyssey.Tests.Sim
         /// numbers were produced by the merged code. <c>GoldenColonyProbe</c> run on the merge and
         /// on <c>origin/main</c> (ee1f9fdc) <b>diffs clean</b> on all three boards: the hash sees
         /// three more pairs of zeros, and no colony does anything different.</para>
-        /// </remarks>
+        ///
+        /// <para><b>Re-baked an eighth time, 2026-09-23, by the combat contracts step (design 33
+        /// §5) — the first kind again, and the last time the combat line moves these.</b> Every
+        /// handle the line needs was claimed at once: five job defs (ten more zeros in the job
+        /// counters), <c>Skill_Melee</c> (a sixth experience, passion and daily-gain slot on every
+        /// colonist, rolled at spawn and on the first tick on streams that draw the first five
+        /// exactly as before), <c>Work_Rescue</c> (a sixth priority) and four weapons (four more
+        /// slots in every storage allow list). The combat state on a pawn, the corpse registry and
+        /// the edifice damage store are hashed only while set, and nothing in these windows fights,
+        /// so they moved nothing. <b>Measured</b>: <c>GoldenColonyProbe</c>, widened the same day to
+        /// print mood, mid-step progress, the first five skills' experience and passions, jobs
+        /// started and failed and every job def's completed and failed counts (the first fourteen,
+        /// so the file runs unchanged on both sides), was run on <c>origin/main</c> (33525521) and
+        /// on this branch: the two outputs diff clean for all three colonies. From here every
+        /// combat lane asserts these six numbers unchanged (<c>docs/plans/combat-contracts.md</c>).</para>
         /// <para><b>All six moved again on 2026-09-23, on the merge of temperature into a main
         /// that had gained animals, and neither side's numbers were right for the merged code.</b>
         /// Both branches had moved all six — main for the pawn's kind entering the hash, this one
@@ -399,6 +413,15 @@ namespace Odyssey.Tests.Sim
         /// number — live things, per-def stacks, item cells, the two lister counts, pawn cells,
         /// total food, total rest, standing orders, zones — is identical on all three boards. The
         /// hash sees more; no colony does anything different.</para>
+        ///
+        /// <para><b>All six moved again on 2026-09-24, merging main (power, research) into the
+        /// combat line's second and third units.</b> Both sides had moved them: main for power's
+        /// three job defs (the job system hashes a completed and failed counter for every def),
+        /// this branch for the combat state it hashes. Re-baked afresh from the merged code, for
+        /// the reason given above. <b>Measured</b>: <c>GoldenColonyProbe</c>, reading the first
+        /// seventeen job defs so it runs unchanged on both sides, was run on <c>main</c> (54df119a)
+        /// and on the merge; the outputs are identical on all three boards.</para>
+        /// </remarks>
 
         public static readonly Case Meadow = new Case
         {
@@ -408,8 +431,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 5251020562371429562UL,
-            Simulated = 7418675576234737140UL,
+            Generated = 10212350739386668344UL,
+            Simulated = 8860197422024298715UL,
         };
 
         /// <summary>
@@ -425,8 +448,17 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 3881740183191474605UL,
-            Simulated = 6116194826114977703UL,
+            // 2026-09-23, wildlife (design 30): the meadow is seeded with nine animals at tick
+            // zero, so both values move; the bare meadow did not, and the colony probe says the
+            // colonists' economy is identical — the difference is the animals and nothing else.
+            // And again the same afternoon for the scatter (design 30 §2: sounders apart and
+            // loose); the probe read the same as the first time — the animals' cells, nothing else.
+            // 2026-09-23 again, the draft's two job defs (see the meadow's remarks): four more
+            // zeros in the job counters; the probe diffs clean.
+            // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
+            // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
+            Generated = 16337376216538696172UL,
+            Simulated = 16703233559271607928UL,
         };
 
         /// <summary>
@@ -462,8 +494,11 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 5742139862679591188UL,
-            Simulated = 2871813967894379842UL,
+            // 2026-09-23, wildlife (design 30): the ruin is seeded with its rats and hogs.
+            // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
+            // 2026-09-23, the combat contracts step; the widened probe diffs clean.
+            Generated = 16106640289945334159UL,
+            Simulated = 9493899456924685757UL,
         };
     }
 }

@@ -104,6 +104,17 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int wreckageClearance = 15;
 
+        /// Weapons laid on the ground beside the food, one to a cell, as item def indices (design
+        /// 33 §1: "one or two in the starting kit", §6D). On the ground and in nobody's hand: the
+        /// player decides who fights with what.
+        ///
+        /// <para><b>Empty by default, so <see cref="Bare"/> is untouched</b> — the same terms as
+        /// <see cref="stonePiles"/>, and for the same reason: every golden builds on Bare, and an
+        /// empty kit asks the storey search for no more spots than it did before weapons
+        /// existed.</para>
+        /// </summary>
+        public int[] startingWeapons = System.Array.Empty<int>();
+
         /// <summary>
         /// Every tree within this many cells of the start is marked for felling before the first
         /// tick, on the start layer. Zero marks nothing.
@@ -203,6 +214,9 @@ namespace Odyssey.Sim.Pawns
                 // only source of it until a scrap drop falls (design 32 §14). Seven piles per ten
                 // thousand columns is ten on the played 120 x 120 board.
                 wreckagePer10kColumns = 7,
+                // A blunt one and a sharp one (design 33 §6D), so the first fight shows both a
+                // stun and the quicker blade. INVENTED inside the owner's "one or two".
+                startingWeapons = new[] { ItemIndex.Bat, ItemIndex.Machete },
                 // No beds (owner, 2026-09-20: "beds should never be given on startup / new
                 // game"). The colony sleeps on the ground until it builds some, which is what
                 // makes a bed the first thing worth building. Bare keeps its five: the tests
@@ -416,8 +430,11 @@ namespace Odyssey.Sim.Pawns
 
             public readonly int SpotsFound;
 
+            /// <summary>Weapons laid on the ground: the starting kit (design 33 §6D).</summary>
+            public readonly int Weapons;
+
             public Result(int colonists, int meals, int beds, int stockpileCells, int salvage,
-                int materialPiles, int spotsFound)
+                int materialPiles, int spotsFound, int weapons = 0)
             {
                 Colonists = colonists;
                 Meals = meals;
@@ -426,11 +443,12 @@ namespace Odyssey.Sim.Pawns
                 Salvage = salvage;
                 MaterialPiles = materialPiles;
                 SpotsFound = spotsFound;
+                Weapons = weapons;
             }
 
             public override string ToString() =>
                 $"{Colonists} colonists, {Meals} meals, {Beds} beds, {StockpileCells} stockpile cells, " +
-                $"{Salvage} salvage, {MaterialPiles} material piles, from {SpotsFound} spots";
+                $"{Salvage} salvage, {MaterialPiles} material piles, {Weapons} weapons, from {SpotsFound} spots";
         }
 
         /// <summary>
@@ -734,8 +752,9 @@ namespace Odyssey.Sim.Pawns
             // the same kind of thing — a pile on the ground the colony wakes up beside — and asking
             // for their spots separately would be a second answer to "which floor does the colony
             // start on" that nothing keeps in step with the first.
+            int weapons = scenario.startingWeapons?.Length ?? 0;
             storeys.Want(scenario.mealLayerOffset,
-                scenario.mealPiles + scenario.stonePiles + scenario.woodPiles);
+                scenario.mealPiles + scenario.stonePiles + scenario.woodPiles + weapons);
             storeys.Want(scenario.bedLayerOffset, scenario.beds);
             storeys.Want(scenario.stockpileLayerOffset, scenario.stockpileCells);
             storeys.Search();
@@ -781,6 +800,13 @@ namespace Odyssey.Sim.Pawns
                 ItemIndex.Stone, scenario.stonePiles, scenario.stonePerPile);
             placedMaterials += PlacePiles(pawns, storeys, scenario.mealLayerOffset,
                 ItemIndex.Wood, scenario.woodPiles, scenario.woodPerPile);
+
+            // The kit's weapons, after the materials and on the same storey: one a cell, on the
+            // ground, in nobody's hand (design 33 §6D).
+            int placedWeapons = 0;
+            for (int i = 0; i < weapons; i++)
+                placedWeapons += PlacePiles(pawns, storeys, scenario.mealLayerOffset,
+                    scenario.startingWeapons![i], piles: 1, perPile: 1);
 
             // Until a spot works or the storey runs out, rather than one attempt per bed: a bed
             // wants two cells and a spot is one, so a spot whose neighbours are all walls buys
@@ -851,7 +877,7 @@ namespace Odyssey.Sim.Pawns
             PlaceWreckage(grid, pawns, start, scenario, ref rng);
 
             return new Result(placedColonists, placedMeals, placedBeds, stockpile.Count, placedSalvage,
-                placedMaterials, storeys.Found);
+                placedMaterials, storeys.Found, placedWeapons);
         }
 
         /// <summary>

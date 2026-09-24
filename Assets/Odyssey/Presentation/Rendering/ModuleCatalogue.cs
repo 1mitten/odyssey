@@ -178,6 +178,16 @@ namespace Odyssey.Presentation.Rendering
         [Tooltip("Extra local yaw in degrees. Use it when a piece faces the wrong way.")]
         public float yaw;
 
+        /// <summary>
+        /// Lay the art on its broadest face: its thinnest axis turned vertical before anything
+        /// else is measured. For a thing modelled standing up that is dropped on the ground — a
+        /// weapon is modelled haft-up, the way a hand holds it, and a bat stood on its end in a
+        /// field reads as a post (C3, the integration, 2026-09-23). Applied before the centring
+        /// and the base, so both measure the piece as it lies.
+        /// </summary>
+        [Tooltip("Lay the art on its broadest face (thinnest axis up). For props modelled standing, dropped on the ground.")]
+        public bool lieFlat;
+
         [Tooltip("Uniform scale applied to the art. 1 unless a piece must be stretched to the cell.")]
         public Vector3 scale = Vector3.one;
 
@@ -335,6 +345,14 @@ namespace Odyssey.Presentation.Rendering
         public List<LocomotionEntry> locomotion = new List<LocomotionEntry>();
 
         /// <summary>
+        /// The clips a <b>combat row</b> plays (design 33 §1, <c>ModuleIds.CombatRows</c>): one
+        /// entry per variant of the role — a direction, a combo step, or a begin, loop or end.
+        /// Empty on every other row, and every clip null on a checkout without the Sword Combat
+        /// pack, which is what sends the figure to <c>CombatPose</c>'s computed version.
+        /// </summary>
+        public List<CombatClipEntry> combat = new List<CombatClipEntry>();
+
+        /// <summary>
         /// The settled idle a live figure blends into while it sits beside a fire (design 31
         /// §18d, <c>SitPose</c>). Not a gait: gaits are chosen by speed and a sitter has none, so
         /// this is its own input on the figure's mixer, weighted by how far down she is.
@@ -450,6 +468,32 @@ namespace Odyssey.Presentation.Rendering
 
         [Tooltip("Metres per second the gait covers ground at. Zero means standing still.")]
         public float metresPerSecond;
+    }
+
+    /// <summary>
+    /// One clip of a combat row: which variant of the role it is and, for a blow, where in it the
+    /// blow lands (design 33 §3, <c>docs/research/synty-sword-combat.md</c>).
+    ///
+    /// <para><b>The impact is measured, not typed.</b> Every attack in the Sword Combat pack is
+    /// cut by its author into WindUp, Hit and FollowThrough sub-clips, so the frame the blade
+    /// lands is the WindUp's last frame. The catalogue build reads it off the importer's own clip
+    /// ranges and writes it here in seconds from the clip's start; the figure then plays the clip
+    /// at the rate that puts this instant on the simulation's <c>windupTicks</c>.</para>
+    /// </summary>
+    [Serializable]
+    public sealed class CombatClipEntry
+    {
+        [Tooltip("The Polygon, in-place, non-returning clip, by its own name.")]
+        public string clipName = string.Empty;
+
+        [Tooltip("The clip. Null on a clone without the Sword Combat pack; the computed pose stands in.")]
+        public AnimationClip? clip;
+
+        [Tooltip("Which variant: F/B/L/R for a direction, A/B/C for a combo step, Begin/Loop/End for a phase.")]
+        public string variant = string.Empty;
+
+        [Tooltip("Seconds from the clip's start to the blow landing: where its WindUp sub-clip ends. 0 for a clip with no blow.")]
+        public float impactSeconds;
     }
 
     /// <summary>
@@ -669,6 +713,64 @@ namespace Odyssey.Presentation.Rendering
             kind > 0 && kind < AnimalNames.Length ? AnimalBase + "." + AnimalNames[kind] : string.Empty;
 
         /// <summary>
+        /// The fight's clip rows (design 33 §1, <c>docs/research/synty-sword-combat.md</c>), one
+        /// row per <b>role</b>, never per clip name: a row's clips are the Sword Combat pack's
+        /// Polygon, in-place, non-returning clips for that role — its directional or combo variants
+        /// as the row's entries — and a checkout without the pack has the row with no clips and
+        /// falls back to <c>CombatPose</c>. Claimed by the combat contracts step so the rows' ids
+        /// are fixed before lane B writes the catalogue build (<c>PlayScene.cs</c>) that fills them.
+        /// </summary>
+        public const string CombatBase = Prefix + "anim.combat";
+
+        /// <summary>A light one-handed swing: <c>LightCombo01A/B/C</c>, alternated.</summary>
+        public const string CombatSwingLight = CombatBase + ".swing.light";
+
+        /// <summary>A heavy swing: <c>HeavyCombo01A</c>, <c>HeavyStab01</c>.</summary>
+        public const string CombatSwingHeavy = CombatBase + ".swing.heavy";
+
+        /// <summary>Taking a blow, by direction: <c>Hit_F/B/L/R_React</c>.</summary>
+        public const string CombatHitReact = CombatBase + ".react.hit";
+
+        /// <summary>A big blow or a stun's first beat, by direction: <c>Hit_F/B/L/R_Stagger</c>.</summary>
+        public const string CombatStagger = CombatBase + ".react.stagger";
+
+        /// <summary>Getting out of the way: <c>Dodge_F/B/L</c> (never <c>_R</c>, which imports Generic).</summary>
+        public const string CombatDodge = CombatBase + ".dodge";
+
+        /// <summary>Stunned: begin, loop, end.</summary>
+        public const string CombatStun = CombatBase + ".stun";
+
+        /// <summary>Downed: <c>KnockDown_Begin</c>, then <c>_Loop</c>; the get-up for a recovery.</summary>
+        public const string CombatDowned = CombatBase + ".downed";
+
+        /// <summary>Dying, by direction: <c>Death_F/B/L/R</c>.</summary>
+        public const string CombatDeath = CombatBase + ".death";
+
+        /// <summary>The corpse: each death's one-frame <c>_Pose</c> clip, held.</summary>
+        public const string CombatDeathPose = CombatBase + ".death.pose";
+
+        /// <summary>Every combat row, for the catalogue build and the test that each resolves or falls back.</summary>
+        public static readonly string[] CombatRows =
+        {
+            CombatSwingLight, CombatSwingHeavy, CombatHitReact, CombatStagger, CombatDodge,
+            CombatStun, CombatDowned, CombatDeath, CombatDeathPose,
+        };
+
+        /// <summary>
+        /// The weapon out of its sheath at the left hip and into the right hand (design 33 §8b):
+        /// <c>A_Draw_Sword_Masc</c> and <c>_Femn</c>, the variant by the body's sex. Played on an
+        /// upper-body layer over the walk. <b>Not in <see cref="CombatRows"/></b>, whose order is
+        /// the combat roles' and whose test holds every clip without a blow to an impact of nought.
+        /// </summary>
+        public const string CombatDraw = CombatBase + ".sheath.draw";
+
+        /// <summary>The weapon back from the hand to the hip: <c>A_Sheathe_Sword_Masc</c> and <c>_Femn</c>.</summary>
+        public const string CombatSheathe = CombatBase + ".sheath.sheathe";
+
+        /// <summary>The two sheath rows, for the catalogue build and the test that each resolves or snaps.</summary>
+        public static readonly string[] SheathRows = { CombatDraw, CombatSheathe };
+
+        /// <summary>
         /// Hair pieces a colonist can be dealt, as a family
         /// (<c>docs/design/29-modular-colonists.md</c>).
         ///
@@ -701,6 +803,15 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemCoal = Prefix + "item.coal";
         public const string ItemCarrots = Prefix + "item.carrots";
 
+        // The four melee weapons lying on the ground (design 33 §1, C3), claimed by the combat
+        // contracts step so the table below stays as long as ItemIndex. Their rows came at the
+        // C2/C3 integration, and the same row is the prop a figure holds
+        // (PawnFigureDirector.Weapons.cs): one piece of art for the weapon wherever it is.
+        public const string ItemBat = Prefix + "item.bat";
+        public const string ItemCrowbar = Prefix + "item.crowbar";
+        public const string ItemMachete = Prefix + "item.machete";
+        public const string ItemArcBlade = Prefix + "item.arcblade";
+
 
         /// <summary>
         /// Module ids for item def indices, in <c>ItemIndex</c> order.
@@ -714,6 +825,7 @@ namespace Odyssey.Presentation.Rendering
         static readonly string[] ItemModules =
         {
             ItemMeal, ItemSalvage, ItemWood, ItemStone, ItemIronOre, ItemCoal, ItemCarrots,
+            ItemBat, ItemCrowbar, ItemMachete, ItemArcBlade,
         };
 
         /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>

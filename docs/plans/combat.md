@@ -1,10 +1,11 @@
 # Combat — the plan
 
 **Approved by the owner 2026-09-23** after an interview of five rounds (every answer is in the
-decision table of `docs/design/33-combat.md` §1). Branch `claude/combat-mvp`, worktree
-`D:\code\odyssey-combat`. **C1 is PR #176**, which also carries wildlife (#169) to `main`: #169 was
-merged into `claude/animals` after #167 had landed, so it never reached `main` on its own.
-Temperature (#164) is independent: combat adds save sections, not a format bump.
+decision table of `docs/design/33-combat.md` §1). **C1 merged as PR #176** (branch
+`claude/combat-mvp`), which also carried wildlife (#169) to `main`. **C2 and C3 are built and
+integrated on `claude/combat-c2`** (worktree `D:\code\odyssey-combat`), awaiting the owner's
+playtest; the hand-over is `docs/plans/combat-c2-handover.md`. Temperature (#164) is independent:
+combat adds save sections, not a format bump.
 
 ## Units
 
@@ -12,8 +13,8 @@ Temperature (#164) is independent: combat adds save sections, not a format bump.
 |---|---|---|---|---|
 | C0 | Research `a-10-melee-combat.md`, pack inventory `synty-sword-combat.md`, design 33, this plan | — | — | **done** |
 | C1 | Draft and move: drafted state, `Job_DraftHold`, `Job_Goto`, `SetDrafted`, `OrderMove`, the Drafted think node, the four-hour release, the job-count load guard. T, the pane's button, `OrderModel`, `SelectionPresenter.Order`, the diamond and the order line. After the playtest: the run (§2h), the deeper red (§2g), the blade sound (§2i) | **played 2026-09-23 — works** | moved once: two job defs | **PR #176** |
-| C2 | Health and melee against a marauder: species hit points, revenge and natural attack, `CombatDef`, live Melee skill, `PawnKind_Marauder`, attack, flee and downed jobs, `OrderAttack`, adjacent auto-attack, `CombatSystem`, corpses; health tab, corpse pane, spawn marauder, feedback, the clip layer and its fallback | **▶ playtest** | moved once, in the contracts step (below) | designed |
-| C3 | Weapons: bat, crowbar, machete, sci-fi blade; the equip job and order; stun; starting kit; held prop | **▶ playtest** | moved once, in the contracts step | designed |
+| C2 | Health and melee against a marauder: species hit points, revenge and natural attack, `CombatDef`, live Melee skill, `PawnKind_Marauder`, attack, flee and downed jobs, `OrderAttack`, adjacent auto-attack, `CombatSystem`, corpses; health tab, corpse pane, spawn marauder, feedback, the clip layer and its fallback | **▶ playtest** | moved once, in the contracts step; **none since**, probe-diffed | **built 2026-09-23 (lanes A, B, C), integrated on `claude/combat-c2` — awaiting playtest** |
+| C3 | Weapons: bat, crowbar, machete, sci-fi blade; the equip job and order; stun; starting kit; held prop | **▶ playtest** | moved once, in the contracts step; **none since** | **built 2026-09-23 (lane D; the held prop at the integration) — awaiting playtest, with C2** |
 | C4 | Rescue and healing in bed | — | moved once, in the contracts step | designed |
 | C5 | Friendly fire and its mood | — | **none, asserted** | designed |
 | C6 | Buildings as targets | — | **none, asserted** | designed |
@@ -59,8 +60,18 @@ single-threaded:
 
 ### The plan: four phases, at most four agents at once
 
-**Phase 1 — contracts (one agent, sequential, about a unit's work).** This is the only phase that
-edits the spine for everyone. It delivers:
+**Phase 1 — contracts (one agent, sequential, about a unit's work).** **Done 2026-09-23 on
+`claude/combat-c2`**: what each seam is for is `docs/design/33-combat.md` §5, and the lane-by-lane
+brief — files owned, seams to fill, tests to add, files not to touch — is
+`docs/plans/combat-contracts.md`. Two refinements of the table below came out of cutting the seams:
+lane D's "stun from blunt" is rolled and applied by lane A from the armament lane D supplies, and the
+debug Spawn rows (the marauder and the four weapons) are lane C's, because they are interface and
+`GiveResource` already places any item. **A seam review the same day** read the briefs against the
+code before any lane started and moved eleven things into the spine or into one written rule
+(design 33 §5j; the journal says why) — so the lanes start from the head of `claude/combat-c2`
+after it, not from the first contracts commit. This is the only phase that edits the spine for
+everyone.
+It delivers:
 
 - **Every handle the line needs, appended once.** No behaviour yet; stub drivers return `Failed`.
   - Jobs: `AttackMelee`, `Flee`, `Downed`, `Equip`, `Rescue`.
@@ -108,7 +119,8 @@ Each lane owns the files it creates and touches the spine only through Phase 1's
 Lanes A and D both implement parts of `ICombatRules`. Phase 1 splits it into two interfaces, one
 per lane, so the two never edit one file.
 
-**Phase 3 — integrate C2 and C3 (one agent, sequential).**
+**Phase 3 — integrate C2 and C3 (one agent, sequential).** **Done 2026-09-23** on
+`claude/combat-c2`: design 33 §6E is what was merged, wired, measured and decided.
 - Merge A, D, C, then B, in that order: simulation first, so each merge adds what the next one reads.
 - Run the Unity tiers once, alone on the machine.
 - Take the frame-budget number (`FrameTimeTests` with a fight in view) and the player-build smoke
@@ -120,6 +132,8 @@ per lane, so the two never edit one file.
   - **C4 rescue:** the driver and giver fill Phase 1's stubs; the carry cradle comes from `CarryPose`.
   - **C5 friendly fire:** Ctrl-attack, self-defence and two thoughts. **Goldens asserted unchanged.**
   - **C6 buildings:** fill `EdificeDamage`, add the attack driver's building mode, demolish at zero.
+    The campfire and power's conduit, generator and heater arrived from `main` with no
+    `maxHitPoints` (0); give them one here, not before — nothing strikes a building until C6.
     **Goldens asserted unchanged.**
 - **Then C7, one agent:**
   - the ten-day gate with and without hostiles;
@@ -157,8 +171,9 @@ per lane, so the two never edit one file.
 
 ## Blocked on the owner
 
-- **PR #176** (C1 and wildlife) to review and merge.
+- **The C2/C3 playtest** — checkpoints 2 and 3 together, on `claude/combat-c2`
+  (`docs/plans/combat-c2-handover.md`), and then its PR. Phase 4 (C4–C6) waits on the verdict.
+- **The combat sounds.** Five ids are named (`SoundIds.CombatSwing`, `CombatHit`, `CombatMiss`,
+  `CombatDown`, `CombatDeath`) with no clips, so a fight is silent until clips are supplied.
 - **The draft sound's licence**: `draft.wav` comes from a Pixabay recording (Dragon Studio). To
   confirm, per design 33 §2i.
-- **Starting the multi-agent run**, when wanted. Say "run the combat workflow" (or similar) and it
-  begins with Phase 1.

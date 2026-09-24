@@ -82,6 +82,12 @@ namespace Odyssey.Sim
 
         /// <summary>Say which drawing of the lines this frame's rows are. See <see cref="WorldSnapshot.PowerVersion"/>.</summary>
         public void SetPowerVersion(int version) => _target.SetPowerVersion(version);
+
+        /// <summary>Publish one moment of a fight. See <see cref="CombatEventView"/>.</summary>
+        public void AddCombatEvent(in CombatEventView view) => _target.AddCombatEvent(view);
+
+        /// <summary>Publish one corpse. See <see cref="CorpseView"/>.</summary>
+        public void AddCorpse(in CorpseView view) => _target.AddCorpse(view);
     }
 
     /// <summary>

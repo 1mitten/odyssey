@@ -750,3 +750,40 @@ Mixamo's sitting idles are the quick alternative, but committing its files is a 
 this repository has not answered. **The test that will judge it is the one above**: crown well under
 standing, lowest point still on the floor — and then the owner's eye, because this section is the
 proof that the numbers alone do not say *sitting*.
+
+## 19. Merged with combat — 2026-09-24
+
+`main` took combat (design 33, PR #180) while this was in review: 97 commits, eleven files in
+conflict, and three things worth keeping that no conflict marker pointed at.
+
+**A marauder sat at the colony's fire.** Combat's hostile mind is *down, else hunt, else idle*, and
+its idle is the same `IdleThinkNode` the hearth lives in. Neither branch alone could show it — main
+had no fireside, this line had no marauders — so after the merge a raider with nobody to hunt walked
+to the colony's campfire, settled, and half the time sat facing the flames. The hearth is now the
+colony's: a hostile idler gets no fireside and wanders as it did before fires.
+`FiresideTests.AMarauderDoesNotSettleAtTheColonysFire`.
+
+**`Seated` stays a bool, not a `PawnFlags` bit.** Combat made `PawnFlags` the byte that says what a
+pawn is and what state it is in, and all eight bits are spent on the fight. Widening it to take a
+presentation posture would change combat's contract for a field `Asleep` already models as a bool
+beside it, so `Seated` sits with `Asleep`.
+
+**The HUD's last 0.3% was spent twice.** §14b widened the right column 266 → 296 for the outdoor
+temperature, which by its own arithmetic (91 px² a pixel from 19.69%) left the resting HUD at about 19.99% of 1280 × 720; combat's health bar under every
+roster card took it to 19.95% on its own. Together: **20.20%**, over the ceiling. The owner chose to
+hand width back rather than raise the ceiling, so `ClockWidth` is **271** — the widest the two can
+share — in `HudLayout` and `.column-right` alike. Whether the temperature still clears the speed
+controls at 271 is a look; dropping "outdoors" (§14b) bought more width than the reading needed,
+which is the reason to expect it does.
+
+**The generated assets were checked against both parents, not trusted.** Combat's own lesson from
+the same day (`docs/lessons.md`) is that git's text merge of `ModuleCatalogue.asset` succeeds and is
+wrong. Measured: the merge holds all 198 of main's rows byte-identical plus this line's campfire
+row, and no row lost a field — but the campfire row predated main's `fit*`, `lieFlat`, the pool and
+`combat` fields, so those were written into it in main's order with the values a rebuild writes
+(each equal to its initialiser, so nothing loads differently). The audio catalogue carries every line
+either side added. The wiki and label registry were regenerated, not merged. The building fingerprint
+was re-taken from a freshly loaded pack, since `radiantC` here and `maxHitPoints` there each moved it.
+
+**No golden moved.** The Sim tier passes on main's re-baked goldens with this line's radiance, fireside
+and seats in: every golden board is fireless.

@@ -396,6 +396,33 @@ namespace Odyssey.Tests.Sim
             Assert.That(restored.World.ComputeStateHash().Value, Is.EqualTo(colony.World.ComputeStateHash().Value));
         }
 
+        /// <summary>
+        /// A marauder does not settle at the colony's fire. The idle node is also the last node of
+        /// the hostile mind (design 33 §5), so without a guard a raider with nobody to hunt walked
+        /// to the hearth and sat facing the flames among the people it came to kill — which came
+        /// in with the merge of combat, where neither branch alone could have shown it.
+        /// </summary>
+        [Test]
+        public void AMarauderDoesNotSettleAtTheColonysFire()
+        {
+            ColonyWorld colony = Board(colonists: 1, beds: 0);
+            int fire = Fire(colony, 12, 12);
+            colony.World.Tick(Odyssey.Sim.Temperature.TemperatureSystem.IntervalTicks * 2);
+
+            int ring = FiresideRing(fire);
+            Pawn marauder = colony.Pawns.Pawns.Spawn(ring, PawnKindIndex.Marauder);
+            Assume.That(marauder.IsHostile, Is.True);
+
+            var settles = Settles(colony, marauder, ring, 400);
+            int seated = 0;
+            foreach (Job job in settles) if (job.Seated) seated++;
+
+            Assert.That(seated, Is.Zero, "a marauder sat down at the colony's fire");
+            Assert.That(settles.Count, Is.LessThan(40),
+                $"a marauder beside the fire settled there {settles.Count} times in 400 ticks; " +
+                "it should wander off as it did before there were fires");
+        }
+
         /// <summary>The first free cell of a fire's ring — where a colonist at the hearth stands.</summary>
         static int FiresideRing(int fire)
         {

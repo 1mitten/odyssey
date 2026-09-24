@@ -90,6 +90,7 @@ ui.pawn.synth,Synth,ui.pawn,M2,"Machine intelligence. Not alive, not harmless"
 ui.pawn.corpse,Corpse,ui.pawn,M2,"Rots, upsets people, can be buried or worse"
 ui.pawn.hog,Midden hog,ui.pawn,AN,"Pig-descended, thrives on refuse heaps. Wild for now; the one you meet first"
 ui.pawn.rat,Duct rat,ui.pawn,AN,"Vermin from the ducts and the caverns. Climbs anything"
+ui.pawn.marauder,Marauder,ui.pawn,CB,"Armed, alone and hostile. Hunts whoever is still standing"
 ui.status.hauling,Hauling,ui.status,M2,Carrying something to storage
 ui.status.building,Building,ui.status,M2,Working a frame or blueprint
 ui.status.deconstructing,Deconstructing,ui.status,M3,Taking one of our own buildings apart
@@ -109,6 +110,22 @@ ui.status.burning,On fire,ui.status,M2,Burning now
 ui.status.drafted,Drafted,ui.status,M2,"Under direct order, not the work list"
 ui.status.wandering,Wandering,ui.status,AN,"An animal on a leg of its own: going somewhere nearby for no reason"
 ui.status.resting,Resting,ui.status,AN,"An animal between legs"
+ui.status.fighting,Fighting,ui.status,CB,Closing on a target and swinging at it
+ui.status.fleeing,Fleeing,ui.status,CB,Running from whatever hurt it
+ui.status.equipping,Equipping,ui.status,CB,Fetching a weapon to hold
+ui.status.rescuing,Rescuing,ui.status,CB,Carrying the downed to a bed
+ui.combat.miss,Miss,ui.combat,CB,A swing that did not land
+ui.combat.dodge,Dodge,ui.combat,CB,A swing the target stepped out of
+ui.combat.stunned,Stunned,ui.combat,CB,"Knocked senseless by a blunt blow, for a moment"
+ui.combat.health,Health,ui.combat,CB,"Hit points left, out of the whole"
+ui.combat.dead,Dead,ui.combat,CB,"Gone. Lies where it fell"
+ui.combat.unhurt,Unhurt,ui.combat,CB,Not a mark on them
+ui.combat.hurt,Hurt,ui.combat,CB,"Wounded. A colonist heals only in a bed"
+ui.combat.condition,Condition,ui.combat,CB,"Standing, hurt, stunned or down"
+ui.combat.weapon,Weapon,ui.combat,CB,What is in the hand
+ui.combat.barehands,Bare hands,ui.combat,CB,No weapon held: fists
+ui.combat.drawn,Drawn,ui.combat,CB,"Out and in the right hand, ready to swing"
+ui.combat.athip,At the hip,ui.combat,CB,"Sheathed at the left hip until there is a fight"
 ui.work.firefighting,Firefighting,ui.work,M7,Put out fires. Always first
 ui.work.patient,Patient,ui.work,M7,Accept treatment when hurt
 ui.work.bedrest,Bed rest,ui.work,M7,Stay in bed while recovering
@@ -268,6 +285,7 @@ ui.command.gift,Gift,ui.command,M3,Give this away for goodwill
 ui.command.evacuate,Evacuate,ui.command,M3,Everyone out of this area
 ui.command.hunt,Hunt,ui.command,M3,Kill this wild animal for meat
 ui.command.strip,Strip,ui.command,M3,Take everything they carry
+ui.menu.cancel,Cancel,ui.menu,CB,"Close the menu a right-click opened, and order nothing"
 ui.overlay.temperature,Temperature,ui.overlay,M1,Warm to cold across the slice
 ui.overlay.light,Light,ui.overlay,M1,How lit each cell is
 ui.overlay.beauty,Beauty,ui.overlay,M1,What the room looks like to a colonist
@@ -403,6 +421,10 @@ ui.item.crossbow,Crossbow,ui.item,M3,"Silent, slow, makeable"
 ui.item.grenade,Grenade,ui.item,M3,"Area damage, and friendly fire"
 ui.item.shield,Shield,ui.item,M3,Melee defence
 ui.item.helmet,Helmet,ui.item,M3,Protects the head
+ui.item.bat,Bat,ui.item,CB,"Blunt, and now and then it stuns"
+ui.item.crowbar,Crowbar,ui.item,CB,"Heavier than a bat, slower, and stuns more often"
+ui.item.machete,Machete,ui.item,CB,Sharp and quick
+ui.item.arcblade,Arc blade,ui.item,CB,A powered edge. The best thing a colonist can hold
 ui.item.vest,Vest,ui.item,M3,Torso armour
 ui.item.jacket,Jacket,ui.item,M3,Warmth and a little protection
 ui.item.mask,Mask,ui.item,M3,Filters what you would rather not breathe
@@ -485,7 +507,19 @@ ui.debug.skipmonth,Skip one month,ui.debug,M4,"Spends a whole game month of tick
 ui.debug.skipmorning,Skip to morning,ui.debug,GR,"Skips the night and hands the clock back at dawn"
 ui.debug.ripen,Ripen crops,ui.debug,GR,"Brings every standing crop to ripeness at once"
 ui.debug.spawnhog,Spawn midden hog,ui.debug,AN,"Adds a wild midden hog near the camera"
+ui.debug.spawnmarauder,Spawn marauder,ui.debug,CB,"Adds a hostile marauder near the camera. It hunts whoever is standing"
+ui.debug.spawnbat,Spawn bat,ui.debug,CB,"Adds a bat near the camera"
+ui.debug.spawncrowbar,Spawn crowbar,ui.debug,CB,"Adds a crowbar near the camera"
+ui.debug.spawnmachete,Spawn machete,ui.debug,CB,"Adds a machete near the camera"
+ui.debug.spawnarcblade,Spawn arc blade,ui.debug,CB,"Adds an arc blade near the camera"
 ui.debug.spawnrat,Spawn duct rat,ui.debug,AN,"Adds a duct rat near the camera"
+ui.debug.spawnmarauders,Spawn 3 marauders,ui.debug,CB,"Adds three marauders near the camera, each on its own tile"
+ui.debug.armcolonists,Arm every colonist,ui.debug,CB,"Every colonist standing with nothing in hand takes a random melee weapon"
+ui.debug.group.colonists,Colonists,ui.debug,CB,"The Spawn tab heading over the colonist rows"
+ui.debug.group.hostiles,Hostiles,ui.debug,CB,"The Spawn tab heading over the marauder rows"
+ui.debug.group.animals,Animals,ui.debug,CB,"The Spawn tab heading over the animal rows"
+ui.debug.group.weapons,Weapons,ui.debug,CB,"The Spawn tab heading over the weapon rows"
+ui.debug.group.items,Items,ui.debug,CB,"The Spawn tab heading over the resource grants"
 ui.debug.marktrace,Mark this moment,ui.debug,PT,"Writes a marker into the performance trace, so the seconds around now can be found"
 ui.debug.trace,Performance trace,ui.debug,PT,"Stops or starts the per-second performance trace this session writes"
 ui.settings.display,Display,ui.settings,M3,"How the frame is paced and how large it is drawn"

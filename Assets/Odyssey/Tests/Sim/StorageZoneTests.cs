@@ -300,11 +300,13 @@ namespace Odyssey.Tests.Sim
             settings.SetDef(ItemIndex.Carrots, false);
             Assert.That(settings.CategoryState(ItemCategory.Food, content), Is.EqualTo(StorageSettings.CategoryMixed));
 
-            // Four of the six categories have no members yet, and an empty branch reads as off
+            // Three of the six categories have no members yet, and an empty branch reads as off
             // rather than as on — which is the whole argument for deferring the tri-state tree.
-            Assert.That(settings.CategoryState(ItemCategory.Weapons, content), Is.EqualTo(StorageSettings.CategoryOff));
-            settings.SetCategory(ItemCategory.Weapons, true, content);
-            Assert.That(settings.CategoryState(ItemCategory.Weapons, content), Is.EqualTo(StorageSettings.CategoryOff),
+            // It was Weapons here until the combat contracts step gave Weapons its four
+            // (design 33 §5); Books is empty and will stay so until research exists.
+            Assert.That(settings.CategoryState(ItemCategory.Books, content), Is.EqualTo(StorageSettings.CategoryOff));
+            settings.SetCategory(ItemCategory.Books, true, content);
+            Assert.That(settings.CategoryState(ItemCategory.Books, content), Is.EqualTo(StorageSettings.CategoryOff),
                 "a category with no members cannot be turned on, because there is nothing to turn on");
         }
 

@@ -24,6 +24,10 @@ putting a file of the same name in the same folder.
 | ~~`alert.wav`~~ | **Supplied 2026-09-19** and split into five: `alert-normal`, `alert-negative`, `alert-happy`, `alert-joined`, `alert-raid`. See `docs/design/24-alert-sounds.md` — the sourcing note below still applies to any future chime. |  |  |  |
 | `draft.wav` | **Supplied 2026-09-23** (a sword drawn; Pixabay, Dragon Studio) and baked by `tools/audio/bake_draft.sh`: the sound of a colonist being drafted. 2D, Effects bus. See `docs/design/33-combat.md` §2i. | | | |
 | `carry-lift.wav`, `carry-drop.wav` | **Supplied 2026-09-19** as one recording and split into two by `tools/audio/bake_carry.sh`. See `docs/design/24-carrying.md` §12. | | | |
+| `combat-whoosh.wav` | **Supplied 2026-09-23** (Pixabay, floraphonic, `swing-whoosh-4`; Pixabay Content License, the owner to confirm) and baked by `tools/audio/bake_combat.sh`: a weapon through the air, every swing with a weapon, hit or miss. Its loudest moment is at 0.040 s, and **that number is a timing constant** (`CombatSoundTiming.WhooshPeakSeconds`): a replacement must be cut to match, or the constant moved with it. See `docs/design/33-combat.md` §9g. | 0.20 s | no | mono |
+| `combat-whoosh_01.wav` | **Supplied 2026-09-23** (Pixabay, floraphonic, `swing-whoosh-3`; the same licence): the second whoosh, cut so its loudest moment lines up with the first's at 0.040 s. | 0.18 s | no | mono |
+| `combat-crit-slice.wav` | **Supplied 2026-09-23** (Pixabay, Dragon Studio, `violent-sword-slice`; the same licence): a sharp weapon's critical, played instead of the whoosh, its loudest moment (0.065 s, `SlicePeakSeconds`) on the impact. The source's 2.2 s tail is cut to 1.1 s with a fade. | 1.10 s | no | mono |
+| `combat-hit.wav` | **Supplied 2026-09-23** (Pixabay, virtual_vibes, `cinematic-thud-fx`; the same licence): every landed blow, from the struck, played on the hit's own frame — so its transient is cut to its first sample (loudest at 0.013 s). Quiet in the source, lifted 5 dB to the ear through a limiter. | 0.75 s | no | mono |
 | `water.wav` | The bed for ponds, streams and the river. Flat and eventless — nothing may *happen* in it, or the event repeats every few seconds and becomes the only thing you hear. Its level is driven by how much water is near the camera, so what is wanted is the sound of standing beside a stream, not of approaching one. | 15–90 s | **yes, seamlessly** | mono |
 | `ambience-day.wav` | The sound of the world outdoors by day, under everything else: air, distance, birds. The floor of the mix — the thing you stop hearing and would notice the absence of. Eventless, like the water. | 10–60 s | **yes, seamlessly** | stereo |
 | `ambience-night.wav` | The same after dark, and a *different world* rather than a quieter one: the day's birds gone, something else started. It plays at a lower level than the day bed. | 10–60 s | **yes, seamlessly** | stereo |
@@ -69,6 +73,7 @@ the lossless master.
 | Sound | Imported as | Why |
 |---|---|---|
 | chop, pick, carry-lift, carry-drop, `alert-normal`, `alert-negative` | PCM, decompress on load | no decode at all at the instant it plays |
+| `combat-whoosh`, `combat-crit-slice`, `combat-hit` | PCM, decompress on load | timed to the frame against the blow; a decode at the moment of play is latency the timing cannot see |
 | `alert-happy`, `alert-joined`, `alert-raid` | ADPCM, compressed in memory | seconds long, rare, and nothing is waiting on the frame they start |
 | menu-bed | Vorbis, streamed from disc | two and a half minutes of bed nobody should pay memory for |
 | water, ambience-day, ambience-night | ADPCM, decompress on load | Unity's own answer for noisy sounds played in quantity — 3.5× smaller than PCM, near-free to decode |

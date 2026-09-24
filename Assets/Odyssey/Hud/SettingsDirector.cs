@@ -143,6 +143,14 @@ namespace Odyssey.Hud
         /// rather than a fall-through somebody has to read the order to predict.</para>
         /// </summary>
         Nothing,
+
+        /// <summary>
+        /// Close the context menu a right-click opened (design 33 §7a). The top rung: it is the
+        /// last thing the player raised, it stands over everything else at the pointer, and it
+        /// cannot be open while a tool is held, because a right-click with a tool armed puts the
+        /// tool down instead. Appended rather than placed by rung so no value moves.
+        /// </summary>
+        CloseContextMenu,
     }
 
     /// <summary>
@@ -1321,6 +1329,29 @@ namespace Odyssey.Hud
         public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen,
             bool almanacOpen, MenuScreen? startScreen) =>
             Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen: false, startScreen);
+
+        /// <summary>
+        /// The same rule with the context menu in it (design 33 §7a), above everything: the menu
+        /// is the last thing raised, at the pointer, and Escape is one of the four ways it closes
+        /// (with a click elsewhere, a camera orbit and a change of selection).
+        /// </summary>
+        public EscapeAction Escape(bool contextMenuOpen, bool toolArmed, bool paletteOpen, bool menuOpen,
+            bool workOpen, bool almanacOpen, bool animalsOpen, MenuScreen? startScreen) =>
+            Escape(contextMenuOpen, toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
+                inventoryOpen: false, researchOpen: false, startScreen);
+
+        /// <summary>
+        /// The whole rule: the context menu above everything, then the ladder with the inventory and
+        /// research panels in it. The one the presenter calls; the shorter overloads are this with
+        /// the panels a caller does not know about shut.
+        /// </summary>
+        public EscapeAction Escape(bool contextMenuOpen, bool toolArmed, bool paletteOpen, bool menuOpen,
+            bool workOpen, bool almanacOpen, bool animalsOpen, bool inventoryOpen, bool researchOpen,
+            MenuScreen? startScreen) =>
+            contextMenuOpen
+                ? EscapeAction.CloseContextMenu
+                : Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
+                    inventoryOpen, researchOpen, startScreen);
 
         public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen,
             bool almanacOpen, bool animalsOpen, MenuScreen? startScreen) =>

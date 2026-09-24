@@ -177,9 +177,15 @@ namespace Odyssey.Sim.Pawns
 
         public static ThinkNode[] DefaultTree() => new ThinkNode[]
         {
+            // First of all (design 33 §5): a downed colonist lies where she fell, whatever else
+            // is true of her. Declines for anybody standing, so it costs one branch a think.
+            new DownedThinkNode(),
             new MentalStateThinkNode(),
             // Above the needs branch, or a drafted colonist wanders off to eat (design 33 §2b).
             new DraftedThinkNode(),
+            // Below the draft — a drafted colonist's hold does its own fighting — and above the
+            // needs, because being struck outranks being hungry (design 33 §5).
+            new SelfDefenceThinkNode(),
             new CriticalNeedsThinkNode(),
             new WorkThinkNode(),
             new IdleThinkNode(),
@@ -323,6 +329,18 @@ namespace Odyssey.Sim.Pawns
                 pawn.FinishingStepTo = -1;
             }
 
+            // A stun holds the pawn where it is (design 33 §4 C3, §5c): its job neither ticks nor
+            // ends, and it does not think. So a stunned hauler keeps her load, a sleeper his bed and
+            // a drafted colonist the player's order, and each carries on when the stun wears off —
+            // a stun is a pause, not an interrupt. The mover's half is MovementSystem.Advance.
+            // Nought in every golden window, so no golden moves.
+            //
+            // A knock-down holds it the same way (design 33 §9b), for the second and a half it lies
+            // where the blow put it. The knockback already ended its job, so there is nothing to
+            // pause; what this holds back is the tree, which would otherwise give it a job — and
+            // an order given meanwhile starts, and waits here until it stands.
+            if (pawn.StunnedAt(tick) || pawn.KnockedDownAt(tick)) return;
+
             if (pawn.CurrentJob != null)
             {
                 var def = _ctx.Content.Jobs[pawn.CurrentJob.DefIndex];
@@ -401,7 +419,7 @@ namespace Odyssey.Sim.Pawns
 
             // Fewer is an older save and is fine: the job table is append-only, so the defs the
             // save does not know are exactly the newest ones, and nothing ever ran them (design 33
-            // §5). It refused any difference until the draft's two jobs arrived, which would have
+            // §6). It refused any difference until the draft's two jobs arrived, which would have
             // made every earlier save unloadable. More is a save from a newer build, and guessing
             // at that mapping would silently attribute one job's history to another.
             int count = reader.ReadInt();
@@ -446,7 +464,8 @@ namespace Odyssey.Sim.Pawns
             // An animal consults the animal tree (design 29 §3), never the colonist's: a node
             // that returned false for a person would be a node every colonist evaluated on
             // every think, and the animal's whole mind is one node anyway.
-            ThinkNode[] tree = pawn.IsPerson ? _tree : AnimalTree;
+            // A hostile person consults the hostile tree (design 33 §5), for the same reason.
+            ThinkNode[] tree = !pawn.IsPerson ? AnimalTree : pawn.IsHostile ? HostileTree : _tree;
             var job = pawn.JobBuffer;
             for (int i = 0; i < tree.Length; i++)
             {
@@ -456,8 +475,30 @@ namespace Odyssey.Sim.Pawns
             }
         }
 
-        /// <summary>The whole of an animal's mind. Shared: the node holds no state.</summary>
-        static readonly ThinkNode[] AnimalTree = { new AnimalIdleThinkNode() };
+        /// <summary>
+        /// The whole of an animal's mind. Shared: the nodes hold no state. The fight's two nodes
+        /// (design 33 §5) stand ahead of the idle one and decline for an animal nobody has hurt,
+        /// so an animal at peace thinks exactly as it did before combat.
+        /// </summary>
+        static readonly ThinkNode[] AnimalTree =
+        {
+            new DownedThinkNode(), new AnimalCombatThinkNode(), new AnimalIdleThinkNode(),
+        };
+
+        /// <summary>
+        /// A marauder's mind (design 33 §1, §5): down, else hunt, else idle. No needs, no work, no
+        /// draft: it is debug-spawned to fight and is never one of ours.
+        /// </summary>
+        static readonly ThinkNode[] HostileTree =
+        {
+            new DownedThinkNode(), new HostileThinkNode(), new IdleThinkNode(),
+        };
+
+        /// <summary>The animal tree, in traversal order, so a test can assert it.</summary>
+        public static IReadOnlyList<ThinkNode> AnimalMind => AnimalTree;
+
+        /// <summary>The hostile tree, in traversal order, so a test can assert it.</summary>
+        public static IReadOnlyList<ThinkNode> HostileMind => HostileTree;
 
         /// <summary>
         /// Claim everything, then run. A driver whose claims cannot all be taken releases what it
@@ -531,6 +572,11 @@ namespace Odyssey.Sim.Pawns
         {
             stand = -1;
             if (pawn == null || ctx == null) return false;
+
+            // Only one of ours, and only standing (design 33 §5c): a marauder is nobody's to
+            // command, and a downed colonist's Job_Downed is never interruptible — a forced build
+            // would otherwise end it and walk her to the site.
+            if (!pawn.IsColonist || pawn.Downed) return false;
 
             switch (jobDefIndex)
             {
@@ -840,7 +886,11 @@ namespace Odyssey.Sim.Pawns
             var rng = DeterministicRandom.ForTick(
                 ctx.Seed, ctx.CurrentTick, PawnPurpose.Fireside ^ (uint)pawn.Id.Value);
 
-            int fireside = FiresideTarget.Find(pawn, ctx, reserve: false);
+            // **The hearth is the colony's, not a marauder's.** This node is also the last in
+            // the hostile mind (design 33 §5), so without the guard a raider with nobody to hunt
+            // walked to the colony's own fire and settled at it, facing the flames among the
+            // people it came to kill. A hostile idler wanders instead, as it did before fires.
+            int fireside = pawn.IsHostile ? -1 : FiresideTarget.Find(pawn, ctx, reserve: false);
 
             // **Already at the hearth: settle, and do not roll again.** This is the fix for the
             // owner's report that idle colonists "are just walking about" (2026-09-23). `Find`

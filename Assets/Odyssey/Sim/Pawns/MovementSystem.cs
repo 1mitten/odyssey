@@ -99,6 +99,11 @@ namespace Odyssey.Sim.Pawns
         {
             if (pawn.Asleep) return;
 
+            // Knocked down (design 33 §9b): lying where the blow put it, it takes no step at all.
+            // The knockback cleared its path, so this is the backstop for an order given while it
+            // lies there.
+            if (pawn.KnockedDownAt(_ctx.CurrentTick)) return;
+
             if (!pawn.HasPath)
             {
                 // A pawn with no path stands still, and there is nowhere it can be standing where
@@ -108,6 +113,12 @@ namespace Odyssey.Sim.Pawns
                 // let-go had nothing left to rescue.
                 return;
             }
+
+            // A stunned pawn lands the step it is part way through and takes no other (design 33
+            // §4 C3, §5c) — never a snap back, never a new step. The job pipeline holds the rest of
+            // it (JobSystem.TickPawn). Nought in every golden window, so no golden moves.
+            bool stunned = pawn.StunnedAt(_ctx.CurrentTick);
+            if (stunned && pawn.MoveProgress == 0) return;
 
             // Progress and cost both count thousandths of the raw nav cost (Rates): the planner's
             // prices are untouched, so no path changes — the pawn just retires more or fewer
@@ -158,6 +169,14 @@ namespace Odyssey.Sim.Pawns
                 pawn.Cell = next;
                 pawn.PathIndex++;
                 StepsTaken++;
+
+                // The step in hand has landed; a stunned pawn stops here, with nothing banked.
+                if (stunned)
+                {
+                    pawn.MoveProgress = 0;
+                    if (!pawn.HasPath) break;
+                    return;
+                }
             }
 
             // Arrived. Anything left over is discarded rather than banked toward the next walk,

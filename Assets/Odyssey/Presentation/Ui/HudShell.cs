@@ -348,6 +348,17 @@ namespace Odyssey.Presentation.Ui
             public Label Name = null!;
             public IconBadge JobIcon = null!;
 
+            /// <summary>The health bar (design 33 §9f): the track, its fill, and "Downed" across the portrait's foot.</summary>
+            public VisualElement Health = null!;
+            public VisualElement HealthFill = null!;
+            public Label HealthWord = null!;
+
+            /// <summary>
+            /// What the bar was last drawn from: the fill per mille, or <see cref="DownedHealth"/>.
+            /// The ink and the word are functions of it, so one int says whether anything moved.
+            /// </summary>
+            public int LastHealth = int.MinValue;
+
             public PawnId LastId;
             /// <summary>
             /// The seed the colonist in this slot was rolled from, beside their id.
@@ -913,6 +924,7 @@ namespace Odyssey.Presentation.Ui
             MarkOrders();
             MarkViews();
             ReadBarKeys();
+            UpdateContextMenu();
 
             // The roster sweep ends when the button does, wherever the pointer happens to be when
             // it ends — a card's own PointerUp never arrives if the release landed off the strip.
@@ -1146,6 +1158,10 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void OnSelectionChanged(SelectionChange reason)
         {
+            // The context menu was raised for the selection there was (design 33 §7a): its Equip
+            // row names that selection's primary colonist, so a new selection puts it away.
+            CloseContextMenu();
+
             var world = _boot!.World;
             if (world == null || _directors == null) return;
 
@@ -1174,6 +1190,7 @@ namespace Odyssey.Presentation.Ui
 
             if (selection.HasPawn) _inspect.SetColonist(selection.Pawn);
             else if (selection.HasThing) _inspect.SetItem(selection.Thing);
+            else if (selection.HasCorpse) _inspect.SetCorpse(selection.Corpse);
             else if (selection.Cell is { } cell) _inspect.SetCell(cell);
             else _inspect.ClearSelection();
 
