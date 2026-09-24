@@ -151,7 +151,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 
 | Track | State |
 |---|---|
-| **M0** foundations | **Closed.** CI runs two tiers per push and PR: a *fast tier* on GitHub-hosted Linux (Sim, Hud, Long, both content checks) and a *Unity tier* on the owner's Windows machine as a self-hosted runner, switched on by the repository variable `UNITY_RUNNER=1`. |
+| **M0** foundations | **Closed.** CI has two tiers: a *fast tier* on GitHub-hosted Linux (Sim, Hud, Long, the content checks) and a *Unity tier* on the owner's Windows machine as a self-hosted runner, switched on by the repository variable `UNITY_RUNNER=1`. **Since 2026-09-24 a PR runs only the tiers its paths can break** (`tools/ci/tiers.py`, `docs/process.md` §5), the timing-only PlayMode arms (`Category("Measurement")`) run nightly or on `ci:perf`, and `main` gets its Unity run from the 03:00 UTC nightly rather than on every merge. |
 | **M1** world, **M2** pawns | **Done and reported** — `docs/milestones/M1-report.md`, `M2-report.md`. Both went further than the plan asked. |
 | **M3** build and dig | **Under way.** Designations, felling, stockpiles, mining, walls, deconstruction, floors and collapse, paving, ladders and beds are all in. Remaining: stairs (`U44`). The gate is a ten-day headless run. |
 | **MS** the start flow | **Done**, `U34`–`U41`: a main screen, seed entry and reroll, three-candidate colonist select, save/load with a named binding, and flat avatars. Ran beside M3 because it is session lifecycle rather than colony mechanics. **The candidate card was re-derived 2026-09-18** (`18-colonist-select.md` §6b): it kept 47 px when the avatar doubled to 60, so the three faces overlapped, and its skills line had been squeezed out by the occupation — so the one screen whose job is telling three people apart showed nothing that varied by ability. The card is identity alone — name, age, occupation — at 76 px, which is the face plus its padding on both sides, and **a card is now asserted to clear its own avatar by that padding**; the skills live in the detail pane beside it, two columns and a heading. |
@@ -517,6 +517,11 @@ invisible where the game is played.
 - **Before diagnosing anything build-shaped, `git diff HEAD -- ProjectSettings/ Assets/Settings/`.**
   An uncommitted flip of URP's `m_StripUnusedVariants` to `0` once took one shader pass from 64
   variants to 884,736 and the build from 12 seconds to an estimated day and a half.
+- **CI selects; it does not run everything** (2026-09-24, `docs/process.md` §5). A docs-only PR
+  runs no test tier, a Unity-side PR skips the Sim tests in both tiers, and no PR runs the
+  `Measurement` arms — label it `ci:perf` (or `ci:full`) and push when the change is about cost.
+  **Selection is by assembly, never by feature**; do not add per-feature test picking. A new
+  top-level folder runs everything until `tools/ci/tiers.py` gives it a row.
 - **Run the Long tier before merging:** `scripts/test-fast.sh --filter TestCategory=Long` (23
   tests, ~20 s). **The default fast tier excludes it**, so three green tiers can sit on top of a
   Long tier nobody ran — which is how PR #145 merged clean and turned `main` red on a wall-clock
