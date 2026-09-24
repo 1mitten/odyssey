@@ -230,7 +230,12 @@ namespace Odyssey.Tests.Sim
         // (design 33 §14e): ThoughtDef gained renewsOnRepeat, false everywhere but
         // Thought_AttackedByColonist, so a second swing renews the day rather than being dropped.
         // No golden moved: no other thought renews, and no golden window has friendly fire.
-        const ulong ContentFingerprint = 5393620802301053337UL;
+        //
+        // Moved a twenty-third time, deliberately, 2026-09-24, by drafted colonists helping (design
+        // 33 §15): CombatDef gained helpRadiusCells (8, INVENTED), how near another colonist's
+        // fight must be for a drafted colonist on her hold to join it. No golden moved: no golden
+        // window drafts anybody.
+        const ulong ContentFingerprint = 1636227730504628602UL;
 
 
         [Test]

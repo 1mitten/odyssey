@@ -58,8 +58,8 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// The first threat within reach of <paramref name="me"/>, in id order, or null. <b>Scales
         /// with the pawns on the board</b>: one integer comparison each and a step test for the
-        /// few that are threats. Asked by a drafted colonist's hold every tick and by a colonist's
-        /// self-defence at each think.
+        /// few that are threats. Asked by a colonist's self-defence at each think; a drafted
+        /// colonist's hold asks <see cref="HoldTarget"/>, which answers this first in the same pass.
         /// </summary>
         public static Pawn? AdjacentThreat(PawnContext ctx, Pawn me)
         {
@@ -71,6 +71,94 @@ namespace Odyssey.Sim.Pawns
                 if (InReach(ctx, me, other, TraverseMode.Colonist)) return other;
             }
             return null;
+        }
+
+        /// <summary>
+        /// The colonist <paramref name="attacker"/> is fighting, when it is a marauder or an animal
+        /// in a melee attack on one and on its feet; else null (design 33 §15). The one answer to
+        /// "is a colonist being attacked, and by whom": the attacker's own job and target, which are
+        /// what swings at her. A colonist attacking a colonist — the player's Ctrl order, or the
+        /// blows she takes back — is not, so it summons nobody. A building attack names no pawn.
+        /// </summary>
+        public static Pawn? ColonistUnderAttackBy(PawnContext ctx, Pawn attacker)
+        {
+            if (attacker.CombatTarget == 0 || !IsInAnAttack(attacker) || attacker.IsColonist) return null;
+            Pawn? victim = ctx.Pawns.Get(new PawnId(attacker.CombatTarget));
+            return victim != null && victim.IsColonist && !IsDead(victim) ? victim : null;
+        }
+
+        /// <summary>
+        /// What a drafted colonist on her hold fights (design 33 §2b, §15), in one pass over the
+        /// pawns:
+        /// <list type="number">
+        /// <item><b>A threat in reach</b> (<see cref="IsThreatTo"/>, <see cref="InReach"/>) — the first
+        /// in list order, exactly as <see cref="AdjacentThreat"/> answers it — and
+        /// <paramref name="joining"/> is false: she strikes from where she stands.</item>
+        /// <item>Else <b>the attacker of another colonist</b>, a marauder or an animal
+        /// (<see cref="ColonistUnderAttackBy"/>), with the victim and the attacker both within
+        /// <see cref="CombatDef.helpRadiusCells"/> of her (<see cref="WithinHelp"/>) and the attacker
+        /// reachable in her own mode — and <paramref name="joining"/> is true: she goes to it. The
+        /// nearest victim's attacker (squared distance in cells, as <see cref="ChooseSide"/>
+        /// measures), a tie to the lower victim id, then the lower attacker id.</item>
+        /// <item>Else null: she holds.</item>
+        /// </list>
+        /// <para><b>Scales with the pawns on the board</b>, and is the same one pass the hold's threat
+        /// scan already was: for a pawn at peace an extra integer comparison (its target is
+        /// nought), a lookup by id for each pawn in an attack, and a reachability test (two array
+        /// reads) only for a candidate nearer than the best so far. Asked every tick by each drafted
+        /// colonist on her hold and at each of her thinks — never by anybody undrafted, walking an
+        /// order, or in a fight already — so it costs nothing while nobody is drafted.</para>
+        /// </summary>
+        public static Pawn? HoldTarget(PawnContext ctx, Pawn me, out bool joining)
+        {
+            joining = false;
+            int radius = ctx.Content.Combat.helpRadiusCells;
+            GridSize size = ctx.Size;
+            CellRef m = size.FromIndex(me.Cell);
+
+            Pawn? best = null;
+            int bestDistance = int.MaxValue, bestVictim = int.MaxValue;
+            var pawns = ctx.Pawns.All;
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                Pawn other = pawns[i];
+                if (IsThreatTo(other, me) && InReach(ctx, me, other, TraverseMode.Colonist)) return other;
+
+                // Another colonist's fight: not one aimed at me, which the blow above answers once
+                // it is in reach.
+                if (other.CombatTarget == 0 || other.CombatTarget == me.Id.Value) continue;
+                Pawn? victim = ColonistUnderAttackBy(ctx, other);
+                if (victim == null || victim == me) continue;
+                if (!WithinHelp(size, m, victim.Cell, radius) || !WithinHelp(size, m, other.Cell, radius)) continue;
+
+                CellRef v = size.FromIndex(victim.Cell);
+                int dx = v.X - m.X, dz = v.Z - m.Z, dy = v.Y - m.Y;
+                int distance = dx * dx + dz * dz + dy * dy;
+                if (distance > bestDistance) continue;
+                if (distance == bestDistance
+                    && (victim.Id.Value > bestVictim || (victim.Id.Value == bestVictim && other.Id.Value > best!.Id.Value))) continue;
+                if (!ctx.Reachable(me, other.Cell, TraverseMode.Colonist)) continue;
+
+                best = other;
+                bestDistance = distance;
+                bestVictim = victim.Id.Value;
+            }
+
+            joining = best != null;
+            return best;
+        }
+
+        /// <summary>
+        /// Is <paramref name="cell"/> within <paramref name="radius"/> cells of <paramref name="m"/> on
+        /// the ground (design 33 §15): Chebyshev across the layer, and the same layer or one either
+        /// side, so a fight on the terrace step above or below counts and one three storeys down
+        /// does not.
+        /// </summary>
+        static bool WithinHelp(GridSize size, CellRef m, int cell, int radius)
+        {
+            CellRef c = size.FromIndex(cell);
+            return System.Math.Abs(c.X - m.X) <= radius && System.Math.Abs(c.Z - m.Z) <= radius
+                && System.Math.Abs(c.Y - m.Y) <= 1;
         }
 
         /// <summary>

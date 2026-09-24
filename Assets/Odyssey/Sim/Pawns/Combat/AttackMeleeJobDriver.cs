@@ -25,7 +25,7 @@ namespace Odyssey.Sim.Pawns
     /// <see cref="WorkFocus"/> reports — and while approaching, the target's cell the side was
     /// chosen against), <see cref="Job.WorkTicks"/> (the tick of the last re-plan,
     /// the precedent <c>BuildJobDriver</c> set for a driver's own use of that field),
-    /// <see cref="Job.DestCell"/> (<see cref="ToTheDeath"/> or -1), and on the pawn the target,
+    /// <see cref="Job.DestCell"/> (<see cref="ToTheDeath"/>, <see cref="Joining"/> or -1), and on the pawn the target,
     /// the swing clock, the destination and the step progress. No decision reads the path, which
     /// is not saved, so a save taken mid-swing resumes on the same ticks.</para>
     ///
@@ -39,7 +39,9 @@ namespace Odyssey.Sim.Pawns
     ///
     /// <para><b>When it ends.</b> The target gone, dead, or — unless the job was ordered on a pawn
     /// already down — down (the owner's "until one of them goes down"); unreachable; out of reach
-    /// for a drafted colonist's hold-attack, which never chases; and, for any attack nobody
+    /// for a drafted colonist's hold-attack, which never chases; for a drafted colonist who joined
+    /// a fight nearby (<see cref="Joining"/>, design 33 §15), which does chase, when the attacker is
+    /// on no colonist any more; and, for any attack nobody
     /// ordered, after <see cref="CombatDef.rechooseTicks"/> at a step boundary, so a hunt or a revenge picks
     /// its target again rather than chasing the first one across the board for ever.</para>
     ///
@@ -57,6 +59,14 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary><see cref="Job.DestCell"/> for an order given on a pawn already down: carry on until it is dead.</summary>
         public const int ToTheDeath = 1;
+
+        /// <summary>
+        /// <see cref="Job.DestCell"/> for a drafted colonist who left her hold to join a fight
+        /// nearby (design 33 §15): unforced, but she goes to the attacker, which the hold's own blow
+        /// never does. Ends as any unforced attack ends, and also once the attacker is no longer
+        /// fighting a colonist.
+        /// </summary>
+        public const int Joining = 2;
 
         public override bool TryMakeReservations(PawnContext ctx) => true;
 
@@ -105,7 +115,15 @@ namespace Odyssey.Sim.Pawns
             bool boundary = Pawn.MoveProgress < Pawn.MoveRatePerMille();
 
             // A drafted colonist's own blow at an adjacent threat: she strikes from where she stands.
-            bool hold = Pawn.Drafted && !Job.PlayerForced;
+            // Not when she left her hold to join a fight nearby (design 33 §15): she goes to it.
+            bool joining = Job.DestCell == Joining;
+            bool hold = Pawn.Drafted && !Job.PlayerForced && !joining;
+
+            // Joined to help a colonist: once the attacker is on no colonist — gone to a building,
+            // between minds, or its revenge spent — the reason is over, and she holds where she is.
+            if (joining && Melee.ColonistUnderAttackBy(ctx, target) == null)
+                return boundary ? JobStatus.Succeeded : JobStatus.Ongoing;
+
             bool inReach = Melee.InReach(ctx, Pawn, target, mode);
 
             if (inReach)
@@ -193,11 +211,16 @@ namespace Odyssey.Sim.Pawns
         /// (<see cref="Pawn.HeldSwing"/>) until the impact applies exactly that. A critical that will
         /// land is published as <see cref="CombatEventKind.SwingCritical"/> in place of
         /// <see cref="CombatEventKind.Swing"/>.
+        /// <para><b>A swing is activity for the draft</b> (design 33 §15), as it already was at a
+        /// building (<see cref="StartSwingAtBuilding"/>): an attacker standing on her side in reach
+        /// never re-thinks, so the quiet clock set when the fight began would otherwise run out
+        /// under a long fight and let the draft go the tick it ended.</para>
         /// </summary>
         void StartSwing(PawnContext ctx, Pawn target, int tick)
         {
             Armament armament = ctx.WeaponRules.ArmamentOf(Pawn, ctx);
             Pawn.NextSwingTick = tick + armament.Attack.cooldownTicks;
+            if (Pawn.Drafted) Pawn.DraftQuietSinceTick = tick;
             Pawn.BeginGesture(PawnGesture.Strike);
             SwingOutcome outcome = ctx.MeleeRules.Resolve(Pawn, target, armament, ctx, tick);
             Pawn.HoldSwing(outcome);
