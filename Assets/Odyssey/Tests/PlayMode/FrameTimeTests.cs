@@ -2925,6 +2925,10 @@ namespace Odyssey.Tests.PlayMode
             bool skinWas = GroundSkin.Enabled;
             GroundSkin.Enabled = !boxes;
             if (boxes) prefix += "boxes-";
+            // ODYSSEY_LOOK_ALLFINE=1 photographs every tree at today's level of detail, the simpler
+            // far trees off (design 38 §23), for the same before-and-after.
+            bool allFine = Environment.GetEnvironmentVariable("ODYSSEY_LOOK_ALLFINE") == "1";
+            if (allFine) prefix += "allfine-";
 
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
                 out OdysseyBootstrap boot);
@@ -2935,6 +2939,7 @@ namespace Odyssey.Tests.PlayMode
             {
                 // Long enough for the board to mesh out under the budget and the post stack to settle.
                 for (int i = 0; i < 180; i++) yield return null;
+                if (allFine && boot.Renderer != null) boot.Renderer.SimplerFarTrees = false;
 
                 cam = boot.cameraRig!.Camera;
                 previousTarget = cam.targetTexture;

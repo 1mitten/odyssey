@@ -1858,8 +1858,11 @@ namespace Odyssey.Presentation.Rendering
 
         void Submit(in RenderParams rp, ModulePart part, Matrix4x4[] matrices, int count)
         {
+            // Below the blended range: the solid crowns sit in the foliage queue (2501) with their depth
+            // written and their cut-out clipped, so the order they go out in cannot change a pixel. A
+            // faded crown's ghost blends (Transparent, 3000) and keeps its own submission.
             if (_groupingTrees && count > 0 && rp.material != null
-                && rp.material.renderQueue <= (int)RenderQueue.GeometryLast)
+                && rp.material.renderQueue < (int)RenderQueue.Transparent)
             {
                 GatherTree(rp, part, matrices, count);
                 return;

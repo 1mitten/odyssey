@@ -19,7 +19,11 @@ namespace Odyssey.Tests.Presentation
     /// </summary>
     public class TreeGroupingTests
     {
-        /// <summary>Five by five chunks of meadow with a tree on every third cell.</summary>
+        /// <summary>
+        /// Five by five chunks of meadow with a tree on about one cell in thirty-seven — a handful of
+        /// trees a chunk, as a played board has (4.5 to 5 a call before grouping). A denser wood would
+        /// already fill each chunk's call and could not tell grouping from not grouping.
+        /// </summary>
         static RenderTestWorld Wood()
         {
             const int side = 125;
@@ -28,7 +32,7 @@ namespace Odyssey.Tests.Presentation
             for (int x = 0; x < side; x++)
             {
                 world.Solid(x, z, 1, NaturalContent.TerrainGrass);
-                if ((x + z * 7) % 3 == 0)
+                if ((x * 31 + z * 17) % 37 == 0)
                     world.Edifice(x, z, 2, NaturalContent.EdificeTreeBroadleaf, blocking: false);
             }
             return world.Publish();
@@ -54,7 +58,7 @@ namespace Odyssey.Tests.Presentation
             int perChunkCalls = renderer.ChunkCallsByKind[0];
             int drawnPerChunk = renderer.InstancesDrawn;
             int trees = renderer.TreeInstances;
-            Assert.That(trees, Is.GreaterThan(1000), "the wood grew too few trees to say anything about batching");
+            Assert.That(trees, Is.GreaterThan(300), "the wood grew too few trees to say anything about batching");
             Assert.That(perChunkCalls, Is.GreaterThanOrEqualTo(25), "each chunk should have submitted its own trees");
 
             renderer.GroupTrees = true;

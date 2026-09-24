@@ -12053,3 +12053,15 @@ The owner ran the scenery benchmark in the player at 4K: with Full grass, the GP
 6.62 ms at 32 / 70 / 140 m with the scenery drawn from GPU buffers, against 6.12 / 8.31 / 7.04 chunk
 by chunk — a real 0.4–0.9 ms, and the whole look at 125–170 fps. The batch arm's 4–5 ms was the
 editor's inflation; design 38 §22a keeps the player's numbers as the ones to quote.
+
+## 2026-09-24 — Trees: grouped, and simpler far away (design 38 §23)
+
+The owner asked whether trees belonged on the GPU-driven path. Measured first, trees on and off: the
+CPU part was 0.3 to 1.3 ms, the GPU part a quarter to two-fifths of a 1080p frame, and the trees went
+out five to a call. So the CPU part was batching and the GPU part was detail; GPU-driven drawing would
+have bought only the first. The owner chose grouping and simpler far trees. Grouping gathers each
+tree bucket's submissions for the frame and sends them once per material and mesh; every cull, level
+and fade decision stays per chunk. Its first cut grouped nothing in the game while its EditMode test
+passed — it took only the opaque queue, and the Meadow crowns sit at 2501 like the grass — and the
+picture proof, not the unit test, said so. Tree calls fell 80–96%, the frame most on Huge zoomed out
+(20.1 → 13.8 ms at 1080p in the editor), and neither change moved the near picture.
