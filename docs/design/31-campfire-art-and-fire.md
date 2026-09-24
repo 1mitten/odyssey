@@ -722,3 +722,31 @@ swatch pass straight after, or every colonist loses its recolouring.
   seat to sit on would sit a crouching figure beside a log. That is a unit with its own clip.
 - **The crowd sidestep** can nudge a sitter the way it nudges anybody standing still. It has not
   been seen to; it is the first thing to look for if a seated figure drifts.
+
+### 18e. The crouch reads as sneaking — taken off, 2026-09-24
+
+Owner, on first look: *"it looks like they are sneaking/crawling and not sat down — happy to keep
+them stood up for now — and do an actual sitting on floor posture later."* The measurement was right
+and the reading was wrong: 69% of standing height with the feet planted is exactly what a crouch is,
+and at the play camera a crouch is somebody about to move, not somebody resting.
+
+**What stays.** The whole simulation half — the seat roll, the longer seated linger, `Job.Seated`,
+`PawnView.Seated` and the fire's cell in `WorkCell` — so a seated colonist still **stands facing the
+fire** and stays longer. And the figure's plumbing: `ModuleEntry.sitClip`, the mixer input and
+`SitPose`, dormant with no clip behind them. A real seated clip is then **one catalogue field on the
+colonist rows and no code**, and `SitPoseTests` is already written to measure it (it ignores itself
+until a row has one).
+
+**What went.** The crouching idle on the 73 colonist rows, and the generator line that named it.
+The catalogue is back to its state before §18d, byte for byte.
+
+**The recommendation for the real sit.** A seated-on-the-ground idle **authored in Blender on the
+Synty humanoid rig** and committed under `Assets/Art/Custom/`, as the brief allows for gaps no pack
+fills. It is a humanoid clip, so it retargets across all 61 characters exactly as the walk does, and
+it is ours to commit. Two things to settle before authoring: first, whether Synty's own animation
+range has a floor sit (not checked; nothing on this disk has one), since buying beats authoring;
+second, cross-legged or knees-up, which the owner should pick from a sheet rather than a sentence.
+Mixamo's sitting idles are the quick alternative, but committing its files is a licence question
+this repository has not answered. **The test that will judge it is the one above**: crown well under
+standing, lowest point still on the floor — and then the owner's eye, because this section is the
+proof that the numbers alone do not say *sitting*.

@@ -1760,9 +1760,9 @@ namespace Odyssey.EditorTools
                     uniform = IsUniform(prefab),
                     sex = feminine ? BodySex.Female : BodySex.Male,
                     poseClipName = $"A_Idle_Standing_{suffix}",
-                    // The pack's crouching idle is the lowest authored rest there is; no pack
-                    // ships a seated clip (design 31 §18d).
-                    sitClipName = $"A_Idle_Crouching_{suffix}",
+                    // No sitClipName yet: no pack ships a seated clip, and the crouching idle
+                    // read as sneaking rather than sitting (owner, 2026-09-24; design 31 §18e).
+                    // A seated clip of our own goes here when there is one.
                     centreXZ = true, baseAtY = true,
                     scale = new Vector3(1.4f, 1.4f, 1.4f),
                     locomotion = new List<LocomotionEntry>

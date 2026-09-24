@@ -10,9 +10,10 @@ using UnityEngine.Playables;
 namespace Odyssey.Presentation.Tests
 {
     /// <summary>
-    /// A colonist sitting by a fire is drawn sitting (design 31 §18d): every colonist row carries a
-    /// settled idle, and that idle, <b>measured off the drawn mesh</b>, is lower than standing with
-    /// its feet still on the floor.
+    /// A colonist sitting by a fire is drawn sitting (design 31 §18d–§18e): a row's seated idle,
+    /// <b>measured off the drawn mesh</b>, is lower than standing with its feet still on the floor.
+    /// No row has one today — the crouch that did was read as sneaking — and this waits for the clip
+    /// that replaces it.
     ///
     /// <para>Measured rather than trusted to the clip's name, which is the lesson of
     /// <c>FigureBuildTests</c>: a name says what somebody meant, and the mesh says what the player
@@ -42,30 +43,20 @@ namespace Odyssey.Presentation.Tests
             return rows;
         }
 
-        [Test]
-        public void EveryColonistRowCanSit()
-        {
-            List<ModuleEntry> rows = ResolvedColonists();
-            if (rows.Count == 0) Assert.Ignore("no colonist art on this machine; the packs are gitignored");
-
-            foreach (ModuleEntry row in rows)
-            {
-                Assert.That(row.sitClipName, Is.Not.Empty, $"{row.prefabName} names no settled idle");
-                Assert.That(row.sitClip, Is.Not.Null,
-                    $"{row.prefabName}'s settled idle {row.sitClipName} did not resolve, so it will " +
-                    "stand at the fire; rebuild the catalogue");
-            }
-        }
-
         /// <summary>
-        /// The seated pose is really lower, and really grounded. One row of each sex, because the
-        /// pack authors the two separately and the catalogue matches them by name.
+        /// The seated pose is really lower, and really grounded. Once per distinct clip, because a
+        /// clip authored per sex is two clips and each has to be right on its own.
         /// </summary>
         [Test]
         public void TheSeatIsLowerThanStandingWithTheFeetStillOnTheFloor()
         {
             List<ModuleEntry> rows = ResolvedColonists();
             if (rows.Count == 0) Assert.Ignore("no colonist art on this machine; the packs are gitignored");
+
+            // No row sits yet: the crouching idle was tried and read as sneaking (design 31 §18e).
+            // This waits for the seated clip that replaces it, and is what should judge it.
+            if (!rows.Exists(r => r.sitClip != null))
+                Assert.Ignore("no colonist row has a seated clip yet (design 31 §18e)");
 
             var measured = new HashSet<string>();
             foreach (ModuleEntry row in rows)

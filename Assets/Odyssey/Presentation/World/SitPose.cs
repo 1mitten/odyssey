@@ -4,20 +4,21 @@ using UnityEngine;
 namespace Odyssey.Presentation.World
 {
     /// <summary>
-    /// A colonist sitting down by a fire (design 31 §18d): how quickly the figure goes down into
-    /// the row's settled idle and comes back up out of it.
+    /// A colonist sitting down by a fire (design 31 §18d–§18e): how quickly the figure goes down
+    /// into the row's seated idle and comes back up out of it.
+    ///
+    /// <para><b>Dormant today.</b> No colonist row carries a seated clip: the locomotion pack's
+    /// crouching idle was the first one tried and the owner read it as sneaking, not sitting
+    /// (2026-09-24). A seated figure therefore stands, facing the fire. The blend below is the seam
+    /// a real seated clip arrives through — one field on the catalogue row, no code.</para>
     ///
     /// <para><b>An authored clip, not a computed pose, and that is the whole decision.</b> Every
     /// other stance here — sleep, swim, the carry, the swing — is angles laid over the standing
     /// idle, and a sit cannot be: it needs knees bent past anything the rig will take from code,
-    /// and lowering an upright figure instead puts its feet through the floor. The locomotion
-    /// pack's crouching idle is authored, grounded and settled, so the figure simply blends into
-    /// it as a second idle. Foot planting stays on, because the clip's feet are already on the
-    /// floor and on a slope planting is what keeps them there.</para>
-    ///
-    /// <para>No pack ships a seated clip; the crouch is the lowest authored rest there is. A log
-    /// seat under a sitter would want a seated clip and a place to put the seat, and is a unit of
-    /// its own rather than a tuning of this one.</para>
+    /// and lowering an upright figure instead puts its feet through the floor. An authored,
+    /// grounded seated idle needs neither, so the figure simply blends into it as a second idle.
+    /// Foot planting stays on, because such a clip's feet are already on the floor and on a slope
+    /// planting is what keeps them there.</para>
     /// </summary>
     public static class SitPose
     {

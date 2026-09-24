@@ -11337,3 +11337,14 @@ height with the soles unmoved, as §18c predicted — but the catalogue. A bare
 `PlayScene.RebuildCatalogue` wipes every colonist's appearance swatches, because `CharacterSwatches`
 is a second pass, and would have been a 4,834-line diff carrying that loss. Recorded in design 31
 §18d so the next rebuild runs both.
+
+## 2026-09-24 — The crouch taken off
+
+First look at §18d: *"it looks like they are sneaking/crawling and not sat down."* The number was
+right — a crouch at 69% of standing height with the feet planted — and it was the wrong pose: at the
+play camera a crouch is somebody about to move. Taken off the 73 colonist rows; the simulation half
+and the figure's blend stay, dormant, so a seated colonist stands facing the fire and a real seated
+clip is one catalogue field. Recommended: a floor sit authored in Blender on the humanoid rig, after
+checking whether Synty sells one. The lesson worth keeping is that `SitPoseTests` proved the pose
+low and grounded and could not prove it read as sitting — a measurement of a pose is a guard, not a
+verdict. Design 31 §18e.
