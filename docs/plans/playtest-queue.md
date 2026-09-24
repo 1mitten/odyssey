@@ -23,6 +23,45 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the ring now mean only your orders?** (`claude/combat-response`, design 33 §18b.)
+  - *Set-up.* Draft two colonists and select both. Spawn a marauder beside one of them from the
+    debug menu, and another on an undrafted colonist about five cells from them.
+  - *Expect.* No red ring while they fight of their own accord — the one striking the marauder
+    beside her, the other running over to help. Right-click the marauder: the ring snaps in, as
+    before. Rescue a downed colonist: no ring, and she is still carried in the arms.
+  - A wrong answer looks like any of these:
+    - a ring under a marauder nobody right-clicked;
+    - no ring after a right-click on one;
+    - a rescued colonist left on the ground or standing at the carrier's feet — the carrier lookup
+      moved to a new aspect, and only Unity can say it still finds her.
+
+- **Do Defend and Flee do what their names say?** (`claude/combat-response`, design 33 §18c–§18e.)
+  - *Set-up.* Select a colonist and press the new button beside Draft on her pane: it reads
+    *Fight back*, then *Defend*, then *Flee*, then round again. Box-select three and press it
+    once: all three should read the same.
+  - *Defend.* Put a colonist on Defend while she works. Spawn a marauder on another colonist
+    about five cells from her. She drops her work, runs to it and fights it; when it is down she
+    goes back to work. She is never drafted: no diamond, no four-hour clock.
+  - *Flee.* Put a colonist on Flee and spawn a marauder about six cells from her. She drops her
+    work and runs, well away; when it is down or far off, she goes back to work. Struck, she runs
+    rather than fighting back.
+  - *Fight back.* The default does what it always did: works on until she is struck.
+  - A wrong answer looks like any of these:
+    - a colonist at Defend who watches a friend being beaten five cells away;
+    - one who comes from across the map;
+    - one who drafts herself, or stands about after the fight instead of working;
+    - a colonist at Flee who fights while she has room to run;
+    - one who runs from a hog that is only rooting about;
+    - one who never stops running once the danger is gone;
+    - the button's label overlapping Draft or running off the pane (three buttons now share that
+      header, and nothing in the fast tier can measure it).
+  - Three things to judge.
+    - Whether a setting per colonist is enough, or the colony-wide rules panel you mentioned is
+      wanted now (deferred, §18a).
+    - Whether Flee's eight cells is too far or not far enough (it is the help radius).
+    - Whether the button showing the *current* response reads well beside Draft, which shows
+      what pressing it will *do*.
+
 - **Do drafted colonists come to help?** (`claude/combat-drafted-help`, design 33 §15.)
   - *Set-up.* Draft two or three colonists and leave them standing within about eight cells of a
     colonist who is **not** drafted. Spawn a marauder beside her from the debug menu.
@@ -42,8 +81,8 @@ the next session learns to ignore.
     - one who chases a hog that has calmed down;
     - one who undrafts herself the moment a long fight ends.
   - Two numbers to judge.
-    - A **selected** helper shows the red lock-on ring under the marauder, as she already does when
-      she strikes one beside her. Say if the ring should mean only orders you gave.
+    - ~~A **selected** helper shows the red lock-on ring~~ — answered 2026-09-24: the ring means
+      only your orders, and a helper wears none now (design 33 §18b; the row above).
     - Eight cells (20 m): say if it is too far or not far enough.
 
 - **Does a marauder break in, and do the weapons feel different on wood and stone?**

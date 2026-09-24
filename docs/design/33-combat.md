@@ -3560,11 +3560,13 @@ the reachability.
 
 - **The ring and the line on a helper.** A selected helper wears the lock-on ring under the
   marauder she joined, as she does under one she hits beside her (§7b). If the ring should mean
-  "an order I gave" only, that is a second aspect. Say so.
+  "an order I gave" only, that is a second aspect. Say so. *Answered 2026-09-24 (§18b): the ring
+  means an order. A helper wears none now; the rescue's patient took the second aspect instead.*
 - **Eight cells** (20 m) is invented. If helpers come from too far or not far enough, it is one
   number in `Combat.xml`.
 - **Undrafted colonists** still help nobody, as asked; they fight back only when struck. Say if a
-  colonist at work should drop it for a friend being beaten beside her.
+  colonist at work should drop it for a friend being beaten beside her. *Answered 2026-09-24
+  (§18c): a setting per colonist, Defend, built on this section's rule.*
 
 ## 16. Doors hold marauders; beds are spared (2026-09-24)
 
@@ -3795,8 +3797,10 @@ not an order mark: it says *drafted*, and a drafted colonist fighting on her own
   over a colonist (`PausedIntents`). Refused for a pawn that is not a colonist and for a value outside
   the three; `AlreadyInThatState` for a no-op. It may be set on anybody of ours — drafted, downed or
   broken — because it is a standing setting, not an order to act. An undrafted colonist on a fight or
-  a flight she started herself is interrupted, so the new setting answers at once rather than when
-  that one ends.
+  a flight **the new setting would not have started** is interrupted, keeping her step, so it
+  answers at once rather than when that one ends (`HostilityResponses.Started`): a flight under
+  anything but Flee, a fight of her own under Flee, a join into somebody else's fight under Fight
+  back. A fight she would have started anyway is left alone, so no swing in the air is lost.
 - **The draft overrides it.** A drafted colonist does what §2 and §15 say whatever her response; it
   takes effect again when she is released.
 
@@ -3826,6 +3830,9 @@ have. She is never drafted, so no four-hour clock runs and nothing needs releasi
   again from where she is; none, she goes back to work.
 - **Struck, she runs rather than fighting back.** Cornered — no flee cell at all — she fights back,
   as Fight back would: the retaliation memory is still written at the blow, for exactly that case.
+- **She does not go back for whoever struck her.** With no danger near her the node gives her no
+  fight at all, even with the blow still remembered; at Fight back the same memory sends her after
+  it across the board, which is the difference the setting is for.
 
 **Both are noticed while working.** The tree runs only between jobs, so a colonist chopping a tree
 would never see a fight until the tree was down. `JobSystem.TickPawn` asks each undrafted *Defend*
@@ -3886,3 +3893,82 @@ current one does and that a press changes it.
 - **A *Defend* colonist asleep** is not woken by a fight nearby. Say if she should be.
 - **The button shows the current response**, where Draft shows what pressing it will do. The
   Draft button's face is an action; this one is a setting. Say if they read as inconsistent.
+
+### 18i. Tests, and the controls seen to fail
+
+Fast tier: Sim **1,458** (from 1,427), Hud **1,015** (from 1,003). Long **41**, all green.
+`GoldenMasterTests` is green without a re-bake, and no content number moved, so no fingerprint
+did. All three content gates are clean; the wiki and `Registry.g.cs` carry the three new names and
+a reworded *Fleeing* tooltip.
+
+**Tests changed on purpose, not relaxed:**
+
+- `CombatContractTests.TheFightsAspectsArePublishedOnlyWhileTheyHaveSomethingToSay` set a target on
+  a colonist with no job and expected it published. It now expects nothing without an order, and
+  the order as its control.
+- `LockOnRingTests.ARescueDrawsNoRing` now feeds the rescuer as the simulation publishes her — the
+  patient aspect, no order target — and its control is the same rescuer *with* an order target,
+  which draws: the ring asks the aspect, not the job.
+- `LockOnRingTests.AnUndraftedColonistsTargetIsNotAnOrder` became `AFightNobodyOrderedDrawsNoRing`:
+  the drafted check it tested is gone, because the simulation no longer publishes an unordered
+  target at all.
+- `HudModelTests.ColonistPaneShowsNeedsAndDisabledTabsAndCommands`: two live commands, not one.
+
+| Test | Claim |
+|---|---|
+| `ResponseTests.OnlyAnOrderedAttackPublishesItsTarget` (five cases) | the ordered attack publishes its target; the hold's blow, fighting back, a drafted join and a Defend join publish none |
+| `…ARescuePublishesItsPatientAndNoOrderTarget` (ordered, automatic) | the patient under its own aspect, carried, and no order target |
+| `…TheNumbersAreTheInterfaces` | 0, 1, 2 — the save contract and `ResponseModel`'s |
+| `…TheIntentSetsItAndRefusesWhatMeansNothing` | default, published only off it, no-op quiet, refused for 3, −1, a marauder, a hog; a drafted colonist keeps her hold |
+| `…ItAppliesWhilePaused` | landed by a republish that spends no tick |
+| `…ItIsSavedAndHashedOnlyWhenNotTheDefault` | set and set back hashes and saves byte for byte as before; Defend and Flee survive a load and the worlds stay together for 300 ticks |
+| `…DefendJoinsAFightNearbyThenGoesBackToWorkNeverDrafted` (5, 12) | off a 20,000-tick job to join, unforced and marked, then work; never drafted; twelve cells off she stays on the job |
+| `…FightBackLeavesAFightNearbyAlone` (default, and back from Defend) | today's behaviour |
+| `…DefendIgnoresAColonistFightingAColonist` | a Ctrl attack four cells off leaves her working |
+| `…ASleeperIsNotRousedByAFightNearby` | asleep, she sleeps on; awake, the control, she goes |
+| `…APlayersOrderIsNotTurnedAsideByDefend` | sent for a weapon across the fight, she keeps walking |
+| `…FleeRunsFromAMarauderNearHerAndGoesBackToWork` (Flee, Fight back) | she runs within 30 ticks, never swings in 300, and works again once it is down; at Fight back she stays on her job |
+| `…StruckSheRunsRatherThanFightingBack` (Flee, Fight back) | on a forced job the notice leaves alone, the blow makes her run; at Fight back it makes her fight |
+| `…CorneredSheFightsBack` | walled into two cells with it, no flee cell, she fights |
+| `…AnAnimalAtPeaceIsNotDangerAndOneOnAColonistIs` | a rooting hog three cells off leaves her working; the same hog on the colonist beside her makes her run |
+| `…AMarauderBehindAShutDoorIsNotDanger` (shut, empty doorway) | a shut door: she works; an empty doorway: she runs |
+| `…SheDoesNotGoBackForWhoeverStruckHer` (Flee, Fight back) | out of range, the blow remembered, she stays; at Fight back she goes for it |
+| `…ANewSettingAnswersAtOnce` | fighting back, set to Flee, she is running in the same call |
+| `…DraftedSheDoesWhatTheDraftSays` | drafted at Flee: no job starts under her hold in 60 ticks with danger six cells off, and the marauder beside her is struck |
+| `…TheGateIsAskedAgainEachTick` | a Defend colonist whose first asking found nothing still notices a marauder that comes later |
+| `ResponseModelTests` (twelve) | the pane shows the response she has with the registry's name, after Draft, off for a colonist who has gone, none for a marauder; a press moves one round the three; a selection takes the first colonist's next and passes over the rest; an unknown number reads as Fight back |
+| `CombatAspectNamesTests`, `CombatContractTests` | `odyssey.pawn.response` spelled alike on both sides; `odyssey.pawn.rescue.patient` held in the simulation |
+
+Each rule was withheld, its tests run and seen to fail, then restored:
+
+| Withheld | Failed |
+|---|---|
+| the order target for any target (the old rule) | `OnlyAnOrdered…` hold, struck, joined, defend; `ARescuePublishes…` both |
+| the rescue's patient never published | `ARescuePublishes…` both |
+| the ring's rescue filter put back | `ARescueDrawsNoRing` (its control) |
+| the notice | `DefendJoins…(5)`, `FleeRuns…(Flee)`, `ASleeper…` (its control), `AnAnimalAtPeace…`, `…ShutDoor(empty)`, `TheGateIsAsked…` |
+| the notice waking a sleeper | `ASleeperIsNotRoused…` |
+| the notice overriding a forced job | `APlayersOrder…`, `StruckSheRuns…(Flee)` |
+| the notice asking a drafted colonist | `DraftedSheDoes…` (seen to pass first: the draft's own hold is forced and the forced-job rule hid it; the test now puts her on a hold her mind gave) |
+| the node's Defend branch | `DefendJoins…(5)`, `ASleeper…`, `OnlyAnOrdered…(defend)`, `TheGateIsAsked…` |
+| the node's Flee branch | six, every Flee test that expects a run |
+| "no danger, no fight" at Flee | `SheDoesNotGoBack…(Flee)` |
+| the setting's interrupt | `ANewSettingAnswersAtOnce` |
+| the hash bits; the flags bits; the record for a response alone | `ItIsSavedAndHashed…`, each |
+| the gate always shut; the gate never forgotten | the same six as the notice, each |
+| danger that need not reach her | `…ShutDoor(shut)` |
+| any animal as danger | `AnAnimalAtPeace…` (seen to pass first: nothing hostile about, so the gate kept the notice from asking; the test now keeps a stunned marauder far off) |
+| Defend's join unmarked | `DefendJoins…(5)` |
+| the cycle per colonist rather than from the first | `ASelectionTakes…` |
+| the pane's button | four `ResponseModelTests` |
+
+**Not tested:** the Presentation wiring (the button's click, the carrier lookup's new aspect) —
+never compiled here, and the fast tier has no Unity. A Defend or Flee colonist on a knock-down or a
+stun is held by the job loop before the notice, which is §5c's rule and not re-tested.
+
+### 18j. Never compiled here
+
+`Presentation/Ui/HudShell.Inspect.cs` (the button's click), `Presentation/Ui/HudShell.Bar.cs`
+(`CycleResponse`), `Presentation/World/PawnFigureDirector.Poses.cs` (the carrier lookups read
+`CombatAspects.RescuePatient`). Three buttons now share the inspect pane's header — Prioritise,
+Draft and the response — and nothing measures whether they fit; that is the playtest's question.
