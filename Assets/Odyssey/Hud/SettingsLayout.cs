@@ -105,7 +105,7 @@ namespace Odyssey.Hud
         public static HudColour Hue(SettingsTab tab) => tab switch
         {
             SettingsTab.Interface => new HudColour(0x8f, 0xb3, 0xd9),
-            SettingsTab.Graphics => new HudColour(0xb9, 0xa8, 0xe0),
+            SettingsTab.Graphics => HudTheme.Violet,
             SettingsTab.Audio => HudTheme.Good,
             SettingsTab.Keys => HudTheme.Warn,
             SettingsTab.Gameplay => HudTheme.Accent,
@@ -258,11 +258,11 @@ namespace Odyssey.Hud
             _ => CloseIcon,
         };
 
-        /// <summary>The header's gear: a hub and eight teeth.</summary>
+        /// <summary>The gear: the window's header and the title screen's Settings button, one
+        /// source for both (design 40).</summary>
         public const string GearIcon =
-            "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" +
-            "M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" +
-            "M12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14z";
+            "M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zM12 2v3M12 19v3M2 12h3M19 12h3" +
+            "M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1";
 
         public const string CloseIcon = "M6 6l12 12M18 6 6 18";
 

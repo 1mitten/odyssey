@@ -172,24 +172,27 @@ namespace Odyssey.Presentation.Ui
         {
             _screenDirectors = new HudDirectors(1, 0, _boot!.Preferences, _boot.Keys);
 
-            // No X: this window has nothing behind it to close to, and an X that does nothing is
-            // worse than no X at all. It is the one window in the game that is allowed to have
-            // none, and Window() takes a null for exactly this.
+            // The title screen (design 40): a dock, full height and flush left, carrying the mark,
+            // the wordmark, four buttons and the build line, with the starfield to its right. Still
+            // the modal it was, so the names the tests find it by hold; the window's header — the
+            // old card's "ODYSSEY" label — is taken off, because the dock carries its own.
             _startScreen = Modal("start", Registry.Label("ui.start.screen"), null, "startscreen");
+            _startScreen.Panel.Q(className: "panel__hdr")?.RemoveFromHierarchy();
+            VisualElement body = _startScreen.Panel;
 
-            // One body of a fixed height, whatever screen is inside it (owner, 2026-09-17). Every
-            // screen's content goes in here rather than straight into the panel, so the panel's
-            // height is a constant rather than a consequence of what is showing.
-            var body = new VisualElement();
-            body.AddToClassList("startscreen__body");
-            _startScreen.Panel.Add(body);
+            _titleLogo = BuildTitleLogo();
+            body.Add(_titleLogo);
+
+            var divider = new VisualElement();
+            divider.AddToClassList("title__divider");
+            body.Add(divider);
 
             _startRows = new VisualElement();
-            _startRows.AddToClassList("startscreen__rows");
+            _startRows.AddToClassList("title__menu");
             body.Add(_startRows);
 
-            foreach (SessionCommand command in SessionCommands.For(SessionContext.MainScreen))
-                _startRows.Add(StartRow(command));
+            foreach (TitleLayout.Button button in TitleLayout.Buttons)
+                _startRows.Add(TitleButton(button));
 
             // The saves, when the load screen is showing. A scroll view because a folder can hold
             // any number of colonies, wearing the Build palette's scroller class so there is one
@@ -203,14 +206,14 @@ namespace Odyssey.Presentation.Ui
             _startBack = new VisualElement();
             _startBack.AddToClassList("settings__row");
             _startBack.AddToClassList("startscreen__back");
-            var backIcon = new IconBadge("ui.start.back", IconBadge.RowSize);
-            backIcon.Inherit(HudTokens.TextMeta);
-            _startBack.Add(backIcon);
             _startBack.Add(HudText.Make(Registry.Label("ui.start.back"), HudTextRole.Row,
                 ussClass: "settings__label"));
             _startBack.RegisterCallback<ClickEvent>(_ => _menu.Back());
             _startBack.style.display = DisplayStyle.None;
             body.Add(_startBack);
+
+            body.Add(BuildTitleFooter());
+            WireTitleKeyboard();
 
             _setupPage = BuildSetupPage();
             _hud.Add(_setupPage);
@@ -225,27 +228,221 @@ namespace Odyssey.Presentation.Ui
             _menu.SavesRequested += OnListSaves;
             _menu.SettingsRequested += () => _boot!.Preferences.SetOpen(true);
             _menu.SettingsClosed += () => _boot!.Preferences.SetOpen(false);
-            _menu.QuitRequested += Quit;
+            // Exit game asks first, in the leave prompt's no-colony form (design 40).
+            _menu.QuitRequested += _leave.AskToExit;
             _menu.LoadRequested += OnLoadSave;
             _boot.Preferences.Changed += OnPreferencesChanged;
         }
 
-        /// <summary>One row of the root screen, in the idiom every list row in this HUD uses.</summary>
-        VisualElement StartRow(SessionCommand command)
+        /// <summary>
+        /// One of the title screen's four buttons: an icon in the button's colour, the name and a
+        /// line under it. Lit on hover and on focus in the Settings rail's treatment — the colour
+        /// at 14%, a 3 px edge on the left, the name in the colour — which the stylesheet carries
+        /// per colour (<c>.title__btn--good</c> and the rest).
+        /// </summary>
+        VisualElement TitleButton(TitleLayout.Button button)
         {
             var row = new VisualElement();
-            row.AddToClassList("settings__row");
+            row.AddToClassList("title__btn");
+            row.AddToClassList("title__btn--" + ToneClass(button.Ink));
+            row.focusable = true;
+            row.tabIndex = 0;
 
-            var icon = new IconBadge(command.Key, IconBadge.RowSize);
-            icon.Inherit(HudTokens.TextMeta);
-            row.Add(icon);
-            row.Add(HudText.Make(command.Label, HudTextRole.Row, ussClass: "settings__label"));
-            row.tooltip = SessionTooltip(command);
-            row.RegisterCallback<ClickEvent>(_ => _menu.Choose(command.Key));
+            var edge = new VisualElement { pickingMode = PickingMode.Ignore };
+            edge.AddToClassList("title__edge");
+            row.Add(edge);
 
-            _startRowByKey[command.Key] = row;
+            row.Add(new PathGlyph(button.Icon, TitleLayout.ButtonIcon, HudTokens.Convert(button.Ink)));
+
+            var words = new VisualElement { pickingMode = PickingMode.Ignore };
+            words.AddToClassList("title__words");
+            Label name = HudText.Make(Registry.Label(button.Key), HudTextRole.Name, ussClass: "title__name");
+            name.pickingMode = PickingMode.Ignore;
+            if (button.NameTakesInk) name.AddToClassList("title__name--ink");
+            words.Add(name);
+            Label description = HudText.Make(button.Description, HudTextRole.Meta, ussClass: "title__desc");
+            description.pickingMode = PickingMode.Ignore;
+            words.Add(description);
+            row.Add(words);
+
+            string key = button.Key;
+            row.tooltip = SessionTooltip(new SessionCommand(key, Registry.Label(key), SessionContext.MainScreen, 0, false));
+            row.RegisterCallback<ClickEvent>(_ => PressTitle(key));
+            _startRowByKey[key] = row;
             return row;
         }
+
+        /// <summary>Which of the four colour classes a button wears.</summary>
+        static string ToneClass(Odyssey.Hud.HudColour ink) =>
+            ink.Equals(HudTheme.Good) ? "good"
+            : ink.Equals(HudTheme.Info) ? "info"
+            : ink.Equals(HudTheme.Violet) ? "violet"
+            : "bad";
+
+        /// <summary>A press on the title screen, remembered so that coming back — from Settings, or
+        /// from the load list — puts focus on the button that was pressed.</summary>
+        void PressTitle(string key)
+        {
+            _titleReturnKey = key;
+            _menu.Choose(key);
+        }
+
+        /// <summary>The mark and the wordmark on one row, the mark drawn as its five slabs.</summary>
+        VisualElement BuildTitleLogo()
+        {
+            var logo = new VisualElement();
+            logo.AddToClassList("title__logo");
+
+            var mark = new VisualElement();
+            mark.AddToClassList("title__mark");
+            float sx = TitleLayout.MarkWidth / (float)TitleLayout.MarkBoxWidth;
+            float sy = TitleLayout.MarkHeight / (float)TitleLayout.MarkBoxHeight;
+            foreach (TitleLayout.Slab slab in TitleLayout.Mark)
+            {
+                var box = new VisualElement { pickingMode = PickingMode.Ignore };
+                box.style.position = Position.Absolute;
+                box.style.left = slab.X * sx;
+                box.style.top = slab.Y * sy;
+                box.style.width = slab.Width * sx;
+                box.style.height = slab.Height * sy;
+                box.style.backgroundColor = HudTokens.Convert(slab.Colour);
+                mark.Add(box);
+            }
+            logo.Add(mark);
+
+            _titleWordmark = HudText.Make("ODYSSEY", HudTextRole.Name, ussClass: "title__wordmark");
+            _titleWordmark.style.fontSize = TitleLayout.WordmarkSize;
+            _titleWordmark.style.letterSpacing = TitleLayout.WordmarkSize * TitleLayout.WordmarkTracking;
+            logo.Add(_titleWordmark);
+            return logo;
+        }
+
+        VisualElement BuildTitleFooter()
+        {
+            var footer = new VisualElement();
+            footer.AddToClassList("title__footer");
+            Label version = HudText.Make(TitleLayout.VersionLine(Application.version), HudTextRole.Meta,
+                numeric: true, ussClass: "title__cap");
+            version.style.fontSize = 11;
+            footer.Add(version);
+            _titleResolution = HudText.Make(string.Empty, HudTextRole.Meta, numeric: true, ussClass: "title__cap");
+            _titleResolution.style.fontSize = 11;
+            footer.Add(_titleResolution);
+            return footer;
+        }
+
+        /// <summary>
+        /// The dock's keyboard: Up and Down move between the buttons, Enter and Space press, and
+        /// focus from a mouse press is given back on release so only the keyboard shows the ring.
+        /// Escape is nobody's here: <c>SettingsDirector.Escape</c> already answers Nothing on the
+        /// root screen.
+        /// </summary>
+        void WireTitleKeyboard()
+        {
+            VisualElement dock = _startScreen.Panel;
+
+            _titleRing = new VisualElement { pickingMode = PickingMode.Ignore };
+            _titleRing.AddToClassList("title__ring");
+            _titleRing.style.display = DisplayStyle.None;
+            dock.Add(_titleRing);
+
+            dock.RegisterCallback<PointerDownEvent>(_ => _titlePointer = true, TrickleDown.TrickleDown);
+            dock.RegisterCallback<PointerUpEvent>(_ => dock.schedule.Execute(() =>
+            {
+                _titlePointer = false;
+                if (dock.focusController?.focusedElement is VisualElement f && dock.Contains(f)) f.Blur();
+            }), TrickleDown.TrickleDown);
+
+            dock.RegisterCallback<FocusInEvent>(evt =>
+            {
+                if (evt.target is VisualElement target && !_titlePointer && target.ClassListContains("title__btn"))
+                {
+                    Rect local = dock.WorldToLocal(target.worldBound);
+                    float grow = SettingsLayout.FocusOffset + SettingsLayout.FocusWidth;
+                    _titleRing.style.left = local.x - grow - HudTheme.BorderWidth;
+                    _titleRing.style.top = local.y - grow - HudTheme.BorderWidth;
+                    _titleRing.style.width = local.width + 2 * grow;
+                    _titleRing.style.height = local.height + 2 * grow;
+                    _titleRing.style.display = DisplayStyle.Flex;
+                }
+                else
+                {
+                    _titleRing.style.display = DisplayStyle.None;
+                }
+            }, TrickleDown.TrickleDown);
+            dock.RegisterCallback<FocusOutEvent>(_ => _titleRing.style.display = DisplayStyle.None,
+                TrickleDown.TrickleDown);
+
+            dock.RegisterCallback<KeyDownEvent>(evt =>
+            {
+                if (!(dock.focusController?.focusedElement is VisualElement focused) ||
+                    !focused.ClassListContains("title__btn")) return;
+                int at = _startRows.IndexOf(focused);
+                switch (evt.keyCode)
+                {
+                    case KeyCode.UpArrow:
+                    case KeyCode.DownArrow:
+                        int next = Mathf.Clamp(at + (evt.keyCode == KeyCode.UpArrow ? -1 : 1), 0,
+                            _startRows.childCount - 1);
+                        _startRows[next].Focus();
+                        evt.StopPropagation();
+                        break;
+                    case KeyCode.Return:
+                    case KeyCode.KeypadEnter:
+                    case KeyCode.Space:
+                        foreach (KeyValuePair<string, VisualElement> pair in _startRowByKey)
+                        {
+                            if (pair.Value != focused) continue;
+                            PressTitle(pair.Key);
+                            break;
+                        }
+                        evt.StopPropagation();
+                        break;
+                }
+            });
+
+            // The logo holds its place down the screen (18.5% of the height, never under 96 px), the
+            // wordmark gives up tracking before it would overflow, and the footer names the screen.
+            dock.RegisterCallback<GeometryChangedEvent>(_ => LayOutTitle());
+        }
+
+        void LayOutTitle()
+        {
+            VisualElement dock = _startScreen.Panel;
+            if (dock.layout.height <= 0f) return;
+            _titleLogo.style.marginTop = TitleLayout.LogoTop(dock.layout.height);
+
+            float word = _titleWordmark.layout.width;
+            if (word > 0f && word + TitleLayout.MarkWidth + TitleLayout.MarkGap > TitleLayout.ContentWidth)
+                _titleWordmark.style.letterSpacing = TitleLayout.WordmarkSize * TitleLayout.WordmarkTrackingTight;
+
+            if (_titleResolutionShown.x != Screen.width || _titleResolutionShown.y != Screen.height)
+            {
+                _titleResolutionShown = new Vector2Int(Screen.width, Screen.height);
+                HudText.Set(_titleResolution, TitleLayout.ResolutionLine(Screen.width, Screen.height), HudTextRole.Meta);
+            }
+        }
+
+        /// <summary>Put focus on a title button a moment after the screen shows, when it can take
+        /// it: New game the first time, the button that was pressed on the way back.</summary>
+        void FocusTitleButton()
+        {
+            string key = _titleReturnKey ?? SessionCommands.NewGameKey;
+            if (!_startRowByKey.TryGetValue(key, out VisualElement? button)) return;
+            _startScreen.Panel.schedule.Execute(() =>
+            {
+                if (_menu.Showing && _menu.Screen == MenuScreen.Root && !_boot!.Preferences.Open) button.Focus();
+            }).ExecuteLater(30);
+        }
+
+        VisualElement _titleLogo = null!;
+        Label _titleWordmark = null!;
+        Label _titleResolution = null!;
+        VisualElement _titleRing = null!;
+        bool _titlePointer;
+        string? _titleReturnKey;
+        MenuScreen _titlePrevScreen = MenuScreen.Root;
+        Vector2Int _titleResolutionShown;
 
         /// <summary>
         /// A plain row of the New game screen: the same icon-and-label row as every other, with an
@@ -838,18 +1035,12 @@ namespace Odyssey.Presentation.Ui
                 return;
             }
 
-            // The settings screen is the settings panel standing where this one was, not on top of
-            // it (owner, 2026-09-17). The scrim stays, because the state is still modal and there
-            // is still no world behind any of it.
-            if (_menu.Screen == MenuScreen.Settings)
-            {
-                _startScreen.ShowScrimOnly();
-                return;
-            }
-
+            // Settings opens over the dock now (design 40), rather than in its place as it did over
+            // the centred card (owner, 2026-09-17): the dock is flush left and the window centred,
+            // and the window's own scrim dims the dock under it.
             _startScreen.Show(true);
 
-            bool root = _menu.Screen == MenuScreen.Root;
+            bool root = _menu.Screen == MenuScreen.Root || _menu.Screen == MenuScreen.Settings;
             bool load = _menu.Screen == MenuScreen.Load;
 
             _startRows.style.display = root ? DisplayStyle.Flex : DisplayStyle.None;
@@ -859,6 +1050,13 @@ namespace Odyssey.Presentation.Ui
             _startBack.style.display = root ? DisplayStyle.None : DisplayStyle.Flex;
 
             if (load) FillSaveList();
+
+            // Coming back to the buttons from a screen puts focus on the button that opened it,
+            // however it was opened — a click, the keyboard, or the director itself.
+            if (_titlePrevScreen == MenuScreen.Settings) _titleReturnKey = SessionCommands.OptionsKey;
+            else if (_titlePrevScreen == MenuScreen.Load) _titleReturnKey = SessionCommands.LoadKey;
+            _titlePrevScreen = _menu.Screen;
+            if (_menu.Screen == MenuScreen.Root) FocusTitleButton();
             RefreshStartArming();
         }
 
@@ -1076,6 +1274,8 @@ namespace Odyssey.Presentation.Ui
         Label _leaveNote = null!;
         Label _leaveSaveLabel = null!;
         VisualElement? _leaveCancel;
+        VisualElement _leaveSave = null!;
+        Label _leaveLabel = null!;
 
         /// <summary>Whether the leave prompt is up, for whoever owns the Escape key.</summary>
         public bool LeavePromptOpen => _leave.Showing;
@@ -1113,6 +1313,7 @@ namespace Odyssey.Presentation.Ui
             answers.AddToClassList("prompt__answers");
 
             var saveAndLeave = new VisualElement();
+            _leaveSave = saveAndLeave;
             saveAndLeave.AddToClassList("prompt__answer");
             saveAndLeave.AddToClassList("prompt__answer--save");
             _leaveSaveLabel = HudText.Make(Registry.Label(LeavePrompt.SaveAndLeaveKey), HudTextRole.Row);
@@ -1123,7 +1324,8 @@ namespace Odyssey.Presentation.Ui
             var leave = new VisualElement();
             leave.AddToClassList("prompt__answer");
             leave.AddToClassList("prompt__answer--leave");
-            leave.Add(HudText.Make(Registry.Label(LeavePrompt.LeaveKey), HudTextRole.Row));
+            _leaveLabel = HudText.Make(Registry.Label(LeavePrompt.LeaveKey), HudTextRole.Row);
+            leave.Add(_leaveLabel);
             leave.RegisterCallback<ClickEvent>(_ => _leave.Choose(save: false));
             answers.Add(leave);
 
@@ -1168,6 +1370,17 @@ namespace Odyssey.Presentation.Ui
             if (!_leave.Showing) return;
 
             HudText.Set(_leaveTitle, Registry.Label(_leave.TitleKey) + "?", HudTextRole.Name);
+
+            // From the title screen there is nothing to save (design 40): no save answer, no note,
+            // and the answer that goes is named for where it goes.
+            _leaveSave.style.display = _leave.HasColony ? DisplayStyle.Flex : DisplayStyle.None;
+            _leaveNote.style.display = _leave.HasColony ? DisplayStyle.Flex : DisplayStyle.None;
+            HudText.Set(_leaveLabel,
+                Registry.Label(_leave.HasColony ? LeavePrompt.LeaveKey : LeavePrompt.ToDesktopTitleKey),
+                HudTextRole.Row);
+            _leaveModal.Panel.schedule.Execute(() => _leaveCancel?.Focus());
+            if (!_leave.HasColony) return;
+
             HudText.Set(_leaveNote,
                 "Unsaved progress since the last save will be lost. " +
                 (_boot?.BoundSavePath == null

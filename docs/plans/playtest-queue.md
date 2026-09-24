@@ -23,6 +23,14 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the title screen's dock read well, and does Exit ask?** (`claude/settings-frame`, design
+  40.) Press Play. A dark panel down the left edge with the layered mark and ODYSSEY, four
+  coloured buttons and the build line at the foot, the starfield clear to the right. New game should
+  already be lit, so Enter starts a game; Up and Down move the light. Hover each button: it fills in
+  its colour with a bar on its left. Settings opens the centred window over the dock, and closing it
+  leaves Settings lit. Exit game asks "Exit game?" with only Exit and Cancel. A wrong answer is the
+  wordmark touching the dock's edge or wrapping, the starfield dimmed, the load list not fitting the
+  dock, or Exit closing the game without asking.
 - **Is the settings window one steady box, and can it be driven from the keyboard?**
   (`claude/settings-frame`, design 39.) Open Menu > Settings and click through all five tabs: the
   window should not move or change size at all, and should sit dead centre. Save, Save as, Load,

@@ -2474,51 +2474,138 @@
    It introduces no control of its own. A row here is a .settings__row, which is the same row the
    stores panel, the Menu popover and the settings panel are built from. */
 
-/* A fixed box, and fixed is the point (owner, 2026-09-17: "keep it fixed width and height because
-   it becomes hard to read between loading and saving screens"). It used to size itself to its
-   content, so the root screen and the load screen gave two different boxes — and since the panel is
-   centred, moving between them moved every row under the pointer. A menu whose items walk away as
-   you navigate is a menu you have to re-find each time. */
-.startscreen {
-    top: 50%;
-    left: 50%;
-    translate: -50% -50%;
-    width: 420px;
-    height: 384px;
+/* The title screen (design 40): a dock, full height, flush left, 560 wide at every resolution,
+   with the starfield to its right. Flat: the .panel radius and padding are taken back off, and
+   the dock carries its own contrast, so the start screen's scrim is clear (it still swallows the
+   pointer, which is its job). The numbers are TitleLayout's; HudStyleSheetTests pins them. */
+.panel.startscreen {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 560px;
+    padding: 0 48px;
+    flex-direction: column;
+    background-color: rgb(12, 16, 20);
+    border-width: 0;
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.13);
+    border-radius: 0;
 }
 
-/* Everything under the title. One height for every screen this panel shows, which is what makes
-   the panel's own height a constant rather than a consequence. */
-.startscreen__body {
-    height: 318px;
-    margin-top: 14px;
-}
+#start-scrim { background-color: rgba(0, 0, 0, 0); }
 
-/* The game's own name, at the largest word-face step the type scale has. An explicit box with
-   middle alignment, like every other label that shares a column, so its leading falls outside the
-   box rather than pushing the rows below it down. */
-.startscreen__title {
-    color: #eef3f6;
-    height: 26px;
-    -unity-text-align: middle-center;
-    white-space: nowrap;
-}
-
-/* Top-aligned in a body that is taller than they are. The air below is deliberate: the alternative
-   to a fixed body is a list that scrolls at four rows. */
-.startscreen__rows { flex-shrink: 0; }
-
-/* The saves, when the load screen is showing. A max height and a scroll, which is the first
-   ceiling any region in this interface has carried — and it is here first because this is the
-   first region whose length is set by the player rather than by the game. The scroller itself is
-   restyled by the .build__scroll rules above; this list wears the same class so there is one
-   scrollbar in the project rather than two. Six rows, which is what the fixed body leaves once the
-   row that goes back has taken its share. */
-.startscreen__list {
-    flex-grow: 0;
+.title__logo {
+    flex-direction: row;
+    align-items: center;
     flex-shrink: 0;
+}
+
+.title__mark {
+    width: 70px;
+    height: 60px;
+    flex-shrink: 0;
+    margin-right: 22px;
+}
+
+.title__wordmark {
+    color: rgb(238, 243, 246);
+    white-space: nowrap;
+    -unity-text-align: middle-left;
+    padding: 0;
+    margin: 0;
+}
+
+.title__divider {
+    height: 1px;
+    flex-shrink: 0;
+    margin-top: 40px;
+    margin-bottom: 28px;
+    background-color: rgba(255, 255, 255, 0.13);
+}
+
+.title__menu { flex-shrink: 0; }
+
+.title__btn {
+    height: 64px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 14px;
+    margin-bottom: 6px;
+}
+
+.title__btn:last-child { margin-bottom: 0; }
+
+/* The lit edge, in the button's colour; shown on hover and focus. */
+.title__edge {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    display: none;
+}
+
+.title__btn:hover > .title__edge,
+.title__btn:focus > .title__edge { display: flex; }
+
+.title__words { margin-left: 16px; }
+
+.title__name { color: rgb(238, 243, 246); }
+
+.title__name--ink { color: rgb(224, 106, 92); }
+
+.title__desc {
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.66);
+}
+
+.title__btn--good > .title__edge { background-color: rgb(127, 201, 140); }
+.title__btn--good:hover,
+.title__btn--good:focus { background-color: rgba(127, 201, 140, 0.14); }
+.title__btn--good:active { background-color: rgba(127, 201, 140, 0.22); }
+.title__btn--good:hover .title__name,
+.title__btn--good:focus .title__name { color: rgb(127, 201, 140); }
+
+.title__btn--info > .title__edge { background-color: rgb(143, 208, 227); }
+.title__btn--info:hover,
+.title__btn--info:focus { background-color: rgba(143, 208, 227, 0.14); }
+.title__btn--info:active { background-color: rgba(143, 208, 227, 0.22); }
+.title__btn--info:hover .title__name,
+.title__btn--info:focus .title__name { color: rgb(143, 208, 227); }
+
+.title__btn--violet > .title__edge { background-color: rgb(185, 168, 224); }
+.title__btn--violet:hover,
+.title__btn--violet:focus { background-color: rgba(185, 168, 224, 0.14); }
+.title__btn--violet:active { background-color: rgba(185, 168, 224, 0.22); }
+.title__btn--violet:hover .title__name,
+.title__btn--violet:focus .title__name { color: rgb(185, 168, 224); }
+
+.title__btn--bad > .title__edge { background-color: rgb(224, 106, 92); }
+.title__btn--bad:hover,
+.title__btn--bad:focus { background-color: rgba(224, 106, 92, 0.14); }
+.title__btn--bad:active { background-color: rgba(224, 106, 92, 0.22); }
+
+/* The keyboard's ring: one for the dock, moved to the focused button. */
+.title__ring {
+    position: absolute;
+    border-width: 2px;
+    border-color: rgb(238, 243, 246);
+}
+
+.title__footer {
+    margin-top: auto;
+    margin-bottom: 28px;
+    flex-direction: row;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+.title__cap { color: rgba(255, 255, 255, 0.35); }
+
+/* The load list, in the dock under the divider where the buttons were. */
+.startscreen__list {
+    flex-grow: 1;
+    flex-shrink: 1;
     min-height: 0;
-    max-height: 284px;
 }
 
 .save {

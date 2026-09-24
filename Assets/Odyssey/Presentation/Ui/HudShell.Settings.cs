@@ -1143,8 +1143,9 @@ namespace Odyssey.Presentation.Ui
             bool open = _directors != null && _directors.Settings.Open;
             _settingsPanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
 
-            // The main screen brings its own wash; a second one over it would only darken it.
-            _settingsScrim.style.display = open && !_menu.Showing ? DisplayStyle.Flex : DisplayStyle.None;
+            // Over the title screen too (design 40): its own scrim is clear now, and the window
+            // opens over the dock, which this dims.
+            _settingsScrim.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
 
             if (open)
             {

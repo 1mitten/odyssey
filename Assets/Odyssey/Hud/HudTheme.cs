@@ -168,6 +168,10 @@ namespace Odyssey.Hud
         public static readonly HudColour Good = new HudColour(0x7f, 0xc9, 0x8c);
         public static readonly HudColour Info = new HudColour(0x8f, 0xd0, 0xe3);
 
+        /// <summary>The settings window's Graphics hue and the title screen's Settings button
+        /// (designs 39 and 40): one colour for the one destination.</summary>
+        public static readonly HudColour Violet = new HudColour(0xb9, 0xa8, 0xe0);
+
         // ------------------------------------------------------------------ controls (design 39)
 
         /// <summary>The border of a control that can be pressed: a segment, a select, a key chip,

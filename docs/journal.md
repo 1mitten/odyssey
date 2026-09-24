@@ -11871,3 +11871,19 @@ Two UI Toolkit gaps shaped the build: no `outline` (one focus ring for the windo
 focused control and drawn last) and no dashed border (a painted `DashedOutline`). The icons are the
 brief's SVG paths, flattened once by `SvgPath` and stroked by `PathGlyph`, so no mark on the window
 is a font glyph.
+
+## 2026-09-24 — The title screen: a dock on the left
+
+Folded into the settings branch on the owner's word. The centred 420 x 384 card became a 560 px
+dock, flush left, full height, with the Strata mark and the wordmark at the top and four buttons that
+are the Settings rail's own icons and inks (`docs/design/40-title-screen.md`). Two things are worth
+keeping. **The brief's width estimate was wrong**: the tracked wordmark does not fit at .3em, and the
+dock measures it after layout and falls back to .26em, which the brief allowed (460 px of 464).
+**And Exit game stopped arming**: it raises the leave prompt in a no-colony form, so
+`SessionCommands` no longer asks twice on the main screen, and the four director tests that used Quit
+as their example of arming were retired with it.
+
+Before this, the first play of the settings window found that Settings opened from the main menu
+showed but took no clicks. The start screen's scrim is built after the window and is pickable; the
+window is brought to the front when it opens now, and a pick at its centre is asserted, with a
+negative control that fails on `start-scrim`.

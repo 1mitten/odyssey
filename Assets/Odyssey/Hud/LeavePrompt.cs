@@ -96,9 +96,31 @@ namespace Odyssey.Hud
 
             Destination = to;
             Target = target!;
+            HasColony = true;
             Showing = true;
             Changed?.Invoke();
             return true;
+        }
+
+        /// <summary>
+        /// Whether there is a colony to lose. False only when the question came from
+        /// <see cref="AskToExit"/>: then there is nothing to save, and the prompt offers leaving
+        /// and staying and nothing else.
+        /// </summary>
+        public bool HasColony { get; private set; }
+
+        /// <summary>
+        /// Ask whether to close the game from the title screen, where nothing is running (design
+        /// 40). The same prompt with its save answer taken away: a click on Exit game is still one
+        /// click from closing the game, so it is still asked.
+        /// </summary>
+        public void AskToExit()
+        {
+            Destination = LeaveTo.Desktop;
+            Target = string.Empty;
+            HasColony = false;
+            Showing = true;
+            Changed?.Invoke();
         }
 
         /// <summary>Stay. The third answer, and the one Escape means.</summary>
@@ -117,6 +139,8 @@ namespace Odyssey.Hud
         public bool Choose(bool save)
         {
             if (!Showing) return false;
+            // With nothing running there is nothing to write, whatever was pressed.
+            if (!HasColony) save = false;
 
             LeaveTo to = Destination;
             Showing = false;
