@@ -186,3 +186,53 @@ say so, and that folder will be switched.
 The hip placement (lean, splay, offset), the moment the hand takes the weapon on bodies other than the
 first two measured, whether the sword's draw clip suits a bat or crowbar, and the bar's sizes and
 opacities are all our own numbers, not yet seen on screen.
+
+## Round three (2026-09-24)
+
+**`D:\code\odyssey-combat`**, branch **`claude/combat-c2-r3`**. Synty is junctioned. Unity
+re-imports the changed files on first open. Press Play, then New game.
+
+### What changed
+
+| Change | Was | Is | Where |
+|---|---|---|---|
+| A hit on a pawn | a number floated and the body didn't move (the reaction was refused while the target was swinging, which in a fight is almost always) | every landed blow flinches the target away from the blow; 12+ damage, a critical or a stun staggers it | design 33 §9a |
+| Critical hits | none | 10% + 1% per 4 Melee levels, ×1.5 damage; settled when the swing starts | §9b |
+| Knockback | none | a critical knocks the target back a tile, 50% of the time (75% with a blunt weapon); it slides, falls, lies about 1.5 s, and stands. It can go down one terrace step, never into water or up | §9b |
+| Sheathed bat and machete | ~5–6 cm off the hip | ~2 cm, measured on 29 bodies and photographed | §9c |
+| Attacking the dead | an attacker kept its attack on a dead pawn for a tick | an attack ends the tick its target dies; nothing targets the dead, marauders included | §9e |
+| Health on the colonist cards | not shown | a thin bar under each name, the overhead bar's colours; *Downed* across the portrait | §9f |
+| Swing sound | silent | a whoosh (2 takes) peaking 0.1 s before the blow lands, for weapons only | §9g |
+| Critical slice | none | a machete or arc blade critical plays the slice instead of the whoosh, landing on the impact | §9g |
+| Hit sound | silent | a thud on every landed blow, on the impact frame, under the slice on a crit | §9g |
+| Spawns in quick succession | stacked on one tile | each on the nearest free tile | §9h |
+| Debug menu | 280 px, one list | 460 px; Spawn tab under headings: Colonists (with **Arm every colonist**), Hostiles (with **Spawn 3 marauders**), Animals, Weapons, Items | §9i |
+| Gear | — | a hook only: the equipped weapon is listed for a future Gear tab | §9d |
+
+### What to test
+
+| Test | Look for | A wrong answer looks like |
+|---|---|---|
+| Debug, Spawn tab, **Arm every colonist**, then **Spawn 3 marauders** | every colonist has a weapon at the hip; three marauders on three tiles | someone bare-handed, or marauders stacked |
+| Let them fight at ×1, near the camera | whoosh, then the thud as the weapon lands; every hit visibly rocks the target | a hit with no body reaction; the whoosh after the contact; the sounds blurring |
+| Watch for a critical with a machete | the slice during the swing, then a stagger or knockback | the slice trails the blow, or a critical looks like any other hit |
+| A knockback | a quick slide back a tile, a fall, a get-up | the figure pops across, runs on the spot, lands in water or on another fighter |
+| Near a terrace edge | a knockback can drop them one step | two steps, or up a step |
+| Look at the sheathed bat and machete | against the hip | still floating out, or through the leg while walking |
+| Watch the colonist cards in a fight | who is hurt reads at a glance; *Downed* on the portrait | you still click cards to find the hurt one, so the bar is too thin |
+| Fight at ×3 | still reads as swing then hit | whooshes drop out or pile onto thuds; the knockdown's get-up starts mid-fall |
+
+### Tests on the merged branch
+
+- **Fast tier:** Sim 1,242 and Hud 910. **Long tier:** 41, including the fight guard sweeps and the dead-target sweep. Both content gates pass.
+- **Unity:** EditMode 3,055 total and PlayMode 107 total, 0 failed in each. Every file the lanes wrote without compiling compiled first time.
+- **Goldens:** none moved. The content fingerprint moved once, for the critical and knockback numbers.
+
+### Questions for you
+
+1. **"Colony stats":** each colonist card now has a health bar, but those cards had no bars at all since mood, food and rest came off them (2026-09-17). Did you mean the cards, or the colonist's Needs panel (food, rest, mood) in the inspect pane? Health also has its own tab there.
+2. **The hand and the bat.** The hanging hand overlaps the bat and crowbar at the hip. Does it read as a hand resting on it, or should the weapon hang behind the hand?
+3. **The arc blade** is longer than the leg, so it is lifted and its hilt sits at the ribs. Should it go on the back instead?
+4. **The pig.** You most likely attacked a *downed* pig: downed and dead look the same, and a right-click on a downed animal finishes it off. Should downed look different from dead, or should that click ask first?
+5. **Is a hog's bite sharp?** The hog's tusks are *blunt* in the content, and the rat's bite *sharp*. This decides the blood later.
+6. **Twenty seconds.** A struck colonist keeps her weapon drawn for the whole 20 s she will fight back. Should that be the 2 s put-away instead?
