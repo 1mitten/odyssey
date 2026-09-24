@@ -797,6 +797,22 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int FiresidePerMille = 660;
 
+        /// <summary>
+        /// How often a colonist already at the hearth moves to a different place in the ring,
+        /// per mille, rather than standing where she is.
+        ///
+        /// <para>Low on purpose. The point of the fireside is that idle people <b>stay</b>, and a
+        /// ring that reshuffles every few seconds reads as the milling this was written to stop.
+        /// One settle in eight is enough that a group looks alive.</para>
+        /// </summary>
+        public const int ShufflePerMille = 125;
+
+        /// <summary>How long a settle lasts, in ticks, before she thinks again.</summary>
+        public const int LingerTicks = 240;
+
+        /// <summary>Spread on top of it, so a ring does not think in unison.</summary>
+        public const int LingerVarianceTicks = 240;
+
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
             if (pawn.Asleep) return false;
@@ -806,16 +822,46 @@ namespace Odyssey.Sim.Pawns
             var rng = DeterministicRandom.ForTick(
                 ctx.Seed, ctx.CurrentTick, PawnPurpose.Fireside ^ (uint)pawn.Id.Value);
 
-            if (rng.NextInt(0, 1_000) < FiresidePerMille)
+            int fireside = FiresideTarget.Find(pawn, ctx, reserve: false);
+
+            // **Already at the hearth: settle, and do not roll again.** This is the fix for the
+            // owner's report that idle colonists "are just walking about" (2026-09-23). `Find`
+            // answers with the pawn's own cell when she is already beside a fire, and the first
+            // version of this then failed its own `!= pawn.Cell` guard and fell through to the
+            // wander below — so arriving at the fire *guaranteed* walking away from it on the
+            // very next think, and a colony of idlers milled about exactly as reported.
+            //
+            // Settling is unconditional now rather than a two-in-three roll. The roll decides
+            // whether somebody standing in a field sets off for the fire; once she is there, she
+            // stays. A hearth people keep leaving is not a hearth.
+            if (fireside == pawn.Cell)
             {
-                int fireside = FiresideTarget.Find(pawn, ctx, reserve: false);
-                if (fireside >= 0 && fireside != pawn.Cell)
+                // Mostly stand. Sometimes shift to another place in the ring, so a group round a
+                // fire is a group rather than a frieze — the variation the owner asked for, with
+                // the pose it wants still owed (§17f).
+                if (rng.NextInt(0, 1_000) < ShufflePerMille)
                 {
-                    job.Reset(JobIndex.Wander);
-                    job.TargetCell = fireside;
-                    job.Mode = TraverseMode.Colonist;
-                    return true;
+                    int along = FiresideTarget.Find(pawn, ctx, reserve: false, excludeOwn: true);
+                    if (along >= 0)
+                    {
+                        job.Reset(JobIndex.Wander);
+                        job.TargetCell = along;
+                        job.Mode = TraverseMode.Colonist;
+                        return true;
+                    }
                 }
+
+                job.Reset(JobIndex.Wait);
+                job.WorkTicks = LingerTicks + rng.NextInt(0, LingerVarianceTicks);
+                return true;
+            }
+
+            if (fireside >= 0 && rng.NextInt(0, 1_000) < FiresidePerMille)
+            {
+                job.Reset(JobIndex.Wander);
+                job.TargetCell = fireside;
+                job.Mode = TraverseMode.Colonist;
+                return true;
             }
 
             if (WanderTarget.Fill(pawn, ctx, job)) return true;
@@ -986,7 +1032,15 @@ namespace Odyssey.Sim.Pawns
         /// false for an idler, who is passing through. A reservation held by somebody merely
         /// loitering would make the fireside a place one colonist could occupy for the night.
         /// </param>
-        public static int Find(Pawn pawn, PawnContext ctx, bool reserve)
+        public static int Find(Pawn pawn, PawnContext ctx, bool reserve) =>
+            Find(pawn, ctx, reserve, excludeOwn: false);
+
+        /// <param name="excludeOwn">
+        /// True to refuse the cell the pawn is standing in, which is how an idler already at the
+        /// hearth shifts to a different place in the ring rather than answering "you are already
+        /// there" for ever.
+        /// </param>
+        public static int Find(Pawn pawn, PawnContext ctx, bool reserve, bool excludeOwn)
         {
             var warmth = ctx.Temperature;
             if (warmth == null || warmth.HeatSourceCount == 0) return -1;
@@ -1011,7 +1065,11 @@ namespace Odyssey.Sim.Pawns
                     if (!size.Contains(x, z, fire.Y)) continue;
 
                     int cell = size.Index(x, z, fire.Y);
-                    if (cell == pawn.Cell) return cell;   // already there
+                    if (cell == pawn.Cell)
+                    {
+                        if (excludeOwn) continue;
+                        return cell;                      // already there
+                    }
 
                     if (reserve)
                     {

@@ -149,6 +149,90 @@ namespace Odyssey.Tests.Sim
                 "a colonist with a bed was sent to the fireside instead of to her bed");
         }
 
+
+        /// <summary>
+        /// A colonist standing at the hearth <b>stays</b> there.
+        ///
+        /// <para><b>The regression this exists for.</b> <c>FiresideTarget.Find</c> answers with
+        /// the pawn's own cell when she is already beside a fire, and the first version of the
+        /// idle node then failed its own <c>!= pawn.Cell</c> guard and fell through to the
+        /// wander — so arriving at the fire guaranteed walking away from it on the next think.
+        /// The owner saw exactly that and reported it as *"they are just walking about when
+        /// idle"* (2026-09-23).</para>
+        ///
+        /// <para>Asserted over many ticks rather than one, because the fault was never that a
+        /// single decision was wrong: each one was reasonable and the sequence was a colonist
+        /// pacing back and forth for ever.</para>
+        /// </summary>
+        [Test]
+        public void AnIdlerAtTheHearthStaysThere()
+        {
+            ColonyWorld colony = Board(colonists: 1, beds: 0);
+            int fire = Fire(colony, 12, 12);
+            colony.World.Tick(Odyssey.Sim.Temperature.TemperatureSystem.IntervalTicks * 2);
+
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+
+            // Put her beside the fire and ask what she would do, over a long stretch of ticks.
+            int ring = FiresideRing(fire);
+            pawn.Cell = ring;
+
+            int wandersAway = 0;
+            for (int i = 0; i < 400; i++)
+            {
+                colony.World.Tick();
+
+                // Held at the hearth each time round: the question is what an idler who IS
+                // there decides, and a tick moves her wherever her real job takes her.
+                pawn.Cell = ring;
+
+                var job = new Job();
+                if (!new IdleThinkNode().TryGiveJob(pawn, colony.Pawns, job)) continue;
+
+                if (colony.Pawns.Content.Jobs[job.DefIndex].driver != JobIndex.Wander) continue;
+                if (!Adjacent(job.TargetCell, fire) && job.TargetCell != fire) wandersAway++;
+            }
+
+            Assert.That(wandersAway, Is.Zero,
+                $"an idler beside the fire chose to walk away from it {wandersAway} times in 400 " +
+                "ticks — she should settle, or at most shift to another place in the ring");
+        }
+
+        /// <summary>
+        /// And she does settle rather than merely not-leaving: the idle node hands back a wait,
+        /// which is what stops her thinking again every tick.
+        /// </summary>
+        [Test]
+        public void SettlingAtTheHearthIsAWaitAndNotAPace()
+        {
+            ColonyWorld colony = Board(colonists: 1, beds: 0);
+            int fire = Fire(colony, 12, 12);
+            colony.World.Tick(Odyssey.Sim.Temperature.TemperatureSystem.IntervalTicks * 2);
+
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            int ring = FiresideRing(fire);
+            int waits = 0;
+            for (int i = 0; i < 200; i++)
+            {
+                colony.World.Tick();
+                pawn.Cell = ring;
+                var job = new Job();
+                if (!new IdleThinkNode().TryGiveJob(pawn, colony.Pawns, job)) continue;
+                if (colony.Pawns.Content.Jobs[job.DefIndex].driver == JobIndex.Wait) waits++;
+            }
+
+            Assert.That(waits, Is.GreaterThan(100),
+                "an idler at the hearth almost never settles, so the ring will reshuffle " +
+                "constantly and read as the milling this was written to stop");
+        }
+
+        /// <summary>The first free cell of a fire's ring — where a colonist at the hearth stands.</summary>
+        static int FiresideRing(int fire)
+        {
+            CellRef at = Size.FromIndex(fire);
+            return Size.Index(at.X + 1, at.Z, at.Y);
+        }
+
         /// <summary>
         /// Two bedless colonists do not lie in the same cell. The sleeper's target is reserved
         /// exactly as a bed is, for the same reason.

@@ -603,3 +603,57 @@ comfort, which is one condition — but it is a behaviour change and wants to be
 
 **Nobody sits.** They stand in the ring. A sitting pose round a fire is the thing that would make
 this read as a hearth rather than as a queue, and it is presentation work with no simulation in it.
+
+
+## 18. The hearth holds them — 2026-09-23
+
+Owner, on watching §17: *"they are just walking about when idle. I think it needs to be clear —
+when they idle, they sit by the fire or stand by the fire or stand by the fire for a bit and then
+sit down and vice versa — for variation so you can tell easily who is idle."*
+
+### 18a. The bug, which was mine and was exactly what it looked like
+
+`FiresideTarget.Find` answers with **the pawn's own cell** when she is already beside a fire — a
+cheap "you are already there". The idle node then guarded on `fireside != pawn.Cell` before taking
+it, so that answer failed the guard and **fell through to the random wander**. Arriving at the fire
+therefore guaranteed walking away from it on the very next think, and a colony of idlers milled
+about precisely as reported.
+
+Each decision in that sequence was individually reasonable, which is why it read as "not
+implemented" rather than as a fault. `FiresideTests.AnIdlerAtTheHearthStaysThere` asserts over 400
+ticks rather than over one decision, for that reason; with the fault reinstated it counts **125
+walk-aways and zero settles**.
+
+### 18b. Settling is now unconditional
+
+The two-in-three roll decides whether somebody standing in a field **sets off** for a fire. Once
+she is there she stays — a hearth people keep leaving is not a hearth. She hands back a `Wait` for
+240–480 ticks, which is also what stops her re-thinking every tick.
+
+One settle in eight she shifts to a different place in the ring instead, so a group round a fire is
+a group rather than a frieze. `ShufflePerMille` is deliberately low: a ring that reshuffles every
+few seconds is the milling this was written to stop.
+
+### 18c. The sit is owed, and here is what it needs
+
+The owner asked for **sit / stand alternation**, and that half is not built. What was found looking
+for it is worth writing down, because it decides the shape of the work:
+
+- **`poseClip` is bake-time only.** `ModuleLibrary` samples it onto an instance to produce a static
+  mesh; there is no runtime per-pawn clip slot, so a sit is not a row in the catalogue.
+- **Gaits are indexed by speed** — idle 0 m/s, walk, run — so a crouch idle is not a fourth gait.
+- **The computed poses** (`SleepPose`, `SwimPose`, the work swing, the carry) are blended over the
+  graph. A computed sit would have to bend knees the rig will not bend from code, and lowering an
+  upright figure puts its feet through the floor.
+- **But the art exists.** `AnimationBaseLocomotion` ships `A_Idle_Crouching_Femn` / `_Masc` — an
+  authored, grounded, settled idle. That is the right "sit" at this camera: no rig work, no feet
+  through the floor.
+
+So the unit is: **a second idle clip, chosen per pawn, blended like sleep is.** It wants
+`PawnView` to carry the posture — the same shape as `Asleep`, which exists for exactly this reason
+(a sleeping colonist stood bolt upright in her bed for a week because presentation had no way to
+know). That field is deliberately **not** added yet: a published field nothing reads is weight, and
+it should arrive with the pose that consumes it.
+
+Until then the tell is that idle colonists **stand still at the fire** while everybody else is
+walking somewhere, which is most of the signal the owner asked for and none of the charm.
