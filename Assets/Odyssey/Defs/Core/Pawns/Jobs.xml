@@ -210,4 +210,54 @@
     <experiencePerWorkTick>110</experiencePerWorkTick>
   </JobDef>
 
+  <!--
+    The combat line (design 33 section 5), claimed together by its contracts step so that no two
+    lanes can each append a job and both call it 14 (renumbered to 17-21, after power's three, at the merge with main). The drivers are stubs that fail until their
+    lane fills them; nothing starts any of these yet.
+
+    None may be taken away by a casual think: a fight, a flight, a body on the ground, a weapon
+    being fetched on the player's word and a colonist being carried to bed are all things a
+    better-looking job must not interrupt.
+
+    Job_AttackMelee trains Skill_Melee (5), but per SWING and not per tick of work: the weapon's
+    experiencePerSwing is the amount (Combat.xml, Items.xml), which is why experiencePerWorkTick
+    is nought here. It never expires; the chase ends when one of the two goes down.
+
+    Job_Equip and Job_Rescue carry the generous walking expiry the other working jobs have, for
+    their reason: a weapon or a patient can be a long walk away.
+  -->
+  <JobDef>
+    <defName>Job_AttackMelee</defName>
+    <driver>17</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <trainsSkill>5</trainsSkill>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Flee</defName>
+    <driver>18</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>1200</expiryTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Downed</defName>
+    <driver>19</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Equip</defName>
+    <driver>20</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>6000</expiryTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Rescue</defName>
+    <driver>21</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+  </JobDef>
+
 </Defs>

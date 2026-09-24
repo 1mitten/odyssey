@@ -143,6 +143,13 @@ namespace Odyssey.Tests.PlayMode
         /// one stockpile - seemed to not draw the other one"</i>. Two stockpiles are painted and the
         /// renderer's own chunk batches — what is actually submitted — are read every frame until
         /// both the wash (the ground chunk) and the outline (the store's chunk) are in them.
+        ///
+        /// <para>Counted from the frame the zone is <i>published</i>, not from the drag. The order
+        /// lands on the next tick, and ticks are paced by real time: on the CI runner a frame is
+        /// about a millisecond, so the next tick can be sixteen frames off and the same renderer
+        /// read 3 frames on one run and 11 on the next purely on where the drag fell in the tick
+        /// (2026-09-24, PR #180). The owner's report is about the renderer, so that is what is
+        /// timed; the frames from the drag are logged beside it.</para>
         /// </summary>
         [UnityTest]
         public IEnumerator TwoStockpilesAreBothDrawnPromptly()
@@ -180,12 +187,13 @@ namespace Odyssey.Tests.PlayMode
 
                 var seen = new int[boxes.Length];
                 for (int i = 0; i < seen.Length; i++) seen[i] = -1;
-                int frames = 0;
+                int frames = 0, published = -1;
                 float until = Time.realtimeSinceStartup + 6f;
                 while (Time.realtimeSinceStartup < until && System.Array.IndexOf(seen, -1) >= 0)
                 {
                     yield return null;
                     frames++;
+                    if (published < 0 && boot.World.Views.Current.Tick > tick0) published = frames;
                     for (int b = 0; b < boxes.Length; b++)
                     {
                         if (seen[b] >= 0) continue;
@@ -198,13 +206,19 @@ namespace Odyssey.Tests.PlayMode
                 }
 
                 long ticks = boot.World.Views.Current.Tick - tick0;
-                Debug.Log($"[StockpileDrag] drawn after frames [{string.Join(", ", seen)}], {ticks} ticks, " +
+                Debug.Log($"[StockpileDrag] drawn after frames [{string.Join(", ", seen)}] from the drag, " +
+                          $"published on frame {published}, {ticks} ticks, " +
                           $"{boot.World.Views.Current.Stores.Length} store cells published, " +
-                          $"speed {boot.World.Views.Current.Tick}");
+                          $"tick {boot.World.Views.Current.Tick}");
+                Assert.That(published, Is.GreaterThan(0), "no tick ran after the drag, so nothing was published");
                 for (int b = 0; b < boxes.Length; b++)
-                    Assert.That(seen[b], Is.InRange(0, 10),
+                {
+                    Assert.That(seen[b], Is.Not.EqualTo(-1),
+                        $"stockpile {b + 1} of {boxes.Length} was never in the drawn batches, in six seconds");
+                    Assert.That(seen[b] - published, Is.InRange(0, 10),
                         $"stockpile {b + 1} of {boxes.Length} was not in the drawn batches within ten frames " +
-                        $"(-1 is never, in six seconds)");
+                        $"of being published (frame {seen[b]}, published on {published})");
+                }
             }
             finally
             {

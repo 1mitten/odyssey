@@ -172,6 +172,10 @@ namespace Odyssey.Sim.Pawns
                 // section whose sites they name. A save from before has none, and loads with every
                 // site's parts at nought — which is what every site then had.
                 construction.Parts,
+                // The dead, and what is left of each struck building (design 33 §5). Appended;
+                // absent from an older save, which loads with no corpses and every building whole.
+                pawns.Corpses,
+                pawns.EdificeDamage,
             };
         }
 

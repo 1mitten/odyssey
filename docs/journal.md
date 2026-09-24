@@ -11033,6 +11033,135 @@ drafted colonist should run. That was the first reason to run the game has had s
 rate, `Pawn.UrgencyPerMille`: 2,000 while drafted and 1,000 otherwise. It needs no animation work,
 because the gait blend already draws the run clip in above 2 m/s. No golden moved, since nobody in
 a golden window is drafted. The second ask was a deeper, translucent red for the draft's marks.
+
+## 2026-09-23 — Combat: the contracts, cut once so four lanes can build at once
+
+The owner said "run the combat workflow", and this is its Phase 1: the one step that edits the
+shared spine, so that the four lanes after it (the fight in the simulation, the fight drawn, the
+interface, the weapons) only fill seams. Every handle the line needs was appended in one commit —
+five jobs, the melee skill, the rescue work type, the marauder, the four weapons, three orders — with
+every number from the owner's table in XML, and nothing yet fights. `docs/design/33-combat.md` §5
+says what each seam is for, and `docs/plans/combat-contracts.md` says who owns which file.
+
+**The shape that made it possible is a rule C1 had already set: combat state is hashed only while
+it is set.** Eight fields on the pawn, the corpse registry and the struck-building store all
+contribute nothing to a colony that has never fought, so the goldens moved once, here, for the new
+handles alone — ten job counters, a sixth skill, a sixth priority and four allow-list slots, all
+zeros — and every lane after this can assert them unchanged. The colony probe says so: widened to
+print mood, step progress, the first five skills' experience and passions and the per-job counts,
+it diffs clean against `origin/main` for all three golden colonies.
+
+**One bug came out of the contracts themselves, and it is the kind that only a round trip finds.**
+A pawn's hit points are full at spawn, and "full" depends on the species. The loader builds every
+pawn as a colonist — pool 100 — and only then reads that it is a hog, whose pool is 60. So a reloaded
+hog carried 100 of 60 hit points; that is combat state, which is saved and hashed, and every board
+with an animal on it would have disagreed with itself across a save. `Pawn.Kind`'s setter now keeps
+a whole pawn whole when its kind changes. `AnAnimalReloadedIsWhole` failed with the setter withheld
+(100,000 against 60,000), which is the control.
+
+**The plan's table had one seam in the wrong place.** "One `ICombatRules`" would have been one file
+that the fight and the weapons both edit, so it is two interfaces: what a pawn *holds*
+(`IWeaponRules`, which never rolls) and what a swing *does* (`IMeleeRules`, which never asks where
+the armament came from), with one value, `Armament`, between them. The fight lane can fight with
+fists and teeth from day one, because that is already the whole truth of a colony with no weapons.
+Two smaller moves: the stun is rolled where every other roll is, in the fight's lane; and the debug
+Spawn rows went to the interface lane, because `GiveResource` already places any item.
+
+**The kind was carrying a meaning it could not hold.** Six places in the interface and the renderer
+read "kind is not 0" as "an animal". A marauder is kind 3 and a person. `PawnView` now carries a
+flags byte — person, hostile, drafted, downed, stunned, carried — and every one of those places asks
+it. A view built by hand without flags still reads its kind the old way, so no existing test had to
+change for it.
+
+Recorded rather than fixed: `PawnPurpose.AnimalMind` and `DeconstructRefund` share a salt. It
+predates combat, and fixing it moves a golden.
+
+## 2026-09-23 — Combat: the seam review, before any lane started
+
+A reviewer read the lane briefs against the code with one question — *can each lane do its job from
+the files it owns?* — and found eleven places where the answer was no, or where two lanes would each
+have answered the same question their own way. The spine was fixed for the first kind and the rule
+written down once for the second (design 33 §5j), so no lane has to edit a shared file and none has
+to guess what another decided.
+
+**The design said things the code could not make true.** The marauder is "armed" in the owner's
+table, the Def comment and the wiki, but no lane could arm it: the kind had no weapon field, the
+only spawn path belonged to nobody, and a phantom armament would not have reached the held prop or
+the drop on death, which both read a real `EquippedItem`. The kind now names `Item_Machete` and
+`Spawn` calls `IWeaponRules.ArmOnSpawn`, which is lane D's. Likewise a stun meant "no swing and no
+step", but only the publish read it: movement and the job pipeline, neither in the fight's lane,
+carried on regardless, and the one thing that lane could do — interrupt the job — would have dropped
+a carried load and thrown away a player's order. **A stun is a pause, not an interrupt**, held in
+`JobSystem.TickPawn` and `MovementSystem.Advance`, and the difference was worth deciding once rather
+than by whichever lane got there first.
+
+**Death found two things nothing had needed before.** Until today only animals were despawned, and
+they own no beds, so a dead colonist would have kept hers for ever under an id that no longer
+exists. `Despawn` releases the pawn's beds now — in the despawn rather than the death, so every way
+off the board releases the same things. And a colonist downed during a mental break would have had
+her `Job_Downed` failed and restarted every tick of the break, inflating the hashed counters; going
+down ends the break, in lane A's one apply method.
+
+**The pane was the largest seam, and it was invisible from the briefs.** Every shape decision in
+`HudShell.Inspect` — which avatar, whether needs and skills are synced, whether there is a tab box,
+who gets commands — was keyed on the subject and `IsAnimal`, in a file belonging to the drawing lane.
+A corpse would have worn the colonist badge; a marauder would have shown needs, skills and a Draft
+button the simulation refuses. `InspectModel` now answers four questions (`ShowsFace`,
+`ShowsColonistBody`, `ShowsTabBox`, `AvatarKey`) and the shell reads them, with values that
+reproduce the pane exactly as it was; the interface lane changes them in the fast tier. The corpse
+became a subject and a selection in the same move.
+
+Every spine fix has its negative control seen to fail with the fix withheld (six in the simulation,
+three in the interface). No golden moved; the content fingerprint moved once, for the machete.
+
+## 2026-09-23 — Combat: C2 and C3 integrated, and the prop nobody owned
+
+The four lanes (`claude/combat-fight`, `-weapons`, `-hud`, `-drawn`) were merged on to
+`claude/combat-c2` in the plan's order — simulation first — and the only conflicts were their own
+subsections of design 33, each appended at the end of the same file. That is the contracts step
+paying for itself: four branches built in parallel against one spine and nobody's code touched
+anybody else's. The fast tier was green after every merge.
+
+**What the merge could not see was what lay between the lanes.** Three things did, and one was a
+missing owner rather than a missing wire:
+
+- **The equip click never arrived.** Lane C's model sends `OrderEquip` for an undrafted colonist
+  (the seam review's rule), but lane B's presenter still asked `AnyDrafted` before asking the model,
+  so the rule was true in a test and false at the keyboard. P1 again: who hears a right-click had
+  two owners, the model and a gate upstream of it that still answered in C1's words.
+- **The health bar had two colour ladders.** Lane B coloured it 60/30 %, lane C had written the
+  need bar's 60/40 % for lane B to call. P1, one rule with two owners, caught before anyone saw
+  them disagree at 35 %. The bar asks the model now, and the floating words take their lifetimes
+  from it too.
+- **Nobody drew the weapon.** Lane D put it in the simulation's hand and published it; lane B picked
+  the swing's clip family from it; the brief gave the held prop to no lane at all, and the ground
+  rows the contracts step claimed said "until lane B's catalogue build gives it a prop", which lane
+  B's brief never asked for. So a marauder would have swung a sword clip with an empty fist, and a
+  dropped machete would have been the orange stand-in box. The plan's split listed files, and a
+  thing that lives in no file of its own fell between them. It is one piece of art now — the
+  weapon's ground row, laid flat on the ground and seated under the right hand by measurement.
+
+**Two lane reports were stale by the time they merged**, which is worth knowing about lane
+hand-overs: lane D recorded that `Job_Equip` had no status word, but the contracts step had mapped
+it all along; and lane C said its two Presentation files had never been compiled, which was true
+and turned out not to matter — they compiled first time. The one Unity failure was elsewhere:
+a lane D assertion used an overload only the fast tier's NUnit has, and the editor refused the
+whole test assembly over it.
+
+**Decided rather than left:** `OrderAttack` carries no Ctrl flag. The right-click is the only thing
+that sends it, and the gesture belongs where the gesture is read. `rechooseTicks` went into
+`CombatDef`. A pawn despawned while holding a weapon puts it down.
+
+**One finding for the owner rather than a fix:** the Long soak, rerun with machetes, made nine downs
+and no deaths. Only a blow that crosses −50 % kills, nothing strikes a body on the ground unless
+ordered to, and so an unattended fight never kills anyone. That is the owner's rules working as
+written; whether it is what they meant is a playtest question, and it is in the hand-over as one.
+
+Measured, alone on the machine: EditMode 2,823 / 2,797 / 0 failed, PlayMode 106 / 101 / 0, fast
+1,161 + 795, Long 39. No golden moved and the colony probe is identical to the contracts commit's.
+A fight in view costs 2.29 ms against 2.06 at peace, in one run. The player build boots into a colony
+clean. Design 33 §6E has the rest.
+
 ## 2026-09-22 — Temperature merged with main: the campfire renumbers, and the season becomes reachable
 
 `main` moved twice under PR #164 while it sat in review — the shelf (#158) and floating crops
@@ -11321,3 +11450,33 @@ The content fingerprint and all three goldens were re-taken rather than adopted,
 side's numbers came from the merged code. `GoldenColonyProbe` on the merge and on `origin/main`
 diffs clean on every board. The wiki and label registry were regenerated from the merged CSVs, not
 merged by hand.
+
+## 2026-09-24 — Combat C2 and C3 merged with main, and the verdict
+
+The owner played round three and the spawn and debug-menu changes and called it: *"it seems great.
+Happy to merge in and do more testing later ... have a battle with tons and tons of characters - was
+hovering 3.5ms."* 3.5 ms is inside the 5 ms budget, but it is the RTX 5070 Ti, not the 2022 laptop,
+and the 64-figure animation ceiling is what keeps a crowd cheap to draw. So it is a good number on
+this machine and an open one for the target.
+
+Main had taken power and the Research and Inventory tabs meanwhile: 46 commits, 26 files in
+conflict. **The job table collided again, the other way round from power's own merge.** Power's
+three jobs are on `main`, so they keep 14–16 and combat's five move from 14–18 to 17–21. Nothing
+combat shipped had saved those numbers, so moving them breaks no save. The same applies to the
+intents: combat's three orders and the debug arming now follow power's four.
+
+Two faults were invisible to the fast tier. `SettingsPresenter` called an `Escape` with ten
+arguments, because main added the Inventory and Research panels and combat added the context menu,
+each with its own overload and neither with all ten. Only Presentation's compile found it, so the
+combined overload now has a test. And the textual merge of `ModuleCatalogue.asset` kept both sides'
+rows but dropped main's four `fit*` fields from every one of them. Rebuilding the catalogue in Unity
+put them back; a module-id comparison with both parents then showed nothing was lost. Rebuild a
+serialized asset rather than trust git's merge of it (`docs/lessons.md`).
+
+A third fault was already on `main`. `Odyssey/PowerLine` is found at runtime and was never added to
+the always-included shader list, so the player build guard refuses `main` as it stands. The fix is
+one line, from `ShaderInclusion.Apply`, in its own commit on PR #180.
+
+The fingerprints and all six goldens were re-taken from the merged code, since both sides had moved
+each of them. `GoldenColonyProbe`, reading the first seventeen job defs so the same file runs on
+both sides, gives identical output on `main` 54df119a and on the merge for all three boards.

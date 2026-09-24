@@ -27,7 +27,8 @@ namespace Odyssey.Presentation.Ui
     /// <b>Events</b>: one row per incident the content declares, each fired through the same door
     /// a storyteller will use (design 23 §3), built from the open colony's content when the panel
     /// opens so a second Def appears by existing. <b>Spawn</b>: one row per kind of pawn —
-    /// the colonist and the animals — placed near the camera.</para>
+    /// the colonist, the animals and the marauder — and one per weapon, placed near the camera
+    /// (<see cref="DebugDirector.SpawnRows"/>).</para>
     /// </summary>
     public sealed partial class HudShell
     {
@@ -64,12 +65,8 @@ namespace Odyssey.Presentation.Ui
                 "The frame-time readout. Also the ` key, and kept between sessions",
                 () => _directors?.Settings.SetDeveloperOverlay(!_directors.Settings.DeveloperOverlay));
             _debugCheats.Add(_debugDeveloperRow);
-            _debugCheats.Add(DebugActionRow(DebugDirector.GiveWoodKey, "Adds 50 wood near the camera",
-                () => GiveResource(ItemIndex.Wood)));
-            _debugCheats.Add(DebugActionRow(DebugDirector.GiveStoneKey, "Adds 50 stone near the camera",
-                () => GiveResource(ItemIndex.Stone)));
-            _debugCheats.Add(DebugActionRow(DebugDirector.GiveFoodKey, "Adds 50 meals near the camera",
-                () => GiveResource(ItemIndex.Meal)));
+            // The three grants moved to the Spawn tab's Items heading (design 33 §9i): they put
+            // things on the board, which is what that tab is for.
             _debugCheats.Add(DebugActionRow(DebugDirector.SkipDayKey,
                 "Spends one whole game day of ticks at once (about a fifth of a second). "
                     + "The crop's stage changes arrive at the same hour each press; works while paused",
@@ -102,19 +99,37 @@ namespace Odyssey.Presentation.Ui
                 MarkTrace));
             _debugPanel.Add(_debugCheats);
 
-            // Who can be put on the board (owner, 2026-09-22: a tab of its own rather than three
-            // rows among the grants). One row per kind of pawn, the colonist first.
+            // Who and what can be put on the board (owner, 2026-09-22: a tab of its own rather
+            // than three rows among the grants): the colonist first, the animals, the marauder and
+            // one of each weapon (design 33 §1). The rows and what each sends are
+            // DebugDirector.SpawnRows, held by the fast tier; this only lays them out.
+            // Grouped under a heading each (design 33 §9i; owner, 2026-09-24: "a category for each
+            // type of spawn"), in two columns now the window is wide enough for them: who (colonists,
+            // hostiles, animals) on the left, what (weapons, items) on the right. The headings are
+            // the Keys tab's .settings__section, so nothing new is invented for them.
             _debugSpawn = new VisualElement();
             _debugSpawn.AddToClassList("settings__body");
-            _debugSpawn.Add(DebugActionRow(DebugDirector.SpawnPawnKey,
-                "Adds a colonist near the camera, with no scenario and no starting kit",
-                () => SpawnPawn()));
-            _debugSpawn.Add(DebugActionRow(DebugDirector.SpawnHogKey,
-                "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
-                () => SpawnPawn(PawnKindIndex.MiddenHog)));
-            _debugSpawn.Add(DebugActionRow(DebugDirector.SpawnRatKey,
-                "Adds a duct rat near the camera. It wanders and rests, and climbs anything",
-                () => SpawnPawn(PawnKindIndex.DuctRat)));
+            var spawnColumns = new VisualElement();
+            spawnColumns.AddToClassList("settings__columns");
+            var who = new VisualElement();
+            who.AddToClassList("settings__column");
+            var what = new VisualElement();
+            what.AddToClassList("settings__column");
+            spawnColumns.Add(who);
+            spawnColumns.Add(what);
+            foreach (string group in DebugDirector.SpawnGroups)
+            {
+                VisualElement column = group == DebugDirector.GroupWeaponsKey || group == DebugDirector.GroupItemsKey
+                    ? what : who;
+                column.Add(HudText.Make(Registry.Label(group), HudTextRole.Meta, ussClass: "settings__section"));
+                foreach (DebugDirector.SpawnRow spawn in DebugDirector.SpawnRows)
+                {
+                    if (spawn.Group != group) continue;
+                    DebugDirector.SpawnRow captured = spawn;
+                    column.Add(DebugActionRow(spawn.Key, spawn.Tooltip, () => Spawn(captured)));
+                }
+            }
+            _debugSpawn.Add(spawnColumns);
             _debugPanel.Add(_debugSpawn);
 
             // Filled when the panel opens, from the colony that is open: the content is the
@@ -254,14 +269,18 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// A pawn of a kind near the camera (design 29 §7). The colonist is kind 0, which is what
-        /// the row that predates animals still sends.
+        /// One Spawn row's intent — a pawn of a kind (design 29 §7, design 33 §1) or one weapon —
+        /// aimed at the column the player is looking at. What it sends is the row's own
+        /// (<see cref="DebugDirector.SpawnRow.ToIntent"/>); only the anchor is found here.
         /// </summary>
-        void SpawnPawn(int kind = PawnKindIndex.Colonist)
+        void Spawn(DebugDirector.SpawnRow row)
         {
             var world = _boot!.World;
             if (world == null || _directors == null) return;
-            world.Intents.Submit(new Intent(IntentKind.SpawnPawn, DebugAnchorCell(world), kind));
+            Intent intent = row.ToIntent(DebugAnchorCell(world));
+            // A band of three is three intents at one column; the simulation spreads each onto its
+            // own tile (design 33 §9h).
+            for (int i = 0; i < row.Repeat; i++) world.Intents.Submit(intent);
         }
 
         /// <summary>Fire one incident regardless of its gates (design 23 §3). Lands on the next tick.</summary>
@@ -270,14 +289,6 @@ namespace Odyssey.Presentation.Ui
             var world = _boot!.World;
             if (world == null || _directors == null) return;
             world.Intents.Submit(new Intent(IntentKind.InvokeIncident, default, def));
-        }
-
-        void GiveResource(int itemIndex)
-        {
-            var world = _boot!.World;
-            if (world == null || _directors == null) return;
-            world.Intents.Submit(new Intent(IntentKind.GiveResource, DebugAnchorCell(world),
-                itemIndex, DebugGiveAmount));
         }
 
         /// <summary>
@@ -345,6 +356,5 @@ namespace Odyssey.Presentation.Ui
             return new CellRef(x, z, Mathf.Clamp(layer, 0, world.Size.SizeY - 1));
         }
 
-        const int DebugGiveAmount = 50;
     }
 }

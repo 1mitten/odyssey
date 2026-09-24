@@ -138,6 +138,37 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// The lock-on ring's red (design 33 §7b) is its own colour: far from the draft's deep red
+        /// over the attacker's head and from the Cancel red that is also the hostile marker over
+        /// the very target the ring is drawn under — by the eighty points
+        /// <see cref="NoTwoOrdersLookAlikeOnTheBoard"/> holds every order to — and far from every
+        /// other order's hue too, since a ring can sit in a field of marks.
+        /// </summary>
+        [Test]
+        public void TheAttackRedIsNeitherTheDraftNorTheCancelRed()
+        {
+            static int Distance(HudColour a, HudColour b) =>
+                Math.Abs(a.R - b.R) + Math.Abs(a.G - b.G) + Math.Abs(a.B - b.B);
+
+            HudColour attack = OrderColours.Attack;
+            Assert.That(Distance(attack, OrderColours.Draft), Is.GreaterThanOrEqualTo(80),
+                $"attack {attack.Hex} and the draft {OrderColours.Draft.Hex} are too close to tell apart");
+            Assert.That(Distance(attack, HudTheme.Bad), Is.GreaterThanOrEqualTo(80),
+                $"attack {attack.Hex} and the hostile marker / cancel red {HudTheme.Bad.Hex} are too close to tell apart");
+
+            foreach (DesignateTool tool in new[]
+                     {
+                         DesignateTool.Fell, DesignateTool.Mine, DesignateTool.Deconstruct, DesignateTool.Cancel,
+                         DesignateTool.Build, DesignateTool.GrowZone, DesignateTool.Stockpile,
+                     })
+                Assert.That(Distance(attack, OrderColours.Hue(tool)), Is.GreaterThanOrEqualTo(80),
+                    $"attack {attack.Hex} is too close to {tool}'s {OrderColours.Hue(tool).Hex}");
+
+            // A red: red leads both other channels by a wide margin, so it never reads as pink or orange.
+            Assert.That(attack.R - Math.Max(attack.G, attack.B), Is.GreaterThanOrEqualTo(160), $"{attack.Hex} is not a clear red");
+        }
+
+        /// <summary>
         /// A mark is lighter than the box being dragged. The cursor is following the hand and has
         /// to be found among however many marks are already down; a mark is paint over something
         /// the player is meant to keep looking at.

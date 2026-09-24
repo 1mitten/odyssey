@@ -139,11 +139,11 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="wrap">
 <nav aria-label="Sections"><h2>Sections</h2><ul class="navlist">
 <li><a href="#commodities">Commodities<b>50</b></a></li>
-<li><a href="#items">Items and equipment<b>30</b></a></li>
+<li><a href="#items">Items and equipment<b>34</b></a></li>
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
-<li><a href="#commands">Commands<b>48</b></a></li>
+<li><a href="#commands">Commands<b>49</b></a></li>
 <li><a href="#work">Work and skills<b>42</b></a></li>
-<li><a href="#colonists">Colonists<b>41</b></a></li>
+<li><a href="#colonists">Colonists<b>46</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>42</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>770</b><i>named entries</i></div>
+<div class="stat"><b>804</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>498</b><i>no art yet</i></div>
+<div class="stat m"><b>532</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -472,7 +472,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="items" data-sec="1">
-<h2>Items and equipment <em class="count">30 entries</em></h2>
+<h2>Items and equipment <em class="count">34 entries</em></h2>
 <p class="blurb">Things a colonist carries, wears or fights with, as distinct from the bulk commodities above. A commodity is counted; an item is an object with a quality and a history.</p>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -583,6 +583,30 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Protects the head<span class="need">Needs drawing: a helmet</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.item.bat" data-hay="bat ui.item.bat blunt, and now and then it stuns " data-gap="1">
+<div class="nm">Bat<span class="k">ui.item.bat</span></div>
+<div class="dsc">Blunt, and now and then it stuns</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.item.crowbar" data-hay="crowbar ui.item.crowbar heavier than a bat, slower, and stuns more often " data-gap="1">
+<div class="nm">Crowbar<span class="k">ui.item.crowbar</span></div>
+<div class="dsc">Heavier than a bat, slower, and stuns more often</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.item.machete" data-hay="machete ui.item.machete sharp and quick " data-gap="1">
+<div class="nm">Machete<span class="k">ui.item.machete</span></div>
+<div class="dsc">Sharp and quick</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.item.arcblade" data-hay="arc blade ui.item.arcblade a powered edge. the best thing a colonist can hold " data-gap="1">
+<div class="nm">Arc blade<span class="k">ui.item.arcblade</span></div>
+<div class="dsc">A powered edge. The best thing a colonist can hold</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
 </div>
 <div class="row" id="ui.item.vest" data-hay="vest ui.item.vest torso armour " data-gap="0">
 <div class="nm">Vest<span class="k">ui.item.vest</span></div>
@@ -1171,8 +1195,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="commands" data-sec="1">
-<h2>Commands <em class="count">48 entries</em></h2>
-<p class="blurb">What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein.</p>
+<h2>Commands <em class="count">49 entries</em></h2>
+<p class="blurb">What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein. A right-click on a thing with more than one answer, a weapon today, opens a small menu at the pointer whose rows are these commands; the menu's own words are listed after them.</p>
+<h3 class="nsh">Commands</h3>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
 <div class="row" id="ui.command.draft" data-hay="draft ui.command.draft take direct control " data-gap="0">
@@ -1464,6 +1489,16 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="ms">M3</div>
 </div>
 </div>
+<h3 class="nsh">The context menu</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.menu.cancel" data-hay="cancel ui.menu.cancel close the menu a right-click opened, and order nothing " data-gap="1">
+<div class="nm">Cancel<span class="k">ui.menu.cancel</span></div>
+<div class="dsc">Close the menu a right-click opened, and order nothing</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
+</div>
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="work" data-sec="1">
@@ -1736,7 +1771,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">41 entries</em></h2>
+<h2>Colonists <em class="count">46 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -1794,6 +1829,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Vermin from the ducts and the caverns. Climbs anything</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">AN</div>
+</div>
+<div class="row gap" id="ui.pawn.marauder" data-hay="marauder ui.pawn.marauder armed, alone and hostile. hunts whoever is still standing " data-gap="1">
+<div class="nm">Marauder<span class="k">ui.pawn.marauder</span></div>
+<div class="dsc">Armed, alone and hostile. Hunts whoever is still standing</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
 </div>
 </div>
 <h3 class="nsh">Needs</h3>
@@ -1998,6 +2039,30 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">An animal between legs</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">AN</div>
+</div>
+<div class="row gap" id="ui.status.fighting" data-hay="fighting ui.status.fighting closing on a target and swinging at it " data-gap="1">
+<div class="nm">Fighting<span class="k">ui.status.fighting</span></div>
+<div class="dsc">Closing on a target and swinging at it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.status.fleeing" data-hay="fleeing ui.status.fleeing running from whatever hurt it " data-gap="1">
+<div class="nm">Fleeing<span class="k">ui.status.fleeing</span></div>
+<div class="dsc">Running from whatever hurt it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.status.equipping" data-hay="equipping ui.status.equipping fetching a weapon to hold " data-gap="1">
+<div class="nm">Equipping<span class="k">ui.status.equipping</span></div>
+<div class="dsc">Fetching a weapon to hold</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.status.rescuing" data-hay="rescuing ui.status.rescuing carrying the downed to a bed " data-gap="1">
+<div class="nm">Rescuing<span class="k">ui.status.rescuing</span></div>
+<div class="dsc">Carrying the downed to a bed</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
 </div>
 </div>
 <p class="empty" hidden>No entries in this section match.</p>
@@ -3513,7 +3578,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 770, "gaps": 498};</script>
+<script>window.WIKI={"total": 804, "gaps": 532};</script>
 <script>
 (function(){
   var D = window.WIKI;

@@ -931,7 +931,7 @@ namespace Odyssey.Presentation.Rendering
                 // An animal is drawn only as a figure (design 29): this pass deals every pawn a
                 // colonist's face, and a hog past the figure cap wearing one would be worse than
                 // a hog not drawn. A baked animal pose is a recorded gap, not an oversight.
-                if (pawns[i].Kind != 0) continue;
+                if (pawns[i].IsAnimal) continue;
 
                 // Glide between cells rather than snapping. The simulation is discrete and
                 // integer, which determinism requires; this is a presentation facade over it,
@@ -2576,6 +2576,102 @@ namespace Odyssey.Presentation.Rendering
             DrawCalls++;
             InstancesDrawn++;
         }
+
+        /// <summary>
+        /// A flat ring lying on the ground in the bracket's lit, translucent material — the
+        /// lock-on ring under an attack order's target (design 33 §7b). <paramref name="placement"/>
+        /// carries the drape, the lift and the radius in x and z; the mesh is
+        /// <see cref="PrimitiveMeshes.UnitRing"/>. One submission.
+        /// </summary>
+        public void DrawRing(Matrix4x4 placement, Color colour)
+        {
+            var rp = new RenderParams(BracketMaterial(colour))
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+            if (SubmitToGpu) Graphics.RenderMesh(rp, PrimitiveMeshes.UnitRing, 0, placement);
+            DrawCalls++;
+            InstancesDrawn++;
+        }
+
+        /// <summary>
+        /// One piece of a health bar over a pawn's head (design 33 §8a), held until
+        /// <see cref="FlushBarPieces"/> and bucketed by its ink, so every bar in view goes out as
+        /// one instanced call per ink — the outline, the plate and the fill's colours, at most
+        /// five calls however many pawns wear a bar. The same buckets as the cell plates, kept
+        /// apart because the material differs: a bar piece's opacity is its ink's own alpha, not
+        /// the bracket's 0.62 of it, so the fill can be nearly solid and the plate see-through.
+        /// </summary>
+        public void GatherBarPiece(Color colour, in Matrix4x4 place)
+        {
+            PlateBucket? bucket = null;
+            for (int i = 0; i < _barBucketCount; i++)
+                if (_barBuckets[i]!.Colour == colour) { bucket = _barBuckets[i]; break; }
+
+            if (bucket == null)
+            {
+                if (_barBucketCount == _barBuckets.Length)
+                    System.Array.Resize(ref _barBuckets, _barBuckets.Length == 0 ? 8 : _barBuckets.Length * 2);
+                bucket = _barBuckets[_barBucketCount] ??= new PlateBucket();
+                bucket.Colour = colour;
+                bucket.Count = 0;
+                _barBucketCount++;
+            }
+
+            if (bucket.Count == bucket.Matrices.Length)
+                System.Array.Resize(ref bucket.Matrices, bucket.Matrices.Length * 2);
+            bucket.Matrices[bucket.Count++] = place;
+        }
+
+        /// <summary>
+        /// Draw every bar piece gathered this frame. <b>The order the buckets go out in does not
+        /// matter</b>, and that is the point of the layout: no two pieces of one bar cover each
+        /// other, so however the transparent sort orders the calls the bar looks the same
+        /// (<c>HealthBarLayoutTests.NoTwoPiecesOfABarOverlapAtAnyFraction</c>).
+        /// </summary>
+        public void FlushBarPieces()
+        {
+            for (int i = 0; i < _barBucketCount; i++)
+            {
+                PlateBucket bucket = _barBuckets[i]!;
+                if (bucket.Count == 0) continue;
+
+                var rp = new RenderParams(BarMaterial(bucket.Colour))
+                {
+                    layer = GameObjectLayer,
+                    shadowCastingMode = ShadowCastingMode.Off,
+                    receiveShadows = false,
+                };
+
+                int drawn = 0;
+                while (drawn < bucket.Count)
+                {
+                    int n = Mathf.Min(MaxInstancesPerCall, bucket.Count - drawn);
+                    if (SubmitToGpu)
+                        Graphics.RenderMeshInstanced(rp, PrimitiveMeshes.UnitCube, 0, bucket.Matrices, n, drawn);
+                    drawn += n;
+                    DrawCalls++;
+                    InstancesDrawn += n;
+                }
+
+                bucket.Count = 0;
+            }
+
+            _barBucketCount = 0;
+        }
+
+        /// <summary>
+        /// The bracket's lit, glowing, translucent material with the ink's own opacity: the same
+        /// shader and the same cache, so nothing new has to survive the player build's stripping.
+        /// </summary>
+        Material BarMaterial(Color colour) =>
+            _materials.Get(_model.Library.FallbackMaterial, colour, colour * BracketGlow,
+                ghost: true, alpha: colour.a);
+
+        PlateBucket?[] _barBuckets = System.Array.Empty<PlateBucket?>();
+        int _barBucketCount;
 
         /// <summary>Turned 45 degrees about the vertical, then tipped on to a corner.</summary>
         static readonly Quaternion MarkerTurn = Quaternion.Euler(0f, 45f, 0f) * Quaternion.Euler(35.264f, 0f, 45f);

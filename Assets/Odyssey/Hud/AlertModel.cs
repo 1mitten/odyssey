@@ -220,10 +220,20 @@ namespace Odyssey.Hud
             int breaking = 0;
             int idle = 0;
 
+            // Colonists only (design 33 §5d): these are the colony's alerts, and a marauder or an
+            // animal is neither hungry on the colony's account nor part of whether it is idle. A
+            // marauder's needs never move at all (design 33 §5c). Read from the flags, which a view
+            // built without them derives from the kind as it always did.
+            int colonists = 0;
+            PawnId onlyColonist = default;
+
             var pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length; i++)
             {
                 PawnView pawn = pawns[i];
+                if (!pawn.IsColonist) continue;
+                colonists++;
+                onlyColonist = pawn.Id;
                 int id = pawn.Id.Value;
 
                 if (Latch(_starving, id, pawn.Food, StarveAt, StarveClearAt, ref _latchVersion))
@@ -250,7 +260,7 @@ namespace Odyssey.Hud
             Forget(_starving, snapshot, ref _latchVersion);
             Forget(_breaking, snapshot, ref _latchVersion);
 
-            if (idle > 0 && idle == pawns.Length)
+            if (idle > 0 && idle == colonists)
             {
                 if (_idleSince < 0.0) _idleSince = seconds;
             }
@@ -307,7 +317,7 @@ namespace Odyssey.Hud
 
             if (starving == _wasStarving && breaking == _wasBreaking &&
                 dark == _wasDark && shortW == _wasShortW && dry == _wasDry &&
-                idleStands == _wasIdle && storeStuck == _wasStoreStuck && pawns.Length == _wasColony &&
+                idleStands == _wasIdle && storeStuck == _wasStoreStuck && colonists == _wasColony &&
                 _latchVersion == _wasLatchVersion && _dismissVersion == _wasDismissVersion)
                 return;
 
@@ -318,7 +328,7 @@ namespace Odyssey.Hud
             _wasBreaking = breaking;
             _wasIdle = idleStands;
             _wasStoreStuck = storeStuck;
-            _wasColony = pawns.Length;
+            _wasColony = colonists;
             _wasLatchVersion = _latchVersion;
             _wasDismissVersion = _dismissVersion;
             Rows.Clear();
@@ -408,19 +418,19 @@ namespace Odyssey.Hud
 
             if (idleStands)
             {
-                if (pawns.Length == 1)
+                if (colonists == 1)
                 {
-                    int dismissKey = AlertRow.ComputeDismissKey(IdleKey, pawns[0].Id, default);
+                    int dismissKey = AlertRow.ComputeDismissKey(IdleKey, onlyColonist, default);
                     if (!_dismissed.Contains(dismissKey))
                     {
-                        string name = ColonistNames.Of(snapshot, pawns[0].Id);
+                        string name = ColonistNames.Of(snapshot, onlyColonist);
                         Rows.Add(new AlertRow(
                             IdleKey,
                             name,
                             " is idle",
                             AlertSeverity.Notice,
                             count: 1,
-                            pawn: pawns[0].Id));
+                            pawn: onlyColonist));
                     }
                 }
                 else

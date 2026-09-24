@@ -187,6 +187,18 @@ namespace Odyssey.Presentation.Bootstrap
         AudioDirector? _audio;
         DoorDirector? _doors;
 
+        /// <summary>The dead, drawn (design 33 §5). Built, synced and disposed beside the doors; lane B's to fill.</summary>
+        CorpseDirector? _corpses;
+
+        /// <summary>The one reader of the fight's events (design 33 §5).</summary>
+        readonly CombatFeedback _combatFeedback = new CombatFeedback();
+
+        /// <summary>The fight's floating words on screen, beneath the HUD (design 33 §1). Built with the session.</summary>
+        Ui.CombatFloaterView? _floaterView;
+
+        /// <summary>The dead, for the pick that finds a corpse under the pointer (design 33 §5f).</summary>
+        public CorpseDirector? Corpses => _corpses;
+
         /// <summary>
         /// The title screen's bed. Owned by the root rather than by the session, because it is
         /// the sound of there being no session: it is built once at <see cref="Start"/>, it
@@ -989,7 +1001,21 @@ namespace Odyssey.Presentation.Bootstrap
             if (_model != null)
             {
                 _doors = new DoorDirector(_model, moduleCatalogue, transform, gameObject.layer);
+                _corpses = new CorpseDirector(_model, moduleCatalogue, _figures, transform, gameObject.layer);
             }
+
+            // Which family each weapon swings in (design 33 §5j), read once off the content, so a
+            // figure can pick its clip row from the event's weapon without asking the simulation.
+            if (_figures != null && _pawns != null)
+                _figures.WeaponStyles = CombatPose.StylesOf(_pawns.Content.Items);
+
+            // Which blows cut (design 33 §7d), read once off the same content, for the blood seam.
+            _combatFeedback.BloodSides = CombatFeedback.BloodSidesOf(_pawns?.Content);
+
+            // The fight's floating words, beneath the HUD's own tree (design 33 §1).
+            UnityEngine.UIElements.VisualElement? hudRoot =
+                GetComponent<UnityEngine.UIElements.UIDocument>()?.rootVisualElement;
+            if (hudRoot != null) _floaterView = new Ui.CombatFloaterView(hudRoot);
 
             // The light through the day. It finds the scene's own sun rather than making one,
             // because the scene builder already places it and two directional lights is a
@@ -1401,6 +1427,7 @@ namespace Odyssey.Presentation.Bootstrap
             MarkSection(FrameSection.Actors);
 
             _doors?.Sync(_world.Views.Current, activeLayer, slice, Time.deltaTime, _audio);
+            _corpses?.Sync(_world.Views.Current, activeLayer, slice, Time.deltaTime);
             MarkSection(FrameSection.Doors);
 
             DrawStandingOrders(_world.Views.Current);
@@ -1417,6 +1444,18 @@ namespace Odyssey.Presentation.Bootstrap
             DrawPowerLines(_world.Views.Current, activeLayer);
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             DrawDraftMarks(_world.Views.Current, movePerTick);
+            // The lock-on ring under whoever the selection is attacking (design 33 §7b).
+            DrawLockOnRings(_world.Views.Current, movePerTick, activeLayer, slice);
+            // The fight (design 33 §1): a bar over the hurt and the drafted, the hostile marker,
+            // then the moments since last frame, handed on once each, and the words they float.
+            DrawCombatMarks(_world.Views.Current, movePerTick, activeLayer, slice);
+            _combatFeedback.Floaters.Step(_world.Views.Current.Running ? Time.deltaTime : 0f);
+            _combatFeedback.Consume(_world.Views.Current, _world, _figures, _audio,
+                Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model?.LowestOutdoorLayer ?? int.MaxValue)),
+                slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY),
+                _tickAlpha, ticksPerSecond);
+            _floaterView?.Draw(_combatFeedback.Floaters,
+                cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
@@ -2627,14 +2666,19 @@ namespace Odyssey.Presentation.Bootstrap
         /// being commanded are signal. One walk of the aspects finds them all
         /// (<see cref="OrderModel.CollectDrafted"/>), and the cost is a submission or three per
         /// drafted colonist — it scales with the draft, never with the board.
+        ///
+        /// <para><b>An undrafted colonist sent for a weapon gets the same line</b> (design 33 §7a,
+        /// the context menu's Equip): the simulation publishes the weapon's cell as her order cell,
+        /// the same walk of <c>OrderModel.CollectDrafted</c> finds it, and the line and bracket are
+        /// drawn exactly as a drafted move's — without the diamond, which says "drafted".</para>
         /// </summary>
         void DrawDraftMarks(WorldSnapshot snapshot, int movePerTick)
         {
             if (_renderer == null || _model == null || _world == null) return;
 
-            OrderModel.CollectDrafted(snapshot, _draftMarks);
+            OrderModel.CollectDrafted(snapshot, _draftMarks, _undraftedOrders);
             SoundTheDraft();
-            if (_draftMarks.Count == 0) return;
+            if (_draftMarks.Count == 0 && _undraftedOrders.Count == 0) return;
 
             Color hue = Ui.HudTokens.Convert(OrderColours.Draft.WithAlpha(OrderColours.DraftAlpha));
             Color line = Ui.HudTokens.Convert(OrderColours.Draft.WithAlpha(OrderColours.DraftAlpha * 0.75f));
@@ -2650,11 +2694,28 @@ namespace Odyssey.Presentation.Bootstrap
                 _renderer.DrawMarker(feet + Vector3.up * (colonistCursor.y + DraftMarkerLift), DraftMarkerSize, hue);
 
                 if (mark.OrderCell < 0 || selection == null || !IsSelected(selection, pawn.Id)) continue;
-                CellRef dest = _world.Size.FromIndex(mark.OrderCell);
-                Vector3 to = GroundRelief.Drape(CellMetrics.FloorCentre(dest)).GetPosition() + Vector3.up * 0.12f;
-                _renderer.DrawSegment(feet + Vector3.up * 0.12f, to, DraftLineThickness, line);
-                _renderer.DrawFloorBracket(dest, hue);
+                DrawOrderLine(feet, mark.OrderCell, hue, line);
             }
+
+            for (int i = 0; i < _undraftedOrders.Count; i++)
+            {
+                OrderModel.DraftedMark order = _undraftedOrders[i];
+                if (selection == null || !IsSelected(selection, order.Pawn)) continue;
+                if (!snapshot.TryGetPawn(order.Pawn, out PawnView pawn)) continue;
+
+                if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+                DrawOrderLine(feet, order.OrderCell, hue, line);
+            }
+        }
+
+        /// <summary>The order line from a colonist's feet to the cell she was sent to, and a bracket on it.</summary>
+        void DrawOrderLine(Vector3 feet, int orderCell, Color bracket, Color line)
+        {
+            CellRef dest = _world!.Size.FromIndex(orderCell);
+            Vector3 to = GroundRelief.Drape(CellMetrics.FloorCentre(dest)).GetPosition() + Vector3.up * 0.12f;
+            _renderer!.DrawSegment(feet + Vector3.up * 0.12f, to, DraftLineThickness, line);
+            _renderer.DrawFloorBracket(dest, bracket);
         }
 
         /// <summary>
@@ -2682,6 +2743,186 @@ namespace Odyssey.Presentation.Bootstrap
             if (fresh && !first) _audio?.PlayOneShot(SoundIds.Draft, Vector3.zero);
         }
 
+        /// <summary>
+        /// The fight's marks over the pawns (design 33 §1): a health bar where
+        /// <see cref="CombatFeedbackModel.HealthBar"/> owes one — the hurt, the downed and the
+        /// drafted — and the red marker over a hostile. What is owed is the model's, the bar's
+        /// pieces are <see cref="HealthBarLayout"/>'s and where they stand is
+        /// <see cref="CombatMarks"/>'. The bars' pieces are gathered by ink and go out together at
+        /// the end, one instanced call per ink (at most five, whatever the number of bars); the
+        /// hostile marker is one submission each. A walk of the pawns on the drawn layers: it
+        /// scales with the pawns in view, never with the board, and allocates nothing.
+        ///
+        /// <para><b>The bar faces the camera and is laid as pieces that never overlap</b> (design
+        /// 33 §8a). It was a translucent fill box inside a translucent track box, and the
+        /// transparent sort decided which covered the other — a tie on every frame of a full bar,
+        /// which is what the owner saw flicker.</para>
+        /// </summary>
+        void DrawCombatMarks(WorldSnapshot snapshot, int movePerTick, int activeLayer, SliceSettings slice)
+        {
+            if (_renderer == null || _model == null) return;
+
+            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model.LowestOutdoorLayer));
+            int highest = slice.HighestVisibleLayer(activeLayer, snapshot.Size.SizeY);
+            Quaternion facing = cameraRig != null ? cameraRig.transform.rotation : Quaternion.identity;
+            Color outline = Ui.HudTokens.Convert(CombatFeedbackModel.HealthBarOutline);
+            Color plate = Ui.HudTokens.Convert(CombatFeedbackModel.HealthBarPlate);
+            Color hostileInk = Ui.HudTokens.Convert(CombatMarks.HostileInk);
+
+            var pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                PawnView pawn = pawns[i];
+                if (pawn.Cell.Y < lowest || pawn.Cell.Y > highest) continue;
+
+                bool bar = CombatFeedbackModel.HealthBar(snapshot, in pawn, out int hp, out int hpMax);
+                bool hostile = CombatFeedbackModel.HostileMarker(in pawn);
+                if (!bar && !hostile) continue;
+
+                if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+
+                // The top of the pawn as the cursor has it: the colonist's box, an animal's own,
+                // and a body on the ground much lower.
+                float top = colonistCursor.y;
+                if (pawn.IsAnimal)
+                    top = _figures != null && _figures.TryGetAnimalBox(pawn.Id, out _, out Vector3 box) ? box.y : 1.0f;
+                if (pawn.IsDowned) top = CombatMarks.DownedTop;
+
+                if (bar)
+                {
+                    Vector3 centre = feet + Vector3.up * (top + CombatMarks.BarLift);
+                    Color fill = Ui.HudTokens.Convert(HealthBarLayout.InkOf(HealthBarInk.Fill,
+                        CombatFeedbackModel.HealthBarColour(hp, hpMax)));
+                    int pieces = HealthBarLayout.Pieces(CombatMarks.Fraction(hp, hpMax), _barPieces);
+                    for (int p = 0; p < pieces; p++)
+                    {
+                        HealthBarInk ink = _barPieces[p].Ink;
+                        Color colour = ink == HealthBarInk.Fill ? fill : ink == HealthBarInk.Plate ? plate : outline;
+                        _renderer.GatherBarPiece(colour, CombatMarks.Place(in _barPieces[p], centre, facing));
+                    }
+                }
+
+                if (hostile)
+                    _renderer.DrawMarker(feet + Vector3.up * (top + DraftMarkerLift), DraftMarkerSize, hostileInk);
+            }
+
+            _renderer.FlushBarPieces();
+        }
+
+        /// <summary>One bar's pieces, reused for every bar every frame.</summary>
+        readonly HealthBarPiece[] _barPieces = new HealthBarPiece[HealthBarLayout.MaxPieces];
+
+        /// <summary>
+        /// The lock-on ring (design 33 §7b; owner, 2026-09-23: <i>"paints a red transparent circle
+        /// quickly around the selected enemy to indicate that target"</i>): a flat red ring under
+        /// every pawn a selected, drafted colonist is attacking, snapping in from 1.6 times its
+        /// footprint on the frame the order is published. Which targets and how far through the
+        /// animation are <see cref="LockOnRings"/>' — fast-tier tested — and this only finds where
+        /// each target stands and draws. <b>Read off the frame, not the click</b>: a refused order
+        /// publishes no target and draws nothing.
+        ///
+        /// <para>The ring lies <b>draped</b> on the ground under the feet — the relief's tilt from
+        /// <see cref="GroundRelief.Drape"/>, the height from the drawn figure, which is lifted on
+        /// to the same ground — so it neither floats on a slope nor cuts into one. A target that
+        /// dies leaves the frame, so the ring's last place is remembered for its fade. A target
+        /// on a layer the slice does not draw draws no ring, the health bars' rule.</para>
+        ///
+        /// <para>One submission per ring, and at most one ring per target: it scales with the
+        /// fight the selection is in, never with the board. Its opacity is quantised
+        /// (<see cref="LockOnRing.Quantise"/>), so the animation reuses a bounded set of cached
+        /// materials instead of minting one per frame.</para>
+        /// </summary>
+        void DrawLockOnRings(WorldSnapshot snapshot, int movePerTick, int activeLayer, SliceSettings slice)
+        {
+            if (_renderer == null || _model == null) return;
+
+            SelectionDirector? selection = Directors?.Selection;
+            IReadOnlyList<PawnId> selected = selection != null ? selection.Pawns : Array.Empty<PawnId>();
+            _lockOn.Update(snapshot, selected, Time.unscaledTime, _world);
+
+            IReadOnlyList<LockOnRings.Ring> rings = _lockOn.Rings;
+            if (rings.Count == 0)
+            {
+                _ringPlaces.Clear();
+                return;
+            }
+
+            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model.LowestOutdoorLayer));
+            int highest = slice.HighestVisibleLayer(activeLayer, snapshot.Size.SizeY);
+
+            for (int i = 0; i < rings.Count; i++)
+            {
+                LockOnRings.Ring ring = rings[i];
+                if (snapshot.TryGetPawn(ring.Target, out PawnView pawn))
+                    _ringPlaces[ring.Target.Value] = RingPlaceOf(in pawn, movePerTick);
+                if (!_ringPlaces.TryGetValue(ring.Target.Value, out RingPlace place)) continue;
+                if (place.Layer < lowest || place.Layer > highest || ring.Alpha <= 0f) continue;
+
+                float radius = place.Radius * ring.Scale;
+                Matrix4x4 at = GroundRelief.Drape(new Vector3(place.Centre.x, 0f, place.Centre.z));
+                at.m13 = place.Centre.y + LockOnRingLift;
+                Color colour = Ui.HudTokens.Convert(OrderColours.Attack.WithAlpha(ring.Alpha));
+                _renderer.DrawRing(at * Matrix4x4.Scale(new Vector3(radius, 1f, radius)), colour);
+            }
+
+            // Forget the places of targets whose rings have gone. The scratch list is reused.
+            if (_ringPlaces.Count <= rings.Count) return;
+            _ringPlacesGone.Clear();
+            foreach (int target in _ringPlaces.Keys)
+            {
+                bool live = false;
+                for (int i = 0; i < rings.Count && !live; i++) live = rings[i].Target.Value == target;
+                if (!live) _ringPlacesGone.Add(target);
+            }
+            for (int i = 0; i < _ringPlacesGone.Count; i++) _ringPlaces.Remove(_ringPlacesGone[i]);
+        }
+
+        /// <summary>
+        /// Where a ring stands under a pawn, and how wide it is at rest: an animal's own drawn box
+        /// (<see cref="PawnFigureDirector.TryGetAnimalBox"/>) centred where the box is, a person
+        /// the colonist cursor's box at the feet, and a person lying down half a body's length.
+        /// </summary>
+        RingPlace RingPlaceOf(in PawnView pawn, int movePerTick)
+        {
+            if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+
+            if (pawn.IsAnimal && _figures != null
+                && _figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 box, out Vector3 size))
+            {
+                Vector3 middle = box.GetPosition();
+                return new RingPlace(new Vector3(middle.x, feet.y, middle.z),
+                    LockOnRing.FootRadius(size.x, size.z), pawn.Cell.Y);
+            }
+
+            float radius = pawn.IsDowned && pawn.IsPerson
+                ? LockOnRing.DownedRadius
+                : LockOnRing.FootRadius(colonistCursor.x, colonistCursor.z);
+            return new RingPlace(feet, radius, pawn.Cell.Y);
+        }
+
+        readonly struct RingPlace
+        {
+            public readonly Vector3 Centre;
+            public readonly float Radius;
+            public readonly int Layer;
+
+            public RingPlace(Vector3 centre, float radius, int layer)
+            {
+                Centre = centre;
+                Radius = radius;
+                Layer = layer;
+            }
+        }
+
+        readonly LockOnRings _lockOn = new LockOnRings();
+        readonly Dictionary<int, RingPlace> _ringPlaces = new Dictionary<int, RingPlace>();
+        readonly List<int> _ringPlacesGone = new List<int>();
+
+        /// <summary>How far above the ground the ring lies, in metres: clear of the ground mesh, under a boot.</summary>
+        const float LockOnRingLift = 0.02f;
+
         // Who was drafted last frame, and in which world: the draft sound's memory.
         readonly HashSet<int> _draftedLastFrame = new HashSet<int>();
         object? _draftSoundWorld;
@@ -2695,6 +2936,7 @@ namespace Odyssey.Presentation.Bootstrap
 
         // Scratch for DrawDraftMarks, refilled every frame.
         readonly List<OrderModel.DraftedMark> _draftMarks = new List<OrderModel.DraftedMark>();
+        readonly List<OrderModel.DraftedMark> _undraftedOrders = new List<OrderModel.DraftedMark>();
 
         /// <summary>How far above the cursor box's top the drafted diamond floats, and how big it is, in metres.</summary>
         const float DraftMarkerLift = 0.35f, DraftMarkerSize = 0.28f;
@@ -2723,7 +2965,7 @@ namespace Odyssey.Presentation.Bootstrap
                     // An animal is bracketed as its own drawn box, turned the way it faces, with
                     // the item bracket's margin (owner, 2026-09-22: the cell-sized column round a
                     // hog highlighted the whole tile). A colonist keeps the one fixed box below.
-                    if (pawn.Kind != 0 && _figures != null
+                    if (pawn.IsAnimal && _figures != null
                         && _figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 place, out Vector3 box))
                     {
                         _renderer.DrawSelectionBracket(place, box + Vector3.one * ItemCursorMargin, strength);
@@ -2738,6 +2980,14 @@ namespace Odyssey.Presentation.Bootstrap
                     _renderer.DrawSelectionBracket(
                         feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, strength);
                 }
+                return;
+            }
+
+            // A corpse is bracketed as the body lying there (design 33 §5f), not as its cell: it
+            // is a person's length along the ground and knee high.
+            if (_corpses != null && _corpses.TryBracket(selection, out Matrix4x4 corpsePlace, out Vector3 corpseBox))
+            {
+                _renderer.DrawSelectionBracket(corpsePlace, corpseBox, colour);
                 return;
             }
 
@@ -3379,8 +3629,16 @@ namespace Odyssey.Presentation.Bootstrap
             }
             _audio?.Dispose();
             _daylight?.Dispose();
+            // The corpses before the figures: a body still falling hands its lent figure back as
+            // it goes, and after the figures that indexed a cleared list and threw out of the
+            // teardown, which a pause on a death and a load reached (review, 2026-09-23).
+            _corpses?.Dispose();
             _figures?.Dispose();
             _doors?.Dispose();
+            _floaterView?.Dispose();
+            _combatFeedback.Floaters.Clear();
+            _combatFeedback.Blood.Clear();
+            _combatFeedback.Sounds.Clear();
 
             // The pictures go with the materials that painted them — a portrait outlives a colony
             // but not the materials it was rendered through, and a cached texture whose shader is
@@ -3408,6 +3666,8 @@ namespace Odyssey.Presentation.Bootstrap
             _daylight = null;
             _figures = null;
             _doors = null;
+            _corpses = null;
+            _floaterView = null;
             _colonistMaterials = null;
             _renderer = null;
             _actorMaterial = null;

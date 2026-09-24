@@ -48,7 +48,11 @@ namespace Odyssey.Tests.Sim
         {
             ColonyWorld colony = ColonyWorld.Build(Tall, seed: 6u, Colony(1));
             int before = colony.Pawns.Pawns.Count;
-            CellRef standing = Tall.FromIndex(colony.Pawns.Pawns.All[0].Cell);
+            // Three columns over from the colonist, not her own: a spawn onto a tile somebody
+            // already stands on is spread to the nearest free one (design 33 §9h), and this test is
+            // about the fall down the column, not about the spread.
+            CellRef colonist = Tall.FromIndex(colony.Pawns.Pawns.All[0].Cell);
+            CellRef standing = new CellRef(colonist.X + 3, colonist.Z, colonist.Y);
             var inTheAir = new CellRef(standing.X, standing.Z, Tall.SizeY - 1);
             Assert.That(colony.Grid.IsWalkable(Tall.Index(inTheAir)), Is.False,
                 "the fixture no longer puts air above the colonist, so this proves nothing");

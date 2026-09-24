@@ -122,10 +122,13 @@ namespace Odyssey.Tests.Sim
             // up sits with deconstructing, for deconstruct's reason. Refuelling leads hauling,
             // because a generator run dry darkens a net and a log in the wrong place darkens
             // nothing (a-07 §3 records the reference's generators running dry while pawns tidied).
+            // Rescue leads everything (design 33 §5, C4): it is the one emergency giver, and an
+            // emergency is scanned ahead of every ordinary giver at the same priority, whatever the
+            // work types' order says. A colonist bleeding out on the grass outranks the wall.
             var names = Shipped().Givers.Select(g => g.Name).ToArray();
             Assert.That(names, Is.EqualTo(new[]
             {
-                "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
+                "Rescue", "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
                 "Harvest", "Sow", "Fell", "Mine", "Refuel", "Haul",
             }));
         }
