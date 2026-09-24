@@ -401,6 +401,12 @@ namespace Odyssey.Tests.Sim
             int bedHandle = colony.Grid.Edifice[bed];
             Assert.That(BuildingTargets.TryStanding(colony.Pawns, bedHandle, out _), Is.True, "the control: a bed is a target");
 
+            // A marauder that came for nothing (design 33 §17): with nobody standing and only a bed,
+            // a looter would carry off the scenario's meals and be gone before the wall went up.
+            // This test is about the bed, so what it came for is set aside, in this colony's own
+            // content record and nowhere else.
+            colony.Pawns.Content.KindMotive[PawnKindIndex.Marauder] = Motive.None;
+
             Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Size.Index(at.X, at.Z, at.Y));
             Down(colony, marauder, colonist);
             for (int t = 0; t < 600; t++)

@@ -347,6 +347,8 @@ namespace Odyssey.Sim.Pawns
             new DownedJobDriver(),
             new EquipJobDriver(),
             new RescueJobDriver(),
+            // A marauder carrying something off the board (design 33 §17), JobHandle 22.
+            new StealJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------

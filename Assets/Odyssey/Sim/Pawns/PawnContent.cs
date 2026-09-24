@@ -171,6 +171,7 @@ namespace Odyssey.Sim.Pawns
         public const int Downed = JobHandle.Downed;
         public const int Equip = JobHandle.Equip;
         public const int Rescue = JobHandle.Rescue;
+        public const int Steal = JobHandle.Steal;
         public const int Count = JobHandle.Count;
     }
 
@@ -203,6 +204,31 @@ namespace Odyssey.Sim.Pawns
         Colony = 0,
         Wild = 1,
         Hostile = 2,
+    }
+
+    /// <summary>
+    /// What a hostile came for, once there is nobody left standing to fight and nothing left to
+    /// break (design 33 §17; the owner, 2026-09-24: <i>"It will thieve items or kidnap people
+    /// depending on their motivation creating a negative event (but they could be rescued later) -
+    /// seam this later but for now - thieve items"</i>). On the kind, as its weapon and its way of
+    /// walking are. <b>Only <see cref="Loot"/> is acted on</b>: <see cref="Kidnap"/> does exactly
+    /// what <see cref="Loot"/> does today, and <c>TheftTests.AKidnapperStealsAsALooterDoes</c>
+    /// says so. Appended, never inserted: a content name, and the day a motive is rolled per pawn
+    /// it is saved.
+    /// </summary>
+    public enum Motive : byte
+    {
+        /// <summary>Came for nothing but the fight: with nobody to fight and nothing to break, it idles. Every kind but the marauder.</summary>
+        None = 0,
+
+        /// <summary>Carries off the nearest stack it can lift and leaves the board with it.</summary>
+        Loot = 1,
+
+        /// <summary>
+        /// Carries off a downed colonist, for the colony to get back later. <b>The seam, not built</b>:
+        /// today it loots, exactly as <see cref="Loot"/> does (design 33 §17f).
+        /// </summary>
+        Kidnap = 2,
     }
 
     /// <summary>A job names a driver; the driver runs toils. This is the naming half.</summary>
@@ -779,6 +805,13 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public string traverseMode = string.Empty;
 
+        /// <summary>
+        /// What a hostile of this kind came for (design 33 §17): <see cref="Motive.Loot"/> for the
+        /// marauder, <see cref="Motive.None"/> for everybody else. Resolved once into
+        /// <see cref="PawnContent.KindMotive"/>; read through <see cref="PawnContent.MotiveOf"/>.
+        /// </summary>
+        public Motive motive = Motive.None;
+
         public int startingMood = 600;
         public int[] startingNeeds = { 800, 800, 800 };
 
@@ -1067,6 +1100,17 @@ namespace Odyssey.Sim.Pawns
             (uint)kind < (uint)KindMode.Length ? KindMode[kind] : SpeciesOf(kind).traverseMode;
 
         /// <summary>
+        /// What each kind came for (<see cref="PawnKindDef.motive"/>), copied out of the Defs into
+        /// this record's own array, so a test that wants a kidnapper sets it here and never writes
+        /// through a Def every other record shares. Read through <see cref="MotiveOf"/>.
+        /// </summary>
+        public Motive[] KindMotive = System.Array.Empty<Motive>();
+
+        /// <summary>What a pawn of this kind came for (design 33 §17) — <see cref="Motive.None"/> for a content set with no table.</summary>
+        public Motive MotiveOf(int kind) =>
+            (uint)kind < (uint)KindMotive.Length ? KindMotive[kind] : Motive.None;
+
+        /// <summary>
         /// The one species a content set built in code has: a person. Content from Defs always
         /// carries a table and never reaches this.
         /// </summary>
@@ -1234,7 +1278,9 @@ namespace Odyssey.Sim.Pawns
                 // Power (design 32), appended for the same reason.
                 "Job_LayConduit", "Job_RemoveConduit", "Job_Refuel",
                 // The combat line, claimed together by its contracts step (design 33 §5).
-                "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue");
+                "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue",
+                // A marauder carrying something off the board (design 33 §17).
+                "Job_Steal");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",
@@ -1318,6 +1364,10 @@ namespace Odyssey.Sim.Pawns
                         $"PawnKindDef '{content.Kinds[k].defName}' names traverse mode '{wanted}', which is not one.");
                 content.KindMode[k] = mode;
             }
+
+            // What each kind came for (design 33 §17), into the record's own array.
+            content.KindMotive = new Motive[content.Kinds.Length];
+            for (int k = 0; k < content.Kinds.Length; k++) content.KindMotive[k] = content.Kinds[k].motive;
 
             if (!content.SpeciesOf(0).person)
                 throw new DefLoadException("kind 0 must be a person: it is what every pawn from before the kind table reads as.");

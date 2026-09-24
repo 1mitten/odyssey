@@ -145,6 +145,11 @@
          "do what you recommend"). Ladders, stairs, the hop and the wade as a colonist, but a
          closed door is a wall: with the colonists behind one, it breaks the door down. -->
     <traverseMode>Marauder</traverseMode>
+    <!-- What it came for, once nobody is left standing to fight and nothing is left to break
+         (design 33 section 17; owner, 2026-09-24: "thieve items or kidnap people depending on
+         their motivation ... for now - thieve items"). Loot carries the nearest stack off the
+         board; Kidnap is the seam and does exactly what Loot does today. -->
+    <motive>Loot</motive>
   </PawnKindDef>
 
 </Defs>

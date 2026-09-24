@@ -27,7 +27,11 @@ namespace Odyssey.Tests.Sim.Events
         // 2026-09-23, power (design 32 §14): Incident_ScrapDrop appended at index 1 — the supply
         // drop's own worker with scrap metal for cargo, fifteen to thirty, weight 60, the supply
         // drop's gates otherwise. The owner's second source of scrap metal beside the wreckage.
-        const ulong ContentFingerprint = 15479437417230274748UL;
+        //
+        // 2026-09-24, marauders stealing (design 33 §17): Incident_Theft (Bad) and
+        // Incident_MarauderLeft (Neutral) appended at 2 and 3, both naming the Recorded worker —
+        // written down by the world when a marauder leaves the board, never fired. Default gates.
+        const ulong ContentFingerprint = 17580740474630100120UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

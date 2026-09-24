@@ -240,7 +240,13 @@ namespace Odyssey.Tests.Sim
         // PawnContent the resolved KindMode table. No golden moved: no golden has a marauder, and
         // every other kind resolves to its species' mode exactly as before. The value below is the
         // two together, measured on the merge rather than taken from either side.
-        const ulong ContentFingerprint = 6953925138484699291UL;
+        //
+        // Moved a twenty-fifth time, deliberately, 2026-09-24, by marauders stealing (design 33
+        // §17): Job_Steal appended at 22, PawnKindDef gained motive (None everywhere but
+        // PawnKind_Marauder, Loot), and PawnContent the KindMotive table. No golden moved: no
+        // golden has a marauder, and the job system hashes a job appended after the combat line's
+        // only once it has run (JobSystem.HashedAlways).
+        const ulong ContentFingerprint = 12926174003015880195UL;
 
 
         [Test]

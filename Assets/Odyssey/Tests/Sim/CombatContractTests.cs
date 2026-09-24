@@ -72,7 +72,9 @@ namespace Odyssey.Tests.Sim
             // until the merge with main put power's three jobs first; nothing combat shipped had saved them.
             Assert.That(new[] { JobHandle.AttackMelee, JobHandle.Flee, JobHandle.Downed, JobHandle.Equip, JobHandle.Rescue },
                 Is.EqualTo(new[] { 17, 18, 19, 20, 21 }));
-            Assert.That(JobHandle.Count, Is.EqualTo(22));
+            // One more after them since design 33 §17: the thief's, appended.
+            Assert.That(JobHandle.Steal, Is.EqualTo(22));
+            Assert.That(JobHandle.Count, Is.EqualTo(23));
             Assert.That(new[] { ItemHandle.Bat, ItemHandle.Crowbar, ItemHandle.Machete, ItemHandle.ArcBlade },
                 Is.EqualTo(new[] { 7, 8, 9, 10 }));
             Assert.That(ItemHandle.Count, Is.EqualTo(11));
@@ -97,7 +99,7 @@ namespace Odyssey.Tests.Sim
         {
             PawnContent content = ContentPack.Pawns();
             Assert.That(content.Jobs.Skip(17).Select(j => j.defName), Is.EqualTo(new[]
-                { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue" }));
+                { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue", "Job_Steal" }));
             for (int i = 0; i < content.Jobs.Length; i++)
                 Assert.That(content.Jobs[i].driver, Is.EqualTo(i), content.Jobs[i].defName + " names another driver");
             Assert.That(content.Jobs[JobIndex.AttackMelee].trainsSkill, Is.EqualTo(SkillIndex.Melee));
@@ -122,6 +124,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(pawn.DriverPool[JobIndex.Downed], Is.TypeOf<DownedJobDriver>());
             Assert.That(pawn.DriverPool[JobIndex.Equip], Is.TypeOf<EquipJobDriver>());
             Assert.That(pawn.DriverPool[JobIndex.Rescue], Is.TypeOf<RescueJobDriver>());
+            Assert.That(pawn.DriverPool[JobIndex.Steal], Is.TypeOf<StealJobDriver>());
         }
 
         /// <summary>

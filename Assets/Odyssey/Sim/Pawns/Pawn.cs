@@ -771,6 +771,12 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public TraverseMode OwnMode => Content.ModeOf(Kind);
 
+        /// <summary>
+        /// What this pawn came for, when there is nobody left to fight and nothing left to break
+        /// (design 33 §17): its kind's. <see cref="Motive.None"/> for a colonist and an animal.
+        /// </summary>
+        public Motive Motive => Content.MotiveOf(Kind);
+
         /// <summary>Whether the pawn will consider work at all this think.</summary>
         public virtual bool WillWork() => !IsBroken && !Asleep;
 

@@ -94,7 +94,9 @@ namespace Odyssey.Sim.Pawns
     /// is not hunted. <b>With no colonist to reach</b> — walled out, or every one down — it attacks
     /// the nearest colony building it can reach (<see cref="BuildingTargets.TryNearestColonyTarget"/>),
     /// unforced, so it thinks again every <see cref="CombatDef.rechooseTicks"/> and a colonist who
-    /// can be reached comes first again. With neither it falls through to idling. The attack it starts re-chooses after
+    /// can be reached comes first again. <b>With neither</b>, a marauder that came for something
+    /// (<see cref="Pawn.Motive"/>) steals it and leaves the board (<see cref="Theft.TryFill"/>,
+    /// design 33 §17); one that cannot reach an edge falls through to idling. The attack it starts re-chooses after
     /// <see cref="CombatDef.rechooseTicks"/>, so a nearer colonist is noticed. <b>A colonist who
     /// struck it</b> comes first while <see cref="Pawn.RetaliateAgainst"/> holds and she is
     /// standing and reachable (<c>CombatSystem.React</c> records her), so the hitter is fought
@@ -112,11 +114,41 @@ namespace Odyssey.Sim.Pawns
             if (pawn.Downed) return false;
             TraverseMode mode = pawn.OwnMode;
 
+            Pawn? foe = ColonistToFight(pawn, ctx, mode);
+            if (foe != null) return AttackJob.Fill(pawn, foe, job, mode);
+
+            // Nobody to reach: the base (design 33 §14b). Only here, so a building never draws a
+            // marauder from a colonist it could get to.
+            if (BuildingTargets.TryNearestColonyTarget(ctx, pawn, mode, out BuildingTarget building))
+                return AttackJob.FillBuilding(ctx, pawn, building, job, mode);
+
+            // Nobody to fight and nothing to break: what it came for (design 33 §17). Last, so a
+            // stack of meals never draws a marauder from a colonist or a wall.
+            return Theft.TryFill(ctx, pawn, mode, job);
+        }
+
+        /// <summary>
+        /// Is there anything for <paramref name="pawn"/> to fight — a colonist it can reach, or a
+        /// colony building it may break? The first two questions of <see cref="TryGiveJob"/>, asked
+        /// without filling a job or naming a target: what a thief asks as it goes
+        /// (<see cref="StealJobDriver"/>), so the theft gives way to the fight by the same rule the
+        /// think would apply.
+        /// </summary>
+        public static bool HasAFight(Pawn pawn, PawnContext ctx, TraverseMode mode) =>
+            ColonistToFight(pawn, ctx, mode) != null
+            || BuildingTargets.TryNearestColonyTarget(ctx, pawn, mode, out _);
+
+        /// <summary>
+        /// The colonist the hunt takes: the one who struck it while it remembers her and she stands
+        /// and can be reached, else the nearest standing colonist it can reach, or null.
+        /// </summary>
+        static Pawn? ColonistToFight(Pawn pawn, PawnContext ctx, TraverseMode mode)
+        {
             if (pawn.RetaliateAgainst != 0 && ctx.CurrentTick < pawn.RetaliateUntilTick)
             {
                 Pawn? foe = ctx.Pawns.Get(new PawnId(pawn.RetaliateAgainst));
                 if (foe != null && foe.IsColonist && Melee.IsStanding(foe) && ctx.Reachable(pawn, foe.Cell, mode))
-                    return AttackJob.Fill(pawn, foe, job, mode);
+                    return foe;
             }
 
             Pawn? best = null;
@@ -132,13 +164,7 @@ namespace Odyssey.Sim.Pawns
                 best = other;
                 bestDistance = distance;
             }
-
-            if (best != null) return AttackJob.Fill(pawn, best, job, mode);
-
-            // Nobody to reach: the base (design 33 §14b). Only here, so a building never draws a
-            // marauder from a colonist it could get to.
-            return BuildingTargets.TryNearestColonyTarget(ctx, pawn, mode, out BuildingTarget building)
-                && AttackJob.FillBuilding(ctx, pawn, building, job, mode);
+            return best;
         }
     }
 

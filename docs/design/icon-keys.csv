@@ -114,6 +114,7 @@ ui.status.fighting,Fighting,ui.status,CB,Closing on a target and swinging at it
 ui.status.fleeing,Fleeing,ui.status,CB,Running from whatever hurt it
 ui.status.equipping,Equipping,ui.status,CB,Fetching a weapon to hold
 ui.status.rescuing,Rescuing,ui.status,CB,Carrying the downed to a bed
+ui.status.stealing,Stealing,ui.status,CB,"A marauder carrying something off the board"
 ui.combat.miss,Miss,ui.combat,CB,A swing that did not land
 ui.combat.dodge,Dodge,ui.combat,CB,A swing the target stepped out of
 ui.combat.stunned,Stunned,ui.combat,CB,"Knocked senseless by a blunt blow, for a moment"
@@ -352,6 +353,8 @@ ui.bulletin.animaljoin,Animal joined,ui.bulletin,M2,A tame beast has attached it
 ui.bulletin.crash,Crash,ui.bulletin,M2,Something has come down nearby
 ui.bulletin.supplydrop,Supply drop,ui.bulletin,M3,"Something has fallen from the sky. Fetch it before the weather does"
 ui.bulletin.birth,Birth,ui.bulletin,M2,A tame animal has given birth
+ui.bulletin.theft,Theft,ui.bulletin,CB,"A marauder carried something off the board"
+ui.bulletin.marauderleft,Marauder left,ui.bulletin,CB,"A marauder walked off the board with nothing"
 ui.weather.clear,Clear,ui.weather,M1,Open sky
 ui.weather.cloudy,Cloudy,ui.weather,M1,"Less light, no other effect"
 ui.weather.rain,Rain,ui.weather,M1,"Puts out fires, waters crops"

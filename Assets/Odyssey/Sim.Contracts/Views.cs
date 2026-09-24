@@ -469,13 +469,25 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int Favourability;
 
-        public BulletinView(int id, int incidentDef, CellRef cell, int tick, int favourability = 0)
+        /// <summary>
+        /// The item def the entry is about, as an <see cref="ItemHandle"/> value, or -1 when it is
+        /// about none — what a marauder carried off (design 33 §17). Most entries carry none.
+        /// </summary>
+        public readonly int Subject;
+
+        /// <summary>How many of <see cref="Subject"/>: the stack a marauder carried off. 0 with no subject.</summary>
+        public readonly int Amount;
+
+        public BulletinView(int id, int incidentDef, CellRef cell, int tick, int favourability = 0,
+            int subject = -1, int amount = 0)
         {
             Id = id;
             IncidentDef = incidentDef;
             Cell = cell;
             Tick = tick;
             Favourability = favourability;
+            Subject = subject;
+            Amount = amount;
         }
     }
 
