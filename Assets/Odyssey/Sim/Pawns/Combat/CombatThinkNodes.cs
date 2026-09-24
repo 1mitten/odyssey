@@ -67,6 +67,9 @@ namespace Odyssey.Sim.Pawns
     /// outranks being hungry. A blow interrupts whatever she was doing
     /// (<c>CombatSystem.React</c>), which is what brings her here. <b>Scales with the pawns on
     /// the board</b> per think, for the threat scan.
+    /// <para><b>And her response</b> (design 33 §18): Defend joins a fight near her as a drafted
+    /// colonist's hold does; Flee runs from danger near her and fights back only when cornered
+    /// (<see cref="HostilityResponses"/>).</para>
     /// </summary>
     public class SelfDefenceThinkNode : ThinkNode
     {
@@ -76,12 +79,31 @@ namespace Odyssey.Sim.Pawns
         {
             if (!pawn.IsColonist || pawn.Downed || pawn.IsBroken) return false;
 
+            // Her response (design 33 §18d). Flee comes before fighting back: struck, she runs,
+            // and only when there is nowhere to run does the retaliation below answer. Defend comes
+            // after it, in place of the threat beside her, which its own scan answers first.
+            // Fight back asks nothing here. One function with the job system's per-tick notice
+            // (HostilityResponses.Choose), so the two never disagree.
+            if (pawn.Response == HostilityResponse.Flee)
+            {
+                if (HostilityResponses.Choose(ctx, pawn, out Pawn? danger, out _, out int fleeCell))
+                    return HostilityResponses.Fill(pawn, danger!, false, fleeCell, job);
+                // No danger near her: nothing to fight, even with a blow still remembered — she
+                // does not walk back to whoever struck her. Danger and nowhere to run: cornered,
+                // and she fights back below.
+                if (danger == null) return false;
+            }
+
             if (pawn.RetaliateAgainst != 0 && ctx.CurrentTick < pawn.RetaliateUntilTick)
             {
                 Pawn? foe = ctx.Pawns.Get(new PawnId(pawn.RetaliateAgainst));
                 if (foe != null && Melee.IsStanding(foe) && ctx.Reachable(pawn, foe.Cell, TraverseMode.Colonist))
                     return AttackJob.Fill(pawn, foe, job, TraverseMode.Colonist);
             }
+
+            if (pawn.Response == HostilityResponse.Defend
+                && HostilityResponses.Choose(ctx, pawn, out Pawn? fight, out bool joining, out _))
+                return HostilityResponses.Fill(pawn, fight!, joining, -1, job);
 
             Pawn? threat = Melee.AdjacentThreat(ctx, pawn);
             return threat != null && AttackJob.Fill(pawn, threat, job, TraverseMode.Colonist);

@@ -200,6 +200,21 @@ namespace Odyssey.Presentation.Ui
         readonly System.Collections.Generic.List<Intent> _draftOrders = new System.Collections.Generic.List<Intent>();
 
         /// <summary>
+        /// The pane's response button (design 33 §18e): every selected colonist to the response
+        /// after the first one's, by <see cref="ResponseModel.Cycle"/>. Applied while paused.
+        /// </summary>
+        void CycleResponse()
+        {
+            var world = _boot?.World;
+            if (world == null || _directors == null) return;
+
+            _draftOrders.Clear();
+            ResponseModel.Cycle(_directors.Selection.Pawns, world.Views.Current, _draftOrders);
+            for (int i = 0; i < _draftOrders.Count; i++) world.Intents.Submit(_draftOrders[i]);
+            _draftOrders.Clear();
+        }
+
+        /// <summary>
         /// Fit the bar to the width it has, and put whatever does not fit into Menu.
         ///
         /// <para><b>The bar may not wrap and may not overflow</b>, which is the acceptance

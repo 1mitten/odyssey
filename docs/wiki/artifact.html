@@ -141,7 +141,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#commodities">Commodities<b>50</b></a></li>
 <li><a href="#items">Items and equipment<b>34</b></a></li>
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
-<li><a href="#commands">Commands<b>49</b></a></li>
+<li><a href="#commands">Commands<b>52</b></a></li>
 <li><a href="#work">Work and skills<b>42</b></a></li>
 <li><a href="#colonists">Colonists<b>47</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>808</b><i>named entries</i></div>
+<div class="stat"><b>811</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>536</b><i>no art yet</i></div>
+<div class="stat m"><b>539</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1195,7 +1195,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="commands" data-sec="1">
-<h2>Commands <em class="count">49 entries</em></h2>
+<h2>Commands <em class="count">52 entries</em></h2>
 <p class="blurb">What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein. A right-click on a thing with more than one answer, a weapon today, opens a small menu at the pointer whose rows are these commands; the menu's own words are listed after them.</p>
 <h3 class="nsh">Commands</h3>
 <div class="tbl">
@@ -1487,6 +1487,24 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Take everything they carry<span class="need">Needs drawing: taking everything a pawn carries</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.command.fightback" data-hay="fight back ui.command.fightback fights only whoever strikes her. press to change raised fists" data-gap="1">
+<div class="nm">Fight back<span class="k">ui.command.fightback</span></div>
+<div class="dsc">Fights only whoever strikes her. Press to change<span class="need">Needs drawing: raised fists</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.command.defend" data-hay="defend ui.command.defend joins a fight near her, then goes back to work. press to change a shield over a figure" data-gap="1">
+<div class="nm">Defend<span class="k">ui.command.defend</span></div>
+<div class="dsc">Joins a fight near her, then goes back to work. Press to change<span class="need">Needs drawing: a shield over a figure</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.command.flee" data-hay="flee ui.command.flee runs from danger near her, and fights only when cornered. press to change a figure running away" data-gap="1">
+<div class="nm">Flee<span class="k">ui.command.flee</span></div>
+<div class="dsc">Runs from danger near her, and fights only when cornered. Press to change<span class="need">Needs drawing: a figure running away</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
 </div>
 </div>
 <h3 class="nsh">The context menu</h3>
@@ -2046,9 +2064,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">CB</div>
 </div>
-<div class="row gap" id="ui.status.fleeing" data-hay="fleeing ui.status.fleeing running from whatever hurt it " data-gap="1">
+<div class="row gap" id="ui.status.fleeing" data-hay="fleeing ui.status.fleeing running from danger, or from whatever hurt it " data-gap="1">
 <div class="nm">Fleeing<span class="k">ui.status.fleeing</span></div>
-<div class="dsc">Running from whatever hurt it</div>
+<div class="dsc">Running from danger, or from whatever hurt it</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">CB</div>
 </div>
@@ -3602,7 +3620,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 808, "gaps": 536};</script>
+<script>window.WIKI={"total": 811, "gaps": 539};</script>
 <script>
 (function(){
   var D = window.WIKI;

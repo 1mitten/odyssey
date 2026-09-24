@@ -111,7 +111,7 @@ ui.status.drafted,Drafted,ui.status,M2,"Under direct order, not the work list"
 ui.status.wandering,Wandering,ui.status,AN,"An animal on a leg of its own: going somewhere nearby for no reason"
 ui.status.resting,Resting,ui.status,AN,"An animal between legs"
 ui.status.fighting,Fighting,ui.status,CB,Closing on a target and swinging at it
-ui.status.fleeing,Fleeing,ui.status,CB,Running from whatever hurt it
+ui.status.fleeing,Fleeing,ui.status,CB,"Running from danger, or from whatever hurt it"
 ui.status.equipping,Equipping,ui.status,CB,Fetching a weapon to hold
 ui.status.rescuing,Rescuing,ui.status,CB,Carrying the downed to a bed
 ui.status.stealing,Stealing,ui.status,CB,"A marauder carrying something off the board"
@@ -286,6 +286,9 @@ ui.command.gift,Gift,ui.command,M3,Give this away for goodwill
 ui.command.evacuate,Evacuate,ui.command,M3,Everyone out of this area
 ui.command.hunt,Hunt,ui.command,M3,Kill this wild animal for meat
 ui.command.strip,Strip,ui.command,M3,Take everything they carry
+ui.command.fightback,Fight back,ui.command,CB,"Fights only whoever strikes her. Press to change"
+ui.command.defend,Defend,ui.command,CB,"Joins a fight near her, then goes back to work. Press to change"
+ui.command.flee,Flee,ui.command,CB,"Runs from danger near her, and fights only when cornered. Press to change"
 ui.menu.cancel,Cancel,ui.menu,CB,"Close the menu a right-click opened, and order nothing"
 ui.overlay.temperature,Temperature,ui.overlay,M1,Warm to cold across the slice
 ui.overlay.light,Light,ui.overlay,M1,How lit each cell is

@@ -24,8 +24,17 @@ namespace Odyssey.Hud
         /// <summary>The item def index of the weapon in the hand; absent for bare hands.</summary>
         public const string Weapon = "odyssey.pawn.weapon";
 
-        /// <summary>The <see cref="PawnId"/> value this pawn is ordered to attack or rescue.</summary>
+        /// <summary>
+        /// The <see cref="PawnId"/> value this pawn was ordered to attack by the player; absent for
+        /// a fight she started herself and for a rescue (design 33 §18b). What the ring reads.
+        /// </summary>
         public const string OrderTarget = "odyssey.pawn.order.target";
+
+        /// <summary>
+        /// The colonist's response to danger, 1 Defend or 2 Flee; absent at the default, Fight
+        /// back (design 33 §18c). What the pane's response button shows.
+        /// </summary>
+        public const string Response = "odyssey.pawn.response";
 
         /// <summary>Present on a downed colonist with no free bed to be carried to (design 33 §11d).</summary>
         public const string RescueNoBed = "odyssey.pawn.rescue.nobed";
@@ -35,5 +44,6 @@ namespace Odyssey.Hud
         public static readonly AspectKey WeaponKey = AspectKey.Of(Weapon);
         public static readonly AspectKey OrderTargetKey = AspectKey.Of(OrderTarget);
         public static readonly AspectKey RescueNoBedKey = AspectKey.Of(RescueNoBed);
+        public static readonly AspectKey ResponseKey = AspectKey.Of(Response);
     }
 }

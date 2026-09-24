@@ -407,12 +407,13 @@ namespace Odyssey.Presentation.World
         /// <summary>
         /// Whether this colonist has somebody in her arms: on a rescue, and the patient it names
         /// carried. The simulation says who carries whom from the patient's side
-        /// (<c>Pawn.CarriedBy</c>), and publishes the rescuer's patient as the order's target.
+        /// (<c>Pawn.CarriedBy</c>), and publishes the rescuer's patient under an aspect of its own
+        /// (design 33 §18b: the order target means an attack the player ordered, and nothing else).
         /// </summary>
         bool CarriesAPatient(in PawnView pawn)
         {
             if (_frame == null || pawn.JobDef != JobHandle.Rescue) return false;
-            if (!_frame.TryGetPawnAspect(pawn.Id, Odyssey.Sim.Pawns.CombatAspects.OrderTarget, out int patient)) return false;
+            if (!_frame.TryGetPawnAspect(pawn.Id, Odyssey.Sim.Pawns.CombatAspects.RescuePatient, out int patient)) return false;
             return _frame.TryGetPawn(new PawnId(patient), out PawnView view) && view.IsCarried;
         }
 
@@ -424,7 +425,7 @@ namespace Odyssey.Presentation.World
             for (int i = 0; i < pawns.Length; i++)
             {
                 if (pawns[i].JobDef != JobHandle.Rescue) continue;
-                if (!_frame.TryGetPawnAspect(pawns[i].Id, Odyssey.Sim.Pawns.CombatAspects.OrderTarget, out int target)
+                if (!_frame.TryGetPawnAspect(pawns[i].Id, Odyssey.Sim.Pawns.CombatAspects.RescuePatient, out int target)
                     || target != patient.Value) continue;
                 return _byPawn.TryGetValue(pawns[i].Id.Value, out Figure? carrier) ? carrier : null;
             }

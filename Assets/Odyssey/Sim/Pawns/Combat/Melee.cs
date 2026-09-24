@@ -108,6 +108,10 @@ namespace Odyssey.Sim.Pawns
         /// reads) only for a candidate nearer than the best so far. Asked every tick by each drafted
         /// colonist on her hold and at each of her thinks — never by anybody undrafted, walking an
         /// order, or in a fight already — so it costs nothing while nobody is drafted.</para>
+        /// <para><b>And by an undrafted colonist whose response is Defend</b> (design 33 §18d): the
+        /// same rule, so she joins exactly the fights a drafted colonist on her hold would. Her
+        /// per-tick notice asks it only while something hostile is about
+        /// (<see cref="AnythingHostile"/>).</para>
         /// </summary>
         public static Pawn? HoldTarget(PawnContext ctx, Pawn me, out bool joining)
         {
@@ -146,6 +150,68 @@ namespace Odyssey.Sim.Pawns
 
             joining = best != null;
             return best;
+        }
+
+        /// <summary>
+        /// The nearest danger to <paramref name="me"/>, for a colonist whose response is Flee (design
+        /// 33 §18d), or null: a standing pawn within <see cref="CombatDef.helpRadiusCells"/> of her
+        /// (<see cref="WithinHelp"/>, the one number for <i>near</i> in a fight) that is a marauder,
+        /// whatever it is doing; an animal attacking a colonist (<see cref="ColonistUnderAttackBy"/>);
+        /// or anybody attacking her. A wild animal at peace is not danger. <b>Only danger that can
+        /// reach her in its own mode counts</b>, so a marauder behind a shut door (§16b) does not
+        /// keep her off work. Nearest by squared distance in cells, a tie to the lower id.
+        /// <para><b>Scales with the pawns on the board</b>: an integer comparison or two each, and a
+        /// reachability test (two array reads) only for a candidate nearer than the best so far.</para>
+        /// </summary>
+        public static Pawn? DangerTo(PawnContext ctx, Pawn me)
+        {
+            int radius = ctx.Content.Combat.helpRadiusCells;
+            GridSize size = ctx.Size;
+            CellRef m = size.FromIndex(me.Cell);
+
+            Pawn? best = null;
+            int bestDistance = int.MaxValue;
+            var pawns = ctx.Pawns.All;
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                Pawn other = pawns[i];
+                if (other == me || !IsStanding(other)) continue;
+                bool danger = other.IsHostile || IsAttacking(other, me)
+                    || (!other.IsPerson && ColonistUnderAttackBy(ctx, other) != null);
+                if (!danger || !WithinHelp(size, m, other.Cell, radius)) continue;
+
+                CellRef o = size.FromIndex(other.Cell);
+                int dx = o.X - m.X, dz = o.Z - m.Z, dy = o.Y - m.Y;
+                int distance = dx * dx + dz * dz + dy * dy;
+                if (distance >= bestDistance) continue;
+                if (!ctx.Reachable(other, me.Cell, other.OwnMode)) continue;
+                best = other;
+                bestDistance = distance;
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Is anything hostile about (design 33 §18f): a standing marauder, or anybody in an attack
+        /// on a colonist? The gate in front of the per-tick notice of a Defend or Flee colonist
+        /// (<see cref="HostilityResponses.Notices"/>): with nothing hostile neither can act, so
+        /// neither scans. Everything either would act on is one of these — a threat to her is a
+        /// hostile or somebody attacking her, a fight to join is somebody attacking a colonist, and
+        /// danger is one of the three. <b>Scales with the pawns on the board</b>, and is asked at
+        /// most once a tick, by the first responder who needs it.
+        /// </summary>
+        public static bool AnythingHostile(PawnContext ctx)
+        {
+            var pawns = ctx.Pawns.All;
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                Pawn other = pawns[i];
+                if (other.IsHostile && IsStanding(other)) return true;
+                if (other.CombatTarget == 0 || !IsInAnAttack(other)) continue;
+                Pawn? target = ctx.Pawns.Get(new PawnId(other.CombatTarget));
+                if (target != null && target.IsColonist) return true;
+            }
+            return false;
         }
 
         /// <summary>
