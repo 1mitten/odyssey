@@ -38,6 +38,24 @@ Shader "Odyssey/Foliage"
 
         _Cutoff("Alpha cutoff", Range(0, 1)) = 0.25
 
+        // The art's own leaf colouring, read from its material at runtime by FoliageLook (never
+        // copied into this repository): with _LeafFlat on, a leaf takes a flat colour — a base,
+        // pushed towards a small-scale and a large-scale colour by world-position noise, so that
+        // neighbouring plants differ — and keeps only its cut-out and a little shading from the
+        // texture. That, not the texture, is where the Meadow screenshots' colour comes from.
+        _LeafFlat("Leaf colour is flat", Float) = 0
+        _LeafBase("Leaf base colour", Color) = (1, 1, 1, 1)
+        _LeafNoise("Leaf noise colour", Color) = (1, 1, 1, 1)
+        _LeafNoiseLarge("Leaf large noise colour", Color) = (1, 1, 1, 1)
+        _LeafNoiseAmount("Leaf noise amount", Range(0, 1)) = 0
+        _LeafNoiseScale("Leaf noise scale", Float) = 1
+        _LeafBigNoiseAmount("Leaf large noise amount", Range(0, 1)) = 0
+        _LeafBigNoiseScale("Leaf large noise scale", Float) = 1
+        // A colour laid over the upward-facing leaves: the sunlit tops of a canopy.
+        _Frost("Frosting", Float) = 0
+        _FrostColour("Frosting colour", Color) = (1, 1, 1, 1)
+        _TrunkBase("Trunk colour", Color) = (1, 1, 1, 1)
+
         // How far the normal is pulled towards straight up. A clump of cards lit by their own
         // normals shades as a dozen facets; pulled up it lights as one mass, which is how grass
         // reads from 60 m.
@@ -84,6 +102,17 @@ Shader "Odyssey/Foliage"
             float4 _LeafGrade;
             float4 _TrunkGrade;
             float _Cutoff;
+            float _LeafFlat;
+            float4 _LeafBase;
+            float4 _LeafNoise;
+            float4 _LeafNoiseLarge;
+            float _LeafNoiseAmount;
+            float _LeafNoiseScale;
+            float _LeafBigNoiseAmount;
+            float _LeafBigNoiseScale;
+            float _Frost;
+            float4 _FrostColour;
+            float4 _TrunkBase;
             float _NormalUp;
             float _WindResponse;
             float _Flutter;
@@ -143,8 +172,16 @@ Shader "Odyssey/Foliage"
         float3 FoliageDisplace(float3 positionOS, float3 normalOS, float4 colour)
         {
             float3 rootWS = TransformObjectToWorld(float3(0, 0, 0));
-            float scale = (1.0 - FoliageClearanceAt(rootWS)) * FoliageDistanceScale(rootWS);
+            float scale = FoliageDistanceScale(rootWS);
             float3 positionWS = TransformObjectToWorld(positionOS * scale);
+
+            // The clearing, asked where the blade is rather than where its clump is rooted: a
+            // Meadow tall-grass mat is six metres across, and a log two metres off its root was
+            // standing in grass the root-sampled clearing never touched (the look pass, design 38
+            // §17). Blades near an item or a mark lie flat towards the ground, so the grass parts
+            // round the thing instead of the whole clump vanishing.
+            float clear = FoliageClearanceAt(positionWS);
+            positionWS.y = lerp(positionWS.y, rootWS.y + 0.02, clear);
 
             float strength = length(_OdysseyWind.xyz) * _WindResponse;
             if (strength < 1e-5) return positionWS;
@@ -171,16 +208,60 @@ Shader "Odyssey/Foliage"
             return positionWS;
         }
 
+        // Smooth value noise over world position, [0, 1]. Ours: a hash lattice and a smoothstep.
+        float FoliageHash(float2 p)
+        {
+            p = frac(p * float2(0.1031, 0.1030));
+            p += dot(p, p.yx + 33.33);
+            return frac((p.x + p.y) * p.x);
+        }
+
+        float FoliageNoise(float2 p)
+        {
+            float2 i = floor(p);
+            float2 f = frac(p);
+            float2 u = f * f * (3.0 - 2.0 * f);
+            float a = FoliageHash(i);
+            float b = FoliageHash(i + float2(1, 0));
+            float c = FoliageHash(i + float2(0, 1));
+            float d = FoliageHash(i + float2(1, 1));
+            return lerp(lerp(a, b, u.x), lerp(c, d, u.x), u.y);
+        }
+
+        // The flat leaf colour at a world position and a height up the plant: the base colour at
+        // the root, rising to the noise colours at the tip (vertex red is the height gradient, 0 at
+        // the root and about 0.5 at a crown), which from above is what shows — so a clump seen
+        // from the play camera is its bright tips over a dark heart, as the reference is. The noise
+        // mixes towards the small noise colour, then towards the large one. The scales are the art's own noise frequencies; the metres they
+        // map to are ours (a grass frequency of 12 varies over about a metre and a half, a tree's
+        // 4 over a crown; a large frequency of 0.5 over a hundred metres of meadow).
+        half3 FoliageLeafColour(float3 positionWS, float height)
+        {
+            float small = FoliageNoise(positionWS.xz * (_LeafNoiseScale * 0.05));
+            float large = FoliageNoise(positionWS.xz * (_LeafBigNoiseScale * 0.02) + 17.0);
+            half3 tip = lerp(_LeafNoise.rgb, _LeafNoiseLarge.rgb, saturate(large * _LeafBigNoiseAmount * 1.5));
+            tip = lerp(tip, _LeafNoise.rgb, saturate(small * _LeafNoiseAmount) * 0.5);
+            return lerp(_LeafBase.rgb, tip, saturate(height * 4.0));
+        }
+
         // Leaf or trunk by the leaf mask; alpha is the cut-out.
-        half4 FoliageSample(float2 uv, float leafMask)
+        half4 FoliageSample(float2 uv, float leafMask, float3 positionWS, float height)
         {
             if (leafMask > 0.5)
             {
                 half4 leaf = SAMPLE_TEXTURE2D(_LeafMap, sampler_LeafMap, TRANSFORM_TEX(uv, _LeafMap));
+                if (_LeafFlat > 0.5)
+                {
+                    // Flat: the art's colour scheme, with a little of the texture's own light and
+                    // dark kept so a clump is not a silhouette.
+                    half luma = dot(leaf.rgb, half3(0.299, 0.587, 0.114));
+                    half3 flat = FoliageLeafColour(positionWS, height) * lerp(1.0, saturate(luma * 3.0), 0.35);
+                    return half4(flat * _LeafGrade.rgb, leaf.a);
+                }
                 return half4(leaf.rgb * _LeafGrade.rgb, leaf.a);
             }
             half4 trunk = SAMPLE_TEXTURE2D(_TrunkMap, sampler_TrunkMap, TRANSFORM_TEX(uv, _TrunkMap));
-            return half4(trunk.rgb * _TrunkGrade.rgb, trunk.a);
+            return half4(trunk.rgb * _TrunkBase.rgb * _TrunkGrade.rgb, trunk.a);
         }
 
         // A 4x4 ordered dither, for the fade. Opaque and depth-writing throughout, so a faded
@@ -250,8 +331,8 @@ Shader "Odyssey/Foliage"
                 float3 positionWS : TEXCOORD0;
                 half3  normalWS   : TEXCOORD1;
                 float2 uv         : TEXCOORD2;
-                // x the leaf mask, y the clump's patch drift.
-                half2  leaf       : TEXCOORD3;
+                // x the leaf mask, y the clump's patch drift, z the height gradient.
+                half3  leaf       : TEXCOORD3;
                 half   fogFactor  : TEXCOORD4;
                 half3  vertexSH   : TEXCOORD5;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -273,7 +354,7 @@ Shader "Odyssey/Foliage"
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.normalWS = normalWS;
                 output.uv = input.uv;
-                output.leaf = half2(input.colour.b, FoliagePatch(rootWS));
+                output.leaf = half3(input.colour.b, FoliagePatch(rootWS), input.colour.r);
                 output.fogFactor = ComputeFogFactor(output.positionCS.z);
                 output.vertexSH = SampleSH(normalize(lerp(normalWS, float3(0, 1, 0), _NormalUp)));
                 return output;
@@ -284,7 +365,7 @@ Shader "Odyssey/Foliage"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-                half4 art = FoliageSample(input.uv, input.leaf.x);
+                half4 art = FoliageSample(input.uv, input.leaf.x, input.positionWS, input.leaf.z);
                 FoliageClip(art.a, input.positionCS);
 
                 // A card lit from behind would go black; its back face takes the flipped normal,
@@ -299,6 +380,10 @@ Shader "Odyssey/Foliage"
 
                 SurfaceData surface = (SurfaceData)0;
                 surface.albedo = art.rgb * _BaseColor.rgb * drift * hue;
+                // The sunlit tops of a canopy: leaves facing up take the art's frosting colour.
+                if (_Frost > 0.5 && input.leaf.x > 0.5)
+                    surface.albedo = lerp(surface.albedo, _FrostColour.rgb * _BaseColor.rgb,
+                                          saturate(normalWS.y * 1.6 - 0.6) * 0.7);
                 surface.alpha = 1;
                 surface.metallic = 0;
                 surface.smoothness = _Smoothness;
@@ -394,7 +479,7 @@ Shader "Odyssey/Foliage"
             half4 ShadowFragment(ShadowVaryings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                FoliageClip(FoliageSample(input.uv, input.leafMask).a, input.positionCS);
+                FoliageClip(FoliageSample(input.uv, input.leafMask, float3(0, 0, 0), 1.0).a, input.positionCS);
                 return 0;
             }
             ENDHLSL
@@ -447,7 +532,7 @@ Shader "Odyssey/Foliage"
             half4 DepthFragment(DepthVaryings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                FoliageClip(FoliageSample(input.uv, input.leafMask).a, input.positionCS);
+                FoliageClip(FoliageSample(input.uv, input.leafMask, float3(0, 0, 0), 1.0).a, input.positionCS);
                 return 0;
             }
             ENDHLSL
@@ -506,7 +591,7 @@ Shader "Odyssey/Foliage"
             half4 DepthNormalsFragment(NormalsVaryings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                FoliageClip(FoliageSample(input.uv, input.leafMask).a, input.positionCS);
+                FoliageClip(FoliageSample(input.uv, input.leafMask, float3(0, 0, 0), 1.0).a, input.positionCS);
                 float3 normalWS = normalize(lerp(normalize(input.normalWS), float3(0, 1, 0), _NormalUp));
                 return half4(normalWS, 0);
             }
