@@ -52,6 +52,24 @@ namespace Odyssey.Presentation.Audio
         /// </summary>
         public const string CarryDrop = SoundPrefix + "carry.drop";
 
+        // ---- the draw's machine (design 41 §6.6). 2D, on the menu's own voice (DrawSounds), and
+        // silent until clips exist under these names: a row with no clip plays nothing.
+
+        /// <summary>The reels turning: a ticking loop while anything spins.</summary>
+        public const string DrawSpin = SoundPrefix + "draw.spin";
+
+        /// <summary>One reel landing. Variants, so a cascade of eleven is not one sample eleven times.</summary>
+        public const string DrawClunk = SoundPrefix + "draw.clunk";
+
+        /// <summary>A reel landing hot, over its clunk.</summary>
+        public const string DrawHot = SoundPrefix + "draw.hot";
+
+        /// <summary>A jackpot.</summary>
+        public const string DrawStar = SoundPrefix + "draw.star";
+
+        /// <summary>A dud.</summary>
+        public const string DrawDud = SoundPrefix + "draw.dud";
+
         /// <summary>
         /// A blade drawn: a colonist has been drafted (design 33 §2i). 2D — it confirms an order
         /// the player gave, wherever the camera is — and played once on the frame the snapshot

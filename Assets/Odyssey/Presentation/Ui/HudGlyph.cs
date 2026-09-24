@@ -148,6 +148,26 @@ namespace Odyssey.Presentation.Ui
         LayoutRows,
         LayoutRail,
         LayoutBar,
+
+        // ---------------------------------------------------------------- the draw (design 41 §6)
+        //
+        // The machine's own marks, drawn rather than typed for the reason every glyph here is: no
+        // shipped font has a lock, a lever or an outlined flame (HudFontTests, P13).
+
+        /// <summary>A minor passion: the <see cref="Flame"/> outline, stroked not filled.</summary>
+        FlameOutline,
+
+        /// <summary>The LOCKED tag's padlock.</summary>
+        Lock,
+
+        /// <summary>PULL: a fruit machine's lever and its knob.</summary>
+        Lever,
+
+        /// <summary>STOP: a filled square.</summary>
+        Stop,
+
+        /// <summary>Next colonist: an arrow pointing on.</summary>
+        ArrowRight,
     }
 
     /// <summary>
@@ -346,6 +366,39 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, P(4.5f, 12.4f), P(9.6f, 17.5f), P(19.5f, 6.5f));
                     return;
 
+                case HudGlyphKind.FlameOutline:
+                    // The Flame's own outline, so a minor and a major passion are one shape at two
+                    // weights of ink rather than two shapes (design 41 §6.5).
+                    Polyline(painter, false,
+                        P(12f, 1.8f), P(17.4f, 8.4f), P(16.2f, 11.6f), P(19.6f, 15.8f),
+                        P(16.2f, 22.2f), P(6.6f, 22.2f), P(4f, 15.8f), P(8.2f, 9.8f));
+                    painter.ClosePath();
+                    painter.Stroke();
+                    return;
+
+                case HudGlyphKind.Lock:
+                    // A shackle over a body: an arch stroked, a box filled.
+                    Polyline(painter, true, P(7.5f, 11f), P(7.5f, 7.5f), P(9f, 4.4f), P(12f, 3.2f),
+                        P(15f, 4.4f), P(16.5f, 7.5f), P(16.5f, 11f));
+                    FillRect(painter, P(5f, 11f), P(19f, 21f));
+                    return;
+
+                case HudGlyphKind.Lever:
+                    // The machine's arm: a slot, a shaft leaning back, and a ball on the end.
+                    Polyline(painter, true, P(6f, 21f), P(18f, 21f));
+                    Polyline(painter, true, P(12f, 21f), P(12f, 15f), P(16.5f, 6.5f));
+                    Dot(painter, P(17.2f, 5f), 3.2f * scale);
+                    return;
+
+                case HudGlyphKind.Stop:
+                    FillRect(painter, P(6.5f, 6.5f), P(17.5f, 17.5f));
+                    return;
+
+                case HudGlyphKind.ArrowRight:
+                    Polyline(painter, true, P(4.5f, 12f), P(19f, 12f));
+                    Polyline(painter, true, P(13f, 6f), P(19f, 12f), P(13f, 18f));
+                    return;
+
                 case HudGlyphKind.CategoryFood:
                     // A lidded bowl: a shallow cup with a domed lid and a knob.
                     Polyline(painter, false, P(4f, 13f), P(20f, 13f), P(17f, 20f), P(7f, 20f), P(4f, 13f));
@@ -508,6 +561,12 @@ namespace Odyssey.Presentation.Ui
         public static readonly Color Warn = Convert(Odyssey.Hud.HudTheme.Warn);
         public static readonly Color Bad = Convert(Odyssey.Hud.HudTheme.Bad);
         public static readonly Color Good = Convert(Odyssey.Hud.HudTheme.Good);
+        public static readonly Color MachineFace = Convert(Odyssey.Hud.HudTheme.MachineFace);
+        public static readonly Color MachineInk = Convert(Odyssey.Hud.HudTheme.MachineInk);
+        public static readonly Color MachineHot = Convert(Odyssey.Hud.HudTheme.MachineHot);
+        public static readonly Color MachineStar = Convert(Odyssey.Hud.HudTheme.MachineStar);
+        public static readonly Color MachineCold = Convert(Odyssey.Hud.HudTheme.MachineCold);
+        public static readonly Color MachineTease = Convert(Odyssey.Hud.HudTheme.MachineTease);
         public static readonly Color Info = Convert(Odyssey.Hud.HudTheme.Info);
 
         public static readonly Color ScrimInk = Convert(Odyssey.Hud.HudTheme.ScrimInk);

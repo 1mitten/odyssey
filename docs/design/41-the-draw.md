@@ -1,6 +1,6 @@
 # 41 — The draw: balanced colonists, a gamble, and the reel machine
 
-**Status: designed 2026-09-24, nothing built.** Branch `claude/character-draw`, worktree
+**Status: designed 2026-09-24; CD1–CD6 built the same day, awaiting the first play.** Branch `claude/character-draw`, worktree
 `D:\code\odyssey-draw`. Numbered 41 because 37, 39 and 40 are taken on other branches
 (`claude/medical-supplies`, `claude/weather-design`, `claude/stair-gait`).
 **Read first:** `18-colonist-select.md` (the seam this extends: a candidate is a pure function of
@@ -51,7 +51,7 @@ pawn Def:
 | Field | Meaning |
 |---|---|
 | `defName` | stable identity; also indexes the save |
-| `label` | a registry key, `ui.trait.<name>`; the name and description live in `icon-keys.csv` |
+| *(name)* | not on the Def: `TraitHandle.Keys` in `Sim.Contracts` holds each trait's registry key beside its handle, so the simulation's table order and the interface's names have one owner. Name and description live in `icon-keys.csv` |
 | `worth` | signed balance value: mild good +2, mild bad −2, extreme ±4. Read by the Standard roll to pair traits and by the outcome judge (§6.4) |
 | `pool` | `Mild` or `Extreme`. Standard draws only `Mild`; Gamble draws both |
 | `commonality` | per-mille weight within its pool |
@@ -87,12 +87,12 @@ Names are invented (clean room; checked against the reference's trait list, and 
 | Mild | Diligent | work ×1.15 | Idle | work ×0.85 |
 | Mild | Quick study | learning ×1.4 | Slow study | learning ×0.6 |
 | Mild | Long stride | pace ×1.05 | Short stride | pace ×0.95 |
-| Mild | Sunny | mood +6 | Dour | mood −6 |
+| Mild | Sunny | mood +60 (of 1,000) | Dour | mood −60 |
 | Mild | Light eater | hunger ×0.8 | Big appetite | hunger ×1.2 |
 | Mild | Scrapper | melee ×1.2 | Soft hands | melee ×0.8 |
 | Extreme | Prodigy | learning ×2 | Wreck | work ×0.6 |
 | Extreme | Tireless | rest fall ×0.5 | Bottomless | hunger ×1.6 |
-| Extreme | Unshakeable | mood +12 | Butterfingers | work ×0.75, melee ×0.7 |
+| Extreme | Unshakeable | mood +120 | Butterfingers | work ×0.75, melee ×0.7 |
 
 Extreme pairs are opposites for dealing purposes only; they are not mirrored effects.
 
@@ -165,9 +165,11 @@ draft gave 12% stars and was thinned):
 | **Star**: any skill ≥ 12 | **6.8%** (Standard: never) | ~7% |
 | Any skill ≥ 10 | 21.8% | |
 
-**These are arithmetic, not measurements of the game.** `DrawDistributionTests` (Long tier) draws
-100,000 of each profile through `ColonistDraw.Roll` itself and pins these bands; the table is
-replaced by what that test prints the day it lands.
+**Measured, 2026-09-24**, by `DrawDistributionTests` (Long tier) over 100,000 pulls through
+`ColonistDraw.Roll` itself: skill total mean **15.87** (+32%), dud **9.0%**, worse **29.2%**, better
+**65.6%**, a 12+ skill **6.7%**, an extreme trait **37.2%** of pulls. Standard over 100,000: a 6+
+skill **26.8%**, and every total exactly 12. The test holds these to bands around them, so a retune
+that drifts outside what the owner chose fails.
 
 Every number in §4.2 and §4.3 lives in `Colonist.xml` as `ASSUMED` tuning, beside the existing
 `startingSkillLevelWeights`.
@@ -294,14 +296,57 @@ faders. `SoundIds`: `odyssey.sound.draw.spin` (a ticking loop), `.clunk` (varian
 `.star`, `.dud`. Clips follow `docs/reference/audio-sourcing.md`. **The machine runs silent until
 they exist**, which is what an unknown clip already does, so sourcing is owed rather than blocking.
 
+## 6.7 The Claude Design spec, and where the build departs from it (2026-09-24)
+
+The owner brought back a Claude Design spec for CD5 with the instruction *"don't be super strict
+here — ensure it fits in the style/format of the game first"*. It supersedes §6.1 and §6.5 where it
+speaks: **Gamble is built into the existing New game screen**, not beside it — a Creation switch, a
+reel window in place of each skill's figure, a machine frame with marquee bulbs round the detail
+pane, and one Pull / Stop button in place of Keep and Reroll. Standard is unchanged. Six tokens
+(`MachineFace`, `MachineInk`, `MachineHot`, `MachineStar`, `MachineCold`, `MachineTease`) went into
+`HudTheme`, every size into `HudLayout` with a test (`DrawLayoutTests`, `HudStyleSheetTests`).
+
+| The spec | What was built | Why |
+|---|---|---|
+| "Draft \| Gamble" | **Standard \| Gamble** | The design and the owner's questions called it Standard; one name. The label is in the registry to correct. |
+| All fourteen skills are reels, 0–20 | **The five live skills spin**; the nine nothing simulates show a still `--` window | Decision 7: a jackpot on a skill that does nothing is a fake jackpot. Levels run 0–15, Gamble's range. |
+| No pace | **A Pace window in the identity row** (85–115) | Decision 7 put SPD on the machine; the identity row had the room. "SPD" became **Pace** because the HUD forbids three-letter capitals (`NoLabelIsAThreeLetterPlaceholder`). |
+| Two trait windows, 200 wide | **Three, 132 wide** | A gamble deals up to three; three and the button have to fit the grid the machine wraps (618 px, `DrawLayoutTests`). |
+| Machine 980 wide, cards 400 × 84 | **The page's own geometry**: the detail pane framed at the grid's width, the cards as they were | "Fit the game first": Standard must look exactly as it did, and the cards are shared. |
+| Skill rows 42 high | **38** (the 32 window plus three either side) | Enough air; the page is scaled from 1080 and 38 keeps the grid clear of the footer at 720. |
+| Verdict tag 14/700 tracked caps | **Row (14/500), sentence case** | The stylesheet sets no type (`TheSheetSetsNoTypeAtAll`) and "DUD" in capitals is the three-letter shout the HUD forbids. |
+| Dashed borders on a face-down card | **Solid, at the same 22% white** | UI Toolkit draws no dashed border. |
+| Colonist generated before the spin | **The same** — drawn at PULL, not at STOP | Decision 2's intent, timing cannot matter, holds either way; drawing at PULL lets a hot reel know to tease. |
+| Jackpot: 13+ with a major, or Prodigy. Dud: sum < 12, or Wreck | **Jackpot: 13+ with a major, or any extreme good trait. Dud: sum ≤ 6, or any extreme bad trait** | "Sum < 12" is *worse than Standard*, which would call three pulls in ten duds; the design's dud is one in eleven. Both are constants in `DrawVerdict`, as the spec asked. |
+| Every reel 18 steps a second | **A speed per reel, 11–23 symbols a second, clear of every small ratio** | The owner's own words: "each stat going at a completely different speed". |
+| Reels step discretely | **Reels scroll continuously**, three items and ghosts | A fruit machine's reel moves; the ghosts are the spec's own motion blur. |
+
+**What the machine does on screen**, all of it `ReelMachine`'s numbers: PULL spins every reel up over
+a quarter of a second; STOP lands them in reading order — portrait, name, pace, the left column of
+skills, the right, the traits — each at least 120 ms after the last; a reel landing hot (a skill of
+11 or more, or any extreme trait) teases over 0.9 s with its window pale amber and two pulsing bars;
+a hot window warms to amber over 0.2 s once down, a flaw lands grey. The bulbs chase every third
+while anything moves; a jackpot flashes them gold three times and holds, and turns the frame gold; a
+dud puts them out right to left over 0.6 s, keeping three. The button reads Pull, Stop, *Stopping
+n / N*, Next colonist, All pulled; Space does the same, never while a name is being typed.
+
+**Sound** (CD6) is wired to all of it and silent until clips exist under `odyssey.sound.draw.*`.
+
 ## 7. What moves
 
-- **Every `Simulated` golden moves, and the colonies behave differently.** This is not the hash
-  seeing more: Standard replaces the roll every scenario colonist uses, and traits change rates.
-  Re-baked with `ODYSSEY_REGOLDEN=1`, and `GoldenColonyProbe` records what the colonies now do,
-  in this document, beside the old numbers.
-- **The ten-day headless gate is re-run on all three seeds.** A colony that survived on the old
-  roll is not proof that one survives with an *Idle* and a *Big appetite* in it.
+- **Every golden moved, both numbers on all three, and the colonies behave differently.** Measured
+  with `GoldenColonyProbe` against `main` (2026-09-24): item counts and cells, need totals and the
+  headcount are unchanged or within a few points on every board; nobody died and no job failed.
+  What moved is a more skilled, traited colony — experience 84M → 133M on the meadow, 62M → 164M in
+  the city, 94M → 182M on the played board — and the job mix (meadow 48 → 42 jobs, city 79 → 92,
+  played board 105 → 89). `Golden.cs` carries the sentence.
+- **Mechanic tests that pinned exact numbers now ask for the old roll.** `CombatFixture` and one
+  `SkillTests` case set `ScenarioDef.colonistProfile = Legacy`, because a Scrapper or a Quick study
+  would move a swing's spread or a felling's experience and which one a seed deals is the draw's
+  business. Measured first: with placement forced to Legacy all seven failing tests passed.
+- **The ten-day headless gate passes** on the new roll (the Long tier, 43 tests, 2026-09-24). A
+  colony that survived on the old roll was not proof that one survives with an *Idle* and a *Big
+  appetite* in it, so it was run rather than assumed.
 - **Save format stays where it is.** Two new sections; old saves load as Legacy with no traits.
 - **The wiki moves**: the `ui.trait` namespace joins the Colonists page, and the machine's words
   and the mode names join the registry.

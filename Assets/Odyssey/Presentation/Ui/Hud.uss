@@ -2517,6 +2517,169 @@
 
 .colonist__namebox .unity-base-text-field__input { padding: 0 4px; }
 
+/* ============================================================ the draw (design 41 §5, §6.5)
+
+   Gamble built into the setup page rather than beside it: a Creation switch beside Board size,
+   face-down cards, a machine frame of marquee bulbs round the detail pane, a white reel window in
+   place of every skill's figure, three trait windows and one Pull / Stop button. In Standard none
+   of it is shown. The white is the machine face after Alternate Reality's stat strip, the one white
+   thing in the interface; every colour here is a HudTheme token, pinned by HudStyleSheetTests, and
+   every size a HudLayout constant. Radii stay the page's own; the bulbs are the one round thing. */
+
+.setup__mode { margin-left: 48px; width: auto; }
+.draw__switch { flex-direction: row; height: 30px; }
+.draw__switch--locked { opacity: 0.5; }
+.draw__segment {
+    height: 30px;
+    padding: 0 18px;
+    justify-content: center;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.26);
+    margin-left: -1px;
+}
+.draw__segment:hover { background-color: rgba(255, 255, 255, 0.07); }
+.draw__segment-label { color: #eef3f6; }
+.draw__segment--on { background-color: #6fd3e3; border-color: #6fd3e3; }
+.draw__segment--on .draw__segment-label { color: #0b1116; }
+
+/* A face-down card. UI Toolkit draws no dashed border, so the spec's dashed 22% white is a solid
+   one at the same weight; the empty portrait frame sits where the face would. */
+.colonist--unpulled { border-color: rgba(255, 255, 255, 0.22); }
+.colonist--active { border-color: #6fd3e3; background-color: rgba(111, 211, 227, 0.06); }
+.colonist__blank {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    width: 60px;
+    height: 60px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.22);
+    border-radius: 3px;
+}
+.draw__lock {
+    position: absolute;
+    right: 12px;
+    top: 26px;
+    height: 22px;
+    padding: 0 7px;
+    flex-direction: row;
+    align-items: center;
+    border-width: 1px;
+    border-color: #6fd3e3;
+    border-radius: 2px;
+}
+.draw__lock-label { color: #6fd3e3; margin-left: 5px; }
+.draw__hint { color: rgba(255, 255, 255, 0.66); margin-top: 9px; white-space: normal; }
+
+/* The machine: the detail pane framed, sized by what it wraps rather than stretched. */
+.setup__detail--machine {
+    flex-grow: 0;
+    align-self: flex-start;
+    padding-top: 30px;
+    padding-bottom: 30px;
+    padding-left: 28px;
+    padding-right: 28px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 3px;
+}
+/* A jackpot's frame is two pixels, and gives one back from the padding so nothing inside moves. */
+.setup__detail--machine.setup__detail--jackpot {
+    border-width: 2px;
+    border-color: #f2c14e;
+    padding-top: 29px;
+    padding-bottom: 29px;
+    padding-left: 27px;
+    padding-right: 27px;
+}
+.draw__rail {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    height: 6px;
+    flex-direction: row;
+    justify-content: space-between;
+}
+.draw__rail--top { top: 11px; }
+.draw__rail--bottom { bottom: 11px; }
+.draw__bulb {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.draw__identity { flex-direction: row; align-items: center; height: 64px; }
+.draw__window--name { margin-left: 16px; }
+.draw__pace { flex-direction: row; align-items: center; margin-left: 16px; }
+.draw__pace-label { color: rgba(255, 255, 255, 0.66); margin-right: 8px; }
+.draw__spacer { flex-grow: 1; }
+.draw__verdict {
+    height: 30px;
+    padding: 0 14px;
+    border-width: 1px;
+    border-radius: 2px;
+    -unity-text-align: middle-center;
+}
+.draw__verdict--spinning { border-color: #e8b55c; color: #e8b55c; }
+.draw__verdict--jackpot { background-color: #f2c14e; border-color: #f2c14e; color: #0b1116; }
+.draw__verdict--dud { border-color: rgba(255, 255, 255, 0.26); color: rgba(255, 255, 255, 0.66); }
+
+/* A reel window, and whatever is written in it: machine ink on machine white, centred both ways. */
+.draw__window { background-color: #eef3f6; border-radius: 2px; flex-shrink: 0; }
+.draw__item { color: #0b1116; -unity-text-align: middle-center; }
+.draw__bar { position: absolute; top: 0; bottom: 0; width: 3px; background-color: #e8b55c; }
+.draw__bar--left { left: 0; }
+.draw__bar--right { right: 0; }
+
+/* A Gamble skill row: taller, to carry its window with air above and below. After .skill--setup
+   so it wins on order at the same specificity. */
+.skill--reel { height: 38px; align-items: center; }
+.draw__flame { width: 12px; height: 16px; margin-left: 8px; overflow: visible; justify-content: center; align-items: center; }
+
+.draw__traits { flex-direction: row; align-items: center; margin-top: 12px; }
+.draw__window--trait { margin-right: 12px; }
+
+.draw__action {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    min-width: 186px;
+    height: 48px;
+    padding: 0 18px;
+    border-width: 1px;
+    border-radius: 3px;
+    border-color: rgba(255, 255, 255, 0.13);
+}
+.draw__action-label { margin-left: 10px; color: rgba(255, 255, 255, 0.50); }
+.draw__action-cap { margin-left: 10px; opacity: 0.7; color: rgba(255, 255, 255, 0.50); }
+.draw__action--pull { background-color: #6fd3e3; border-color: #6fd3e3; }
+.draw__action--pull .draw__action-label { color: #0b1116; }
+.draw__action--pull .draw__action-cap { color: #0b1116; }
+.draw__action--stop { background-color: #e8b55c; border-color: #e8b55c; }
+.draw__action--stop .draw__action-label { color: #0b1116; }
+.draw__action--stop .draw__action-cap { color: #0b1116; }
+.draw__action--stopping { background-color: rgba(232, 181, 92, 0.22); border-color: #e8b55c; }
+.draw__action--stopping .draw__action-label { color: #e8b55c; }
+.draw__action--stopping .draw__action-cap { color: #e8b55c; }
+.draw__action--next { background-color: rgba(111, 211, 227, 0.12); border-color: #6fd3e3; }
+.draw__action--next .draw__action-label { color: #6fd3e3; }
+.draw__action--next .draw__action-cap { color: #6fd3e3; }
+
+/* Start waits for three landed: dim and inert, not hidden. Out-specifies .setup .setup__commit. */
+.setup .setup__commit.setup__commit--waiting { opacity: 0.4; }
+
+/* A colonist's traits on the inspect pane's Needs tab, a whole line under the two rows of needs:
+   the tab is the short one, so this sits in the body's slack and the pane keeps its height. */
+.inspect__traits {
+    width: 100%;
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.66);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* The row that goes back, set apart from the list above it the way the settings panel's exit row
    is set apart from the tabs. */
 .startscreen__back {

@@ -576,15 +576,20 @@ ui.newgame.mode.gamble,Gamble,ui.newgame,MS,"One pull per colonist, and it is ke
 ui.draw.pull,Pull,ui.draw,MS,Set the reels spinning for this colonist
 ui.draw.stop,Stop,ui.draw,MS,Stop the reels. Whatever lands is who you get
 ui.draw.locked,Locked,ui.draw,MS,"Pulled, and kept for good. The name can still be changed"
-ui.draw.reel.face,Face,ui.draw,MS,Who they are
-ui.draw.reel.name,Name,ui.draw,MS,What they are called
-ui.draw.reel.cutting,CHP,ui.draw,MS,Chopping
-ui.draw.reel.mining,MIN,ui.draw,MS,Mining
-ui.draw.reel.construction,CON,ui.draw,MS,Construction
-ui.draw.reel.growing,GRO,ui.draw,MS,Growing
-ui.draw.reel.melee,MEL,ui.draw,MS,Melee
-ui.draw.reel.pace,SPD,ui.draw,MS,"Walking pace, as a per cent of an ordinary colonist's"
-ui.draw.reel.trait,Trait,ui.draw,MS,"Something about them that moves how they work, learn, eat, sleep or fight"
+ui.draw.reel.pace,Pace,ui.draw,MS,"Walking pace, as a per cent of an ordinary colonist's"
+ui.newgame.mode,Creation,ui.newgame,MS,"How the three are chosen: dealt and rerolled, or pulled once each"
+ui.draw.modelocked,Chosen for this colony,ui.draw,MS,"A pull has been made, so the gamble stands until Start"
+ui.draw.spinning,Spinning,ui.draw,MS,The reels are turning. Press Stop
+ui.draw.stopping,Stopping,ui.draw,MS,"The reels are landing, left to right"
+ui.draw.next,Next colonist,ui.draw,MS,Keep this one and move to the next card
+ui.draw.allpulled,All pulled,ui.draw,MS,Every colonist has been pulled. Press Start
+ui.draw.jackpot,Jackpot,ui.draw,MS,"A skill of thirteen or more they love, or a gift only a gamble deals"
+ui.draw.dud,Dud,ui.draw,MS,"Six skill levels or fewer between them, or a flaw only a gamble deals"
+ui.draw.ready,Ready to pull,ui.draw,MS,This colonist is waiting for the lever
+ui.draw.notpulled,Not pulled,ui.draw,MS,Nobody here yet
+ui.draw.colonist,Colonist {n},ui.draw,MS,A card before anyone has landed on it
+ui.draw.hint,"Gamble: one pull per colonist, and whatever lands is kept. Switch to Standard to keep and reroll instead.",ui.draw,MS,The line under the cards in Gamble
+ui.draw.key,Space,ui.draw,MS,The key that pulls and stops
 ui.trait.diligent,Diligent,ui.trait,MS,Works 15% faster at everything
 ui.trait.idle,Idle,ui.trait,MS,Works 15% slower at everything
 ui.trait.quickstudy,Quick study,ui.trait,MS,Learns 40% faster

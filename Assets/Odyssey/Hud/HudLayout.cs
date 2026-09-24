@@ -1045,6 +1045,95 @@ namespace Odyssey.Hud
         /// </summary>
         public const int SetupSkillsGap = 24;
 
+        // ---------------------------------- the draw's machine (design 41 §6.5)
+        //
+        // Sized from the Claude Design spec, then fitted to the page this game already has: the
+        // machine wraps the setup page's own detail pane rather than being a 980 px panel of its
+        // own, so its inner width is the skills grid's, and every row below is held to it by
+        // HudLayoutTests.
+
+        /// <summary>A skill's reel window: the figure's box, centred on both axes.</summary>
+        public const int ReelWindowWidth = 52;
+
+        public const int ReelWindowHeight = 32;
+
+        /// <summary>How far above and below the middle a spinning window's ghost figures sit.</summary>
+        public const int ReelPitch = 21;
+
+        /// <summary>A setup skill row in Gamble: the window plus three pixels either side.</summary>
+        public const int DrawSkillRow = ReelWindowHeight + 6;
+
+        /// <summary>Between a reel window and its passion flame, which sits outside the window so
+        /// it never pushes the figure off centre.</summary>
+        public const int FlameGap = 8;
+
+        public const int FlameWidth = 12;
+
+        public const int FlameHeight = 16;
+
+        /// <summary>
+        /// A trait's window. 132 rather than the spec's 200, because a gamble can deal three and
+        /// three windows and the action button must share the grid's width.
+        /// </summary>
+        public const int TraitWindowWidth = 132;
+
+        public const int TraitWindowHeight = 36;
+
+        public const int TraitWindowGap = 12;
+
+        /// <summary>The trait windows' ghost offset: a word needs a little more room than a figure.</summary>
+        public const int TraitPitch = 24;
+
+        /// <summary>The most trait windows the machine draws: a gamble deals up to three.</summary>
+        public const int TraitWindows = 3;
+
+        /// <summary>Pull, Stop, Next colonist. At least this wide, and this tall.</summary>
+        public const int ActionButtonMinWidth = 186;
+
+        public const int ActionButtonHeight = 48;
+
+        /// <summary>The identity row: the portrait window, the name window, the pace and the verdict.</summary>
+        public const int IdentityHeight = 64;
+
+        public const int PortraitWindow = 64;
+
+        public const int NameWindowWidth = 280;
+
+        /// <summary>The name window's ghost offset.</summary>
+        public const int NamePitch = 30;
+
+        /// <summary>Between the identity row's windows.</summary>
+        public const int IdentityGap = 16;
+
+        /// <summary>The verdict tag's height; its width is its word.</summary>
+        public const int VerdictHeight = 30;
+
+        /// <summary>The machine frame's padding, top and bottom then either side.</summary>
+        public const int MachinePadY = 30;
+
+        public const int MachinePadX = 28;
+
+        /// <summary>Bulbs along each of the two rails.</summary>
+        public const int BulbsPerRail = 52;
+
+        /// <summary>A bulb: the one round thing in the interface.</summary>
+        public const int Bulb = 6;
+
+        /// <summary>A rail's distance in from the frame's top or bottom edge, and from each side.</summary>
+        public const int BulbInsetY = 11;
+
+        public const int BulbInsetX = 14;
+
+        /// <summary>The machine's inner width: the skills grid it wraps.</summary>
+        public const int MachineInnerWidth = SetupSkillsWidth - SkillColumnGap;
+
+        /// <summary>The trait row: three windows, the gaps, the gap before the button, and the button.</summary>
+        public const int TraitRowWidth =
+            TraitWindows * TraitWindowWidth + (TraitWindows - 1) * TraitWindowGap + TraitWindowGap + ActionButtonMinWidth;
+
+        /// <summary>What a Gamble skill row needs beside its name: the window, the gap, the flame.</summary>
+        public const int DrawSkillTail = ReelWindowWidth + FlameGap + FlameWidth;
+
         /// <summary>
         /// How many needs the colonist body draws: Food, Rest and Mood, the three the model
         /// carries and the three <c>HudShell.SetNeed</c> fills by index.

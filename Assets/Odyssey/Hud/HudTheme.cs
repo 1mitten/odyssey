@@ -168,6 +168,30 @@ namespace Odyssey.Hud
         public static readonly HudColour Good = new HudColour(0x7f, 0xc9, 0x8c);
         public static readonly HudColour Info = new HudColour(0x8f, 0xd0, 0xe3);
 
+        // ------------------------------------------------------------------ the machine (design 41 §6.5)
+        //
+        // The gamble's reel windows are the one white thing in the interface, on purpose: the
+        // machine face after Alternate Reality's stat strip, the brightest thing on the page. Six
+        // tokens from the Claude Design spec, and nothing else new.
+
+        /// <summary>A reel window's fill: the white against the dark panel.</summary>
+        public static readonly HudColour MachineFace = new HudColour(0xee, 0xf3, 0xf6);
+
+        /// <summary>Every figure and word inside a window.</summary>
+        public static readonly HudColour MachineInk = new HudColour(0x0b, 0x11, 0x16);
+
+        /// <summary>A window that landed high, or a star trait.</summary>
+        public static readonly HudColour MachineHot = new HudColour(0xe8, 0xb5, 0x5c);
+
+        /// <summary>A jackpot's frame, bulbs and tag.</summary>
+        public static readonly HudColour MachineStar = new HudColour(0xf2, 0xc1, 0x4e);
+
+        /// <summary>A window that landed at nothing, or a flaw trait, on a dud.</summary>
+        public static readonly HudColour MachineCold = new HudColour(0x7d, 0x86, 0x8d);
+
+        /// <summary>The one reel that is slowing toward something hot.</summary>
+        public static readonly HudColour MachineTease = new HudColour(0xf6, 0xe3, 0xb8);
+
         // ------------------------------------------------------------------ quality
 
         /// <summary>

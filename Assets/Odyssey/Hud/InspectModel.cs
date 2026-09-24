@@ -344,6 +344,17 @@ namespace Odyssey.Hud
         public readonly List<SkillRow> Skills = new List<SkillRow>();
 
         /// <summary>
+        /// The colonist's traits (design 41 §3.5), as <see cref="TraitHandle"/> indices in the order
+        /// dealt; the first <see cref="TraitCount"/> are live. Read from the published slots in the
+        /// same walk as the skills, so the pane shows what the start screen showed for as long as the
+        /// colonist lives. A fixed array, so a refresh allocates nothing.
+        /// </summary>
+        public readonly int[] Traits = new int[TraitHandle.MaxPerPawn];
+
+        /// <summary>How many of <see cref="Traits"/> are dealt.</summary>
+        public int TraitCount { get; private set; }
+
+        /// <summary>
         /// Which tab the pane is showing, as an index into <see cref="Tabs"/>. Held on the model
         /// rather than in the view, because "which tab" survives a refresh and a reselection and
         /// the view is rebuilt from the model, never the other way round.
@@ -1561,6 +1572,9 @@ namespace Odyssey.Hud
 
             if (Tombstoned) return;
 
+            TraitCount = 0;
+            for (int s = 0; s < Traits.Length; s++) Traits[s] = TraitHandle.None;
+
             // One walk of the published aspects rather than three lookups per row, which is what
             // TryGetPawnAspect's own remarks recommend for a reader that wants every aspect of a
             // pawn: the lookup is a scan, so calling it thirty-nine times would be thirty-nine
@@ -1570,6 +1584,13 @@ namespace Odyssey.Hud
             {
                 PawnAspect aspect = published[i];
                 if (aspect.Pawn != Pawn) continue;
+                for (int s = 0; s < TraitHandle.MaxPerPawn; s++)
+                {
+                    if (aspect.Key != TraitHandle.Slot[s] || aspect.Value <= 0) continue;
+                    Traits[s] = aspect.Value - 1;
+                    if (s + 1 > TraitCount) TraitCount = s + 1;
+                }
+
                 for (int r = 0; r < order.Count; r++)
                 {
                     SkillCatalogue.Entry entry = order[r];

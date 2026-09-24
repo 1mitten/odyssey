@@ -244,6 +244,7 @@ namespace Odyssey.Presentation.Ui
             SetNeed(0, _inspect.Food);
             SetNeed(1, _inspect.Rest);
             SetNeed(2, _inspect.Mood);
+            SetTraits();
 
             for (int i = 0; i < _inspect.Skills.Count; i++)
             {
@@ -378,6 +379,28 @@ namespace Odyssey.Presentation.Ui
         }
 
         void SetSkill(int index, in SkillRow row) => SetSkillLine(_skills, index, row);
+
+        Label? _needsTraits;
+        int _shownTraitCount = -1;
+        readonly int[] _shownTraits = new int[TraitHandle.MaxPerPawn];
+
+        /// <summary>
+        /// The traits line, rebuilt only when the traits change — which is never, for one colonist —
+        /// so a selected colonist costs a compare a refresh and no string.
+        /// </summary>
+        void SetTraits()
+        {
+            if (_needsTraits == null) return;
+            bool same = _shownTraitCount == _inspect.TraitCount;
+            for (int i = 0; same && i < _inspect.TraitCount; i++) same = _shownTraits[i] == _inspect.Traits[i];
+            if (same) return;
+
+            _shownTraitCount = _inspect.TraitCount;
+            var dealt = new int[_inspect.TraitCount];
+            for (int i = 0; i < dealt.Length; i++) dealt[i] = _shownTraits[i] = _inspect.Traits[i];
+            HudText.Set(_needsTraits, Registry.Label(SeedField.TraitsKey) + ": " + TraitLine(dealt), HudTextRole.Meta);
+            _needsTraits.tooltip = TraitTooltip(dealt);
+        }
 
         /// <summary>
         /// Draw one line of a skills grid — <b>any</b> skills grid.
@@ -557,6 +580,8 @@ namespace Odyssey.Presentation.Ui
             _cellRows.Clear();
             _needsGrid = null;
             _skillsGrid = null;
+            _needsTraits = null;
+            _shownTraitCount = -1;
             ForgetHealthTab();
             _cellRowsGrid = null;
             _locationRow = null;
@@ -713,6 +738,13 @@ namespace Odyssey.Presentation.Ui
                 _needs.Add(Need(grid, "ui.need.rest"));
                 _needs.Add(Need(grid, "ui.need.mood"));
                 _needRows = (_needs.Count + 1) / 2;
+
+                // Her traits (design 41 §3.5), under the needs: the start screen dealt them, and a
+                // trait never seen again would be a promise the game breaks. The Needs tab is the
+                // short one, so this line sits in the body's slack and the pane does not grow.
+                _needsTraits = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__traits");
+                grid.Add(_needsTraits);
+
                 _needsGrid = grid;
                 tabBody.Add(grid);
 

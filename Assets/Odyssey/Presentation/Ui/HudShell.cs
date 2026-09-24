@@ -865,6 +865,11 @@ namespace Odyssey.Presentation.Ui
 
         void Update()
         {
+            // The draw's machine (design 41 §6.5) runs on the setup page, where there is no world
+            // and so nothing below this line: it is the menu's one per-frame driver, on unscaled
+            // time, and it does nothing unless the page is showing a gamble.
+            if (_hud != null) StepDraw(Time.unscaledDeltaTime);
+
             var world = _boot!.World;
             if (world == null || _hud == null) return;
             if (_directors == null)

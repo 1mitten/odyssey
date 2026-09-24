@@ -23,6 +23,14 @@ the next session learns to ignore.
 
 ## Open
 
+- **Is the gamble fun, and is it worth taking?** (`claude/character-draw`, PR #193, design
+  `41-the-draw.md` §6.7.) New game → Creation: **Gamble** → Pull → Stop, three times, then Start.
+  The reels should spin at visibly different speeds, land left to right a beat apart, and a reel
+  heading for something big should crawl in pale amber first. A jackpot lights the frame and the
+  bulbs gold; a dud puts the bulbs out. Back and New game must bring the same pulls back. Then play
+  a Standard colony and hover a colonist's traits on the Needs tab. A wrong answer is a tease that
+  reads as the game being slow rather than as suspense, a white machine that looks like a hole in the
+  page, Gamble not tempting at +32%, or a dud that feels like a punishment rather than the game.
 - **Does blood read as blood, and is it too much?** (`claude/combat-blood`, design 33 §10).
   *Arm every colonist*, *Spawn 3 marauders*, and watch at the play camera's distance. Every landed
   hit should throw a few red drops from the wound along the blow and leave one mark where they

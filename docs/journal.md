@@ -11877,3 +11877,35 @@ keeps old saves rolling as they did, because pace is re-derived from the seed on
 
 One naming call was made against the owner's list: the chopping reel is **CHP**, not CUT, because
 the skill is *Chopping* on every other surface. It is on the open list for the first play.
+
+## 2026-09-24 — The draw, built
+
+The owner read design 41 and came back with a Claude Design spec for the machine and one instruction:
+*"don't be super strict here — ensure it fits in the style/format of the game first"*. So Gamble went
+into the setup page that exists rather than into a panel of its own, and the page's own rules won
+every disagreement (design 41 §6.7 tables each one).
+
+**The roll change was a confound, not a bug, and it was measured before anything was edited.**
+Dealing every placed colonist Standard traits turned eleven simulation tests red — a swing cooldown,
+a damage spread, a felling's exact experience, two fight guards. Rather than read the eleven, one
+line forced placement back to Legacy and all seven mechanic tests went green, which said the fixtures
+had pinned numbers against trait-free colonists. They now ask for Legacy by name
+(`ScenarioDef.colonistProfile`), and the draw has its own tests for what traits do.
+
+**The simulation's numbers held.** The 100,000-pull Long test measured what the pre-design
+simulation promised to a tenth of a per cent (+32%, 9.0% duds, 6.7% stars), and the ten-day gate
+passed on the new roll. The golden probe against `main` showed the colonies doing more with more
+skill and nothing else moving: no deaths, no failed jobs, stores and needs unchanged.
+
+**The machine's one idea is where the answer goes.** A reel that must land on a value either jumps,
+speeds up, or is told the answer in time. Each reel here brakes at a constant rate, and at the moment
+it starts the rest point is rounded up to a whole symbol and the target is written into the strip
+there — two or more symbols out of the window, which a test checks for every reel. It then simply
+stops. `ReelMachineTests` lands every reel exactly at five frame rates on sixty seeds, and a
+withheld write turns that red.
+
+**The tests caught three of my own mistakes before Unity did.** Two reel speeds sat 1% from a 3:2
+ratio (they would have been seen to march together); three trait windows and the button came to 630
+px in a 618 px grid; and the stylesheet set a bold weight, which the sheet is not allowed to (type
+belongs to the roles). The HUD's three-letter rule also retired the "SPD" and "CHP" abbreviations
+the first design had leant on: the spec's full skill names made them unnecessary anyway.
