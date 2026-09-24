@@ -140,6 +140,13 @@ namespace Odyssey.Presentation.Rendering
         [Tooltip("The prefab this row wants, by name. Used to rebuild the reference and to report gaps.")]
         public string prefabName = string.Empty;
 
+        [Tooltip("The folder under Assets/Synty the prefab is looked for in first, when more than one pack has a prefab of that name. Empty: any pack, in path order.")]
+        // Because the packs share names: SM_Env_Bush_01 is in Battle Royale, Western Frontier
+        // and Meadow Forest, and a lookup by name alone takes whichever sorts first — so the
+        // Meadow dressing drew Battle Royale's bushes and rocks, which carry no levels of detail
+        // (design 38 §18c).
+        public string prefabUnder = string.Empty;
+
         [Tooltip("Centre the art on the cell in x and z. Off for pieces whose pivot is deliberate.")]
         public bool centreXZ = true;
 

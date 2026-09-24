@@ -458,6 +458,37 @@ namespace Odyssey.Presentation.Rendering
         public float TreeLodBias { get; set; } = 3f;
 
         /// <summary>
+        /// The bias a bush is judged at, apart from the trees since design 38 §18c: a bush is a
+        /// fifth of a tree's height, so the same bias drops it a level far nearer the camera, and
+        /// the two want tuning by eye separately. Bushes are tree-tinted, so they take their levels
+        /// through <see cref="TreeLevels"/>.
+        /// </summary>
+        public float BushLodBias { get; set; } = 1.5f;
+
+        /// <summary>
+        /// Whether the dressing's grass stands, wildflowers, sunflowers and ground cover are drawn
+        /// by level of detail, on <see cref="DressingLodBias"/> (design 38 §18c). The benchmark
+        /// found their fill the second-largest GPU term after shadows, and drawing them at their
+        /// coarsest level recovered about a millisecond at 4K (§18e). The grass tufts are not
+        /// included: M2 found their coarse levels crude from this camera, and they are cheap.
+        /// </summary>
+        public bool DressingLevels { get; set; } = true;
+
+        /// <summary>
+        /// Whether a tree casts its shadow from its simplest level — the card — rather than from the
+        /// last mesh before it (design 38 §18f). The owner's call to try, 2026-09-24: shadows were
+        /// the largest GPU term the player benchmark found (§18e). Judged by photographs at a low
+        /// evening sun before it ships.
+        /// </summary>
+        public bool TreeShadowFromSimplest { get; set; } = true;
+
+        /// <summary>The bias the dressing's foliage is judged at; see <see cref="DressingLevels"/>.</summary>
+        /// <remarks>Eight, chosen by photographs at the play camera (design 38 §18c): the near
+        /// meadow unchanged (0.00% at the start, 0.12% close), where four thinned the nearest
+        /// flowers' stems and two moved 6% of the wide view.</remarks>
+        public float DressingLodBias { get; set; } = 8f;
+
+        /// <summary>
         /// Whether a chunk's box, grown upwards, meets the camera's frustum.
         ///
         /// <para><b>Grown by <see cref="TallestModuleMetres"/>, and that is the load-bearing part.</b>
@@ -896,9 +927,14 @@ namespace Odyssey.Presentation.Rendering
                 int shadowLevel = -1;
                 if (resolved.DrawsByLevel)
                 {
-                    int level = TintCode.IsTree(bucket.Tint) && TreeLevels
-                        ? LevelFor(resolved, distance, ViewerFieldOfView, TreeLodBias)
-                        : LevelFor(resolved, distance);
+                    int level;
+                    if (TintCode.IsTree(bucket.Tint) && TreeLevels)
+                        level = LevelFor(resolved, distance, ViewerFieldOfView,
+                            TintCode.IsDressing(bucket.Tint) ? BushLodBias : TreeLodBias);
+                    else if (DressingLevels && TintCode.IsFoliage(bucket.Tint) && !_mesher.IsScatterModule(bucket.Module))
+                        level = LevelFor(resolved, distance, ViewerFieldOfView, DressingLodBias);
+                    else
+                        level = LevelFor(resolved, distance);
                     levelParts = resolved.Lods[level].Parts;
                     if (level > 0) InstancesAtCoarserLevels += bucket.Count;
 
@@ -909,7 +945,9 @@ namespace Odyssey.Presentation.Rendering
                     if (TintCode.IsTree(bucket.Tint) && TreeShadowProxy)
                     {
                         int lods = resolved.Lods.Length;
-                        shadowLevel = Mathf.Max(level, lods >= 3 ? lods - 2 : lods - 1);
+                        shadowLevel = TreeShadowFromSimplest
+                            ? lods - 1
+                            : Mathf.Max(level, lods >= 3 ? lods - 2 : lods - 1);
                     }
                 }
                 int drawnParts = levelParts?.Length ?? 1;

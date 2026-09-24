@@ -93,6 +93,11 @@ namespace Odyssey.Presentation.Rendering
         /// a level is measured against. Zero for a module without levels.</summary>
         public float LodSize { get; }
 
+        /// <summary>Why this module draws its finest level only, when it has a LOD group but no
+        /// levels were kept — or empty. So "why is this at full detail" has an answer without a
+        /// debugger (design 38 §18c).</summary>
+        public string LevelNote { get; internal set; } = string.Empty;
+
         /// <summary>
         /// Where this module's head bone sits, in the same space <see cref="ModulePart.Local"/> is
         /// in, so that <c>placement * Head</c> puts a thing on its head
@@ -364,7 +369,11 @@ namespace Odyssey.Presentation.Rendering
                 _missing.Add(moduleId!);
             }
 
-            var module = new ResolvedModule(moduleId!, shape, parts, usesArt, head, hasHead, lods, lodSize);
+            var module = new ResolvedModule(moduleId!, shape, parts, usesArt, head, hasHead, lods, lodSize)
+            {
+                LevelNote = _levelNote,
+            };
+            _levelNote = string.Empty;
             _modules.Add(module);
             int index = _modules.Count - 1;
             _byId[moduleId!] = index;
@@ -431,15 +440,19 @@ namespace Odyssey.Presentation.Rendering
         /// <para>A level holds the renderers its <c>LOD</c> names plus every renderer no level
         /// names, which is the same rule <see cref="HighestDetail"/> applies to the finest.</para>
         /// </summary>
+        /// <summary>Why the last <see cref="CoarserLevels"/> kept no levels; read by the resolver.</summary>
+        string _levelNote = string.Empty;
+
         ModuleLod[]? CoarserLevels(GameObject prefab, MeshFilter[] filters, ModuleEntry entry,
             Matrix4x4 rootInverse, Matrix4x4 place, ModulePart[] finest, out float size)
         {
             size = 0f;
             var groups = prefab.GetComponentsInChildren<LODGroup>(includeInactive: true);
-            if (groups.Length != 1) return null;
+            if (groups.Length == 0) return null;
+            if (groups.Length != 1) { _levelNote = $"{groups.Length} LOD groups"; return null; }
             LOD[] levels = groups[0].GetLODs();
-            if (levels.Length < 2) return null;
-            if (!SharesOneLocal(finest, finest[0].Local)) return null;
+            if (levels.Length < 2) { _levelNote = "one level"; return null; }
+            if (!SharesOneLocal(finest, finest[0].Local)) { _levelNote = "the finest level's parts sit apart"; return null; }
 
             var mentioned = new HashSet<Renderer>();
             foreach (LOD level in levels)
@@ -461,14 +474,18 @@ namespace Odyssey.Presentation.Rendering
                 var ignored = new Bounds();
                 bool any = false;
                 CollectStatic(filters, entry, keep, rootInverse, raw, ref ignored, ref any);
-                if (raw.Count == 0) return null;
+                if (raw.Count == 0) { _levelNote = $"level {k} collected no renderer"; return null; }
 
                 List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)> merged = Merge(raw);
                 var parts = new ModulePart[merged.Count];
                 for (int i = 0; i < merged.Count; i++)
                     parts[i] = new ModulePart(merged[i].mesh, merged[i].submesh, merged[i].material,
                         place * merged[i].local, fallback: false);
-                if (!SharesOneLocal(parts, finest[0].Local)) return null;
+                if (!SharesOneLocal(parts, finest[0].Local))
+                {
+                    _levelNote = $"level {k} sits apart from the finest: {parts[0].Local.GetColumn(3)} vs {finest[0].Local.GetColumn(3)}";
+                    return null;
+                }
                 result[k] = new ModuleLod(parts, levels[k].screenRelativeTransitionHeight);
             }
 

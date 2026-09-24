@@ -759,10 +759,50 @@ none returned a GPU time on DX11. A RenderDoc capture is the instrument for the 
    would buy ~0.2 ms of CPU and nothing on the GPU**, where the frame is bound. It is not
    recommended ahead of 18c and the shadow casters.
 
-### 18c. Levels of detail on the dressing (owed)
+### 18c. Levels of detail on the dressing (built; bushes were the wrong pack)
 
-Bushes and grass stands with levels on and a bias tuned by photographs at the play camera — d-19's
-~2.4 ms of dressing fill at 4K. Not started.
+**The bushes were Battle Royale's.** The first sweep showed no bias moving a bush at all, and the
+library said why: the three bush rows resolved with one level and no LOD group. The dressing rows
+find their prefab by name, `SM_Env_Bush_01` is in Battle Royale, Western Frontier and Meadow Forest,
+and the lookup took whichever path sorts first — `PolygonBattleRoyale`. The same took `Rock_01` and
+`Rock_02`. A catalogue row now names its pack (`ModuleEntry.prefabUnder`; the Meadow dressing rows
+say `PNB_Meadow_Forest`) and `PlayScene.FindSyntyPrefab` looks there first. The five references are
+patched in `ModuleCatalogue.asset` by hand rather than by a rebuild, because a plain rebuild also
+drops the probed `skin` swatches (≈2,800 lines). **So the meadow's bushes and stones are now
+Meadow's own** — foliage bushes through `Odyssey/Foliage` — and that is a look change the owner
+judges. `ResolvedModule.LevelNote` now says why any module that has a LOD group draws its finest
+level only.
+
+**The levels.** `DressingLevels` (on) and `DressingLodBias` for the grass stands, wildflowers,
+sunflowers and ground cover; `BushLodBias` apart from the trees'. The tufts are left at their finest.
+Tuned by `FrameTimeTests.TheDressingLevelsAtThePlayCamera`, which photographs the start, close and
+wide framings, paused, at each bias against levels off:
+
+| grass stands and flowers | start | close | wide |
+|---|---|---|---|
+| bias 8 | 0.00% | 0.12% | 0.21% |
+| bias 4 | 0.29% | 0.40% | 0.44% |
+| bias 2 | 0.29% | 0.40% | 6.44% |
+| bias 1 | 2.13% | 1.02% | 9.89% |
+
+At bias 4 the nearest flowers' stems visibly simplify; **bias 8** leaves the near meadow as it was
+(`docs/reference/screenshots/look/2026-09-24-perf-lod-close-off-8-4.png`: off, 8, 4). Bushes:
+**bias 1.5** moves 0.00–0.16% at every framing (0.75 moved 0.57% of the wide view). The frame is in
+§18g.
+
+### 18f. Three shadow reductions, the owner's to try (built, awaiting the owner's eye)
+
+1. **Trees cast from their simplest level**, the card, rather than the last mesh before it
+   (`ChunkRenderer.TreeShadowFromSimplest`, on).
+2. **Two shadow cascades** instead of four, on the runtime copy of the pipeline asset
+   (`DisplaySettingsApplier.ShadowCascades`); **`PC_RPAsset.asset` is untouched** and still says four.
+3. **Nothing small casts**: grass stands, flowers and tufts never did (foliage), bushes did not
+   (dressing); the Meadow stones did, and are dressing-tinted now so they do not.
+
+`FrameTimeTests.TheShadowChangesAtThePlayCamera` photographs noon and 19.5 h at the start and wide
+framings, shipped against each change undone and against all undone: noon 0.35–0.62% of pixels,
+evening 0.00–0.04% — no seam and no visible difference at these framings
+(`2026-09-24-perf-shadow-{wide-noon,start-evening}-{shipped,before}.png`). The owner judges.
 
 ### 18d. BatchRendererGroup (recorded, not built)
 
@@ -771,3 +811,21 @@ data, SRP Batcher draws with no per-call C#, but every world shader needs a `DOT
 variant, Project Settings must keep BRG variants and URP must stop stripping unused ones — the
 setting whose flip once took one pass to 884,736 variants — and its DX11 player cost is unmeasured.
 The owner's call: record it, do not build it.
+
+### 18g. The bench after 18c and 18f (2026-09-24) — only half of it usable
+
+One run at 4K, quit on its own in 89 s. **The bench did not pause the colony or hold the hour**, and
+the run shows it: the two "look" arms a minute apart read 6.57 and 9.27 ms of GPU, the calls rose
+1,169 → 1,366, and "no shadow casters" read slower than shipped. Only the first four arms, back to
+back inside ~40 s, are worth quoting:
+
+| arm | GPU ms | draw calls |
+|---|---|---|
+| look as shipped (18c, 18f on) | **6.57** | 1,169 |
+| trees cast from the old proxy level | 6.90 | 1,200 |
+| four cascades | 6.86 | 1,169 |
+| **before 18c and 18f** (finest dressing, old proxy, four cascades) | **7.74** | 1,284 |
+
+So 18c and 18f together are **about 1.2 ms of GPU at 4K**, the proxy and the cascades about 0.3 each,
+and the rest the dressing's levels — to be confirmed. `PlayerBench` now pauses the world and holds
+noon for every arm (`Still`); one more run is owed, with the owner's go.

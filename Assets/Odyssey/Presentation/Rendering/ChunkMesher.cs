@@ -592,7 +592,9 @@ namespace Odyssey.Presentation.Rendering
             int tint = kind switch
             {
                 MeadowDressing.Kind.Bush => TintCode.Dressing(TintCode.Tree(TreeSpecies.Broadleaf)),
-                MeadowDressing.Kind.Rock => TintCode.Stuff(CoreContent.StuffNone),
+                // Dressing, so a stone casts no shadow either (design 38 §18f): its tint colours only
+                // by the low byte, which the flag leaves alone.
+                MeadowDressing.Kind.Rock => TintCode.Dressing(TintCode.Stuff(CoreContent.StuffNone)),
                 _ => TintCode.Daylit(TintCode.Foliage(which % StuffPalette.FoliageTintCount), daylit),
             };
 

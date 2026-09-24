@@ -1942,6 +1942,9 @@ namespace Odyssey.Tests.PlayMode
                 // 38 §17); this arm prices the general one, so the trees' is off for its control.
 
                 renderer.TreeLevels = false;
+                // And the dressing's own levels (design 38 §18c), on by default since, so that "off"
+                // is every module at its finest and the control means what it says.
+                renderer.DressingLevels = false;
                 int withLevels = 0;
                 for (int i = 0; i < library.Count; i++)
                     if (library[i].DrawsByLevel) withLevels++;
@@ -1982,7 +1985,10 @@ namespace Odyssey.Tests.PlayMode
             }
             finally
             {
-                if (boot.Renderer != null) { boot.Renderer.UseLods = false; boot.Renderer.TreeLevels = true; }
+                if (boot.Renderer != null)
+                {
+                    boot.Renderer.UseLods = false; boot.Renderer.TreeLevels = true; boot.Renderer.DressingLevels = true;
+                }
                 if (cam != null) cam.targetTexture = previousTarget;
                 if (fourK != null) fourK.Release();
                 UnityEngine.Object.Destroy(root);
@@ -2339,9 +2345,20 @@ namespace Odyssey.Tests.PlayMode
                 renderer.IndirectTufts = false;
                 long tickBefore = boot.World!.CurrentTick;
                 Color32[] chunk = null!, again = null!, indirect = null!, bare = null!;
-                yield return Shoot("indirect-off", boot, target, p => chunk = p);
-                int chunkCalls = renderer.DrawCalls;
-                yield return Shoot("indirect-off-again", boot, target, p => again = p);
+                // **Still means two shots agree, not a count of frames.** With the world paused and
+                // the tick unchanged, the full tier still read a 3.8-6.5% floor after a fixed wait
+                // where a run alone read 0.00% — something (the camera easing in, a first-use
+                // upload) was still settling. So pairs are shot until two agree, and the pair that
+                // did is the floor.
+                int chunkCalls = 0;
+                for (int attempt = 0; attempt < 10; attempt++)
+                {
+                    yield return Shoot("indirect-off", boot, target, p => chunk = p);
+                    chunkCalls = renderer.DrawCalls;
+                    yield return Shoot("indirect-off-again", boot, target, p => again = p);
+                    if (Difference(chunk, again) < 0.005f) break;
+                    for (int i = 0; i < 60; i++) yield return null;
+                }
                 renderer.IndirectTufts = true;
                 yield return Shoot("indirect-on", boot, target, p => indirect = p);
                 int indirectCalls = renderer.DrawCalls;
@@ -2515,6 +2532,235 @@ namespace Odyssey.Tests.PlayMode
                 if (target != null) target.Release();
                 UnityEngine.Object.Destroy(root);
             }
+        }
+
+        /// <summary>
+        /// Photographs the dressing's levels of detail at a range of biases, for tuning them by eye
+        /// (design 38 §18c). Explicit: run by name. The world is paused and the clock stilled, so
+        /// what moves between two shots is the levels alone. At each framing — the start, close in,
+        /// and the reference's wide one — the levels off, then the grass stands and flowers at each
+        /// bias with the bushes at their finest, then the bushes at each bias with the grass at its
+        /// finest. Each shot is written to <c>Logs/look/lod/</c> and logged with the pixels it moved
+        /// against the levels-off shot, the instances drawn at a coarser level and the draw calls.
+        /// </summary>
+        [UnityTest, Explicit("photographs for tuning the dressing's levels, not a test")]
+        public IEnumerator TheDressingLevelsAtThePlayCamera()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            RenderTexture? target = null;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            float previousScale = Time.timeScale;
+            ChunkRenderer renderer = null!;
+            bool levelsWas = false;
+            float dressingWas = 1f, bushWas = 3f;
+            try
+            {
+                yield return null;
+                renderer = boot.Renderer!;
+                levelsWas = renderer.DressingLevels; dressingWas = renderer.DressingLodBias; bushWas = renderer.BushLodBias;
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+                Assert.That(boot.World!.GameSpeed, Is.Zero, "the world would not pause");
+                Time.timeScale = 0f;
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                target = new RenderTexture(1920, 1080, 24) { name = "lod-look" };
+                cam.targetTexture = target;
+                Directory.CreateDirectory(Path.GetFullPath("Logs/look/lod"));
+#if UNITY_EDITOR
+                var golden = UnityEditor.AssetDatabase.LoadAssetAtPath<VolumeProfile>("Assets/Settings/OdysseyGoldenHour.asset");
+                if (golden != null)
+                {
+                    var grade = new GameObject("Grade").AddComponent<Volume>();
+                    grade.transform.SetParent(root.transform, false);
+                    grade.isGlobal = true;
+                    grade.sharedProfile = golden;
+                }
+#endif
+                WorldSnapshot frame = boot.World!.Views.Current;
+                var framings = new List<(string Name, float Distance)> { ("start", -1f) };
+                if (frame.Pawns.Length > 0) { framings.Add(("close", 28f)); framings.Add(("wide", 70f)); }
+                float[] dressingBiases = { 8f, 4f, 2f, 1f, 0.5f };
+                float[] bushBiases = { 6f, 3f, 1.5f, 0.75f };
+                var lines = new List<string>();
+
+                foreach (var framing in framings)
+                {
+                    if (framing.Distance > 0f) boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, framing.Distance);
+                    for (int i = 0, quiet = 0; i < 1200 && (i < 60 || quiet < 30); i++)
+                    {
+                        yield return null;
+                        quiet = renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
+                    }
+
+                    renderer.DressingLevels = false; renderer.BushLodBias = 1e6f;
+                    Color32[] off = null!;
+                    yield return Snap($"{framing.Name}-off", boot, target, p => off = p);
+                    lines.Add($"{framing.Name} off: {renderer.DrawCalls} calls");
+
+                    foreach (float bias in dressingBiases)
+                    {
+                        renderer.DressingLevels = true; renderer.DressingLodBias = bias; renderer.BushLodBias = 1e6f;
+                        Color32[] shot = null!;
+                        yield return Snap($"{framing.Name}-grass-{bias:0.##}", boot, target, p => shot = p);
+                        lines.Add($"{framing.Name} grass bias {bias:0.##}: moved {Difference(off, shot) * 100f:0.00}%, " +
+                                  $"{renderer.InstancesAtCoarserLevels} coarser, {renderer.DrawCalls} calls");
+                    }
+                    foreach (float bias in bushBiases)
+                    {
+                        renderer.DressingLevels = false; renderer.BushLodBias = bias;
+                        Color32[] shot = null!;
+                        yield return Snap($"{framing.Name}-bush-{bias:0.##}", boot, target, p => shot = p);
+                        lines.Add($"{framing.Name} bush bias {bias:0.##}: moved {Difference(off, shot) * 100f:0.00}%, " +
+                                  $"{renderer.InstancesAtCoarserLevels} coarser, {renderer.DrawCalls} calls");
+                    }
+                }
+                Debug.Log("[Look] dressing levels: " + string.Join("; ", lines));
+
+                // What the library made of the dressing: which kinds draw by level, and at what size.
+                var modules = new List<string>();
+                ModuleLibrary library = boot.Model!.Library;
+                for (int i = 0; i < library.Count; i++)
+                {
+                    ResolvedModule m = library[i];
+                    if (m.Id.IndexOf("dress", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                    modules.Add($"{m.Id}: levels {m.Lods.Length}, by level {m.DrawsByLevel}, size {m.LodSize:0.0} m, " +
+                                $"heights {string.Join("/", Array.ConvertAll(m.Lods, l => l.ScreenHeight.ToString("0.###")))}" +
+                                (m.LevelNote.Length > 0 ? $", finest only: {m.LevelNote}" : string.Empty));
+                }
+                Debug.Log("[Look] dressing modules: " + string.Join("; ", modules));
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                if (renderer != null)
+                {
+                    renderer.DressingLevels = levelsWas; renderer.DressingLodBias = dressingWas; renderer.BushLodBias = bushWas;
+                }
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (target != null) target.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Photographs the shadow changes of design 38 §18f for the owner to judge: noon and a low
+        /// evening sun (long shadows show a cascade seam), at the start and the reference's wide
+        /// framing, each as shipped, with the trees casting from the older proxy level, and with four
+        /// cascades. Explicit: run by name; written to <c>Logs/look/shadow/</c>. The world is paused
+        /// and the clock stilled; the cascade count is set on a runtime copy of the pipeline asset.
+        /// </summary>
+        [UnityTest, Explicit("photographs for judging the shadow changes, not a test")]
+        public IEnumerator TheShadowChangesAtThePlayCamera()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            RenderTexture? target = null;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            float previousScale = Time.timeScale;
+            var pipeline = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+            RenderPipelineAsset? qualityWas = QualitySettings.renderPipeline;
+            RenderPipelineAsset? defaultWas = GraphicsSettings.defaultRenderPipeline;
+            UniversalRenderPipelineAsset? copy = pipeline != null ? UnityEngine.Object.Instantiate(pipeline) : null;
+            try
+            {
+                yield return null;
+                ChunkRenderer renderer = boot.Renderer!;
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+                Assert.That(boot.World!.GameSpeed, Is.Zero, "the world would not pause");
+                Time.timeScale = 0f;
+                if (copy != null)
+                {
+                    if (QualitySettings.renderPipeline != null) QualitySettings.renderPipeline = copy;
+                    else GraphicsSettings.defaultRenderPipeline = copy;
+                }
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                target = new RenderTexture(1920, 1080, 24) { name = "shadow-look" };
+                cam.targetTexture = target;
+                Directory.CreateDirectory(Path.GetFullPath("Logs/look/shadow"));
+#if UNITY_EDITOR
+                var golden = UnityEditor.AssetDatabase.LoadAssetAtPath<VolumeProfile>("Assets/Settings/OdysseyGoldenHour.asset");
+                if (golden != null)
+                {
+                    var grade = new GameObject("Grade").AddComponent<Volume>();
+                    grade.transform.SetParent(root.transform, false);
+                    grade.isGlobal = true;
+                    grade.sharedProfile = golden;
+                }
+#endif
+                WorldSnapshot frame = boot.World!.Views.Current;
+                var framings = new List<(string Name, float Distance)> { ("start", -1f) };
+                if (frame.Pawns.Length > 0) framings.Add(("wide", 70f));
+                var lines = new List<string>();
+                foreach (var framing in framings)
+                {
+                    if (framing.Distance > 0f) boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, framing.Distance);
+                    foreach ((string hourName, float hour) in new[] { ("noon", 12f), ("evening", 19.5f) })
+                    {
+                        boot.DaylightHourOverride = hour;
+                        for (int i = 0, quiet = 0; i < 1200 && (i < 60 || quiet < 30); i++)
+                        {
+                            yield return null;
+                            quiet = renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
+                        }
+                        var arms = new (string Name, bool Simplest, int Cascades)[]
+                        {
+                            ("shipped", true, 2), ("old-proxy", false, 2), ("four-cascades", true, 4), ("before", false, 4),
+                        };
+                        Color32[] shipped = null!;
+                        foreach (var arm in arms)
+                        {
+                            renderer.TreeShadowFromSimplest = arm.Simplest;
+                            if (copy != null) copy.shadowCascadeCount = arm.Cascades;
+                            Color32[] shot = null!;
+                            yield return Snap($"../shadow/{framing.Name}-{hourName}-{arm.Name}", boot, target, p => shot = p);
+                            if (arm.Name == "shipped") shipped = shot;
+                            else lines.Add($"{framing.Name} {hourName} {arm.Name}: differs from shipped by {Difference(shipped, shot) * 100f:0.00}%");
+                        }
+                    }
+                }
+                boot.DaylightHourOverride = null;
+                renderer.TreeShadowFromSimplest = true;
+                Debug.Log("[Look] shadow changes: " + string.Join("; ", lines));
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                boot.DaylightHourOverride = null;
+                QualitySettings.renderPipeline = qualityWas;
+                GraphicsSettings.defaultRenderPipeline = defaultWas;
+                if (copy != null) UnityEngine.Object.Destroy(copy);
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (target != null) target.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        IEnumerator Snap(string name, OdysseyBootstrap boot, RenderTexture target, Action<Color32[]> pixels)
+        {
+            for (int i = 0; i < 8; i++) yield return null;
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = target;
+            var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+            image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+            image.Apply();
+            RenderTexture.active = previous;
+            File.WriteAllBytes(Path.GetFullPath($"Logs/look/lod/{name}.png"), image.EncodeToPNG());
+            pixels(image.GetPixels32());
+            UnityEngine.Object.Destroy(image);
         }
 
         IEnumerator Photograph(string name, OdysseyBootstrap boot, RenderTexture target)

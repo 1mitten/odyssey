@@ -3027,6 +3027,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 1583811397360488284, guid: ad4266017d60f904c9024d082d378839, type: 3}
     prefabName: SM_Env_Grass_Tall_Clump_04
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3070,6 +3071,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 4190401626231728328, guid: 59302d4b4398e504da743b9d9f8e7b67, type: 3}
     prefabName: SM_Env_Grass_Tall_Clump_05
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3113,6 +3115,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 6741950074395184577, guid: a1c8b732aaba82b4aa5ce99cd756d345, type: 3}
     prefabName: SM_Env_Ground_Cover_01
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3156,6 +3159,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 8567074628543705154, guid: c2997bb6f6d25bb418a808309627e831, type: 3}
     prefabName: SM_Env_Ground_Cover_02
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3199,6 +3203,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 6300180554355361027, guid: 2633ad019cc834d4a815232473127d8a, type: 3}
     prefabName: SM_Env_Ground_Cover_03
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3242,6 +3247,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 1159558787302553158, guid: 93d6b405c00afaa46b2e4f45cb9f2a2e, type: 3}
     prefabName: SM_Env_Grass_Bush_01
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3285,6 +3291,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 3757109599224033816, guid: 60467653c9024a94cbe4863e1b401660, type: 3}
     prefabName: SM_Env_Wildflowers_01
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3328,6 +3335,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 1557974530457926728, guid: d74b9ad70f26c1c41805b672a71665b0, type: 3}
     prefabName: SM_Env_Wildflowers_02
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3371,6 +3379,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 5214937767286086917, guid: f4c1ab01cce3344498755643a1be1e5a, type: 3}
     prefabName: SM_Env_Wildflowers_03
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3414,6 +3423,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 30244553050222735, guid: 73663df767caaeb4e8d8a22389f6b41f, type: 3}
     prefabName: SM_Env_Sunflower_01
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3455,8 +3465,9 @@ MonoBehaviour:
       quality: 0
   - moduleId: odyssey.module.dress.bush.a
     shape: 4
-    prefab: {fileID: 1335091913290960, guid: 3f90b914695a45b4b8ec6533e009937c, type: 3}
+    prefab: {fileID: 5580235122429883281, guid: e527460148bf17741a2c17dffc4fb54a, type: 3}
     prefabName: SM_Env_Bush_01
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3498,8 +3509,9 @@ MonoBehaviour:
       quality: 0
   - moduleId: odyssey.module.dress.bush.b
     shape: 4
-    prefab: {fileID: 1631437466478702, guid: 26d8ba263e005bc41afb31205a5dedb3, type: 3}
+    prefab: {fileID: 6906830690193866741, guid: 3595ba075729fec458abd9577f51845e, type: 3}
     prefabName: SM_Env_Bush_02
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3541,8 +3553,9 @@ MonoBehaviour:
       quality: 0
   - moduleId: odyssey.module.dress.bush.c
     shape: 4
-    prefab: {fileID: 1287149350551992, guid: 51803f22817ba224297a8f4dc1585284, type: 3}
+    prefab: {fileID: 1583897355313174661, guid: 09593cef97621c0418f070d7c9fa3091, type: 3}
     prefabName: SM_Env_Bush_03
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3584,8 +3597,9 @@ MonoBehaviour:
       quality: 0
   - moduleId: odyssey.module.dress.rock.a
     shape: 4
-    prefab: {fileID: 1405840485290130, guid: d7beb5687da9e074fbb0455868c345dd, type: 3}
+    prefab: {fileID: 756244418324746648, guid: 9cc02011d1e1d024e9c4420809cd2623, type: 3}
     prefabName: SM_Env_Rock_01
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3627,8 +3641,9 @@ MonoBehaviour:
       quality: 0
   - moduleId: odyssey.module.dress.rock.b
     shape: 4
-    prefab: {fileID: 1264127105196670, guid: 1e3861f9ad1beae4eadd9ad081712f57, type: 3}
+    prefab: {fileID: 4135293660491200023, guid: 145248c1f7a30134aaf7b4e97e61e587, type: 3}
     prefabName: SM_Env_Rock_02
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -3672,6 +3687,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 4259286663014254190, guid: 85d4b66433595d840b0ef5a47fa79d10, type: 3}
     prefabName: SM_Env_Rock_Round_01
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
     centreXZ: 1
     baseAtY: 1
     topAtY: 0

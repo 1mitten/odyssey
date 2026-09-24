@@ -128,6 +128,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Wait for the session and for the board to mesh out.
             while (_boot.Renderer == null || _boot.Model == null) yield return null;
+            yield return Still();
             yield return Settle();
 
             var urp = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
@@ -143,6 +144,27 @@ namespace Odyssey.Presentation.Bootstrap
 
             ChunkRenderer renderer = _boot.Renderer!;
             yield return Arm("look as shipped", null, null);
+
+            // Design 38 §18c and §18f, before and after in this run: each change taken back alone,
+            // then all of them together.
+            var pipeline = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+            int cascades = pipeline != null ? pipeline.shadowCascadeCount : 0;
+            yield return Arm("trees cast from the level before the card (the old proxy)",
+                () => renderer.TreeShadowFromSimplest = false, () => renderer.TreeShadowFromSimplest = true);
+            yield return Arm("four shadow cascades",
+                () => { if (pipeline != null) pipeline.shadowCascadeCount = 4; },
+                () => { if (pipeline != null) pipeline.shadowCascadeCount = cascades; });
+            yield return Arm("before 18c and 18f (finest dressing, old proxy, four cascades)",
+                () =>
+                {
+                    renderer.DressingLevels = false; renderer.BushLodBias = 1e6f; renderer.TreeShadowFromSimplest = false;
+                    if (pipeline != null) pipeline.shadowCascadeCount = 4;
+                },
+                () =>
+                {
+                    renderer.DressingLevels = true; renderer.BushLodBias = 1.5f; renderer.TreeShadowFromSimplest = true;
+                    if (pipeline != null) pipeline.shadowCascadeCount = cascades;
+                });
             yield return Arm("no shadow casters", () => renderer.CastShadows = false, () => renderer.CastShadows = true);
             yield return Arm("no dressing", () => { renderer.Dressing = false; _boot.Model!.Remesh(); },
                 () => { renderer.Dressing = true; _boot.Model!.Remesh(); });
@@ -151,9 +173,18 @@ namespace Odyssey.Presentation.Bootstrap
             yield return Arm("no dressing or tufts",
                 () => { renderer.Dressing = false; renderer.Tufts = false; _boot.Model!.Remesh(); },
                 () => { renderer.Dressing = true; renderer.Tufts = true; _boot.Model!.Remesh(); });
+            // Before and after §18c in the same run: every level the finest, then the dressing at
+            // its coarsest, against the look as shipped (which carries §18c's tuned biases).
+            bool levelsWas = renderer.DressingLevels;
+            float dressingWas = renderer.DressingLodBias, bushWas = renderer.BushLodBias;
+            yield return Arm("dressing at its finest level (no dressing levels)",
+                () => { renderer.DressingLevels = false; renderer.BushLodBias = 1e6f; },
+                () => { renderer.DressingLevels = levelsWas; renderer.BushLodBias = bushWas; });
             yield return Arm("dressing and tufts at their coarsest level",
-                () => { renderer.UseLods = true; renderer.LodBias = 1e-4f; },
-                () => { renderer.UseLods = false; renderer.LodBias = 1f; });
+                () => { renderer.UseLods = true; renderer.LodBias = 1e-4f; renderer.DressingLevels = true;
+                        renderer.DressingLodBias = 1e-4f; renderer.BushLodBias = 1e-4f; },
+                () => { renderer.UseLods = false; renderer.LodBias = 1f; renderer.DressingLevels = levelsWas;
+                        renderer.DressingLodBias = dressingWas; renderer.BushLodBias = bushWas; });
 
             var volumes = new List<Volume>(UnityEngine.Object.FindObjectsByType<Volume>(FindObjectsSortMode.None));
             yield return Arm("golden grade off", () => { foreach (Volume v in volumes) v.enabled = false; },
@@ -168,6 +199,7 @@ namespace Odyssey.Presentation.Bootstrap
             yield return null;
             _boot.BuildSession();
             while (_boot.Renderer == null || _boot.Model == null) yield return null;
+            yield return Still();
             yield return Settle();
             yield return Arm("stock ground (new session)", null, null);
             MeadowLook.GroundEnabled = true;
@@ -175,11 +207,29 @@ namespace Odyssey.Presentation.Bootstrap
             yield return null;
             _boot.BuildSession();
             while (_boot.Renderer == null || _boot.Model == null) yield return null;
+            yield return Still();
             yield return Settle();
             yield return Arm("look (new session)", null, null);
 
             Log("[Bench] table:\n" + _table);
             Quit("[Bench] done");
+        }
+
+        /// <summary>
+        /// The world paused and the day held at noon for the whole run. The second run without this
+        /// drifted 6.6 → 9.3 ms between two identical "look" arms a minute apart, and its calls
+        /// rose 1,169 → 1,366, because colonists went on felling and the sun went on moving under
+        /// the arms: nothing after the first four arms could be compared (design 38 §18e).
+        /// </summary>
+        IEnumerator Still()
+        {
+            _boot.DaylightHourOverride = 12f;
+            for (int i = 0; i < 120 && _boot.World != null && _boot.World.GameSpeed != 0; i++)
+            {
+                _boot.World.Intents.Submit(new Odyssey.Sim.Contracts.Intent(Odyssey.Sim.Contracts.IntentKind.SetGameSpeed, default, 0));
+                yield return null;
+            }
+            Log($"[Bench] world paused: {(_boot.World != null && _boot.World.GameSpeed == 0)}, hour held at 12");
         }
 
         IEnumerator Settle()

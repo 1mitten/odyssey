@@ -11841,3 +11841,20 @@ conversion d-19 ranked second would buy ~0.2 ms of CPU on a GPU-bound frame; lev
 dressing and the shadow casters come first. The bench's first attempt had no guard, died on an
 unsupported profiler flag, and held the owner's screen fullscreen for six minutes; it now runs
 under a try/catch per step, a watchdog and a hard kill, and only on the owner's word.
+
+## 2026-09-24 — The dressing's levels, the wrong pack's bushes, and three shadow reductions
+
+Tuning the bushes' levels found they had none, and the reason was not the levels: the dressing rows
+look their prefab up by name, three packs have an `SM_Env_Bush_01`, and the lookup took Battle
+Royale's because its path sorts first — the Meadow look had been drawing another pack's bushes and
+two of its stones since it was built. Rows can name their pack now, and the five references were
+patched by hand, because a catalogue rebuild also drops the probed swatches. The grass stands and
+flowers take levels at bias 8, chosen by photographs (the near meadow unchanged; 4 thinned the
+nearest flowers), and bushes at 1.5.
+
+The owner asked to try three shadow reductions — trees casting from their card, two cascades, and
+nothing small casting — and all three are in, on the runtime pipeline copy, photographed at noon and
+dusk with no visible seam, for the owner to judge. The bench after them was only half usable: it did
+not pause the colony or hold the hour, and two identical arms a minute apart differed by 2.7 ms. The
+first four arms, back to back, put the whole of 18c and 18f at about 1.2 ms of GPU at 4K. The bench
+pauses and holds noon now; one more run is owed. Design 38 §18c, §18f, §18g.

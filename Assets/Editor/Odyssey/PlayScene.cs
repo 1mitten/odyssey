@@ -1307,7 +1307,12 @@ namespace Odyssey.EditorTools
 
             // A piece of the Meadow dressing. The same shape as a tuft, named apart because the
             // two are placed by different rules and a reader should be able to tell which is which.
-            void Dress(string id, string prefab, float size) => Tuft(id, prefab, size);
+            // Meadow's own prefab, never another pack's of the same name (design 38 §18c).
+            void Dress(string id, string prefab, float size)
+            {
+                Tuft(id, prefab, size);
+                rows[rows.Count - 1].prefabUnder = MeadowFolder;
+            }
 
             // A cell-shaped box wearing a tiling terrain texture. See the note above the natural
             // terrain rows for why this is the one kind of pack material a box may wear.
@@ -2153,7 +2158,7 @@ namespace Odyssey.EditorTools
                 if (string.IsNullOrEmpty(row.prefabName)) continue;
                 if (!cache.TryGetValue(row.prefabName, out GameObject? prefab))
                 {
-                    prefab = FindSyntyPrefab(row.prefabName) ?? FindCustomModel(row.prefabName);
+                    prefab = FindSyntyPrefab(row.prefabName, row.prefabUnder) ?? FindCustomModel(row.prefabName);
                     cache[row.prefabName] = prefab;
                 }
                 row.prefab = prefab;
@@ -2291,16 +2296,29 @@ namespace Odyssey.EditorTools
         }
 
         /// <summary>Exact-name lookup under Assets/Synty. Absent packs give null, which is fine.</summary>
-        static GameObject? FindSyntyPrefab(string exactName)
+        /// <summary>Where the Meadow Forest pack's own prefabs live.</summary>
+        const string MeadowFolder = "Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest";
+
+        /// <summary>
+        /// Exact-name prefab lookup under Assets/Synty, looking in <paramref name="under"/> first
+        /// when it is given. The packs share names — three have an <c>SM_Env_Bush_01</c> — and by
+        /// name alone the one whose path sorts first wins, which is how the Meadow dressing came to
+        /// draw Battle Royale's bushes (design 38 §18c).
+        /// </summary>
+        static GameObject? FindSyntyPrefab(string exactName, string? under = null)
         {
             if (!Directory.Exists(Path.GetFullPath("Assets/Synty"))) return null;
             string[] guids = AssetDatabase.FindAssets($"{exactName} t:Prefab", new[] { "Assets/Synty" });
-            string? path = guids
+            string[] paths = guids
                 .Select(AssetDatabase.GUIDToAssetPath)
                 .Where(p => string.Equals(Path.GetFileNameWithoutExtension(p), exactName,
                     StringComparison.OrdinalIgnoreCase))
                 .OrderBy(p => p, StringComparer.Ordinal)
-                .FirstOrDefault();
+                .ToArray();
+            string? path = null;
+            if (!string.IsNullOrEmpty(under))
+                path = paths.FirstOrDefault(p => p.StartsWith(under + "/", StringComparison.OrdinalIgnoreCase));
+            path ??= paths.FirstOrDefault();
             return path == null ? null : AssetDatabase.LoadAssetAtPath<GameObject>(path);
         }
 
