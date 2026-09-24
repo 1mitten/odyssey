@@ -11643,3 +11643,39 @@ the clock back to 271 rather than raise the ceiling. And the **catalogue** was c
 against both parents, per combat's lesson of the same morning, and the campfire row given the fields
 main added to every row. `Seated` stayed a bool beside `Asleep` because `PawnFlags` is full and is
 the fight's. Design 31 §19.
+
+## 2026-09-24 — The Meadow overhaul: explored, interviewed, researched (design 38)
+
+The owner asked to overhaul the graphics with Synty's Meadow Forest pack — grass, flowers and trees
+replaced, the terraces replaced by a landscape that carries real heights, with culling, occlusion,
+performance and a loading screen all in view — and to be interviewed after the exploration. The
+package they downloaded turned out to be **already imported**: the same 182 prefabs sit under
+`Assets/Synty/PolygonNatureBiomes`, and the grass tufts and the grass ground have been Meadow assets
+for a week. So this is a wiring job, and the package's own `PolygonGeneric` — Battle Royale's GUID
+trap again — is never touched.
+
+Twenty questions in five rounds (`meadow-interview.md`). The landscape decision is the one with
+reach: **a smooth skin drawn over the unchanged simulation layers**, generalising the banks, rather
+than Unity Terrain (one surface, fighting the slice, digging and cut faces) or finer simulation
+heights (ADR 0002). Mid-interview the owner added *"completely full of grass … also consider
+performance"*, which replaced the 2026-09-22 answer that density should follow the land.
+
+Four research lanes, each capped. **d-18 found the thing that reorders the work**: as the project is
+configured, every foliage instance is drawn up to six times a frame — the SSAO DepthNormals prepass,
+the forward pass, and four shadow cascades — with depth priming off, so the forward pass gains
+nothing from the prepass it already pays for. Full-cover grass is decided there before it is decided
+by clump counts, so a new first unit measures priming and grass shadows before any art moves.
+**e-09 found the fact the renderer rests on**: every Meadow LOD child and FBX node is identity, so
+one matrix per plant draws every part of every level, and the wind weights are already in the vertex
+colours. **d-16 found the player starts on DX11**, which decides which warm-up exists, and recommends
+measuring for hitches before building any. **d-17** settled the skin's shading on two texture arrays
+filled on the GPU.
+
+A planning agent checked the three risky mechanisms against the code and found what the first sketch
+had missed: stand heights have about fifteen owners that already disagree on banks; the slice
+assumes one surface layer, which eight layers of hills would break; a naive corner rule caps pits the
+simulation can fill; and a per-chunk grass count pops at the 62.5 m seam unless the shader fades by
+the same rank. All four are in design 38.
+
+PR #174 (frustum culling) is green but conflicts with `main` as of today and needs an approving
+review; it gates M1.
