@@ -2736,6 +2736,11 @@ computed at publish for downed colonists only: a colony with nobody down pays on
   she is down; nobody feeds a patient yet. A later unit, if the playtest wants it.
 - **She reads *Downed* while she heals in bed.** Whether that should say something else is the
   playtest's question (§11e).
+- **A bed demolished under a patient** (C6, found at the Phase 4 integration): she stays down on
+  its cell and is rescued again to another bed, but keeps her reservation on the old head cell until
+  she gets up, so a new bed raised on exactly that cell reads as taken until then. Small, and left:
+  the fix is releasing a patient's bed reservation in `ConstructionGrid.Demolish` beside the damage
+  row it already clears.
 
 ## 12. Friendly fire (C5, built 2026-09-24, `claude/combat-friendly-fire`)
 

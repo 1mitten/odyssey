@@ -23,6 +23,15 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does friendly fire feel like anything?** (C5, `claude/combat-phase4`, design 33 §12). Draft a
+  colonist, Ctrl + right-click another: she is attacked, fights back, and her mood drops by about 8
+  points for a day (the Needs panel's mood; the Thoughts tab that would name it is still disabled).
+  Let a colonist die: every other colonist's mood drops by about 6 for three days, and a
+  marauder's death moves nobody. A wrong answer is no drop, a drop for a marauder, or a drop that
+  stacks up on every blow. Open for the owner (§12): should a second attack renew the day; should
+  the one who started it remember the blows she takes back; is three stacked deaths the right cap;
+  should a miss count?
+
 - **Does blood read as blood, and is it too much?** (`claude/combat-blood`, design 33 §10).
   *Arm every colonist*, *Spawn 3 marauders*, and watch at the play camera's distance. Every landed
   hit should throw a few red drops from the wound along the blow and leave one mark where they
