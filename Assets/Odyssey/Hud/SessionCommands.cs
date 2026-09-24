@@ -168,17 +168,17 @@ namespace Odyssey.Hud
         /// <see cref="LeavePrompt"/> instead, which asks the same question and one more — whether
         /// to save on the way out — and arming a row that opens a prompt would be asking twice
         /// before asking properly. On the main screen nothing is running, so Load and Options cost
-        /// nothing and go on the first press. Quit still asks twice there, for the reason the exit
-        /// row did: it sits directly under Options in a stack of four, it is irreversible, and a
-        /// mis-aimed click closes the game — and with no colony there is nothing to offer to save,
-        /// so there is no prompt to raise in its place.</para>
+        /// nothing and go on the first press. Quit asked twice there until 2026-09-24, because with no
+        /// colony there was no prompt to raise in its place; the title screen's Exit game now raises
+        /// the leave prompt in its no-colony form (<c>LeavePrompt.AskToExit</c>, design 40), so the
+        /// prompt is the second press there too and the row no longer arms.</para>
         /// </summary>
         static readonly (string Key, SessionContext Context, int Order, bool AsksTwice)[] Table =
         {
             (NewGameKey,    SessionContext.MainScreen, 1, false),
             (LoadKey,       SessionContext.MainScreen, 2, false),
             (OptionsKey,    SessionContext.MainScreen, 3, false),
-            (QuitKey,       SessionContext.MainScreen, 4, true),
+            (QuitKey,       SessionContext.MainScreen, 4, false),
 
             (SaveKey,       SessionContext.InGame,     1, false),
             (SaveAsKey,     SessionContext.InGame,     2, false),

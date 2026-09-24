@@ -38,6 +38,24 @@ Shader "Odyssey/Foliage"
 
         _Cutoff("Alpha cutoff", Range(0, 1)) = 0.25
 
+        // The art's own leaf colouring, read from its material at runtime by FoliageLook (never
+        // copied into this repository): with _LeafFlat on, a leaf takes a flat colour — a base,
+        // pushed towards a small-scale and a large-scale colour by world-position noise, so that
+        // neighbouring plants differ — and keeps only its cut-out and a little shading from the
+        // texture. That, not the texture, is where the Meadow screenshots' colour comes from.
+        _LeafFlat("Leaf colour is flat", Float) = 0
+        _LeafBase("Leaf base colour", Color) = (1, 1, 1, 1)
+        _LeafNoise("Leaf noise colour", Color) = (1, 1, 1, 1)
+        _LeafNoiseLarge("Leaf large noise colour", Color) = (1, 1, 1, 1)
+        _LeafNoiseAmount("Leaf noise amount", Range(0, 1)) = 0
+        _LeafNoiseScale("Leaf noise scale", Float) = 1
+        _LeafBigNoiseAmount("Leaf large noise amount", Range(0, 1)) = 0
+        _LeafBigNoiseScale("Leaf large noise scale", Float) = 1
+        // A colour laid over the upward-facing leaves: the sunlit tops of a canopy.
+        _Frost("Frosting", Float) = 0
+        _FrostColour("Frosting colour", Color) = (1, 1, 1, 1)
+        _TrunkBase("Trunk colour", Color) = (1, 1, 1, 1)
+
         // How far the normal is pulled towards straight up. A clump of cards lit by their own
         // normals shades as a dozen facets; pulled up it lights as one mass, which is how grass
         // reads from 60 m.
@@ -64,7 +82,23 @@ Shader "Odyssey/Foliage"
         _ShrinkStart("Shrink starts, metres", Float) = 0
         _ShrinkEnd("Shrink complete by, metres", Float) = 0
 
+        // Whether this material's clumps thin with distance by rank (design 38 §21): grass yes,
+        // trees and bushes no. The distances come from the renderer, as _OdysseyThin.
+        _Thinnable("Thins with distance", Float) = 0
+
         _Smoothness("Smoothness", Range(0, 1)) = 0.1
+
+        // The stand colours (design 38 §17c): how strongly the leaves take the green, gold,
+        // orange or red their tree is dealt from its position. 0 is the art's own colour.
+        _StandVariety("Stand colours", Range(0, 1)) = 0
+
+        // The ghost a crown becomes over a colonist (design 38 §17c): blended at _Fade, after a
+        // depth pass so only the front-most leaf card shows. The cache sets these on the ghost's
+        // material and nowhere else; on every other material the ghost depth pass is disabled.
+        [HideInInspector] _Ghost("Ghost", Float) = 0
+        [HideInInspector] _SrcBlend("Source blend", Float) = 1
+        [HideInInspector] _DstBlend("Destination blend", Float) = 0
+        [HideInInspector] _ZWrite("Depth write", Float) = 1
     }
 
     SubShader
@@ -73,6 +107,33 @@ Shader "Odyssey/Foliage"
 
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+        // The indirect path (design 38 §18). Under ODYSSEY_INDIRECT a clump's matrix comes from the
+        // buffer the compute cull read, at the index it kept for this instance, instead of from the
+        // instancing arrays; nothing else about the clump changes. Everything below asks for a
+        // position or a normal in world space through these two, never through the URP transforms
+        // directly, so the two paths cannot drift apart.
+        #if defined(ODYSSEY_INDIRECT)
+            StructuredBuffer<float4x4> _OdysseyInstances;
+            StructuredBuffer<uint> _OdysseyVisible;
+            static float4x4 _OdysseyObjectToWorld;
+            void FoliageIndirectSetup(uint instanceID)
+            {
+                _OdysseyObjectToWorld = _OdysseyInstances[_OdysseyVisible[instanceID]];
+            }
+            float3 FoliageToWorld(float3 positionOS)
+            {
+                return mul(_OdysseyObjectToWorld, float4(positionOS, 1.0)).xyz;
+            }
+            // Clumps are placed turned and uniformly scaled, so the matrix itself carries a normal.
+            float3 FoliageToWorldNormal(float3 normalOS)
+            {
+                return normalize(mul((float3x3)_OdysseyObjectToWorld, normalOS));
+            }
+        #else
+            float3 FoliageToWorld(float3 positionOS) { return TransformObjectToWorld(positionOS); }
+            float3 FoliageToWorldNormal(float3 normalOS) { return TransformObjectToWorldNormal(normalOS); }
+        #endif
 
         TEXTURE2D(_LeafMap);  SAMPLER(sampler_LeafMap);
         TEXTURE2D(_TrunkMap); SAMPLER(sampler_TrunkMap);
@@ -84,6 +145,17 @@ Shader "Odyssey/Foliage"
             float4 _LeafGrade;
             float4 _TrunkGrade;
             float _Cutoff;
+            float _LeafFlat;
+            float4 _LeafBase;
+            float4 _LeafNoise;
+            float4 _LeafNoiseLarge;
+            float _LeafNoiseAmount;
+            float _LeafNoiseScale;
+            float _LeafBigNoiseAmount;
+            float _LeafBigNoiseScale;
+            float _Frost;
+            float4 _FrostColour;
+            float4 _TrunkBase;
             float _NormalUp;
             float _WindResponse;
             float _Flutter;
@@ -92,7 +164,13 @@ Shader "Odyssey/Foliage"
             float _Fade;
             float _ShrinkStart;
             float _ShrinkEnd;
+            float _Thinnable;
             float _Smoothness;
+            float _StandVariety;
+            float _Ghost;
+            float _SrcBlend;
+            float _DstBlend;
+            float _ZWrite;
         CBUFFER_END
 
         // Globals from WindDirector. All-zero is still air, so foliage drawn before anything sets
@@ -108,7 +186,43 @@ Shader "Odyssey/Foliage"
         SAMPLER(sampler_OdysseyClearTex);
         float4 _OdysseyClear;
 
+        // The grass thinning from ChunkRenderer (design 38 §21): x the metres from the camera where
+        // it starts, y the least fraction kept, w on. Mirrors GrassThinning.Keep.
+        float4 _OdysseyThin;
+
         #define ODYSSEY_FOLIAGE_MAX_BOW 0.6
+        #define ODYSSEY_THIN_SOFT 0.05
+
+        // **Mirrors GrassThinning.Rank exactly** — the same quantisation (a sixteenth of a metre,
+        // exact in float), the same integer PCG — because the CPU submits a prefix of each bucket
+        // sorted by this rank and a clump the two disagreed about would pop. GrassThinningTests
+        // pins the C# side; change one, change both.
+        uint FoliagePcg(uint v)
+        {
+            uint state = v * 747796405u + 2891336453u;
+            uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+            return (word >> 22u) ^ word;
+        }
+
+        float FoliageRank(float2 xz)
+        {
+            uint ix = (uint)(int)floor(xz.x * 16.0);
+            uint iz = (uint)(int)floor(xz.y * 16.0);
+            uint h = FoliagePcg(ix + FoliagePcg(iz));
+            return (h >> 8) * (1.0 / 16777216.0);
+        }
+
+        // One while the clump is kept at its distance; shrinking to nothing over the last
+        // ODYSSEY_THIN_SOFT of the keep fraction, so the far field loses clumps one at a time as the
+        // camera moves rather than a chunk's worth at a seam.
+        float FoliageThinScale(float3 rootWS)
+        {
+            if (_OdysseyThin.w < 0.5 || _Thinnable < 0.5) return 1;
+            float span = distance(_WorldSpaceCameraPos.xyz, rootWS);
+            float r = _OdysseyThin.x / max(span, _OdysseyThin.x);
+            float keep = max(_OdysseyThin.y, r * r);
+            return saturate((keep - FoliageRank(rootWS.xz)) / ODYSSEY_THIN_SOFT);
+        }
 
         // Sampled at the clump's root, so a clump clears or stands as one thing.
         float FoliageClearanceAt(float3 rootWS)
@@ -142,9 +256,17 @@ Shader "Odyssey/Foliage"
         // along its normal.
         float3 FoliageDisplace(float3 positionOS, float3 normalOS, float4 colour)
         {
-            float3 rootWS = TransformObjectToWorld(float3(0, 0, 0));
-            float scale = (1.0 - FoliageClearanceAt(rootWS)) * FoliageDistanceScale(rootWS);
-            float3 positionWS = TransformObjectToWorld(positionOS * scale);
+            float3 rootWS = FoliageToWorld(float3(0, 0, 0));
+            float scale = FoliageDistanceScale(rootWS) * FoliageThinScale(rootWS);
+            float3 positionWS = FoliageToWorld(positionOS * scale);
+
+            // The clearing, asked where the blade is rather than where its clump is rooted: a
+            // Meadow tall-grass mat is six metres across, and a log two metres off its root was
+            // standing in grass the root-sampled clearing never touched (the look pass, design 38
+            // §17). Blades near an item or a mark lie flat towards the ground, so the grass parts
+            // round the thing instead of the whole clump vanishing.
+            float clear = FoliageClearanceAt(positionWS);
+            positionWS.y = lerp(positionWS.y, rootWS.y + 0.02, clear);
 
             float strength = length(_OdysseyWind.xyz) * _WindResponse;
             if (strength < 1e-5) return positionWS;
@@ -165,22 +287,104 @@ Shader "Odyssey/Foliage"
             positionWS = rootWS + RotateAbout(positionWS - rootWS, axis, angle);
 
             // Flutter: leaves only (blue), strongest at the free tip (green).
-            float3 normalWS = TransformObjectToWorldNormal(normalOS);
+            float3 normalWS = FoliageToWorldNormal(normalOS);
             float shiver = sin(_OdysseyWind.w * 2.3 + travel * 3.1 + dot(positionWS.xz, float2(1.7, 2.3)));
             positionWS += normalWS * (shiver * _Flutter * colour.b * colour.g * saturate(strength / 0.45));
             return positionWS;
         }
 
+        // Smooth value noise over world position, [0, 1]. Ours: a hash lattice and a smoothstep.
+        float FoliageHash(float2 p)
+        {
+            p = frac(p * float2(0.1031, 0.1030));
+            p += dot(p, p.yx + 33.33);
+            return frac((p.x + p.y) * p.x);
+        }
+
+        float FoliageNoise(float2 p)
+        {
+            float2 i = floor(p);
+            float2 f = frac(p);
+            float2 u = f * f * (3.0 - 2.0 * f);
+            float a = FoliageHash(i);
+            float b = FoliageHash(i + float2(1, 0));
+            float c = FoliageHash(i + float2(0, 1));
+            float d = FoliageHash(i + float2(1, 1));
+            return lerp(lerp(a, b, u.x), lerp(c, d, u.x), u.y);
+        }
+
+        // The colour a tree is dealt from where it stands (owner, 2026-09-24; design 38 §17c): like
+        // the reference, mostly fresh greens and yellow-greens, with patches of gold and orange and
+        // the odd red — varying tree to tree but grouped in stands, because the choice leans on a
+        // field about fifty metres across as well as on the tree's own hash. rgb is the colour
+        // (linear), a how strongly it is taken: the greens gently, so a green tree keeps the art's
+        // own green; autumn fully. **Mirrored by LeafVariety.cs**, which the tests count — change
+        // one, change both (LeafVarietyTests reads these constants out of this file).
+        half4 FoliageStandColour(float3 rootWS)
+        {
+            float2 xz = rootWS.xz;
+            float s  = FoliageNoise(xz * 0.018 + 3.1);
+            float h  = FoliageHash(xz * 0.731 + 11.3);
+            float h2 = FoliageHash(xz * 1.917 + 3.7);
+            float t = s * 0.7 + h * 0.3;
+            if (h2 > 0.965) return half4(0.477, 0.040, 0.013, 1.0);
+            if (t > 0.58) return h2 < 0.5 ? half4(0.787, 0.479, 0.033, 1.0)
+                                          : half4(0.787, 0.214, 0.020, 1.0);
+            // The greens take a little, so each species keeps most of its own painted colour and the
+            // stand colours are what add to it rather than what replace it (photographed: at 0.6 the
+            // fruit trees' own orange went green, and the meadow had fewer colours than before).
+            if (h > 0.8) return half4(0.477, 0.604, 0.051, 0.45);
+            return half4(lerp(float3(0.133, 0.342, 0.027), float3(0.319, 0.479, 0.033), h2), 0.3);
+        }
+
+        // A leaf colour moved to the stand colour's hue, keeping its own lightness: the art's light
+        // and dark survive, only the colour changes — tint, not flatten.
+        half3 FoliageRecolour(half3 albedo, half4 stand)
+        {
+            if (_StandVariety <= 0.001) return albedo;
+            const half3 lumaWeights = half3(0.2126, 0.7152, 0.0722);
+            half luma = dot(albedo, lumaWeights);
+            half target = max(dot(stand.rgb, lumaWeights), 1e-3);
+            // Half the art's own light and dark, half the stand colour's: at the art's lightness
+            // alone an orange dealt to a dark crown read as brown, and gold as olive (photographed).
+            half3 recoloured = min(stand.rgb * lerp(1.0, luma / target, 0.5), 1.0);
+            return lerp(albedo, recoloured, saturate(_StandVariety * stand.a));
+        }
+
+        // The flat leaf colour at a world position and a height up the plant: the base colour at
+        // the root, rising to the noise colours at the tip (vertex red is the height gradient, 0 at
+        // the root and about 0.5 at a crown), which from above is what shows — so a clump seen
+        // from the play camera is its bright tips over a dark heart, as the reference is. The noise
+        // mixes towards the small noise colour, then towards the large one. The scales are the art's own noise frequencies; the metres they
+        // map to are ours (a grass frequency of 12 varies over about a metre and a half, a tree's
+        // 4 over a crown; a large frequency of 0.5 over a hundred metres of meadow).
+        half3 FoliageLeafColour(float3 positionWS, float height)
+        {
+            float small = FoliageNoise(positionWS.xz * (_LeafNoiseScale * 0.05));
+            float large = FoliageNoise(positionWS.xz * (_LeafBigNoiseScale * 0.02) + 17.0);
+            half3 tip = lerp(_LeafNoise.rgb, _LeafNoiseLarge.rgb, saturate(large * _LeafBigNoiseAmount * 1.5));
+            tip = lerp(tip, _LeafNoise.rgb, saturate(small * _LeafNoiseAmount) * 0.5);
+            return lerp(_LeafBase.rgb, tip, saturate(height * 4.0));
+        }
+
         // Leaf or trunk by the leaf mask; alpha is the cut-out.
-        half4 FoliageSample(float2 uv, float leafMask)
+        half4 FoliageSample(float2 uv, float leafMask, float3 positionWS, float height)
         {
             if (leafMask > 0.5)
             {
                 half4 leaf = SAMPLE_TEXTURE2D(_LeafMap, sampler_LeafMap, TRANSFORM_TEX(uv, _LeafMap));
+                if (_LeafFlat > 0.5)
+                {
+                    // Flat: the art's colour scheme, with a little of the texture's own light and
+                    // dark kept so a clump is not a silhouette.
+                    half luma = dot(leaf.rgb, half3(0.299, 0.587, 0.114));
+                    half3 flat = FoliageLeafColour(positionWS, height) * lerp(1.0, saturate(luma * 3.0), 0.35);
+                    return half4(flat * _LeafGrade.rgb, leaf.a);
+                }
                 return half4(leaf.rgb * _LeafGrade.rgb, leaf.a);
             }
             half4 trunk = SAMPLE_TEXTURE2D(_TrunkMap, sampler_TrunkMap, TRANSFORM_TEX(uv, _TrunkMap));
-            return half4(trunk.rgb * _TrunkGrade.rgb, trunk.a);
+            return half4(trunk.rgb * _TrunkBase.rgb * _TrunkGrade.rgb, trunk.a);
         }
 
         // A 4x4 ordered dither, for the fade. Opaque and depth-writing throughout, so a faded
@@ -199,7 +403,8 @@ Shader "Odyssey/Foliage"
         void FoliageClip(half alpha, float4 positionCS)
         {
             clip(alpha - _Cutoff);
-            if (_Fade < 0.999) clip(_Fade - FoliageDither(positionCS));
+            // The dither is for a fade drawn opaque; a ghost is blended instead (see the ghost pass).
+            if (_Ghost < 0.5 && _Fade < 0.999) clip(_Fade - FoliageDither(positionCS));
         }
 
         // Patch drift from the root, so a whole clump moves together.
@@ -216,7 +421,10 @@ Shader "Odyssey/Foliage"
             Name "FoliageForward"
             Tags { "LightMode" = "UniversalForward" }
 
-            ZWrite On
+            // One and Zero and On for everything but a ghost, which blends at _Fade over the depth
+            // its own ghost pass laid down, so it only ever shades its front-most card.
+            Blend [_SrcBlend] [_DstBlend]
+            ZWrite [_ZWrite]
             // Both sides: a card seen from behind is still grass.
             Cull Off
 
@@ -225,6 +433,9 @@ Shader "Odyssey/Foliage"
             #pragma fragment Fragment
             // Without this the instanced path draws every clump at the origin, silently.
             #pragma multi_compile_instancing
+            // The indirect path: only the forward pass, because grass is drawn in queue 2501 and
+            // casts nothing, so the depth and shadow passes never see a tuft (design 38 §13, §18).
+            #pragma multi_compile_local _ ODYSSEY_INDIRECT
             #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
@@ -242,6 +453,10 @@ Shader "Odyssey/Foliage"
                 float4 colour     : COLOR;
                 float2 uv         : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
+            // UNITY_ANY_INSTANCING_ENABLED is always defined, as 0 or 1: tested by value.
+            #if defined(ODYSSEY_INDIRECT) && !UNITY_ANY_INSTANCING_ENABLED
+                uint indirectID   : SV_InstanceID;
+            #endif
             };
 
             struct Varyings
@@ -250,10 +465,12 @@ Shader "Odyssey/Foliage"
                 float3 positionWS : TEXCOORD0;
                 half3  normalWS   : TEXCOORD1;
                 float2 uv         : TEXCOORD2;
-                // x the leaf mask, y the clump's patch drift.
-                half2  leaf       : TEXCOORD3;
+                // x the leaf mask, y the clump's patch drift, z the height gradient.
+                half3  leaf       : TEXCOORD3;
                 half   fogFactor  : TEXCOORD4;
                 half3  vertexSH   : TEXCOORD5;
+                // The tree's stand colour, dealt once per vertex from the instance's position.
+                half4  stand      : TEXCOORD6;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -264,18 +481,26 @@ Shader "Odyssey/Foliage"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+            #if defined(ODYSSEY_INDIRECT)
+                #if UNITY_ANY_INSTANCING_ENABLED
+                FoliageIndirectSetup(input.instanceID);
+                #else
+                FoliageIndirectSetup(input.indirectID);
+                #endif
+            #endif
 
-                float3 rootWS = TransformObjectToWorld(float3(0, 0, 0));
+                float3 rootWS = FoliageToWorld(float3(0, 0, 0));
                 float3 positionWS = FoliageDisplace(input.positionOS.xyz, input.normalOS, input.colour);
-                float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                float3 normalWS = FoliageToWorldNormal(input.normalOS);
 
                 output.positionWS = positionWS;
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.normalWS = normalWS;
                 output.uv = input.uv;
-                output.leaf = half2(input.colour.b, FoliagePatch(rootWS));
+                output.leaf = half3(input.colour.b, FoliagePatch(rootWS), input.colour.r);
                 output.fogFactor = ComputeFogFactor(output.positionCS.z);
                 output.vertexSH = SampleSH(normalize(lerp(normalWS, float3(0, 1, 0), _NormalUp)));
+                output.stand = FoliageStandColour(rootWS);
                 return output;
             }
 
@@ -284,8 +509,9 @@ Shader "Odyssey/Foliage"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-                half4 art = FoliageSample(input.uv, input.leaf.x);
+                half4 art = FoliageSample(input.uv, input.leaf.x, input.positionWS, input.leaf.z);
                 FoliageClip(art.a, input.positionCS);
+                if (input.leaf.x > 0.5) art.rgb = FoliageRecolour(art.rgb, input.stand);
 
                 // A card lit from behind would go black; its back face takes the flipped normal,
                 // then both are pulled towards up so the clump lights as one mass.
@@ -299,6 +525,10 @@ Shader "Odyssey/Foliage"
 
                 SurfaceData surface = (SurfaceData)0;
                 surface.albedo = art.rgb * _BaseColor.rgb * drift * hue;
+                // The sunlit tops of a canopy: leaves facing up take the art's frosting colour.
+                if (_Frost > 0.5 && input.leaf.x > 0.5)
+                    surface.albedo = lerp(surface.albedo, FoliageRecolour(_FrostColour.rgb, input.stand) * _BaseColor.rgb,
+                                          saturate(normalWS.y * 1.6 - 0.6) * 0.7);
                 surface.alpha = 1;
                 surface.metallic = 0;
                 surface.smoothness = _Smoothness;
@@ -317,7 +547,7 @@ Shader "Odyssey/Foliage"
 
                 half4 colour = UniversalFragmentPBR(inputData, surface);
                 colour.rgb = MixFog(colour.rgb, inputData.fogCoord);
-                colour.a = 1;
+                colour.a = _Ghost > 0.5 ? _Fade : 1;
                 return colour;
             }
             ENDHLSL
@@ -394,7 +624,66 @@ Shader "Odyssey/Foliage"
             half4 ShadowFragment(ShadowVaryings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                FoliageClip(FoliageSample(input.uv, input.leafMask).a, input.positionCS);
+                FoliageClip(FoliageSample(input.uv, input.leafMask, float3(0, 0, 0), 1.0).a, input.positionCS);
+                return 0;
+            }
+            ENDHLSL
+        }
+
+        // The ghost's depth, drawn just before its colour (URP draws SRPDefaultUnlit ahead of
+        // UniversalForward for one object). With it the blended colour pass that follows passes the
+        // depth test on the front-most leaf card only, so a crown of forty cards fades to one faint
+        // layer instead of stacking forty 15% panes back into a solid crown — which is what the
+        // translucent stand-in did (the owner: "the leaves you cannot [see through]"). Disabled on
+        // every material but a ghost's (MaterialCache), so a solid crown never draws it.
+        Pass
+        {
+            Name "FoliageGhostDepth"
+            Tags { "LightMode" = "SRPDefaultUnlit" }
+
+            ZWrite On
+            ColorMask 0
+            Cull Off
+
+            HLSLPROGRAM
+            #pragma vertex GhostVertex
+            #pragma fragment GhostFragment
+            #pragma multi_compile_instancing
+            #pragma target 3.5
+
+            struct GhostAttributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS   : NORMAL;
+                float4 colour     : COLOR;
+                float2 uv         : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct GhostVaryings
+            {
+                float4 positionCS : SV_POSITION;
+                float2 uv         : TEXCOORD0;
+                half   leafMask   : TEXCOORD1;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            GhostVaryings GhostVertex(GhostAttributes input)
+            {
+                GhostVaryings output = (GhostVaryings)0;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                output.positionCS = TransformWorldToHClip(
+                    FoliageDisplace(input.positionOS.xyz, input.normalOS, input.colour));
+                output.uv = input.uv;
+                output.leafMask = input.colour.b;
+                return output;
+            }
+
+            half4 GhostFragment(GhostVaryings input) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                FoliageClip(FoliageSample(input.uv, input.leafMask, float3(0, 0, 0), 1.0).a, input.positionCS);
                 return 0;
             }
             ENDHLSL
@@ -413,6 +702,9 @@ Shader "Odyssey/Foliage"
             #pragma vertex DepthVertex
             #pragma fragment DepthFragment
             #pragma multi_compile_instancing
+            // The scenery drawn from GPU buffers (design 38 §22): bushes are opaque, so they reach
+            // this pass and must read the same instance the forward pass does.
+            #pragma multi_compile_local _ ODYSSEY_INDIRECT
             #pragma target 3.5
 
             struct DepthAttributes
@@ -422,6 +714,9 @@ Shader "Odyssey/Foliage"
                 float4 colour     : COLOR;
                 float2 uv         : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
+            #if defined(ODYSSEY_INDIRECT) && !UNITY_ANY_INSTANCING_ENABLED
+                uint indirectID   : SV_InstanceID;
+            #endif
             };
 
             struct DepthVaryings
@@ -437,6 +732,13 @@ Shader "Odyssey/Foliage"
                 DepthVaryings output = (DepthVaryings)0;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
+            #if defined(ODYSSEY_INDIRECT)
+                #if UNITY_ANY_INSTANCING_ENABLED
+                FoliageIndirectSetup(input.instanceID);
+                #else
+                FoliageIndirectSetup(input.indirectID);
+                #endif
+            #endif
                 output.positionCS = TransformWorldToHClip(
                     FoliageDisplace(input.positionOS.xyz, input.normalOS, input.colour));
                 output.uv = input.uv;
@@ -447,7 +749,7 @@ Shader "Odyssey/Foliage"
             half4 DepthFragment(DepthVaryings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                FoliageClip(FoliageSample(input.uv, input.leafMask).a, input.positionCS);
+                FoliageClip(FoliageSample(input.uv, input.leafMask, float3(0, 0, 0), 1.0).a, input.positionCS);
                 return 0;
             }
             ENDHLSL
@@ -468,6 +770,7 @@ Shader "Odyssey/Foliage"
             #pragma vertex DepthNormalsVertex
             #pragma fragment DepthNormalsFragment
             #pragma multi_compile_instancing
+            #pragma multi_compile_local _ ODYSSEY_INDIRECT
             #pragma target 3.5
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -479,6 +782,9 @@ Shader "Odyssey/Foliage"
                 float4 colour     : COLOR;
                 float2 uv         : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
+            #if defined(ODYSSEY_INDIRECT) && !UNITY_ANY_INSTANCING_ENABLED
+                uint indirectID   : SV_InstanceID;
+            #endif
             };
 
             struct NormalsVaryings
@@ -495,9 +801,16 @@ Shader "Odyssey/Foliage"
                 NormalsVaryings output = (NormalsVaryings)0;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
+            #if defined(ODYSSEY_INDIRECT)
+                #if UNITY_ANY_INSTANCING_ENABLED
+                FoliageIndirectSetup(input.instanceID);
+                #else
+                FoliageIndirectSetup(input.indirectID);
+                #endif
+            #endif
                 output.positionCS = TransformWorldToHClip(
                     FoliageDisplace(input.positionOS.xyz, input.normalOS, input.colour));
-                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                output.normalWS = FoliageToWorldNormal(input.normalOS);
                 output.uv = input.uv;
                 output.leafMask = input.colour.b;
                 return output;
@@ -506,7 +819,7 @@ Shader "Odyssey/Foliage"
             half4 DepthNormalsFragment(NormalsVaryings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                FoliageClip(FoliageSample(input.uv, input.leafMask).a, input.positionCS);
+                FoliageClip(FoliageSample(input.uv, input.leafMask, float3(0, 0, 0), 1.0).a, input.positionCS);
                 float3 normalWS = normalize(lerp(normalize(input.normalWS), float3(0, 1, 0), _NormalUp));
                 return half4(normalWS, 0);
             }

@@ -283,7 +283,10 @@ namespace Odyssey.Presentation.Rendering
         public const float TreeFullDensityMetres = 15f;
 
         /// <summary>What the density has fallen to at <see cref="TreeRangeMetres"/>.</summary>
-        public const float TreeFarDensity = 0.15f;
+        public static float TreeFarDensity { get; set; } = DefaultTreeFarDensity;
+
+        /// <summary>Raised from 0.15f on 2026-09-24: the surround read barer than the board (design 38 §19).</summary>
+        public const float DefaultTreeFarDensity = 0.45f;
 
         /// <summary>
         /// How much of the board's own tree density a point this far out gets.
@@ -361,10 +364,16 @@ namespace Odyssey.Presentation.Rendering
         public const float FarTreeStepMetres = 15f;
 
         /// <summary>The chance of a tree at a lattice point just outside the near wood.</summary>
-        public const float FarTreeNearDensity = 0.30f;
+        public static float FarTreeNearDensity { get; set; } = DefaultFarTreeNearDensity;
+
+        /// <summary>Raised from 0.30f on 2026-09-24: the surround read barer than the board (design 38 §19).</summary>
+        public const float DefaultFarTreeNearDensity = 0.5f;
 
         /// <summary>And at <see cref="FarTreeRangeMetres"/>, where it is nearly haze.</summary>
-        public const float FarTreeFarDensity = 0.07f;
+        public static float FarTreeFarDensity { get; set; } = DefaultFarTreeFarDensity;
+
+        /// <summary>Raised from 0.07f on 2026-09-24: the surround read barer than the board (design 38 §19).</summary>
+        public const float DefaultFarTreeFarDensity = 0.1f;
 
         /// <summary>
         /// How much of a tree a lattice point this far out gets. Thins outwards for the same

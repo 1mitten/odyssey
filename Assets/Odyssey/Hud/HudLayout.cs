@@ -1211,9 +1211,9 @@ namespace Odyssey.Hud
         /// day, board, when it was written, and for a file this build cannot open, why — under it.
         /// Two lines, so it stands taller than the plain row above.
         /// </summary>
-        public const int StartSaveRow = 44;
+        public const int StartSaveRow = 64;
 
-        public const int StartSaveGap = 4;
+        public const int StartSaveGap = 10;
 
         /// <summary>
         /// The start screen's body: everything under the title, and <b>a fixed height whatever

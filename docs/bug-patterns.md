@@ -621,6 +621,20 @@ means ("the first tick this system sees") rather than to a number that stood for
 
 ## The register
 
+### 2026-09-24 — A stored graphics preference never reached a new game (P1, P2-adjacent)
+
+Found by reading, while building the quality presets. `SettingsPresenter` attaches on the first
+frame — the start screen — and lays the stored preferences over the director, which raises
+`OptionChanged`; its `Apply` asks for the renderer, finds none, and returns. The session's renderer
+is then built from the bootstrap's fields. So a stored "shadows off" or "surround off" was applied to
+nothing and every new game came up as the scene said; only a lever moved *during* play ever took.
+Two owners of what a preference means to the renderer — the live handler and the bootstrap's
+initialiser — and only one of them read the preferences.
+
+**What now stops it:** `SettingsPresenter.ApplyRendererLevers` is the one mapping, called by the
+root as it builds a renderer whenever a store is attached, and `GraphicsLeverTests` holds the
+mapping. `27-graphics-settings.md` §10.
+
 ### 2026-09-24 — The cull was asked after the mesher, so the budget went on chunks nobody could see (P1-adjacent)
 
 Found by reading, while planning the Meadow overhaul, and fixed on merging `main` up to the culling

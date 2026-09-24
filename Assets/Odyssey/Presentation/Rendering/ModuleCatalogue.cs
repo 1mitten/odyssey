@@ -140,6 +140,13 @@ namespace Odyssey.Presentation.Rendering
         [Tooltip("The prefab this row wants, by name. Used to rebuild the reference and to report gaps.")]
         public string prefabName = string.Empty;
 
+        [Tooltip("The folder under Assets/Synty the prefab is looked for in first, when more than one pack has a prefab of that name. Empty: any pack, in path order.")]
+        // Because the packs share names: SM_Env_Bush_01 is in Battle Royale, Western Frontier
+        // and Meadow Forest, and a lookup by name alone takes whichever sorts first — so the
+        // Meadow dressing drew Battle Royale's bushes and rocks, which carry no levels of detail
+        // (design 38 §18c).
+        public string prefabUnder = string.Empty;
+
         [Tooltip("Centre the art on the cell in x and z. Off for pieces whose pivot is deliberate.")]
         public bool centreXZ = true;
 
@@ -874,6 +881,47 @@ namespace Odyssey.Presentation.Rendering
         public static int GrassTuftCount => GrassTufts.Length;
 
         public static string GrassTuft(int variant) => GrassTufts[variant];
+
+        // The Meadow dressing: everything that stands on the ground to make a meadow of it, and
+        // none of it simulated (the look pass, owner 2026-09-24: "scenery first, sim after";
+        // design 38 §17). Families rather than single rows, so the variety is the catalogue's and
+        // the layout only ever asks for "a bush". Kept apart from the tufts because they are
+        // placed by a different rule — patches over the land, not a count per cell.
+        const string DressPrefix = Prefix + "dress.";
+
+        /// <summary>The big tall-grass mats, four to seven metres across: the stands in a meadow.</summary>
+        public static readonly string[] DressTallGrass = { DressPrefix + "grass.tall.a", DressPrefix + "grass.tall.b" };
+
+        /// <summary>Low leafy cover and grass bushes, filling between the stands.</summary>
+        public static readonly string[] DressCover =
+            { DressPrefix + "cover.a", DressPrefix + "cover.b", DressPrefix + "cover.c", DressPrefix + "cover.grassbush" };
+
+        /// <summary>Flowers: the standing wildflowers and the flat cards that dot a field with colour.</summary>
+        public static readonly string[] DressFlowers =
+            { DressPrefix + "flower.wild.a", DressPrefix + "flower.wild.b", DressPrefix + "flower.wild.c" };
+
+        /// <summary>A sunflower, for the odd cluster; tall, so used sparingly.</summary>
+        public static readonly string[] DressSunflower = { DressPrefix + "flower.sun" };
+
+        /// <summary>The round bushes, which in the reference are the biggest thing in the picture.</summary>
+        public static readonly string[] DressBushes = { DressPrefix + "bush.a", DressPrefix + "bush.b", DressPrefix + "bush.c" };
+
+        /// <summary>Rocks lying in the grass: single stones and small piles.</summary>
+        public static readonly string[] DressRocks =
+        {
+            DressPrefix + "rock.a", DressPrefix + "rock.b", DressPrefix + "rock.c",
+        };
+
+        /// <summary>
+        /// A tree's art variant. Variant 0 is the species' own row, which every other reader of a
+        /// tree (the cursor, the sight test, the surround) keeps using; the rest are only chosen by
+        /// the mesher, per cell, so a wood is not one tree repeated.
+        /// </summary>
+        public static string TreeVariant(string baseId, int variant) =>
+            variant == 0 ? baseId : baseId + "." + variant;
+
+        /// <summary>How many art variants a tree species may have, the base row included.</summary>
+        public const int MaxTreeVariants = 6;
 
         /// <summary>Terrain is not authored per template, so its ids are derived from the def name.</summary>
         public static string Terrain(string terrainDefName) =>

@@ -42,6 +42,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -83,6 +85,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -124,6 +128,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -165,6 +171,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -206,6 +214,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -247,6 +257,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -288,6 +300,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -329,6 +343,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -370,6 +386,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -411,6 +429,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -452,6 +472,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -493,6 +515,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -534,6 +558,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -575,6 +601,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -616,6 +644,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -657,6 +687,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -698,6 +730,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -739,6 +773,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -780,6 +816,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -821,6 +859,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -862,6 +902,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -903,6 +945,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -944,6 +988,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -985,6 +1031,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1026,6 +1074,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1067,6 +1117,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1108,6 +1160,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1149,6 +1203,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1190,6 +1246,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1231,6 +1289,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1272,6 +1332,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1313,6 +1375,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1354,6 +1418,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1395,6 +1461,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1436,6 +1504,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1477,6 +1547,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1518,6 +1590,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1559,6 +1633,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1600,6 +1676,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1641,6 +1719,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1682,6 +1762,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1723,6 +1805,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1764,6 +1848,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1805,6 +1891,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1846,6 +1934,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1887,6 +1977,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1928,6 +2020,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -1969,6 +2063,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2010,6 +2106,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2051,6 +2149,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2092,6 +2192,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2133,6 +2235,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2174,6 +2278,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2215,6 +2321,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2256,6 +2364,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2297,6 +2407,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2338,6 +2450,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2379,6 +2493,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2420,6 +2536,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2461,6 +2579,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2502,6 +2622,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2543,6 +2665,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2584,6 +2708,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2625,6 +2751,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2666,6 +2794,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2707,6 +2837,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2748,6 +2880,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2789,6 +2923,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2830,6 +2966,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2871,6 +3009,712 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.grass.tall.a
+    shape: 4
+    prefab: {fileID: 1583811397360488284, guid: ad4266017d60f904c9024d082d378839, type: 3}
+    prefabName: SM_Env_Grass_Tall_Clump_04
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.grass.tall.b
+    shape: 4
+    prefab: {fileID: 4190401626231728328, guid: 59302d4b4398e504da743b9d9f8e7b67, type: 3}
+    prefabName: SM_Env_Grass_Tall_Clump_05
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 0.8, y: 0.8, z: 0.8}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.cover.a
+    shape: 4
+    prefab: {fileID: 6741950074395184577, guid: a1c8b732aaba82b4aa5ce99cd756d345, type: 3}
+    prefabName: SM_Env_Ground_Cover_01
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.cover.b
+    shape: 4
+    prefab: {fileID: 8567074628543705154, guid: c2997bb6f6d25bb418a808309627e831, type: 3}
+    prefabName: SM_Env_Ground_Cover_02
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.cover.c
+    shape: 4
+    prefab: {fileID: 6300180554355361027, guid: 2633ad019cc834d4a815232473127d8a, type: 3}
+    prefabName: SM_Env_Ground_Cover_03
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.cover.grassbush
+    shape: 4
+    prefab: {fileID: 1159558787302553158, guid: 93d6b405c00afaa46b2e4f45cb9f2a2e, type: 3}
+    prefabName: SM_Env_Grass_Bush_01
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.flower.wild.a
+    shape: 4
+    prefab: {fileID: 3757109599224033816, guid: 60467653c9024a94cbe4863e1b401660, type: 3}
+    prefabName: SM_Env_Wildflowers_01
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.3, y: 1.3, z: 1.3}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.flower.wild.b
+    shape: 4
+    prefab: {fileID: 1557974530457926728, guid: d74b9ad70f26c1c41805b672a71665b0, type: 3}
+    prefabName: SM_Env_Wildflowers_02
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.3, y: 1.3, z: 1.3}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.flower.wild.c
+    shape: 4
+    prefab: {fileID: 5214937767286086917, guid: f4c1ab01cce3344498755643a1be1e5a, type: 3}
+    prefabName: SM_Env_Wildflowers_03
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.3, y: 1.3, z: 1.3}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.flower.sun
+    shape: 4
+    prefab: {fileID: 30244553050222735, guid: 73663df767caaeb4e8d8a22389f6b41f, type: 3}
+    prefabName: SM_Env_Sunflower_01
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.bush.a
+    shape: 4
+    prefab: {fileID: 5580235122429883281, guid: e527460148bf17741a2c17dffc4fb54a, type: 3}
+    prefabName: SM_Env_Bush_01
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.bush.b
+    shape: 4
+    prefab: {fileID: 6906830690193866741, guid: 3595ba075729fec458abd9577f51845e, type: 3}
+    prefabName: SM_Env_Bush_02
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 0.8, y: 0.8, z: 0.8}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.bush.c
+    shape: 4
+    prefab: {fileID: 1583897355313174661, guid: 09593cef97621c0418f070d7c9fa3091, type: 3}
+    prefabName: SM_Env_Bush_03
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 0.7, y: 0.7, z: 0.7}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.rock.a
+    shape: 4
+    prefab: {fileID: 756244418324746648, guid: 9cc02011d1e1d024e9c4420809cd2623, type: 3}
+    prefabName: SM_Env_Rock_01
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 0.6, y: 0.6, z: 0.6}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.rock.b
+    shape: 4
+    prefab: {fileID: 4135293660491200023, guid: 145248c1f7a30134aaf7b4e97e61e587, type: 3}
+    prefabName: SM_Env_Rock_02
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 0.55, y: 0.55, z: 0.55}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.dress.rock.c
+    shape: 4
+    prefab: {fileID: 4259286663014254190, guid: 85d4b66433595d840b0ef5a47fa79d10, type: 3}
+    prefabName: SM_Env_Rock_Round_01
+    prefabUnder: Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 0.45, y: 0.45, z: 0.45}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2912,6 +3756,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2953,6 +3799,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -2994,6 +3842,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -3008,15 +3858,15 @@ MonoBehaviour:
       quality: 0
   - moduleId: odyssey.module.tree.conifer
     shape: 4
-    prefab: {fileID: 6131553767378768855, guid: ae12f1ba847c6f74281e7a9a7b0ac7fd, type: 3}
-    prefabName: SM_Gen_Env_Tree_Pine_01
-    centreXZ: 1
+    prefab: {fileID: 1016392496237815170, guid: f8b47c2401a09be4f87efe27b925b3fd, type: 3}
+    prefabName: SM_Env_Tree_Birch_01
+    centreXZ: 0
     baseAtY: 1
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     lieFlat: 0
-    scale: {x: 1, y: 1, z: 1}
+    scale: {x: 0.85, y: 0.85, z: 0.85}
     fitFootprint: {x: 0, y: 0}
     fitHeight: 0
     fitStretch: 0
@@ -3035,6 +3885,94 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.tree.conifer.1
+    shape: 4
+    prefab: {fileID: 5592075822852266847, guid: 44bbd64fad9366947a1c9b68c15e1261, type: 3}
+    prefabName: SM_Env_Tree_Birch_02
+    centreXZ: 0
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 0.85, y: 0.85, z: 0.85}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.tree.conifer.2
+    shape: 4
+    prefab: {fileID: 3298165907711742831, guid: 050fd5c9e63617c4db35ee70e9e823f1, type: 3}
+    prefabName: SM_Env_Tree_Birch_03
+    centreXZ: 0
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.2, y: 1.2, z: 1.2}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -3049,15 +3987,15 @@ MonoBehaviour:
       quality: 0
   - moduleId: odyssey.module.tree.broadleaf
     shape: 4
-    prefab: {fileID: 2137760205200772258, guid: 49091280d622b904f96e72e71fe4e877, type: 3}
-    prefabName: SM_Gen_Env_Tree_03
-    centreXZ: 1
+    prefab: {fileID: 2146921750331591826, guid: a6dccea81e1455d4491d73f1d0e6d0ce, type: 3}
+    prefabName: SM_Env_Tree_Meadow_02
+    centreXZ: 0
     baseAtY: 1
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     lieFlat: 0
-    scale: {x: 1, y: 1, z: 1}
+    scale: {x: 0.8, y: 0.8, z: 0.8}
     fitFootprint: {x: 0, y: 0}
     fitHeight: 0
     fitStretch: 0
@@ -3076,6 +4014,180 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.tree.broadleaf.1
+    shape: 4
+    prefab: {fileID: 2452613710419899469, guid: f5ba9e2973c6d8d4cad295b79e2a7f45, type: 3}
+    prefabName: SM_Env_Tree_Fruit_01
+    centreXZ: 0
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.1, y: 1.1, z: 1.1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.tree.broadleaf.2
+    shape: 4
+    prefab: {fileID: 2154830210199987570, guid: 681cbb809427f574a9f0d40322b45c90, type: 3}
+    prefabName: SM_Env_Tree_Fruit_02
+    centreXZ: 0
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.1, y: 1.1, z: 1.1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.tree.broadleaf.3
+    shape: 4
+    prefab: {fileID: 739240639354438539, guid: ab41e12e3193e5241a054da74ad6cee7, type: 3}
+    prefabName: SM_Env_Tree_Fruit_03
+    centreXZ: 0
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.1, y: 1.1, z: 1.1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.tree.broadleaf.4
+    shape: 4
+    prefab: {fileID: 6954770494557141849, guid: 0f2120e89197acc47bfde23175d19f26, type: 3}
+    prefabName: SM_Env_Tree_Meadow_01
+    centreXZ: 0
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 0.6, y: 0.6, z: 0.6}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -3117,6 +4229,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -3158,6 +4272,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -3199,6 +4315,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -3252,6 +4370,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -3330,6 +4450,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -3408,6 +4530,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -3486,6 +4610,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -3564,6 +4690,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -3642,6 +4770,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -3720,6 +4850,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -3798,6 +4930,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -3876,6 +5010,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -3954,6 +5090,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -4032,6 +5170,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -4110,6 +5250,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -4188,6 +5330,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -4266,6 +5410,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -4344,6 +5490,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -4422,6 +5570,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -4500,6 +5650,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -4578,6 +5730,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4646,6 +5800,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4719,6 +5875,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4782,6 +5940,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -4860,6 +6020,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -4933,6 +6095,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -5011,6 +6175,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -5094,6 +6260,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -5172,6 +6340,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -5240,6 +6410,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -5318,6 +6490,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -5396,6 +6570,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -5474,6 +6650,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -5552,6 +6730,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -5620,6 +6800,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -5698,6 +6880,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -5776,6 +6960,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -5854,6 +7040,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -5932,6 +7120,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -6015,6 +7205,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -6098,6 +7290,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -6176,6 +7370,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -6259,6 +7455,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -6342,6 +7540,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -6425,6 +7625,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -6503,6 +7705,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -6581,6 +7785,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -6659,6 +7865,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -6742,6 +7950,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -6820,6 +8030,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -6903,6 +8115,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -6986,6 +8200,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -7069,6 +8285,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -7147,6 +8365,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -7225,6 +8445,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -7303,6 +8525,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -7386,6 +8610,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -7469,6 +8695,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -7547,6 +8775,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -7630,6 +8860,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -7708,6 +8940,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -7791,6 +9025,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -7874,6 +9110,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -7957,6 +9195,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -8040,6 +9280,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -8113,6 +9355,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -8196,6 +9440,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -8274,6 +9520,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -8357,6 +9605,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -8435,6 +9685,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -8513,6 +9765,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -8596,6 +9850,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -8674,6 +9930,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -8757,6 +10015,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -8835,6 +10095,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -8918,6 +10180,8 @@ MonoBehaviour:
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin:
@@ -8984,6 +10248,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9030,6 +10296,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9076,6 +10344,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9122,6 +10392,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9168,6 +10440,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9214,6 +10488,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9260,6 +10536,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9306,6 +10584,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9352,6 +10632,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9398,6 +10680,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9444,6 +10728,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9490,6 +10776,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9536,6 +10824,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9582,6 +10872,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9628,6 +10920,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9674,6 +10968,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9720,6 +11016,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9766,6 +11064,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9812,6 +11112,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9858,6 +11160,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9904,6 +11208,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9950,6 +11256,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -9996,6 +11304,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10042,6 +11352,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10092,6 +11404,8 @@ MonoBehaviour:
       speedFromClipName: 
       metresPerSecond: 0
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 1
     appearance:
       skin: []
@@ -10145,6 +11459,8 @@ MonoBehaviour:
       speedFromClipName: 
       metresPerSecond: 2.2
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10186,6 +11502,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10227,6 +11545,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10268,6 +11588,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10309,6 +11631,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10350,6 +11674,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10391,6 +11717,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10432,6 +11760,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10473,6 +11803,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10514,6 +11846,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10555,6 +11889,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10596,6 +11932,8 @@ MonoBehaviour:
     poseClipTime: 0
     locomotion: []
     combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10649,6 +11987,8 @@ MonoBehaviour:
       clip: {fileID: -8890989884591690541, guid: c9e0b6900401fcb42980df96b84db76c, type: 3}
       variant: C
       impactSeconds: 0.36666667
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10698,6 +12038,8 @@ MonoBehaviour:
       clip: {fileID: 8332939666779294377, guid: b963d0c4e093a9c4ea792b8095e51ba2, type: 3}
       variant: B
       impactSeconds: 0.8666667
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10755,6 +12097,8 @@ MonoBehaviour:
       clip: {fileID: -8134992637236915294, guid: 881ed1a8905746f4d9b1def6f9e773dd, type: 3}
       variant: R
       impactSeconds: 0
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10812,6 +12156,8 @@ MonoBehaviour:
       clip: {fileID: -5950831409251336622, guid: bb9255eddd5619c4e9398d076eb337fd, type: 3}
       variant: R
       impactSeconds: 0
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10865,6 +12211,8 @@ MonoBehaviour:
       clip: {fileID: 8020556318125480424, guid: e8bce1554d1659347aae4f4f75892c21, type: 3}
       variant: L
       impactSeconds: 0
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10918,6 +12266,8 @@ MonoBehaviour:
       clip: {fileID: -6759780123328594538, guid: ee840371c325fd748b10e1b2f509cff2, type: 3}
       variant: End
       impactSeconds: 0
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -10971,6 +12321,8 @@ MonoBehaviour:
       clip: {fileID: -7560739488375888718, guid: 8a405eac44feba441a02a2df3f42f432, type: 3}
       variant: End
       impactSeconds: 0
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -11028,6 +12380,8 @@ MonoBehaviour:
       clip: {fileID: -5737455498129746005, guid: fb3c21dead0f2e54284772f27eb1de00, type: 3}
       variant: R
       impactSeconds: 0
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -11085,6 +12439,8 @@ MonoBehaviour:
       clip: {fileID: 5990651622721326783, guid: 5952bcb69b331a841a9e9b77b715507d, type: 3}
       variant: R
       impactSeconds: 0
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -11134,6 +12490,8 @@ MonoBehaviour:
       clip: {fileID: 1972962540892491625, guid: 3f6f85425f929304198f743d3902c6b0, type: 3}
       variant: Femn
       impactSeconds: 0
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -11183,6 +12541,8 @@ MonoBehaviour:
       clip: {fileID: 4741049883773862030, guid: 8d7a574352a5f294fa488a9148bc9ceb, type: 3}
       variant: Femn
       impactSeconds: 0
+    sitClip: {fileID: 0}
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
