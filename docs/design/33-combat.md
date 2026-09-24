@@ -3184,6 +3184,9 @@ Making a door a wall to a hostile is a navigation change and the owner's call (�
 it half exists: `TraverseMode.IgnoreDoors` is described as "raiders and bashers" and prices a
 closed door as a cost, not an obstacle.
 
+**Superseded by §16 (2026-09-24):** a marauder no longer opens doors, and slot 3 is now
+`TraverseMode.Marauder`.
+
 ### 14c. No Melee from a building
 
 `CombatSystem.StrikeBuilding` no longer grants experience. A swing at a pawn still trains Melee,
@@ -3255,7 +3258,9 @@ superseded.
 - Colonist on colonist only, as before (§12b).
 - §12b's first bullet is superseded.
 
-### 14g. Open for the owner
+### 14g. Open for the owner — answered 2026-09-24 (§16)
+
+The owner's answer to all four: *"do what you recommend"*. §16h says what each became.
 
 - **Should a door stop a marauder?** Today it walks through a closed door as a colonist does
   (§14b). Suppose "walled in" should include "behind a closed door". Then a hostile needs a mode
@@ -3326,3 +3331,160 @@ Each rule was withheld and its test run and seen to fail, then restored:
   the two damage columns;
 - `PawnContentDefTests.ContentFingerprint`, 13836212755718261116 → 5393620802301053337, for
   `renewsOnRepeat`.
+
+## 16. Doors hold marauders; beds are spared (2026-09-24)
+
+§14g asked the owner three things about a marauder and the base. The answer was *"do what you
+recommend"*. Built on `claude/combat-marauder-doors`, from `claude/combat-owner-round` at
+`cd53b5cf`, on the fast and Long tiers only, with no Unity. **No golden moved.** No Presentation or
+Editor file was touched.
+
+### 16a. The three decisions
+
+| §14g question | Decision | Built |
+|---|---|---|
+| Should a door stop a marauder? | **Yes.** A marauder does not open a colony door. It breaks it down. | §16b |
+| Should a marauder break the beds? | **No.** A bed is never the marauder's own choice of target. A player's order may still strike one (C6 answer (c)). | §16d |
+| Does it go for the right building? | **Unchanged:** the nearest colony building to the marauder. A smarter breach is deferred until play asks for it. | §16e |
+
+The reason for the first is the owner's own example, *"a door broken open"*, and C6's answer,
+*"kill colonists, destroy base"*. Both assume a door holds. A marauder that opens doors makes the
+door the one building in the base that never needs breaking.
+
+The reason for the second is §14g's soak. With every colonist down, the nearest colony building is
+usually a bed, and in ten days nobody got up again. Sparing beds keeps a downed colony rescuable.
+
+### 16b. A marauder moves as a colonist, less a closed door
+
+- **`TraverseMode.Marauder`**: ladders, stairs, the hop and the wade, as `Colonist`. **A closed
+  door is a wall.** An open door is a floor.
+  - `TraverseModes.OpensDoors` is the one owner of the rule: everyone but `Animal` and `Marauder`.
+    `NavGrid.CanEnter` is its only caller, so the district flood, the region links, the cell
+    search, `IsLegalStep` and `Reachable` all follow from it.
+  - The rat (`Climber`) still opens doors, as it always has. The hog still does not. Colonists and
+    haulers are untouched.
+- **It is slot 3, repurposed rather than added.** Slot 3 was `IgnoreDoors`, "a closed door is a
+  cost, not an obstacle". No pawn, Def or test used it.
+  - A sixth mode would cost a sixth district flood on **every** nav rebuild, on every board, with
+    or without a marauder. Slot 3 was already being flooded for nothing.
+  - The old meaning was the RimWorld-style basher: path through the door at a price. That is not
+    what the owner asked for. The door must stop the marauder so that §14b's fallback breaks it.
+  - `MoveCost.DoorBash` went with it. The cell search charged it and the region graph never did,
+    a disagreement nothing was walking into.
+  - The ladder's mask already carried slot 3, and the hop and the wade read "not an animal", so
+    nothing else changed.
+- **The mode is the kind's, not the species'.** A marauder is `Species_Person`, drawn and hurt as
+  a colonist is.
+  - `PawnKindDef.traverseMode` names a mode, or is empty for the species' own.
+  - `PawnContent.KindMode` resolves it once at load. A name the enum does not have fails the load.
+  - `PawnKind_Marauder` names `Marauder` in `Species.xml`. It is the only kind that names one.
+- **`Pawn.OwnMode` is the one owner of "how does this pawn move when it chooses for itself".**
+  Every place that read `Species.traverseMode` reads it now:
+  - the hunt and the building fallback (`HostileThinkNode`), the animal's revenge, the downed job
+    (both where it is thought and where it is started);
+  - `FightingBeside` and the flight (`CombatSystem.Apply`);
+  - the knockback: a marauder is not knocked into a shut door, where standing would open it;
+  - the animal's idle mind (identical for animals, whose kinds name no mode);
+  - `Pawn.Mode` between jobs.
+- **Two places that were `Colonist` for everybody now read `OwnMode`**:
+  - `WanderTarget.Fill`'s person overload. An idle marauder with nothing to hunt wanders, and it
+    would have wandered through the front door;
+  - the idle `Wait` job's mode, so a waiting marauder is a marauder to anything that asks
+    `pawn.Mode`.
+  - A colonist's `OwnMode` is `Colonist`, so both are unchanged for her.
+- **Left as `Colonist` on purpose**: a player's orders, the draft, self-defence and every work job.
+  Only colonists take them.
+
+**So a door behaves like this.** With the colonists behind a closed door they are unreachable, and
+§14b's fallback takes the nearest colony building the marauder can stand beside. When that is the
+door, the door goes down, and the marauder looks again and goes in.
+
+**A door a colonist is walking through is open**, and a marauder may follow her through it. That is
+the door working, not a leak.
+
+### 16c. What it costs
+
+- **Nothing per tick, and nothing new on a rebuild.** Slot 3's district flood ran before and runs
+  now, over the same regions.
+- **The nav graph for the other four modes is identical.** Measured with a probe that hashed every
+  region's district and every link's and portal edge's mask with slot 3 masked out, on all three
+  goldens at generation and after 3,000 ticks. The ruined city, with 34 doors, included. Every
+  number was the same before and after, and so were the state hashes.
+- **The goldens did not move.** No golden has a marauder, and the nav graph is not in the state
+  hash.
+- **`PawnContentDefTests.ContentFingerprint`** moved once, deliberately:
+  5393620802301053337 → 9855151047521430616, for the new field and its table.
+
+### 16d. Beds are spared
+
+- **`BuildingTargets.IsMarauderTarget`**: every target but a bed. `TryNearestColonyTarget` asks it
+  before anything else about a record.
+- **What a target is does not change.** `TryStanding` still answers yes for a bed, so a player's
+  order on one is taken and its blows land.
+- It keys on `CoreContent.EdificeBed`, as every other bed rule in `ConstructionGrid` does. It is
+  one method, so a medical bed or a cot joins it there.
+
+### 16e. Target choice stays the nearest
+
+The marauder still picks the colony building nearest **itself**. It does not look for the door
+between it and a colonist, nor for the wall that is cheapest to go through.
+
+- A door on the far side of the room from the marauder is not preferred to a nearer wall.
+  `ItTakesTheNearestBuildingNotTheDoor` pins that.
+- A breach chooser would need a path search with walls priced as time to break them. That is
+  deferred until play shows that "nearest" reads as stupid.
+
+### 16f. The soak
+
+`MarauderSoakTests` (Long) now reads **377 swings, 165 hits, 11 downed, 0 died, 3 got up, 0
+buildings broken down**. Before §16 it was 231 swings, 7 downed, none up and 5 buildings broken.
+
+- The soak's only colony buildings are the scenario's beds, and it has no doors.
+- So sparing beds leaves the marauders nothing to break. The run is again exactly the one from
+  before §14b, number for number, which is the measurement that the change reached no further.
+
+### 16g. Tests, and the controls seen to fail
+
+Fast tier: Sim **1,412** (from 1,401), Hud **1,003** (unchanged), Long **41**, all green.
+`GoldenMasterTests` is green without a re-bake. All three content gates are clean, since no name was
+added.
+
+| Test (`MarauderDoorTests`) | Claim |
+|---|---|
+| `EachKindMovesInItsOwnMode` | the marauder's kind is `Marauder` and its species still `Colonist`; the other three kinds keep their species' modes |
+| `AClosedDoorIsAWallToTheMarauderAndTheHogOnly` | the five modes at a shut door and an open one; the marauder wades and climbs a ladder |
+| `OnEveryLinkTheMaraudersModeIsTheColonistsLessAClosedDoor` | on the city's 2,066 link ends and 218 portal edges, the marauder's bit equals the colonist's except into a shut door (128 link ends) |
+| `BehindAClosedDoorSheIsUnreachableToAMarauderAndNotToAColonist` | the district, the step and the search say no to a marauder and yes to a colonist |
+| `AMarauderBreaksTheDoorDownAndThenGoesForHer` | the door is its target, unforced; it never stands in the doorway or opens it; no wall is struck; then her |
+| `WithTheDoorOpenItGoesStraightIn` | the control: an open door is a way in, and it is not struck |
+| `ItTakesTheNearestBuildingNotTheDoor` | decision three: the door far side, the nearest wall broken |
+| `AMarauderIsNotKnockedIntoAShutDoor` | a knockback asks the target's own mode; a colonist in the same place is the control |
+| `AnIdleMarauderDoesNotWanderThroughAShutDoor` | 6,000 ticks of an idle marauder in a yard whose only way out is a city door |
+| `AMarauderLeavesABedAloneAndBreaksTheWallInstead` | 600 ticks with only a bed: nothing struck; add a wall further off than the bed, and the wall is struck |
+| `APlayerCanStillOrderAnAttackOnABed` | the order is taken and a blow lands |
+
+Each rule was withheld and the tests run and seen to fail, then restored:
+
+| Withheld | Failed |
+|---|---|
+| the kind's mode (the XML line removed) | `EachKind…`, `…BreaksTheDoorDown…`, `…NotKnockedInto…`, `AnIdleMarauder…`, `ItTakesTheNearest…` |
+| `CanEnter` as it was (only the hog refused a shut door) | seven of the eleven: all but the kind, the open door, the bed and the order tests |
+| the idle wander in `Colonist` for everybody | `AnIdleMarauderDoesNotWanderThroughAShutDoor` |
+| the knockback in the species' mode | `AMarauderIsNotKnockedIntoAShutDoor` |
+| the hunt in the species' mode | `…BreaksTheDoorDown…`, `ItTakesTheNearest…` |
+| a bed as a marauder's target | `AMarauderLeavesABedAlone…` (and the order test's own control line) |
+| a bed as no target at all (spared in `TryStanding`) | `AMarauderLeavesABedAlone…`, `APlayerCanStillOrderAnAttackOnABed` |
+| the ladder's mask without the marauder | `AClosedDoorIsAWall…`, `OnEveryLink…` |
+
+**Not tested directly**: the idle `Wait` job's mode. Nothing a marauder does while waiting asks
+`pawn.Mode` today, so no test can see it. It is there so the next thing that asks is right.
+
+### 16h. §14g, answered
+
+- *Should a door stop a marauder?* Yes (§16b).
+- *Does a marauder go for the right building?* Nearest to itself, unchanged. Revisit after play
+  (§16e).
+- *The city's materials at ×1*: unchanged. It is (b)'s question, which stays forgotten for now.
+- *With every colonist down, a marauder breaks the beds*: it no longer does (§16d). A marauder
+  with nothing to hunt and nothing else to break now **idles**. Leaving is a separate question for
+  the owner, not taken here.
