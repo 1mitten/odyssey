@@ -149,29 +149,46 @@ namespace Odyssey.Presentation.CameraRig
         [NonSerialized] public bool wallsLowered;
 
         /// <summary>
-        /// Are this layer's walls, doors and pillars drawn as stumps? The active layer and
-        /// everything below it — a storey beneath is under the active floor and seen only down a
-        /// shaft or over a terrace, and there the same plan should read the same way.
+        /// The layer of the topmost rock in the lowest column of the generated landscape —
+        /// <c>WorldRenderModel.LowestOutdoorLayer</c>, handed over once a frame by the composition
+        /// root with <see cref="wallsLowered"/>, or -1 before there is a world.
+        ///
+        /// <para>It is what lets walls-down tell a lower terrace from a tunnel (design 42 §3a).
+        /// <see cref="surfaceLayer"/> is the one layer the colony opened on, and the terraced ground
+        /// runs several layers below it — on the played board the colony opens on L12 and the
+        /// lowest terrace's rock tops out at L8, so its ground is walked on L9 (measured,
+        /// <c>LandscapeBandTests.WithTheWallsDownEveryTerraceIsAboveGround</c>). A player standing
+        /// on real ground at L10 was "underground" and got the one-layer x-ray, the see-through
+        /// building the owner reported on 2026-09-24.</para>
         /// </summary>
-        public bool LowersWallsOn(int activeLayer, int layer) => wallsLowered && layer <= activeLayer;
+        [NonSerialized] public int landscapeFloor = -1;
 
         /// <summary>
-        /// Is everything <em>built</em> on this layer hidden, leaving the landscape? Above the
-        /// slice, and only where the layers above are drawn solid (design 42 §3). Underground the
-        /// one layer above is already an x-ray, a ghost nobody can click, and it is left as it is.
+        /// Are walls, doors and pillars drawn as stumps on this layer? On every layer that is drawn
+        /// while the walls are down (owner, 2026-09-24): a house standing on a terrace above the
+        /// slice shows its plan in stumps exactly as the one on the slice does.
         /// </summary>
-        public bool HidesBuiltOn(int activeLayer, int layer) =>
+        public bool LowersWallsOn(int activeLayer, int layer) => wallsLowered;
+
+        /// <summary>
+        /// Is what is <em>stacked</em> on this layer hidden — an upper storey, and whatever stands
+        /// on one? Above the slice, and only where the layers above are drawn solid (design 42 §3).
+        /// A building standing on the ground of a higher terrace is not stacked and stays. Truly
+        /// underground the one layer above is still an x-ray, a ghost nobody can click, and it is
+        /// left as it is.
+        /// </summary>
+        public bool HidesStackedOn(int activeLayer, int layer) =>
             wallsLowered && layer > activeLayer && !GhostsAbove(activeLayer);
 
         /// <summary>
         /// Is something standing in this cell hidden with the storey it stands on? A colonist on
-        /// the upper floor of a house goes with the house; one on a hilltop above the slice stands
-        /// on landscape and stays (design 42 §5). The one question every actor pass asks.
+        /// the upper floor of a house goes with it; one on the ground floor of a house up on a
+        /// terrace, or on a hilltop, stays (design 42 §5). The one question every actor pass asks.
         /// </summary>
         public bool HidesStandingAt(int activeLayer, Odyssey.Sim.Contracts.CellRef cell,
             Odyssey.Presentation.World.WorldRenderModel? model) =>
-            model != null && HidesBuiltOn(activeLayer, cell.Y)
-            && model.Size.Contains(cell.X, cell.Z, cell.Y) && model.IsBuiltAt(model.Size.Index(cell));
+            model != null && HidesStackedOn(activeLayer, cell.Y)
+            && model.Size.Contains(cell.X, cell.Z, cell.Y) && model.IsStackedAt(model.Size.Index(cell));
 
         /// <summary>
         /// Below the opacity at which a ghosted layer is not drawn at all.
@@ -183,8 +200,18 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         public const float MinVisibleAlpha = 0.012f;
 
-        /// <summary>Is the slice underground — below the layer the game opens at?</summary>
-        public bool BelowSurface(int activeLayer) => followDepth && activeLayer < surfaceLayer;
+        /// <summary>
+        /// Is the slice underground — below the layer the game opens at? While the walls are down,
+        /// below every piece of ground instead: a lower terrace is ground, not a tunnel, and with
+        /// the walls down the x-ray is no longer what shows a player the inside of anything
+        /// (design 42 §3a). Only a slice beneath the whole landscape keeps it, because there solid
+        /// rock drawn overhead would bury the working the player went down to see.
+        /// </summary>
+        public bool BelowSurface(int activeLayer) => followDepth && activeLayer < SurfaceFor();
+
+        /// <summary>The layer at and above which the slice counts as above ground.</summary>
+        int SurfaceFor() =>
+            wallsLowered && landscapeFloor >= 0 ? Math.Min(surfaceLayer, landscapeFloor + 1) : surfaceLayer;
 
         /// <summary>
         /// The treatment above the slice, after <see cref="followDepth"/> has had its say.

@@ -11823,6 +11823,19 @@ before Unity compiled a line; the unit moved into M2's warm worktree once there 
 shader compiled clean on its first real run and every foliage test passed; the player build keeps
 it, and its log carries no fallback warning.
 
+## 2026-09-24 — Walls down, after the first play
+
+*"Works brilliantly but a few things"*: the "R / F" label was still there, and at L10 — ground — the
+building above was see-through. The cause was not walls-down at all but the surface being one
+number: `surfaceLayer` is the layer the colony opened on (L12 on seed 1) while the lowest terrace
+is walked on L9 (its rock tops out at L8 — measured, after a first comment said L7), so L10 was
+"underground" and got the one-layer x-ray, which the first build left alone
+deliberately. The owner chose to fix it inside walls-down only: with the walls down, anything above
+`LowestOutdoorLayer` is ground. And the hiding narrowed from "everything built above" to "what is
+stacked" — built with no terrain beneath — because hiding everything built took the house on the
+next terrace with it. That became a bucket key bit rather than a tint test, so the renderer still
+only skips buckets. The label went; its keys went into the rail cells' tooltips. Design 42 §3a, §10.
+
 ## 2026-09-24 — Walls down
 
 The owner could not see colonists inside their own buildings: at or above the surface every

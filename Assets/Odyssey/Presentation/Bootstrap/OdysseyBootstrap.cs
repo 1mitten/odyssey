@@ -1374,6 +1374,7 @@ namespace Odyssey.Presentation.Bootstrap
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
             SliceSettings slice = cameraRig != null ? cameraRig.slice : new SliceSettings();
             slice.wallsLowered = WallsLoweredNow();
+            slice.landscapeFloor = _model.LowestOutdoorLayer;
 
             _frameTimer.Restart();
             System.Array.Clear(_sectionMs, 0, _sectionMs.Length);
@@ -1973,8 +1974,10 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 CellRef cell = size.FromIndex(sites[i].CellIndex);
                 if (cell.Y < lowest || cell.Y > highest) continue;
-                // A site on a storey walls-down is hiding goes with that storey (design 42 §5).
-                if (cameraRig.slice.HidesBuiltOn(cameraRig.ActiveLayer, cell.Y)) continue;
+                // A site for an upper storey walls-down is hiding goes with that storey (design 42
+                // §5): anything ordered above the slice with no ground under it.
+                if (cameraRig.slice.HidesStackedOn(cameraRig.ActiveLayer, cell.Y)
+                    && !_model!.RestsOnGround(sites[i].CellIndex)) continue;
 
                 // **The shape and the progress, and nothing else** (owner, 2026-09-18: "just the
                 // shape/outline of what is going to be built because it's difficult to visualize

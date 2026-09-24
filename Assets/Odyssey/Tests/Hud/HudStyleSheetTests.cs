@@ -182,7 +182,7 @@ namespace Odyssey.Tests.Hud
             (".rail__cell", "margin-bottom", () => HudLayout.RailCellGap, "rail cell gap"),
             (".rail__walls", "width", () => HudLayout.RailCellWidth, "the walls switch is a cell wide"),
             (".rail__walls", "height", () => HudLayout.RailToggle, "the walls switch"),
-            (".rail__walls", "margin-top", () => HudLayout.RailToggleGap, "hint to walls switch"),
+            (".rail__walls", "margin-top", () => HudLayout.RailToggleGap, "last cell to walls switch"),
 
             (".orders", "margin-top", () => HudLayout.RailToOrders, "rail to orders strip"),
             (".orders", "padding-top", () => HudLayout.OrdersPadTop, "orders strip top padding"),

@@ -174,7 +174,6 @@ namespace Odyssey.Presentation.Ui
 
         // ---- depth rail (A11)
         VisualElement _railCells = null!;
-        Label _railHint = null!;
         readonly List<RailCellView> _rail = new List<RailCellView>();
         float _railPitch = -1f;
 
@@ -1023,7 +1022,6 @@ namespace Odyssey.Presentation.Ui
             // height is exactly what HudLayout.RailHeight says it is.
             _railCells.style.marginTop = gap;
             _railCells.style.marginBottom = -gap;
-            _railHint.style.marginTop = gap;
 
             foreach (RailCellView view in _rail)
             {

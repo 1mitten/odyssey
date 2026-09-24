@@ -40,6 +40,9 @@ namespace Odyssey.Presentation.Rendering
         readonly Dictionary<long, int> _roofIndex = new Dictionary<long, int>();
         readonly Dictionary<long, int> _wallIndex = new Dictionary<long, int>();
         readonly Dictionary<long, int> _stumpIndex = new Dictionary<long, int>();
+
+        /// <summary>Whether the cell being emitted is an upper storey (design 42 §4).</summary>
+        bool _stacked;
         readonly WorldRenderModel _model;
 
         public ChunkMesher(WorldRenderModel model) => _model = model;
@@ -70,6 +73,9 @@ namespace Odyssey.Presentation.Rendering
             for (int x = x0; x < x1; x++)
             {
                 int index = size.Index(x, z, y);
+                // Once per cell, for everything the cell emits: only something built can be
+                // stacked, so terrain, trees and grass are never marked by it.
+                _stacked = _model.IsStackedAt(index);
                 EmitTerrain(batch, index, x, z, y);
                 EmitBank(batch, index, x, z, y);
                 EmitScatter(batch, index, x, z, y);
@@ -1033,7 +1039,7 @@ namespace Odyssey.Presentation.Rendering
             int tint = TintCode.Tree(species);
             for (int p = 0; p < BucketsPerPlacement(module); p++)
             {
-                InstanceBucket bucket = BucketFor(batch.Body, _bodyIndex, module, p, tint);
+                InstanceBucket bucket = BucketFor(batch.Body, _bodyIndex, module, p, tint, _stacked);
                 bucket.Add(placement * parts[p].Local,
                     Colour(theme.Bark.Shaded), Colour(theme.Bark.Lit),
                     Colour(theme.Leaf.Shaded), Colour(theme.Leaf.Lit));
@@ -1077,7 +1083,7 @@ namespace Odyssey.Presentation.Rendering
             var parts = _model.Library[module].Parts;
             for (int p = 0; p < BucketsPerPlacement(module); p++)
             {
-                BucketFor(list, lookup, module, p, tint).Add(placement * parts[p].Local);
+                BucketFor(list, lookup, module, p, tint, _stacked).Add(placement * parts[p].Local);
                 batch.InstanceCount++;
             }
         }
@@ -1097,13 +1103,13 @@ namespace Odyssey.Presentation.Rendering
         }
 
         static InstanceBucket BucketFor(List<InstanceBucket> list, Dictionary<long, int> lookup,
-            int module, int part, int tint)
+            int module, int part, int tint, bool stacked)
         {
-            long key = Key(module, part, tint);
+            long key = Key(module, part, tint, stacked);
             if (!lookup.TryGetValue(key, out int slot))
             {
                 slot = list.Count;
-                list.Add(new InstanceBucket { Module = module, Part = part, Tint = tint });
+                list.Add(new InstanceBucket { Module = module, Part = part, Tint = tint, Stacked = stacked });
                 lookup.Add(key, slot);
             }
             return list[slot];
@@ -1119,9 +1125,13 @@ namespace Odyssey.Presentation.Rendering
         /// large had exactly one part — but "wrong only by luck" is not a property to leave in a
         /// key.</para>
         /// </summary>
-        static long Key(int module, int part, int tint) =>
-            ((long)module << 44) | ((long)part << 32) | (uint)tint;
+        /// <summary>
+        /// The bucket key: module, part, tint and whether it is an upper storey's. The stacked bit
+        /// sits between the part (twelve bits) and the module, so no field is narrowed.
+        /// </summary>
+        static long Key(int module, int part, int tint, bool stacked) =>
+            ((long)module << 45) | ((stacked ? 1L : 0L) << 44) | ((long)part << 32) | (uint)tint;
 
-        static long KeyOf(InstanceBucket bucket) => Key(bucket.Module, bucket.Part, bucket.Tint);
+        static long KeyOf(InstanceBucket bucket) => Key(bucket.Module, bucket.Part, bucket.Tint, bucket.Stacked);
     }
 }

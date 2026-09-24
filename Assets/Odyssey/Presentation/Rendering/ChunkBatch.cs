@@ -252,18 +252,6 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Is this bucket a tree, and so coloured from <see cref="TreePalette"/>?</summary>
         public static bool IsTree(int code) => (code & TreeBase) != 0;
 
-        /// <summary>
-        /// Is this the landscape rather than something built — ground, rock, water, a bank, grass,
-        /// a crop or a tree? Walls-down hides everything built above the slice and keeps this
-        /// (design 42 §4), because the landscape is never cut away (06 §3b).
-        ///
-        /// <para>A tint answers it because the mesher already sorts the two apart when it picks
-        /// one: anything built wears a plain stuff tint, the linen tint or the store edge, none
-        /// of which carries any of these bits, and a stored wash on the ground keeps the terrain
-        /// bit it was laid over.</para>
-        /// </summary>
-        public static bool IsLandscape(int code) =>
-            (code & (TerrainBase | FoliageBase | WaterBase | TreeBase | WholeBase)) != 0;
 
         /// <summary>Is this bucket open to the sky, and so exempt from the depth shade?</summary>
         public static bool IsDaylit(int code) => (code & DaylitBase) != 0;
@@ -286,6 +274,15 @@ namespace Odyssey.Presentation.Rendering
         public int Module;
         public int Part;
         public int Tint;
+
+        /// <summary>
+        /// Everything in this bucket is built on top of something built — an upper storey, and
+        /// what stands in it — rather than on the ground (<c>WorldRenderModel.IsStackedAt</c>).
+        /// Part of the bucket's key, so walls-down can hide the storeys above the slice by skipping
+        /// buckets as it draws, with nothing re-meshed (design 42 §4).
+        /// </summary>
+        public bool Stacked;
+
         public Matrix4x4[] Matrices = new Matrix4x4[16];
         public int Count;
 

@@ -590,10 +590,10 @@ namespace Odyssey.Presentation.Rendering
                 else if (steps == 1 && slice.SuppressCeilingAt(activeLayer)) drawRoof = false;
 
                 // Walls down (design 42 §4): which form of the walls this layer draws, and whether
-                // anything built on it is drawn at all. Both are a choice of list or of bucket, made
+                // its upper storeys are drawn at all. Both are a choice of list or of bucket, made
                 // here every frame — nothing is re-meshed when the Build palette opens or closes.
                 bool stumps = slice.LowersWallsOn(activeLayer, layer);
-                bool landscapeOnly = slice.HidesBuiltOn(activeLayer, layer);
+                bool hideStacked = slice.HidesStackedOn(activeLayer, layer);
 
                 int first = layer * chunksPerLayer;
                 for (int i = 0; i < chunksPerLayer; i++)
@@ -635,12 +635,10 @@ namespace Odyssey.Presentation.Rendering
                     float distance = ViewerPosition.HasValue
                         ? Mathf.Sqrt(batch.Bounds.SqrDistance(ViewerPosition.Value))
                         : 0f;
-                    DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight, distance, landscapeOnly);
-                    if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight, distance, landscapeOnly);
-                    // Nothing that lowers is landscape, so a layer hiding what is built draws
-                    // neither form of the walls.
-                    if (!landscapeOnly)
-                        DrawBuckets(batch, stumps ? batch.Stumps : batch.Walls, shade, ghost, alpha, sight, distance);
+                    DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight, distance, hideStacked);
+                    if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight, distance, hideStacked);
+                    DrawBuckets(batch, stumps ? batch.Stumps : batch.Walls, shade, ghost, alpha, sight, distance,
+                        hideStacked);
                 }
             }
         }
@@ -705,19 +703,20 @@ namespace Odyssey.Presentation.Rendering
             return batch;
         }
 
-        /// <param name="landscapeOnly">
-        /// Draw only the landscape's buckets — ground, rock, water, grass, crops and trees — and
-        /// nothing built. Walls-down asks it of the layers above the slice (design 42 §4).
+        /// <param name="hideStacked">
+        /// Skip the buckets of upper storeys — whatever is built on top of something built.
+        /// Walls-down asks it of the layers above the slice (design 42 §4); the landscape and a
+        /// building's ground floor are drawn either way.
         /// </param>
         void DrawBuckets(ChunkBatch batch, System.Collections.Generic.List<InstanceBucket> buckets,
             float shade, bool ghost, float alpha, bool sight = false, float distance = 0f,
-            bool landscapeOnly = false)
+            bool hideStacked = false)
         {
             for (int b = 0; b < buckets.Count; b++)
             {
                 InstanceBucket bucket = buckets[b];
                 if (bucket.Count == 0) continue;
-                if (landscapeOnly && !TintCode.IsLandscape(bucket.Tint)) continue;
+                if (hideStacked && bucket.Stacked) continue;
 
                 ResolvedModule resolved = _model.Library[bucket.Module];
 

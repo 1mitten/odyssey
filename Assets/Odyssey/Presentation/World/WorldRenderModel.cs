@@ -985,6 +985,29 @@ namespace Odyssey.Presentation.World
             return def != CoreContent.EdificeNone && !NaturalContent.IsTree(def);
         }
 
+        /// <summary>
+        /// Does this cell rest on the ground — solid terrain directly beneath it? A building's
+        /// ground floor does, whether it stands on the slice or up on a terrace; an upper storey
+        /// rests on another floor or on the walls below it, and does not.
+        /// </summary>
+        public bool RestsOnGround(int index)
+        {
+            int below = index - Size.LayerStride;
+            return below >= 0 && IsSolid(below);
+        }
+
+        /// <summary>
+        /// Is what is built here <em>stacked</em> — an upper storey rather than a ground floor? The
+        /// thing walls-down hides above the slice (owner, 2026-09-24, design 42 §3): the first
+        /// floor of the house being looked into goes, the house on the terrace next to it stays.
+        ///
+        /// <para>It asks only about the cell underneath, so it is absolute rather than relative to
+        /// the slice, and the mesher can bake it into a bucket. What changes it is terrain changing
+        /// underneath, and digging a cell out already marks the chunk above it dirty
+        /// (<c>MineJob.MarkChunksAround</c>).</para>
+        /// </summary>
+        public bool IsStackedAt(int index) => IsBuiltAt(index) && !RestsOnGround(index);
+
         /// <summary>The module index for whatever edifice stands in this cell, or 0.</summary>
         public int EdificeModule(int index) => ModuleForEdificeAt(index, _edifice[index]);
 

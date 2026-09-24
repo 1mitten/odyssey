@@ -123,9 +123,9 @@ namespace Odyssey.Presentation.CameraRig
                 bool floors = !(slice != null && layer == activeLayer + 1 && slice.SuppressCeilingAt(activeLayer));
 
                 // Walls down (design 42 §5): a click meets a lowered wall only where its stump is
-                // drawn, and on a storey whose building is hidden it meets only the landscape.
+                // drawn, and passes through an upper storey that is hidden.
                 bool lowered = slice != null && slice.LowersWallsOn(activeLayer, layer);
-                bool builtHidden = slice != null && slice.HidesBuiltOn(activeLayer, layer);
+                bool builtHidden = slice != null && slice.HidesStackedOn(activeLayer, layer);
 
                 if (!PickOnLayer(ray, model, layer, floors, out CellRef hit, out float t, out bool thing,
                         lowered, builtHidden))
@@ -240,8 +240,8 @@ namespace Odyssey.Presentation.CameraRig
 
                 // What walls-down has taken out of the picture is not in the way of a click either.
                 // Solid rock is terrain and is never built, so it is left standing by both rules.
-                bool stump = lowered && model.Lowers(index);
-                bool hidden = builtHidden && !model.IsSolid(index) && model.IsBuiltAt(index);
+                bool hidden = builtHidden && model.IsStackedAt(index);
+                bool stump = !hidden && lowered && model.Lowers(index);
 
                 if (!stump && !hidden
                     && (model.OccludesFace(index) || model.EdificeDef(index) == CoreContent.EdificeDoor))
@@ -379,33 +379,13 @@ namespace Odyssey.Presentation.CameraRig
             thing = false;
             cell = default;
 
-            // A storey walls-down is hiding owns nothing a click can land on — not its building,
-            // its floor, its orders or its lines — and the ray goes on to whatever the landscape
-            // offers under it (design 42 §5). A tree is not built, so it keeps its click.
-            if (builtHidden)
-            {
-                bool tree = NaturalContent.IsTree(model.EdificeDef(index));
-                if (tree)
-                {
-                    cell = size.FromIndex(index);
-                    thing = true;
-                    return true;
-                }
-
-                if (NaturalContent.IsWater(model.Terrain(index)) && model.Floor(index) == 0)
-                {
-                    cell = size.FromIndex(index);
-                    return true;
-                }
-
-                if (layer > 0 && model.IsSolid(index - size.LayerStride))
-                {
-                    cell = size.FromIndex(index - size.LayerStride);
-                    return true;
-                }
-
+            // An upper storey walls-down is hiding owns nothing a click can land on — not its
+            // building, its floor, its orders or its lines — and the ray goes on through it
+            // (design 42 §5). A stacked cell has no ground under it by definition, so there is no
+            // block below to hand the click to either. A ground floor up on a terrace is not
+            // stacked and answers as it always has.
+            if (builtHidden && (model.IsStackedAt(index) || !model.RestsOnGround(index) && model.HasSite(index)))
                 return false;
-            }
 
             if (model.EdificeDef(index) != 0)
             {

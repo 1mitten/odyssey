@@ -23,6 +23,13 @@ the next session learns to ignore.
 
 ## Open
 
+- **Walls down, second look: a lower terrace and the house next door** (`claude/walls-down`, PR
+  #197, design 42 §3a). Stand the slice on a terrace below the one the colony opened on. Nothing
+  above should be see-through: the terrace above is solid, a house standing on it shows as stumps
+  with its colonists, and only a storey built on top of another building is gone. The "R / F" label
+  is gone and the walls switch sits under the cells. A wrong answer is anything above still
+  translucent, a house on the next terrace vanishing, or an upper storey still drawn over the room
+  you are looking into.
 - **Walls down: can you see inside your buildings?** (`claude/walls-down`, design 42.) Build a
   room of a few walls with a door, put a floor over part of it and a wall on the storey above, and
   send colonists in. The walls should stand as knee-high stumps in the wall's colour, the doorway

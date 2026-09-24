@@ -547,13 +547,11 @@ namespace Odyssey.Hud
         public const int RailSurfaceCellHeight = 32;
         public const int RailCellGap = 6;
 
-        /// <summary>The "R / F" hint under the rail.</summary>
-        public const int RailHint = 14;
-
-        /// <summary>The walls-down switch under the hint (design 42 §7): as wide as a rail cell.</summary>
+        /// <summary>The walls-down switch under the cells (design 42 §7): as wide as a rail cell.
+        /// It took the place of the "R / F" hint, whose keys are a tooltip now.</summary>
         public const int RailToggle = 22;
 
-        /// <summary>The gap between the hint and the walls-down switch.</summary>
+        /// <summary>The gap between the last cell and the walls-down switch.</summary>
         public const int RailToggleGap = 4;
 
         /// <summary>The rail's label row, which is shorter than a panel header because it carries
@@ -1553,7 +1551,7 @@ namespace Odyssey.Hud
         /// <summary>
         /// The rail's chrome: everything that is not a cell.
         /// </summary>
-        public const float RailChrome = Frame + Pad + RailLabel + RailHint + RailToggleGap + RailToggle + Pad;
+        public const float RailChrome = Frame + Pad + RailLabel + RailToggleGap + RailToggle + Pad;
 
         /// <summary>
         /// The smallest a cell and its gap may be squeezed to. Four pixels of cell is still a

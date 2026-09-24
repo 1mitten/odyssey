@@ -38,10 +38,6 @@ namespace Odyssey.Presentation.Ui
             _railCells.AddToClassList("rail__cells");
             rail.Add(_railCells);
 
-            _railHint = HudText.Make("R / F", HudTextRole.Meta, numeric: false, "rail__hint");
-            _railHint.tooltip = "R and F move the slice up and down. Home recentres.";
-            rail.Add(_railHint);
-
             rail.Add(BuildWallsToggle());
 
             gutter.Add(rail);
@@ -184,7 +180,11 @@ namespace Odyssey.Presentation.Ui
                         ? $"{occupancyPercent}% built"
                         : "occupancy publishes for the active slice only";
                     view.Root.tooltip =
-                        $"Layer {model.Layer}{surface} — {model.Pawns} colonists, {occupancy}. Click to move the slice.";
+                        $"Layer {model.Layer}{surface} — {model.Pawns} colonists, {occupancy}. " +
+                        "Click to move the slice, or R and F; Home recentres.";
+                    // The keys ride on each cell's own tooltip rather than on an "R / F" label under
+                    // the rail (owner, 2026-09-24): the label took a row of a rail whose length the
+                    // world decides, and the walls switch beside the slice keys has that row now.
                 }
             }
         }

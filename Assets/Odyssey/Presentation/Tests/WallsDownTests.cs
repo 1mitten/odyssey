@@ -26,11 +26,19 @@ namespace Odyssey.Tests.Presentation
             return batch;
         }
 
-        static int Instances(List<InstanceBucket> buckets, bool landscapeOnly = false)
+        static int Instances(List<InstanceBucket> buckets, bool skipStacked = false)
         {
             int n = 0;
             foreach (InstanceBucket bucket in buckets)
-                if (!landscapeOnly || TintCode.IsLandscape(bucket.Tint)) n += bucket.Count;
+                if (!skipStacked || !bucket.Stacked) n += bucket.Count;
+            return n;
+        }
+
+        static int Stacked(List<InstanceBucket> buckets)
+        {
+            int n = 0;
+            foreach (InstanceBucket bucket in buckets)
+                if (bucket.Stacked) n += bucket.Count;
             return n;
         }
 
@@ -137,8 +145,11 @@ namespace Odyssey.Tests.Presentation
 
         // ------------------------------------------------------------------ the renderer
 
-        /// <summary>A room on the ground floor with a storey on top, and a rock outcrop beside it.</summary>
-        static RenderTestWorld HouseAndHill()
+        /// <summary>
+        /// A house on the slice with a storey on top of it, and a terrace one layer up with a
+        /// house of its own standing on the terrace's ground.
+        /// </summary>
+        static RenderTestWorld HouseAndTerrace()
         {
             RenderTestWorld world = Ground();
             for (int x = 1; x <= 3; x++) world.Edifice(x, 1, Active, CoreContent.EdificeWall);
@@ -146,9 +157,33 @@ namespace Odyssey.Tests.Presentation
             for (int x = 1; x <= 3; x++)
             for (int z = 2; z <= 3; z++)
                 world.Slab(x, z, Active + 1);
-            // The hill: rock two storeys high, which is landscape at every height.
-            world.Solid(6, 6, Active).Solid(6, 6, Active + 1);
+            // The terrace: a step of rock, a wall standing on it and a floor laid on it.
+            for (int x = 5; x <= 7; x++)
+            for (int z = 5; z <= 7; z++)
+                world.Solid(x, z, Active);
+            world.Edifice(5, 5, Active + 1, CoreContent.EdificeWall);
+            world.Slab(6, 6, Active + 1);
             return world.Publish();
+        }
+
+        [Test]
+        public void AnUpperStoreyIsStackedAndAHouseOnATerraceIsNot()
+        {
+            RenderTestWorld world = HouseAndTerrace();
+            WorldRenderModel model = world.Model;
+
+            Assert.That(model.IsStackedAt(world.Index(2, 1, Active + 1)), Is.True, "a wall on a wall");
+            Assert.That(model.IsStackedAt(world.Index(2, 2, Active + 1)), Is.True, "a floor over a room");
+            Assert.That(model.IsStackedAt(world.Index(5, 5, Active + 1)), Is.False, "a wall on the terrace");
+            Assert.That(model.IsStackedAt(world.Index(6, 6, Active + 1)), Is.False, "a floor on the terrace");
+            Assert.That(model.IsStackedAt(world.Index(2, 1, Active)), Is.False, "the ground floor on the slice");
+            Assert.That(model.IsStackedAt(world.Index(6, 5, Active)), Is.False, "rock is never built");
+
+            ChunkBatch above = MeshLayer(world, Active + 1);
+            Assert.That(Stacked(above.Walls) + Stacked(above.Stumps) + Stacked(above.Roof), Is.GreaterThan(0),
+                "the upper storey's buckets are marked");
+            Assert.That(Instances(above.Stumps, skipStacked: true), Is.EqualTo(1),
+                "and the terrace wall's stump is not");
         }
 
         static int Drawn(RenderTestWorld world, SliceSettings slice)
@@ -163,7 +198,7 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void WithTheWallsUpThePictureIsWhatItWas()
         {
-            RenderTestWorld world = HouseAndHill();
+            RenderTestWorld world = HouseAndTerrace();
             int expected = 0;
             for (int layer = 0; layer <= Active + 1; layer++)
             {
@@ -176,9 +211,9 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
-        public void WithTheWallsDownStumpsStandInAndTheStoreyAboveKeepsOnlyItsLandscape()
+        public void WithTheWallsDownStumpsStandInAndOnlyTheUpperStoreyIsHidden()
         {
-            RenderTestWorld world = HouseAndHill();
+            RenderTestWorld world = HouseAndTerrace();
             int expected = 0;
             for (int layer = 0; layer <= Active; layer++)
             {
@@ -186,11 +221,13 @@ namespace Odyssey.Tests.Presentation
                 expected += Instances(batch.Body) + Instances(batch.Roof) + Instances(batch.Stumps);
             }
             ChunkBatch above = MeshLayer(world, Active + 1);
-            int landscapeAbove = Instances(above.Body, landscapeOnly: true) + Instances(above.Roof, landscapeOnly: true);
-            Assert.That(landscapeAbove, Is.GreaterThan(0), "the hill above the slice is there to keep");
-            Assert.That(Instances(above.Roof) + Instances(above.Walls), Is.GreaterThan(landscapeAbove),
-                "and the storey above has something built in it to hide");
-            expected += landscapeAbove;
+            int keptAbove = Instances(above.Body, skipStacked: true) + Instances(above.Roof, skipStacked: true)
+                            + Instances(above.Stumps, skipStacked: true);
+            Assert.That(Instances(above.Stumps, skipStacked: true), Is.GreaterThan(0),
+                "the house on the terrace is there to keep, as stumps");
+            Assert.That(Stacked(above.Roof) + Stacked(above.Stumps), Is.GreaterThan(0),
+                "and the storey over the house on the slice is there to hide");
+            expected += keptAbove;
 
             Assert.That(Drawn(world, Lowered()), Is.EqualTo(expected));
         }
@@ -202,7 +239,7 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void FlippingTheWallsMeshesNothing()
         {
-            RenderTestWorld world = HouseAndHill();
+            RenderTestWorld world = HouseAndTerrace();
             using var renderer = new ChunkRenderer(world.Model) { SubmitToGpu = false };
             SliceSettings slice = Lowered(false);
 
@@ -220,10 +257,35 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void UndergroundTheGhostAboveIsLeftAlone()
         {
+            // No landscape floor known: the opening layer is the only measure of the surface.
             var slice = new SliceSettings { wallsLowered = true, surfaceLayer = 5 };
-            Assert.That(slice.HidesBuiltOn(Active, Active + 1), Is.False,
+            Assert.That(slice.BelowSurface(Active), Is.True, "the fixture is underground");
+            Assert.That(slice.HidesStackedOn(Active, Active + 1), Is.False,
                 "below the surface the storey above is an x-ray already, and walls-down leaves it be");
-            Assert.That(slice.LowersWallsOn(Active, Active), Is.True, "but the working layer's walls still lower");
+            Assert.That(slice.LowersWallsOn(Active, Active), Is.True, "but the walls still lower");
+        }
+
+        /// <summary>
+        /// The owner's report of 2026-09-24: standing on real ground at L10, with the colony opened
+        /// on L12, the building above was drawn see-through, because a lower terrace counted as
+        /// underground. With the walls down, anything above the lowest ground is above ground.
+        /// </summary>
+        [Test]
+        public void WithTheWallsDownALowerTerraceIsAboveGroundAndATunnelIsNot()
+        {
+            // The played board, measured (LandscapeBandTests): the colony opens on L12 and the
+            // lowest terrace's rock tops out at L8, so its ground is walked on L9.
+            var slice = new SliceSettings { surfaceLayer = 12, landscapeFloor = 8 };
+
+            Assert.That(slice.BelowSurface(10), Is.True, "walls up: today's rule, unchanged");
+            Assert.That(slice.GhostsAbove(10), Is.True, "and the one layer above is an x-ray");
+
+            slice.wallsLowered = true;
+            Assert.That(slice.BelowSurface(10), Is.False, "walls down: L10 is ground");
+            Assert.That(slice.GhostsAbove(10), Is.False, "so nothing above it is see-through");
+            Assert.That(slice.HidesStackedOn(10, 11), Is.True, "and upper storeys above it are hidden instead");
+            Assert.That(slice.BelowSurface(9), Is.False, "the lowest ground is ground");
+            Assert.That(slice.BelowSurface(8), Is.True, "beneath all of it is a tunnel, and keeps its x-ray");
         }
 
         // ------------------------------------------------------------------ the picker
@@ -268,6 +330,23 @@ namespace Odyssey.Tests.Presentation
             Assert.That(cell, Is.EqualTo(new CellRef(4, 4, Active)), "the stump's top is the wall's");
         }
 
+        /// <summary>
+        /// A house on a higher terrace is drawn, as stumps, so its stumps are clickable — where an
+        /// upper storey at the same height is not (the test below).
+        /// </summary>
+        [Test]
+        public void AWallOnATerraceAboveTheSliceIsPickedByItsStump()
+        {
+            GroundRelief.Reset();
+            RenderTestWorld world = Ground().Solid(4, 4, Active)
+                .Edifice(4, 4, Active + 1, CoreContent.EdificeWall).Publish();
+
+            Assert.That(SlicePicker.Pick(Aimed(4.5f, 4.5f, Active + 1, CellMetrics.StumpHeight), world.Model, Active,
+                Lowered(), out CellRef cell), Is.True);
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, Active + 1)),
+                "a wall standing on a higher terrace's ground is drawn, so its stump is a click target");
+        }
+
         [Test]
         public void AFloorAboveTheSliceIsNotPickedWhileItIsHidden()
         {
@@ -304,6 +383,7 @@ namespace Odyssey.Tests.Presentation
             RenderTestWorld world = Ground()
                 .Slab(2, 2, Active + 1)            // the upper storey of a house
                 .Solid(5, 5, Active)               // a hill, whose top is walked at Active + 1
+                .Solid(4, 4, Active).Slab(4, 4, Active + 1) // a floor laid on a terrace
                 .Publish();
             SliceSettings slice = Lowered();
 
@@ -311,6 +391,8 @@ namespace Odyssey.Tests.Presentation
                 "upstairs goes with the house");
             Assert.That(slice.HidesStandingAt(Active, new CellRef(5, 5, Active + 1), world.Model), Is.False,
                 "the hilltop is landscape");
+            Assert.That(slice.HidesStandingAt(Active, new CellRef(4, 4, Active + 1), world.Model), Is.False,
+                "a house on a terrace is a ground floor, and whoever is in it stays");
             Assert.That(slice.HidesStandingAt(Active, new CellRef(2, 2, Active), world.Model), Is.False,
                 "nobody on the slice itself is hidden");
             Assert.That(Lowered(false).HidesStandingAt(Active, new CellRef(2, 2, Active + 1), world.Model), Is.False,
