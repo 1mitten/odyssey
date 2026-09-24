@@ -212,6 +212,14 @@ namespace Odyssey.Presentation.Rendering
                 else Object.DestroyImmediate(_meadowGround);
                 _meadowGround = null;
             }
+
+            foreach (Material plain in _plainGround.Values)
+            {
+                if (plain == null) continue;
+                if (Application.isPlaying) Object.Destroy(plain);
+                else Object.DestroyImmediate(plain);
+            }
+            _plainGround.Clear();
         }
 
         public ModuleLibrary(ModuleCatalogue? catalogue)
@@ -347,7 +355,12 @@ namespace Odyssey.Presentation.Rendering
 
             if (parts.Length == 0)
             {
-                parts = new[] { FallbackPart(shape, entry, null, meshVariant) };
+                // A natural terrain with no texture of its own — sand, the ore seams — is still
+                // drawn by the ground shader when the Meadow look is on, so that it carries the
+                // terrain mark the ink line reads (design 38 §17c). Still a fallback: it keeps the
+                // palette colour a primitive is given.
+                Material? plain = IsNaturalTerrain(moduleId) ? PlainGround(null) : null;
+                parts = new[] { FallbackPart(shape, entry, plain, meshVariant, fallback: true) };
                 _missing.Add(moduleId!);
             }
 
@@ -847,7 +860,7 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>The stand-in box for a shape, sized to the cell. One mesh, many matrices.</summary>
         ModulePart FallbackPart(ModuleShape shape, ModuleEntry? entry, Material? material = null,
-            int meshVariant = 0)
+            int meshVariant = 0, bool? fallback = null)
         {
             GetFallbackBox(shape, out Vector3 size, out Vector3 centre);
             Matrix4x4 local = Matrix4x4.TRS(centre, Quaternion.identity, size);
@@ -872,7 +885,7 @@ namespace Odyssey.Presentation.Rendering
 
             return new ModulePart(
                 mesh, 0, material ?? FallbackMaterial, local,
-                fallback: material == null);
+                fallback: fallback ?? material == null);
         }
 
         static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
@@ -908,6 +921,15 @@ namespace Odyssey.Presentation.Rendering
             }
 
             Material source = entry.material!;
+
+            // Every other natural terrain is drawn the same way, from its own texture, so that it
+            // carries the terrain mark and the ink line leaves it alone (design 38 §17c).
+            if (IsNaturalTerrain(entry.moduleId))
+            {
+                Material? plain = PlainGround(MainTextureOf(source));
+                if (plain != null) return plain;
+            }
+
             if (entry.materialTilesPerCell <= 0f && !entry.flattenNormalMap) return source;
 
             var key = (source, entry.materialTilesPerCell, entry.flattenNormalMap);
@@ -935,6 +957,59 @@ namespace Odyssey.Presentation.Rendering
 
             _dressed[key] = dressed;
             return dressed;
+        }
+
+        readonly Dictionary<Texture, Material> _plainGround = new Dictionary<Texture, Material>();
+
+        /// <summary>The repeat of a plain terrain texture, in metres: the pack's own terrain layers.</summary>
+        const float PlainGroundTileMetres = 4f;
+
+        /// <summary>One ground material per texture, built on first use; null when the look is off.</summary>
+        Material? PlainGround(Texture? top)
+        {
+            Texture key = top != null ? top : Texture2D.whiteTexture;
+            if (_plainGround.TryGetValue(key, out Material? ready)) return ready;
+            Material? made = MeadowLook.NewPlainGroundMaterial(top, PlainGroundTileMetres);
+            if (made != null) _plainGround[key] = made;
+            return made;
+        }
+
+        /// <summary>
+        /// A terrain of the natural board drawn by the ground shader: anything under the terrain
+        /// prefix but stone. The city's paving slabs are prefab rows and never reach here.
+        ///
+        /// <para><b>Stone keeps the pack's shader, and so keeps its ink</b> (design 38 §17c).
+        /// Measured by photograph: through the ground shader a rock outcrop's chipped lumps drew a
+        /// saturated blue, and back on the pack's material they are grey again. An outcrop is a
+        /// thing standing on the meadow rather than a step of it, and its outline is what keeps it
+        /// reading as rock — the owner's complaint was the terraced ground.</para>
+        /// </summary>
+        static bool IsNaturalTerrain(string? moduleId)
+        {
+            const string prefix = ModuleIds.Prefix + "terrain.";
+            if (moduleId == null || !moduleId.StartsWith(prefix, System.StringComparison.Ordinal)) return false;
+            string rest = moduleId.Substring(prefix.Length);
+            int dot = rest.IndexOf('.');
+            string terrain = dot < 0 ? rest : rest.Substring(0, dot);
+            return !Stone.Contains(terrain);
+        }
+
+        static readonly HashSet<string> Stone = new HashSet<string> { "rock", "bedrock", "ironore", "coalseam" };
+
+        /// <summary>The albedo a pack material draws with, by the names the packs use.</summary>
+        static Texture? MainTextureOf(Material material)
+        {
+            if (material.HasProperty(BaseMapId) && material.GetTexture(BaseMapId) != null) return material.GetTexture(BaseMapId);
+            if (material.HasProperty(MainTexId) && material.GetTexture(MainTexId) != null) return material.GetTexture(MainTexId);
+            foreach (string name in material.GetTexturePropertyNames())
+            {
+                string lower = name.ToLowerInvariant();
+                if (lower.Contains("normal") || lower.Contains("bump") || lower.Contains("noise")) continue;
+                if (!(lower.Contains("albedo") || lower.Contains("base") || lower.Contains("texture") || lower.Contains("colour") || lower.Contains("color"))) continue;
+                Texture? found = material.GetTexture(name);
+                if (found != null) return found;
+            }
+            return null;
         }
 
         /// <summary>The first shared material on a prefab, used when only its look is wanted.</summary>

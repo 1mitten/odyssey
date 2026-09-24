@@ -11800,3 +11800,19 @@ its lens-dirt bloom costs eight milliseconds at 4K. And the harness had been pho
 nobody plays — the Play scene carries the golden-hour Volume and the test rig did not — which is the
 board-nobody-plays fault met a third time, in the one tool built to show what the player sees.
 Design 38 §17a.
+
+## 2026-09-24 — The look's first playtest, and three fixes (design 38 §17c)
+
+The owner played the merged look: a step in the right direction, and four things — leaves that still
+blocked a colonist behind a tree, the lines along the terraces, more leaf colour, and performance
+(the last its own unit). Three were fixed on `claude/meadow-look-fixes`, each judged by photograph
+before it was believed.
+
+The fade took two attempts. Wiring the foliage shader's dither at the owner's 15% produced exactly
+what a sparse ordered dither is — a screen door, invisible at the play camera. A two-pass ghost
+(depth first, then colour blended at 15%) shows one faint layer of the front-most leaves, which is
+what the owner described. The ink needed a mask the outline could read cheaply; the DepthNormals
+prepass already runs for SSAO and has a spare channel, so the ground marks itself there — and
+colonists, who were never in that prepass, had to join it or lose their own outlines. Stone stays
+inked on purpose. The colour pass was photographed to be *reducing* the variety on its first cut —
+it was overwriting each species' own colour with green — and was retuned until the range widened.

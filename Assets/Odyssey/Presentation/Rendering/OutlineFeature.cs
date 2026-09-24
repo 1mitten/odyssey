@@ -129,7 +129,10 @@ namespace Odyssey.Presentation.Rendering
                 // Say out loud that the camera colour has to be a real texture rather than the
                 // back buffer, because a fullscreen pass cannot read the surface it writes to.
                 requiresIntermediateTexture = true;
-                ConfigureInput(ScriptableRenderPassInput.Depth);
+                // Normals as well as depth: the terrain mark rides in the normals texture's spare
+                // channel (design 38 §17c). SSAO already asks for the prepass that writes it, so
+                // asking here costs nothing while it is on and keeps the mark if it is ever off.
+                ConfigureInput(ScriptableRenderPassInput.Depth | ScriptableRenderPassInput.Normal);
             }
 
             /// <summary>State the render graph hands back to the render function.</summary>
@@ -175,6 +178,9 @@ namespace Odyssey.Presentation.Rendering
 
                     builder.UseTexture(source, AccessFlags.Read);
                     builder.UseTexture(depth, AccessFlags.Read);
+                    // Declared for the same reason as the depth: it arrives as a global.
+                    TextureHandle normals = resources.cameraNormalsTexture;
+                    if (normals.IsValid()) builder.UseTexture(normals, AccessFlags.Read);
                     builder.SetRenderAttachment(destination, 0, AccessFlags.Write);
 
                     builder.SetRenderFunc((PassData pass, RasterGraphContext context) =>

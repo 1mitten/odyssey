@@ -570,3 +570,74 @@ machine; in-run differences only):
   are kept off anything built, zoned or floored, but not off an order mark or a stockpile's
   neighbourhood beyond one cell.
 - **Huge at High** needs the owner's GPU reading before the High preset is signed off.
+
+### 17c. The owner's first look, and three fixes (2026-09-24)
+
+Branch `claude/meadow-look-fixes`, on the merged look. The owner, having played it: *"It's a step in
+the right direction visually but a few things"* — the leaves still blocked the view of a colonist
+behind a tree while the bark faded; the lines on the terraced tiles should go, *"as it's starting to
+look more seamless"*; more variety in the leaf colour; and performance (a separate unit). Asked and
+answered the same day: leaves **nearly invisible, about 15%**, over **every colonist**; ink off
+**terrain only**; leaf colour **like #13, mixed stands**.
+
+Photographs: `docs/reference/screenshots/look/fixes-before-wide.jpg` and `fixes-after-wide.jpg`, the
+terrace crops `fixes-before-terrace-crop.jpg` / `fixes-after-terrace-crop.jpg`,
+`fixes-after-colonists-crop.jpg` (the colonists and piles keep their ink), and the fade,
+`fixes-after-wide-faded.jpg` (every crown drawn as though a colonist stood behind it).
+
+**The leaves: a ghost, not a dither and not the stand-in.** The bark faded and the leaves did not
+because a Meadow crown in a sight line was handed to the translucent stand-in — which draws each
+leaf card as a whole pane, so forty overlapping panes at 22% added back up to a solid crown. The
+first fix drove `Odyssey/Foliage`'s own `_Fade` dither at 15%, and photographed it did the opposite
+wrong thing: a sparse 4 × 4 screen-door grid of dots, legible as nothing at the play camera. What
+shipped is a **two-pass ghost**: the faded crown's material enables a depth-only pass
+(`FoliageGhostDepth`, LightMode `SRPDefaultUnlit`, which URP draws before `UniversalForward` for the
+same object) and blends its colour pass at `SightLeafFade` (0.15) over it, in the transparent queue.
+The depth pass means only the front-most leaf card survives the depth test, so the crown fades to one
+faint layer rather than forty. Every other foliage material has that pass switched off
+(`Material.SetShaderPassEnabled`, inherited from the base material), so a solid crown pays nothing.
+Trunk and leaves share the material, so a tree fades as one thing; its shadow still falls. Bushes
+take the same path. `ChunkRenderer.FadeEveryTreeForAPhotograph` exists only for the photograph.
+
+**No ink on terrain: a mark in the normals texture, not a stencil.** The outline is one full-screen
+pass over the depth copy. A stencil would need the depth attachment the opaques drew with bound to
+that pass and every terrain material to write a stencil reference; instead the ground writes a
+**terrain mark into the spare alpha channel of the DepthNormals prepass** (which already runs every
+frame for SSAO), and the outline returns the scene untouched where the centre pixel is marked. It is
+one extra texture read a pixel and, on most of the screen, *less* work, because the rest of the
+detector is skipped. It is correct for the reason the ink is one-sided: the line lands on the near
+side of a step, and the near side of a terrace riser or a stream bank is the ground itself, while a
+colonist standing on the ground overwrites the mark with its own 0.
+
+Three things had to be true for that, and each is now asserted (`LookFixesTests`):
+
+- **Every natural terrain is drawn by `Odyssey/MeadowGround`**, which gained a single-texture mode
+  (`_Single`) — earth, gravel, mud, marsh, sand. Only this shader writes the mark; a sand bed left on
+  the pack's material kept a black line along every step of a stream.
+- **Stone is the exception, deliberately.** Through the ground shader a rock outcrop's chipped lumps
+  drew a saturated blue (the stone texture is grey; the cause was not chased, because the decision
+  below makes it moot), and an outcrop is a thing on the meadow rather than a step of it — its
+  outline is what keeps it reading as rock. Rock, bedrock and the ore seams keep the pack's material
+  and their ink.
+- **Everything that keeps its ink must be in the prepass.** A colonist was not (`OdysseyCharacter` had
+  no DepthNormals pass, which d-18 had already noticed), so it would have stood on the ground's mark
+  and lost its line. It has one now.
+
+**Leaf colour: dealt in the shader from where the tree stands.** No colour is uploaded per tree:
+`FoliageStandColour` deals each instance a family from a ~50 m noise field (the stands) and the
+tree's own hash — about 70% greens (two greens and a lime), 27% gold and orange, 3% red — and
+`FoliageRecolour` moves the leaf to that hue while keeping half the art's own light and dark, so the
+texture's detail survives. Photographed and tuned twice: at the art's full lightness an orange dealt
+to a dark crown read as brown, and when the greens replaced 60% of the art's colour the fruit trees'
+own orange disappeared and the meadow had *fewer* colours than before; the greens now take 30–45%,
+autumn takes it all. Bushes take less than trees (`BushStandVariety` 0.45). `LeafVariety` mirrors the
+rule in C# so the distribution can be counted, and a test reads the constants back out of the shader.
+
+**Cost.** Draw calls are unchanged (Standard at the Meadow rung: 2,065 calls, 45,875 instances,
+before and after). The ghost costs a depth pass for the faded instances only; the ink mark is one
+read a pixel and skips the detector on terrain. **Neither was timed as its own arm** — the in-run
+4K dressing arm is within the noise of the look's own, and the performance unit running beside this
+one owns the frame.
+
+**Owed.** A playtest of all three; whether 15% is too faint when a colonist is *inside* a canopy
+rather than behind it; the blue stone through the ground shader, if stone is ever moved onto it.

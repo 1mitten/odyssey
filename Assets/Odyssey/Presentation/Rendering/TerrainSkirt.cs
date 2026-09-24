@@ -855,7 +855,7 @@ namespace Odyssey.Presentation.Rendering
             // surround; the atlas repaint is for the PolygonGeneric trees (design 38 §17).
             bool meadowTree = TintCode.IsTree(tintCode) && !part.IsFallback
                               && FoliageLook.IsMeadowFoliage(part.Material);
-            Material? meadow = meadowTree ? _materials.GetTree(part.Material, tint) : null;
+            Material? meadow = meadowTree ? _materials.GetTree(part.Material, tint, 1f, ChunkRenderer.DefaultTreeStandVariety) : null;
             Material? painted = !meadowTree && TintCode.IsTree(tintCode) && !part.IsFallback
                 ? _materials.Trees.For(part.Material, TintCode.TreeSpeciesOf(tintCode), 1f, muteStep)
                 : null;

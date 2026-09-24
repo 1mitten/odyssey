@@ -106,6 +106,39 @@ namespace Odyssey.Presentation.Rendering
             return material;
         }
 
+        /// <summary>
+        /// One terrain texture drawn the meadow's way — projected from world position, with the
+        /// slow drift over it — for every natural terrain that is not grass: earth, gravel, mud,
+        /// marsh, sand, rock, the ore seams (design 38 §17c). Null when the look is not active, and
+        /// the caller keeps the pack's own material.
+        ///
+        /// <para>Why every terrain and not only the pretty one: the ink line leaves a pixel alone
+        /// when its visible surface wrote the terrain mark, and only this shader writes it. A sand
+        /// bed on the pack's material kept a black line along every step of a stream.</para>
+        ///
+        /// <para><paramref name="top"/> null is a flat surface, coloured wholly by the tint the
+        /// renderer resolves — which is how sand and the ore seams, which have no texture of their
+        /// own, were already drawn.</para>
+        /// </summary>
+        public static Material? NewPlainGroundMaterial(Texture? top, float tileMetres)
+        {
+            if (!GroundActive) return null;
+            Shader? shader = Shader.Find("Odyssey/MeadowGround");
+            if (shader == null) return null;
+            var material = new Material(shader)
+            {
+                name = "Odyssey_Ground_" + (top != null ? top.name : "plain"),
+                enableInstancing = true,
+            };
+            material.SetFloat(SingleId, 1f);
+            material.SetFloat(TileMetresId, Mathf.Max(0.5f, tileMetres));
+            material.SetTexture(GrassAId, top != null ? top : Texture2D.whiteTexture);
+            material.SetTexture(EarthId, top != null ? top : Texture2D.whiteTexture);
+            return material;
+        }
+
+        static readonly int SingleId = Shader.PropertyToID("_Single");
+        static readonly int TileMetresId = Shader.PropertyToID("_TileMetres");
         static readonly int GrassAId = Shader.PropertyToID("_GrassA");
         static readonly int GrassBId = Shader.PropertyToID("_GrassB");
         static readonly int CloverId = Shader.PropertyToID("_Clover");
