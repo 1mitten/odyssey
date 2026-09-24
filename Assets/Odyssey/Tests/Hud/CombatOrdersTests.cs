@@ -52,11 +52,11 @@ namespace Odyssey.Tests.Hud
         static readonly PawnId[] Both = { Ada, Bo };
 
         static List<Intent> RightClick(IReadOnlyList<PawnId> selection, WorldSnapshot frame, CellRef? cell,
-            PawnId under, bool ctrl = false)
+            PawnId under, bool ctrl = false, int edifice = EdificeHandle.None)
         {
             var sent = new List<Intent>();
             var menu = new List<ContextMenuRow>();
-            OrderModel.RightClick(selection, frame, cell, under, ctrl, sent, menu);
+            OrderModel.RightClick(selection, frame, cell, under, ctrl, sent, menu, edifice);
             Assert.That(menu, Is.Empty, "a click that acts at once opened a menu as well");
             return sent;
         }
@@ -173,28 +173,108 @@ namespace Odyssey.Tests.Hud
             }
         }
 
+        // ---- buildings (C6, design 33 §13i) ------------------------------------------------------
+
         /// <summary>
-        /// A building is not a target until C6 (design 33 §5j), and even then a floor never is. A
-        /// click on a cell whose detail reports a wall, and on one with a wooden floor, moves the
-        /// drafted colonist exactly as a click on grass does.
+        /// The content's table as the simulation publishes it: which edifices have hit points. A
+        /// tree and nothing have none.
+        /// </summary>
+        static WorldSnapshot WithBuildings(WorldSnapshot frame)
+        {
+            frame.SetEdificeHitPoints(EdificeHandle.Wall, 300);
+            frame.SetEdificeHitPoints(EdificeHandle.Door, 160);
+            frame.SetEdificeHitPoints(EdificeHandle.Bed, 120);
+            frame.SetEdificeHitPoints(EdificeHandle.Shelf, 100);
+            return frame;
+        }
+
+        static readonly CellRef WallCell = new CellRef(2, 6, 1);
+        static readonly CellRef FloorCell = new CellRef(3, 6, 1);
+
+        /// <summary>
+        /// A right-click on a wall, a door or a bed — an edifice that occupies the cell and has hit
+        /// points — is an attack by every selected drafted colonist, with the building as target 0
+        /// at the cell clicked (design 33 §5j, §13i).
         /// </summary>
         [Test]
-        public void AClickOnAFlooredOrWalledCellIsStillAMove()
+        public void RightClickOnABuildingAttacksItFromEveryDraftedColonist()
         {
-            WorldSnapshot frame = Board(Ada);
-            var wall = new CellRef(2, 6, 1);
-            var floor = new CellRef(3, 6, 1);
-            frame.AddCellDetail(new CellDetail(frame.Size.Index(wall), (byte)TerrainHandle.Soil,
-                (byte)EdificeHandle.Wall, 0, 0, 1000, 0));
-            frame.AddCellDetail(new CellDetail(frame.Size.Index(floor), (byte)TerrainHandle.Soil,
+            WorldSnapshot frame = WithBuildings(Board(Ada, Bo));
+            foreach (int edifice in new[] { EdificeHandle.Wall, EdificeHandle.Door, EdificeHandle.Bed })
+            {
+                List<Intent> sent = RightClick(Both, frame, WallCell, PawnId.None, edifice: edifice);
+                AssertAttacks(sent, PawnId.None, Ada, Bo);
+                Assert.That(sent[0].Cell, Is.EqualTo(WallCell), $"edifice {edifice}");
+            }
+        }
+
+        /// <summary>
+        /// The case the brief names (design 33 §5j): <b>a click on a floored cell still moves</b> —
+        /// a floor is a slab, not an edifice, so the presenter reports nothing standing there. So
+        /// does a tree, which stands in its cell but has no hit points, and a cell whose edifice the
+        /// frame knows nothing of. The control is the wall, which attacks.
+        /// </summary>
+        [Test]
+        public void AClickOnAFlooredCellIsStillAMove()
+        {
+            WorldSnapshot frame = WithBuildings(Board(Ada));
+            frame.AddCellDetail(new CellDetail(frame.Size.Index(FloorCell), (byte)TerrainHandle.Soil,
                 (byte)EdificeHandle.None, (byte)StuffHandle.Wood, 0, 1000, 0));
 
-            foreach (CellRef cell in new[] { wall, floor })
+            foreach (int edifice in new[] { EdificeHandle.None, EdificeHandle.TreeConifer, EdificeHandle.Campfire })
             {
-                List<Intent> sent = RightClick(new[] { Ada }, frame, cell, PawnId.None);
+                List<Intent> sent = RightClick(new[] { Ada }, frame, FloorCell, PawnId.None, edifice: edifice);
                 Assert.That(sent.Count, Is.EqualTo(1));
-                Assert.That(sent[0].Kind, Is.EqualTo(IntentKind.OrderMove), $"a building at {cell} was attacked");
+                Assert.That(sent[0].Kind, Is.EqualTo(IntentKind.OrderMove), $"edifice {edifice} was attacked");
+                Assert.That(sent[0].Cell, Is.EqualTo(FloorCell));
             }
+
+            List<Intent> wall = RightClick(new[] { Ada }, frame, WallCell, PawnId.None, edifice: EdificeHandle.Wall);
+            Assert.That(wall[0].Kind, Is.EqualTo(IntentKind.OrderAttack), "the control: a wall");
+        }
+
+        /// <summary>
+        /// A pawn under the pointer wins over the building it stands on (design 33 §6C): a colonist
+        /// on a bed, no Ctrl, is the move it always was, and a hog on one is attacked, not the bed.
+        /// </summary>
+        [Test]
+        public void APawnUnderThePointerWinsOverTheBuildingItStandsOn()
+        {
+            WorldSnapshot frame = WithBuildings(Board(Ada));
+            List<Intent> onBo = RightClick(new[] { Ada }, frame, new CellRef(7, 4, 1), Bo, edifice: EdificeHandle.Bed);
+            Assert.That(onBo.Count, Is.EqualTo(1));
+            Assert.That(onBo[0].Kind, Is.EqualTo(IntentKind.OrderMove));
+
+            AssertAttacks(RightClick(new[] { Ada }, frame, new CellRef(6, 6, 1), Hog, edifice: EdificeHandle.Bed), Hog, Ada);
+        }
+
+        /// <summary>No draft, no fight (design 33 §5j): an undrafted selection sends nothing at a wall, and no move either.</summary>
+        [Test]
+        public void AnUndraftedSelectionSendsNothingAtABuilding()
+        {
+            WorldSnapshot frame = WithBuildings(Board());
+            Assert.That(RightClick(Both, frame, WallCell, PawnId.None, edifice: EdificeHandle.Wall), Is.Empty);
+        }
+
+        /// <summary>
+        /// A weapon on a shelf opens the context menu rather than the shelf being attacked (design 33
+        /// §13i): equipping is the answer the owner asked for on a weapon (§7a).
+        /// </summary>
+        [Test]
+        public void AWeaponOnAShelfOpensTheMenuRatherThanAnAttack()
+        {
+            WorldSnapshot frame = WithBuildings(Board(Ada));
+            var shelf = new CellRef(5, 2, 1);
+            frame.AddThing(new ThingView(new ThingId(30), shelf, ItemHandle.Bat, 0, 1, 1, 0));
+
+            var sent = new List<Intent>();
+            var menu = new List<ContextMenuRow>();
+            OrderModel.RightClick(new[] { Ada }, frame, shelf, PawnId.None, false, sent, menu, EdificeHandle.Shelf);
+            Assert.That(sent, Is.Empty, "the shelf was attacked");
+            Assert.That(menu, Is.Not.Empty, "no menu for the bat");
+
+            List<Intent> bare = RightClick(new[] { Ada }, frame, WallCell, PawnId.None, edifice: EdificeHandle.Shelf);
+            Assert.That(bare[0].Kind, Is.EqualTo(IntentKind.OrderAttack), "the control: an empty shelf is attacked");
         }
 
         [Test]

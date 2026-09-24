@@ -57,6 +57,17 @@ namespace Odyssey.Sim.Pawns
 
             var pawns = _ctx.Pawns.All;
             for (int i = 0; i < pawns.Count; i++) Advance(pawns[i]);
+
+            // A carried pawn is where her carrier is (design 33 §11a), after every step of the
+            // tick, so the two never disagree between ticks. One flag a pawn; nobody carried is
+            // nothing more.
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                Pawn carried = pawns[i];
+                if (carried.CarriedBy == 0) continue;
+                Pawn? carrier = _ctx.Pawns.Get(new Contracts.PawnId(carried.CarriedBy));
+                if (carrier != null) carried.Cell = carrier.Cell;
+            }
         }
 
         /// <summary>

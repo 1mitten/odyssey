@@ -45,6 +45,8 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < pawns.Count; i++)
             {
                 Pawn pawn = pawns[i];
+                // A carried patient goes where her carrier goes; the carrier is the occupant.
+                if (pawn.CarriedBy != 0) continue;
                 if (pawn.Cell == cell) return pawn;
                 if (pawn.HasPath && pawn.Path[pawn.PathIndex] == cell) return pawn;
             }

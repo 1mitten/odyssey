@@ -76,6 +76,13 @@
     <rechooseTicks>300</rechooseTicks>
 
     <!--
+      How near a fight must be for a drafted colonist holding her ground to join it (design 33
+      section 15; owner, 2026-09-24: "if there is any fight going on nearby ... they will help"):
+      the colonist being attacked and her attacker both within this many cells. INVENTED: 20 m.
+    -->
+    <helpRadiusCells>8</helpRadiusCells>
+
+    <!--
       How long a colonist struck by a colonist fights back (owner: she does), 20 seconds; and how
       long a hog that turned stays vengeful, the reference's 10,000-tick floor (a-10). Both in
       ticks. The first is INVENTED.

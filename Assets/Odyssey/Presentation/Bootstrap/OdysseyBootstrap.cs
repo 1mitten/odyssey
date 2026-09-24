@@ -1552,6 +1552,8 @@ namespace Odyssey.Presentation.Bootstrap
             DrawPowerLines(_world.Views.Current, activeLayer);
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             DrawDraftMarks(_world.Views.Current, movePerTick);
+            // The landing ring on the cell each selected colonist was sent to (design 33 §20).
+            DrawLandingRings(_world.Views.Current, activeLayer, slice);
             // The lock-on ring under whoever the selection is attacking (design 33 §7b).
             DrawLockOnRings(_world.Views.Current, movePerTick, activeLayer, slice);
             // The fight (design 33 §1): a bar over the hurt and the drafted, the hostile marker,
@@ -2847,15 +2849,16 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>
         /// The draft on the board (design 33 §2g): a diamond over every drafted colonist's head, and
         /// for the <i>selected</i> ones that are walking under orders, a line to where they were
-        /// sent and a floor bracket on it. Twenty lines across the board would be noise; the ones
+        /// sent. The cell at its end wears the landing ring (§20, <see cref="DrawLandingRings"/>),
+        /// which replaced a floor bracket there. Twenty lines across the board would be noise; the ones
         /// being commanded are signal. One walk of the aspects finds them all
         /// (<see cref="OrderModel.CollectDrafted"/>), and the cost is a submission or three per
         /// drafted colonist — it scales with the draft, never with the board.
         ///
         /// <para><b>An undrafted colonist sent for a weapon gets the same line</b> (design 33 §7a,
         /// the context menu's Equip): the simulation publishes the weapon's cell as her order cell,
-        /// the same walk of <c>OrderModel.CollectDrafted</c> finds it, and the line and bracket are
-        /// drawn exactly as a drafted move's — without the diamond, which says "drafted".</para>
+        /// the same walk of <c>OrderModel.CollectDrafted</c> finds it, and the line is drawn
+        /// exactly as a drafted move's — without the diamond, which says "drafted".</para>
         /// </summary>
         void DrawDraftMarks(WorldSnapshot snapshot, int movePerTick)
         {
@@ -2879,7 +2882,7 @@ namespace Odyssey.Presentation.Bootstrap
                 _renderer.DrawMarker(feet + Vector3.up * (colonistCursor.y + DraftMarkerLift), DraftMarkerSize, hue);
 
                 if (mark.OrderCell < 0 || selection == null || !IsSelected(selection, pawn.Id)) continue;
-                DrawOrderLine(feet, mark.OrderCell, hue, line);
+                DrawOrderLine(feet, mark.OrderCell, line);
             }
 
             for (int i = 0; i < _undraftedOrders.Count; i++)
@@ -2890,18 +2893,67 @@ namespace Odyssey.Presentation.Bootstrap
 
                 if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
                     feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
-                DrawOrderLine(feet, order.OrderCell, hue, line);
+                DrawOrderLine(feet, order.OrderCell, line);
             }
         }
 
-        /// <summary>The order line from a colonist's feet to the cell she was sent to, and a bracket on it.</summary>
-        void DrawOrderLine(Vector3 feet, int orderCell, Color bracket, Color line)
+        /// <summary>
+        /// The order line from a colonist's feet to the cell she was sent to. The cell itself is
+        /// marked by the landing ring (<see cref="DrawLandingRings"/>), not here: the floor bracket
+        /// that stood on it until design 33 §20 is gone.
+        /// </summary>
+        void DrawOrderLine(Vector3 feet, int orderCell, Color line)
         {
             CellRef dest = _world!.Size.FromIndex(orderCell);
             Vector3 to = GroundRelief.Drape(CellMetrics.FloorCentre(dest)).GetPosition() + Vector3.up * 0.12f;
             _renderer!.DrawSegment(feet + Vector3.up * 0.12f, to, DraftLineThickness, line);
-            _renderer.DrawFloorBracket(dest, bracket);
         }
+
+        /// <summary>
+        /// The landing ring (design 33 §20; owner, 2026-09-24: <i>"instead of using a square to
+        /// indicate where to land when drafting people, can it be a ring that flashes temporarily
+        /// or has a transition effect that makes sense"</i>): a flat, pale ring on the cell each
+        /// selected colonist was sent to — a drafted move or a weapon fetched from the menu, the
+        /// order cell the line above ends on. Which rings and how far through their animation are
+        /// <see cref="LandingRings"/>' — fast-tier tested, on the lock-on ring's own clock — and
+        /// this only places and draws them.
+        ///
+        /// <para>Draped on the destination cell's floor, as the bracket it replaced was, and 2 cm
+        /// clear of it. A ring on a layer the slice does not draw is not drawn, the lock-on's rule.
+        /// One submission per ring, one ring per selected colonist under orders (and for a fade's
+        /// length, the one she left): it scales with the selection, never the board. Its opacity is
+        /// quantised by the model, so the animation reuses a bounded set of cached materials.</para>
+        /// </summary>
+        void DrawLandingRings(WorldSnapshot snapshot, int activeLayer, SliceSettings slice)
+        {
+            if (_renderer == null || _model == null || _world == null) return;
+
+            SelectionDirector? selection = Directors?.Selection;
+            IReadOnlyList<PawnId> selected = selection != null ? selection.Pawns : Array.Empty<PawnId>();
+            _landing.Update(snapshot, selected, Time.unscaledTime, _world);
+
+            IReadOnlyList<LandingRings.Ring> rings = _landing.Rings;
+            if (rings.Count == 0) return;
+
+            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model.LowestOutdoorLayer));
+            int highest = slice.HighestVisibleLayer(activeLayer, snapshot.Size.SizeY);
+
+            for (int i = 0; i < rings.Count; i++)
+            {
+                LandingRings.Ring ring = rings[i];
+                if (ring.Alpha <= 0f || ring.Cell < 0 || ring.Cell >= snapshot.Size.CellCount) continue;
+                CellRef dest = snapshot.Size.FromIndex(ring.Cell);
+                if (dest.Y < lowest || dest.Y > highest) continue;
+
+                float radius = LandingRings.Radius * ring.Scale;
+                Matrix4x4 at = GroundRelief.Drape(CellMetrics.FloorCentre(dest));
+                at.m13 += LockOnRingLift;
+                Color colour = Ui.HudTokens.Convert(OrderColours.Move.WithAlpha(ring.Alpha));
+                _renderer.DrawRing(at * Matrix4x4.Scale(new Vector3(radius, 1f, radius)), colour);
+            }
+        }
+
+        readonly LandingRings _landing = new LandingRings();
 
         /// <summary>
         /// A blade drawn, once, on the frame the snapshot first shows a colonist drafted (design 33

@@ -219,7 +219,34 @@ namespace Odyssey.Tests.Sim
         // jobs keep drivers 14-16, so the combat five move from 14-18 to 17-21 (nothing combat shipped
         // had saved them). Neither side's number covers the merged pack, so it is re-taken from a
         // freshly loaded pack rather than adopted from either.
-        const ulong ContentFingerprint = 7311169109491343133UL;
+        //
+        // Moved a twenty-first time, 2026-09-24, by C5, friendly fire (design 33 §12): two thoughts
+        // appended at indices 6 and 7 — Thought_AttackedByColonist (-80, one day, once) and
+        // Thought_ColonistDied (-60, three days, three deep), the owner's -8 and -6 on our scale of
+        // thousandths. No golden moved: no golden window has a colonist hurt by a colonist or a
+        // death, and a memory is hashed only once a pawn has one.
+        //
+        // Moved a twenty-second time, deliberately, 2026-09-24, by the owner's answers to Phase 4
+        // (design 33 §14e): ThoughtDef gained renewsOnRepeat, false everywhere but
+        // Thought_AttackedByColonist, so a second swing renews the day rather than being dropped.
+        // No golden moved: no other thought renews, and no golden window has friendly fire.
+        //
+        // Moved a twenty-third time, deliberately, 2026-09-24, by drafted colonists helping (design
+        // 33 §15): CombatDef gained helpRadiusCells (8, INVENTED), how near another colonist's
+        // fight must be for a drafted colonist on her hold to join it. No golden moved: no golden
+        // window drafts anybody.
+        // And a twenty-fourth, the same day, by doors holding marauders out (design 33 §16):
+        // PawnKindDef gained traverseMode, empty everywhere but PawnKind_Marauder (Marauder), and
+        // PawnContent the resolved KindMode table. No golden moved: no golden has a marauder, and
+        // every other kind resolves to its species' mode exactly as before. The value below is the
+        // two together, measured on the merge rather than taken from either side.
+        //
+        // Moved a twenty-fifth time, deliberately, 2026-09-24, by marauders stealing (design 33
+        // §17): Job_Steal appended at 22, PawnKindDef gained motive (None everywhere but
+        // PawnKind_Marauder, Loot), and PawnContent the KindMotive table. No golden moved: no
+        // golden has a marauder, and the job system hashes a job appended after the combat line's
+        // only once it has run (JobSystem.HashedAlways).
+        const ulong ContentFingerprint = 12926174003015880195UL;
 
 
         [Test]

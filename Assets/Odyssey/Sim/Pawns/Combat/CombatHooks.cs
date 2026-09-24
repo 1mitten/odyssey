@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -32,6 +33,39 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
+    /// One swing that reached a pawn, whatever came of it — a hit, a miss, a dodge, or a blow that
+    /// fell on air because she stepped out of reach during the wind-up (design 33 §14f).
+    /// </summary>
+    public readonly struct SwingReport
+    {
+        /// <summary>Who was swung at.</summary>
+        public readonly Pawn Target;
+
+        /// <summary>Who swung.</summary>
+        public readonly Pawn Attacker;
+
+        /// <summary><see cref="CombatEventKind.Hit"/>, <see cref="CombatEventKind.Miss"/> or <see cref="CombatEventKind.Dodge"/>.</summary>
+        public readonly CombatEventKind Result;
+
+        /// <summary>The item def index it was swung with, or -1 for bare hands or teeth.</summary>
+        public readonly int Weapon;
+
+        public readonly int Tick;
+
+        public SwingReport(Pawn target, Pawn attacker, CombatEventKind result, int weapon, int tick)
+        {
+            Target = target;
+            Attacker = attacker;
+            Result = result;
+            Weapon = weapon;
+            Tick = tick;
+        }
+
+        /// <summary>Did it take hit points? A <see cref="CombatSystem"/> hit is followed by <c>DamageApplied</c>.</summary>
+        public bool Landed => Result == CombatEventKind.Hit;
+    }
+
+    /// <summary>
     /// Something that wants to hear about a fight: friendly fire's two memories (C5), a dropped
     /// weapon on a death (C3), a rescue's giver noticing somebody went down (C4). Registered on
     /// <see cref="CombatHooks"/> by the composition, in a fixed order.
@@ -43,6 +77,15 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public interface ICombatListener
     {
+        /// <summary>
+        /// A swing reached a pawn (design 33 §14f): raised once for every swing
+        /// <c>CombatSystem.ApplySwing</c> resolves on a pawn — landed, missed, dodged or on air —
+        /// before its outcome is applied, so for a hit it comes before <see cref="DamageApplied"/>.
+        /// Never for a blow at a building (no hooks, §13g), nor for a swing lost in the air to its
+        /// attacker's own stun or fall, which never reaches her.
+        /// </summary>
+        void SwingResolved(in SwingReport report);
+
         /// <summary>A blow landed and took hit points.</summary>
         void DamageApplied(in DamageReport report);
 
@@ -54,8 +97,8 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// The three hooks (design 33 §5): <c>DamageApplied</c>, <c>Downed</c> and <c>Died</c>, raised by
-    /// the fight's rules and heard by anyone registered.
+    /// The hooks (design 33 §5, §14f): <c>SwingResolved</c>, <c>DamageApplied</c>, <c>Downed</c> and
+    /// <c>Died</c>, raised by the fight's rules and heard by anyone registered.
     ///
     /// <para><b>A listener list, not C# events</b>, for the reason the work givers are a list: the
     /// order they are called in is the order they were registered in, which the composition fixes,
@@ -79,6 +122,11 @@ namespace Odyssey.Sim.Pawns
             if (_listeners.Contains(listener))
                 throw new InvalidOperationException($"{listener.GetType().FullName} is already listening.");
             _listeners.Add(listener);
+        }
+
+        public void RaiseSwingResolved(in SwingReport report)
+        {
+            for (int i = 0; i < _listeners.Count; i++) _listeners[i].SwingResolved(report);
         }
 
         public void RaiseDamageApplied(in DamageReport report)
