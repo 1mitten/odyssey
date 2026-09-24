@@ -11822,3 +11822,31 @@ The first attempt died on a full disk — D: had 0.1 GB left across sixty worktr
 before Unity compiled a line; the unit moved into M2's warm worktree once there was room. The
 shader compiled clean on its first real run and every foliage test passed; the player build keeps
 it, and its log carries no fallback warning.
+
+## 2026-09-24 — Blood
+
+The unit design 33 §7d cut the seam for, built to the owner's rules there (§10). Two tests on PR
+#180 had to go green first, and neither was combat's fault: both counted frames across a tick the
+bootstrap paces by real time, and the CI runner draws a frame in a millisecond (`docs/lessons.md`).
+
+**The seam changed shape**, because the first thing to implement it needed two facts it did not
+carry: the drops need ground to land on, so a spurt now takes the struck pawn's feet beside the
+wound; and a pool has to go under a body that has not fallen yet when the event arrives, so it
+takes who it is under. **Which way a body falls is a clip's decision, not the simulation's**, so no
+place computed at the event could be right. The pool waits 1.2 s and then asks: the corpse's own
+drawn box once it is at rest, and halfway from the figure's feet to its head while it is still
+falling or merely downed — a midpoint that is on the body whichever way it went.
+
+**One mark per hit, not per drop.** A sharp hit throws up to sixteen drops; a mark each would have
+filled the owner's cap of two hundred in a dozen blows. The splatter's satellite drops are built
+into its shape instead, ahead along the blow.
+
+**A floor taken away takes its blood with it**, rather than letting the stain fall: every mark
+asks, each frame, whether it still has ground, which is two hundred cheap reads. And nothing is laid
+over a drop, into water (in the cell or under it, the knockback's rule) or against a wall.
+
+**Cost.** Marks are bucketed by shape and one of six fade steps and go out through the renderer's
+cached translucent material, so no new shader has to survive the player build. The ceiling is 19
+calls whatever the fight, and a colony with no blood submits nothing. Negative controls seen to
+fail: the cap dropping the newest, the fade brightening before its hold ends, the fans wound face
+down, the per-frame ground check off, the water rule off.

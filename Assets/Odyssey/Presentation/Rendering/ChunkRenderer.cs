@@ -2926,6 +2926,36 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
+        /// Instances of one mesh lying on the ground in one colour, lit and translucent, with no
+        /// glow: the blood marks and the drops in the air (design 33 §10d). One instanced call per
+        /// <see cref="MaxInstancesPerCall"/>, counted, so a caller that buckets by colour pays in
+        /// colours and never in marks (P10). The material is the bracket's translucent base with the
+        /// caller's colour and alpha, cached, so no new shader has to survive the player build.
+        /// </summary>
+        public void DrawGroundInstances(Mesh mesh, Color colour, Matrix4x4[] matrices, int count)
+        {
+            if (count <= 0) return;
+            Material material = _materials.Get(_model.Library.FallbackMaterial, colour, Color.black,
+                ghost: true, alpha: colour.a);
+            var rp = new RenderParams(material)
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = true,
+            };
+
+            int sent = 0;
+            while (sent < count)
+            {
+                int n = Mathf.Min(MaxInstancesPerCall, count - sent);
+                if (SubmitToGpu) Graphics.RenderMeshInstanced(rp, mesh, 0, matrices, n, sent);
+                DrawCalls++;
+                InstancesDrawn += n;
+                sent += n;
+            }
+        }
+
+        /// <summary>
         /// A flat ring lying on the ground in the bracket's lit, translucent material — the
         /// lock-on ring under an attack order's target (design 33 §7b). <paramref name="placement"/>
         /// carries the drape, the lift and the radius in x and z; the mesh is
