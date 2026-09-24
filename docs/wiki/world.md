@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-111 entries, 85 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+125 entries, 99 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -108,7 +108,6 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Interface scale** | `ui.settings.uiscale` | How large the HUD is drawn. Larger type covers more of the board | no art | M1 |
 | **Shadows** | `ui.settings.shadows` | Whether people and buildings cast shadows on the ground | no art | M1 |
 | **Surrounding land** | `ui.settings.surround` | The land carried past the rim so the board does not end in mid-air | no art | M1 |
-| **Grass tufts** | `ui.settings.grass` | Tufts strewn over the meadow. Decoration, in no cell and no save | no art | M1 |
 | **Ground relief** | `ui.settings.relief` | The roll of the drawn ground. The cells underneath stay flat | no art | M1 |
 | **See through to selection** | `ui.settings.seethrough` | Fade whatever stands between the camera and a selected colonist | no art | M1 |
 | **Cut away the ceiling** | `ui.settings.cutaway` | See into rooms on this layer. Off shows the floor above you | no art | M3 |
@@ -127,6 +126,10 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Anti-aliasing** | `ui.settings.antialias` | Smooth the stepped edges of the board. The most expensive thing on this page | no art | M3 |
 | **Shadow distance** | `ui.settings.shadowdist` | How far from the camera shadows are still drawn | no art | M3 |
 | **Display mode** | `ui.settings.displaymode` | Fullscreen, borderless or a window | no art | M3 |
+| **Quality** | `ui.settings.quality` | Set every lever on this page at once, from Low to Ultra. Custom once any is moved by hand | no art | MF |
+| **Grass** | `ui.settings.vegetation` | How thick the grass is strewn, from bare ground to every cell. Decoration, in no cell and no save | no art | MF |
+| **Grass distance** | `ui.settings.grassdist` | How far from the camera grass is still drawn. Past it the ground carries the field | no art | MF |
+| **Grass shadows** | `ui.settings.foliageshadows` | Whether grass casts shadows. Off, as it has always shipped: a shadow centimetres long on grass the same colour | no art | MF |
 | **Resolution** | `ui.settings.resolution` | How many pixels the game is drawn at. Only a built game can change it | no art | M3 |
 | **Exit game** | `ui.settings.exit` | Leave the game. The row asks twice, because leaving is not undoable | no art | M3 |
 | **Gameplay** | `ui.settings.gameplay` | What the game does for you while you play | no art | MS |
@@ -136,6 +139,17 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Ambience volume** | `ui.settings.volume.ambience` | The sound of the place itself | no art | M3 |
 | **Effects volume** | `ui.settings.volume.effects` | Axes, picks and the noises of work | no art | M3 |
 | **Alerts volume** | `ui.settings.volume.alerts` | What asks for attention | no art | M3 |
+| **Scale** | `ui.settings.group.scale` | How large the interface is drawn | no art | M3 |
+| **Camera** | `ui.settings.group.camera` | How the camera moves, and the keys that move it | no art | M3 |
+| **Build palette** | `ui.settings.group.palette` | The shape of the Build palette | no art | M3 |
+| **Performance** | `ui.settings.group.performance` | What the frame costs to draw | no art | M3 |
+| **Volume** | `ui.settings.group.volume` | The loudness of the game and its music and ambience | no art | M3 |
+| **Cues** | `ui.settings.group.cues` | The loudness of work and of what asks for attention | no art | M3 |
+| **Saving** | `ui.settings.group.saving` | When the colony is written to disk without being asked | no art | M3 |
+| **Game** | `ui.settings.group.game` | Saving, loading and leaving, pinned under the tabs | no art | M3 |
+| **View** | `ui.settings.group.view` | The keys that move the slice and frame the map | no art | M3 |
+| **Tools** | `ui.settings.group.tools` | The keys that arm an order | no art | M3 |
+| **Time** | `ui.settings.group.time` | The keys that pause the game and set its speed | no art | M3 |
 
 ## The Inventory tab's words
 

@@ -227,6 +227,9 @@ namespace Odyssey.Presentation.Ui
 
             for (int i = 0; i < content.Count; i++)
             {
+                // An incident the world writes down when it happens — a theft (design 33 §17) —
+                // cannot be fired, so a row for it would do nothing.
+                if (!content.Workers[i].Fireable) continue;
                 int def = i;
                 _debugEvents.Add(DebugActionRow(IncidentLabels.IconKey(i),
                     content.Defs[i].description ?? string.Empty, () => InvokeIncident(def)));

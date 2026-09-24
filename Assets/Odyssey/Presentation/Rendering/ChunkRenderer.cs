@@ -334,11 +334,323 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public float ShadowCasterMarginMetres { get; set; } = 120f;
 
+        /// <summary>
+        /// The direction the key light travels (its <c>transform.forward</c>), or null when there
+        /// is no key light to ask. With it, the shadow margin is a **sweep towards the sun** rather
+        /// than a shell in every direction (<c>docs/design/38-meadow-overhaul.md</c> §18,
+        /// <c>docs/research/d-19</c> §3).
+        ///
+        /// <para>A caster can only darken what lies along the light's path from it, so a chunk
+        /// matters to the picture only if its box, swept along this direction, reaches the frustum.
+        /// The sweep is as long as the light can travel before it falls below the lowest drawn
+        /// layer — the drop from the chunk's tallest possible top, over the sine of the sun's
+        /// elevation — capped at <see cref="ShadowCasterMarginMetres"/>, the old bound, which a low
+        /// sun therefore still reaches. Measured on the played meadow at 4K, the old shell kept
+        /// every chunk of a Standard board (26 on screen, 104 submitted); the sweep keeps those up
+        /// sun of the view and drops the rest.</para>
+        ///
+        /// <para>Null keeps the shell, which is never wrong, only slower. The root writes it every
+        /// frame, so a test that wants a sun of its own sets the light, not this (P18).</para>
+        /// </summary>
+        public Vector3? ShadowLightDirection { get; set; }
+
+        /// <summary>Whether the margin sweeps towards the sun (on, the game) or keeps the shell in
+        /// every direction (off). A measurement seam the root never writes, so one run can time
+        /// both; see <see cref="ShadowLightDirection"/>.</summary>
+        public bool SweepShadowMargin { get; set; } = true;
+
+        /// <summary>
+        /// Whether the scenery — grass tufts, tall-grass stands, flowers, ground cover and bushes — is
+        /// drawn from GPU buffers with a compute cull (<see cref="Rendering.IndirectScenery"/>,
+        /// design 38 §22) rather than one instanced call per chunk, kind and level. Where the machine
+        /// can do it; the chunk path draws them otherwise, and always on a ghosted layer, and always
+        /// for a kind that casts shadows, fades, or is drawn by a shader that cannot read the buffers
+        /// (trees, stones).
+        ///
+        /// <para><b>On, because the owner's frame drop zoomed out was the scenery's calls</b> (§21:
+        /// each kind 100–170 calls at far zoom). The path is picture-exact against the chunk path
+        /// (<c>FrameTimeTests.TheIndirectSceneryDoesNotChangeThePicture</c>), and off is the arm that
+        /// measures it.</para>
+        /// </summary>
+        public bool UseIndirectScenery { get; set; } = true;
+
+        /// <summary>Draw calls the indirect path issued last frame (already in <see cref="DrawCalls"/>).</summary>
+        public int IndirectDrawCalls { get; private set; }
+
+        /// <summary>
+        /// Last frame's chunk-path draw calls by kind (for measurement): which kinds the calls a zoomed
+        /// out frame costs actually belong to. Indexed as <see cref="CallKindNames"/>.
+        /// </summary>
+        public readonly int[] ChunkCallsByKind = new int[CallKindNames.Length];
+
+        /// <summary>
+        /// Whether the board's trees are drawn at all. A measurement seam, like
+        /// <see cref="UseIndirectScenery"/>: off is the arm that prices what trees cost the frame
+        /// (the question of whether trees belong on the GPU path, design 38 §23). The game draws them.
+        /// </summary>
+        public bool DrawTrees { get; set; } = true;
+
+        /// <summary>
+        /// Whether the board's trees are submitted grouped across chunks (design 38 §23): every
+        /// opaque submission a tree bucket makes — its crowns at the chosen level and its shadow
+        /// proxy — is gathered for the frame and sent once per (material, mesh, submesh, shadow
+        /// mode) at the end of the chunk walk, instead of once per chunk.
+        ///
+        /// <para><b>Why:</b> measured (<c>TheTreesAgainstTheFrame</c>), a board's trees went out at
+        /// four and a half to five a call — 276 tree calls on Standard at the default zoom, 1,169 on
+        /// Huge at 140 m — and that submission was 0.28 to 1.33 ms of CPU. Every decision is still
+        /// taken where it was, chunk by chunk (the frustum and sun-side cull, the level, the sight
+        /// fade); only the submission is batched, so the picture is the same one
+        /// (<c>FrameTimeTests.GroupingTheTreesDoesNotChangeThePicture</c>). Translucent draws — a
+        /// faded crown's ghost — keep their own submission: their blending order is the renderer's
+        /// business, not ours. Off is the arm that measures it.</para>
+        /// </summary>
+        public bool GroupTrees { get; set; } = true;
+
+        /// <summary>Calls the grouped trees went out in last frame (already in <see cref="DrawCalls"/>).</summary>
+        public int GroupedTreeCalls { get; private set; }
+
+        /// <summary>Instances the grouped trees submitted last frame.</summary>
+        public int GroupedTreeInstances { get; private set; }
+
+        readonly struct TreeGroupKey : System.IEquatable<TreeGroupKey>
+        {
+            public readonly Material Material;
+            public readonly Mesh Mesh;
+            public readonly int Submesh;
+            public readonly ShadowCastingMode Shadows;
+            public readonly bool Receives;
+            public readonly int Layer;
+
+            public TreeGroupKey(Material material, Mesh mesh, int submesh, ShadowCastingMode shadows, bool receives, int layer)
+            {
+                Material = material; Mesh = mesh; Submesh = submesh; Shadows = shadows; Receives = receives; Layer = layer;
+            }
+
+            public bool Equals(TreeGroupKey o) =>
+                ReferenceEquals(Material, o.Material) && ReferenceEquals(Mesh, o.Mesh) && Submesh == o.Submesh &&
+                Shadows == o.Shadows && Receives == o.Receives && Layer == o.Layer;
+
+            public override bool Equals(object? obj) => obj is TreeGroupKey o && Equals(o);
+
+            public override int GetHashCode() => unchecked(
+                ((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Material) * 397
+                  ^ System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Mesh)) * 397
+                 ^ Submesh * 31 ^ (int)Shadows * 7 ^ (Receives ? 1 : 0)) * 397 ^ Layer);
+        }
+
+        sealed class TreeGroup
+        {
+            public Matrix4x4[] Matrices = new Matrix4x4[64];
+            public int Count;
+            public Bounds Bounds;
+            public ModulePart Part = null!;
+        }
+
+        readonly System.Collections.Generic.Dictionary<TreeGroupKey, TreeGroup> _treeGroups =
+            new System.Collections.Generic.Dictionary<TreeGroupKey, TreeGroup>();
+        readonly System.Collections.Generic.List<TreeGroup> _treeGroupsInUse = new System.Collections.Generic.List<TreeGroup>();
+        readonly System.Collections.Generic.List<TreeGroupKey> _treeGroupKeysInUse = new System.Collections.Generic.List<TreeGroupKey>();
+
+        /// <summary>True while a board-tree bucket is being submitted and <see cref="GroupTrees"/> is on.</summary>
+        bool _groupingTrees;
+
+        /// <summary>Tree buckets the chunk path met last frame, and the instances in them: how thinly a
+        /// board's trees are spread across draws (instances per bucket).</summary>
+        public int TreeBuckets { get; private set; }
+
+        /// <summary>See <see cref="TreeBuckets"/>.</summary>
+        public int TreeInstances { get; private set; }
+
+        public static readonly string[] CallKindNames =
+            { "trees", "bushes", "grass dressing", "other dressing", "tufts", "terrain", "water", "skin", "other" };
+
+        const int SkinKind = 7, OtherKind = 8;
+        int _currentKind = OtherKind;
+
+        int CallKindOf(int tint, int module)
+        {
+            if (TintCode.IsTree(tint)) return TintCode.IsDressing(tint) ? 1 : 0;
+            if (TintCode.IsDressing(tint)) return 3;
+            if (TintCode.IsFoliage(tint)) return _mesher.IsScatterModule(module) ? 4 : 2;
+            if (TintCode.IsWater(tint)) return 6;
+            if (TintCode.IsTerrain(tint)) return 5;
+            return OtherKind;
+        }
+
+        /// <summary>Milliseconds the indirect path spent regathering its buffers last frame (0 when
+        /// nothing was re-meshed): the cost a dig, a build or a growing crop adds to its frame.</summary>
+        public double IndirectRegatherMs { get; private set; }
+
+        /// <summary>Instances in the indirect path's buffers.</summary>
+        public int IndirectInstances => _indirect?.InstanceCount ?? 0;
+
+        readonly System.Diagnostics.Stopwatch _regatherTimer = new System.Diagnostics.Stopwatch();
+
+        /// <summary>See <see cref="ChunkMesher.Dressing"/>. Meshed, so a change needs a re-mesh.</summary>
+        public bool Dressing { get => _mesher.Dressing; set => _mesher.Dressing = value; }
+
+        /// <summary>See <see cref="ChunkMesher.Tufts"/>. Meshed, so a change needs a re-mesh.</summary>
+        public bool Tufts { get => _mesher.Tufts; set => _mesher.Tufts = value; }
+
+        /// <summary>See <see cref="ChunkMesher.DressingKinds"/>. Meshed, so a change needs a re-mesh.</summary>
+        public int DressingKinds { get => _mesher.DressingKinds; set => _mesher.DressingKinds = value; }
+
+        Rendering.IndirectScenery? _indirect;
+        bool? _indirectAvailable;
+        bool _indirectActive;
+        // Per chunk, this frame: whether the chunk walk drew it (a solid layer, inside the frustum)
+        // and its distance from the viewer, exactly as the walk computed them, so the indirect path
+        // decides per segment what the chunk path decided per bucket.
+        int _renderStamp;
+        int[] _chunkDrawnStamp = System.Array.Empty<int>();
+        float[] _chunkDistance = System.Array.Empty<float>();
+        float[] _chunkSqrDistance = System.Array.Empty<float>();
+        readonly System.Collections.Generic.Dictionary<(int, int, int), bool> _indirectKinds =
+            new System.Collections.Generic.Dictionary<(int, int, int), bool>();
+        (bool, bool, bool, bool) _indirectKindSignature;
+        readonly System.Collections.Generic.List<(int Layer, float Shade)> _solidLayers =
+            new System.Collections.Generic.List<(int Layer, float Shade)>();
+
+        /// <summary>
+        /// Whether a bucket goes the indirect way (design 38 §22): grass tufts and foliage dressing,
+        /// and bushes; only if every part of every level is drawn by <c>Odyssey/Foliage</c> (the one
+        /// shader that reads the buffers), the module has at most <see cref="Rendering.IndirectScenery.MaxLevels"/>
+        /// levels, and the kind casts no shadow. Asked per kind and remembered; the remembered answers
+        /// are dropped when a setting that changes them moves.
+        /// </summary>
+        bool IsIndirectKind(InstanceBucket bucket)
+        {
+            int tint = bucket.Tint;
+            bool bush = TintCode.IsTree(tint) && TintCode.IsDressing(tint);
+            // Any foliage that is not a tree: the tufts, and the grass dressing — tall-grass stands,
+            // flowers, ground cover, sunflowers — which the mesher tints as plain foliage, not as
+            // dressing (only bushes and stones carry the dressing bit). Crops are foliage too and are
+            // turned away below: their material is not drawn by the foliage shader.
+            bool grass = !TintCode.IsTree(tint) && TintCode.IsFoliage(tint);
+            if (!bush && !grass) return false;
+            if (CastShadows && (bush ? DressingCastsShadows : FoliageCastsShadows)) return false;
+
+            var key = (bucket.Module, bucket.Part, tint);
+            if (_indirectKinds.TryGetValue(key, out bool known)) return known;
+
+            bool ok = true;
+            ModulePart[][] levels = LevelsOf(bucket);
+            if (levels.Length == 0 || levels.Length > Rendering.IndirectScenery.MaxLevels) ok = false;
+            foreach (ModulePart[] level in levels)
+            {
+                if (!ok) break;
+                if (level.Length == 0 || level.Length > Rendering.IndirectScenery.MaxPartsPerLevel) { ok = false; break; }
+                foreach (ModulePart part in level)
+                {
+                    if (part.IsFallback || part.Mesh == null) { ok = false; break; }
+                    if (bush && !FoliageLook.IsMeadowFoliage(part.Material)) { ok = false; break; }
+                    Material? material = IndirectMaterialFor(tint, part, 1f);
+                    if (material == null || material.shader == null || material.shader.name != "Odyssey/Foliage")
+                    { ok = false; break; }
+                }
+            }
+            _indirectKinds[key] = ok;
+            return ok;
+        }
+
+        /// <summary>
+        /// Which scenery kinds were asked about and whether they go the indirect way, by module name
+        /// and the shader their first part draws with (for measurement: a kind turned away stays on
+        /// the chunk path and keeps its calls).
+        /// </summary>
+        public string IndirectKindReport()
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            foreach (var kv in _indirectKinds)
+            {
+                ResolvedModule resolved = _model.Library[kv.Key.Item1];
+                ModulePart part = resolved.Parts.Length > 0 ? resolved.Parts[0] : null!;
+                string shader = part != null
+                    ? (IndirectMaterialFor(kv.Key.Item3, part, 1f)?.shader?.name ?? "none")
+                    : "no parts";
+                parts.Add($"{resolved.Id} [{CallKindNames[CallKindOf(kv.Key.Item3, kv.Key.Item1)]}, {resolved.Lods.Length} levels, {shader}] " +
+                          (kv.Value ? "indirect" : "CHUNK"));
+            }
+            return string.Join("; ", parts);
+        }
+
+        /// <summary>A bucket's levels, finest first: every level of a module drawn by level, else its one part.</summary>
+        ModulePart[][] LevelsOf(InstanceBucket bucket)
+        {
+            ResolvedModule resolved = _model.Library[bucket.Module];
+            if (!resolved.DrawsByLevel) return new[] { new[] { resolved.Parts[bucket.Part] } };
+            var levels = new ModulePart[resolved.Lods.Length][];
+            for (int l = 0; l < levels.Length; l++) levels[l] = resolved.Lods[l].Parts;
+            return levels;
+        }
+
+        /// <summary>
+        /// The material a part of an indirect kind is drawn with at a layer's shade — the very one
+        /// <see cref="DrawBuckets"/> picks for it, so the two paths cannot draw a clump differently.
+        /// </summary>
+        Material? IndirectMaterialFor(int tint, ModulePart part, float shade)
+        {
+            ResolveColour(tint, part.IsFallback, shade, out Color colour, out Color emission);
+            if (TintCode.IsTree(tint))
+                return _materials.GetTree(part.Material, colour, 1f,
+                    TintCode.IsDressing(tint) ? BushStandVariety : TreeStandVariety);
+            return _materials.Get(part.Material, colour, emission, false, 1f,
+                foliage: TintCode.IsFoliage(tint), water: TintCode.IsWater(tint));
+        }
+
+        /// <summary>
+        /// The level of detail a bucket of this kind is drawn at from a distance: the one rule both
+        /// paths use (design 38 §3, §17b, §18, §21).
+        /// </summary>
+        int LevelOf(int tint, int module, ResolvedModule resolved, float distance)
+        {
+            if (TintCode.IsTree(tint) && TreeLevels)
+                return LevelFor(resolved, distance, ViewerFieldOfView,
+                    TintCode.IsDressing(tint) ? BushLodBias : TreeBiasAt(distance));
+            if (DressingLevels && TintCode.IsFoliage(tint) && !_mesher.IsScatterModule(module))
+                return LevelFor(resolved, distance, ViewerFieldOfView, DressingLodBias);
+            if (TuftLevels && TintCode.IsFoliage(tint) && _mesher.IsScatterModule(module))
+                return LevelFor(resolved, distance, ViewerFieldOfView, TuftLodBias);
+            return LevelFor(resolved, distance);
+        }
+
+        /// <summary>Whether a kind is grass the distance thinning thins (design 38 §21).</summary>
+        bool IsThinnedKind(int tint, int module) => TintCode.IsFoliage(tint) && _mesher.IsGrassModule(module);
+
+        /// <summary>The bottom of the lowest drawn layer this frame: where a shadow ray stops
+        /// mattering, because nothing below it is drawn. Set by <see cref="Render"/>.</summary>
+        float _lowestReceiverY = float.NegativeInfinity;
+
         /// <summary>How solid an occluder in the way is left. Zero would be invisible; this is a
         /// hint of what is there, in the same idiom as a ghosted storey above the slice.</summary>
         public float SightFadeAlpha { get; set; } = DefaultSightFadeAlpha;
 
         public const float DefaultSightFadeAlpha = 0.22f;
+
+        /// <summary>
+        /// What a Meadow crown and its trunk fade to when they stand between the camera and a
+        /// colonist: a dithered 15%, a faint ghost of the crown (owner, 2026-09-24; design 38 §17c).
+        /// Drawn by our foliage shader, cut-out kept — the translucent stand-in drew every leaf card
+        /// as a whole pane, and forty overlapping panes at 22% blocked the view as well as a crown.
+        /// </summary>
+        public float SightLeafFade { get; set; } = DefaultSightLeafFade;
+
+        public const float DefaultSightLeafFade = 0.15f;
+
+        /// <summary>How strongly a Meadow tree's leaves take the stand colours (design 38 §17c).</summary>
+        public float TreeStandVariety { get; set; } = DefaultTreeStandVariety;
+
+        public const float DefaultTreeStandVariety = 1f;
+
+        /// <summary>The same for a bush: a lighter touch, so the meadow's undergrowth stays green.</summary>
+        public float BushStandVariety { get; set; } = 0.45f;
+
+        /// <summary>
+        /// Draw every tree and bush as though it stood in a colonist's line of sight, for a
+        /// photograph of the fade. A seam for the look harness, never set by the game.
+        /// </summary>
+        public bool FadeEveryTreeForAPhotograph { get; set; }
 
         /// <summary>
         /// How far above its own layer a chunk may hold geometry, in metres.
@@ -347,8 +659,133 @@ namespace Odyssey.Presentation.Rendering
         /// tree — which is precisely what the sight line is for. Without this allowance the coarse
         /// test would reject the very chunk holding the crown that is doing the hiding, and the
         /// feature would do nothing at all while every per-instance test still passed.</para>
+        ///
+        /// <para><b>Measured since the look pass</b> (design 38 §17): the Meadow trees reach
+        /// fifteen metres and more, and a hand-set twelve would cull a crown still on screen. It is
+        /// the tallest tree or bush the mesher has resolved, never less than the twelve it was.</para>
         /// </summary>
-        public const float TallestModuleMetres = 12f;
+        public float TallestModuleMetres => Mathf.Max(MinimumTallestModuleMetres, _mesher.TallestResolved);
+
+        /// <summary>The allowance before anything taller has resolved: the twelve metres it always was.</summary>
+        public const float MinimumTallestModuleMetres = 12f;
+
+        /// <summary>See <see cref="ChunkMesher.DressingClearing"/>: where the colony started, kept
+        /// clear of bushes and stones. Set before the first meshing.</summary>
+        public Vector2Int? DressingClearing
+        {
+            get => _mesher.DressingClearing;
+            set => _mesher.DressingClearing = value;
+        }
+
+        /// <summary>
+        /// Whether trees and bushes — the tree-tinted buckets — are drawn by level of detail, on
+        /// their own bias, whatever <see cref="UseLods"/> says. The look pass turns this on: the
+        /// Meadow trees are 5,000 to 45,000 triangles each, and they are the art the levels were
+        /// built for (design 38 §14, §17).
+        /// </summary>
+        public bool TreeLevels { get; set; } = true;
+
+        /// <summary>See <see cref="ChunkMesher.DressingFamiliesWithArt"/>.</summary>
+        public int DressingFamiliesWithArt => _mesher.DressingFamiliesWithArt;
+
+        /// <summary>The bias a tree or bush is judged at. Set against the play camera: above
+        /// one keeps the finer levels further out, because the pack authored its heights for a
+        /// camera standing on the ground.</summary>
+        public float TreeLodBias { get; set; } = 3f;
+
+        /// <summary>
+        /// Whether trees further from the camera take their simpler levels sooner (design 38 §23;
+        /// the owner's call, 2026-09-24, with the numbers: trees were 25–42% of a 1080p frame, most
+        /// of it the fill of their leaf cards). Trees nearer than <see cref="FarTreeNear"/> keep
+        /// <see cref="TreeLodBias"/> exactly, so the near meadow does not change; beyond it the bias
+        /// eases down to <see cref="FarTreeLodBias"/> by <see cref="FarTreeFar"/>, so levels coarsen
+        /// gradually with distance rather than at a line.
+        /// </summary>
+        public bool SimplerFarTrees { get; set; } = true;
+
+        /// <summary>Metres from the camera within which trees keep <see cref="TreeLodBias"/>.</summary>
+        public float FarTreeNear { get; set; } = 60f;
+
+        /// <summary>Metres from the camera by which trees are judged at <see cref="FarTreeLodBias"/>.</summary>
+        public float FarTreeFar { get; set; } = 120f;
+
+        /// <summary>The bias far trees are judged at; see <see cref="SimplerFarTrees"/>.</summary>
+        public float FarTreeLodBias { get; set; } = 1f;
+
+        /// <summary>The bias a tree at this distance from the camera is judged at.</summary>
+        public float TreeBiasAt(float distance)
+        {
+            if (!SimplerFarTrees || distance <= FarTreeNear || FarTreeFar <= FarTreeNear) return TreeLodBias;
+            float t = Mathf.Clamp01((distance - FarTreeNear) / (FarTreeFar - FarTreeNear));
+            return Mathf.Lerp(TreeLodBias, Mathf.Min(TreeLodBias, FarTreeLodBias), t);
+        }
+
+        /// <summary>
+        /// The bias a bush is judged at, apart from the trees since design 38 §18c: a bush is a
+        /// fifth of a tree's height, so the same bias drops it a level far nearer the camera, and
+        /// the two want tuning by eye separately. Bushes are tree-tinted, so they take their levels
+        /// through <see cref="TreeLevels"/>.
+        /// </summary>
+        public float BushLodBias { get; set; } = 1.5f;
+
+        /// <summary>
+        /// Whether the dressing's grass stands, wildflowers, sunflowers and ground cover are drawn
+        /// by level of detail, on <see cref="DressingLodBias"/> (design 38 §18c). The benchmark
+        /// found their fill the second-largest GPU term after shadows, and drawing them at their
+        /// coarsest level recovered about a millisecond at 4K (§18e). The grass tufts are not
+        /// included: M2 found their coarse levels crude from this camera, and they are cheap.
+        /// </summary>
+        public bool DressingLevels { get; set; } = true;
+
+        /// <summary>
+        /// Whether a tree casts its shadow from its simplest level — the card — rather than from the
+        /// last mesh before it (design 38 §18f). The owner's call to try, 2026-09-24: shadows were
+        /// the largest GPU term the player benchmark found (§18e). Judged by photographs at a low
+        /// evening sun before it ships.
+        /// </summary>
+        public bool TreeShadowFromSimplest { get; set; } = true;
+
+        /// <summary>The bias the dressing's foliage is judged at; see <see cref="DressingLevels"/>.</summary>
+        /// <remarks>Eight, chosen by photographs at the play camera (design 38 §18c): the near
+        /// meadow unchanged (0.00% at the start, 0.12% close), where four thinned the nearest
+        /// flowers' stems and two moved 6% of the wide view.</remarks>
+        public float DressingLodBias { get; set; } = 8f;
+
+        /// <summary>
+        /// Whether grass thins with distance from the camera (owner, 2026-09-24: "the biggest
+        /// performance hit I can see is actually grass, especially when full at distance"; design 38
+        /// §21). Full cover out to <see cref="GrassThinNear"/>, then fewer clumps as the square of the
+        /// distance, down to <see cref="GrassThinFloor"/>, clump by clump without a pop
+        /// (<see cref="GrassThinning"/>).
+        /// </summary>
+        public bool ThinGrass { get; set; } = true;
+
+        /// <summary>Metres from the camera at which grass starts to thin.</summary>
+        public float GrassThinNear { get; set; } = DefaultGrassThinNear;
+
+        /// <summary>The least fraction of clumps kept however far away.</summary>
+        public float GrassThinFloor { get; set; } = DefaultGrassThinFloor;
+
+        public const float DefaultGrassThinNear = 70f;
+        public const float DefaultGrassThinFloor = 0.1f;
+
+        /// <summary>Grass clumps the thinning left unsubmitted last frame (the rest shrink in the shader).</summary>
+        public int GrassInstancesThinned { get; private set; }
+
+        bool _thinning;
+        static readonly int ThinId = Shader.PropertyToID("_OdysseyThin");
+
+        /// <summary>
+        /// Whether the grass tufts take coarser levels of detail with distance, on
+        /// <see cref="TuftLodBias"/> (design 38 §21). M2 left the tufts at their finest because
+        /// the pack's own switch heights made every one on screen crude from this camera; a bias
+        /// chosen by photographs keeps the near meadow and simplifies only the far field.
+        /// </summary>
+        public bool TuftLevels { get; set; } = true;
+
+        /// <summary>The bias the tufts are judged at; see <see cref="TuftLevels"/>.</summary>
+        public float TuftLodBias { get; set; } = 8f;
+
 
         /// <summary>
         /// Whether a chunk's box, grown upwards, meets the camera's frustum.
@@ -373,12 +810,46 @@ namespace Odyssey.Presentation.Rendering
             Vector3 size = bounds.size;
             centre.y += TallestModuleMetres * 0.5f;
             size.y += TallestModuleMetres;
+            // And sideways by whatever overhangs a chunk's box — a crown wider than its cell —
+            // so both the picture and the shadow sweep start from what is really drawn.
+            float overhang = _mesher.OverhangResolved;
+            if (overhang > 0f) { size.x += overhang * 2f; size.z += overhang * 2f; }
 
-            // And outwards, so an off-screen caster keeps its shadow on screen.
+            // And outwards, so an off-screen caster keeps its shadow on screen: along the light
+            // when the key light is known, in every direction when it is not.
             float margin = ShadowCasterMarginMetres;
+            if (margin > 0f && SweepShadowMargin && ShadowLightDirection is Vector3 light && light.sqrMagnitude > 1e-6f)
+            {
+                light.Normalize();
+                float top = centre.y + size.y * 0.5f;
+                float drop = Mathf.Max(0f, top - _lowestReceiverY);
+                float sinElevation = -light.y;
+                float length = sinElevation > 1e-3f ? Mathf.Min(margin, drop / sinElevation) : margin;
+                return SweptInside(ActiveFrustum!, centre, size * 0.5f, light * length);
+            }
             if (margin > 0f) size += new Vector3(margin * 2f, margin * 2f, margin * 2f);
 
             return GeometryUtility.TestPlanesAABB(ActiveFrustum, new Bounds(centre, size));
+        }
+
+        /// <summary>
+        /// Whether a box swept along <paramref name="sweep"/> — the convex hull of the box and the
+        /// box moved by it — touches every plane's inside, by the same separating-plane rule
+        /// <c>GeometryUtility.TestPlanesAABB</c> applies to a box: it is outside a plane only if
+        /// both ends of the sweep are. Planes face inwards, as <c>CalculateFrustumPlanes</c>
+        /// returns them.
+        /// </summary>
+        public static bool SweptInside(Plane[] planes, Vector3 centre, Vector3 extents, Vector3 sweep)
+        {
+            for (int i = 0; i < planes.Length; i++)
+            {
+                Vector3 n = planes[i].normal;
+                float reach = Vector3.Dot(n, centre) + planes[i].distance
+                              + Mathf.Abs(n.x) * extents.x + Mathf.Abs(n.y) * extents.y + Mathf.Abs(n.z) * extents.z
+                              + Mathf.Max(0f, Vector3.Dot(n, sweep));
+                if (reach < 0f) return false;
+            }
+            return true;
         }
 
         /// <summary>Scratch, reused every frame: the instances of one bucket that are in the way,
@@ -423,6 +894,28 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The same for an order mark, which covers a cell face and so wants a wider ring
         /// than a stack of logs does.</summary>
         public float MarkClearance { get; set; } = 1.1f;
+
+        /// <summary>
+        /// How far past a thing's own footprint the grass lies flat (owner, 2026-09-24: "flatten
+        /// grass so items can be seen clearer", design 38 §19). An item's ring is its drawn
+        /// footprint plus this, never less than <see cref="ItemClearance"/>.
+        /// </summary>
+        public float ItemMargin { get; set; } = 0.5f;
+
+        /// <summary>
+        /// How far the grass lies flat round a colonist lying on the ground — downed, asleep out of
+        /// a bed, or dead: half a body's length plus <see cref="ItemMargin"/>, from the cell the
+        /// body lies in.
+        /// </summary>
+        public float LyingClearance { get; set; } = 1.4f;
+
+        /// <summary>
+        /// The ring an item on the floor pushes the grass back by: its footprint plus the margin.
+        /// A heap spreads its rocks over <c>Recipe.Spread</c> from the cell centre; a single prop
+        /// covers its module's half-diagonal. Pure so a test can state it.
+        /// </summary>
+        public static float ItemRing(float footprint, float margin, float floor) =>
+            Mathf.Max(floor, footprint + margin);
 
         /// <summary>Instances drawn ghosted last frame because they stood in a line of sight.</summary>
         public int InstancesFaded { get; private set; }
@@ -532,7 +1025,12 @@ namespace Odyssey.Presentation.Rendering
             InstancesFaded = 0;
             ChunksSightTested = 0;
             ChunksOutsideFrustum = 0;
+            IndirectDrawCalls = 0;
             InstancesAtCoarserLevels = 0;
+            GrassInstancesThinned = 0;
+            _thinning = ThinGrass && ViewerPosition.HasValue;
+            Shader.SetGlobalVector(ThinId, new Vector4(GrassThinNear, GrassThinFloor, 0f, _thinning ? 1f : 0f));
+            SkinTrianglesDrawn = 0;
             CellPlatesDrawn = 0;
             ChunksMeshDeferred = 0;
             _meshedThisFrame = 0;
@@ -563,6 +1061,38 @@ namespace Odyssey.Presentation.Rendering
             int highest = Mathf.Min(size.SizeY - 1, slice.HighestDrawnLayer(activeLayer, size.SizeY));
             highest = Mathf.Max(activeLayer, Mathf.Min(highest, _model.HighestOccupiedLayer));
             int chunksPerLayer = _model.Chunks.ChunksX * _model.Chunks.ChunksZ;
+            // The floor of what is drawn, padded as a chunk's own box is, for the shadow sweep.
+            _lowestReceiverY = _mesher.BoundsOf(lowest * chunksPerLayer).min.y;
+
+            // The tufts go the indirect way this frame if asked, possible, and there is a frustum
+            // for the compute cull to test against; the chunk walk then leaves them out.
+            if (UseIndirectScenery && _indirectAvailable == null)
+            {
+                _indirect ??= new Rendering.IndirectScenery();
+                _indirectAvailable = _indirect.Available;
+            }
+            _indirectActive = UseIndirectScenery && _indirectAvailable == true && ActiveFrustum != null;
+            _solidLayers.Clear();
+            _renderStamp++;
+            System.Array.Clear(ChunkCallsByKind, 0, ChunkCallsByKind.Length);
+            TreeBuckets = 0;
+            TreeInstances = 0;
+            if (_chunkDrawnStamp.Length != _batches.Length)
+            {
+                _chunkDrawnStamp = new int[_batches.Length];
+                _chunkDistance = new float[_batches.Length];
+                _chunkSqrDistance = new float[_batches.Length];
+            }
+            // A setting that moves which kinds go the indirect way regathers everything.
+            // Including which shader draws Meadow foliage: switched to the pack's, no kind can read
+            // the buffers, so every kind falls back to the chunk path.
+            var signature = (CastShadows, DressingCastsShadows, FoliageCastsShadows, MaterialCache.OwnFoliageShader);
+            if (_indirect != null && signature != _indirectKindSignature)
+            {
+                _indirectKindSignature = signature;
+                _indirectKinds.Clear();
+                _indirect.MarkAllDirty();
+            }
 
             for (int layer = lowest; layer <= highest; layer++)
             {
@@ -580,6 +1110,7 @@ namespace Odyssey.Presentation.Rendering
                 // texture render as dark olive.
                 float shade = above ? 1f : slice.ShadeBelow(-steps - 1);
                 if (ghost) shade *= 1.15f; // translucent geometry reads darker than it is
+                if (!ghost) _solidLayers.Add((layer, shade));
 
                 // The active layer's ceiling is the slab of the layer above it. Dropping it is
                 // what makes interiors visible, and it is also exactly what roofs-off mode wants
@@ -632,15 +1163,87 @@ namespace Odyssey.Presentation.Rendering
                     if (sight) ChunksSightTested++;
 
                     // Once per chunk: every bucket's level of detail is chosen against it.
-                    float distance = ViewerPosition.HasValue
-                        ? Mathf.Sqrt(batch.Bounds.SqrDistance(ViewerPosition.Value))
-                        : 0f;
-                    DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight, distance, hideStacked);
-                    if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight, distance, hideStacked);
+                    float sqrDistance = ViewerPosition.HasValue ? batch.Bounds.SqrDistance(ViewerPosition.Value) : 0f;
+                    float distance = ViewerPosition.HasValue ? Mathf.Sqrt(sqrDistance) : 0f;
+                    if (!ghost)
+                    {
+                        _chunkDrawnStamp[index] = _renderStamp;
+                        _chunkDistance[index] = distance;
+                        _chunkSqrDistance[index] = sqrDistance;
+                    }
+                    DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight, distance, body: true,
+                        hideStacked: hideStacked);
+                    DrawSkin(batch, shade, ghost, alpha);
+                    if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight, distance,
+                        hideStacked: hideStacked);
+                    // Walls down (design 42 §4): one form of the walls or the other, never both.
                     DrawBuckets(batch, stumps ? batch.Stumps : batch.Walls, shade, ghost, alpha, sight, distance,
-                        hideStacked);
+                        hideStacked: hideStacked);
+                    _currentKind = OtherKind;
                 }
             }
+
+            _groupingTrees = false;
+            FlushTreeGroups();
+            if (_indirectActive) DrawIndirectScenery();
+        }
+
+        void GatherTree(in RenderParams rp, ModulePart part, Matrix4x4[] matrices, int count)
+        {
+            var key = new TreeGroupKey(rp.material, part.Mesh, part.Submesh, rp.shadowCastingMode, rp.receiveShadows, rp.layer);
+            if (!_treeGroups.TryGetValue(key, out TreeGroup? group))
+            {
+                group = new TreeGroup();
+                _treeGroups.Add(key, group);
+            }
+            if (group.Count == 0)
+            {
+                group.Bounds = rp.worldBounds;
+                group.Part = part;
+                _treeGroupsInUse.Add(group);
+                _treeGroupKeysInUse.Add(key);
+            }
+            else group.Bounds.Encapsulate(rp.worldBounds);
+
+            int needed = group.Count + count;
+            if (needed > group.Matrices.Length)
+            {
+                int size = group.Matrices.Length;
+                while (size < needed) size *= 2;
+                System.Array.Resize(ref group.Matrices, size);
+            }
+            System.Array.Copy(matrices, 0, group.Matrices, group.Count, count);
+            group.Count = needed;
+        }
+
+        /// <summary>Sends every tree group gathered this frame, in as few calls as the per-call cap
+        /// allows, and empties the gather for the next frame (see <see cref="GroupTrees"/>).</summary>
+        void FlushTreeGroups()
+        {
+            GroupedTreeCalls = 0;
+            GroupedTreeInstances = 0;
+            int kindWas = _currentKind;
+            _currentKind = 0;
+            for (int g = 0; g < _treeGroupsInUse.Count; g++)
+            {
+                TreeGroup group = _treeGroupsInUse[g];
+                TreeGroupKey key = _treeGroupKeysInUse[g];
+                var rp = new RenderParams(key.Material)
+                {
+                    worldBounds = group.Bounds,
+                    layer = key.Layer,
+                    receiveShadows = key.Receives,
+                    shadowCastingMode = key.Shadows,
+                };
+                int callsBefore = DrawCalls;
+                Submit(rp, group.Part, group.Matrices, group.Count);
+                GroupedTreeCalls += DrawCalls - callsBefore;
+                GroupedTreeInstances += group.Count;
+                group.Count = 0;
+            }
+            _treeGroupsInUse.Clear();
+            _treeGroupKeysInUse.Clear();
+            _currentKind = kindWas;
         }
 
         /// <summary>
@@ -674,6 +1277,66 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
+        /// <summary>
+        /// The scenery of every solid layer this frame, through <see cref="Rendering.IndirectScenery"/>:
+        /// the dirty layers regathered, then per layer each segment decided exactly as
+        /// <see cref="DrawBuckets"/> decides a bucket — drawn at all, level, thinned prefix — and the
+        /// groups culled and drawn with the material the chunk path would have chosen at that shade.
+        /// </summary>
+        void DrawIndirectScenery()
+        {
+            Rendering.IndirectScenery indirect = _indirect!;
+            _regatherTimer.Restart();
+            indirect.Rebuild(_batches, IsIndirectKind, LevelsOf, bucket => IsThinnedKind(bucket.Tint, bucket.Module));
+            _regatherTimer.Stop();
+            IndirectRegatherMs = indirect.GroupsRegathered > 0 ? _regatherTimer.Elapsed.TotalMilliseconds : 0d;
+            if (indirect.InstanceCount == 0) return;
+
+            var size = _model.Size;
+            var board = new Bounds();
+            board.SetMinMax(new Vector3(-50f, -50f, -50f),
+                new Vector3(size.SizeX * CellMetrics.SizeXZ + 50f, size.SizeY * CellMetrics.SizeY + 50f,
+                    size.SizeZ * CellMetrics.SizeXZ + 50f));
+
+            foreach ((int layer, float shade) in _solidLayers)
+            {
+                if (!indirect.HasLayer(layer)) continue;
+                float layerShade = shade;
+                int calls = indirect.DrawLayer(layer, ActiveFrustum!, DecideSegment,
+                    (group, part) => IndirectMaterialFor(group.Tint, part, layerShade),
+                    GameObjectLayer, board, SubmitToGpu,
+                    out int offered, out int coarser, out int thinned);
+                IndirectDrawCalls += calls;
+                DrawCalls += calls;
+                InstancesDrawn += offered;
+                InstancesAtCoarserLevels += coarser;
+                GrassInstancesThinned += thinned;
+            }
+        }
+
+        /// <summary>
+        /// One segment's decision, made as <see cref="DrawBuckets"/> makes it for the bucket the
+        /// segment was gathered from: not drawn if the walk did not draw its chunk or it is past the
+        /// foliage draw distance; its level from the chunk's distance; its survivors the rank prefix.
+        /// </summary>
+        Rendering.IndirectScenery.Decision DecideSegment(Rendering.IndirectScenery.Group group, Rendering.IndirectScenery.Segment segment)
+        {
+            int chunk = segment.ChunkIndex;
+            if (_chunkDrawnStamp[chunk] != _renderStamp) return default;
+            if (TintCode.IsFoliage(group.Tint) && ViewerPosition.HasValue
+                && _chunkSqrDistance[chunk] > FoliageDrawDistance * FoliageDrawDistance)
+                return default;
+
+            float distance = _chunkDistance[chunk];
+            ResolvedModule resolved = _model.Library[group.Module];
+            int level = resolved.DrawsByLevel ? LevelOf(group.Tint, group.Module, resolved, distance) : 0;
+            int submitted = segment.Count;
+            if (_thinning && group.Thinned)
+                submitted = Rendering.IndirectScenery.CountBelow(group.Ranks, segment.Start, segment.Count,
+                    GrassThinning.Keep(distance, GrassThinNear, GrassThinFloor));
+            return new Rendering.IndirectScenery.Decision { Drawn = true, Submitted = submitted, Level = level };
+        }
+
         ChunkBatch BatchFor(int chunkIndex)
         {
             ChunkBatch? batch = _batches[chunkIndex];
@@ -695,7 +1358,10 @@ namespace Odyssey.Presentation.Rendering
                     return batch;
                 }
 
+                // The skin's apron meets the surround at its level, which the skirt settles.
+                _mesher.SurroundLevel = Skirt.Enabled && Skirt.Built ? Skirt.SurfaceLayer : -1;
                 _mesher.Mesh(batch, chunkIndex);
+                _indirect?.MarkDirty(chunkIndex);
                 _meshedThisFrame++;
                 ChunksMeshedThisFrame++;
                 TotalChunksMeshed++;
@@ -709,7 +1375,7 @@ namespace Odyssey.Presentation.Rendering
         /// building's ground floor are drawn either way.
         /// </param>
         void DrawBuckets(ChunkBatch batch, System.Collections.Generic.List<InstanceBucket> buckets,
-            float shade, bool ghost, float alpha, bool sight = false, float distance = 0f,
+            float shade, bool ghost, float alpha, bool sight = false, float distance = 0f, bool body = false,
             bool hideStacked = false)
         {
             for (int b = 0; b < buckets.Count; b++)
@@ -717,6 +1383,16 @@ namespace Odyssey.Presentation.Rendering
                 InstanceBucket bucket = buckets[b];
                 if (bucket.Count == 0) continue;
                 if (hideStacked && bucket.Stacked) continue;
+                _currentKind = CallKindOf(bucket.Tint, bucket.Module);
+                _groupingTrees = GroupTrees && _currentKind == 0;
+                if (_currentKind == 0)
+                {
+                    TreeBuckets++;
+                    TreeInstances += bucket.Count;
+                    if (!DrawTrees) continue;
+                }
+                // Drawn by the indirect path instead (design 38 §22); a ghosted layer keeps this one.
+                if (_indirectActive && !ghost && body && IsIndirectKind(bucket)) continue;
 
                 ResolvedModule resolved = _model.Library[bucket.Module];
 
@@ -724,17 +1400,44 @@ namespace Odyssey.Presentation.Rendering
                 // level; the chunk's distance chooses which level's parts are submitted from it
                 // (docs/design/38-meadow-overhaul.md §3). Anything else is one part per bucket.
                 ModulePart[]? levelParts = null;
+                int shadowLevel = -1;
                 if (resolved.DrawsByLevel)
                 {
-                    int level = LevelFor(resolved, distance);
+                    int level = LevelOf(bucket.Tint, bucket.Module, resolved, distance);
                     levelParts = resolved.Lods[level].Parts;
                     if (level > 0) InstancesAtCoarserLevels += bucket.Count;
+
+                    // A tree's shadow from a coarse level (design 38 §17): measured, shadow casters
+                    // were seven of the Meadow look's milliseconds at 4K, every crown drawing its
+                    // finest mesh into four cascades. The last mesh before the card is the proxy —
+                    // never the card, which casts a flat pane — and never finer than what is drawn.
+                    if (TintCode.IsTree(bucket.Tint) && TreeShadowProxy)
+                    {
+                        int lods = resolved.Lods.Length;
+                        shadowLevel = TreeShadowFromSimplest
+                            ? lods - 1
+                            : Mathf.Max(level, lods >= 3 ? lods - 2 : lods - 1);
+                    }
                 }
                 int drawnParts = levelParts?.Length ?? 1;
 
+                // Grass thinned with distance (design 38 §21): the bucket is in rank order, so only a
+                // prefix can survive anywhere in this chunk — the keep at its nearest point is the most
+                // any clump in it gets. The shader shrinks the rest of the way, clump by clump.
+                int submitted = bucket.Count;
+                if (_thinning && !ghost && IsThinnedKind(bucket.Tint, bucket.Module))
+                {
+                    float keep = GrassThinning.Keep(distance, GrassThinNear, GrassThinFloor);
+                    submitted = GrassThinning.CountBelow(bucket.Matrices, bucket.Count, keep);
+                    GrassInstancesThinned += bucket.Count - submitted;
+                    if (submitted == 0) continue;
+                }
+
                 // Once per bucket, not per part: it splits the bucket's matrices, which every part
                 // of a level shares.
-                int faded = sight && !NeverFades(bucket.Tint) ? Partition(bucket) : 0;
+                int faded = (sight || (FadeEveryTreeForAPhotograph && TintCode.IsTree(bucket.Tint))) && !NeverFades(bucket.Tint) ? Partition(bucket) : 0;
+                bool proxyCasts = false;
+                float variety = TintCode.IsDressing(bucket.Tint) ? BushStandVariety : TreeStandVariety;
 
                 for (int k = 0; k < drawnParts; k++)
                 {
@@ -747,9 +1450,16 @@ namespace Odyssey.Presentation.Rendering
                     // and has no atlas to repaint — goes the ordinary way. A null from the tree cache
                     // means there was no shader or no art, and the fallback is exactly what a tree
                     // drew before this feature existed.
-                    Material? painted = !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
-                        ? _materials.Trees.For(part.Material, TintCode.TreeSpeciesOf(bucket.Tint), shade)
-                        : null;
+                    // Meadow art is drawn by our foliage shader in the opaque queue; the atlas repaint
+                    // is for the PolygonGeneric trees it was measured against and would scramble a
+                    // Meadow texture (design 38 §17).
+                    bool meadowTree = !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
+                                      && FoliageLook.IsMeadowFoliage(part.Material);
+                    Material? painted = meadowTree
+                        ? _materials.GetTree(part.Material, tint, 1f, variety)
+                        : !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
+                            ? _materials.Trees.For(part.Material, TintCode.TreeSpeciesOf(bucket.Tint), shade)
+                            : null;
                     Material material = painted ?? _materials.Get(part.Material, tint, emission, ghost, alpha,
                         foliage: TintCode.IsFoliage(bucket.Tint),
                         water: TintCode.IsWater(bucket.Tint));
@@ -777,30 +1487,32 @@ namespace Odyssey.Presentation.Rendering
                     if (foliage && ViewerPosition.HasValue
                         && batch.Bounds.SqrDistance(ViewerPosition.Value) > FoliageDrawDistance * FoliageDrawDistance)
                         continue;
-                    bool casts = CastShadows && !ghost && !terrain && (!foliage || FoliageCastsShadows);
+                    bool casts = CastShadows && !ghost && !terrain && (!foliage || FoliageCastsShadows)
+                                 && (DressingCastsShadows || !TintCode.IsDressing(bucket.Tint));
+                    if (casts && shadowLevel >= 0) proxyCasts = true;
 
                     var rp = new RenderParams(material)
                     {
                         worldBounds = batch.Bounds,
                         layer = GameObjectLayer,
                         receiveShadows = !ghost,
-                        shadowCastingMode = casts ? ShadowCastingMode.On : ShadowCastingMode.Off,
+                        shadowCastingMode = casts && shadowLevel < 0 ? ShadowCastingMode.On : ShadowCastingMode.Off,
                     };
 
                     // The per-instance colours of a tree, which is what lets every colour in a chunk
                     // share one draw. Built once per meshing rather than once a frame, and only when
                     // the material that reads them is the one actually drawing.
-                    bool coloured = painted != null && bucket.IsColoured;
+                    bool coloured = painted != null && !meadowTree && bucket.IsColoured;
 
                     if (faded == 0)
                     {
                         if (coloured)
-                            SubmitColoured(rp, part, bucket.Matrices, bucket.Count,
+                            SubmitColoured(rp, part, bucket.Matrices, submitted,
                                 bucket.BarkDeep!, bucket.BarkWarm!, bucket.LeafDeep!, bucket.LeafFresh!,
                                 PropsOf(bucket));
                         else
-                            Submit(rp, part, bucket.Matrices, bucket.Count);
-                        InstancesDrawn += bucket.Count;
+                            Submit(rp, part, bucket.Matrices, submitted);
+                        InstancesDrawn += submitted;
                         continue;
                     }
 
@@ -808,8 +1520,13 @@ namespace Odyssey.Presentation.Rendering
                     // still reads as the tree or the wall it is, rather than as a grey pane. The
                     // ghost material is the translucent stand-in the x-rayed storeys use; the pack's
                     // own shaders are alpha-clipped and cannot be turned transparent from script.
+                    // A Meadow crown fades by our shader's dither, cut-out and all (SightLeafFade);
+                    // anything else by the translucent stand-in, as before.
+                    Material? fadedMeadow = meadowTree
+                        ? _materials.GetTree(part.Material, tint, SightLeafFade, variety)
+                        : null;
                     var ghostParams = new RenderParams(
-                        _materials.Get(part.Material, tint, emission, ghost: true, SightFadeAlpha))
+                        fadedMeadow ?? _materials.Get(part.Material, tint, emission, ghost: true, SightFadeAlpha))
                     {
                         worldBounds = batch.Bounds,
                         layer = GameObjectLayer,
@@ -829,8 +1546,50 @@ namespace Odyssey.Presentation.Rendering
                     InstancesDrawn += bucket.Count;
                     InstancesFaded += faded;
                 }
+
+                // The shadow, from the proxy level, shadows only, for every instance whether faded
+                // or not: a tree seen through still casts on the ground.
+                if (proxyCasts)
+                {
+                    ModulePart[] casters = resolved.Lods[shadowLevel].Parts;
+                    for (int k = 0; k < casters.Length; k++)
+                    {
+                        ModulePart caster = casters[k];
+                        // Never the art's own material: pack materials ship with instancing off,
+                        // and RenderMeshInstanced refuses them. Ours when it draws Meadow art,
+                        // otherwise the cache's instanced clone (found by the arm that prices the
+                        // pack's shader, which switches ours off).
+                        Material shadowMaterial = (!caster.IsFallback && FoliageLook.IsMeadowFoliage(caster.Material)
+                                ? _materials.GetTree(caster.Material, Color.white) : null)
+                            ?? _materials.Get(caster.Material, Color.white, Color.black, ghost: false, alpha: 1f);
+                        var shadowParams = new RenderParams(shadowMaterial)
+                        {
+                            worldBounds = batch.Bounds,
+                            layer = GameObjectLayer,
+                            receiveShadows = false,
+                            shadowCastingMode = ShadowCastingMode.ShadowsOnly,
+                        };
+                        Submit(shadowParams, caster, bucket.Matrices, bucket.Count);
+                    }
+                }
             }
+            _groupingTrees = false;
         }
+
+        /// <summary>
+        /// Whether a tree or bush casts its shadow from a coarse level of detail rather than the
+        /// one drawn (design 38 §17). On: the Meadow crowns' finest meshes in four shadow cascades
+        /// were most of what the look cost at 4K.
+        /// </summary>
+        public bool TreeShadowProxy { get; set; } = true;
+
+        /// <summary>
+        /// Whether the Meadow dressing's bushes cast shadows. Off, measured (design 38 §17): the
+        /// bushes' shadows were the whole of what the dressing cost at 4K — the Meadow rung with
+        /// no casters drew in the time the bare rung took with them — and a bush's contact shadow
+        /// is the least of what the reference picture's shadows are.
+        /// </summary>
+        public bool DressingCastsShadows { get; set; }
 
         /// <summary>
         /// What the sight fade never touches, however squarely it stands in the beam.
@@ -859,7 +1618,10 @@ namespace Odyssey.Presentation.Rendering
         /// so the next surface that wants it needs nothing here.</para>
         /// </summary>
         public static bool NeverFades(int tint) =>
-            TintCode.IsFoliage(tint) || TintCode.IsWater(tint) || TintCode.IsWhole(tint);
+            TintCode.IsFoliage(tint) || TintCode.IsWater(tint) || TintCode.IsWhole(tint)
+            // Bushes and stones — the dressing — stay put whatever walks through or lies under them
+            // (owner, 2026-09-24; design 38 §21). Trees still fade for colonists.
+            || TintCode.IsDressing(tint);
 
         /// <summary>
         /// Split one bucket's instances into the ones standing in a line of sight and the rest,
@@ -874,10 +1636,34 @@ namespace Odyssey.Presentation.Rendering
         int Partition(InstanceBucket bucket)
         {
             ResolvedModule module = _model.Library[bucket.Module];
-            if (module.IsEmpty || Sight == null) return 0;
+            if (module.IsEmpty) return 0;
+
+            // The photograph of the fade: every tree and bush in the way, nothing solid.
+            if (FadeEveryTreeForAPhotograph && TintCode.IsTree(bucket.Tint))
+            {
+                if (_faded.Length < bucket.Count)
+                {
+                    int grown = Mathf.NextPowerOfTwo(bucket.Count);
+                    _faded = new Matrix4x4[grown];
+                    _solid = new Matrix4x4[grown];
+                }
+                System.Array.Copy(bucket.Matrices, _faded, bucket.Count);
+                _solidBarkDeep.Clear();
+                _solidBarkWarm.Clear();
+                _solidLeafDeep.Clear();
+                _solidLeafFresh.Clear();
+                return bucket.Count;
+            }
+
+            if (Sight == null) return 0;
 
             Matrix4x4 unplace = module.Parts[bucket.Part].Local.inverse;
             Bounds local = module.Bounds;
+
+            // Trees and bushes fade for every line; anything else only for the primary lines
+            // (the selected colonists), which is what it always did (design 38 §19).
+            bool vegetation = TintCode.IsTree(bucket.Tint);
+            if (!vegetation && Sight.Primary == 0) return 0;
 
             if (_faded.Length < bucket.Count)
             {
@@ -900,7 +1686,8 @@ namespace Odyssey.Presentation.Rendering
             for (int i = 0; i < bucket.Count; i++)
             {
                 Matrix4x4 m = bucket.Matrices[i];
-                if (Sight.Blocks(SightLines.Place(local, m * unplace)))
+                Bounds placed = SightLines.Place(local, m * unplace);
+                if (vegetation ? Sight.Blocks(placed) : Sight.BlocksPrimary(placed))
                 {
                     _faded[fadedCount++] = m;
                     continue;
@@ -966,6 +1753,7 @@ namespace Odyssey.Presentation.Rendering
                 if (SubmitToGpu)
                     Graphics.RenderMeshInstanced(rp, part.Mesh, part.Submesh, matrices, n, drawn);
                 DrawCalls++;
+                ChunkCallsByKind[_currentKind]++;
                 drawn += n;
             }
         }
@@ -1051,8 +1839,62 @@ namespace Odyssey.Presentation.Rendering
             return _solidProps;
         }
 
+        /// <summary>
+        /// A point on the ground of this cell as it is drawn: the relief, and the ground skin's ramp
+        /// where the cell is the foot of a step (design 38 §20). Items and heaps stand here, so a
+        /// stack put down at the foot of a terrace lies on the slope instead of inside it.
+        /// </summary>
+        Vector3 OnGround(Vector3 point, CellRef cell) =>
+            GroundRelief.Lift(point) + Vector3.up * BankLayout.RiseAt(_model, cell, point.x, point.z);
+
+        static readonly Matrix4x4[] SkinIdentity = { Matrix4x4.identity };
+
+        /// <summary>Skin triangles submitted last frame, for the measurement arms (design 38 §20).</summary>
+        public int SkinTrianglesDrawn { get; private set; }
+
+        /// <summary>
+        /// A chunk's ground skin, one call per (material, tint) group. Ground: receives shadows,
+        /// never casts them (the argument in <see cref="DrawBuckets"/>), and never fades for a sight
+        /// line, so none of the bucket path's per-instance machinery applies.
+        /// </summary>
+        void DrawSkin(ChunkBatch batch, float shade, bool ghost, float alpha)
+        {
+            GroundSkinMesh skin = batch.Skin;
+            Mesh? mesh = skin.Mesh;
+            if (mesh == null) return;
+
+            for (int g = 0; g < skin.GroupCount; g++)
+            {
+                int tintCode = skin.GroupTint(g);
+                ResolveColour(tintCode, skin.GroupFallback(g), shade, out Color tint, out Color emission);
+                Material material = _materials.Get(skin.GroupMaterial(g), tint, emission, ghost, alpha);
+                var rp = new RenderParams(material)
+                {
+                    worldBounds = batch.Bounds,
+                    layer = GameObjectLayer,
+                    receiveShadows = !ghost,
+                    shadowCastingMode = ShadowCastingMode.Off,
+                };
+                // Through the instanced path the boxes took, one instance at the identity, rather
+                // than RenderMesh: the two light the ground differently (measured, design 38 §20).
+                if (SubmitToGpu) Graphics.RenderMeshInstanced(rp, mesh, g, SkinIdentity, 1);
+                DrawCalls++;
+                ChunkCallsByKind[SkinKind]++;
+            }
+            SkinTrianglesDrawn += skin.TriangleCount;
+        }
+
         void Submit(in RenderParams rp, ModulePart part, Matrix4x4[] matrices, int count)
         {
+            // Below the blended range: the solid crowns sit in the foliage queue (2501) with their depth
+            // written and their cut-out clipped, so the order they go out in cannot change a pixel. A
+            // faded crown's ghost blends (Transparent, 3000) and keeps its own submission.
+            if (_groupingTrees && count > 0 && rp.material != null
+                && rp.material.renderQueue < (int)RenderQueue.Transparent)
+            {
+                GatherTree(rp, part, matrices, count);
+                return;
+            }
             int drawn = 0;
             while (drawn < count)
             {
@@ -1061,6 +1903,7 @@ namespace Odyssey.Presentation.Rendering
                     Graphics.RenderMeshInstanced(rp, part.Mesh, part.Submesh, matrices, n, drawn);
                 drawn += n;
                 DrawCalls++;
+                ChunkCallsByKind[_currentKind]++;
             }
         }
 
@@ -1301,6 +2144,66 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
+        /// Lay the grass flat round every body on the ground (design 38 §19): a colonist downed,
+        /// asleep somewhere that is not a bed, or dead. The same ring for all three, because at the
+        /// play camera the question is the same — can you see who is lying there.
+        /// </summary>
+        void StampLying(WorldSnapshot snapshot, int lowest, int highest)
+        {
+            System.ReadOnlySpan<PawnView> pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                CellRef cell = pawns[i].Cell;
+                if (cell.Y < lowest || cell.Y > highest) continue;
+                if (!LiesOnTheGround(in pawns[i])) continue;
+                Clearance.Stamp(CellMetrics.Centre(cell.X, cell.Z, cell.Y), LyingClearance);
+            }
+
+            System.ReadOnlySpan<CorpseView> corpses = snapshot.Corpses;
+            for (int i = 0; i < corpses.Length; i++)
+            {
+                CellRef cell = corpses[i].Cell;
+                if (cell.Y < lowest || cell.Y > highest) continue;
+                Clearance.Stamp(CellMetrics.Centre(cell.X, cell.Z, cell.Y), LyingClearance);
+            }
+        }
+
+        /// <summary>For the photograph only: treat every colonist as lying on the ground, so the
+        /// flattened grass and the faded bush round a body can be judged by looking. Never set by the
+        /// game.</summary>
+        public bool ForceLyingForAPhotograph { get; set; }
+
+        /// <summary>The nearest bush to a point on the given surface layer, from the discs the mesher
+        /// recorded; false when no meshed chunk nearby holds one. For the photograph.</summary>
+        public bool TryNearestBush(Vector3 near, int surfaceLayer, out Vector3 at)
+        {
+            at = default;
+            float best = float.MaxValue;
+            for (int i = 0; i < _batches.Length; i++)
+            {
+                ChunkBatch? batch = _batches[i];
+                if (batch == null || batch.Layer != surfaceLayer) continue;
+                foreach (Vector3 d in batch.BushDiscs)
+                {
+                    float dist = (d.x - near.x) * (d.x - near.x) + (d.y - near.z) * (d.y - near.z);
+                    if (dist < best) { best = dist; at = new Vector3(d.x, near.y, d.y); }
+                }
+            }
+            return best < float.MaxValue;
+        }
+
+        /// <summary>Downed, or asleep out of a bed: lying on the ground rather than on a mattress.</summary>
+        public bool LiesOnTheGround(in PawnView pawn)
+        {
+            if (ForceLyingForAPhotograph && pawn.IsColonist) return true;
+            if (pawn.IsDowned) return true;
+            if (!pawn.Asleep) return false;
+            CellRef c = pawn.Cell;
+            if (!_model.Size.Contains(c.X, c.Z, c.Y)) return true;
+            return _model.BedHeadAt(_model.Size.Index(c.X, c.Z, c.Y)) < 0;
+        }
+
+        /// <summary>
         /// Where a load rides on a colonist drawn as an instanced stand-in rather than as a live
         /// figure, as a fraction of a cell's height above the pawn's feet.
         ///
@@ -1336,6 +2239,7 @@ namespace Odyssey.Presentation.Rendering
             SliceSettings? slice = null, int activeLayer = 0)
         {
             System.ReadOnlySpan<ThingView> things = snapshot.Things;
+            StampLying(snapshot, lowest, highest);
             if (things.Length == 0 && snapshot.PawnCount == 0 && snapshot.FallingCount == 0) return;
             EnsureItemModules();
             System.Array.Clear(_itemCounts, 0, _itemCounts.Length);
@@ -1346,12 +2250,22 @@ namespace Odyssey.Presentation.Rendering
                 if (cell.Y < lowest || cell.Y > highest) continue;
                 if (slice != null && slice.HidesStandingAt(activeLayer, cell, _model)) continue;
 
-                // A stack of logs is shorter than a blade of grass. Stamped from the drawn set, so
-                // an item three storeys down does not bald the meadow above it.
-                Clearance.Stamp(CellMetrics.Centre(cell.X, cell.Z, cell.Y), ItemClearance);
-
                 int def = things[i].DefIndex;
                 ResolvedModule? module = ItemModule(def);
+
+                // A stack of logs is shorter than a blade of grass, so the grass round it lies flat
+                // over its whole footprint and half a metre more (design 38 §19). Stamped from the
+                // drawn set, so an item three storeys down does not bald the meadow above it. A
+                // thing on a shelf keeps the old small ring: it is off the ground.
+                float footprint = 0f;
+                if (!things[i].Contained)
+                {
+                    if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe ring)) footprint = ring.Spread + 0.3f;
+                    else if (module != null && !module.IsEmpty)
+                        footprint = new Vector2(module.Bounds.extents.x, module.Bounds.extents.z).magnitude;
+                }
+                Clearance.Stamp(CellMetrics.Centre(cell.X, cell.Z, cell.Y),
+                    things[i].Contained ? ItemClearance : ItemRing(footprint, ItemMargin, ItemClearance));
                 if (module == null || module.IsEmpty || !module.UsesArt)
                 {
                     // No art for this kind — either the packs are absent or the def is newer than
@@ -1473,7 +2387,7 @@ namespace Odyssey.Presentation.Rendering
                     for (int rock = 0; rock < rocks; rock++)
                     {
                         Matrix4x4 placement = _heapPlacements[rock];
-                        Vector3 at = GroundRelief.Lift(placement.GetColumn(3)) + falling;
+                        Vector3 at = OnGround(placement.GetColumn(3), cell) + falling;
                         placement.SetColumn(3, new Vector4(at.x, at.y, at.z, 1f));
                         AppendItem(def, placement);
                     }
@@ -1482,7 +2396,7 @@ namespace Odyssey.Presentation.Rendering
                 }
 
                 AppendItem(def, Matrix4x4.TRS(
-                    GroundRelief.Lift(floor) + falling,
+                    OnGround(floor, cell) + falling,
                     Quaternion.Euler(0f, YawOf(things[i].Id), 0f),
                     Vector3.one));
             }
@@ -3091,9 +4005,11 @@ namespace Odyssey.Presentation.Rendering
 
         public void Dispose()
         {
+            for (int i = 0; i < _batches.Length; i++) _batches[i]?.Dispose();
             Skirt.Dispose();
             _materials.Dispose();
             Clearance.Dispose();
+            _indirect?.Dispose();
         }
     }
 }

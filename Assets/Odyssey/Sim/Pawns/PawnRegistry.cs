@@ -43,7 +43,8 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < _pawns.Count; i++)
             {
                 var p = _pawns[i];
-                if (p.Cell == cell && !p.HasPath) return true;
+                // A carried patient is in her carrier's arms, not standing (design 33 §11f).
+                if (p.Cell == cell && !p.HasPath && p.CarriedBy == 0) return true;
             }
             return false;
         }
@@ -346,6 +347,8 @@ namespace Odyssey.Sim.Pawns
             new DownedJobDriver(),
             new EquipJobDriver(),
             new RescueJobDriver(),
+            // A marauder carrying something off the board (design 33 §17), JobHandle 22.
+            new StealJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------
@@ -473,8 +476,20 @@ namespace Odyssey.Sim.Pawns
                 bool hurt = pawn.HpMilli < pawn.HpMaxMilli || pawn.Downed || pawn.Drafted;
                 if (hurt) writer.AddPawnAspect(pawn.Id, CombatAspects.Hp, pawn.HpMilli);
                 if (hurt || pawn.IsPerson) writer.AddPawnAspect(pawn.Id, CombatAspects.HpMax, pawn.HpMaxMilli);
-                if (pawn.CombatTarget != 0)
-                    writer.AddPawnAspect(pawn.Id, CombatAspects.OrderTarget, pawn.CombatTarget);
+                // Whom the player sent her at, and whom she is carrying (design 33 §18b): two
+                // meanings of the one saved target, published apart, so the ring can mean an order
+                // without asking the job. A fight she started herself publishes neither.
+                int orderTarget = OrderTargetOf(pawn);
+                if (orderTarget != 0) writer.AddPawnAspect(pawn.Id, CombatAspects.OrderTarget, orderTarget);
+                int patient = RescuePatientOf(pawn);
+                if (patient != 0) writer.AddPawnAspect(pawn.Id, CombatAspects.RescuePatient, patient);
+                // The response (design 33 §18c), at anything but the default.
+                if (pawn.Response != HostilityResponse.FightBack)
+                    writer.AddPawnAspect(pawn.Id, CombatAspects.Response, (int)pawn.Response);
+                // Lying where she fell with no bed to be carried to (design 33 §11d): why nobody
+                // comes. Asked only of the downed, so a colony nobody has hurt pays one flag.
+                if (pawn.Downed && RescueRules.NeedsRescue(pawn, _ctx) && RescueRules.BedFor(pawn, pawn, _ctx) < 0)
+                    writer.AddPawnAspect(pawn.Id, CombatAspects.RescueNoBed, 1);
                 if (pawn.EquippedItem != 0)
                 {
                     var weapon = _ctx.Items.Get(new ThingId(pawn.EquippedItem));
@@ -628,8 +643,9 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// Where the pawn is walking under the player's orders, or -1 (design 33 §2e, §7a): a
         /// drafted colonist's move, or a weapon she was sent for — the only equip there is comes
-        /// from an order, drafted or not. An attack or a rescue is drawn to its target, not a cell
-        /// (<see cref="CombatAspects.OrderTarget"/>).
+        /// from an order, drafted or not. An ordered attack on a pawn is marked on the pawn, not a
+        /// cell (<see cref="CombatAspects.OrderTarget"/>, the ring); an attack on a building to the cell
+        /// of it she strikes (design 33 §13i).
         /// </summary>
         static int OrderCellOf(Pawn pawn)
         {
@@ -637,7 +653,34 @@ namespace Odyssey.Sim.Pawns
             if (job == null) return -1;
             if (job.DefIndex == JobIndex.Goto && pawn.Drafted) return job.TargetCell;
             if (job.DefIndex == JobIndex.Equip && job.PlayerForced) return job.TargetCell;
+            // A building has no pawn id to draw a line to, so it rides the order cell (design 33
+            // §5d, §13i): the cell of it she strikes at.
+            if (job.DefIndex == JobIndex.AttackMelee && job.PlayerForced && pawn.CombatTarget == 0) return job.TargetCell;
             return -1;
+        }
+
+        /// <summary>
+        /// The pawn the player ordered this one to attack, or 0 (design 33 §18b): a forced
+        /// <c>Job_AttackMelee</c> on a pawn — <c>OrderAttack</c>, and the knockback's re-issue of
+        /// it, which stays forced (§9b). <b>The one owner of "is this fight an order"</b>, which is
+        /// what the lock-on ring means. The hold's blow, fighting back, a drafted join (§15) and a
+        /// Defend join (§18) are unforced, and answer 0; so does a building, which has no pawn id
+        /// and rides the order cell (<see cref="OrderCellOf"/>).
+        /// </summary>
+        public static int OrderTargetOf(Pawn pawn)
+        {
+            Job? job = pawn.CurrentJob;
+            return job != null && job.DefIndex == JobIndex.AttackMelee && job.PlayerForced ? pawn.CombatTarget : 0;
+        }
+
+        /// <summary>
+        /// The downed colonist this one is rescuing, ordered or of her own accord, or 0 (design 33
+        /// §11, §18b): presentation's carrier lookup reads it.
+        /// </summary>
+        public static int RescuePatientOf(Pawn pawn)
+        {
+            Job? job = pawn.CurrentJob;
+            return job != null && job.DefIndex == JobIndex.Rescue ? pawn.CombatTarget : 0;
         }
 
         // ---- saving ------------------------------------------------------------------------

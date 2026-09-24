@@ -233,6 +233,10 @@ namespace Odyssey.Tests.PlayMode
                 if (bucket.Count > 0 && tint(bucket.Tint) && !TintCode.IsTree(bucket.Tint)) return true;
             foreach (InstanceBucket bucket in batch.Roof)
                 if (bucket.Count > 0 && tint(bucket.Tint) && !TintCode.IsTree(bucket.Tint)) return true;
+            // A store's ground wash rides the ground's tint, and skinned ground carries its tint in
+            // the skin's groups rather than a bucket (design 38 §20).
+            for (int g = 0; g < batch.Skin.GroupCount; g++)
+                if (tint(batch.Skin.GroupTint(g))) return true;
             return false;
         }
 

@@ -24,6 +24,8 @@ namespace Odyssey.Sim.Pawns
 
         public WeaponDropListener(PawnContext ctx) { _ctx = ctx; }
 
+        public void SwingResolved(in SwingReport report) { }
+
         public void DamageApplied(in DamageReport report) { }
 
         /// <summary>A downed pawn keeps its weapon: nothing to do.</summary>

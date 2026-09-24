@@ -2068,6 +2068,9 @@ namespace Odyssey.Presentation.Ui
             if (command.Enabled
                 && (command.IconKey == InspectModel.DraftKey || command.IconKey == InspectModel.UndraftKey))
                 button.RegisterCallback<ClickEvent>(_ => ToggleDraft());
+            // The response beside it (design 33 §18e): the model decides, this carries its intents.
+            if (command.Enabled && ResponseModel.IsResponseKey(command.IconKey))
+                button.RegisterCallback<ClickEvent>(_ => CycleResponse());
             return button;
         }
 

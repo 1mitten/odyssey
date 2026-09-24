@@ -133,8 +133,10 @@ namespace Odyssey.Tests.Hud
             Assert.That(SessionCommands.AsksTwice(SessionCommands.LoadKey, SessionContext.MainScreen), Is.False,
                 "nothing is running, so there is nothing to lose");
             Assert.That(SessionCommands.AsksTwice(SessionCommands.OptionsKey, SessionContext.MainScreen), Is.False);
-            Assert.That(SessionCommands.AsksTwice(SessionCommands.QuitKey, SessionContext.MainScreen), Is.True,
-                "it is irreversible and it sits under the row above it");
+            // Since the title screen (design 40): Exit game raises the leave prompt in its
+            // no-colony form, and the prompt is the second press, as it is in game.
+            Assert.That(SessionCommands.AsksTwice(SessionCommands.QuitKey, SessionContext.MainScreen), Is.False,
+                "the prompt asks; the row arming as well would be asking twice before asking");
 
             // Neither save arms. Save writes over a file the player already named and asked for;
             // Save as writes a file that does not exist yet, or asks its own question in the

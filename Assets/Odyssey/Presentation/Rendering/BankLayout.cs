@@ -188,8 +188,221 @@ namespace Odyssey.Presentation.Rendering
         {
             if (model == null || !LiftFigures) return 0f;
             if (!model.Size.Contains(cell.X, cell.Z, cell.Y)) return 0f;
+
+            // The ground skin's ramp (design 38 §6, §20): the surface the mesher draws, read back by
+            // the same corners and the same triangulation, so a figure stands on the drawn slope.
+            if (GroundSkin.Enabled)
+            {
+                if (!GroundCorners(model, cell.X, cell.Z, cell.Y, out Ramp ramp)) return 0f;
+                Vector3 corner = CellMetrics.FloorCentre(cell) - new Vector3(CellMetrics.HalfXZ, 0f, CellMetrics.HalfXZ);
+                float u = Mathf.Clamp01((worldX - corner.x) / CellMetrics.SizeXZ);
+                float v = Mathf.Clamp01((worldZ - corner.z) / CellMetrics.SizeXZ);
+                return ramp.HeightAt(u, v) * CellMetrics.SizeY;
+            }
+
             Bank bank = At(model, cell);
             return bank.Exists ? RiseAt(bank, cell, worldX, worldZ) : 0f;
+        }
+
+        // ------------------------------------------------------------------ the skin's ramp
+
+        /// <summary>
+        /// A ramp over one cell as four corner rises, in cell heights (0 = the cell's floor, 1 = the
+        /// rim of the step above), and the diagonal its two triangles share.
+        ///
+        /// <para>Corners are numbered from the cell's low-x low-z corner anticlockwise seen from
+        /// above: 0 (−x,−z), 1 (+x,−z), 2 (+x,+z), 3 (−x,+z). <see cref="SplitZeroTwo"/> says the
+        /// quad is cut along 0–2, otherwise along 1–3.</para>
+        /// </summary>
+        public readonly struct Ramp
+        {
+            public Ramp(float r0, float r1, float r2, float r3, bool splitZeroTwo)
+            {
+                R0 = r0; R1 = r1; R2 = r2; R3 = r3; SplitZeroTwo = splitZeroTwo;
+            }
+
+            public readonly float R0, R1, R2, R3;
+            public readonly bool SplitZeroTwo;
+
+            public float Corner(int i) => i switch { 0 => R0, 1 => R1, 2 => R2, _ => R3 };
+
+            /// <summary>
+            /// The rise at (u, v) in the cell, both 0..1 from corner 0 — exactly the two triangles
+            /// the mesher draws, so a reader and the picture cannot disagree.
+            /// </summary>
+            public float HeightAt(float u, float v)
+            {
+                if (SplitZeroTwo)
+                    return u >= v
+                        ? R0 + (R1 - R0) * u + (R2 - R1) * v
+                        : R0 + (R2 - R3) * u + (R3 - R0) * v;
+                return u + v <= 1f
+                    ? R0 + (R1 - R0) * u + (R3 - R0) * v
+                    : (R1 + R3 - R2) + (R2 - R3) * u + (R2 - R1) * v;
+            }
+        }
+
+        // Corner i sits at (CornerX[i], CornerZ[i]) in half-cell units from the centre.
+        static readonly int[] CornerX = { -1, 1, 1, -1 };
+        static readonly int[] CornerZ = { -1, -1, 1, 1 };
+
+        /// <summary>
+        /// The skin's ramp in this cell, or false where the ground here is drawn flat.
+        ///
+        /// <para><b>The corner rule.</b> A corner rises to the rim where any of the three other
+        /// cells that meet at it is a step (<see cref="IsStep"/>). That is the three bank shapes
+        /// generalised — a straight run lifts the two corners on its step's side, an inner corner
+        /// three, an outer corner one — and because two neighbouring cells ask the same cells about
+        /// the corner they share, the surface is continuous without either knowing the other.</para>
+        ///
+        /// <para><b>The same cells, not new ones.</b> A cell gets a ramp only where
+        /// <see cref="At"/> finds a bank, which is where <c>TerraceFoot.IsFoot</c> says a step rises
+        /// out of it — the simulation's copy of the rule is unchanged, and so is every golden.</para>
+        ///
+        /// <para><b>All four corners high is drawn flat instead.</b> That is a trench between two
+        /// terraces, a pit, or a cell ringed by diagonal steps, and the ramp would cap it flush with
+        /// the ground above — hiding a hole the simulation still has. It keeps its floor and its
+        /// sheer walls, as it always did; <see cref="GroundSkin"/> closes the edge with a skirt.</para>
+        /// </summary>
+        public static bool RampCorners(WorldRenderModel model, int x, int z, int y, out Ramp ramp)
+        {
+            ramp = default;
+            if (!At(model, x, z, y).Exists) return false;
+
+            float r0 = CornerHigh(model, x, z, y, 0) ? 1f : 0f;
+            float r1 = CornerHigh(model, x, z, y, 1) ? 1f : 0f;
+            float r2 = CornerHigh(model, x, z, y, 2) ? 1f : 0f;
+            float r3 = CornerHigh(model, x, z, y, 3) ? 1f : 0f;
+
+            int high = (int)(r0 + r1 + r2 + r3);
+            if (high == 0 || high == 4) return false;
+
+            // The diagonal: through the odd corner when one or three are high, which is what makes
+            // an inner corner max(u,v) and an outer corner min(u,v) as the old banks were; along the
+            // ridge when two opposite corners are high; otherwise any, and 0–2 by convention.
+            bool split02;
+            if (high == 1 || high == 3)
+            {
+                bool odd0 = (r0 != r1) && (r0 != r3);
+                bool odd2 = (r2 != r1) && (r2 != r3);
+                split02 = odd0 || odd2;
+            }
+            else
+            {
+                split02 = !(r1 > 0f && r3 > 0f && r0 == 0f && r2 == 0f);
+            }
+
+            ramp = new Ramp(r0, r1, r2, r3, split02);
+            return true;
+        }
+
+        /// <summary>
+        /// How far a stream bank's water-side corners drop below its top, in metres: to just above
+        /// the water line of the layer (<see cref="ChunkMesher.WaterSurface"/>), so the meadow runs
+        /// down into the stream rather than stopping at a square rim.
+        /// </summary>
+        public static float WaterBankDrop =>
+            CellMetrics.SizeY * (1f - ChunkMesher.WaterSurface) - 0.05f;
+
+        /// <summary>
+        /// The skin's bank down into water: a solid earth cell whose every open side is water at its
+        /// own layer (a stream or pond bank one layer above its bed), with each corner that touches
+        /// open water lowered by <see cref="WaterBankDrop"/>. Rises are negative, in cell heights,
+        /// measured from the cell's top — the floor of the cell above it, where a colonist walks.
+        ///
+        /// <para>False where the cell keeps its box: a riser with dry air beside it, a cut face,
+        /// something built on it (the ground levels under anything built), or no water at a corner.
+        /// The simulation never hears of it: the cell above is walkable at its floor as always, and
+        /// a figure or an item there is drawn on the slope through <see cref="RiseAt"/>.</para>
+        /// </summary>
+        public static bool BankDips(WorldRenderModel model, int x, int z, int y, out Ramp dip)
+        {
+            dip = default;
+            if (!GroundSkin.Enabled) return false;
+            GridSize size = model.Size;
+            if (!size.Contains(x, z, y) || y + 1 >= size.SizeY) return false;
+
+            int index = size.Index(x, z, y);
+            if (!model.IsSolid(index) || !model.IsEarth(index) || model.IsCutFace(index)) return false;
+            int above = index + size.LayerStride;
+            if (model.IsSolid(above) || model.Floor(above) != CoreContent.SlabNone) return false;
+            // Air over it, where a colonist walks. The bed under a stream is earth beside water too
+            // — the next stretch down a cascade — and dipping it pulled the water above it down with
+            // it (measured: SlicePickerBoardTests lost the water on every cascade).
+            if (model.Terrain(above) != CoreContent.TerrainAir) return false;
+            ushort edifice = model.EdificeDef(above);
+            if (edifice != 0 && !Odyssey.Sim.Worldgen.Natural.NaturalContent.IsTree(edifice)) return false;
+            if (y > 0 && !model.IsSolid(index - size.LayerStride)) return false;
+
+            // Every open side must be water: a dry riser beside it is a terrace, not a bank.
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
+                if (!size.Contains(nx, nz, y)) continue;
+                int n = size.Index(nx, nz, y);
+                if (!model.IsSolid(n) && !OpenWater(model, n)) return false;
+            }
+
+            float drop = -WaterBankDrop / CellMetrics.SizeY;
+            float r0 = CornerWet(model, x, z, y, 0) ? drop : 0f;
+            float r1 = CornerWet(model, x, z, y, 1) ? drop : 0f;
+            float r2 = CornerWet(model, x, z, y, 2) ? drop : 0f;
+            float r3 = CornerWet(model, x, z, y, 3) ? drop : 0f;
+            int low = (r0 < 0f ? 1 : 0) + (r1 < 0f ? 1 : 0) + (r2 < 0f ? 1 : 0) + (r3 < 0f ? 1 : 0);
+            if (low == 0) return false;
+
+            dip = new Ramp(r0, r1, r2, r3, SplitFor(r0, r1, r2, r3));
+            return true;
+        }
+
+        /// <summary>
+        /// The shape of the ground a colonist stands on in air cell (x, z, y): the ramp in it, or
+        /// the bank dipping in the cell under it, as rises from that cell's floor.
+        /// </summary>
+        public static bool GroundCorners(WorldRenderModel model, int x, int z, int y, out Ramp shape)
+        {
+            if (RampCorners(model, x, z, y, out shape)) return true;
+            return y > 0 && BankDips(model, x, z, y - 1, out shape);
+        }
+
+        static bool OpenWater(WorldRenderModel model, int index) =>
+            !model.IsSolid(index) && Odyssey.Sim.Worldgen.Natural.NaturalContent.IsWater(model.Terrain(index));
+
+        static bool CornerWet(WorldRenderModel model, int x, int z, int y, int corner)
+        {
+            GridSize size = model.Size;
+            int cx = CornerX[corner], cz = CornerZ[corner];
+            for (int k = 0; k < 3; k++)
+            {
+                int dx = k == 1 ? 0 : cx, dz = k == 0 ? 0 : cz;
+                int nx = x + dx, nz = z + dz;
+                if (!size.Contains(nx, nz, y)) continue;
+                if (OpenWater(model, size.Index(nx, nz, y))) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// The diagonal a quad is cut on: through the odd corner when one or three corners differ
+        /// from the rest, along the pair when two opposite corners do, else 0–2.
+        /// </summary>
+        static bool SplitFor(float r0, float r1, float r2, float r3)
+        {
+            bool odd0 = r0 != r1 && r0 != r3;
+            bool odd1 = r1 != r0 && r1 != r2;
+            bool odd2 = r2 != r1 && r2 != r3;
+            bool odd3 = r3 != r2 && r3 != r0;
+            int odd = (odd0 ? 1 : 0) + (odd1 ? 1 : 0) + (odd2 ? 1 : 0) + (odd3 ? 1 : 0);
+            if (odd == 1) return odd0 || odd2;
+            // Two opposite corners share a value unlike the other two: cut along that pair.
+            if (r0 == r2 && r1 == r3 && r0 != r1) return r0 > r1;
+            return true;
+        }
+
+        static bool CornerHigh(WorldRenderModel model, int x, int z, int y, int corner)
+        {
+            int cx = CornerX[corner], cz = CornerZ[corner];
+            return IsStep(model, x, z, y, cx, 0) || IsStep(model, x, z, y, 0, cz) || IsStep(model, x, z, y, cx, cz);
         }
 
         /// <summary>The same for a bank already found, which is what a caller with one in hand wants.</summary>

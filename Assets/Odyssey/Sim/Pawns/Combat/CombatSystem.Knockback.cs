@@ -32,6 +32,8 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public static int KnockbackCell(PawnContext ctx, Pawn attacker, Pawn target)
         {
+            // A body in somebody's arms is not knocked out of them (design 33 §11a).
+            if (target.CarriedBy != 0) return -1;
             GridSize size = ctx.Size;
             CellRef a = size.FromIndex(attacker.Cell), t = size.FromIndex(target.Cell);
             if (a.Y != t.Y) return -1;
@@ -44,7 +46,7 @@ namespace Odyssey.Sim.Pawns
             int beyond = size.Index(x, z, t.Y);
             if (IsWater(ctx, beyond)) return -1;
 
-            TraverseMode mode = target.Species.traverseMode;
+            TraverseMode mode = target.OwnMode;
             int land;
             if (ctx.Nav.IsLegalStep(target.Cell, beyond, mode))
             {
@@ -118,7 +120,8 @@ namespace Odyssey.Sim.Pawns
             Job? job = target.CurrentJob;
             bool ordered = job != null && job.DefIndex == JobIndex.AttackMelee && job.PlayerForced;
             int foe = target.CombatTarget, toTheDeath = job?.DestCell ?? -1;
-            TraverseMode mode = job?.Mode ?? TraverseMode.Colonist;
+            int struck = job?.TargetCell ?? -1;
+            TraverseMode mode = job?.Mode ?? target.OwnMode;
 
             int from = target.Cell;
             _jobs.EndJob(target, JobStatus.Failed);
@@ -139,6 +142,18 @@ namespace Odyssey.Sim.Pawns
                 again.Mode = mode;
                 again.PlayerForced = true;
                 if (!_jobs.StartJob(target, again, tick)) target.CombatTarget = 0;
+            }
+            // An order on a building outlives the fall the same way (design 33 §13e): target 0, the
+            // building by its record handle, which the job carried in DestCell.
+            else if (ordered && foe == 0 && BuildingTargets.TryStanding(_ctx, toTheDeath, out _))
+            {
+                Job again = target.JobBuffer;
+                again.Reset(JobIndex.AttackMelee);
+                again.TargetCell = struck;
+                again.DestCell = toTheDeath;
+                again.Mode = mode;
+                again.PlayerForced = true;
+                _jobs.StartJob(target, again, tick);
             }
 
             _ctx.CombatLog.Report(CombatEventKind.KnockedBack, attacker.Id, target.Id, _ctx.Size.FromIndex(land), tick,

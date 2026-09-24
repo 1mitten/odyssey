@@ -108,14 +108,22 @@ namespace Odyssey.Tests.Sim
         // Moved again, 2026-09-24, merging main (combat) into the campfire line: `radiantC` there
         // and `maxHitPoints` here, so neither number covers the merged table. Re-taken from a
         // freshly loaded pack.
-        const ulong BuildingFingerprint = 4989369424864157307UL;
+        // Moved once, deliberately, 2026-09-24, C6 buildings as targets (design 33 §13c): the
+        // campfire 60, conduit 40, generator 300 and heater 100 `maxHitPoints`, all INVENTED,
+        // in the XML and the code oracle together. Nothing else in the table moved.
+        const ulong BuildingFingerprint = 5425507577810914397UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone
         /// 15). Update this only when you meant to change a material's numbers, and say what moved
         /// in the commit message.
+        ///
+        /// <para>Moved once, deliberately, 2026-09-24 (design 33 §14d; the owner: blunt against
+        /// stone, sharp against wood): <c>sharpDamagePerMille</c> and <c>bluntDamagePerMille</c>,
+        /// wood 1,250 and 1,000, stone 500 and 1,250, the city's four and nothing at the default
+        /// 1,000 — all INVENTED, in the XML and the code oracle together. Nothing else moved.</para>
         /// </summary>
-        const ulong StuffFingerprint = 4054578596745551293UL;
+        const ulong StuffFingerprint = 3846353424243238969UL;
 
         /// <summary>
         /// The quality tiers as they stand: Poor 85, Normal 100, Decent 112, Uber 125, Epic 140

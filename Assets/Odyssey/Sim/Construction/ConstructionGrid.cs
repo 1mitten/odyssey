@@ -1546,6 +1546,13 @@ namespace Odyssey.Sim.Construction
             // Its switch and whatever wood was in its hopper go with it (design 32 §5).
             ctx.Power?.RemoveDevice(handle);
 
+            // Nothing may go on pointing at a building that has gone (design 33 §13h): what was
+            // left of it after a fight, and an order to take it apart. Here, because this is the one
+            // way an edifice leaves the world — taken apart, beaten down, or whatever calls it next.
+            ctx.EdificeDamage.Clear(was.CellIndex);
+            ClearDeconstructOrder(ctx, was.CellIndex);
+            if (second >= 0) ClearDeconstructOrder(ctx, second);
+
             // 2. The cells and everything touching them must be re-meshed: a thing coming down
             // changes how its neighbours draw their own faces, and the vertical neighbours are in
             // other chunks.
@@ -1563,6 +1570,17 @@ namespace Odyssey.Sim.Construction
             MarkNavAround(ctx, was.CellIndex);
             if (second >= 0) MarkNavAround(ctx, second);
             return true;
+        }
+
+        /// <summary>
+        /// An order to take apart a building that is no longer there is an order on nothing. The
+        /// deconstruct driver clears its own before the removal; this is for every other route.
+        /// </summary>
+        static void ClearDeconstructOrder(PawnContext ctx, int cell)
+        {
+            var designations = ctx.Designations;
+            if (designations != null && designations.At(cell) == Designations.DesignationKind.Deconstruct)
+                designations.Clear(cell);
         }
 
         /// <summary>

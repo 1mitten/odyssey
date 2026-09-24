@@ -53,7 +53,10 @@ namespace Odyssey.Presentation.Rendering
 
             batch.ChunkIndex = chunkIndex;
             batch.Layer = y;
+            _rampCacheIndex = -1;
+            _dipIndex = -1;
             batch.Bounds = ChunkWorldBounds(x0, z0, y, x1, z1);
+            if (GroundSkin.Enabled) FillCornerRelief(x0, z0, x1, z1);
             batch.Clear();
             _bodyIndex.Clear();
             _roofIndex.Clear();
@@ -79,14 +82,50 @@ namespace Odyssey.Presentation.Rendering
                 EmitTerrain(batch, index, x, z, y);
                 EmitBank(batch, index, x, z, y);
                 EmitScatter(batch, index, x, z, y);
+                EmitDressing(batch, index, x, z, y);
                 EmitFloor(batch, index, x, z, y);
                 EmitStoreEdge(batch, index, x, z, y);
                 EmitEdifice(batch, index, x, z, y);
                 EmitCrop(batch, index, x, z, y);
             }
 
+            // Grass in rank order, so the renderer's distance thinning submits a prefix (design 38
+            // §21, GrassThinning). Once per meshing, not per frame.
+            for (int i = 0; i < batch.Body.Count; i++)
+            {
+                InstanceBucket bucket = batch.Body[i];
+                if (bucket.Count > 1 && !bucket.IsColoured && IsGrassModule(bucket.Module))
+                    GrassThinning.SortByRank(bucket.Matrices, bucket.Count, ref _rankKeys);
+            }
+
+            batch.Skin.Build(batch.Bounds);
             batch.Version = _model.ChunkVersion(chunkIndex);
         }
+
+        float[] _rankKeys = new float[256];
+
+        /// <summary>
+        /// Whether a module is grass the distance thinning may thin (design 38 §21): the tufts, and
+        /// the Meadow dressing that reads as meadow — tall-grass stands, flowers, ground cover and
+        /// sunflowers. Not bushes or stones, which are single features rather than a carpet, and not
+        /// crops, which are the colony's own.
+        /// </summary>
+        public bool IsGrassModule(int module)
+        {
+            if (_grassModules == null)
+            {
+                EnsureScatterModules();
+                EnsureDressModules();
+                _grassModules = new HashSet<int>(_scatterModules);
+                if (_dressModules.Length > 0)
+                    foreach (MeadowDressing.Kind kind in new[] { MeadowDressing.Kind.TallGrass,
+                                 MeadowDressing.Kind.Flower, MeadowDressing.Kind.Cover, MeadowDressing.Kind.Sunflower })
+                        foreach (int m in _dressModules[(int)kind]) _grassModules.Add(m);
+            }
+            return _grassModules.Contains(module);
+        }
+
+        HashSet<int>? _grassModules;
 
         /// <summary>
         /// The chunk's cell volume, padded.
@@ -127,7 +166,19 @@ namespace Odyssey.Presentation.Rendering
             return ChunkWorldBounds(x0, z0, y, x1, z1);
         }
 
-        static Bounds ChunkWorldBounds(int x0, int z0, int y, int x1, int z1)
+        Bounds ChunkWorldBounds(int x0, int z0, int y, int x1, int z1)
+        {
+            Bounds bounds = ChunkWorldBoundsCore(x0, z0, y, x1, z1);
+            // A rim chunk's skin runs ApronMetres past the board's edge, down or up to the
+            // surround; its box has to hold that or the cull drops the apron at the screen edge.
+            if (GroundSkin.Enabled && (x0 == 0 || z0 == 0 || x1 >= _model.Size.SizeX || z1 >= _model.Size.SizeZ))
+            {
+                bounds.Expand(new Vector3(2f * ApronMetres, 2f * CellMetrics.SizeY, 2f * ApronMetres));
+            }
+            return bounds;
+        }
+
+        static Bounds ChunkWorldBoundsCore(int x0, int z0, int y, int x1, int z1)
         {
             float relief = ReliefReach();
             var bounds = new Bounds();
@@ -260,6 +311,11 @@ namespace Odyssey.Presentation.Rendering
         internal void SinkRoof(ChunkBatch batch, int module, int tint, in Matrix4x4 at) =>
             AddRoof(batch, module, tint, at);
 
+        internal bool SinkSkinsTop(in TerrainCell cell) => SkinsTop(cell.Index, cell.X, cell.Z, cell.Y);
+
+        internal void SinkSkin(ChunkBatch batch, int module, int tint, int x, int z, int y) =>
+            SinkSkinTop(batch, module, tint, x, z, y);
+
         // ------------------------------------------------------------- scatter
 
         /// <summary>
@@ -270,7 +326,27 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public int ScatterDensity { get; set; } = 60;
 
+        /// <summary>Whether the Meadow dressing is strewn at all, apart from the density. A
+        /// measurement seam (the player benchmark, design 38 §18e): on in the game.</summary>
+        public bool Dressing { get; set; } = true;
+
+        /// <summary>Whether the grass tufts are strewn at all, apart from the density. A
+        /// measurement seam, as <see cref="Dressing"/>: on in the game.</summary>
+        public bool Tufts { get; set; } = true;
+
+        /// <summary>Which dressing kinds are strewn, one bit per <see cref="MeadowDressing.Kind"/>.
+        /// A measurement seam (design 38 §21: what each kind costs at distance): all on in the game.</summary>
+        public int DressingKinds { get; set; } = ~0;
+
         int[] _scatterModules = System.Array.Empty<int>();
+
+        /// <summary>Whether a module is one of the grass tufts the scatter strews — the kind the
+        /// indirect path draws (design 38 §18). Resolves the tufts on first ask.</summary>
+        public bool IsScatterModule(int module)
+        {
+            EnsureScatterModules();
+            return System.Array.IndexOf(_scatterModules, module) >= 0;
+        }
         bool _scatterResolved;
 
         /// <summary>
@@ -288,7 +364,7 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         void EmitScatter(ChunkBatch batch, int index, int x, int z, int y)
         {
-            if (ScatterDensity <= 0) return;
+            if (ScatterDensity <= 0 || !Tufts) return;
 
             // The drawn terrain, so a zoned cell - drawn as dirt - grows no tuft through it.
             ushort terrain = _model.DrawnTerrain(index);
@@ -393,6 +469,7 @@ namespace Odyssey.Presentation.Rendering
 
                 Vector3 at = GroundRelief.Lift(
                     surface + new Vector3(offsetX * CellMetrics.SizeXZ, ripple, offsetZ * CellMetrics.SizeXZ));
+                at.y += SkinRise(x, z, surface.y, at.x, at.z);
 
                 AddBody(batch, module, tint, Matrix4x4.TRS(
                     at, Quaternion.Euler(0f, yaw, 0f), new Vector3(scale, scale, scale)));
@@ -453,6 +530,255 @@ namespace Odyssey.Presentation.Rendering
         /// thousand grey cubes strewn across a meadow, so a clone without the packs gets bare
         /// ground instead, which is what it had before any of this existed.
         /// </summary>
+        // ------------------------------------------------------------ dressing
+
+        /// <summary>
+        /// A cell the colony started in, and how far round it the big dressing stays away: the
+        /// clearing is where the colony lays out its first buildings, and a bush there would be in
+        /// the way of every order. Set by the composition root before the first meshing; none means
+        /// the dressing stands anywhere it may.
+        /// </summary>
+        public Vector2Int? DressingClearing { get; set; }
+
+        /// <summary>The clearing's radius in cells.</summary>
+        public int DressingClearRadius { get; set; } = 4;
+
+        /// <summary>
+        /// The tallest tree or bush the dressing and the tree variants resolved to, in metres above
+        /// the cell floor: what the frustum and sight tests must allow for above a chunk's box.
+        /// Zero until something has resolved.
+        /// </summary>
+        public float TallestResolved { get; private set; }
+
+        /// <summary>
+        /// How far past its chunk's box, sideways, anything resolved so far can reach: a tree crown
+        /// or a bush wider than its cell, turned, scaled and jittered off its cell centre, less the
+        /// half cell and the padding the box already allows. The frustum test grows a chunk's box
+        /// by this in x and z (design 38 §18) — the sun-ward shadow sweep starts from the box, and
+        /// a 17 m crown whose edge overhangs it cast a shadow the sweep did not see. Zero until
+        /// something wide has resolved.
+        /// </summary>
+        public float OverhangResolved { get; private set; }
+
+        void NoteReach(int module, float scale, float jitter)
+        {
+            Bounds b = _model.Library[module].Bounds;
+            float x = Mathf.Max(Mathf.Abs(b.min.x), Mathf.Abs(b.max.x));
+            float z = Mathf.Max(Mathf.Abs(b.min.z), Mathf.Abs(b.max.z));
+            float reach = Mathf.Sqrt(x * x + z * z) * scale + jitter;
+            OverhangResolved = Mathf.Max(OverhangResolved,
+                reach - CellMetrics.SizeXZ * 0.5f - BoundsPadding);
+        }
+
+        /// <summary>How many dressing families resolved to real art. Zero on a checkout without the
+        /// packs, which is how a measurement knows there is no dressing to price.</summary>
+        public int DressingFamiliesWithArt
+        {
+            get
+            {
+                EnsureDressModules();
+                int n = 0;
+                foreach (int[] family in _dressModules) if (family.Length > 0) n++;
+                return n;
+            }
+        }
+
+        int[][] _dressModules = System.Array.Empty<int[]>();
+        bool _dressResolved;
+        readonly Dictionary<int, int[]> _treeVariants = new Dictionary<int, int[]>();
+
+        /// <summary>
+        /// Strew the Meadow dressing over an exposed grass surface: one big piece on the lattice
+        /// (a bush or a stand of tall grass) and a handful of small ones (flowers, cover, a stone),
+        /// by <see cref="MeadowDressing"/>'s fields. The same ground rule as the tufts, and more:
+        /// the big pieces overhang their cell, so they also need a clear ring round it — no zone,
+        /// floor or building in any neighbour — and keep out of the colony's clearing.
+        /// </summary>
+        void EmitDressing(ChunkBatch batch, int index, int x, int z, int y)
+        {
+            if (ScatterDensity <= 0 || !Dressing) return;
+            if (!DressableSurface(index, y)) return;
+            EnsureDressModules();
+            if (_dressModules.Length == 0) return;
+
+            float density = ScatterDensity / 60f;
+            var size = _model.Size;
+            bool inClearing = DressingClearing.HasValue
+                && (new Vector2Int(x, z) - DressingClearing.Value).sqrMagnitude
+                   <= DressingClearRadius * DressingClearRadius;
+            bool daylit = _model.OpenToTheSky(index, y);
+            Vector3 surface = CellMetrics.FloorCentre(x, z, y) + Vector3.up * CellMetrics.SizeY;
+
+            bool ringFree = true, woodEdge = false, nearRock = false;
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dz == 0) continue;
+                int nx = x + dx, nz = z + dz;
+                if (nx < 0 || nz < 0 || nx >= size.SizeX || nz >= size.SizeZ) continue;
+                int n = size.Index(nx, nz, y);
+                if (_model.IsZoned(n)) ringFree = false;
+                if (y + 1 < size.SizeY)
+                {
+                    int up = n + size.LayerStride;
+                    if (_model.Floor(up) != CoreContent.SlabNone) ringFree = false;
+                    ushort edifice = _model.EdificeDef(up);
+                    if (edifice != CoreContent.EdificeNone)
+                    {
+                        if (NaturalContent.IsTree(edifice)) woodEdge = true;
+                        else ringFree = false;
+                    }
+                    if (_model.IsSolid(up) && _model.DrawnTerrain(up) == NaturalContent.TerrainRock) nearRock = true;
+                }
+                if (_model.DrawnTerrain(n) == NaturalContent.TerrainRock) nearRock = true;
+            }
+
+            // The big piece, on its lattice.
+            if (ringFree && !inClearing)
+            {
+                MeadowDressing.Kind big = MeadowDressing.BigPiece(x, z, density, woodEdge);
+                if (big != MeadowDressing.Kind.None)
+                    PlaceDressing(batch, big, x, z, surface, daylit, spread: 0.5f);
+            }
+
+            for (int slot = 0; slot < MeadowDressing.SmallSlots; slot++)
+            {
+                MeadowDressing.Kind small = MeadowDressing.SmallPiece(x, z, slot, density, nearRock);
+                if (small == MeadowDressing.Kind.None) continue;
+                if (small == MeadowDressing.Kind.Rock && inClearing) continue;
+                PlaceDressing(batch, small, x, z, surface, daylit, spread: 0.7f, slot: slot);
+            }
+        }
+
+        void PlaceDressing(ChunkBatch batch, MeadowDressing.Kind kind, int x, int z, Vector3 surface,
+            bool daylit, float spread, int slot = 0)
+        {
+            int[] family = _dressModules[(int)kind];
+            if (family.Length == 0) return;
+            if ((DressingKinds & (1 << (int)kind)) == 0) return;
+            uint salt = MeadowDressing.SaltOf(kind) + (uint)slot * 104729u;
+            int which = MeadowDressing.VariantFor(x, z, salt, family.Length);
+            MeadowDressing.Placement(x, z, salt, spread,
+                out float offsetX, out float offsetZ, out float yaw, out float scale);
+
+            // Grass and flowers are foliage (no shadow, cleared round items, our shader); a bush
+            // takes the tree's path (it casts a shadow, and fades when it stands between the camera
+            // and a colonist); a stone is plain art.
+            int tint = kind switch
+            {
+                MeadowDressing.Kind.Bush => TintCode.Dressing(TintCode.Tree(TreeSpecies.Broadleaf)),
+                // Dressing, so a stone casts no shadow either (design 38 §18f): its tint colours only
+                // by the low byte, which the flag leaves alone.
+                MeadowDressing.Kind.Rock => TintCode.Dressing(TintCode.Stuff(CoreContent.StuffNone)),
+                _ => TintCode.Daylit(TintCode.Foliage(which % StuffPalette.FoliageTintCount), daylit),
+            };
+
+            Vector3 at = GroundRelief.Lift(
+                surface + new Vector3(offsetX * CellMetrics.SizeXZ, 0f, offsetZ * CellMetrics.SizeXZ));
+            at.y += SkinRise(x, z, surface.y, at.x, at.z);
+            AddBody(batch, family[which], tint, Matrix4x4.TRS(
+                at, Quaternion.Euler(0f, yaw, 0f), new Vector3(scale, scale, scale)));
+
+            // Where the bush stands and how wide, for the renderer's "is this thing under a bush"
+            // (design 38 §19): the half-diagonal of its footprint, so any bearing is covered.
+            if (kind == MeadowDressing.Kind.Bush)
+            {
+                Vector3 extent = _model.Library[family[which]].Bounds.extents * scale;
+                batch.BushDiscs.Add(new Vector3(at.x, at.z,
+                    Mathf.Sqrt(extent.x * extent.x + extent.z * extent.z)));
+            }
+        }
+
+        /// <summary>
+        /// Whether the top of this cell is open grass the dressing may stand on: the tufts' own
+        /// rule — grass, solid, nothing solid, no floor and nothing built on it (a tree is allowed:
+        /// woodland has a floor).
+        /// </summary>
+        bool DressableSurface(int index, int y)
+        {
+            if (_model.DrawnTerrain(index) != NaturalContent.TerrainGrass) return false;
+            if (!_model.IsSolid(index)) return false;
+            var size = _model.Size;
+            if (y + 1 >= size.SizeY) return true;
+            int above = index + size.LayerStride;
+            if (_model.IsSolid(above)) return false;
+            if (_model.Floor(above) != CoreContent.SlabNone) return false;
+            ushort built = _model.EdificeDef(above);
+            return built == CoreContent.EdificeNone || NaturalContent.IsTree(built);
+        }
+
+        /// <summary>
+        /// Resolve every dressing family once, keeping only the rows that found real art — a
+        /// clone without the packs strews no boxes, the tufts' rule — and note the tallest.
+        /// Indexed by <see cref="MeadowDressing.Kind"/>.
+        /// </summary>
+        void EnsureDressModules()
+        {
+            if (_dressResolved) return;
+            _dressResolved = true;
+
+            var families = new int[System.Enum.GetValues(typeof(MeadowDressing.Kind)).Length][];
+            for (int i = 0; i < families.Length; i++) families[i] = System.Array.Empty<int>();
+            families[(int)MeadowDressing.Kind.TallGrass] = ResolveFamily(ModuleIds.DressTallGrass);
+            families[(int)MeadowDressing.Kind.Cover] = ResolveFamily(ModuleIds.DressCover);
+            families[(int)MeadowDressing.Kind.Flower] = ResolveFamily(ModuleIds.DressFlowers);
+            families[(int)MeadowDressing.Kind.Sunflower] = ResolveFamily(ModuleIds.DressSunflower);
+            families[(int)MeadowDressing.Kind.Bush] = ResolveFamily(ModuleIds.DressBushes);
+            families[(int)MeadowDressing.Kind.Rock] = ResolveFamily(ModuleIds.DressRocks);
+
+            bool any = false;
+            foreach (int[] family in families) any |= family.Length > 0;
+            _dressModules = any ? families : System.Array.Empty<int[]>();
+            foreach (int bush in families[(int)MeadowDressing.Kind.Bush])
+                TallestResolved = Mathf.Max(TallestResolved, _model.Library[bush].Bounds.max.y);
+            // Every family, turned, at MeadowDressing.Placement's largest scale (1.2) and furthest
+            // jitter (half the widest spread, 0.7, of a cell).
+            foreach (int[] family in families)
+                foreach (int module in family)
+                    NoteReach(module, 1.2f, 0.35f * CellMetrics.SizeXZ);
+        }
+
+        int[] ResolveFamily(string[] ids)
+        {
+            var usable = new List<int>();
+            foreach (string id in ids)
+            {
+                if (_model.Library.Catalogue == null || _model.Library.Catalogue.Find(id) == null) continue;
+                int module = _model.Library.Resolve(id, ModuleShape.Pillar);
+                ResolvedModule resolved = _model.Library[module];
+                if (resolved.UsesArt && !resolved.IsEmpty) usable.Add(module);
+            }
+            return usable.ToArray();
+        }
+
+        /// <summary>
+        /// A tree species' art variants, its own row first, resolved once per species module.
+        /// Only rows the catalogue actually has are asked for, so a checkout whose catalogue
+        /// predates the variants — or has no packs — gets its one tree, and no "missing art" noise.
+        /// </summary>
+        int[] TreeVariantsOf(int module)
+        {
+            if (_treeVariants.TryGetValue(module, out int[]? known)) return known;
+
+            var variants = new List<int> { module };
+            string baseId = _model.Library[module].Id;
+            for (int v = 1; v < ModuleIds.MaxTreeVariants; v++)
+            {
+                string id = ModuleIds.TreeVariant(baseId, v);
+                if (_model.Library.Catalogue == null || _model.Library.Catalogue.Find(id) == null) continue;
+                int resolved = _model.Library.Resolve(id, ModuleShape.Pillar);
+                if (_model.Library[resolved].UsesArt && !_model.Library[resolved].IsEmpty) variants.Add(resolved);
+            }
+            int[] result = variants.ToArray();
+            _treeVariants[module] = result;
+            foreach (int m in result)
+            {
+                TallestResolved = Mathf.Max(TallestResolved, _model.Library[m].Bounds.max.y * 1.15f);
+                NoteReach(m, 1.15f, 0f);
+            }
+            return result;
+        }
+
         void EnsureScatterModules()
         {
             if (_scatterResolved) return;
@@ -533,6 +859,11 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         void EmitBank(ChunkBatch batch, int index, int x, int z, int y)
         {
+            if (GroundSkin.Enabled)
+            {
+                EmitRamp(batch, x, z, y);
+                return;
+            }
 
             BankLayout.Bank bank = BankLayout.At(_model, x, z, y);
             if (!bank.Exists) return;
@@ -548,6 +879,344 @@ namespace Odyssey.Presentation.Rendering
                 Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[bank.Rotation], 0f)));
         }
 
+
+        // ------------------------------------------------------------- the ground skin
+
+        // Corner i of a cell, in cells from its low-x low-z corner: the order BankLayout.Ramp uses.
+        static readonly int[] SkinCornerX = { 0, 1, 1, 0 };
+        static readonly int[] SkinCornerZ = { 0, 0, 1, 1 };
+
+        // The edge on each side of a cell as a pair of corners, indexed by Directions.
+        static readonly int[] EdgeFirst = new int[Directions.Count];
+        static readonly int[] EdgeSecond = new int[Directions.Count];
+
+        static ChunkMesher()
+        {
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int dx = Directions.DeltaX[dir], dz = Directions.DeltaZ[dir];
+                // The two corners on that side are the ones whose offset agrees with the direction.
+                int first = -1, second = -1;
+                for (int c = 0; c < 4; c++)
+                {
+                    bool onSide = dx != 0 ? SkinCornerX[c] == (dx > 0 ? 1 : 0) : SkinCornerZ[c] == (dz > 0 ? 1 : 0);
+                    if (!onSide) continue;
+                    if (first < 0) first = c; else second = c;
+                }
+                EdgeFirst[dir] = first;
+                EdgeSecond[dir] = second;
+            }
+        }
+
+        // The relief at every cell corner of the chunk being meshed, sampled once each. A corner is
+        // shared by up to six triangles and the relief is four sine waves: sampling per vertex was
+        // most of what made a skinned chunk dearer to mesh than a boxed one (design 38 §20).
+        float[] _cornerRelief = System.Array.Empty<float>();
+        int _reliefX0, _reliefZ0, _reliefSpan;
+
+        void FillCornerRelief(int x0, int z0, int x1, int z1)
+        {
+            _reliefX0 = x0;
+            _reliefZ0 = z0;
+            _reliefSpan = Mathf.Max(x1 - x0, z1 - z0) + 1;
+            int count = _reliefSpan * _reliefSpan;
+            if (_cornerRelief.Length < count) _cornerRelief = new float[count];
+            for (int j = 0; j < _reliefSpan; j++)
+            for (int i = 0; i < _reliefSpan; i++)
+                _cornerRelief[i + j * _reliefSpan] = GroundRelief.HeightAt(
+                    (x0 + i) * CellMetrics.SizeXZ, (z0 + j) * CellMetrics.SizeXZ);
+        }
+
+        float CornerRelief(int cx, int cz)
+        {
+            int i = cx - _reliefX0, j = cz - _reliefZ0;
+            if ((uint)i < (uint)_reliefSpan && (uint)j < (uint)_reliefSpan)
+                return _cornerRelief[i + j * _reliefSpan];
+            return GroundRelief.HeightAt(cx * CellMetrics.SizeXZ, cz * CellMetrics.SizeXZ);
+        }
+
+        /// <summary>
+        /// A corner of the skin in world space: the cell's corner at a rise above a plane, on the
+        /// relief sampled at the corner itself so two cells meeting there agree to the bit.
+        /// </summary>
+        Vector3 SkinCorner(int x, int z, float planeY, int corner, float rise)
+        {
+            int cx = x + SkinCornerX[corner], cz = z + SkinCornerZ[corner];
+            return new Vector3(cx * CellMetrics.SizeXZ, planeY + rise + CornerRelief(cx, cz), cz * CellMetrics.SizeXZ);
+        }
+
+        // The last cell a point was lifted onto a ramp for: a meadow cell asks for up to three tufts
+        // and a clump or two of dressing, and each would otherwise re-run the ramp's neighbour scan.
+        int _rampCacheIndex = -1;
+        bool _rampCacheHas;
+        bool _rampCacheIsRamp;
+        BankLayout.Ramp _rampCache;
+
+        /// <summary>
+        /// How far the skin's ramp lifts a point standing on the ground whose top is at
+        /// <paramref name="surfaceY"/> — zero off a ramp. Grass, dressing and crops stand at points,
+        /// so they are lifted onto the ramp rather than buried in it (the draped/lifted rule).
+        /// </summary>
+        float SkinRise(int x, int z, float surfaceY, float worldX, float worldZ)
+        {
+            if (!GroundSkin.Enabled || !BankLayout.LiftFigures) return 0f;
+            int layer = Mathf.RoundToInt(surfaceY / CellMetrics.SizeY);
+            var size = _model.Size;
+            if (!size.Contains(x, z, layer)) return 0f;
+            int index = size.Index(x, z, layer);
+            if (index != _rampCacheIndex)
+            {
+                _rampCacheIndex = index;
+                _rampCacheHas = BankLayout.GroundCorners(_model, x, z, layer, out _rampCache);
+                _rampCacheIsRamp = _rampCacheHas && BankLayout.RampCorners(_model, x, z, layer, out _);
+            }
+            if (!_rampCacheHas) return 0f;
+            float u = Mathf.Clamp01((worldX - x * CellMetrics.SizeXZ) / CellMetrics.SizeXZ);
+            float v = Mathf.Clamp01((worldZ - z * CellMetrics.SizeXZ) / CellMetrics.SizeXZ);
+            return _rampCache.HeightAt(u, v) * CellMetrics.SizeY + (_rampCacheIsRamp ? GroundSkin.RampLift : 0f);
+        }
+
+        /// <summary>
+        /// The layer the surround's ground stands on (<c>TerrainSkirt.SurfaceLayer</c>), or -1 when
+        /// there is no surround. Set by the renderer before it meshes; the skin's apron at the
+        /// board's rim runs down (or up) to it.
+        /// </summary>
+        public int SurroundLevel { get; set; } = -1;
+
+        /// <summary>
+        /// How far the skin runs past the board's edge to meet the surround, in metres. Two cells: a
+        /// rim one layer above the surround then slopes at about 30 degrees, which the ground shader
+        /// still paints as grass, where a wall at the edge read as a brown line round the board
+        /// from far out (owner's report via the look pass, design 38 §20).
+        /// </summary>
+        public const float ApronMetres = 5f;
+
+        /// <summary>
+        /// The skin's apron beyond each side of a rim cell that is the board's edge: a strip from the
+        /// cell's own edge, at the heights it was drawn at, to the surround's ground at the apron's
+        /// outer edge, so the meadow runs off the board instead of stopping at a step.
+        /// </summary>
+        void EmitApron(GroundSkinMesh skin, ModulePart part, int tint, int x, int z,
+            Vector3 c0, Vector3 c1, Vector3 c2, Vector3 c3)
+        {
+            if (SurroundLevel < 0) return;
+            var size = _model.Size;
+            bool west = x == 0, east = x == size.SizeX - 1, south = z == 0, north = z == size.SizeZ - 1;
+            if (!west && !east && !south && !north) return;
+
+            Vector3[] corners = _apronCorners;
+            corners[0] = c0; corners[1] = c1; corners[2] = c2; corners[3] = c3;
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int dx = Directions.DeltaX[dir], dz = Directions.DeltaZ[dir];
+                if (size.Contains(x + dx, z + dz, 0)) continue;
+                Vector3 a = corners[EdgeFirst[dir]], b = corners[EdgeSecond[dir]];
+                var outward = new Vector3(dx, 0f, dz) * ApronMetres;
+                Vector3 a2 = SurroundPoint(a + outward);
+                Vector3 b2 = SurroundPoint(b + outward);
+                skin.Triangle(part.Material, tint, part.IsFallback, a, b, b2, Vector3.up);
+                skin.Triangle(part.Material, tint, part.IsFallback, a, b2, a2, Vector3.up);
+            }
+
+            // At a corner of the board the two strips leave a square between them: fill it.
+            if ((west || east) && (south || north))
+            {
+                int cx = east ? 1 : 0, cz = north ? 1 : 0;
+                int corner = cx == 0 ? (cz == 0 ? 0 : 3) : (cz == 0 ? 1 : 2);
+                Vector3 c = corners[corner];
+                var ox = new Vector3(east ? ApronMetres : -ApronMetres, 0f, 0f);
+                var oz = new Vector3(0f, 0f, north ? ApronMetres : -ApronMetres);
+                Vector3 px = SurroundPoint(c + ox), pz = SurroundPoint(c + oz), pxz = SurroundPoint(c + ox + oz);
+                skin.Triangle(part.Material, tint, part.IsFallback, c, px, pxz, Vector3.up);
+                skin.Triangle(part.Material, tint, part.IsFallback, c, pxz, pz, Vector3.up);
+            }
+        }
+
+        readonly Vector3[] _apronCorners = new Vector3[4];
+
+        // The last cell SkinsTop asked BankDips about, so SinkSkinTop does not ask again.
+        int _dipIndex = -1;
+        bool _dipHas;
+        BankLayout.Ramp _dip;
+
+        /// <summary>A point outside the board, on the surround's ground: its level plus its field.</summary>
+        Vector3 SurroundPoint(Vector3 at)
+        {
+            var size = _model.Size;
+            float boardX = size.SizeX * CellMetrics.SizeXZ, boardZ = size.SizeZ * CellMetrics.SizeXZ;
+            float outX = Mathf.Max(0f, Mathf.Max(-at.x, at.x - boardX));
+            float outZ = Mathf.Max(0f, Mathf.Max(-at.z, at.z - boardZ));
+            float outside = Mathf.Sqrt(outX * outX + outZ * outZ);
+            float y = (SurroundLevel + 1) * CellMetrics.SizeY + GroundRelief.SurroundHeightAt(at.x, at.z, outside);
+            return new Vector3(at.x, y, at.z);
+        }
+
+        /// <summary>The flat earth this ground is made of, as the material its turf box wore.</summary>
+        ModulePart? GroundPart(ushort terrain)
+        {
+            int module = _model.EarthModule(terrain, 0, showsAFace: false);
+            if (module == 0) return null;
+            ModulePart[] parts = _model.Library[module].Parts;
+            return parts.Length > 0 ? parts[0] : null;
+        }
+
+        /// <summary>
+        /// The ramp in a terrace's foot cell, and a skirt down any side where the ground beside it is
+        /// lower than the ramp's edge — a cell drawn flat because a ramp would have capped it.
+        /// </summary>
+        void EmitRamp(ChunkBatch batch, int x, int z, int y)
+        {
+            if (!BankLayout.RampCorners(_model, x, z, y, out BankLayout.Ramp ramp)) return;
+            BankLayout.Bank bank = BankLayout.At(_model, x, z, y);
+            ModulePart? part = GroundPart(bank.Terrain);
+            if (part == null) return;
+
+            // Always daylit: the ramp needs open sky over it (BankLayout.CanBank).
+            int tint = TintCode.Daylit(TintCode.Whole(TintCode.Terrain(bank.Terrain)), open: true);
+            float plane = y * CellMetrics.SizeY + GroundSkin.RampLift;
+            float h = CellMetrics.SizeY;
+            Vector3 c0 = SkinCorner(x, z, plane, 0, ramp.R0 * h);
+            Vector3 c1 = SkinCorner(x, z, plane, 1, ramp.R1 * h);
+            Vector3 c2 = SkinCorner(x, z, plane, 2, ramp.R2 * h);
+            Vector3 c3 = SkinCorner(x, z, plane, 3, ramp.R3 * h);
+
+            GroundSkinMesh skin = batch.Skin;
+            if (ramp.SplitZeroTwo)
+            {
+                skin.Triangle(part.Material, tint, part.IsFallback, c0, c2, c1, Vector3.up);
+                skin.Triangle(part.Material, tint, part.IsFallback, c0, c3, c2, Vector3.up);
+            }
+            else
+            {
+                skin.Triangle(part.Material, tint, part.IsFallback, c0, c3, c1, Vector3.up);
+                skin.Triangle(part.Material, tint, part.IsFallback, c1, c3, c2, Vector3.up);
+            }
+            batch.InstanceCount++;
+            EmitApron(skin, part, tint, x, z, c0, c1, c2, c3);
+
+            // Skirts. A neighbouring ramp meets this one exactly and a solid neighbour is a wall of
+            // its own, so only an open neighbour lower than the edge needs closing — the flat cell
+            // beside a trench, or the ground past the lip of a step down.
+            var size = _model.Size;
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
+                if (!size.Contains(nx, nz, y)) continue;
+                int neighbour = size.Index(nx, nz, y);
+                if (_model.IsSolid(neighbour)) continue;
+
+                int a = EdgeFirst[dir], b = EdgeSecond[dir];
+                float mineA = ramp.Corner(a), mineB = ramp.Corner(b);
+                float theirA = 0f, theirB = 0f;
+                if (BankLayout.RampCorners(_model, nx, nz, y, out BankLayout.Ramp other))
+                {
+                    // The same world corner seen from the other cell: its offset is ours, less the step.
+                    theirA = other.Corner(Mirror(a, dir));
+                    theirB = other.Corner(Mirror(b, dir));
+                }
+                if (mineA <= theirA && mineB <= theirB) continue;
+
+                Vector3 topA = SkinCorner(x, z, plane, a, mineA * h);
+                Vector3 topB = SkinCorner(x, z, plane, b, mineB * h);
+                Vector3 lowA = SkinCorner(x, z, plane, a, Mathf.Min(mineA, theirA) * h);
+                Vector3 lowB = SkinCorner(x, z, plane, b, Mathf.Min(mineB, theirB) * h);
+                var outward = new Vector3(Directions.DeltaX[dir], 0f, Directions.DeltaZ[dir]);
+                skin.Triangle(part.Material, tint, part.IsFallback, topA, topB, lowB, outward, vertical: true);
+                skin.Triangle(part.Material, tint, part.IsFallback, topA, lowB, lowA, outward, vertical: true);
+            }
+        }
+
+        /// <summary>The index, in the neighbour across <paramref name="dir"/>, of our corner <paramref name="corner"/>.</summary>
+        static int Mirror(int corner, int dir)
+        {
+            int cx = SkinCornerX[corner] - (Directions.DeltaX[dir] > 0 ? 1 : Directions.DeltaX[dir] < 0 ? -1 : 0);
+            int cz = SkinCornerZ[corner] - (Directions.DeltaZ[dir] > 0 ? 1 : Directions.DeltaZ[dir] < 0 ? -1 : 0);
+            for (int c = 0; c < 4; c++)
+                if (SkinCornerX[c] == cx && SkinCornerZ[c] == cz) return c;
+            return corner;
+        }
+
+        /// <summary>
+        /// Whether this earth cell's top goes into the skin rather than a box: nothing but its top
+        /// can be seen (no side open, open above, solid below), and nothing is built on it whose
+        /// drape the ground must match to the millimetre — a slab, a wall, a bed. A tree is not
+        /// built; woodland keeps its skin.
+        /// </summary>
+        internal bool SkinsTop(int index, int x, int z, int y)
+        {
+            if (!GroundSkin.Enabled) return false;
+            var size = _model.Size;
+            if (y + 1 >= size.SizeY) return false;
+            // A side open onto water only: a stream bank, drawn as skin sloping down into it.
+            if (ExposedSides(x, z, y) != 0)
+            {
+                _dipIndex = index;
+                _dipHas = BankLayout.BankDips(_model, x, z, y, out _dip);
+                return _dipHas;
+            }
+            int above = index + size.LayerStride;
+            if (_model.IsSolid(above)) return false;
+            if (y > 0 && !_model.IsSolid(index - size.LayerStride)) return false;
+            if (_model.Floor(above) != CoreContent.SlabNone) return false;
+            ushort edifice = _model.EdificeDef(above);
+            if (edifice != 0 && !Odyssey.Sim.Worldgen.Natural.NaturalContent.IsTree(edifice)) return false;
+            return true;
+        }
+
+        /// <summary>
+        /// The top of an earth cell as two triangles of skin — flat, or dipping at the corners that
+        /// touch water (<see cref="BankLayout.BankDips"/>) — and, on a stream bank, a wall down each
+        /// open side to the bed under the water.
+        /// </summary>
+        internal void SinkSkinTop(ChunkBatch batch, int module, int tint, int x, int z, int y)
+        {
+            ModulePart[] parts = _model.Library[module].Parts;
+            if (parts.Length == 0) return;
+            ModulePart part = parts[0];
+            int cellIndex = _model.Size.Index(x, z, y);
+            bool dips;
+            BankLayout.Ramp dip;
+            if (cellIndex == _dipIndex) { dips = _dipHas; dip = _dip; }
+            else dips = BankLayout.BankDips(_model, x, z, y, out dip);
+            float h = CellMetrics.SizeY;
+            float plane = (y + 1) * h;
+            Vector3 c0 = SkinCorner(x, z, plane, 0, dips ? dip.R0 * h : 0f);
+            Vector3 c1 = SkinCorner(x, z, plane, 1, dips ? dip.R1 * h : 0f);
+            Vector3 c2 = SkinCorner(x, z, plane, 2, dips ? dip.R2 * h : 0f);
+            Vector3 c3 = SkinCorner(x, z, plane, 3, dips ? dip.R3 * h : 0f);
+            GroundSkinMesh skin = batch.Skin;
+            if (!dips || dip.SplitZeroTwo)
+            {
+                skin.Triangle(part.Material, tint, part.IsFallback, c0, c2, c1, Vector3.up);
+                skin.Triangle(part.Material, tint, part.IsFallback, c0, c3, c2, Vector3.up);
+            }
+            else
+            {
+                skin.Triangle(part.Material, tint, part.IsFallback, c0, c3, c1, Vector3.up);
+                skin.Triangle(part.Material, tint, part.IsFallback, c1, c3, c2, Vector3.up);
+            }
+            batch.InstanceCount++;
+            EmitApron(skin, part, tint, x, z, c0, c1, c2, c3);
+            if (!dips) return;
+
+            // The wall under each open side, from the dipped edge down to the bed the water lies
+            // on: seen through the water, as the box's side was.
+            var size = _model.Size;
+            float bed = y * h;
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
+                if (!size.Contains(nx, nz, y) || _model.IsSolid(size.Index(nx, nz, y))) continue;
+                int a = EdgeFirst[dir], b = EdgeSecond[dir];
+                Vector3 topA = SkinCorner(x, z, plane, a, dip.Corner(a) * h);
+                Vector3 topB = SkinCorner(x, z, plane, b, dip.Corner(b) * h);
+                Vector3 lowA = SkinCorner(x, z, bed, a, 0f);
+                Vector3 lowB = SkinCorner(x, z, bed, b, 0f);
+                var outward = new Vector3(Directions.DeltaX[dir], 0f, Directions.DeltaZ[dir]);
+                skin.Triangle(part.Material, tint, part.IsFallback, topA, topB, lowB, outward, vertical: true);
+                skin.Triangle(part.Material, tint, part.IsFallback, topA, lowB, lowA, outward, vertical: true);
+            }
+        }
 
         /// <summary>
         /// Can any of this cell's four vertical faces be seen — is it a terrace riser, the wall of
@@ -1034,6 +1703,19 @@ namespace Odyssey.Presentation.Rendering
             TreeSpecies species = TreeLook.SpeciesOf(def);
             TreeTheme theme = TreePalette.At(TreeLook.Theme(x, z, species));
             Matrix4x4 placement = GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y));
+
+            // Which tree this is, and which way it faces (the look pass, design 38 §17): a species
+            // has several pieces of art, chosen per cell, each turned and sized a little by the
+            // hash so a wood is not one tree stamped in rows. A species with one row — no packs,
+            // or the old art — is drawn exactly as before.
+            int[] variants = TreeVariantsOf(module);
+            if (variants.Length > 1)
+            {
+                module = variants[MeadowDressing.TreeVariant(x, z, variants.Length)];
+                float yaw = GroundScatter.Unit(x, z, 0x6A09u) * 360f;
+                float size = 0.9f + GroundScatter.Unit(x, z, 0x6A0Bu) * 0.25f;
+                placement *= Matrix4x4.TRS(Vector3.zero, Quaternion.Euler(0f, yaw, 0f), Vector3.one * size);
+            }
 
             var parts = _model.Library[module].Parts;
             int tint = TintCode.Tree(species);

@@ -53,7 +53,7 @@ namespace Odyssey.Tests.Presentation
 
             int passes = Regex.Matches(code, @"\bPass\s*\{").Count;
             int calls = Regex.Matches(code, @"\bFoliageDisplace\(input\.").Count;
-            Assert.That(passes, Is.EqualTo(4), "the forward, shadow, depth and depth-normals passes");
+            Assert.That(passes, Is.EqualTo(5), "the forward, shadow, ghost-depth, depth and depth-normals passes");
             Assert.That(calls, Is.EqualTo(passes), "a pass positions its vertices without FoliageDisplace");
             Assert.That(code, Does.Not.Contain("_Time"), "the wind must come from the tick, not from _Time");
             Assert.That(Regex.Matches(code, @"multi_compile_instancing").Count, Is.EqualTo(passes),

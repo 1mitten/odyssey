@@ -32,6 +32,14 @@ namespace Odyssey.Sim.Pawns
             CellRef at = _ctx.Size.FromIndex(target.Cell);
             int weapon = armament.ItemDef;
 
+            // Every swing that reaches her is heard, whatever came of it (design 33 §14f: a missed
+            // swing is an attack), from here and nowhere else — before the outcome, so a hit's
+            // DamageApplied follows it.
+            CombatEventKind result = !outcome.Landed && outcome.Result == CombatEventKind.Dodge
+                ? CombatEventKind.Dodge
+                : outcome.Landed ? CombatEventKind.Hit : CombatEventKind.Miss;
+            _ctx.CombatHooks.RaiseSwingResolved(new SwingReport(target, attacker, result, weapon, tick));
+
             if (!outcome.Landed)
             {
                 CombatEventKind kind = outcome.Result == CombatEventKind.Dodge ? CombatEventKind.Dodge : CombatEventKind.Miss;
@@ -98,7 +106,7 @@ namespace Odyssey.Sim.Pawns
 
             Job job = pawn.JobBuffer;
             job.Reset(JobIndex.Downed);
-            job.Mode = pawn.Species.traverseMode;
+            job.Mode = pawn.OwnMode;
             _jobs.StartJob(pawn, job, tick);
 
             _ctx.CombatLog.Report(CombatEventKind.Downed, by?.Id ?? default, pawn.Id,
@@ -221,6 +229,9 @@ namespace Odyssey.Sim.Pawns
             target.RetaliateAgainst = attacker.Id.Value;
             target.RetaliateUntilTick = tick + combat.retaliationTicks;
 
+            // Set to Flee (design 33 §18d) she runs rather than fighting back: the interrupt below
+            // brings her to her self-defence, which asks her response first. The memory above is
+            // still written, for when she is cornered and fights back as Fight back would.
             if (!Melee.IsAttacking(target, attacker)) _jobs.Interrupt(target, JobStatus.Failed);
         }
 
@@ -233,7 +244,7 @@ namespace Odyssey.Sim.Pawns
             if (pawn.CombatTarget == 0 || pawn.CurrentJob == null || pawn.CurrentJob.DefIndex != JobIndex.AttackMelee)
                 return false;
             Pawn? foe = _ctx.Pawns.Get(new PawnId(pawn.CombatTarget));
-            return foe != null && Melee.IsStanding(foe) && Melee.InReach(_ctx, pawn, foe, pawn.Species.traverseMode);
+            return foe != null && Melee.IsStanding(foe) && Melee.InReach(_ctx, pawn, foe, pawn.OwnMode);
         }
 
         /// <summary>
@@ -242,7 +253,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         void Flee(Pawn pawn, Pawn threat, int tick)
         {
-            TraverseMode mode = pawn.Species.traverseMode;
+            TraverseMode mode = pawn.OwnMode;
             int cell = FleeJobDriver.FindFleeCell(_ctx, pawn, threat.Cell, _ctx.Content.Combat.fleeCells, mode);
             if (cell < 0) return;
 

@@ -56,6 +56,23 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
+        /// Should a hit-point bar stand over the building whose own cell is
+        /// <paramref name="cellIndex"/>, and how full is it (design 33 §13i, §13k)? <b>Owed exactly
+        /// where the simulation publishes a row</b> — a building somebody has struck and that still
+        /// stands — as a pawn's is owed where it publishes hit points. Clamped to 0 to the pool;
+        /// never without a pool. The drawing is owed (§13k); this is its answer.
+        /// </summary>
+        public static bool BuildingHealthBar(WorldSnapshot snapshot, int cellIndex, out int hpMilli, out int hpMaxMilli)
+        {
+            hpMilli = 0;
+            hpMaxMilli = 0;
+            if (!snapshot.TryGetEdificeDamage(cellIndex, out EdificeDamageView row) || row.MaxMilli <= 0) return false;
+            hpMaxMilli = row.MaxMilli;
+            hpMilli = row.HpMilli < 0 ? 0 : row.HpMilli > row.MaxMilli ? row.MaxMilli : row.HpMilli;
+            return true;
+        }
+
+        /// <summary>
         /// The words that float up from one moment of a fight — "miss", "dodge", the damage in
         /// whole points, "stunned", "downed", "dead" — or empty for a moment that floats nothing
         /// (a swing starting, a pawn getting up).

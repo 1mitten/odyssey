@@ -141,13 +141,13 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#commodities">Commodities<b>50</b></a></li>
 <li><a href="#items">Items and equipment<b>34</b></a></li>
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
-<li><a href="#commands">Commands<b>49</b></a></li>
+<li><a href="#commands">Commands<b>52</b></a></li>
 <li><a href="#work">Work and skills<b>42</b></a></li>
-<li><a href="#colonists">Colonists<b>46</b></a></li>
+<li><a href="#colonists">Colonists<b>47</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
-<li><a href="#events">Events<b>42</b></a></li>
+<li><a href="#events">Events<b>45</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
-<li><a href="#world">World and interface<b>111</b></a></li>
+<li><a href="#world">World and interface<b>125</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
 </ul></nav>
 <main>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>806</b><i>named entries</i></div>
+<div class="stat"><b>827</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>534</b><i>no art yet</i></div>
+<div class="stat m"><b>555</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1195,7 +1195,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="commands" data-sec="1">
-<h2>Commands <em class="count">49 entries</em></h2>
+<h2>Commands <em class="count">52 entries</em></h2>
 <p class="blurb">What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein. A right-click on a thing with more than one answer, a weapon today, opens a small menu at the pointer whose rows are these commands; the menu's own words are listed after them.</p>
 <h3 class="nsh">Commands</h3>
 <div class="tbl">
@@ -1488,6 +1488,24 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.command.fightback" data-hay="fight back ui.command.fightback fights only whoever strikes her. press to change raised fists" data-gap="1">
+<div class="nm">Fight back<span class="k">ui.command.fightback</span></div>
+<div class="dsc">Fights only whoever strikes her. Press to change<span class="need">Needs drawing: raised fists</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.command.defend" data-hay="defend ui.command.defend joins a fight near her, then goes back to work. press to change a shield over a figure" data-gap="1">
+<div class="nm">Defend<span class="k">ui.command.defend</span></div>
+<div class="dsc">Joins a fight near her, then goes back to work. Press to change<span class="need">Needs drawing: a shield over a figure</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.command.flee" data-hay="flee ui.command.flee runs from danger near her, and fights only when cornered. press to change a figure running away" data-gap="1">
+<div class="nm">Flee<span class="k">ui.command.flee</span></div>
+<div class="dsc">Runs from danger near her, and fights only when cornered. Press to change<span class="need">Needs drawing: a figure running away</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
 </div>
 <h3 class="nsh">The context menu</h3>
 <div class="tbl">
@@ -1771,7 +1789,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">46 entries</em></h2>
+<h2>Colonists <em class="count">47 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -2046,9 +2064,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">CB</div>
 </div>
-<div class="row gap" id="ui.status.fleeing" data-hay="fleeing ui.status.fleeing running from whatever hurt it " data-gap="1">
+<div class="row gap" id="ui.status.fleeing" data-hay="fleeing ui.status.fleeing running from danger, or from whatever hurt it " data-gap="1">
 <div class="nm">Fleeing<span class="k">ui.status.fleeing</span></div>
-<div class="dsc">Running from whatever hurt it</div>
+<div class="dsc">Running from danger, or from whatever hurt it</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">CB</div>
 </div>
@@ -2061,6 +2079,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.status.rescuing" data-hay="rescuing ui.status.rescuing carrying the downed to a bed " data-gap="1">
 <div class="nm">Rescuing<span class="k">ui.status.rescuing</span></div>
 <div class="dsc">Carrying the downed to a bed</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.status.stealing" data-hay="stealing ui.status.stealing a marauder carrying something off the board " data-gap="1">
+<div class="nm">Stealing<span class="k">ui.status.stealing</span></div>
+<div class="dsc">A marauder carrying something off the board</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">CB</div>
 </div>
@@ -2244,7 +2268,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="events" data-sec="1">
-<h2>Events <em class="count">42 entries</em></h2>
+<h2>Events <em class="count">45 entries</em></h2>
 <p class="blurb">Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.</p>
 <h3 class="nsh">Alerts</h3>
 <div class="tbl">
@@ -2393,6 +2417,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.alert.norescuebed" data-hay="no bed for the wounded ui.alert.norescuebed a downed colonist has no free bed to be carried to, so nobody can rescue her " data-gap="1">
+<div class="nm">No bed for the wounded<span class="k">ui.alert.norescuebed</span></div>
+<div class="dsc">A downed colonist has no free bed to be carried to, so nobody can rescue her</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 </div>
 <h3 class="nsh">Bulletins</h3>
 <div class="tbl">
@@ -2498,6 +2528,18 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">A tame animal has given birth<span class="need">Needs drawing: a newborn animal</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M2</div>
+</div>
+<div class="row gap" id="ui.bulletin.theft" data-hay="theft ui.bulletin.theft a marauder carried something off the board a figure carrying a sack off the edge. our own concept" data-gap="1">
+<div class="nm">Theft<span class="k">ui.bulletin.theft</span></div>
+<div class="dsc">A marauder carried something off the board<span class="need">Needs drawing: a figure carrying a sack off the edge. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.bulletin.marauderleft" data-hay="marauder left ui.bulletin.marauderleft a marauder walked off the board with nothing a figure walking off the edge. our own concept" data-gap="1">
+<div class="nm">Marauder left<span class="k">ui.bulletin.marauderleft</span></div>
+<div class="dsc">A marauder walked off the board with nothing<span class="need">Needs drawing: a figure walking off the edge. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
 </div>
 </div>
 <h3 class="nsh">Toasts</h3>
@@ -2690,7 +2732,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">111 entries</em></h2>
+<h2>World and interface <em class="count">125 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -3139,12 +3181,6 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M1</div>
 </div>
-<div class="row gap" id="ui.settings.grass" data-hay="grass tufts ui.settings.grass tufts strewn over the meadow. decoration, in no cell and no save " data-gap="1">
-<div class="nm">Grass tufts<span class="k">ui.settings.grass</span></div>
-<div class="dsc">Tufts strewn over the meadow. Decoration, in no cell and no save</div>
-<div class="art"><span class="pill no">no art</span></div>
-<div class="ms">M1</div>
-</div>
 <div class="row gap" id="ui.settings.relief" data-hay="ground relief ui.settings.relief the roll of the drawn ground. the cells underneath stay flat " data-gap="1">
 <div class="nm">Ground relief<span class="k">ui.settings.relief</span></div>
 <div class="dsc">The roll of the drawn ground. The cells underneath stay flat</div>
@@ -3253,6 +3289,30 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.settings.quality" data-hay="quality ui.settings.quality set every lever on this page at once, from low to ultra. custom once any is moved by hand " data-gap="1">
+<div class="nm">Quality<span class="k">ui.settings.quality</span></div>
+<div class="dsc">Set every lever on this page at once, from Low to Ultra. Custom once any is moved by hand</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MF</div>
+</div>
+<div class="row gap" id="ui.settings.vegetation" data-hay="grass ui.settings.vegetation how thick the grass is strewn, from bare ground to every cell. decoration, in no cell and no save " data-gap="1">
+<div class="nm">Grass<span class="k">ui.settings.vegetation</span></div>
+<div class="dsc">How thick the grass is strewn, from bare ground to every cell. Decoration, in no cell and no save</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MF</div>
+</div>
+<div class="row gap" id="ui.settings.grassdist" data-hay="grass distance ui.settings.grassdist how far from the camera grass is still drawn. past it the ground carries the field " data-gap="1">
+<div class="nm">Grass distance<span class="k">ui.settings.grassdist</span></div>
+<div class="dsc">How far from the camera grass is still drawn. Past it the ground carries the field</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MF</div>
+</div>
+<div class="row gap" id="ui.settings.foliageshadows" data-hay="grass shadows ui.settings.foliageshadows whether grass casts shadows. off, as it has always shipped: a shadow centimetres long on grass the same colour " data-gap="1">
+<div class="nm">Grass shadows<span class="k">ui.settings.foliageshadows</span></div>
+<div class="dsc">Whether grass casts shadows. Off, as it has always shipped: a shadow centimetres long on grass the same colour</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MF</div>
+</div>
 <div class="row gap" id="ui.settings.resolution" data-hay="resolution ui.settings.resolution how many pixels the game is drawn at. only a built game can change it " data-gap="1">
 <div class="nm">Resolution<span class="k">ui.settings.resolution</span></div>
 <div class="dsc">How many pixels the game is drawn at. Only a built game can change it</div>
@@ -3304,6 +3364,72 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.settings.volume.alerts" data-hay="alerts volume ui.settings.volume.alerts what asks for attention " data-gap="1">
 <div class="nm">Alerts volume<span class="k">ui.settings.volume.alerts</span></div>
 <div class="dsc">What asks for attention</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.scale" data-hay="scale ui.settings.group.scale how large the interface is drawn " data-gap="1">
+<div class="nm">Scale<span class="k">ui.settings.group.scale</span></div>
+<div class="dsc">How large the interface is drawn</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.camera" data-hay="camera ui.settings.group.camera how the camera moves, and the keys that move it " data-gap="1">
+<div class="nm">Camera<span class="k">ui.settings.group.camera</span></div>
+<div class="dsc">How the camera moves, and the keys that move it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.palette" data-hay="build palette ui.settings.group.palette the shape of the build palette " data-gap="1">
+<div class="nm">Build palette<span class="k">ui.settings.group.palette</span></div>
+<div class="dsc">The shape of the Build palette</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.performance" data-hay="performance ui.settings.group.performance what the frame costs to draw " data-gap="1">
+<div class="nm">Performance<span class="k">ui.settings.group.performance</span></div>
+<div class="dsc">What the frame costs to draw</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.volume" data-hay="volume ui.settings.group.volume the loudness of the game and its music and ambience " data-gap="1">
+<div class="nm">Volume<span class="k">ui.settings.group.volume</span></div>
+<div class="dsc">The loudness of the game and its music and ambience</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.cues" data-hay="cues ui.settings.group.cues the loudness of work and of what asks for attention " data-gap="1">
+<div class="nm">Cues<span class="k">ui.settings.group.cues</span></div>
+<div class="dsc">The loudness of work and of what asks for attention</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.saving" data-hay="saving ui.settings.group.saving when the colony is written to disk without being asked " data-gap="1">
+<div class="nm">Saving<span class="k">ui.settings.group.saving</span></div>
+<div class="dsc">When the colony is written to disk without being asked</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.game" data-hay="game ui.settings.group.game saving, loading and leaving, pinned under the tabs " data-gap="1">
+<div class="nm">Game<span class="k">ui.settings.group.game</span></div>
+<div class="dsc">Saving, loading and leaving, pinned under the tabs</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.view" data-hay="view ui.settings.group.view the keys that move the slice and frame the map " data-gap="1">
+<div class="nm">View<span class="k">ui.settings.group.view</span></div>
+<div class="dsc">The keys that move the slice and frame the map</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.tools" data-hay="tools ui.settings.group.tools the keys that arm an order " data-gap="1">
+<div class="nm">Tools<span class="k">ui.settings.group.tools</span></div>
+<div class="dsc">The keys that arm an order</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.time" data-hay="time ui.settings.group.time the keys that pause the game and set its speed " data-gap="1">
+<div class="nm">Time<span class="k">ui.settings.group.time</span></div>
+<div class="dsc">The keys that pause the game and set its speed</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -3584,7 +3710,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 806, "gaps": 534};</script>
+<script>window.WIKI={"total": 827, "gaps": 555};</script>
 <script>
 (function(){
   var D = window.WIKI;

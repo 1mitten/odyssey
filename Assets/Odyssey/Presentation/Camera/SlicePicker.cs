@@ -267,6 +267,11 @@ namespace Odyssey.Presentation.CameraRig
                 }
 
                 float floorY = slabMin + FloorHeightAt(x, z);
+                // A foot cell's ground is the skin's ramp, drawn up to 3 m above its floor; aiming at
+                // it meant hitting a floor under the slope (design 38 §20). Taken at the centre, a
+                // plane through the ramp's middle, which is where a click on a slope means.
+                Vector3 middle = CellMetrics.FloorCentre(x, z, layer);
+                floorY += BankLayout.RiseAt(model, new CellRef(x, z, layer), middle.x, middle.z);
 
                 // **A thing you walk over is still a thing you can see the top of.** A bed does
                 // not occlude, so before this the only surface it offered a ray was the floor

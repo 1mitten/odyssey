@@ -698,23 +698,26 @@ namespace Odyssey.Presentation.Ui
                 Health = health, HealthFill = healthFill, HealthWord = downed,
             };
 
-            // Shift is the strip's toggle, exactly as it is in the world: a shift-press on a card
-            // turns it on or off without moving the camera, and while shift is held a drag across
-            // cards toggles each one it crosses (A2 "drag-select a range"). A plain press keeps the
-            // jump: a card is a way of getting to someone far away. Right-click and hold initiates
-            // drag-and-drop to reorder slots.
+            // A left press starts a sweep (design 33 §20; owner, 2026-09-24: "I should be drag the
+            // across their roster profile and select them all"): dragged across other cards it
+            // selects every card passed over, as the world's box does, and Shift adds them to what
+            // was held. A press that crosses no other card is a click — the one colonist, and on
+            // the release the jump to her, since a card is a way of getting to someone far away;
+            // with Shift it toggles her, as a shift-click does in the world. The rule is
+            // RosterSweep's and fast-tier tested; this only reports the pointer. Right-click and
+            // hold still reorders the slots, untouched.
             card.RegisterCallback<PointerDownEvent>(evt =>
             {
                 if (!view.LastId.IsValid || _boot!.World == null) return;
                 PawnId id = view.LastId;
                 if (evt.button == 0)
                 {
-                    if (evt.shiftKey)
-                    {
-                        _sweepingRoster = true;
-                        _directors?.Selection.Toggle(id);
-                    }
-                    else _directors?.ChooseColonist(id, _boot.World.Views.Current);
+                    if (_directors == null) return;
+                    _sweepPage.Clear();
+                    for (int c = 0; c < _cards.Count; c++)
+                        if (_cards[c].LastId.IsValid) _sweepPage.Add(_cards[c].LastId);
+                    if (_rosterSweep.Press(_sweepPage, id, evt.shiftKey, _directors.Selection.Pawns))
+                        ApplyRosterSweep(evt.shiftKey ? SelectionChange.Toggled : SelectionChange.Chosen);
                 }
                 else if (evt.button == 2)
                 {
@@ -747,6 +750,7 @@ namespace Odyssey.Presentation.Ui
 
             card.RegisterCallback<PointerUpEvent>(evt =>
             {
+                if (evt.button == 0 && _rosterSweep.Active) FinishRosterSweep();
                 if (evt.button == 2)
                 {
                     if (card.HasPointerCapture(evt.pointerId))
@@ -768,6 +772,8 @@ namespace Odyssey.Presentation.Ui
 
             card.RegisterCallback<PointerCancelEvent>(evt =>
             {
+                // A cancelled pointer is not a click: the sweep is dropped with no jump.
+                _rosterSweep.Cancel();
                 if (card.HasPointerCapture(evt.pointerId))
                     card.ReleasePointer(evt.pointerId);
                 if (_isRightDragging)
@@ -780,12 +786,30 @@ namespace Odyssey.Presentation.Ui
 
             card.RegisterCallback<PointerEnterEvent>(_ =>
             {
-                if (!_sweepingRoster || !view.LastId.IsValid) return;
-                _directors?.Selection.Toggle(view.LastId);
+                if (!_rosterSweep.Active || !view.LastId.IsValid) return;
+                if (_rosterSweep.Over(view.LastId)) ApplyRosterSweep(SelectionChange.Boxed);
             });
 
             _cardsHost.Add(card);
             return view;
+        }
+
+        /// <summary>Write the sweep's selection to the director: it replaces the selection, Shift's base included.</summary>
+        void ApplyRosterSweep(SelectionChange reason) =>
+            _directors?.Selection.PickMany(_rosterSweep.Selection, additive: false, reason);
+
+        /// <summary>
+        /// The left button came up after a press on a card (design 33 §20). A plain click — no
+        /// other card covered, no Shift — is the roster's old click and takes the slice and the
+        /// camera to her; a sweep, or a Shift-click, has already said everything it has to.
+        /// </summary>
+        void FinishRosterSweep()
+        {
+            PawnId pressed = _rosterSweep.Pressed;
+            bool additive = _rosterSweep.Additive;
+            if (_rosterSweep.Release() != RosterSweepEnd.Clicked || additive) return;
+            var world = _boot?.World;
+            if (world != null && pressed.IsValid) _directors?.ChooseColonist(pressed, world.Views.Current);
         }
 
         void StartDragDrop(VisualElement sourceCard, PawnId pawnId)

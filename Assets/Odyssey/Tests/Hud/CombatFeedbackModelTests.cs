@@ -51,6 +51,33 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// A struck building's bar (design 33 §13i, §13k): owed exactly where the simulation
+        /// publishes a row — a building nobody has struck has none — clamped to its pool, and never
+        /// without a pool. A demolition is no floating word: the building going is the telling.
+        /// </summary>
+        [Test]
+        public void ABarIsOwedOverAStruckBuildingAndNoOther()
+        {
+            WorldSnapshot frame = Board();
+            int struck = frame.Size.Index(new CellRef(2, 2, 1));
+            int falling = frame.Size.Index(new CellRef(3, 2, 1));
+            int whole = frame.Size.Index(new CellRef(4, 2, 1));
+            frame.AddEdificeDamage(new EdificeDamageView(struck, EdificeHandle.Wall, 212_000, 300_000));
+            frame.AddEdificeDamage(new EdificeDamageView(falling, EdificeHandle.Door, -3_000, 160_000));
+
+            Assert.That(CombatFeedbackModel.BuildingHealthBar(frame, struck, out int hp, out int max), Is.True);
+            Assert.That(hp, Is.EqualTo(212_000));
+            Assert.That(max, Is.EqualTo(300_000));
+            Assert.That(CombatFeedbackModel.BuildingHealthBar(frame, falling, out hp, out _), Is.True);
+            Assert.That(hp, Is.Zero, "a bar is a fill, not a signed number");
+            Assert.That(CombatFeedbackModel.BuildingHealthBar(frame, whole, out _, out _), Is.False, "a whole building");
+
+            var demolished = new CombatEventView(1, 5, CombatEventKind.Demolished, Whole, PawnId.None,
+                new CellRef(2, 2, 1), EdificeHandle.Wall);
+            Assert.That(CombatFeedbackModel.FloatingText(demolished), Is.Empty);
+        }
+
+        /// <summary>
         /// The owner's rule is a bar over the hurt and the drafted and nobody else (design 33 §1);
         /// the simulation says which by publishing hit points, so the whole colonist beside the
         /// hurt one is the control.

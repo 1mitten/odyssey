@@ -1,6 +1,6 @@
 # 42 — Walls down: seeing inside a building
 
-**Status: designed and built 2026-09-24; played once the same day and revised (§3a, §10).** Branch `claude/walls-down`, worktree
+**Status: designed and built 2026-09-24; played, revised (§3a, §10) and played again the same day — owner: *"excellent"*. Ready to merge (PR #197).** Branch `claude/walls-down`, worktree
 `D:\code\odyssey-walls-down`. Research: `docs/research/b-walls-down-cutaway.md`.
 **Read first:** `06-rendering-and-camera.md` §3 (the slice), §3a (the depth decides the treatment),
 §3c (what can be clicked is what is drawn solid); ADR 0006 (the six above-modes).
