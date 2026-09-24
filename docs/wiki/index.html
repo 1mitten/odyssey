@@ -153,7 +153,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>45</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
-<li><a href="#world">World and interface<b>110</b></a></li>
+<li><a href="#world">World and interface<b>124</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
 </ul></nav>
 <main>
@@ -162,9 +162,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>811</b><i>named entries</i></div>
+<div class="stat"><b>825</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>539</b><i>no art yet</i></div>
+<div class="stat m"><b>553</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -2738,7 +2738,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">110 entries</em></h2>
+<h2>World and interface <em class="count">124 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -3187,12 +3187,6 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M1</div>
 </div>
-<div class="row gap" id="ui.settings.grass" data-hay="grass tufts ui.settings.grass tufts strewn over the meadow. decoration, in no cell and no save " data-gap="1">
-<div class="nm">Grass tufts<span class="k">ui.settings.grass</span></div>
-<div class="dsc">Tufts strewn over the meadow. Decoration, in no cell and no save</div>
-<div class="art"><span class="pill no">no art</span></div>
-<div class="ms">M1</div>
-</div>
 <div class="row gap" id="ui.settings.relief" data-hay="ground relief ui.settings.relief the roll of the drawn ground. the cells underneath stay flat " data-gap="1">
 <div class="nm">Ground relief<span class="k">ui.settings.relief</span></div>
 <div class="dsc">The roll of the drawn ground. The cells underneath stay flat</div>
@@ -3295,6 +3289,30 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.settings.quality" data-hay="quality ui.settings.quality set every lever on this page at once, from low to ultra. custom once any is moved by hand " data-gap="1">
+<div class="nm">Quality<span class="k">ui.settings.quality</span></div>
+<div class="dsc">Set every lever on this page at once, from Low to Ultra. Custom once any is moved by hand</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MF</div>
+</div>
+<div class="row gap" id="ui.settings.vegetation" data-hay="grass ui.settings.vegetation how thick the grass is strewn, from bare ground to every cell. decoration, in no cell and no save " data-gap="1">
+<div class="nm">Grass<span class="k">ui.settings.vegetation</span></div>
+<div class="dsc">How thick the grass is strewn, from bare ground to every cell. Decoration, in no cell and no save</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MF</div>
+</div>
+<div class="row gap" id="ui.settings.grassdist" data-hay="grass distance ui.settings.grassdist how far from the camera grass is still drawn. past it the ground carries the field " data-gap="1">
+<div class="nm">Grass distance<span class="k">ui.settings.grassdist</span></div>
+<div class="dsc">How far from the camera grass is still drawn. Past it the ground carries the field</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MF</div>
+</div>
+<div class="row gap" id="ui.settings.foliageshadows" data-hay="grass shadows ui.settings.foliageshadows whether grass casts shadows. off, as it has always shipped: a shadow centimetres long on grass the same colour " data-gap="1">
+<div class="nm">Grass shadows<span class="k">ui.settings.foliageshadows</span></div>
+<div class="dsc">Whether grass casts shadows. Off, as it has always shipped: a shadow centimetres long on grass the same colour</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">MF</div>
+</div>
 <div class="row gap" id="ui.settings.resolution" data-hay="resolution ui.settings.resolution how many pixels the game is drawn at. only a built game can change it " data-gap="1">
 <div class="nm">Resolution<span class="k">ui.settings.resolution</span></div>
 <div class="dsc">How many pixels the game is drawn at. Only a built game can change it</div>
@@ -3346,6 +3364,72 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.settings.volume.alerts" data-hay="alerts volume ui.settings.volume.alerts what asks for attention " data-gap="1">
 <div class="nm">Alerts volume<span class="k">ui.settings.volume.alerts</span></div>
 <div class="dsc">What asks for attention</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.scale" data-hay="scale ui.settings.group.scale how large the interface is drawn " data-gap="1">
+<div class="nm">Scale<span class="k">ui.settings.group.scale</span></div>
+<div class="dsc">How large the interface is drawn</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.camera" data-hay="camera ui.settings.group.camera how the camera moves, and the keys that move it " data-gap="1">
+<div class="nm">Camera<span class="k">ui.settings.group.camera</span></div>
+<div class="dsc">How the camera moves, and the keys that move it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.palette" data-hay="build palette ui.settings.group.palette the shape of the build palette " data-gap="1">
+<div class="nm">Build palette<span class="k">ui.settings.group.palette</span></div>
+<div class="dsc">The shape of the Build palette</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.performance" data-hay="performance ui.settings.group.performance what the frame costs to draw " data-gap="1">
+<div class="nm">Performance<span class="k">ui.settings.group.performance</span></div>
+<div class="dsc">What the frame costs to draw</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.volume" data-hay="volume ui.settings.group.volume the loudness of the game and its music and ambience " data-gap="1">
+<div class="nm">Volume<span class="k">ui.settings.group.volume</span></div>
+<div class="dsc">The loudness of the game and its music and ambience</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.cues" data-hay="cues ui.settings.group.cues the loudness of work and of what asks for attention " data-gap="1">
+<div class="nm">Cues<span class="k">ui.settings.group.cues</span></div>
+<div class="dsc">The loudness of work and of what asks for attention</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.saving" data-hay="saving ui.settings.group.saving when the colony is written to disk without being asked " data-gap="1">
+<div class="nm">Saving<span class="k">ui.settings.group.saving</span></div>
+<div class="dsc">When the colony is written to disk without being asked</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.game" data-hay="game ui.settings.group.game saving, loading and leaving, pinned under the tabs " data-gap="1">
+<div class="nm">Game<span class="k">ui.settings.group.game</span></div>
+<div class="dsc">Saving, loading and leaving, pinned under the tabs</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.view" data-hay="view ui.settings.group.view the keys that move the slice and frame the map " data-gap="1">
+<div class="nm">View<span class="k">ui.settings.group.view</span></div>
+<div class="dsc">The keys that move the slice and frame the map</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.tools" data-hay="tools ui.settings.group.tools the keys that arm an order " data-gap="1">
+<div class="nm">Tools<span class="k">ui.settings.group.tools</span></div>
+<div class="dsc">The keys that arm an order</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.time" data-hay="time ui.settings.group.time the keys that pause the game and set its speed " data-gap="1">
+<div class="nm">Time<span class="k">ui.settings.group.time</span></div>
+<div class="dsc">The keys that pause the game and set its speed</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -3626,7 +3710,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 811, "gaps": 539};</script>
+<script>window.WIKI={"total": 825, "gaps": 553};</script>
 <script>
 (function(){
   var D = window.WIKI;

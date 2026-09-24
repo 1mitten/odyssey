@@ -161,3 +161,49 @@ playtest item by construction, not an oversight.
 - No refresh-rate choice. It is dropped with the duplicate resolutions and would need its own row.
 - The Unity tier has not run against this change; there is no Unity in the container this was
   written in.
+
+## 10. Presets and the grass ladders (2026-09-24, Meadow M6)
+
+`docs/design/38-meadow-overhaul.md` §9 and §15 hold the reasoning; this is what the tab gained.
+
+- **Quality** — a row across the top of the tab: Low, Medium, High, Ultra, and **Custom**, lit
+  whenever the levers match no preset. `SettingsDirector.Preset` is **read off the levers every
+  time and never stored**, so it cannot disagree with them; `ApplyPreset` puts each lever it owns
+  through that lever's own setter, so a preset is written down and announced exactly as a hand
+  press would be. A preset owns shadows, the surround, grass shadows, shadow distance, render
+  scale, anti-aliasing, grass and grass distance. It does not own VSync, the frame cap, the display
+  mode, the resolution, relief, see-through or the cut-away — the screen's business, or how a player
+  likes to look at the board.
+- **Grass** (`GraphicsLadder.VegetationDensity`) — Off / Sparse 30 / Meadow 60 / Lush 150 / Full
+  300 tufts per hundred grass cells, `ChunkRenderer.ScatterDensity`'s own number. **It replaces the
+  grass-tufts toggle**: two controls for how grassy the board is could disagree, and the toggle's
+  Off is this ladder's bottom rung. Stored under `ui.settings.vegetation`, not the toggle's key,
+  because a stored `1` read as a density would snap to bare ground; a stored "off" under the old
+  key is carried over once (`SettingsDirector.LegacyGrassKey`). Re-meshes through the meshing
+  budget.
+- **Grass distance** (`GraphicsLadder.GrassDistance`) — 60 / 120 / 250 m / All,
+  `ChunkRenderer.FoliageDrawDistance`. Free to move.
+- **Grass shadows** (`GraphicsOption.FoliageShadows`) — a toggle, off by default, as grass has
+  always shipped.
+
+| | Low | Medium | High | Ultra |
+|---|---|---|---|---|
+| Shadows | on | on | on | on |
+| Shadow distance | 30 m | 60 m | 120 m | 120 m |
+| Render scale | 70% | 85% | 100% | 100% |
+| Anti-aliasing | off | off | off | off |
+| Surrounding land | off | on | on | on |
+| Grass | Sparse 30 | Meadow 60 | Meadow 60 | Full 300 |
+| Grass distance | 60 m | 120 m | All | All |
+| Grass shadows | off | off | off | off |
+
+**High is exactly what ships**, so a machine that has never been told reads as High and choosing it
+changes nothing (`QualityPresetTests.AFreshMachineIsOnHighBecauseHighIsWhatTheGameShipsWith`).
+
+**A preference now reaches a new session.** Until this unit nothing put stored graphics preferences
+on a session's renderer: `SettingsPresenter` attaches at the start screen, where there is no
+renderer, so every `Apply` returned early and the session's renderer was built from the
+bootstrap's fields. A stored "shadows off" was lost at every new game. `ApplyRendererLevers` is the
+one mapping, called by the root as it builds a renderer (before the board is meshed, so it arrives
+as chosen) whenever a store is attached — a test harness has none and keeps its fields.
+`docs/bug-patterns.md` has the register entry.

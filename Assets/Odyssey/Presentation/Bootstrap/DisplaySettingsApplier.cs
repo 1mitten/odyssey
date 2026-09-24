@@ -65,6 +65,14 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         bool _live;
 
+        /// <summary>
+        /// How many shadow cascades a session draws with, written on the runtime copy; zero keeps
+        /// the asset's own. Two since 2026-09-24, the owner's call to try (design 38 §18f): the
+        /// player benchmark found shadows the largest GPU term, and four cascades over a 40 m
+        /// shadow distance re-draw the casters four times.
+        /// </summary>
+        public static int ShadowCascades { get; set; } = 2;
+
         public DisplaySettingsApplier(SettingsDirector director)
         {
             _director = director;
@@ -86,6 +94,9 @@ namespace Odyssey.Presentation.Bootstrap
                 // Not saved with the scene, not shown in the hierarchy, and — the point — not the
                 // asset on disk.
                 _copy.hideFlags = HideFlags.HideAndDontSave;
+                // Two cascades rather than the asset's four (design 38 §18f), on the copy so the
+                // committed asset keeps its own number until the owner has judged the seams.
+                if (ShadowCascades > 0) _copy.shadowCascadeCount = ShadowCascades;
                 Install(_copy);
             }
 

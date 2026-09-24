@@ -162,6 +162,72 @@ namespace Odyssey.Presentation.Rendering
             return gone.Count;
         }
 
+        readonly Dictionary<(Material, uint, int, int), Material> _treeMaterials =
+            new Dictionary<(Material, uint, int, int), Material>();
+
+        static readonly int FadeId = Shader.PropertyToID("_Fade");
+        static readonly int GhostId = Shader.PropertyToID("_Ghost");
+        static readonly int SrcBlendId = Shader.PropertyToID("_SrcBlend");
+        static readonly int DstBlendId = Shader.PropertyToID("_DstBlend");
+        static readonly int ZWriteId = Shader.PropertyToID("_ZWrite");
+
+        /// <summary>The LightMode of <c>Odyssey/Foliage</c>'s ghost depth pass.</summary>
+        public const string GhostPass = "SRPDefaultUnlit";
+        static readonly int StandVarietyId = Shader.PropertyToID("_StandVariety");
+
+        /// <summary>
+        /// A Meadow tree or bush drawn by <c>Odyssey/Foliage</c> (the look pass, design 38 §17):
+        /// the art's textures and its own colour scheme, the tint the renderer resolved (the slice's
+        /// shade), drawn late in the foliage queue like the grass. <b>Not in the opaque queue,
+        /// measured by looking:</b> there the outline pass inked every cut-out leaf and a crown read
+        /// as a black scribble — the grass's own reason for being late (<see cref="FoliageQueue"/>).
+        /// It still casts its shadow, which the queue does not decide.
+        /// Null when our shader is not available, and the caller falls back to the art's own.
+        /// </summary>
+        /// <param name="fade">1 solid; below 1 the dithered see-through a crown takes when it stands
+        /// between the camera and a colonist (design 38 §17c). Trunk and leaves share the material,
+        /// so a tree fades as one thing.</param>
+        /// <param name="variety">How strongly the stand colours — greens, golds, oranges and the odd
+        /// red, grouped in stands — recolour the art's leaves: 1 a tree, less for a bush, 0 none.</param>
+        public Material? GetTree(Material art, Color tint, float fade = 1f, float variety = 0f)
+        {
+            if (FoliageBase == null || !OwnFoliageShader) return null;
+            uint key = Pack(new Color(tint.r, tint.g, tint.b, 1f));
+            int fadeKey = Mathf.RoundToInt(Mathf.Clamp01(fade) * 100f);
+            int varietyKey = Mathf.RoundToInt(Mathf.Clamp01(variety) * 100f);
+            if (_treeMaterials.TryGetValue((art, key, fadeKey, varietyKey), out Material cached)) return cached;
+
+            var material = new Material(FoliageBase)
+            {
+                name = art.name + "/tree#" + key.ToString("x8"),
+                enableInstancing = true,
+                renderQueue = FoliageQueue,
+            };
+            SetColour(material, new Color(tint.r, tint.g, tint.b, 1f));
+            FoliageLook.DressTree(material, art);
+            material.SetFloat(FadeId, fadeKey / 100f);
+            material.SetFloat(StandVarietyId, varietyKey / 100f);
+            if (fadeKey < 100)
+            {
+                // A ghost: blended at the fade over its own depth, so only the front-most card
+                // shows, and drawn with the transparents so it lies over what is behind it.
+                material.name += "/ghost";
+                material.SetFloat(GhostId, 1f);
+                material.SetFloat(SrcBlendId, (float)BlendMode.SrcAlpha);
+                material.SetFloat(DstBlendId, (float)BlendMode.OneMinusSrcAlpha);
+                material.SetFloat(ZWriteId, 0f);
+                material.SetShaderPassEnabled(GhostPass, true);
+                material.renderQueue = (int)RenderQueue.Transparent;
+            }
+            else
+            {
+                material.SetShaderPassEnabled(GhostPass, false);
+            }
+            _treeMaterials.Add((art, key, fadeKey, varietyKey), material);
+            _owned.Add(material);
+            return material;
+        }
+
         /// <summary>
         /// Moves foliage to another queue, including every foliage clone this cache has already
         /// built — <see cref="FoliageQueue"/> alone is read only when a clone is made, so setting
@@ -356,6 +422,9 @@ namespace Odyssey.Presentation.Rendering
                     return null;
                 }
                 _foliageBase = new Material(shader) { name = "Odyssey/Foliage", enableInstancing = true };
+                // The ghost's depth pass is for a ghost only (design 38 §17c); every clone of this
+                // material inherits it switched off, and GetTree switches it on for the fade.
+                _foliageBase.SetShaderPassEnabled(GhostPass, false);
                 _owned.Add(_foliageBase);
                 return _foliageBase;
             }

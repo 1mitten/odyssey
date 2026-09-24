@@ -1320,6 +1320,34 @@ namespace Odyssey.Tests.PlayMode
                         $"moved {noise * 100f:0.00}%: it is not only skipping submissions the " +
                         "camera could not see. The blind control moved " +
                         $"{blinded * 100f:0.00}%, so the instrument can certainly see a real change");
+
+                    // **And again under a low sun** (design 38 §18). The shadow margin sweeps
+                    // towards the sun, and a sun near the horizon throws the longest shadows the
+                    // day has, from the furthest casters — the case a sweep that was too short
+                    // would get wrong. Evening, about nine degrees up, held through the root's
+                    // seam because the root re-applies the hour every frame (P18).
+                    boot.DaylightHourOverride = 19.5f;
+                    for (int i = 0; i < 60; i++) yield return null;
+                    boot.Renderer!.CullToFrustum = false;
+                    Color32[] lowOff = null!, lowAgain = null!, lowOn = null!;
+                    yield return Shoot("low-off", boot, target, p => lowOff = p);
+                    int lowShellChunks = boot.Renderer!.ChunksDrawn;
+                    yield return Shoot("low-again", boot, target, p => lowAgain = p);
+                    boot.Renderer!.CullToFrustum = true;
+                    yield return Shoot("low-on", boot, target, p => lowOn = p);
+                    int lowSweptChunks = boot.Renderer!.ChunksDrawn;
+                    boot.DaylightHourOverride = null;
+
+                    float lowNoise = Difference(lowOff, lowAgain);
+                    float lowCulled = Difference(lowOff, lowOn);
+                    Debug.Log($"[FrameTime] cull proof, low sun (19.5 h): the same shot twice moved " +
+                              $"{lowNoise * 100f:0.00}%, culling moved {lowCulled * 100f:0.00}%; " +
+                              $"{lowShellChunks} chunks unculled, {lowSweptChunks} culled");
+                    Assert.That(lowNoise, Is.LessThan(0.02f), "the low-sun shots have no floor to measure against");
+                    Assert.That(lowCulled, Is.LessThanOrEqualTo(lowNoise + 0.002f),
+                        $"under a low sun culling moved {lowCulled * 100f:0.00}% of pixels against a floor of " +
+                        $"{lowNoise * 100f:0.00}%: the sun-ward sweep is dropping a caster whose long shadow " +
+                        "reaches the view");
                 }
                 finally
                 {
@@ -2003,6 +2031,13 @@ namespace Odyssey.Tests.PlayMode
 
                 ChunkRenderer renderer = boot.Renderer!;
                 ModuleLibrary library = boot.Model!.Library;
+                // Trees choose their level by a switch of their own since the look pass (design
+                // 38 §17); this arm prices the general one, so the trees' is off for its control.
+
+                renderer.TreeLevels = false;
+                // And the dressing's own levels (design 38 §18c), on by default since, so that "off"
+                // is every module at its finest and the control means what it says.
+                renderer.DressingLevels = false;
                 int withLevels = 0;
                 for (int i = 0; i < library.Count; i++)
                     if (library[i].DrawsByLevel) withLevels++;
@@ -2043,10 +2078,1470 @@ namespace Odyssey.Tests.PlayMode
             }
             finally
             {
-                if (boot.Renderer != null) boot.Renderer.UseLods = false;
+                if (boot.Renderer != null)
+                {
+                    boot.Renderer.UseLods = false; boot.Renderer.TreeLevels = true; boot.Renderer.DressingLevels = true;
+                }
                 if (cam != null) cam.targetTexture = previousTarget;
                 if (fourK != null) fourK.Release();
                 UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// What the Meadow look costs (the look pass, design 38 §17): the played meadow with its
+        /// Meadow trees, at 3840 x 2160, on Standard and Huge, with the grass ladder at Off (no
+        /// tufts, no dressing), Meadow (the shipped rung, High) and Full (Ultra). One world per
+        /// board, three readings each, only the differences quoted.
+        ///
+        /// <para>It asserts that the controls applied — the dressing resolved to art, the instance
+        /// count rose with the rung, the camera drew at 4K, and nothing was timed mid-re-mesh —
+        /// and ignores itself where no dressing art resolved, which is a clone without the packs.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheDressingAgainstTheFrame()
+        {
+            var lines = new List<string>();
+            foreach ((string board, int side) in new[] { ("standard", 120), ("huge", 240) })
+            {
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                    out OdysseyBootstrap boot, side, side, 16);
+                UnityEngine.Camera? cam = null;
+                RenderTexture? previousTarget = null;
+                RenderTexture? fourK = null;
+                try
+                {
+                    yield return TimeFrames($"dressing/{board}/warm", boot, WarmupFrames, _ => { });
+                    ChunkRenderer renderer = boot.Renderer!;
+                    if (renderer.DressingFamiliesWithArt == 0)
+                        Assert.Ignore("no Meadow dressing resolved to art on this machine, so there is none to price");
+
+                    cam = boot.cameraRig!.Camera;
+                    previousTarget = cam.targetTexture;
+                    fourK = new RenderTexture(3840, 2160, 24) { name = "dressing-4k" };
+                    cam.targetTexture = fourK;
+
+                    int shipped = renderer.ScatterDensity;
+                    int previousInstances = -1;
+                    foreach ((string rung, int density) in new[] { ("off", 0), ("meadow", shipped), ("full", GroundScatter.MaxPerCell * 100) })
+                    {
+                        if (renderer.ScatterDensity != density)
+                        {
+                            renderer.ScatterDensity = density;
+                            boot.Model!.Remesh();
+                        }
+                        float ms = 0f;
+                        yield return TimeFrames($"dressing/{board}/{rung}", boot, WarmupFrames, m => ms = m);
+                        Assert.That(renderer.ChunksMeshDeferred, Is.Zero, $"{board} {rung} was timed mid-re-mesh");
+                        Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
+                        Assert.That(renderer.InstancesDrawn, Is.GreaterThan(previousInstances),
+                            $"{board} {rung} drew no more than the rung below it, so the dressing never changed");
+                        previousInstances = renderer.InstancesDrawn;
+                        lines.Add($"{board} {rung}: frame {ms:0.00} ms, {renderer.DrawCalls} calls, " +
+                                  $"{renderer.InstancesDrawn} instances, {renderer.InstancesAtCoarserLevels} at a coarser level");
+
+                        // Where the Meadow rung's cost is, on the Standard board: the trees' level
+                        // of detail and the shadow casters, each taken away in turn.
+                        if (board == "standard" && rung == "meadow")
+                        {
+                            renderer.TreeShadowProxy = false;
+                            float fullShadows = 0f;
+                            yield return TimeFrames("dressing/standard/meadow, no shadow proxy", boot, WarmupFrames, m => fullShadows = m);
+                            lines.Add($"standard meadow casting from the finest level: frame {fullShadows:0.00} ms, {renderer.DrawCalls} calls");
+                            renderer.TreeShadowProxy = true;
+
+                            renderer.DressingCastsShadows = true;
+                            float bushShadows = 0f;
+                            yield return TimeFrames("dressing/standard/meadow, bushes casting", boot, WarmupFrames, m => bushShadows = m);
+                            lines.Add($"standard meadow with the bushes casting: frame {bushShadows:0.00} ms, {renderer.DrawCalls} calls");
+                            renderer.DressingCastsShadows = false;
+
+                            bool casts = renderer.CastShadows;
+                            renderer.CastShadows = false;
+                            float noShadows = 0f;
+                            yield return TimeFrames("dressing/standard/meadow, no casters", boot, WarmupFrames, m => noShadows = m);
+                            lines.Add($"standard meadow with no shadow casters: frame {noShadows:0.00} ms, {renderer.DrawCalls} calls");
+                            renderer.CastShadows = casts;
+                        }
+                    }
+                }
+                finally
+                {
+                    if (cam != null) cam.targetTexture = previousTarget;
+                    if (fourK != null) fourK.Release();
+                    UnityEngine.Object.Destroy(root);
+                }
+                yield return null;
+            }
+            Debug.Log($"[FrameTime] dressing at 3840x2160 ({SystemInfo.graphicsDeviceName}): " + string.Join("; ", lines));
+        }
+
+        /// <summary>
+        /// What the painted Meadow ground and the demo's grade cost at the owner's resolution
+        /// (<c>docs/design/38-meadow-overhaul.md</c> §17, the look pass — ground and light).
+        ///
+        /// <para>Two worlds, because the ground material is chosen when a session's module library
+        /// resolves the grass terrain: the stock tiled texture, then <c>Odyssey/MeadowGround</c>.
+        /// On the second, the Play scene's golden-hour volume and then the Meadow demo's own. Each
+        /// at 640 x 480 and into a 3840 x 2160 target. Ground is most of the pixels at the play
+        /// camera, so this is the arm that says whether five texture samples and four noise fields
+        /// a pixel are affordable; only differences inside the run are quoted (§6c).</para>
+        ///
+        /// <para>Ignored where the look did not resolve — a clone without the packs, the runner.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheMeadowGroundAgainstTheFrame()
+        {
+            if (MeadowLook.Loaded == null || !MeadowLook.Loaded.HasGround)
+                Assert.Ignore("the Meadow look's textures did not resolve on this machine");
+
+            bool groundWas = MeadowLook.GroundEnabled;
+            var lines = new List<string>();
+            try
+            {
+                foreach (bool painted in new[] { false, true })
+                {
+                    MeadowLook.GroundEnabled = painted;
+                    GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                        out OdysseyBootstrap boot);
+                    UnityEngine.Camera? cam = null;
+                    RenderTexture? previousTarget = null;
+                    RenderTexture? fourK = null;
+                    Volume? grade = null;
+                    try
+                    {
+                        yield return TimeFrames($"meadow-ground/{(painted ? "painted" : "stock")}/warm", boot,
+                            WarmupFrames, _ => { });
+                        Assert.That(MeadowLook.GroundActive, Is.EqualTo(painted),
+                            "the ground switch did not reach the session, so the two arms are one ground");
+
+#if UNITY_EDITOR
+                        var golden = UnityEditor.AssetDatabase.LoadAssetAtPath<VolumeProfile>(
+                            "Assets/Settings/OdysseyGoldenHour.asset");
+                        if (golden != null)
+                        {
+                            grade = new GameObject("Grade").AddComponent<Volume>();
+                            grade.transform.SetParent(root.transform, false);
+                            grade.isGlobal = true;
+                            grade.sharedProfile = golden;
+                        }
+#endif
+                        cam = boot.cameraRig!.Camera;
+                        previousTarget = cam.targetTexture;
+                        fourK = new RenderTexture(3840, 2160, 24) { name = "meadow-ground-4k" };
+
+                        var grades = new List<(string Name, VolumeProfile? Profile)> { ("golden", grade?.sharedProfile) };
+                        if (painted && grade != null && MeadowLook.Loaded!.grade != null)
+                            grades.Add(("meadow grade", MeadowLook.Loaded!.grade));
+
+                        foreach (var g in grades)
+                        {
+                            if (grade != null && g.Profile != null) grade.sharedProfile = g.Profile;
+                            foreach (bool big in new[] { false, true })
+                            {
+                                cam.targetTexture = big ? fourK : previousTarget;
+                                string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                                float ms = 0f;
+                                yield return TimeFrames(
+                                    $"meadow-ground/{(painted ? "painted" : "stock")}/{g.Name}/{resolution}",
+                                    boot, WarmupFrames, m => ms = m);
+                                lines.Add($"{resolution} {(painted ? "painted" : "stock")} ground, {g.Name}: " +
+                                          $"frame {ms:0.00} ms, {boot.Renderer?.DrawCalls ?? -1} calls");
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        if (cam != null) cam.targetTexture = previousTarget;
+                        if (fourK != null) fourK.Release();
+                        UnityEngine.Object.Destroy(root);
+                    }
+                    yield return null;
+                }
+            }
+            finally
+            {
+                MeadowLook.GroundEnabled = groundWas;
+            }
+
+            Debug.Log($"[FrameTime] meadow ground ({SystemInfo.graphicsDeviceName}): " + string.Join("; ", lines));
+        }
+
+        /// <summary>
+        /// Where the look pass's frame goes: research for d-19 (the owner, 2026-09-24: "the compute
+        /// is up to 5 ms", against ~1.5 before the look pass). Explicit: a measurement, not a test.
+        ///
+        /// <para>One played meadow (Standard), five readings at the batch view and five with the
+        /// camera drawing into 3840 x 2160: the look as shipped; the same with
+        /// <c>SubmitToGpu</c> off, so the renderer does all of its own bookkeeping and hands Unity
+        /// nothing — the difference is what Unity spends drawing the submissions; the dressing and
+        /// tufts off (<c>ScatterDensity</c> 0, the nearest in-run stand-in for the board before the
+        /// pass); that with <c>SubmitToGpu</c> off; and the look with no shadow casters. Plus a
+        /// census of the meshed buckets by kind, which is what a draw call is here.</para>
+        /// </summary>
+        [UnityTest, Explicit("a measurement for docs/research/d-19, not a test")]
+        public IEnumerator TheLookAgainstTheSubmission()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            try
+            {
+                yield return TimeFrames("submission/warm", boot, WarmupFrames, _ => { });
+                ChunkRenderer renderer = boot.Renderer!;
+                int shipped = renderer.ScatterDensity;
+                Debug.Log("[FrameTime] submission census: " + Census(renderer));
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "submission-4k" };
+
+                // Every arm but the last two draws the tufts the chunk way, so the rows stay
+                // comparable with d-19's; the last two are design 38 §18's tie-breaker.
+                var arms = new (string Name, int Density, bool Submit, bool Shadows, float ShadowMetres, bool Indirect)[]
+                {
+                    ("look", shipped, true, true, 0f, false),
+                    ("look, nothing handed to Unity", shipped, false, true, 0f, false),
+                    ("no dressing or tufts", 0, true, true, 0f, false),
+                    ("no dressing or tufts, nothing handed to Unity", 0, false, true, 0f, false),
+                    ("look, no shadow casters", shipped, true, false, 0f, false),
+                    ("look, shadow margin as a shell", shipped, true, true, -1f, false),
+                    // The High preset's shadow distance, on a runtime copy of the pipeline asset so
+                    // the committed one is never dirtied (DisplaySettingsApplier's rule).
+                    ("look, 120 m shadows", shipped, true, true, 120f, false),
+                    ("no dressing or tufts, 120 m shadows", 0, true, true, 120f, false),
+                    ("look, tufts indirect", shipped, true, true, 0f, true),
+                    ("look again, tufts chunk by chunk", shipped, true, true, 0f, false),
+                };
+                var pipeline = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+                RenderPipelineAsset? qualityWas = QualitySettings.renderPipeline;
+                RenderPipelineAsset? defaultWas = GraphicsSettings.defaultRenderPipeline;
+                float shadowWas = QualitySettings.shadowDistance;
+                UniversalRenderPipelineAsset? copy = pipeline != null ? UnityEngine.Object.Instantiate(pipeline) : null;
+                var lines = new List<string>();
+                try
+                {
+                foreach (bool big in new[] { false, true })
+                {
+                    cam.targetTexture = big ? fourK : previousTarget;
+                    string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                    foreach (var arm in arms)
+                    {
+                        if (renderer.ScatterDensity != arm.Density)
+                        {
+                            renderer.ScatterDensity = arm.Density;
+                            boot.Model!.Remesh();
+                        }
+                        renderer.SubmitToGpu = arm.Submit;
+                        renderer.CastShadows = arm.Shadows;
+                        renderer.UseIndirectScenery = arm.Indirect;
+                        // -1 marks the arm that measures the old margin: a shell in every direction.
+                        renderer.SweepShadowMargin = arm.ShadowMetres >= 0f;
+                        if (copy != null)
+                        {
+                            float metres = arm.ShadowMetres > 0f ? arm.ShadowMetres : pipeline!.shadowDistance;
+                            copy.shadowDistance = metres;
+                            QualitySettings.shadowDistance = metres;
+                            if (QualitySettings.renderPipeline != null) QualitySettings.renderPipeline = copy;
+                            else GraphicsSettings.defaultRenderPipeline = copy;
+                        }
+                        float ms = 0f;
+                        double[] split = Array.Empty<double>();
+                        yield return TimeFrames($"submission/{resolution}/{arm.Name}", boot, WarmupFrames,
+                            m => ms = m, p => split = p);
+                        Assert.That(renderer.ChunksMeshDeferred, Is.Zero, $"{arm.Name} was timed mid-re-mesh");
+                        lines.Add($"{resolution} {arm.Name}: frame {ms:0.00} ms, submit {boot.SubmitMs:0.00}, " +
+                                  $"World {Section(split, OdysseyBootstrap.FrameSection.World):0.000}, " +
+                                  $"Surround {Section(split, OdysseyBootstrap.FrameSection.Surround):0.000}, " +
+                                  $"Figures {Section(split, OdysseyBootstrap.FrameSection.Figures):0.000}, " +
+                                  $"{renderer.DrawCalls} calls ({renderer.IndirectDrawCalls} indirect), " +
+                                  $"{renderer.InstancesDrawn} instances, {renderer.ChunksDrawn} chunks");
+                    }
+                }
+                }
+                finally
+                {
+                    QualitySettings.renderPipeline = qualityWas;
+                    GraphicsSettings.defaultRenderPipeline = defaultWas;
+                    QualitySettings.shadowDistance = shadowWas;
+                    if (copy != null) UnityEngine.Object.Destroy(copy);
+                }
+                Debug.Log($"[FrameTime] submission split (pipeline shadow distance {pipeline?.shadowDistance ?? -1f} m, " +
+                          $"{pipeline?.shadowCascadeCount ?? -1} cascades): " + string.Join("; ", lines));
+            }
+            finally
+            {
+                if (boot.Renderer != null)
+                {
+                    boot.Renderer.SubmitToGpu = true;
+                    boot.Renderer.CastShadows = true;
+                    boot.Renderer.SweepShadowMargin = true;
+                    boot.Renderer.UseIndirectScenery = false;
+                }
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// The scenery drawn from GPU buffers looks exactly as the scenery drawn chunk by chunk
+        /// (design 38 §22): tufts, tall-grass stands, flowers, ground cover and bushes, with their
+        /// levels of detail and the distance thinning. Stilled and settled, at three framings — the
+        /// start, 70 m and 140 m, where the far field thins and simplifies — and at noon and in the
+        /// evening. At each, the chunk path is shot until two shots agree (the floor), then the
+        /// indirect path; and once, the scenery taken away altogether as the positive control, so a
+        /// pass that drew nothing could not read as "no change".
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheIndirectSceneryDoesNotChangeThePicture()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            var target = new RenderTexture(480, 270, 24) { name = "indirect-proof" };
+            float previousScale = Time.timeScale;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            bool indirectWas = true;
+            try
+            {
+                yield return null;
+                indirectWas = boot.Renderer!.UseIndirectScenery;
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+                // The wind is phased off the tick, so a world still ticking waves every blade
+                // between two shots and the floor is noise everywhere (4.9% on the first attempt).
+                Assert.That(boot.World!.GameSpeed, Is.Zero, "the world would not pause, so the shots cannot be still");
+                Time.timeScale = 0f;
+                ChunkRenderer renderer = boot.Renderer!;
+
+                renderer.UseIndirectScenery = true;
+                yield return null;
+                if (renderer.IndirectDrawCalls == 0)
+                    Assert.Ignore("the indirect path did not draw on this machine (no compute, no scenery art, " +
+                                  "or no foliage shader), so there is nothing to compare");
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                cam.targetTexture = target;
+                WorldSnapshot frame = boot.World!.Views.Current;
+                CellRef at = frame.Pawns.Length > 0 ? frame.Pawns[0].Cell : default;
+
+                var lines = new List<string>();
+                float worstExcess = float.NegativeInfinity;
+                string worst = string.Empty;
+                Color32[] firstChunk = null!;
+                foreach ((string Name, float Distance) framing in new[] { ("start", 0f), ("wide", 70f), ("far", 140f) })
+                foreach (float hour in new[] { 12f, 19.5f })
+                {
+                    boot.DaylightHourOverride = hour;
+                    if (framing.Distance > 0f) boot.cameraRig!.FocusOn(at, framing.Distance);
+                    // Settled means the board has finished meshing in and the camera has arrived,
+                    // not a fixed count of frames.
+                    for (int i = 0, quiet = 0; i < 1500 && (i < 150 || quiet < 30); i++)
+                    {
+                        yield return null;
+                        quiet = renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
+                    }
+
+                    long tickBefore = boot.World!.CurrentTick;
+                    renderer.UseIndirectScenery = false;
+                    Color32[] chunk = null!, again = null!, indirect = null!;
+                    int chunkCalls = 0;
+                    // Still means two shots agree, not a count of frames (the full tier read a
+                    // 3.8-6.5% floor after a fixed wait where a run alone read 0.00%).
+                    for (int attempt = 0; attempt < 10; attempt++)
+                    {
+                        yield return Shoot($"indirect-{framing.Name}-{hour:0.#}-off", boot, target, px => chunk = px);
+                        chunkCalls = renderer.DrawCalls;
+                        yield return Shoot($"indirect-{framing.Name}-{hour:0.#}-off-again", boot, target, px => again = px);
+                        if (Difference(chunk, again) < 0.005f) break;
+                        for (int i = 0; i < 60; i++) yield return null;
+                    }
+                    renderer.UseIndirectScenery = true;
+                    yield return Shoot($"indirect-{framing.Name}-{hour:0.#}-on", boot, target, px => indirect = px);
+                    int indirectCalls = renderer.DrawCalls;
+                    int indirectOnly = renderer.IndirectDrawCalls;
+                    Assert.That(boot.World!.CurrentTick, Is.EqualTo(tickBefore),
+                        "the world ticked between the shots, so the wind moved every blade and nothing can be compared");
+
+                    float noise = Difference(chunk, again);
+                    float moved = Difference(chunk, indirect);
+                    lines.Add($"{framing.Name} {hour:0.#} h: floor {noise * 100f:0.00}%, indirect moved {moved * 100f:0.00}%, " +
+                              $"{chunkCalls} calls chunk by chunk, {indirectCalls} with {indirectOnly} indirect");
+                    lines.Add($"{framing.Name} {hour:0.#} h chunk-path calls by kind with the indirect path on: " + CallsByKind(renderer));
+                    Assert.That(noise, Is.LessThan(0.02f), $"{framing.Name} {hour} h: the repeated shot has no floor to measure against");
+                    Assert.That(indirectCalls, Is.LessThan(chunkCalls),
+                        $"{framing.Name} {hour} h: the indirect path did not reduce the calls, so the chunk walk is still drawing the scenery");
+                    if (moved - noise > worstExcess) { worstExcess = moved - noise; worst = $"{framing.Name} {hour:0.#} h"; }
+                    Assert.That(moved, Is.LessThanOrEqualTo(noise + 0.002f),
+                        $"{framing.Name} {hour} h: the indirect scenery moved {moved * 100f:0.00}% of pixels against a " +
+                        $"floor of {noise * 100f:0.00}%: it is not drawing what the chunk path drew");
+                    if (firstChunk == null) firstChunk = chunk;
+                }
+
+                // The positive control, once, at the start framing and noon.
+                boot.DaylightHourOverride = 12f;
+                boot.cameraRig!.FocusOn(at, 32f);
+                int shipped = renderer.ScatterDensity;
+                renderer.UseIndirectScenery = false;
+                for (int i = 0; i < 120; i++) yield return null;
+                Color32[] withScenery = null!, bare = null!;
+                yield return Shoot("indirect-control-on", boot, target, px => withScenery = px);
+                renderer.ScatterDensity = 0;
+                boot.Model!.Remesh();
+                for (int i = 0; i < 120; i++) yield return null;
+                yield return Shoot("indirect-control-bare", boot, target, px => bare = px);
+                renderer.ScatterDensity = shipped;
+                boot.Model!.Remesh();
+                float scenery = Difference(withScenery, bare);
+
+                Debug.Log($"[FrameTime] indirect scenery proof: " + string.Join("; ", lines) +
+                          $"; taking the scenery away moved {scenery * 100f:0.00}%; worst excess over the floor " +
+                          $"{worstExcess * 100f:0.00}% at {worst}");
+                Debug.Log("[FrameTime] indirect scenery kinds: " + renderer.IndirectKindReport());
+                Assert.That(scenery, Is.GreaterThan(0.01f),
+                    "taking the scenery away changed nothing, so the scenery is not in these shots and the " +
+                    "comparison proves nothing");
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                boot.DaylightHourOverride = null;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (boot.Renderer != null) boot.Renderer.UseIndirectScenery = indirectWas;
+                UnityEngine.Object.Destroy(root);
+                target.Release();
+                UnityEngine.Object.Destroy(target);
+            }
+        }
+
+        /// <summary>
+        /// What drawing the scenery from GPU buffers is worth (design 38 §22): the chunk path against
+        /// the indirect path, one world per board, on Standard and Huge, at the start zoom and pulled
+        /// back to 140 m where the owner saw the drop, at the batch view (CPU-bound) and into a
+        /// 3840 x 2160 target. Only differences inside the run are quoted. And the worst regather: a
+        /// whole-board re-mesh dirties every layer, which is the most the buffers are ever rebuilt at once.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheIndirectSceneryAgainstTheFrame()
+        {
+            var lines = new List<string>();
+            foreach ((string board, int side) in new[] { ("standard", 120), ("huge", 240) })
+            {
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                    out OdysseyBootstrap boot, side, side, 16);
+                UnityEngine.Camera? cam = null;
+                RenderTexture? previousTarget = null;
+                RenderTexture? fourK = null;
+                try
+                {
+                    yield return TimeFrames($"indirect/{board}/warm", boot, WarmupFrames, _ => { });
+                    ChunkRenderer renderer = boot.Renderer!;
+                    renderer.UseIndirectScenery = true;
+                    yield return null;
+                    if (renderer.IndirectDrawCalls == 0)
+                        Assert.Ignore("the indirect path did not draw on this machine (no compute or no scenery art)");
+
+                    cam = boot.cameraRig!.Camera;
+                    previousTarget = cam.targetTexture;
+                    fourK = new RenderTexture(3840, 2160, 24) { name = "indirect-4k" };
+                    WorldSnapshot frame = boot.World!.Views.Current;
+                    CellRef at = frame.Pawns.Length > 0 ? frame.Pawns[0].Cell : default;
+
+                    foreach ((string zoom, float distance) in new[] { ("start", 32f), ("140 m", 140f) })
+                    {
+                        boot.cameraRig!.FocusOn(at, distance);
+                        for (int i = 0; i < 120; i++) yield return null;
+                        foreach (bool big in new[] { false, true })
+                        {
+                            cam.targetTexture = big ? fourK : previousTarget;
+                            string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                            foreach (bool indirect in new[] { false, true })
+                            {
+                                renderer.UseIndirectScenery = indirect;
+                                float ms = 0f;
+                                yield return TimeFrames($"indirect/{board}/{zoom}/{resolution}/{(indirect ? "indirect" : "chunk")}",
+                                    boot, WarmupFrames, m => ms = m);
+                                Assert.That(renderer.ChunksMeshDeferred, Is.Zero, $"{board} {zoom} was timed mid-re-mesh");
+                                if (big) Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
+                                if (indirect) Assert.That(renderer.IndirectDrawCalls, Is.GreaterThan(0),
+                                    $"{board} {zoom}: the indirect arm drew nothing indirectly, so it measured the chunk path twice");
+                                lines.Add($"{board} {zoom} {resolution} {(indirect ? "indirect" : "chunk")}: frame {ms:0.00} ms, " +
+                                          $"submit {boot.SubmitMs:0.00}, {renderer.DrawCalls} calls " +
+                                          $"({renderer.IndirectDrawCalls} indirect), {renderer.ChunksDrawn} chunks");
+                            }
+                        }
+                    }
+
+                    // The worst regather: every layer dirty at once.
+                    cam.targetTexture = previousTarget;
+                    renderer.UseIndirectScenery = true;
+                    boot.Model!.Remesh();
+                    double worstRegather = 0d;
+                    for (int i = 0; i < 180; i++)
+                    {
+                        yield return null;
+                        if (renderer.IndirectRegatherMs > worstRegather) worstRegather = renderer.IndirectRegatherMs;
+                    }
+                    lines.Add($"{board}: {renderer.IndirectInstances} instances in the buffers, worst regather " +
+                              $"{worstRegather:0.000} ms after a whole-board re-mesh");
+
+                    // And the case play meets: one chunk re-meshed (a dig, a build, a crop that grew),
+                    // which dirties only the layers it is on.
+                    double oneChunk = 0d;
+                    for (int repeat = 0; repeat < 5; repeat++)
+                    {
+                        var chunks = boot.Model!.Chunks;
+                        boot.Model!.RemeshChunk(chunks.ChunkIndexOfCell(at.X, at.Z, at.Y));
+                        if (at.Y > 0) boot.Model!.RemeshChunk(chunks.ChunkIndexOfCell(at.X, at.Z, at.Y - 1));
+                        for (int i = 0; i < 10; i++)
+                        {
+                            yield return null;
+                            if (renderer.IndirectRegatherMs > oneChunk) oneChunk = renderer.IndirectRegatherMs;
+                        }
+                    }
+                    lines.Add($"{board}: worst regather {oneChunk:0.000} ms after one chunk re-meshed (5 tries)");
+                }
+                finally
+                {
+                    if (cam != null) cam.targetTexture = previousTarget;
+                    if (fourK != null) fourK.Release();
+                    UnityEngine.Object.Destroy(root);
+                }
+                yield return null;
+            }
+            Debug.Log($"[FrameTime] indirect scenery ({SystemInfo.graphicsDeviceName}, {SystemInfo.graphicsDeviceType}): " +
+                      string.Join("; ", lines));
+        }
+
+        /// <summary>The chunk path's draw calls last frame, by kind.</summary>
+        static string CallsByKind(ChunkRenderer renderer)
+        {
+            var parts = new List<string>();
+            for (int k = 0; k < ChunkRenderer.CallKindNames.Length; k++)
+                if (renderer.ChunkCallsByKind[k] > 0) parts.Add($"{ChunkRenderer.CallKindNames[k]} {renderer.ChunkCallsByKind[k]}");
+            return string.Join(", ", parts);
+        }
+
+        /// <summary>The meshed buckets by kind: how many, how full, and how many calls they cost.</summary>
+        static string Census(ChunkRenderer renderer)
+        {
+            var batches = (ChunkBatch?[])typeof(ChunkRenderer)
+                .GetField("_batches", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .GetValue(renderer)!;
+            var counts = new SortedDictionary<string, (int Buckets, long Instances, int Chunks)>();
+            int meshed = 0;
+            foreach (ChunkBatch? batch in batches)
+            {
+                if (batch == null || batch.InstanceCount == 0) continue;
+                meshed++;
+                var seen = new HashSet<string>();
+                foreach (var list in new[] { batch.Body, batch.Roof })
+                    foreach (InstanceBucket bucket in list)
+                    {
+                        if (bucket.Count == 0) continue;
+                        string kind = TintCode.IsTree(bucket.Tint) ? "tree"
+                            : TintCode.IsDressing(bucket.Tint) ? "dressing"
+                            : TintCode.IsFoliage(bucket.Tint) ? "tufts"
+                            : TintCode.IsWater(bucket.Tint) ? "water"
+                            : TintCode.IsTerrain(bucket.Tint) ? "terrain"
+                            : "other";
+                        (int Buckets, long Instances, int Chunks) c =
+                            counts.TryGetValue(kind, out var v) ? v : (0, 0L, 0);
+                        c.Buckets++; c.Instances += bucket.Count;
+                        if (seen.Add(kind)) c.Chunks++;
+                        counts[kind] = c;
+                    }
+            }
+            var parts = new List<string> { $"{meshed} meshed chunks" };
+            foreach (var kv in counts)
+                parts.Add($"{kv.Key}: {kv.Value.Buckets} buckets in {kv.Value.Chunks} chunks " +
+                          $"({(kv.Value.Chunks > 0 ? kv.Value.Buckets / (double)kv.Value.Chunks : 0):0.0} a chunk), " +
+                          $"{kv.Value.Instances} instances ({(kv.Value.Buckets > 0 ? kv.Value.Instances / (double)kv.Value.Buckets : 0):0.0} a bucket)");
+            return string.Join("; ", parts);
+        }
+
+        /// <summary>
+        /// Photographs the played meadow from the play camera, for judging the look against the
+        /// Meadow Forest reference (owner, 2026-09-24: screenshot #13, design 38 §17). Explicit:
+        /// never part of a tier, run by name.
+        ///
+        /// <para>Two framings at 1920 x 1080 — the camera as a new game opens it, and closer in on
+        /// the first colonist — written to <c>Logs/look/start.png</c> and <c>Logs/look/close.png</c>,
+        /// with the draw counts beside them in the log. It asserts nothing about the picture; it
+        /// exists so that the person or agent changing the look can see what they changed without
+        /// pressing Play, which until now only the owner could do.</para>
+        /// </summary>
+        [UnityTest, Explicit("a photograph for judging the look, not a test")]
+        public IEnumerator TheLookAtThePlayCamera()
+        {
+            // ODYSSEY_LOOK_STOCK=1 photographs the stock ground instead of the painted one, so a
+            // before and an after can be taken under identical conditions (design 38 §17).
+            bool stock = Environment.GetEnvironmentVariable("ODYSSEY_LOOK_STOCK") == "1";
+            bool groundWas = MeadowLook.GroundEnabled;
+            MeadowLook.GroundEnabled = !stock;
+            string prefix = stock ? "stock-" : string.Empty;
+            // ODYSSEY_LOOK_BOXES=1 photographs the ground as boxes and bank wedges, the ground skin
+            // off (design 38 §20), for the same before-and-after under identical conditions.
+            bool boxes = Environment.GetEnvironmentVariable("ODYSSEY_LOOK_BOXES") == "1";
+            bool skinWas = GroundSkin.Enabled;
+            GroundSkin.Enabled = !boxes;
+            if (boxes) prefix += "boxes-";
+
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            RenderTexture? target = null;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            try
+            {
+                // Long enough for the board to mesh out under the budget and the post stack to settle.
+                for (int i = 0; i < 180; i++) yield return null;
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                target = new RenderTexture(1920, 1080, 24) { name = "look" };
+                cam.targetTexture = target;
+                Directory.CreateDirectory(Path.GetFullPath("Logs/look"));
+
+                // **The grade the Play scene carries.** Play.unity has a global Volume holding the
+                // golden-hour profile; the rig this file builds has none, so without this every
+                // photograph was of an ungraded frame nobody plays.
+                Volume? grade = null;
+#if UNITY_EDITOR
+                var golden = UnityEditor.AssetDatabase.LoadAssetAtPath<VolumeProfile>(
+                    "Assets/Settings/OdysseyGoldenHour.asset");
+                if (golden != null)
+                {
+                    grade = new GameObject("Grade").AddComponent<Volume>();
+                    grade.transform.SetParent(root.transform, false);
+                    grade.isGlobal = true;
+                    grade.sharedProfile = golden;
+                }
+#endif
+                for (int i = 0; i < 8; i++) yield return null;
+
+                yield return Photograph(prefix + "start", boot, target);
+
+                WorldSnapshot frame = boot.World!.Views.Current;
+                if (frame.Pawns.Length > 0)
+                {
+                    boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, 28f);
+                    for (int i = 0; i < 120; i++) yield return null;
+                    yield return Photograph(prefix + "close", boot, target);
+
+                    // Pulled back to about the reference screenshot's own framing, which is the
+                    // view the composition of the meadow is judged at.
+                    boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, 70f);
+                    for (int i = 0; i < 150; i++) yield return null;
+                    yield return Photograph(prefix + "wide", boot, target);
+
+                    // The same framing with every tree and bush drawn as though it stood between the
+                    // camera and a colonist, so the fade can be judged by looking (design 38 §17c).
+                    boot.Renderer!.FadeEveryTreeForAPhotograph = true;
+                    yield return Photograph(prefix + "wide-faded", boot, target);
+                    boot.Renderer!.FadeEveryTreeForAPhotograph = false;
+
+                    // design 38 §19: a stack dropped beside a bush and a colonist lying in the
+                    // grass, before (the old 0.55 m ring, no body ring, no bush fade) and after.
+                    yield return PhotographTheGround(boot, target, prefix);
+                    // And an unselected colonist standing behind a tree, with the see-through for
+                    // selected colonists only (before) and for every colonist (after).
+                    yield return PhotographBehindATree(boot, target, prefix);
+
+                    // The surround at the camera's farthest pull, from the rim of the board looking
+                    // out (design 38 §19): the land beyond should read wooded, not bare.
+                    // The board's south-west corner, so two sides of the surround are in frame; the
+                    // old surround first (finest level, thin wood, no bushes), then the new.
+                    boot.cameraRig!.FocusOn(new CellRef(1, 1, frame.Pawns[0].Cell.Y),
+                        boot.cameraRig.maxDistance);
+                    TerrainSkirt.NearWoodLevel = 0;
+                    TerrainSkirt.BushBesideTree = 0f;
+                    SkirtLayout.TreeFarDensity = 0.15f;
+                    SkirtLayout.FarTreeNearDensity = 0.30f;
+                    SkirtLayout.FarTreeFarDensity = 0.07f;
+                    boot.Renderer!.Skirt.Build();
+                    for (int i = 0; i < 150; i++) yield return null;
+                    yield return Photograph(prefix + "horizon-before", boot, target);
+                    TerrainSkirt.NearWoodLevel = TerrainSkirt.DefaultNearWoodLevel;
+                    TerrainSkirt.BushBesideTree = 0.75f;
+                    SkirtLayout.TreeFarDensity = SkirtLayout.DefaultTreeFarDensity;
+                    SkirtLayout.FarTreeNearDensity = SkirtLayout.DefaultFarTreeNearDensity;
+                    SkirtLayout.FarTreeFarDensity = SkirtLayout.DefaultFarTreeFarDensity;
+                    boot.Renderer!.Skirt.Build();
+                    for (int i = 0; i < 30; i++) yield return null;
+                    yield return Photograph(prefix + "horizon", boot, target);
+                }
+
+                // And the wide framing again under the Meadow demo's own grade, where it resolved.
+                VolumeProfile? meadow = MeadowLook.Loaded != null ? MeadowLook.Loaded.grade : null;
+                if (grade != null && meadow != null)
+                {
+                    grade.sharedProfile = meadow;
+                    yield return Photograph(prefix + "wide-meadowgrade", boot, target);
+                }
+            }
+            finally
+            {
+                GroundSkin.Enabled = skinWas;
+                MeadowLook.GroundEnabled = groundWas;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (target != null) target.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Photographs the dressing's levels of detail at a range of biases, for tuning them by eye
+        /// (design 38 §18c). Explicit: run by name. The world is paused and the clock stilled, so
+        /// what moves between two shots is the levels alone. At each framing — the start, close in,
+        /// and the reference's wide one — the levels off, then the grass stands and flowers at each
+        /// bias with the bushes at their finest, then the bushes at each bias with the grass at its
+        /// finest. Each shot is written to <c>Logs/look/lod/</c> and logged with the pixels it moved
+        /// against the levels-off shot, the instances drawn at a coarser level and the draw calls.
+        /// </summary>
+        [UnityTest, Explicit("photographs for tuning the dressing's levels, not a test")]
+        public IEnumerator TheDressingLevelsAtThePlayCamera()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            RenderTexture? target = null;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            float previousScale = Time.timeScale;
+            ChunkRenderer renderer = null!;
+            bool levelsWas = false;
+            float dressingWas = 1f, bushWas = 3f;
+            try
+            {
+                yield return null;
+                renderer = boot.Renderer!;
+                levelsWas = renderer.DressingLevels; dressingWas = renderer.DressingLodBias; bushWas = renderer.BushLodBias;
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+                Assert.That(boot.World!.GameSpeed, Is.Zero, "the world would not pause");
+                Time.timeScale = 0f;
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                target = new RenderTexture(1920, 1080, 24) { name = "lod-look" };
+                cam.targetTexture = target;
+                Directory.CreateDirectory(Path.GetFullPath("Logs/look/lod"));
+#if UNITY_EDITOR
+                var golden = UnityEditor.AssetDatabase.LoadAssetAtPath<VolumeProfile>("Assets/Settings/OdysseyGoldenHour.asset");
+                if (golden != null)
+                {
+                    var grade = new GameObject("Grade").AddComponent<Volume>();
+                    grade.transform.SetParent(root.transform, false);
+                    grade.isGlobal = true;
+                    grade.sharedProfile = golden;
+                }
+#endif
+                WorldSnapshot frame = boot.World!.Views.Current;
+                var framings = new List<(string Name, float Distance)> { ("start", -1f) };
+                if (frame.Pawns.Length > 0) { framings.Add(("close", 28f)); framings.Add(("wide", 70f)); }
+                float[] dressingBiases = { 8f, 4f, 2f, 1f, 0.5f };
+                float[] bushBiases = { 6f, 3f, 1.5f, 0.75f };
+                var lines = new List<string>();
+
+                foreach (var framing in framings)
+                {
+                    if (framing.Distance > 0f) boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, framing.Distance);
+                    for (int i = 0, quiet = 0; i < 1200 && (i < 60 || quiet < 30); i++)
+                    {
+                        yield return null;
+                        quiet = renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
+                    }
+
+                    renderer.DressingLevels = false; renderer.BushLodBias = 1e6f;
+                    Color32[] off = null!;
+                    yield return Snap($"{framing.Name}-off", boot, target, p => off = p);
+                    lines.Add($"{framing.Name} off: {renderer.DrawCalls} calls");
+
+                    foreach (float bias in dressingBiases)
+                    {
+                        renderer.DressingLevels = true; renderer.DressingLodBias = bias; renderer.BushLodBias = 1e6f;
+                        Color32[] shot = null!;
+                        yield return Snap($"{framing.Name}-grass-{bias:0.##}", boot, target, p => shot = p);
+                        lines.Add($"{framing.Name} grass bias {bias:0.##}: moved {Difference(off, shot) * 100f:0.00}%, " +
+                                  $"{renderer.InstancesAtCoarserLevels} coarser, {renderer.DrawCalls} calls");
+                    }
+                    foreach (float bias in bushBiases)
+                    {
+                        renderer.DressingLevels = false; renderer.BushLodBias = bias;
+                        Color32[] shot = null!;
+                        yield return Snap($"{framing.Name}-bush-{bias:0.##}", boot, target, p => shot = p);
+                        lines.Add($"{framing.Name} bush bias {bias:0.##}: moved {Difference(off, shot) * 100f:0.00}%, " +
+                                  $"{renderer.InstancesAtCoarserLevels} coarser, {renderer.DrawCalls} calls");
+                    }
+                }
+                Debug.Log("[Look] dressing levels: " + string.Join("; ", lines));
+
+                // What the library made of the dressing: which kinds draw by level, and at what size.
+                var modules = new List<string>();
+                ModuleLibrary library = boot.Model!.Library;
+                for (int i = 0; i < library.Count; i++)
+                {
+                    ResolvedModule m = library[i];
+                    if (m.Id.IndexOf("dress", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                    modules.Add($"{m.Id}: levels {m.Lods.Length}, by level {m.DrawsByLevel}, size {m.LodSize:0.0} m, " +
+                                $"heights {string.Join("/", Array.ConvertAll(m.Lods, l => l.ScreenHeight.ToString("0.###")))}" +
+                                (m.LevelNote.Length > 0 ? $", finest only: {m.LevelNote}" : string.Empty));
+                }
+                Debug.Log("[Look] dressing modules: " + string.Join("; ", modules));
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                if (renderer != null)
+                {
+                    renderer.DressingLevels = levelsWas; renderer.DressingLodBias = dressingWas; renderer.BushLodBias = bushWas;
+                }
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (target != null) target.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Photographs the shadow changes of design 38 §18f for the owner to judge: noon and a low
+        /// evening sun (long shadows show a cascade seam), at the start and the reference's wide
+        /// framing, each as shipped, with the trees casting from the older proxy level, and with four
+        /// cascades. Explicit: run by name; written to <c>Logs/look/shadow/</c>. The world is paused
+        /// and the clock stilled; the cascade count is set on a runtime copy of the pipeline asset.
+        /// </summary>
+        [UnityTest, Explicit("photographs for judging the shadow changes, not a test")]
+        public IEnumerator TheShadowChangesAtThePlayCamera()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            RenderTexture? target = null;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            float previousScale = Time.timeScale;
+            var pipeline = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+            RenderPipelineAsset? qualityWas = QualitySettings.renderPipeline;
+            RenderPipelineAsset? defaultWas = GraphicsSettings.defaultRenderPipeline;
+            UniversalRenderPipelineAsset? copy = pipeline != null ? UnityEngine.Object.Instantiate(pipeline) : null;
+            try
+            {
+                yield return null;
+                ChunkRenderer renderer = boot.Renderer!;
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+                Assert.That(boot.World!.GameSpeed, Is.Zero, "the world would not pause");
+                Time.timeScale = 0f;
+                if (copy != null)
+                {
+                    if (QualitySettings.renderPipeline != null) QualitySettings.renderPipeline = copy;
+                    else GraphicsSettings.defaultRenderPipeline = copy;
+                }
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                target = new RenderTexture(1920, 1080, 24) { name = "shadow-look" };
+                cam.targetTexture = target;
+                Directory.CreateDirectory(Path.GetFullPath("Logs/look/shadow"));
+#if UNITY_EDITOR
+                var golden = UnityEditor.AssetDatabase.LoadAssetAtPath<VolumeProfile>("Assets/Settings/OdysseyGoldenHour.asset");
+                if (golden != null)
+                {
+                    var grade = new GameObject("Grade").AddComponent<Volume>();
+                    grade.transform.SetParent(root.transform, false);
+                    grade.isGlobal = true;
+                    grade.sharedProfile = golden;
+                }
+#endif
+                WorldSnapshot frame = boot.World!.Views.Current;
+                var framings = new List<(string Name, float Distance)> { ("start", -1f) };
+                if (frame.Pawns.Length > 0) framings.Add(("wide", 70f));
+                var lines = new List<string>();
+                foreach (var framing in framings)
+                {
+                    if (framing.Distance > 0f) boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, framing.Distance);
+                    foreach ((string hourName, float hour) in new[] { ("noon", 12f), ("evening", 19.5f) })
+                    {
+                        boot.DaylightHourOverride = hour;
+                        for (int i = 0, quiet = 0; i < 1200 && (i < 60 || quiet < 30); i++)
+                        {
+                            yield return null;
+                            quiet = renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
+                        }
+                        var arms = new (string Name, bool Simplest, int Cascades)[]
+                        {
+                            ("shipped", true, 2), ("old-proxy", false, 2), ("four-cascades", true, 4), ("before", false, 4),
+                        };
+                        Color32[] shipped = null!;
+                        foreach (var arm in arms)
+                        {
+                            renderer.TreeShadowFromSimplest = arm.Simplest;
+                            if (copy != null) copy.shadowCascadeCount = arm.Cascades;
+                            Color32[] shot = null!;
+                            yield return Snap($"../shadow/{framing.Name}-{hourName}-{arm.Name}", boot, target, p => shot = p);
+                            if (arm.Name == "shipped") shipped = shot;
+                            else lines.Add($"{framing.Name} {hourName} {arm.Name}: differs from shipped by {Difference(shipped, shot) * 100f:0.00}%");
+                        }
+                    }
+                }
+                boot.DaylightHourOverride = null;
+                renderer.TreeShadowFromSimplest = true;
+                Debug.Log("[Look] shadow changes: " + string.Join("; ", lines));
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                boot.DaylightHourOverride = null;
+                QualitySettings.renderPipeline = qualityWas;
+                GraphicsSettings.defaultRenderPipeline = defaultWas;
+                if (copy != null) UnityEngine.Object.Destroy(copy);
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (target != null) target.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Where Full grass costs, and what the distance techniques of design 38 §21 buy back: one
+        /// board at a time, 3840 x 2160 (the frame is GPU-bound there, so the frame stands in for
+        /// the GPU, which a batch run cannot read), the world paused, at three framings — the camera
+        /// a new game opens with, the reference's wide view and the farthest pull — and at each the
+        /// grass rungs Off, Meadow and Full, Full cut at two distances past the focus (how much of
+        /// Full's cost is the far field), then Full with each technique added in turn. Only
+        /// differences inside one board's run are quoted (§6c). Explicit: a measurement, minutes
+        /// long, run by name.
+        /// </summary>
+        [UnityTest, Explicit("a measurement, run by name"), Timeout(3600000)]
+        public IEnumerator TheGrassAtDistanceAgainstTheFrame()
+        {
+            var lines = new List<string>();
+            foreach ((string board, int side) in new[] { ("standard", 120), ("huge", 240) })
+            {
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                    out OdysseyBootstrap boot, side, side, 16);
+                UnityEngine.Camera? cam = null;
+                RenderTexture? previousTarget = null;
+                RenderTexture? fourK = null;
+                ChunkRenderer renderer = null!;
+                try
+                {
+                    yield return null;
+                    renderer = boot.Renderer!;
+                    for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                    {
+                        boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                        yield return null;
+                    }
+                    yield return TimeFrames($"grass-distance/{board}/warm", boot, WarmupFrames, _ => { });
+                    if (renderer.RequeueFoliage(MaterialCache.DefaultFoliageQueue) == 0)
+                        Assert.Ignore("no grass art resolved on this machine, so there is no grass to price");
+
+                    cam = boot.cameraRig!.Camera;
+                    previousTarget = cam.targetTexture;
+                    fourK = new RenderTexture(3840, 2160, 24) { name = "grass-distance-4k" };
+                    cam.targetTexture = fourK;
+
+                    int shipped = renderer.ScatterDensity;
+                    int full = GroundScatter.MaxPerCell * 100;
+                    WorldSnapshot frame = boot.World!.Views.Current;
+                    CellRef focusCell = frame.Pawns.Length > 0 ? frame.Pawns[0].Cell : default;
+
+                    foreach (float framing in new[] { 70f, 140f })
+                    {
+                        if (frame.Pawns.Length > 0) boot.cameraRig!.FocusOn(focusCell, framing);
+                        bool thinWas = renderer.ThinGrass, levelsWas = renderer.TuftLevels;
+                        Action none = () => { renderer.ThinGrass = false; renderer.TuftLevels = false; };
+                        Action restore = () => { renderer.ThinGrass = thinWas; renderer.TuftLevels = levelsWas; renderer.Tufts = true; renderer.Dressing = true; };
+                        var conditions = new List<(string Name, int Density, Action On, Action Off, bool Remesh)>
+                        {
+                            ("off", 0, none, restore, false),
+                            ("meadow, none of §21", shipped, none, restore, false),
+                            ("meadow, tufts only", shipped, () => { none(); renderer.Dressing = false; }, restore, true),
+                            ("meadow, dressing only", shipped, () => { none(); renderer.Tufts = false; }, restore, true),
+                            ("meadow, as shipped", shipped, () => { }, () => { }, false),
+                            ("full, none of §21", full, none, restore, false),
+                            ("full, as shipped", full, () => { }, () => { }, false),
+                        };
+                        if (framing > 100f)
+                            foreach (MeadowDressing.Kind kind in new[] { MeadowDressing.Kind.TallGrass, MeadowDressing.Kind.Bush,
+                                         MeadowDressing.Kind.Flower, MeadowDressing.Kind.Cover, MeadowDressing.Kind.Sunflower,
+                                         MeadowDressing.Kind.Rock })
+                            {
+                                MeadowDressing.Kind k = kind;
+                                conditions.Add(($"meadow, dressing only: {k}", shipped,
+                                    () => { none(); renderer.Tufts = false; renderer.DressingKinds = 1 << (int)k; },
+                                    () => { restore(); renderer.DressingKinds = ~0; }, true));
+                            }
+
+                        // Twice round, and the lower of the two kept: the owner's editor shares the GPU
+                        // and a single reading moved by more than the thing being measured.
+                        var best = new Dictionary<string, (float Ms, string Line)>();
+                        for (int pass = 0; pass < 2; pass++)
+                        foreach (var c in conditions)
+                        {
+                            if (renderer.ScatterDensity != c.Density) { renderer.ScatterDensity = c.Density; boot.Model!.Remesh(); }
+                            c.On();
+                            if (c.Remesh) boot.Model!.Remesh();
+                            for (int i = 0, quiet = 0; i < 1200 && (i < 30 || quiet < 20); i++)
+                            {
+                                yield return null;
+                                quiet = renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
+                            }
+                            float ms = 0f;
+                            yield return TimeFrames($"grass-distance/{board}/{framing:0}m/{c.Name}/{pass}", boot, WarmupFrames, m => ms = m);
+                            Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
+                            string line = $"{board} @{framing:0} m {c.Name}: frame {ms:0.00} ms, {renderer.DrawCalls} calls, " +
+                                          $"{renderer.InstancesDrawn} instances, {renderer.InstancesAtCoarserLevels} coarser, " +
+                                          $"{renderer.GrassInstancesThinned} thinned";
+                            if (!best.TryGetValue(c.Name, out var b0) || ms < b0.Ms) best[c.Name] = (ms, line);
+                            c.Off();
+                            if (c.Remesh) boot.Model!.Remesh();
+                        }
+                        foreach (var c in conditions) lines.Add(best[c.Name].Line);
+                    }
+                }
+                finally
+                {
+                    if (renderer != null) { renderer.Tufts = true; renderer.Dressing = true; renderer.DressingKinds = ~0; }
+                    if (cam != null) cam.targetTexture = previousTarget;
+                    if (fourK != null) fourK.Release();
+                    UnityEngine.Object.Destroy(root);
+                }
+                yield return null;
+            }
+            Debug.Log($"[FrameTime] grass at distance, 3840x2160 ({SystemInfo.graphicsDeviceName}): " + string.Join("; ", lines));
+        }
+
+        /// <summary>
+        /// Photographs Full grass at distance for tuning and for the owner (design 38 §21): the
+        /// world paused and the clock stilled, at the start, wide and farthest framings, with none of
+        /// §21, with thinning, with thinning and a coarser tuft bias, and as shipped; each against the
+        /// untouched picture as a fraction of pixels moved. Written to <c>Logs/look/grass/</c>.
+        /// Explicit: photographs, not a test.
+        /// </summary>
+        [UnityTest, Explicit("photographs for tuning the grass at distance, not a test")]
+        public IEnumerator TheGrassAtDistanceAtThePlayCamera()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            RenderTexture? target = null;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            float previousScale = Time.timeScale;
+            ChunkRenderer renderer = null!;
+            bool thinWas = true, levelsWas = true;
+            float biasWas = 8f;
+            try
+            {
+                yield return null;
+                renderer = boot.Renderer!;
+                thinWas = renderer.ThinGrass; levelsWas = renderer.TuftLevels;
+                biasWas = renderer.TuftLodBias;
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+                Time.timeScale = 0f;
+                renderer.ScatterDensity = GroundScatter.MaxPerCell * 100;
+                boot.Model!.Remesh();
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                target = new RenderTexture(1920, 1080, 24) { name = "grass-look" };
+                cam.targetTexture = target;
+                Directory.CreateDirectory(Path.GetFullPath("Logs/look/grass"));
+#if UNITY_EDITOR
+                var golden = UnityEditor.AssetDatabase.LoadAssetAtPath<VolumeProfile>("Assets/Settings/OdysseyGoldenHour.asset");
+                if (golden != null)
+                {
+                    var grade = new GameObject("Grade").AddComponent<Volume>();
+                    grade.transform.SetParent(root.transform, false);
+                    grade.isGlobal = true;
+                    grade.sharedProfile = golden;
+                }
+#endif
+                WorldSnapshot frame = boot.World!.Views.Current;
+                var framings = new List<(string Name, float Distance)> { ("start", -1f) };
+                if (frame.Pawns.Length > 0) { framings.Add(("wide", 70f)); framings.Add(("far", 140f)); }
+                var lines = new List<string>();
+
+                foreach (var framing in framings)
+                {
+                    if (framing.Distance > 0f) boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, framing.Distance);
+                    var conditions = new List<(string Name, bool Thin, bool Levels, float Bias)>
+                    {
+                        ("none", false, false, biasWas),
+                        ("thin", true, false, biasWas),
+                        ("thin-levels-4", true, true, 4f),
+                        ("shipped", thinWas, levelsWas, biasWas),
+                    };
+
+                    Color32[] none = null!;
+                    foreach (var c in conditions)
+                    {
+                        renderer.ThinGrass = c.Thin; renderer.TuftLevels = c.Levels;
+                        renderer.TuftLodBias = c.Bias;
+                        for (int i = 0, quiet = 0; i < 1200 && (i < 40 || quiet < 20); i++)
+                        {
+                            yield return null;
+                            quiet = renderer.ChunksMeshDeferred == 0 && renderer.ChunksMeshedThisFrame == 0 ? quiet + 1 : 0;
+                        }
+                        Color32[] shot = null!;
+                        yield return SnapInto("grass", $"{framing.Name}-{c.Name}", target, p => shot = p);
+                        if (c.Name == "none") none = shot;
+                        lines.Add($"{framing.Name} {c.Name}: moved {Difference(none, shot) * 100f:0.00}%, " +
+                                  $"{renderer.InstancesDrawn} instances, {renderer.GrassInstancesThinned} thinned, " +
+                                  $"{renderer.InstancesAtCoarserLevels} coarser, {renderer.DrawCalls} calls");
+                    }
+                }
+                Debug.Log("[Look] grass at distance: " + string.Join("; ", lines));
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                if (renderer != null)
+                {
+                    renderer.ThinGrass = thinWas; renderer.TuftLevels = levelsWas;
+                    renderer.TuftLodBias = biasWas;
+                }
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (target != null) target.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        IEnumerator SnapInto(string folder, string name, RenderTexture target, Action<Color32[]> pixels)
+        {
+            for (int i = 0; i < 8; i++) yield return null;
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = target;
+            var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+            image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+            image.Apply();
+            RenderTexture.active = previous;
+            File.WriteAllBytes(Path.GetFullPath($"Logs/look/{folder}/{name}.png"), image.EncodeToPNG());
+            pixels(image.GetPixels32());
+            UnityEngine.Object.Destroy(image);
+        }
+
+        IEnumerator Snap(string name, OdysseyBootstrap boot, RenderTexture target, Action<Color32[]> pixels)
+        {
+            for (int i = 0; i < 8; i++) yield return null;
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = target;
+            var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+            image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+            image.Apply();
+            RenderTexture.active = previous;
+            File.WriteAllBytes(Path.GetFullPath($"Logs/look/lod/{name}.png"), image.EncodeToPNG());
+            pixels(image.GetPixels32());
+            UnityEngine.Object.Destroy(image);
+        }
+
+        /// <summary>
+        /// What the wooded surround costs (design 38 §19): the same board, its surround built the
+        /// old way (finest level, thin wood, no bushes) and the new way, at 3840 x 2160 at the
+        /// camera's farthest pull over the rim, one run. And the see-through for every colonist with
+        /// 50 colonists about the start, its lines and its frame against see-through off.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheWoodedSurroundAgainstTheFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            var lines = new List<string>();
+            try
+            {
+                yield return TimeFrames("surround/warm", boot, WarmupFrames, _ => { });
+                ChunkRenderer renderer = boot.Renderer!;
+                if (renderer.Skirt.TreeInstances == 0)
+                    Assert.Ignore("no surround wood resolved on this machine");
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "surround-4k" };
+                cam.targetTexture = fourK;
+                var size = boot.World!.Size;
+                CellRef start = boot.World.Views.Current.Pawns[0].Cell;
+                boot.cameraRig!.FocusOn(new CellRef(size.SizeX / 2, 2, start.Y), boot.cameraRig.maxDistance);
+
+                foreach (bool wooded in new[] { false, true, false, true })
+                {
+                    TerrainSkirt.NearWoodLevel = wooded ? TerrainSkirt.DefaultNearWoodLevel : 0;
+                    TerrainSkirt.BushBesideTree = wooded ? 0.75f : 0f;
+                    SkirtLayout.TreeFarDensity = wooded ? SkirtLayout.DefaultTreeFarDensity : 0.15f;
+                    SkirtLayout.FarTreeNearDensity = wooded ? SkirtLayout.DefaultFarTreeNearDensity : 0.30f;
+                    SkirtLayout.FarTreeFarDensity = wooded ? SkirtLayout.DefaultFarTreeFarDensity : 0.07f;
+                    renderer.Skirt.Build();
+                    float ms = 0f;
+                    double[] split = Array.Empty<double>();
+                    yield return TimeFrames($"surround/{(wooded ? "wooded" : "old")}", boot, WarmupFrames,
+                        m => ms = m, p => split = p);
+                    lines.Add($"{(wooded ? "wooded" : "old")}: frame {ms:0.00} ms, surround section " +
+                              $"{Section(split, OdysseyBootstrap.FrameSection.Surround):0.000} ms, " +
+                              $"{renderer.Skirt.DrawCalls} surround calls, {renderer.Skirt.TreeInstances} near + " +
+                              $"{renderer.Skirt.FarTreeInstances} far trees, {renderer.Skirt.BushInstances} bushes");
+                }
+
+                // Every colonist gets a line: 50 of them about the start, focus on them.
+                for (int i = 0; boot.World.Views.Current.Pawns.Length < 50 && i < 200; i++)
+                {
+                    boot.World.Intents.Submit(new Intent(IntentKind.SpawnPawn,
+                        new CellRef(start.X - 4 + i % 9, start.Z - 4 + (i / 9) % 9, start.Y), 0));
+                    boot.World.Tick();
+                }
+                boot.cameraRig!.FocusOn(start, 70f);
+                foreach (bool every in new[] { false, true, false, true })
+                {
+                    boot.seeThroughToEveryColonist = every;
+                    float ms = 0f;
+                    double[] split = Array.Empty<double>();
+                    yield return TimeFrames($"sight/{(every ? "every" : "selected")}", boot, WarmupFrames,
+                        m => ms = m, p => split = p);
+                    lines.Add($"sight {(every ? "every colonist" : "selected only")} with " +
+                              $"{boot.World.Views.Current.Pawns.Length} pawns: frame {ms:0.00} ms, sight section " +
+                              $"{Section(split, OdysseyBootstrap.FrameSection.Sight):0.000} ms, world " +
+                              $"{Section(split, OdysseyBootstrap.FrameSection.World):0.000} ms, " +
+                              $"{boot.SightLinesLastFrame} lines, {renderer.InstancesFaded} faded");
+                }
+            }
+            finally
+            {
+                TerrainSkirt.NearWoodLevel = TerrainSkirt.DefaultNearWoodLevel;
+                TerrainSkirt.BushBesideTree = 0.75f;
+                SkirtLayout.TreeFarDensity = SkirtLayout.DefaultTreeFarDensity;
+                SkirtLayout.FarTreeNearDensity = SkirtLayout.DefaultFarTreeNearDensity;
+                SkirtLayout.FarTreeFarDensity = SkirtLayout.DefaultFarTreeFarDensity;
+                boot.seeThroughToEveryColonist = true;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+            Debug.Log("[FrameTime] wooded surround and every-colonist sight at 3840x2160: " + string.Join("; ", lines));
+        }
+
+        IEnumerator PhotographTheGround(OdysseyBootstrap boot, RenderTexture target, string prefix)
+        {
+            ChunkRenderer renderer = boot.Renderer!;
+            WorldSnapshot frame = boot.World!.Views.Current;
+            PawnView first = frame.Pawns[0];
+            Vector3 feet = CellMetrics.FloorCentre(first.Cell);
+            if (!renderer.TryNearestBush(feet, first.Cell.Y - 1, out Vector3 bush))
+            {
+                Debug.Log("[Look] ground: no bush meshed near the colony, shot skipped");
+                yield break;
+            }
+
+            // A stack of wood at the bush, and the colony paused so nobody hauls it away.
+            var cell = new CellRef(Mathf.FloorToInt(bush.x / CellMetrics.SizeXZ),
+                Mathf.FloorToInt(bush.z / CellMetrics.SizeXZ), first.Cell.Y);
+            boot.World.Intents.Submit(new Intent(IntentKind.GiveResource, cell,
+                Odyssey.Sim.Pawns.ItemIndex.Wood, 30));
+            boot.World.Tick();
+            boot.World.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+            boot.World.Tick();
+
+            boot.cameraRig!.FocusOn(cell, 22f);
+            renderer.ForceLyingForAPhotograph = true;
+            if (boot.Figures != null) boot.Figures.ForceSleep = 1f;
+            float margin = renderer.ItemMargin, lying = renderer.LyingClearance;
+            try
+            {
+                renderer.ItemMargin = 0f;
+                renderer.LyingClearance = 0f;
+                for (int i = 0; i < 120; i++) yield return null;
+                yield return Photograph(prefix + "ground-before", boot, target);
+
+                renderer.ItemMargin = margin;
+                renderer.LyingClearance = lying;
+                for (int i = 0; i < 30; i++) yield return null;
+                yield return Photograph(prefix + "ground-after", boot, target);
+            }
+            finally
+            {
+                renderer.ItemMargin = margin;
+                renderer.LyingClearance = lying;
+                renderer.ForceLyingForAPhotograph = false;
+                if (boot.Figures != null) boot.Figures.ForceSleep = null;
+            }
+        }
+
+        IEnumerator PhotographBehindATree(OdysseyBootstrap boot, RenderTexture target, string prefix)
+        {
+            var colony = boot.Colony!;
+            var size = colony.Grid.Size;
+            WorldSnapshot frame = boot.World!.Views.Current;
+            CellRef start = frame.Pawns[0].Cell;
+            Vector3 forward = boot.cameraRig!.transform.forward;
+            forward.y = 0f;
+            forward.Normalize();
+
+            // A tree near the colony, and a cell two beyond it along the camera's view: a colonist
+            // there stands behind the crown from where the camera looks.
+            for (int r = 2; r < 18; r++)
+            for (int dz = -r; dz <= r; dz++)
+            for (int dx = -r; dx <= r; dx++)
+            {
+                if (Math.Max(Math.Abs(dx), Math.Abs(dz)) != r) continue;
+                int x = start.X + dx, z = start.Z + dz;
+                if (!size.Contains(x, z, start.Y)) continue;
+                ushort edifice = boot.Model!.EdificeDef(size.Index(x, z, start.Y));
+                if (!Odyssey.Sim.Worldgen.Natural.NaturalContent.IsTree(edifice)) continue;
+
+                var behind = new CellRef(x + Mathf.RoundToInt(forward.x * 2f),
+                    z + Mathf.RoundToInt(forward.z * 2f), start.Y);
+                if (!size.Contains(behind.X, behind.Z, behind.Y)) continue;
+
+                boot.World.Intents.Submit(new Intent(IntentKind.SpawnPawn, behind, 0));
+                boot.World.Tick();
+                boot.World.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                boot.World.Tick();
+                boot.Directors?.Selection?.Clear();
+                boot.cameraRig!.FocusOn(behind, 26f);
+
+                try
+                {
+                    boot.seeThroughToEveryColonist = false;
+                    for (int i = 0; i < 120; i++) yield return null;
+                    yield return Photograph(prefix + "tree-before", boot, target);
+                    boot.seeThroughToEveryColonist = true;
+                    for (int i = 0; i < 30; i++) yield return null;
+                    yield return Photograph(prefix + "tree-after", boot, target);
+                    Debug.Log($"[Look] tree: {boot.SightLinesLastFrame} sight lines, " +
+                              $"{boot.Renderer!.InstancesFaded} instances faded");
+                }
+                finally
+                {
+                    boot.seeThroughToEveryColonist = true;
+                }
+                yield break;
+            }
+            Debug.Log("[Look] tree: no tree near the colony, shot skipped");
+        }
+
+        IEnumerator Photograph(string name, OdysseyBootstrap boot, RenderTexture target)
+        {
+            for (int i = 0; i < 8; i++) yield return null;
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = target;
+            var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+            image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+            image.Apply();
+            RenderTexture.active = previous;
+            string path = Path.GetFullPath($"Logs/look/{name}.png");
+            File.WriteAllBytes(path, image.EncodeToPNG());
+            UnityEngine.Object.Destroy(image);
+            SliceCameraRig rig = boot.cameraRig!;
+            Debug.Log($"[Look] {name}: {path}; distance {rig.TargetDistance:0.0} m, focus {rig.Focus}; " +
+                      $"{boot.Renderer?.DrawCalls ?? -1} calls, {boot.Renderer?.InstancesDrawn ?? -1} instances, " +
+                      $"{boot.Renderer?.ChunksDrawn ?? -1} chunks; surround " +
+                      $"{boot.Renderer?.Skirt.TreeInstances ?? -1} near + {boot.Renderer?.Skirt.FarTreeInstances ?? -1} far trees, " +
+                      $"{boot.Renderer?.Skirt.DrawCalls ?? -1} calls");
+        }
+
+        /// <summary>
+        /// The ground skin against the boxes it replaces (<c>docs/design/38-meadow-overhaul.md</c>
+        /// §20): the played meadow on Standard and Huge, each at 640 x 480 and into a 3840 x 2160
+        /// target, with <see cref="GroundSkin.Enabled"/> off and on in one world, and a whole-board
+        /// re-mesh with the budget off timed each way — the per-chunk meshing cost the budget was
+        /// sized on, now with a mesh upload in it.
+        ///
+        /// <para>Asserts only that the controls applied: the skin drew triangles when on and none
+        /// when off, the instance count fell, the camera drew at 4K, nothing was timed mid-re-mesh.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheSkinAgainstTheBoxes()
+        {
+            bool skinWas = GroundSkin.Enabled;
+            var lines = new List<string>();
+            try
+            {
+                foreach ((string board, int side) in new[] { ("standard", 120), ("huge", 240) })
+                {
+                    GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                        out OdysseyBootstrap boot, side, side, 16);
+                    UnityEngine.Camera? cam = null;
+                    RenderTexture? previousTarget = null;
+                    RenderTexture? fourK = null;
+                    try
+                    {
+                        yield return TimeFrames($"skin/{board}/warm", boot, WarmupFrames, _ => { });
+                        ChunkRenderer renderer = boot.Renderer!;
+                        cam = boot.cameraRig!.Camera;
+                        previousTarget = cam.targetTexture;
+                        fourK = new RenderTexture(3840, 2160, 24) { name = "skin-4k" };
+
+                        int instancesOff = -1, instancesOn = -1;
+                        foreach (bool on in new[] { false, true })
+                        {
+                            GroundSkin.Enabled = on;
+
+                            // A whole-board re-mesh in one frame, budget off, to time the meshing
+                            // itself — twice, timing the second: the first after a switch creates
+                            // every chunk's skin mesh and uploads it cold, a one-off the steady cost
+                            // of a re-mesh never pays again.
+                            int budget = renderer.MeshBudgetPerFrame;
+                            renderer.MeshBudgetPerFrame = 0;
+                            boot.Model!.Remesh();
+                            yield return null;
+                            for (int settle = 0; settle < 10; settle++) yield return null;
+                            boot.Model!.Remesh();
+                            yield return null;
+                            float meshFrame = Time.unscaledDeltaTime * 1000f;
+                            int meshed = renderer.ChunksMeshedThisFrame;
+                            renderer.MeshBudgetPerFrame = budget;
+
+                            foreach (bool big in new[] { false, true })
+                            {
+                                cam.targetTexture = big ? fourK : previousTarget;
+                                string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                                float ms = 0f;
+                                yield return TimeFrames($"skin/{board}/{resolution}/{(on ? "skin" : "boxes")}",
+                                    boot, WarmupFrames, m => ms = m);
+                                Assert.That(renderer.ChunksMeshDeferred, Is.Zero, $"{board} timed mid-re-mesh");
+                                if (big) Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
+                                if (on) Assert.That(renderer.SkinTrianglesDrawn, Is.GreaterThan(0), "the skin drew nothing");
+                                else Assert.That(renderer.SkinTrianglesDrawn, Is.Zero, "the skin drew with the switch off");
+                                if (!big) { if (on) instancesOn = renderer.InstancesDrawn; else instancesOff = renderer.InstancesDrawn; }
+                                lines.Add($"{board} {resolution} {(on ? "skin" : "boxes")}: frame {ms:0.00} ms, " +
+                                          $"{renderer.DrawCalls} calls, {renderer.InstancesDrawn} instances, " +
+                                          $"{renderer.SkinTrianglesDrawn} skin triangles, {renderer.ChunksDrawn} chunks");
+                            }
+                            lines.Add($"{board} {(on ? "skin" : "boxes")} whole-board re-mesh: {meshed} chunks in {meshFrame:0.0} ms " +
+                                      $"({(meshed > 0 ? meshFrame / meshed : 0f):0.000} ms a chunk)");
+                        }
+                        Assert.That(instancesOn, Is.LessThan(instancesOff),
+                            $"{board}: the skin should take the flat tops and banks out of the instanced buckets");
+                    }
+                    finally
+                    {
+                        if (cam != null) cam.targetTexture = previousTarget;
+                        if (fourK != null) fourK.Release();
+                        GroundSkin.Enabled = skinWas;
+                        UnityEngine.Object.Destroy(root);
+                    }
+                    yield return null;
+                }
+                Debug.Log($"[FrameTime] skin ({SystemInfo.graphicsDeviceName}): " + string.Join("; ", lines));
+            }
+            finally
+            {
+                GroundSkin.Enabled = skinWas;
             }
         }
 
