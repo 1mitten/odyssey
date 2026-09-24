@@ -208,7 +208,7 @@ namespace Odyssey.Presentation.Rendering
         ///
         /// <para>That is the second time the same fault has been found in this one test file: the
         /// first was <see cref="ShadowCasterMarginMetres"/>, re-derived per frame from
-        /// <c>QualitySettings.shadowDistance</c>, and it is written up as <c>P17</c> in
+        /// <c>QualitySettings.shadowDistance</c>, and it is written up as <c>P18</c> in
         /// <c>docs/bug-patterns.md</c>. A field the root writes every frame cannot be set by a
         /// test; it needs a seam of its own.</para>
         /// </summary>
@@ -485,15 +485,29 @@ namespace Odyssey.Presentation.Rendering
                 int first = layer * chunksPerLayer;
                 for (int i = 0; i < chunksPerLayer; i++)
                 {
-                    ChunkBatch batch = BatchFor(first + i);
+                    int index = first + i;
+
+                    // Off-screen chunks, asked *before* BatchFor. Asked after it, a stale chunk
+                    // behind the camera was meshed first and culled second, so it spent the
+                    // meshing budget on geometry nobody would see, and a panning camera could
+                    // leave on-screen chunks deferred behind off-screen ones. The box is the one
+                    // Mesh would write — a function of the footprint only — so the answer is the
+                    // same as before and the picture cannot move. An off-screen chunk simply stays
+                    // stale until it is on screen, which is what deferral already means.
+                    bool outside = ActiveFrustum != null && !InFrustum(_mesher.BoundsOf(index));
+                    if (outside && CullToFrustum)
+                    {
+                        // Counted as before: only chunks known to hold something.
+                        ChunkBatch? known = _batches[index];
+                        if (known != null && known.InstanceCount > 0) ChunksOutsideFrustum++;
+                        continue;
+                    }
+
+                    ChunkBatch batch = BatchFor(index);
                     if (batch.InstanceCount == 0) continue;
 
-                    // Off-screen chunks. Counted always, skipped only when asked.
-                    if (ActiveFrustum != null && !InFrustum(batch.Bounds))
-                    {
-                        ChunksOutsideFrustum++;
-                        if (CullToFrustum) continue;
-                    }
+                    // Culling off: counted, and drawn anyway, so the off state stays a measurement.
+                    if (outside) ChunksOutsideFrustum++;
 
                     ChunksDrawn++;
 

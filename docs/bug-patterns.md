@@ -336,7 +336,7 @@ for Defs (the content fingerprints); a font is the same question with a differen
 
 ### P14 — A rule that only governs arrival, in a world where things are already there
 
-*There is one `P14`, one `P16` and one `P17`, and **two** `P15`s — the second is a known collision from two branches merging, kept because both numbers were already cited. A third would not be kept: renumber on merge, as `P17` was on 2026-09-23.*
+*There is one `P14`, one `P16`, one `P17` and one `P18`, and **two** `P15`s — the second is a known collision from two branches merging, kept because both numbers were already cited. A third would not be kept: renumber on merge, as `P18` was twice (2026-09-23 and 2026-09-24).*
 
 A gate is written where new things come in — a filter on what a store *accepts*, a check on what
 may be *placed*, a validator on what may be *entered* — and it is correct about every one of them.
@@ -480,11 +480,12 @@ distance is worth tens of centimetres at the play camera.
 
 ---
 
-### P17 — An instrument that cannot see the thing it is comparing, and passes
+### P18 — An instrument that cannot see the thing it is comparing, and passes
 
-*Numbered P17 rather than P14, which it arrived as. `P14` was already taken on `main` by "a rule
-that only governs arrival", and this catalogue's whole value is that a number resolves to one
-pattern. Renumbered on merge, 2026-09-23, along with the three places that cited it.*
+*Numbered P18. It arrived as P14, which `main` had already given to "a rule that only governs
+arrival", and was renumbered P17 on merge on 2026-09-23; by the next merge, 2026-09-24, `main` had
+given P17 to "two translucent draws", so it moved again, with every place that cited it. This
+catalogue's whole value is that a number resolves to one pattern.*
 
 **Symptom.** A before/after comparison reports a small, plausible difference and the test goes
 green. The change looks proven.
@@ -533,7 +534,7 @@ Writing a pattern down is not the same as running it over the work in hand.
 writes it is writing into the next frame's overwrite. And any capture-and-compare: ask what the
 picture looks like when the subject is removed entirely, and make the test assert that answer.
 
-### P17, met a third time — and the field the root rewrites every frame
+### P18, met a third time — and the field the root rewrites every frame
 
 **2026-09-23.** `CullingDoesNotChangeThePicture` was the test frustum culling was held on. It
 failed its own control — a frustum admitting *nothing* moved 3.22% of pixels — and for two days
@@ -601,6 +602,19 @@ fixture had just queued still going through. It landed on the dev machine and di
 ---
 
 ## The register
+
+### 2026-09-24 — The cull was asked after the mesher, so the budget went on chunks nobody could see (P1-adjacent)
+
+Found by reading, while planning the Meadow overhaul, and fixed on merging `main` up to the culling
+branch. `ChunkRenderer.Render` called `BatchFor` — which meshes a stale chunk — and only then asked
+the frustum. So after a board-wide `Remesh` (every graphics toggle) the eleven-chunk meshing budget
+was spent in index order on chunks behind the camera, and the chunks on screen waited behind them.
+Two fixes that each worked alone, the budget and the cull, met in an order neither had chosen.
+
+**What now stops it:** `MeshBudgetTests.AnOffScreenChunkSpendsNoneOfTheBudget` — a whole-board
+re-mesh under a frustum round one chunk defers nothing, and removing the frustum meshes the rest.
+The cull asks `ChunkMesher.BoundsOf`, the same box `Mesh` writes, so the picture cannot move.
+`28-map-size.md` §10.1.
 
 ### 2026-09-22 — A merge with no conflict where the fault was, and a claim that outlived a review (P1, P10)
 

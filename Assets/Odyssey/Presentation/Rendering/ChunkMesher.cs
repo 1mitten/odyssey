@@ -102,6 +102,17 @@ namespace Odyssey.Presentation.Rendering
             return amplitude + GroundRelief.MaxSlope(amplitude) * CellMetrics.SizeXZ;
         }
 
+        /// <summary>
+        /// The box <see cref="Mesh"/> gives a chunk, without meshing it. It depends on the chunk's
+        /// footprint and nothing inside it, which is what lets the renderer ask the frustum before
+        /// deciding whether the chunk is worth meshing at all.
+        /// </summary>
+        public Bounds BoundsOf(int chunkIndex)
+        {
+            _model.ChunkBounds(chunkIndex, out int x0, out int z0, out int y, out int x1, out int z1);
+            return ChunkWorldBounds(x0, z0, y, x1, z1);
+        }
+
         static Bounds ChunkWorldBounds(int x0, int z0, int y, int x1, int z1)
         {
             float relief = ReliefReach();

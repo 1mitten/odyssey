@@ -995,7 +995,7 @@ namespace Odyssey.Tests.PlayMode
         /// It now goes through <c>ChunkRenderer.FrustumOverride</c>, which the root does not
         /// touch. <b>This is the second time in this one file that a test set a field the root
         /// re-derives per frame</b>; the first was <c>ShadowCasterMarginMetres</c>, and both are
-        /// <c>P17</c> in <c>docs/bug-patterns.md</c>.</para>
+        /// <c>P18</c> in <c>docs/bug-patterns.md</c>.</para>
         ///
         /// <para><i>Two — the scene was moving underneath it.</i> The shots were taken seconds
         /// apart on a live colony, so colonists walked and the light drifted between them, and

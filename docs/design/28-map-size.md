@@ -96,7 +96,7 @@ is generation time (a wooded board carries more trees to place), the feature cou
 about 2 B/cell, and save size by a few per cent.
 
 **What it cost was confidence, not conclusions**, and the general form is `docs/bug-patterns.md`
-P17 — which was written one commit before this was found, in this same branch, and not applied to
+P18 — which was written one commit before this was found, in this same branch, and not applied to
 the arms it was written about.
 
 **A tick at rest is 0.065 ms on Standard and 0.068 ms on Large — the board does not appear in it at
@@ -489,7 +489,7 @@ is the seam the root does not touch.
 
 > **This is the second time in that one file that a test set a field the root re-derives per frame.**
 > The first was `ShadowCasterMarginMetres`, off `QualitySettings.shadowDistance`, and the tell was
-> the same both times. `docs/bug-patterns.md` P17.
+> the same both times. `docs/bug-patterns.md` P18.
 
 It also refuted the obvious hypothesis, which is why the diagnostics were worth having: the shots
 reported a **mean channel of 130.6**, so the capture was seeing the board perfectly well.
@@ -545,3 +545,19 @@ and Huge culls 74 of 443 (7.56 ms). That is the mechanism being correct rather t
 being disappointing, but a number quoted without the shadow distance beside it is not a number.
 
 `CullToFrustum` is therefore **on by default** from this date.
+
+### 10.1 The cull is asked before the mesher (2026-09-24)
+
+Found while planning the Meadow overhaul (`36-meadow-overhaul.md`) and fixed on merging `main` up to
+this branch. The frustum test sat **after** `BatchFor`, so every stale chunk on the walk was meshed
+first and rejected second. After a board-wide `Remesh` — which every graphics toggle does — the
+eleven-chunk budget was spent in index order on chunks behind the camera, and the chunks on screen
+waited behind them for as many frames as the board had off-screen chunks ahead of them.
+
+The fix moves the test ahead of the mesher. It needs no new geometry: `ChunkMesher.BoundsOf` returns
+exactly the box `Mesh` writes, which depends only on the chunk's footprint, so the cull answers the
+same question as before and **the picture cannot move** — the proof in §10 still holds as written.
+An off-screen chunk now simply stays stale until it is on screen, which is what deferral already
+meant. `ChunksOutsideFrustum` still counts only chunks known to hold something.
+`MeshBudgetTests.AnOffScreenChunkSpendsNoneOfTheBudget` is the guard: a whole-board re-mesh under a
+frustum round one chunk defers nothing, and taking the frustum away meshes the rest.

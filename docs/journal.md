@@ -11582,3 +11582,25 @@ one line, from `ShaderInclusion.Apply`, in its own commit on PR #180.
 The fingerprints and all six goldens were re-taken from the merged code, since both sides had moved
 each of them. `GoldenColonyProbe`, reading the first seventeen job defs so the same file runs on
 both sides, gives identical output on `main` 54df119a and on the merge for all three boards.
+
+## 2026-09-24 — The cull merged up to main, and asked before the mesher
+
+PR #174 had fallen 169 commits behind `main` (power, the research tab, combat, wildlife). Three
+conflicts, none of them in the cull: `ColonyWorld` (this branch's `DefFor` against main's wildlife
+switch on the same lines — both kept, the switch after `DefFor`), and the status and journal files,
+where both sides had appended. The merge created one more collision: main had given `P17` to the
+flickering bar while this branch had renamed its pattern to `P17`, so the branch's pattern is `P18`
+now, with every citation — the catalogue's own rule for a third collision.
+
+One real fault went in with it, found while planning the Meadow overhaul: the frustum was asked
+*after* `BatchFor`, so a stale chunk behind the camera was meshed first and culled second, and a
+graphics toggle spent the eleven-chunk budget on the board in index order rather than on what was on
+screen. The test now goes first, against `ChunkMesher.BoundsOf` — the box `Mesh` writes, a function
+of the footprint only — so the picture cannot move, and the proof agrees: the same shot twice moved
+0.03%, culling 0.02%, a frustum admitting nothing 98.22%. The budget arm shows it directly: an
+unbudgeted whole-board re-mesh on Huge meshed **227 chunks in 51 ms**, the ones on screen, where it
+meshed all 900 in 156 ms before. `28-map-size.md` §10.1.
+
+Tiers on the merge: fast 1,322 Sim + 977 Hud, Long 41, content gates clean; EditMode 3,222 / 3,191
+/ 0; PlayMode 115 / 110 / 0. Culling at a 40 m margin, same run: Standard 2.74 -> 2.33 ms (33 of 104
+chunks, 1,363 -> 999 calls), Huge 7.05 -> 3.43 ms (317 of 443, 5,086 -> 1,747).
