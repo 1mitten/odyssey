@@ -11728,3 +11728,17 @@ it ships off: the pack's switch heights assume a camera near the ground, and at 
 is past its first switch. With levels off the counts are M1's to the instance, which is the proof
 the one-bucket path changed nothing. The saving is for the Meadow trees in M5, which will turn
 levels on with a bias chosen against them and a person looking.
+
+## 2026-09-24 — Meadow M3: the grass drawn by our own shader
+
+`Odyssey/Foliage` draws the Meadow grass from the art's own leaf texture, with this project's wind,
+clearing and colour: the wind is a function of the tick, so a paused meadow holds still; items and
+order marks push the grass back through the clearance field the closed grass branch built, now
+centred on what the camera looks at rather than where it stands; and the green is lifted towards
+the spring lime the owner asked for on 2026-09-22. Measured against the pack's own shader on the
+same meshes in one run, ours is half a millisecond cheaper at 4K and level at the batch view.
+
+The first attempt died on a full disk — D: had 0.1 GB left across sixty worktrees' Library folders —
+before Unity compiled a line; the unit moved into M2's warm worktree once there was room. The
+shader compiled clean on its first real run and every foliage test passed; the player build keeps
+it, and its log carries no fallback warning.
