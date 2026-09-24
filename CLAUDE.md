@@ -491,7 +491,8 @@ invisible where the game is played.
   `Enabled` itself are wrong for a colonist test too, since the animals unit committed art of the
   project's own** that resolves on the runner: ask about the rows the rule is about
   (`WorldRenderModelTests` and `PawnFigureDirector.CanDrawColonists`, 2026-09-23, the third and
-  fourth times).
+  fourth times; and `FrameTimeTests.TheGrassAgainstTheFrame`, 2026-09-24, the fifth: it asserted grass
+  existed, and the runner draws none — it now asks whether a foliage material was ever made).
 - **An editor GUI appears on the project moments after a batch run finishes**, twice on 2026-09-18
   (09:25:52 and 09:47:19, against runs ending 09:25:19 and 09:47:13), and it locks the project
   against the next `unity.sh` command. The cause is unestablished — Hub, the licensing IPC, or a

@@ -1731,6 +1731,13 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(shipped, Is.GreaterThan(0), "this board strews no grass, so there is nothing to price");
                 int full = GroundScatter.MaxPerCell * 100;
 
+                // Asked of the art, not of the catalogue: a clone without the packs resolves every
+                // tuft to a primitive, the scatter drops those, and no foliage material is ever made
+                // — so there is no grass to price, and the arm says so rather than failing on it.
+                // The CI runner is that machine (CLAUDE.md, "ask whether the art resolved").
+                if (renderer.RequeueFoliage(MaterialCache.DefaultFoliageQueue) == 0)
+                    Assert.Ignore("no grass art resolved on this machine, so there is no grass to price");
+
                 cam = boot.cameraRig!.Camera;
                 previousTarget = cam.targetTexture;
                 fourK = new RenderTexture(3840, 2160, 24) { name = "grass-4k" };
