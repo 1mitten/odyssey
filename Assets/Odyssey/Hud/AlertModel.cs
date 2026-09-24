@@ -486,3 +486,5 @@ namespace Odyssey.Hud
         }
     }
 }
+
+// CI proof: a Hud-only change; this PR is closed, never merged.
