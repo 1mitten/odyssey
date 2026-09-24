@@ -643,6 +643,12 @@ namespace Odyssey.Tests.PlayMode
         /// and the chase re-plans. It asserts that a fight really was in view — combat events in
         /// the timed window, marauders on the board — because a brawl that never started reports a
         /// beautifully cheap frame; about time it asserts only the class's 30 Hz ceiling.</para>
+        ///
+        /// <para>The brawl is ticked once a frame by the test on top of the bootstrap's own
+        /// real-time ticks. Without it the window's sim time was the machine's frame rate: 180
+        /// frames at 2.5 ms here are 27 ticks and caught four swings, and at 1.2 ms on the CI
+        /// runner they were about twelve and caught none (2026-09-24, PR #180). A tick of this
+        /// colony is 0.005 ms, so the frame it adds is noise; a peace it lets through is not.</para>
         /// </summary>
         [UnityTest]
         public IEnumerator TheFrameWithAFightInView()
@@ -687,16 +693,37 @@ namespace Odyssey.Tests.PlayMode
                 }
 
                 int eventsBefore = LastCombatEvent(boot);
+                long ticksBefore = boot.World.Views.Current.Tick;
+                bool brawling = true;
+                IEnumerator TickEachFrame()
+                {
+                    while (brawling)
+                    {
+                        boot.World!.Tick();
+                        yield return null;
+                    }
+                }
+
+                Coroutine ticker = boot.StartCoroutine(TickEachFrame());
                 float fight = 0f;
-                yield return TimeFrames("fight/brawl", boot, 30, x => fight = x);
+                try
+                {
+                    yield return TimeFrames("fight/brawl", boot, 30, x => fight = x);
+                }
+                finally
+                {
+                    brawling = false;
+                    boot.StopCoroutine(ticker);
+                }
                 int events = LastCombatEvent(boot) - eventsBefore;
+                long windowTicks = boot.World.Views.Current.Tick - ticksBefore;
 
                 WorldSnapshot frame = boot.World.Views.Current;
                 int hostiles = Hostiles(frame);
                 Debug.Log($"[FrameTime] fight: peace {peace:0.00} ms ({peaceDraws} draw calls), " +
                           $"brawl {fight:0.00} ms ({boot.Renderer?.DrawCalls ?? 0} draw calls), " +
                           $"{frame.Pawns.Length} pawns ({hostiles} hostile), {boot.Figures?.FigureCount ?? 0} figures, " +
-                          $"{events} combat events in the window, {frame.Corpses.Length} corpses");
+                          $"{events} combat events in {windowTicks} ticks of the window, {frame.Corpses.Length} corpses");
 
                 Assert.That(hostiles + frame.Corpses.Length, Is.GreaterThan(0), "no marauder was ever spawned");
                 Assert.That(events, Is.GreaterThan(0), "nothing fought in the timed window: this timed a peace");

@@ -181,6 +181,17 @@ same message — and it does not get slower, because it stops as soon as the eff
 applies to anything downstream of a tick: a published snapshot, a job starting, a designation
 clearing.
 
+**The same trap has a second form: counting frames, or timing a window of frames, across a tick.**
+2026-09-24, PR #180, two PlayMode tests red on the CI runner and green here. `StockpileDragTests`
+counted frames from the drag to the drawn zone and allowed ten, but the zone exists only after the
+next tick, and at the runner's ~1 ms frames that tick can be sixteen frames off — `main` read 3 and
+the branch 11 on the same renderer. `TheFrameWithAFightInView` asserted combat events inside 180
+timed frames, which are 27 ticks at 2.5 ms here and about twelve at 1.2 ms there, and the runner's
+twelve caught no swing. **The runner is the faster machine, so it is where this shows.** Count
+from the effect (the tick that published the zone), and where a window must hold simulation time,
+tick it from the test (`boot.StartCoroutine` ticking once a frame) rather than hoping the frame
+rate supplies it. Print the tick count beside any frame count, so the next failure names itself.
+
 **The fast tier compiles neither Presentation nor Editor.** `scripts/test-fast.sh` builds only the
 two mirror projects, `Odyssey.Tests.Sim` and `Odyssey.Tests.Hud`, so a green fast tier says nothing
 at all about `Assets/Odyssey/Presentation/`, `Assets/Editor/` or the scene wiring. A unit that
