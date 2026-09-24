@@ -937,6 +937,16 @@ namespace Odyssey.Presentation.Rendering
                 if (_meadowGround != null) return _meadowGround;
             }
 
+            // Marsh wears the grass's material too, when the look has a wet texture: the ground
+            // field then paints it into the meadow over metres, where its own tiled texture could
+            // only change at a cell's edge — the ring of pale tiles round every stream (§24).
+            if (string.Equals(entry.moduleId, ModuleIds.Terrain("Marsh"), System.StringComparison.Ordinal)
+                && MeadowLook.PaintsMarsh)
+            {
+                _meadowGround ??= MeadowLook.NewGroundMaterial();
+                if (_meadowGround != null) return _meadowGround;
+            }
+
             Material source = entry.material!;
 
             // Every other natural terrain is drawn the same way, from its own texture, so that it
