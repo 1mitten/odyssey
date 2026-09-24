@@ -183,6 +183,21 @@ simulation does not change. Validated against the code (planning agent, 2026-09-
 
 - Worldgen relief goes to **±4 layers**, spaced so a hillside reads as a slope rather than a
   staircase. That changes `SurfaceY`, so the goldens re-bake.
+- **Measured 2026-09-24 (M7, `28-map-size.md` §11).** ±4 relief with today's noise leaves **no
+  cliffs** on any board over five seeds. At 16 layers the lowest valley has **no rock** above the
+  bedrock (three today); at 20 it has four, for 25% more cells (Huge 70.6 → 87.1 MiB); at 24, eight,
+  for 50% more (Huge 104 MiB). The Huge edit tick follows the relief, not the depth (1.21 → 1.48 ms
+  at 20, 1.62 at 24).
+  **The tie-breaker was the frame, and it is run: depth costs the frame nothing** — 20 and 24
+  layers draw the same calls and chunks on every board, `World` within noise (`28-map-size.md` §11).
+  **Recommendation, ranked: 24 layers, then 20, never 16.** With the frame equal, 24 buys a mine
+  twice as deep as 20's (8 rock layers under the lowest valley against 4) and matches Large, which
+  already ships 24; what it costs is memory alone, Huge 87 → 104 MiB simulation-side (~129 with the
+  render mirror) and 606 KB saves. **What would flip it to 20:** the RTX 3050/3060 laptop's memory
+  budget, if a Huge board at ~130 MiB turns out to matter there. 16 deletes the mine under every
+  valley.
+  **The relief, not the depth, is what costs the frame**: ±4 adds ~600 draw calls and 0.6–0.75 ms
+  of `World` on Standard and Huge. M9's ground skin is the lever and is measured against that table.
 - **The board's height is measured before it is chosen.** 8 layers of relief on a 16-layer board
   leaves ground at `SizeY − 1 − 3 − 4`. The arms are 16, 20 and 24 tall on all four boards, for tick,
   memory, meshing and frame. The owner picks.
@@ -241,7 +256,7 @@ measurements here.
 | **M4** | Lush grass and flowers on today's ground (§5). | **First Play.** 2.0 ms at 4K. |
 | **M5** | Meadow trees and bushes as sim species; the topple; goldens measured; wiki. Confirm fruit-bearing. | **Second Play.** |
 | **M6** | **Built 2026-09-24** (§15): quality presets, the grass ladders, grass shadows; preferences now reach a new session. | Unity tiers owed (disk); owner's look at 4K and on a laptop. |
-| **M7** | The board-depth measurement (§7). | **Owner picks.** |
+| **M7** | **Measured 2026-09-24** (§7, `28-map-size.md` §11): no cliffs at ±4; depth costs the frame nothing, relief ~600 calls; 24 layers recommended, then 20, never 16. | **Owner picks.** |
 | **M8** | Hills worldgen and the per-column slice. | Goldens measured. |
 | **M9** | **Built 2026-09-24** (§20): the ground skin — ramps, flat tops, stream banks and an apron to the surround — on `claude/meadow-skin`. The ground keeps the `MeadowGround` shader. | **Third Play.** |
 | **M10** | The surround continues the skin (§7). | Seam-free at the rim. |

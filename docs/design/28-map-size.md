@@ -561,3 +561,79 @@ An off-screen chunk now simply stays stale until it is on screen, which is what 
 meant. `ChunksOutsideFrustum` still counts only chunks known to hold something.
 `MeshBudgetTests.AnOffScreenChunkSpendsNoneOfTheBudget` is the guard: a whole-board re-mesh under a
 frustum round one chunk defers nothing, and taking the frustum away meshes the rest.
+
+## 11. Eight layers of hills, and how deep a board must be for them (2026-09-24)
+
+The Meadow overhaul's owner decision is rolling hills of about eight layers — relief ±4 where the
+game ships ±2 — with "make sure performance doesn't suffer" (`38-meadow-overhaul.md` §7). The ground
+sits at `SizeY − 1 − headroomLayers − surfaceRelief`, so doubling the relief on a 16-layer board
+takes two layers out of the mine. `BoardDepthTests.EightLayersOfHillsOnEveryBoard` (Long) prices
+each option on every board through `ColonyWorld.DefFor` — the played wooded meadow, with a relief
+seam (`surfaceRelief`, -1 for the def's own) — one test per board so its times compare with each
+other. Generation is the median of seeds 1–5; everything else is seed 4242, as §2. .NET 8 CoreCLR on
+the Windows dev machine; world memory is the simulation half only (add ~18 B/cell for the render
+mirror, §2).
+
+| Board | Config | Cells | Surface | Rock under lowest valley | Cliffs, 5 seeds | Generation | Regions / links | Edit tick | World MiB (B/cell) | Save KB |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Small 80² | today ±2 @16 | 102,400 | 7..12 | 3 | 0 | 14 ms | 945 / 568 | 0.268 ms | 8.0 (81.9) | 58 |
+| | ±4 @16 | 102,400 | 4..11 | **0** | 0 | 13 ms | 925 / 750 | 0.301 ms | 8.0 (81.9) | 66 |
+| | ±4 @20 | 128,000 | 8..15 | 4 | 0 | 16 ms | 1,182 / 752 | 0.309 ms | 9.9 (80.9) | 70 |
+| | ±4 @24 | 153,600 | 12..19 | 8 | 0 | 20 ms | 1,438 / 752 | 0.303 ms | 11.8 (80.3) | 70 |
+| Standard 120² | today ±2 @16 | 230,400 | 7..12 | 3 | 0 | 41 ms | 2,110 / 1,477 | 0.627 ms | 17.8 (81.0) | 133 |
+| | ±4 @16 | 230,400 | 4..12 | **0** | 0 | 39 ms | 2,008 / 1,931 | 0.553 ms | 17.7 (80.7) | 150 |
+| | ±4 @20 | 288,000 | 8..16 | 4 | 0 | 47 ms | 2,590 / 1,946 | 0.569 ms | 21.9 (79.8) | 151 |
+| | ±4 @24 | 345,600 | 12..20 | 8 | 0 | 53 ms | 3,166 / 1,946 | 0.510 ms | 26.2 (79.5) | 148 |
+| Large 180² | today ±2 @24 | 777,600 | 15..20 | 11 | 0 | 102 ms | 7,360 / 3,511 | 0.836 ms | 58.4 (78.8) | 348 |
+| | ±4 @16 | 518,400 | 4..12 | **0** | 0 | 77 ms | 4,486 / 4,301 | 0.875 ms | 39.9 (80.7) | 339 |
+| | ±4 @20 | 648,000 | 7..16 | 3 | 0 | 88 ms | 5,790 / 4,327 | 0.975 ms | 49.5 (80.0) | 346 |
+| | ±4 @24 | 777,600 | 11..20 | 7 | 0 | 84 ms | 7,086 / 4,327 | 1.108 ms | 58.7 (79.1) | 339 |
+| Huge 240² | today ±2 @16 | 921,600 | 7..12 | 3 | 0 | 113 ms | 8,406 / 6,180 | 1.213 ms | 70.6 (80.4) | 546 |
+| | ±4 @16 | 921,600 | 4..12 | **0** | 0 | 116 ms | 7,880 / 7,584 | 1.476 ms | 70.2 (79.9) | 620 |
+| | ±4 @20 | 1,152,000 | 8..16 | 4 | 0 | 131 ms | 10,195 / 7,615 | 1.484 ms | 87.1 (79.3) | 632 |
+| | ±4 @24 | 1,382,400 | 12..20 | 8 | 0 | 145 ms | 12,500 / 7,620 | 1.616 ms | 104.0 (78.9) | 606 |
+
+**What it says.**
+
+- **No cliffs.** Over five seeds on every board, ±4 with today's noise period (34) leaves no two
+  neighbouring columns more than one layer apart. The ±2 tuning holds at ±4; M8 needs no slope
+  spacing to keep the surface walkable, only to make it read as hills.
+- **At 16 layers the mine is gone under the valleys.** The lowest valley has **no rock at all**
+  between its subsoil and the bedrock, on every board, against three layers today. That rules out
+  keeping 16.
+- **At 20 the mine is back to today's depth and a layer more** (4 against 3), for **25% more cells**:
+  Standard 17.8 → 21.9 MiB, Huge 70.6 → 87.1 MiB (~108 with the render mirror). Save +13–16%,
+  generation +15%.
+- **At 24 the mine is deeper than today's** (8), for **50% more cells**: Huge 104 MiB (~129 with the
+  mirror). Large already ships at 24 and pays the same.
+- **The edit tick moves with relief on Huge, not with depth**: 1.213 ms today, 1.476 at ±4 on 16
+  layers, 1.484 at 20, 1.616 at 24 — relief adds terrace links (6,180 → ~7,600), depth adds only
+  regions in rock. On Standard the three readings sit inside the run's noise (0.51–0.63 ms). A tick
+  at rest is flat (~0.02 ms) on every depth.
+- **Cavern and ore counts did not change with depth** (Standard 4 / 100 on every row). The arm counts
+  deposits, not whether they sit where a colonist can reach them; that is not established.
+
+**The frame** (`FrameTimeTests.TheBoardDepthAgainstTheFrame`, one run, RTX 5070 Ti on DX11, culling
+on, played wooded meadow; another session's PlayMode run and the CI runner shared the machine, so
+only differences inside the table are read):
+
+| Board | Config | Batch frame (`World`) | 4K frame (`World`) | Calls at 4K | Chunks at 4K |
+|---|---|---|---|---|---|
+| Small | today ±2 @16 | 1.95 (0.531) | 10.36 (0.791) | 660 | 55 |
+| | ±4 @16 / @20 / @24 | 2.47 / 2.43 / 2.26 (0.825 / 0.795 / 0.753) | 11.34 / 9.98 / 10.08 | 876 / 869 / 869 | 70 / 70 / 68 |
+| Standard | today ±2 @16 | 2.30 (0.699) | 9.88 (0.882) | 877 | 76 |
+| | ±4 @16 / @20 / @24 | 3.38 / 3.34 / 3.17 (1.443 / 1.435 / 1.348) | 15.77 / 12.08 / 12.06 | 1,520 / 1,489 / 1,478 | 126 / 123 / 118 |
+| Large | today ±2 @24 | 2.46 (1.274) | 10.57 (1.358) | 1,092 | 108 |
+| | ±4 @16 / @20 / @24 | 3.12 / 3.13 / 3.02 (1.828 / 1.826 / 1.774) | 13.68 / 14.46 / 15.98 | 1,678 / 1,662 / 1,652 | 143 / 139 / 136 |
+| Huge | today ±2 @16 | 2.72 (1.504) | 10.59 (1.814) | 1,443 | 139 |
+| | ±4 @16 / @20 / @24 | 3.45 / 3.49 / 3.41 (2.075 / 2.095 / 2.051) | 13.59 / 12.43 / 12.19 | 2,078 / 2,064 / 2,064 | 169 / 165 / 165 |
+
+- **Depth costs the frame nothing.** From 16 to 20 to 24 layers the calls and chunks are identical
+  or fall, and `World` moves inside the noise on every board. The camera draws the layers it can
+  see, and extra rock under the valleys is not among them.
+- **Relief costs the frame, and that is the finding.** ±2 → ±4 adds **~600 draw calls and 0.6–0.75
+  ms of `World`** on Standard and Huge (Standard 877 → ~1,490 calls, `World` 0.70 → 1.44 ms at the
+  batch view): taller hills put more layers of chunks in view. At 4K the frame moves 2–3 ms on
+  Standard and Huge, a figure noisier than `World` because the frame is GPU-bound there. **"Performance
+  doesn't suffer" is breached by the relief, not the depth**, and the lever is M9's ground skin, which
+  replaces ~625 turf instances a surface chunk with one mesh — measure it against this table.

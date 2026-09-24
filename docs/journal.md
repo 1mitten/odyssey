@@ -12194,3 +12194,28 @@ nearly all of it `Settle`'s 0.4 s of wall clock repeated 63 times; the wait exis
 cadence buckets run on wall-clock time, so shortening it needs a Unity run to prove, not a guess.
 And "a skipped job passes a required check" is what the whole scheme rests on; *Fast tier* is an
 aggregator that fails when the selector does, so a broken selector cannot skip its way to a merge.
+
+## 2026-09-24 — Meadow M7: what eight layers of hills cost, and a full disk
+
+The owner chose hills of about eight layers and asked that performance not suffer; the ground sits at
+`SizeY − 1 − 3 − relief`, so ±4 on a 16-layer board takes two layers out of the mine. The measurement
+went through the game's own chooser — `ColonyWorld.DefFor` gained a relief parameter, the one seam,
+so the measured board is the played meadow and differs only in relief and height.
+
+Two findings were not the expected ones. **±4 with today's noise produces no cliffs** on any board
+over five seeds — the worry that M8 would need slope spacing just to stay walkable was wrong. And the
+cost of depth is almost all memory: the edit tick on Huge follows the relief (more terrace links), not
+the extra layers of rock. **Sixteen layers is ruled out** — it leaves no rock at all under the lowest
+valley — and twenty is recommended over twenty-four, with the 4K frame as the tie-breaker.
+
+That tie-breaker could not be run: drive D: filled to zero bytes during this session and Unity's
+package import failed with `ENOSPC`. The arm is written. Every worktree on D: and the CI runner share
+the drive, so the next Unity run anywhere will fail the same way until space is freed.
+
+The frame arm ran the same day, in another worktree's warm Library once space was found, and it
+reversed the recommendation. Depth costs the frame nothing — 20 and 24 layers draw identical calls
+and chunks on every board — so the deeper mine is free at the frame and 24 is recommended, with
+memory the only price. What the frame *does* feel is the relief: ±4 hills add about 600 draw calls
+and 0.6–0.75 ms of `World` on Standard and Huge, because taller hills put more layers of chunks in
+view. So the owner's "make sure performance doesn't suffer" is a question for the ground skin (M9),
+not for the board height. EditMode 3,261 / 3,229 / 0, PlayMode 117 / 112 / 0.

@@ -87,6 +87,11 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("With barrenMap: keep the woodland, so there are trees to fell. Off gives the bare board.")]
         public bool woodedMap = true;
 
+        /// <summary>A natural map's surface relief in layers, or -1 for the def's own. For the
+        /// board-depth measurement only (<c>docs/design/38-meadow-overhaul.md</c> §7); not saved,
+        /// and a loaded colony ignores it.</summary>
+        [HideInInspector] public int surfaceReliefOverride = -1;
+
         // Playtest marks the trees near the start for felling before the first tick, because
         // there is no tool to give that order with yet and a colony with nothing to do proves
         // nothing. When the UI line's designate tool lands, the default here flips to Bare and
@@ -843,6 +848,7 @@ namespace Odyssey.Presentation.Bootstrap
                 // put a restored colony's camera on empty ground far from the colony.
                 Barren = from != null ? from.Recipe.Barren : barrenMap,
                 Wooded = from != null ? from.Recipe.Wooded : woodedMap,
+                SurfaceRelief = from != null ? -1 : surfaceReliefOverride,
                 Map = sessionMap,
                 Chunks = chunks,
 
