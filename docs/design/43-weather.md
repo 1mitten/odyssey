@@ -66,13 +66,13 @@ query nobody restates (P1).
   rolls", not "a quarter of the time" (episodes have different lengths; the owner tunes lengths
   separately).
 - **RNG** only through `DeterministicRandom.ForTick(seed, tick, purpose)` (the tick is an `int`)
-  with a purpose of its own, so weather rolls can never collide with another system's draws. Same seed → same sky,
-  on Mono and CoreCLR (01 §7).
+  with a purpose of its own, so weather rolls can never collide with another system's draws. Same
+  seed → same sky, on Mono and CoreCLR (01 §7).
 - **State**: active kind, previous kind, both intensities, the blend window, the episode-end tick.
   `ISaveable` (`SaveKey "odyssey.weather"`, a new keyed section, so **no format bump**: storage (8)
   and temperature (9) settled that only a change to an existing record moves the number,
-  `SaveFormat.cs`) and
-  `IStateHashable` — anything a pass reads is saved and hashed, the `AmbientTempC` lesson. Goldens
+  `SaveFormat.cs`) and `IStateHashable` — anything a pass reads is saved and hashed, the
+  `AmbientTempC` lesson. Goldens
   re-baked with a reason line in `Golden.cs`.
 
 ## 4. The roll and the episode
@@ -247,6 +247,26 @@ scaled by intensity, and a drum under a roof from the same column map.
 Ultra and ≤ 0.3 ms at 1080p Low. The PlayMode arm (`FrameTimeTests.TheRainAgainstTheFrame`) runs
 off, zero intensity (the negative control, P18), the particle arm and the procedural arm in one
 run. The 4K and laptop figures come from a Play session.
+
+**First reading (2026-09-24, `claude/rain-look`, one run, RTX 5070 Ti, D3D11, one other editor
+open).**
+
+| Arm | 640 × 480 | 3840 × 2160 | Submit at 4K |
+|---|---|---|---|
+| off | 2.17 ms | 8.38 ms | 1.748 ms |
+| zero (control) | 2.06 | 8.95 | 1.838 |
+| wet ground only | 2.05 | 8.59 | 1.826 |
+| particles, 0.7 (11,702 drops alive) | 2.11 | 9.49 | 1.969 |
+| GPU, 0.7 (16,800 + 4,900) | 2.08 | 8.67 | 1.839 |
+| GPU downpour (24,000 + 7,000) | 2.14 | 9.24 | 1.927 |
+
+The controls differ by 0.11 ms at 640 × 480 and by 0.57 ms at 4K, and that spread is the floor.
+- The GPU arm at 0.7 lands inside the floor.
+- The downpour is 0.29 ms above the higher control.
+- The particles are 0.54 ms above it, with 30 % fewer drops than their target.
+- GPU time cannot be read in a batch run, so the 0.5 ms budget stays unproven.
+
+Pictures: https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3
 
 **Rejected, and why.**
 - **VFX Graph**: similar GPU cost, but it adds a package and compute passes, and its depth collision
