@@ -11713,3 +11713,18 @@ front to back, instead of relying on the queue to hide it from the ink.
 The owner took the one reading only Play could: at 3840 x 2160 the overlay's `gpu` read 6–7 ms with
 the tufts off and about 7, spiking to 8 while moving, with them on. Half a millisecond to one and a
 half of GPU for the shipped grass, which is the batch arm's answer by an independent instrument.
+
+## 2026-09-24 — Meadow M2: levels of detail through instancing, and why they ship off
+
+The world is drawn with `RenderMeshInstanced`, so a prefab's `LODGroup` never runs, and the library
+kept each prefab's finest level only. M2 keeps every level. It rests on e-09's one fact — every
+Meadow LOD child sits on the prefab's origin — so a module whose parts all share one local transform
+is emitted into a single bucket and drawn from it with whichever level's parts the chunk's distance
+chooses. Art that breaks the rule is not an error; it keeps drawing its finest level, as before.
+
+The arm on the played meadow gave two answers at once. The mechanism works — the three Meadow grass
+tufts qualify, and switched on, 4,403 of the ~4,800 on screen drop a level — and that is exactly why
+it ships off: the pack's switch heights assume a camera near the ground, and at 60–160 m every tuft
+is past its first switch. With levels off the counts are M1's to the instance, which is the proof
+the one-bucket path changed nothing. The saving is for the Meadow trees in M5, which will turn
+levels on with a bias chosen against them and a person looking.

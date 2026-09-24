@@ -89,6 +89,54 @@ namespace Odyssey.Presentation.Rendering
         /// everything, which is what a headless measurement wants.
         /// </summary>
         public Vector3? ViewerPosition { get; set; }
+
+        /// <summary>
+        /// Whether a module drawn by level (<see cref="ResolvedModule.DrawsByLevel"/>) takes a
+        /// coarser level with distance. **Off by default**, and off means exactly the finest level
+        /// everywhere, which is what every module drew before levels existed.
+        ///
+        /// <para>Off because the pack's own switch heights were authored for a camera near the
+        /// ground: a 1.9 m grass clump leaves its finest level at a tenth of the screen, which at
+        /// this camera's 40° is about 25 m, and the play camera stands 60 to 160 m off the ground —
+        /// so with the numbers as shipped, every tuft on screen would be its crudest card. Each
+        /// unit that brings art in turns it on with <see cref="LodBias"/> set against that art and
+        /// a person looking at it (design 38 §11, M4 and M5).</para>
+        /// </summary>
+        public bool UseLods { get; set; }
+
+        /// <summary>Multiplies the screen height a module is judged at, as Unity's own
+        /// <c>QualitySettings.lodBias</c> does: above one keeps finer levels further away.</summary>
+        public float LodBias { get; set; } = 1f;
+
+        /// <summary>The camera's vertical field of view in degrees, which the screen height of a
+        /// level is measured against. The root writes it every frame beside
+        /// <see cref="ViewerPosition"/>; 40 is the play camera's.</summary>
+        public float ViewerFieldOfView { get; set; } = 40f;
+
+        /// <summary>Instances drawn last frame at a level coarser than the finest. The only way to
+        /// tell "levels are on and doing nothing" from "levels are on and working".</summary>
+        public int InstancesAtCoarserLevels { get; private set; }
+
+        int LevelFor(ResolvedModule module, float distance) =>
+            UseLods ? LevelFor(module, distance, ViewerFieldOfView, LodBias) : 0;
+
+        /// <summary>
+        /// The level a module is drawn at from a distance, by the rule Unity's <c>LODGroup</c>
+        /// applies: the fraction of the screen's height the module fills, times the bias, against
+        /// each level's switch height, finest first. Past the last switch the last level is kept —
+        /// the pack's final number is a cull, and nothing here culls by size.
+        /// </summary>
+        public static int LevelFor(ResolvedModule module, float distance, float fieldOfView, float bias)
+        {
+            ModuleLod[] lods = module.Lods;
+            if (lods.Length < 2 || distance <= 0f || module.LodSize <= 0f) return 0;
+
+            float screen = module.LodSize * bias
+                           / (2f * distance * Mathf.Tan(0.5f * fieldOfView * Mathf.Deg2Rad));
+            for (int i = 0; i < lods.Length - 1; i++)
+                if (screen >= lods[i].ScreenHeight) return i;
+            return lods.Length - 1;
+        }
         /// <summary>
         /// This frame's crowd buckets, or null for the plain scan.
         ///
@@ -430,6 +478,7 @@ namespace Odyssey.Presentation.Rendering
             InstancesFaded = 0;
             ChunksSightTested = 0;
             ChunksOutsideFrustum = 0;
+            InstancesAtCoarserLevels = 0;
             CellPlatesDrawn = 0;
             ChunksMeshDeferred = 0;
             _meshedThisFrame = 0;
@@ -522,8 +571,12 @@ namespace Odyssey.Presentation.Rendering
                                  && Sight.Touches(batch.Bounds, TallestModuleMetres);
                     if (sight) ChunksSightTested++;
 
-                    DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight);
-                    if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight);
+                    // Once per chunk: every bucket's level of detail is chosen against it.
+                    float distance = ViewerPosition.HasValue
+                        ? Mathf.Sqrt(batch.Bounds.SqrDistance(ViewerPosition.Value))
+                        : 0f;
+                    DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight, distance);
+                    if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight, distance);
                 }
             }
         }
@@ -589,104 +642,124 @@ namespace Odyssey.Presentation.Rendering
         }
 
         void DrawBuckets(ChunkBatch batch, System.Collections.Generic.List<InstanceBucket> buckets,
-            float shade, bool ghost, float alpha, bool sight = false)
+            float shade, bool ghost, float alpha, bool sight = false, float distance = 0f)
         {
             for (int b = 0; b < buckets.Count; b++)
             {
                 InstanceBucket bucket = buckets[b];
                 if (bucket.Count == 0) continue;
 
-                ModulePart part = _model.Library[bucket.Module].Parts[bucket.Part];
-                ResolveColour(bucket.Tint, part.IsFallback, shade, out Color tint, out Color emission);
+                ResolvedModule resolved = _model.Library[bucket.Module];
 
-                // A tree is the one bucket whose colour is not a tint: it is four colours painted
-                // into four cells of the pack atlas, which needs its own shader and its own cache.
-                // Everything else — and a ghosted tree, which is drawn by the translucent stand-in
-                // and has no atlas to repaint — goes the ordinary way. A null from the tree cache
-                // means there was no shader or no art, and the fallback is exactly what a tree
-                // drew before this feature existed.
-                Material? painted = !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
-                    ? _materials.Trees.For(part.Material, TintCode.TreeSpeciesOf(bucket.Tint), shade)
-                    : null;
-                Material material = painted ?? _materials.Get(part.Material, tint, emission, ghost, alpha,
-                    foliage: TintCode.IsFoliage(bucket.Tint),
-                    water: TintCode.IsWater(bucket.Tint));
-
-                // Terrain receives shadows but never casts them, and that is not a saving so much
-                // as a correctness fix. Ground is a contiguous mass of cell-sized boxes; letting
-                // each box cast meant the surface shadowed itself, and with a shadow map stretched
-                // over a 300 m board the texel is far larger than a cell, so every ground tile
-                // acned against its neighbours. The result was a dark cross-hatch over the whole
-                // map that read as filth on the grass rather than as light.
-                //
-                // Nothing worth seeing is lost: a colonist, a wall or a tree still casts onto the
-                // ground, which is what actually tells the eye where something is standing. It
-                // also takes 14,400 instances per layer out of the shadow pass.
-                //
-                // Foliage is the same argument a second time, and a bigger one. A meadow is
-                // seventeen thousand clumps, each of which would be drawn again into the shadow
-                // map to cast a shadow a few centimetres long onto grass of the same colour. The
-                // reference art has no per-tuft shadows either — its ground is evenly lit and the
-                // shadows that matter are the ones people and buildings cast onto it.
-                // Water is terrain, so it already inherits terrain's "receives but never casts".
-                bool terrain = TintCode.IsTerrain(bucket.Tint);
-                bool foliage = TintCode.IsFoliage(bucket.Tint);
-
-                if (foliage && ViewerPosition.HasValue
-                    && batch.Bounds.SqrDistance(ViewerPosition.Value) > FoliageDrawDistance * FoliageDrawDistance)
-                    continue;
-                bool casts = CastShadows && !ghost && !terrain && (!foliage || FoliageCastsShadows);
-
-                var rp = new RenderParams(material)
+                // A module drawn by level keeps one bucket whose matrices serve every part of every
+                // level; the chunk's distance chooses which level's parts are submitted from it
+                // (docs/design/38-meadow-overhaul.md §3). Anything else is one part per bucket.
+                ModulePart[]? levelParts = null;
+                if (resolved.DrawsByLevel)
                 {
-                    worldBounds = batch.Bounds,
-                    layer = GameObjectLayer,
-                    receiveShadows = !ghost,
-                    shadowCastingMode = casts ? ShadowCastingMode.On : ShadowCastingMode.Off,
-                };
-
-                // The per-instance colours of a tree, which is what lets every colour in a chunk
-                // share one draw. Built once per meshing rather than once a frame, and only when
-                // the material that reads them is the one actually drawing.
-                bool coloured = painted != null && bucket.IsColoured;
-
-                int faded = sight && !NeverFades(bucket.Tint) ? Partition(bucket) : 0;
-                if (faded == 0)
-                {
-                    if (coloured)
-                        SubmitColoured(rp, part, bucket.Matrices, bucket.Count,
-                            bucket.BarkDeep!, bucket.BarkWarm!, bucket.LeafDeep!, bucket.LeafFresh!,
-                            PropsOf(bucket));
-                    else
-                        Submit(rp, part, bucket.Matrices, bucket.Count);
-                    InstancesDrawn += bucket.Count;
-                    continue;
+                    int level = LevelFor(resolved, distance);
+                    levelParts = resolved.Lods[level].Parts;
+                    if (level > 0) InstancesAtCoarserLevels += bucket.Count;
                 }
+                int drawnParts = levelParts?.Length ?? 1;
 
-                // Ghosted with the same tint the solid draw would have had, so what shows through
-                // still reads as the tree or the wall it is, rather than as a grey pane. The
-                // ghost material is the translucent stand-in the x-rayed storeys use; the pack's
-                // own shaders are alpha-clipped and cannot be turned transparent from script.
-                var ghostParams = new RenderParams(
-                    _materials.Get(part.Material, tint, emission, ghost: true, SightFadeAlpha))
+                // Once per bucket, not per part: it splits the bucket's matrices, which every part
+                // of a level shares.
+                int faded = sight && !NeverFades(bucket.Tint) ? Partition(bucket) : 0;
+
+                for (int k = 0; k < drawnParts; k++)
                 {
-                    worldBounds = batch.Bounds,
-                    layer = GameObjectLayer,
-                    receiveShadows = false,
-                    shadowCastingMode = ShadowCastingMode.Off,
-                };
-                Submit(ghostParams, part, _faded, faded);
-                // The solid half is a *filtered* subsequence, so its colours have to be gathered in
-                // the same order — which Partition does as it splits, into scratch lists that are
-                // reused. The ghosted half needs none: it is drawn by the translucent stand-in,
-                // which has no atlas to repaint.
-                if (coloured)
-                    SubmitColoured(rp, part, _solid, bucket.Count - faded,
-                        _solidBarkDeep, _solidBarkWarm, _solidLeafDeep, _solidLeafFresh, SolidProps());
-                else
-                    Submit(rp, part, _solid, bucket.Count - faded);
-                InstancesDrawn += bucket.Count;
-                InstancesFaded += faded;
+                    ModulePart part = levelParts != null ? levelParts[k] : resolved.Parts[bucket.Part];
+                    ResolveColour(bucket.Tint, part.IsFallback, shade, out Color tint, out Color emission);
+
+                    // A tree is the one bucket whose colour is not a tint: it is four colours painted
+                    // into four cells of the pack atlas, which needs its own shader and its own cache.
+                    // Everything else — and a ghosted tree, which is drawn by the translucent stand-in
+                    // and has no atlas to repaint — goes the ordinary way. A null from the tree cache
+                    // means there was no shader or no art, and the fallback is exactly what a tree
+                    // drew before this feature existed.
+                    Material? painted = !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
+                        ? _materials.Trees.For(part.Material, TintCode.TreeSpeciesOf(bucket.Tint), shade)
+                        : null;
+                    Material material = painted ?? _materials.Get(part.Material, tint, emission, ghost, alpha,
+                        foliage: TintCode.IsFoliage(bucket.Tint),
+                        water: TintCode.IsWater(bucket.Tint));
+
+                    // Terrain receives shadows but never casts them, and that is not a saving so much
+                    // as a correctness fix. Ground is a contiguous mass of cell-sized boxes; letting
+                    // each box cast meant the surface shadowed itself, and with a shadow map stretched
+                    // over a 300 m board the texel is far larger than a cell, so every ground tile
+                    // acned against its neighbours. The result was a dark cross-hatch over the whole
+                    // map that read as filth on the grass rather than as light.
+                    //
+                    // Nothing worth seeing is lost: a colonist, a wall or a tree still casts onto the
+                    // ground, which is what actually tells the eye where something is standing. It
+                    // also takes 14,400 instances per layer out of the shadow pass.
+                    //
+                    // Foliage is the same argument a second time, and a bigger one. A meadow is
+                    // seventeen thousand clumps, each of which would be drawn again into the shadow
+                    // map to cast a shadow a few centimetres long onto grass of the same colour. The
+                    // reference art has no per-tuft shadows either — its ground is evenly lit and the
+                    // shadows that matter are the ones people and buildings cast onto it.
+                    // Water is terrain, so it already inherits terrain's "receives but never casts".
+                    bool terrain = TintCode.IsTerrain(bucket.Tint);
+                    bool foliage = TintCode.IsFoliage(bucket.Tint);
+
+                    if (foliage && ViewerPosition.HasValue
+                        && batch.Bounds.SqrDistance(ViewerPosition.Value) > FoliageDrawDistance * FoliageDrawDistance)
+                        continue;
+                    bool casts = CastShadows && !ghost && !terrain && (!foliage || FoliageCastsShadows);
+
+                    var rp = new RenderParams(material)
+                    {
+                        worldBounds = batch.Bounds,
+                        layer = GameObjectLayer,
+                        receiveShadows = !ghost,
+                        shadowCastingMode = casts ? ShadowCastingMode.On : ShadowCastingMode.Off,
+                    };
+
+                    // The per-instance colours of a tree, which is what lets every colour in a chunk
+                    // share one draw. Built once per meshing rather than once a frame, and only when
+                    // the material that reads them is the one actually drawing.
+                    bool coloured = painted != null && bucket.IsColoured;
+
+                    if (faded == 0)
+                    {
+                        if (coloured)
+                            SubmitColoured(rp, part, bucket.Matrices, bucket.Count,
+                                bucket.BarkDeep!, bucket.BarkWarm!, bucket.LeafDeep!, bucket.LeafFresh!,
+                                PropsOf(bucket));
+                        else
+                            Submit(rp, part, bucket.Matrices, bucket.Count);
+                        InstancesDrawn += bucket.Count;
+                        continue;
+                    }
+
+                    // Ghosted with the same tint the solid draw would have had, so what shows through
+                    // still reads as the tree or the wall it is, rather than as a grey pane. The
+                    // ghost material is the translucent stand-in the x-rayed storeys use; the pack's
+                    // own shaders are alpha-clipped and cannot be turned transparent from script.
+                    var ghostParams = new RenderParams(
+                        _materials.Get(part.Material, tint, emission, ghost: true, SightFadeAlpha))
+                    {
+                        worldBounds = batch.Bounds,
+                        layer = GameObjectLayer,
+                        receiveShadows = false,
+                        shadowCastingMode = ShadowCastingMode.Off,
+                    };
+                    Submit(ghostParams, part, _faded, faded);
+                    // The solid half is a *filtered* subsequence, so its colours have to be gathered in
+                    // the same order — which Partition does as it splits, into scratch lists that are
+                    // reused. The ghosted half needs none: it is drawn by the translucent stand-in,
+                    // which has no atlas to repaint.
+                    if (coloured)
+                        SubmitColoured(rp, part, _solid, bucket.Count - faded,
+                            _solidBarkDeep, _solidBarkWarm, _solidLeafDeep, _solidLeafFresh, SolidProps());
+                    else
+                        Submit(rp, part, _solid, bucket.Count - faded);
+                    InstancesDrawn += bucket.Count;
+                    InstancesFaded += faded;
+                }
             }
         }
 

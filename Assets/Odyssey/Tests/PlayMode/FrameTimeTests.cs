@@ -1809,6 +1809,82 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What levels of detail do to the frame on the played meadow, with the pack's own switch
+        /// heights (<c>docs/design/38-meadow-overhaul.md</c> §3, M2).
+        ///
+        /// <para><b>A control for the mechanism, not the saving it exists for.</b> The saving is
+        /// the Meadow trees (M5), which are 5,000 to 45,000 triangles each; today's board has
+        /// PolygonGeneric trees with no levels, and the only art with levels is the grass, which is
+        /// cheap already (§13). What this proves is that the levels really are chosen and drawn in a
+        /// running world — <c>InstancesAtCoarserLevels</c> above zero with them on and at zero with
+        /// them off — and what the pack's numbers do at this camera, which is the reason
+        /// <c>UseLods</c> ships off.</para>
+        ///
+        /// <para>Ignored where no drawn module has levels, which is a clone without the packs: the
+        /// catalogue resolves to primitives there, and a primitive has one level.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheLevelsOfDetailAgainstTheFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            try
+            {
+                yield return TimeFrames("lod/warm", boot, WarmupFrames, _ => { });
+
+                ChunkRenderer renderer = boot.Renderer!;
+                ModuleLibrary library = boot.Model!.Library;
+                int withLevels = 0;
+                for (int i = 0; i < library.Count; i++)
+                    if (library[i].DrawsByLevel) withLevels++;
+                if (withLevels == 0)
+                    Assert.Ignore("no module on this board resolved with levels of detail — no art on this machine");
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "lod-4k" };
+
+                var lines = new List<string>();
+                int coarserWhenOn = 0, coarserWhenOff = -1;
+                foreach (bool big in new[] { false, true })
+                {
+                    cam.targetTexture = big ? fourK : previousTarget;
+                    string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                    foreach (bool on in new[] { false, true })
+                    {
+                        renderer.UseLods = on;
+                        float ms = 0f;
+                        yield return TimeFrames($"lod/{resolution}/{(on ? "on" : "off")}", boot, WarmupFrames,
+                            m => ms = m);
+                        int coarser = renderer.InstancesAtCoarserLevels;
+                        if (on) coarserWhenOn = Math.Max(coarserWhenOn, coarser);
+                        else coarserWhenOff = Math.Max(coarserWhenOff, coarser);
+                        lines.Add($"{resolution} levels {(on ? "on" : "off")}: frame {ms:0.00} ms, " +
+                                  $"{renderer.DrawCalls} calls, {renderer.InstancesDrawn} instances, " +
+                                  $"{coarser} at a coarser level");
+                    }
+                }
+
+                Debug.Log($"[FrameTime] levels of detail ({withLevels} modules with levels, bias " +
+                          $"{renderer.LodBias}, fov {renderer.ViewerFieldOfView:0}): " + string.Join("; ", lines));
+
+                Assert.That(coarserWhenOff, Is.Zero, "levels were chosen with UseLods off");
+                Assert.That(coarserWhenOn, Is.GreaterThan(0),
+                    "levels were on and nothing was drawn at a coarser level, so the pick never ran");
+            }
+            finally
+            {
+                if (boot.Renderer != null) boot.Renderer.UseLods = false;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// Designate the board row-major until a thousand orders stand, the same walk and the
         /// same draining <see cref="SeedField"/> uses and for the same reasons: the meadow
         /// refuses what stands on it, and the intent bus has a capacity.

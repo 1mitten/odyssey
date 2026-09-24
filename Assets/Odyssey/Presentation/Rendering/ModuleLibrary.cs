@@ -35,11 +35,30 @@ namespace Odyssey.Presentation.Rendering
         public bool IsFallback { get; }
     }
 
+    /// <summary>
+    /// One level of detail of a module: the parts drawn at that level, and the screen height (as a
+    /// fraction of the screen, the pack's own <c>LODGroup</c> number) above which it is used.
+    /// </summary>
+    public sealed class ModuleLod
+    {
+        public ModuleLod(ModulePart[] parts, float screenHeight)
+        {
+            Parts = parts;
+            ScreenHeight = screenHeight;
+        }
+
+        public ModulePart[] Parts { get; }
+
+        /// <summary>The level is drawn while the module fills at least this much of the screen's
+        /// height. The last level is drawn below its own number too: nothing here culls.</summary>
+        public float ScreenHeight { get; }
+    }
+
     /// <summary>A module id resolved to drawable parts.</summary>
     public sealed class ResolvedModule
     {
         public ResolvedModule(string id, ModuleShape shape, ModulePart[] parts, bool usesArt,
-            Matrix4x4 head = default, bool hasHead = false)
+            Matrix4x4 head = default, bool hasHead = false, ModuleLod[]? lods = null, float lodSize = 0f)
         {
             Id = id;
             Shape = shape;
@@ -48,7 +67,31 @@ namespace Odyssey.Presentation.Rendering
             Head = head;
             HasHead = hasHead;
             Bounds = BoundsOf(parts);
+            Lods = lods != null && lods.Length > 1 ? lods : new[] { new ModuleLod(parts, 0f) };
+            LodSize = lodSize;
         }
+
+        /// <summary>
+        /// Every level of detail the art ships, finest first; <c>Lods[0].Parts</c> is
+        /// <see cref="Parts"/>. A module without levels — or whose levels could not be drawn from
+        /// one matrix — has exactly one (<c>docs/design/38-meadow-overhaul.md</c> §3).
+        /// </summary>
+        public ModuleLod[] Lods { get; }
+
+        /// <summary>
+        /// Whether the renderer draws this module by level: one bucket per placement, whose matrix
+        /// serves every part of whichever level is chosen.
+        ///
+        /// <para><b>Only true when every part of every level sits at one local transform</b>,
+        /// checked at load. That is what lets one matrix array draw a trunk, its branches and, at
+        /// a distance, the card that replaces both — the Meadow art is built that way
+        /// (<c>e-09</c> §1). Art that is not keeps the part-by-part path it always had.</para>
+        /// </summary>
+        public bool DrawsByLevel => Lods.Length > 1;
+
+        /// <summary>The <c>LODGroup</c>'s size once placed, in metres: what the screen height of
+        /// a level is measured against. Zero for a module without levels.</summary>
+        public float LodSize { get; }
 
         /// <summary>
         /// Where this module's head bone sits, in the same space <see cref="ModulePart.Local"/> is
@@ -260,6 +303,8 @@ namespace Odyssey.Presentation.Rendering
             bool usesArt = false;
             Matrix4x4 head = Matrix4x4.identity;
             bool hasHead = false;
+            ModuleLod[]? lods = null;
+            float lodSize = 0f;
             if (entry != null && entry.material != null)
             {
                 // A material straight onto the cell-shaped box: how textured ground is drawn.
@@ -284,7 +329,8 @@ namespace Odyssey.Presentation.Rendering
             }
             else if (entry != null && entry.prefab != null)
             {
-                parts = FlattenPrefab(entry.prefab!, entry, shape, out head, out hasHead);
+                parts = FlattenPrefab(entry.prefab!, entry, shape, out head, out hasHead,
+                    out lods, out lodSize);
                 usesArt = parts.Length > 0;
             }
             else
@@ -298,7 +344,7 @@ namespace Odyssey.Presentation.Rendering
                 _missing.Add(moduleId!);
             }
 
-            var module = new ResolvedModule(moduleId!, shape, parts, usesArt, head, hasHead);
+            var module = new ResolvedModule(moduleId!, shape, parts, usesArt, head, hasHead, lods, lodSize);
             _modules.Add(module);
             int index = _modules.Count - 1;
             _byId[moduleId!] = index;
@@ -352,11 +398,86 @@ namespace Odyssey.Presentation.Rendering
             return keep;
         }
 
+        /// <summary>
+        /// The coarser levels of a prefab's <see cref="LODGroup"/>, placed exactly as the finest
+        /// was, or null when the module should keep drawing its finest level only.
+        ///
+        /// <para><b>Null unless one matrix can draw every level</b> — one LOD group, and every part
+        /// of every level at the same local transform as the finest level's first part. That is
+        /// what the renderer relies on to keep a single matrix array per placement and swap only
+        /// the meshes (<c>docs/design/38-meadow-overhaul.md</c> §3). A prefab that breaks it is not
+        /// an error: it draws its finest level, as everything did before levels existed.</para>
+        ///
+        /// <para>A level holds the renderers its <c>LOD</c> names plus every renderer no level
+        /// names, which is the same rule <see cref="HighestDetail"/> applies to the finest.</para>
+        /// </summary>
+        ModuleLod[]? CoarserLevels(GameObject prefab, MeshFilter[] filters, ModuleEntry entry,
+            Matrix4x4 rootInverse, Matrix4x4 place, ModulePart[] finest, out float size)
+        {
+            size = 0f;
+            var groups = prefab.GetComponentsInChildren<LODGroup>(includeInactive: true);
+            if (groups.Length != 1) return null;
+            LOD[] levels = groups[0].GetLODs();
+            if (levels.Length < 2) return null;
+            if (!SharesOneLocal(finest, finest[0].Local)) return null;
+
+            var mentioned = new HashSet<Renderer>();
+            foreach (LOD level in levels)
+                foreach (Renderer renderer in level.renderers)
+                    if (renderer != null) mentioned.Add(renderer);
+            var unmentioned = new List<Renderer>();
+            foreach (Renderer renderer in prefab.GetComponentsInChildren<Renderer>(includeInactive: false))
+                if (!mentioned.Contains(renderer)) unmentioned.Add(renderer);
+
+            var result = new ModuleLod[levels.Length];
+            result[0] = new ModuleLod(finest, levels[0].screenRelativeTransitionHeight);
+            for (int k = 1; k < levels.Length; k++)
+            {
+                var keep = new HashSet<Renderer>(unmentioned);
+                foreach (Renderer renderer in levels[k].renderers)
+                    if (renderer != null) keep.Add(renderer);
+
+                var raw = new List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)>();
+                var ignored = new Bounds();
+                bool any = false;
+                CollectStatic(filters, entry, keep, rootInverse, raw, ref ignored, ref any);
+                if (raw.Count == 0) return null;
+
+                List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)> merged = Merge(raw);
+                var parts = new ModulePart[merged.Count];
+                for (int i = 0; i < merged.Count; i++)
+                    parts[i] = new ModulePart(merged[i].mesh, merged[i].submesh, merged[i].material,
+                        place * merged[i].local, fallback: false);
+                if (!SharesOneLocal(parts, finest[0].Local)) return null;
+                result[k] = new ModuleLod(parts, levels[k].screenRelativeTransitionHeight);
+            }
+
+            // The group's size is in its own space; carried through the prefab and the placement
+            // it becomes the metres the screen height is measured against.
+            size = groups[0].size * MaxScale(place * rootInverse * groups[0].transform.localToWorldMatrix);
+            return result;
+        }
+
+        static bool SharesOneLocal(ModulePart[] parts, Matrix4x4 local)
+        {
+            const float tolerance = 1e-4f;
+            for (int i = 0; i < parts.Length; i++)
+                for (int c = 0; c < 16; c++)
+                    if (Mathf.Abs(parts[i].Local[c] - local[c]) > tolerance) return false;
+            return true;
+        }
+
+        static float MaxScale(Matrix4x4 m) => Mathf.Max(
+            ((Vector3)m.GetColumn(0)).magnitude,
+            Mathf.Max(((Vector3)m.GetColumn(1)).magnitude, ((Vector3)m.GetColumn(2)).magnitude));
+
         ModulePart[] FlattenPrefab(GameObject prefab, ModuleEntry entry, ModuleShape shape,
-            out Matrix4x4 head, out bool hasHead)
+            out Matrix4x4 head, out bool hasHead, out ModuleLod[]? lods, out float lodSize)
         {
             head = Matrix4x4.identity;
             hasHead = false;
+            lods = null;
+            lodSize = 0f;
 
             var filters = prefab.GetComponentsInChildren<MeshFilter>(includeInactive: false);
             var raw = new List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)>();
@@ -366,6 +487,33 @@ namespace Odyssey.Presentation.Rendering
             var bounds = new Bounds();
             bool hasBounds = false;
 
+            CollectStatic(filters, entry, detail, rootInverse, raw, ref bounds, ref hasBounds);
+            int staticCount = raw.Count;
+
+            CollectSkinned(prefab, entry, raw, ref bounds, ref hasBounds,
+                out Matrix4x4 headLocal, out hasHead);
+            bool skinned = raw.Count > staticCount;
+
+            if (raw.Count == 0) return new ModulePart[0];
+
+            ModulePart[] parts = Place(raw, entry, ref bounds, out Matrix4x4 place);
+
+            // The head goes through the same `place` every part does, so it inherits the pivot
+            // convention and the scale rather than having them re-applied by a caller.
+            if (hasHead) head = place * headLocal;
+
+            // Every coarser level through the same `place` as the finest, never measured afresh:
+            // a level normalised on its own bounds would sit a few centimetres off the one it
+            // replaces, and the swap would be seen. A rig has no levels to take.
+            if (!skinned) lods = CoarserLevels(prefab, filters, entry, rootInverse, place, parts, out lodSize);
+            return parts;
+        }
+
+        void CollectStatic(MeshFilter[] filters, ModuleEntry entry, HashSet<Renderer>? keep,
+            Matrix4x4 rootInverse, List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)> raw,
+            ref Bounds bounds, ref bool hasBounds)
+        {
+            HashSet<Renderer>? detail = keep;
             for (int i = 0; i < filters.Length; i++)
             {
                 Mesh? mesh = filters[i].sharedMesh;
@@ -406,12 +554,11 @@ namespace Odyssey.Presentation.Rendering
                 if (!hasBounds) { bounds = local_b; hasBounds = true; }
                 else bounds.Encapsulate(local_b);
             }
+        }
 
-            CollectSkinned(prefab, entry, raw, ref bounds, ref hasBounds,
-                out Matrix4x4 headLocal, out hasHead);
-
-            if (raw.Count == 0) return new ModulePart[0];
-
+        ModulePart[] Place(List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)> raw,
+            ModuleEntry entry, ref Bounds bounds, out Matrix4x4 place)
+        {
             // Merge before measuring, because merging is what makes the measurement honest.
             //
             // A piece's bounds were previously its mesh's axis-aligned box pushed through its
@@ -465,13 +612,9 @@ namespace Odyssey.Presentation.Rendering
                     offset.z += BackOffset(entry.fitFootprint.y, bounds.size.z * fitted.z);
             }
 
-            Matrix4x4 place = Matrix4x4.TRS(offset, Quaternion.Euler(0f, entry.yaw, 0f), scale)
-                              * Matrix4x4.Translate(-normalise)
-                              * Matrix4x4.Rotate(lie);
-
-            // The head goes through the same `place` every part does, so it inherits the pivot
-            // convention and the scale rather than having them re-applied by a caller.
-            if (hasHead) head = place * headLocal;
+            place = Matrix4x4.TRS(offset, Quaternion.Euler(0f, entry.yaw, 0f), scale)
+                    * Matrix4x4.Translate(-normalise)
+                    * Matrix4x4.Rotate(lie);
 
             var parts = new ModulePart[merged.Count];
             for (int i = 0; i < merged.Count; i++)
