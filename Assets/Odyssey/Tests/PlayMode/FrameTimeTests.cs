@@ -2141,6 +2141,148 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// Where the look pass's frame goes: research for d-19 (the owner, 2026-09-24: "the compute
+        /// is up to 5 ms", against ~1.5 before the look pass). Explicit: a measurement, not a test.
+        ///
+        /// <para>One played meadow (Standard), five readings at the batch view and five with the
+        /// camera drawing into 3840 x 2160: the look as shipped; the same with
+        /// <c>SubmitToGpu</c> off, so the renderer does all of its own bookkeeping and hands Unity
+        /// nothing — the difference is what Unity spends drawing the submissions; the dressing and
+        /// tufts off (<c>ScatterDensity</c> 0, the nearest in-run stand-in for the board before the
+        /// pass); that with <c>SubmitToGpu</c> off; and the look with no shadow casters. Plus a
+        /// census of the meshed buckets by kind, which is what a draw call is here.</para>
+        /// </summary>
+        [UnityTest, Explicit("a measurement for docs/research/d-19, not a test")]
+        public IEnumerator TheLookAgainstTheSubmission()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            try
+            {
+                yield return TimeFrames("submission/warm", boot, WarmupFrames, _ => { });
+                ChunkRenderer renderer = boot.Renderer!;
+                int shipped = renderer.ScatterDensity;
+                Debug.Log("[FrameTime] submission census: " + Census(renderer));
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "submission-4k" };
+
+                var arms = new (string Name, int Density, bool Submit, bool Shadows, float ShadowMetres)[]
+                {
+                    ("look", shipped, true, true, 0f),
+                    ("look, nothing handed to Unity", shipped, false, true, 0f),
+                    ("no dressing or tufts", 0, true, true, 0f),
+                    ("no dressing or tufts, nothing handed to Unity", 0, false, true, 0f),
+                    ("look, no shadow casters", shipped, true, false, 0f),
+                    // The High preset's shadow distance, on a runtime copy of the pipeline asset so
+                    // the committed one is never dirtied (DisplaySettingsApplier's rule).
+                    ("look, 120 m shadows", shipped, true, true, 120f),
+                    ("no dressing or tufts, 120 m shadows", 0, true, true, 120f),
+                };
+                var pipeline = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+                RenderPipelineAsset? qualityWas = QualitySettings.renderPipeline;
+                RenderPipelineAsset? defaultWas = GraphicsSettings.defaultRenderPipeline;
+                float shadowWas = QualitySettings.shadowDistance;
+                UniversalRenderPipelineAsset? copy = pipeline != null ? UnityEngine.Object.Instantiate(pipeline) : null;
+                var lines = new List<string>();
+                try
+                {
+                foreach (bool big in new[] { false, true })
+                {
+                    cam.targetTexture = big ? fourK : previousTarget;
+                    string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                    foreach (var arm in arms)
+                    {
+                        if (renderer.ScatterDensity != arm.Density)
+                        {
+                            renderer.ScatterDensity = arm.Density;
+                            boot.Model!.Remesh();
+                        }
+                        renderer.SubmitToGpu = arm.Submit;
+                        renderer.CastShadows = arm.Shadows;
+                        if (copy != null)
+                        {
+                            float metres = arm.ShadowMetres > 0f ? arm.ShadowMetres : pipeline!.shadowDistance;
+                            copy.shadowDistance = metres;
+                            QualitySettings.shadowDistance = metres;
+                            if (QualitySettings.renderPipeline != null) QualitySettings.renderPipeline = copy;
+                            else GraphicsSettings.defaultRenderPipeline = copy;
+                        }
+                        float ms = 0f;
+                        double[] split = Array.Empty<double>();
+                        yield return TimeFrames($"submission/{resolution}/{arm.Name}", boot, WarmupFrames,
+                            m => ms = m, p => split = p);
+                        Assert.That(renderer.ChunksMeshDeferred, Is.Zero, $"{arm.Name} was timed mid-re-mesh");
+                        lines.Add($"{resolution} {arm.Name}: frame {ms:0.00} ms, submit {boot.SubmitMs:0.00}, " +
+                                  $"World {Section(split, OdysseyBootstrap.FrameSection.World):0.000}, " +
+                                  $"Surround {Section(split, OdysseyBootstrap.FrameSection.Surround):0.000}, " +
+                                  $"Figures {Section(split, OdysseyBootstrap.FrameSection.Figures):0.000}, " +
+                                  $"{renderer.DrawCalls} calls, {renderer.InstancesDrawn} instances, {renderer.ChunksDrawn} chunks");
+                    }
+                }
+                }
+                finally
+                {
+                    QualitySettings.renderPipeline = qualityWas;
+                    GraphicsSettings.defaultRenderPipeline = defaultWas;
+                    QualitySettings.shadowDistance = shadowWas;
+                    if (copy != null) UnityEngine.Object.Destroy(copy);
+                }
+                Debug.Log($"[FrameTime] submission split (pipeline shadow distance {pipeline?.shadowDistance ?? -1f} m, " +
+                          $"{pipeline?.shadowCascadeCount ?? -1} cascades): " + string.Join("; ", lines));
+            }
+            finally
+            {
+                if (boot.Renderer != null) { boot.Renderer.SubmitToGpu = true; boot.Renderer.CastShadows = true; }
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>The meshed buckets by kind: how many, how full, and how many calls they cost.</summary>
+        static string Census(ChunkRenderer renderer)
+        {
+            var batches = (ChunkBatch?[])typeof(ChunkRenderer)
+                .GetField("_batches", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .GetValue(renderer)!;
+            var counts = new SortedDictionary<string, (int Buckets, long Instances, int Chunks)>();
+            int meshed = 0;
+            foreach (ChunkBatch? batch in batches)
+            {
+                if (batch == null || batch.InstanceCount == 0) continue;
+                meshed++;
+                var seen = new HashSet<string>();
+                foreach (var list in new[] { batch.Body, batch.Roof })
+                    foreach (InstanceBucket bucket in list)
+                    {
+                        if (bucket.Count == 0) continue;
+                        string kind = TintCode.IsTree(bucket.Tint) ? "tree"
+                            : TintCode.IsDressing(bucket.Tint) ? "dressing"
+                            : TintCode.IsFoliage(bucket.Tint) ? "tufts"
+                            : TintCode.IsWater(bucket.Tint) ? "water"
+                            : TintCode.IsTerrain(bucket.Tint) ? "terrain"
+                            : "other";
+                        (int Buckets, long Instances, int Chunks) c =
+                            counts.TryGetValue(kind, out var v) ? v : (0, 0L, 0);
+                        c.Buckets++; c.Instances += bucket.Count;
+                        if (seen.Add(kind)) c.Chunks++;
+                        counts[kind] = c;
+                    }
+            }
+            var parts = new List<string> { $"{meshed} meshed chunks" };
+            foreach (var kv in counts)
+                parts.Add($"{kv.Key}: {kv.Value.Buckets} buckets in {kv.Value.Chunks} chunks " +
+                          $"({(kv.Value.Chunks > 0 ? kv.Value.Buckets / (double)kv.Value.Chunks : 0):0.0} a chunk), " +
+                          $"{kv.Value.Instances} instances ({(kv.Value.Buckets > 0 ? kv.Value.Instances / (double)kv.Value.Buckets : 0):0.0} a bucket)");
+            return string.Join("; ", parts);
+        }
+
+        /// <summary>
         /// Photographs the played meadow from the play camera, for judging the look against the
         /// Meadow Forest reference (owner, 2026-09-24: screenshot #13, design 38 §17). Explicit:
         /// never part of a tier, run by name.
