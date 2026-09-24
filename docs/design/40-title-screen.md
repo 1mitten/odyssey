@@ -130,3 +130,17 @@ spacing between the entries … date is misaligned … make the title label for 
   so the day and the date stand in columns. The same test hands the menu three made-up saves (never
   the real saves folder) with names of three lengths, asserts the columns, and writes
   `Logs/load-shot.png`. The middle dot is gone with the string, which also makes the line ASCII.
+
+**Before merge, from the pictures** (`Logs/title-shot.png`, `Logs/load-shot.png`, both read):
+
+- **The keyboard ring stood in the wrong place.** It was one element for the dock, placed by
+  coordinates when focus arrived, and the logo's offset — set after the first layout — moved the
+  buttons out from under it, so the ring framed the gap below New game. It is each button's own child
+  now, shown on `:focus`, and `StartScreenTests.TheTitleScreenIsADockFlushLeft` asserts that the
+  focused button lights its name and edge, that its ring is round it, and that no other button shows
+  one. (The photograph cannot show focus: a panel drawing into a render texture does not keep the
+  keyboard in a batch run, measured.)
+- **The day still moved** — by 5 px, because the date beside it sat at its natural width and "2 Sep"
+  is shorter than "24 Sep". The date is a fixed 120 px, right-aligned inside it; the test that
+  caught it now passes.
+- **Back** starts at the save titles' 14 px edge and stands 16 px clear of the version line.

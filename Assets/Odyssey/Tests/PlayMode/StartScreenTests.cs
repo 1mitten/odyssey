@@ -92,6 +92,25 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(Focused(doc)?.ClassListContains("title__btn--good"), Is.True,
                     "New game does not have focus on load, so Enter starts nothing");
 
+                // Focus lights the button the way hover does (the name in its colour, the edge on its
+                // left) and shows the keyboard's ring, which is the button's own child and so stands
+                // round the button wherever the layout has put it — it was one element placed by
+                // coordinates, and the logo's late offset left it round the gap below New game.
+                VisualElement newGame = Focused(doc)!;
+                Color lit = newGame.Q(className: "title__name")!.resolvedStyle.color;
+                Assert.That(((Vector4)(lit - HudTokens.Convert(HudTheme.Good))).magnitude, Is.LessThan(0.01f),
+                    $"the focused button does not light its name (it is {lit})");
+                Assert.That(newGame.Q(className: "title__edge")!.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex),
+                    "the focused button shows no edge");
+                VisualElement ring = newGame.Q(className: "title__ring")!;
+                Assert.That(ring.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex), "the focused button shows no ring");
+                Assert.That(ring.worldBound.center.y, Is.EqualTo(newGame.worldBound.center.y).Within(pixel),
+                    "the ring is not round the button it belongs to");
+                foreach (VisualElement other in dock.Query(className: "title__btn").ToList())
+                    if (other != newGame)
+                        Assert.That(other.Q(className: "title__ring")!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                            "a button without focus shows a ring");
+
                 // Exit game: the prompt, with nothing to save.
                 shell.Menu.Choose(SessionCommands.QuitKey);
                 yield return Settle();

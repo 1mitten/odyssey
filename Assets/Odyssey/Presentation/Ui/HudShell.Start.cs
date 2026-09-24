@@ -252,6 +252,14 @@ namespace Odyssey.Presentation.Ui
             edge.AddToClassList("title__edge");
             row.Add(edge);
 
+            // The keyboard's ring, the button's own child, so it moves with the button. It was one
+            // element for the dock placed by coordinates when focus arrived, and anything that moved
+            // the buttons afterwards — the logo's offset is set after the first layout — left it
+            // standing where the button had been.
+            var ring = new VisualElement { pickingMode = PickingMode.Ignore };
+            ring.AddToClassList("title__ring");
+            row.Add(ring);
+
             row.Add(new PathGlyph(button.Icon, TitleLayout.ButtonIcon, HudTokens.Convert(button.Ink)));
 
             var words = new VisualElement { pickingMode = PickingMode.Ignore };
@@ -338,37 +346,12 @@ namespace Odyssey.Presentation.Ui
         {
             VisualElement dock = _startScreen.Panel;
 
-            _titleRing = new VisualElement { pickingMode = PickingMode.Ignore };
-            _titleRing.AddToClassList("title__ring");
-            _titleRing.style.display = DisplayStyle.None;
-            dock.Add(_titleRing);
-
-            dock.RegisterCallback<PointerDownEvent>(_ => _titlePointer = true, TrickleDown.TrickleDown);
+            // A press is a pointer's, so its focus is given back on release: the ring is the
+            // keyboard's (it shows on :focus, and a mouse player keeps nothing focused).
             dock.RegisterCallback<PointerUpEvent>(_ => dock.schedule.Execute(() =>
             {
-                _titlePointer = false;
                 if (dock.focusController?.focusedElement is VisualElement f && dock.Contains(f)) f.Blur();
             }), TrickleDown.TrickleDown);
-
-            dock.RegisterCallback<FocusInEvent>(evt =>
-            {
-                if (evt.target is VisualElement target && !_titlePointer && target.ClassListContains("title__btn"))
-                {
-                    Rect local = dock.WorldToLocal(target.worldBound);
-                    float grow = SettingsLayout.FocusOffset + SettingsLayout.FocusWidth;
-                    _titleRing.style.left = local.x - grow - HudTheme.BorderWidth;
-                    _titleRing.style.top = local.y - grow - HudTheme.BorderWidth;
-                    _titleRing.style.width = local.width + 2 * grow;
-                    _titleRing.style.height = local.height + 2 * grow;
-                    _titleRing.style.display = DisplayStyle.Flex;
-                }
-                else
-                {
-                    _titleRing.style.display = DisplayStyle.None;
-                }
-            }, TrickleDown.TrickleDown);
-            dock.RegisterCallback<FocusOutEvent>(_ => _titleRing.style.display = DisplayStyle.None,
-                TrickleDown.TrickleDown);
 
             dock.RegisterCallback<KeyDownEvent>(evt =>
             {
@@ -428,8 +411,6 @@ namespace Odyssey.Presentation.Ui
 
         VisualElement _titleLogo = null!;
         Label _titleWordmark = null!;
-        VisualElement _titleRing = null!;
-        bool _titlePointer;
         string? _titleReturnKey;
         MenuScreen _titlePrevScreen = MenuScreen.Root;
 

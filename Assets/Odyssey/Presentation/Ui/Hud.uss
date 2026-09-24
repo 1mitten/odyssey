@@ -2605,12 +2605,19 @@
 .title__btn--bad:focus { background-color: rgba(224, 106, 92, 0.14); }
 .title__btn--bad:active { background-color: rgba(224, 106, 92, 0.22); }
 
-/* The keyboard's ring: one for the dock, moved to the focused button. */
+/* The keyboard's ring: each button's own, 2 px off it and 2 px thick, shown while it has focus. */
 .title__ring {
     position: absolute;
+    left: -4px;
+    top: -4px;
+    right: -4px;
+    bottom: -4px;
     border-width: 2px;
     border-color: rgb(238, 243, 246);
+    display: none;
 }
+
+.title__btn:focus > .title__ring { display: flex; }
 
 .title__footer {
     margin-top: auto;
@@ -2684,7 +2691,10 @@
     color: rgba(255, 255, 255, 0.66);
 }
 
+/* A fixed width too, right-aligned inside it: a shorter date ("2 Sep") at its natural width moved
+   the day beside it (measured, HudShotTests.PhotographTheTitleScreen). */
 .save__when {
+    width: 120px;
     flex-shrink: 0;
     margin: 0;
     margin-left: 12px;
@@ -2966,9 +2976,14 @@
    is set apart from the tabs. */
 .startscreen__back {
     margin-top: 4px;
+    margin-bottom: 16px;
+    padding: 0 14px;
     border-top-width: 1px;
     border-top-color: rgba(255, 255, 255, 0.09);
 }
+
+/* In the dock its word starts at the save titles' edge, not the row idiom's icon gap. */
+.startscreen__back .settings__label { margin-left: 0; }
 
 /* ---------------------------------------------------------------- the naming prompt
 

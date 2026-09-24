@@ -74,6 +74,11 @@ namespace Odyssey.Tests.PlayMode
                 doc.panelSettings = settings;
                 for (int i = 0; i < 10; i++) yield return null;
 
+                // No focus in this picture: a panel drawing into a render texture does not keep the
+                // keyboard in a batch run (measured: nothing is focused after the swap), so the lit
+                // state and the ring are asserted where focus is real, in
+                // StartScreenTests.TheTitleScreenIsADockFlushLeft.
+
                 foreach (VisualElement button in doc.rootVisualElement.Query(className: "title__btn").ToList())
                 {
                     VisualElement icon = button.Q<PathGlyph>()!;
