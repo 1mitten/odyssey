@@ -87,14 +87,22 @@ namespace Odyssey.Hud
         /// <summary>Which board size, as an index into <see cref="MapSizes.All"/>.</summary>
         public readonly int Size;
 
+        /// <summary>
+        /// Which tables each chosen colonist was drawn from, in the same order as
+        /// <see cref="Colonists"/> (design 41 §4.4) — Standard, or Gamble for a pulled one. Null
+        /// with no colonist select in the flow, which the world reads as Standard.
+        /// </summary>
+        public readonly RollProfile[]? Profiles;
+
         public NewGameChoice(uint seed, uint[]? colonists, string? name, int size,
-            string?[]? names = null)
+            string?[]? names = null, RollProfile[]? profiles = null)
         {
             Seed = seed;
             Colonists = colonists;
             Names = names;
             Name = name ?? string.Empty;
             Size = size;
+            Profiles = profiles;
         }
     }
 
@@ -499,10 +507,19 @@ namespace Odyssey.Hud
         {
             if (!Showing || Screen != MenuScreen.NewGame) return false;
             if (!Seed.Usable) return false;
+            // A gamble starts only with all three landed (design 41 §5.3). Refused here as well as
+            // drawn inert, for the reason the seed's rule is.
+            if (Colonists != null && !Colonists.CanStart) return false;
 
-            StartRequested?.Invoke(
-                new NewGameChoice(Seed.Seed, Colonists?.ChosenSeeds(), ColonyName, Size,
-                    Colonists?.ChosenNames()));
+            var choice = new NewGameChoice(Seed.Seed, Colonists?.ChosenSeeds(), ColonyName, Size,
+                Colonists?.ChosenNames(), Colonists?.ChosenProfiles());
+
+            StartRequested?.Invoke(choice);
+
+            // The pulls have done their job: the next New game is a new decision (design 41 §5.3).
+            // After the raise, so anything the handler reads off the page still reads the colony
+            // it is building; the menu is not shown again until the session ends.
+            Colonists?.Forget();
             return true;
         }
 

@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
 {
@@ -41,18 +42,60 @@ namespace Odyssey.Hud
         /// </summary>
         public readonly IReadOnlyList<SkillRow> Skills;
 
+        /// <summary>
+        /// The traits they were dealt, as <see cref="TraitHandle"/> indices in the order dealt
+        /// (design 41 §3). The interface names each through <see cref="TraitHandle.Keys"/>.
+        /// </summary>
+        public readonly IReadOnlyList<int> Traits;
+
+        /// <summary>Their walking pace, per mille of an ordinary colonist's — the SPD the machine spins.</summary>
+        public readonly int PacePerMille;
+
+        /// <summary>Which tables they were drawn from: what the colony is told to roll them with.</summary>
+        public readonly RollProfile Profile;
+
         public Candidate(uint seed, string name, int age, string occupation,
-            IReadOnlyList<SkillRow>? skills)
+            IReadOnlyList<SkillRow>? skills, IReadOnlyList<int>? traits = null, int pacePerMille = 1_000,
+            RollProfile profile = RollProfile.Standard)
         {
             Seed = seed;
             Name = name ?? string.Empty;
             Age = age;
             Occupation = occupation ?? string.Empty;
             Skills = skills ?? Array.Empty<SkillRow>();
+            Traits = traits ?? Array.Empty<int>();
+            PacePerMille = pacePerMille;
+            Profile = profile;
         }
 
         /// <summary>"Wrenn, 34" — the line at the top of a card and of the detail beside it.</summary>
         public string NameAndAge => Age > 0 ? Name + ", " + Age : Name;
+    }
+
+    /// <summary>
+    /// How the three are chosen (design 41 §5.1): dealt and rerolled until you like them, or
+    /// pulled once each on the machine. One or the other, for the whole colony.
+    /// </summary>
+    public enum CreationMode
+    {
+        Standard,
+        Gamble,
+    }
+
+    /// <summary>Where one gamble slot stands (design 41 §5.3). Standard's slots are always <see cref="Dealt"/>.</summary>
+    public enum SlotState
+    {
+        /// <summary>A Standard card: dealt, and rerollable unless kept.</summary>
+        Dealt,
+
+        /// <summary>A gamble slot nobody has pulled.</summary>
+        Unpulled,
+
+        /// <summary>Pulled: the colonist is drawn and the machine is revealing them.</summary>
+        Spinning,
+
+        /// <summary>Revealed and kept for good. Only the name can change.</summary>
+        Landed,
     }
 
     /// <summary>
@@ -95,7 +138,12 @@ namespace Odyssey.Hud
 
         /// <summary>Every key this screen can put on screen, held to the naming CSV by
         /// <c>RegistryTests</c>.</summary>
-        public static readonly string[] IconKeys = { TitleKey, RerollKey, LockKey };
+        /// <summary>The registry keys naming the two creation modes (design 41 §5.1).</summary>
+        public const string StandardKey = "ui.newgame.mode.standard";
+
+        public const string GambleKey = "ui.newgame.mode.gamble";
+
+        public static readonly string[] IconKeys = { TitleKey, RerollKey, LockKey, StandardKey, GambleKey };
 
         readonly Candidate[] _cards = new Candidate[Slots];
         readonly bool[] _locked = new bool[Slots];
@@ -110,7 +158,9 @@ namespace Odyssey.Hud
         /// </summary>
         readonly string?[] _given = new string?[Slots];
 
-        readonly Func<uint, int, Candidate> _roll;
+        readonly Func<uint, int, RollProfile, Candidate> _roll;
+
+        readonly SlotState[] _state = new SlotState[Slots];
 
         /// <summary>
         /// The seam the presenter fills and a test drives: given a seed <b>and the slot it will
@@ -123,8 +173,161 @@ namespace Odyssey.Hud
         /// people. A card rolled without it would show the right name and the wrong skills for two
         /// of the three, and the player would only find out after pressing Start.
         /// </remarks>
-        public ColonistSelect(Func<uint, int, Candidate> roll) =>
+        public ColonistSelect(Func<uint, int, RollProfile, Candidate> roll) =>
             _roll = roll ?? throw new ArgumentNullException(nameof(roll));
+
+        /// <summary>A select screen whose roll does not care which tables it is asked for — a
+        /// test's stub, which names people and nothing else.</summary>
+        public ColonistSelect(Func<uint, int, Candidate> roll)
+        {
+            if (roll == null) throw new ArgumentNullException(nameof(roll));
+            _roll = (seed, slot, _) => roll(seed, slot);
+        }
+
+        // ---- the mode (design 41 §5) ---------------------------------------------------------------
+
+        /// <summary>Standard or Gamble. Standard until the player says otherwise.</summary>
+        public CreationMode Mode { get; private set; } = CreationMode.Standard;
+
+        /// <summary>Where a slot stands. <see cref="SlotState.Dealt"/> for every Standard slot.</summary>
+        public SlotState StateOf(int slot) => slot >= 0 && slot < Slots ? _state[slot] : SlotState.Dealt;
+
+        /// <summary>Whether any slot has been pulled — the moment the choice of mode is made for good.</summary>
+        public bool AnyPulled
+        {
+            get
+            {
+                for (int i = 0; i < Slots; i++)
+                    if (_state[i] == SlotState.Spinning || _state[i] == SlotState.Landed) return true;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Whether the mode may still be changed: only before the first pull (design 41 §5.1, the
+        /// owner's "you have to choose one or the other"). Enforced here, not by the view.
+        /// </summary>
+        public bool CanChangeMode => !AnyPulled;
+
+        /// <summary>
+        /// Switch between Standard and Gamble. Refused after the first pull. Standard deals a fresh
+        /// three; Gamble lays three face-down cards. Locks and typed names go with the cards.
+        /// </summary>
+        public bool SetMode(CreationMode mode, Func<uint> seeds)
+        {
+            if (seeds == null) throw new ArgumentNullException(nameof(seeds));
+            if (mode == Mode) return true;
+            if (!CanChangeMode) return false;
+
+            Mode = mode;
+            if (mode == CreationMode.Standard)
+            {
+                Deal(seeds);
+                return true;
+            }
+
+            for (int i = 0; i < Slots; i++)
+            {
+                _locked[i] = false;
+                _given[i] = null;
+                _cards[i] = default;
+                _state[i] = SlotState.Unpulled;
+            }
+
+            Selected = 0;
+            Changed?.Invoke();
+            return true;
+        }
+
+        /// <summary>
+        /// Pull this slot: draw its colonist from the Gamble tables, now, before a reel has moved
+        /// (design 41 §2 decision 2, and the spec's "the spin only reveals it"). Refused for a slot
+        /// already pulled, in Standard, or while another slot is still being revealed.
+        /// </summary>
+        public bool Pull(int slot, Func<uint> seeds)
+        {
+            if (seeds == null) throw new ArgumentNullException(nameof(seeds));
+            if (Mode != CreationMode.Gamble || slot < 0 || slot >= Slots) return false;
+            if (_state[slot] != SlotState.Unpulled) return false;
+            if (Spinning >= 0) return false;
+
+            _cards[slot] = DrawUnused(seeds, slot);
+            _state[slot] = SlotState.Spinning;
+            Selected = slot;
+            Changed?.Invoke();
+            return true;
+        }
+
+        /// <summary>The machine has finished revealing this slot: it is kept for good.</summary>
+        public bool Land(int slot)
+        {
+            if (slot < 0 || slot >= Slots || _state[slot] != SlotState.Spinning) return false;
+            _state[slot] = SlotState.Landed;
+            Changed?.Invoke();
+            return true;
+        }
+
+        /// <summary>The slot being revealed, or -1.</summary>
+        public int Spinning
+        {
+            get
+            {
+                for (int i = 0; i < Slots; i++) if (_state[i] == SlotState.Spinning) return i;
+                return -1;
+            }
+        }
+
+        /// <summary>The first slot nobody has pulled, or -1 when all three have been.</summary>
+        public int NextUnpulled
+        {
+            get
+            {
+                for (int i = 0; i < Slots; i++) if (_state[i] == SlotState.Unpulled) return i;
+                return -1;
+            }
+        }
+
+        /// <summary>
+        /// Whether Start may build the colony: always in Standard, and in Gamble only once all three
+        /// have landed (design 41 §5.3). <c>MenuDirector.Start</c> refuses on it as well as the view
+        /// drawing it.
+        /// </summary>
+        public bool CanStart
+        {
+            get
+            {
+                if (Mode == CreationMode.Standard) return true;
+                for (int i = 0; i < Slots; i++) if (_state[i] != SlotState.Landed) return false;
+                return true;
+            }
+        }
+
+        /// <summary>Which tables each slot was drawn from, in slot order — what <c>ColonyRequest.Profiles</c> takes.</summary>
+        public RollProfile[] ChosenProfiles()
+        {
+            var profiles = new RollProfile[Slots];
+            for (int i = 0; i < Slots; i++) profiles[i] = _cards[i].Profile;
+            return profiles;
+        }
+
+        /// <summary>
+        /// Let go of a gamble: what Start does once the colony is asked for, so the next New game is
+        /// a new decision rather than the same machine (pulls otherwise stick, design 41 §5.3). Only
+        /// the mode and the slot states go — the cards stay readable until the next
+        /// <see cref="Deal"/> replaces them, so anything reading the page as the colony is built
+        /// still reads the colony.
+        /// </summary>
+        public void Forget()
+        {
+            Mode = CreationMode.Standard;
+            for (int i = 0; i < Slots; i++)
+            {
+                _locked[i] = false;
+                _state[i] = SlotState.Dealt;
+            }
+
+            Changed?.Invoke();
+        }
 
         /// <summary>The three, in the order they are drawn.</summary>
         public IReadOnlyList<Candidate> Cards => _cards;
@@ -195,6 +398,9 @@ namespace Odyssey.Hud
         public bool Rename(int slot, string? typed)
         {
             if (slot < 0 || slot >= Slots) return false;
+            // Nobody to name until they have been revealed: a name is not a stat (design 19 §10),
+            // but a face-down card and one still spinning have nobody on them yet.
+            if (_state[slot] == SlotState.Unpulled || _state[slot] == SlotState.Spinning) return false;
 
             string clean = ColonistNameBook.Clean(typed);
             string? held = _given[slot];
@@ -242,7 +448,7 @@ namespace Odyssey.Hud
         /// draws the row inert from it — a row that silently does nothing reads as broken, and the
         /// player's next move is to press it harder rather than to unlock somebody.
         /// </summary>
-        public bool CanReroll => LockedCount < Slots;
+        public bool CanReroll => Mode == CreationMode.Standard && LockedCount < Slots;
 
         /// <summary>Raised whenever anything the screen draws has changed.</summary>
         public event Action? Changed;
@@ -259,6 +465,19 @@ namespace Odyssey.Hud
         {
             if (seeds == null) throw new ArgumentNullException(nameof(seeds));
 
+            // Pulls stick (design 41 §5.3, owner's decision 6): Back and New game must not wash a
+            // pull out. A reveal Back interrupted is finished rather than lost — the colonist was
+            // drawn at the press, and only the show was cut short.
+            if (Mode == CreationMode.Gamble && AnyPulled)
+            {
+                for (int i = 0; i < Slots; i++)
+                    if (_state[i] == SlotState.Spinning) _state[i] = SlotState.Landed;
+                Changed?.Invoke();
+                return;
+            }
+
+            Mode = CreationMode.Standard;
+            for (int i = 0; i < Slots; i++) _state[i] = SlotState.Dealt;
             for (int i = 0; i < Slots; i++) _locked[i] = false;
             for (int i = 0; i < Slots; i++) _given[i] = null;
             for (int i = 0; i < Slots; i++) _cards[i] = DrawUnused(seeds, i);
@@ -293,6 +512,8 @@ namespace Odyssey.Hud
         public bool ToggleLock(int slot)
         {
             if (slot < 0 || slot >= Slots) return false;
+            // Gamble has no Keep: every landed card is kept already, and an unpulled one has nobody.
+            if (Mode != CreationMode.Standard) return false;
 
             _locked[slot] = !_locked[slot];
             Changed?.Invoke();
@@ -319,9 +540,10 @@ namespace Odyssey.Hud
         /// </summary>
         Candidate DrawUnused(Func<uint> seeds, int slot)
         {
-            Candidate drawn = _roll(seeds(), slot);
+            RollProfile profile = Mode == CreationMode.Gamble ? RollProfile.Gamble : RollProfile.Standard;
+            Candidate drawn = _roll(seeds(), slot, profile);
             for (int attempt = 0; attempt < 8 && NameIsTaken(drawn.Name, slot); attempt++)
-                drawn = _roll(seeds(), slot);
+                drawn = _roll(seeds(), slot, profile);
             return drawn;
         }
 
