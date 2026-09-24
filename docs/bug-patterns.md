@@ -603,6 +603,48 @@ fixture had just queued still going through. It landed on the dev machine and di
 
 ## The register
 
+### 2026-09-24 — Two marauders stood on "Fighting" at a wall with one side (P1)
+
+The owner: three marauders, one breaking a building, two standing about. Measured in the owner's
+save: all three chose the same wall of a house on the edge of a terrace step, whose only side on its
+own layer was one cell (the others are air over the step below). One struck; two waited 3,245 and
+3,312 ticks. The choice (`TryNearestColonyTarget`) asked whether a side could be **reached**; the
+driver (`ChooseSide`) asked whether one was **free**; every rethink sent them back to the same wall.
+The difference had been written down on purpose (*"a held side is the driver's to sort out"*), which
+is how a P1 looks when it is a decision rather than an accident.
+
+**What now stops it:** the choice asks `BuildingTargets.HasAFreeSide`, the driver's own answer, and
+an unforced attack that finds every side held thinks again at once.
+`MarauderSideTests.ThreeMaraudersAtAWallWithOneSideDoNotStandAbout`. `33-combat.md` §19a–§19b.
+
+### 2026-09-24 — A loaded game kept the generated board's paths (P1-adjacent; a test that could not fail)
+
+Found by the same probe. `ColonyWorld.RebuildDerived` — "the derived state is now correct", one
+definition for both paths — called `NavGraph.Rebuild`, which floods only the blocks something marked
+dirty, and a load marks none. In every block of a loaded game that no door or ladder on the load
+path happened to dirty, a built wall was walkable and a built floor was not. In the owner's save:
+seven walls on the first column of a block, walked into by marauders, and six upstairs cells a
+colonist could not be ordered to. The test written for exactly this,
+`AWorldWhoseGridHasChangedStillResumesIdentically`, wrote its wall straight into the grid with
+nothing marking the graph in **either** world, so both were equally stale and the hashes agreed.
+
+**What now stops it:** `MarkAllDirty` before the rebuild, and
+`WorldRoundTripTests.ABuiltWallIsStillAWallToThePathsAfterTheLoad`, whose walls go up through
+`Raise` so the original is right and the loaded copy is compared with it cell by cell. The shape to
+ask of any "rebuild" on a load path: **does it rebuild, or does it catch up?** `33-combat.md` §19a.
+
+### 2026-09-24 — A squad sent upstairs was spread downstairs (P1)
+
+A right-click on the upper floor with four drafted colonists selected sent 49 of 160 orders to
+another layer (the owner: *"tricky to draft then move my colonists to another floor"*).
+`JobSystem.Spread` placed the others round the clicked cell with the **click's** lift, `StandAt` —
+that cell, else above, else below — so a ring cell over the ladder's open shaft or past the floor's
+edge dropped to the room below or the ground outside. One rule (where she stands for a click) was
+serving a second question (where the others stand round her).
+
+**What now stops it:** the spread keeps to the named cell's layer.
+`DraftOrderLevelTests.ASquadSentUpstairsIsSpreadOnTheFloorItWasSentTo`. `33-combat.md` §19c.
+
 ### 2026-09-24 — The cull was asked after the mesher, so the budget went on chunks nobody could see (P1-adjacent)
 
 Found by reading, while planning the Meadow overhaul, and fixed on merging `main` up to the culling

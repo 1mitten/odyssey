@@ -23,6 +23,17 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do three marauders all get to work, and does a squad go upstairs?** (`claude/combat-stall-fix`,
+  design 33 §19.)
+  - *Set-up.* Load a save with a building on a terrace (the owner's `the-latest-tim` will do), wall
+    the colonists in or put them behind a shut door, and let three marauders come.
+  - *Expect.* Each marauder breaks something: one at a wall with a single side, the others at other
+    walls. None stands on *Fighting* with nothing to hit for more than a moment. No marauder or
+    colonist walks through a wall after a load.
+  - *Also check:* draft the squad, select them all and right-click the upper floor of a two-storey
+    building: all go up, on that floor, none to the room below or the ground outside. Then
+    right-click the ladder itself and see whether the attack it starts (§13i) is what you want.
+
 - **Does a marauder steal and leave?** (`claude/combat-thieves`, design 33 §17.)
   - *Set-up.* Let a marauder down every colonist, with no walls, doors or other buildings of yours
     about (beds are fine: it leaves them alone), and a few stacks lying around — the starting meals

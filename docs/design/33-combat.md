@@ -4231,3 +4231,150 @@ stun is held by the job loop before the notice, which is §5c's rule and not re-
 (`CycleResponse`), `Presentation/World/PawnFigureDirector.Poses.cs` (the carrier lookups read
 `CombatAspects.RescuePatient`). Three buttons now share the inspect pane's header — Prioritise,
 Draft and the response — and nothing measures whether they fit; that is the playtest's question.
+
+## 19. The playtest after the owner's rounds (2026-09-24)
+
+The owner played the combined combat branch (PR #194) and reported two things:
+
+> *"I noticed when the mauraders came to attack - 3 of them. Only one of them started attackign the
+> building after destroying a campfire - the other 2 said they were fighting but kinda stood around -
+> maybe it was because it didn't read the building was up on the hill at another depth or didn't
+> know where to attack. Something is off there. Also it seemed tricky to draft then move my
+> colonists to another floor in the building - just double check that."*
+
+Built on `claude/combat-stall-fix`, from `claude/combat-owner-round` at `f87a3ab0`, on the fast and
+Long tiers only, with no Unity. **No golden moved.** No Presentation or Editor file was touched.
+
+### 19a. Measured on the owner's own save
+
+Every finding below was measured, not reasoned. The save was on the disk: `the-latest-tim.odyssey`,
+written at 17:51 on the day, tick 89,868, three marauders already on their way to the campfire at
+(59, 37, L10). The colony is a two-storey house on a terrace one layer up: walls on x 56–60,
+z 40–47 at L11, the door at (58, 40) on the edge of the step, a ladder at (58, 43), an upper floor
+at L12, and four drafted colonists inside. A throwaway fast-tier probe loaded it the way
+`Odyssey.SaveProbe` does and ran it on, logging every marauder's job, target, side, path and cell.
+
+**First: a loaded world kept the generated board's paths.** Seven walls on x = 60 (z 41–47) were
+walkable to the navigation graph and the floor above them was not. Marauders stepped into those
+walls and chose sides inside them, and a colonist ordered to six upper-floor cells over that column
+was refused. `ColonyWorld.RebuildDerived` called `NavGraph.Rebuild`, which floods only the blocks
+something marked dirty, and a load writes the cell arrays wholesale without marking any. So the
+graph the fresh world built for the generated meadow survived the load everywhere a door or a
+ladder had not happened to dirty a block — and x = 60 is the first column of a ten-cell block, one
+column past the door's. **Fixed:** `MarkAllDirty` before the rebuild. After it, no cell on the board
+is blocked in the grid and enterable in the graph. This is older than the combat line: every loaded
+game has had it, in every block the player built in that nothing on the load path happened to
+dirty.
+
+**Then, with the graph right, the owner's report exactly.** With the colonists behind the shut
+door no colonist can be reached, so all three marauders turn on the base (§14b), and all three took
+the same wall: (59, 40, L11), beside the door, the nearest colony building to all of them. A side
+is a cell beside the wall **on its own layer**, and on the edge of a terrace most of those are air
+over the step below: that wall had one, (60, 40, L11). One marauder took it and struck. The other
+two stood at (59, 36) and (60, 37) on the lower ground, on *Fighting*, for **3,245 and 3,312
+ticks** — to the end of the run.
+
+- **One rule, two owners** (`docs/bug-patterns.md` P1). The choice,
+  `BuildingTargets.TryNearestColonyTarget`, asked `CanReach`: is there a side it can get to, held
+  or not. The driver asked `ChooseSide`: is there a side nobody holds. §14b wrote the difference
+  down on purpose — *"a held side is the driver's to sort out"* — and the driver's sorting was to
+  wait and look again. Every 300 ticks the mind thought again, and the choice sent it back to the
+  same wall.
+- **The owner's guess was half right.** The height is why the wall had one side; the marauders read
+  the level correctly.
+
+### 19b. The fix: a building is chosen only with a side free
+
+- **`BuildingTargets.HasAFreeSide`** is `ChooseSide(...) >= 0`: the driver's own answer, her own
+  cell counting as hers. `TryNearestColonyTarget` asks it instead of `CanReach`, so a building whose
+  every side is held is passed over for the next one. With no building free at all the marauder
+  turns to what it came for (§17), as it does with no building.
+- **An unforced building attack whose look finds every side held ends**, and the mind chooses again
+  in the same tick. Two marauders can choose one side in the same tick — a job given at the end of a
+  tick has no destination until its driver's first look — and this is what sorts them out; without
+  it the second waited the 300 ticks to its next think.
+- **A player's order is unchanged.** It still waits for a side, and `CanReach` is still the order's
+  question (§13d): a drafted colonist sent at a wall whose one side is taken queues for it.
+- **`HostileThinkNode.HasAFight`** asks the same choice, so a thief (§17c) drops its load only for a
+  building it could start on.
+- **What it costs.** The choice's side search is now `ChooseSide`: at most ten cells, a reachability
+  query each and, for a cell nearer than the last, a pass over the pawns (`Melee.Holds`). Only for a
+  building nearer than the best so far, only on a marauder's think with no colonist to reach, never
+  per tick.
+- **Measured after, on the save:** a colonist placed on each of the house's inside cells in turn, the
+  rest down, 92 runs; no marauder stood longer than 183 ticks in one cell without a swing, which is
+  the time of the hop up the step. Before, 3,245 and 3,312.
+
+### 19c. Moving a drafted squad to another floor
+
+**One colonist was fine; a squad was not.** From the same save, with the marauders removed:
+
+- One drafted colonist inside, ordered to each of the 117 standable cells in and round the house on
+  L10–L13, reached 113; the other four were spread off a cell another drafted colonist stood on
+  (§8c). With the stale graph of §19a, six upper-floor cells over x = 60 refused the order outright —
+  a right-click that does nothing.
+- **All four ordered at once to each of the 40 upper-floor cells — one right-click with the squad
+  selected — sent 49 of 160 orders to another layer.** The first colonist goes to the clicked cell;
+  the others are spread to free cells round it (`JobSystem.Spread`), and the spread lifted each ring
+  cell by the **click's** rule, `StandAt`: that cell, else the one above, else the one below. The
+  ladder's open shaft and the air past the floor's edge are not places to stand, so it dropped a
+  layer and sent those colonists to the room below or the ground beside the house.
+- **Fixed:** the spread keeps to the named cell's own layer. The click itself is still lifted by
+  `StandAt` — a click names a block and she stands on top of it — but a spread already knows which
+  floor it is on. After: **0 of 160**.
+
+**What a click resolves to, read and not run** (Presentation; no Unity here). `SlicePicker.Owner`
+returns a built floor slab's own cell, so a right-click on the upper floor names L12 and she is sent
+there. Two things for a person at the keyboard:
+
+- **A right-click on a ladder, a door or a bed with drafted colonists selected is an attack** (§13i;
+  C6 answer (c) made all three targets). Right-clicking the ladder to send a squad up it starts them
+  beating the ladder. That is as built and as answered; it may be the other half of "tricky", and it
+  is the owner's call.
+- **Seeing into the ground floor of a two-storey house** needs the cut-away ceiling
+  (`GraphicsOption.CutAwayCeiling`) or a lower slice: at the surface every layer above is drawn
+  solid, and a click there lands on the storey above.
+
+### 19d. Found and left
+
+- **A colonist with one open side is queued for** (§7c, by design). A drafted colonist on the narrow
+  ledge behind the house, (57, 48, L11): one marauder fights her, the other two wait a ring back for
+  **2,360 and 2,506 ticks** — and the ring back can be on the far side of a wall. The same shape as
+  §19a with a pawn for a wall, but it is §7c's queue and not a slip: whether a marauder that can get
+  no side of any colonist should break a building instead is the owner's call.
+- **A spread's ring is by distance, not by path.** Once, a colonist sent to a taken cell inside the
+  house was spread to (55, 46, L11), outside the west wall on the same layer, a long walk round. Not
+  pursued.
+- **Exhausted colonists let the draft go the moment they arrive** (rest at nought, §2b). Several in
+  the save were; it will look like a squad that will not stay upstairs.
+- **An unexplained difference between two runs of the probe.** One placement gave different numbers
+  in two versions of the throwaway probe that differed only in read-only logging. Three runs of one
+  scenario in one process came to the same hash every hundred ticks, so determinism within a run
+  holds; the difference across runs was not chased.
+
+### 19e. Tests, and the controls seen to fail
+
+Fast tier: Sim **1,475** (from 1,470), Hud **1,016** (unchanged). Long **41**, all green.
+`GoldenMasterTests` green without a re-bake. `MarauderSoakTests` reads exactly §17h's numbers
+(7 left with a stack, 391 swings, 211 hits, 12 downed, 4 got up): its only buildings are beds.
+
+| Test | Claim |
+|---|---|
+| `WorldRoundTripTests.ABuiltWallIsStillAWallToThePathsAfterTheLoad` | walls raised through `Raise` are walls to the world that built them (control) and to the one it is loaded into; the two graphs agree cell for cell |
+| `MarauderSideTests.ThreeMaraudersAtAWallWithOneSideDoNotStandAbout` | the owner's case built small — a two-cell step, a wall on its edge with one side (control), a colonist sealed in (control), three marauders: each swings, three walls are struck, and the longest wait at a building with no side is two ticks |
+| `MarauderSideTests.AWallWhoseOnlySideIsHeldIsPassedOverForOneWithASide` | with its side free the edge wall is chosen (control); held, `CanReach` still says yes, `HasAFreeSide` says no, and another wall is chosen |
+| `DraftOrderLevelTests.ASquadSentUpstairsIsSpreadOnTheFloorItWasSentTo` | a storey on walls up a ladder; three drafted colonists sent to its corner by the shaft and the edge are each sent to, and hold on, a different upper-floor cell |
+| `DraftOrderLevelTests.AClickOnTheWallUnderTheFloorStillSendsHerOnToIt` | the control: the click's own lift is untouched |
+
+| Withheld | Failed |
+|---|---|
+| the whole-graph rebuild on load | `ABuiltWallIsStillAWall…`: a wall walked through after the load |
+| the choice's free side (`CanReach` put back) | both `MarauderSideTests`: two marauders never swing; the held wall is chosen |
+| the driver's rethink when every side is held | `ThreeMarauders…`: a 301-tick wait |
+| both | `ThreeMarauders…`: two never swing |
+| the spread on its own layer (`StandAt` put back) | `ASquadSentUpstairs…`: the second sent to the ground a layer down |
+
+**`AWorldWhoseGridHasChangedStillResumesIdentically` could not have caught §19a** and is left as it
+is: its wall is written straight into the grid and nothing marks the graph dirty in either world, so
+the original is exactly as stale as the copy and the hashes agree. The new test raises its walls
+through `Raise`, which marks the graph, so the original is right and the copy is compared with it.
