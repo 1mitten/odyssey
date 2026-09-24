@@ -2050,6 +2050,97 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What the painted Meadow ground and the demo's grade cost at the owner's resolution
+        /// (<c>docs/design/38-meadow-overhaul.md</c> §17, the look pass — ground and light).
+        ///
+        /// <para>Two worlds, because the ground material is chosen when a session's module library
+        /// resolves the grass terrain: the stock tiled texture, then <c>Odyssey/MeadowGround</c>.
+        /// On the second, the Play scene's golden-hour volume and then the Meadow demo's own. Each
+        /// at 640 x 480 and into a 3840 x 2160 target. Ground is most of the pixels at the play
+        /// camera, so this is the arm that says whether five texture samples and four noise fields
+        /// a pixel are affordable; only differences inside the run are quoted (§6c).</para>
+        ///
+        /// <para>Ignored where the look did not resolve — a clone without the packs, the runner.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheMeadowGroundAgainstTheFrame()
+        {
+            if (MeadowLook.Loaded == null || !MeadowLook.Loaded.HasGround)
+                Assert.Ignore("the Meadow look's textures did not resolve on this machine");
+
+            bool groundWas = MeadowLook.GroundEnabled;
+            var lines = new List<string>();
+            try
+            {
+                foreach (bool painted in new[] { false, true })
+                {
+                    MeadowLook.GroundEnabled = painted;
+                    GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                        out OdysseyBootstrap boot);
+                    UnityEngine.Camera? cam = null;
+                    RenderTexture? previousTarget = null;
+                    RenderTexture? fourK = null;
+                    Volume? grade = null;
+                    try
+                    {
+                        yield return TimeFrames($"meadow-ground/{(painted ? "painted" : "stock")}/warm", boot,
+                            WarmupFrames, _ => { });
+                        Assert.That(MeadowLook.GroundActive, Is.EqualTo(painted),
+                            "the ground switch did not reach the session, so the two arms are one ground");
+
+#if UNITY_EDITOR
+                        var golden = UnityEditor.AssetDatabase.LoadAssetAtPath<VolumeProfile>(
+                            "Assets/Settings/OdysseyGoldenHour.asset");
+                        if (golden != null)
+                        {
+                            grade = new GameObject("Grade").AddComponent<Volume>();
+                            grade.transform.SetParent(root.transform, false);
+                            grade.isGlobal = true;
+                            grade.sharedProfile = golden;
+                        }
+#endif
+                        cam = boot.cameraRig!.Camera;
+                        previousTarget = cam.targetTexture;
+                        fourK = new RenderTexture(3840, 2160, 24) { name = "meadow-ground-4k" };
+
+                        var grades = new List<(string Name, VolumeProfile? Profile)> { ("golden", grade?.sharedProfile) };
+                        if (painted && grade != null && MeadowLook.Loaded!.grade != null)
+                            grades.Add(("meadow grade", MeadowLook.Loaded!.grade));
+
+                        foreach (var g in grades)
+                        {
+                            if (grade != null && g.Profile != null) grade.sharedProfile = g.Profile;
+                            foreach (bool big in new[] { false, true })
+                            {
+                                cam.targetTexture = big ? fourK : previousTarget;
+                                string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                                float ms = 0f;
+                                yield return TimeFrames(
+                                    $"meadow-ground/{(painted ? "painted" : "stock")}/{g.Name}/{resolution}",
+                                    boot, WarmupFrames, m => ms = m);
+                                lines.Add($"{resolution} {(painted ? "painted" : "stock")} ground, {g.Name}: " +
+                                          $"frame {ms:0.00} ms, {boot.Renderer?.DrawCalls ?? -1} calls");
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        if (cam != null) cam.targetTexture = previousTarget;
+                        if (fourK != null) fourK.Release();
+                        UnityEngine.Object.Destroy(root);
+                    }
+                    yield return null;
+                }
+            }
+            finally
+            {
+                MeadowLook.GroundEnabled = groundWas;
+            }
+
+            Debug.Log($"[FrameTime] meadow ground ({SystemInfo.graphicsDeviceName}): " + string.Join("; ", lines));
+        }
+
+        /// <summary>
         /// Photographs the played meadow from the play camera, for judging the look against the
         /// Meadow Forest reference (owner, 2026-09-24: screenshot #13, design 38 §17). Explicit:
         /// never part of a tier, run by name.
@@ -2063,6 +2154,13 @@ namespace Odyssey.Tests.PlayMode
         [UnityTest, Explicit("a photograph for judging the look, not a test")]
         public IEnumerator TheLookAtThePlayCamera()
         {
+            // ODYSSEY_LOOK_STOCK=1 photographs the stock ground instead of the painted one, so a
+            // before and an after can be taken under identical conditions (design 38 §17).
+            bool stock = Environment.GetEnvironmentVariable("ODYSSEY_LOOK_STOCK") == "1";
+            bool groundWas = MeadowLook.GroundEnabled;
+            MeadowLook.GroundEnabled = !stock;
+            string prefix = stock ? "stock-" : string.Empty;
+
             GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
                 out OdysseyBootstrap boot);
             RenderTexture? target = null;
@@ -2079,24 +2177,50 @@ namespace Odyssey.Tests.PlayMode
                 cam.targetTexture = target;
                 Directory.CreateDirectory(Path.GetFullPath("Logs/look"));
 
-                yield return Photograph("start", boot, target);
+                // **The grade the Play scene carries.** Play.unity has a global Volume holding the
+                // golden-hour profile; the rig this file builds has none, so without this every
+                // photograph was of an ungraded frame nobody plays.
+                Volume? grade = null;
+#if UNITY_EDITOR
+                var golden = UnityEditor.AssetDatabase.LoadAssetAtPath<VolumeProfile>(
+                    "Assets/Settings/OdysseyGoldenHour.asset");
+                if (golden != null)
+                {
+                    grade = new GameObject("Grade").AddComponent<Volume>();
+                    grade.transform.SetParent(root.transform, false);
+                    grade.isGlobal = true;
+                    grade.sharedProfile = golden;
+                }
+#endif
+                for (int i = 0; i < 8; i++) yield return null;
+
+                yield return Photograph(prefix + "start", boot, target);
 
                 WorldSnapshot frame = boot.World!.Views.Current;
                 if (frame.Pawns.Length > 0)
                 {
                     boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, 28f);
                     for (int i = 0; i < 120; i++) yield return null;
-                    yield return Photograph("close", boot, target);
+                    yield return Photograph(prefix + "close", boot, target);
 
                     // Pulled back to about the reference screenshot's own framing, which is the
                     // view the composition of the meadow is judged at.
                     boot.cameraRig!.FocusOn(frame.Pawns[0].Cell, 70f);
                     for (int i = 0; i < 150; i++) yield return null;
-                    yield return Photograph("wide", boot, target);
+                    yield return Photograph(prefix + "wide", boot, target);
+                }
+
+                // And the wide framing again under the Meadow demo's own grade, where it resolved.
+                VolumeProfile? meadow = MeadowLook.Loaded != null ? MeadowLook.Loaded.grade : null;
+                if (grade != null && meadow != null)
+                {
+                    grade.sharedProfile = meadow;
+                    yield return Photograph(prefix + "wide-meadowgrade", boot, target);
                 }
             }
             finally
             {
+                MeadowLook.GroundEnabled = groundWas;
                 if (cam != null) cam.targetTexture = previousTarget;
                 if (target != null) target.Release();
                 UnityEngine.Object.Destroy(root);

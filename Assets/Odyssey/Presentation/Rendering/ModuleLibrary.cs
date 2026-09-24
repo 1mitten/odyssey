@@ -205,6 +205,13 @@ namespace Odyssey.Presentation.Rendering
                 else Object.DestroyImmediate(_fallbackMaterial);
                 _fallbackMaterial = null;
             }
+
+            if (_meadowGround != null)
+            {
+                if (Application.isPlaying) Object.Destroy(_meadowGround);
+                else Object.DestroyImmediate(_meadowGround);
+                _meadowGround = null;
+            }
         }
 
         public ModuleLibrary(ModuleCatalogue? catalogue)
@@ -876,6 +883,9 @@ namespace Odyssey.Presentation.Rendering
         readonly Dictionary<(Material, float, bool), Material> _dressed =
             new Dictionary<(Material, float, bool), Material>();
 
+        /// <summary>The painted meadow floor, built on first use; owned here and destroyed with the library.</summary>
+        Material? _meadowGround;
+
         /// <summary>
         /// A pack terrain material adjusted to this game's grid and lighting.
         ///
@@ -888,6 +898,15 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         Material DressGround(ModuleEntry entry)
         {
+            // The grass terrain is painted rather than tiled when the Meadow look is present
+            // (design 38 §17): one material for every grass cell, blending the pack's terrain
+            // textures by patches in world space. Everything else keeps its tiled texture.
+            if (string.Equals(entry.moduleId, ModuleIds.Terrain("Grass"), System.StringComparison.Ordinal))
+            {
+                _meadowGround ??= MeadowLook.NewGroundMaterial();
+                if (_meadowGround != null) return _meadowGround;
+            }
+
             Material source = entry.material!;
             if (entry.materialTilesPerCell <= 0f && !entry.flattenNormalMap) return source;
 

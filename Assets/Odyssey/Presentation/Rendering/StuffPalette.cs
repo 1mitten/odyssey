@@ -159,8 +159,17 @@ namespace Odyssey.Presentation.Rendering
             new Color(0.92f, 1.10f, 0.74f),            // 20 marsh
         };
 
-        public static Color TerrainTint(int terrain) =>
-            terrain >= 0 && terrain < TerrainTints.Length ? TerrainTints[terrain] : Color.white;
+        public static Color TerrainTint(int terrain)
+        {
+            // Over the painted Meadow ground the grass keeps the pack's own colours (owner,
+            // 2026-09-24: "Synty's colours"), so the lift above — which pulled a single olive
+            // texture towards a lime it was never painted as — is not applied (design 38 §17).
+            if (terrain == GrassTerrain && MeadowLook.GroundActive) return Color.white;
+            return terrain >= 0 && terrain < TerrainTints.Length ? TerrainTints[terrain] : Color.white;
+        }
+
+        /// <summary>The grass terrain's index in the tables above.</summary>
+        const int GrassTerrain = 10;
 
         /// <summary>
         /// What multiplies a tuft of grass or any other piece of standing foliage.

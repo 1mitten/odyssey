@@ -11782,3 +11782,21 @@ into four cascades. Trees now cast from a coarse proxy level (1.5 ms at 4K) and 
 the dressing costs about 2 ms at High and 3 at Full on Standard. Huge at High was over the 60 fps
 line in a run shared with other Unity processes and at the asset's 250 m of shadow; the owner's GPU
 reading decides it. Design 38 §17.
+
+## 2026-09-24 — The look pass, ground and light: the floor painted, and the light that paints it
+
+The owner put three of Synty's own screenshots beside the game and said it looked nothing like them.
+The ground half of the answer turned out to be half ground and half light. The painted ground — six
+of the pack's terrain textures blended by noise in world space, a 4 m repeat instead of one tile a
+cell — came out *darker* than the stock tile on its first frame, because the stock tile had been
+lifted towards lime by a (1.04, 1.30, 1.55) multiply and the pack paints its terrain olive. The
+brightness in the screenshots is the demo's light: an orange key at 3 over a trilight ambient at 1.6,
+three times ours. So the day's light moves towards that by daylight only, as a transform of the
+sampled state so the keys the owner judged at dawn and dusk stand, and with that the painted meadow
+comes up to something recognisably like #13.
+
+The demo's grade was tried and refused on two counts, both measured: it haloes every white thing, and
+its lens-dirt bloom costs eight milliseconds at 4K. And the harness had been photographing a frame
+nobody plays — the Play scene carries the golden-hour Volume and the test rig did not — which is the
+board-nobody-plays fault met a third time, in the one tool built to show what the player sees.
+Design 38 §17a.
