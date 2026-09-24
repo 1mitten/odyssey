@@ -390,6 +390,71 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public bool DrawTrees { get; set; } = true;
 
+        /// <summary>
+        /// Whether the board's trees are submitted grouped across chunks (design 38 §23): every
+        /// opaque submission a tree bucket makes — its crowns at the chosen level and its shadow
+        /// proxy — is gathered for the frame and sent once per (material, mesh, submesh, shadow
+        /// mode) at the end of the chunk walk, instead of once per chunk.
+        ///
+        /// <para><b>Why:</b> measured (<c>TheTreesAgainstTheFrame</c>), a board's trees went out at
+        /// four and a half to five a call — 276 tree calls on Standard at the default zoom, 1,169 on
+        /// Huge at 140 m — and that submission was 0.28 to 1.33 ms of CPU. Every decision is still
+        /// taken where it was, chunk by chunk (the frustum and sun-side cull, the level, the sight
+        /// fade); only the submission is batched, so the picture is the same one
+        /// (<c>FrameTimeTests.GroupingTheTreesDoesNotChangeThePicture</c>). Translucent draws — a
+        /// faded crown's ghost — keep their own submission: their blending order is the renderer's
+        /// business, not ours. Off is the arm that measures it.</para>
+        /// </summary>
+        public bool GroupTrees { get; set; } = true;
+
+        /// <summary>Calls the grouped trees went out in last frame (already in <see cref="DrawCalls"/>).</summary>
+        public int GroupedTreeCalls { get; private set; }
+
+        /// <summary>Instances the grouped trees submitted last frame.</summary>
+        public int GroupedTreeInstances { get; private set; }
+
+        readonly struct TreeGroupKey : System.IEquatable<TreeGroupKey>
+        {
+            public readonly Material Material;
+            public readonly Mesh Mesh;
+            public readonly int Submesh;
+            public readonly ShadowCastingMode Shadows;
+            public readonly bool Receives;
+            public readonly int Layer;
+
+            public TreeGroupKey(Material material, Mesh mesh, int submesh, ShadowCastingMode shadows, bool receives, int layer)
+            {
+                Material = material; Mesh = mesh; Submesh = submesh; Shadows = shadows; Receives = receives; Layer = layer;
+            }
+
+            public bool Equals(TreeGroupKey o) =>
+                ReferenceEquals(Material, o.Material) && ReferenceEquals(Mesh, o.Mesh) && Submesh == o.Submesh &&
+                Shadows == o.Shadows && Receives == o.Receives && Layer == o.Layer;
+
+            public override bool Equals(object? obj) => obj is TreeGroupKey o && Equals(o);
+
+            public override int GetHashCode() => unchecked(
+                ((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Material) * 397
+                  ^ System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Mesh)) * 397
+                 ^ Submesh * 31 ^ (int)Shadows * 7 ^ (Receives ? 1 : 0)) * 397 ^ Layer);
+        }
+
+        sealed class TreeGroup
+        {
+            public Matrix4x4[] Matrices = new Matrix4x4[64];
+            public int Count;
+            public Bounds Bounds;
+            public ModulePart Part = null!;
+        }
+
+        readonly System.Collections.Generic.Dictionary<TreeGroupKey, TreeGroup> _treeGroups =
+            new System.Collections.Generic.Dictionary<TreeGroupKey, TreeGroup>();
+        readonly System.Collections.Generic.List<TreeGroup> _treeGroupsInUse = new System.Collections.Generic.List<TreeGroup>();
+        readonly System.Collections.Generic.List<TreeGroupKey> _treeGroupKeysInUse = new System.Collections.Generic.List<TreeGroupKey>();
+
+        /// <summary>True while a board-tree bucket is being submitted and <see cref="GroupTrees"/> is on.</summary>
+        bool _groupingTrees;
+
         /// <summary>Tree buckets the chunk path met last frame, and the instances in them: how thinly a
         /// board's trees are spread across draws (instances per bucket).</summary>
         public int TreeBuckets { get; private set; }
@@ -541,7 +606,8 @@ namespace Odyssey.Presentation.Rendering
         int LevelOf(int tint, int module, ResolvedModule resolved, float distance)
         {
             if (TintCode.IsTree(tint) && TreeLevels)
-                return LevelFor(resolved, distance, ViewerFieldOfView, TintCode.IsDressing(tint) ? BushLodBias : TreeLodBias);
+                return LevelFor(resolved, distance, ViewerFieldOfView,
+                    TintCode.IsDressing(tint) ? BushLodBias : TreeBiasAt(distance));
             if (DressingLevels && TintCode.IsFoliage(tint) && !_mesher.IsScatterModule(module))
                 return LevelFor(resolved, distance, ViewerFieldOfView, DressingLodBias);
             if (TuftLevels && TintCode.IsFoliage(tint) && _mesher.IsScatterModule(module))
@@ -626,6 +692,33 @@ namespace Odyssey.Presentation.Rendering
         /// one keeps the finer levels further out, because the pack authored its heights for a
         /// camera standing on the ground.</summary>
         public float TreeLodBias { get; set; } = 3f;
+
+        /// <summary>
+        /// Whether trees further from the camera take their simpler levels sooner (design 38 §23;
+        /// the owner's call, 2026-09-24, with the numbers: trees were 25–42% of a 1080p frame, most
+        /// of it the fill of their leaf cards). Trees nearer than <see cref="FarTreeNear"/> keep
+        /// <see cref="TreeLodBias"/> exactly, so the near meadow does not change; beyond it the bias
+        /// eases down to <see cref="FarTreeLodBias"/> by <see cref="FarTreeFar"/>, so levels coarsen
+        /// gradually with distance rather than at a line.
+        /// </summary>
+        public bool SimplerFarTrees { get; set; } = true;
+
+        /// <summary>Metres from the camera within which trees keep <see cref="TreeLodBias"/>.</summary>
+        public float FarTreeNear { get; set; } = 60f;
+
+        /// <summary>Metres from the camera by which trees are judged at <see cref="FarTreeLodBias"/>.</summary>
+        public float FarTreeFar { get; set; } = 120f;
+
+        /// <summary>The bias far trees are judged at; see <see cref="SimplerFarTrees"/>.</summary>
+        public float FarTreeLodBias { get; set; } = 1f;
+
+        /// <summary>The bias a tree at this distance from the camera is judged at.</summary>
+        public float TreeBiasAt(float distance)
+        {
+            if (!SimplerFarTrees || distance <= FarTreeNear || FarTreeFar <= FarTreeNear) return TreeLodBias;
+            float t = Mathf.Clamp01((distance - FarTreeNear) / (FarTreeFar - FarTreeNear));
+            return Mathf.Lerp(TreeLodBias, Mathf.Min(TreeLodBias, FarTreeLodBias), t);
+        }
 
         /// <summary>
         /// The bias a bush is judged at, apart from the trees since design 38 §18c: a bush is a
@@ -1069,7 +1162,67 @@ namespace Odyssey.Presentation.Rendering
                 }
             }
 
+            _groupingTrees = false;
+            FlushTreeGroups();
             if (_indirectActive) DrawIndirectScenery();
+        }
+
+        void GatherTree(in RenderParams rp, ModulePart part, Matrix4x4[] matrices, int count)
+        {
+            var key = new TreeGroupKey(rp.material, part.Mesh, part.Submesh, rp.shadowCastingMode, rp.receiveShadows, rp.layer);
+            if (!_treeGroups.TryGetValue(key, out TreeGroup? group))
+            {
+                group = new TreeGroup();
+                _treeGroups.Add(key, group);
+            }
+            if (group.Count == 0)
+            {
+                group.Bounds = rp.worldBounds;
+                group.Part = part;
+                _treeGroupsInUse.Add(group);
+                _treeGroupKeysInUse.Add(key);
+            }
+            else group.Bounds.Encapsulate(rp.worldBounds);
+
+            int needed = group.Count + count;
+            if (needed > group.Matrices.Length)
+            {
+                int size = group.Matrices.Length;
+                while (size < needed) size *= 2;
+                System.Array.Resize(ref group.Matrices, size);
+            }
+            System.Array.Copy(matrices, 0, group.Matrices, group.Count, count);
+            group.Count = needed;
+        }
+
+        /// <summary>Sends every tree group gathered this frame, in as few calls as the per-call cap
+        /// allows, and empties the gather for the next frame (see <see cref="GroupTrees"/>).</summary>
+        void FlushTreeGroups()
+        {
+            GroupedTreeCalls = 0;
+            GroupedTreeInstances = 0;
+            int kindWas = _currentKind;
+            _currentKind = 0;
+            for (int g = 0; g < _treeGroupsInUse.Count; g++)
+            {
+                TreeGroup group = _treeGroupsInUse[g];
+                TreeGroupKey key = _treeGroupKeysInUse[g];
+                var rp = new RenderParams(key.Material)
+                {
+                    worldBounds = group.Bounds,
+                    layer = key.Layer,
+                    receiveShadows = key.Receives,
+                    shadowCastingMode = key.Shadows,
+                };
+                int callsBefore = DrawCalls;
+                Submit(rp, group.Part, group.Matrices, group.Count);
+                GroupedTreeCalls += DrawCalls - callsBefore;
+                GroupedTreeInstances += group.Count;
+                group.Count = 0;
+            }
+            _treeGroupsInUse.Clear();
+            _treeGroupKeysInUse.Clear();
+            _currentKind = kindWas;
         }
 
         /// <summary>
@@ -1203,6 +1356,7 @@ namespace Odyssey.Presentation.Rendering
                 InstanceBucket bucket = buckets[b];
                 if (bucket.Count == 0) continue;
                 _currentKind = CallKindOf(bucket.Tint, bucket.Module);
+                _groupingTrees = GroupTrees && _currentKind == 0;
                 if (_currentKind == 0)
                 {
                     TreeBuckets++;
@@ -1391,6 +1545,7 @@ namespace Odyssey.Presentation.Rendering
                     }
                 }
             }
+            _groupingTrees = false;
         }
 
         /// <summary>
@@ -1703,6 +1858,12 @@ namespace Odyssey.Presentation.Rendering
 
         void Submit(in RenderParams rp, ModulePart part, Matrix4x4[] matrices, int count)
         {
+            if (_groupingTrees && count > 0 && rp.material != null
+                && rp.material.renderQueue <= (int)RenderQueue.GeometryLast)
+            {
+                GatherTree(rp, part, matrices, count);
+                return;
+            }
             int drawn = 0;
             while (drawn < count)
             {
