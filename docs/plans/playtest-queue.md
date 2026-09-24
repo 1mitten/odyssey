@@ -23,6 +23,22 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the title screen's dock read well, and does Exit ask?** (`claude/settings-frame`, design
+  40.) Press Play. A dark panel down the left edge with the layered mark and ODYSSEY, four
+  coloured buttons and the build line at the foot, the starfield clear to the right. New game should
+  already be lit, so Enter starts a game; Up and Down move the light. Hover each button: it fills in
+  its colour with a bar on its left. Settings opens the centred window over the dock, and closing it
+  leaves Settings lit. Exit game asks "Exit game?" with only Exit and Cancel. A wrong answer is the
+  wordmark touching the dock's edge or wrapping, the starfield dimmed, the load list not fitting the
+  dock, or Exit closing the game without asking.
+- **Is the settings window one steady box, and can it be driven from the keyboard?**
+  (`claude/settings-frame`, design 39.) Open Menu > Settings and click through all five tabs: the
+  window should not move or change size at all, and should sit dead centre. Save, Save as, Load,
+  Quit to main menu and Exit game appear once, at the foot of the rail. Then press Tab and use the
+  arrows, Enter and Space to change a setting without the mouse: a white ring should follow you, and
+  the camera should not pan and the game should not pause while it does. A wrong answer is a window
+  that shifts as you change tab, a Keys tab with a scrollbar, a ring that jumps two rows for one
+  arrow press (the engine moving focus as well as us), or Space pausing the game from a switch.
 - **Does zooming out over Full grass feel smoother, and does anything flicker or vanish?**
   (`claude/meadow-grass-perf`, PR #195, design 38 §22). Grass → Full, zoom slowly from the start out to the
   farthest pull and pan along the board's edge, watching the overlay's `frame` and `gpu`. The scenery
