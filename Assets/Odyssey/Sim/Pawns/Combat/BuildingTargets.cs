@@ -235,8 +235,76 @@ namespace Odyssey.Sim.Pawns
         public static bool CanReach(PawnContext ctx, Pawn pawn, in BuildingTarget target, TraverseMode mode)
         {
             if (InReach(ctx, pawn.Cell, target)) return true;
-            ChooseSide(ctx, pawn, target, mode, out bool reachable);
-            return reachable;
+            return HasASideToReach(ctx, pawn, target, mode);
+        }
+
+        /// <summary>
+        /// Is there a cell in reach of the building that <paramref name="pawn"/> could stand on and
+        /// get to, held by another fighter or not? <see cref="ChooseSide"/>'s <c>reachable</c>,
+        /// without the pass over the pawns it makes to see who holds what: at most ten cells, each
+        /// two array reads. Her own cell counts, as it does there.
+        /// </summary>
+        static bool HasASideToReach(PawnContext ctx, Pawn pawn, in BuildingTarget target, TraverseMode mode)
+        {
+            GridSize size = ctx.Size;
+            for (int part = 0; part < 2; part++)
+            {
+                int centre = part == 0 ? target.Anchor : target.Second;
+                if (centre < 0) continue;
+                CellRef t = size.FromIndex(centre);
+
+                for (int dz = -1; dz <= 1; dz++)
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    if (dx == 0 && dz == 0) continue;
+                    int x = t.X + dx, z = t.Z + dz;
+                    if (!size.Contains(x, z, t.Y)) continue;
+                    int cell = size.Index(x, z, t.Y);
+                    if (target.Covers(cell)) continue;
+                    if (cell == pawn.Cell) return true;
+                    if (ctx.Nav.Grid.CanEnter(cell, mode) && ctx.Reachable(pawn, cell, mode)) return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// The colony building a marauder with no colonist to reach attacks (design 33 §14b; the
+        /// owner, 2026-09-24: <i>"kill colonists, destroy base"</i>): of every edifice a colonist
+        /// raised (<see cref="PlacedEdifice.Built"/>) that is a target (<see cref="TryStanding"/>)
+        /// and that <paramref name="pawn"/> can strike from where she is or get beside
+        /// (<see cref="CanReach"/>), the nearest by <see cref="PawnContext.Distance"/> to its own
+        /// cell, <b>a tie to the lower record handle</b> — the older building. The ruined city's
+        /// walls are passed over: <i>destroy base</i> names the colony's.
+        ///
+        /// <para><b>Scales with the edifice records</b> — every edifice ever placed, trees and removed
+        /// slots included: one branch for anything a colonist did not raise, a content lookup of at
+        /// most twelve rows for anything she did, and a reachability test of at most ten cells for
+        /// each one nearer than the best so far. Asked on a marauder's think when no colonist can be
+        /// reached, never per tick.</para>
+        /// </summary>
+        public static bool TryNearestColonyTarget(PawnContext ctx, Pawn pawn, TraverseMode mode, out BuildingTarget nearest)
+        {
+            nearest = default;
+            var construction = ctx.Construction;
+            if (construction == null) return false;
+
+            List<PlacedEdifice> records = construction.Edifices.Records;
+            int bestDistance = int.MaxValue;
+            bool found = false;
+            for (int handle = 0; handle < records.Count; handle++)
+            {
+                PlacedEdifice placed = records[handle];
+                if (placed.Removed || !placed.Built) continue;
+                int distance = ctx.Distance(pawn.Cell, placed.CellIndex);
+                if (distance >= bestDistance) continue;
+                if (!TryStanding(ctx, handle, out BuildingTarget target)) continue;
+                if (!CanReach(ctx, pawn, target, mode)) continue;
+                nearest = target;
+                bestDistance = distance;
+                found = true;
+            }
+            return found;
         }
 
         /// <summary>

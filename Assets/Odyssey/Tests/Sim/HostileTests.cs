@@ -11,7 +11,8 @@ namespace Odyssey.Tests.Sim
     /// <summary>
     /// The marauder's hunt and a colonist's self-defence (design 33 §1, §6A): the nearest standing
     /// colonist is hunted and a downed one is not; a colonist struck by a hostile, or by a colonist,
-    /// stops what she is doing and fights back; with nobody left standing the marauder idles.
+    /// stops what she is doing and fights back; with nobody left standing and nothing built the marauder
+    /// idles (with a building, §14b, it breaks that — <c>BuildingTargetTests</c>).
     /// </summary>
     public class HostileTests
     {
@@ -41,10 +42,14 @@ namespace Odyssey.Tests.Sim
             Assert.That(marauder.CombatTarget, Is.EqualTo(mid.Id.Value), "the next nearest standing colonist was not chosen");
         }
 
+        /// <summary>
+        /// With nobody standing and nothing the colony built to break (design 33 §14b: a marauder
+        /// with no colonist to reach attacks the base; here there is none — no bed), it idles.
+        /// </summary>
         [Test]
-        public void WithNobodyStandingAMarauderIdles()
+        public void WithNobodyStandingAndNothingBuiltAMarauderIdles()
         {
-            var colony = Board(colonists: 1);
+            var colony = Board(colonists: 1, beds: 0);
             colony.World.Tick(5);
             Pawn only = colony.Pawns.Pawns.All[0];
             Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 6, 0));

@@ -689,5 +689,197 @@ namespace Odyssey.Tests.Sim
             Assert.Fail("no cell beside her");
             return -1;
         }
+
+        // ---- a marauder breaks in (design 33 §14b) ------------------------------------------------
+
+        /// <summary>Colonists and no bed, so no building stands on the board but the ones a test raises.</summary>
+        static ColonyWorld Bare(int colonists = 1)
+        {
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = colonists;
+            scenario.beds = 0;
+            var colony = ColonyWorld.Build(Size, 7u, scenario, barren: true, wooded: false);
+            colony.World.Tick();
+            return colony;
+        }
+
+        /// <summary>Raise one building on exactly this cell.</summary>
+        static void RaiseAt(ColonyWorld colony, int cell, int building = BuildingHandle.Wall, int stuff = StuffHandle.Wood)
+        {
+            Assert.That(colony.Construction.Place(Size.FromIndex(cell), building, stuff, 0), Is.EqualTo(IntentRejection.None),
+                $"could not order building {building} at {Size.FromIndex(cell)}");
+            Assert.That(colony.Construction.Raise(colony.Pawns, cell), Is.True);
+        }
+
+        /// <summary>
+        /// A colonist sealed in a ring of eight wooden walls, and the cells of the ring by their offset
+        /// from her: east is (1, 0), west (-1, 0).
+        /// </summary>
+        static Dictionary<(int, int), int> WallIn(ColonyWorld colony, Pawn pawn)
+        {
+            CellRef at = Size.FromIndex(pawn.Cell);
+            var ring = new Dictionary<(int, int), int>();
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dz == 0) continue;
+                int cell = Size.Index(at.X + dx, at.Z + dz, at.Y);
+                RaiseAt(colony, cell);
+                ring[(dx, dz)] = cell;
+            }
+            colony.World.Tick();
+            return ring;
+        }
+
+        static bool AttackingBuilding(Pawn pawn, int handle) =>
+            pawn.CurrentJob is { DefIndex: JobIndex.AttackMelee } job && pawn.CombatTarget == 0 && job.DestCell == handle;
+
+        /// <summary>
+        /// The owner's rule (design 33 §14b): with no colonist to reach, a marauder attacks the nearest
+        /// colony building it can reach — here the wall of the ring nearest it — through C6's own
+        /// building mode, unforced; and once the wall is down and she can be reached, it turns on her.
+        /// </summary>
+        [Test]
+        public void AMarauderWithNobodyToReachBreaksInThroughTheNearestWall()
+        {
+            var colony = Bare();
+            Pawn colonist = colony.Pawns.Pawns.All[0];
+            Stand(colony, colonist, Near(colony, 0, 0));
+            var ring = WallIn(colony, colonist);
+            int east = ring[(1, 0)];
+            CellRef at = Size.FromIndex(colonist.Cell);
+            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Size.Index(at.X + 5, at.Z, at.Y));
+            int handle = colony.Grid.Edifice[east];
+
+            TickUntil(colony, () => AttackingBuilding(marauder, handle), 60, "the marauder never went for the east wall");
+            Assert.That(marauder.CurrentJob!.PlayerForced, Is.False, "a marauder's own choice is not an order");
+
+            TickUntil(colony, () => colony.Grid.Edifice[east] < 0, 20_000, "the marauder never broke the wall down");
+            foreach (var side in ring)
+                if (side.Value != east)
+                    Assert.That(colony.Pawns.EdificeDamage.TryGet(side.Value, out _), Is.False, $"it struck the wall at {side.Key} too");
+
+            TickUntil(colony, () => marauder.CombatTarget == colonist.Id.Value, 600, "through the wall, and it did not turn on her");
+        }
+
+        /// <summary>
+        /// The control on the order of the rule (design 33 §14b): a colonist it can reach comes before
+        /// any building, however near the building.
+        /// </summary>
+        [Test]
+        public void AMarauderGoesForAColonistItCanReachBeforeAnyBuilding()
+        {
+            var colony = Bare();
+            Pawn colonist = colony.Pawns.Pawns.All[0];
+            Stand(colony, colonist, Near(colony, -12, 0));
+            CellRef at = Size.FromIndex(Near(colony, 6, 0));
+            RaiseAt(colony, Size.Index(at.X + 1, at.Z, at.Y));
+            colony.World.Tick();
+            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Size.Index(at.X, at.Z, at.Y));
+
+            TickUntil(colony, () => marauder.CurrentJob?.DefIndex == JobIndex.AttackMelee, 60, "the marauder did nothing");
+            Assert.That(marauder.CombatTarget, Is.EqualTo(colonist.Id.Value), "it went for the wall beside it, not the colonist");
+        }
+
+        /// <summary>
+        /// With every colonist down (design 33 §14b), the nearest colony building it can reach: a tie
+        /// goes to the older record, and a wall no colonist raised — the ruined city's — is passed over
+        /// however near.
+        /// </summary>
+        [Test]
+        public void WithEveryColonistDownItTakesTheNearestColonyBuildingAndTheOlderOnATie()
+        {
+            var colony = Bare();
+            Pawn colonist = colony.Pawns.Pawns.All[0];
+            CellRef at = Size.FromIndex(Near(colony, 8, 0));
+            int older = Size.Index(at.X, at.Z + 3, at.Y), newer = Size.Index(at.X, at.Z - 3, at.Y);
+            int city = Size.Index(at.X + 2, at.Z, at.Y);
+            RaiseAt(colony, older);
+            RaiseAt(colony, newer);
+            RaiseAt(colony, city);
+            var records = colony.Construction.Edifices.Records;
+            int cityHandle = colony.Grid.Edifice[city];
+            var stamped = records[cityHandle];
+            stamped.Built = false;
+            records[cityHandle] = stamped;
+            colony.World.Tick();
+
+            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Size.Index(at.X, at.Z, at.Y));
+            Strike(colony, marauder, colonist, colonist.HpMilli);
+            Assert.That(colonist.Downed, Is.True, "the control: she is down");
+            Assert.That(colony.Pawns.Distance(marauder.Cell, older), Is.EqualTo(colony.Pawns.Distance(marauder.Cell, newer)),
+                "the control: a tie");
+            Assert.That(colony.Grid.Edifice[older], Is.LessThan(colony.Grid.Edifice[newer]), "the control: raised first, lower handle");
+
+            TickUntil(colony, () => marauder.CurrentJob?.DefIndex == JobIndex.AttackMelee, 60, "with nobody standing, it did nothing");
+            Assert.That(AttackingBuilding(marauder, colony.Grid.Edifice[older]), Is.True,
+                "it did not take the older of two equally near walls, passing over the city's");
+        }
+
+        /// <summary>
+        /// A marauder at a wall looks up (design 33 §14b): every <c>rechooseTicks</c> between swings
+        /// it thinks again, so a colonist who can now be reached — here another wall of her ring taken
+        /// down — is gone for long before the wall it was striking would have fallen.
+        /// </summary>
+        [Test]
+        public void AMarauderAtAWallLooksUpWhenAColonistCanBeReached()
+        {
+            var colony = Bare();
+            Pawn colonist = colony.Pawns.Pawns.All[0];
+            Stand(colony, colonist, Near(colony, 0, 0));
+            var ring = WallIn(colony, colonist);
+            CellRef at = Size.FromIndex(colonist.Cell);
+            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Size.Index(at.X + 5, at.Z, at.Y));
+            int east = ring[(1, 0)];
+
+            TickUntil(colony, () => colony.Pawns.EdificeDamage.TryGet(east, out _), 2_000, "the marauder never struck the east wall");
+            colony.Construction.Demolish(colony.Pawns, ring[(-1, 0)], out _);
+            int opened = colony.World.CurrentTick;
+
+            TickUntil(colony, () => marauder.CombatTarget == colonist.Id.Value, colony.Pawns.Content.Combat.rechooseTicks + 150,
+                "it kept at the wall with a way in open");
+            Assert.That(colony.Grid.Edifice[east], Is.GreaterThanOrEqualTo(0), "the control: the east wall still stands");
+            TestContext.WriteLine($"turned on her {colony.World.CurrentTick - opened} ticks after the way in opened");
+        }
+
+        /// <summary>
+        /// A building it cannot get beside is passed over (design 33 §14b), however near: here a shelf
+        /// sealed inside a ring of the city's walls — which a marauder passes over too — and a colony
+        /// wall further off that it can reach, which is the one it takes.
+        /// </summary>
+        [Test]
+        public void ABuildingItCannotGetBesideIsPassedOver()
+        {
+            var colony = Bare();
+            Pawn colonist = colony.Pawns.Pawns.All[0];
+            CellRef at = Size.FromIndex(Near(colony, 8, 0));
+            int shelf = Size.Index(at.X + 3, at.Z, at.Y);
+            RaiseAt(colony, shelf, BuildingHandle.Shelf);
+            CellRef s = Size.FromIndex(shelf);
+            var records = colony.Construction.Edifices.Records;
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dz == 0) continue;
+                int cell = Size.Index(s.X + dx, s.Z + dz, s.Y);
+                RaiseAt(colony, cell);
+                int handle = colony.Grid.Edifice[cell];
+                var stamped = records[handle];
+                stamped.Built = false;
+                records[handle] = stamped;
+            }
+            int far = Size.Index(at.X - 7, at.Z, at.Y);
+            RaiseAt(colony, far);
+            colony.World.Tick();
+
+            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Size.Index(at.X, at.Z, at.Y));
+            Strike(colony, marauder, colonist, colonist.HpMilli);
+            Assert.That(colony.Pawns.Distance(marauder.Cell, shelf), Is.LessThan(colony.Pawns.Distance(marauder.Cell, far)),
+                "the control: the shelf is the nearer");
+
+            TickUntil(colony, () => marauder.CurrentJob?.DefIndex == JobIndex.AttackMelee, 60, "with nobody standing, it did nothing");
+            Assert.That(AttackingBuilding(marauder, colony.Grid.Edifice[far]), Is.True,
+                "it did not take the wall it could reach over the shelf it could not");
+        }
     }
 }

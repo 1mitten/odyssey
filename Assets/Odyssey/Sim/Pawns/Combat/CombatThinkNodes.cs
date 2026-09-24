@@ -40,6 +40,23 @@ namespace Odyssey.Sim.Pawns
             pawn.CombatTarget = target.Id.Value;
             return true;
         }
+
+        /// <summary>
+        /// Fill <paramref name="job"/> with a melee attack on a building — C6's building mode (design
+        /// 33 §13e), as the order starts it but <b>unforced</b>, so it thinks again on
+        /// <see cref="CombatDef.rechooseTicks"/> (§14b): the record handle in
+        /// <see cref="Job.DestCell"/>, the cell she strikes in <see cref="Job.TargetCell"/>, and no
+        /// pawn target, which is what says "a building" everywhere.
+        /// </summary>
+        public static bool FillBuilding(PawnContext ctx, Pawn pawn, in BuildingTarget building, Job job, TraverseMode mode)
+        {
+            job.Reset(JobIndex.AttackMelee);
+            job.TargetCell = BuildingTargets.StruckCell(ctx, pawn.Cell, building);
+            job.DestCell = building.Handle;
+            job.Mode = mode;
+            pawn.CombatTarget = 0;
+            return true;
+        }
     }
 
     /// <summary>
@@ -72,15 +89,19 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// A marauder's whole purpose (design 33 §1): hunt the nearest reachable colonist who is
-    /// standing, and attack. A downed colonist is not hunted; a marauder with nobody left to
-    /// hunt falls through to idling. The attack it starts re-chooses after
+    /// A marauder's whole purpose (design 33 §1, §14b; the owner: <i>"kill colonists, destroy
+    /// base"</i>): hunt the nearest reachable colonist who is standing, and attack. A downed colonist
+    /// is not hunted. <b>With no colonist to reach</b> — walled out, or every one down — it attacks
+    /// the nearest colony building it can reach (<see cref="BuildingTargets.TryNearestColonyTarget"/>),
+    /// unforced, so it thinks again every <see cref="CombatDef.rechooseTicks"/> and a colonist who
+    /// can be reached comes first again. With neither it falls through to idling. The attack it starts re-chooses after
     /// <see cref="CombatDef.rechooseTicks"/>, so a nearer colonist is noticed. <b>A colonist who
     /// struck it</b> comes first while <see cref="Pawn.RetaliateAgainst"/> holds and she is
     /// standing and reachable (<c>CombatSystem.React</c> records her), so the hitter is fought
     /// even when another colonist is as near.
     /// <b>Scales with the pawns on the board</b> per think: one pass, a reachability test (two
-    /// array reads) for each standing colonist nearer than the best so far.
+    /// array reads) for each standing colonist nearer than the best so far — and, only on a think
+    /// that finds no colonist to reach, with the edifice records as well (the building scan).
     /// </summary>
     public class HostileThinkNode : ThinkNode
     {
@@ -112,7 +133,12 @@ namespace Odyssey.Sim.Pawns
                 bestDistance = distance;
             }
 
-            return best != null && AttackJob.Fill(pawn, best, job, mode);
+            if (best != null) return AttackJob.Fill(pawn, best, job, mode);
+
+            // Nobody to reach: the base (design 33 §14b). Only here, so a building never draws a
+            // marauder from a colonist it could get to.
+            return BuildingTargets.TryNearestColonyTarget(ctx, pawn, mode, out BuildingTarget building)
+                && AttackJob.FillBuilding(ctx, pawn, building, job, mode);
         }
     }
 

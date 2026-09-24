@@ -240,6 +240,14 @@ namespace Odyssey.Sim.Pawns
             int tick = ctx.CurrentTick;
             TraverseMode mode = Job.Mode;
             bool boundary = Pawn.MoveProgress < Pawn.MoveRatePerMille();
+
+            // A marauder's own choice (design 33 §14b) thinks again every rechooseTicks, between
+            // swings and in reach or not — unlike a hunt, which re-chooses only while chasing,
+            // because one beating on a wall never chases and would not look up till it fell. A
+            // player's order is forced and runs until the building has gone.
+            if (!Job.PlayerForced && boundary && tick - Pawn.JobStartTick >= ctx.Content.Combat.rechooseTicks)
+                return JobStatus.Succeeded;
+
             bool inReach = BuildingTargets.InReach(ctx, Pawn.Cell, target);
 
             if (inReach)

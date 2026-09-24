@@ -95,6 +95,7 @@ namespace Odyssey.Tests.Sim
                 $"marauder soak: {watch.Elapsed.TotalSeconds:F1} s wall; {spawned} marauders spawned, {marauders} left on the board; " +
                 $"{rules.Swings.Count} swings resolved, {tape.Of(CombatEventKind.Hit).Count} hits, " +
                 $"{hooks.DownedCount} downed, {hooks.DiedCount} died, {recovered} got up; " +
+                $"{tape.Of(CombatEventKind.Demolished).Count} buildings broken down (design 33 §14b); " +
                 $"{standing} standing and {downed} down at the end; jobs failed — attack " +
                 $"{colony.Jobs.FailedOf(JobIndex.AttackMelee)}, downed {colony.Jobs.FailedOf(JobIndex.Downed)}, " +
                 $"flee {colony.Jobs.FailedOf(JobIndex.Flee)}");
