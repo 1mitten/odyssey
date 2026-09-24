@@ -198,10 +198,22 @@ namespace Odyssey.Presentation.World
 
                 float left = Footing.Correction(leftAt.y, leftGround) * planted;
                 float right = Footing.Correction(rightAt.y, rightGround) * planted;
-                if (left == 0f && right == 0f) continue;
 
-                Vector3 leftTarget = leftAt + Vector3.up * left;
-                Vector3 rightTarget = rightAt + Vector3.up * right;
+                // The stair climber's knee lift (design 40): a swing foot is raised to clear the
+                // tread it is being carried over. Faded in over exactly the band where the
+                // correction above fades out, so a foot the planter is holding down — the planted
+                // one, or a swing foot still near the ground — is untouched, and only a foot the
+                // gait has already swung clear comes up higher for the step. The hips drop on the
+                // corrections alone: a knee lifting is a leg bending, not the body sinking.
+                float leftKnee = StairGait.KneeLift(
+                    figure.StairTread, leftAt.y - leftGround, Footing.ReachMetres) * planted;
+                float rightKnee = StairGait.KneeLift(
+                    figure.StairTread, rightAt.y - rightGround, Footing.ReachMetres) * planted;
+
+                if (left == 0f && right == 0f && leftKnee == 0f && rightKnee == 0f) continue;
+
+                Vector3 leftTarget = leftAt + Vector3.up * (left + leftKnee);
+                Vector3 rightTarget = rightAt + Vector3.up * (right + rightKnee);
 
                 // The hips drop before the legs are solved, so each leg is solved against where
                 // the body has actually ended up. Doing it the other way round solves both legs

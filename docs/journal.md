@@ -11850,3 +11850,40 @@ cached translucent material, so no new shader has to survive the player build. T
 calls whatever the fight, and a colony with no blood submits nothing. Negative controls seen to
 fail: the cap dropping the newest, the fade brightening before its hold ends, the fans wound face
 down, the per-frame ground check off, the water rule off.
+
+## 2026-09-24 — The stair gait
+
+The third attempt at making a bank crossing read as climbing rather than as an escalator,
+designed as `40-stair-gait.md` after reviewing the owner's plan against the code. The two
+rejections (`HopArc`'s header) were failures of shape, not of ambition: the parabola lifted
+where the ground did not, and the strides were four rectangular holds with velocity edges. The
+stair is a smoothed sawtooth **added to the ramp** — cosine treads, C1 by construction, zero at
+both ends of the climbing half and at every tread boundary — so between treads the drawn
+position is exactly the glide the owner tuned on 2026-09-19, and the measured budgets hold:
+worst per-mille step ≈ 12 mm up, ≈ 24 mm lowering and worst frame ≈ 38 mm, all inside the
+50 mm teleport ceiling. `BankFootingTests` runs stair-on unchanged. Two `HopArcTests` claims are
+the glide's own and could not survive a stair as written — "on the ramp and nowhere else", and
+"no rhythm, only a steady climb" — so they now pin the **stair-off** glide, as strict as ever,
+and the stair holds itself to the pre-existing teleport budget instead (a stair *is* a rhythm;
+that is the feature). The cosine also opens a hair (≄ 8 mm, a sole's width) under the ramp at
+each tread's start; the ground clamp makes that a landing, and a test keeps it a hair.
+
+**Three corrections the review made to the plan.** The curve phases to the *climbing half* of
+the step, not to the step — a bank sits in one cell, and a whole-step sawtooth would bob the
+figure across the flat approach, which is the parabola's fault from the other side; `StepPace`
+now publishes each half's rise and drop. The banked descent is not a third code path: a banked
+arrival falls through to the surface-following branch the climb already uses, with the hold
+mirrored where the half descends — up and down symmetric, and the same-layer walk off a bank's
+foot got the stair for free. And the plan's body bob keyed on a `WalkCyclePhase` that does not
+exist anywhere; rather than invent a phase clock for a 3 cm bob under a curve that already
+moves the body, it is cut and recorded as a seam, beside the forward lean the plan wanted —
+which cannot exist as described, because `Footing` reads only the relief field and banks are
+not in it.
+
+**One owner for "is this a stair climb"**: `StairGait.IsClimbing`, asked by both the pose
+(where the stair draws) and the footing pass (whether a knee may lift), so the knees can never
+lift for a glide. The knee lift fades in over exactly the band where `Footing.Correction`
+fades out — inside half the reach the planter owns the foot, beyond it the knee comes up for
+the tread — and the hips drop on the corrections alone. Nothing simulated moved: no cell, no
+path price, no snapshot field, and `BankLayout`/`HopArc` keep their own answers for everything
+that is not a banked crossing.
