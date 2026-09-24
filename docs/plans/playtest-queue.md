@@ -23,6 +23,15 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the Meadow grass read as grass, and is this the grass to judge?** (PR for
+  `claude/meadow-m3-foliage`, design 38 §16) **This is the first branch to test grass in.** New game,
+  play camera. Three things: (1) the meadow reads as grass and the green is the lighter spring green
+  you asked for — if it reads as grey fuzz or olive, the grade is the one number to move; (2) it
+  sways, and **stops dead when you pause** — if it keeps moving, the wind is on wall time; (3) drop
+  or haul a stack onto grass, and designate a tree: **the grass clears in a small ring round each** —
+  if a log disappears into the grass, the clearance is not reaching the drawn view. Density is
+  unchanged (full cover is M4), and trees are still the old ones (M5).
+
 - **Does the hearth read as a hearth?** (`claude/campfire-art`, PR #170, `docs/design/31-campfire-art-and-fire.md`
   §17–§18d.) Build a campfire, give the colony nothing to do, and watch for a game hour. Idlers
   should drift to it two times in three and **stay** once there, about half of them turned to face

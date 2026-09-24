@@ -1809,6 +1809,79 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What <c>Odyssey/Foliage</c> costs against the pack's own foliage shader, on the same grass
+        /// in the same run (<c>docs/design/38-meadow-overhaul.md</c> §4, M3).
+        ///
+        /// <para>Two shaders over the same meshes and textures, at the shipped density and at full
+        /// cover, at the batch view and at 3840 x 2160. Ours adds a clearance fetch and a rotation per
+        /// vertex and drops the pack's noise colouring; whether that is cheaper or dearer is the
+        /// question, and M1's arm (§13) is the scale it is read against. The switch is
+        /// <c>MaterialCache.OwnFoliageShader</c> with the clones dropped between arms, and the arm
+        /// asserts the drop reached something, so it cannot compare a shader with itself (P18).</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheFoliageShaderAgainstThePacks()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            try
+            {
+                yield return TimeFrames("foliage/warm", boot, WarmupFrames, _ => { });
+
+                ChunkRenderer renderer = boot.Renderer!;
+                if (renderer.RequeueFoliage(MaterialCache.DefaultFoliageQueue) == 0)
+                    Assert.Ignore("no grass art resolved on this machine, so there is no foliage to price");
+
+                int shipped = renderer.ScatterDensity;
+                int full = GroundScatter.MaxPerCell * 100;
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "foliage-4k" };
+
+                var lines = new List<string>();
+                foreach (bool big in new[] { false, true })
+                {
+                    cam.targetTexture = big ? fourK : previousTarget;
+                    string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                    foreach (int density in new[] { shipped, full })
+                    {
+                        if (renderer.ScatterDensity != density)
+                        {
+                            renderer.ScatterDensity = density;
+                            boot.Model!.Remesh();
+                        }
+                        foreach (bool ours in new[] { false, true })
+                        {
+                            MaterialCache.OwnFoliageShader = ours;
+                            int dropped = renderer.ForgetFoliageMaterials();
+                            float ms = 0f;
+                            yield return TimeFrames($"foliage/{resolution}/{density}/{(ours ? "ours" : "pack")}",
+                                boot, WarmupFrames, m => ms = m);
+                            Assert.That(dropped, Is.GreaterThan(0),
+                                "no foliage clone was dropped, so this arm drew the previous shader again");
+                            Assert.That(renderer.ChunksMeshDeferred, Is.Zero, "timed while still re-meshing");
+                            lines.Add($"{resolution} density {density} {(ours ? "ours" : "pack")}: " +
+                                      $"frame {ms:0.00} ms, {renderer.DrawCalls} calls, {renderer.InstancesDrawn} instances");
+                        }
+                    }
+                }
+
+                Debug.Log("[FrameTime] foliage shader (" + SystemInfo.graphicsDeviceName + "): " +
+                          string.Join("; ", lines));
+            }
+            finally
+            {
+                MaterialCache.OwnFoliageShader = true;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// What levels of detail do to the frame on the played meadow, with the pack's own switch
         /// heights (<c>docs/design/38-meadow-overhaul.md</c> §3, M2).
         ///

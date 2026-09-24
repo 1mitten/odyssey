@@ -3,7 +3,7 @@
 *Numbered 38. Written as 36; by the time it merged, `main` had given 36 to radiant heat and
 `claude/medical-supplies` had 37, so it moved, with every place that cited it (2026-09-24).*
 
-**Status: designed 2026-09-24; M1 measured (§13) and M2 built (§14) the same day.** Branch `claude/meadow-overhaul`, worktree
+**Status: designed 2026-09-24; M1 measured (§13), M2 built (§14) and M3 built (§16) the same day.** Branch `claude/meadow-overhaul`, worktree
 `D:\code\odyssey-meadow`. Interview: `docs/research/meadow-interview.md` (twenty answers, the
 source of every decision here). Research: `e-09-meadow-mesh-data.md` (what the pack's meshes carry),
 `d-16-shader-warmup.md`, `d-17-terrain-skin-shading.md`, `d-18-dense-foliage-cost.md`.
@@ -237,7 +237,7 @@ measurements here.
 | **M0** | This document, the interview, four research files. | Owner reads. |
 | **M1** | **Measured 2026-09-24** (§13): what grass costs at 640 × 480 and 3840 × 2160, none / shipped / full cover / full cover in the opaque queue. | Done; the owner's GPU reading agrees (§13). |
 | **M2** | **Built 2026-09-24** (§14): instanced LOD, off by default. The tallest-bound constant moves with M5, when a tree first exceeds it. | Done. |
-| **M3** | `Odyssey/Foliage` (§4). | Tests; keep-alive in a player build. |
+| **M3** | **Built 2026-09-24** (§16): `Odyssey/Foliage` draws the Meadow grass — tick wind, clearance round items and marks, a spring grade. | Awaiting the owner's first look. |
 | **M4** | Lush grass and flowers on today's ground (§5). | **First Play.** 2.0 ms at 4K. |
 | **M5** | Meadow trees and bushes as sim species; the topple; goldens measured; wiki. Confirm fruit-bearing. | **Second Play.** |
 | **M6** | Settings and presets (§9). | Each preset measured. |
@@ -352,3 +352,45 @@ predicts for grass; the saving levels exist for is the Meadow trees in M5.
 Guards: `InstancedLodTests` (EditMode) — a prefab resolves into every level placed as the finest,
 a level off the origin falls back to the finest alone, a prefab without a group has one level, the
 pick follows the screen height by the pack's rule and never culls, and levels are off by default.
+
+## 16. M3: `Odyssey/Foliage`, built (2026-09-24)
+
+*§15 is M6's, written on its own branch at the same time.*
+
+§4 as designed. What is on screen now: **the three Meadow grass tufts on the board are drawn by our
+shader**, from the art's own leaf texture, graded lighter and yellower (`FoliageLook.LeafGrade`,
+a linear (1.9, 2.1, 1.3) on an art that averages sRGB (88, 112, 48) — a first setting, one number,
+for the owner's eye); **they sway on the game clock**, so they hold still on pause and hurry at
+speed 3 (`WindDirector`, restored from the closed grass branch, applied beside the daylight); and
+**they shrink away round a dropped item (0.55 m) and an order mark (1.1 m)** through the clearance
+field (`GrassClearance`, restored), whose window now follows the rig's *focus* rather than the camera.
+
+Decisions worth keeping:
+
+- **Routed by the art, not by the tint.** A material is drawn by ours when it has a filled
+  `_Leaf_Texture` slot — the pack foliage shader's own input. The foliage tint also marks crops,
+  which are PolygonFarm art with no such slot; keying on the tint drew every carrot as grass once
+  already (#166). `MaterialCache.OwnFoliageShader` is the switch, on in the game.
+- **Degrades, never vanishes.** If a player strips `Odyssey/Foliage` the cache logs once and the
+  pack's own material draws as before M3. It is on `ShaderInclusion.Required`, always-included and
+  has a keep-alive, and the player build's log carries no warning.
+- **Pawns do not clear grass yet.** The closed branch stamped colonists too; that replaced a static
+  bare hole the scatter kept in every cell, which is a scatter change and belongs with M4's density.
+- **The canopy fade is a property, not yet wired.** `_Fade` dithers the clip; nothing sets it
+  until trees move to this shader in M5, which is where the see-through machinery meets it.
+- **The distance shrink ships off** (`_ShrinkStart`/`_ShrinkEnd` zero); M4 turns it on with the
+  rank thinning.
+
+**Measured** (`FrameTimeTests.TheFoliageShaderAgainstThePacks`, one run, the played meadow, the
+pack's material against ours on the same meshes, clones dropped between arms and asserted dropped):
+
+| | 640 × 480 pack / ours | 3840 × 2160 pack / ours |
+|---|---|---|
+| shipped density (60) | 2.35 / 2.43 ms | **9.53 / 8.86 ms** |
+| full cover (300) | 2.36 / 2.48 ms | **9.68 / 9.16 ms** |
+
+**Ours is 0.5–0.7 ms cheaper at 4K** and within 0.1 ms at the batch view, where the frame is
+submission rather than fill. Draw calls and instances are identical in every pair, as they must be.
+The pack's graph computes three noise colours and a frosting term per pixel; ours samples one
+texture and does the wind in the vertex stage. Same caveat as §13: other batch runs shared the
+machine, so only the in-run pairs mean anything.
