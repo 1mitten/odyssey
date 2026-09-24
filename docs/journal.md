@@ -11895,3 +11895,30 @@ removed the rim boxes, showed more of — hence the apron.
 
 It costs the frame nothing measurable and meshing about 0.2 ms more a chunk, after three cuts. Design
 38 §20.
+
+## 2026-09-24 — Grass at distance, measured before it was cut (design 38 §21)
+
+The owner: bushes should stay put when walked through, and grass — "especially when full at distance"
+— was the biggest drop. Bushes were one line (the dressing never fades) and the removal of the lines
+that faded them over items. Grass took three measurements, and the second overturned the first plan.
+
+The plan approved was to thin Full towards the Meadow rung's density far out. Built and measured at
+the farthest pull, it bought almost nothing, because the split showed why: Meadow already cost what
+Full did there. The cost at distance is having the grass layer at all — and most of that is the
+dressing, not the tufts: flowers, bushes, ground cover and stones each adding a hundred-odd draw
+calls at that zoom, a bucket per kind and variant in every visible chunk. So the thinning became a
+rule for every rung, falling as the square of distance from 70 m to a floor of a tenth, sorted by a
+hashed rank the CPU and the shader agree on so the far field loses clumps one at a time. At the
+reference's framing the meadow still reads lush; at the farthest pull more painted ground shows.
+
+The solid far blades were not built: the measurement named draw calls and instance counts, not
+overdraw, and the lever that removes draw calls per kind is the indirect path §18b built for the
+tufts and left off. The owner's editor was open on the same GPU for every reading, so each condition
+was taken twice and the lower kept, Huge's numbers were discarded as noise, and the player bench —
+the one instrument with the GPU's own clock — is prepared and waits for the owner's go.
+
+Two operational slips on the way, both recovered: the owner opened the worktree this work began in,
+so the work moved (stash, then a clean re-apply) rather than editing under a live editor; and a
+`cd` into a worktree that had been deleted to free disk space failed silently, so two git commands
+ran in the main checkout — it was switched back to `main` and the stash re-taken within the minute.
+Every chain now guards its `cd`.

@@ -23,6 +23,14 @@ the next session learns to ignore.
 
 ## Open
 
+- **Bushes stay, and grass at distance is cheaper** (`claude/meadow-grass-perf`, design 38 §21).
+  Walk colonists through and past bushes: **the bush stays solid** — if it fades or vanishes, the
+  dressing is still in the sight fade. Then Settings → Graphics → Grass → **Full**, overlay on
+  (backtick), and zoom out to the farthest pull and back: the near meadow looks as it did, the far
+  field thins smoothly as you pull back and fills in as you come close — **a wrong answer is clumps
+  popping in or out at a line, or the far field reading bald**; and `gpu` at the farthest pull should
+  be lower than before this branch. Trees still fade for colonists.
+
 - **Do the terraces read as slopes?** (`claude/meadow-skin`, design 38 §20). New game; walk the
   camera along a hillside and a stream. The steps between terraces should read as grassy slopes, the
   stream banks should run down into the water, and there should be no line where the board meets the

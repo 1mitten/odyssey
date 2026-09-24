@@ -987,3 +987,79 @@ is worth checking the same way.
   and show their own side above the rim; the apron fixes the (common) higher rim only. Meeting the rim
   column by column is M10's.
 - Meshing cost, above.
+
+## 21. Grass at distance, and bushes that stay (2026-09-24)
+
+The owner, after M9: *"Walking through / past a bush shouldn't make it disappear, keep it there — it's
+fine to walk through bushes. The biggest performance hit I can see is actually grass, especially when
+full at distance … I see the biggest fps drop with the grass settings."* Decisions asked and answered
+the same day: **bushes never fade**; for grass, **thin with distance**, **simpler far tufts** and
+**solid blades far out** were approved; baked static grass was not.
+
+### 21a. Bushes stay
+
+`ChunkRenderer.NeverFades` takes the dressing flag, so bushes and stones are never partitioned into
+the sight fade — for a colonist, selected or not. The sight lines to bodies and items under bushes
+(§19a's second half) are removed with their switch (`seeThroughToGround`) and `UnderBush`; grass still
+lies flat round an item or a body. Trees keep fading for colonists (§19b).
+
+### 21b. Where Full's cost at distance actually is
+
+`FrameTimeTests.TheGrassAtDistanceAgainstTheFrame` (Explicit, a measurement): 3840 × 2160, the world
+paused, the wide (70 m) and farthest (140 m) framings, each condition taken twice and the lower kept —
+the owner's editor was open on the same GPU throughout, and a single reading moved by more than the
+thing measured. Standard is quoted; **Huge's readings were too noisy to use** (one kind alone measured
+cheaper than no grass at all).
+
+| Standard, 3840 × 2160 | frame @70 m | frame @140 m |
+|---|---|---|
+| no grass | 8.70 ms | 13.39 ms |
+| tufts only (Meadow rung) | 9.42 | 14.66 |
+| dressing only (Meadow rung) | 12.03 | 18.41 |
+| Meadow, both, none of §21 | 12.55 | 19.93 |
+| Full, none of §21 | 13.52 | 21.69 |
+
+**The cost at distance is having the grass layer at all, and most of it is the dressing, not the
+tufts.** At the farthest pull Meadow already costs about 6.5 ms and Full adds only ~1.8 more; the
+dressing is ~5 of Meadow's cost, spread across its kinds (flowers ~+2.5, bushes ~+1.8, ground cover
+~+1.6, stones ~+1.3, tall grass and sunflowers within noise) — each kind adding 100–170 draw calls at
+that zoom, because every chunk carries its own bucket per kind and variant. So a rule that only
+thinned the rungs above Meadow, which is what §21 first built, bought nothing where the drop was seen.
+
+### 21c. What was built
+
+- **Thinning with distance, at every rung** (`GrassThinning`, mirrored in `Odyssey/Foliage`'s
+  `FoliageRank`/`FoliageThinScale`): every clump of grass — the tufts and the dressing that reads as
+  meadow (tall grass, flowers, cover, sunflowers; never bushes, stones or crops) — has a rank in [0, 1)
+  from an integer PCG hash of where it stands. Past `GrassThinNear` (70 m from the camera) the fraction
+  kept falls as (near / distance)², the rate that holds clumps per pixel of screen roughly constant,
+  never below `GrassThinFloor` (0.1). The CPU sorts each grass bucket by rank once when the chunk is
+  meshed and submits only the prefix that can survive at the chunk's nearest point; the shader shrinks
+  the rest clump by clump over the last 5% of the keep, so nothing pops at a chunk seam.
+  `GrassThinningTests` pins the arithmetic and reads the HLSL mirror's constants out of the shader.
+- **Tufts take coarser levels far out** (`TuftLevels`, `TuftLodBias` 8): measurable (more instances at
+  a coarser level at the wide and far framings) but a small effect on its own.
+- **Solid far blades: not built.** The measurement points at draw calls and instance counts per kind
+  at far zoom, not at the see-through edge's overdraw, so a solid far stand-in was not the lever the
+  evidence named. The switch that was sketched for it was removed rather than shipped empty.
+
+### 21d. Measured, and seen
+
+Photographs (`FrameTimeTests.TheGrassAtDistanceAtThePlayCamera`, Full grass, paused and stilled;
+`docs/reference/screenshots/look/2026-09-24-grass-distance-{wide,far}-{none,shipped}.png`): the start
+framing moves 1.37% of pixels (the top edge of the screen is past 70 m even there), the wide framing
+10%, the farthest 36%. At the wide framing — the reference's own — the thinned meadow still reads
+lush and the near field is untouched; at the farthest pull more painted ground shows through.
+
+At the farthest pull on Standard, thinning saved about 0.8 ms at Meadow and about 1.6 ms at Full in
+the batch arm (frame as the GPU's stand-in, noisy). **The real GPU numbers are owed from the player
+bench** (`PlayerBench`, `-odyssey-bench-grass`), which needs the owner's go because it takes the screen.
+
+### 21e. What is owed
+
+- **The player bench's grass table**, which settles the numbers above on the GPU's own clock.
+- **GPU-driven drawing for the dressing** (§18b's indirect path, built for the tufts and left off):
+  the measured driver at distance is draw calls per kind per chunk, which is exactly what one indirect
+  draw per kind removes. It was shelved on a measurement at the start camera, where it saved little;
+  §21b says the far camera is where it pays. The owner's call.
+- Huge re-measured on a quiet machine.
