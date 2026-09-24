@@ -170,6 +170,31 @@ Shader "Odyssey/Water"
             float4 _OdysseyGroundFieldST;
             float _OdysseyGroundFieldOn;
 
+            // Which way the water runs, per column (GroundField.RebuildFlow): RG the direction
+            // (0.5 is none), B the speed. And the clock it runs by, in seconds of game time
+            // (WaterDirector): a paused world holds still, and unset is still water.
+            TEXTURE2D(_OdysseyWaterFlow); SAMPLER(sampler_OdysseyWaterFlow);
+            float _OdysseyWaterTime;
+            // How much the level water visibly moves (WaterDirector.Motion): nought is the still
+            // water of §24, and what anything drawn without a bootstrap gets.
+            float _OdysseyWaterMotion;
+
+            float WaterHash(float2 p)
+            {
+                p = frac(p * float2(123.34, 456.21));
+                p += dot(p, p + 45.32);
+                return frac(p.x * p.y);
+            }
+
+            float WaterNoise(float2 p)
+            {
+                float2 i = floor(p);
+                float2 f = frac(p);
+                float2 u = f * f * (3.0 - 2.0 * f);
+                return lerp(lerp(WaterHash(i), WaterHash(i + float2(1, 0)), u.x),
+                            lerp(WaterHash(i + float2(0, 1)), WaterHash(i + float2(1, 1)), u.x), u.y);
+            }
+
             struct Attributes
             {
                 float4 positionOS : POSITION;
@@ -220,7 +245,7 @@ Shader "Odyssey/Water"
             // agree with each other and neither needs a field of its own.
             float3 RippleNormal(float3 normalWS, float3 positionWS, out float wave)
             {
-                float t = _Time.y * _RippleSpeed;
+                float t = _OdysseyWaterTime * _RippleSpeed;
                 float2 p = positionWS.xz * _RippleScale;
 
                 float a = sin(p.x * 1.00 + p.y * 0.35 + t * 1.00);
@@ -326,6 +351,7 @@ Shader "Odyssey/Water"
                 // cell's edge, so the depth fade traces that line and can be short. The ground
                 // field is sampled here for the colour below: B = water, A = deep. Level water only.
                 float4 groundField = 0;
+                float4 flowSample = float4(0.5, 0.5, 0, 0);
                 bool fieldOn = _OdysseyGroundFieldOn > 0.5 && upness > 0.5;
                 [branch] if (fieldOn)
                 {
@@ -335,6 +361,9 @@ Shader "Odyssey/Water"
                                 + wave * _ShoreWobble;
                     float2 fuv = (p + warp) * _OdysseyGroundFieldST.xy;
                     groundField = SAMPLE_TEXTURE2D_LOD(_OdysseyGroundField, sampler_OdysseyGroundField, fuv, 0);
+                    // Unwarped: the direction should follow the channel, not the shore's wobble.
+                    flowSample = SAMPLE_TEXTURE2D_LOD(_OdysseyWaterFlow, sampler_OdysseyWaterFlow,
+                        p * _OdysseyGroundFieldST.xy, 0);
                     shore = smoothstep(0.0, 1.0,
                         saturate((through + wave * _ShoreWobble) / max(_FieldShoreFade, 1e-3)));
                 }
@@ -388,6 +417,46 @@ Shader "Odyssey/Water"
                 half reflectAmount = _ReflectionStrength * fresnel;
                 lit = lerp(lit, reflection, saturate(reflectAmount));
 
+                // ---- the level water moving (design 38 §24f) ------------------------------------
+                //
+                // Carried by colour, like the falls, and for their reason: at the play camera the
+                // ripple normal's Fresnel is two per cent, so the surface read as still however it
+                // was perturbed. Three things move. **Streaks** of a noise field carried along the
+                // flow: two phases of it, half a cycle apart and crossfaded, so the pattern travels
+                // without stretching (the flow-map technique). **Swells** on still water: three
+                // slow crossed waves, lighter where they crest. **The shore breathes**: a thin light
+                // rim at the water's edge that slowly swells and ebbs. All on the game clock.
+                float motionFoam = 0;
+                [branch] if (fieldOn && _OdysseyWaterMotion > 0.001)
+                {
+                    float T = _OdysseyWaterTime;
+                    float2 p = input.positionWS.xz;
+                    float2 dir = flowSample.rg * 2.0 - 1.0;
+                    float speed = flowSample.b;
+
+                    const float cycle = 3.0;
+                    float ph0 = frac(T / cycle), ph1 = frac(T / cycle + 0.5);
+                    float2 carry = dir * speed * 0.9 * cycle;
+                    float2 q0 = p - carry * ph0, q1 = p - carry * ph1;
+                    float n0 = WaterNoise(q0 * 1.1) * 0.55 + WaterNoise(q0 * 2.7 + 11.7) * 0.45;
+                    float n1 = WaterNoise(q1 * 1.1 + 5.3) * 0.55 + WaterNoise(q1 * 2.7 + 17.1) * 0.45;
+                    float n = lerp(n1, n0, 1.0 - abs(2.0 * ph0 - 1.0));
+                    float streak = smoothstep(0.60, 0.85, n) * speed;
+
+                    float still = 1.0 - speed;
+                    float r = sin(dot(p, float2(0.83, 0.42)) * 1.3 + T * 0.9)
+                            + sin(dot(p, float2(-0.47, 0.88)) * 1.7 - T * 1.2)
+                            + sin(dot(p, float2(0.15, -0.99)) * 1.1 + T * 0.7);
+                    float crest = smoothstep(1.4, 2.7, r) * (0.35 + 0.65 * still);
+                    lit *= 1.0 + 0.06 * (r / 3.0) * still * _OdysseyWaterMotion;
+                    lit += mainLight.color * (streak * 0.08 + crest * 0.05) * _OdysseyWaterMotion;
+
+                    float edge = 1.0 - smoothstep(0.0, 0.3, through);
+                    float breathe = 0.55 + 0.45 * sin(T * 1.1 + WaterNoise(p * 0.4) * 6.2832);
+                    motionFoam = saturate(edge * breathe * _OdysseyWaterMotion);
+                    lit = lerp(lit, half3(0.86, 0.93, 0.90) * mainLight.color, motionFoam * 0.25);
+                }
+
                 lit += _EmissionColor.rgb;
 
                 // Opacity: the palette's own alpha, opened up at the shore and closed towards
@@ -396,7 +465,7 @@ Shader "Odyssey/Water"
                 // With the field the shore takes the reflection with it: past the soft edge the
                 // sheet lies over sunken bank, and a sky reflection left there drew pale glassy
                 // triangles along every shore at the play camera.
-                if (fieldOn) alpha = saturate((base.a + reflectAmount) * shore);
+                if (fieldOn) alpha = saturate(max((base.a + reflectAmount) * shore, motionFoam * 0.3));
 
                 // ---- the falling sheet -------------------------------------------------------
                 //
@@ -419,7 +488,7 @@ Shader "Odyssey/Water"
                 // is a thing worth stating because it looks plausible either way in a still.
                 float fallAmount = 1.0 - upness;
                 float along = input.positionWS.x + input.positionWS.z;
-                float down  = input.positionWS.y + _Time.y * _FallSpeed;
+                float down  = input.positionWS.y + _OdysseyWaterTime * _FallSpeed;
 
                 float streak = (sin(along * 2.7) * 0.5 + 0.5) *
                                (sin(down * 3.1 + along * 1.3) * 0.5 + 0.5);

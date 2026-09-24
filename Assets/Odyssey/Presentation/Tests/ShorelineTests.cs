@@ -266,6 +266,69 @@ namespace Odyssey.Tests.Presentation
             Assert.That(field.Texture.width, Is.EqualTo(Side), "one texel a column");
         }
 
+        /// <summary>
+        /// Water runs to where it can fall (design 38 §24f): a stretch that steps down a layer runs
+        /// towards the step, and the stretch below it, with nowhere lower to go, lies still.
+        /// </summary>
+        [Test]
+        public void WaterRunsTowardsTheStepAndAPondLiesStill()
+        {
+            var world = new RenderTestWorld(Side, Side, 4);
+            for (int z = 0; z < Side; z++)
+            for (int x = 0; x < Side; x++)
+            {
+                world.Solid(x, z, 0, NaturalContent.TerrainGrass);
+                bool upper = x == 5 && z >= 2 && z <= 5, lower = x == 5 && z >= 6 && z <= 9;
+                if (lower) world.Surface(x, z, 1, NaturalContent.TerrainShallowWater);
+                else world.Solid(x, z, 1, NaturalContent.TerrainGrass);
+                if (upper) world.Surface(x, z, 2, NaturalContent.TerrainShallowWater);
+                else if (!lower) world.Solid(x, z, 2, NaturalContent.TerrainGrass);
+            }
+            world.Publish();
+
+            using var field = new GroundField(world.Model);
+            for (int z = 2; z <= 5; z++)
+            {
+                Color32 flow = field.FlowAt(5, z);
+                Assert.That(flow.b, Is.GreaterThan(0), $"the upper stretch at z = {z} should run");
+                Assert.That(flow.g, Is.GreaterThan(200), $"and run towards the step, +z (z = {z}, g = {flow.g})");
+                Assert.That(flow.r, Is.InRange(120, 136), "and not sideways");
+            }
+            for (int z = 6; z <= 9; z++)
+                Assert.That(field.FlowAt(5, z).b, Is.Zero, $"the stretch below has no outlet and lies still (z = {z})");
+            Assert.That(field.FlowAt(2, 2).b, Is.Zero, "dry ground has no flow");
+        }
+
+        /// <summary>The water's clock is the game's: a paused world holds still, unless told to move on pause.</summary>
+        [Test]
+        public void TheWaterHoldsStillThroughAPause()
+        {
+            bool was = WaterDirector.MovesOnPause;
+            var water = new WaterDirector { TicksPerSecond = 60f };
+            try
+            {
+                WaterDirector.MovesOnPause = false;
+                water.Apply(600, 0.016f);
+                Assert.That(water.Seconds, Is.EqualTo(10f).Within(1e-4f));
+                water.Apply(600, 0.5f);
+                Assert.That(water.Seconds, Is.EqualTo(10f).Within(1e-4f), "a paused world moved the water");
+                water.Apply(660, 0.016f);
+                Assert.That(water.Seconds, Is.EqualTo(11f).Within(1e-4f), "a second of ticks is a second of water");
+
+                WaterDirector.MovesOnPause = true;
+                water.Apply(660, 0.5f);
+                Assert.That(water.Seconds, Is.EqualTo(11.5f).Within(1e-4f), "on pause, with the switch, it runs in real time");
+
+                water.Apply(0, 0.016f);
+                Assert.That(water.Seconds, Is.EqualTo(0f).Within(1e-4f), "a new session starts the clock again");
+            }
+            finally
+            {
+                WaterDirector.MovesOnPause = was;
+                water.Dispose();
+            }
+        }
+
         static ChunkBatch?[] Batches(ChunkRenderer renderer) =>
             (ChunkBatch?[])typeof(ChunkRenderer)
                 .GetField("_batches", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(renderer)!;

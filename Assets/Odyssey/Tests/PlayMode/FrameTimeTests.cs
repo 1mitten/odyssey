@@ -3188,9 +3188,10 @@ namespace Odyssey.Tests.PlayMode
                 var size = grid.Size;
                 CellRef start = boot.Colony!.Start;
 
-                // The nearest water to the colony, and the water cell with the most water round it.
-                CellRef nearest = default, widest = default;
-                int bestDistance = int.MaxValue, bestCount = -1;
+                // The nearest water to the colony, the water cell with the most water round it, and
+                // the fall nearest the colony: water beside water a layer down.
+                CellRef nearest = default, widest = default, fall = default;
+                int bestDistance = int.MaxValue, bestCount = -1, fallDistance = int.MaxValue;
                 for (int y = 0; y < size.SizeY; y++)
                 for (int z = 2; z < size.SizeZ - 2; z++)
                 for (int x = 2; x < size.SizeX - 2; x++)
@@ -3203,8 +3204,17 @@ namespace Odyssey.Tests.PlayMode
                     for (int dx = -2; dx <= 2; dx++)
                         if (Odyssey.Sim.Worldgen.Natural.NaturalContent.IsWater(grid.Terrain[size.Index(x + dx, z + dz, y)])) count++;
                     if (count > bestCount) { bestCount = count; widest = new CellRef(x, z, y); }
+                    if (y > 0 && d < fallDistance)
+                        for (int dir = 0; dir < 4; dir++)
+                        {
+                            int nx = x + (dir == 0 ? 1 : dir == 1 ? -1 : 0), nz = z + (dir == 2 ? 1 : dir == 3 ? -1 : 0);
+                            if (!Odyssey.Sim.Worldgen.Natural.NaturalContent.IsWater(grid.Terrain[size.Index(nx, nz, y - 1)])) continue;
+                            if (Odyssey.Sim.Worldgen.Natural.NaturalContent.IsWater(grid.Terrain[size.Index(nx, nz, y)])) continue;
+                            fallDistance = d; fall = new CellRef(x, z, y);
+                        }
                 }
                 if (bestCount < 0) Assert.Ignore("this board grew no water to photograph");
+                if (fallDistance == int.MaxValue) fall = nearest;
 
                 cam = boot.cameraRig!.Camera;
                 previousTarget = cam.targetTexture;
@@ -3215,13 +3225,52 @@ namespace Odyssey.Tests.PlayMode
                 foreach ((string name, CellRef at, float distance) in new[]
                          {
                              ("start", start, 36f), ("near", nearest, 24f), ("wide", nearest, 60f),
-                             ("pond", widest, 36f),
+                             ("pond", widest, 36f), ("fall", fall, 28f),
                          })
                 {
                     boot.cameraRig!.FocusOn(at, distance);
                     for (int i = 0; i < 180; i++) yield return null;
                     yield return Photograph(prefix + name, boot, target);
                 }
+                // The water moving (§24f): three frames of the nearest stream a second apart, the world
+                // still paused and the water let run through the pause for the photograph, and how
+                // much of the picture changed between each pair.
+                if (!before)
+                {
+                    bool movedWas = WaterDirector.MovesOnPause;
+                    WaterDirector.MovesOnPause = true;
+                    try
+                    {
+                        boot.cameraRig!.FocusOn(nearest, 20f);
+                        for (int i = 0; i < 180; i++) yield return null;
+                        Color32[]? previous = null;
+                        var moved = new List<string>();
+                        for (int shot = 0; shot < 3; shot++)
+                        {
+                            if (shot > 0) yield return new WaitForSecondsRealtime(1f);
+                            yield return Photograph($"{prefix}flow-{shot}", boot, target);
+                            var image = new Texture2D(2, 2);
+                            image.LoadImage(File.ReadAllBytes(Path.GetFullPath($"Logs/look/{prefix}flow-{shot}.png")));
+                            Color32[] pixels = image.GetPixels32();
+                            UnityEngine.Object.Destroy(image);
+                            if (previous != null)
+                            {
+                                int changed = 0;
+                                for (int i = 0; i < pixels.Length; i++)
+                                    if (Math.Abs(pixels[i].r - previous[i].r) + Math.Abs(pixels[i].g - previous[i].g)
+                                        + Math.Abs(pixels[i].b - previous[i].b) > 6) changed++;
+                                moved.Add($"{100f * changed / pixels.Length:0.00}%");
+                            }
+                            previous = pixels;
+                        }
+                        Debug.Log($"[Look] water moving at {nearest}: pixels changed a second apart {string.Join(", ", moved)}");
+                    }
+                    finally
+                    {
+                        WaterDirector.MovesOnPause = movedWas;
+                    }
+                }
+
                 Debug.Log($"[Look] shore: nearest water {nearest} ({bestDistance} cells from the start), " +
                           $"widest {widest} ({bestCount} of 25 water); shoreline {(WaterShore.Enabled ? "smooth" : "square")}");
             }
@@ -3328,6 +3377,75 @@ namespace Odyssey.Tests.PlayMode
             finally
             {
                 WaterShore.Enabled = shoreWas;
+            }
+        }
+
+        /// <summary>
+        /// What the water's motion costs (design 38 §24f): the played meadow on Standard, framed on
+        /// the water nearest the colony at 36 m so the water fills the frame, timed at 640 x 480 and
+        /// into a 3840 x 2160 target with <see cref="WaterDirector.Motion"/> off and on, twice each
+        /// in alternation so drift shows as the two offs disagreeing. Asserts only that the controls
+        /// applied and that the motion added no draw calls.
+        /// </summary>
+        [UnityTest, Category("Measurement")]
+        public IEnumerator TheWaterMotionAgainstTheFrame()
+        {
+            float motionWas = WaterDirector.Motion;
+            bool pausedWas = WaterDirector.MovesOnPause;
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true, out OdysseyBootstrap boot);
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            var lines = new List<string>();
+            try
+            {
+                yield return TimeFrames("motion/warm", boot, WarmupFrames, _ => { });
+                var grid = boot.Colony!.Grid;
+                var size = grid.Size;
+                CellRef start = boot.Colony!.Start, nearest = start;
+                int best = int.MaxValue;
+                for (int y = 0; y < size.SizeY; y++)
+                for (int z = 0; z < size.SizeZ; z++)
+                for (int x = 0; x < size.SizeX; x++)
+                {
+                    if (!Odyssey.Sim.Worldgen.Natural.NaturalContent.IsWater(grid.Terrain[size.Index(x, z, y)])) continue;
+                    int d = Math.Abs(x - start.X) + Math.Abs(z - start.Z);
+                    if (d < best) { best = d; nearest = new CellRef(x, z, y); }
+                }
+                boot.cameraRig!.FocusOn(nearest, 36f);
+                for (int i = 0; i < 180; i++) yield return null;
+
+                ChunkRenderer renderer = boot.Renderer!;
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "motion-4k" };
+                WaterDirector.MovesOnPause = true;
+
+                foreach (bool big in new[] { false, true })
+                {
+                    cam.targetTexture = big ? fourK : previousTarget;
+                    string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                    var calls = new Dictionary<bool, int>();
+                    foreach (bool on in new[] { false, true, false, true })
+                    {
+                        WaterDirector.Motion = on ? 1f : 0f;
+                        float ms = 0f;
+                        yield return TimeFrames($"motion/{resolution}/{(on ? "moving" : "still")}", boot, WarmupFrames, m => ms = m);
+                        if (big) Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
+                        calls[on] = renderer.DrawCalls;
+                        lines.Add($"{resolution} {(on ? "moving" : "still")}: frame {ms:0.00} ms, {renderer.DrawCalls} calls");
+                    }
+                    Assert.That(calls[true], Is.EqualTo(calls[false]), $"{resolution}: the motion added draw calls");
+                }
+                Debug.Log($"[FrameTime] water motion ({SystemInfo.graphicsDeviceName}), framed on {nearest}: " + string.Join("; ", lines));
+            }
+            finally
+            {
+                WaterDirector.Motion = motionWas;
+                WaterDirector.MovesOnPause = pausedWas;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
             }
         }
 
