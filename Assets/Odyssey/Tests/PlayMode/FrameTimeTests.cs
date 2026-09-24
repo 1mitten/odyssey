@@ -3384,8 +3384,9 @@ namespace Odyssey.Tests.PlayMode
         /// What the water's motion costs (design 38 §24f): the played meadow on Standard, framed on
         /// the water nearest the colony at 36 m so the water fills the frame, timed at 640 x 480 and
         /// into a 3840 x 2160 target with <see cref="WaterDirector.Motion"/> off and on, twice each
-        /// in alternation so drift shows as the two offs disagreeing. Asserts only that the controls
-        /// applied and that the motion added no draw calls.
+        /// in alternation so drift shows as the two offs disagreeing. The world is paused and the
+        /// water let run through the pause, so the motion is the only difference. Asserts only that
+        /// the controls applied and that the motion added no draw calls.
         /// </summary>
         [UnityTest, Category("Measurement")]
         public IEnumerator TheWaterMotionAgainstTheFrame()
@@ -3400,6 +3401,14 @@ namespace Odyssey.Tests.PlayMode
             try
             {
                 yield return TimeFrames("motion/warm", boot, WarmupFrames, _ => { });
+                // Paused, so the only thing that differs between two arms is the motion: the first
+                // run left the colony working and a felled tree moved the calls by one.
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+                boot.DaylightHourOverride = 12f;
                 var grid = boot.Colony!.Grid;
                 var size = grid.Size;
                 CellRef start = boot.Colony!.Start, nearest = start;
@@ -3443,6 +3452,7 @@ namespace Odyssey.Tests.PlayMode
             {
                 WaterDirector.Motion = motionWas;
                 WaterDirector.MovesOnPause = pausedWas;
+                boot.DaylightHourOverride = null;
                 if (cam != null) cam.targetTexture = previousTarget;
                 if (fourK != null) fourK.Release();
                 UnityEngine.Object.Destroy(root);
