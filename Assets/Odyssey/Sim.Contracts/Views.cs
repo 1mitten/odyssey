@@ -220,7 +220,8 @@ namespace Odyssey.Sim.Contracts
         public readonly bool Working;
 
         /// <summary>
-        /// What is being worked on, meaningful only while <see cref="Working"/>.
+        /// What is being worked on while <see cref="Working"/>, and the fire a colonist faces
+        /// while <see cref="Seated"/>; meaningless otherwise.
         ///
         /// A cell and not just a flag, because the pose needs a direction: a colonist has to face
         /// what it is swinging at, and presentation has no other way to learn which of the eight
@@ -228,6 +229,18 @@ namespace Odyssey.Sim.Contracts
         /// so by the time the work starts the last thing it could be derived from is gone.
         /// </summary>
         public readonly CellRef WorkCell;
+
+        /// <summary>
+        /// Whether this pawn is sitting down beside a fire, so that it can be <b>drawn</b> sitting
+        /// (design 31 §18d), and <see cref="WorkCell"/> is the fire to face. A bool beside
+        /// <see cref="Asleep"/> rather than a <see cref="PawnFlags"/> bit, because that byte is full
+        /// and belongs to the fight.
+        ///
+        /// <para>A field here rather than an aspect, for the reason <see cref="Asleep"/> gives: every
+        /// figure on screen is posed whether or not anybody has selected it. Derived from the job,
+        /// not stored on the pawn — see <c>Job.Seated</c>.</para>
+        /// </summary>
+        public readonly bool Seated;
 
         /// <summary>
         /// The last momentary thing this pawn did, which stays reported until it does another.
@@ -326,8 +339,9 @@ namespace Odyssey.Sim.Contracts
             bool working = false, CellRef workCell = default,
             PawnGesture gesture = PawnGesture.None, byte gestureSerial = 0,
             bool asleep = false, int movePerMille = 0, int moveDeltaPerMille = 0,
-            int kind = 0, PawnFlags? flags = null)
+            int kind = 0, PawnFlags? flags = null, bool seated = false)
         {
+            Seated = seated;
             Kind = kind;
             Flags = flags ?? (kind == 0 ? PawnFlags.Person : PawnFlags.None);
             MovePerMille = movePerMille;

@@ -11605,7 +11605,46 @@ Tiers on the merge: fast 1,322 Sim + 977 Hud, Long 41, content gates clean; Edit
 / 0; PlayMode 115 / 110 / 0. Culling at a 40 m margin, same run: Standard 2.74 -> 2.33 ms (33 of 104
 chunks, 1,363 -> 999 calls), Huge 7.05 -> 3.43 ms (317 of 443, 5,086 -> 1,747).
 
-## 2026-09-24 — The Meadow overhaul: explored, interviewed, researched (design 36)
+## 2026-09-24 — Colonists sit at the fire
+
+The half of the owner's hearth request that §18c left owed: idle colonists *"sit by the fire or
+stand by the fire for a bit and then sit down and vice versa"*. Every settle at the hearth rolls
+sit or stand; a seat is a `Wait` whose `DestCell` names the fire, so it is saved and hashed through
+a field that already was, with no format bump and no golden moved (every golden board is fireless).
+The view publishes `Seated` and the fire's cell, and the figure blends into the pack's crouching idle
+facing it. A two-state chain was designed and dropped: `Think` resets the job before every node, so
+it needed a new pawn field for something that fresh rolls plus a longer seated linger already give.
+
+The measurement that paid for itself was not the pose — the crouch came out at 69% of standing
+height with the soles unmoved, as §18c predicted — but the catalogue. A bare
+`PlayScene.RebuildCatalogue` wipes every colonist's appearance swatches, because `CharacterSwatches`
+is a second pass, and would have been a 4,834-line diff carrying that loss. Recorded in design 31
+§18d so the next rebuild runs both.
+
+## 2026-09-24 — The crouch taken off
+
+First look at §18d: *"it looks like they are sneaking/crawling and not sat down."* The number was
+right — a crouch at 69% of standing height with the feet planted — and it was the wrong pose: at the
+play camera a crouch is somebody about to move. Taken off the 73 colonist rows; the simulation half
+and the figure's blend stay, dormant, so a seated colonist stands facing the fire and a real seated
+clip is one catalogue field. Recommended: a floor sit authored in Blender on the humanoid rig, after
+checking whether Synty sells one. The lesson worth keeping is that `SitPoseTests` proved the pose
+low and grounded and could not prove it read as sitting — a measurement of a pose is a guard, not a
+verdict. Design 31 §18e.
+
+## 2026-09-24 — The campfire line merged with combat
+
+97 commits of combat into `claude/campfire-art`. The conflict markers were the easy part; the three
+findings were in files git merged cleanly or in code that met for the first time. **A marauder sat at
+the colony's fire** — the hostile mind ends in the same idle node the hearth lives in — so the fireside
+is now for non-hostiles only, with a test. **The HUD's last 0.3% had been spent on both branches**
+(the wider clock here, the roster card's health bar there), 20.20% together; the owner chose to take
+the clock back to 271 rather than raise the ceiling. And the **catalogue** was checked row by row
+against both parents, per combat's lesson of the same morning, and the campfire row given the fields
+main added to every row. `Seated` stayed a bool beside `Asleep` because `PawnFlags` is full and is
+the fight's. Design 31 §19.
+
+## 2026-09-24 — The Meadow overhaul: explored, interviewed, researched (design 38)
 
 The owner asked to overhaul the graphics with Synty's Meadow Forest pack — grass, flowers and trees
 replaced, the terraces replaced by a landscape that carries real heights, with culling, occlusion,
@@ -11636,7 +11675,7 @@ A planning agent checked the three risky mechanisms against the code and found w
 had missed: stand heights have about fifteen owners that already disagree on banks; the slice
 assumes one surface layer, which eight layers of hills would break; a naive corner rule caps pits the
 simulation can fill; and a per-chunk grass count pops at the 62.5 m seam unless the shader fades by
-the same rank. All four are in design 36.
+the same rank. All four are in design 38.
 
 PR #174 (frustum culling) is green but conflicts with `main` as of today and needs an approving
 review; it gates M1.
@@ -11661,13 +11700,13 @@ and is not worth grass under the ink. The queue stays and priming is dropped.
 
 `GpuFrameMs` reads unavailable in a batch run on Direct3D 11, so the frame stood in for the GPU (it
 is GPU-bound at 4K: submission is 1.6–2.0 ms of 7.4–9.2). One reading is owed from the owner's
-overlay, and the playtest queue carries it. Design 36 §13; d-18 carries a correction note.
+overlay, and the playtest queue carries it. Design 38 §13; d-18 carries a correction note.
 
 A third reading came from the full PlayMode tier, busier than either filtered run, and it moved one
 conclusion. The shipped grass held at +1.27 ms — three runs, 1.11 to 1.27 — but the opaque queue came
 out **2.51 ms** cheaper than full cover in 2501 where the quiet runs had it at 0.18 and 0.19. Three of
 three in one direction is not noise, and a gap that grows with load is what a sort order would do.
-So the queue is kept for now rather than settled, and design 36 §13 names the lever if the GPU
+So the queue is kept for now rather than settled, and design 38 §13 names the lever if the GPU
 reading confirms it: keep grass out of the outline by a rendering-layer mask and draw it opaque,
 front to back, instead of relying on the queue to hide it from the ink.
 

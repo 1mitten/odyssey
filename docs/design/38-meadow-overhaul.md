@@ -1,4 +1,7 @@
-# 36 — The Meadow overhaul: lush grass, Meadow trees, a landscape instead of terraces
+# 38 — The Meadow overhaul: lush grass, Meadow trees, a landscape instead of terraces
+
+*Numbered 38. Written as 36; by the time it merged, `main` had given 36 to radiant heat and
+`claude/medical-supplies` had 37, so it moved, with every place that cited it (2026-09-24).*
 
 **Status: designed 2026-09-24; M1 measured the same day (§13), nothing else built.** Branch `claude/meadow-overhaul`, worktree
 `D:\code\odyssey-meadow`. Interview: `docs/research/meadow-interview.md` (twenty answers, the

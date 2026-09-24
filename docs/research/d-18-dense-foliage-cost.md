@@ -1,6 +1,6 @@
 # d-18 — What dense foliage costs, and how to keep it cheap
 
-> **Correction, 2026-09-24 (design 36 §2, §13).** The "drawn up to six times" finding holds for
+> **Correction, 2026-09-24 (design 38 §2, §13).** The "drawn up to six times" finding holds for
 > opaque shadow-casting foliage — the trees — and **not for the grass as the project draws it**:
 > `ChunkRenderer.FoliageCastsShadows` is off and foliage is drawn in queue 2501, past the opaque
 > range, so it is in neither the shadow pass nor the opaque-only DepthNormals prepass. Depth priming

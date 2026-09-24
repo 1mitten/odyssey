@@ -1405,6 +1405,18 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const uint MovePace = 0x428A_2F98;
 
+        /// <summary>
+        /// Whether an idle colonist heads for a fire or wanders (design 33).
+        ///
+        /// <para>Its own salt, and the reason is the one this file states twice: two purposes
+        /// sharing a salt is two streams that agree. Drawn on the same tick with the same pawn
+        /// id as <see cref="Wander"/>, a shared salt would make the fireside roll and the
+        /// wander's first coordinate the <i>same number</i> — so whether she went to the fire
+        /// and which way she would otherwise have drifted would be one decision wearing two
+        /// names. Nothing would ever report that; it would just look slightly wrong for ever.</para>
+        /// </summary>
+        public const uint Fireside = 0x846C_A68B;
+
         // ---- combat (design 33 §3) -------------------------------------------------------------
         //
         // Claimed by the combat contracts step so that the two lanes that roll dice in a fight
