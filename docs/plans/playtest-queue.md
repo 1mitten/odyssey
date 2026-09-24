@@ -23,6 +23,13 @@ the next session learns to ignore.
 
 ## Open
 
+- **What does grass cost on the GPU at your resolution?** (`claude/meadow-m1-grass-cost`, design 36
+  §13). One reading, not a look, and it sizes the lush grass in M4. At 3840 x 2160 on a New game,
+  press backtick for the developer overlay and note the `gpu` figure; then Settings -> Graphics ->
+  Grass tufts off, wait a few seconds, and note it again. The batch arm measured about 1 ms of frame
+  between the two but cannot read the GPU timer itself; **if the gap is well over 2 ms**, full
+  cover is not affordable at taller clumps and M4 starts from a lower density.
+
 - **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
   Spawn a marauder, draft two colonists, select both and right-click it: a translucent red ring
   should appear wide round its feet and snap in, in a fifth of a second, flash once as it lands

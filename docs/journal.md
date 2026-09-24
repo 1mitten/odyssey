@@ -11640,3 +11640,33 @@ the same rank. All four are in design 36.
 
 PR #174 (frustum culling) is green but conflicts with `main` as of today and needs an approving
 review; it gates M1.
+
+## 2026-09-24 — Meadow M1: the grass is drawn once, and costs about a millisecond at 4K
+
+M1 was written to test d-18's prediction that every foliage instance is drawn up to six times a
+frame — prepass, forward, four shadow cascades — and to measure depth priming against it. Reading
+the code before writing the arm dissolved the premise: `ChunkRenderer.FoliageCastsShadows` is off,
+and foliage is drawn in queue 2501, past the opaque range so the outline never inks it, which also
+keeps it out of the opaque-only DepthNormals prepass. Grass is drawn once. Depth priming, which only
+reaches the opaque range, could never have touched it. The prediction holds for trees.
+
+So the arm measured what grass does cost, at the owner's resolution: `TheGrassAgainstTheFrame`, one
+world, none / shipped / full cover / full cover in the opaque queue, at 640 x 480 and with the camera
+drawing into a 3840 x 2160 target, every control asserted to have applied. Twice, because the first
+run's full-cover step looked large: **+1.24 and +1.11 ms for the shipped grass, +1.78 and +0.83 for
+five times the clumps.** The cost is in having grass at all, and the step to full cover is inside a
+half-millisecond noise floor — two other batch Unity runs shared the machine throughout. The opaque
+queue was 0.18–0.19 ms cheaper both times, the back-to-front sort of the transparent range showing,
+and is not worth grass under the ink. The queue stays and priming is dropped.
+
+`GpuFrameMs` reads unavailable in a batch run on Direct3D 11, so the frame stood in for the GPU (it
+is GPU-bound at 4K: submission is 1.6–2.0 ms of 7.4–9.2). One reading is owed from the owner's
+overlay, and the playtest queue carries it. Design 36 §13; d-18 carries a correction note.
+
+A third reading came from the full PlayMode tier, busier than either filtered run, and it moved one
+conclusion. The shipped grass held at +1.27 ms — three runs, 1.11 to 1.27 — but the opaque queue came
+out **2.51 ms** cheaper than full cover in 2501 where the quiet runs had it at 0.18 and 0.19. Three of
+three in one direction is not noise, and a gap that grows with load is what a sort order would do.
+So the queue is kept for now rather than settled, and design 36 §13 names the lever if the GPU
+reading confirms it: keep grass out of the outline by a rendering-layer mask and draw it opaque,
+front to back, instead of relying on the queue to hide it from the ink.

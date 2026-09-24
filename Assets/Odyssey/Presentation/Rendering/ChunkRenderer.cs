@@ -336,6 +336,10 @@ namespace Odyssey.Presentation.Rendering
         public int ChunksMeshedThisFrame { get; private set; }
         public int MaterialCount => _materials.MaterialCount;
 
+        /// <summary>See <see cref="MaterialCache.RequeueFoliage"/>. A measurement seam: the game
+        /// draws foliage in <see cref="MaterialCache.DefaultFoliageQueue"/>.</summary>
+        public int RequeueFoliage(int queue) => _materials.RequeueFoliage(queue);
+
         /// <summary>Instances drawn ghosted last frame because they stood in a line of sight.</summary>
         public int InstancesFaded { get; private set; }
 

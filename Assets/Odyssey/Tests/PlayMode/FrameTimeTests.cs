@@ -1573,6 +1573,126 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What grass costs at the play resolution as well as the batch one: the first unit of the
+        /// Meadow overhaul (<c>docs/design/36-meadow-overhaul.md</c> §11, M1), taken before any
+        /// art moves.
+        ///
+        /// <para><b>Why it is not the arm the design first asked for.</b> d-18 predicted that
+        /// every foliage instance is drawn up to six times a frame — the SSAO DepthNormals
+        /// prepass, the forward pass and four shadow cascades — and proposed depth priming. Read
+        /// against the code it does not hold for grass: <c>ChunkRenderer.FoliageCastsShadows</c>
+        /// is off, and foliage is drawn in <see cref="MaterialCache.DefaultFoliageQueue"/>, just
+        /// past the opaque range so the outline never inks it, which also keeps it out of the
+        /// opaque-only depth prepass. Grass is drawn once, and depth priming cannot reach it.</para>
+        ///
+        /// <para><b>What the queue does cost is the order.</b> 2501 is in URP's transparent range,
+        /// which is sorted back to front — the worst order for alpha-clipped cards over
+        /// alpha-clipped cards, since the far clumps are shaded first and then covered. The
+        /// alpha-test queue (2450) is opaque, sorted front to back, but joins the DepthNormals
+        /// prepass and is inked by the outline. The fourth arm of each resolution prices that
+        /// trade; it is a measurement, not a proposal to change the look.</para>
+        ///
+        /// <para><b>One world, eight readings.</b> None, the shipped density, full cover
+        /// (<see cref="GroundScatter.MaxPerCell"/> tufts on every grass cell, the most the scatter
+        /// can place today) and full cover in the alpha-test queue — at the batch game view and
+        /// with the camera drawing into a 3840 x 2160 target, which is the owner's resolution and
+        /// the only one at which fill is honestly priced. Only differences inside this run are
+        /// quoted (§6c). The GPU figure is <c>OdysseyBootstrap.GpuFrameMs</c> and is reported as
+        /// unavailable rather than as zero where the platform will not say.</para>
+        ///
+        /// <para>It asserts no times. It asserts that each control applied: the density really
+        /// moved the instance count, the queue arm really moved a material, the 4K arm really drew
+        /// at 4K, and no reading was taken while the board was still re-meshing.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheGrassAgainstTheFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            int previousQueue = MaterialCache.FoliageQueue;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            try
+            {
+                yield return TimeFrames("grass/warm", boot, WarmupFrames, _ => { });
+
+                ChunkRenderer renderer = boot.Renderer!;
+                int shipped = renderer.ScatterDensity;
+                Assert.That(shipped, Is.GreaterThan(0), "this board strews no grass, so there is nothing to price");
+                int full = GroundScatter.MaxPerCell * 100;
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "grass-4k" };
+
+                var arms = new (string Name, int Density, int Queue)[]
+                {
+                    ("none", 0, MaterialCache.DefaultFoliageQueue),
+                    ("shipped", shipped, MaterialCache.DefaultFoliageQueue),
+                    ("full", full, MaterialCache.DefaultFoliageQueue),
+                    ("full, alpha-test queue", full, (int)RenderQueue.AlphaTest),
+                };
+                var lines = new List<string>();
+                var instances = new Dictionary<string, int>();
+
+                foreach (bool big in new[] { false, true })
+                {
+                    cam.targetTexture = big ? fourK : previousTarget;
+                    string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                    foreach (var arm in arms)
+                    {
+                        // Density is meshed into the chunks, so moving it is a re-mesh; the
+                        // warm-up inside TimeFrames outlasts the meshing budget's instalments.
+                        if (renderer.ScatterDensity != arm.Density)
+                        {
+                            renderer.ScatterDensity = arm.Density;
+                            boot.Model!.Remesh();
+                        }
+                        int moved = renderer.RequeueFoliage(arm.Queue);
+
+                        float ms = 0f, gpu = 0f;
+                        yield return TimeFrames($"grass/{resolution}/{arm.Name}", boot, WarmupFrames,
+                            m => ms = m, gpu: g => gpu = g);
+
+                        Assert.That(renderer.ChunksMeshDeferred, Is.Zero,
+                            $"{resolution} {arm.Name} was timed while the board was still re-meshing");
+                        if (big)
+                            Assert.That(cam.pixelWidth, Is.EqualTo(3840),
+                                "the camera was not drawing at 4K, so this arm measured the batch view");
+                        if (arm.Density > 0)
+                            Assert.That(moved, Is.GreaterThan(0),
+                                "no foliage material was re-queued, so the queue arm compared a queue with itself");
+
+                        instances[$"{resolution}/{arm.Name}"] = renderer.InstancesDrawn;
+                        lines.Add($"{resolution} {arm.Name}: frame {ms:0.00} ms, gpu " +
+                                  (gpu > 0f ? $"{gpu:0.00} ms" : "unavailable") +
+                                  $", {renderer.DrawCalls} calls, {renderer.InstancesDrawn} instances");
+                    }
+                }
+
+                Debug.Log($"[FrameTime] grass (shipped density {shipped}, full {full}, " +
+                          $"{SystemInfo.graphicsDeviceName}, {SystemInfo.graphicsDeviceType}): " +
+                          string.Join("; ", lines));
+
+                string small = $"{Screen.width}x{Screen.height}";
+                Assert.That(instances[$"{small}/shipped"], Is.GreaterThan(instances[$"{small}/none"]),
+                    "the shipped density drew no more than none, so the grass never appeared");
+                Assert.That(instances[$"{small}/full"], Is.GreaterThan(instances[$"{small}/shipped"]),
+                    "full cover drew no more than the shipped density, so the full arm measured nothing new");
+            }
+            finally
+            {
+                // The queue is a static every later MaterialCache reads, so it goes back whatever
+                // happened; so does the camera's target, before the world is destroyed.
+                MaterialCache.FoliageQueue = previousQueue;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// Designate the board row-major until a thousand orders stand, the same walk and the
         /// same draining <see cref="SeedField"/> uses and for the same reasons: the meadow
         /// refuses what stands on it, and the intent bus has a capacity.
@@ -1710,12 +1830,12 @@ namespace Odyssey.Tests.PlayMode
         /// difference, which is the only figure this machine can be trusted for.</para>
         /// </summary>
         IEnumerator TimeFrames(string label, OdysseyBootstrap boot, int warmup, Action<float> mean,
-                               Action<double[]>? sections = null)
+                               Action<double[]>? sections = null, Action<float>? gpu = null)
         {
             for (int i = 0; i < warmup; i++) yield return null;
 
             float total = 0f, worst = 0f;
-            double tick = 0d, submit = 0d;
+            double tick = 0d, submit = 0d, gpuTotal = 0d;
             var sectionTotals = new double[(int)OdysseyBootstrap.FrameSection.Count];
             for (int i = 0; i < TimedFrames; i++)
             {
@@ -1728,12 +1848,16 @@ namespace Odyssey.Tests.PlayMode
                 // orders costs the work givers as well as the renderer.
                 tick += boot.TickMs;
                 submit += boot.SubmitMs;
+                // Smoothed by the bootstrap over ~20 frames, which the warm-up absorbs; 0 where
+                // the platform will not say, and the caller reports that rather than a zero.
+                gpuTotal += boot.GpuFrameMs;
                 System.ReadOnlySpan<double> split = boot.FrameSectionMs;
                 for (int k = 0; k < sectionTotals.Length && k < split.Length; k++) sectionTotals[k] += split[k];
             }
 
             float meanMs = total / TimedFrames;
             mean(meanMs);
+            gpu?.Invoke((float)(gpuTotal / TimedFrames));
 
             ChunkRenderer? renderer = boot.Renderer;
             // Resolution matters to the reading: a fullscreen pass or a sky costs per pixel,

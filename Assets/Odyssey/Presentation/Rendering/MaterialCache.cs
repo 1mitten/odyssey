@@ -54,6 +54,8 @@ namespace Odyssey.Presentation.Rendering
                 _unlit == other._unlit &&
                 _foliage == other._foliage && _water == other._water;
 
+            public bool Foliage => _foliage;
+
             public override bool Equals(object? obj) => obj is Key other && Equals(other);
 
             public override int GetHashCode() =>
@@ -126,6 +128,28 @@ namespace Odyssey.Presentation.Rendering
         public static int FoliageQueue { get; set; } = DefaultFoliageQueue;
 
         public const int DefaultFoliageQueue = (int)RenderQueue.GeometryLast + 1;
+
+        /// <summary>
+        /// Moves foliage to another queue, including every foliage clone this cache has already
+        /// built — <see cref="FoliageQueue"/> alone is read only when a clone is made, so setting
+        /// it on a running world moves nothing. For a measurement arm, not for the game.
+        ///
+        /// <para>Returns how many clones were moved, so the caller can check the change reached
+        /// something. A control that never applied is how the culling proof read the same shot
+        /// twice and called it a comparison (<c>docs/bug-patterns.md</c> P18).</para>
+        /// </summary>
+        public int RequeueFoliage(int queue)
+        {
+            FoliageQueue = queue;
+            int moved = 0;
+            foreach (KeyValuePair<Key, Material> pair in _cache)
+            {
+                if (!pair.Key.Foliage) continue;
+                pair.Value.renderQueue = queue;
+                moved++;
+            }
+            return moved;
+        }
 
         static readonly int AlphaClipThresholdId = Shader.PropertyToID("_Alpha_Clip_Threshold");
         static readonly int CutoffId = Shader.PropertyToID("_Cutoff");
