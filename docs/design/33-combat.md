@@ -2615,7 +2615,12 @@ fingerprint moved once, for the two thoughts (the twenty-first move, `PawnConten
 
 ### 12c. Tests (`FriendlyFireTests`, fast tier)
 
-Each was seen to fail with its rule withheld; the hand-over names the break used for each.
+Each was seen to fail with its rule withheld — fourteen breaks, one at a time: the attacker or the
+victim need not be a colonist; a miss raises the hook; the attacked thought stacks twice, renews, or
+is −79; the dead mourns herself; non-colonists mourn; the downed do not; any death is mourned;
+deaths stack four; the listener unregistered; the order refusing a colonist target; and a colonist
+not retaliating against a colonist. The last two are C2's rules, broken to show the end-to-end
+test reaches them.
 
 | Test | Claim |
 |---|---|

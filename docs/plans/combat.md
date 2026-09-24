@@ -16,7 +16,7 @@ combat adds save sections, not a format bump.
 | C2 | Health and melee against a marauder: species hit points, revenge and natural attack, `CombatDef`, live Melee skill, `PawnKind_Marauder`, attack, flee and downed jobs, `OrderAttack`, adjacent auto-attack, `CombatSystem`, corpses; health tab, corpse pane, spawn marauder, feedback, the clip layer and its fallback | **▶ playtest** | moved once, in the contracts step; **none since**, probe-diffed | **built 2026-09-23 (lanes A, B, C), integrated on `claude/combat-c2` — awaiting playtest** |
 | C3 | Weapons: bat, crowbar, machete, sci-fi blade; the equip job and order; stun; starting kit; held prop | **▶ playtest** | moved once, in the contracts step; **none since** | **built 2026-09-23 (lane D; the held prop at the integration) — awaiting playtest, with C2** |
 | C4 | Rescue and healing in bed | — | moved once, in the contracts step | designed |
-| C5 | Friendly fire and its mood | — | **none, asserted** | designed |
+| C5 | Friendly fire and its mood: the two memories (design 33 §12); Ctrl-attack and self-defence were C2's, now tested end to end | **▶ playtest** | **none**, asserted; content fingerprint moved once | **built 2026-09-24 on `claude/combat-friendly-fire`** (fast and Long tiers; no Unity needed, nothing drawn) |
 | C6 | Buildings as targets | — | **none, asserted** | designed |
 | C7 | Ten-day gate with and without hostiles, benchmark rows, records, wiki republish | — | — | — |
 
