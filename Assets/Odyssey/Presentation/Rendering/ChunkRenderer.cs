@@ -1231,6 +1231,11 @@ namespace Odyssey.Presentation.Rendering
             Matrix4x4 unplace = module.Parts[bucket.Part].Local.inverse;
             Bounds local = module.Bounds;
 
+            // Trees and bushes fade for every line; anything else only for the primary lines
+            // (the selected colonists), which is what it always did (design 38 §19).
+            bool vegetation = TintCode.IsTree(bucket.Tint);
+            if (!vegetation && Sight.Primary == 0) return 0;
+
             if (_faded.Length < bucket.Count)
             {
                 int size = Mathf.NextPowerOfTwo(bucket.Count);
@@ -1252,7 +1257,8 @@ namespace Odyssey.Presentation.Rendering
             for (int i = 0; i < bucket.Count; i++)
             {
                 Matrix4x4 m = bucket.Matrices[i];
-                if (Sight.Blocks(SightLines.Place(local, m * unplace)))
+                Bounds placed = SightLines.Place(local, m * unplace);
+                if (vegetation ? Sight.Blocks(placed) : Sight.BlocksPrimary(placed))
                 {
                     _faded[fadedCount++] = m;
                     continue;

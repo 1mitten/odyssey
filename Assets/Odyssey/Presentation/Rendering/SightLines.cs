@@ -66,7 +66,23 @@ namespace Odyssey.Presentation.Rendering
 
         public int Count => _lines.Count;
 
-        public void Clear() => _lines.Clear();
+        public void Clear()
+        {
+            _lines.Clear();
+            Primary = 0;
+        }
+
+        /// <summary>
+        /// How many of the lines, from the first, fade <em>anything</em> in the way — walls, rock,
+        /// a storey. The rest fade only trees and bushes (design 38 §19): they are the lines to
+        /// every other colonist and to what lies under a bush, and there are up to thirty-two of
+        /// them, so testing every ground box against them cost 1.9 ms at 4K with fifty colonists.
+        /// </summary>
+        public int Primary { get; set; }
+
+        /// <summary>Whether any of the first <see cref="Primary"/> lines crosses the box.</summary>
+        public bool BlocksPrimary(in Bounds worldBounds) =>
+            HitsAny(worldBounds.min, worldBounds.max, Primary);
 
         /// <summary>
         /// A line of sight from the eye to a point on a figure.
@@ -106,12 +122,14 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Is this one drawn instance in the way? The fine test, asked per matrix.</summary>
         public bool Blocks(in Bounds worldBounds) => HitsAny(worldBounds.min, worldBounds.max);
 
-        bool HitsAny(Vector3 min, Vector3 max)
+        bool HitsAny(Vector3 min, Vector3 max) => HitsAny(min, max, _lines.Count);
+
+        bool HitsAny(Vector3 min, Vector3 max, int count)
         {
             float r = Radius;
             min -= new Vector3(r, r, r);
             max += new Vector3(r, r, r);
-            for (int i = 0; i < _lines.Count; i++)
+            for (int i = 0; i < count && i < _lines.Count; i++)
                 if (Hits(_lines[i], min, max)) return true;
             return false;
         }

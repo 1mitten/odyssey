@@ -2707,6 +2707,9 @@ namespace Odyssey.Presentation.Bootstrap
                 }
             }
 
+            // Lines past this point fade only trees and bushes (SightLines.Primary).
+            _sight.Primary = _sight.Count;
+
             // Then every other colonist on screen, nearest the focus first, up to a fixed count
             // (owner, 2026-09-24: trees fade for every colonist). Bounded so the cost does not
             // grow with the colony: each line is a slab test per instance in the chunks it crosses.
