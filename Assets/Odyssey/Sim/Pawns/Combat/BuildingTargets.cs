@@ -229,6 +229,16 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// Is there a side of the building <paramref name="pawn"/> could take <b>now</b> — a cell in
+        /// reach she can stand on and get to that no other fighter holds, her own cell included?
+        /// <see cref="ChooseSide"/>'s answer, so the marauder's choice (§14b) and the driver that
+        /// carries it out ask one question (design 33 §19). <see cref="CanReach"/> is the order's
+        /// question and counts a held side: a player's attacker waits for one.
+        /// </summary>
+        public static bool HasAFreeSide(PawnContext ctx, Pawn pawn, in BuildingTarget target, TraverseMode mode) =>
+            ChooseSide(ctx, pawn, target, mode, out _) >= 0;
+
+        /// <summary>
         /// Can <paramref name="pawn"/> get to strike the building at all — from where she stands, or
         /// from a cell in reach she can walk to? The order's question.
         /// </summary>
@@ -272,16 +282,19 @@ namespace Odyssey.Sim.Pawns
         /// The colony building a marauder with no colonist to reach attacks (design 33 §14b; the
         /// owner, 2026-09-24: <i>"kill colonists, destroy base"</i>): of every edifice a colonist
         /// raised (<see cref="PlacedEdifice.Built"/>) that is a target (<see cref="TryStanding"/>)
-        /// and that <paramref name="pawn"/> can strike from where she is or get beside
-        /// (<see cref="CanReach"/>), the nearest by <see cref="PawnContext.Distance"/> to its own
-        /// cell, <b>a tie to the lower record handle</b> — the older building. The ruined city's
-        /// walls are passed over: <i>destroy base</i> names the colony's.
+        /// and that has a side <paramref name="pawn"/> can take now (<see cref="HasAFreeSide"/>,
+        /// design 33 §19) — a cell beside it she can get to and no other fighter holds — the
+        /// nearest by <see cref="PawnContext.Distance"/> to its own cell, <b>a tie to the lower
+        /// record handle</b> — the older building. The ruined city's walls are passed over:
+        /// <i>destroy base</i> names the colony's. A building whose every side is held is not a
+        /// choice: the next one is, and with none free the marauder turns to what it came for.
         ///
         /// <para><b>Scales with the edifice records</b> — every edifice ever placed, trees and removed
         /// slots included: one branch for anything a colonist did not raise, a content lookup of at
-        /// most twelve rows for anything she did, and a reachability test of at most ten cells for
-        /// each one nearer than the best so far. Asked on a marauder's think when no colonist can be
-        /// reached, never per tick.</para>
+        /// most twelve rows for anything she did, and for each one nearer than the best so far a
+        /// side search of at most ten cells, each a reachability test and, for one nearer than the
+        /// last, a pass over the pawns (<see cref="Melee.Holds"/>). Asked on a marauder's think when
+        /// no colonist can be reached, never per tick.</para>
         ///
         /// <para><b>A bed is passed over</b> (<see cref="IsMarauderTarget"/>, design 33 §16), so a
         /// colony with everybody down still has somewhere to be carried to and get up from.
@@ -316,7 +329,11 @@ namespace Odyssey.Sim.Pawns
                 int distance = ctx.Distance(pawn.Cell, placed.CellIndex);
                 if (distance >= bestDistance) continue;
                 if (!TryStanding(ctx, handle, out BuildingTarget target)) continue;
-                if (!CanReach(ctx, pawn, target, mode)) continue;
+                // A side it can take now, not merely one it can get to (design 33 §19): the
+                // driver's own question. Asked as reach alone, a wall whose one side another
+                // marauder held was chosen again every rethink, and the marauder stood beside the
+                // step below it on "Fighting" for as long as the other one was striking.
+                if (!HasAFreeSide(ctx, pawn, target, mode)) continue;
                 nearest = target;
                 bestDistance = distance;
                 found = true;

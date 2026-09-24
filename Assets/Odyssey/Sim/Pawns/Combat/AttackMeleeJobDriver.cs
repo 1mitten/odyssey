@@ -245,7 +245,8 @@ namespace Odyssey.Sim.Pawns
         /// when the clock allows.</item>
         /// <item>Otherwise <b>choose a side</b> when the attack is new, when she is in reach on a
         /// held cell, or, waiting, every <see cref="CombatDef.chaseRepathTicks"/>; not while walking,
-        /// since nothing she walks to can move. No side she can reach at all: the order fails.</item>
+        /// since nothing she walks to can move. No side she can reach at all: the order fails.
+        /// Every side held: a player's order waits, a marauder's own choice thinks again (§19).</item>
         /// </list>
         /// </summary>
         JobStatus TickBuilding(PawnContext ctx)
@@ -295,7 +296,15 @@ namespace Odyssey.Sim.Pawns
                 if (!reachable) return JobStatus.Failed;
                 if (dest < 0)
                 {
-                    // Every side held: wait where she is and look again.
+                    // Every side held. A marauder's own choice thinks again at once (design 33
+                    // §19): the choice takes only a building with a side free, so it goes to the
+                    // next one rather than standing on "Fighting" behind the one who got the side —
+                    // the owner's three at a wall on a terrace edge, which had one side. Two can
+                    // choose one side in the same tick, before either has walked to it; this is
+                    // what sorts them out.
+                    if (!Job.PlayerForced) return boundary ? JobStatus.Succeeded : JobStatus.Ongoing;
+
+                    // A player's order waits where she is and looks again.
                     Pawn.ClearPath();
                     Pawn.Destination = -1;
                     return JobStatus.Ongoing;
