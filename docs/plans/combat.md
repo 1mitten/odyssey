@@ -18,7 +18,7 @@ the owner's (the report's §5, the playtest queue).
 | C4 | Rescue and healing in bed: carried in the arms to her own or the nearest free bed, in it until whole, *No bed for the wounded* (design 33 §11) | **▶ playtest** | **none since the contracts step** | **PR #194** |
 | C5 | Friendly fire and its mood: the two memories (design 33 §12); Ctrl-attack and self-defence were C2's, now tested end to end | **▶ playtest** | **none**, asserted; content fingerprint moved once | **PR #194** |
 | C6 | Buildings as targets: `EdificeDamage` filled, the attack driver's building mode, `OrderAttack` with `B = 0`, demolition through `ConstructionGrid.Demolish` with no refund, the right-click (`CombatOrders.RouteBuilding`), hit points for the campfire and power's three | **▶ playtest** | **none, asserted** (building fingerprint moved once) | **PR #194**, with the owner's rounds (design 33 §14–§20) |
-| C7 | Ten-day gate with and without hostiles, benchmark rows, records, wiki republish (design 33 §21) | — | **none** (asserted; the gate's own fix touches only a loaded world) | **done 2026-09-24, `claude/combat-c7`** — `docs/milestones/combat-report.md` |
+| C7 | Ten-day gate with and without hostiles, benchmark rows, records, wiki republish (design 33 §21) | — | **none** (asserted; the gate's own fix touches only a loaded world) | **done 2026-09-24, PR #204, `claude/combat-c7`** — `docs/milestones/combat-report.md` |
 
 ## Running C2–C7 with several agents
 
