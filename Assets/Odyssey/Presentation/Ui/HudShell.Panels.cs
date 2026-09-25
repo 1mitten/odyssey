@@ -1262,15 +1262,10 @@ namespace Odyssey.Presentation.Ui
             _bulletins.Refresh(world.Views.Current);
 
             // The chime rides the row, as an alert's does: the model says what is news, and a
-            // clone with no catalogue gets a null director and silence. A gift sounds glad, a
-            // blow sounds like one, and anything else is worth a glance.
+            // clone with no catalogue gets a null director and silence. Which chime is the
+            // library's (BulletinChime): a raid's war horn, else by favourability.
             if (_bulletins.Arrived > 0)
-                _boot.Audio?.PlayAlert(_bulletins.ArrivedFavourability switch
-                {
-                    1 => Audio.SoundIds.AlertHappy,
-                    2 => Audio.SoundIds.AlertNegative,
-                    _ => Audio.SoundIds.AlertNormal,
-                });
+                _boot.Audio?.PlayAlert(Audio.BulletinChime.For(_bulletins.ArrivedRaid, _bulletins.ArrivedFavourability));
 
             if (_bulletinsDrawn == _bulletins.Version) return;
             _bulletinsDrawn = _bulletins.Version;

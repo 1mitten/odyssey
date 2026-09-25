@@ -86,10 +86,17 @@ namespace Odyssey.Hud
         /// <summary>The loudest thing that arrived last refresh, by favourability: 0 neutral, 1 good, 2 bad.</summary>
         public int ArrivedFavourability { get; private set; }
 
+        /// <summary>
+        /// A raid arrived last refresh (design 50 §7): its row sounds the war horn rather than the
+        /// chime its favourability would pick, because a raid and a theft are not the same news.
+        /// </summary>
+        public bool ArrivedRaid { get; private set; }
+
         public void Refresh(WorldSnapshot snapshot)
         {
             Arrived = 0;
             ArrivedFavourability = 0;
+            ArrivedRaid = false;
 
             var tail = snapshot.Bulletins;
             for (int i = 0; i < tail.Length; i++)
@@ -103,6 +110,7 @@ namespace Odyssey.Hud
                 Version++;
                 if (!_primed) continue;
                 Arrived++;
+                if (view.IncidentDef == IncidentHandle.Raid) ArrivedRaid = true;
                 if (view.Favourability == 2 || ArrivedFavourability == 0)
                     ArrivedFavourability = view.Favourability;
             }

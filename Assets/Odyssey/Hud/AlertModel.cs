@@ -66,7 +66,8 @@ namespace Odyssey.Hud
             PawnId pawn = default,
             CellRef? cell = null,
             string targetPrefix = "",
-            string detail = "")
+            string detail = "",
+            bool dismissByKey = false)
         {
             Key = key;
             TargetName = targetName;
@@ -78,7 +79,9 @@ namespace Odyssey.Hud
             Count = count;
             Pawn = pawn;
             Cell = cell;
-            DismissKey = ComputeDismissKey(key, pawn, cell);
+            // A row whose cell follows something moving — a raid's centre — is dismissed by its key,
+            // or a dismiss would last only until the band took a step.
+            DismissKey = ComputeDismissKey(key, pawn, dismissByKey ? null : cell);
         }
 
         public AlertRow(string key, string lead, string detail, AlertSeverity severity, int count)
@@ -187,6 +190,14 @@ namespace Odyssey.Hud
         public const string NoMedicineKey = "ui.alert.nomedicine";
 
         /// <summary>
+        /// A raid is assaulting (design 50 §7): Danger, the standing raiders counted, a click going to
+        /// the middle of them. Raised from the assault, not the arrival — a band gathering at the edge
+        /// is the Events row's news, and the alert is the condition to act on. Its chime is the assault
+        /// horn, through the override the sound library has carried since 2026-09-19.
+        /// </summary>
+        public const string RaidKey = "ui.alert.raid";
+
+        /// <summary>
         /// The order kind a deconstruction is published as (<c>DesignationKind.Deconstruct</c>, 2).
         /// Restated here as <c>InspectModel.OrderVerb</c> and <c>OrderColours.ToolOf</c> restate it,
         /// because this assembly cannot see the simulation's enum.
@@ -194,7 +205,7 @@ namespace Odyssey.Hud
         public const byte DeconstructOrderKind = 2;
 
         /// <summary>Every key this panel can put on screen, for the registry test.</summary>
-        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey, StoreStuckKey, PowerLossKey, NoFuelKey, NoRescueBedKey, NoHearthKey, HearthDownKey, InjuredKey, NoMedicineKey };
+        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey, StoreStuckKey, PowerLossKey, NoFuelKey, NoRescueBedKey, NoHearthKey, HearthDownKey, InjuredKey, NoMedicineKey, RaidKey };
 
         public readonly List<AlertRow> Rows = new List<AlertRow>();
 
@@ -225,6 +236,7 @@ namespace Odyssey.Hud
         int _wasInjured = -1;
         long _wasInjuredIds;
         int _wasNoMedicine = -1;
+        int _wasRaid = -1;
         int _latchVersion;
         int _wasLatchVersion = -1;
         int _dismissVersion;
@@ -423,7 +435,24 @@ namespace Odyssey.Hud
                     if (orders[i].CellIndex == hearth && orders[i].Kind == DeconstructOrderKind) { hearthDown = true; break; }
             }
 
-            if (starving == _wasStarving && breaking == _wasBreaking &&
+            // A raid assaulting (design 50 §7): the standing raiders of every assaulting band, and the
+            // first band's middle and mix for the row. The middle is coarsened to eight cells in the
+            // signature, so the row's jump follows the band without a rebuild on every step.
+            int raidStanding = 0, raidMix = -1;
+            CellRef raidCentre = default;
+            System.ReadOnlySpan<RaidView> raids = snapshot.Raids;
+            for (int i = 0; i < raids.Length; i++)
+            {
+                if (raids[i].Phase != RaidPhase.Assaulting || raids[i].Standing <= 0) continue;
+                raidStanding += raids[i].Standing;
+                if (raidMix >= 0) continue;
+                raidMix = raids[i].Mix;
+                raidCentre = raids[i].Centre;
+            }
+            int raidSignature = raidMix < 0 ? -1 : raidStanding * 1_000_000 + raidCentre.X / 8 * 1_000 + raidCentre.Z / 8;
+
+            if (raidSignature == _wasRaid &&
+                starving == _wasStarving && breaking == _wasBreaking &&
                 (noHearth ? keptHome : 0) == _wasNoHearth && (hearthDown ? hearth : -1) == _wasHearthDown &&
                 dark == _wasDark && shortW == _wasShortW && dry == _wasDry &&
                 idleStands == _wasIdle && storeStuck == _wasStoreStuck && colonists == _wasColony &&
@@ -449,7 +478,25 @@ namespace Odyssey.Hud
             _wasNoMedicine = noMedicine;
             _wasLatchVersion = _latchVersion;
             _wasDismissVersion = _dismissVersion;
+            _wasRaid = raidSignature;
             Rows.Clear();
+
+            // Worst of all first: a band in the colony.
+            int raidDismiss = AlertRow.ComputeDismissKey(RaidKey, default, null);
+            if (raidMix >= 0)
+            {
+                if (!_dismissed.Contains(raidDismiss))
+                    Rows.Add(new AlertRow(
+                        RaidKey,
+                        Registry.Label(RaidKey),
+                        raidStanding == 1 ? string.Empty : " × " + raidStanding,
+                        AlertSeverity.Danger,
+                        count: raidStanding,
+                        cell: raidCentre,
+                        detail: RaidMixLabels.Label(raidMix),
+                        dismissByKey: true));
+            }
+            else _dismissed.Remove(raidDismiss);
 
             // Worst first: Danger (starving), then Warning (breaking), then Notice (idle).
             for (int i = 0; i < pawns.Length; i++)

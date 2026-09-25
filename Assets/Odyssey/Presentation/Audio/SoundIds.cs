@@ -337,6 +337,23 @@ namespace Odyssey.Presentation.Audio
     /// because severity undersells them. A raid is a danger like a starving colonist is a
     /// danger, and they should plainly not make the same noise.</para>
     /// </summary>
+    public static class BulletinChime
+    {
+        /// <summary>
+        /// The sound an Events row makes when it arrives (design 50 §7): the war horn for a raid,
+        /// else by favourability — a gift sounds glad, a blow sounds like one, and anything else is
+        /// worth a glance. A raid arriving in the same refresh as anything else wins: it is the news.
+        /// </summary>
+        public static string For(bool raid, int favourability) =>
+            raid ? SoundIds.AlertRaidArrive
+            : favourability switch
+            {
+                1 => SoundIds.AlertHappy,
+                2 => SoundIds.AlertNegative,
+                _ => SoundIds.AlertNormal,
+            };
+    }
+
     public static class AlertChime
     {
         /// <summary>The raid alert's key, as <c>docs/design/icon-keys.csv</c> declares it.

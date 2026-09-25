@@ -61,6 +61,63 @@ namespace Odyssey.Tests.Hud
             Assert.That(RaidMixLabels.Keys[RaidMixLabels.Default], Is.EqualTo("ui.raid.mix.mixed"));
         }
 
+        static readonly GridSize Size = new GridSize(40, 40, 4);
+
+        static WorldSnapshot Frame(RaidPhase phase, int standing, CellRef centre)
+        {
+            var frame = new WorldSnapshot();
+            frame.BeginWrite(tick: 0, Size, sliceLayer: 1);
+            frame.AddRaid(new RaidView(1, phase, 2, 20, standing, centre, new CellRef(20, 1, 20)));
+            return frame;
+        }
+
+        static AlertRow? RaidRow(AlertModel model)
+        {
+            foreach (AlertRow row in model.Rows)
+                if (row.Key == AlertModel.RaidKey) return row;
+            return null;
+        }
+
+        /// <summary>
+        /// The Raid alert is raised by the assault and not by the gathering (the control), counts the
+        /// standing raiders, goes to their middle, and goes when the band does.
+        /// </summary>
+        [Test]
+        public void TheRaidAlertIsRaisedWhileABandAssaults()
+        {
+            var model = new AlertModel();
+            model.Refresh(Frame(RaidPhase.Gathering, 12, new CellRef(3, 1, 20)), 0);
+            Assert.That(RaidRow(model), Is.Null, "a band gathering at the edge raised the alert");
+
+            model.Refresh(Frame(RaidPhase.Assaulting, 12, new CellRef(9, 1, 20)), 1);
+            AlertRow? row = RaidRow(model);
+            Assert.That(row, Is.Not.Null, "an assault raised no alert");
+            Assert.That(row!.Value.Severity, Is.EqualTo(AlertSeverity.Danger));
+            Assert.That(row.Value.Count, Is.EqualTo(12));
+            Assert.That(row.Value.Cell, Is.EqualTo(new CellRef(9, 1, 20)));
+            Assert.That(row.Value.Detail, Is.EqualTo("Mixed"));
+
+            model.Refresh(Frame(RaidPhase.Assaulting, 0, new CellRef(9, 1, 20)), 2);
+            Assert.That(RaidRow(model), Is.Null, "a band with nobody standing still raised the alert");
+        }
+
+        /// <summary>A dismissed Raid alert stays dismissed while the band moves, and a later raid raises it again.</summary>
+        [Test]
+        public void ADismissedRaidAlertStaysDismissedAsTheBandMoves()
+        {
+            var model = new AlertModel();
+            model.Refresh(Frame(RaidPhase.Assaulting, 12, new CellRef(9, 1, 20)), 0);
+            model.Dismiss(RaidRow(model)!.Value.DismissKey);
+            model.Refresh(Frame(RaidPhase.Assaulting, 12, new CellRef(30, 1, 20)), 1);
+            Assert.That(RaidRow(model), Is.Null, "the dismiss lasted only until the band moved");
+
+            var empty = new WorldSnapshot();
+            empty.BeginWrite(tick: 0, Size, sliceLayer: 1);
+            model.Refresh(empty, 2);
+            model.Refresh(Frame(RaidPhase.Assaulting, 5, new CellRef(9, 1, 20)), 3);
+            Assert.That(RaidRow(model), Is.Not.Null, "the next raid was dismissed in advance");
+        }
+
         /// <summary>
         /// A raid's row names its mix and size, "Raid warning · Mixed × 20", and never reads its mix
         /// as an item the way a theft's subject is read. The theft's title is the control.
