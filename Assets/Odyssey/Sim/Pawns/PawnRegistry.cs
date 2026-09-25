@@ -350,6 +350,13 @@ namespace Odyssey.Sim.Pawns
             new RescueJobDriver(),
             // A bandit carrying something off the board (design 33 §17), JobHandle 22.
             new StealJobDriver(),
+            // Medical supplies (design 37): 23 and 24, after Steal.
+            new TreatJobDriver(),
+            new PatientJobDriver(),
+            // Picking a berry bush (design 45 §6), JobHandle 25, after medical supplies.
+            new ForageJobDriver(),
+            // The kitchen (design 48 §5), JobHandle 26, after the forager's.
+            new Cooking.CookJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------
@@ -489,6 +496,9 @@ namespace Odyssey.Sim.Pawns
                 // The response (design 33 §18c), at anything but the default.
                 if (pawn.Response != HostilityResponse.FightBack)
                     writer.AddPawnAspect(pawn.Id, CombatAspects.Response, (int)pawn.Response);
+                // Where she may work (design 43 §4a), at anything but the default.
+                if (pawn.Area != PawnArea.Anywhere)
+                    writer.AddPawnAspect(pawn.Id, AreaAspects.Area, (int)pawn.Area);
                 // Lying where she fell with no bed to be carried to (design 33 §11d): why nobody
                 // comes. Asked only of the downed, so a colony nobody has hurt pays one flag.
                 if (pawn.Downed && RescueRules.NeedsRescue(pawn, _ctx) && RescueRules.BedFor(pawn, pawn, _ctx) < 0)
@@ -506,6 +516,10 @@ namespace Odyssey.Sim.Pawns
                 if (!pawn.IsPerson)
                 {
                     writer.AddPawnAspect(pawn.Id, RateAspects.Move, pawn.MoveRatePerMille());
+                    // Sheltering from the rain (design 43 §6a), sparse: read off the job it is
+                    // running and the sky, so the activity line can say so without a job def.
+                    if (AnimalShelterThinkNode.IsSheltering(pawn, _ctx))
+                        writer.AddPawnAspect(pawn.Id, AnimalShelterThinkNode.Sheltering, 1);
                     continue;
                 }
 
@@ -571,6 +585,18 @@ namespace Odyssey.Sim.Pawns
                 // publishes for every colonist and not only a working one: whatever draws a
                 // colonist's pace wants to be able to ask it of an idle one.
                 writer.AddPawnAspect(pawn.Id, RateAspects.Move, pawn.MoveRatePerMille());
+
+                // And what that pace is a product of (design 17 §5a), so the pane can say why:
+                // the very methods MoveRatePerMille multiplies, asked again rather than derived a
+                // second way. The rolled pace always; the rest only while they cost her something,
+                // so a dry, fed, undrafted colonist pays one row for all of it.
+                writer.AddPawnAspect(pawn.Id, RateAspects.PaceRolled, pawn.InnatePacePerMille());
+                int condition = pawn.ConditionPerMille();
+                if (condition != Rates.Scale) writer.AddPawnAspect(pawn.Id, RateAspects.PaceCondition, condition);
+                int weather = pawn.WeatherPerMille();
+                if (weather != Rates.Scale) writer.AddPawnAspect(pawn.Id, RateAspects.PaceWeather, weather);
+                int urgency = pawn.UrgencyPerMille();
+                if (urgency != Rates.Scale) writer.AddPawnAspect(pawn.Id, RateAspects.PaceUrgency, urgency);
 
                 // The draft (design 33 §2e), sparse: a colony nobody drafts publishes nothing
                 // new. The order cell only while an order is being walked: a drafted move, or a

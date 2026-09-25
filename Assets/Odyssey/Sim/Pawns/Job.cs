@@ -472,7 +472,7 @@ namespace Odyssey.Sim.Pawns
 
             if (!Pawn.HasPath && !Pawn.PathPending)
             {
-                if (!ctx.Reachable(Pawn, dest))
+                if (!ctx.CanTravel(Pawn, dest))
                 {
                     Pawn.Destination = -1;
                     return JobStatus.Failed;

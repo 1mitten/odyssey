@@ -23,7 +23,9 @@ ui.res.cord,Cord,ui.res,M1,"Rope and cable. Ladders, lifts, bindings"
 ui.res.insulation,Insulation,ui.res,M1,Foam batting. Slows heat through a wall
 ui.res.paper,Paper,ui.res,M1,Records and packaging. Research feedstock
 ui.res.rations,Rations,ui.res,M1,"Sealed pre-collapse food. Never spoils, nobody enjoys it"
-ui.res.meal,Meal,ui.res,M1,Cooked at a galley. Mood as well as nutrition
+ui.res.meal,Meal,ui.res,M3,"Cooked at an electric cooker or a campfire. The best food there is, and it rots in four days"
+ui.res.meal.veg,Vegetable meal,ui.res,M3,"A meal cooked without meat. As filling and as welcome as one with"
+ui.res.meal.burnt,Burnt meal,ui.res,M3,"A meal the cook let catch. Edible, less filling, and nobody enjoys it"
 ui.res.protein,Protein paste,ui.res,M1,Reclaimed nutrition. Edible; that is all
 ui.res.meat,Raw meat,ui.res,M1,Butchered. Spoils without cold
 ui.res.produce,Produce,ui.res,M1,"Grown food, uncooked"
@@ -32,11 +34,13 @@ ui.res.stone,Stone,ui.res,M3,"Broken rock from a mined face. Heavy, and there is
 ui.res.ironore,Iron ore,ui.res,M3,Raw ore. Worthless until something smelts it
 ui.res.coal,Coal,ui.res,M3,"Burns hot. Found deeper than iron, and for that reason"
 ui.res.carrots,Carrots,ui.res,M3,"The first field crop. Eaten straight, no cooking and no spoilage"
+ui.res.berries,Berries,ui.res,M3,"Picked from a wild berry bush. Eaten straight; the bush grows more"
+ui.res.mushrooms,Mushrooms,ui.res,M3,"Found under the trees. Eaten straight; more come up somewhere else"
 ui.res.grain,Grain,ui.res,M1,"Bulk staple. Stores well, needs cooking"
 ui.res.fungus,Fungus,ui.res,M1,Grows without light. The underground staple
 ui.res.stimulant,Stimulant,ui.res,M1,Buys an hour of wakefulness at a cost
 ui.res.alcohol,Alcohol,ui.res,M1,"Recreation, and a problem for some"
-ui.res.medkit,Medkit,ui.res,M1,Field tending. Consumed per treatment
+ui.res.medkit,Medical supplies,ui.res,M1,Dressings and drugs. One is used up per treatment
 ui.res.medicine,Medicine,ui.res,M1,Compounded drugs. Better outcomes than a medkit
 ui.res.organ,Organ,ui.res,M1,"Harvested and kept cold. Surgery, or trade"
 ui.res.prosthetic,Prosthetic,ui.res,M1,Replaces a lost part. Quality varies wildly
@@ -65,13 +69,13 @@ ui.mood.broken,Breaking down,ui.mood,M2,In a mental break now
 ui.skill.construction,Construction,ui.skill,M2,"Building, and the quality of what is built"
 ui.skill.mining,Mining,ui.skill,M2,"Digging, rubble clearance and salvage extraction"
 ui.skill.salvage,Salvage,ui.skill,M2,Stripping a shell without wrecking what is in it
-ui.skill.cooking,Cooking,ui.skill,M2,"Meal quality, and food poisoning avoided"
+ui.skill.cooking,Cooking,ui.skill,M3,"How fast a colonist cooks, and how seldom the meal burns"
 ui.skill.growing,Growing,ui.skill,M2,Yield and harvest speed
 ui.skill.cutting,Chopping,ui.skill,M2,"Felling trees. How fast the axe comes down, and how fast the trunk goes over"
 ui.skill.animals,Animals,ui.skill,M2,"Taming, training and husbandry"
 ui.skill.crafting,Crafting,ui.skill,M2,Bench work and item quality
 ui.skill.fabrication,Fabrication,ui.skill,M2,Advanced production. Gates the best gear
-ui.skill.medicine,Medicine,ui.skill,M2,"Tending, surgery and survival odds"
+ui.skill.medicine,Medicine,ui.skill,M2,How fast a colonist treats the hurt
 ui.skill.social,Social,ui.skill,M2,"Negotiation, recruitment and warden work"
 ui.skill.shooting,Shooting,ui.skill,M2,Ranged accuracy
 ui.skill.melee,Melee,ui.skill,M2,"Close combat, hit and parry"
@@ -98,6 +102,7 @@ ui.status.mining,Mining,ui.status,M2,"Cutting into rubble, concrete or rock"
 ui.status.felling,Chopping,ui.status,M3,Cutting a tree down for wood
 ui.status.sowing,Sowing,ui.status,M3,Breaking ground and planting a zone cell
 ui.status.harvesting,Harvesting,ui.status,M3,Cutting a ripe crop and gathering it
+ui.status.foraging,Picking,ui.status,M3,Picking the berries off a wild bush
 ui.status.refuelling,Refuelling,ui.status,M3,Carrying fuel to a generator and filling it
 ui.status.sleeping,Sleeping,ui.status,M2,"Asleep, and should stay that way"
 ui.status.eating,Eating,ui.status,M2,Taking a meal
@@ -115,6 +120,18 @@ ui.status.fleeing,Fleeing,ui.status,CB,"Running from danger, or from whatever hu
 ui.status.equipping,Equipping,ui.status,CB,Fetching a weapon to hold
 ui.status.rescuing,Rescuing,ui.status,CB,Carrying the downed to a bed
 ui.status.stealing,Stealing,ui.status,CB,"A bandit carrying something off the board"
+ui.status.treating,Treating,ui.status,M3,"Tending the hurt, or herself"
+ui.status.patient,Resting as a patient,ui.status,M3,In bed until the wound allows getting up
+ui.status.cooking,Cooking,ui.status,M3,"At an electric cooker or a campfire, or fetching food for the pan"
+ui.status.sheltering,Sheltering,ui.status,WE,"An animal waiting out the rain under a roof or a tree, or walking to one"
+ui.status.inrain,In the rain,ui.status,WE,"A colonist under open sky while it rains, and walking slower for it. Said beside her pace"
+ui.stat.pace,Pace,ui.stat,WE,"How fast a colonist walks, as a share of the standard walk. Not the tile's walk speed, which is the ground"
+ui.stat.pace.rolled,Rolled,ui.stat,WE,"The pace a colonist was born with, between 85% and 115% of the standard walk"
+ui.stat.pace.condition,Condition,ui.stat,WE,"What hunger, cold or heat is taking off her pace. Never above 100%, never below 70%"
+ui.stat.pace.rain,Rain,ui.stat,WE,"What walking in the rain under open sky takes off her pace. A roof or a tree gives it back"
+ui.stat.pace.drafted,Drafted,ui.stat,WE,"A drafted colonist runs"
+ui.stat.pace.running,Running,ui.stat,WE,"Running to a fight or away from one"
+ui.stat.pace.standard,The standard walk,ui.stat,WE,"The pace tooltip when nothing is making her faster or slower"
 ui.combat.miss,Miss,ui.combat,CB,A swing that did not land
 ui.combat.dodge,Dodge,ui.combat,CB,A swing the target stepped out of
 ui.combat.stunned,Stunned,ui.combat,CB,"Knocked senseless by a blunt blow, for a moment"
@@ -130,10 +147,10 @@ ui.combat.athip,At the hip,ui.combat,CB,"Sheathed at the left hip until there is
 ui.work.firefighting,Firefighting,ui.work,M7,Put out fires. Always first
 ui.work.patient,Patient,ui.work,M7,Accept treatment when hurt
 ui.work.bedrest,Bed rest,ui.work,M7,Stay in bed while recovering
-ui.work.doctor,Doctor,ui.work,M7,Tend the injured and operate
+ui.work.doctor,Doctor,ui.work,M3,"Treat the hurt, with medical supplies or without"
 ui.work.warden,Warden,ui.work,M7,"Feed, talk to and recruit prisoners"
 ui.work.handling,Handling,ui.work,M7,"Tame, train and feed animals"
-ui.work.cooking,Cooking,ui.work,M7,Prepare meals and butcher
+ui.work.cooking,Cooking,ui.work,M3,Work the bills at an electric cooker or a campfire
 ui.work.hunting,Hunting,ui.work,M7,Kill wild animals for meat
 ui.work.construction,Construction,ui.work,M7,Build frames and blueprints
 ui.work.growing,Growing,ui.work,M7,Sow and harvest growing zones
@@ -155,6 +172,21 @@ ui.schedule.sleep,Sleep,ui.schedule,M7,Go to bed whether tired or not
 ui.schedule.recreation,Recreation,ui.schedule,M7,Rest and recover mood
 ui.schedule.eat,Eat,ui.schedule,M7,Take a meal even if not yet hungry
 ui.schedule.meditate,Meditate,ui.schedule,M7,"Quiet hours, for whatever comes to need them"
+ui.recipe.meal,Cook a meal,ui.recipe,M3,"Any raw food, three carrots' worth, into one meal"
+ui.bill.heading,Bills,ui.bill,M3,What this station is told to make. The top one is worked first
+ui.bill.add,Add a bill,ui.bill,M3,Put a new order at the bottom of the list
+ui.bill.none,No bills yet,ui.bill,M3,Nothing will be made here until a bill is added
+ui.bill.mode.until,Until you have,ui.bill,M3,"Cook while the colony holds fewer than this many meals, and start again when it drops below"
+ui.bill.mode.times,Make,ui.bill,M3,"Cook this many, then stop"
+ui.bill.mode.forever,Forever,ui.bill,M3,Never stop cooking
+ui.bill.suspended,Paused,ui.bill,M3,"Stopped by you. The next bill down is worked instead"
+ui.bill.done,Done,ui.bill,M3,"This bill's count is met. It starts again by itself when it needs to"
+ui.bill.unpowered,No power,ui.bill,M3,"The electric cooker needs power to cook. Nothing on the hob will spoil in the meantime"
+ui.bill.waiting,Waiting for power,ui.bill,M3,"This bill will be worked once the station has power again"
+ui.bill.needs,"Each meal: raw food, about 3 carrots",ui.bill,M3,"A meal takes 500 of any raw food by nutrition: three carrots, or meat once there is any"
+ui.bill.needs.fire,"Each meal: raw food, about 3 carrots, and 1 wood",ui.bill,M3,"A campfire burns one wood for every meal it cooks"
+ui.bill.supply,Raw food for {n} meals,ui.bill,M3,"What the raw food on the map, in stores and on the ground, would cook into"
+ui.bill.nosupply,No raw food on the map,ui.bill,M3,"Nothing to cook. Grow carrots, or use the debug menu's Give carrots"
 ui.arch.category.structure,Structure,ui.arch.category,M3,"Walls, doors, floors and vertical connectors"
 ui.arch.category.zones,Zones,ui.arch.category,M3,"Stockpiles, growing zones and allowed areas"
 ui.arch.category.orders,Orders,ui.arch.category,M3,One-off designations on existing things
@@ -186,11 +218,11 @@ ui.arch.tool.salvage,Salvage,ui.arch.tool,M3,"Strip a ruin. Slower than deconstr
 ui.arch.tool.haulurgent,Haul urgently,ui.arch.tool,M3,Jump this to the top of the haul list
 ui.arch.tool.cancel,Cancel,ui.arch.tool,M3,Remove designations and orders
 ui.arch.tool.forbid,Forbid,ui.arch.tool,M3,Hands off this
-ui.arch.tool.fell,Chop trees,ui.arch.tool,M3,Cut a tree down for wood
+ui.arch.tool.fell,Chop and clear,ui.arch.tool,M3,"Cut a tree down for wood, or clear a bush out of the way"
 ui.arch.tool.allowitem,Allow,ui.arch.tool,M3,Hands back on
 ui.arch.tool.clearrubble,Clear rubble,ui.arch.tool,M3,Remove loose debris from a cell
 ui.arch.tool.extinguish,Extinguish,ui.arch.tool,M3,Put this fire out now
-ui.arch.tool.harvest,Harvest,ui.arch.tool,M3,Take the crop
+ui.arch.tool.harvest,Harvest,ui.arch.tool,M3,"Pick the berries from a ripe berry bush. They grow back in three days"
 ui.arch.tool.conduit,Conduit,ui.arch.tool,M3,Carries power. Connects vertically
 ui.arch.tool.unwire,Remove conduit,ui.arch.tool,M3,"Takes a conduit up, and nothing else in the cell"
 ui.arch.tool.battery,Battery,ui.arch.tool,M3,Stores charge against the night
@@ -201,7 +233,7 @@ ui.arch.tool.geothermal,Geothermal tap,ui.arch.tool,M3,"Deep, expensive, constan
 ui.arch.tool.switch,Power switch,ui.arch.tool,M3,Cuts a net in two
 ui.arch.tool.reactor,Reactor,ui.arch.tool,M3,"Late, enormous, dangerous"
 ui.arch.tool.fabricator,Fabricator,ui.arch.tool,M3,Makes refined materials and components
-ui.arch.tool.galley,Galley,ui.arch.tool,M3,Cooks meals
+ui.arch.tool.galley,Electric Cooker,ui.arch.tool,M3,"Cooks meals from bills. Needs power"
 ui.arch.tool.reclaimer,Reclaimer,ui.arch.tool,M3,Sorts scrap into usable material
 ui.arch.tool.hydroponics,Hydroponics basin,ui.arch.tool,M3,"Grows without soil, needs power"
 ui.arch.tool.bench,Crafting bench,ui.arch.tool,M3,General making
@@ -289,6 +321,7 @@ ui.command.strip,Strip,ui.command,M3,Take everything they carry
 ui.command.fightback,Fight back,ui.command,CB,"Fights only whoever strikes her. Press to change"
 ui.command.defend,Defend,ui.command,CB,"Joins a fight near her, then goes back to work. Press to change"
 ui.command.flee,Flee,ui.command,CB,"Runs from danger near her, and fights only when cornered. Press to change"
+ui.command.sethearth,Make this the hearth,ui.command,M3,"Centre the colony's home on this campfire"
 ui.menu.cancel,Cancel,ui.menu,CB,"Close the menu a right-click opened, and order nothing"
 ui.overlay.temperature,Temperature,ui.overlay,M1,Warm to cold across the slice
 ui.overlay.light,Light,ui.overlay,M1,How lit each cell is
@@ -297,6 +330,7 @@ ui.overlay.cleanliness,Cleanliness,ui.overlay,M1,"Filth, and where it matters"
 ui.overlay.roofs,Roofs,ui.overlay,M1,"What is roofed, and by what"
 ui.overlay.zones,Zones,ui.overlay,M1,"Stockpiles, growing and allowed areas"
 ui.overlay.power,Power,ui.overlay,M1,"Nets, and which of them are short"
+ui.overlay.home,Home,ui.overlay,M3,"The colony's home: the base joined to the hearth, and five cells round it"
 ui.overlay.salvage,Salvage density,ui.overlay,M1,Where the worthwhile scrap is
 ui.overlay.support,Structural support,ui.overlay,M1,What is holding this layer up
 ui.overlay.traffic,Traffic,ui.overlay,M1,Where colonists actually walk
@@ -338,9 +372,12 @@ ui.alert.darkness,No light,ui.alert,M2,Work is slowed for want of a lamp
 ui.alert.trapped,Trapped,ui.alert,M2,Someone cannot reach the colony
 ui.alert.storagestuck,Store cannot be emptied,ui.alert,M3,"A shelf is marked for removal and there is nowhere to put what is in it"
 ui.alert.norescuebed,No bed for the wounded,ui.alert,M3,"A downed colonist has no free bed to be carried to, so nobody can rescue her"
+ui.alert.nohearth,No hearth,ui.alert,M3,"Somebody is kept home, and there is no hearth: build or mark a campfire"
+ui.alert.hearthdown,Hearth marked to come down,ui.alert,M3,"When it comes down the colony has no home"
 ui.toast.skillup,{name} has reached {skill} {level},ui.toast,M2,A colonist's skill has gone up a level
 ui.bulletin.salvage,Salvage found,ui.bulletin,M2,Something worthwhile in the rubble
 ui.bulletin.scrapdrop,Scrap drop,ui.bulletin,M3,Scrap metal fell from the sky
+ui.bulletin.medicaldrop,Medical drop,ui.bulletin,M3,Medical supplies fell from the sky
 ui.bulletin.arrival,Arrival,ui.bulletin,M2,Someone new is here
 ui.bulletin.trader,Trader,ui.bulletin,M2,A trader has come to us
 ui.bulletin.caravan,Caravan,ui.bulletin,M2,Ours has arrived or returned
@@ -455,8 +492,13 @@ ui.terrain.rock,Rock,ui.terrain,M1,"Natural stone. Mined, not cleared"
 ui.terrain.subsoil,Subsoil,ui.terrain,M1,"The band between soil and rock. Cheap to dig"
 ui.terrain.bedrock,Bedrock,ui.terrain,M1,"The floor of the world. Deliberately punitive to mine"
 ui.terrain.packedgravel,Packed Gravel,ui.terrain,M3,"Stony ground, packed hard. Firm footing, poor soil"
-ui.terrain.tree.conifer,Conifer,ui.terrain,M3,"An evergreen of the meadow. Chopped for wood"
-ui.terrain.tree.broadleaf,Broadleaf,ui.terrain,M3,"A broad-crowned tree of the meadow. Chopped for wood"
+ui.terrain.tree.birch,Birch,ui.terrain,M3,"A slim white-barked tree. Quick to chop, not much wood in it"
+ui.terrain.tree.meadow,Meadow tree,ui.terrain,M3,"A broad round-crowned tree of the open meadow. Chopped for wood"
+ui.terrain.tree.fruit,Fruit tree,ui.terrain,M3,"A low spreading tree. It will bear fruit one day; for now it is wood"
+ui.terrain.tree.giant,Giant tree,ui.terrain,M3,"A rare old giant. Slow to bring down, and a great deal of wood"
+ui.terrain.bush,Bush,ui.terrain,M3,"Dense undergrowth. Slow to push through; cleared before anything is built here"
+ui.terrain.bush.berry,Berry bush,ui.terrain,M3,"A bush that bears berries"
+ui.terrain.bush.picked,Picked berry bush,ui.terrain,M3,"A berry bush picked bare, growing its berries back"
 ui.terrain.carrot,Carrot,ui.terrain,M3,"A root vegetable of the meadow. Grown in zones, cut at full growth"
 ui.settings.panel,Settings,ui.settings,M1,"What the game does, not what the colony does"
 ui.settings.graphics,Graphics,ui.settings,M1,"How the world is drawn. None of it reaches the simulation"
@@ -507,7 +549,8 @@ ui.debug.panel,Debug,ui.debug,M3,"Debug-only actions: not saved and not for a sh
 ui.debug.spawnpawn,Spawn colonist,ui.debug,M3,"Adds a colonist with no scenario and no starting kit"
 ui.debug.givewood,Give wood,ui.debug,M3,"Adds 50 wood near the camera"
 ui.debug.givestone,Give stone,ui.debug,M3,"Adds 50 stone near the camera"
-ui.debug.givefood,Give food,ui.debug,M3,"Adds 50 meals near the camera"
+ui.debug.givefood,Give food,ui.debug,M3,"Adds 50 ration packs near the camera"
+ui.debug.givecarrots,Give carrots,ui.debug,M3,"Adds 50 carrots near the camera: raw food a cook can put in a pan"
 ui.debug.tab.cheats,Cheats,ui.debug,M3,"The overlay toggle and the grants"
 ui.debug.tab.events,Events,ui.debug,M3,"One row per event the content declares, each fired on click"
 ui.debug.tab.spawn,Spawn,ui.debug,AN,"Colonists and animals, placed near the camera"
@@ -838,3 +881,12 @@ ui.inventory.hud.inplace,"{category}, in 1 place",ui.inventory.hud,INV,The line 
 ui.inventory.hud.hint,Go moves the camera to that place and selects it. Clicking the item row itself goes to the place holding the most.,ui.inventory.hud,INV,The hint under the list of places
 ui.inventory.hud.empty,Nothing is in a store yet.,ui.inventory.hud,INV,The table when the colony's stores are empty
 ui.inventory.hud.nomatch,No item matches.,ui.inventory.hud,INV,The table when a search finds nothing
+ui.home.hearth,Hearth,ui.home,HA,"This campfire is the colony's hearth: home is the base joined to it"
+ui.tab.assign,Assign,ui.tab,HA,"Where each colonist may work, and what she does about danger"
+ui.keys.assign,Assign tab,ui.keys,HA,"Open and close the Assign tab"
+ui.assign.colonist,Colonist,ui.assign,HA,"The colonist, in the roster's order. Click to select her"
+ui.assign.area,Area,ui.assign,HA,"Where she may work. Press a cell to change it"
+ui.assign.response,Response,ui.assign,HA,"What she does about danger. Press a cell to change it"
+ui.assign.anywhere,Anywhere,ui.assign,HA,"She takes work wherever it is"
+ui.assign.home,Home,ui.assign,HA,"She takes no work outside home, and walks home when idle. A draft overrides it"
+ui.assign.nohearth,No hearth yet,ui.assign,HA,"There is no hearth, so there is no home and Home keeps nobody in. Mark a campfire as the hearth"

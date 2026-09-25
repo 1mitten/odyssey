@@ -251,8 +251,11 @@ namespace Odyssey.Tests.Sim
             var parts = new List<string>();
             foreach (var pawn in colony.World.Views.Current.Pawns) parts.Add("p" + pawn.Cell);
             foreach (int cell in colony.Pawns.Items.Beds) parts.Add("b" + cell);
-            foreach (var item in colony.Pawns.Items.Items)
-                parts.Add("i" + item.DefIndex + ":" + item.Cell + ":" + item.Stack);
+            // The scenario's own things only: since design 45 the map lays loose stones and
+            // mushrooms after it, and those are the generator's, not the placement's.
+            var items = colony.Pawns.Items.Items;
+            for (int i = 0; i < colony.FirstNaturalItem; i++)
+                parts.Add("i" + items[i].DefIndex + ":" + items[i].Cell + ":" + items[i].Stack);
             foreach (int cell in colony.Pawns.Storage!.Cells) parts.Add("s" + cell);
 
             ulong hash = 14695981039346656037UL;
@@ -353,14 +356,19 @@ namespace Odyssey.Tests.Sim
             Assert.That(playtest.Designations.Count, Is.Zero, "the playtest scenario gave an order");
             Assert.That(playtest.Placement.Meals, Is.EqualTo(3), playtest.Placement.ToString());
             Assert.That(playtest.Placement.Salvage, Is.Zero, "a new colony was given scrap");
-            Assert.That(playtest.Placement.MaterialPiles, Is.EqualTo(4), playtest.Placement.ToString());
+            // Four of stone and wood, and one of medical supplies (design 37).
+            Assert.That(playtest.Placement.MaterialPiles, Is.EqualTo(5), playtest.Placement.ToString());
 
-            int stone = 0, wood = 0;
-            foreach (var item in playtest.Pawns.Items.Items)
+            int stone = 0, wood = 0, medical = 0;
+            // The kit, not the loose stones the map lays after it (design 45 §6).
+            var items = playtest.Pawns.Items.Items;
+            for (int i = 0; i < playtest.FirstNaturalItem; i++)
             {
+                var item = items[i];
                 if (item.Cell < 0) continue;
                 if (item.DefIndex == ItemIndex.Stone) stone += item.Stack;
                 else if (item.DefIndex == ItemIndex.Wood) wood += item.Stack;
+                else if (item.DefIndex == ItemIndex.MedicalSupplies) medical += item.Stack;
             }
 
             // A full stack apiece, and the assertion is on the total rather than on the pile count
@@ -368,6 +376,7 @@ namespace Odyssey.Tests.Sim
             // because an unclamped pile would pass a count and fail this.
             Assert.That(stone, Is.EqualTo(150), "stone to build with");
             Assert.That(wood, Is.EqualTo(150), "wood to build with");
+            Assert.That(medical, Is.EqualTo(6), "medical supplies for the first fight (owner, 2026-09-24)");
         }
     }
 }

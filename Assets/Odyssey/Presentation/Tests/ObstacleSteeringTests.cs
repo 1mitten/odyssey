@@ -16,7 +16,7 @@ namespace Odyssey.Tests.Presentation
         public void CrossingTreeCell_VeersAroundTrunkAndReturnsSeamlessly()
         {
             var world = new RenderTestWorld(5, 5, 2);
-            world.Edifice(2, 2, 0, NaturalContent.EdificeTreeBroadleaf, blocking: false);
+            world.Edifice(2, 2, 0, NaturalContent.EdificeTreeMeadow, blocking: false);
             world.Publish();
 
             Assert.That(world.Model.HasObstacle(new CellRef(2, 2, 0)), Is.True);
@@ -57,7 +57,7 @@ namespace Odyssey.Tests.Presentation
         public void StepTransition_IntoAndOutOfTreeCell_IsContinuous()
         {
             var world = new RenderTestWorld(5, 5, 2);
-            world.Edifice(2, 2, 0, NaturalContent.EdificeTreeBroadleaf, blocking: false);
+            world.Edifice(2, 2, 0, NaturalContent.EdificeTreeMeadow, blocking: false);
             world.Publish();
 
             CellRef approachCell = new CellRef(2, 1, 0);
@@ -92,7 +92,7 @@ namespace Odyssey.Tests.Presentation
         {
             var world = new RenderTestWorld(5, 5, 2);
             // Tree at corner (2, 3, 0)
-            world.Edifice(2, 3, 0, NaturalContent.EdificeTreeBroadleaf, blocking: false);
+            world.Edifice(2, 3, 0, NaturalContent.EdificeTreeMeadow, blocking: false);
             world.Publish();
 
             // Pawn moving diagonally from (2, 2, 0) to (3, 3, 0)
@@ -116,7 +116,7 @@ namespace Odyssey.Tests.Presentation
         public void TreeObstacle_OnLowerTerraceLayer_IsDetectedAtColonistLayer()
         {
             var world = new RenderTestWorld(5, 5, 3);
-            world.Edifice(2, 2, 0, NaturalContent.EdificeTreeBroadleaf, blocking: false);
+            world.Edifice(2, 2, 0, NaturalContent.EdificeTreeMeadow, blocking: false);
             world.Publish();
 
             // Tree is rooted at Y=0, colonist is walking on layer Y=1

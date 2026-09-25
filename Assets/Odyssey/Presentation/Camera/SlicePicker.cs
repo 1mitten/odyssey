@@ -316,6 +316,29 @@ namespace Odyssey.Presentation.CameraRig
                 // drawn to, and nothing else changes.
                 // A stump is picked the way a bed is: on its own top, inside its own cell, and only
                 // there — so a click over it reaches the floor behind, which is what is drawn there.
+                // **A bush is a box you can click anywhere on** (design 45 §12; owner, 2026-09-25: "I
+                // couldn't click on some of the berry bushes properly"). A bush fills its cell to its
+                // crown, a metre and a half up or more, and a ray aimed at that crown meets the ground
+                // a metre or two further on — in the cell behind, or back in its own cell as the
+                // ground block below, whose top the solid-cell rule claims first. Measured through
+                // the rig: 14 of 18 clicks on the middle of a bush and 56 of 73 on its crown named
+                // something else. So a bush's cell is claimed wherever the ray is inside its column
+                // below the drawn crown — through the top, or through a side — at the point it
+                // entered, which is nearer the camera than any ground behind it.
+                if (!hidden && NaturalContent.IsBush(model.EdificeDef(index)))
+                {
+                    float crown = floorY + model.BushTop(index);
+                    float yIn = ray.origin.y + ray.direction.y * t;
+                    float tIn = yIn <= crown ? t : FloorCrossing(ray, crown);
+                    if (tIn >= t - 1e-4f && tIn <= tCellEnd)
+                    {
+                        cell = new CellRef(x, z, layer);
+                        thing = true;
+                        hitAt = tIn;
+                        return true;
+                    }
+                }
+
                 float stand = hidden ? 0f : stump ? CellMetrics.StumpHeight : model.StandHeight(index);
                 if (stand > 0f)
                 {

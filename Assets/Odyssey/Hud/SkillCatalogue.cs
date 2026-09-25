@@ -114,13 +114,16 @@ namespace Odyssey.Hud
             new Entry("ui.skill.construction", "construction", string.Empty),
             new Entry("ui.skill.mining", "mining", string.Empty),
             new Entry("ui.skill.salvage", NotSimulated, "salvage is hauled, not stripped"),
-            new Entry("ui.skill.cooking", NotSimulated, "meals are found, not made"),
+            // Live with the kitchen (design 48 §5): cooking trains it, and it buys speed at the
+            // stove and keeps the meal from burning.
+            new Entry("ui.skill.cooking", "cooking", string.Empty),
             new Entry("ui.skill.growing", "growing", string.Empty),
             new Entry("ui.skill.cutting", "cutting", string.Empty),
             new Entry("ui.skill.animals", NotSimulated, "no creature simulation"),
             new Entry("ui.skill.crafting", NotSimulated, "no bench work"),
             new Entry("ui.skill.fabrication", NotSimulated, "no production chain"),
-            new Entry("ui.skill.medicine", NotSimulated, "wounds heal in bed, untreated"),
+            // Live with medical supplies (design 37): treating trains it, and it buys speed at it.
+            new Entry("ui.skill.medicine", "medicine", string.Empty),
             new Entry("ui.skill.social", NotSimulated, "no other people"),
             new Entry("ui.skill.shooting", NotSimulated, "no combat"),
             // Live from the combat contracts step (design 33 §5): Skill_Melee, rolled at the start

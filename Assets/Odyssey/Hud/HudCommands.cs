@@ -108,13 +108,26 @@ namespace Odyssey.Hud
         /// </summary>
         public const string AnimalsKey = "ui.tab.animals";
 
+        /// <summary>
+        /// Opens the Assign tab (design 43 §6): where each colonist may work and what she does
+        /// about danger. F4, the slot the bar has advertised for a colonist list since M1; the
+        /// roster strip stays the list, and <c>ui.tab.colonists</c> stays in the registry.
+        /// </summary>
+        public const string AssignKey = "ui.tab.assign";
+
+        /// <summary>
+        /// The icon a bar item draws, by key: its own, except Assign's, which draws the owner's
+        /// three-person silhouette already drawn for the Colonists slot it took over.
+        /// </summary>
+        public static string IconOf(string key) => key == AssignKey ? "ui.tab.colonists" : key;
+
         static readonly (string Key, string Hotkey, string Reason)[] Order =
         {
             (BuildKey, "B", ""),
             (WorkKey, "F1", ""),
             (InventoryKey, "F2", ""),
             (ResearchKey, "F3", ""),
-            ("ui.tab.colonists", "F4", "the roster strip is the colonist list for now"),
+            (AssignKey, "F4", ""),
             (AnimalsKey, "F5", ""),
             // Wildlife left the bar on 2026-09-23 (owner: "remove Wildlife bottom bar"): what is
             // out there is the Animals tab. The key stays in the registry for the day the tamed

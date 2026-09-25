@@ -82,6 +82,9 @@ namespace Odyssey.Sim.Worldgen.Natural
             barren = true;
             surfaceRelief = 0;              // one flat surface layer, no terracing
             treeDensityPerMille = 0;
+            bushPerMille = 0;
+            looseRockNearPerMille = 0;
+            looseRockOpenPerMille = 0;
             outcropsPer10000Columns = 0;
             oreDepositsPer10000Columns = 0;
             cavernsPer10000Columns = 0;     // the strata stay solid: a hole in them is a bug here
@@ -204,8 +207,39 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// </summary>
         public int treeClumpFloor = 170;
 
-        /// <summary>Per mille chance a placed tree is broadleaf rather than conifer.</summary>
+        /// <summary>Per mille chance a placed tree is a broadleaf - meadow, fruit or giant -
+        /// rather than a birch (design 45 §3).</summary>
         public int broadleafChance = 420;
+
+        // ---- pass 11, undergrowth ------------------------------------------------------------
+        //
+        // The Meadow dressing's bush rule at its shipped density, made real (design 45 §4):
+        // bushes on the even-even lattice, where a 14-cell value-noise field stands above a
+        // threshold, and at wood edges whatever the field says. Zero switches bushes off.
+
+        /// <summary>Per mille chance at full want that a lattice cell grows a bush. The dressing's 0.4.</summary>
+        public int bushPerMille = 400;
+
+        /// <summary>Lattice period of the bush field, in cells.</summary>
+        public int bushFieldPeriod = 14;
+
+        /// <summary>Per mille of the field below which it wants no bush at all. The dressing's 0.45.</summary>
+        public int bushFieldThreshold = 450;
+
+        /// <summary>The want, per mille, at a cell beside a tree whatever the field says. The dressing's 0.7.</summary>
+        public int bushWoodEdgeWant = 700;
+
+        /// <summary>One bush in this many bears berries.</summary>
+        public int berryBushOneIn = 6;
+
+        /// <summary>No bush within this many cells of the start (the dressing's clearing radius).</summary>
+        public int undergrowthClearRadius = 4;
+
+        /// <summary>Per mille of open grass cells beside rock that hold a loose stone. The dressing's 0.18.</summary>
+        public int looseRockNearPerMille = 180;
+
+        /// <summary>Per mille of open grass cells elsewhere that hold one. The dressing's 0.012.</summary>
+        public int looseRockOpenPerMille = 12;
 
         // ---- pass 4, rock outcrops -----------------------------------------------------------
 
@@ -415,6 +449,11 @@ namespace Odyssey.Sim.Worldgen.Natural
             if (treeDensityPerMille < 0 || treeDensityPerMille > 1000)
                 throw new ArgumentOutOfRangeException(nameof(treeDensityPerMille));
             if (treeClumpPeriod < 1) throw new ArgumentOutOfRangeException(nameof(treeClumpPeriod));
+            if (bushPerMille < 0 || bushPerMille > 1000) throw new ArgumentOutOfRangeException(nameof(bushPerMille));
+            if (bushFieldPeriod < 1) throw new ArgumentOutOfRangeException(nameof(bushFieldPeriod));
+            if (bushFieldThreshold < 0 || bushFieldThreshold >= 1000)
+                throw new ArgumentOutOfRangeException(nameof(bushFieldThreshold));
+            if (berryBushOneIn < 1) throw new ArgumentOutOfRangeException(nameof(berryBushOneIn));
             if (minOutcropRadius < 0 || maxOutcropRadius < minOutcropRadius)
                 throw new ArgumentOutOfRangeException(nameof(minOutcropRadius));
             if (minOutcropHeight < 1 || maxOutcropHeight < minOutcropHeight)

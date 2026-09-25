@@ -47,8 +47,14 @@ namespace Odyssey.Tests.Sim
             var colony = ColonyWorld.Build(Size, 7u, scenario, barren: true, wooded: false);
             colony.World.Tick(5);
             var pawns = colony.Pawns.Pawns.All;
-            // Nobody rescues on their own unless a test says so.
-            foreach (Pawn pawn in pawns) pawn.WorkPriorities[WorkTypeIndex.Rescue] = 0;
+            // Nobody rescues on their own unless a test says so. Nor treats: this suite predates
+            // the doctor (design 37), and a bare dressing crossing the recovery line early is a
+            // real behaviour these tests were not written to exercise.
+            foreach (Pawn pawn in pawns)
+            {
+                pawn.WorkPriorities[WorkTypeIndex.Rescue] = 0;
+                pawn.WorkPriorities[WorkTypeIndex.Doctor] = 0;
+            }
             return new Board3(colony, pawns[0], pawns[1], pawns[2]);
         }
 

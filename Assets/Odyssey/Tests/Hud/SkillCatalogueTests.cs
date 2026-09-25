@@ -33,7 +33,7 @@ namespace Odyssey.Tests.Hud
         /// Copied from <c>SkillIndex.Names</c> by hand; the two are only allowed to agree by
         /// agreeing on the spelling.
         /// </summary>
-        static readonly string[] Simulated = { "cutting", "mining", "construction", "growing", "melee" };
+        static readonly string[] Simulated = { "cutting", "mining", "construction", "growing", "melee", "medicine", "cooking" };
 
         [Test]
         public void TheLiveRowsAreExactlyTheSkillsTheSimulationTrains()

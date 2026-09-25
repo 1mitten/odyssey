@@ -273,4 +273,63 @@
     <casuallyInterruptible>false</casuallyInterruptible>
   </JobDef>
 
+  <!--
+    Medical supplies (design 37), after Job_Steal at the merge with main (renumbered 22-23 ->
+    23-24; bandits shipped first). Job_Treat is a doctor fetching one unit (or none, a bare
+    dressing) and treating a patient, or a colonist treating herself: workTicks is one treatment
+    at the standard pace (600, INVENTED), which Work_Doctor's curve scales and self-treatment
+    triples. It trains medicine at growing's rate. Not casually interruptible: a doctor halfway
+    through a dressing finishes it.
+
+    Job_Patient is a hurt colonist lying in a bed (or on the ground, when there is none) until
+    she is back to the release line. She sleeps there, so rest and the bed's heal both run.
+  -->
+  <JobDef>
+    <defName>Job_Treat</defName>
+    <driver>23</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+    <workTicks>600</workTicks>
+    <trainsSkill>6</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Patient</defName>
+    <driver>24</driver>
+  </JobDef>
+
+  <!--
+    Picking a berry bush (design 45 section 6), driver 25: after medical
+    supplies' Treat and Patient at the merge with main, which shipped them first. No workTicks: the work is the plant's own, in
+    World/WildPlants.xml, as felling's is. Growing's skill and experience, because it is picking
+    a crop.
+  -->
+  <JobDef>
+    <defName>Job_Forage</defName>
+    <driver>25</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>4</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
+  <!--
+    The kitchen (design 48 section 5), JobHandle 26, after the forager's 25 (nature reached main first). One job for both halves of a bill: fetching a
+    load of raw food into a station's pan, and cooking what the pan holds. The work is the
+    recipe's (Recipes.xml) and not this def's, so there is no workTicks here - Job_Build's
+    argument. It trains cooking at every working job's rate. Not casually interruptible: a cook
+    stirring a pan finishes the meal. Expiry is the walking jobs' generous one, because the
+    carrots can be a long way from the kitchen.
+  -->
+  <JobDef>
+    <defName>Job_Cook</defName>
+    <driver>26</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>7</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
 </Defs>

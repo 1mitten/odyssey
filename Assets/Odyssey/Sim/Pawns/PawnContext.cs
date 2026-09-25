@@ -140,6 +140,12 @@ namespace Odyssey.Sim.Pawns
         public Power.PowerGrid? Power { get; set; }
 
         /// <summary>
+        /// The kitchen (design 48 §5): every cooking station's bills and pan. Null in a bare pawn
+        /// fixture, which has nothing to cook on.
+        /// </summary>
+        public Cooking.Kitchen? Kitchen { get; set; }
+
+        /// <summary>
         /// The structure of this cell changed, so the boundary above it has to be re-judged.
         ///
         /// <para>Both the cell and the one above it, always, because they are two different
@@ -185,6 +191,12 @@ namespace Odyssey.Sim.Pawns
         public Growing.GrowingZones? Growing { get; set; }
 
         /// <summary>
+        /// The wild between orders (design 45 §6): berry bushes growing back and mushrooms coming
+        /// up. Null in a bare pawn fixture, so the forage giver answers no there.
+        /// </summary>
+        public NatureSystem? Nature { get; set; }
+
+        /// <summary>
         /// Where the colony puts things down, or null in a world that has none — a bare test
         /// fixture, or a board before the composition root has wired one. Every read here is
         /// null-guarded for that reason and not out of habit: the haul giver answers "no
@@ -198,6 +210,15 @@ namespace Odyssey.Sim.Pawns
         /// never given one simply has no containers rather than throwing.
         /// </summary>
         public Storage.StorageUnits? StorageUnits { get; set; }
+
+        /// <summary>
+        /// The colony's home (design 43): everything placed, grown by five cells. Null in a bare
+        /// fixture that assembles no colony, where nothing is ever restricted.
+        /// </summary>
+        public World.HomeArea? Home { get; set; }
+
+        /// <summary>The campfire home is centred on (design 43 §3f). Null in a bare fixture.</summary>
+        public World.Hearth? Hearth { get; set; }
 
         /// <summary>
         /// Where a thing is, as a cell a colonist can walk to: its own cell, the cell of the store
@@ -276,15 +297,43 @@ namespace Odyssey.Sim.Pawns
             ColonyItems.Distance(a, b, Size, Content.Movement.layerChangeEstimate);
 
         /// <summary>
-        /// Can this pawn get there at all? Two array reads and an integer comparison — never a
-        /// search. A work-giver scan asks this thousands of times per tick against candidate
-        /// targets, and it is the reason the district table exists.
+        /// May this pawn take this cell as the place a job acts on or is done from? It can get
+        /// there (<see cref="CanTravel(Pawn, int, TraverseMode)"/>) and it may work there
+        /// (<see cref="MayWork"/>). Two array reads and an integer comparison for anybody not kept
+        /// home — never a search. A work-giver scan asks this thousands of times per tick against
+        /// candidate targets, and it is the reason the district table exists.
+        ///
+        /// <para><b>This is the question every work giver asks</b>, which is why the home gate is
+        /// in it (design 43 §4b): a giver written next month is gated without knowing it. A
+        /// question that is purely physical — the fight, the flight, the walk of a job already
+        /// begun — asks <see cref="CanTravel(Pawn, int, TraverseMode)"/> instead, or a colonist
+        /// kept home would stop defending herself at the edge of home.</para>
         /// </summary>
         public bool Reachable(Pawn pawn, int cell) => Reachable(pawn, cell, pawn.Mode);
 
         public bool Reachable(Pawn pawn, int cell, TraverseMode mode) =>
+            CanTravel(pawn, cell, mode) && MayWork(pawn, cell);
+
+        /// <summary>Can this pawn get there at all? Physical only: no setting is asked.</summary>
+        public bool CanTravel(Pawn pawn, int cell) => CanTravel(pawn, cell, pawn.Mode);
+
+        public bool CanTravel(Pawn pawn, int cell, TraverseMode mode) =>
             (uint)cell < (uint)Size.CellCount &&
             Nav.Grid.CanEnter(cell, mode) &&
             Nav.Reachable(pawn.Cell, cell, mode);
+
+        /// <summary>
+        /// May she work in this cell (design 43 §4b)? Yes unless she is a colonist kept home,
+        /// undrafted, and the cell is outside a home that exists. <b>The only reader of
+        /// <see cref="Pawn.Area"/></b> apart from the walk home; a giver that asks the setting
+        /// itself is a second owner of the rule. One byte comparison for a colonist at the default.
+        /// </summary>
+        public bool MayWork(Pawn pawn, int cell) =>
+            pawn.Area == PawnArea.Anywhere
+            || pawn.Drafted
+            || !pawn.IsColonist
+            || Home == null
+            || Home.IsEmpty
+            || Home.Contains(cell);
     }
 }

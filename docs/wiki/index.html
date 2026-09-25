@@ -144,16 +144,16 @@ footer code{font-size:11.5px;color:var(--ink2)}
 </div></div></header>
 <div class="wrap">
 <nav aria-label="Sections"><h2>Sections</h2><ul class="navlist">
-<li><a href="#commodities">Commodities<b>50</b></a></li>
+<li><a href="#commodities">Commodities<b>54</b></a></li>
 <li><a href="#items">Items and equipment<b>34</b></a></li>
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
-<li><a href="#commands">Commands<b>52</b></a></li>
-<li><a href="#work">Work and skills<b>42</b></a></li>
-<li><a href="#colonists">Colonists<b>47</b></a></li>
+<li><a href="#commands">Commands<b>53</b></a></li>
+<li><a href="#work">Work and skills<b>57</b></a></li>
+<li><a href="#colonists">Colonists<b>60</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
-<li><a href="#events">Events<b>45</b></a></li>
+<li><a href="#events">Events<b>48</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
-<li><a href="#world">World and interface<b>127</b></a></li>
+<li><a href="#world">World and interface<b>134</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
 </ul></nav>
 <main>
@@ -162,15 +162,15 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>839</b><i>named entries</i></div>
+<div class="stat"><b>891</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>567</b><i>no art yet</i></div>
+<div class="stat m"><b>619</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
 <p id="nohits" class="empty" hidden>Nothing matches that search.</p>
 <section id="commodities" data-sec="1">
-<h2>Commodities <em class="count">50 entries</em></h2>
+<h2>Commodities <em class="count">54 entries</em></h2>
 <p class="blurb">What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the ore classes a wilderness colony sim would have, because the setting is a dead city and the ground is already full of manufactured things. These names appear in the resource ledger, in every bill and in every trade, so they are the names worth arguing about first.</p>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -318,11 +318,23 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> food</div>
 <div class="ms">M1</div>
 </div>
-<div class="row" id="ui.res.meal" data-hay="meal ui.res.meal cooked at a galley. mood as well as nutrition " data-gap="0">
+<div class="row" id="ui.res.meal" data-hay="meal ui.res.meal cooked at an electric cooker or a campfire. the best food there is, and it rots in four days " data-gap="0">
 <div class="nm">Meal<span class="k">ui.res.meal</span></div>
-<div class="dsc">Cooked at a galley. Mood as well as nutrition</div>
+<div class="dsc">Cooked at an electric cooker or a campfire. The best food there is, and it rots in four days</div>
 <div class="art"><span class="pill">high</span> food</div>
-<div class="ms">M1</div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.res.meal.veg" data-hay="vegetable meal ui.res.meal.veg a meal cooked without meat. as filling and as welcome as one with a bowl of cooked vegetables. the food sheet's bowl may serve once the art is judged" data-gap="1">
+<div class="nm">Vegetable meal<span class="k">ui.res.meal.veg</span></div>
+<div class="dsc">A meal cooked without meat. As filling and as welcome as one with<span class="need">Needs drawing: a bowl of cooked vegetables. The food sheet's bowl may serve once the art is judged</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.res.meal.burnt" data-hay="burnt meal ui.res.meal.burnt a meal the cook let catch. edible, less filling, and nobody enjoys it a blackened bowl of food. our own concept" data-gap="1">
+<div class="nm">Burnt meal<span class="k">ui.res.meal.burnt</span></div>
+<div class="dsc">A meal the cook let catch. Edible, less filling, and nobody enjoys it<span class="need">Needs drawing: a blackened bowl of food. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
 </div>
 <div class="row" id="ui.res.protein" data-hay="protein paste ui.res.protein reclaimed nutrition. edible; that is all " data-gap="0">
 <div class="nm">Protein paste<span class="k">ui.res.protein</span></div>
@@ -372,6 +384,18 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.res.berries" data-hay="berries ui.res.berries picked from a wild berry bush. eaten straight; the bush grows more a handful of red berries" data-gap="1">
+<div class="nm">Berries<span class="k">ui.res.berries</span></div>
+<div class="dsc">Picked from a wild berry bush. Eaten straight; the bush grows more<span class="need">Needs drawing: a handful of red berries</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.res.mushrooms" data-hay="mushrooms ui.res.mushrooms found under the trees. eaten straight; more come up somewhere else two capped mushrooms" data-gap="1">
+<div class="nm">Mushrooms<span class="k">ui.res.mushrooms</span></div>
+<div class="dsc">Found under the trees. Eaten straight; more come up somewhere else<span class="need">Needs drawing: two capped mushrooms</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 <div class="row" id="ui.res.grain" data-hay="grain ui.res.grain bulk staple. stores well, needs cooking " data-gap="0">
 <div class="nm">Grain<span class="k">ui.res.grain</span></div>
 <div class="dsc">Bulk staple. Stores well, needs cooking</div>
@@ -396,9 +420,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> food</div>
 <div class="ms">M1</div>
 </div>
-<div class="row" id="ui.res.medkit" data-hay="medkit ui.res.medkit field tending. consumed per treatment " data-gap="0">
-<div class="nm">Medkit<span class="k">ui.res.medkit</span></div>
-<div class="dsc">Field tending. Consumed per treatment</div>
+<div class="row" id="ui.res.medkit" data-hay="medical supplies ui.res.medkit dressings and drugs. one is used up per treatment " data-gap="0">
+<div class="nm">Medical supplies<span class="k">ui.res.medkit</span></div>
+<div class="dsc">Dressings and drugs. One is used up per treatment</div>
 <div class="art"><span class="pill">high</span> salvage gear</div>
 <div class="ms">M1</div>
 </div>
@@ -885,9 +909,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> salvage gear</div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.arch.tool.fell" data-hay="chop trees ui.arch.tool.fell cut a tree down for wood an axe against a trunk" data-gap="1">
-<div class="nm">Chop trees<span class="k">ui.arch.tool.fell</span></div>
-<div class="dsc">Cut a tree down for wood<span class="need">Needs drawing: an axe against a trunk</span></div>
+<div class="row gap" id="ui.arch.tool.fell" data-hay="chop and clear ui.arch.tool.fell cut a tree down for wood, or clear a bush out of the way an axe against a trunk" data-gap="1">
+<div class="nm">Chop and clear<span class="k">ui.arch.tool.fell</span></div>
+<div class="dsc">Cut a tree down for wood, or clear a bush out of the way<span class="need">Needs drawing: an axe against a trunk</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -909,9 +933,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill low">low</span> tools and weapons</div>
 <div class="ms">M3</div>
 </div>
-<div class="row" id="ui.arch.tool.harvest" data-hay="harvest ui.arch.tool.harvest take the crop " data-gap="0">
+<div class="row" id="ui.arch.tool.harvest" data-hay="harvest ui.arch.tool.harvest pick the berries from a ripe berry bush. they grow back in three days " data-gap="0">
 <div class="nm">Harvest<span class="k">ui.arch.tool.harvest</span></div>
-<div class="dsc">Take the crop</div>
+<div class="dsc">Pick the berries from a ripe berry bush. They grow back in three days</div>
 <div class="art"><span class="pill">high</span> tools and weapons</div>
 <div class="ms">M3</div>
 </div>
@@ -975,9 +999,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">med</span> action tiles</div>
 <div class="ms">M3</div>
 </div>
-<div class="row" id="ui.arch.tool.galley" data-hay="galley ui.arch.tool.galley cooks meals " data-gap="0">
-<div class="nm">Galley<span class="k">ui.arch.tool.galley</span></div>
-<div class="dsc">Cooks meals</div>
+<div class="row" id="ui.arch.tool.galley" data-hay="electric cooker ui.arch.tool.galley cooks meals from bills. needs power " data-gap="0">
+<div class="nm">Electric Cooker<span class="k">ui.arch.tool.galley</span></div>
+<div class="dsc">Cooks meals from bills. Needs power</div>
 <div class="art"><span class="pill">high</span> camp and crafting</div>
 <div class="ms">M3</div>
 </div>
@@ -1201,7 +1225,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="commands" data-sec="1">
-<h2>Commands <em class="count">52 entries</em></h2>
+<h2>Commands <em class="count">53 entries</em></h2>
 <p class="blurb">What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein. A right-click on a thing with more than one answer, a weapon today, opens a small menu at the pointer whose rows are these commands; the menu's own words are listed after them.</p>
 <h3 class="nsh">Commands</h3>
 <div class="tbl">
@@ -1512,6 +1536,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">CB</div>
 </div>
+<div class="row gap" id="ui.command.sethearth" data-hay="make this the hearth ui.command.sethearth centre the colony's home on this campfire a house over a campfire" data-gap="1">
+<div class="nm">Make this the hearth<span class="k">ui.command.sethearth</span></div>
+<div class="dsc">Centre the colony's home on this campfire<span class="need">Needs drawing: a house over a campfire</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 </div>
 <h3 class="nsh">The context menu</h3>
 <div class="tbl">
@@ -1526,7 +1556,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="work" data-sec="1">
-<h2>Work and skills <em class="count">42 entries</em></h2>
+<h2>Work and skills <em class="count">57 entries</em></h2>
 <p class="blurb">The work types a colonist can be assigned, in priority order of urgency, the skills that govern how well they do them, and the schedule blocks that say when. Salvaging is ours: it sits beside mining because taking a ruin apart without wrecking what is inside it is a different craft from digging. Work and schedule share one tab and one table, so they share a page here.</p>
 <h3 class="nsh">Work types</h3>
 <div class="tbl">
@@ -1549,11 +1579,11 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> salvage gear</div>
 <div class="ms">M7</div>
 </div>
-<div class="row" id="ui.work.doctor" data-hay="doctor ui.work.doctor tend the injured and operate " data-gap="0">
+<div class="row" id="ui.work.doctor" data-hay="doctor ui.work.doctor treat the hurt, with medical supplies or without " data-gap="0">
 <div class="nm">Doctor<span class="k">ui.work.doctor</span></div>
-<div class="dsc">Tend the injured and operate</div>
+<div class="dsc">Treat the hurt, with medical supplies or without</div>
 <div class="art"><span class="pill">high</span> salvage gear</div>
-<div class="ms">M7</div>
+<div class="ms">M3</div>
 </div>
 <div class="row" id="ui.work.warden" data-hay="warden ui.work.warden feed, talk to and recruit prisoners " data-gap="0">
 <div class="nm">Warden<span class="k">ui.work.warden</span></div>
@@ -1567,11 +1597,11 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M7</div>
 </div>
-<div class="row" id="ui.work.cooking" data-hay="cooking ui.work.cooking prepare meals and butcher " data-gap="0">
+<div class="row" id="ui.work.cooking" data-hay="cooking ui.work.cooking work the bills at an electric cooker or a campfire " data-gap="0">
 <div class="nm">Cooking<span class="k">ui.work.cooking</span></div>
-<div class="dsc">Prepare meals and butcher</div>
+<div class="dsc">Work the bills at an electric cooker or a campfire</div>
 <div class="art"><span class="pill">high</span> action tiles</div>
-<div class="ms">M7</div>
+<div class="ms">M3</div>
 </div>
 <div class="row" id="ui.work.hunting" data-hay="hunting ui.work.hunting kill wild animals for meat " data-gap="0">
 <div class="nm">Hunting<span class="k">ui.work.hunting</span></div>
@@ -1685,11 +1715,11 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M2</div>
 </div>
-<div class="row" id="ui.skill.cooking" data-hay="cooking ui.skill.cooking meal quality, and food poisoning avoided " data-gap="0">
+<div class="row" id="ui.skill.cooking" data-hay="cooking ui.skill.cooking how fast a colonist cooks, and how seldom the meal burns " data-gap="0">
 <div class="nm">Cooking<span class="k">ui.skill.cooking</span></div>
-<div class="dsc">Meal quality, and food poisoning avoided</div>
+<div class="dsc">How fast a colonist cooks, and how seldom the meal burns</div>
 <div class="art"><span class="pill">high</span> action tiles</div>
-<div class="ms">M2</div>
+<div class="ms">M3</div>
 </div>
 <div class="row" id="ui.skill.growing" data-hay="growing ui.skill.growing yield and harvest speed " data-gap="0">
 <div class="nm">Growing<span class="k">ui.skill.growing</span></div>
@@ -1721,9 +1751,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M2</div>
 </div>
-<div class="row" id="ui.skill.medicine" data-hay="medicine ui.skill.medicine tending, surgery and survival odds " data-gap="0">
+<div class="row" id="ui.skill.medicine" data-hay="medicine ui.skill.medicine how fast a colonist treats the hurt " data-gap="0">
 <div class="nm">Medicine<span class="k">ui.skill.medicine</span></div>
-<div class="dsc">Tending, surgery and survival odds</div>
+<div class="dsc">How fast a colonist treats the hurt</div>
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M2</div>
 </div>
@@ -1792,10 +1822,108 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="ms">M7</div>
 </div>
 </div>
+<h3 class="nsh">Recipes</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.recipe.meal" data-hay="cook a meal ui.recipe.meal any raw food, three carrots' worth, into one meal a pan with food in it. our own concept" data-gap="1">
+<div class="nm">Cook a meal<span class="k">ui.recipe.meal</span></div>
+<div class="dsc">Any raw food, three carrots' worth, into one meal<span class="need">Needs drawing: a pan with food in it. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+</div>
+<h3 class="nsh">Bills, and the words of a station's pane</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.bill.heading" data-hay="bills ui.bill.heading what this station is told to make. the top one is worked first a list of orders pinned up. our own concept" data-gap="1">
+<div class="nm">Bills<span class="k">ui.bill.heading</span></div>
+<div class="dsc">What this station is told to make. The top one is worked first<span class="need">Needs drawing: a list of orders pinned up. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.add" data-hay="add a bill ui.bill.add put a new order at the bottom of the list a plus. interface furniture drawn as a hudglyph" data-gap="1">
+<div class="nm">Add a bill<span class="k">ui.bill.add</span></div>
+<div class="dsc">Put a new order at the bottom of the list<span class="need">Needs drawing: a plus. Interface furniture drawn as a HudGlyph</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.none" data-hay="no bills yet ui.bill.none nothing will be made here until a bill is added an empty list. interface words, no icon wanted" data-gap="1">
+<div class="nm">No bills yet<span class="k">ui.bill.none</span></div>
+<div class="dsc">Nothing will be made here until a bill is added<span class="need">Needs drawing: an empty list. Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.mode.until" data-hay="until you have ui.bill.mode.until cook while the colony holds fewer than this many meals, and start again when it drops below interface words, no icon wanted" data-gap="1">
+<div class="nm">Until you have<span class="k">ui.bill.mode.until</span></div>
+<div class="dsc">Cook while the colony holds fewer than this many meals, and start again when it drops below<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.mode.times" data-hay="make ui.bill.mode.times cook this many, then stop interface words, no icon wanted" data-gap="1">
+<div class="nm">Make<span class="k">ui.bill.mode.times</span></div>
+<div class="dsc">Cook this many, then stop<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.mode.forever" data-hay="forever ui.bill.mode.forever never stop cooking interface words, no icon wanted" data-gap="1">
+<div class="nm">Forever<span class="k">ui.bill.mode.forever</span></div>
+<div class="dsc">Never stop cooking<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.suspended" data-hay="paused ui.bill.suspended stopped by you. the next bill down is worked instead a pause mark. interface furniture drawn as a hudglyph" data-gap="1">
+<div class="nm">Paused<span class="k">ui.bill.suspended</span></div>
+<div class="dsc">Stopped by you. The next bill down is worked instead<span class="need">Needs drawing: a pause mark. Interface furniture drawn as a HudGlyph</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.done" data-hay="done ui.bill.done this bill's count is met. it starts again by itself when it needs to a tick. interface furniture drawn as a hudglyph" data-gap="1">
+<div class="nm">Done<span class="k">ui.bill.done</span></div>
+<div class="dsc">This bill's count is met. It starts again by itself when it needs to<span class="need">Needs drawing: a tick. Interface furniture drawn as a HudGlyph</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.unpowered" data-hay="no power ui.bill.unpowered the electric cooker needs power to cook. nothing on the hob will spoil in the meantime a broken plug. our own concept" data-gap="1">
+<div class="nm">No power<span class="k">ui.bill.unpowered</span></div>
+<div class="dsc">The electric cooker needs power to cook. Nothing on the hob will spoil in the meantime<span class="need">Needs drawing: a broken plug. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.waiting" data-hay="waiting for power ui.bill.waiting this bill will be worked once the station has power again interface words, no icon wanted" data-gap="1">
+<div class="nm">Waiting for power<span class="k">ui.bill.waiting</span></div>
+<div class="dsc">This bill will be worked once the station has power again<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.needs" data-hay="each meal: raw food, about 3 carrots ui.bill.needs a meal takes 500 of any raw food by nutrition: three carrots, or meat once there is any interface words, no icon wanted" data-gap="1">
+<div class="nm">Each meal: raw food, about 3 carrots<span class="k">ui.bill.needs</span></div>
+<div class="dsc">A meal takes 500 of any raw food by nutrition: three carrots, or meat once there is any<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.needs.fire" data-hay="each meal: raw food, about 3 carrots, and 1 wood ui.bill.needs.fire a campfire burns one wood for every meal it cooks interface words, no icon wanted" data-gap="1">
+<div class="nm">Each meal: raw food, about 3 carrots, and 1 wood<span class="k">ui.bill.needs.fire</span></div>
+<div class="dsc">A campfire burns one wood for every meal it cooks<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.supply" data-hay="raw food for {n} meals ui.bill.supply what the raw food on the map, in stores and on the ground, would cook into interface words, no icon wanted" data-gap="1">
+<div class="nm">Raw food for {n} meals<span class="k">ui.bill.supply</span></div>
+<div class="dsc">What the raw food on the map, in stores and on the ground, would cook into<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.nosupply" data-hay="no raw food on the map ui.bill.nosupply nothing to cook. grow carrots, or use the debug menu's give carrots an empty basket. our own concept" data-gap="1">
+<div class="nm">No raw food on the map<span class="k">ui.bill.nosupply</span></div>
+<div class="dsc">Nothing to cook. Grow carrots, or use the debug menu's Give carrots<span class="need">Needs drawing: an empty basket. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+</div>
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">47 entries</em></h2>
+<h2>Colonists <em class="count">60 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -1992,6 +2120,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.status.foraging" data-hay="picking ui.status.foraging picking the berries off a wild bush a hand picking a berry" data-gap="1">
+<div class="nm">Picking<span class="k">ui.status.foraging</span></div>
+<div class="dsc">Picking the berries off a wild bush<span class="need">Needs drawing: a hand picking a berry</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 <div class="row gap" id="ui.status.refuelling" data-hay="refuelling ui.status.refuelling carrying fuel to a generator and filling it " data-gap="1">
 <div class="nm">Refuelling<span class="k">ui.status.refuelling</span></div>
 <div class="dsc">Carrying fuel to a generator and filling it</div>
@@ -2093,6 +2227,82 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">A bandit carrying something off the board</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.status.treating" data-hay="treating ui.status.treating tending the hurt, or herself hands dressing a wound. blocked on the missing human figure" data-gap="1">
+<div class="nm">Treating<span class="k">ui.status.treating</span></div>
+<div class="dsc">Tending the hurt, or herself<span class="need">Needs drawing: hands dressing a wound. Blocked on the missing human figure</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.status.patient" data-hay="resting as a patient ui.status.patient in bed until the wound allows getting up a figure lying in bed. blocked on the missing human figure" data-gap="1">
+<div class="nm">Resting as a patient<span class="k">ui.status.patient</span></div>
+<div class="dsc">In bed until the wound allows getting up<span class="need">Needs drawing: a figure lying in bed. Blocked on the missing human figure</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.status.cooking" data-hay="cooking ui.status.cooking at an electric cooker or a campfire, or fetching food for the pan a figure stirring a pan. blocked on the missing human figure" data-gap="1">
+<div class="nm">Cooking<span class="k">ui.status.cooking</span></div>
+<div class="dsc">At an electric cooker or a campfire, or fetching food for the pan<span class="need">Needs drawing: a figure stirring a pan. Blocked on the missing human figure</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.status.sheltering" data-hay="sheltering ui.status.sheltering an animal waiting out the rain under a roof or a tree, or walking to one " data-gap="1">
+<div class="nm">Sheltering<span class="k">ui.status.sheltering</span></div>
+<div class="dsc">An animal waiting out the rain under a roof or a tree, or walking to one</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.status.inrain" data-hay="in the rain ui.status.inrain a colonist under open sky while it rains, and walking slower for it. said beside her pace " data-gap="1">
+<div class="nm">In the rain<span class="k">ui.status.inrain</span></div>
+<div class="dsc">A colonist under open sky while it rains, and walking slower for it. Said beside her pace</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+</div>
+<h3 class="nsh">Pace and what it is made of</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.stat.pace" data-hay="pace ui.stat.pace how fast a colonist walks, as a share of the standard walk. not the tile's walk speed, which is the ground " data-gap="1">
+<div class="nm">Pace<span class="k">ui.stat.pace</span></div>
+<div class="dsc">How fast a colonist walks, as a share of the standard walk. Not the tile's walk speed, which is the ground</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.stat.pace.rolled" data-hay="rolled ui.stat.pace.rolled the pace a colonist was born with, between 85% and 115% of the standard walk " data-gap="1">
+<div class="nm">Rolled<span class="k">ui.stat.pace.rolled</span></div>
+<div class="dsc">The pace a colonist was born with, between 85% and 115% of the standard walk</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.stat.pace.condition" data-hay="condition ui.stat.pace.condition what hunger, cold or heat is taking off her pace. never above 100%, never below 70% " data-gap="1">
+<div class="nm">Condition<span class="k">ui.stat.pace.condition</span></div>
+<div class="dsc">What hunger, cold or heat is taking off her pace. Never above 100%, never below 70%</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.stat.pace.rain" data-hay="rain ui.stat.pace.rain what walking in the rain under open sky takes off her pace. a roof or a tree gives it back " data-gap="1">
+<div class="nm">Rain<span class="k">ui.stat.pace.rain</span></div>
+<div class="dsc">What walking in the rain under open sky takes off her pace. A roof or a tree gives it back</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.stat.pace.drafted" data-hay="drafted ui.stat.pace.drafted a drafted colonist runs " data-gap="1">
+<div class="nm">Drafted<span class="k">ui.stat.pace.drafted</span></div>
+<div class="dsc">A drafted colonist runs</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.stat.pace.running" data-hay="running ui.stat.pace.running running to a fight or away from one " data-gap="1">
+<div class="nm">Running<span class="k">ui.stat.pace.running</span></div>
+<div class="dsc">Running to a fight or away from one</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.stat.pace.standard" data-hay="the standard walk ui.stat.pace.standard the pace tooltip when nothing is making her faster or slower " data-gap="1">
+<div class="nm">The standard walk<span class="k">ui.stat.pace.standard</span></div>
+<div class="dsc">The pace tooltip when nothing is making her faster or slower</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
 </div>
 </div>
 <p class="empty" hidden>No entries in this section match.</p>
@@ -2274,7 +2484,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="events" data-sec="1">
-<h2>Events <em class="count">45 entries</em></h2>
+<h2>Events <em class="count">48 entries</em></h2>
 <p class="blurb">Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.</p>
 <h3 class="nsh">Alerts</h3>
 <div class="tbl">
@@ -2429,6 +2639,18 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.alert.nohearth" data-hay="no hearth ui.alert.nohearth somebody is kept home, and there is no hearth: build or mark a campfire a campfire ring with no fire" data-gap="1">
+<div class="nm">No hearth<span class="k">ui.alert.nohearth</span></div>
+<div class="dsc">Somebody is kept home, and there is no hearth: build or mark a campfire<span class="need">Needs drawing: a campfire ring with no fire</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.alert.hearthdown" data-hay="hearth marked to come down ui.alert.hearthdown when it comes down the colony has no home a campfire under a deconstruct mark" data-gap="1">
+<div class="nm">Hearth marked to come down<span class="k">ui.alert.hearthdown</span></div>
+<div class="dsc">When it comes down the colony has no home<span class="need">Needs drawing: a campfire under a deconstruct mark</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 </div>
 <h3 class="nsh">Bulletins</h3>
 <div class="tbl">
@@ -2442,6 +2664,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.bulletin.scrapdrop" data-hay="scrap drop ui.bulletin.scrapdrop scrap metal fell from the sky scrap metal falling from the sky. our own concept" data-gap="1">
 <div class="nm">Scrap drop<span class="k">ui.bulletin.scrapdrop</span></div>
 <div class="dsc">Scrap metal fell from the sky<span class="need">Needs drawing: scrap metal falling from the sky. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bulletin.medicaldrop" data-hay="medical drop ui.bulletin.medicaldrop medical supplies fell from the sky medical supplies falling from the sky. our own concept" data-gap="1">
+<div class="nm">Medical drop<span class="k">ui.bulletin.medicaldrop</span></div>
+<div class="dsc">Medical supplies fell from the sky<span class="need">Needs drawing: medical supplies falling from the sky. Our own concept</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -2738,7 +2966,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">127 entries</em></h2>
+<h2>World and interface <em class="count">134 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -2809,15 +3037,45 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.terrain.tree.conifer" data-hay="conifer ui.terrain.tree.conifer an evergreen of the meadow. chopped for wood " data-gap="1">
-<div class="nm">Conifer<span class="k">ui.terrain.tree.conifer</span></div>
-<div class="dsc">An evergreen of the meadow. Chopped for wood</div>
+<div class="row gap" id="ui.terrain.tree.birch" data-hay="birch ui.terrain.tree.birch a slim white-barked tree. quick to chop, not much wood in it a slim pale-trunked tree" data-gap="1">
+<div class="nm">Birch<span class="k">ui.terrain.tree.birch</span></div>
+<div class="dsc">A slim white-barked tree. Quick to chop, not much wood in it<span class="need">Needs drawing: a slim pale-trunked tree</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.terrain.tree.broadleaf" data-hay="broadleaf ui.terrain.tree.broadleaf a broad-crowned tree of the meadow. chopped for wood " data-gap="1">
-<div class="nm">Broadleaf<span class="k">ui.terrain.tree.broadleaf</span></div>
-<div class="dsc">A broad-crowned tree of the meadow. Chopped for wood</div>
+<div class="row gap" id="ui.terrain.tree.meadow" data-hay="meadow tree ui.terrain.tree.meadow a broad round-crowned tree of the open meadow. chopped for wood a round-crowned tree" data-gap="1">
+<div class="nm">Meadow tree<span class="k">ui.terrain.tree.meadow</span></div>
+<div class="dsc">A broad round-crowned tree of the open meadow. Chopped for wood<span class="need">Needs drawing: a round-crowned tree</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.tree.fruit" data-hay="fruit tree ui.terrain.tree.fruit a low spreading tree. it will bear fruit one day; for now it is wood a low tree with a spreading crown" data-gap="1">
+<div class="nm">Fruit tree<span class="k">ui.terrain.tree.fruit</span></div>
+<div class="dsc">A low spreading tree. It will bear fruit one day; for now it is wood<span class="need">Needs drawing: a low tree with a spreading crown</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.tree.giant" data-hay="giant tree ui.terrain.tree.giant a rare old giant. slow to bring down, and a great deal of wood a towering tree dwarfing a figure" data-gap="1">
+<div class="nm">Giant tree<span class="k">ui.terrain.tree.giant</span></div>
+<div class="dsc">A rare old giant. Slow to bring down, and a great deal of wood<span class="need">Needs drawing: a towering tree dwarfing a figure</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.bush" data-hay="bush ui.terrain.bush dense undergrowth. slow to push through; cleared before anything is built here a round green bush" data-gap="1">
+<div class="nm">Bush<span class="k">ui.terrain.bush</span></div>
+<div class="dsc">Dense undergrowth. Slow to push through; cleared before anything is built here<span class="need">Needs drawing: a round green bush</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.bush.berry" data-hay="berry bush ui.terrain.bush.berry a bush that bears berries a bush dotted with red berries" data-gap="1">
+<div class="nm">Berry bush<span class="k">ui.terrain.bush.berry</span></div>
+<div class="dsc">A bush that bears berries<span class="need">Needs drawing: a bush dotted with red berries</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.bush.picked" data-hay="picked berry bush ui.terrain.bush.picked a berry bush picked bare, growing its berries back a bare bush with no berries" data-gap="1">
+<div class="nm">Picked berry bush<span class="k">ui.terrain.bush.picked</span></div>
+<div class="dsc">A berry bush picked bare, growing its berries back<span class="need">Needs drawing: a bare bush with no berries</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -2942,6 +3200,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Nets, and which of them are short</div>
 <div class="art"><span class="pill">high</span> salvage gear</div>
 <div class="ms">M1</div>
+</div>
+<div class="row gap" id="ui.overlay.home" data-hay="home ui.overlay.home the colony's home: the base joined to the hearth, and five cells round it a house, drawn as a path (docs/reference/mockups/home-glyph.svg)" data-gap="1">
+<div class="nm">Home<span class="k">ui.overlay.home</span></div>
+<div class="dsc">The colony's home: the base joined to the hearth, and five cells round it<span class="need">Needs drawing: a house, drawn as a path (docs/reference/mockups/home-glyph.svg)</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
 </div>
 <div class="row" id="ui.overlay.salvage" data-hay="salvage density ui.overlay.salvage where the worthwhile scrap is " data-gap="0">
 <div class="nm">Salvage density<span class="k">ui.overlay.salvage</span></div>
@@ -3118,6 +3382,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Everything in the colony's stores, and which store holds it</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">INV</div>
+</div>
+<div class="row gap" id="ui.tab.assign" data-hay="assign ui.tab.assign where each colonist may work, and what she does about danger drawn with ui.tab.colonists' art (hudcommands.iconof)" data-gap="1">
+<div class="nm">Assign<span class="k">ui.tab.assign</span></div>
+<div class="dsc">Where each colonist may work, and what she does about danger<span class="need">Needs drawing: drawn with ui.tab.colonists' art (HudCommands.IconOf)</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">HA</div>
 </div>
 </div>
 <h3 class="nsh">Game speed</h3>
@@ -3728,7 +3998,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 839, "gaps": 567};</script>
+<script>window.WIKI={"total": 891, "gaps": 619};</script>
 <script>
 (function(){
   var D = window.WIKI;

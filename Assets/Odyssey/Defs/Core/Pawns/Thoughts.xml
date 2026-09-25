@@ -13,9 +13,16 @@
     <durationTicks>30000</durationTicks>
   </ThoughtDef>
 
+  <!--
+    What a colonist thinks of what she ate (design 48 section 4). Before the kitchen every food was
+    this thought at +20; it is the cooked meal's now, and worth more (+50, the reference's fine
+    meal on this scale, where mood runs 0 to 1000 and the reference's points are tenths). The
+    ration pack keeps the old +20 as Thought_AteRation, so a colony living on rations feels what it
+    always felt. A quarter of a day each, and the good ones stack twice.
+  -->
   <ThoughtDef>
     <defName>Thought_AteMeal</defName>
-    <moodOffset>20</moodOffset>
+    <moodOffset>50</moodOffset>
     <durationTicks>15000</durationTicks>
     <stackLimit>2</stackLimit>
   </ThoughtDef>
@@ -90,6 +97,31 @@
     <moodOffset>-60</moodOffset>
     <durationTicks>180000</durationTicks>
     <stackLimit>3</stackLimit>
+  </ThoughtDef>
+
+  <!--
+    The kitchen (design 48 section 4), appended: a thought index rides every saved memory. The
+    ration keeps what every food was worth before (+20). Burnt food and raw food are the
+    reference's shape softened (-4 and -7 there, in points that are tenths of ours): a colony on
+    carrots minds it and is not miserable. Neither stacks, so two carrots are one grievance.
+  -->
+  <ThoughtDef>
+    <defName>Thought_AteRation</defName>
+    <moodOffset>20</moodOffset>
+    <durationTicks>15000</durationTicks>
+    <stackLimit>2</stackLimit>
+  </ThoughtDef>
+
+  <ThoughtDef>
+    <defName>Thought_AteBurnt</defName>
+    <moodOffset>-40</moodOffset>
+    <durationTicks>15000</durationTicks>
+  </ThoughtDef>
+
+  <ThoughtDef>
+    <defName>Thought_AteRaw</defName>
+    <moodOffset>-50</moodOffset>
+    <durationTicks>15000</durationTicks>
   </ThoughtDef>
 
 </Defs>

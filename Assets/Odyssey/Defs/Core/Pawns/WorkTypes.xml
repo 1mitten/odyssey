@@ -25,13 +25,13 @@
   <WorkTypeDef>
     <defName>Work_Haul</defName>
     <label>hauling</label>
-    <order>4</order>
+    <order>5</order>
   </WorkTypeDef>
 
   <WorkTypeDef>
     <defName>Work_Cutting</defName>
     <label>cutting</label>
-    <order>2</order>
+    <order>3</order>
     <rateSkill>1</rateSkill>
     <workRateBasePerMille>600</workRateBasePerMille>
     <workRateSlopePerLevel>100</workRateSlopePerLevel>
@@ -40,7 +40,7 @@
   <WorkTypeDef>
     <defName>Work_Mining</defName>
     <label>mining</label>
-    <order>3</order>
+    <order>4</order>
     <rateSkill>2</rateSkill>
     <workRateBasePerMille>550</workRateBasePerMille>
     <workRateSlopePerLevel>105</workRateSlopePerLevel>
@@ -115,7 +115,40 @@
   <WorkTypeDef>
     <defName>Work_Rescue</defName>
     <label>rescue</label>
-    <order>5</order>
+    <order>6</order>
+  </WorkTypeDef>
+
+  <!--
+    Treating the hurt (design 37): the ui.work.doctor column. Its giver is an emergency one, like
+    rescue's, so the order only matters among ordinary types, which it never is. Medicine buys
+    speed on cutting's and growing's curve - a novice treats at six tenths of the tuned pace and
+    each level buys a tenth more - because a difference would be a claim needing a measurement.
+  -->
+  <WorkTypeDef>
+    <defName>Work_Doctor</defName>
+    <label>doctor</label>
+    <order>7</order>
+    <rateSkill>6</rateSkill>
+    <workRateBasePerMille>600</workRateBasePerMille>
+    <workRateSlopePerLevel>100</workRateSlopePerLevel>
+  </WorkTypeDef>
+
+  <!--
+    Working the bills at a galley or a campfire (design 48 section 5): the ui.work.cooking column.
+    It scans after growing and before cutting - the reference's own place for it - so a hungry
+    colony cooks before it fells, and cutting, mining, hauling and the two emergency types moved
+    down one rank to make room. The order is a scan rank and nothing saves it.
+
+    The rate is a-18's: cooking speed 40 per cent at level 0 and 100 at level 10, so 400 and 60
+    here. That is steeper than cutting's because cooking is where the reference's curve is.
+  -->
+  <WorkTypeDef>
+    <defName>Work_Cooking</defName>
+    <label>cooking</label>
+    <order>2</order>
+    <rateSkill>7</rateSkill>
+    <workRateBasePerMille>400</workRateBasePerMille>
+    <workRateSlopePerLevel>60</workRateSlopePerLevel>
   </WorkTypeDef>
 
 </Defs>

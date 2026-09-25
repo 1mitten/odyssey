@@ -214,11 +214,19 @@ namespace Odyssey.Tests.Hud
         /// <para>A seventh is a different argument and should be made here too. The ceiling is
         /// the thing stopping the strip becoming a second palette, and its value has never been
         /// the point — what matters is that raising it costs somebody a paragraph.</para>
+        ///
+        /// <para><b>And from six to seven on 2026-09-25, for Harvest</b> (design 45 §6). It is the
+        /// other half of Fell: both are verbs over the wild plants on the board, given over the
+        /// same bushes, and a player clearing a meadow and picking it are doing one job with two
+        /// hands. It sits beside Fell so the pair is learned as a pair, in a colour of its own.
+        /// The Build palette has no Orders row to put it in instead, which is the other half of
+        /// the argument. <b>It is recorded as an owner decision to confirm</b>: if the strip reads
+        /// long at seven, Harvest is the one to move.</para>
         /// </summary>
         [Test]
         public void ThePinnedRowStaysShort()
         {
-            Assert.That(PaletteTools.Pinned.Length, Is.LessThanOrEqualTo(6));
+            Assert.That(PaletteTools.Pinned.Length, Is.LessThanOrEqualTo(7));
         }
 
         /// <summary>
@@ -366,6 +374,8 @@ namespace Odyssey.Tests.Hud
                 // Power (design 32): the generator and the heater are built of wood or stone; the
                 // line is always wood and asks nothing, and taking one up is an order.
                 PaletteTools.Generator, PaletteTools.Heater,
+                // The kitchen (design 48 §5): the galley is built of wood or stone like the heater.
+                PaletteTools.Galley,
             };
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(tool.WantsMaterial, Is.EqualTo(System.Array.IndexOf(built, tool.Key) >= 0),

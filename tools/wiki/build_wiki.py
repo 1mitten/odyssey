@@ -45,13 +45,13 @@ SECTIONS = [
      "come from the setting, such as stripping a shell rather than mining a vein. A right-click on "
      "a thing with more than one answer, a weapon today, opens a small menu at the pointer whose "
      "rows are these commands; the menu's own words are listed after them."),
-    ("work", "Work and skills", ["ui.work", "ui.skill", "ui.schedule"],
+    ("work", "Work and skills", ["ui.work", "ui.skill", "ui.schedule", "ui.recipe", "ui.bill"],
      "The work types a colonist can be assigned, in priority order of urgency, the skills that "
      "govern how well they do them, and the schedule blocks that say when. Salvaging is ours: it "
      "sits beside mining because taking a ruin apart without wrecking what is inside it is a "
      "different craft from digging. Work and schedule share one tab and one table, so they share "
      "a page here."),
-    ("colonists", "Colonists", ["ui.pawn", "ui.need", "ui.mood", "ui.status"],
+    ("colonists", "Colonists", ["ui.pawn", "ui.need", "ui.mood", "ui.status", "ui.stat"],
      "Who is on the map, what they need, how they feel and what they are doing right now. This is "
      "the section with the least art: no sheet contains a human figure."),
     ("health", "Health and anatomy", ["ui.health"],
@@ -81,8 +81,10 @@ NS_TITLES = {
     "ui.arch.category": "Architect categories", "ui.arch.tool": "Architect tools",
     "ui.command": "Commands", "ui.menu": "The context menu", "ui.work": "Work types", "ui.skill": "Skills",
     "ui.schedule": "Schedule blocks",
+    "ui.recipe": "Recipes", "ui.bill": "Bills, and the words of a station's pane",
     "ui.pawn": "Kinds of pawn", "ui.need": "Needs", "ui.mood": "Mood states",
-    "ui.status": "Current activity", "ui.health": "Body parts and conditions",
+    "ui.status": "Current activity", "ui.stat": "Pace and what it is made of",
+    "ui.health": "Body parts and conditions",
     "ui.alert": "Alerts", "ui.bulletin": "Bulletins", "ui.toast": "Toasts",
     "ui.weather": "Weather",
     "ui.overlay": "Overlays", "ui.layer": "Layer controls", "ui.tab": "Tabs",

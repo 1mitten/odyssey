@@ -48,7 +48,7 @@ namespace Odyssey.Sim.Pawns
 
                     int cell = ctx.Cells.NearestWalkableInColumn(x, z, at.Y);
                     if (cell < 0 || cell == pawn.Cell) continue;
-                    if (!ctx.Reachable(pawn, cell, mode)) continue;
+                    if (!ctx.CanTravel(pawn, cell, mode)) continue;
                     return cell;
                 }
                 if (reach == 1) break;

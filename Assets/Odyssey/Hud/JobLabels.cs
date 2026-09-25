@@ -49,6 +49,13 @@ namespace Odyssey.Hud
             // A bandit carrying something off the board (design 33 §17), JobHandle 22. With a
             // load in its arms the line reads "Stealing · Meal × 12" by Carrying below.
             "ui.status.stealing",
+            // Medical supplies (design 37): Job_Treat and Job_Patient, 23 and 24, after Steal.
+            "ui.status.treating", "ui.status.patient",
+            // Picking a berry bush (design 45 §6), JobHandle 25, after medical supplies.
+            "ui.status.foraging",
+            // The kitchen (design 48): Job_Cook, 26 — fetching food for the pan reads as cooking,
+            // because it is the bill being worked.
+            "ui.status.cooking",
         };
 
         public static string IconKey(int jobDef) =>

@@ -75,7 +75,7 @@ namespace Odyssey.Tests.Sim
             public void Tree(int x, int z, int y)
             {
                 int c = Cell(x, z, y);
-                Edifices.Add(new PlacedEdifice { CellIndex = c, Def = NaturalContent.EdificeTreeConifer, Stuff = NaturalContent.StuffWood });
+                Edifices.Add(new PlacedEdifice { CellIndex = c, Def = NaturalContent.EdificeTreeBirch, Stuff = NaturalContent.StuffWood });
                 Cells.Edifice[c] = Edifices.Count - 1;
                 Chunks.MarkDirty(x, z, y);
             }
