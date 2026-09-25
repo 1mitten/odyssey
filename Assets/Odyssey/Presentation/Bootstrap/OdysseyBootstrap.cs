@@ -399,6 +399,9 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         readonly Rendering.PawnCrowdIndex _crowd = new Rendering.PawnCrowdIndex();
 
+        /// <summary>This frame's crowd index, for a pose asked for outside the draw passes.</summary>
+        public Rendering.PawnCrowdIndex CrowdIndex => _crowd;
+
         readonly double[] _sectionMs = new double[(int)FrameSection.Count];
         readonly Stopwatch _sectionTimer = new Stopwatch();
 
@@ -2886,7 +2889,7 @@ namespace Odyssey.Presentation.Bootstrap
                 for (int i = 0; i < selected.Count && lines < MaxSightLines; i++)
                 {
                     if (!snapshot.TryGetPawn(selected[i], out PawnView pawn)) continue;
-                    _sight.Add(eye, FeetOf(pawn, movePerTick) + Vector3.up * lift);
+                    _sight.Add(eye, FeetOf(pawn, snapshot.Pawns, movePerTick) + Vector3.up * lift);
                     lines++;
                 }
             }
@@ -2905,7 +2908,7 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 if (!pawns[i].IsColonist) continue;
                 if (selection != null && selection.HasPawn && Selected(selection.Pawns, pawns[i].Id)) continue;
-                Vector3 feet = FeetOf(pawns[i], movePerTick);
+                Vector3 feet = FeetOf(pawns[i], pawns, movePerTick);
                 _sightCandidates.Add((Flat(feet - focus), feet + Vector3.up * lift));
             }
             lines += AddNearest(eye, MaxColonistSightLines);
@@ -2917,10 +2920,12 @@ namespace Odyssey.Presentation.Bootstrap
             SightLinesLastFrame = _sight.Count;
         }
 
-        Vector3 FeetOf(in PawnView pawn, int movePerTick)
+        // Runs before the frame's crowd index is rebuilt, so it takes the linear scan: bounded by the
+        // sight-line count, and a stale index would miss a colonist who arrived this tick.
+        Vector3 FeetOf(in PawnView pawn, System.ReadOnlySpan<PawnView> everyone, int movePerTick)
         {
             if (_figures != null && _figures.TryGetFeet(pawn.Id, out Vector3 feet)) return feet;
-            return PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+            return PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model, everyone);
         }
 
         static float Flat(Vector3 v) => v.x * v.x + v.z * v.z;
@@ -3088,7 +3093,7 @@ namespace Odyssey.Presentation.Bootstrap
                 if (!snapshot.TryGetPawn(mark.Pawn, out PawnView pawn)) continue;
 
                 if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model, snapshot.Pawns, _crowd);
                 _renderer.DrawMarker(feet + Vector3.up * (colonistCursor.y + DraftMarkerLift), DraftMarkerSize, hue);
 
                 if (mark.OrderCell < 0 || selection == null || !IsSelected(selection, pawn.Id)) continue;
@@ -3102,7 +3107,7 @@ namespace Odyssey.Presentation.Bootstrap
                 if (!snapshot.TryGetPawn(order.Pawn, out PawnView pawn)) continue;
 
                 if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model, snapshot.Pawns, _crowd);
                 DrawOrderLine(feet, order.OrderCell, line);
             }
         }
@@ -3246,7 +3251,7 @@ namespace Odyssey.Presentation.Bootstrap
                 if (!bar && !hostile) continue;
 
                 if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model, snapshot.Pawns, _crowd);
 
                 // The top of the pawn as the cursor has it: the colonist's box, an animal's own,
                 // and a body on the ground much lower.
@@ -3321,7 +3326,7 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 LockOnRings.Ring ring = rings[i];
                 if (snapshot.TryGetPawn(ring.Target, out PawnView pawn))
-                    _ringPlaces[ring.Target.Value] = RingPlaceOf(in pawn, movePerTick);
+                    _ringPlaces[ring.Target.Value] = RingPlaceOf(in pawn, snapshot.Pawns, movePerTick);
                 if (!_ringPlaces.TryGetValue(ring.Target.Value, out RingPlace place)) continue;
                 if (place.Layer < lowest || place.Layer > highest || ring.Alpha <= 0f) continue;
                 if (snapshot.TryGetPawn(ring.Target, out PawnView standing)
@@ -3351,10 +3356,10 @@ namespace Odyssey.Presentation.Bootstrap
         /// (<see cref="PawnFigureDirector.TryGetAnimalBox"/>) centred where the box is, a person
         /// the colonist cursor's box at the feet, and a person lying down half a body's length.
         /// </summary>
-        RingPlace RingPlaceOf(in PawnView pawn, int movePerTick)
+        RingPlace RingPlaceOf(in PawnView pawn, System.ReadOnlySpan<PawnView> everyone, int movePerTick)
         {
             if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+                feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model, everyone, _crowd);
 
             if (pawn.IsAnimal && _figures != null
                 && _figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 box, out Vector3 size))
@@ -3456,7 +3461,7 @@ namespace Odyssey.Presentation.Bootstrap
                     // uses it: a working colonist is stepped off their cell, and a bracket drawn from
                     // the pose would sit on the cell while the person stands beside it.
                     if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                        feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+                        feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model, snapshot.Pawns, _crowd);
                     _renderer.DrawSelectionBracket(
                         feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, strength, seeThrough: true);
                 }
