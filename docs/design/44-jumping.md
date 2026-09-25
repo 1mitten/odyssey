@@ -164,6 +164,20 @@ could see named, so `ui.debug.jumpsfail` is in `icon-keys.csv` and the wiki move
 - **An early return, above the wading line.** A jump is drawn from its own curve, never through
   `OnTheDrawnGround`'s clamp: that clamp samples the bank under whichever cell the figure is over,
   and a figure over the gap is 2.5 m from either cell's centre.
+- **The lip is the last dry ground, not the cell's edge** (owner's first play, 2026-09-25: *"the
+  jump should happen on land (and not in water which I see it does) — it has to happen from the
+  ledge"*). The shoreline (design 38 §24), which reached `main` while this was in review, draws a
+  bank sloping into the stream: along a straight bank the water's edge is about 0.7 m from the
+  bank's centre, and the cell's edge 1.25 m out is 1.5 m down the slope and 0.66 m under the
+  water. Taking off there walked the figure into the stream to leap out of it. `JumpArc.Lips`
+  now walks out from each bank's centre in 5 cm steps on the drawn ground (`BankLayout.RiseAt`,
+  the one surface owner) and stops where it comes within `DryClearance` (20 cm) of the water's
+  surface: at 20 cm the lips on a straight stream are 0.5 m out and the flight is 4.0 m rather than
+  2.5, which clears the 3.6 m of water the shoreline draws. 10 cm was tried on paper first and
+  left the take-off 0.72 m down the slope, inside the damp band painted at the water's edge. **The time shares do not move** — the approach still takes its quarter of the step, so the
+  figure slows to about half walking pace as it comes to the edge, which reads as gathering
+  itself, and the air is quicker. With no world or no slope the lip is the cell's edge, as
+  before. `JumpArcTests.OnAShoreline…`, whose control is that the old edge really is under water.
 - **Pace**: the approach and the departure are walked; the flight holds the clip's 0.9 s at its
   centre with a gather before and a settle after.
 - **Height**: a parabola over the chord between the two lips, its apex from gravity for the

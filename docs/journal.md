@@ -12608,3 +12608,12 @@ asset by hand with empty clip references until the owner's rebuild fills them.
 review. Left as 43, `Intents.cs` would have cited "design 43 §6" for the jump and "design 43 §8" for
 the sky three lines apart. Only the lines this branch added were rewritten; the weather's own
 references are untouched.
+
+**First play, same day: the jump took off in the water, the legs did not move, and the women's jump
+was the men's.** The last two were one cause: the catalogue had never been rebuilt, so all four
+clip references were still empty and every figure glided the arc in its walk. The first was the
+merge: the shoreline (design 38 §24) reached `main` while this was in review and slopes each bank
+into the stream, so the cell's edge the arc took off from is 0.66 m under the drawn water. The lip
+is found on the drawn ground now, the last point at least 20 cm above the water (design 44 §7).
+Every jump test had run on a board with no world under it, which is why none could see it; the
+new ones build a stream with the shoreline on, and their control is that the old edge is wet.

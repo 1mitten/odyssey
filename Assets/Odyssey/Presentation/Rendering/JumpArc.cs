@@ -15,8 +15,10 @@ namespace Odyssey.Presentation.Rendering
     /// decides where the figure is between the two ends. It cannot move a pawn or touch the hash.
     ///
     /// <para><b>The shape is read off the price.</b> A jump costs two cells of walking, so a
-    /// quarter of the step is the 1.25 m from the bank's centre to its lip, walked at walking pace,
-    /// and the last quarter is the same off the far lip. The middle half is the flight: the
+    /// quarter of the step is the walk from the bank's centre to its lip — 1.25 m at walking pace
+    /// on a square bank, less and slower where the shoreline slopes the bank into the water and
+    /// the lip is the last dry ground (<see cref="Lips"/>) — and the last quarter is the same off
+    /// the far lip. The middle half is the flight: the
     /// pack's take-off clip at the lip (the gather), the air, and the pack's landing clip on the
     /// far lip (the settle). Every share is a fraction of the step, not a number of seconds, so a
     /// drafted colonist — who runs, and so jumps in half the time — plays the same clips at
@@ -92,11 +94,18 @@ namespace Odyssey.Presentation.Rendering
         /// so its lip is half way along instead of a quarter, and it finishes the flight at the
         /// water's centre — where it floats, and where the step ends.</para>
         /// </summary>
-        public static float Along(float t, bool short_)
+        public static float Along(float t, bool short_) =>
+            Along(t, short_, short_ ? 0.5f : Approach, short_ ? 1f : 1f - Approach);
+
+        /// <summary>
+        /// <see cref="Along(float, bool)"/> with the two lips where the drawn ground puts them, as
+        /// shares of the straight line from the bank's centre to the step's far end
+        /// (<see cref="Lips"/>). The time shares do not move — only how far the approach walks in
+        /// its quarter, and how far the flight carries.
+        /// </summary>
+        public static float Along(float t, bool short_, float lip, float farLip)
         {
             t = Mathf.Clamp01(t);
-            float lip = short_ ? 0.5f : Approach;
-            float farLip = short_ ? 1f : 1f - Approach;
             if (t <= Approach) return lip * (t / Approach);
             if (t >= 1f - Approach) return short_ ? 1f : farLip + (1f - farLip) * ((t - (1f - Approach)) / Approach);
             return Mathf.Lerp(lip, farLip, AirProgress(t));
@@ -128,13 +137,13 @@ namespace Odyssey.Presentation.Rendering
             Vector3 to = CellMetrics.FloorCentre(pawn.NextCell);
             Vector3 flat = new Vector3(to.x - from.x, 0f, to.z - from.z);
 
-            float s = Along(t, short_);
+            Lips(world, in pawn, out float lipS, out float farLipS);
+            float s = Along(t, short_, lipS, farLipS);
             Vector3 at = from + flat * s;
             t = Mathf.Clamp01(t);
 
             if (t <= Approach) return new Vector3(at.x, GroundAt(world, pawn.Cell, at.x, at.z), at.z);
 
-            float lipS = short_ ? 0.5f : Approach;
             Vector3 lip = from + flat * lipS;
             float take = GroundAt(world, pawn.Cell, lip.x, lip.z);
 
@@ -145,7 +154,7 @@ namespace Odyssey.Presentation.Rendering
             if (short_) land = WaterLine.RestingHeight(world, pawn.NextCell);
             else
             {
-                Vector3 farLip = from + flat * (1f - Approach);
+                Vector3 farLip = from + flat * farLipS;
                 land = GroundAt(world, pawn.NextCell, farLip.x, farLip.z);
             }
 
@@ -170,6 +179,74 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static float GroundAt(WorldRenderModel? world, CellRef cell, float x, float z) =>
             CellMetrics.FloorCentre(cell).y + GroundRelief.HeightAt(x, z) + BankLayout.RiseAt(world, cell, x, z);
+
+        /// <summary>
+        /// How far above the water a lip must stand, in metres: enough that the feet at the gather
+        /// and the settle are plainly on grass and not at the water's edge.
+        /// </summary>
+        public const float DryClearance = 0.20f;
+
+        /// <summary>How finely <see cref="DryReach"/> walks out towards the water: every 5 cm.</summary>
+        const int ReachSamples = 25;
+
+        /// <summary>
+        /// Where the two lips are for this jump, as shares of the straight line from the bank's
+        /// centre to the step's far end: <paramref name="lip"/> the take-off, <paramref name="farLip"/>
+        /// the landing (one for a short jump, which comes down at the water's centre).
+        ///
+        /// <para><b>The lip is the last dry ground, not the cell's edge</b> (owner, 2026-09-25:
+        /// <i>"the jump should happen on land … from the ledge"</i>). The shoreline (design 38 §24)
+        /// draws a bank sloping into the stream so the water's edge is about 0.7 m from the bank's
+        /// centre, and the cell's edge 1.25 m out is 1.5 m down that slope and under the water. A
+        /// take-off there walked the figure into the stream to leap out of it. So each lip is
+        /// found on the drawn ground itself, which is the only surface that can say where the
+        /// grass ends; with no world, or no slope, it is the cell's edge as before.</para>
+        /// </summary>
+        public static void Lips(WorldRenderModel? world, in PawnView pawn, out float lip, out float farLip)
+        {
+            bool short_ = !IsFullJump(in pawn);
+            float span = short_ ? CellMetrics.SizeXZ : 2f * CellMetrics.SizeXZ;
+            CellRef water = short_ ? pawn.NextCell : StreamBetween(world, pawn.Cell, pawn.NextCell);
+
+            Vector3 from = CellMetrics.FloorCentre(pawn.Cell), to = CellMetrics.FloorCentre(pawn.NextCell);
+            Vector3 out_ = new Vector3(to.x - from.x, 0f, to.z - from.z).normalized;
+
+            lip = DryReach(world, pawn.Cell, out_, water) / span;
+            farLip = short_ ? 1f : 1f - DryReach(world, pawn.NextCell, -out_, water) / span;
+        }
+
+        /// <summary>
+        /// How far from a bank's centre towards the stream, in metres, the drawn ground stays at
+        /// least <see cref="DryClearance"/> above the water's surface — at most half a cell, the
+        /// cell's edge. The relief is left out of both sides of the comparison because the water
+        /// sheet is draped by the same field as the ground under it.
+        /// </summary>
+        public static float DryReach(WorldRenderModel? world, CellRef bank, Vector3 towards, CellRef water)
+        {
+            if (world == null || !WaterLine.IsWater(world, water)) return CellMetrics.HalfXZ;
+
+            Vector3 centre = CellMetrics.FloorCentre(bank);
+            float surface = CellMetrics.FloorCentre(water).y + WaterLine.SurfaceAbove(world, water);
+            float reach = 0f;
+            for (int i = 1; i <= ReachSamples; i++)
+            {
+                float d = CellMetrics.HalfXZ * i / ReachSamples;
+                float x = centre.x + towards.x * d, z = centre.z + towards.z * d;
+                if (centre.y + BankLayout.RiseAt(world, bank, x, z) < surface + DryClearance) break;
+                reach = d;
+            }
+            return reach;
+        }
+
+        /// <summary>
+        /// The water cell a full jump clears: the cell between the two banks, a layer down where
+        /// the stream is cut into the ground, else level with them.
+        /// </summary>
+        static CellRef StreamBetween(WorldRenderModel? world, CellRef near, CellRef far)
+        {
+            var below = new CellRef((near.X + far.X) / 2, (near.Z + far.Z) / 2, near.Y - 1);
+            return WaterLine.IsWater(world, below) ? below : new CellRef(below.X, below.Z, near.Y);
+        }
 
         /// <summary>
         /// How much of the figure is off the ground, 0 to 1, for the footing to fade by: through

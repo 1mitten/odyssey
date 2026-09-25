@@ -2,7 +2,9 @@
 using NUnit.Framework;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
+using Odyssey.Presentation.World;
 using Odyssey.Sim.Pathing;
+using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
 
 namespace Odyssey.Tests.Presentation
@@ -10,9 +12,10 @@ namespace Odyssey.Tests.Presentation
     /// <summary>
     /// How a figure is drawn jumping a one-cell stream, or falling short into it (design 44 §7).
     ///
-    /// <para>Everything here is on a board with no world under it — flat ground, no relief, no
-    /// banks — so the numbers are the arc's own and not the terrain's. What only a board can show
-    /// (a real stream, a bank sloping into the water) is the Unity tier's and the owner's.</para>
+    /// <para>Most of this is on a board with no world under it — flat ground, no relief, no banks
+    /// — so the numbers are the arc's own and not the terrain's. The <c>OnAShoreline</c> tests are
+    /// the exception, because a bank sloping into the water is where the owner's first play found
+    /// the jump taking off in the stream, and no world-free test could see that.</para>
     /// </summary>
     public class JumpArcTests
     {
@@ -184,6 +187,110 @@ namespace Odyssey.Tests.Presentation
                 Assert.That(heading.x, Is.GreaterThan(0f), "a jump faces where it is going");
             }
         }
+
+        // ------------------------------------------------------------------ on a real shoreline
+
+        /// <summary>
+        /// A stream one cell wide at x = 5, drawn with the shoreline on (design 38 §24): grass at
+        /// layer 0, and at layer 1 grass or water — the same cells as <see cref="Near"/>,
+        /// <see cref="Water"/> and <see cref="Far"/>. The water's surface is 5.16 m, 0.84 m under
+        /// the banks' 6 m tops.
+        /// </summary>
+        static WorldRenderModel Stream()
+        {
+            var world = new RenderTestWorld(12, 12, 4);
+            for (int z = 0; z < 12; z++)
+            for (int x = 0; x < 12; x++)
+            {
+                world.Solid(x, z, 0, NaturalContent.TerrainGrass);
+                if (x == 5) world.Surface(x, z, 1, NaturalContent.TerrainShallowWater);
+                else world.Solid(x, z, 1, NaturalContent.TerrainGrass);
+            }
+            return world.Publish().Model;
+        }
+
+        static float WaterSurface(WorldRenderModel world) =>
+            CellMetrics.FloorCentre(Water).y + WaterLine.SurfaceAbove(world, Water);
+
+        /// <summary>Run a test body on the drawn shoreline, putting the switches back after.</summary>
+        static void OnTheShoreline(System.Action<WorldRenderModel> body)
+        {
+            bool skin = GroundSkin.Enabled, shore = WaterShore.Enabled;
+            GroundSkin.Enabled = true;
+            WaterShore.Enabled = true;
+            try { body(Stream()); }
+            finally
+            {
+                GroundSkin.Enabled = skin;
+                WaterShore.Enabled = shore;
+            }
+        }
+
+        /// <summary>
+        /// The owner's report (2026-09-25): <i>"the jump should happen on land (and not in water
+        /// which I see it does) — it has to happen from the ledge"</i>. The shoreline slopes a bank
+        /// into the stream, so the cell's edge the arc used to take off from is under the water.
+        /// The control is that edge: it must be wet, or this board is not the one the owner saw.
+        /// </summary>
+        [Test]
+        public void OnAShorelineTheJumpTakesOffAndLandsOnDryGround() => OnTheShoreline(world =>
+        {
+            float surface = WaterSurface(world);
+            Vector3 edge = CellMetrics.FloorCentre(Near) + new Vector3(CellMetrics.HalfXZ, 0f, 0f);
+            Assert.That(JumpArc.GroundAt(world, Near, edge.x, edge.z), Is.LessThan(surface),
+                "control: the cell's edge is not under the water, so this board shows nothing");
+
+            JumpArc.Lips(world, Jumping(Far, 500), out float lip, out float farLip);
+            Assert.That(lip, Is.GreaterThan(0.05f).And.LessThan(JumpArc.Approach), "the take-off did not move in from the edge");
+            Assert.That(farLip, Is.EqualTo(1f - lip).Within(0.011f), "a straight stream is not jumped symmetrically");
+
+            float gatherEnds = JumpArc.Approach + JumpArc.Flight * JumpArc.Gather;
+            float settleBegins = JumpArc.Approach + JumpArc.Flight * (JumpArc.Gather + JumpArc.Air);
+            for (int i = 0; i <= 1_000; i++)
+            {
+                float t = i / 1_000f;
+                if (t > gatherEnds && t < settleBegins) continue; // in the air
+                Vector3 p = JumpArc.Position(world, Jumping(Far, Mathf.Max(1, i)), t);
+                Assert.That(p.y, Is.GreaterThanOrEqualTo(surface + JumpArc.DryClearance - Tolerance),
+                    $"t {t}: on the ground at the water's edge or in it");
+            }
+        });
+
+        [Test]
+        public void OnAShorelineAShortJumpStillTakesOffFromDryGround() => OnTheShoreline(world =>
+        {
+            float surface = WaterSurface(world);
+            float gatherEnds = JumpArc.Approach + JumpArc.Flight * JumpArc.Gather;
+            for (int i = 0; i <= 1_000; i++)
+            {
+                float t = i / 1_000f;
+                if (t > gatherEnds) break;
+                Vector3 p = JumpArc.Position(world, Jumping(Water, Mathf.Max(1, i), jumpingShort: true), t);
+                Assert.That(p.y, Is.GreaterThanOrEqualTo(surface + JumpArc.DryClearance - Tolerance),
+                    $"t {t}: a short jump walked into the water before it took off");
+            }
+        });
+
+        /// <summary>The lip moving in must not open a snap where the walk hands over to the gather.</summary>
+        [Test]
+        public void OnAShorelineNoFrameSnaps() => OnTheShoreline(world =>
+        {
+            JumpArc.Lips(world, Jumping(Far, 500), out float lip, out float farLip);
+            float span = (farLip - lip) * 2f * CellMetrics.SizeXZ;
+            int frames = Mathf.CeilToInt(JumpArc.StepSeconds * TicksPerSecond);
+            float horizontal = span / JumpArc.AirSeconds / TicksPerSecond;
+            float vertical = (4f * JumpArc.Apex + 1f) / JumpArc.AirSeconds / TicksPerSecond;
+            float budget = Mathf.Sqrt(horizontal * horizontal + vertical * vertical) * 1.05f;
+
+            Vector3 was = JumpArc.Position(world, Jumping(Far, 1), 0f);
+            for (int f = 1; f <= frames; f++)
+            {
+                float t = f / (float)frames;
+                Vector3 now = JumpArc.Position(world, Jumping(Far, Mathf.Max(1, Mathf.RoundToInt(t * 1_000))), t);
+                Assert.That(Vector3.Distance(was, now), Is.LessThanOrEqualTo(budget), $"frame {f}: a snap");
+                was = now;
+            }
+        });
 
         static float Horizontal(Vector3 a, Vector3 b) => new Vector2(b.x - a.x, b.z - a.z).magnitude;
     }

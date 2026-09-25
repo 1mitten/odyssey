@@ -52,7 +52,11 @@ the next session learns to ignore.
   the far bank. They walk to the lip, gather, leap and land on the far lip without touching the
   water. A wrong answer is a figure that slides across level with the bank (the clips did not
   resolve), a pause at the lip long enough to read as stuck, feet sliding on landing, or a colonist
-  who still swims a one-cell stream.
+  who still swims a one-cell stream. **First play (2026-09-25):** took off in the water, legs still,
+  women the same as men — the catalogue had not been rebuilt, and the take-off was at the cell's
+  edge, which the shoreline draws under water. The lip is now the last dry ground; play again after
+  the rebuild. A wrong answer now is feet at or in the water at the gather, or a leap so long it
+  reads as a launch.
 - **Does a failed jump read as a slip and not a bug?** (same.) Debug menu > Cheats > *Jumps always
   fail*, then the same order. They leap, come down in the water with a splash (silent until a splash
   is sourced), float and climb out on the far side. A wrong answer is a figure that lies down in
