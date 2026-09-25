@@ -2833,3 +2833,19 @@ each time. Found merging health (design 43 §15c).
   every guard on a working toil whether the work itself can falsify it. Getting up is asked once,
   when the treatment ends (`Medical.GetUpIfAble`).
   `TendTests.ADownedPatientGetsUpWhenHerTreatmentEndsAndTheUnitIsSpent`.
+
+## A death deferred from inside the deferred phase (2026-09-25)
+
+`CombatSystem.Kill` defers the removal to the end of the tick, which is right when a blow lands
+in a loop over pawns. Health made falls hurt, and falls happen inside the deferred phase itself;
+`SimWorld` runs work deferred from there on the *next* tick by design. So a pawn killed by a
+five-layer collapse stood, thought and walked for a tick past the death line, and a save taken in
+between wrote her out alive and lost her queued removal: a pawn no later blow could kill, because
+only the blow that *crosses* the line kills. Found by review, not by a test — `FallTests` called
+`Fall` outside a tick.
+
+- **The pattern:** *a rule with a second way in* — "a death is removed this tick" held only while
+  every death happened before the deferred phase.
+- **The check:** a test of a consequence that is deferred must also run it from inside the
+  deferred phase (`FallTests.AFatalFallInsideTheDeferredPhaseIsGoneTheSameTick`), and a removal
+  that must not outlive its tick uses `DeferThisTick`.

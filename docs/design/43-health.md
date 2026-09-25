@@ -465,3 +465,31 @@ are the owner's; neither knew of the other. **Where this section and §5 disagre
 - **No golden moved.** Main's goldens hold unchanged on the merge: every handle the health line
   needed is main's, and the ledger is hashed only while somebody is hurt. The content fingerprint
   moved once, for `Health.xml`.
+
+### 15e. The review of the merged branch, 2026-09-25
+
+A read-through of the health code after the merge found three faults, fixed with tests:
+
+- **A pawn killed by a fall outlived her tick.** Falls happen inside the deferred phase (a
+  collapse, a dig, a deconstruction), and `Kill` deferred her removal, which a deferral queued
+  from inside that phase runs next tick. For one tick she stood, thought and walked past the death
+  line, and a save in between wrote her out alive with the removal lost — a pawn nothing could
+  ever kill again. `Kill` now uses `SimWorld.DeferThisTick`, which runs such work in the same phase
+  after the batch; everything else deferred from the phase keeps its next-tick rule (both halves
+  in `FallTests.AFatalFallInsideTheDeferredPhaseIsGoneTheSameTick`).
+- **A death by blood loss left the pool above the death line** for the rest of the tick, so a
+  blow later in the same tick could cross it and report the death twice. The pool is set to the
+  line as she dies.
+- **A five-layer fall was not reliably fatal.** Each hit's ±20 % was drawn independently, so the
+  168 points came out between 134 and 201. The spread now moves points between the hits and the
+  last takes what is left, so the total is exactly §7's (`FallTests.AFallsHitsAlwaysSumToItsTotal`).
+
+Recorded, not fixed:
+
+- **A save from before health** holds colonists already hurt with no ledger behind the damage; a
+  later blow starts a ledger with only the new points, so pain reads low until the pool heals
+  whole. Nothing crashes and it heals out. A migration would invent where old wounds were.
+- **An untended bruise or fracture above the cap waits for bed rest** (§15b, design 37's rule);
+  §5 had made any untended injury a patient. The right-click Tend reaches it.
+- **Downed bandits bleed out in unordered fights** (§14b): design 33's "downs, never deaths" now
+  holds for colonists only while somebody tends them. The owner's call.

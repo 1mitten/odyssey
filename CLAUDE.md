@@ -434,7 +434,7 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~55 s, no Unity): **1,605 Sim + 1,128 Hud**
+- **Fast tier** (`scripts/test-fast.sh`, ~55 s, no Unity): **1,607 Sim + 1,128 Hud**
   (2026-09-25, health merged with medical supplies); Long tier **49** in about four minutes, a third of it the
   combat gate's three seeds (`BanditSoakTests.TheGateWithRaids`, each run beside a lockstep twin).
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the

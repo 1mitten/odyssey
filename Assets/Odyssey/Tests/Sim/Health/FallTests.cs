@@ -100,5 +100,48 @@ namespace Odyssey.Tests.Sim
                 differ = p1.Health[i].Region != p2.Health![i].Region || p1.Health[i].SeverityMilli != p2.Health[i].SeverityMilli;
             Assert.That(differ, Is.True, "two falls a tick apart landed identically");
         }
+
+        /// <summary>
+        /// The spread moves points between a fall's hits and never its total (review, 2026-09-25):
+        /// spread independently, a five-layer fall's 168 ranged 134 to 201 and now and then left
+        /// somebody alive past the design's line. Two layers on many ticks, every one the same total.
+        /// </summary>
+        [Test]
+        public void AFallsHitsAlwaysSumToItsTotal()
+        {
+            var (colony, pawn) = One();
+            int total = pawn.Body!.FallDamageMilli(2);
+            for (int tick = 1_000; tick < 1_060; tick++)
+            {
+                MakeWhole(pawn);
+                colony.Pawns.Combat!.Fall(pawn, 2, tick);
+                Assert.That(Loss(pawn), Is.EqualTo(total), $"tick {tick}: the hits did not sum to fifteen times two to the one and a half");
+                Assert.That(pawn.Health!.TotalSeverityMilli, Is.EqualTo(Loss(pawn)));
+            }
+        }
+
+        /// <summary>
+        /// A fall kills inside the deferred phase — a collapse, a dig, a deconstruction — and the
+        /// death it raises must land in the same tick (design 43 §15e). Deferred to the next, she
+        /// stood, thought and walked for a tick past the death line, and a save in between wrote
+        /// her out alive with her removal lost.
+        /// </summary>
+        [Test]
+        public void AFatalFallInsideTheDeferredPhaseIsGoneTheSameTick()
+        {
+            var (colony, pawn) = One();
+            colony.World.Defer(_ => colony.Pawns.Combat!.Fall(pawn, 5, colony.World.CurrentTick));
+            colony.World.Tick();
+            Assert.That(colony.Pawns.Pawns.Get(pawn.Id), Is.Null, "a fall's death waited for the next tick");
+            Assert.That(colony.Pawns.Corpses.Count, Is.EqualTo(1));
+
+            // The control: anything else deferred from inside the phase still belongs to the next tick.
+            bool ran = false;
+            colony.World.Defer(w => w.Defer(_ => ran = true));
+            colony.World.Tick();
+            Assert.That(ran, Is.False, "Defer's own rule moved: work deferred from the deferred phase ran this tick");
+            colony.World.Tick();
+            Assert.That(ran, Is.True);
+        }
     }
 }

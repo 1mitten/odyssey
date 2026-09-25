@@ -126,6 +126,23 @@ namespace Odyssey.Sim
         /// </summary>
         public void Defer(Action<SimWorld> action) => _deferred.Add(action);
 
+        /// <summary>
+        /// <see cref="Defer"/>, except that work queued <i>while the deferred phase is running</i>
+        /// runs in it, after the batch that queued it, rather than next tick. For a removal that
+        /// must not outlive its tick: a pawn killed by a fall is killed inside a collapse, a dig or
+        /// a deconstruction — all deferred — and left to the next tick she stood, thought and walked
+        /// for one tick past the death line, and a save between the two wrote her out alive with
+        /// her removal lost (design 43 §15e). Everything else keeps <see cref="Defer"/>'s rule.
+        /// </summary>
+        public void DeferThisTick(Action<SimWorld> action)
+        {
+            if (_inDeferredPhase) _sameTick.Add(action);
+            else _deferred.Add(action);
+        }
+
+        readonly List<Action<SimWorld>> _sameTick = new List<Action<SimWorld>>();
+        bool _inDeferredPhase;
+
         /// <summary>Advance exactly one tick, in the fixed phase order.</summary>
         public void Tick()
         {
@@ -158,7 +175,25 @@ namespace Odyssey.Sim
                 // Snapshot first: an action may defer more work, which belongs to the next tick.
                 var toRun = _deferred.ToArray();
                 _deferred.Clear();
-                foreach (var action in toRun) action(this);
+                _inDeferredPhase = true;
+                try
+                {
+                    foreach (var action in toRun) action(this);
+                    // What the batch queued for this tick (DeferThisTick): a death in a fall. Bounded,
+                    // because a removal queues nothing further of its kind.
+                    for (int round = 0; round < 8 && _sameTick.Count > 0; round++)
+                    {
+                        var more = _sameTick.ToArray();
+                        _sameTick.Clear();
+                        foreach (var action in more) action(this);
+                    }
+                    _deferred.AddRange(_sameTick);
+                    _sameTick.Clear();
+                }
+                finally
+                {
+                    _inDeferredPhase = false;
+                }
             }
             Mark(phases, Diagnostics.TickSegment.Deferred, ref mark);
 

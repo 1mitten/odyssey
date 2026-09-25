@@ -126,7 +126,8 @@ namespace Odyssey.Sim.Pawns
             _ctx.CombatLog.Report(CombatEventKind.Died, by?.Id ?? default, pawn.Id,
                 _ctx.Size.FromIndex(pawn.Cell), tick, 0, weapon);
             int from = by?.Cell ?? -1;
-            _ctx.Defer(_ => Remove(pawn, by, from, tick));
+            // This tick, whichever phase it is: a fall kills inside the deferred phase (design 43 §15e).
+            _ctx.DeferThisTick(_ => Remove(pawn, by, from, tick));
         }
 
         void Remove(Pawn pawn, Pawn? by, int from, int tick)

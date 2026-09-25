@@ -73,10 +73,18 @@ namespace Odyssey.Sim.Pawns
             int spread = (int)((long)each * table.fallSpreadPerMille / 1_000);
             var blows = new int[hits];
             int worst = 0;
+            long given = 0;
             for (int i = 0; i < hits; i++)
             {
-                int blow = each - spread + (spread > 0 ? roll.NextInt(2 * spread + 1) : 0);
+                // The spread moves points between the hits and never the total (review 2026-09-25):
+                // spread independently, a five-layer fall's 168 came out anywhere from 134 to 201
+                // and a few in a hundred left the colonist alive past design §7's line. The last hit
+                // is what is left, which the spread's bound keeps positive for up to five hits.
+                int blow = i < hits - 1
+                    ? each - spread + (spread > 0 ? roll.NextInt(2 * spread + 1) : 0)
+                    : (int)(total - given);
                 blows[i] = blow < 1 ? 1 : blow;
+                given += blows[i];
                 if (blows[i] > blows[worst]) worst = i;
             }
 
@@ -162,6 +170,10 @@ namespace Odyssey.Sim.Pawns
                 if (health.BloodLossMicro >= body.bloodDeathAtPerMille * 1_000)
                 {
                     health.BloodLossMicro = body.bloodDeathAtPerMille * 1_000;
+                    // Dead now as far as every rule this tick can tell (Melee.IsDead reads the pool),
+                    // so a blow landing later in the same tick cannot cross the line and report the
+                    // death a second time, and the debug kill and a fall leave her alone.
+                    pawn.HpMilli = pawn.DeathAtMilli;
                     Kill(pawn, null, -1, tick);
                     return;
                 }
