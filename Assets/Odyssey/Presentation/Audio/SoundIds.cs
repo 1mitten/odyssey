@@ -205,11 +205,20 @@ namespace Odyssey.Presentation.Audio
         public const string AlertJoined = SoundPrefix + "alert.joined";
 
         /// <summary>
-        /// A raid. <b>In the library, and the one unplayed chime that is already wired</b>:
-        /// <see cref="AlertChime.RaidKey"/> is declared in <c>icon-keys.csv</c>, so the moment
-        /// something raises an alert row under that key this sound plays with no code change.
+        /// A raid turning to assault the colony: the low horn (Pixabay, trading_nation,
+        /// <c>low-horn-185556</c> — the owner's <c>notification-raid</c> is the same recording,
+        /// measured sample for sample, design 50 §7). Played through <see cref="AlertChime.RaidKey"/>:
+        /// the alert row under that key is raised while a raid is assaulting.
         /// </summary>
         public const string AlertRaid = SoundPrefix + "alert.raid";
+
+        /// <summary>
+        /// A raid arriving at the edge of the board: the war horn (Pixabay, freesound_community,
+        /// <c>war-horn-horror-73771</c>, baked by <c>tools/audio/bake_raid.sh</c>). Played by the
+        /// raid's Events row (design 50 §7), not by an alert, because a raid gathering at the edge
+        /// is news rather than a standing problem.
+        /// </summary>
+        public const string AlertRaidArrive = SoundPrefix + "alert.raid.arrive";
 
         /// <summary>
         /// A campfire burning. **In the library, not yet in the game.**
