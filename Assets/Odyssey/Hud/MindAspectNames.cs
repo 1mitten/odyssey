@@ -22,6 +22,21 @@ namespace Odyssey.Hud
         public const string Major = "odyssey.pawn.mood.major";
         public const string Extreme = "odyssey.pawn.mood.extreme";
 
+        /// <summary>Trait slot keys (design 43 §4d): the handle, then each effect.</summary>
+        public static readonly AspectKey[] TraitKey = Slots(string.Empty);
+        public static readonly AspectKey[] TraitMoodKey = Slots(".mood");
+        public static readonly AspectKey[] TraitNerveKey = Slots(".nerve");
+        public static readonly AspectKey[] TraitLearnKey = Slots(".learn");
+        public static readonly AspectKey[] TraitWorkKey = Slots(".work");
+        public static readonly AspectKey[] TraitCannotKey = Slots(".cannot");
+
+        static AspectKey[] Slots(string suffix)
+        {
+            var keys = new AspectKey[TraitHandle.MaxPerPawn];
+            for (int s = 0; s < keys.Length; s++) keys[s] = AspectKey.Of("odyssey.pawn.trait." + s + suffix);
+            return keys;
+        }
+
         public static readonly AspectKey BandKey = AspectKey.Of(Band);
         public static readonly AspectKey TargetKey = AspectKey.Of(Target);
         public static readonly AspectKey MinorKey = AspectKey.Of(Minor);

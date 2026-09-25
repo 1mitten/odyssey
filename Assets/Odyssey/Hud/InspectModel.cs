@@ -240,6 +240,15 @@ namespace Odyssey.Hud
         /// </summary>
         public readonly List<InspectRow> ThoughtRows = new List<InspectRow>();
 
+        /// <summary>
+        /// Who she is (design 43 §5f): one row per trait, the name then what it does, tinted by
+        /// <see cref="TraitSummary.Tint"/> and described by the registry. Drawn on the Needs tab
+        /// under the bars, in the slack the fixed body leaves there. Empty for a colonist from
+        /// before traits, and the pane then says nothing about them.
+        /// </summary>
+        public readonly List<InspectRow> TraitRows = new List<InspectRow>();
+
+        long _traitsSignature = long.MinValue;
         long _thoughtsSignature = long.MinValue;
         readonly List<(MindCatalogue.Source Source, int Value, int Left, int Count)> _nowScratch =
             new List<(MindCatalogue.Source, int, int, int)>();
@@ -572,6 +581,35 @@ namespace Odyssey.Hud
         /// <para>Three O(1) aspect lookups a refresh for the one pawn on the pane.</para>
         /// </summary>
         /// <summary>
+        /// Fill <see cref="TraitRows"/> from the slots the simulation published (design 43 §4d),
+        /// rebuilding only when a slot changed — which, since traits never change, is once per
+        /// colonist the pane is opened on.
+        /// </summary>
+        void RefreshTraits(WorldSnapshot snapshot, in PawnView pawn)
+        {
+            long signature = pawn.Id.Value;
+            for (int slot = 0; slot < TraitHandle.MaxPerPawn; slot++)
+                signature = signature * 31 + (snapshot.TryGetPawnAspect(pawn.Id, MindAspectNames.TraitKey[slot], out int h) ? h + 1 : 0);
+            if (signature == _traitsSignature) return;
+            _traitsSignature = signature;
+
+            TraitRows.Clear();
+            for (int slot = 0; slot < TraitHandle.MaxPerPawn; slot++)
+            {
+                if (!snapshot.TryGetPawnAspect(pawn.Id, MindAspectNames.TraitKey[slot], out int handle)) continue;
+                TraitRows.Add(TraitSummary.Row(handle,
+                    Read(snapshot, pawn.Id, MindAspectNames.TraitMoodKey[slot], 0),
+                    Read(snapshot, pawn.Id, MindAspectNames.TraitNerveKey[slot], 0),
+                    Read(snapshot, pawn.Id, MindAspectNames.TraitLearnKey[slot], 1_000),
+                    Read(snapshot, pawn.Id, MindAspectNames.TraitWorkKey[slot], 1_000),
+                    Read(snapshot, pawn.Id, MindAspectNames.TraitCannotKey[slot], 0)));
+            }
+        }
+
+        static int Read(WorldSnapshot snapshot, PawnId pawn, AspectKey key, int otherwise) =>
+            snapshot.TryGetPawnAspect(pawn, key, out int value) ? value : otherwise;
+
+        /// <summary>
         /// Fill <see cref="ThoughtRows"/> and <see cref="ThoughtHeading"/> from what the simulation
         /// published (design 43 §4d). O(1) lookups, a dozen of them, for the one pawn on the pane;
         /// the rows are rebuilt only when a published value moved, so a standing pane allocates
@@ -590,6 +628,16 @@ namespace Odyssey.Hud
                 if (!snapshot.TryGetPawnAspect(pawn.Id, source.Value, out int value) || value == 0) continue;
                 _nowScratch.Add((source, value, 0, 1));
                 signature = signature * 31 + value;
+            }
+
+            // A trait's permanent offset is situational: it is here now, for as long as she is
+            // who she is (design 43 §4e). Named by the trait.
+            for (int slot = 0; slot < TraitHandle.MaxPerPawn; slot++)
+            {
+                if (!snapshot.TryGetPawnAspect(pawn.Id, MindAspectNames.TraitMoodKey[slot], out int value) || value == 0) continue;
+                snapshot.TryGetPawnAspect(pawn.Id, MindAspectNames.TraitKey[slot], out int handle);
+                _nowScratch.Add((new MindCatalogue.Source(TraitSummary.Key(handle), default), value, 0, 1));
+                signature = signature * 31 + value + handle;
             }
 
             foreach (MindCatalogue.Source source in MindCatalogue.Memories)
@@ -805,6 +853,7 @@ namespace Odyssey.Hud
                     SetPosition(pawn.Cell);
                     Layer = pawn.Cell.Y;
                     RefreshHealth(snapshot, pawn);
+                    RefreshTraits(snapshot, pawn);
                     RefreshThoughts(snapshot, pawn);
                 }
                 else

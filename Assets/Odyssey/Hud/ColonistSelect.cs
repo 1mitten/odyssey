@@ -41,14 +41,42 @@ namespace Odyssey.Hud
         /// </summary>
         public readonly IReadOnlyList<SkillRow> Skills;
 
+        /// <summary>
+        /// Who she is (design 43 §5f): the same rows the inspect pane draws, from
+        /// <see cref="TraitSummary.Row"/>, so the card and the pane cannot word a trait two ways.
+        /// Empty for a candidate built without them.
+        /// </summary>
+        public readonly IReadOnlyList<InspectRow> Traits;
+
         public Candidate(uint seed, string name, int age, string occupation,
-            IReadOnlyList<SkillRow>? skills)
+            IReadOnlyList<SkillRow>? skills, IReadOnlyList<InspectRow>? traits = null)
         {
             Seed = seed;
             Name = name ?? string.Empty;
             Age = age;
             Occupation = occupation ?? string.Empty;
             Skills = skills ?? Array.Empty<SkillRow>();
+            Traits = traits ?? Array.Empty<InspectRow>();
+        }
+
+        /// <summary>
+        /// The traits as the detail pane's one block of text: a line each, the name and what it
+        /// does. Empty when she has none.
+        /// </summary>
+        public string TraitLines
+        {
+            get
+            {
+                if (Traits.Count == 0) return string.Empty;
+                var lines = new System.Text.StringBuilder();
+                for (int i = 0; i < Traits.Count; i++)
+                {
+                    if (i > 0) lines.Append('\n');
+                    lines.Append(Traits[i].Name);
+                    if (!string.IsNullOrEmpty(Traits[i].Value)) lines.Append(" - ").Append(Traits[i].Value);
+                }
+                return lines.ToString();
+            }
         }
 
         /// <summary>"Wrenn, 34" — the line at the top of a card and of the detail beside it.</summary>

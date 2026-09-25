@@ -51,6 +51,30 @@ namespace Odyssey.Sim.Pawns
         /// <summary>How many copies of the memory are live.</summary>
         public static readonly AspectKey[] ThoughtCount = MintThought(".count");
 
+        /// <summary>
+        /// Her traits by slot (design 43 §4d): <c>odyssey.pawn.trait.0</c> to <c>.2</c> carry the
+        /// <see cref="TraitHandle"/>, and the rest the effects, each only while it is not the
+        /// default, so the interface derives no number the simulation knows.
+        /// </summary>
+        public static readonly AspectKey[] Trait = MintTrait(string.Empty);
+        public static readonly AspectKey[] TraitMood = MintTrait(".mood");
+        public static readonly AspectKey[] TraitNerve = MintTrait(".nerve");
+        public static readonly AspectKey[] TraitLearn = MintTrait(".learn");
+        public static readonly AspectKey[] TraitWork = MintTrait(".work");
+
+        /// <summary>The work types a slot's trait forbids, a bit per <c>WorkHandle</c>.</summary>
+        public static readonly AspectKey[] TraitCannot = MintTrait(".cannot");
+
+        /// <summary>The name one value of one trait slot is published under, as both sides spell it.</summary>
+        public static string TraitName(int slot, string suffix) => "odyssey.pawn.trait." + slot + suffix;
+
+        static AspectKey[] MintTrait(string suffix)
+        {
+            var keys = new AspectKey[TraitHandle.MaxPerPawn];
+            for (int s = 0; s < keys.Length; s++) keys[s] = AspectKey.Of(TraitName(s, suffix));
+            return keys;
+        }
+
         /// <summary>The name one value of one thought is published under, as both sides spell it.</summary>
         public static string ThoughtName(int thought, string suffix) =>
             "odyssey.pawn.thought." + ThoughtHandle.Names[thought] + suffix;

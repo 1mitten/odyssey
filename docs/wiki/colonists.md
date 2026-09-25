@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure. Traits, thoughts and mental breaks are design 43: a thought's description here is its tooltip on the Thoughts tab, and a trait's is its tooltip on the colonist's pane and the select screen.
 
-78 entries, 60 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+84 entries, 66 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -81,6 +81,12 @@ Who is on the map, what they need, how they feel and what they are doing right n
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
+| **Traits** | `ui.mind.traits` | Who she is: dealt when she arrives, and hers for good | no art | TM |
+| **Work** | `ui.mind.work` | How much faster or slower than most she works at everything | no art | TM |
+| **Learns** | `ui.mind.learns` | How much faster or slower than most she learns every skill | no art | TM |
+| **Breaks sooner** | `ui.mind.breakssooner` | Her mood need not fall as far before she can break | no art | TM |
+| **Breaks later** | `ui.mind.breakslater` | Her mood must fall further than most before she can break | no art | TM |
+| **Cannot** | `ui.mind.cannot` | Work she will never do. The Work tab greys it | no art | TM |
 | **Now** | `ui.mind.now` | What is weighing on her at this moment, gone when its cause is | no art | TM |
 | **Memories** | `ui.mind.memories` | Things that happened to her, each fading after its own time | no art | TM |
 | **Heading for** | `ui.mind.target` | The mood everything listed pulls her toward; she drifts there, faster up than down | no art | TM |

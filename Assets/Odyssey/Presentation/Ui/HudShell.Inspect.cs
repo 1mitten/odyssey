@@ -315,6 +315,7 @@ namespace Odyssey.Presentation.Ui
 
             SyncHealthTab();
             SyncThoughtsTab();
+            SyncTraitsRows(_inspect.ActiveTabName == "Needs");
         }
 
         /// <summary>
@@ -344,6 +345,7 @@ namespace Odyssey.Presentation.Ui
                 _skillsGrid.style.display = skills ? DisplayStyle.Flex : DisplayStyle.None;
             ShowHealthTab(health);
             ShowThoughtsTab(thoughts);
+            ShowTraitsRows(!(skills || health || thoughts));
 
             // A store's two tabs stand in the same box and one of them is drawn, exactly as the
             // colonist's needs and skills do — so changing tab changes which rows are shown and
@@ -627,6 +629,7 @@ namespace Odyssey.Presentation.Ui
             _skillsGrid = null;
             ForgetHealthTab();
             ForgetThoughtsTab();
+            ForgetTraitsRows();
             _cellRowsGrid = null;
             _locationRow = null;
             _locationValue = null;
@@ -784,6 +787,9 @@ namespace Odyssey.Presentation.Ui
                 _needRows = (_needs.Count + 1) / 2;
                 _needsGrid = grid;
                 tabBody.Add(grid);
+
+                // Who she is, under the bars (design 43 §5f), HudShell.Mind.cs.
+                BuildTraitsRows(tabBody);
 
                 _skillsGrid = new VisualElement();
                 _skillsGrid.AddToClassList("skills");

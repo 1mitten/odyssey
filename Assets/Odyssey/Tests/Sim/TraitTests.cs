@@ -288,6 +288,48 @@ namespace Odyssey.Tests.Sim
             Assert.That(spawned.Single(p => p.IsHostile).Traits, Is.Empty);
         }
 
+        // ---- the publish (TM4) --------------------------------------------------------------
+
+        [Test]
+        public void TheTraitsArePublishedSlotBySlotWithOnlyTheirEffects()
+        {
+            ColonyWorld colony = Board(colonists: 1);
+            colony.World.Tick();
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            pawn.Traits.Clear();
+            pawn.Traits.Add(TraitHandle.Diligent);
+            pawn.Traits.Add(TraitHandle.SoftHands);
+            colony.World.Tick();
+            WorldSnapshot frame = colony.World.Views.Current;
+
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.Trait[0], out int first), Is.True);
+            Assert.That(first, Is.EqualTo(TraitHandle.Diligent));
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.TraitWork[0], out int work), Is.True);
+            Assert.That(work, Is.EqualTo(1200));
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.TraitMood[0], out _), Is.False,
+                "sparse: a trait that moves no mood publishes none");
+
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.Trait[1], out int second), Is.True);
+            Assert.That(second, Is.EqualTo(TraitHandle.SoftHands));
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.TraitCannot[1], out int cannot), Is.True);
+            Assert.That(cannot, Is.EqualTo(1 << WorkTypeIndex.Mining));
+
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.Trait[2], out _), Is.False, "two traits, two slots");
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, WorkAspects.Capable[WorkTypeIndex.Mining], out int capable), Is.True);
+            Assert.That(capable, Is.EqualTo(0), "and the Work tab's cell says the same");
+        }
+
+        [Test]
+        public void TheTraitAspectNamesAreTheOnesTheInterfaceSpells()
+        {
+            Assert.That(MindAspects.Trait[0], Is.EqualTo(AspectKey.Of("odyssey.pawn.trait.0")));
+            Assert.That(MindAspects.TraitMood[1], Is.EqualTo(AspectKey.Of("odyssey.pawn.trait.1.mood")));
+            Assert.That(MindAspects.TraitNerve[2], Is.EqualTo(AspectKey.Of("odyssey.pawn.trait.2.nerve")));
+            Assert.That(MindAspects.TraitLearn[0], Is.EqualTo(AspectKey.Of("odyssey.pawn.trait.0.learn")));
+            Assert.That(MindAspects.TraitWork[0], Is.EqualTo(AspectKey.Of("odyssey.pawn.trait.0.work")));
+            Assert.That(MindAspects.TraitCannot[0], Is.EqualTo(AspectKey.Of("odyssey.pawn.trait.0.cannot")));
+        }
+
         // ---- the content ------------------------------------------------------------------
 
         [Test]

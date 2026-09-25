@@ -713,6 +713,25 @@ namespace Odyssey.Sim.Pawns
                 if (offset != 0) writer.AddPawnAspect(pawn.Id, MindAspects.Need[n], offset);
             }
 
+            // Who she is, slot by slot (design 43 §5f), with each effect only while it is not the
+            // default. Traits never change, so this is the same handful of rows every tick; it is
+            // published rather than cached on the interface's side for the reason every aspect is.
+            for (int slot = 0; slot < pawn.Traits.Count && slot < MindAspects.Trait.Length; slot++)
+            {
+                int handle = pawn.Traits[slot];
+                TraitDef trait = content.Traits[handle];
+                writer.AddPawnAspect(pawn.Id, MindAspects.Trait[slot], handle);
+                if (trait.moodOffset != 0) writer.AddPawnAspect(pawn.Id, MindAspects.TraitMood[slot], trait.moodOffset);
+                if (trait.breakThresholdOffset != 0)
+                    writer.AddPawnAspect(pawn.Id, MindAspects.TraitNerve[slot], trait.breakThresholdOffset);
+                if (trait.learningPerMille != 1_000)
+                    writer.AddPawnAspect(pawn.Id, MindAspects.TraitLearn[slot], trait.learningPerMille);
+                if (trait.workSpeedPerMille != 1_000)
+                    writer.AddPawnAspect(pawn.Id, MindAspects.TraitWork[slot], trait.workSpeedPerMille);
+                if (content.TraitDisabledWork[handle] != 0)
+                    writer.AddPawnAspect(pawn.Id, MindAspects.TraitCannot[slot], content.TraitDisabledWork[handle]);
+            }
+
             int temperature = content.Temperature.MoodOffset(pawn.AmbientTempC);
             if (temperature != 0) writer.AddPawnAspect(pawn.Id, MindAspects.Temperature, temperature);
 
