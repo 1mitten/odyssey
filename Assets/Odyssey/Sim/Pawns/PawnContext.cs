@@ -292,6 +292,16 @@ namespace Odyssey.Sim.Pawns
             World.Defer(action);
         }
 
+        /// <summary>
+        /// <see cref="Defer"/>, but inside the deferred phase it runs this tick
+        /// (<see cref="SimWorld.DeferThisTick"/>): a death that happens during a collapse.
+        /// </summary>
+        public void DeferThisTick(System.Action<SimWorld> action)
+        {
+            if (World == null) throw new System.InvalidOperationException("no world is being ticked");
+            World.DeferThisTick(action);
+        }
+
         internal void Sync(SimWorld world)
         {
             World = world;

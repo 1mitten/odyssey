@@ -192,3 +192,14 @@ All four units are in, on `claude/medical-supplies`. What moved from the plan, a
   storage zone.
 
 `ui.alert.nomedicine` is **not** built. It remains a hook.
+
+## 10. Merged with health (design 43), 2026-09-25
+
+Health's body arrived on top of this design: `docs/design/43-health.md` §15 is the reconciliation
+and wins where it and this document disagree. In short: `Job_Treat` is the one doctor's job and
+now **ends in the tend** (every injury tended at the treater's Medicine quality, every bleed
+stopped); **a bleeding colonist is a patient whatever her pool**, and inside the cooldown a
+treatment tends and heals nothing; a treatment heals the body's ledger with the pool. And two
+faults in §9's driver were fixed: a downed patient now gets up when her treatment **ends**
+(`Medical.GetUpIfAble`), not a third of the way through it, and a treatment that reaches the cap
+part-way runs to the end — both had failed the job with the unit unused and no cooldown set.

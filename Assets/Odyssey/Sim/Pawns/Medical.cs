@@ -17,6 +17,13 @@ namespace Odyssey.Sim.Pawns
     /// <see cref="CombatDef.bareHeal"/> with none; halved for treating yourself; clamped to the cap
     /// (80 %, or 60 % for yourself). Never lowers the pool: a treatment given above the cap does
     /// nothing and uses nothing.</para>
+    ///
+    /// <para><b>The body (design 43, merged 2026-09-25).</b> A treatment is also the tend: when the
+    /// work is done every injury on the patient is tended at the treater's quality and every bleed
+    /// stops. And <b>a bleeding colonist is a patient whatever her pool and whatever the
+    /// cooldown</b> — a cut on a colonist at 90 % kills her in a day and a half if nobody comes —
+    /// but a treatment inside the cooldown tends without healing, so a stack of supplies is still
+    /// not a substitute for rest. Design 43 §15.</para>
     /// </summary>
     public static class Medical
     {
@@ -35,11 +42,35 @@ namespace Odyssey.Sim.Pawns
             return false;
         }
 
-        /// <summary>Below the doctor's cap and outside the cooldown: a treatment would do something now.</summary>
+        /// <summary>
+        /// A treatment would do something now: she is bleeding (design 43 §4: any tend stops it), or
+        /// she is below the doctor's cap and outside the cooldown.
+        /// </summary>
         public static bool NeedsTreatment(Pawn pawn, PawnContext ctx) =>
             pawn.IsColonist && pawn.CarriedBy == 0
-            && Below(pawn, ctx.Content.Combat.treatCapPerMille)
-            && ctx.CurrentTick >= pawn.TreatedUntilTick;
+            && (IsBleeding(pawn) || (Below(pawn, ctx.Content.Combat.treatCapPerMille) && Heals(pawn, ctx)));
+
+        /// <summary>
+        /// Would a treatment given now heal the pool — outside the cooldown — or only tend? Constant
+        /// for the length of one treatment, because the cooldown is set only when one finishes.
+        /// </summary>
+        public static bool Heals(Pawn pawn, PawnContext ctx) => ctx.CurrentTick >= pawn.TreatedUntilTick;
+
+        /// <summary>An untended wound on her body (design 43 §4). Nobody without a body bleeds.</summary>
+        public static bool IsBleeding(Pawn pawn) =>
+            pawn.HasHealthState && pawn.Health!.BleedingSeverityMilli > 0;
+
+        /// <summary>
+        /// Anything a player's order to treat her would do: what <see cref="NeedsTreatment"/> asks,
+        /// or an injury nobody has tended yet — a tended injury heals anywhere (design 43 §6), which
+        /// is worth a player's click even on a colonist the doctor's own round would leave alone.
+        /// </summary>
+        public static bool WorthAnOrder(Pawn pawn, PawnContext ctx) =>
+            NeedsTreatment(pawn, ctx)
+            || (pawn.IsColonist && pawn.CarriedBy == 0 && pawn.HasHealthState && pawn.Health!.UntendedCount > 0);
+
+        /// <summary>Lying still: down where she fell, or asleep — the only patients a doctor's round walks to.</summary>
+        public static bool LyingStill(Pawn pawn) => pawn.Downed || pawn.Asleep;
 
         /// <summary>A patient a doctor may walk to: in need, and lying still — downed, or in bed.</summary>
         public static bool AwaitsDoctor(Pawn pawn, PawnContext ctx)
@@ -143,9 +174,8 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Add a share of a treatment to the pool, clamped to <paramref name="capMilli"/>, and —
-        /// for a pawn who was down and is now past the line — getting up, at the end of the tick
-        /// through the combat system, which owns that rule.
+        /// Add a share of a treatment to the pool, clamped to <paramref name="capMilli"/>, and the
+        /// same points off the body's ledger. Getting up is <see cref="GetUpIfAble"/>'s, at the end.
         ///
         /// <para><b>Called every tick the treatment toil progresses</b>, not once at the end
         /// (owner, 2026-09-25: a bar that fills as she works rather than jumping at the finish, and
@@ -160,15 +190,38 @@ namespace Odyssey.Sim.Pawns
             long after = patient.HpMilli + shareMilli;
             if (after > capMilli) after = capMilli;
             if (after <= patient.HpMilli) return;
+            int healed = (int)after - patient.HpMilli;
             patient.HpMilli = (int)after;
+            // The same points off the body's ledger, the worst injury first, in the same call: for
+            // a pawn with a body the pool and the ledger never disagree (design 43 §2's invariant,
+            // which the combat gate walks). The pool written alone here would be a second owner of
+            // healing, and the ledger would keep pain shock on a colonist the pool calls well.
+            patient.Health?.Heal(healed);
+        }
 
+        /// <summary>
+        /// A downed patient a treatment has lifted past the line gets up — at the end of the tick,
+        /// through the combat system, which owns that rule — and only once the body lets her too
+        /// (design 43 §3): pain past the shock line, blood past its worst stage or a head at nought
+        /// keep her down at any pool.
+        ///
+        /// <para><b>Asked when the treatment ends, not on every share</b> (merge with design 43,
+        /// 2026-09-25). Asked per share, she stood up at 15 % a third of the way through her own
+        /// treatment, stopped lying still, and the doctor's job failed: the unit went back on the
+        /// floor unused, no cooldown was set, and the next doctor started again — a free heal each
+        /// time. The driver asks in <c>Cleanup</c>, so a doctor called away still leaves her on her
+        /// feet if what landed was enough.</para>
+        /// </summary>
+        public static void GetUpIfAble(Pawn patient, PawnContext ctx)
+        {
             if (!patient.Downed) return;
             if ((long)patient.HpMilli * 1_000 < (long)patient.HpMaxMilli * ctx.Content.Combat.downedRecoverAtPerMille)
                 return;
 
             int tick = ctx.CurrentTick;
             CombatSystem? combat = ctx.Combat;
-            if (combat != null) ctx.Defer(_ => { if (patient.Downed) combat.Recover(patient, tick); });
+            if (combat != null)
+                ctx.Defer(_ => { if (patient.Downed && !patient.CurrentVitals().Incapacitated) combat.Recover(patient, tick); });
         }
 
         /// <summary>
@@ -177,14 +230,34 @@ namespace Odyssey.Sim.Pawns
         /// is also what stops her lying down and getting straight up again every tick.
         /// </summary>
         public static bool WorthLyingDown(Pawn pawn, PawnContext ctx, int bed) =>
-            bed >= 0 || (ctx.CurrentTick >= pawn.TreatedUntilTick && DoctorCanReach(pawn, ctx));
+            bed >= 0 || (NeedsTreatment(pawn, ctx) && DoctorCanReach(pawn, ctx));
 
         /// <summary>Would she treat herself right now, if she were up? The think node's first branch, as a question.</summary>
         public static bool WouldSelfTreat(Pawn pawn, PawnContext ctx) =>
-            Below(pawn, ctx.Content.Combat.selfCapPerMille)
-            && ctx.CurrentTick >= pawn.TreatedUntilTick
+            WantsSelfTreatment(pawn, ctx)
             && !DoctorCanReach(pawn, ctx)
             && NearestSupplies(pawn, ctx) != null;
+
+        /// <summary>
+        /// Would treating herself do anything: bleeding, or under the self-treatment cap and outside
+        /// the cooldown. Whether anybody else could come is <see cref="DoctorCanReach"/>'s question.
+        /// </summary>
+        public static bool WantsSelfTreatment(Pawn pawn, PawnContext ctx) =>
+            IsBleeding(pawn) || (Below(pawn, ctx.Content.Combat.selfCapPerMille) && Heals(pawn, ctx));
+
+        /// <summary>
+        /// The tend a treatment ends in (design 43 §5): every injury on <paramref name="patient"/>
+        /// tended at the treater's Medicine quality times the potency of what she used — supplies or
+        /// a bare dressing — and every bleed stopped, whatever the quality. A pawn with no body has
+        /// nothing to tend. Returns how many injuries were tended.
+        /// </summary>
+        public static int Tend(Pawn patient, Pawn by, PawnContext ctx, bool supplies)
+        {
+            HealthDef? body = patient.Body;
+            if (body == null || ctx.Combat == null) return 0;
+            int quality = body.TendQualityPerMille(by.SkillLevel(SkillIndex.Medicine), supplies);
+            return ctx.Combat.Tend(patient, quality);
+        }
 
         /// <summary>
         /// Where a hurt colonist lies down: her own bed, else the nearest free one she can reach,
@@ -235,7 +308,10 @@ namespace Odyssey.Sim.Pawns
 
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
+            // Somebody bleeding before somebody who is not (design 43 §5: the bleed is the clock),
+            // then the nearest.
             Pawn? best = null;
+            bool bestBleeding = false;
             int bestDistance = int.MaxValue;
             var all = ctx.Pawns.All;
             for (int i = 0; i < all.Count; i++)
@@ -243,14 +319,18 @@ namespace Odyssey.Sim.Pawns
                 Pawn patient = all[i];
                 if (patient == pawn || !Medical.AwaitsDoctor(patient, ctx)) continue;
 
+                bool bleeding = Medical.IsBleeding(patient);
+                if (bestBleeding && !bleeding) continue;
+
                 long key = ReservationManager.Key(ReservationTargetKind.Pawn, patient.Id.Value);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
 
                 int distance = ctx.Distance(pawn.Cell, patient.Cell);
-                if (distance >= bestDistance) continue;
+                if (bleeding == bestBleeding && distance >= bestDistance) continue;
                 if (!ctx.Reachable(pawn, patient.Cell)) continue;
 
                 bestDistance = distance;
+                bestBleeding = bleeding;
                 best = patient;
             }
 
@@ -283,11 +363,12 @@ namespace Odyssey.Sim.Pawns
         {
             if (!pawn.IsColonist || pawn.Downed || pawn.Asleep || pawn.IsBroken || pawn.Drafted) return false;
             CombatDef combat = ctx.Content.Combat;
-            if (!Medical.Below(pawn, combat.treatCapPerMille)) return false;
+            // A bleeding colonist is a patient whatever her pool (design 43 §15): she lies down for
+            // the doctor, or treats herself when nobody can come.
+            bool bleeding = Medical.IsBleeding(pawn);
+            if (!bleeding && !Medical.Below(pawn, combat.treatCapPerMille)) return false;
 
-            if (Medical.Below(pawn, combat.selfCapPerMille)
-                && ctx.CurrentTick >= pawn.TreatedUntilTick
-                && !Medical.DoctorCanReach(pawn, ctx))
+            if (Medical.WantsSelfTreatment(pawn, ctx) && !Medical.DoctorCanReach(pawn, ctx))
             {
                 // NearestSupplies is asked here rather than through WouldSelfTreat so the scan runs once.
                 ColonyItem? supplies = Medical.NearestSupplies(pawn, ctx);
@@ -302,7 +383,7 @@ namespace Odyssey.Sim.Pawns
                 }
             }
 
-            if (!Medical.Below(pawn, combat.patientBelowPerMille)) return false;
+            if (!bleeding && !Medical.Below(pawn, combat.patientBelowPerMille)) return false;
 
             int bed = Medical.BedFor(pawn, ctx);
             if (!Medical.WorthLyingDown(pawn, ctx, bed)) return false;
@@ -322,6 +403,10 @@ namespace Odyssey.Sim.Pawns
     /// hashed with the job, the field every driver uses for its own purpose. The supplies are taken
     /// at the grasp and used on the heal; a treatment that fails in between puts the unit down
     /// again rather than using it (<see cref="Cleanup"/>).</para>
+    ///
+    /// <para><b>It ends in the tend</b> (design 43 §5, folded in at the merge 2026-09-25): every
+    /// injury on her tended at the treater's quality, every bleed stopped. There is one doctor's
+    /// job, not a treatment and a tend beside it with two owners of who a doctor walks to.</para>
     /// </summary>
     public class TreatJobDriver : JobDriver
     {
@@ -330,13 +415,15 @@ namespace Odyssey.Sim.Pawns
         public override int WorkType => WorkTypeIndex.Doctor;
 
         public override int WorkFocus =>
-            ToilIndex == ToilTreat && Job.DestCell >= 0 ? Job.DestCell : -1;
+            ToilIndex == ToilTreat && Job.DestCell >= 0 && Pawn.Destination < 0 ? Job.DestCell : -1;
 
         bool Self => Job.WorkTicks == Pawn.Id.Value;
 
         public override void Begin(Pawn pawn, Job job)
         {
             base.Begin(pawn, job);
+            // The pool reuses one driver per pawn, and a loaded job re-begins its kneel.
+            _kneeling = false;
             // No supplies named: a bare dressing, so nothing to fetch.
             if (job.TargetItem == ThingId.None) ToilIndex = ToilGo;
         }
@@ -361,8 +448,21 @@ namespace Odyssey.Sim.Pawns
         public override JobStatus Tick(PawnContext ctx)
         {
             Pawn? patient = ctx.Pawns.Get(new PawnId(Job.WorkTicks));
-            if (patient == null || !Medical.NeedsTreatment(patient, ctx)) return JobStatus.Failed;
-            if (!Self && !Medical.AwaitsDoctor(patient, ctx)) return JobStatus.Failed;
+            if (patient == null || patient.CarriedBy != 0) return JobStatus.Failed;
+
+            if (ToilIndex < ToilTreat)
+            {
+                // Before the work starts: still worth doing — on a player's order, anything a
+                // treatment would do; on the doctor's own round, a patient lying still.
+                if (Job.PlayerForced ? !Medical.WorthAnOrder(patient, ctx) : !Medical.NeedsTreatment(patient, ctx))
+                    return JobStatus.Failed;
+                if (!Self && !Job.PlayerForced && !Medical.AwaitsDoctor(patient, ctx)) return JobStatus.Failed;
+            }
+            // Once the work has started it runs to the end (merge with design 43, 2026-09-25): a
+            // treatment that lifts her to the cap part-way no longer stops being needed, fails,
+            // and puts the unit back on the floor unused with no cooldown set. On the doctor's
+            // round she must still be lying still; getting up is asked only when it ends.
+            else if (!Self && !Job.PlayerForced && !Medical.LyingStill(patient)) return JobStatus.Failed;
 
             switch (ToilIndex)
             {
@@ -386,46 +486,44 @@ namespace Odyssey.Sim.Pawns
                         return JobStatus.Ongoing;
                     }
 
-                    // Beside her rather than on her: she is lying in the cell. No free cell beside
-                    // her (a packed bed row, §12a) fails the toil rather than overlapping the
-                    // patient — the giver picks somebody else, or the same patient once a
-                    // neighbour clears.
                     Job.DestCell = patient.Cell;
-                    int stand = FellJobDriver.StandBeside(ctx, Pawn, patient.Cell);
-                    if (Pawn.Cell != patient.Cell && StillInReach(ctx, Pawn, patient.Cell, 0, 0))
+                    if (InReach(ctx, patient))
                     {
-                        Pawn.ClearPath();
-                        Pawn.Destination = -1;
+                        Stop();
                         NextToil();
                         return JobStatus.Ongoing;
                     }
-
-                    if (stand < 0) return JobStatus.Failed;
-
-                    JobStatus walk = GotoCell(ctx, stand);
-                    if (walk == JobStatus.Succeeded) NextToil();
-                    return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
+                    return Approach(ctx, patient);
                 }
 
                 default:
                 {
-                    if (!Self && !StillInReach(ctx, Pawn, patient.Cell, 0, 0))
+                    if (!Self)
                     {
-                        ToilIndex = ToilGo;
-                        ToilProgress = 0;
-                        // The kneel is over the moment the stance is (GrowingJob's own rule): a
-                        // displaced doctor is only walking back, not tending.
-                        Pawn.BeginGesture(PawnGesture.None);
-                        return JobStatus.Ongoing;
+                        Job.DestCell = patient.Cell;
+                        if (!InReach(ctx, patient))
+                        {
+                            // Walking back to her side, in this toil so the work done so far is
+                            // kept (design 43 §14c's rule). Going back to the walk toil threw it
+                            // away, and the shares already paid then paid out again from nought:
+                            // one unit could heal more than its forty. The kneel is over the moment
+                            // the stance is (GrowingJob's own rule).
+                            Pawn.BeginGesture(PawnGesture.None);
+                            _kneeling = false;
+                            return Approach(ctx, patient);
+                        }
+                        Stop();
                     }
 
                     // Kneeling at her side to dress the wound — the sower's own kneel, re-used for
                     // the same reason it was re-used for the lift: down where she is lying. In a
                     // bed she is tended standing, bent over the bed rather than down at the floor
-                    // (owner, 2026-09-25: "stood up if customer in bed"). Begun once at the toil's
-                    // start and held while it runs, exactly as the sow's own kneel is.
-                    if (ToilProgress == 0 && !Medical.IsBedCell(ctx, patient.Cell))
+                    // (owner, 2026-09-25: "stood up if customer in bed"), and a patient on her feet
+                    // (an ordered treatment) is tended standing too. Begun once as the work starts,
+                    // and again after a walk back, and held while it runs, as the sow's own kneel is.
+                    if (!_kneeling && (Self || Medical.LyingStill(patient)) && !Medical.IsBedCell(ctx, patient.Cell))
                         Pawn.BeginGesture(PawnGesture.Sow);
+                    _kneeling = true;
 
                     ColonyItem? carried = Job.CarriedItem >= 0 ? ctx.Items.Get(new ThingId(Job.CarriedItem)) : null;
                     if (Job.TargetItem != ThingId.None && carried == null) return JobStatus.Failed;
@@ -442,19 +540,25 @@ namespace Odyssey.Sim.Pawns
                     // perturb the arithmetic of. Summed over every tick this lands exactly the full
                     // heal, because a share is a difference of two cumulative fractions and every
                     // tick but the rounding on the last is accounted for by the one before it.
+                    // Inside the cooldown — a bleeding patient treated again — it tends and heals
+                    // nothing (design 43 §15): the supplies are not a substitute for rest.
                     long before = System.Math.Min(ToilProgress, totalTicks);
                     ToilProgress += Pawn.WorkRatePerMille(WorkTypeIndex.Doctor);
                     Work(ctx);
                     long after = System.Math.Min(ToilProgress, totalTicks);
 
-                    long heal = Medical.HealDelta(ctx, suppliesDef, Self);
+                    bool heals = Medical.Heals(patient, ctx);
+                    long heal = heals ? Medical.HealDelta(ctx, suppliesDef, Self) : 0;
                     long share = totalTicks > 0 ? heal * after / totalTicks - heal * before / totalTicks : heal;
                     Medical.ApplyShare(patient, ctx, share, Medical.CapMilli(patient, ctx, Self));
 
                     if (ToilProgress < totalTicks) return JobStatus.Ongoing;
 
                     Pawn.BeginGesture(PawnGesture.None);
-                    patient.TreatedUntilTick = ctx.CurrentTick + combat.treatedCooldownTicks;
+                    _kneeling = false;
+                    // The tend (design 43 §5): every injury tended at her quality, every bleed stopped.
+                    Medical.Tend(patient, Pawn, ctx, supplies: carried != null);
+                    if (heals) patient.TreatedUntilTick = ctx.CurrentTick + combat.treatedCooldownTicks;
                     if (carried != null)
                     {
                         ctx.Items.Despawn(carried);
@@ -463,6 +567,49 @@ namespace Odyssey.Sim.Pawns
                     return JobStatus.Succeeded;
                 }
             }
+        }
+
+        // Whether the kneel has been begun in this stretch of work. Presentation's cue only,
+        // re-derived after a load by beginning it again, so neither saved nor hashed.
+        bool _kneeling;
+
+        /// <summary>Standing beside her, not on her: she may be lying in the cell.</summary>
+        bool InReach(PawnContext ctx, Pawn patient) =>
+            Pawn.Cell != patient.Cell && StillInReach(ctx, Pawn, patient.Cell, 0, 0);
+
+        /// <summary>
+        /// Walk to a free cell beside her, chosen once and kept while it is still beside her (design
+        /// 43 §14c): a patient on her feet moves, and choosing again on every step she took cleared
+        /// the walk each time, so a doctor following her never arrived. No free cell beside her (a
+        /// packed bed row, design 37 §12a) fails rather than overlapping her — the giver picks
+        /// somebody else, or the same patient once a neighbour clears. <see cref="Job.TargetCell"/>
+        /// holds it: the supplies' cell is spent once the unit is in hand.
+        /// </summary>
+        JobStatus Approach(PawnContext ctx, Pawn patient)
+        {
+            int stand = Job.TargetCell;
+            if (stand < 0 || stand == patient.Cell || !Beside(ctx.Size, stand, patient.Cell))
+                Job.TargetCell = stand = FellJobDriver.StandBeside(ctx, Pawn, patient.Cell);
+            if (stand < 0) return JobStatus.Failed;
+
+            JobStatus walk = GotoCell(ctx, stand);
+            return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
+        }
+
+        /// <summary>One of the eight cells round <paramref name="of"/> on its layer.</summary>
+        static bool Beside(GridSize size, int cell, int of)
+        {
+            if (cell == of) return false;
+            CellRef a = size.FromIndex(cell), b = size.FromIndex(of);
+            return a.Y == b.Y && System.Math.Abs(a.X - b.X) <= 1 && System.Math.Abs(a.Z - b.Z) <= 1;
+        }
+
+        /// <summary>Standing to work: whatever walk was in hand is over.</summary>
+        void Stop()
+        {
+            if (Pawn.Destination < 0 && !Pawn.HasPath) return;
+            Pawn.ClearPath();
+            Pawn.Destination = -1;
         }
 
         /// <summary>
@@ -496,7 +643,14 @@ namespace Odyssey.Sim.Pawns
             return JobStatus.Ongoing;
         }
 
-        public override void Cleanup(PawnContext ctx, JobStatus status) => DropCarried(ctx);
+        public override void Cleanup(PawnContext ctx, JobStatus status)
+        {
+            _kneeling = false;
+            DropCarried(ctx);
+            // Up if what landed was enough, whether the treatment finished or was cut short.
+            Pawn? patient = ctx.Pawns.Get(new PawnId(Job.WorkTicks));
+            if (patient != null) Medical.GetUpIfAble(patient, ctx);
+        }
     }
 
     /// <summary>
@@ -527,7 +681,8 @@ namespace Odyssey.Sim.Pawns
         public override JobStatus Tick(PawnContext ctx)
         {
             CombatDef combat = ctx.Content.Combat;
-            if (!Medical.Below(Pawn, combat.patientReleasePerMille)) return JobStatus.Succeeded;
+            // Up at the release line — unless she is still bleeding, which is what she is lying there for.
+            if (!Medical.Below(Pawn, combat.patientReleasePerMille) && !Medical.IsBleeding(Pawn)) return JobStatus.Succeeded;
 
             if (ToilIndex == 0)
             {

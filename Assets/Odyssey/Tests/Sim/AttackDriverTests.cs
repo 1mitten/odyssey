@@ -172,6 +172,9 @@ namespace Odyssey.Tests.Sim
         public void EveryReportCarriesTheWeapon()
         {
             var (colony, a, b, _) = Duel(order: false);
+            // Bodiless (design 43 §8): the test is the reports, and needs the fight to run long
+            // enough for a bat to stun; with a body, pain shock ends it at 64 points.
+            Bodiless(colony);
             colony.Pawns.WeaponRules = new HeldWeapon().Give(a, ItemHandle.Bat);
             Assert.That(Attack(colony, a, b), Is.EqualTo(IntentRejection.None));
 
