@@ -2120,6 +2120,18 @@ namespace Odyssey.Presentation.Rendering
                     Vector3.one);
                 AppendColonist(variant, placement);
 
+                // Selected, and drawn here rather than as a figure: the highlight takes the same
+                // body at the same matrix (design 44 §3).
+                float captured = 0f;
+                bool capture = Highlight != null && HighlightPawns.Count > 0
+                               && HighlightPawns.TryGetValue(pawns[i].Id.Value, out captured);
+                if (capture)
+                {
+                    Highlight!.AddModule(colonist, placement, captured);
+                    HighlightPawnsCaptured.Add(pawns[i].Id.Value);
+                    HighlightCaptured++;
+                }
+
                 // Whatever this colonist is wearing on their head, at the head of the body they
                 // are wearing. The appearance is the same object the figures read, so the person
                 // past the cap is the person in front of the camera.
@@ -2131,14 +2143,23 @@ namespace Odyssey.Presentation.Rendering
                     if (look.HidesHair)
                     {
                         if (Attachments.Headgear(look.HeadPiece).Usable)
+                        {
                             AppendPiece(look.HeadPiece, head, _headPlacements, _headCounts);
+                            if (capture) CapturePiece(Attachments.Headgear(look.HeadPiece), head, captured);
+                        }
                     }
                     else
                     {
                         if (Attachments.Hair(look.HairPiece).Usable)
+                        {
                             AppendPiece(look.HairPiece, head, _hairPlacements, _hairCounts);
+                            if (capture) CapturePiece(Attachments.Hair(look.HairPiece), head, captured);
+                        }
                         if (Attachments.Beard(look.BeardPiece).Usable)
+                        {
                             AppendPiece(look.BeardPiece, head, _beardPlacements, _beardCounts);
+                            if (capture) CapturePiece(Attachments.Beard(look.BeardPiece), head, captured);
+                        }
                     }
                 }
 
@@ -2243,6 +2264,105 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>And how far in front of them, in metres.</summary>
         public const float StandInCarryReach = 0.35f;
 
+        // ---- the selection highlight's captures (design 44 §3) --------------------------------
+
+        /// <summary>
+        /// Where this frame's selection highlight is collected, or null when the highlight is off.
+        /// The composition root sets it, with <see cref="HighlightThing"/> and
+        /// <see cref="HighlightPawns"/>, before <see cref="RenderActors"/>: a selected item or a
+        /// colonist past the figure cap is captured as it is appended, at the matrices it is drawn
+        /// at, so the highlight never has a second copy of where a heap's lumps go.
+        /// </summary>
+        public SelectionHighlight? Highlight { get; set; }
+
+        /// <summary>The selected item, or null for none.</summary>
+        public ThingId? HighlightThing { get; set; }
+
+        /// <summary>The selected pawns by id, with the strength each is highlighted at.</summary>
+        public readonly System.Collections.Generic.Dictionary<int, float> HighlightPawns =
+            new System.Collections.Generic.Dictionary<int, float>();
+
+        /// <summary>The selected pawns that were drawn here, past the figure cap, and captured.</summary>
+        public readonly System.Collections.Generic.HashSet<int> HighlightPawnsCaptured =
+            new System.Collections.Generic.HashSet<int>();
+
+        /// <summary>How many draws the captures added since <see cref="BeginHighlight"/>.</summary>
+        public int HighlightCaptured { get; private set; }
+
+        /// <summary>The strength the item being appended is captured at; zero while it is not.</summary>
+        float _capturing;
+
+        /// <summary>Start a frame's captures: nothing selected, nothing captured.</summary>
+        public void BeginHighlight(SelectionHighlight? into)
+        {
+            Highlight = into;
+            HighlightThing = null;
+            HighlightPawns.Clear();
+            HighlightPawnsCaptured.Clear();
+            HighlightCaptured = 0;
+            _capturing = 0f;
+        }
+
+        void CapturePiece(in ColonistAttachments.Piece piece, in Matrix4x4 head, float strength)
+        {
+            if (Highlight == null || piece.Mesh == null) return;
+            Highlight.AddMesh(piece.Mesh, 0, head, strength, piece.Material);
+            HighlightCaptured++;
+        }
+
+        ChunkBatch? _highlightBatch;
+
+        /// <summary>
+        /// The building in one cell — with <paramref name="terrain"/>, its ground as well — added to
+        /// <paramref name="into"/> exactly as the chunk draws it: <see cref="ChunkMesher.MeshCell"/>
+        /// over a scratch batch, then every instance of every bucket at its own matrix. Walls or
+        /// their stumps, whichever the slice is showing. Returns how many draws it added; none
+        /// means the caller falls back to the brackets.
+        /// </summary>
+        public int CollectCell(int index, SelectionHighlight into, float strength, bool terrain)
+        {
+            _highlightBatch ??= new ChunkBatch();
+            _mesher.MeshCell(_highlightBatch, index, terrain);
+            CellRef cell = _model.Size.FromIndex(index);
+            bool lowered = _drawnSlice != null && _drawnSlice.LowersWallsOn(_drawnLayer, cell.Y);
+
+            int added = CollectBuckets(_highlightBatch.Body, into, strength)
+                        + CollectBuckets(_highlightBatch.Roof, into, strength)
+                        + CollectBuckets(lowered ? _highlightBatch.Stumps : _highlightBatch.Walls, into, strength);
+
+            GroundSkinMesh skin = _highlightBatch.Skin;
+            if (terrain && skin.Mesh != null)
+                for (int g = 0; g < skin.GroupCount; g++)
+                {
+                    into.AddMesh(skin.Mesh, g, Matrix4x4.identity, strength);
+                    added++;
+                }
+            return added;
+        }
+
+        int CollectBuckets(System.Collections.Generic.List<InstanceBucket> buckets, SelectionHighlight into, float strength)
+        {
+            int added = 0;
+            for (int b = 0; b < buckets.Count; b++)
+            {
+                InstanceBucket bucket = buckets[b];
+                if (bucket.Count == 0) continue;
+                ResolvedModule resolved = _model.Library[bucket.Module];
+                // A module drawn by level keeps one bucket for every part of its finest level, at
+                // the one local transform they share; anything else is one part per bucket.
+                ModulePart[] parts = resolved.DrawsByLevel ? resolved.Lods[0].Parts : resolved.Parts;
+                int first = resolved.DrawsByLevel ? 0 : bucket.Part;
+                int last = resolved.DrawsByLevel ? parts.Length : bucket.Part + 1;
+                for (int p = first; p < last && p < parts.Length; p++)
+                    for (int k = 0; k < bucket.Count; k++)
+                    {
+                        into.AddMesh(parts[p].Mesh, parts[p].Submesh, bucket.Matrices[k], strength, parts[p].Material);
+                        added++;
+                    }
+            }
+            return added;
+        }
+
         // ---- loose items ----------------------------------------------------------------------
 
         int[] _itemModules = System.Array.Empty<int>();
@@ -2269,9 +2389,12 @@ namespace Odyssey.Presentation.Rendering
             if (things.Length == 0 && snapshot.PawnCount == 0 && snapshot.FallingCount == 0) return;
             EnsureItemModules();
             System.Array.Clear(_itemCounts, 0, _itemCounts.Length);
+            bool seeking = Highlight != null && HighlightThing.HasValue;
 
             for (int i = 0; i < things.Length; i++)
             {
+                // The selected thing is captured by AppendItem as its lumps go in (design 44 §3).
+                _capturing = seeking && things[i].Id == HighlightThing!.Value ? SelectionHighlight.Primary : 0f;
                 CellRef cell = things[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
                 if (slice != null && slice.HidesStandingAt(activeLayer, cell, _model)) continue;
@@ -2426,6 +2549,7 @@ namespace Odyssey.Presentation.Rendering
                     Quaternion.Euler(0f, YawOf(things[i].Id), 0f),
                     Vector3.one));
             }
+            _capturing = 0f;
 
             RenderCarriedLoads(snapshot, carried, lowest, highest, tickAlpha, movePerTick);
             RenderFalling(snapshot, lowest, highest, fallback, tickAlpha);
@@ -2661,6 +2785,12 @@ namespace Odyssey.Presentation.Rendering
                 _itemPlacements[def] = into;
             }
             into[_itemCounts[def]++] = placement;
+
+            if (_capturing > 0f && Highlight != null)
+            {
+                Highlight.AddModule(_model.Library[_itemModules[def]], placement, _capturing);
+                HighlightCaptured++;
+            }
         }
 
         /// <summary>
@@ -3063,6 +3193,47 @@ namespace Odyssey.Presentation.Rendering
         ///
         /// <para>Separated from the draw so the geometry can be asserted rather than looked at.</para>
         /// </summary>
+        /// <summary>
+        /// How far a tile's highlighted face stands off the surface, in metres: past the drape's
+        /// curvature (about 11 mm) so the wash is not lost into the ground it is washing.
+        /// </summary>
+        public const float SurfaceHighlightLift = 0.03f;
+
+        Mesh? _surfaceQuad;
+        readonly Vector3[] _surfaceCorners = new Vector3[4];
+        static readonly int[] SurfaceTriangles = { 0, 2, 1, 1, 2, 3 };
+
+        /// <summary>
+        /// A selected tile's top face for the selection highlight (design 44 §3): the four corners
+        /// the floor bracket stands on — the same placement, the same corner rises, so a water line,
+        /// a bank and a skin ramp all come out as they do for the bracket — as one quad, washed.
+        /// </summary>
+        public void CollectSurface(Matrix4x4 place, SelectionHighlight into, float strength,
+            float[]? cornerRises = null)
+        {
+            float half = CellMetrics.HalfXZ;
+            for (int corner = 0; corner < 4; corner++)
+            {
+                float sx = (corner & 1) == 0 ? -1f : 1f;
+                float sz = (corner & 2) == 0 ? -1f : 1f;
+                float rise = cornerRises != null && corner < cornerRises.Length ? cornerRises[corner] : 0f;
+                _surfaceCorners[corner] = place.MultiplyPoint3x4(
+                    new Vector3(sx * half, rise + SurfaceHighlightLift, sz * half));
+            }
+
+            if (_surfaceQuad == null)
+            {
+                _surfaceQuad = new Mesh { name = "Selection surface" };
+                _surfaceQuad.MarkDynamic();
+                _surfaceQuad.vertices = _surfaceCorners;
+                _surfaceQuad.triangles = SurfaceTriangles;
+            }
+            else _surfaceQuad.vertices = _surfaceCorners;
+            _surfaceQuad.RecalculateBounds();
+
+            into.AddMesh(_surfaceQuad, 0, Matrix4x4.identity, strength, null, fill: 1f);
+        }
+
         public static int FloorBracketEdges(Matrix4x4 place, Matrix4x4[] into, float[]? cornerRises = null)
         {
             float half = CellMetrics.HalfXZ;
@@ -4083,6 +4254,12 @@ namespace Odyssey.Presentation.Rendering
             _materials.Dispose();
             Clearance.Dispose();
             _indirect?.Dispose();
+            _highlightBatch?.Dispose();
+            if (_surfaceQuad != null)
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(_surfaceQuad);
+                else UnityEngine.Object.DestroyImmediate(_surfaceQuad);
+            }
         }
     }
 }

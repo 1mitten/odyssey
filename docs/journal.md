@@ -12569,3 +12569,48 @@ with rain, cloud with a bolt) with the word in its tooltip, from the registry.
 
 **Flakes seen, not fixed:** one unnamed Sim test and one unnamed Long-tier test each failed once
 and passed on the re-run, on a machine with a CI job running beside it.
+
+## 2026-09-25 — The selection highlight: the selected thing lit at its own edges
+
+The owner asked for a default selection that marks the thing itself rather than a white box
+round it, with the brackets kept as an option. It should also light a tile and be cheap. They were
+interviewed on the look before anything was built (design 44 §1). Their answers: a white line round
+the silhouette with a faint lift, a soft wash and line on a tile, a dimmed line through walls, the
+primary brighter in a box selection, about 2.5 px at 1080 lines, no hover yet, and the choice in
+Settings → Interface.
+
+**Why screen-space.** The ink hull only exists on `Odyssey/Character`. A rim term would mean editing
+every pack shader and would split the instanced buckets. So the highlight is one URP feature. It
+draws a mask of only the selected thing against the camera's depth (R where the thing is seen, G for
+the whole silhouette), then two blits scissored to the thing's rectangle. With nothing selected it
+enqueues nothing.
+
+**What is masked is what is drawn, never a second rule.**
+- A figure contributes its own renderers.
+- An item, and a colonist past the figure cap, are captured as `RenderActors` appends them.
+- A building is `ChunkMesher.MeshCell`, the chunk mesher run over the one cell.
+- A tile is the quad the flush bracket already stands on.
+
+`AWallIsCollectedAsExactlyThePanelsAndCoreTheChunkDraws` holds the building case to the chunk's own
+matrices. Anything that yields nothing falls back to the brackets, so a selection is never
+invisible.
+
+**Measured, and one decision reversed by a photograph.** The lift was first an 8 % alpha blend
+towards white. Photographed against a control (the same colonist and camera, nothing selected), it
+washed the orange jumpsuit to cream. At 3.5 % it still did. A white blend in linear light raises
+orange's near-zero blue channel furthest. The lift is now a second pass that multiplies by 1.12
+(`Blend DstColor One`), and the colour holds (§6a).
+
+**Three things only a run could say.**
+- In a batch PlayMode run no camera renders by itself (there is no Game view). The rig's camera
+  rendered zero times in three frames, so the first version of the PlayMode test asserted against a
+  feature that was never asked for its passes. The tests now drive `Camera.Render` into a texture,
+  as the picture arms in `FrameTimeTests` do.
+- The instancing keep-alive test and the player build's shader guard each caught the two new
+  shaders missing from their lists. Both were fixed by the commands those guards name.
+- In the probe, a board that is not primed has no chunks meshed, and the budget meshes eleven a
+  frame. A shot must call `PrimeAll` or it photographs the actors over a void.
+
+**Cost, CPU side, one run** (1280 × 720, primitives, `TheSelectionHighlightAgainstTheFrame`): a
+render is 0.331 ms p50 with nothing selected and 0.350 ms with a tile. The GPU side is the owner's
+overlay reading at 4K. Not yet played.

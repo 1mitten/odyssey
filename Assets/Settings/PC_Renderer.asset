@@ -48,7 +48,8 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: 7833122117494664109}
   - {fileID: -5087203024939024053}
-  m_RendererFeatureMap: ad6b866f10d7b46c4b81374ecd9f66b9
+  - {fileID: 3527378496092713311}
+  m_RendererFeatureMap: ad6b866f10d7b46c4b81374ecd9f66b95f31f5a70dc4f330
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
@@ -77,6 +78,25 @@ MonoBehaviour:
   m_DepthTextureFormat: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
+--- !u!114 &3527378496092713311
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d497fd00e77a8554ca59ae9aa44ffe36, type: 3}
+  m_Name: Odyssey Selection Highlight
+  m_EditorClassIdentifier: Odyssey.Presentation::Odyssey.Presentation.Rendering.SelectionHighlightFeature
+  m_Active: 1
+  colour: {r: 1.25, g: 1.25, b: 1.25, a: 1}
+  width: 2.5
+  hiddenStrength: 0.4
+  lift: 0.12
+  fill: 0.16
+  stage: 500
 --- !u!114 &7833122117494664109
 MonoBehaviour:
   m_ObjectHideFlags: 0

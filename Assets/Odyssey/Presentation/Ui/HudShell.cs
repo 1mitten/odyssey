@@ -670,6 +670,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.AutosaveDaysChanged += OnAutosaveDaysChanged;
             _directors.Settings.CameraSpeedChanged += OnCameraSpeedChanged;
             _directors.Settings.BuildPaletteLayoutChanged += OnBuildLayoutChanged;
+            _directors.Settings.SelectionStyleChanged += OnSelectionStyleChanged;
             _directors.Settings.DeveloperOverlayChanged += OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged += OnBusDbChanged;
             _directors.Settings.ExitChanged += OnExitChanged;
@@ -703,6 +704,7 @@ namespace Odyssey.Presentation.Ui
             OnAutosaveDaysChanged(_directors.Settings.AutosaveDays);
             OnCameraSpeedChanged(_directors.Settings.CameraSpeed);
             OnBuildLayoutChanged(_directors.Settings.BuildPaletteLayout);
+            OnSelectionStyleChanged(_directors.Settings.SelectionStyle);
             OnDeveloperOverlayChanged();
             foreach (SettingsBus bus in SettingsDirector.Buses) OnBusDbChanged(bus);
             OnExitChanged();
@@ -738,6 +740,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.AutosaveDaysChanged -= OnAutosaveDaysChanged;
             _directors.Settings.CameraSpeedChanged -= OnCameraSpeedChanged;
             _directors.Settings.BuildPaletteLayoutChanged -= OnBuildLayoutChanged;
+            _directors.Settings.SelectionStyleChanged -= OnSelectionStyleChanged;
             _directors.Settings.DeveloperOverlayChanged -= OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged -= OnBusDbChanged;
             _directors.Settings.ExitChanged -= OnExitChanged;
