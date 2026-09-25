@@ -130,3 +130,128 @@ So pathfinding falls from roughly 65% of the old tick to roughly 45%, not to not
 The lesson generalises: a plausible causal story attached to a real number is still a guess until it is measured separately.
 
 Still unmeasured, and honestly so: the right chunk and region size for a stamped ruined city (unmeasurable until mapgen exists), whether the cell A-star needs Burst at all (a D1 follow-up), and HPA-style crossing-distance caching under constant editing, for which no published measurement was found.
+
+## 7. Keeping the region graph current without walking the board (HT1, 2026-09-25)
+
+The hardening plan's first unit (`docs/plans/vertical-slice.md` §HT, audit §2a). **The one cost in
+the simulation that grows with the board rather than with what is happening on it.**
+
+### 7a. Measured first
+
+`NavGraph.Rebuild` after one mined cell, split by segment (`NavGraph.RebuildTicks`, printed by
+`NavGraphStatisticsTests`; mean of 200 rebuilds, the Windows dev machine, CoreCLR, 2026-09-25, the
+played map). Only the first two segments are local to the edit; the other four walk every region or
+link on the board:
+
+| Board | Rebuild | Flood | Links | **Portals** | **Adjacency** | **Districts** | **Estimate** |
+|---|---|---|---|---|---|---|---|
+| Standard 120 × 120 × 16 | 0.330 ms | 0.027 | 0.092 | 0.083 | 0.018 | 0.102 | 0.003 |
+| Large 180 × 180 × 24 | 0.733 | 0.034 | 0.100 | 0.196 | 0.048 | 0.330 | 0.008 |
+| Huge 240 × 240 × 16 | 1.233 | 0.041 | 0.118 | 0.338 | 0.076 | 0.623 | 0.016 |
+| Scale target 250 × 250 × 40 | **1.795** | 0.048 | 0.121 | 0.422 | 0.126 | **1.000** | 0.018 |
+| Ruined city, scale target | **3.454** | 0.044 | 0.148 | 0.355 | 0.254 | **2.559** | 0.043 |
+
+So the audit's "districts" is half of it on the natural map and three quarters on the city, and the
+**portal table is the second cost** (a dictionary cleared, every portal link re-added and sorted). The
+local work is 0.17 ms: **the 0.2 ms target means all four global passes go**, not districts alone.
+
+### 7b. The decisions
+
+- **Districts are repaired, not re-flooded — and not by the audit's option 1 as written.**
+  "Re-flood the components the edit touched" is the full pass again on a real board, because nearly
+  every region on the surface is one district: the touched component *is* the board. What is done
+  instead:
+  - **A split** of an old district can only happen if the regions that bordered the edit — the
+    surviving ends of every link freed, and the new regions in the re-flooded blocks — stop reaching
+    each other. (Any path between two surviving regions either avoids the edit, or enters and leaves
+    it through border regions.) So a search starts from each border region, searches that meet are
+    joined (union-find), and the search stops the moment each old district's borders are one group.
+    The ordinary edit meets within a few steps, through the block just rebuilt. A search that runs
+    out of frontier first has found a closed piece: it gets a fresh id, at the cost of that piece.
+  - **A merge** — a new link joining two old districts — relabels the **smaller** one, by the member
+    counts kept per district.
+  - **Ids are kept per mode with a free list and a member count**; nothing compares them for order,
+    and they are **not in the state hash** (`NavGraph.ContributeTo`, which would have hashed them, has
+    no caller; its comment said otherwise). `DistrictCount` stays the number of live districts.
+  - The full `RecomputeDistricts` stays: the first build, a load (`MarkAllDirty`) and the oracle.
+- **Adjacency keeps its order exactly**: each region's incident links in ascending link id, as the
+  CSR built them — the abstract search walks them in that order, so a path, and with it every golden,
+  depends on it. Stored as a slotted CSR (each region owns a run of slots with room to grow), so
+  `AdjacencyStart/Count/Link` keep their meaning and no caller changes. Only freed and built links, and
+  freed and allocated regions, touch it.
+- **Portal edges are maintained per cell** as portal links are freed and built, each cell's chain in
+  ascending target cell as before, from a pool with a free list. **The estimate** counts portal links
+  as they come and go.
+
+### 7c. The oracle
+
+`NavGraph.DerivedTablesDisagree()` rebuilds all four tables from scratch **inside the same graph** —
+where ids agree, unlike a second graph — and says what differs: adjacency order exactly, portal chains
+exactly, districts as a partition (a bijection between the two labellings), the live district count
+and the estimate. It runs after every round of `IncrementalRebuildTests`' randomised edits and of a new
+randomised run on generated maps, beside the existing checks (the id-independent fingerprint against a
+graph built from scratch, and every path identical). Each piece was built with the oracle failing
+first when it was withheld.
+
+### 7d. Done when
+
+The scale-target rebuild after one mined cell is **under 0.2 ms** on this machine, with every path
+checksum, every golden and `NavGraphStatisticsTests`' region counts unchanged.
+
+### 7e. Measured after
+
+The same arm, the same machine, 2026-09-25, alone (no Unity process, CPU at 5 %):
+
+| Board | Rebuild before | **after** | Districts before | after | Local work (flood + links) |
+|---|---|---|---|---|---|
+| Standard 120 × 120 × 16 | 0.330 ms | 0.294 | 0.102 | 0.021 | 0.263 (first arm; the JIT) |
+| Large 180 × 180 × 24 | 0.733 | **0.156** | 0.330 | 0.014 | 0.125 |
+| Huge 240 × 240 × 16 | 1.233 | **0.168** | 0.623 | 0.016 | 0.132 |
+| **Scale target 250 × 250 × 40** | **1.795** | **0.184** | 1.000 | 0.005 | 0.127 |
+| Ruined city, scale target | 3.454 | **0.263** | 2.559 | 0.037 | 0.176 |
+
+**Done: 0.184 ms at the scale target, under the 0.2 ms the plan set.** Every golden, the combat
+gate's hashes and every path checksum unchanged; `NavGraphStatisticsTests`' region counts unchanged.
+What is left is the local work, and it now costs about the same on every board.
+
+**The tick benchmark's edit arm**, on its room lattice (nine times a generated map's regions, so the
+stress case, `28-map-size.md` §2), `main` against this branch in one sitting:
+
+| Edit tick, lattice | `main` | HT1 |
+|---|---|---|
+| Standard | 7.48 ms | 3.08–4.18 |
+| Large | 20.27 | 7.89–8.38 |
+| Huge | 29.09 | 12.57–13.97 |
+| Scale target | **63.77** | **11.16–17.57** |
+
+On the lattice the repair's search costs more (1.45 ms per rebuild at the scale target): its seeds sit
+in rooms whose shared district is reached round walls, through doorways, so the searches travel
+before they meet. Still a thirtieth of what the full flood cost there.
+
+### 7f. What the oracle caught
+
+- **A first draft's stopping rule was wrong.** It searched until no two live groups shared an old id
+  and every group carried one. Two groups with *different* ids can be joined through the edit itself —
+  the gap reopened between two halves of a board — and stopping left them as two districts
+  (`OpeningTheGapMergesTheTwoHalves`: "2 districts, expected 1"). The fix is the reason a merge can only
+  happen through something new: the ends of every built link are joined before any search, after which
+  distinct groups really are distinct components.
+- **A new region's id came out of `Array.Resize` at district 0**, which is somebody's district; a
+  recycled id had been reset as it was freed. On the played map, edit 1: "10 districts, expected 11".
+- **The small fixtures never reached the repair.** A rebuild dirtying a quarter of the board takes the
+  full pass, and the maze fixture and the first split and merge tests were small enough to do so every
+  time; withholding the merge relabel passed them. They were enlarged until the repair is what runs,
+  and then each withheld part failed.
+- **One part could not be made to fail**: the ends of a freed link as seeds. Dirtying the edited cell's
+  neighbouring blocks already re-floods every surviving region at the end of a link that did not come
+  back, so those regions are new and seeded anyway. Kept as a second line, and written down so it is
+  not mistaken for a tested rule.
+
+### 7g. Found on the way, and not this unit's
+
+With the navigation local, the busy tick's board-scaled cost is elsewhere. A throwaway probe timing
+every world system on the scale-target lattice, one cell mined a tick: **Enclosure 8.04 ms** (the
+temperature rooms, `28-temperature.md`), **Needs 4.16 ms**, Navigation 2.97 ms, everything else under
+0.03. At rest the whole tick is 0.15 ms, so both scale with edits. The enclosure solve arrived after
+the audit, which is why the audit's 1.19 ms edit tick was out of date by a factor of fifty on `main`.
+Recorded as **HT10** in `docs/plans/vertical-slice.md`.

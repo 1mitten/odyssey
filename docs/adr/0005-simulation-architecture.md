@@ -249,6 +249,27 @@ window rather than a day.
 **Flip condition.** If tracing a real desync becomes impractical, the answer is a cheaper *trace*
 hash rather than a cheaper state hash — the canonical number should stay the complete one.
 
+## Amendment, 2026-09-25 — the edit tick (HT1)
+
+OQ-19's figures above are a world **at rest**, and a still world is the one state in which the
+navigation rebuild costs nothing. The baseline audit (2026-09-19) measured the other state — one cell
+mined a tick — and found the region graph's four whole-board passes behind it. HT1 made them local
+(`docs/design/05-ai-and-jobs.md` §7): portal edges and adjacency kept as links come and go, districts
+repaired where an edit touched them. Measured on the Windows dev machine, CoreCLR, alone:
+
+| One mined cell, the played map | Nav rebuild before | after |
+|---|---|---|
+| Standard 120 × 120 × 16 | 0.330 ms | 0.294 |
+| Huge 240 × 240 × 16 | 1.233 | 0.168 |
+| **Scale target 250 × 250 × 40** | **1.795** | **0.184** |
+| Ruined city, scale target | 3.454 | 0.263 |
+
+The tick benchmark's edit arm (its room lattice, the stress case) went **63.8 → 11–18 ms** a tick at
+the scale target on the same machine. That number is not the margin table's to celebrate: on `main`
+it had grown from the audit's 1.19 ms to 63.8 because the temperature line's **enclosure solve** also
+scales with the board under edits — 8.0 ms of the busy tick after HT1, with Needs at 4.2 ms — which is
+HT10. **Every margin in this ADR is a world at rest until HT10 closes.**
+
 ## What would make us revisit this
 
 - The pathfinding work fails to bring the tick inside budget on target hardware *and* profiling shows the remaining cost is structural rather than algorithmic.

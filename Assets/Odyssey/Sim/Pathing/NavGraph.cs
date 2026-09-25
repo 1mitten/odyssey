@@ -53,7 +53,7 @@ namespace Odyssey.Sim.Pathing
     /// that adjacency. An incremental rebuild and a full rebuild therefore agree on structure,
     /// on successor order, and on every path that follows from them.</para>
     /// </summary>
-    public sealed class NavGraph
+    public sealed partial class NavGraph
     {
         /// <summary>A region block: 10 x 10 cells of one layer. Never larger, never vertical.</summary>
         public const int BlockSize = 10;
@@ -120,23 +120,31 @@ namespace Odyssey.Sim.Pathing
         readonly List<int> _freeLinks = new List<int>();
         int _freeLinkCursor;
 
-        // ---- region adjacency, CSR, rebuilt in ascending link id -------------------------
+        // ---- region adjacency, a slotted CSR kept in ascending link id (HT1) ---------------
+        // Each region owns a run of _adjCap slots at _adjStart in _adjLinks, of which _adjCount
+        // are used. A run that fills moves to the end of the pool at twice the size; the runs left
+        // behind are counted and the pool is packed again when they are half of it.
         int[] _adjStart = new int[65];
         int[] _adjCount = new int[64];
-        int[] _adjLinks = new int[64];
-        int _adjTotal;
+        int[] _adjCap = new int[64];
+        int[] _adjLinks = new int[256];
+        int _adjUsed;
+        int _adjWaste;
 
         // ---- portal edges per cell, for the concrete search ------------------------------
         readonly Dictionary<int, int> _cellPortalHead = new Dictionary<int, int>();
         int _portalEdgeCount;
+        readonly List<int> _freePortalEdges = new List<int>();
+        int _portalLinkCount;
         int[] _peTarget = new int[64];
         int[] _peCost = new int[64];
         byte[] _peMode = new byte[64];
         int[] _peNext = new int[64];
         int[] _peLink = new int[64];
         int[] _peFrom = new int[64];
-        long[] _peKey = new long[64];
-        int[] _peOrder = new int[64];
+        // The two edges each live portal link owns, so freeing the link can take them out (HT1).
+        int[] _linkEdgeA = new int[64];
+        int[] _linkEdgeB = new int[64];
 
         // ---- districts --------------------------------------------------------------------
         readonly int[][] _district = new int[TraverseModes.Count][];
@@ -286,6 +294,52 @@ namespace Odyssey.Sim.Pathing
 
         public bool HasDirtyWork => _anyDirty;
 
+        /// <summary>The segments of <see cref="Rebuild"/>, in the order they run (HT1).</summary>
+        public enum RebuildSegment
+        {
+            /// <summary>Collecting the affected zones, freeing and re-flooding the dirty blocks.</summary>
+            Flood,
+
+            /// <summary>Rebuilding the links of every affected zone.</summary>
+            Links,
+
+            /// <summary>The per-cell portal edge table, from every live portal link.</summary>
+            Portals,
+
+            /// <summary>The region adjacency CSR, from every live link.</summary>
+            Adjacency,
+
+            /// <summary>The districts of every traverse mode.</summary>
+            Districts,
+
+            /// <summary>The layer-change estimate, from every live portal link.</summary>
+            Estimate,
+        }
+
+        /// <summary>
+        /// Stopwatch ticks spent in each <see cref="RebuildSegment"/> since construction or the last
+        /// <see cref="ResetRebuildTimes"/> (HT1). Counters on the graph rather than segments behind
+        /// the tick's <c>PhaseSink</c>, whose seven phases sum to the tick and would stop doing so.
+        /// A measurement: never saved, never hashed, never read by the simulation.
+        /// </summary>
+        public long[] RebuildTicks { get; } = new long[6];
+
+        /// <summary>How many rebuilds did work since the counters were last reset.</summary>
+        public int RebuildsTimed { get; private set; }
+
+        public void ResetRebuildTimes()
+        {
+            Array.Clear(RebuildTicks, 0, RebuildTicks.Length);
+            RebuildsTimed = 0;
+        }
+
+        long Lap(RebuildSegment segment, long since)
+        {
+            long now = System.Diagnostics.Stopwatch.GetTimestamp();
+            RebuildTicks[(int)segment] += now - since;
+            return now;
+        }
+
         // =====================================================================================
         // Rebuild
         // =====================================================================================
@@ -302,6 +356,7 @@ namespace Odyssey.Sim.Pathing
             for (int b = 0; b < BlockCount; b++) if (_dirty[b]) _dirtyList.Add(b);
             if (_dirtyList.Count == 0) { _anyDirty = false; return false; }
 
+            long t = System.Diagnostics.Stopwatch.GetTimestamp();
             CollectAffectedZones();
 
             // Free first, everything, then allocate. Because the free lists hand out the lowest
@@ -316,17 +371,31 @@ namespace Odyssey.Sim.Pathing
             _freeLinkCursor = 0;
 
             for (int i = 0; i < _dirtyList.Count; i++) FloodBlock(_dirtyList[i]);
+            t = Lap(RebuildSegment.Flood, t);
             for (int i = 0; i < _affectedZones.Count; i++) BuildZoneLinks(_affectedZones[i]);
+            for (int i = 0; i < _affectedZones.Count; i++)
+                for (int l = _zoneLinkHead[_affectedZones[i]]; l != -1; l = _linkNextInZone[l])
+                {
+                    if (_linkKind[l] == LinkKind.Portal) AddPortalEdges(l);
+                    InsertAdjacent(_linkA[l], l);
+                    InsertAdjacent(_linkB[l], l);
+                    NoteBuiltLink(l);
+                }
 
             if (_freeRegionCursor > 0) _freeRegions.RemoveRange(0, _freeRegionCursor);
             if (_freeLinkCursor > 0) _freeLinks.RemoveRange(0, _freeLinkCursor);
             _freeRegionCursor = 0;
             _freeLinkCursor = 0;
+            t = Lap(RebuildSegment.Links, t);
 
-            RebuildPortalEdges();
-            RebuildAdjacency();
-            RecomputeDistricts();
+            t = Lap(RebuildSegment.Portals, t);
+            if (_adjWaste > 1024 && _adjWaste * 2 > _adjUsed) PackAdjacency();
+            t = Lap(RebuildSegment.Adjacency, t);
+            UpdateDistricts();
+            t = Lap(RebuildSegment.Districts, t);
             RecomputeLayerChangeEstimate();
+            Lap(RebuildSegment.Estimate, t);
+            RebuildsTimed++;
 
             for (int i = 0; i < _dirtyList.Count; i++) _dirty[_dirtyList[i]] = false;
             _anyDirty = false;
@@ -419,6 +488,7 @@ namespace Odyssey.Sim.Pathing
             for (int r = _blockRegionHead[block]; r != -1;)
             {
                 int next = _regionNextInBlock[r];
+                LeaveDistricts(r);
                 _regionAlive[r] = false;
                 _regionKind[r] = RegionKind.None;
                 _regionVersion[r]++;
@@ -442,6 +512,10 @@ namespace Odyssey.Sim.Pathing
 
             _regionAlive[id] = true;
             _regionKind[id] = kind;
+            // In no district until the repair puts it in one. A recycled id was reset as it was
+            // freed; a new one comes out of Array.Resize at 0, which is somebody's district (HT1).
+            for (int m = 0; m < TraverseModes.Count; m++) _district[m][id] = -1;
+            AddRepairSeed(id);
             _regionBlock[id] = block;
             _regionMinCell[id] = minCell;
             _regionCells[id] = 0;
@@ -467,6 +541,7 @@ namespace Odyssey.Sim.Pathing
             Array.Resize(ref _regionVersion, n);
             Array.Resize(ref _regionNextInBlock, n);
             Array.Resize(ref _adjCount, n);
+            Array.Resize(ref _adjCap, n);
             Array.Resize(ref _adjStart, n + 1);
             for (int m = 0; m < TraverseModes.Count; m++) Array.Resize(ref _district[m], n);
         }
@@ -562,6 +637,11 @@ namespace Odyssey.Sim.Pathing
             for (int l = _zoneLinkHead[zone]; l != -1;)
             {
                 int next = _linkNextInZone[l];
+                if (_linkKind[l] == LinkKind.Portal) RemovePortalEdges(l);
+                RemoveAdjacent(_linkA[l], l);
+                RemoveAdjacent(_linkB[l], l);
+                AddRepairSeed(_linkA[l]);
+                AddRepairSeed(_linkB[l]);
                 _linkAlive[l] = false;
                 _freeLinks.Add(l);
                 l = next;
@@ -605,6 +685,8 @@ namespace Odyssey.Sim.Pathing
             Array.Resize(ref _linkSpan, n);
             Array.Resize(ref _linkZone, n);
             Array.Resize(ref _linkNextInZone, n);
+            Array.Resize(ref _linkEdgeA, n);
+            Array.Resize(ref _linkEdgeB, n);
         }
 
         void BuildZoneLinks(int zone)
@@ -930,105 +1012,160 @@ namespace Odyssey.Sim.Pathing
 
         // ---- derived tables -----------------------------------------------------------------
 
-        void RebuildPortalEdges()
+        // Portal edges are kept as portal links come and go (HT1, design 05 §7b): a link freed takes
+        // its two edges out of their cells' chains while its fields still say where they are, and
+        // every portal link built in an affected zone puts its two back. Each cell's chain stays in
+        // ascending target cell, then ascending link — a property of the world rather than of the
+        // order connectors were registered in. Successor order feeds straight into which of several
+        // equal-cost predecessors a search records, so it has to be canonical, or a graph rebuilt
+        // from a save would produce a different path from one maintained incrementally. This was a
+        // sort of every portal edge on the board on every rebuild; it is now the handful an edit
+        // touched. Scales with the portal links in the affected zones.
+
+        void AddPortalEdges(int link)
         {
-            _cellPortalHead.Clear();
-            _portalEdgeCount = 0;
-
-            int needed = 0;
-            for (int l = 0; l < _linkCount; l++)
-                if (_linkAlive[l] && _linkKind[l] == LinkKind.Portal) needed += 2;
-            if (needed > _peTarget.Length)
-            {
-                int n = Math.Max(1, _peTarget.Length);
-                while (n < needed) n *= 2;
-                Array.Resize(ref _peTarget, n);
-                Array.Resize(ref _peCost, n);
-                Array.Resize(ref _peMode, n);
-                Array.Resize(ref _peNext, n);
-                Array.Resize(ref _peLink, n);
-                Array.Resize(ref _peFrom, n);
-                Array.Resize(ref _peKey, n);
-                Array.Resize(ref _peOrder, n);
-            }
-
-            for (int l = 0; l < _linkCount; l++)
-            {
-                if (!_linkAlive[l] || _linkKind[l] != LinkKind.Portal) continue;
-                AddPortalEdge(_linkCellA[l], _linkCellB[l], _linkCostAB[l], _linkMode[l], l);
-                AddPortalEdge(_linkCellB[l], _linkCellA[l], _linkCostBA[l], _linkMode[l], l);
-            }
-
-            // Chain each cell's portal edges in ascending target cell, which is a property of the
-            // world rather than of the order connectors were registered in. Successor order feeds
-            // straight into which of several equal-cost predecessors a search records, so it has
-            // to be canonical or a graph rebuilt from a save would produce a different path from
-            // one maintained incrementally.
-            int count = _portalEdgeCount;
-            for (int i = 0; i < count; i++)
-            {
-                _peKey[i] = ((long)_peFrom[i] << 32) | (uint)_peTarget[i];
-                _peOrder[i] = i;
-            }
-
-            Array.Sort(_peKey, _peOrder, 0, count);
-            for (int i = count - 1; i >= 0; i--)
-            {
-                int e = _peOrder[i];
-                int from = _peFrom[e];
-                _peNext[e] = _cellPortalHead.TryGetValue(from, out int head) ? head : -1;
-                _cellPortalHead[from] = e;
-            }
+            _linkEdgeA[link] = ChainPortalEdge(_linkCellA[link], _linkCellB[link], _linkCostAB[link], _linkMode[link], link);
+            _linkEdgeB[link] = ChainPortalEdge(_linkCellB[link], _linkCellA[link], _linkCostBA[link], _linkMode[link], link);
+            _portalLinkCount++;
         }
 
-        void AddPortalEdge(int fromCell, int toCell, int cost, byte mode, int link)
+        void RemovePortalEdges(int link)
         {
-            int e = _portalEdgeCount++;
+            UnchainPortalEdge(_linkCellA[link], _linkEdgeA[link]);
+            UnchainPortalEdge(_linkCellB[link], _linkEdgeB[link]);
+            _portalLinkCount--;
+        }
+
+        int ChainPortalEdge(int fromCell, int toCell, int cost, byte mode, int link)
+        {
+            int e;
+            if (_freePortalEdges.Count > 0)
+            {
+                e = _freePortalEdges[_freePortalEdges.Count - 1];
+                _freePortalEdges.RemoveAt(_freePortalEdges.Count - 1);
+            }
+            else
+            {
+                e = _portalEdgeCount++;
+                if (e >= _peTarget.Length)
+                {
+                    int n = _peTarget.Length * 2;
+                    Array.Resize(ref _peTarget, n);
+                    Array.Resize(ref _peCost, n);
+                    Array.Resize(ref _peMode, n);
+                    Array.Resize(ref _peNext, n);
+                    Array.Resize(ref _peLink, n);
+                    Array.Resize(ref _peFrom, n);
+                }
+            }
+
             _peFrom[e] = fromCell;
             _peTarget[e] = toCell;
             _peCost[e] = cost;
             _peMode[e] = mode;
             _peLink[e] = link;
-            _peNext[e] = -1;
+
+            int prev = -1;
+            int cur = _cellPortalHead.TryGetValue(fromCell, out int head) ? head : -1;
+            while (cur != -1 && (_peTarget[cur] < toCell || (_peTarget[cur] == toCell && _peLink[cur] < link)))
+            {
+                prev = cur;
+                cur = _peNext[cur];
+            }
+
+            _peNext[e] = cur;
+            if (prev == -1) _cellPortalHead[fromCell] = e;
+            else _peNext[prev] = e;
+            return e;
         }
 
-        void RebuildAdjacency()
+        void UnchainPortalEdge(int fromCell, int edge)
         {
-            EnsureRegionCapacity(Math.Max(1, _regionCount));
-            for (int r = 0; r < _regionCount; r++) _adjCount[r] = 0;
-
-            for (int l = 0; l < _linkCount; l++)
+            int prev = -1;
+            int cur = _cellPortalHead.TryGetValue(fromCell, out int head) ? head : -1;
+            while (cur != -1 && cur != edge)
             {
-                if (!_linkAlive[l]) continue;
-                _adjCount[_linkA[l]]++;
-                _adjCount[_linkB[l]]++;
+                prev = cur;
+                cur = _peNext[cur];
+            }
+            if (cur == -1) throw new InvalidOperationException($"portal edge {edge} is not in cell {fromCell}'s chain");
+
+            if (prev != -1) _peNext[prev] = _peNext[edge];
+            else if (_peNext[edge] == -1) _cellPortalHead.Remove(fromCell);
+            else _cellPortalHead[fromCell] = _peNext[edge];
+            _peNext[edge] = -1;
+            _freePortalEdges.Add(edge);
+        }
+
+        // The region adjacency is kept as links come and go (HT1, design 05 §7b): every live link in
+        // ascending id, listed at its first end and then its second — exactly the order the CSR
+        // rebuilt on every edit used to give, because the abstract search walks it in that order and
+        // a path, and every golden with it, depends on which of several equal-cost neighbours comes
+        // first. A link freed leaves both lists while its ends still name them; every link built in
+        // an affected zone joins both. Scales with the links in the affected zones and the degree of
+        // their regions; the pack below is the only walk of the whole pool, and it runs when half the
+        // pool is runs left behind.
+
+        void InsertAdjacent(int region, int link)
+        {
+            int count = _adjCount[region];
+            if (count == _adjCap[region])
+            {
+                int cap = Math.Max(4, count * 2);
+                if (_adjUsed + cap > _adjLinks.Length)
+                {
+                    int n = _adjLinks.Length;
+                    while (n < _adjUsed + cap) n *= 2;
+                    Array.Resize(ref _adjLinks, n);
+                }
+                Array.Copy(_adjLinks, _adjStart[region], _adjLinks, _adjUsed, count);
+                _adjWaste += _adjCap[region];
+                _adjStart[region] = _adjUsed;
+                _adjCap[region] = cap;
+                _adjUsed += cap;
             }
 
+            // Ascending link id; a link listed twice (both ends one region) sits after itself.
+            int s = _adjStart[region];
+            int i = count;
+            while (i > 0 && _adjLinks[s + i - 1] > link)
+            {
+                _adjLinks[s + i] = _adjLinks[s + i - 1];
+                i--;
+            }
+            _adjLinks[s + i] = link;
+            _adjCount[region] = count + 1;
+        }
+
+        void RemoveAdjacent(int region, int link)
+        {
+            int s = _adjStart[region];
+            int count = _adjCount[region];
+            int i = 0;
+            while (i < count && _adjLinks[s + i] != link) i++;
+            if (i == count) throw new InvalidOperationException($"link {link} is not adjacent to region {region}");
+            for (; i < count - 1; i++) _adjLinks[s + i] = _adjLinks[s + i + 1];
+            _adjCount[region] = count - 1;
+        }
+
+        /// <summary>Pack every region's run back to back, each at its own count, in region order.</summary>
+        void PackAdjacency()
+        {
             int total = 0;
+            for (int r = 0; r < _regionCount; r++) total += _adjCount[r];
+            var packed = new int[Math.Max(256, total * 2)];
+            int at = 0;
             for (int r = 0; r < _regionCount; r++)
             {
-                _adjStart[r] = total;
-                total += _adjCount[r];
-                _adjCount[r] = 0;
+                int count = _adjCount[r];
+                Array.Copy(_adjLinks, _adjStart[r], packed, at, count);
+                _adjStart[r] = at;
+                _adjCap[r] = count;
+                at += count;
             }
-
-            _adjStart[_regionCount] = total;
-            _adjTotal = total;
-            if (total > _adjLinks.Length)
-            {
-                int n = _adjLinks.Length;
-                while (n < total) n *= 2;
-                _adjLinks = new int[n];
-            }
-
-            for (int l = 0; l < _linkCount; l++)
-            {
-                if (!_linkAlive[l]) continue;
-                int a = _linkA[l];
-                int b = _linkB[l];
-                _adjLinks[_adjStart[a] + _adjCount[a]++] = l;
-                _adjLinks[_adjStart[b] + _adjCount[b]++] = l;
-            }
+            _adjLinks = packed;
+            _adjUsed = at;
+            _adjWaste = 0;
         }
 
         void RecomputeDistricts()
@@ -1077,9 +1214,8 @@ namespace Odyssey.Sim.Pathing
 
         void RecomputeLayerChangeEstimate()
         {
-            int portals = 0;
-            for (int l = 0; l < _linkCount; l++)
-                if (_linkAlive[l] && _linkKind[l] == LinkKind.Portal) portals++;
+            // Counted as portal links come and go (HT1), not by walking every link.
+            int portals = _portalLinkCount;
 
             int gaps = Math.Max(1, Size.SizeY - 1);
             int perLayer = Math.Max(1, portals / gaps);
@@ -1497,9 +1633,11 @@ namespace Odyssey.Sim.Pathing
         }
 
         /// <summary>
-        /// Fold the graph into the state hash. Ids and district numbers are derived, but they are
-        /// derived <em>deterministically</em>, so hashing them turns a divergence in the nav
-        /// rebuild into a gate failure at the tick it happens.
+        /// Fold the graph into a hash. <b>Not part of the world's state hash</b>: nothing calls this
+        /// (checked 2026-09-25, HT1) — the graph is derived, rebuilt on load, and no system hashes
+        /// it, so district ids, which the local repair renumbers, move no golden. It is here for a
+        /// test that wants the id-dependent picture; the id-independent one is
+        /// <see cref="StructureFingerprint"/>.
         /// </summary>
         public void ContributeTo(ref StateHash hash)
         {
@@ -1526,6 +1664,143 @@ namespace Odyssey.Sim.Pathing
         }
 
         /// <summary>
+        /// The oracle for the tables a rebuild derives from the regions and links (HT1, design 05
+        /// §7c): the region adjacency, the per-cell portal edges, the districts of every mode and
+        /// the layer-change estimate, each computed again from scratch <b>inside this graph</b> —
+        /// where region and link ids agree, unlike a second graph built from scratch — and compared
+        /// with what the rebuild left. Adjacency and portal order are compared exactly, because the
+        /// abstract and concrete searches walk them in that order; districts as a partition, because
+        /// their ids mean nothing but equality. Returns what differs first, or null. A test's
+        /// instrument: it allocates and walks the whole board.
+        /// </summary>
+        public string? DerivedTablesDisagree()
+        {
+            // Adjacency: every live link, in ascending id, appended to its first end then its second.
+            var expected = new List<int>[_regionCount];
+            for (int r = 0; r < _regionCount; r++) expected[r] = new List<int>();
+            for (int l = 0; l < _linkCount; l++)
+            {
+                if (!_linkAlive[l]) continue;
+                expected[_linkA[l]].Add(l);
+                expected[_linkB[l]].Add(l);
+            }
+            for (int r = 0; r < _regionCount; r++)
+            {
+                int count = AdjacencyCount(r);
+                if (count != expected[r].Count)
+                    return $"region {r}: {count} adjacent links, expected {expected[r].Count}";
+                int start = AdjacencyStart(r);
+                for (int i = 0; i < count; i++)
+                    if (AdjacencyLink(start + i) != expected[r][i])
+                        return $"region {r}: adjacency slot {i} is link {AdjacencyLink(start + i)}, expected {expected[r][i]}";
+            }
+
+            // Portal edges: each end of every live portal link, chained per cell in ascending target.
+            var portals = new Dictionary<int, List<(int Target, int Cost, byte Mode, int Link)>>();
+            int portalLinks = 0;
+            for (int l = 0; l < _linkCount; l++)
+            {
+                if (!_linkAlive[l] || _linkKind[l] != LinkKind.Portal) continue;
+                portalLinks++;
+                AddExpected(_linkCellA[l], (_linkCellB[l], _linkCostAB[l], _linkMode[l], l));
+                AddExpected(_linkCellB[l], (_linkCellA[l], _linkCostBA[l], _linkMode[l], l));
+            }
+            int chained = 0;
+            foreach (KeyValuePair<int, List<(int Target, int Cost, byte Mode, int Link)>> cell in portals)
+            {
+                cell.Value.Sort((a, b) => a.Target != b.Target ? a.Target.CompareTo(b.Target) : a.Link.CompareTo(b.Link));
+                int e = FirstPortalEdge(cell.Key);
+                for (int i = 0; i < cell.Value.Count; i++, e = PortalEdgeNext(e))
+                {
+                    if (e < 0) return $"cell {cell.Key}: portal chain ends after {i} of {cell.Value.Count}";
+                    var want = cell.Value[i];
+                    if (PortalEdgeTarget(e) != want.Target || PortalEdgeCost(e) != want.Cost
+                        || PortalEdgeMode(e) != want.Mode || PortalEdgeLink(e) != want.Link)
+                        return $"cell {cell.Key}: portal edge {i} is to {PortalEdgeTarget(e)} by link {PortalEdgeLink(e)}, " +
+                               $"expected {want.Target} by link {want.Link}";
+                }
+                if (e >= 0) return $"cell {cell.Key}: portal chain longer than its {cell.Value.Count} edges";
+                chained++;
+            }
+            if (PortalCellCount != chained) return $"{PortalCellCount} cells carry portal edges, expected {chained}";
+
+            // Districts: the same flood the full rebuild runs, compared as a partition.
+            var queue = new int[Math.Max(1, _regionCount)];
+            for (int m = 0; m < TraverseModes.Count; m++)
+            {
+                var want = new int[_regionCount];
+                for (int r = 0; r < _regionCount; r++) want[r] = -1;
+                int next = 0;
+                for (int seed = 0; seed < _regionCount; seed++)
+                {
+                    if (!_regionAlive[seed] || want[seed] != -1) continue;
+                    RegionKind kind = _regionKind[seed];
+                    if (kind == RegionKind.None || kind == RegionKind.Impassable) continue;
+                    int id = next++;
+                    want[seed] = id;
+                    int head = 0, tail = 0;
+                    queue[tail++] = seed;
+                    while (head < tail)
+                    {
+                        int r = queue[head++];
+                        foreach (int l in expected[r])
+                        {
+                            if (_linkOneWay[l] || (_linkMode[l] & (1 << m)) == 0) continue;
+                            int other = _linkA[l] == r ? _linkB[l] : _linkA[l];
+                            if (want[other] != -1) continue;
+                            want[other] = id;
+                            queue[tail++] = other;
+                        }
+                    }
+                }
+
+                if (_districtCount[m] != next)
+                    return $"mode {(TraverseMode)m}: {_districtCount[m]} districts, expected {next}";
+                if (_districtsBuilt)
+                {
+                    var members = new Dictionary<int, int>();
+                    for (int r = 0; r < _regionCount; r++)
+                        if (_regionAlive[r] && _district[m][r] >= 0)
+                            members[_district[m][r]] = members.TryGetValue(_district[m][r], out int c) ? c + 1 : 1;
+                    foreach (KeyValuePair<int, int> kv in members)
+                        if (_districtSize[m][kv.Key] != kv.Value)
+                            return $"mode {(TraverseMode)m}: district {kv.Key} counts {_districtSize[m][kv.Key]} members, has {kv.Value}";
+                }
+                var forward = new Dictionary<int, int>();
+                var backward = new Dictionary<int, int>();
+                for (int r = 0; r < _regionCount; r++)
+                {
+                    if (!_regionAlive[r]) continue;
+                    int have = _district[m][r], should = want[r];
+                    if ((have < 0) != (should < 0))
+                        return $"mode {(TraverseMode)m}: region {r} is in district {have}, expected {(should < 0 ? "none" : "one")}";
+                    if (should < 0) continue;
+                    if (forward.TryGetValue(have, out int f) && f != should)
+                        return $"mode {(TraverseMode)m}: district {have} holds regions of two true districts (region {r})";
+                    if (backward.TryGetValue(should, out int b) && b != have)
+                        return $"mode {(TraverseMode)m}: one true district is split between districts {b} and {have} (region {r})";
+                    forward[have] = should;
+                    backward[should] = have;
+                }
+            }
+
+            int layerChange = EstimatedLayerChangeCost;
+            RecomputeLayerChangeEstimate();
+            if (EstimatedLayerChangeCost != layerChange)
+                return $"layer-change estimate {layerChange}, expected {EstimatedLayerChangeCost} ({portalLinks} portal links)";
+            return null;
+
+            void AddExpected(int cell, (int Target, int Cost, byte Mode, int Link) edge)
+            {
+                if (!portals.TryGetValue(cell, out var list)) portals[cell] = list = new List<(int, int, byte, int)>();
+                list.Add(edge);
+            }
+        }
+
+        /// <summary>How many cells carry at least one portal edge.</summary>
+        public int PortalCellCount => _cellPortalHead.Count;
+
+        /// <summary>
         /// A canonical, id-independent fingerprint of the graph's <em>structure</em>.
         ///
         /// Region and link ids come from free lists, so an incremental rebuild and a rebuild from
@@ -1540,7 +1815,12 @@ namespace Odyssey.Sim.Pathing
             var districtRep = new int[TraverseModes.Count][];
             for (int m = 0; m < TraverseModes.Count; m++)
             {
-                districtRep[m] = new int[Math.Max(1, _districtCount[m])];
+                // Sized by the largest id in use, not the live count: a repaired graph reuses ids
+                // from a free list, so its ids are not 0..count-1 (HT1).
+                int maxId = -1;
+                for (int r = 0; r < _regionCount; r++)
+                    if (_regionAlive[r] && _district[m][r] > maxId) maxId = _district[m][r];
+                districtRep[m] = new int[Math.Max(1, maxId + 1)];
                 for (int i = 0; i < districtRep[m].Length; i++) districtRep[m][i] = int.MaxValue;
                 for (int r = 0; r < _regionCount; r++)
                 {

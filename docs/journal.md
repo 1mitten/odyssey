@@ -12342,3 +12342,36 @@ The probe also found that `HeavyCombo01C` would have landed its blow at 0 s. The
 one cut `...01CWindUp` without the underscore, and the impact measurement found nothing and returned
 zero. The existing test accepted a zero, so it now requires an impact above zero, and a new test
 holds every blunt weapon, read from the content, to a row with no stab in it. Design 33 §22.
+
+## 2026-09-25 — HT1: the navigation rebuild is local
+
+The first hardening unit, started once the owner said to carry on past the combat line.
+
+**Measured before touching anything**, as the plan asked: counters on `NavGraph`, not segments in the
+tick's `PhaseSink`. At the scale target one mined cell cost 1.80 ms, and the audit's "districts" was
+only 1.00 of it; the portal table, a sort of every portal edge on the board, was another 0.42. The
+local work was 0.17. So the target of 0.2 ms meant every global pass had to go, which is a larger
+unit than the audit described.
+
+**The audit's recommended method would not have worked.** "Recompute only the components the edit
+touched" is the full pass again on a generated board, because nearly every surface region is one
+district: the touched component is the board. What works is narrower — a district splits only if the
+regions bordering the edit stop reaching each other, and merges only through something the edit
+built — so the repair searches from those regions and stops as soon as the answer is known. A merge
+costs the smaller district; the ordinary edit meets within a few regions.
+
+**The oracle earned its keep three times before anything was committed.** It rebuilds the four
+tables from scratch inside the same graph, where ids agree, and names the first difference. It caught
+a new region's id arriving at district 0 out of `Array.Resize`; it caught a stopping rule that let two
+differently labelled halves of a board stay apart after the gap between them was reopened; and,
+through the negative controls, it showed that the small fixtures never reached the repair at all,
+because a rebuild dirtying a quarter of the board takes the full pass. The fixtures were enlarged
+until each withheld part failed. One part never could: the ends of a freed link as seeds, because
+dirtying the edit's neighbouring blocks already re-floods every region they would name. It stays, and
+the design says so, so nobody mistakes it for a tested rule.
+
+**1.795 → 0.184 ms at the scale target**, goldens and paths unchanged. And the busy tick's real
+number was not the audit's 1.19 ms but 63.8 on `main` today: the temperature line's enclosure solve
+also scales with the board under edits, and arrived after the audit. A throwaway probe timing each
+world system put it at 8 ms of the post-HT1 tick, with Needs at 4. That is HT10, recorded rather than
+chased, because it is a different system with its own owner.
