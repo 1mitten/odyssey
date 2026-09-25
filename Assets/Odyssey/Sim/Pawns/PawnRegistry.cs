@@ -578,6 +578,7 @@ namespace Odyssey.Sim.Pawns
                     writer.AddPawnAspect(pawn.Id, MindAspects.Minor, pawn.MinorBreakLine());
                     writer.AddPawnAspect(pawn.Id, MindAspects.Major, pawn.MajorBreakLine());
                     writer.AddPawnAspect(pawn.Id, MindAspects.Extreme, pawn.ExtremeBreakLine());
+                    if (pawn.IsBroken) writer.AddPawnAspect(pawn.Id, MindAspects.Break, pawn.BreakKind);
                     PublishThoughts(writer, pawn, world.CurrentTick);
                 }
 

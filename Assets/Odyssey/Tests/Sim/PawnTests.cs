@@ -210,7 +210,18 @@ namespace Odyssey.Tests.Sim
             for (int i = 0; i < colony.Needs.IntervalTicks * 2; i++) { Miserable(pawn); colony.World.Tick(); }
             Assert.That(pawn.IsBroken, Is.False, "and still a roll a few intervals later");
 
-            colony.Ctx.Content.Mood.breakMtbTicks = 15_000;
+            // Retuned by replacing the Def on this colony's own content, never by writing through
+            // it: the MoodDef is shared by every test in the process. All three clocks, because
+            // a miserable colonist is under the major line and it is the deepest that rolls
+            // (design 43 §5c).
+            MoodDef shipped = colony.Ctx.Content.Mood;
+            colony.Ctx.Content.Mood = new MoodDef
+            {
+                baseMood = shipped.baseMood, max = shipped.max,
+                risePerInterval = shipped.risePerInterval, fallPerInterval = shipped.fallPerInterval,
+                breakThreshold = shipped.breakThreshold, strainMargin = shipped.strainMargin,
+                breakMtbTicks = 15_000, majorMtbTicks = 15_000, extremeMtbTicks = 15_000,
+            };
             for (int i = 0; i < 120_000 && colony.Needs.BreaksTriggered == 0; i++)
             {
                 Miserable(pawn);

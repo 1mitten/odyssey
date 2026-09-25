@@ -37,6 +37,10 @@ namespace Odyssey.Hud
             return keys;
         }
 
+        /// <summary>The <see cref="BreakHandle"/> she is in, while she is in one.</summary>
+        public const string Break = "odyssey.pawn.break";
+        public static readonly AspectKey BreakKey = AspectKey.Of(Break);
+
         public static readonly AspectKey BandKey = AspectKey.Of(Band);
         public static readonly AspectKey TargetKey = AspectKey.Of(Target);
         public static readonly AspectKey MinorKey = AspectKey.Of(Minor);

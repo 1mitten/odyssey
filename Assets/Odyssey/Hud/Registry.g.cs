@@ -127,6 +127,11 @@ namespace Odyssey.Hud
             { "ui.arch.tool.wall", "Wall" },
             { "ui.arch.tool.wind", "Wind turbine" },
             { "ui.arch.tool.window", "Window" },
+            { "ui.break.berserk", "Berserk" },
+            { "ui.break.binge", "Food binge" },
+            { "ui.break.sulk", "Sulk" },
+            { "ui.break.tantrum", "Tantrum" },
+            { "ui.break.wander", "Daze" },
             { "ui.bulletin.animaljoin", "Animal joined" },
             { "ui.bulletin.arrival", "Arrival" },
             { "ui.bulletin.banditleft", "Bandit left" },
@@ -134,6 +139,7 @@ namespace Odyssey.Hud
             { "ui.bulletin.caravan", "Caravan" },
             { "ui.bulletin.crash", "Crash" },
             { "ui.bulletin.death", "Death" },
+            { "ui.bulletin.mentalbreak", "Mental break" },
             { "ui.bulletin.quest", "Opportunity" },
             { "ui.bulletin.raidincoming", "Raid warning" },
             { "ui.bulletin.recruited", "Recruited" },
@@ -895,6 +901,11 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly Dictionary<string, string> Descriptions = new Dictionary<string, string>
         {
+            { "ui.break.berserk", "An extreme break: attacks whoever is nearest. Draft the colony to bring her down; nobody is killed" },
+            { "ui.break.binge", "A major break: eats whatever food she can reach, over and over" },
+            { "ui.break.sulk", "A minor break: goes to her own bed and stays there, doing nothing" },
+            { "ui.break.tantrum", "A major break: smashes whatever the colony has built near her. Beds are spared" },
+            { "ui.break.wander", "A minor break: wanders aimlessly and does no work" },
             { "ui.mind.breakslater", "Her mood must fall further than most before she can break" },
             { "ui.mind.breakssooner", "Her mood need not fall as far before she can break" },
             { "ui.mind.cannot", "Work she will never do. The Work tab greys it" },

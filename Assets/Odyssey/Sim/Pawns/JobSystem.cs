@@ -308,7 +308,10 @@ namespace Odyssey.Sim.Pawns
                 {
                     // Breaks are self-limiting: the aftermath lifts mood clear of the threshold,
                     // so a broken colonist recovers rather than cycling forever.
-                    pawn.AddMemory(_ctx.Content.Break.catharsisThought, tick);
+                    pawn.AddMemory(_ctx.Content.Breaks.Length > pawn.BreakKind
+                        ? _ctx.Content.Breaks[pawn.BreakKind].catharsisThought
+                        : _ctx.Content.Break.catharsisThought, tick);
+                    pawn.BreakKind = BreakHandle.Wander;
                     EndJob(pawn, JobStatus.Succeeded);
                 }
                 else if (pawn.CurrentJob != null && !IsBreakJob(pawn, pawn.CurrentJob))
@@ -380,8 +383,7 @@ namespace Odyssey.Sim.Pawns
             if (pawn.CurrentJob == null) Think(pawn, tick);
         }
 
-        bool IsBreakJob(Pawn pawn, Job job) =>
-            _ctx.Content.Jobs[job.DefIndex].driver == JobIndex.Wander;
+        bool IsBreakJob(Pawn pawn, Job job) => MentalBreaks.IsBreakJob(pawn, job, _ctx.Content);
 
         // ---- state ------------------------------------------------------------------------
         //
@@ -666,7 +668,11 @@ namespace Odyssey.Sim.Pawns
     // The think tree
     // =====================================================================================
 
-    /// <summary>A broken colonist wanders and does nothing useful. One behaviour; the taxonomy is later.</summary>
+    /// <summary>
+    /// A broken colonist does what her break does (design 43 §5c): wander, sulk at her bed, binge,
+    /// strike a building or strike whoever is nearest — <see cref="MentalBreaks.Fill"/>, one branch
+    /// per kind, and the wander when a break has nothing to do.
+    /// </summary>
     public sealed class MentalStateThinkNode : ThinkNode
     {
         public override string Name => "MentalState";
@@ -674,7 +680,7 @@ namespace Odyssey.Sim.Pawns
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
             if (!pawn.IsBroken) return false;
-            return WanderTarget.Fill(pawn, ctx, job);
+            return MentalBreaks.Fill(pawn, ctx, job);
         }
     }
 
@@ -698,7 +704,7 @@ namespace Odyssey.Sim.Pawns
                    TrySleep(pawn, ctx, job);
         }
 
-        static bool TryEat(Pawn pawn, PawnContext ctx, Job job)
+        internal static bool TryEat(Pawn pawn, PawnContext ctx, Job job)
         {
             var items = ctx.Items.Items;
             int best = -1;

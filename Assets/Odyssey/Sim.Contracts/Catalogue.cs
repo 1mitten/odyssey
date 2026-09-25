@@ -257,6 +257,28 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// See <see cref="JobHandle"/>: the kinds of mental break (design 43 §5c). The order is
+    /// <c>PawnContent.FromDefs</c>'s break list, and a break's index rides every save taken while a
+    /// colonist is in one: <b>appended, never inserted</b>. The wander is nought, so every break
+    /// from before the taxonomy is one.
+    /// </summary>
+    public static class BreakHandle
+    {
+        public const int Wander = 0;
+        public const int Sulk = 1;
+        public const int Binge = 2;
+        public const int Tantrum = 3;
+        public const int Berserk = 4;
+        public const int Count = 5;
+
+        /// <summary>The names a break is keyed by in the registry (<c>ui.break.&lt;name&gt;</c>).</summary>
+        public static readonly string[] Names = { "wander", "sulk", "binge", "tantrum", "berserk" };
+
+        /// <summary>The tiers, as <c>MentalBreakDef.tier</c> counts them.</summary>
+        public const int Minor = 0, Major = 1, Extreme = 2;
+    }
+
+    /// <summary>
     /// See <see cref="JobHandle"/>: trait indices (design 43 §4a, §4c). The order is
     /// <c>PawnContent.FromDefs</c>'s trait list, and a trait's index rides every save that holds
     /// it: <b>appended, never inserted</b>. The interface names a trait by <see cref="Names"/>
@@ -379,7 +401,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A bandit with nothing to fight, break or take walked off the board empty-handed (design 33 §17).</summary>
         public const int BanditLeft = 3;
 
-        public const int Count = 4;
+        /// <summary>
+        /// A colonist broke (design 43 §5c). Written down by the world when it happens and never
+        /// fired: the bulletin's subject is the <see cref="BreakHandle"/>, its amount the pawn.
+        /// </summary>
+        public const int MentalBreak = 4;
+
+        public const int Count = 5;
     }
 
     /// <summary>

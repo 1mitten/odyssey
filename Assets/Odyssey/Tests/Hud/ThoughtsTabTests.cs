@@ -149,6 +149,39 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
+        public void ABreakIsNamedOnThePaneAndOnTheEventsPanel()
+        {
+            WorldSnapshot snapshot = Frame();
+            Aspect(snapshot, MindAspectNames.Band, MoodBand.Broken);
+            Aspect(snapshot, MindAspectNames.Break, BreakHandle.Tantrum);
+
+            InspectModel pane = Pane(snapshot);
+            Assert.That(pane.MoodWord, Is.EqualTo(MoodBands.Word(MoodBand.Broken) + " ("
+                + Registry.Label("ui.break.tantrum").ToLowerInvariant() + ")"));
+
+            Assert.That(BulletinModel.BreakTitle("ui.bulletin.mentalbreak", BreakHandle.Berserk),
+                Is.EqualTo(Registry.Label("ui.bulletin.mentalbreak") + " · " + Registry.Label("ui.break.berserk")),
+                "the row names the break; the subject is the break, not an item");
+            Assert.That(IncidentLabels.IconKey(IncidentHandle.MentalBreak), Is.EqualTo("ui.bulletin.mentalbreak"));
+
+            // The control: a colonist not in a break is named by her band alone.
+            WorldSnapshot calm = Frame();
+            Aspect(calm, MindAspectNames.Band, MoodBand.Strained);
+            Assert.That(Pane(calm).MoodWord, Is.EqualTo(MoodBands.Word(MoodBand.Strained)));
+        }
+
+        [Test]
+        public void EveryBreakHasANameAndADescription()
+        {
+            for (int k = 0; k < BreakHandle.Count; k++)
+            {
+                string key = "ui.break." + BreakHandle.Names[k];
+                Assert.That(Registry.Label(key), Is.Not.EqualTo(key), key + " is not in the registry");
+                Assert.That(Registry.Describe(key), Is.Not.Empty, key + " has no description");
+            }
+        }
+
+        [Test]
         public void EveryThoughtHasANameAndADescription()
         {
             foreach (MindCatalogue.Source source in MindCatalogue.Memories.Concat(MindCatalogue.Situational))

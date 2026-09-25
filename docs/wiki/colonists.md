@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure. Traits, thoughts and mental breaks are design 43: a thought's description here is its tooltip on the Thoughts tab, and a trait's is its tooltip on the colonist's pane and the select screen.
 
-84 entries, 66 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+89 entries, 71 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -76,6 +76,16 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Tiredness** | `ui.thought.tiredness` | Tired costs mood; exhausted costs more. Sleep clears it | no art | TM |
 | **Recreation** | `ui.thought.recreation` | Idle time lifts it and a long stretch of work without any wears it down | no art | TM |
 | **Temperature** | `ui.thought.temperature` | Too cold or too hot where she is standing | no art | TM |
+
+## Mental breaks
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Daze** | `ui.break.wander` | A minor break: wanders aimlessly and does no work | no art | TM |
+| **Sulk** | `ui.break.sulk` | A minor break: goes to her own bed and stays there, doing nothing | no art | TM |
+| **Food binge** | `ui.break.binge` | A major break: eats whatever food she can reach, over and over | no art | TM |
+| **Tantrum** | `ui.break.tantrum` | A major break: smashes whatever the colony has built near her. Beds are spared | no art | TM |
+| **Berserk** | `ui.break.berserk` | An extreme break: attacks whoever is nearest. Draft the colony to bring her down; nobody is killed | no art | TM |
 
 ## The Thoughts tab's words
 

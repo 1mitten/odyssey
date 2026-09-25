@@ -25,6 +25,9 @@ namespace Odyssey.Sim.Pawns
         public static readonly AspectKey Major = AspectKey.Of("odyssey.pawn.mood.major");
         public static readonly AspectKey Extreme = AspectKey.Of("odyssey.pawn.mood.extreme");
 
+        /// <summary>The <see cref="BreakHandle"/> she is in, while she is in one (design 43 §5c).</summary>
+        public static readonly AspectKey Break = AspectKey.Of("odyssey.pawn.break");
+
         /// <summary>The base every target starts from, so the Thoughts tab can show its sum.</summary>
         public static readonly AspectKey Base = AspectKey.Of("odyssey.pawn.mood.base");
 

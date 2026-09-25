@@ -1233,7 +1233,11 @@ namespace Odyssey.Sim.Pawns
                 | ((int)Response << 24)
                 // Bit 22, which the line beside combat left free: her traits (design 43 §3), walked
                 // only while she has any, so every pawn from before traits hashes as it did.
-                | (Traits.Count > 0 ? 1 << 22 : 0));
+                | (Traits.Count > 0 ? 1 << 22 : 0)
+                // Bit 23: the kind of break, while it is not the wander (design 43 §3), so every
+                // break from before the taxonomy hashes as it did.
+                | (BreakKind != 0 ? 1 << 23 : 0));
+            if (BreakKind != 0) hash.Add(BreakKind);
             if (Traits.Count > 0)
             {
                 hash.Add(Traits.Count);

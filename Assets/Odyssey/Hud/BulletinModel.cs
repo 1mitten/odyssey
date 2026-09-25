@@ -186,7 +186,10 @@ namespace Odyssey.Hud
         static BulletinRow Make(in BulletinView view)
         {
             string key = IncidentLabels.IconKey(view.IncidentDef);
-            return new BulletinRow(view.Id, key, Title(key, view.Subject, view.Amount), Stamp(view.Tick), view.Cell,
+            string title = view.IncidentDef == IncidentHandle.MentalBreak
+                ? BreakTitle(key, view.Subject)
+                : Title(key, view.Subject, view.Amount);
+            return new BulletinRow(view.Id, key, title, Stamp(view.Tick), view.Cell,
                 view.Tick, view.IncidentDef, view.Favourability);
         }
 
@@ -202,6 +205,17 @@ namespace Odyssey.Hud
             if (subject < 0) return name;
             string thing = ItemLabels.Label(subject);
             return amount > 1 ? name + " · " + thing + " × " + amount : name + " · " + thing;
+        }
+
+        /// <summary>
+        /// A mental break's row (design 43 §5c): the incident's name and which break — "Mental
+        /// break · Tantrum". The entry's subject is the <see cref="BreakHandle"/>, not an item.
+        /// </summary>
+        public static string BreakTitle(string key, int breakKind)
+        {
+            string name = Registry.Label(key);
+            if (breakKind < 0 || breakKind >= BreakHandle.Count) return name;
+            return name + " · " + Registry.Label("ui.break." + BreakHandle.Names[breakKind]);
         }
 
         /// <summary>"Day 3 · 14h": the day as the clock counts it, and the hour. Built here so the

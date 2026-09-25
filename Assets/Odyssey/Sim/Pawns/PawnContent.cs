@@ -171,8 +171,18 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Below this a break is rolled as a mean-time-between-events draw.</summary>
         public int breakThreshold = 350;
 
-        /// <summary>Mean ticks between breaks while below the threshold. 10 in-game days.</summary>
-        public int breakMtbTicks = 600_000;
+        /// <summary>
+        /// Mean ticks between breaks while below the minor line: four in-game days, the reference's
+        /// figure as a-19 corrected it (a-01 carried the older ten). The major and extreme lines have
+        /// their own, faster clocks; the deepest line she is under is the one that rolls.
+        /// </summary>
+        public int breakMtbTicks = 240_000;
+
+        /// <summary>Below the major line: 0.8 days (a-19).</summary>
+        public int majorMtbTicks = 48_000;
+
+        /// <summary>Below the extreme line: half a day (a-19).</summary>
+        public int extremeMtbTicks = 30_000;
 
         /// <summary>
         /// How far above the minor line a colonist still reads <i>strained</i> rather than content
@@ -182,10 +192,25 @@ namespace Odyssey.Sim.Pawns
         public int strainMargin = 100;
     }
 
-    /// <summary>The one break behaviour the slice carries. The taxonomy is a later milestone.</summary>
+    /// <summary>
+    /// One kind of mental break (design 43 §5c): which tier it belongs to, how likely it is among
+    /// that tier's breaks, and how long it lasts. What it <i>does</i> is the think node's one branch
+    /// per <see cref="BreakHandle"/>; the Def carries the numbers.
+    /// </summary>
     public class MentalBreakDef : Def
     {
-        public int durationTicks = 7_500;
+        /// <summary><see cref="BreakHandle.Minor"/>, <see cref="BreakHandle.Major"/> or <see cref="BreakHandle.Extreme"/>.</summary>
+        public int tier;
+
+        /// <summary>A plain weight among the tier's breaks whose requirement holds.</summary>
+        public int commonality = 10;
+
+        /// <summary>How long it lasts: one uniform draw between these, in ticks.</summary>
+        public int minTicks = 5_000;
+        public int maxTicks = 10_000;
+
+        /// <summary>How far a tantrum or a berserker looks for something to strike, in cells; nought for none.</summary>
+        public int reachCells;
 
         /// <summary>How far a broken pawn will wander from where it stands, in cells.</summary>
         public int wanderRadius = 6;
@@ -1419,8 +1444,18 @@ namespace Odyssey.Sim.Pawns
                 "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade");
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");
-            content.Break = One<MentalBreakDef>(defs, "Break_Wander");
-            content.Breaks = new[] { content.Break };
+            // The kinds of break (design 43 §5c). Appended, never inserted: a break's index rides
+            // every save taken mid-break. The wander is first, so every break from before is one.
+            content.Breaks = ByName<MentalBreakDef>(defs,
+                "Break_Wander", "Break_Sulk", "Break_Binge", "Break_Tantrum", "Break_Berserk");
+            content.Break = content.Breaks[0];
+            foreach (MentalBreakDef kind in content.Breaks)
+            {
+                if (kind.tier < BreakHandle.Minor || kind.tier > BreakHandle.Extreme)
+                    throw new DefLoadException($"{kind.defName} has tier {kind.tier}; a break is minor (0), major (1) or extreme (2).");
+                if (kind.minTicks <= 0 || kind.maxTicks < kind.minTicks)
+                    throw new DefLoadException($"{kind.defName} lasts {kind.minTicks} to {kind.maxTicks} ticks.");
+            }
             content.Movement = One<MovementDef>(defs, "Movement_Colonist");
             content.Kind = One<PawnKindDef>(defs, "PawnKind_Colonist");
             content.Temperature = One<TemperatureDef>(defs, "Temperature_Colonist");

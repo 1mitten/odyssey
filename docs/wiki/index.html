@@ -149,9 +149,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
 <li><a href="#commands">Commands<b>52</b></a></li>
 <li><a href="#work">Work and skills<b>42</b></a></li>
-<li><a href="#colonists">Colonists<b>84</b></a></li>
+<li><a href="#colonists">Colonists<b>89</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
-<li><a href="#events">Events<b>45</b></a></li>
+<li><a href="#events">Events<b>46</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
 <li><a href="#world">World and interface<b>125</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
@@ -162,9 +162,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>864</b><i>named entries</i></div>
+<div class="stat"><b>870</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>592</b><i>no art yet</i></div>
+<div class="stat m"><b>598</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1795,7 +1795,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">84 entries</em></h2>
+<h2>Colonists <em class="count">89 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure. Traits, thoughts and mental breaks are design 43: a thought's description here is its tooltip on the Thoughts tab, and a trait's is its tooltip on the colonist's pane and the select screen.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -2101,6 +2101,40 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.thought.temperature" data-hay="temperature ui.thought.temperature too cold or too hot where she is standing " data-gap="1">
 <div class="nm">Temperature<span class="k">ui.thought.temperature</span></div>
 <div class="dsc">Too cold or too hot where she is standing</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+</div>
+<h3 class="nsh">Mental breaks</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.break.wander" data-hay="daze ui.break.wander a minor break: wanders aimlessly and does no work " data-gap="1">
+<div class="nm">Daze<span class="k">ui.break.wander</span></div>
+<div class="dsc">A minor break: wanders aimlessly and does no work</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.break.sulk" data-hay="sulk ui.break.sulk a minor break: goes to her own bed and stays there, doing nothing " data-gap="1">
+<div class="nm">Sulk<span class="k">ui.break.sulk</span></div>
+<div class="dsc">A minor break: goes to her own bed and stays there, doing nothing</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.break.binge" data-hay="food binge ui.break.binge a major break: eats whatever food she can reach, over and over " data-gap="1">
+<div class="nm">Food binge<span class="k">ui.break.binge</span></div>
+<div class="dsc">A major break: eats whatever food she can reach, over and over</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.break.tantrum" data-hay="tantrum ui.break.tantrum a major break: smashes whatever the colony has built near her. beds are spared " data-gap="1">
+<div class="nm">Tantrum<span class="k">ui.break.tantrum</span></div>
+<div class="dsc">A major break: smashes whatever the colony has built near her. Beds are spared</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.break.berserk" data-hay="berserk ui.break.berserk an extreme break: attacks whoever is nearest. draft the colony to bring her down; nobody is killed " data-gap="1">
+<div class="nm">Berserk<span class="k">ui.break.berserk</span></div>
+<div class="dsc">An extreme break: attacks whoever is nearest. Draft the colony to bring her down; nobody is killed</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">TM</div>
 </div>
@@ -2508,7 +2542,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="events" data-sec="1">
-<h2>Events <em class="count">45 entries</em></h2>
+<h2>Events <em class="count">46 entries</em></h2>
 <p class="blurb">Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.</p>
 <h3 class="nsh">Alerts</h3>
 <div class="tbl">
@@ -2780,6 +2814,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">A bandit walked off the board with nothing<span class="need">Needs drawing: a figure walking off the edge. Our own concept</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.bulletin.mentalbreak" data-hay="mental break ui.bulletin.mentalbreak a colonist lost control. the row names the break, and a click goes to where it began " data-gap="1">
+<div class="nm">Mental break<span class="k">ui.bulletin.mentalbreak</span></div>
+<div class="dsc">A colonist lost control. The row names the break, and a click goes to where it began</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
 </div>
 </div>
 <h3 class="nsh">Toasts</h3>
@@ -3950,7 +3990,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 864, "gaps": 592};</script>
+<script>window.WIKI={"total": 870, "gaps": 598};</script>
 <script>
 (function(){
   var D = window.WIKI;

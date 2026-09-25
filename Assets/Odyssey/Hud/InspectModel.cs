@@ -337,8 +337,18 @@ namespace Odyssey.Hud
         /// </summary>
         public int Band;
 
-        /// <summary>The band as a word inside a sentence, "content" to "breaking down".</summary>
-        public string MoodWord => MoodBands.Word(Band);
+        /// <summary>
+        /// The band as a word inside a sentence, "content" to "breaking down" — and in a break, which
+        /// one: "breaking down (tantrum)" (design 43 §5c). Rebuilt only when the band or the break
+        /// changes, so a standing pane allocates nothing.
+        /// </summary>
+        public string MoodWord => _moodWord ?? MoodBands.Word(Band);
+
+        /// <summary>The <see cref="BreakHandle"/> she is in, or -1 when she is in none.</summary>
+        public int BreakKind = -1;
+
+        string? _moodWord;
+        int _moodWordBand = -1, _moodWordBreak = -2;
 
         // ---- no selection: the colony summary
         public int ColonySize;
@@ -850,6 +860,16 @@ namespace Odyssey.Hud
                     Rest = pawn.Rest;
                     Mood = pawn.Mood;
                     Band = MoodBands.Of(snapshot, pawn.Id);
+                    BreakKind = Band == MoodBand.Broken
+                        && snapshot.TryGetPawnAspect(pawn.Id, MindAspectNames.BreakKey, out int kind) ? kind : -1;
+                    if (Band != _moodWordBand || BreakKind != _moodWordBreak)
+                    {
+                        _moodWordBand = Band;
+                        _moodWordBreak = BreakKind;
+                        _moodWord = BreakKind >= 0 && BreakKind < BreakHandle.Count
+                            ? MoodBands.Word(Band) + " (" + Registry.Label("ui.break." + BreakHandle.Names[BreakKind]).ToLowerInvariant() + ")"
+                            : MoodBands.Word(Band);
+                    }
                     SetPosition(pawn.Cell);
                     Layer = pawn.Cell.Y;
                     RefreshHealth(snapshot, pawn);

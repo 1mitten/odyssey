@@ -260,7 +260,13 @@ namespace Odyssey.Tests.Sim
         // thirteen placeholder TraitDefs (every number INVENTED), PawnKindDef.thirdTraitPerCent
         // (30), and the resolved spectrum, conflict and disabled-work tables. The Simulated goldens
         // moved in the same commit, for the hash seeing the traits (Golden.cs says what else).
-        const ulong ContentFingerprint = 15424607032684955989UL;
+        //
+        // Moved a twenty-ninth time, deliberately, 2026-09-25, by the break taxonomy (design 43
+        // §5c, TM5): MoodDef gained majorMtbTicks and extremeMtbTicks and breakMtbTicks went
+        // 600,000 -> 240,000 (a-19's correction); MentalBreakDef lost durationTicks for minTicks and
+        // maxTicks and gained tier, commonality and reachCells; four Defs appended (Sulk, Binge,
+        // Tantrum, Berserk). No golden moved: no golden colony falls below a break line.
+        const ulong ContentFingerprint = 7764152286371171380UL;
 
 
         [Test]
