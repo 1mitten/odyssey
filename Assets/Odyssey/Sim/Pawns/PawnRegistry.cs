@@ -355,6 +355,8 @@ namespace Odyssey.Sim.Pawns
             new PatientJobDriver(),
             // Picking a berry bush (design 45 §6), JobHandle 25, after medical supplies.
             new ForageJobDriver(),
+            // The kitchen (design 48 §5), JobHandle 26, after the forager's.
+            new Cooking.CookJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------

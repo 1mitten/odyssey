@@ -199,6 +199,9 @@ namespace Odyssey.Sim.Pawns
                 // Which campfire is the hearth (design 43 §3f). Appended; absent from an older
                 // save, which loads with none, as there then was.
                 pawns.Hearth!,
+                // The kitchen (design 48 §5): every station's bills and pan. Appended, no format
+                // bump; a save from before the kitchen has no section and loads with no bills.
+                pawns.Kitchen!,
             };
         }
 

@@ -23,6 +23,27 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the new bill list read at a glance, and is anything on it in the way?** (`claude/bills-pane`,
+  design 49, stacked on `claude/cooking`.) Click an **Electric Cooker** with no power: the pane is
+  wider (680), a warn strip reads **No power** with a green **Switch off** beside it, and the tile's
+  own Switch row is gone. Add three bills with the full-width cyan **Add a bill**; cycle one's mode
+  (the cell with the round arrow), step a target with the red minus and green plus (shift for ten),
+  pause one (it fades, its buttons do not), move one with the stacked arrows, bin one. Then a
+  campfire, which has no strip. A wrong answer is a count or a number that is not centred, a row
+  whose name is cut off at a length you would use, the pane jumping under the pointer while you
+  press Add or the bin, or the reorder pair being too small to hit. Say whether the empty status
+  line on a working bill looks unfinished.
+- **Does a cook turn carrots into meals from a bill, and does it read as cooking?** (`claude/cooking`,
+  design 48 K1.) Build an **Electric Cooker** (Build → Production) on a powered line, or use a **campfire**.
+  Click it: the pane shows **Bills** with *Add a bill*. Add one, stock carrots, and watch: a cook
+  fetches three carrots, stands at the station tossing a frying pan, and puts a meal down. Try the
+  mode (press it: until you have → make → forever), the ‹ › target, suspend, reorder and remove;
+  switch the cooker off mid-cook and back on. A campfire meal also costs one wood. A wrong answer is
+  a bill that does nothing, a pane that jumps when you add a row, a cook who swings at the stove
+  instead of tossing a pan, or colonists who still reach for carrots with a meal in the store.
+  The cooker is the POLYGON Shops stove: say whether it is the right size, and whether it faces the
+  side the cook stands on. **Known:** the pan shows no food going raw → cooked yet, and the meals are
+  Sci-Fi food trays.
 - **Can you click a campfire a terrace above you while building?** (`claude/terrace-click`,
   design 42 §3a amended.) On a lower terrace, open Build and raise a campfire on the terrace one step
   up, then click it with the palette still open: its pane should open, with *Make this the hearth*.

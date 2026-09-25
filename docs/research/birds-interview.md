@@ -1,8 +1,8 @@
 # Ambient birds — the interview, 2026-09-25
 
 **Phase 1 for the birds unit**, an owner request ("could we procedurally generate some birds flying
-around … or even a low poly bird"). The ground was `d-21-ambient-birds.md` (technique and prior art),
-`e-10-bird-models.md` (models and licences) and the sketch in `docs/reference/mockups/birds/`
+around … or even a low poly bird"). The ground was `d-23-ambient-birds.md` (technique and prior art),
+`e-12-bird-models.md` (models and licences) and the sketch in `docs/reference/mockups/birds/`
 (hosted: https://claude.ai/artifact/7Y3abzdRug1KTkjU1xFiTZ), which the owner asked for before
 deciding ("what would they look like — we need to be specific"). Three questions were put; every
 answer below is the owner's, with the consequence beside it so the design can be written without
@@ -28,5 +28,5 @@ asking again.
 
 ## Next
 
-The design document (`docs/design/47-ambient-birds.md`), then the plan, both for approval before any
+The design document (`docs/design/50-ambient-birds.md`), then the plan, both for approval before any
 code.

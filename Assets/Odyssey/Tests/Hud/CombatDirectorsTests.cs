@@ -102,8 +102,8 @@ namespace Odyssey.Tests.Hud
                 Assert.That(keys, Does.Contain(row.Key), $"{row.Key} is not in DebugDirector.IconKeys");
                 Assert.That(row.Tooltip, Is.Not.Empty, row.Key);
             }
-            Assert.That(DebugDirector.SpawnRows.Length, Is.EqualTo(13),
-                "colonist, arm-all, bandit, three bandits, two animals, four weapons, three resources");
+            Assert.That(DebugDirector.SpawnRows.Length, Is.EqualTo(14),
+                "colonist, arm-all, bandit, three bandits, two animals, four weapons, four resources");
             Assert.That(DebugDirector.SpawnRows[0].Key, Is.EqualTo(DebugDirector.SpawnPawnKey), "the colonist first");
         }
 

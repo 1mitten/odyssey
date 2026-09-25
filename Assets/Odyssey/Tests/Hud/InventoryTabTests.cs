@@ -121,7 +121,8 @@ namespace Odyssey.Tests.Hud
         public void ASearchFiltersLiveAndHidesEmptyCategories()
         {
             InventoryModel model = Read();
-            model.SetSearch("mea");
+            // Handle 0 is the ration pack, named "Rations" since the kitchen (design 48 §3).
+            model.SetSearch("rat");
             Assert.That(model.Rows.Count(r => r.IsGroup), Is.EqualTo(1));
             Assert.That(model.Rows.Where(r => !r.IsGroup).Select(r => r.Item!.DefIndex), Is.EqualTo(new[] { Meal }));
             Assert.That(model.SelectedDef, Is.EqualTo(Meal), "the selection follows the search to what it shows");

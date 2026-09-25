@@ -154,6 +154,7 @@ namespace Odyssey.Presentation.World
         readonly int _campfireModule;
         readonly int _generatorModule;
         readonly int _heaterModule;
+        readonly int _galleyModule;
         readonly int _bedPillowModule;
         readonly int _shelfModule;
         readonly int _storeEdgeModule;
@@ -221,6 +222,7 @@ namespace Odyssey.Presentation.World
             _campfireModule = library.Resolve(ModuleIds.Campfire, ModuleShape.SolidBlock);
             _generatorModule = library.Resolve(ModuleIds.Generator, ModuleShape.SolidBlock);
             _heaterModule = library.Resolve(ModuleIds.Heater, ModuleShape.SolidBlock);
+            _galleyModule = library.Resolve(ModuleIds.Galley, ModuleShape.SolidBlock);
 
             // The pillow is a module of its own so it can be a rounded shape and a linen colour
             // whatever the bed's frame is made of (BedShape, PillowMesh).
@@ -1041,6 +1043,8 @@ namespace Odyssey.Presentation.World
             // The generator and the heater, above the trees' range for the same reason (design 32).
             if (def == CoreContent.EdificeGenerator) return _generatorModule;
             if (def == CoreContent.EdificeHeater) return _heaterModule;
+            // The galley (design 48), above the trees' range for the same reason.
+            if (def == CoreContent.EdificeGalley) return _galleyModule;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below
             // to the wall module and the woodland rendered as a grid of grey boxes.

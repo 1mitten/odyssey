@@ -424,6 +424,9 @@ namespace Odyssey.Sim.Worldgen
         /// <summary>The electric heater (design 32 §7): the first thing that spends power.</summary>
         public const ushort EdificeHeater = 16;
 
+        /// <summary>The galley (design 48 §5): the electric cooker, where meals are cooked from bills.</summary>
+        public const ushort EdificeGalley = 22;
+
         /// <summary>
         /// The city's ten, which are the first ten of the one table. Loaded from
         /// <c>Defs/Core/World/Terrain.xml</c> like everything else: this class used to build them

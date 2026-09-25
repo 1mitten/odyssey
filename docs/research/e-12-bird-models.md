@@ -1,4 +1,4 @@
-# e-10 — Bird models: sources, licences, and making our own
+# e-12 — Bird models: sources, licences, and making our own
 
 **Phase:** Research, ahead of any birds unit (ambient wildlife over the Meadow board). **Status:**
 done 2026-09-25. **Method:** 12 web searches, 10 page fetches (**8 of them refused by this

@@ -88,6 +88,8 @@ namespace Odyssey.Tests.Sim
                     "melee",
                     // Medical supplies (design 37): SkillCatalogue's medicine row went live with it.
                     "medicine",
+                    // The kitchen (design 48): SkillCatalogue's cooking row went live with it.
+                    "cooking",
                 }),
                 "the simulation's skills have changed. A skill that trains is a skill the " +
                 "colonist pane must stop calling unavailable: add or remove the matching live " +

@@ -131,6 +131,23 @@ namespace Odyssey.Presentation.World
             raiseEnds: 0.6f,
             strikeEnds: 0.88f);
 
+        /// <summary>
+        /// The cook's stroke (design 48 §10): a pan held out at the height of the hob, tossed and
+        /// set down again. **Proposed, on the footing of the pick and the hammer** — a contact sheet
+        /// judges it, not this comment.
+        ///
+        /// <para>Everything about it is smaller than any tool's: the elbow stays bent near a right
+        /// angle and the shoulder moves a third as far as a hammer's, because a pan is lifted a
+        /// hand's breadth off the heat and dropped back, not swung at anything. Quick and even —
+        /// 0.9 s, with a long dwell on the hob — so it reads as tending rather than striking.</para>
+        /// </summary>
+        public static readonly WorkStroke Stir = new WorkStroke(
+            raised: new WorkSwing(-68f, -92f, -2f),
+            struck: new WorkSwing(-48f, -78f, 6f),
+            strokeSeconds: 0.9f,
+            raiseEnds: 0.45f,
+            strikeEnds: 0.6f);
+
         /// <summary>The pose at the moment the head is in the work. Any phase in the dwell agrees.</summary>
         public WorkSwing AtStrike => At(0.9f);
 
@@ -477,15 +494,30 @@ namespace Odyssey.Presentation.World
             // miner works the layer below and the ceiling above, so both aims are wanted.
             dip: 45f, raise: -55f);
 
+        /// <summary>
+        /// Cooking (design 48 §10): the pan held over the hob and tossed. **Proposed.** A sizzle of
+        /// flecks rather than chips, and aimed at the near face like the builder's, because a galley
+        /// fills its cell and the hob is its top. It never dips or reaches: a station stands on
+        /// the cook's own floor.
+        /// </summary>
+        public static readonly WorkStyle Cooking = new WorkStyle(
+            WorkStroke.Stir, ModuleIds.ToolPan, ChipRecipe.Sizzle,
+            aimFromCentre: CellMetrics.SizeXZ * 0.5f - 0.12f,
+            // Level and nearly square to the body: a pan is held out in front, not across.
+            tilt: -6f, gripFraction: 0.12f, bladeRoll: 0f, bladeYaw: 0f, buttFraction: 0.04f,
+            // Nothing slides: the hand stays on the handle the whole time.
+            slideFraction: 0.12f);
+
         /// <summary>How many styles there are. Sizes the per-figure tool table.</summary>
-        public const int Count = 3;
+        public const int Count = 4;
 
         public const int FellingIndex = 0;
         public const int MiningIndex = 1;
         public const int BuildingIndex = 2;
+        public const int CookingIndex = 3;
 
         /// <summary>The styles, by index. Mutable so a contact sheet can tune one and re-fit.</summary>
-        public static readonly WorkStyle[] All = { Felling, Mining, Building };
+        public static readonly WorkStyle[] All = { Felling, Mining, Building, Cooking };
 
         /// <summary>
         /// Which style a job is worked in, from the job def the snapshot already publishes.
@@ -504,6 +536,8 @@ namespace Odyssey.Presentation.World
         public static int IndexForJob(int jobDef) =>
             jobDef == JobHandle.Mine ? MiningIndex
             : jobDef == JobHandle.Build ? BuildingIndex
+            // The kitchen (design 48 §10): a cook at the hob tosses a pan, never swings an axe.
+            : jobDef == JobHandle.Cook ? CookingIndex
             : FellingIndex;
 
         /// <summary>The same, resolved. Anything that is not mining swings an axe.</summary>

@@ -53,6 +53,9 @@ namespace Odyssey.Hud
             "ui.status.treating", "ui.status.patient",
             // Picking a berry bush (design 45 §6), JobHandle 25, after medical supplies.
             "ui.status.foraging",
+            // The kitchen (design 48): Job_Cook, 26 — fetching food for the pan reads as cooking,
+            // because it is the bill being worked.
+            "ui.status.cooking",
         };
 
         public static string IconKey(int jobDef) =>

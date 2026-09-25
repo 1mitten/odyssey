@@ -121,6 +121,24 @@ namespace Odyssey.Presentation.World
         /// dressed and dry where a fresh cut is dark and wet. Against a wall of the same stuff a
         /// burst the colour of the wall is invisible, which is the trap <see cref="Stone"/> names.
         /// </summary>
+        /// <summary>
+        /// What comes off a pan when the cook tosses it (design 48 §10): a few warm flecks of food
+        /// and fat, small, slow and short-lived, so a toss reads as sizzling rather than as
+        /// throwing anything. <b>Proposed</b>, like the stroke it goes with.
+        /// </summary>
+        public static readonly ChipRecipe Sizzle = new ChipRecipe(
+            count: 3,
+            speed: new Vector2(0.25f, 0.7f),
+            size: new Vector2(0.012f, 0.028f),
+            life: new Vector2(0.18f, 0.35f),
+            spread: 40f,
+            colours: new[]
+            {
+                new Color(0.93f, 0.84f, 0.62f),
+                new Color(0.78f, 0.52f, 0.28f),
+                new Color(0.98f, 0.95f, 0.86f),
+            });
+
         public static readonly ChipRecipe Timber = new ChipRecipe(
             count: 5,
             speed: new Vector2(0.6f, 1.6f),
