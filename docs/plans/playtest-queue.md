@@ -23,6 +23,18 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do the birds read as birds, and is the size right at every zoom?** (`claude/wizardly-ride-wely6j`,
+  design 50.) New game, clear weather, midday. Pull the camera from 10 m out to 160 m: close in a rook
+  is its real size beside a colonist, far out it is drawn ×1.75, and a dark flock should still read
+  as birds at the furthest zoom. Watch a flock come down on treetops, then walk a colonist under it:
+  the whole flock goes up at once. Skip to 19:00 (debug menu, *Skip one day* or the clock): the rooks
+  gather in one stand of trees and sit there until 06:00. The buzzard circles high and is gone in rain
+  and after dark. Set the weather to Storm: no rook in the air. A wrong answer is a flock you only
+  find by looking for it at 160 m, a rook that looks too big next to a colonist close in, birds
+  sitting in mid-air beside a crown or buried inside one, a flock that never lands, a bird that pops
+  in or out in view, or birds flying through the camera at the closest zoom. The overlay's **Birds**
+  line is the cost: over 0.1 ms is the cue for the GPU path.
+
 - **Does the new bill list read at a glance, and is anything on it in the way?** (`claude/bills-pane`,
   design 49, stacked on `claude/cooking`.) Click an **Electric Cooker** with no power: the pane is
   wider (680), a warn strip reads **No power** with a green **Switch off** beside it, and the tile's

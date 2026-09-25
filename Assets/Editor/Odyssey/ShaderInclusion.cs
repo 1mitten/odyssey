@@ -85,6 +85,9 @@ namespace Odyssey.EditorTools
             // Rain (the rain-look prototype): streaks and splashes drawn procedurally.
             "Odyssey/Rain",
 
+            // The ambient birds (design 50): one instanced call a species, flapped in the shader.
+            "Odyssey/Bird",
+
             // The sky, and it was not on the first draft of this list — `ShaderInclusionTests`
             // found it on the run that was meant to confirm the fix, along with `Standard` below.
             // Worth recording rather than quietly adding: a list of runtime-found shaders

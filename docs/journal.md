@@ -13380,3 +13380,45 @@ therefore peak-normalised on import, undoing the loudness their bakes set. The g
 committed with it off. The fix for the rest changes how loud every blow is, so it is its own PR, and
 it is unverified in Unity until somebody reads `GetData` on `combat-hit`.
 
+## 2026-09-25 — Ambient birds: research, a sketch, three answers, and the build (design 50)
+
+The owner asked whether the environment could have birds, procedural or a low-poly model. Nothing in
+the repository drew one. The day ambience has birdsong and no owned pack has a bird
+(`e-12-bird-models.md`: Meadow Forest has butterflies and two birdhouses). Two research lanes ran:
+technique and prior art (`d-23`) and models and licences (`e-12`). Their field-of-view claims
+disagreed (60° against 40°). The scene settles it at 40° (`Assets/Scenes/Play.unity`), and d-23 was
+corrected. At 40° and 1080p a rook is about 9 px across at 160 m drawn ×1.75, and about 5 px at life
+size.
+
+**The owner asked to see it before deciding** ("we need to be specific"), so the recommendation was
+drawn: a three.js sketch through the game's own camera, with four species and twelve stills
+(`docs/reference/mockups/birds/`). The stills settled two things the prose could not. At life size
+the far zoom loses the birds. A ground-feeding pigeon built in code reads as a dart at 16 m. The
+interview (`birds-interview.md`) then took three answers: **birds grow with zoom**, **fly and perch
+only** (so no model and no licence), and **rooks and the buzzard** first.
+
+**Numbering collided with main twice on the merge.** Main had taken `d-21` and `e-10` for the
+ranged-combat research while this ran (`e-10` is itself doubled there, with the Shops pack), and
+design 47 is ranged combat. The bird files moved to `d-23`, `e-12` and design **50**.
+
+**The build.** The flock is engine-free (`BirdSky` in Odyssey.Hud) so the fast tier drives a dusk, a
+storm and a colonist walking under a tree in seconds. 27 tests cover the shape's symmetry, the zoom
+curve, perching on crowns, the scatter, the rookery, the storm, the buzzard leaving and returning,
+and a board with nowhere to sit. The Unity half is a perch source over the render mirror, the
+director and `Odyssey/Bird`. The perch source reads the sky column rule the rain uses, and takes a
+crown's top from the art's own bounds through `TreeArt.CrownOf`. Which art rows a tree family has is
+now `TreeArt.VariantsOf`, called by the mesher too, so it keeps one owner. Two calls a frame.
+Measured on the build container under .NET 8: 8 µs for Standard's 18 birds, 21 µs for Huge's 51.
+
+**One draft decision reversed before it shipped:** scattering perched birds when a chunk's version
+moved. A chunk is 62.5 m across and moves for any edit in it, so a floor laid on one side of it would
+have put up a flock on the other. The perch's own column is asked twice a second instead
+(design 50 §6).
+
+**How it was proven without Unity.** The container had no .NET SDK and no Unity. The SDK came from
+Ubuntu's archive, which ran the fast tier. Unity 2021.3's reference assemblies from NuGet
+(`UnityEngine.Modules`), with signature stubs for the few project types the new files touch, type-
+checked the director, the perch source, `TreeArt` and the EditMode test against Unity's real API. A
+planted error was caught, so the check is live. It proves the Unity calls and the C#. It does not
+prove the shader or the bootstrap edit, which only Unity compiles.
+

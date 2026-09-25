@@ -28,7 +28,8 @@ exist (d-23 §11: Cities: Skylines' seagulls took a citizen budget, which is the
 (Odyssey.Hud, so the fast tier checks it) returns flat-shaded triangles for a bird of **unit
 wingspan**, nose along +Z, up +Y, right wing +X:
 
-- a six-sided spindle body with a beak and a tail fan;
+- a body of diamond cross-section (nose cone, mid band, tail cone: 16 triangles) with a two-face
+  beak and a notched two-face tail fan;
 - each wing as an **inner and an outer panel** meeting at an elbow, the buzzard with an extra
   fingered tip;
 - every vertex carrying a **wing weight** (0 at the shoulder, 0.45 at the elbow, 1 at the tip) and a
@@ -102,11 +103,19 @@ the tree it is drawn on, not on a guessed height. `TreeArt.VariantsOf` is now th
 art rows a tree family has, and the mesher calls it (P1). Without the packs the tree is a stand-in
 and the crown is `FallbackCrown` 6 m. **A roof** is a column whose walk landed on a slab.
 
-A perch is dropped (and its birds scatter) when:
+A perch is dropped, and its birds scatter, when `BirdPerches.Holds` says no. The flock asks twice a
+second. The answer is no when:
 
-- its chunk's version moves (`WorldRenderModel.ChunkVersion`, the `SkyHeightMap.SyncDirty` pattern);
+- the tree is no longer a tree (felled, or gone by any road) or the roof slab is gone;
 - its layer is above the highest layer the slice draws (`SliceSettings.HighestVisibleLayer`), so a
   rook is never left sitting on a roof that has been cut away.
+
+**Not by chunk version**, which the first draft of this section proposed. A chunk is 25 × 25 cells,
+62.5 m across, and its version moves for any edit in it. Scattering on it would put a flock up from
+a tree 50 m from where somebody laid a floor. The exact question, asked of the one column, is
+cheaper and right. `BirdSky.Disturb` stays as the seam for a disturbance with a place, such as a
+gunshot when the ranged unit wants one, and nothing in the game calls it yet. A colonist walking up
+to fell the tree has already put the flock up before the tree falls.
 
 ## 7. What is drawn when
 
@@ -120,11 +129,13 @@ A perch is dropped (and its birds scatter) when:
 
 - **Draw calls**: two, plus URP's shadow and depth passes on the same two meshes.
 - **CPU**: `FrameSection.Birds`, its own line on the developer overlay and in the trace. The step is
-  73 birds' steering and the matrix fill. Perch queries run only when a flock lands (a column walk
-  each, three to thirty columns).
-- **Not measured yet on the machine.** The first Play session reads `Birds` off the overlay. A
-  number over 0.1 ms is the cue for the compute path d-23 ranked second; the mesh and shader do not
-  change.
+  the birds' steering and the matrix fill. A perch search runs only when a flock lands: a column walk
+  per column within 30 m (about 600), or every other column for the rookery search once a night.
+- **Measured in the fast tier's runtime, not in Unity**: **8 µs a frame** for Standard's 18 birds and
+  **21 µs** for Huge's 51, with 60 walkers, under .NET 8 on the build container. Unity's Mono is
+  slower, so read this as the order of magnitude. The first Play session reads `Birds` off the
+  overlay. A number over 0.1 ms is the cue for the compute path d-23 ranked second; the mesh and
+  shader do not change.
 
 ## 9. The build
 
