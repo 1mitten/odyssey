@@ -156,7 +156,7 @@ namespace Odyssey.Sim.Pawns
             {
                 target.CombatTarget = foe;
                 Job again = target.JobBuffer;
-                again.Reset(CombatJobs.AttackJobFor(target, _ctx));
+                again.Reset(CombatJobs.AttackJobFor(target, _ctx, still));
                 again.TargetCell = still.Cell;
                 again.DestCell = toTheDeath;
                 again.Mode = mode;

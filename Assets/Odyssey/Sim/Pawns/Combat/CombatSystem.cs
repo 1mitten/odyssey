@@ -69,6 +69,10 @@ namespace Odyssey.Sim.Pawns
             {
                 Pawn pawn = pawns[i];
 
+                // A gun-holder's reach rule (design 47 §12), before anything lands or fires: an enemy
+                // within reach is clubbed, not shot, and one that steps away is shot again.
+                SwapByReach(pawn, tick);
+
                 if (pawn.Driver is AttackMeleeJobDriver swing && swing.InWindup) LandOrLose(pawn, swing, tick);
                 else if (pawn.Driver is AttackRangedJobDriver aim && aim.InAim) FireOrLose(pawn, aim, tick);
 
@@ -110,7 +114,7 @@ namespace Odyssey.Sim.Pawns
                 return;
             }
 
-            Armament armament = _ctx.WeaponRules.ArmamentOf(attacker, _ctx);
+            Armament armament = _ctx.WeaponRules.ArmamentOf(attacker, _ctx).Melee;
             if (!swing.WindupDone(armament)) return;
             bool decided = attacker.HasPendingSwing;
             SwingOutcome held = attacker.HeldSwing;

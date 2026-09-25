@@ -12968,3 +12968,15 @@ is saved under the format-10 bump this line already makes, and hashed only when 
 moved (design 47 §11).
 
 *Sidearm* is *Pistol* now.
+
+## 2026-09-25 — The reach rule: a gun-holder next to an enemy clubs it
+
+The owner saw a pistol outclass a machete at one tile and asked what the reference does. Our own
+research had the answer on file (`a-10-projectile-path` finding 17): an adjacent enemy is fought
+in melee, gun or no gun, with a weak blow every gun carries. The design had departed from it for
+simplicity, recommending point-blank fire, and play showed the cost. Built as design 47 §12: the
+switch has one owner (`CombatSystem.SwapByReach`, after the jobs), an order survives the swap, an
+aim broken by an enemy stepping in is lost with its clock given back, and the gun's blow is data.
+The lesson worth keeping: the research recommended this and the design overrode it without a
+measurement. When a design departs from its own research, say what observation would prove the
+departure wrong. Here it was one tile of play.

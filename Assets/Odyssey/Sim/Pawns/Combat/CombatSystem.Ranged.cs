@@ -11,6 +11,64 @@ namespace Odyssey.Sim.Pawns
     public partial class CombatSystem
     {
         readonly List<Projectiles.Entry> _due = new List<Projectiles.Entry>();
+
+        /// <summary>
+        /// A gun-holder's reach rule (design 47 §12; the reference's: "when adjacent to an enemy, pawns
+        /// will always fight in melee, even if they are holding a gun"). In a ranged attack with an
+        /// enemy within reach, she swaps to a melee attack on it — an aim in hand is lost with no shot
+        /// and its clock given back. In a melee attack, between swings, whose target has stepped out of
+        /// reach, she swaps back to shooting it. An order carries across when the target is the one she
+        /// was ordered on. Here, after the jobs and before anything lands or fires, so no shot is ever
+        /// fired at an enemy she could strike. <b>Scales with the pawns on the board</b> for each pawn
+        /// in a ranged attack; one reach test for a gun-holder in a melee one; nothing for anybody else.
+        /// </summary>
+        void SwapByReach(Pawn pawn, int tick)
+        {
+            Job? job = pawn.CurrentJob;
+            if (job == null || pawn.Downed) return;
+
+            if (job.DefIndex == JobIndex.AttackRanged)
+            {
+                Pawn? close = CombatJobs.EnemyInReach(_ctx, pawn);
+                if (close == null) return;
+                // The shot never happened: its clock comes back, as when an aim breaks.
+                if (pawn.Driver is AttackRangedJobDriver { InAim: true }) pawn.NextSwingTick = 0;
+                SwapAttack(pawn, close, JobIndex.AttackMelee, tick);
+                return;
+            }
+
+            if (job.DefIndex != JobIndex.AttackMelee || pawn.CombatTarget == 0) return;
+            if (pawn.Driver is AttackMeleeJobDriver { InWindup: true }) return;
+            if (!CombatJobs.IsGunHolder(pawn, _ctx)) return;
+            Pawn? target = _ctx.Pawns.Get(new PawnId(pawn.CombatTarget));
+            if (target == null || Melee.IsDead(target) || Melee.InReach(_ctx, pawn, target, pawn.OwnMode)) return;
+            SwapAttack(pawn, target, JobIndex.AttackRanged, tick);
+        }
+
+        /// <summary>
+        /// End the attack in hand and start <paramref name="jobDef"/> on <paramref name="foe"/> in its
+        /// place, keeping the step in progress (the order's own way), the traverse mode, and — when the
+        /// foe is the one she was already on — whether the player forced it and whether it was to the
+        /// death or a join, so an order survives the swap. The knockback's re-issue is the precedent.
+        /// </summary>
+        void SwapAttack(Pawn pawn, Pawn foe, int jobDef, int tick)
+        {
+            Job job = pawn.CurrentJob!;
+            bool same = foe.Id.Value == pawn.CombatTarget;
+            bool forced = same && job.PlayerForced;
+            int dest = same ? job.DestCell : -1;
+            Pathing.TraverseMode mode = job.Mode;
+
+            _jobs.Interrupt(pawn, JobStatus.Succeeded);
+            pawn.CombatTarget = foe.Id.Value;
+            Job again = pawn.JobBuffer;
+            again.Reset(jobDef);
+            again.TargetCell = foe.Cell;
+            again.DestCell = dest;
+            again.Mode = mode;
+            again.PlayerForced = forced;
+            if (!_jobs.StartJob(pawn, again, tick)) pawn.CombatTarget = 0;
+        }
         readonly SightLine _line = new SightLine();
 
         /// <summary>

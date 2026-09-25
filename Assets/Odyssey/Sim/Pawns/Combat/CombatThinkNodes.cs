@@ -34,8 +34,8 @@ namespace Odyssey.Sim.Pawns
     {
         public static bool Fill(PawnContext ctx, Pawn pawn, Pawn target, Job job, TraverseMode mode)
         {
-            // A swing or a shot, by what she holds (design 47 §2d).
-            job.Reset(CombatJobs.AttackJobFor(pawn, ctx));
+            // A swing or a shot, by what she holds and how near it is (design 47 §2d, §12).
+            job.Reset(CombatJobs.AttackJobFor(pawn, ctx, target));
             job.TargetCell = target.Cell;
             job.Mode = mode;
             pawn.CombatTarget = target.Id.Value;

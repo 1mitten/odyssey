@@ -201,6 +201,20 @@
           <li><mm>25000</mm><perMille>650</perMille></li>
           <li><mm>40000</mm><perMille>450</perMille></li>
         </accuracyByDistance>
+        <!--
+          The gun's blow (design 47 section 12, the reference's rule): an enemy within reach is
+          clubbed with the pistol, never shot. Blunt, 5 damage on the fists' two-second cadence, on
+          the Melee skill - a little better than a bare fist and far worse than a machete, so a
+          melee rush is the counter to a lone gunman. INVENTED; the quality tiers apply.
+        -->
+        <melee>
+          <damage>5</damage>
+          <cooldownTicks>120</cooldownTicks>
+          <windupTicks>20</windupTicks>
+          <damageKind>Blunt</damageKind>
+          <experiencePerSwing>50000</experiencePerSwing>
+          <style>Fists</style>
+        </melee>
       </ranged>
     </weapon>
   </ItemDef>

@@ -1047,3 +1047,38 @@ no golden moved. It is published on `ThingView.Quality` and, for the held weapon
 
 **Not built**: quality changing what a weapon looks like, and crafting. Deterioration and a
 quality floor for traders are the reference's and are not in any plan.
+
+## 12. The reach rule, 2026-09-25
+
+The owner, after playing: *"the shooter seems more distinctly advantaged over the melee - IE if 1
+tile away - gun still shoots"*, then *"what does rimworld do?"*, then *"do it"*.
+
+**The reference's rule** (`a-10-projectile-path` finding 17, a player's guide via search, so medium
+confidence): *"When adjacent to an enemy, pawns will always fight in melee — even if they are
+holding a gun."* Every gun carries a weak melee attack for it. The research recommended taking it;
+§8 item 5 departed ("point-blank fire, no pistol-whip"), and play showed why that was wrong: a
+pistol hitting 83–93 % at one tile for 10, undodgeable, beat a machete up close.
+
+**Built:**
+
+- **An enemy within reach is clubbed, never shot.** Reach is `Melee.InReach`, the melee rule: the
+  eight neighbours on the same layer.
+- **The gun's blow** is its own block in the Def, `RangedDef.melee`: blunt, 5 damage, the fists'
+  120-tick cadence, trained on Melee, quality applied. `Armament.Melee` hands every melee path the
+  blow for a gun and the weapon itself for anything else.
+- **One owner of the switch**: `CombatSystem.SwapByReach`, after the jobs and before anything lands
+  or fires.
+  - In a ranged attack with an enemy in reach (`CombatJobs.EnemyInReach`), she swaps to a melee
+    attack on it. An aim in hand is lost unfired, with its clock given back.
+  - In a melee attack between swings, whose target has stepped away, she swaps back to shooting it.
+  - An order carries across the swap when the target is the one ordered (forced, to the death,
+    joining).
+- **A new attack starts right**: `CombatJobs.AttackJobFor(pawn, ctx, target)` asks reach too.
+- **Everybody**: a pistol bandit caught by a colonist clubs.
+- **No backing off to shoot.** The reference does not do it, and it invites kiting.
+
+**What it does to a fight**: a melee rush takes a few shots on its way in, then beats a lone gunman
+at arm's length. Melee fighters in front and shooters behind is the formation that works, which is
+the reference's balance.
+
+**Do not undo by tidying**: this replaces §7's "No minimum range" and §8 item 5.

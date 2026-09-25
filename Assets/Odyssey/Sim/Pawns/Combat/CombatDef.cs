@@ -111,6 +111,14 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public List<DistancePoint> accuracyByDistance = new List<DistancePoint>();
 
+        /// <summary>
+        /// The gun's own blow, for an enemy within reach (design 47 §12; the reference's rule: "when
+        /// adjacent to an enemy, pawns will always fight in melee, even if they are holding a gun").
+        /// A gun-holder never shoots at an enemy she could strike; she clubs it with this, on her
+        /// Melee skill, and shoots again when it steps away. Null would leave her bare-fisted.
+        /// </summary>
+        public AttackDef? melee;
+
         /// <summary>The gun's accuracy at a distance, per mille. Integer throughout.</summary>
         public int AccuracyPerMille(int distanceMm)
         {

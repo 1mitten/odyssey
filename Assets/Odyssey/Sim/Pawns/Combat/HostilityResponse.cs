@@ -89,7 +89,7 @@ namespace Odyssey.Sim.Pawns
                 return true;
             }
 
-            job.Reset(CombatJobs.AttackJobFor(pawn, ctx));
+            job.Reset(CombatJobs.AttackJobFor(pawn, ctx, foe));
             job.TargetCell = foe.Cell;
             job.Mode = TraverseMode.Colonist;
             if (joining) job.DestCell = AttackMeleeJobDriver.Joining;

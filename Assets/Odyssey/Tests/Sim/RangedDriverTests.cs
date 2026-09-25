@@ -82,23 +82,126 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// No minimum range (design 47 §7): an enemy on the next cell is shot at point-blank, not
-        /// swung at with the gun.
+        /// The reach rule (design 47 §12; owner, 2026-09-25, reversing §8's point-blank): an enemy
+        /// within reach is clubbed with the gun, never shot — the swing carries the pistol as its
+        /// weapon. Moved three cells off, the same bandit is shot: the control that the gun still shoots.
         /// </summary>
         [Test]
-        public void AnAdjacentEnemyIsShotPointBlank()
+        public void AnAdjacentEnemyIsClubbedAndOneThatStepsAwayIsShot()
         {
             var colony = Range();
             Pawn shooter = colony.Pawns.Pawns.All[0];
             Stand(colony, shooter, Near(colony, 0, 0));
             Arm(colony, shooter, ItemIndex.Pistol);
             Assert.That(Draft(colony, shooter), Is.EqualTo(IntentRejection.None));
-            Bandit(colony, Near(colony, 1, 0));
+            Pawn bandit = Bandit(colony, Near(colony, 1, 0));
 
             var tape = new Tape();
-            tape.Tick(colony, 120);
-            Assert.That(tape.By(shooter, CombatEventKind.Shot), Is.Not.Empty);
-            Assert.That(tape.By(shooter, CombatEventKind.Swing), Is.Empty, "no pistol-whip");
+            tape.Tick(colony, 150);
+            Assert.That(tape.By(shooter, CombatEventKind.Shot), Is.Empty, "she shot an enemy she could strike");
+            var swings = tape.Swings(shooter);
+            Assert.That(swings, Is.Not.Empty, "she did not club it");
+            Assert.That(swings.TrueForAll(e => e.Weapon == ItemIndex.Pistol), Is.True, "with the pistol");
+
+            // Stepped away: shot again.
+            Stand(colony, bandit, Near(colony, 5, 0));
+            bandit.StunnedUntilTick = colony.World.CurrentTick + 400;
+            var after = new Tape();
+            after.Read(colony);
+            after.Tick(colony, 150);
+            Assert.That(after.By(shooter, CombatEventKind.Shot), Is.Not.Empty, "out of reach, she did not shoot it");
+        }
+
+        /// <summary>
+        /// The pistol's blow is its own (design 47 §12): blunt, five points before quality and spread,
+        /// on the fists' cadence — not the bullet's ten. What the melee paths are handed for a gun.
+        /// </summary>
+        [Test]
+        public void AGunsBlowIsItsOwnAndNotItsBullet()
+        {
+            var colony = Range();
+            Armament gun = Weapon(colony.Pawns, ItemIndex.Pistol);
+            Armament blow = gun.Melee;
+            Assert.That(blow.Attack.IsRanged, Is.False);
+            Assert.That(blow.Attack.damage, Is.EqualTo(5));
+            Assert.That(blow.Attack.damageKind, Is.EqualTo(DamageKind.Blunt));
+            Assert.That(blow.ItemDef, Is.EqualTo(ItemIndex.Pistol), "still the pistol, for the drawing and the log");
+            Armament machete = Weapon(colony.Pawns, ItemIndex.Machete);
+            Assert.That(machete.Melee.Attack, Is.SameAs(machete.Attack), "the control: a blade swings as itself");
+        }
+
+        /// <summary>
+        /// An order survives the swap: ordered on a bandit that walks up to her, she clubs it under the
+        /// same order, and when it steps away she shoots it under the same order again.
+        /// </summary>
+        [Test]
+        public void AnOrderCarriesAcrossTheSwap()
+        {
+            var colony = Range();
+            Pawn shooter = colony.Pawns.Pawns.All[0];
+            Stand(colony, shooter, Near(colony, 0, 0));
+            Arm(colony, shooter, ItemIndex.Pistol);
+            Assert.That(Draft(colony, shooter), Is.EqualTo(IntentRejection.None));
+            Pawn bandit = Bandit(colony, Near(colony, 6, 0));
+            Assert.That(Attack(colony, shooter, bandit), Is.EqualTo(IntentRejection.None));
+            Assert.That(shooter.CurrentJob!.DefIndex, Is.EqualTo(JobIndex.AttackRanged));
+
+            Stand(colony, bandit, Near(colony, 1, 0));
+            bandit.StunnedUntilTick = colony.World.CurrentTick + 60;
+            colony.World.Tick();
+            Assert.That(shooter.CurrentJob!.DefIndex, Is.EqualTo(JobIndex.AttackMelee), "within reach: a swing");
+            Assert.That(shooter.CurrentJob.PlayerForced, Is.True, "still the player's order");
+            Assert.That(shooter.CombatTarget, Is.EqualTo(bandit.Id.Value));
+
+            colony.World.Tick(40);
+            Stand(colony, bandit, Near(colony, 6, 0));
+            bandit.StunnedUntilTick = colony.World.CurrentTick + 400;
+            for (int t = 0; t < 60 && shooter.CurrentJob?.DefIndex != JobIndex.AttackRanged; t++) colony.World.Tick();
+            Assert.That(shooter.CurrentJob!.DefIndex, Is.EqualTo(JobIndex.AttackRanged), "stepped away: a shot again");
+            Assert.That(shooter.CurrentJob.PlayerForced, Is.True, "and still the player's order");
+        }
+
+        /// <summary>
+        /// An aim in hand when an enemy steps within reach is lost with no shot fired, and its clock is
+        /// given back, so the first blow is not delayed by a shot that never happened.
+        /// </summary>
+        [Test]
+        public void AnAimIsLostWhenAnEnemyStepsWithinReach()
+        {
+            var colony = Range();
+            Pawn shooter = colony.Pawns.Pawns.All[0];
+            Stand(colony, shooter, Near(colony, 0, 0));
+            Arm(colony, shooter, ItemIndex.Pistol);
+            Assert.That(Draft(colony, shooter), Is.EqualTo(IntentRejection.None));
+            Pawn bandit = Bandit(colony, Near(colony, 6, 0));
+            Assert.That(Attack(colony, shooter, bandit), Is.EqualTo(IntentRejection.None));
+            for (int t = 0; t < 60 && !Ranged.IsAiming(shooter); t++) colony.World.Tick();
+            Assert.That(Ranged.IsAiming(shooter), Is.True, "the control: mid-aim");
+
+            Stand(colony, bandit, Near(colony, 1, 0));
+            bandit.StunnedUntilTick = colony.World.CurrentTick + 200;
+            var tape = new Tape();
+            tape.Tick(colony, 1);
+            Assert.That(tape.By(shooter, CombatEventKind.Shot), Is.Empty, "the aim fired at an enemy she could strike");
+            Assert.That(shooter.CurrentJob!.DefIndex, Is.EqualTo(JobIndex.AttackMelee));
+            tape.Tick(colony, 5);
+            Assert.That(tape.Swings(shooter), Is.Not.Empty, "the clock was not given back: no blow at once");
+        }
+
+        /// <summary>A pistol bandit caught by a colonist clubs her: the rule is everybody's.</summary>
+        [Test]
+        public void APistolBanditWithinReachClubs()
+        {
+            var colony = Range(colonists: 1);
+            Pawn colonist = colony.Pawns.Pawns.All[0];
+            Stand(colony, colonist, Near(colony, 0, 0));
+            Assert.That(Draft(colony, colonist), Is.EqualTo(IntentRejection.None));
+            Pawn bandit = Bandit(colony, Near(colony, 1, 0), ItemIndex.Pistol);
+
+            var tape = new Tape();
+            tape.Tick(colony, 200);
+            Assert.That(tape.By(bandit, CombatEventKind.Shot), Is.Empty);
+            Assert.That(tape.Swings(bandit), Is.Not.Empty);
         }
 
         /// <summary>The hold never walks (design 47 §2d): on her hold she shoots from where she stands.</summary>

@@ -259,7 +259,9 @@ namespace Odyssey.Tests.Sim
         // SpeciesDef interceptPerMille (person 400, hog 500, rat 40).
         // 2026-09-25, design 47 on the owner's first play ("keep it more accurate"): shootingPerCell
         // 876/943/983 and the pistol's bands 950/850/650/450; the pistol's label "pistol" (was sidearm).
-        const ulong ContentFingerprint = 6713843915009952454UL;
+        // 2026-09-25, design 47 §12: the pistol's ranged block gained its own melee blow (blunt, 5,
+        // the fists' cadence) — an enemy within reach is clubbed, never shot.
+        const ulong ContentFingerprint = 5602294991736737376UL;
 
 
         [Test]

@@ -43,7 +43,7 @@ namespace Odyssey.Sim.Pawns
             if (foe != null)
             {
                 pawn.DraftQuietSinceTick = ctx.CurrentTick;
-                job.Reset(CombatJobs.AttackJobFor(pawn, ctx));
+                job.Reset(CombatJobs.AttackJobFor(pawn, ctx, foe));
                 job.TargetCell = foe.Cell;
                 if (joining) job.DestCell = AttackMeleeJobDriver.Joining;
                 pawn.CombatTarget = foe.Id.Value;

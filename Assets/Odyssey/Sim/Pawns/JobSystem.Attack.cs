@@ -44,7 +44,7 @@ namespace Odyssey.Sim.Pawns
                 && !_ctx.Reachable(pawn, target.Cell, TraverseMode.Colonist)
                 && !(gun != null && Ranged.CanHit(_ctx, pawn.Cell, target.Cell, gun)))
                 return IntentRejection.NotPermitted;
-            int attack = CombatJobs.AttackJobFor(pawn, _ctx);
+            int attack = CombatJobs.AttackJobFor(pawn, _ctx, target);
 
             // The same order again — a confirm-click, sent for every selected drafted colonist — is
             // a no-op. Restarting threw away the swing in the air while the pawn's swing clock

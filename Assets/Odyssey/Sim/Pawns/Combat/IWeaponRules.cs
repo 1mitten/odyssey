@@ -29,6 +29,14 @@ namespace Odyssey.Sim.Pawns
         }
 
         public bool Armed => ItemDef >= 0;
+
+        /// <summary>
+        /// What this swings with when it swings (design 47 §12): a gun's own blow, on the same item
+        /// and at the same quality; anything else is itself. Every melee path asks for this, so a
+        /// gun-holder in melee never swings with the gun's bullet numbers.
+        /// </summary>
+        public Armament Melee =>
+            Attack.ranged?.melee is AttackDef blow ? new Armament(blow, ItemDef, Quality) : this;
     }
 
     /// <summary>
