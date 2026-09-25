@@ -649,9 +649,9 @@ initialiser — and only one of them read the preferences.
 root as it builds a renderer whenever a store is attached, and `GraphicsLeverTests` holds the
 mapping. `27-graphics-settings.md` §10.
 
-### 2026-09-24 — Two marauders stood on "Fighting" at a wall with one side (P1)
+### 2026-09-24 — Two bandits stood on "Fighting" at a wall with one side (P1)
 
-The owner: three marauders, one breaking a building, two standing about. Measured in the owner's
+The owner: three bandits, one breaking a building, two standing about. Measured in the owner's
 save: all three chose the same wall of a house on the edge of a terrace step, whose only side on its
 own layer was one cell (the others are air over the step below). One struck; two waited 3,245 and
 3,312 ticks. The choice (`TryNearestColonyTarget`) asked whether a side could be **reached**; the
@@ -661,7 +661,7 @@ is how a P1 looks when it is a decision rather than an accident.
 
 **What now stops it:** the choice asks `BuildingTargets.HasAFreeSide`, the driver's own answer, and
 an unforced attack that finds every side held thinks again at once.
-`MarauderSideTests.ThreeMaraudersAtAWallWithOneSideDoNotStandAbout`. `33-combat.md` §19a–§19b.
+`BanditSideTests.ThreeBanditsAtAWallWithOneSideDoNotStandAbout`. `33-combat.md` §19a–§19b.
 
 ### 2026-09-24 — A loaded game kept the generated board's paths (P1-adjacent; a test that could not fail)
 
@@ -669,7 +669,7 @@ Found by the same probe. `ColonyWorld.RebuildDerived` — "the derived state is 
 definition for both paths — called `NavGraph.Rebuild`, which floods only the blocks something marked
 dirty, and a load marks none. In every block of a loaded game that no door or ladder on the load
 path happened to dirty, a built wall was walkable and a built floor was not. In the owner's save:
-seven walls on the first column of a block, walked into by marauders, and six upstairs cells a
+seven walls on the first column of a block, walked into by bandits, and six upstairs cells a
 colonist could not be ordered to. The test written for exactly this,
 `AWorldWhoseGridHasChangedStillResumesIdentically`, wrote its wall straight into the grid with
 nothing marking the graph in **either** world, so both were equally stale and the hashes agreed.
@@ -2682,8 +2682,8 @@ optional, so lane B wrote its own; the gate was a rule the brief gave lane C in 
 **Symptom, found by the guard before anyone played it.** The owner asked that fighters never
 share a tile, *"handled uniformly"*. §7c had given every attacker a side of its own. A test that
 walked every tick of mixed brawls then found fighters standing together for hundreds of ticks
-anyway. A marauder stood on a downed body a colonist was finishing off beside it. Two drafted
-colonists swung from one tile. A colonist ordered onto a marauder's tile was given it.
+anyway. A bandit stood on a downed body a colonist was finishing off beside it. Two drafted
+colonists swung from one tile. A colonist ordered onto a bandit's tile was given it.
 
 **Cause.** The rule was written for one side of the relation. An attacker held its side, but a pawn
 being attacked held nothing. Three ways into a fight also had no rule at all: the drafted hold

@@ -103,9 +103,9 @@ namespace Odyssey.Sim.Events
         {
             "Incident_SupplyDrop",
             "Incident_ScrapDrop",
-            // Written down by the world, never fired (design 33 §17): a marauder leaving the board.
+            // Written down by the world, never fired (design 33 §17): a bandit leaving the board.
             "Incident_Theft",
-            "Incident_MarauderLeft",
+            "Incident_BanditLeft",
         };
 
         public IncidentDef[] Defs = System.Array.Empty<IncidentDef>();

@@ -33,7 +33,7 @@ namespace Odyssey.Sim.Pawns
             // anybody attacking her. Not a forced job, so the attack driver never chases — she
             // strikes from where she stands and holds again when it steps away or goes down.
             //
-            // Else another colonist's fight nearby (design 33 §15): a marauder or an animal on a
+            // Else another colonist's fight nearby (design 33 §15): a bandit or an animal on a
             // colonist within the help radius. Also unforced — self-started, like the blow — but
             // marked Joining, so she goes to the attacker; when it is down, dead, out of reach or
             // no longer on a colonist the job ends and she holds wherever she is.

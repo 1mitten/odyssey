@@ -25,7 +25,8 @@ namespace Odyssey.Sim.Pawns
         /// ground beneath either (<see cref="IsWater"/>);</item>
         /// <item><b>free of other fighters</b> — no cell <see cref="Melee.Holds"/> for anybody else,
         /// the same rule every fighter stops by (§8c), so a knockback never stands two fighters on
-        /// one tile.</item>
+        /// one tile — <b>and never the tile of the one the target is itself fighting</b>
+        /// (<see cref="OnWhoItFights"/>), which Holds leaves to her.</item>
         /// </list>
         /// <para><b>Scales with</b> the pawns on the board, for the one <see cref="Melee.Holds"/>
         /// pass, asked only for a critical that rolled its knockback.</para>
@@ -68,7 +69,26 @@ namespace Odyssey.Sim.Pawns
                 land = lower;
             }
 
-            return Melee.Holds(ctx, target, land) ? -1 : land;
+            if (Melee.Holds(ctx, target, land)) return -1;
+            return OnWhoItFights(ctx, target, land) ? -1 : land;
+        }
+
+        /// <summary>
+        /// Is <paramref name="cell"/> the side of the pawn <paramref name="pawn"/> is herself
+        /// attacking? <see cref="Melee.Holds"/> does not count her own claims against her — an
+        /// attacker's own side is hers to stand on — but the tile of the one she is fighting is
+        /// held <i>only</i> by her claim when it does not fight back, so Holds let a knockback lay
+        /// her on it, and a knocked-down fighter lies where she lands. A fighter never fights from
+        /// her target's tile (<c>AttackMeleeJobDriver.MayFightFrom</c>), and she is never knocked
+        /// on to it either. Found by <c>FightGuardTests.MixedBrawlsOnManySeeds</c> once the bandit
+        /// carried blunt weapons (design 42): a colonist beating a rat, knocked on to the rat by a
+        /// bandit's critical, lay there 90 ticks.
+        /// </summary>
+        static bool OnWhoItFights(PawnContext ctx, Pawn pawn, int cell)
+        {
+            if (!Melee.IsInAnAttack(pawn) || pawn.CombatTarget == 0) return false;
+            Pawn? fought = ctx.Pawns.Get(new PawnId(pawn.CombatTarget));
+            return fought != null && Melee.SideOf(fought) == cell;
         }
 
         /// <summary>

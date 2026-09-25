@@ -90,7 +90,7 @@ ui.pawn.synth,Synth,ui.pawn,M2,"Machine intelligence. Not alive, not harmless"
 ui.pawn.corpse,Corpse,ui.pawn,M2,"Rots, upsets people, can be buried or worse"
 ui.pawn.hog,Midden hog,ui.pawn,AN,"Pig-descended, thrives on refuse heaps. Wild for now; the one you meet first"
 ui.pawn.rat,Duct rat,ui.pawn,AN,"Vermin from the ducts and the caverns. Climbs anything"
-ui.pawn.marauder,Marauder,ui.pawn,CB,"Armed, alone and hostile. Hunts whoever is still standing"
+ui.pawn.bandit,Bandit,ui.pawn,CB,"Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing"
 ui.status.hauling,Hauling,ui.status,M2,Carrying something to storage
 ui.status.building,Building,ui.status,M2,Working a frame or blueprint
 ui.status.deconstructing,Deconstructing,ui.status,M3,Taking one of our own buildings apart
@@ -114,7 +114,7 @@ ui.status.fighting,Fighting,ui.status,CB,Closing on a target and swinging at it
 ui.status.fleeing,Fleeing,ui.status,CB,"Running from danger, or from whatever hurt it"
 ui.status.equipping,Equipping,ui.status,CB,Fetching a weapon to hold
 ui.status.rescuing,Rescuing,ui.status,CB,Carrying the downed to a bed
-ui.status.stealing,Stealing,ui.status,CB,"A marauder carrying something off the board"
+ui.status.stealing,Stealing,ui.status,CB,"A bandit carrying something off the board"
 ui.combat.miss,Miss,ui.combat,CB,A swing that did not land
 ui.combat.dodge,Dodge,ui.combat,CB,A swing the target stepped out of
 ui.combat.stunned,Stunned,ui.combat,CB,"Knocked senseless by a blunt blow, for a moment"
@@ -356,8 +356,8 @@ ui.bulletin.animaljoin,Animal joined,ui.bulletin,M2,A tame beast has attached it
 ui.bulletin.crash,Crash,ui.bulletin,M2,Something has come down nearby
 ui.bulletin.supplydrop,Supply drop,ui.bulletin,M3,"Something has fallen from the sky. Fetch it before the weather does"
 ui.bulletin.birth,Birth,ui.bulletin,M2,A tame animal has given birth
-ui.bulletin.theft,Theft,ui.bulletin,CB,"A marauder carried something off the board"
-ui.bulletin.marauderleft,Marauder left,ui.bulletin,CB,"A marauder walked off the board with nothing"
+ui.bulletin.theft,Theft,ui.bulletin,CB,"A bandit carried something off the board"
+ui.bulletin.banditleft,Bandit left,ui.bulletin,CB,"A bandit walked off the board with nothing"
 ui.weather.clear,Clear,ui.weather,M1,Open sky
 ui.weather.cloudy,Cloudy,ui.weather,M1,"Less light, no other effect"
 ui.weather.rain,Rain,ui.weather,M1,"Puts out fires, waters crops"
@@ -515,16 +515,16 @@ ui.debug.skipmonth,Skip one month,ui.debug,M4,"Spends a whole game month of tick
 ui.debug.skipmorning,Skip to morning,ui.debug,GR,"Skips the night and hands the clock back at dawn"
 ui.debug.ripen,Ripen crops,ui.debug,GR,"Brings every standing crop to ripeness at once"
 ui.debug.spawnhog,Spawn midden hog,ui.debug,AN,"Adds a wild midden hog near the camera"
-ui.debug.spawnmarauder,Spawn marauder,ui.debug,CB,"Adds a hostile marauder near the camera. It hunts whoever is standing"
+ui.debug.spawnbandit,Spawn bandit,ui.debug,CB,"Adds a hostile bandit near the camera, armed. It hunts whoever is still standing"
 ui.debug.spawnbat,Spawn bat,ui.debug,CB,"Adds a bat near the camera"
 ui.debug.spawncrowbar,Spawn crowbar,ui.debug,CB,"Adds a crowbar near the camera"
 ui.debug.spawnmachete,Spawn machete,ui.debug,CB,"Adds a machete near the camera"
 ui.debug.spawnarcblade,Spawn arc blade,ui.debug,CB,"Adds an arc blade near the camera"
 ui.debug.spawnrat,Spawn duct rat,ui.debug,AN,"Adds a duct rat near the camera"
-ui.debug.spawnmarauders,Spawn 3 marauders,ui.debug,CB,"Adds three marauders near the camera, each on its own tile"
+ui.debug.spawnbandits,Spawn 3 bandits,ui.debug,CB,"Adds three bandits near the camera, each on its own tile"
 ui.debug.armcolonists,Arm every colonist,ui.debug,CB,"Every colonist standing with nothing in hand takes a random melee weapon"
 ui.debug.group.colonists,Colonists,ui.debug,CB,"The Spawn tab heading over the colonist rows"
-ui.debug.group.hostiles,Hostiles,ui.debug,CB,"The Spawn tab heading over the marauder rows"
+ui.debug.group.hostiles,Hostiles,ui.debug,CB,"The Spawn tab heading over the bandit rows"
 ui.debug.group.animals,Animals,ui.debug,CB,"The Spawn tab heading over the animal rows"
 ui.debug.group.weapons,Weapons,ui.debug,CB,"The Spawn tab heading over the weapon rows"
 ui.debug.group.items,Items,ui.debug,CB,"The Spawn tab heading over the resource grants"

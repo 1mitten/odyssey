@@ -17,7 +17,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Corpse** | `ui.pawn.corpse` | Rots, upsets people, can be buried or worse | sheet 07 (anatomy), high | M2 |
 | **Midden hog** | `ui.pawn.hog` | Pig-descended, thrives on refuse heaps. Wild for now; the one you meet first | no art | AN |
 | **Duct rat** | `ui.pawn.rat` | Vermin from the ducts and the caverns. Climbs anything | no art | AN |
-| **Marauder** | `ui.pawn.marauder` | Armed, alone and hostile. Hunts whoever is still standing | no art | CB |
+| **Bandit** | `ui.pawn.bandit` | Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing | no art | CB |
 
 ## Needs
 
@@ -69,7 +69,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Fleeing** | `ui.status.fleeing` | Running from danger, or from whatever hurt it | no art | CB |
 | **Equipping** | `ui.status.equipping` | Fetching a weapon to hold | no art | CB |
 | **Rescuing** | `ui.status.rescuing` | Carrying the downed to a bed | no art | CB |
-| **Stealing** | `ui.status.stealing` | A marauder carrying something off the board | no art | CB |
+| **Stealing** | `ui.status.stealing` | A bandit carrying something off the board | no art | CB |
 
 ---
 

@@ -18,7 +18,7 @@ namespace Odyssey.Hud
     /// pawn</b> — <c>odyssey.pawn.order.target</c> — not on the right-click. A refused order
     /// publishes nothing, so it draws nothing; the same order clicked again is quiet in the
     /// simulation (<c>AlreadyInThatState</c>) and so is quiet here. <b>At most one ring per
-    /// target</b>: two colonists sent at one marauder share it, and the second order restarts the
+    /// target</b>: two colonists sent at one bandit share it, and the second order restarts the
     /// snap only once the first has settled, so a squad ordered in one click locks on once.</para>
     ///
     /// <para><b>A ring that was not ordered in front of the player is adopted, not snapped</b>: a

@@ -13,7 +13,7 @@ namespace Odyssey.Hud
         /// <summary>One row per incident the content declares, each fired on click (design 23 §3).</summary>
         Events,
 
-        /// <summary>Colonists, animals, the marauder and the weapons, placed near the camera (owner, 2026-09-22: a tab of its own).</summary>
+        /// <summary>Colonists, animals, the bandit and the weapons, placed near the camera (owner, 2026-09-22: a tab of its own).</summary>
         Spawn,
 
         /// <summary>
@@ -117,8 +117,8 @@ namespace Odyssey.Hud
         public static readonly string[] IconKeys =
         {
             PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey,
-            SpawnMarauderKey, SpawnBatKey, SpawnCrowbarKey, SpawnMacheteKey, SpawnArcBladeKey,
-            SpawnMaraudersKey, ArmColonistsKey,
+            SpawnBanditKey, SpawnBatKey, SpawnCrowbarKey, SpawnMacheteKey, SpawnArcBladeKey,
+            SpawnBanditsKey, ArmColonistsKey,
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey,
             SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
@@ -197,8 +197,8 @@ namespace Odyssey.Hud
                 1f, 1f, 1f, 1f, gloom: 1f, wind: 1.3f),
         };
 
-        /// <summary>The marauder (design 33 §1): a hostile person, the same intent as the colonist's with a kind.</summary>
-        public const string SpawnMarauderKey = "ui.debug.spawnmarauder";
+        /// <summary>The bandit (design 33 §1): a hostile person, the same intent as the colonist's with a kind.</summary>
+        public const string SpawnBanditKey = "ui.debug.spawnbandit";
 
         /// <summary>The four weapons (design 33 §1, C3): one item each, granted as wood is.</summary>
         public const string SpawnBatKey = "ui.debug.spawnbat", SpawnCrowbarKey = "ui.debug.spawncrowbar",
@@ -224,7 +224,7 @@ namespace Odyssey.Hud
             /// <summary>The heading this row sits under (design 33 §9i): one of the <c>Group…Key</c>s.</summary>
             public readonly string Group;
 
-            /// <summary>How many times a click sends the intent: 3 for the marauder band, else 1. The
+            /// <summary>How many times a click sends the intent: 3 for the bandit band, else 1. The
             /// simulation spreads each onto its own tile (§9h).</summary>
             public readonly int Repeat;
 
@@ -253,8 +253,8 @@ namespace Odyssey.Hud
         public static readonly string[] SpawnGroups =
             { GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey };
 
-        /// <summary>Three marauders at once, spread over neighbouring tiles; and every unarmed colonist given a weapon.</summary>
-        public const string SpawnMaraudersKey = "ui.debug.spawnmarauders", ArmColonistsKey = "ui.debug.armcolonists";
+        /// <summary>Three bandits at once, spread over neighbouring tiles; and every unarmed colonist given a weapon.</summary>
+        public const string SpawnBanditsKey = "ui.debug.spawnbandits", ArmColonistsKey = "ui.debug.armcolonists";
 
         /// <summary>How many a resource row grants: the Cheats tab's old fifty, moved here with the rows.</summary>
         public const int GiveAmount = 50;
@@ -270,7 +270,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The Spawn tab, top to bottom: who can be put on the board (owner, 2026-09-22: the
-        /// colonist first, then the animals), then the marauder, then one of each weapon (design
+        /// colonist first, then the animals), then the bandit, then one of each weapon (design
         /// 33 §1: "any from the debug Spawn tab"). A weapon is one to a stack, so it is granted one
         /// at a time — fifty machetes would be fifty piles.
         /// </summary>
@@ -281,10 +281,10 @@ namespace Odyssey.Hud
             new SpawnRow(ArmColonistsKey,
                 "Every colonist standing with nothing in hand takes a random melee weapon, at once. Armed colonists keep theirs",
                 IntentKind.DebugArmColonists, 0, 0, GroupColonistsKey),
-            Pawn(SpawnMarauderKey, "Adds a hostile marauder near the camera, armed. It hunts whoever is still standing",
-                PawnKindLabels.Marauder, GroupHostilesKey),
-            Pawn(SpawnMaraudersKey, "Adds three marauders near the camera, each on its own tile",
-                PawnKindLabels.Marauder, GroupHostilesKey, repeat: 3),
+            Pawn(SpawnBanditKey, "Adds a hostile bandit near the camera, armed. It hunts whoever is still standing",
+                PawnKindLabels.Bandit, GroupHostilesKey),
+            Pawn(SpawnBanditsKey, "Adds three bandits near the camera, each on its own tile",
+                PawnKindLabels.Bandit, GroupHostilesKey, repeat: 3),
             Pawn(SpawnHogKey, "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
                 PawnKindLabels.MiddenHogKind, GroupAnimalsKey),
             Pawn(SpawnRatKey, "Adds a duct rat near the camera. It wanders and rests, and climbs anything",

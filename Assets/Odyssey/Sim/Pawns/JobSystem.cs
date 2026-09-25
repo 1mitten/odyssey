@@ -509,7 +509,7 @@ namespace Odyssey.Sim.Pawns
         };
 
         /// <summary>
-        /// A marauder's mind (design 33 §1, §5): down, else hunt — a colonist, else a building, else
+        /// A bandit's mind (design 33 §1, §5): down, else hunt — a colonist, else a building, else
         /// what it came for, which it carries off the board (§14b, §17) — else idle. No needs, no
         /// work, no draft: it is debug-spawned to fight and is never one of ours.
         /// </summary>
@@ -597,7 +597,7 @@ namespace Odyssey.Sim.Pawns
             stand = -1;
             if (pawn == null || ctx == null) return false;
 
-            // Only one of ours, and only standing (design 33 §5c): a marauder is nobody's to
+            // Only one of ours, and only standing (design 33 §5c): a bandit is nobody's to
             // command, and a downed colonist's Job_Downed is never interruptible — a forced build
             // would otherwise end it and walk her to the site.
             if (!pawn.IsColonist || pawn.Downed) return false;
@@ -910,7 +910,7 @@ namespace Odyssey.Sim.Pawns
             var rng = DeterministicRandom.ForTick(
                 ctx.Seed, ctx.CurrentTick, PawnPurpose.Fireside ^ (uint)pawn.Id.Value);
 
-            // **The hearth is the colony's, not a marauder's.** This node is also the last in
+            // **The hearth is the colony's, not a bandit's.** This node is also the last in
             // the hostile mind (design 33 §5), so without the guard a raider with nobody to hunt
             // walked to the colony's own fire and settled at it, facing the flames among the
             // people it came to kill. A hostile idler wanders instead, as it did before fires.
@@ -970,7 +970,7 @@ namespace Odyssey.Sim.Pawns
             if (WanderTarget.Fill(pawn, ctx, job)) return true;
 
             job.Reset(JobIndex.Wait);
-            // The pawn's own mode, so a waiting marauder is a marauder to everything that asks
+            // The pawn's own mode, so a waiting bandit is a bandit to everything that asks
             // pawn.Mode (design 33 §16). A colonist's is Colonist, which Reset already set.
             job.Mode = pawn.OwnMode;
             return true;
@@ -1244,9 +1244,9 @@ namespace Odyssey.Sim.Pawns
     {
         /// <summary>
         /// A person's wander — the mental break's, and an idler's — under the pawn's own mode: a
-        /// colonist's is <see cref="TraverseMode.Colonist"/>, as it always was, and a marauder with
+        /// colonist's is <see cref="TraverseMode.Colonist"/>, as it always was, and a bandit with
         /// nothing to hunt wanders without opening a door (design 33 §16). It was Colonist for
-        /// everybody, which would have walked an idle marauder through the colony's front door.
+        /// everybody, which would have walked an idle bandit through the colony's front door.
         /// </summary>
         public static bool Fill(Pawn pawn, PawnContext ctx, Job job) =>
             Fill(pawn, ctx, job, ctx.Content.Break.wanderRadius, pawn.OwnMode, avoidSlopes: false);

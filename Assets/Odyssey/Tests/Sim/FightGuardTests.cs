@@ -189,93 +189,93 @@ namespace Odyssey.Tests.Sim
             Assert.That(guard.CloseTicks, Is.GreaterThan(100), $"{name}, the control: nobody fought at close quarters");
         }
 
-        /// <summary>Four marauders from four sides on one colonist going about her day, who fights back.</summary>
+        /// <summary>Four bandits from four sides on one colonist going about her day, who fights back.</summary>
         [TestCase(true)]
         [TestCase(false)]
-        public void SeveralMaraudersOnOneColonist(bool whiffs)
+        public void SeveralBanditsOnOneColonist(bool whiffs)
         {
             var colony = Board(1, whiffs, out var rules);
             Pawn c = colony.Pawns.Pawns.All[0];
             Stand(colony, c, Near(colony, 0, 0));
-            Spawn(colony, PawnKindIndex.Marauder, Near(colony, -9, 0));
-            Spawn(colony, PawnKindIndex.Marauder, Near(colony, 9, 1));
-            Spawn(colony, PawnKindIndex.Marauder, Near(colony, 1, -9));
-            Spawn(colony, PawnKindIndex.Marauder, Near(colony, -1, 9));
+            Spawn(colony, PawnKindIndex.Bandit, Near(colony, -9, 0));
+            Spawn(colony, PawnKindIndex.Bandit, Near(colony, 9, 1));
+            Spawn(colony, PawnKindIndex.Bandit, Near(colony, 1, -9));
+            Spawn(colony, PawnKindIndex.Bandit, Near(colony, -1, 9));
             var guard = Run(colony, 1_500);
-            guard.AssertClean(nameof(SeveralMaraudersOnOneColonist));
-            Controls(nameof(SeveralMaraudersOnOneColonist), guard, rules, 10);
+            guard.AssertClean(nameof(SeveralBanditsOnOneColonist));
+            Controls(nameof(SeveralBanditsOnOneColonist), guard, rules, 10);
         }
 
-        /// <summary>Four drafted colonists ordered on to one marauder, which fights back.</summary>
+        /// <summary>Four drafted colonists ordered on to one bandit, which fights back.</summary>
         [TestCase(true)]
         [TestCase(false)]
-        public void SeveralColonistsOnOneMarauder(bool whiffs)
+        public void SeveralColonistsOnOneBandit(bool whiffs)
         {
             var colony = Board(4, whiffs, out var rules);
             var all = colony.Pawns.Pawns.All;
             var cs = new List<Pawn>(all);
             for (int i = 0; i < cs.Count; i++) Stand(colony, cs[i], Near(colony, -6, i * 2 - 3));
-            Pawn m = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 4, 0));
+            Pawn m = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 4, 0));
             foreach (Pawn c in cs) Assert.That(Draft(colony, c), Is.EqualTo(IntentRejection.None));
             foreach (Pawn c in cs) Assert.That(Attack(colony, c, m), Is.EqualTo(IntentRejection.None));
             var guard = Run(colony, 1_500);
-            guard.AssertClean(nameof(SeveralColonistsOnOneMarauder));
-            Controls(nameof(SeveralColonistsOnOneMarauder), guard, rules, 10);
+            guard.AssertClean(nameof(SeveralColonistsOnOneBandit));
+            Controls(nameof(SeveralColonistsOnOneBandit), guard, rules, 10);
         }
 
         /// <summary>
-        /// Two colonists side by side, undrafted, and two marauders arriving side by side: each
-        /// marauder takes one, both colonists fight back, and the four stand on four cells.
+        /// Two colonists side by side, undrafted, and two bandits arriving side by side: each
+        /// bandit takes one, both colonists fight back, and the four stand on four cells.
         /// </summary>
         [TestCase(true)]
         [TestCase(false)]
-        public void TwoMaraudersOnTwoColonistsSideBySide(bool whiffs)
+        public void TwoBanditsOnTwoColonistsSideBySide(bool whiffs)
         {
             var colony = Board(2, whiffs, out var rules);
             var all = colony.Pawns.Pawns.All;
             Stand(colony, all[0], Near(colony, 0, 0));
             Stand(colony, all[1], Near(colony, 0, 1));
-            Spawn(colony, PawnKindIndex.Marauder, Near(colony, -8, 0));
-            Spawn(colony, PawnKindIndex.Marauder, Near(colony, -8, 1));
+            Spawn(colony, PawnKindIndex.Bandit, Near(colony, -8, 0));
+            Spawn(colony, PawnKindIndex.Bandit, Near(colony, -8, 1));
             var guard = Run(colony, 1_500);
-            guard.AssertClean(nameof(TwoMaraudersOnTwoColonistsSideBySide));
-            Controls(nameof(TwoMaraudersOnTwoColonistsSideBySide), guard, rules, 10);
+            guard.AssertClean(nameof(TwoBanditsOnTwoColonistsSideBySide));
+            Controls(nameof(TwoBanditsOnTwoColonistsSideBySide), guard, rules, 10);
         }
 
         /// <summary>
-        /// Drafted colonists holding a line, side by side, and marauders walking into it: the hold's
+        /// Drafted colonists holding a line, side by side, and bandits walking into it: the hold's
         /// own blow strikes from where she stands, and nobody arriving may stand on her.
         /// </summary>
         [TestCase(true)]
         [TestCase(false)]
-        public void MaraudersIntoADraftedLine(bool whiffs)
+        public void BanditsIntoADraftedLine(bool whiffs)
         {
             var colony = Board(3, whiffs, out var rules);
             var cs = new List<Pawn>(colony.Pawns.Pawns.All);
             for (int i = 0; i < cs.Count; i++) Stand(colony, cs[i], Near(colony, 0, i - 1));
             foreach (Pawn c in cs) Assert.That(Draft(colony, c), Is.EqualTo(IntentRejection.None));
-            for (int i = 0; i < 4; i++) Spawn(colony, PawnKindIndex.Marauder, Near(colony, -9, i - 2));
+            for (int i = 0; i < 4; i++) Spawn(colony, PawnKindIndex.Bandit, Near(colony, -9, i - 2));
             var guard = Run(colony, 1_500);
-            guard.AssertClean(nameof(MaraudersIntoADraftedLine));
-            Controls(nameof(MaraudersIntoADraftedLine), guard, rules, 10);
+            guard.AssertClean(nameof(BanditsIntoADraftedLine));
+            Controls(nameof(BanditsIntoADraftedLine), guard, rules, 10);
         }
 
         /// <summary>
-        /// Five marauders converging from one direction on two colonists: they must fan out round
+        /// Five bandits converging from one direction on two colonists: they must fan out round
         /// both, not queue on one tile.
         /// </summary>
         [TestCase(true)]
         [TestCase(false)]
-        public void MaraudersConvergingFromOneDirection(bool whiffs)
+        public void BanditsConvergingFromOneDirection(bool whiffs)
         {
             var colony = Board(2, whiffs, out var rules);
             var all = colony.Pawns.Pawns.All;
             Stand(colony, all[0], Near(colony, 0, 0));
             Stand(colony, all[1], Near(colony, 1, 0));
-            for (int i = 0; i < 5; i++) Spawn(colony, PawnKindIndex.Marauder, Near(colony, -10 - (i % 2), i - 2));
+            for (int i = 0; i < 5; i++) Spawn(colony, PawnKindIndex.Bandit, Near(colony, -10 - (i % 2), i - 2));
             var guard = Run(colony, 1_500);
-            guard.AssertClean(nameof(MaraudersConvergingFromOneDirection));
-            Controls(nameof(MaraudersConvergingFromOneDirection), guard, rules, 10);
+            guard.AssertClean(nameof(BanditsConvergingFromOneDirection));
+            Controls(nameof(BanditsConvergingFromOneDirection), guard, rules, 10);
         }
 
         /// <summary>
@@ -309,7 +309,7 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// A rat struck mostly runs; the colonists ordered on it chase, and a marauder fights a third
+        /// A rat struck mostly runs; the colonists ordered on it chase, and a bandit fights a third
         /// colonist close by. The runner, the chasers and the brawl beside them all obey the rule.
         /// </summary>
         [Test]
@@ -321,7 +321,7 @@ namespace Odyssey.Tests.Sim
             Stand(colony, cs[1], Near(colony, -2, 1));
             Stand(colony, cs[2], Near(colony, 0, 3));
             Pawn rat = Spawn(colony, PawnKindIndex.DuctRat, Near(colony, 1, 0));
-            Spawn(colony, PawnKindIndex.Marauder, Near(colony, 3, 6));
+            Spawn(colony, PawnKindIndex.Bandit, Near(colony, 3, 6));
             Assert.That(Draft(colony, cs[0]), Is.EqualTo(IntentRejection.None));
             Assert.That(Draft(colony, cs[1]), Is.EqualTo(IntentRejection.None));
             Assert.That(Attack(colony, cs[0], rat), Is.EqualTo(IntentRejection.None));
@@ -341,9 +341,9 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// A downed body somebody is finishing off holds its cell: a marauder coming for the
+        /// A downed body somebody is finishing off holds its cell: a bandit coming for the
         /// colonist beside it takes a side of her that is not the body. From the west, the body's
-        /// cell is the nearest side of her, and it is what the marauder stood on before §8c.
+        /// cell is the nearest side of her, and it is what the bandit stood on before §8c.
         /// </summary>
         [Test]
         public void ABodyBeingFinishedOffIsNobodysSide()
@@ -353,12 +353,12 @@ namespace Odyssey.Tests.Sim
             Pawn c = all[0], a = all[1];
             Stand(colony, c, Near(colony, 0, 0));
             Stand(colony, a, Near(colony, -1, -4));
-            Pawn body = Spawn(colony, PawnKindIndex.Marauder, Near(colony, -1, 0));
-            Pawn m = Spawn(colony, PawnKindIndex.Marauder, Near(colony, -5, 0));
+            Pawn body = Spawn(colony, PawnKindIndex.Bandit, Near(colony, -1, 0));
+            Pawn m = Spawn(colony, PawnKindIndex.Bandit, Near(colony, -5, 0));
             Strike(colony, a, body, body.HpMilli);
             Assert.That(body.Downed, Is.True, "the control: the body is down");
 
-            // She holds where she stands, and the marauder remembers she struck it, so it comes for her.
+            // She holds where she stands, and the bandit remembers she struck it, so it comes for her.
             Assert.That(Draft(colony, c), Is.EqualTo(IntentRejection.None));
             Strike(colony, c, m, 1);
             Assert.That(Draft(colony, a), Is.EqualTo(IntentRejection.None));
@@ -374,12 +374,12 @@ namespace Odyssey.Tests.Sim
             }
             guard.AssertClean(nameof(ABodyBeingFinishedOffIsNobodysSide));
             Controls(nameof(ABodyBeingFinishedOffIsNobodysSide), guard, rules, 10);
-            Assert.That(atHer, Is.GreaterThan(100), "the control: the marauder never stood at her");
+            Assert.That(atHer, Is.GreaterThan(100), "the control: the bandit never stood at her");
             Assert.That(body.Downed && Melee.IsAttacking(a, body), Is.True, "the control: the body is not being finished off");
         }
 
         /// <summary>
-        /// A drafted colonist sent on to the tile a marauder is swinging from stops beside it: the
+        /// A drafted colonist sent on to the tile a bandit is swinging from stops beside it: the
         /// move order's spread treats a cell somebody in a fight holds as taken, as it does one
         /// another drafted colonist holds. Before §8c she walked on to it and swung from it.
         /// </summary>
@@ -393,23 +393,23 @@ namespace Odyssey.Tests.Sim
             Stand(colony, sent, Near(colony, 0, 6));
             Assert.That(Draft(colony, c), Is.EqualTo(IntentRejection.None));
             Assert.That(Draft(colony, sent), Is.EqualTo(IntentRejection.None));
-            Pawn m = Spawn(colony, PawnKindIndex.Marauder, Near(colony, -6, 0));
+            Pawn m = Spawn(colony, PawnKindIndex.Bandit, Near(colony, -6, 0));
             var guard = Run(colony, 400);
             Assume.That(Melee.IsAttacking(m, c) && m.Destination < 0 && Melee.InReach(colony.Pawns, m, c, m.Species.traverseMode),
-                Is.True, "the control: the marauder is not at her");
+                Is.True, "the control: the bandit is not at her");
 
             int held = m.Cell;
             Assert.That(Send(colony, new Intent(IntentKind.OrderMove, Size.FromIndex(held), sent.Id.Value)), Is.EqualTo(IntentRejection.None));
-            Assert.That(sent.CurrentJob?.TargetCell, Is.Not.EqualTo(held), "sent on to the marauder's tile");
+            Assert.That(sent.CurrentJob?.TargetCell, Is.Not.EqualTo(held), "sent on to the bandit's tile");
             Run(colony, 900, guard);
             guard.AssertClean(nameof(AColonistSentOnToAFighterStopsBesideIt));
-            Assert.That(sent.Destination < 0 && sent.Cell != m.Cell, Is.True, "she never stopped, or stopped on the marauder");
+            Assert.That(sent.Destination < 0 && sent.Cell != m.Cell, Is.True, "she never stopped, or stopped on the bandit");
             Controls(nameof(AColonistSentOnToAFighterStopsBesideIt), guard, rules, 5);
         }
 
         /// <summary>
         /// Targets on the move: two drafted colonists under attack are ordered away and back, again
-        /// and again, and the marauders on them follow and spread again wherever they stop.
+        /// and again, and the bandits on them follow and spread again wherever they stop.
         /// </summary>
         [Test]
         public void TargetsThatKeepMoving()
@@ -419,7 +419,7 @@ namespace Odyssey.Tests.Sim
             Stand(colony, cs[0], Near(colony, 0, 0));
             Stand(colony, cs[1], Near(colony, 0, 2));
             foreach (Pawn c in cs) Assert.That(Draft(colony, c), Is.EqualTo(IntentRejection.None));
-            for (int i = 0; i < 5; i++) Spawn(colony, PawnKindIndex.Marauder, Near(colony, -8, i - 2));
+            for (int i = 0; i < 5; i++) Spawn(colony, PawnKindIndex.Bandit, Near(colony, -8, i - 2));
 
             var guard = Run(colony, 600);
             int[] hops = { 6, -6, 0 };
@@ -440,7 +440,7 @@ namespace Odyssey.Tests.Sim
 
         /// <summary>
         /// Colonists hunted while going about their day on the bare board — wandering, not drafted —
-        /// with a hog and a marauder in the same fight: every mind at once.
+        /// with a hog and a bandit in the same fight: every mind at once.
         /// </summary>
         [Test]
         public void EveryMindAtOnce()
@@ -449,9 +449,9 @@ namespace Odyssey.Tests.Sim
             var cs = new List<Pawn>(colony.Pawns.Pawns.All);
             for (int i = 0; i < cs.Count; i++) Stand(colony, cs[i], Near(colony, i - 2, 0));
             Pawn hog = Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, 0, -4));
-            Spawn(colony, PawnKindIndex.Marauder, Near(colony, -8, 2));
-            Spawn(colony, PawnKindIndex.Marauder, Near(colony, 8, 2));
-            Spawn(colony, PawnKindIndex.Marauder, Near(colony, 0, 9));
+            Spawn(colony, PawnKindIndex.Bandit, Near(colony, -8, 2));
+            Spawn(colony, PawnKindIndex.Bandit, Near(colony, 8, 2));
+            Spawn(colony, PawnKindIndex.Bandit, Near(colony, 0, 9));
             Assert.That(Draft(colony, cs[0]), Is.EqualTo(IntentRejection.None));
             Assert.That(Attack(colony, cs[0], hog), Is.EqualTo(IntentRejection.None));
             var guard = Run(colony, 2_500);
@@ -499,24 +499,24 @@ namespace Odyssey.Tests.Sim
                     Stand(colony, cs[0], Near(colony, 0, 0));
                     Stand(colony, cs[1], Near(colony, 0, 1));
                     Stand(colony, cs[2], Near(colony, 1, 0));
-                    for (int i = 0; i < 4; i++) Spawn(colony, PawnKindIndex.Marauder, Near(colony, i % 2 == 0 ? -8 : 8, i - 2));
+                    for (int i = 0; i < 4; i++) Spawn(colony, PawnKindIndex.Bandit, Near(colony, i % 2 == 0 ? -8 : 8, i - 2));
                     break;
                 case 1:
                     for (int i = 0; i < cs.Count; i++) Stand(colony, cs[i], Near(colony, -6, i * 2 - 3));
-                    Pawn m = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 4, 0));
+                    Pawn m = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 4, 0));
                     foreach (Pawn c in cs) Assert.That(Draft(colony, c), Is.EqualTo(IntentRejection.None));
                     foreach (Pawn c in cs) Assert.That(Attack(colony, c, m), Is.EqualTo(IntentRejection.None));
                     break;
                 case 2:
                     for (int i = 0; i < cs.Count; i++) Stand(colony, cs[i], Near(colony, 0, i - 1));
                     foreach (Pawn c in cs) Assert.That(Draft(colony, c), Is.EqualTo(IntentRejection.None));
-                    for (int i = 0; i < 4; i++) Spawn(colony, PawnKindIndex.Marauder, Near(colony, -9, i - 2));
+                    for (int i = 0; i < 4; i++) Spawn(colony, PawnKindIndex.Bandit, Near(colony, -9, i - 2));
                     break;
                 default:
                     for (int i = 0; i < cs.Count; i++) Stand(colony, cs[i], Near(colony, 0, i * 2 - 2));
                     Pawn h1 = Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, 5, 0));
                     Pawn h2 = Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, 5, 2));
-                    Spawn(colony, PawnKindIndex.Marauder, Near(colony, -9, 0));
+                    Spawn(colony, PawnKindIndex.Bandit, Near(colony, -9, 0));
                     foreach (Pawn c in cs) Assert.That(Draft(colony, c), Is.EqualTo(IntentRejection.None));
                     Assert.That(Attack(colony, cs[0], h1), Is.EqualTo(IntentRejection.None));
                     Assert.That(Attack(colony, cs[1], h1), Is.EqualTo(IntentRejection.None));
@@ -538,7 +538,7 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// The Long tier's sweep: on twelve seeds, a colony of three to six, and a mix of marauders,
+        /// The Long tier's sweep: on twelve seeds, a colony of three to six, and a mix of bandits,
         /// hogs and rats dropped round it from every side, some colonists drafted and ordered on to
         /// the nearest animal. Four thousand ticks each, the rule asserted on every one.
         /// </summary>
@@ -558,9 +558,9 @@ namespace Odyssey.Tests.Sim
                 for (int i = 0; i < cs.Count; i++) Stand(colony, cs[i], Near(colony, roll.Next(-3, 4), roll.Next(-3, 4)));
 
                 var animals = new List<Pawn>();
-                int marauders = 1 + roll.Next(colonists);
-                for (int i = 0; i < marauders; i++)
-                    Spawn(colony, PawnKindIndex.Marauder, Near(colony, roll.Next(-12, 13), roll.Next(0, 2) == 0 ? -12 : 12));
+                int bandits = 1 + roll.Next(colonists);
+                for (int i = 0; i < bandits; i++)
+                    Spawn(colony, PawnKindIndex.Bandit, Near(colony, roll.Next(-12, 13), roll.Next(0, 2) == 0 ? -12 : 12));
                 for (int i = 0; i < 1 + roll.Next(3); i++)
                     animals.Add(Spawn(colony, roll.Next(0, 2) == 0 ? PawnKindIndex.MiddenHog : PawnKindIndex.DuctRat,
                         Near(colony, roll.Next(-6, 7), roll.Next(-6, 7))));

@@ -224,7 +224,7 @@ Nothing failed, so no row was added to the overnight queue by this run.
 ## 2026-09-24 — the combat gate (C7), without hostiles and with them
 
 **Without hostiles**: commit `3ca5098c` (`main` after PR #194, every combat unit in), the command
-above. **With them**: commit `4e8926a9` on `claude/combat-c7`, `MarauderSoakTests.TheGateWithRaids`
+above. **With them**: commit `4e8926a9` on `claude/combat-c7`, `BanditSoakTests.TheGateWithRaids`
 (`--filter "FullyQualifiedName~TheGateWithRaids"`), which runs a lockstep twin of the same seed
 beside the colony, so its wall time is two colonies'. Machine: the Windows dev machine, AMD Ryzen 7
 9800X3D, 32 GB, Windows 11 (build 26200), dotnet SDK 8.0.425 running the net8.0 test project
@@ -238,11 +238,11 @@ wall times are the day's and not the program's. The hashes are unaffected by tha
 | Bare, seed 3 | 600,000 | passed | 6.2 s | 0.010 | 0.016 | 15 | 95 | 53 | 3,241 | 0 | 0 | 49 of 144 | 0 | `9b55d816f37c5c05` |
 | Field, seed 1 | 600,000 | passed | 8.0 s | 0.013 | 0.022 | 17 | 157 | 53 | 2,947 | 173 | 116 | 70 of 144 | 497 | `39d119b11c732db4` |
 
-The gate with raids: seven raids (days 0, 1, 3, 4, 6, 7, 9; one marauder or three, thirteen in
+The gate with raids: seven raids (days 0, 1, 3, 4, 6, 7, 9; one bandit or three, thirteen in
 all), the colony armed by `DebugArmColonists`, a hut of sixteen wooden walls and a door, every
 party of three answered by drafting and gathering the colonists on their feet.
 
-| Seed | Result | Drafts | Swings at pawns | Blows landed | Downed (colonists) | Died | Got up | Rescues (failed) | Buildings broken | Thefts | Marauders on the board | Colonists at day ten | Save at | Final hash |
+| Seed | Result | Drafts | Swings at pawns | Blows landed | Downed (colonists) | Died | Got up | Rescues (failed) | Buildings broken | Thefts | Bandits on the board | Colonists at day ten | Save at | Final hash |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | passed | 4 | 220 | 585 | 7 (5) | 0 | 1 | 5 (1) | 16 of 16 | 12 | 1 | 0 up, 5 down | 76,602 | `70478f55eecc2899` |
 | 2 | passed | 9 | 420 | 681 | 14 (5) | 0 | 4 | 5 (1) | 16 of 16 | 8 | 5 | 0 up, 5 down | 76,726 | `4124129805926a70` |
@@ -253,12 +253,12 @@ party of three answered by drafting and gathering the colonists on their feet.
   frozen, because the attack driver waits for a step to land and a path is not saved
   (`docs/bug-patterns.md`, 2026-09-24; `docs/design/33-combat.md` §21). The three final hashes above
   were **identical before and after the fix**, which is the evidence it touches only a loaded world.
-- **Every bound held with room**: the longest a marauder stood on *Fighting* at a building without a
+- **Every bound held with room**: the longest a bandit stood on *Fighting* at a building without a
   step or a swing was 95 ticks (bound 500), the same at a colonist (printed, not bound — §19d's
   queue), no attacker stood on a target already gone for more than one tick, nobody lay rescuable
   and unrescued past 2,500 ticks (bound 5,000), and nobody was freed from a wall.
 - **Nobody died**, as an unordered fight must end (design 33 §3): 33 downs across three seeds, no
   corpse.
 - **The colony loses.** Ten days of raids leave seed 1 and seed 2 with every colonist down, and on
-  seed 1 an armed, drafted, gathered squad of four lost to three marauders on day one. That is the
+  seed 1 an armed, drafted, gathered squad of four lost to three bandits on day one. That is the
   invented numbers speaking, and it is the owner's to judge (the playtest queue).

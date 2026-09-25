@@ -170,9 +170,9 @@ namespace Odyssey.Tests.Sim
             ColonyItem bat = PutDown(colony, colonist, ItemIndex.Bat);
 
             Pawn hog = SpawnKind(colony, PawnKindIndex.MiddenHog);
-            Pawn marauder = SpawnKind(colony, PawnKindIndex.Marauder);
+            Pawn bandit = SpawnKind(colony, PawnKindIndex.Bandit);
             Assert.That(ctx.WeaponRules.CanEquip(hog, bat, ctx), Is.False, "an animal");
-            Assert.That(ctx.WeaponRules.CanEquip(marauder, bat, ctx), Is.False, "a hostile");
+            Assert.That(ctx.WeaponRules.CanEquip(bandit, bat, ctx), Is.False, "a hostile");
 
             Assert.That(ctx.WeaponRules.CanEquip(colonist, bat, ctx), Is.True, "the control: standing");
             colonist.Downed = true;

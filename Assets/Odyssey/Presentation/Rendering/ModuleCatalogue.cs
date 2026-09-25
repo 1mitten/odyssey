@@ -386,6 +386,28 @@ namespace Odyssey.Presentation.Rendering
         /// can be recoloured. Empty on everything that is not a colonist.
         /// </summary>
         public AppearanceCells appearance = new AppearanceCells();
+
+        /// <summary>
+        /// One of the bandit gang's bodies (<c>docs/design/42-bandits.md</c>): never in the
+        /// colonist lottery, dealt only to a hostile person by <c>ColonistCastPools.BanditMale</c>
+        /// and <c>BanditFemale</c>, which read this.
+        /// </summary>
+        public bool bandit;
+
+        /// <summary>
+        /// A skinned overlay the rig already carries, switched <b>on</b> for this row after the
+        /// head is bared — the bandit's armour vest, <c>SM_Char_Attach_Male_Armor_02</c> and its
+        /// kin. Every Battle Royale rig ships six of them inactive. Empty on every other row.
+        /// </summary>
+        public string overlayName = string.Empty;
+
+        /// <summary>
+        /// Where the overlay takes its colour from, which is <b>not</b> where the body does: the
+        /// vest's camo and the male rig's trousers share one region of the atlas, so one set of
+        /// rectangles would paint the trousers red or the vest black. Filled by
+        /// <c>CharacterSwatches</c> with the rest of the appearance.
+        /// </summary>
+        public AppearanceCells overlayAppearance = new AppearanceCells();
     }
 
     /// <summary>How confidently a body was carved into recolourable regions.</summary>
@@ -797,6 +819,17 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The id of one beard.</summary>
         public static string Beard(int variant) =>
             variant <= 0 ? BeardBase : BeardBase + "." + variant.ToString();
+
+        /// <summary>
+        /// What covers a whole head — the bandit's welding helmet (<c>docs/design/42-bandits.md</c>
+        /// §4) — on the hair's terms: a rigid prop on the head bone with an identity transform.
+        /// Worn in the pack's own paint, so its rows are not recoloured.
+        /// </summary>
+        public const string HeadgearBase = Prefix + "attach.head";
+
+        /// <summary>The id of one piece of headgear.</summary>
+        public static string Headgear(int variant) =>
+            variant <= 0 ? HeadgearBase : HeadgearBase + "." + variant.ToString();
 
         // Loose items lying in a cell: a crate of rations to be eaten, a heap of scrap to be
         // hauled. These are drawn by the actor pass for the same reason the colonist is — they

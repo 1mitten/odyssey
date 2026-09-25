@@ -472,6 +472,9 @@ namespace Odyssey.Presentation.Rendering
         /// blue-grey pane rather than magenta. That matters more than it sounds: a shader error
         /// that renders as magenta gets fixed, and one that renders as *nothing* gets shipped.
         /// </summary>
+        static readonly int WaterShallowId = Shader.PropertyToID("_WaterShallow");
+        static readonly int WaterDeepId = Shader.PropertyToID("_WaterDeep");
+
         Material WaterBase
         {
             get
@@ -482,6 +485,11 @@ namespace Odyssey.Presentation.Rendering
                 if (shader != null)
                 {
                     _waterBase = new Material(shader) { name = "Odyssey/Water", enableInstancing = true };
+                    // The two depths the shader blends between by the ground field (design 38 §24).
+                    // On the material rather than as globals, so they are converted exactly as
+                    // each tile's own _BaseColor is and the shader's ratio of the two is exact.
+                    _waterBase.SetColor(WaterShallowId, StuffPalette.TerrainSolid(Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainShallowWater));
+                    _waterBase.SetColor(WaterDeepId, StuffPalette.TerrainSolid(Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainDeepWater));
                     _owned.Add(_waterBase);
                     return _waterBase;
                 }

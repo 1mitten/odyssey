@@ -27,7 +27,7 @@ namespace Odyssey.Presentation.Ui
     /// <b>Events</b>: one row per incident the content declares, each fired through the same door
     /// a storyteller will use (design 23 §3), built from the open colony's content when the panel
     /// opens so a second Def appears by existing. <b>Spawn</b>: one row per kind of pawn —
-    /// the colonist, the animals and the marauder — and one per weapon, placed near the camera
+    /// the colonist, the animals and the bandit — and one per weapon, placed near the camera
     /// (<see cref="DebugDirector.SpawnRows"/>).</para>
     /// </summary>
     public sealed partial class HudShell
@@ -104,7 +104,7 @@ namespace Odyssey.Presentation.Ui
             _debugPanel.Add(_debugCheats);
 
             // Who and what can be put on the board (owner, 2026-09-22: a tab of its own rather
-            // than three rows among the grants): the colonist first, the animals, the marauder and
+            // than three rows among the grants): the colonist first, the animals, the bandit and
             // one of each weapon (design 33 §1). The rows and what each sends are
             // DebugDirector.SpawnRows, held by the fast tier; this only lays them out.
             // Grouped under a heading each (design 33 §9i; owner, 2026-09-24: "a category for each

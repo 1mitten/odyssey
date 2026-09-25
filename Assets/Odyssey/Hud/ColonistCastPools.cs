@@ -57,7 +57,8 @@ namespace Odyssey.Hud
         public ColonistCastPools(
             int[] maleBodies, int[] femaleBodies,
             int[] maleHair, int[] femaleHair, int[] beards,
-            int uniformMale = NoUniform, int uniformFemale = NoUniform)
+            int uniformMale = NoUniform, int uniformFemale = NoUniform,
+            int[]? banditMale = null, int[]? banditFemale = null, int[]? headgear = null)
         {
             MaleBodies = maleBodies;
             FemaleBodies = femaleBodies;
@@ -66,7 +67,38 @@ namespace Odyssey.Hud
             Beards = beards;
             UniformMale = uniformMale;
             UniformFemale = uniformFemale;
+            BanditMale = banditMale ?? Array.Empty<int>();
+            BanditFemale = banditFemale ?? Array.Empty<int>();
+            Headgear = headgear ?? Array.Empty<int>();
         }
+
+        /// <summary>
+        /// The bandit gang's male bodies, one per vest cut, as catalogue family indices
+        /// (<c>docs/design/42-bandits.md</c> §5). <b>Never in <see cref="MaleBodies"/></b>: a
+        /// colonist is not dealt a bandit's body, so adding the gang's rows to the catalogue
+        /// re-deals nobody.
+        /// </summary>
+        public int[] BanditMale { get; }
+
+        /// <summary>The gang's female bodies, one per vest cut.</summary>
+        public int[] BanditFemale { get; }
+
+        /// <summary>
+        /// What a bandit wears on the head, as indices into the headgear attachment family: the
+        /// welding helmet (design 42 §4). Empty without the packs, and a bandit is then drawn
+        /// bare-headed with their own hair.
+        /// </summary>
+        public int[] Headgear { get; }
+
+        /// <summary>The gang's bodies for a resolved sex, falling back to the other where one is missing.</summary>
+        public int[] BanditBodiesFor(char sex) =>
+            sex == 'f'
+                ? (BanditFemale.Length > 0 ? BanditFemale : BanditMale)
+                : (BanditMale.Length > 0 ? BanditMale : BanditFemale);
+
+        /// <summary>Whether body <paramref name="look"/> is one of the gang's.</summary>
+        public bool IsBanditBody(int look) =>
+            Array.IndexOf(BanditMale, look) >= 0 || Array.IndexOf(BanditFemale, look) >= 0;
 
         /// <summary>No uniform in this catalogue, so every colonist is dealt from the pool.</summary>
         public const int NoUniform = -1;

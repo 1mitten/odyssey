@@ -246,7 +246,7 @@ namespace Odyssey.Presentation.Ui
             // through, or a pile that changes hands, swaps its icon without a rebuild.
             // An animal is a pawn with no face (design 29 §8): the badge slot shows its species
             // key and the portrait slot stays out, as for anything that is not a person.
-            // Both answers are the model's (design 33 §5f), so a marauder and a corpse are decided
+            // Both answers are the model's (design 33 §5f), so a bandit and a corpse are decided
             // in the fast tier by the interface lane rather than here.
             bool colonist = _inspect.ShowsFace;
             string avatarKey = _inspect.AvatarKey;

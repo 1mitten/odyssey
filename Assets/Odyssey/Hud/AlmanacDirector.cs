@@ -205,7 +205,7 @@ namespace Odyssey.Hud
                 // An animal opens its own Fauna entry (design 30; owner, 2026-09-23: "make sure
                 // the almanac is up-to-date with animals"), by the kind's registry name, which
                 // is the entry's name.
-                // A marauder (design 33 §1) is not a colonist and its skills are not the player's:
+                // A bandit (design 33 §1) is not a colonist and its skills are not the player's:
                 // its kind's entry if the Almanac has one, else none, never a colonist's page.
                 if (inspect.IsAnimal || inspect.IsHostile)
                 {

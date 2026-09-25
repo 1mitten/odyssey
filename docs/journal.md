@@ -12312,6 +12312,73 @@ The twin every hour is the thing to copy: "the same final hash" would have said 
 hourly comparison says *where* two runs part, and here it said they never did — which is what pointed
 at the save.
 
+## 2026-09-24 — The marauder becomes the bandit, and stops looking like a colonist
+
+The owner: *"The marauders look like colonists."* They did, exactly. The figure director asked a
+pawn only whether it was an animal, so a hostile person was dealt a colonist's body and the colony's
+white jumpsuit. The word is **bandit** now, everywhere but this journal (design 42). A bandit is a
+person rolled as a colonist and then dressed: welding helmet, red vest, black trousers, and a
+crowbar or a bat. The owner asked for each to have a name of their own, because bandits may be
+kidnapped one day.
+
+The contact sheets settled more than the helmet. The trousers and every vest in Battle Royale are
+**camo texture**, not swatch cells, so the swatch classifier painted the male's belt and boots and
+left the garments alone. The male rig's trouser camo also shares a box of the atlas with every vest.
+Three consequences:
+
+- Each gang row carries two sets of rectangles.
+- The body's black is the *whole atlas*, lying behind its skin. The character shader now lets the
+  first slot a fragment is inside win. That changes nothing for a colonist, because the classifier
+  keeps a colonist's slots disjoint.
+- The far form keeps the vest a separate part, through a twin material, so it can be painted from
+  its own set.
+
+The weapon is dealt by a hash of the pawn rather than a draw, so no roll after the first bandit
+moves.
+
+One test had been measuring swing speed without saying so. Three bandits at a one-sided wall struck
+three walls with the machete and two with the slower blunt weapons, because fewer walls fell in the
+run. The test is now pinned to the machete it was measured with. Nobody stood about either way.
+
+## 2026-09-24 — Meadow: the shoreline is geometry, not shading
+
+The target was the reference's stream (#13): a soft edge, murky green water, no grid. Three shading
+attempts failed before the fourth, and the reason is worth keeping. Sinking a bank under the water
+line and laying water over it left the edge at the underwater wall, because the depth fade made the
+thin water clear. Driving the edge from a soft board field instead gave a soft blob — over square
+geometry, which showed wherever the blob and the cells disagreed: pits onto the sand bed at a water
+cell's corners, the bank's sawtooth where it overran. **A soft edge painted over a square hole is
+still a square hole.** What worked was making the ground itself cross the water line on a line of
+its own: the bank and the bed as one height field, each of nine points a cell at `(1 − w)` of a layer
+above the bed by how much water surrounds it. Every cell's centre keeps its height, so nothing in the
+simulation moved.
+
+The deep water's cross of squares survived a correct blend, and the way it was found is the lesson.
+Drawing the shader's own intermediate terms as colour, one at a time — the field, then the depth each
+material thought it was, then the lit colour — showed each term right and the result wrong: the two
+palette colours reached the shader as globals and `_BaseColor` as a material property, and the two
+do not share a colour-space path, so a ratio of them was a different constant per material. Four
+Unity runs, each a few minutes, against an afternoon of reasoning from screenshots.
+
+Measured in one run on Standard and Huge at 640 × 480 and 4K: draw calls identical, instances up by
+the banks, meshing 7–9% dearer a chunk. Design 38 §24.
+
+## 2026-09-25 — Water that can be clicked, and water that moves
+
+The owner played the shoreline and found two regressions. The first was not one. "I couldn't click on
+a lot of the water tiles anymore" was measured through the rig's own pick path before anything was
+read: 280 of 307 aimed points on the played board missed their water — and the control, the old
+square shore, missed exactly the same 280. The picker had always met water at its bed, two metres
+under the surface and two metres past the aim at the play camera's angle; the new shoreline only made
+the water inviting to click. **A report of a regression is a report of a bug, and the control is what
+says which.** Water is met on its surface now, and a shore bank on its fan through the same
+`HeightAt` the figures stand on, so one surface owner answers both.
+
+The second was real: the ripples lived in the normal, invisible at 48 degrees, which the falls had
+already taught once. Motion is carried by colour — streaks drifting along a flow derived from the
+water network, swells on still water, a breathing rim at the shore — on the game's clock, so a
+paused world holds still. Design 38 §24f.
+
 ## 2026-09-24 — Rain, photographed and timed (the rain-look prototype)
 
 The weather design (#190) drew rain with the campfire's shared particle systems. The review

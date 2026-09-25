@@ -53,8 +53,8 @@ The seam review put these in the shared files so that no lane has to. They are t
 |---|---|---|
 | **A stun is a pause**: a stunned pawn's job neither ticks nor ends, it does not think, and it lands the step in hand and takes no other | `JobSystem.TickPawn`, `MovementSystem.Advance` | §5c |
 | **Despawn releases the pawn's beds** | `PawnRegistry.Despawn` → `ConstructionGrid.ReleaseBedsOf` | §5c |
-| **A forced order is refused for a marauder and a downed colonist** | `JobSystem.CanForce` | §5c |
-| **The marauder's kind names its weapon** (`Item_Machete`), and `Spawn` calls `IWeaponRules.ArmOnSpawn` for it | `PawnKindDef.weapon`, `PawnContent.WeaponOf`, `PawnRegistry.Spawn` | §5b, §5c |
+| **A forced order is refused for a bandit and a downed colonist** | `JobSystem.CanForce` | §5c |
+| **The bandit's kind names its weapon** (`Item_Machete`), and `Spawn` calls `IWeaponRules.ArmOnSpawn` for it | `PawnKindDef.weapon`, `PawnContent.WeaponOf`, `PawnRegistry.Spawn` | §5b, §5c |
 | **`odyssey.pawn.hp.max` for every person**, whole or hurt; `hp` stays sparse | `PawnRegistry` publish | §5d |
 | **The pane's shape is the model's**: `ShowsFace`, `ShowsColonistBody`, `ShowsTabBox`, `AvatarKey`; `Commands` drawn for any subject | `InspectModel`, read by `HudShell.Inspect` | §5f |
 | **A corpse can be selected and inspected**: `SelectionDirector.Corpse` / `ChooseCorpse`, `InspectSubject.Corpse`, `InspectModel.SetCorpse` with a stub pane | `SelectionDirector`, `InspectModel`, `HudShell` | §5f |
@@ -121,10 +121,10 @@ swings on cooldown, a new order does not reset `NextSwingTick`, the gesture seri
 `DownedDeathTests` (down at 0, dead at −50 %, the corpse, the hooks fired once each, the pawn gone
 from every per-pawn loop, a death is deferred, **a broken colonist downed has one `Job_Downed`
 start and no failures over the rest of the break**, **a dead colonist owns no bed**); a stunned
-attacker's wound-up swing does not land; `HostileTests` (a marauder hunts the nearest standing
+attacker's wound-up swing does not land; `HostileTests` (a bandit hunts the nearest standing
 colonist and ignores a downed one); `AnimalRevengeTests` (a hog mostly turns, a rat mostly runs,
 both seeded); the **mid-swing save round trip** (identical hash after the load and 600 ticks on); a
-**Long** "a marauder a day for ten days"; the **20-against-20** row in `TickBenchmarkTests`.
+**Long** "a bandit a day for ten days"; the **20-against-20** row in `TickBenchmarkTests`.
 **Goldens unchanged.**
 
 ## Lane B — the fight (drawn), C2
@@ -178,7 +178,7 @@ integrator, listing which tests and files have never been compiled.
 
 ## Lane C — the interface, C2/C3
 
-**Fills:** the orders a right-click gives, the Health tab, the corpse pane, the marauder's pane, the
+**Fills:** the orders a right-click gives, the Health tab, the corpse pane, the bandit's pane, the
 words and colours of the feedback, the Spawn tab's rows, the roster and Work tab by flags.
 
 **Owns (may edit):** everything under `Assets/Odyssey/Hud/` — in particular `CombatOrders.cs`
@@ -186,9 +186,9 @@ words and colours of the feedback, the Spawn tab's rows, the roster and Work tab
 Health tab's model; the **corpse subject**, whose stub refresh is already there — name it "Corpse
 of X" from `ColonistNames` over the corpse's `RollSeed`, or the kind's label, and write its state
 line into `Job`; and the **shape answers** `ShowsFace`, `ShowsColonistBody`, `ShowsTabBox` and
-`AvatarKey` for the marauder and the corpse — a marauder needs no needs, skills, Health tab or
-Draft button, and wears `ui.pawn.marauder`), `HudDirectors.cs` (`ChooseCorpse`: check the corpse
-is in the frame, call `Selection.ChooseCorpse`, answer true), `DebugDirector.cs` (the marauder and
+`AvatarKey` for the bandit and the corpse — a bandit needs no needs, skills, Health tab or
+Draft button, and wears `ui.pawn.bandit`), `HudDirectors.cs` (`ChooseCorpse`: check the corpse
+is in the frame, call `Selection.ChooseCorpse`, answer true), `DebugDirector.cs` (the bandit and
 the four weapon rows: `SpawnPawn` with `PawnKindIndex` 3; `GiveResource` with the item def and a
 count of 1), `OrderColours.cs` (an attack colour, if one is wanted), `WorkGridModel.cs`,
 `RosterModel.cs`, `AlmanacDirector.cs` (a corpse's entry, if any); plus **the two Presentation
@@ -207,8 +207,8 @@ files this lane owns: `Ui/HudShell.Combat.cs`** (the Health tab body, already ca
   furniture), never a floor or slab (§5j); `OrderAttack` with `B = 0` is refused throughout C2/C3.
 
 **Keys already in the registry:** `ui.command.attack`, `ui.command.rescue`, `ui.command.equip`,
-`ui.pawn.corpse`, `ui.pawn.hostile`, `ui.pawn.marauder`, `ui.combat.{miss,dodge,stunned,health,dead}`,
-`ui.debug.spawn{marauder,bat,crowbar,machete,arcblade}`, `ui.status.{fighting,fleeing,downed,equipping,rescuing}`.
+`ui.pawn.corpse`, `ui.pawn.hostile`, `ui.pawn.bandit`, `ui.combat.{miss,dodge,stunned,health,dead}`,
+`ui.debug.spawn{bandit,bat,crowbar,machete,arcblade}`, `ui.status.{fighting,fleeing,downed,equipping,rescuing}`.
 Call `Registry.Label(key)`, never a literal (`RegistryTests`). **The Health tab reads the pool from
 `odyssey.pawn.hp.max`, published for every person; an absent `odyssey.pawn.hp` beside it means
 whole** (§5d).
@@ -216,28 +216,28 @@ whole** (§5d).
 **Must not touch:** `Sim/`, `Sim.Contracts/`, any Presentation file but the two above (in
 particular not `HudShell.Inspect.cs` or `HudShell.cs` — if the pane needs a shape the four answers
 cannot express, that is a missed seam: report it), `Tests/Sim/`, `Tests/Hud/CombatInspectSeamTests.cs`
-**except** its marauder and corpse assertions, which move with your answers, any Def XML.
+**except** its bandit and corpse assertions, which move with your answers, any Def XML.
 
 **Tests to add (Hud fast tier):** `CombatOrdersTests` (each of the owner's four gestures, the
 Ctrl rule, a click nothing claims is still a move, **a click on a floored or walled cell is still a
 move**, an undrafted selection sends no attack or rescue **but does send an equip**);
 `CombatFeedbackModelTests` (a bar over the hurt and the drafted and nobody else; miss, dodge and the
 damage in whole points; the marker on a hostile only); the corpse pane's title for a colonist, an
-animal and a marauder; the marauder's pane has no needs, skills, Health tab or Draft button; the
+animal and a bandit; the bandit's pane has no needs, skills, Health tab or Draft button; the
 Health tab's rows, whole and hurt; the registry and font tests stay green (`HudFontTests`: any
 non-ASCII character must exist in both shipped fonts). **The hand-over lists `HudShell.Combat.cs`
 and `HudShell.Debug.cs` as never compiled** — the fast tier does not compile Presentation.
 
 ## Lane D — weapons (simulation), C3
 
-**Fills:** the equipped weapon, the equip job and order, arming the marauder on spawn, dropping the
+**Fills:** the equipped weapon, the equip job and order, arming the bandit on spawn, dropping the
 weapon on death, the starting kit.
 
 **Owns (may edit):** `Assets/Odyssey/Sim/Pawns/Combat/WeaponRules.cs` (`ArmamentOf`: the equipped
 weapon's `ItemDef.weapon` first — resolve `Pawn.EquippedItem` through `ColonyItems`; `CanEquip`;
 **`ArmOnSpawn`**: `ctx.Content.WeaponOf(pawn.Kind)` is the item def — make it through
 `ColonyItems.Spawn` at the pawn's cell, take it off the ground exactly as the equip job does, and
-set `EquippedItem`; `PawnRegistry.Spawn` already calls it for the marauder, after adoption),
+set `EquippedItem`; `PawnRegistry.Spawn` already calls it for the bandit, after adoption),
 `Combat/EquipJobDriver.cs` (walk, lift, take into the hand, put down what was there; the item keeps
 no cell while held), `Assets/Odyssey/Sim/Pawns/JobSystem.Equip.cs` (`HandleOrderEquip`: **accepted
 for a colonist drafted or not**; refused for a downed pawn, a hostile, an animal and a pawn that
@@ -257,7 +257,7 @@ of any def — so the Spawn rows are lane C's.
 `Pawn.cs`, `PawnRegistry.cs` (the `odyssey.pawn.weapon` aspect is already published from
 `EquippedItem`, and the call to `ArmOnSpawn` is already there), `IWeaponRules.cs`, `PawnContent.cs`,
 `JobSystem.cs`, `ColonyComposition.cs`, `CombatSection.cs`, `CombatContractTests.cs`, any Def XML
-(the weapons' numbers and the marauder's machete are frozen; propose changes in the hand-over),
+(the weapons' numbers and the bandit's machete are frozen; propose changes in the hand-over),
 `Golden.cs`.
 
 **Tests to add (fast tier):** `WeaponRulesTests` (bare hands, teeth, and each of the four weapons'
@@ -265,7 +265,7 @@ armament once held, a blunt one carrying its stun); `EquipTests` (the order walk
 **accepted for an undrafted colonist**; a second weapon puts the first down; refused for a
 forbidden item, a non-weapon, an animal, a hostile and a downed colonist; the save round trip with
 a weapon in the hand); `WeaponDropTests` (dies → the weapon on the ground at the corpse; downed →
-still held); **`MarauderArmsTests`** (a marauder spawned by the debug intent holds its machete, the
+still held); **`BanditArmsTests`** (a bandit spawned by the debug intent holds its machete, the
 item has no cell while held and `odyssey.pawn.weapon` publishes it, and on death it lies at the
 corpse; a colonist and an animal spawned the same way hold nothing); `StartingKitTests` (the kit's
 weapons in the playtest scenario and **none in `ScenarioDef.Bare`**). **Goldens unchanged.**
@@ -292,5 +292,5 @@ changes and the fingerprints once. Run EditMode, then PlayMode **alone on the ma
 `Get-CimInstance Win32_Process -Filter "Name='Unity.exe'"` for batch runs first), the frame budget
 with a fight in view, and the player-build smoke test (`Build/Win64/Odyssey.exe -odyssey-newgame`),
 which C2 needs because it ships clips. **Compile every Presentation file the lanes listed as never
-compiled first**, and read lane C's shape answers against the pane on screen: a marauder with a
+compiled first**, and read lane C's shape answers against the pane on screen: a bandit with a
 Draft button or a corpse wearing the colonist badge is the seam not being used.

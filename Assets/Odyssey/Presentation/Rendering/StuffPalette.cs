@@ -102,8 +102,10 @@ namespace Odyssey.Presentation.Rendering
             // two depths are told apart. They must stay close in hue — a body of water has one
             // colour and gets darker, it does not change colour halfway across — so the deep
             // entry is the shallow one darkened and closed up rather than a different blue.
-            new Color(0.28f, 0.52f, 0.55f, 0.62f),     // 18 shallow water — the bed reads through
-            new Color(0.10f, 0.26f, 0.34f, 0.90f),     // 19 deep water — almost nothing does
+            // Greener and darker since design 38 §24: the reference meadow's (#13) water is a
+            // murky green-teal, and the old sky-cyan read as a swimming pool under the noon sun.
+            new Color(0.21f, 0.41f, 0.39f, 0.62f),     // 18 shallow water — the bed reads through
+            new Color(0.08f, 0.21f, 0.24f, 0.90f),     // 19 deep water — almost nothing does
             new Color(0.44f, 0.46f, 0.34f),            // 20 marsh — wet ground, not shadow
         };
 
@@ -165,11 +167,17 @@ namespace Odyssey.Presentation.Rendering
             // 2026-09-24: "Synty's colours"), so the lift above — which pulled a single olive
             // texture towards a lime it was never painted as — is not applied (design 38 §17).
             if (terrain == GrassTerrain && MeadowLook.GroundActive) return Color.white;
+            // Marsh painted into the meadow by the ground field wears the same material as the
+            // grass and the same white tint, or its green would stop at the cell's edge (§24).
+            if (terrain == MarshTerrain && MeadowLook.PaintsMarsh) return Color.white;
             return terrain >= 0 && terrain < TerrainTints.Length ? TerrainTints[terrain] : Color.white;
         }
 
         /// <summary>The grass terrain's index in the tables above.</summary>
         const int GrassTerrain = 10;
+
+        /// <summary>The marsh terrain's index in the tables above.</summary>
+        const int MarshTerrain = 20;
 
         /// <summary>
         /// What multiplies a tuft of grass or any other piece of standing foliage.

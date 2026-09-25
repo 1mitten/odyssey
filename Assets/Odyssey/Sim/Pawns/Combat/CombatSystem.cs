@@ -142,7 +142,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// One needs interval's healing (design 33 §1): an animal anywhere, at
         /// <see cref="CombatDef.animalHealPerDay"/>; a colonist only lying in a bed, at
-        /// <see cref="CombatDef.bedHealPerDay"/>; a hostile never — a marauder stays down until it
+        /// <see cref="CombatDef.bedHealPerDay"/>; a hostile never — a bandit stays down until it
         /// is killed. Exact over a day: the fraction a single interval cannot carry is spent by the
         /// interval index, the way <c>Pawn.RestGainPerInterval</c> spends rest's.
         /// </summary>

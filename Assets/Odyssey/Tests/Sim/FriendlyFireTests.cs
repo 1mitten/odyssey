@@ -75,24 +75,24 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// The controls on the attack: a marauder's blow — landed or missed — is not friendly fire,
-        /// and a colonist hitting a marauder gives nobody anything. Colonist on colonist only (§12b).
+        /// The controls on the attack: a bandit's blow — landed or missed — is not friendly fire,
+        /// and a colonist hitting a bandit gives nobody anything. Colonist on colonist only (§12b).
         /// </summary>
         [Test]
-        public void AMaraudersBlowIsNotFriendlyFire()
+        public void ABanditsBlowIsNotFriendlyFire()
         {
             var colony = Board(colonists: 2);
             colony.World.Tick(5);
             Pawn victim = colony.Pawns.Pawns.All[0], by = colony.Pawns.Pawns.All[1];
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 10, 10));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 10, 10));
             int tick = colony.World.CurrentTick;
 
-            Strike(colony, marauder, victim, 1_000);
-            colony.Pawns.Combat!.ApplySwing(marauder, victim, Fists(colony.Pawns), new SwingOutcome(CombatEventKind.Miss), tick);
-            Assert.That(Copies(victim, ThoughtIndex.AttackedByColonist), Is.EqualTo(0), "a marauder's swing was remembered");
+            Strike(colony, bandit, victim, 1_000);
+            colony.Pawns.Combat!.ApplySwing(bandit, victim, Fists(colony.Pawns), new SwingOutcome(CombatEventKind.Miss), tick);
+            Assert.That(Copies(victim, ThoughtIndex.AttackedByColonist), Is.EqualTo(0), "a bandit's swing was remembered");
 
-            Strike(colony, by, marauder, 1_000);
-            Assert.That(Copies(marauder, ThoughtIndex.AttackedByColonist), Is.EqualTo(0));
+            Strike(colony, by, bandit, 1_000);
+            Assert.That(Copies(bandit, ThoughtIndex.AttackedByColonist), Is.EqualTo(0));
             Assert.That(Copies(by, ThoughtIndex.AttackedByColonist), Is.EqualTo(0));
 
             Strike(colony, by, victim, 1_000);
@@ -214,7 +214,7 @@ namespace Odyssey.Tests.Sim
 
         /// <summary>
         /// A colonist's death is felt by every other colonist on the board, standing or downed, for
-        /// three days — and by no marauder, no animal, and not by the dead.
+        /// three days — and by no bandit, no animal, and not by the dead.
         /// </summary>
         [Test]
         public void EveryOtherColonistFeelsAColonistsDeath()
@@ -222,15 +222,15 @@ namespace Odyssey.Tests.Sim
             var colony = Board(colonists: 3);
             colony.World.Tick(5);
             Pawn dies = colony.Pawns.Pawns.All[0], stands = colony.Pawns.Pawns.All[1], lies = colony.Pawns.Pawns.All[2];
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 10, 10));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 10, 10));
             Pawn hog = Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, -10, -10));
 
-            Strike(colony, marauder, lies, lies.HpMilli);
+            Strike(colony, bandit, lies, lies.HpMilli);
             Assert.That(lies.Downed, Is.True);
             Assert.That(Copies(stands, ThoughtIndex.ColonistDied), Is.EqualTo(0), "the control: a fall is not a death");
 
             int tick = colony.World.CurrentTick;
-            Strike(colony, marauder, dies, Fatal(dies));
+            Strike(colony, bandit, dies, Fatal(dies));
             colony.World.Tick();
             Assert.That(colony.Pawns.Pawns.Get(dies.Id), Is.Null, "she did not die");
 
@@ -240,24 +240,24 @@ namespace Odyssey.Tests.Sim
                 Assert.That(ExpiryOf(survivor, ThoughtIndex.ColonistDied), Is.EqualTo(tick + 3 * Calendar.TicksPerDay));
             }
             Assert.That(OffsetOf(stands, ThoughtIndex.ColonistDied, tick), Is.EqualTo(-60));
-            Assert.That(Copies(marauder, ThoughtIndex.ColonistDied), Is.EqualTo(0), "a marauder mourned");
+            Assert.That(Copies(bandit, ThoughtIndex.ColonistDied), Is.EqualTo(0), "a bandit mourned");
             Assert.That(Copies(hog, ThoughtIndex.ColonistDied), Is.EqualTo(0), "an animal mourned");
             Assert.That(Copies(dies, ThoughtIndex.ColonistDied), Is.EqualTo(0), "the dead mourned herself");
         }
 
         [Test]
-        public void AMaraudersDeathIsFeltByNobody()
+        public void ABanditsDeathIsFeltByNobody()
         {
             var colony = Board(colonists: 2);
             colony.World.Tick(5);
             Pawn a = colony.Pawns.Pawns.All[0], b = colony.Pawns.Pawns.All[1];
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 10, 10));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 10, 10));
             Pawn hog = Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, -10, -10));
 
-            Strike(colony, a, marauder, Fatal(marauder));
+            Strike(colony, a, bandit, Fatal(bandit));
             Strike(colony, a, hog, Fatal(hog));
             colony.World.Tick();
-            Assert.That(colony.Pawns.Pawns.Get(marauder.Id), Is.Null, "the control: the marauder died");
+            Assert.That(colony.Pawns.Pawns.Get(bandit.Id), Is.Null, "the control: the bandit died");
             Assert.That(colony.Pawns.Pawns.Get(hog.Id), Is.Null, "the control: the hog died");
 
             Assert.That(Copies(a, ThoughtIndex.ColonistDied), Is.EqualTo(0));
@@ -274,12 +274,12 @@ namespace Odyssey.Tests.Sim
             var colony = Board(colonists: 6);
             colony.World.Tick(5);
             Pawn[] all = colony.Pawns.Pawns.All.ToArray();
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 10, 10));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 10, 10));
             int tick = colony.World.CurrentTick;
 
             for (int i = 0; i < 4; i++)
             {
-                Strike(colony, marauder, all[i], Fatal(all[i]));
+                Strike(colony, bandit, all[i], Fatal(all[i]));
                 colony.World.Tick();
                 Assert.That(colony.Pawns.Pawns.Get(all[i].Id), Is.Null, $"death {i + 1} did not happen");
                 if (i == 1)

@@ -57,7 +57,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public virtual void ArmOnSpawn(Pawn pawn, PawnContext ctx)
         {
-            int def = ctx.Content.WeaponOf(pawn.Kind);
+            int def = ctx.Content.WeaponFor(pawn.Kind, pawn.Id.Value, pawn.RollSeed);
             if (def < 0 || pawn.EquippedItem != 0) return;
 
             int cell = ctx.Items.NearestCellWithSpace(ctx.Cells, pawn.Cell, def, 1, JobDriver.DropSearchRadius);

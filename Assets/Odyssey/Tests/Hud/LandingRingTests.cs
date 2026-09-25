@@ -26,7 +26,7 @@ namespace Odyssey.Tests.Hud
 
         /// <summary>
         /// A frame with Ada and Bo drafted and walking to the cells given (-1: standing), and a
-        /// marauder. <paramref name="adaDrafted"/> false publishes Ada's cell with no drafted row
+        /// bandit. <paramref name="adaDrafted"/> false publishes Ada's cell with no drafted row
         /// before it — how the simulation says she is fetching a weapon (§7a).
         /// </summary>
         static WorldSnapshot Frame(int adaCell = -1, int boCell = -1, bool adaDrafted = true, int raiderCell = -1)
@@ -265,10 +265,10 @@ namespace Odyssey.Tests.Hud
         /// <summary>
         /// The Equip order shares the marker (§7a): a colonist sent for a weapon, drafted or not,
         /// wears the ring on the weapon's cell, since the simulation publishes it as her order
-        /// cell. A marauder never does — the ring is the colony's orders, asked of colonists only.
+        /// cell. A bandit never does — the ring is the colony's orders, asked of colonists only.
         /// </summary>
         [Test]
-        public void AnEquipOrderWearsTheRingAndAMarauderNever()
+        public void AnEquipOrderWearsTheRingAndABanditNever()
         {
             var rings = new LandingRings();
             rings.Update(Frame(adaDrafted: false), AdaOnly, 0f, World);
@@ -279,7 +279,7 @@ namespace Odyssey.Tests.Hud
             PawnId[] raider = { Raider };
             hostile.Update(Frame(), raider, 0f, World);
             hostile.Update(Frame(raiderCell: CellB), raider, 0.1f, World);
-            Assert.That(hostile.Rings.Count, Is.Zero, "a marauder's cell drew a ring");
+            Assert.That(hostile.Rings.Count, Is.Zero, "a bandit's cell drew a ring");
         }
 
         [Test]

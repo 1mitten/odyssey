@@ -179,7 +179,7 @@ namespace Odyssey.Sim.Pawns
         /// <see cref="CombatDef.revengeTicks"/>; not turning, it runs — unless it had already
         /// turned on this attacker, which a failed roll does not undo. A colonist not under the
         /// player's hand stops what she is doing and fights back against whoever struck her for
-        /// <see cref="CombatDef.retaliationTicks"/>. A marauder remembers a colonist hitting it for the
+        /// <see cref="CombatDef.retaliationTicks"/>. A bandit remembers a colonist hitting it for the
         /// same window and turns on her, unless it is already fighting somebody beside it.
         /// </summary>
         void React(Pawn target, Pawn attacker, int tick)
@@ -205,10 +205,10 @@ namespace Odyssey.Sim.Pawns
                 return;
             }
 
-            // A marauder struck by a colonist it is not fighting remembers her for the retaliation
+            // A bandit struck by a colonist it is not fighting remembers her for the retaliation
             // window, and its hunt prefers her (HostileThinkNode). Chasing somebody else, it turns
             // now. Already trading blows with a colonist beside it, it keeps to her: an interrupt
-            // there threw away the swing in the air and left the marauder a whole cooldown, so two
+            // there threw away the swing in the air and left the bandit a whole cooldown, so two
             // colonists could keep it from ever landing a blow — and the re-think chose the
             // nearest, which on a tie was the lower id, not the hitter (review, 2026-09-23).
             if (target.IsHostile)
@@ -222,10 +222,10 @@ namespace Odyssey.Sim.Pawns
 
             if (!target.IsColonist || target.Drafted || target.IsBroken) return;
 
-            // Whoever struck her, for the window: a colonist (the owner's rule), a marauder or a
+            // Whoever struck her, for the window: a colonist (the owner's rule), a bandit or a
             // hog alike. Remembering only the colonist was tried first and a struck colonist
             // stepped out of reach landing the step she was on, found nobody beside her, and went
-            // back to wandering while the marauder beat her down (measured).
+            // back to wandering while the bandit beat her down (measured).
             target.RetaliateAgainst = attacker.Id.Value;
             target.RetaliateUntilTick = tick + combat.retaliationTicks;
 

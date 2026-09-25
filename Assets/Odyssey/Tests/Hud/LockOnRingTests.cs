@@ -257,7 +257,7 @@ namespace Odyssey.Tests.Hud
 
         /// <summary>
         /// A fight nobody ordered draws no ring (design 33 §18b; owner, 2026-09-24: <i>"Update the
-        /// depending on the correct action"</i>). A drafted colonist swinging at a marauder of her
+        /// depending on the correct action"</i>). A drafted colonist swinging at a bandit of her
         /// own accord — the hold's blow, or joining a fight nearby — is on the attack job with no
         /// order target published, as the simulation now publishes her, and wears no ring. The
         /// control is the same frame with the order's target, which does.
@@ -285,7 +285,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(Only(rings).Target, Is.EqualTo(Raider), "the control: the order drew nothing");
         }
 
-        /// <summary>Two colonists on one marauder: one ring. The squad ordered in one click locks on once.</summary>
+        /// <summary>Two colonists on one bandit: one ring. The squad ordered in one click locks on once.</summary>
         [Test]
         public void TwoAttackersShareOneRing()
         {

@@ -82,7 +82,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(WorkHandle.Count, Is.EqualTo(6));
             Assert.That(SkillIndex.Melee, Is.EqualTo(5));
             Assert.That(SkillIndex.Count, Is.EqualTo(6));
-            Assert.That(PawnKindIndex.Marauder, Is.EqualTo(3));
+            Assert.That(PawnKindIndex.Bandit, Is.EqualTo(3));
             Assert.That(PawnKindIndex.Count, Is.EqualTo(4));
 
             // IntentKind is an enum whose numbers an intent log carries: the three orders are
@@ -110,7 +110,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(SkillIndex.Names[SkillIndex.Melee], Is.EqualTo("melee"));
             Assert.That(content.Items.Skip(7).Select(i => i.defName), Is.EqualTo(new[]
                 { "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade" }));
-            Assert.That(content.Kinds[PawnKindIndex.Marauder].defName, Is.EqualTo("PawnKind_Marauder"));
+            Assert.That(content.Kinds[PawnKindIndex.Bandit].defName, Is.EqualTo("PawnKind_Bandit"));
         }
 
         [Test]
@@ -218,47 +218,47 @@ namespace Odyssey.Tests.Sim
             Assert.That(rescue.TryGiveJob(colony.Pawns.Pawns.All[0], colony.Pawns, new Job()), Is.False);
         }
 
-        // ---- the marauder ---------------------------------------------------------------------
+        // ---- the bandit ---------------------------------------------------------------------
 
         [Test]
-        public void AMarauderIsAPersonAndNotOurs()
+        public void ABanditIsAPersonAndNotOurs()
         {
             var colony = Board();
-            Pawn marauder = SpawnKind(colony, PawnKindIndex.Marauder);
+            Pawn bandit = SpawnKind(colony, PawnKindIndex.Bandit);
             Pawn colonist = colony.Pawns.Pawns.All[0];
 
-            Assert.That(marauder.IsPerson, Is.True);
-            Assert.That(marauder.IsHostile, Is.True);
-            Assert.That(marauder.IsColonist, Is.False);
+            Assert.That(bandit.IsPerson, Is.True);
+            Assert.That(bandit.IsHostile, Is.True);
+            Assert.That(bandit.IsColonist, Is.False);
             Assert.That(colonist.IsColonist, Is.True, "the control: a colonist is one of ours");
 
             // Nobody's to draft: the colonist beside it is.
-            Assert.That(Send(colony, new Intent(IntentKind.SetDrafted, default, marauder.Id.Value, 1)),
+            Assert.That(Send(colony, new Intent(IntentKind.SetDrafted, default, bandit.Id.Value, 1)),
                 Is.EqualTo(IntentRejection.NotPermitted));
             Assert.That(Send(colony, new Intent(IntentKind.SetDrafted, default, colonist.Id.Value, 1)),
                 Is.EqualTo(IntentRejection.None));
         }
 
         /// <summary>
-        /// A marauder's needs do not tick, and nor do a downed colonist's (the C2 default). The
+        /// A bandit's needs do not tick, and nor do a downed colonist's (the C2 default). The
         /// control is the standing colonist beside them, whose food falls over the same ticks.
         /// </summary>
         [Test]
-        public void AMarauderAndADownedColonistHaveNoNeedsTick()
+        public void ABanditAndADownedColonistHaveNoNeedsTick()
         {
             var colony = Board();
-            Pawn marauder = SpawnKind(colony, PawnKindIndex.Marauder);
+            Pawn bandit = SpawnKind(colony, PawnKindIndex.Bandit);
             Pawn downed = colony.Pawns.Pawns.All[0];
             Pawn standing = colony.Pawns.Pawns.All[1];
             downed.Downed = true;
 
-            int marauderFood = marauder.Needs[NeedIndex.Food];
+            int banditFood = bandit.Needs[NeedIndex.Food];
             int downedFood = downed.Needs[NeedIndex.Food];
             int standingFood = standing.Needs[NeedIndex.Food];
             colony.World.Tick(3_000);
 
             Assert.That(standing.Needs[NeedIndex.Food], Is.LessThan(standingFood), "the control's food did not fall");
-            Assert.That(marauder.Needs[NeedIndex.Food], Is.EqualTo(marauderFood));
+            Assert.That(bandit.Needs[NeedIndex.Food], Is.EqualTo(banditFood));
             Assert.That(downed.Needs[NeedIndex.Food], Is.EqualTo(downedFood));
         }
 
@@ -420,7 +420,7 @@ namespace Odyssey.Tests.Sim
             Pawn colonist = colony.Pawns.Pawns.All[0];
             Pawn other = colony.Pawns.Pawns.All[1];
             Pawn hog = SpawnKind(colony, PawnKindIndex.MiddenHog);
-            Pawn marauder = SpawnKind(colony, PawnKindIndex.Marauder);
+            Pawn bandit = SpawnKind(colony, PawnKindIndex.Bandit);
             other.Downed = true;
             other.StunnedUntilTick = colony.World.CurrentTick + 1_000;
             other.CarriedBy = colonist.Id.Value;
@@ -433,11 +433,11 @@ namespace Odyssey.Tests.Sim
             Assert.That(Of(colonist), Is.EqualTo(PawnFlags.Person | PawnFlags.Drafted));
             Assert.That(Of(other), Is.EqualTo(PawnFlags.Person | PawnFlags.Downed | PawnFlags.Stunned | PawnFlags.Carried));
             Assert.That(Of(hog), Is.EqualTo(PawnFlags.None));
-            Assert.That(Of(marauder), Is.EqualTo(PawnFlags.Person | PawnFlags.Hostile | PawnFlags.Drawn),
-                "a marauder spawns armed and always has its weapon out (design 33 §8b)");
+            Assert.That(Of(bandit), Is.EqualTo(PawnFlags.Person | PawnFlags.Hostile | PawnFlags.Drawn),
+                "a bandit spawns armed and always has its weapon out (design 33 §8b)");
 
-            Assert.That(frame.TryGetPawn(marauder.Id, out PawnView m) && m.IsPerson && !m.IsColonist && !m.IsAnimal, Is.True,
-                "a marauder is kind 3 and a person: exactly the case 'kind 0 or an animal' got wrong");
+            Assert.That(frame.TryGetPawn(bandit.Id, out PawnView m) && m.IsPerson && !m.IsColonist && !m.IsAnimal, Is.True,
+                "a bandit is kind 3 and a person: exactly the case 'kind 0 or an animal' got wrong");
         }
 
         /// <summary>
@@ -521,7 +521,7 @@ namespace Odyssey.Tests.Sim
         {
             var colony = Board();
             Pawn colonist = colony.Pawns.Pawns.All[0];
-            Pawn marauder = SpawnKind(colony, PawnKindIndex.Marauder);
+            Pawn bandit = SpawnKind(colony, PawnKindIndex.Bandit);
             Pawn hog = SpawnKind(colony, PawnKindIndex.MiddenHog);
             colony.World.Tick();
             WorldSnapshot whole = colony.World.Views.Current;
@@ -530,7 +530,7 @@ namespace Odyssey.Tests.Sim
                 "a whole colonist's pool was not published");
             Assert.That(whole.TryGetPawnAspect(colonist.Id, CombatAspects.Hp, out _), Is.False,
                 "a whole colonist published hit points, which is what says a bar is owed");
-            Assert.That(whole.TryGetPawnAspect(marauder.Id, CombatAspects.HpMax, out _), Is.True);
+            Assert.That(whole.TryGetPawnAspect(bandit.Id, CombatAspects.HpMax, out _), Is.True);
             Assert.That(whole.TryGetPawnAspect(hog.Id, CombatAspects.HpMax, out _), Is.False,
                 "a whole animal published a pool nothing reads");
 
@@ -543,37 +543,41 @@ namespace Odyssey.Tests.Sim
         // ---- seams the seam review found (2026-09-23) -------------------------------------------
 
         /// <summary>
-        /// The marauder is armed (design 33 §1), and the content says with what: the kind names a
+        /// The bandit is armed (design 33 §1), and the content says with what: the kind names a
         /// weapon, and every spawn of a kind that names one passes through
         /// <see cref="IWeaponRules.ArmOnSpawn"/> — lane D's seam, which puts it in the hand. The
         /// control is the hog spawned the same way, whose kind names nothing and never reaches it.
         /// </summary>
         [Test]
-        public void AMarauderIsSpawnedThroughTheArmingSeamAndAnAnimalIsNot()
+        public void ABanditIsSpawnedThroughTheArmingSeamAndAnAnimalIsNot()
         {
             var colony = Board();
             PawnContent content = colony.Pawns.Content;
-            Assert.That(content.WeaponOf(PawnKindIndex.Marauder), Is.EqualTo(ItemIndex.Machete));
-            Assert.That(content.WeaponOf(0), Is.EqualTo(-1), "a colonist arrives bare-handed");
-            Assert.That(content.WeaponOf(PawnKindIndex.MiddenHog), Is.EqualTo(-1));
-            Assert.That(content.Items[content.WeaponOf(PawnKindIndex.Marauder)].weapon, Is.Not.Null,
-                "the marauder's weapon is a weapon");
+            Assert.That(content.KindWeapons[PawnKindIndex.Bandit],
+                Is.EquivalentTo(new[] { ItemIndex.Crowbar, ItemIndex.Bat }),
+                "a bandit carries a crowbar or a bat, never a blade (design 42)");
+            Assert.That(content.ArmsOnSpawn(0), Is.False, "a colonist arrives bare-handed");
+            Assert.That(content.ArmsOnSpawn(PawnKindIndex.MiddenHog), Is.False);
+            Assert.That(content.WeaponFor(0, 1, 7u), Is.EqualTo(-1));
+            foreach (int def in content.KindWeapons[PawnKindIndex.Bandit])
+                Assert.That(content.Items[def].weapon, Is.Not.Null, "the bandit's weapon is a weapon");
 
             var arming = new ArmingRecorder();
             colony.Pawns.WeaponRules = arming;
             Pawn hog = SpawnKind(colony, PawnKindIndex.MiddenHog);
             Assert.That(arming.Armed, Is.Empty, "a kind that names no weapon was armed");
 
-            Pawn marauder = SpawnKind(colony, PawnKindIndex.Marauder);
-            Assert.That(arming.Armed, Is.EqualTo(new[] { marauder.Id.Value }));
+            Pawn bandit = SpawnKind(colony, PawnKindIndex.Bandit);
+            Assert.That(arming.Armed, Is.EqualTo(new[] { bandit.Id.Value }));
             Assert.That(arming.KnownWhenArmed, Is.True, "armed before the registry knew the pawn");
             Assert.That(hog.EquippedItem, Is.EqualTo(0));
 
-            // Lane D filled the hand (design 33 §6D): the real rules arm the marauder with the
-            // kind's own weapon. MarauderArmsTests holds the rest of it.
+            // Lane D filled the hand (design 33 §6D): the real rules arm the bandit with the
+            // kind's own weapon. BanditArmsTests holds the rest of it.
             colony.Pawns.WeaponRules = new WeaponRules();
-            Pawn armed = SpawnKind(colony, PawnKindIndex.Marauder);
-            Assert.That(colony.Pawns.Items.Get(new ThingId(armed.EquippedItem))?.DefIndex, Is.EqualTo(ItemIndex.Machete));
+            Pawn armed = SpawnKind(colony, PawnKindIndex.Bandit);
+            Assert.That(colony.Pawns.Items.Get(new ThingId(armed.EquippedItem))?.DefIndex,
+                Is.EqualTo(content.WeaponFor(PawnKindIndex.Bandit, armed.Id.Value, armed.RollSeed)));
         }
 
         sealed class ArmingRecorder : WeaponRules
@@ -702,7 +706,7 @@ namespace Odyssey.Tests.Sim
 
         /// <summary>
         /// A forced order is for a standing colonist of ours (design 33 §5c): a downed colonist's
-        /// Job_Downed is never interruptible, and a marauder is nobody's to command. The control is
+        /// Job_Downed is never interruptible, and a bandit is nobody's to command. The control is
         /// the same colonist, standing, who can be sent to the same frame.
         /// </summary>
         [Test]
@@ -710,7 +714,7 @@ namespace Odyssey.Tests.Sim
         {
             var colony = Board();
             Pawn colonist = colony.Pawns.Pawns.All[0];
-            Pawn marauder = SpawnKind(colony, PawnKindIndex.Marauder);
+            Pawn bandit = SpawnKind(colony, PawnKindIndex.Bandit);
 
             int site = -1;
             CellRef at = Size.FromIndex(colonist.Cell);
@@ -728,7 +732,7 @@ namespace Odyssey.Tests.Sim
             colony.Construction.Deliver(site, 5);
 
             Assert.That(JobSystem.CanForce(colonist, colony.Pawns, JobIndex.Build, site), Is.True, "the control");
-            Assert.That(JobSystem.CanForce(marauder, colony.Pawns, JobIndex.Build, site), Is.False, "a marauder took an order");
+            Assert.That(JobSystem.CanForce(bandit, colony.Pawns, JobIndex.Build, site), Is.False, "a bandit took an order");
             colonist.Downed = true;
             Assert.That(JobSystem.CanForce(colonist, colony.Pawns, JobIndex.Build, site), Is.False, "a downed colonist took an order");
         }
@@ -753,15 +757,15 @@ namespace Odyssey.Tests.Sim
         public void ACorpseIsPublishedAsWhoItWas()
         {
             var colony = Board();
-            Pawn marauder = SpawnKind(colony, PawnKindIndex.Marauder);
-            colony.Pawns.Corpses.Add(marauder, colony.World.CurrentTick, 9);
+            Pawn bandit = SpawnKind(colony, PawnKindIndex.Bandit);
+            colony.Pawns.Corpses.Add(bandit, colony.World.CurrentTick, 9);
             colony.World.Tick();
 
             var corpses = colony.World.Views.Current.Corpses;
             Assert.That(corpses.Length, Is.EqualTo(1));
-            Assert.That(corpses[0].Pawn, Is.EqualTo(marauder.Id));
-            Assert.That(corpses[0].Kind, Is.EqualTo(PawnKindIndex.Marauder));
-            Assert.That(corpses[0].RollSeed, Is.EqualTo(marauder.RollSeed));
+            Assert.That(corpses[0].Pawn, Is.EqualTo(bandit.Id));
+            Assert.That(corpses[0].Kind, Is.EqualTo(PawnKindIndex.Bandit));
+            Assert.That(corpses[0].RollSeed, Is.EqualTo(bandit.RollSeed));
             Assert.That(corpses[0].Facing, Is.EqualTo(1), "a facing is one of eight");
             Assert.That(corpses[0].Flags, Is.EqualTo(PawnFlags.Person | PawnFlags.Hostile));
         }
@@ -808,8 +812,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(content.Kinds[PawnKindIndex.Colonist].faction, Is.EqualTo(Faction.Colony));
             Assert.That(content.Kinds[PawnKindIndex.MiddenHog].faction, Is.EqualTo(Faction.Wild));
             Assert.That(content.Kinds[PawnKindIndex.DuctRat].faction, Is.EqualTo(Faction.Wild));
-            Assert.That(content.Kinds[PawnKindIndex.Marauder].faction, Is.EqualTo(Faction.Hostile));
-            Assert.That(content.SpeciesOf(PawnKindIndex.Marauder).person, Is.True);
+            Assert.That(content.Kinds[PawnKindIndex.Bandit].faction, Is.EqualTo(Faction.Hostile));
+            Assert.That(content.SpeciesOf(PawnKindIndex.Bandit).person, Is.True);
         }
 
         [Test]

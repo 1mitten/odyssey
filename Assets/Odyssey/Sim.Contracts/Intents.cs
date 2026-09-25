@@ -280,7 +280,7 @@ namespace Odyssey.Sim.Contracts
         /// <summary>
         /// Debug-menu-only (design 33 §9i): every colonist standing with nothing in her hand takes a
         /// random melee weapon into it at once — made beside her and taken straight up, as a
-        /// marauder is armed at spawn. Colonists already holding one keep it. No arguments. Not
+        /// bandit is armed at spawn. Colonists already holding one keep it. No arguments. Not
         /// player content; not applied while paused, like the other debug spawns.
         /// </summary>
         DebugArmColonists,

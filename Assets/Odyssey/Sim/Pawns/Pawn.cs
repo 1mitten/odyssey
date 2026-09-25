@@ -188,7 +188,7 @@ namespace Odyssey.Sim.Pawns
         /// A person, as against an animal — a colonist <b>or a hostile one</b>. Every pawn-wide
         /// system asks this once at the top of its loop (design 29 §2): an animal has no needs
         /// tick, no mood, no skills, no work and no schedule, and the same movement, doors and
-        /// falling as anyone. Since combat a person may be a marauder: a system that means "one
+        /// falling as anyone. Since combat a person may be a bandit: a system that means "one
         /// of ours" asks <see cref="IsColonist"/>.
         /// </summary>
         public bool IsPerson => Species.person;
@@ -196,7 +196,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Whose side this pawn is on — its kind's (design 33 §3). Nothing is saved for it.</summary>
         public Faction Faction => Content.KindOf(Kind).faction;
 
-        /// <summary>Fights the colony on sight: a marauder (design 33 §1).</summary>
+        /// <summary>Fights the colony on sight: a bandit (design 33 §1).</summary>
         public bool IsHostile => Faction == Faction.Hostile;
 
         /// <summary>One of ours: a person of the colony's faction. The draft, the roster and the Work tab mean this.</summary>
@@ -204,7 +204,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// Whether the needs system ticks this pawn's needs, mood and breaks. A colonist's do; an
-        /// animal's never have (design 29 §2); a hostile's do not — a marauder is debug-spawned to
+        /// animal's never have (design 29 §2); a hostile's do not — a bandit is debug-spawned to
         /// hunt until it is killed, and one that went looking for the colony's meals would be a
         /// raider with a pantry (design 33 §5); and <b>a downed pawn's needs pause</b>, the C2
         /// default the owner did not object to.
@@ -773,7 +773,7 @@ namespace Odyssey.Sim.Pawns
         /// The way this pawn moves when it chooses for itself: its kind's mode, else its species'
         /// (design 29 §4, design 33 §16). A colonist is <see cref="TraverseMode.Colonist"/>, a hog
         /// <see cref="TraverseMode.Animal"/>, a rat <see cref="TraverseMode.Climber"/>, and a
-        /// marauder <see cref="TraverseMode.Marauder"/> — a person who does not open doors. Every
+        /// bandit <see cref="TraverseMode.Bandit"/> — a person who does not open doors. Every
         /// job a pawn's own mind or its own reflexes start (the hunt, the wander, the flight, the
         /// fall) moves in it. A colonist's work jobs name their own mode (the hauler's), and a
         /// player's order is a colonist's.

@@ -16,7 +16,7 @@ namespace Odyssey.Tests.Hud
     {
         static readonly PawnId Ada = new PawnId(1), Bo = new PawnId(2), Raider = new PawnId(10), Hog = new PawnId(11);
 
-        /// <summary>Ada and Bo, colonists, at the responses given (0 unpublished); a marauder and a hog.</summary>
+        /// <summary>Ada and Bo, colonists, at the responses given (0 unpublished); a bandit and a hog.</summary>
         static WorldSnapshot Frame(int ada = 0, int bo = 0)
         {
             WorldSnapshot frame = Odyssey.Tests.Hud.Frame.Write();
@@ -82,9 +82,9 @@ namespace Odyssey.Tests.Hud
             Assert.That(ResponseButton(pane).Enabled, Is.False, "a colonist who has gone could be given a response");
         }
 
-        /// <summary>A marauder has no commands, so no response either (design 33 §6C).</summary>
+        /// <summary>A bandit has no commands, so no response either (design 33 §6C).</summary>
         [Test]
-        public void AMarauderHasNoResponseButton()
+        public void ABanditHasNoResponseButton()
         {
             var pane = new InspectModel();
             pane.SetColonist(Raider);
@@ -108,7 +108,7 @@ namespace Odyssey.Tests.Hud
 
         /// <summary>
         /// A box selection: the next after the <b>first</b> colonist's, for everybody not already at
-        /// it; the marauder and the hog passed over wherever they stand in the selection.
+        /// it; the bandit and the hog passed over wherever they stand in the selection.
         /// </summary>
         [Test]
         public void ASelectionTakesTheFirstColonistsNextAndPassesOverTheRest()

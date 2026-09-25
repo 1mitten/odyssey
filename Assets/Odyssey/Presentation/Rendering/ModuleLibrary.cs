@@ -173,6 +173,28 @@ namespace Odyssey.Presentation.Rendering
         Material? _fallbackMaterial;
 
         /// <summary>
+        /// A copy of the pack material for each skinned overlay baked into a body — the bandit's
+        /// vest (design 42) — keyed on the original. It exists so the vest is <b>not merged</b> into
+        /// the body it shares a material with: the far form paints the two from different
+        /// rectangles, and a merged mesh has one set. See <see cref="IsOverlayMaterial"/>.
+        /// </summary>
+        readonly Dictionary<Material, Material> _overlayTwins = new Dictionary<Material, Material>();
+        readonly HashSet<Material> _overlayMaterials = new HashSet<Material>();
+
+        /// <summary>Whether a baked part is a body's overlay (its vest) rather than the body itself.</summary>
+        public bool IsOverlayMaterial(Material? material) =>
+            material != null && _overlayMaterials.Contains(material);
+
+        Material OverlayTwin(Material source)
+        {
+            if (_overlayTwins.TryGetValue(source, out Material twin)) return twin;
+            twin = new Material(source) { name = source.name + "/overlay" };
+            _overlayTwins[source] = twin;
+            _overlayMaterials.Add(twin);
+            return twin;
+        }
+
+        /// <summary>
         /// Meshes the library created and therefore owns: baked from rigged art, or merged from a
         /// prefab's parts. Unity does not garbage-collect either, so <see cref="Dispose"/> is what
         /// frees them.
@@ -203,6 +225,15 @@ namespace Odyssey.Presentation.Rendering
                 else Object.DestroyImmediate(mesh);
             }
             _baked.Clear();
+
+            foreach (Material twin in _overlayTwins.Values)
+            {
+                if (twin == null) continue;
+                if (Application.isPlaying) Object.Destroy(twin);
+                else Object.DestroyImmediate(twin);
+            }
+            _overlayTwins.Clear();
+            _overlayMaterials.Clear();
 
             if (_fallbackMaterial != null)
             {
@@ -799,6 +830,11 @@ namespace Odyssey.Presentation.Rendering
                 // (docs/design/29-modular-colonists.md, MC6).
                 ColonistAttachments.BareTheHead(instance);
 
+                // The bandit's vest back on (design 42), as the live figure wears it, so the far
+                // form wears it too. Its parts get a twin material below so they are kept apart
+                // from the body's in the merge.
+                SkinnedMeshRenderer? overlay = ColonistAttachments.ShowOverlay(instance, entry.overlayName);
+
                 // Pose it before the snapshot is taken, or the bind pose is what gets captured.
                 if (entry.poseClip != null)
                     entry.poseClip!.SampleAnimation(instance, entry.poseClipTime);
@@ -837,6 +873,7 @@ namespace Odyssey.Presentation.Rendering
                         Material? material = materials.Length == 0
                             ? null
                             : materials[Mathf.Min(sub, materials.Length - 1)];
+                        if (material != null && skin == overlay) material = OverlayTwin(material);
                         raw.Add((baked, sub, material ?? FallbackMaterial, local));
                     }
 
@@ -932,6 +969,16 @@ namespace Odyssey.Presentation.Rendering
             // (design 38 §17): one material for every grass cell, blending the pack's terrain
             // textures by patches in world space. Everything else keeps its tiled texture.
             if (string.Equals(entry.moduleId, ModuleIds.Terrain("Grass"), System.StringComparison.Ordinal))
+            {
+                _meadowGround ??= MeadowLook.NewGroundMaterial();
+                if (_meadowGround != null) return _meadowGround;
+            }
+
+            // Marsh wears the grass's material too, when the look has a wet texture: the ground
+            // field then paints it into the meadow over metres, where its own tiled texture could
+            // only change at a cell's edge — the ring of pale tiles round every stream (§24).
+            if (string.Equals(entry.moduleId, ModuleIds.Terrain("Marsh"), System.StringComparison.Ordinal)
+                && MeadowLook.PaintsMarsh)
             {
                 _meadowGround ??= MeadowLook.NewGroundMaterial();
                 if (_meadowGround != null) return _meadowGround;
