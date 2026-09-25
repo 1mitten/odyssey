@@ -33,6 +33,19 @@ namespace Odyssey.Sim.Weather
         /// <summary>The wind against ordinary, 1000 being ordinary. Not scaled by intensity.</summary>
         public int windPerMille = 1000;
 
+        /// <summary>
+        /// The pace of anybody standing under the open sky at full intensity, per mille of their
+        /// own (design 43 §5): 1000 for a dry sky, below it for rain. Scaled by intensity, so a
+        /// drizzle costs a fraction of what a downpour does.
+        /// </summary>
+        public int moveFloorPerMille = 1000;
+
+        /// <summary>
+        /// What rain adds to a sky-exposed crop's growth at full intensity, per mille (design 43
+        /// §5, the stand-in for a moisture model, 22 §8). Scaled by intensity. 0 for a dry sky.
+        /// </summary>
+        public int growBonusPerMilleAtFull;
+
         /// <summary>How often each season rolls it, per 10,000, in Wash · Glare · Rime order.</summary>
         public List<int> seasonWeights = new List<int> { 0, 0, 0 };
 
