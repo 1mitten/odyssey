@@ -1609,6 +1609,63 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+  - moduleId: odyssey.module.galley
+    shape: 4
+    prefab: {fileID: 1318730670100516, guid: 85e0f933beabb974a9c4889242a2ac58, type: 3}
+    prefabName: SM_Prop_Kitchen_Stove_Oven_01
+    prefabUnder: 
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 2.3, y: 1.6}
+    fitHeight: 1.6
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.campfire
     shape: 4
     prefab: {fileID: 1008667369134030, guid: ac728ce9ca76cf84bb4f051bad08e5b0, type: 3}
@@ -5660,6 +5717,63 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 1294210970984720, guid: 19cc85b724f1bea4c806426ea56b0ac3, type: 3}
     prefabName: SM_Wep_Hammer_01
+    prefabUnder: 
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.tool.pan
+    shape: 4
+    prefab: {fileID: 1332914809032618, guid: 3e423096e91b7cb4880f4621cd70d11a, type: 3}
+    prefabName: SM_Wep_Pan_01
     prefabUnder: 
     centreXZ: 1
     baseAtY: 1
@@ -15578,7 +15692,7 @@ MonoBehaviour:
       totalVerts: 0
       quality: 0
     bandit: 0
-    overlayName:
+    overlayName: 
     overlayAppearance:
       skin: []
       hair: []
@@ -15594,7 +15708,7 @@ MonoBehaviour:
     shape: 4
     prefab: {fileID: 1435410842068634, guid: 9efa848c9a423b04493ee1b7772154b2, type: 3}
     prefabName: SM_Prop_MedicalBox_01
-    prefabUnder:
+    prefabUnder: 
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -15612,16 +15726,16 @@ MonoBehaviour:
     uniform: 0
     materialOnly: 0
     material: {fileID: 0}
-    materialName:
+    materialName: 
     materialTilesPerCell: 0
     flattenNormalMap: 0
     poseClip: {fileID: 0}
-    poseClipName:
+    poseClipName: 
     poseClipTime: 0
     locomotion: []
     combat: []
     sitClip: {fileID: 0}
-    sitClipName:
+    sitClipName: 
     quadrupedGait: 0
     appearance:
       skin: []
@@ -15635,7 +15749,178 @@ MonoBehaviour:
       totalVerts: 0
       quality: 0
     bandit: 0
-    overlayName:
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.item.meal.cooked
+    shape: 4
+    prefab: {fileID: 1615530336579966, guid: d557e3e8ceade7e4c99f21e6c68039f3, type: 3}
+    prefabName: SM_Prop_FoodTray_01
+    prefabUnder: 
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.5, y: 1.5, z: 1.5}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.item.meal.vegetable
+    shape: 4
+    prefab: {fileID: 1007010316781446, guid: 2fd2487a59257a74492e0db8b42539ab, type: 3}
+    prefabName: SM_Prop_FoodTray_02
+    prefabUnder: 
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.5, y: 1.5, z: 1.5}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.item.meal.burnt
+    shape: 4
+    prefab: {fileID: 1145043073829884, guid: 636fb01b6b0e031418f4a433d89e6992, type: 3}
+    prefabName: SM_Prop_FoodTray_04
+    prefabUnder: 
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1.5, y: 1.5, z: 1.5}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
     overlayAppearance:
       skin: []
       hair: []
@@ -15681,14 +15966,17 @@ MonoBehaviour:
       clip: {fileID: -7717634560727564301, guid: 9f773338b2a96174ebe9b63870034ca3, type: 3}
       variant: A
       impactSeconds: 0.33333334
+      fileName: 
     - clipName: A_Attack_LightCombo01B_Sword
       clip: {fileID: 5800342443961765143, guid: 95697c3218923dd43aa160c110bfbc79, type: 3}
       variant: B
       impactSeconds: 0.16666667
+      fileName: 
     - clipName: A_Attack_LightCombo01C_Sword
       clip: {fileID: -8890989884591690541, guid: c9e0b6900401fcb42980df96b84db76c, type: 3}
       variant: C
       impactSeconds: 0.36666667
+      fileName: 
     sitClip: {fileID: 0}
     sitClipName: 
     quadrupedGait: 0
@@ -15750,14 +16038,17 @@ MonoBehaviour:
       clip: {fileID: -8709411803423658444, guid: f3800f1bd189abc469fcc7c374371a91, type: 3}
       variant: A
       impactSeconds: 0.96666664
+      fileName: 
     - clipName: A_Attack_HeavyCombo01B_Sword
       clip: {fileID: 7713716175428577925, guid: 94770028b07a9ce44b555d283c113a86, type: 3}
       variant: B
       impactSeconds: 0.8
+      fileName: 
     - clipName: A_Attack_HeavyCombo01C_Sword
       clip: {fileID: -2621343224683262629, guid: 2511e6dc0955bde4395e6b369d7d8707, type: 3}
       variant: C
       impactSeconds: 0.93333334
+      fileName: 
     sitClip: {fileID: 0}
     sitClipName: 
     quadrupedGait: 0
@@ -15819,18 +16110,22 @@ MonoBehaviour:
       clip: {fileID: -5694488986427802680, guid: adc1feaf8563f6247989bffd0737b6ad, type: 3}
       variant: F
       impactSeconds: 0
+      fileName: 
     - clipName: A_Hit_B_React_Sword
       clip: {fileID: 5410598297907043000, guid: 646e411aff9e6a3409589c9eebc68c3a, type: 3}
       variant: B
       impactSeconds: 0
+      fileName: 
     - clipName: A_Hit_L_React_Sword
       clip: {fileID: 8990611995264232770, guid: 202a1ac9f04ce2a419bc2bdd6b148b2a, type: 3}
       variant: L
       impactSeconds: 0
+      fileName: 
     - clipName: A_Hit_R_React_Sword
       clip: {fileID: -8134992637236915294, guid: 881ed1a8905746f4d9b1def6f9e773dd, type: 3}
       variant: R
       impactSeconds: 0
+      fileName: 
     sitClip: {fileID: 0}
     sitClipName: 
     quadrupedGait: 0
@@ -15892,18 +16187,22 @@ MonoBehaviour:
       clip: {fileID: 8724492062134716513, guid: 3af9f677619822043a708e52c79ba040, type: 3}
       variant: F
       impactSeconds: 0
+      fileName: 
     - clipName: A_Hit_B_Stagger_Sword
       clip: {fileID: 8724492062134716513, guid: 2c9d421561b7c9941bd5d9942e4dcaa5, type: 3}
       variant: B
       impactSeconds: 0
+      fileName: 
     - clipName: A_Hit_L_Stagger_Sword
       clip: {fileID: -5950831409251336622, guid: ec81d250c60b03d47b70b65309c588ee, type: 3}
       variant: L
       impactSeconds: 0
+      fileName: 
     - clipName: A_Hit_R_Stagger_Sword
       clip: {fileID: -5950831409251336622, guid: bb9255eddd5619c4e9398d076eb337fd, type: 3}
       variant: R
       impactSeconds: 0
+      fileName: 
     sitClip: {fileID: 0}
     sitClipName: 
     quadrupedGait: 0
@@ -15965,14 +16264,17 @@ MonoBehaviour:
       clip: {fileID: 6808892750511483125, guid: 80f9aad568ebdbf4f9fd28c054c27a20, type: 3}
       variant: F
       impactSeconds: 0
+      fileName: 
     - clipName: A_Dodge_B_Sword
       clip: {fileID: -377892130397285394, guid: b3ac7f325a7e6a843be780efd40ca046, type: 3}
       variant: B
       impactSeconds: 0
+      fileName: 
     - clipName: A_Dodge_L_Sword
       clip: {fileID: 8020556318125480424, guid: e8bce1554d1659347aae4f4f75892c21, type: 3}
       variant: L
       impactSeconds: 0
+      fileName: 
     sitClip: {fileID: 0}
     sitClipName: 
     quadrupedGait: 0
@@ -16034,14 +16336,17 @@ MonoBehaviour:
       clip: {fileID: 3635232535751687706, guid: f348d316efadffb46a8fe603f8bac817, type: 3}
       variant: Begin
       impactSeconds: 0
+      fileName: 
     - clipName: A_Stun_Loop_Sword
       clip: {fileID: -2029077043182818740, guid: 23b7cb91698239b4aa8dd2c6e5298354, type: 3}
       variant: Loop
       impactSeconds: 0
+      fileName: 
     - clipName: A_Stun_End_Sword
       clip: {fileID: -6759780123328594538, guid: ee840371c325fd748b10e1b2f509cff2, type: 3}
       variant: End
       impactSeconds: 0
+      fileName: 
     sitClip: {fileID: 0}
     sitClipName: 
     quadrupedGait: 0
@@ -16103,14 +16408,17 @@ MonoBehaviour:
       clip: {fileID: 3719875270879779954, guid: 7ba7023334e89e340927c5c166306e04, type: 3}
       variant: Begin
       impactSeconds: 0
+      fileName: 
     - clipName: A_KnockDown_Loop_Sword
       clip: {fileID: 3546632239941170796, guid: 334f831830b92884ca55ad69efd72917, type: 3}
       variant: Loop
       impactSeconds: 0
+      fileName: 
     - clipName: A_KnockDown_End_Sword
       clip: {fileID: -7560739488375888718, guid: 8a405eac44feba441a02a2df3f42f432, type: 3}
       variant: End
       impactSeconds: 0
+      fileName: 
     sitClip: {fileID: 0}
     sitClipName: 
     quadrupedGait: 0
@@ -16172,18 +16480,22 @@ MonoBehaviour:
       clip: {fileID: -7862834798869268496, guid: 90f98101f7a4c2c4bbbf30f76e7b91c7, type: 3}
       variant: F
       impactSeconds: 0
+      fileName: 
     - clipName: A_Death_B_01_Sword
       clip: {fileID: -1444214504022159124, guid: a0b8f6f252ea03c46b36b357f5ea81e5, type: 3}
       variant: B
       impactSeconds: 0
+      fileName: 
     - clipName: A_Death_L_01_Sword
       clip: {fileID: 2178902523417233475, guid: 65976cacc9c112c4bb50b463be29f1db, type: 3}
       variant: L
       impactSeconds: 0
+      fileName: 
     - clipName: A_Death_R_01_Sword
       clip: {fileID: -5737455498129746005, guid: fb3c21dead0f2e54284772f27eb1de00, type: 3}
       variant: R
       impactSeconds: 0
+      fileName: 
     sitClip: {fileID: 0}
     sitClipName: 
     quadrupedGait: 0
@@ -16245,18 +16557,22 @@ MonoBehaviour:
       clip: {fileID: 4976112731881477189, guid: e700b1959b9313b4d9d43d5e666417fe, type: 3}
       variant: F
       impactSeconds: 0
+      fileName: 
     - clipName: A_Death_B_01_Pose_Sword
       clip: {fileID: 5381203422592421398, guid: 1d11585940b474e4b991d89402e88cd1, type: 3}
       variant: B
       impactSeconds: 0
+      fileName: 
     - clipName: A_Death_L_01_Pose_Sword
       clip: {fileID: 2772978117036748950, guid: 7824bbe4742763d408feb32763148c02, type: 3}
       variant: L
       impactSeconds: 0
+      fileName: 
     - clipName: A_Death_R_01_Pose_Sword
       clip: {fileID: 5990651622721326783, guid: 5952bcb69b331a841a9e9b77b715507d, type: 3}
       variant: R
       impactSeconds: 0
+      fileName: 
     sitClip: {fileID: 0}
     sitClipName: 
     quadrupedGait: 0
@@ -16318,10 +16634,12 @@ MonoBehaviour:
       clip: {fileID: -1799629646076063188, guid: 1e112675476098345a62bc14cbf8a7ef, type: 3}
       variant: Masc
       impactSeconds: 0
+      fileName: 
     - clipName: A_Draw_Sword_Femn
       clip: {fileID: 1972962540892491625, guid: 3f6f85425f929304198f743d3902c6b0, type: 3}
       variant: Femn
       impactSeconds: 0
+      fileName: 
     sitClip: {fileID: 0}
     sitClipName: 
     quadrupedGait: 0
@@ -16383,10 +16701,12 @@ MonoBehaviour:
       clip: {fileID: 2918243416346985125, guid: febb68dd712756c4c883a3e4f482d3b1, type: 3}
       variant: Masc
       impactSeconds: 0
+      fileName: 
     - clipName: A_Sheathe_Sword_Femn
       clip: {fileID: 4741049883773862030, guid: 8d7a574352a5f294fa488a9148bc9ceb, type: 3}
       variant: Femn
       impactSeconds: 0
+      fileName: 
     sitClip: {fileID: 0}
     sitClipName: 
     quadrupedGait: 0

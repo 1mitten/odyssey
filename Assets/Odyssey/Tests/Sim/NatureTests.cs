@@ -105,16 +105,21 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void TheNaturalIdsNeverCollideWithABuilding()
         {
-            for (ushort id = 0; id < NaturalContent.EdificeLimit; id++)
+            for (ushort id = 0; id < EdificeHandle.Count; id++)
             {
                 bool natural = NaturalContent.IsNatural(id);
                 bool building = id == CoreContent.EdificeBed || id == CoreContent.EdificeShelf
                     || id == CoreContent.EdificeCampfire || id == CoreContent.EdificeGenerator
-                    || id == CoreContent.EdificeHeater || id < NaturalContent.FirstEdifice;
+                    || id == CoreContent.EdificeHeater || id == CoreContent.EdificeGalley
+                    || id < NaturalContent.FirstEdifice;
                 Assert.That(natural && building, Is.False, $"edifice {id} is claimed twice");
                 Assert.That(NaturalContent.IsTree(id) && NaturalContent.IsBush(id), Is.False);
             }
-            Assert.That(EdificeHandle.Count, Is.EqualTo(NaturalContent.EdificeLimit));
+            // The galley (design 48) takes the first id after the wild things, so the edifice space
+            // runs one past their limit and the galley is not natural.
+            Assert.That(CoreContent.EdificeGalley, Is.EqualTo(NaturalContent.EdificeLimit));
+            Assert.That(NaturalContent.IsNatural(CoreContent.EdificeGalley), Is.False);
+            Assert.That(EdificeHandle.Count, Is.EqualTo(NaturalContent.EdificeLimit + 1));
         }
 
         // ---------------------------------------------------------------- species

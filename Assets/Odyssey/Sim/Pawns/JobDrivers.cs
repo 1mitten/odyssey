@@ -177,7 +177,12 @@ namespace Odyssey.Sim.Pawns
             // why every pantry-size estimate made before this was four times too high.
             if (item.Stack > 1) item.Stack--;
             else ctx.Items.Despawn(item);
-            Pawn.AddMemory(ThoughtIndex.AteMeal, ctx.CurrentTick);
+
+            // What she thinks of it is the food's (design 48 §4): a cooked meal pleases, a ration
+            // is what every food used to be, burnt or raw food she minds.
+            int thought = ctx.Content.Items[item.DefIndex].ateThought;
+            if ((uint)thought < (uint)ctx.Content.Thoughts.Length) Pawn.AddMemory(thought, ctx.CurrentTick);
+            ctx.Kitchen?.Invalidate();
             return JobStatus.Succeeded;
         }
     }

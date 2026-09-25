@@ -147,6 +147,10 @@ namespace Odyssey.Sim.Pawns
             var nature = new NatureSystem(pawns, edifices);
             pawns.Nature = nature;
             construction.Power = power;
+            // The kitchen (design 48 §5), for the same argument once more: a colony that forgot it
+            // would have a galley whose bill pane silently did nothing.
+            var kitchen = new Cooking.Kitchen(pawns, edifices);
+            pawns.Kitchen = kitchen;
 
             // The home (design 43): derived from everything above, so it is built last and is
             // neither a system, a hashable nor a save section. It rebuilds itself when asked.
@@ -309,6 +313,7 @@ namespace Odyssey.Sim.Pawns
             growing.Attach(builder);
             storage.Attach(builder);
             units.Attach(builder);
+            kitchen.Attach(builder);
             return builder;
         }
     }

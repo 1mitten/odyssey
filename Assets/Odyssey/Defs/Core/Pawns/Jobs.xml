@@ -314,4 +314,22 @@
     <settleTicks>30</settleTicks>
   </JobDef>
 
+  <!--
+    The kitchen (design 48 section 5), JobHandle 26, after the forager's 25 (nature reached main first). One job for both halves of a bill: fetching a
+    load of raw food into a station's pan, and cooking what the pan holds. The work is the
+    recipe's (Recipes.xml) and not this def's, so there is no workTicks here - Job_Build's
+    argument. It trains cooking at every working job's rate. Not casually interruptible: a cook
+    stirring a pan finishes the meal. Expiry is the walking jobs' generous one, because the
+    carrots can be a long way from the kitchen.
+  -->
+  <JobDef>
+    <defName>Job_Cook</defName>
+    <driver>26</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>7</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
 </Defs>

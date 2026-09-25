@@ -13143,3 +13143,140 @@ few per cent, under, behind or nothing is the ray passing through and never allo
 `SaveProbe` gained a hearth report on the way: every campfire in a save, which is the hearth, the
 ground round each, and what the pane is told when each is clicked.
 
+
+## 2026-09-25 — Cooking, interviewed and designed (CK)
+
+The owner asked how the colony cooks, with the POLYGON Shops pack in hand: a cooker, fridges,
+plates, cutlery and meat in raw, cooked and burnt states. Their chain was a hog's raw meat hauled to
+a fridge, cooked, and eaten on a plate with a knife and fork, with the cooker and fridge on power
+and the cook's skill deciding when food burns. Mid-interview they added that every cooking and
+eating animation must make sense.
+
+**The ground was almost empty.** Eating is the nearest thing with nutrition, eaten standing where it
+lies, with the same +20 for everything. There is no recipe, bill, station, spoilage, meat, table or
+chair. What does exist lines up well:
+
+- the power grid already answers "is this building powered";
+- a shelf is a built store, and a def with both slots and a power draw already registers as both;
+- the refuel and treatment jobs are a fetch-and-work template;
+- a hog can already be killed.
+
+The one real obstacle was the corpse, which is a record nothing can remove.
+
+**Twelve questions, every recommendation taken** (`docs/research/cooking-interview.md`). The ones
+that shape the most:
+
+- butcher on the spot rather than haul corpses;
+- rot yes, but not temperature-driven;
+- one step from raw to meal, from any raw food, so the kitchen works on carrots before the first
+  hunt;
+- a burnt meal rather than food poisoning, because health is not in;
+- the campfire cooks too, because a colony without a generator should not be stuck on raw carrots;
+- **kitchen first**, so the first PR has something to cook.
+
+**Four research lanes.**
+
+- `a-18` found the reference's simple meal is already the owner's one-step any-raw recipe
+  (500 in, 900 out).
+- `a-19` found the three merge sites and the one split site. It named the bug most likely to ship:
+  a stack changing kind under a hauler walking more of the same kind to it.
+- `e-10` measured the pack without importing it. It ships PolygonGeneric with identical GUIDs and 109
+  older `.mat` files, so it is imported as `PolygonShops/` only, and only while no editor holds the
+  shared junction.
+- `e-11` disagreed with the note in `SitPose.cs` that a sit cannot be computed. That is true of the
+  floor and not of a chair, so one contact sheet decides before dining is written. It also found
+  every stoop in the game is 66 mm deep because its depth scales with the clamped
+  `StandingHipHeight`, P11 for a third time.
+
+**Decisions made without the owner, in design 48:**
+
+- **No handle numbers.** Two open PRs claim the next ones.
+- **The ration pack gives up `ui.res.meal`** to the cooked meal.
+- **A campfire meal costs one wood**, rather than building a fuel hopper the campfire never had.
+- **The burn roll is made when cooking starts**, so the pan can darken before a burnt meal comes out.
+- **A meal with any meat in it is a Meal; without, a Vegetable meal.** Two defs, not per-stack
+  ingredient memory.
+
+Four things go back to the owner at the plan review (design 48 §13):
+
+- the mood table, because today every food is +20 and a carrot colony would lose mood;
+- galley or cooker, and cold store or fridge;
+- whether rotten food is hauled or deleted;
+- whether an unpowered fridge rots faster than the floor, as storage decision 24 says of every
+  container.
+
+## 2026-09-25 — The kitchen built (K1)
+
+Approved with *"go for it"*, which took every recommendation in design 48 §13.
+
+**The simulation came first and came out clean.** A `Kitchen` keyed by edifice holds each station's
+bills and its pan, in a save section of its own, so there was no format bump. It is hashed only
+once a station is used. One job, `Job_Cook`, carries one load a job into the pan, or cooks what the
+pan holds; the burn is rolled once when cooking starts. The pan belongs to the station, so a power
+cut mid-cook leaves the meal on the hob with its work banked. `AMealOnTheHobWaitsOutAPowerCut`
+proves it: same three carrots, work unmoved while dark, finished after.
+
+**Two things the build found that the design had wrong.**
+
+- **The mood table was in the wrong units.** Design 48 proposed +12 / +4 / −4 / −5 / −3 against
+  "today's +20", but mood here runs 0–1000 and today's +20 is two of the reference's points. It is
+  now +50 meal, +20 ration (exactly what every food gave before, so a ration colony feels nothing
+  new), −40 burnt, −50 raw, −30 no table. Found while writing `Thoughts.xml`; the intent is
+  unchanged.
+- **`ColonyWorld.SaveComponents` is a list you add to by hand.** The kitchen's save section would
+  have been written by nothing. `BillsAndThePanComeBackFromASave` would have caught it; it was
+  caught first by reading.
+
+**And one fault the old code would have shown.** `WorkStyle.IndexForJob` falls through to the axe
+for any job it does not list, so a cook at a stove would have chopped at it. `JobHandle.Cook` has a
+style of its own now: a frying pan (Battle Royale's, the only one installed) tossed in a short
+stroke, with a small sizzle of flecks. `EveryStyleNamesAToolAndSomethingToThrow` refused a
+chip-less style, rightly.
+
+**The goldens moved and the colonies did not.** A pawn record carries an eighth work priority and
+an eighth skill, and the job system one more counter pair. `GoldenColonyProbe` on `main` and on the
+branch is identical on all three boards.
+
+**Waiting for the Shops pack.** The galley row points at its stove and draws the tinted block until
+the pack is imported. The food going raw → cooked → burnt in the pan waits for its models too; the
+station already publishes what that needs. The import is held because every worktree's
+`Assets/Synty` is one folder, and another session had an editor open on it.
+
+**A merge mid-run cost a round.** Stashing uncommitted work before merging `main` meant a conflicted
+merge could not take the stash back. It was resolved, committed and then popped, and nothing was
+lost. Commit before merging, not stash.
+
+**And a fault on `main` the player build found.** `Odyssey/SeeThroughMark` (the draft's marks drawn
+through walls, `134b7f24`) was never added to the always-included shaders, so `unity.sh build`
+refused on `main` as well as here — neither test tier can see it, because both run in the editor
+where every shader exists. `ShaderInclusion.Apply` added its one GUID to `GraphicsSettings.asset`;
+the player then booted into a colony with a clean log.
+
+## 2026-09-25 — The bill list, one control for everything that takes orders (design 49)
+
+The owner sent mockup *20a*, a rebuild of the workbench pane, and asked for it to be **composite**:
+cooking now, crafting later, anything that takes orders uses the same control. And not to follow
+it where it would steer away from the HUD as it is — *especially the tile part*.
+
+**The control is `BillList`, and the rules stay in `BillsModel`.** What takes bills became a table
+(`BillsModel.Stations`: edifice, needs power, the recipe Add adds) rather than two `==` checks, so a
+bench is a row there and a row in the recipe tables. The view decides nothing: the status line and
+its ink, the stepper's limits, the progress fraction and the strip are all model properties with
+fast-tier tests, and every number is a `BillsLayout` constant with a width budget
+(`TheRowsColumnsFitThePaneWithRoomForTheName`: the name keeps 180 px of the 680).
+
+**The cooker's pane was 280 wide.** The cooking branch's rows never fitted it — `IsWide` knew the
+campfire and not the galley. A station's pane is now `.inspect--bench`, 680, pinned to the constant
+by `HudStyleSheetTests`.
+
+**Three departures from the mockup, each for a reason in the game.** Reorder stays (the mockup had
+only pause and delete; the top bill is worked first, so order is a setting the game has), as a
+stacked pair in one 28 px box. The status line under a working bill says **nothing** rather than
+*Anyone can do this*, a worker rule that does not exist. And the mode words stay the registry's,
+because the mockup's are the reference game's strings. The header and the tile facts are the
+pane's own, per the owner.
+
+**One reversal of design 48.** The list is as tall as its content, not five rows' height always.
+The pane grows upward from the bottom, and Add a bill sits under the rows, so adding one moves
+nothing under the pointer; the fixed block was 240 px of empty pane under one bill. Removing a bill
+does shift the rows above it; that is in the playtest row.

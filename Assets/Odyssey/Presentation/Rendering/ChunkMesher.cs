@@ -1626,8 +1626,19 @@ namespace Odyssey.Presentation.Rendering
                 // has the tinted block, which is drawn per cell below as it always was.
                 case CoreContent.EdificeGenerator:
                 case CoreContent.EdificeHeater:
+                case CoreContent.EdificeGalley:
                     if (shape == ModuleShape.Pillar)
                     {
+                        // The galley's facing is the player's too: it is the side the cook
+                        // stands on (design 48 §5), so it is drawn turned to it and never backed.
+                        if (def == CoreContent.EdificeGalley)
+                        {
+                            if (_model.EdificeHead(index))
+                                AddBody(batch, module, TintCode.Stuff(CoreContent.StuffNone),
+                                    PropShape.Root(x, z, y, _model.EdificeFacing(index), 1));
+                            return;
+                        }
+
                         // The generator's facing is where its second cell lies, so it is the
                         // player's; the heater's is drawing only, and backs on to a wall (§14c).
                         if (_model.EdificeHead(index))

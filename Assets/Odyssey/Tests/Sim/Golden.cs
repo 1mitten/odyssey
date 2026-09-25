@@ -461,6 +461,16 @@ namespace Odyssey.Tests.Sim
         /// which are the four animals standing under cover in the 120-tick waits
         /// <c>AnimalShelterThinkNode</c> gives them. Both together: 300 started, 74 wanders, 217
         /// waits, 341,744 progress.</para>
+        ///
+        /// <para><b>All six moved on 2026-09-25, with the kitchen (design 48, K1).</b> Every
+        /// colonist carries an eighth work priority (<c>Work_Cooking</c>) and an eighth skill
+        /// (<c>Skill_Cooking</c>), and the job system one more counter pair (<c>Job_Cook</c>); all
+        /// are hashed. The kitchen itself is hashed only once a station has been used, and none of
+        /// these colonies has one. Eating changed too — the best tier first, and a thought that is
+        /// the food's own — but nobody in these windows gets hungry enough to eat.
+        /// <b>Measured</b>: <c>GoldenColonyProbe</c> run on <c>main</c> (837c895a) and on this
+        /// branch; the outputs are identical on all three boards, food, rest, mood, experience and
+        /// every job counted included. The hash sees more; no colony does anything different.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -474,8 +484,8 @@ namespace Odyssey.Tests.Sim
             // Re-baked 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1), on top of the weather's own re-bake: the combined job, item,
             // skill and incident tables moved the hash the same way any content append does.
-            Generated = 9731137379822364786UL,
-            Simulated = 4414416609844227350UL,
+            Generated = 530566901186481748UL,
+            Simulated = 10523218902147163138UL,
         };
 
         /// <summary>
@@ -531,8 +541,12 @@ namespace Odyssey.Tests.Sim
             // board; re-taken from the merged code.
             // The scenery line merged with medical supplies (design 37), 2026-09-25: re-taken from the
             // merged code; the probe against main is in the merge commit's message.
-            Generated = 17190337490259996812UL,
-            Simulated = 6077395405167700288UL,
+            // The kitchen merged with the wild foods, 2026-09-25: an eighth work priority and skill
+            // on every colonist and Job_Cook's counter pair, on the wild-food board. Re-taken from
+            // the merged code; GoldenColonyProbe on main (2a1cfa63) and on the merge is identical on
+            // all three boards, so the hash sees more and no colony does anything different.
+            Generated = 1045594947919303250UL,
+            Simulated = 11044222309838476707UL,
         };
 
         /// <summary>
@@ -574,8 +588,8 @@ namespace Odyssey.Tests.Sim
             // 2026-09-25, weather-world: it rains here all run — pace and animal shelter (remarks).
             // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
-            Generated = 6499961642199718646UL,
-            Simulated = 17342170182267167369UL,
+            Generated = 13777213757865155735UL,
+            Simulated = 9495214819731883809UL,
         };
     }
 }

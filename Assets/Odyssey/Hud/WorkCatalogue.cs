@@ -122,7 +122,9 @@ namespace Odyssey.Hud
             new Entry("ui.work.doctor",       "doctor",       "medicine",     "", WorkHandle.Doctor),
             new Entry("ui.work.warden",       NotSimulated, NoSkill, "prisoners arrive with factions (M7)"),
             new Entry("ui.work.handling",     NotSimulated, NoSkill, "animals arrive with M5"),
-            new Entry("ui.work.cooking",      NotSimulated, NoSkill, "cooking arrives with M5"),
+            // Live with the kitchen (design 48 §5): the Cook giver works the bills at a galley or a
+            // campfire, and Cooking buys speed at it.
+            new Entry("ui.work.cooking",      "cooking",      "cooking",      "", WorkHandle.Cooking),
             new Entry("ui.work.hunting",      NotSimulated, NoSkill, "animals arrive with M5"),
             new Entry("ui.work.construction", "construction", "construction", "", WorkHandle.Construction),
             new Entry("ui.work.growing",      "growing",      "growing",      "", WorkHandle.Growing),

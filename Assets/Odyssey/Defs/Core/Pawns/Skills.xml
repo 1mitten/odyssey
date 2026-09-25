@@ -138,4 +138,13 @@
     <label>medicine</label>
   </SkillDef>
 
+  <!--
+    Cooking (design 48 section 5). Buys speed at the stove through Work_Cooking's curve, and keeps
+    the meal from burning through Recipe_Meal's table. Cooking trains it, at every station.
+  -->
+  <SkillDef ParentName="SkillBase">
+    <defName>Skill_Cooking</defName>
+    <label>cooking</label>
+  </SkillDef>
+
 </Defs>
