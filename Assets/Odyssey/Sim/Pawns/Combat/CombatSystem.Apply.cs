@@ -21,15 +21,27 @@ namespace Odyssey.Sim.Pawns
         /// critical rolled (design 33 §9b), and the reaction: an animal's revenge roll, a
         /// colonist's retaliation.</item>
         /// </list>
-        /// <para>Public so a test can land an exact blow; the only caller in the game is the
-        /// resolver, inside <see cref="Tick"/>.</para>
+        /// <para>Public so a test can land an exact blow; the callers in the game are the resolver
+        /// and the bullet's landing, inside <see cref="Tick"/>.</para>
+        ///
+        /// <para><b>A bullet comes through here too</b> (design 47 §2c), with three differences a
+        /// swing never has. <paramref name="attacker"/> may be null — a shooter killed while her
+        /// bullet flew still lands it, with no experience and no reaction to anybody. A gun's
+        /// experience is not given here: a shot trains Shooting when it is fired, hit or miss,
+        /// including the shots that strike a wall and never reach this method. And a bullet that
+        /// was not meant for <paramref name="target"/> — a bystander on the line,
+        /// <paramref name="stray"/> — does not make a colonist fight back against the colonist who
+        /// fired it: she was in the way, not attacked. <paramref name="reportCell"/> is where a
+        /// miss is reported, when that is not the target's cell: where the bullet went down.</para>
         /// </summary>
-        public void ApplySwing(Pawn attacker, Pawn target, in Armament armament, in SwingOutcome outcome, int tick)
+        public void ApplySwing(Pawn? attacker, Pawn target, in Armament armament, in SwingOutcome outcome, int tick,
+            int reportCell = -1, bool stray = false)
         {
-            if (attacker.IsPerson && armament.Attack.experiencePerSwing > 0)
+            if (attacker != null && attacker.IsPerson && !armament.Attack.IsRanged && armament.Attack.experiencePerSwing > 0)
                 attacker.GainExperience(SkillIndex.Melee, armament.Attack.experiencePerSwing, tick);
 
-            CellRef at = _ctx.Size.FromIndex(target.Cell);
+            PawnId by = attacker?.Id ?? default;
+            CellRef at = _ctx.Size.FromIndex(reportCell >= 0 ? reportCell : target.Cell);
             int weapon = armament.ItemDef;
 
             // Every swing that reaches her is heard, whatever came of it (design 33 §14f: a missed
@@ -43,16 +55,16 @@ namespace Odyssey.Sim.Pawns
             if (!outcome.Landed)
             {
                 CombatEventKind kind = outcome.Result == CombatEventKind.Dodge ? CombatEventKind.Dodge : CombatEventKind.Miss;
-                _ctx.CombatLog.Report(kind, attacker.Id, target.Id, at, tick, 0, weapon);
+                _ctx.CombatLog.Report(kind, by, target.Id, at, tick, 0, weapon);
                 return;
             }
 
             int before = target.HpMilli;
             target.HpMilli = before - outcome.DamageMilli;
-            _ctx.CombatLog.Report(CombatEventKind.Hit, attacker.Id, target.Id, at, tick, outcome.DamageMilli, weapon);
+            _ctx.CombatLog.Report(CombatEventKind.Hit, by, target.Id, at, tick, outcome.DamageMilli, weapon);
             // Straight after the Hit it qualifies (design 33 §9b): same tick, same pair, no amount.
             if (outcome.Critical)
-                _ctx.CombatLog.Report(CombatEventKind.Critical, attacker.Id, target.Id, at, tick, 0, weapon);
+                _ctx.CombatLog.Report(CombatEventKind.Critical, by, target.Id, at, tick, 0, weapon);
             _ctx.CombatHooks.RaiseDamageApplied(new DamageReport(target, attacker, outcome.DamageMilli, weapon, tick));
 
             // Past the death line with this blow: dead now, gone at the end of the tick. Only the
@@ -75,13 +87,20 @@ namespace Odyssey.Sim.Pawns
             {
                 int until = tick + outcome.StunTicks;
                 if (until > target.StunnedUntilTick) target.StunnedUntilTick = until;
-                _ctx.CombatLog.Report(CombatEventKind.Stun, attacker.Id, target.Id, at, tick, outcome.StunTicks, weapon);
+                _ctx.CombatLog.Report(CombatEventKind.Stun, by, target.Id, at, tick, outcome.StunTicks, weapon);
             }
+
+            // Nobody to answer: a bullet whose shooter has gone.
+            if (attacker == null) return;
 
             // A critical that rolled its knockback, on a target still on its feet: death and the
             // fall were resolved first and returned above (design 33 §9b). Before the reaction, so
             // an animal that runs runs from where it landed.
             if (outcome.Knockback) KnockBack(target, attacker, weapon, tick);
+
+            // A colonist in the way of another colonist's bullet does not turn on her (design 47
+            // §2c): the memory of it is SwingResolved's, above; fighting back is for being attacked.
+            if (stray && attacker.IsColonist && target.IsColonist) return;
 
             React(target, attacker, tick);
         }
@@ -241,10 +260,16 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         bool FightingBeside(Pawn pawn)
         {
-            if (pawn.CombatTarget == 0 || pawn.CurrentJob == null || pawn.CurrentJob.DefIndex != JobIndex.AttackMelee)
-                return false;
+            if (pawn.CombatTarget == 0 || !CombatJobs.InAttack(pawn)) return false;
             Pawn? foe = _ctx.Pawns.Get(new PawnId(pawn.CombatTarget));
-            return foe != null && Melee.IsStanding(foe) && Melee.InReach(_ctx, pawn, foe, pawn.OwnMode);
+            if (foe == null || !Melee.IsStanding(foe)) return false;
+            // A shooter is in her fight while her target is in her sights (design 47 §3e).
+            if (pawn.CurrentJob!.DefIndex == JobIndex.AttackRanged)
+            {
+                RangedDef? gun = _ctx.WeaponRules.ArmamentOf(pawn, _ctx).Attack.ranged;
+                return gun != null && Ranged.CanHit(_ctx, pawn.Cell, foe.Cell, gun);
+            }
+            return Melee.InReach(_ctx, pawn, foe, pawn.OwnMode);
         }
 
         /// <summary>

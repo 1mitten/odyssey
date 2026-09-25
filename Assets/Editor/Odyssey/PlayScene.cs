@@ -2052,6 +2052,19 @@ namespace Odyssey.EditorTools
                 centreXZ = true, baseAtY = true, lieFlat = true,
                 scale = new Vector3(1.5f, 1.5f, 1.5f),
             });
+            // The pistol (design 47 §4a; owner, 2026-09-25: Battle Royale's pistol). The heavy
+            // semi-automatic, the one self-loader among the pack's four; its name is unique in every
+            // pack, pinned to Battle Royale anyway so a future pack cannot move it. Five parts on one
+            // material, the slide among them (the director cycles it on a shot). Ground scale as the
+            // four weapons.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemPistol, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Pistol_Heavy_01",
+                centreXZ = true, baseAtY = true, lieFlat = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+            rows[rows.Count - 1].prefabUnder = BattleRoyaleFolder;
 
             // Medical supplies (design 37 §5): the Battle Royale first-aid case, 0.48 x 0.13 x 0.39
             // at source and drawn as authored — one small box, the ore lumps' size band, so the heap
@@ -2524,6 +2537,8 @@ namespace Odyssey.EditorTools
 
         /// <summary>Packs imported after the catalogue's rows were chosen, which lose a name tie to any older pack.</summary>
         static readonly string[] LaterPacks = { "Assets/Synty/PolygonShops" };
+        /// <summary>POLYGON Battle Royale, which the pistol is pinned to (design 47 §4a).</summary>
+        const string BattleRoyaleFolder = "Assets/Synty/PolygonBattleRoyale";
 
         /// <summary>
         /// Exact-name prefab lookup under Assets/Synty, looking in <paramref name="under"/> first

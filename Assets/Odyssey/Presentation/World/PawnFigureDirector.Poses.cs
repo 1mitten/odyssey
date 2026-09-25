@@ -257,6 +257,7 @@ namespace Odyssey.Presentation.World
             CarryingFigures = 0;
             MeasuredSwimPitch = 0f;
             MeasuredToolDrift = 0f;
+            AimingFigures = 0;
 
             for (int i = 0; i < _figures.Count; i++)
             {
@@ -297,8 +298,15 @@ namespace Odyssey.Presentation.World
                     // while it lasts, and the pack's clips need nothing here at all.
                     else if (ShowsComputedCombat(figure))
                         ApplyCombatPose(figure);
+                    // The gun (design 47 §4b): the aim is a stance that owns both arms while it
+                    // lasts, and low ready the right arm; after a blow or a stagger, which take the
+                    // whole body for their moment, and before the one-shot gestures.
+                    else if (figure.AimWeight > 0.001f)
+                        ApplyAimPose(figure);
                     else if (figure.Gesture != PawnGesture.None || ForceGesture.HasValue)
                         ApplyGesturePose(figure);
+                    else if (figure.LowReadyWeight > 0.001f)
+                        ApplyLowReady(figure);
                     // Last of the five, and the only one that is a stance rather than an event.
                     // Everything above it either moves the whole body somewhere else (sleep, swim,
                     // climb) or is a motion that owns the arms for a moment (the lift, the stow),

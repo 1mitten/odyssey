@@ -150,9 +150,9 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void ASwingAndAGettingUpFloatNothing()
+        public void ASwingAShotAndAGettingUpFloatNothing()
         {
-            foreach (CombatEventKind kind in new[] { CombatEventKind.None, CombatEventKind.Swing, CombatEventKind.Recovered })
+            foreach (CombatEventKind kind in new[] { CombatEventKind.None, CombatEventKind.Swing, CombatEventKind.Shot, CombatEventKind.Recovered })
             {
                 Assert.That(CombatFeedbackModel.FloatingText(Event(kind, 30)), Is.Empty, kind.ToString());
                 Assert.That(CombatFeedbackModel.FloatingColour(Event(kind)).A, Is.Zero, kind.ToString());

@@ -121,7 +121,7 @@ namespace Odyssey.Hud
         {
             PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey,
             SpawnBanditKey, SpawnBatKey, SpawnCrowbarKey, SpawnMacheteKey, SpawnArcBladeKey,
-            SpawnBanditsKey, ArmColonistsKey,
+            SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey,
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey, GiveCarrotsKey,
             SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
@@ -208,6 +208,12 @@ namespace Odyssey.Hud
             SpawnMacheteKey = "ui.debug.spawnmachete", SpawnArcBladeKey = "ui.debug.spawnarcblade";
 
         /// <summary>
+        /// The ranged line's two rows (design 47 §4d): the pistol on the ground, and a bandit holding
+        /// one — the bandit's own kind, with the spawn intent's <c>B</c> naming the weapon plus one.
+        /// </summary>
+        public const string SpawnPistolKey = "ui.debug.spawnpistol", SpawnGunmanKey = "ui.debug.spawngunman";
+
+        /// <summary>
         /// One row of the Spawn tab: its name, what its tooltip says, and the intent a click sends
         /// at the column the shell aims it at. <b>A table here rather than eight calls in the
         /// shell</b>, so what each row sends is held by the fast tier — the shell only lays the
@@ -282,12 +288,14 @@ namespace Odyssey.Hud
             Pawn(SpawnPawnKey, "Adds a colonist near the camera, with no scenario and no starting kit",
                 PawnKindLabels.ColonistKind, GroupColonistsKey),
             new SpawnRow(ArmColonistsKey,
-                "Every colonist standing with nothing in hand takes a random melee weapon, at once. Armed colonists keep theirs",
+                "Every colonist standing with nothing in hand takes a random weapon, a gun among them, at once. Armed colonists keep theirs",
                 IntentKind.DebugArmColonists, 0, 0, GroupColonistsKey),
             Pawn(SpawnBanditKey, "Adds a hostile bandit near the camera, armed. It hunts whoever is still standing",
                 PawnKindLabels.Bandit, GroupHostilesKey),
             Pawn(SpawnBanditsKey, "Adds three bandits near the camera, each on its own tile",
                 PawnKindLabels.Bandit, GroupHostilesKey, repeat: 3),
+            new SpawnRow(SpawnGunmanKey, "Adds a hostile bandit near the camera, holding a pistol. It shoots whoever it can see",
+                IntentKind.SpawnPawn, PawnKindLabels.Bandit, ItemHandle.Pistol + 1, GroupHostilesKey),
             Pawn(SpawnHogKey, "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
                 PawnKindLabels.MiddenHogKind, GroupAnimalsKey),
             Pawn(SpawnRatKey, "Adds a duct rat near the camera. It wanders and rests, and climbs anything",
@@ -298,6 +306,8 @@ namespace Odyssey.Hud
             Weapon(SpawnMacheteKey, "Adds a machete near the camera. Sharp and quick", ItemHandle.Machete),
             Weapon(SpawnArcBladeKey, "Adds an arc blade near the camera. The best thing a colonist can hold",
                 ItemHandle.ArcBlade),
+            Weapon(SpawnPistolKey, "Adds a pistol near the camera. It shoots, and is surest close in",
+                ItemHandle.Pistol),
             Resource(GiveWoodKey, "Adds 50 wood near the camera", ItemHandle.Wood),
             Resource(GiveStoneKey, "Adds 50 stone near the camera", ItemHandle.Stone),
             Resource(GiveFoodKey, "Adds 50 ration packs near the camera", ItemHandle.Meal),

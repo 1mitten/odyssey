@@ -727,7 +727,7 @@ namespace Odyssey.Sim.Pawns
         /// golden window fights, so no golden moved.</para>
         /// </summary>
         public virtual int UrgencyPerMille() =>
-            Drafted || (CurrentJob != null && (CurrentJob.DefIndex == JobIndex.AttackMelee || CurrentJob.DefIndex == JobIndex.Flee))
+            Drafted || (CurrentJob != null && (CombatJobs.IsAttack(CurrentJob.DefIndex) || CurrentJob.DefIndex == JobIndex.Flee))
                 ? Content.Movement.draftedPacePerMille
                 : 1_000;
 

@@ -471,6 +471,29 @@ namespace Odyssey.Tests.Sim
         /// <b>Measured</b>: <c>GoldenColonyProbe</c> run on <c>main</c> (837c895a) and on this
         /// branch; the outputs are identical on all three boards, food, rest, mood, experience and
         /// every job counted included. The hash sees more; no colony does anything different.</para>
+        ///
+        /// <para><b>All six moved on 2026-09-25, by the ranged line's contracts step (design 47 R0):
+        /// the hash seeing more, and no colony doing anything different.</b> Every person carries a
+        /// seventh skill, passion and daily-gain slot — Shooting — and each colonist is dealt a
+        /// level in it on the first tick, from the same stream the first six are dealt from and
+        /// after them, so the six come out exactly as they were. That moves the generated numbers
+        /// (the arrays are longer before a tick runs) and the simulated ones (the dealt level is
+        /// hashed). <b>Measured</b>: <c>GoldenColonyProbe</c> on <c>origin/main</c> (804c2e6a) and on
+        /// the branch is identical on all three boards, line for line — food, rest, mood, work
+        /// progress, the shared skills' experience and passions, jobs, and where every pawn
+        /// stands.</para>
+        ///
+        /// <para><b>And again at the ranged line's merge with <c>main</c> (2a1cfa63), for the same
+        /// reason.</b> Medical supplies had taken the seventh skill slot first, so Shooting is the
+        /// eighth, <c>Job_AttackRanged</c> the twenty-seventh job and the pistol the fifteenth
+        /// item: longer hashed tables, dealt after everything main deals. <b>Measured</b> the same
+        /// way: <c>GoldenColonyProbe</c> on <c>origin/main</c> and on the merge is identical on all
+        /// three boards, all nine census lines.</para>
+        ///
+        /// <para><b>And a third time at the merge with the kitchen (<c>origin/main</c> fc6b8ba6).</b>
+        /// Cooking took the eighth skill, so Shooting is the ninth, <c>Job_AttackRanged</c> the
+        /// twenty-eighth job and the pistol the eighteenth item. <b>Measured</b> the same way; the
+        /// merge commit says what the probe found.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -484,8 +507,9 @@ namespace Odyssey.Tests.Sim
             // Re-baked 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1), on top of the weather's own re-bake: the combined job, item,
             // skill and incident tables moved the hash the same way any content append does.
-            Generated = 530566901186481748UL,
-            Simulated = 10523218902147163138UL,
+            // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            Generated = 14881731598722590511UL,
+            Simulated = 5300718913518332604UL,
         };
 
         /// <summary>
@@ -545,8 +569,9 @@ namespace Odyssey.Tests.Sim
             // on every colonist and Job_Cook's counter pair, on the wild-food board. Re-taken from
             // the merged code; GoldenColonyProbe on main (2a1cfa63) and on the merge is identical on
             // all three boards, so the hash sees more and no colony does anything different.
-            Generated = 1045594947919303250UL,
-            Simulated = 11044222309838476707UL,
+            // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            Generated = 13308657285820379759UL,
+            Simulated = 16876557663456853837UL,
         };
 
         /// <summary>
@@ -588,8 +613,9 @@ namespace Odyssey.Tests.Sim
             // 2026-09-25, weather-world: it rains here all run — pace and animal shelter (remarks).
             // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
-            Generated = 13777213757865155735UL,
-            Simulated = 9495214819731883809UL,
+            // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            Generated = 14180088319569370523UL,
+            Simulated = 7648152829369388509UL,
         };
     }
 }

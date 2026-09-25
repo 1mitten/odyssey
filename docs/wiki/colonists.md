@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-60 entries, 42 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+61 entries, 43 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -76,6 +76,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Cooking** | `ui.status.cooking` | At an electric cooker or a campfire, or fetching food for the pan <br>**Needs:** a figure stirring a pan. Blocked on the missing human figure | no art | M3 |
 | **Sheltering** | `ui.status.sheltering` | An animal waiting out the rain under a roof or a tree, or walking to one | no art | WE |
 | **In the rain** | `ui.status.inrain` | A colonist under open sky while it rains, and walking slower for it. Said beside her pace | no art | WE |
+| **Shooting** | `ui.status.shooting` | Standing where the line is open and firing at a target | no art | RC |
 
 ## Pace and what it is made of
 

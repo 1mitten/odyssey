@@ -13380,3 +13380,91 @@ therefore peak-normalised on import, undoing the loudness their bakes set. The g
 committed with it off. The fix for the rest changes how loud every blow is, so it is its own PR, and
 it is unverified in Unity until somebody reads `GetData` on `combat-hit`.
 
+## 2026-09-25 — Ranged combat built: the pistol from the contracts to the gunshot
+
+The owner approved design 47 (*"approved - execute"*). Built the same day on `claude/ranged-combat`,
+stacked on PR #220: R0–R4, H1 and P1–P3. R5, R6, P4 and a player build are owed.
+
+**R0 moved every golden once and nothing moved them again.** A seventh skill made the hash see more
+of every colonist; the colony probe on `origin/main` and on the branch was identical on all three
+boards, line for line. Every later unit asserted the goldens and they held. That is the payoff of
+hashing the bullet registry only while something flies, and of putting the new job above
+`HashedAlways`.
+
+**Two of the design's rules would have been wrong in play, and the build changed them** (design 47
+§10). "The intended target on any crossed cell is a certain hit" would have turned most misses into
+hits, because a miss's line to its scatter cell usually crosses the target's own cell. So only a
+shot aimed true takes its target, and the near miss the owner asked to see falls out of that. And a
+colonist standing in the way of another colonist's bullet would have turned on her. She now
+remembers being hit and does not fight back.
+
+**The pistol keeps the sword pack's draw.** The design had keyed the draw off for a computed arc.
+But the pistol holsters at the left hip, and the sword draw from the left hip is a cross-draw,
+which is how a left-hip holster is drawn. An authored clip with its grasp moment already measured
+beats a computed arc; a shot mid-draw cuts it to the hand.
+
+**The catalogue lesson held again.** Rebuilding the module catalogue deleted 3,022 lines, the
+colonists' swatches, before `CharacterSwatches.Classify` put them back. After that the diff was the
+one pistol row. The lessons file already said this; reading the diff stat is what caught it.
+
+**Parallel lanes.** Line of sight (R1) and the tracer, flash and sound (P3) were built by agents in
+their own worktrees while R0–R4 and P1/P2 were built here. Both merged without a conflict. P3 found
+five places where §4c met the code differently, recorded in its §4c-ter. The most useful:
+`AudioImporter.normalize` has no scripting API, so the gunshot's normalise-off is written through
+the importer's serialised form.
+
+## 2026-09-25 — Guns after the first play: more accurate, hits that land, weapon quality
+
+The owner played the pistol: *"really decent and everything seemed to work well"*, but it missed a
+lot from a height, some shots went "way off", and hits did not connect with the target. All three
+had a cause in the code, and design 47 §10a has the table.
+
+**The misses from a height were arithmetic, not geometry.** The reference's curve, raised to the
+distance in cells, is harsh: a level-0 colonist hit 16 per cent at 12.5 m and 2 at 25. Fire at will
+engages anything in range, and a height gives clear lines to far targets, so most shots were long
+shots. The curve is raised; skill still buys the reach.
+
+**The shots going down were the old scatter.** It drew a miss's cell from a box round the target in
+the target's layer, which from a terrace often meant a cell inside the terrace. A miss now carries
+on past its target along its own line and ends where that line first stops.
+
+**Hits not connecting were the "real flight" rule working as designed.** A shot rolled to hit was
+walked to the cell the target stood in when it was fired, so a walking target was missed by most of
+them. The owner's words overrule the design: a shot aimed true now lands on its target wherever it
+stands, and only cover it stepped behind or a body that stepped in front can take it. The streak
+follows the body. Worth recording for the next time "realism" is proposed: the owner judged by what
+they saw, and a rule the player reads as a bug is a bug.
+
+**Weapon quality** was asked for in the same message. It reuses the beds' tiers and roll, with two
+new factors on each tier (damage and hit chance) for every weapon. It is rolled when a weapon is
+made, from a stand-in maker's skill until crafting exists: a find at 6, a bandit's gear at 2. It
+is saved under the format-10 bump this line already makes, and hashed only when set, so no golden
+moved (design 47 §11).
+
+*Sidearm* is *Pistol* now.
+
+## 2026-09-25 — The reach rule: a gun-holder next to an enemy clubs it
+
+The owner saw a pistol outclass a machete at one tile and asked what the reference does. Our own
+research had the answer on file (`a-10-projectile-path` finding 17): an adjacent enemy is fought
+in melee, gun or no gun, with a weak blow every gun carries. The design had departed from it for
+simplicity, recommending point-blank fire, and play showed the cost. Built as design 47 §12: the
+switch has one owner (`CombatSystem.SwapByReach`, after the jobs), an order survives the swap, an
+aim broken by an enemy stepping in is lost with its clock given back, and the gun's blow is data.
+The lesson worth keeping: the research recommended this and the design overrode it without a
+measurement. When a design departs from its own research, say what observation would prove the
+departure wrong. Here it was one tile of play.
+
+## 2026-09-25 — Ranged combat merged with main, and a big battle
+
+The owner played a big battle on the reach rule and said *"great job"*, so the line was made ready
+to merge. Main had moved sixty commits, and three of them took the handles the plan had warned
+were raced: the ranged job is 27, the pistol 17, Shooting 8, after medical supplies, the wild foods and the kitchen. Main had also changed what
+`Reachable` means — it now asks whether a colonist may work there as well as travel — and the
+melee line had already moved to `CanTravel`; the ranged line's two sites followed. The goldens
+moved once more and the colony probe diffs clean against main on every board. Two lessons. The
+textual merge silently dropped the closing tag of the last element in three Def files, because
+both sides appended after it, so resolving an append hunk needs a look at the join and not only
+the hunk. And a catalogue rebuild is not a neutral step: it re-resolved a colonist whose prefab
+name two packs share. The merged asset was already right, so the rebuild was thrown away.
+Design 47 §13.

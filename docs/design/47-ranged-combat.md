@@ -1,6 +1,12 @@
 # 47 — Ranged combat: the pistol
 
-**Status (2026-09-25): designed, nothing built.** Ground, interview, research and this document are
+**Status (2026-09-25): built, played three times and merged with `main` — ready to merge, PR #225**
+(owner, after a big battle: *"great job"*). R0–R4, H1 and P1–P3 are in, with the three rounds that
+play moved (§10a accuracy, §11 weapon quality, §12 the reach rule); §13 is the merge. **Owed**: R5
+(the soak with gunmen and the fifty-shooter benchmark), R6 (buildings under fire) and P4 (the frame
+with gunfire). What follows is the design-time status, kept as written.
+
+*Design-time*: designed, nothing built. Ground, interview, research and this document are
 the whole of the work so far. The plan is `docs/plans/ranged-combat.md`, the interview
 `docs/research/ranged-interview.md`, the research `a-10-ranged-combat.md`, `a-10-projectile-path.md`,
 `c-3d-shot-line.md`, `d-21-projectile-rendering.md`, `d-22-procedural-aim-and-recoil.md` and
@@ -712,6 +718,47 @@ how loud every chop, blow and stroke is** and wants a listen, so it is its own s
 one. **Unverified in Unity**: the evidence is the metas and the importer's documented behaviour;
 the check is `AudioClip.GetData` on `combat-hit` against the WAV's own −3.0 dBFS peak.
 
+### 4c-ter. As built (P3, 2026-09-25)
+
+`Presentation/World/ProjectileDirector.cs`, wired in `OdysseyBootstrap.LateUpdate` straight after
+the blood's draw, inside `FrameSection.Overlays`, with the blood's band (`LowestDrawnLayer` to
+`HighestVisibleLayer`). `CombatFeedback` hands it every `Shot` and every gun's `Hit` and `Miss`
+before it draws, so the director follows a bullet from its `Shot` even when no snapshot ever
+carried it — the 3× point-blank case — and learns where it ended from the impact's event. Where the
+build departs from, or had to settle, what §4c and §4c-bis say:
+
+- **The streak's shape is in its matrix.** `Odyssey/Tracer` reads the tail from the translation, the
+  line from the z column, the width and the fade from the lengths of the x and y columns (built
+  square to the line, so the matrix stays invertible). That is what lets the afterimage's fade ride
+  in the same bucket with no per-instance property to keep alive in a player. It follows that the
+  shader has **no fallback**: any other shader would draw the matrix as a transform. It is in
+  `ShaderInclusion.Required`, the always-included list and the keep-alive folder.
+- **The draw is counted through the renderer** (`ChunkRenderer.DrawOverlayInstances`, gated on
+  `SubmitToGpu`), as the blood's is, with an explicit world box, because a shader that places its own
+  vertices cannot be culled from the quad's bounds. Streaks and afterimages are one call, flashes a
+  second.
+- **"Stands on or is stepping out of the end cell"** is taken as `Cell == End || NextCell == End`:
+  a figure stepping *into* the end cell is drawn half on it, and ending the streak at the cell centre
+  there is the "stops in the air beside the body" the rule exists to prevent.
+- **A walls-down storey's clip plane is its own floor**, not the band's ceiling: the band still
+  reaches above it (walls-down hides stacked storeys, not layers), so the plane a bullet from it
+  crosses is the ceiling of what is drawn beneath.
+- **The muzzle is used only while `PawnFlags.Drawn` is set**; a holstered or absent prop starts the
+  streak at the shooter's drawn chest, else the start cell at chest height. It is latched on the
+  frame the bullet is first seen; the flash re-reads it each frame, so it rides the recoil.
+- **"A wall → the stone or timber chips the building-hit path already picks" — no such path
+  exists.** Nothing in presentation throws chips for a blow on a building; chips come only from the
+  work stroke. A bullet that strikes a building (a `Hit` with no target) throws the same dust as one
+  into the ground, until a unit gives building hits their material's chips.
+- **`importer.normalize` does not exist in the scripting API.** `AudioImporter` exposes
+  `forceToMono`, `loadInBackground` and the sample settings, and not the normalise switch, which is
+  why `AudioSetup` never set it. It is written through the importer's serialised form
+  (`AudioSetup.SetNormalize`), for the two gunshot families only, and the build throws if the field
+  cannot be found. The fix for every other clip stays its own PR.
+- **The shot's sound is chosen in `CombatFeedback.ShotSoundFor`**, at `ShotNearMetres` (70 m) from
+  `AudioDirector.ListenerPosition`, and plays from the shooter's drawn feet on the `Shot`'s frame;
+  `CombatSoundTiming` is untouched. Blood reads `damageKind != Blunt`, so a bullet bleeds as an edge.
+
 ### 4d. Interface
 
 Right-click on a hostile from a gun-holder already routes through `CombatOrders.Route` →
@@ -930,3 +977,141 @@ and one table of every state's pose and prop (§4b); a hit that ends on the draw
 afterimage for short flights, the paused bullet, the in-flight bound, the render queue against the
 rain, and the packs' particle effects as a look experiment rather than a dependency (§4c); and the
 gunshot, supplied, baked and levelled, with its wiring and voice budget (§4c-bis).
+
+## 10. Built, 2026-09-25
+
+Approved by the owner the same day (*"approved - execute"*) and built on
+`claude/ranged-combat`, stacked on PR #220. Units R0–R4, H1 and P1–P3 are in; R5 (the soak and
+the benchmark), R6 (buildings) and P4 (the frame measurement) are not, and neither is a player
+build. What the build did differently from the text above, each for a reason found in the code:
+
+| Where | The design said | Built | Why |
+|---|---|---|---|
+| §2c landing | the intended target on any crossed cell is a certain hit | **only on a shot aimed true**; a shot that missed passes its own target | a miss's line to its scatter cell usually crosses the target's cell, so "any crossed cell" would have turned most misses into hits and the hit chance into fiction; the near miss the owner asked to see is this rule |
+| §2c reaction | a struck colonist retaliates through `React` | **not when she was a bystander hit by a colonist's stray** — she remembers it (`Thought_AttackedByColonist`), she does not turn on the shooter | a colonist in the way is not attacked; retaliating would start a fight inside the firing line every time a shot went astray |
+| §2c experience | Shooting trains in `ApplySwing` | **at the shot**, in `CombatSystem.Fire` | a bullet that strikes a wall never reaches `ApplySwing`, and every shot trains, hit or miss |
+| §2d aim pace | the condition pace, accessor named at R3 | `Pawn.ConditionPerMille()` — hunger and temperature, floored at 700 | the one condition-only rate on the pawn; `WorkRatePerMille` needs a work type |
+| §2e swimming | the swim predicate design 20 uses | the shallow-water cost class on the shooter's cell | the swim is drawn by presentation off the water line; the simulation's only water fact is the cell's cost class |
+| §2e carrying | the load goes down first | nothing to do | every driver drops its load in its own cleanup, so no attack job ever starts carrying |
+| §3a clip rows | four empty pistol rows | **none declared** | see the draw below; a row is added the day a pistol clip exists, rather than four rows nobody reads |
+| §4b draw and holster | a computed 0.45 s arc, the sword rows keyed off | **the sword pack's draw and sheathe**, cut short to the hand by a shot | the pistol holsters at the left hip, and the sword's draw from the left hip is a cross-draw — which is what a left-hip holster is drawn with. The authored clip, with its grasp moment already measured, beats a computed arc. Without the pack, it snaps, as a sword does |
+| §4b aim | spine, chest and upper chest at 0.3 / 0.4 / 0.3 | spine and chest at 0.45 / 0.55 (yaw), 0.4 / 0.6 (pitch) | the figure binds no upper-chest bone |
+| §4b recoil | 12 % of the pitch into the shoulders | 25 % of it into the chest, backwards | the chest is the bone the pose pass already moves; tune it first, as §4b says |
+| §5 driver test | an unreachable target in sight is accepted | **not yet tested**: needs a terrace fixture where a target stands out of reach but in sight | a pen of walls with a gap in it is reachable; the test was rewritten to what it could honestly check, and this case is owed |
+
+### 10a. The owner's first play, 2026-09-25
+
+*"it's really decent and everything seemed to work well - but seemed to miss a lot from just a
+height up. Also some of the shots were way off like the projectile went down or not even in a place
+a gun would fire to so keep it more accurate. Also make sure shots that hit actually connect with
+the target directly"* — and *"rename "sidearm" to "Pistol""*.
+
+| Report | Cause | Change |
+|---|---|---|
+| misses a lot from a height | a height gives clear lines to far targets, fire at will takes them, and the reference's curve left a level-0 colonist at 16 % at 12.5 m and 2 % at 25 m | **the curve raised**: per cell 876 / 943 / 983 (was 747 / 903 / 951), the pistol's bands 95 / 85 / 65 / 45 % (was 80 / 70 / 40 / 30). 1, 5 and 10 cells: level 0 83 / 43 / 17 %, level 10 90 / 63 / 36 %, level 20 93 / 77 / 54 %. Skill still buys the reach |
+| shots way off, going down | a miss drew a cell from a 7 × 7 box round the target in its layer — from a height, often inside the terrace or off to one side — and the tracer was drawn all the way there | **a miss carries on past its target** along the line of fire, one to three cells by how bad the shot was (`RangedRules.MissCell`), and **ends where that line first stops** (`LineOfSight.StopCell`). Its streak passes 0.6 m beside the body and goes into the ground there (`ProjectileDirector.MissPoint`) |
+| hits not connecting | a shot aimed true was walked to the cell the target stood in *when fired*; a walking target had usually stepped on, so the bullet missed and the tracer ended at the old cell | **a shot aimed true lands on its target wherever it stands at the impact** — cover it stepped behind, or a body that stepped in front, still takes it, and nothing else does. `ProjectileView.Aimed` is published and the streak follows the target's drawn chest the whole flight. This reverses §2c's "a target can step out of a long shot", at the owner's word |
+| "Sidearm" | — | **Pistol** on every screen (`ui.item.pistol`, the debug rows) |
+
+## 11. Weapon quality, 2026-09-25
+
+The owner, the same day: *"can you give the guns quality like you do with beds (and apply this to
+all weapons) depending on the spawn/who crafted them - make sure this is included"*.
+
+**The beds' system, not a second one.** The five tiers are `QualityHandle`'s — Poor, Normal, Decent,
+Uber, Epic — and the roll is `QualityContent.Roll`, which centres a tier on the maker's skill so a
+novice never makes Epic and a master never makes Poor. A tier's `QualityDef` gains two numbers:
+
+| Tier | Damage | Hit chance |
+|---|---|---|
+| Poor | ×0.90 | ×0.90 |
+| Normal | ×1.00 | ×1.00 |
+| Decent | ×1.10 | ×1.05 |
+| Uber | ×1.20 | ×1.10 |
+| Epic | ×1.35 | ×1.15 |
+
+The reference's shape, a tenth a step and more at the top. INVENTED values in `Quality.xml`,
+tunable there. **Every weapon** takes it: the hit chance of a swing (`MeleeRules`) and of a shot
+(`RangedRules`), and the damage of both, and of a blow at a building.
+
+**Who made it.** Nothing is crafted yet, so every weapon is a find, and the maker's skill stands in
+for how good a find is (`WeaponQuality`):
+
+| How it arrived | Maker's skill | Rolls mostly |
+|---|---|---|
+| the debug menu's grant, the Arm row | 6 (`FoundSkill`) | Normal, sometimes Poor or Decent |
+| a bandit's own gear, the pistol bandit's included | 2 (`BanditSkill`) | Poor, sometimes Normal |
+| crafted, the day there is a bench | the crafter's skill | as a bed is, by its builder |
+
+**Where it lives.** `ColonyItem.Quality`, rolled once when the item is made (on its own stream,
+`PawnPurpose.WeaponQuality`, salted by the thing's id) and kept for life. It is saved in the item
+record from format 10, the unshipped bump this line already makes, and **hashed only when set**, so
+no golden moved. It is published on `ThingView.Quality` and, for the held weapon, as
+`odyssey.pawn.weapon.quality`, and carried into a fight on `Armament.Quality`. A weapon with no tier
+(from an older save, or a path that never rolled) fights as Normal. **The interface names it**:
+*Pistol (Decent)* on the item's pane, the colonist's weapon row and the gear row.
+
+**Not built**: quality changing what a weapon looks like, and crafting. Deterioration and a
+quality floor for traders are the reference's and are not in any plan.
+
+## 12. The reach rule, 2026-09-25
+
+The owner, after playing: *"the shooter seems more distinctly advantaged over the melee - IE if 1
+tile away - gun still shoots"*, then *"what does rimworld do?"*, then *"do it"*.
+
+**The reference's rule** (`a-10-projectile-path` finding 17, a player's guide via search, so medium
+confidence): *"When adjacent to an enemy, pawns will always fight in melee — even if they are
+holding a gun."* Every gun carries a weak melee attack for it. The research recommended taking it;
+§8 item 5 departed ("point-blank fire, no pistol-whip"), and play showed why that was wrong: a
+pistol hitting 83–93 % at one tile for 10, undodgeable, beat a machete up close.
+
+**Built:**
+
+- **An enemy within reach is clubbed, never shot.** Reach is `Melee.InReach`, the melee rule: the
+  eight neighbours on the same layer.
+- **The gun's blow** is its own block in the Def, `RangedDef.melee`: blunt, 5 damage, the fists'
+  120-tick cadence, trained on Melee, quality applied. `Armament.Melee` hands every melee path the
+  blow for a gun and the weapon itself for anything else.
+- **One owner of the switch**: `CombatSystem.SwapByReach`, after the jobs and before anything lands
+  or fires.
+  - In a ranged attack with an enemy in reach (`CombatJobs.EnemyInReach`), she swaps to a melee
+    attack on it. An aim in hand is lost unfired, with its clock given back.
+  - In a melee attack between swings, whose target has stepped away, she swaps back to shooting it.
+  - An order carries across the swap when the target is the one ordered (forced, to the death,
+    joining).
+- **A new attack starts right**: `CombatJobs.AttackJobFor(pawn, ctx, target)` asks reach too.
+- **Everybody**: a pistol bandit caught by a colonist clubs.
+- **No backing off to shoot.** The reference does not do it, and it invites kiting.
+
+**What it does to a fight**: a melee rush takes a few shots on its way in, then beats a lone gunman
+at arm's length. Melee fighters in front and shooters behind is the formation that works, which is
+the reference's balance.
+
+**Do not undo by tidying**: this replaces §7's "No minimum range" and §8 item 5.
+
+## 13. Merged with `main`, 2026-09-25
+
+Sixty commits of `main` came in at 2a1cfa63, and the kitchen (#227) at fc6b8ba6 the same evening — medical supplies (#184), foraging and the scenery
+(#223, #222), the home area (#214) among them — and three of them had taken the handles §3a said
+would race.
+
+- **The handles moved at the merge**: `Job_AttackRanged` is **27** (after Treat 23, Patient 24,
+  Forage 25 and the kitchen's Cook 26), `Item_Pistol` **17** (after medical supplies 11, the wild foods 12–13
+  and the kitchen's meals 14–16), `Skill_Shooting` **8** (after Medicine 6 and Cooking 7), so
+  `SkillIndex.Count` is **9**. `Jobs.xml`'s driver and
+  `trainsSkill` moved with them; `CombatContractTests` pins all three.
+- **Combat asks the physical question.** `main` made `PawnContext.Reachable` mean *can travel and may
+  work there* (the home area, design 43), and the melee line moved to `CanTravel`. The ranged line's
+  two sites — `AttackRangedJobDriver`'s approach and `CanFight` in `CombatThinkNodes` — followed, so a
+  colonist kept home still shoots, and closes on, an enemy outside it.
+- **Goldens re-baked once more, measured**: `GoldenColonyProbe` on `origin/main` and on the merge is
+  identical on all three boards, all nine census lines. The hash sees a ninth skill and longer job
+  and item tables; no colony did anything different. Content fingerprint re-taken.
+- **The textual merge dropped closing tags** in `Items.xml`, `Jobs.xml` and `Skills.xml` — both sides
+  appended after the same last element, and the shared `</…Def>` fell outside the conflict — and
+  doubled the closers of three `ByName` lists in `PawnContent.cs`. The fast tier found all six in one
+  run. Worth knowing for the next append-only merge: after resolving an XML or list hunk as *theirs
+  then ours*, look at the join.
+- **Tiers on the merge**: on the first merge, EditMode 4,011 / 3,975 / 0 failed, PlayMode 156 / 140 / 0 failed (a first full run had one intermittent failure, RescueFigureTests, not reproduced on the second with every rescue gate true) and a player build that boots into a colony clean; on the second, fast 1,747 Sim + 1,166 Hud and the three content gates. **Open**: `PathAllocationTests.ATickThatDoesNothingAllocatesNextToNothing` (Long) fails inside the full Long run on the second merge (an idle colony at 11.5 to over 16 bytes a tick against main's 3.3 in the same run) and passes alone at main's 3.3, so an earlier Long test leaves something behind that the ranged line then allocates on; not yet bisected. A catalogue rebuild was run and discarded: it re-resolved
+  an unrelated colonist (`SM_Chr_Hunter_Male_01`, two packs ship the name) and re-sampled its swatches,
+  and the merged asset was already exactly `main`'s plus the pistol row.

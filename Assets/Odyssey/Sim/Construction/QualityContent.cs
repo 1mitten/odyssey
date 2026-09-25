@@ -26,6 +26,18 @@ namespace Odyssey.Sim.Construction
         /// </summary>
         public int restEffectiveness;
 
+        /// <summary>
+        /// A weapon of this quality's damage, per mille of its figure (design 47 §11): the
+        /// reference's shape, a tenth a step, more at the top.
+        /// </summary>
+        public int weaponDamagePerMille = 1_000;
+
+        /// <summary>
+        /// A weapon of this quality's accuracy, per mille of the hit chance — a swing's as well as a
+        /// shot's (design 47 §11).
+        /// </summary>
+        public int weaponAccuracyPerMille = 1_000;
+
         /// <summary>The registry key the interface names this tier by. Never a label.</summary>
         public string iconKey = "";
     }
@@ -131,32 +143,32 @@ namespace Odyssey.Sim.Construction
                 // own bed spots have always given.
                 new QualityDef
                 {
-                    defName = "Quality_None", label = "nothing", restEffectiveness = 100,
+                    defName = "Quality_None", label = "nothing", restEffectiveness = 100, weaponDamagePerMille = 1000, weaponAccuracyPerMille = 1000,
                 },
 
                 new QualityDef
                 {
-                    defName = "Quality_Poor", label = "poor", restEffectiveness = 85,
+                    defName = "Quality_Poor", label = "poor", restEffectiveness = 85, weaponDamagePerMille = 900, weaponAccuracyPerMille = 900,
                     iconKey = "ui.quality.poor",
                 },
                 new QualityDef
                 {
-                    defName = "Quality_Normal", label = "normal", restEffectiveness = 100,
+                    defName = "Quality_Normal", label = "normal", restEffectiveness = 100, weaponDamagePerMille = 1000, weaponAccuracyPerMille = 1000,
                     iconKey = "ui.quality.normal",
                 },
                 new QualityDef
                 {
-                    defName = "Quality_Decent", label = "decent", restEffectiveness = 112,
+                    defName = "Quality_Decent", label = "decent", restEffectiveness = 112, weaponDamagePerMille = 1100, weaponAccuracyPerMille = 1050,
                     iconKey = "ui.quality.decent",
                 },
                 new QualityDef
                 {
-                    defName = "Quality_Uber", label = "uber", restEffectiveness = 125,
+                    defName = "Quality_Uber", label = "uber", restEffectiveness = 125, weaponDamagePerMille = 1200, weaponAccuracyPerMille = 1100,
                     iconKey = "ui.quality.uber",
                 },
                 new QualityDef
                 {
-                    defName = "Quality_Epic", label = "epic", restEffectiveness = 140,
+                    defName = "Quality_Epic", label = "epic", restEffectiveness = 140, weaponDamagePerMille = 1350, weaponAccuracyPerMille = 1150,
                     iconKey = "ui.quality.epic",
                 },
             };

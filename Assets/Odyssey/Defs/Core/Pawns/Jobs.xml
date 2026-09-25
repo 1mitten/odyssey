@@ -332,4 +332,17 @@
     <settleTicks>30</settleTicks>
   </JobDef>
 
+  <!--
+    The ranged attack (design 47 section 2d): stand where the line to the target is open and
+    shoot. Not casually interruptible, as the melee attack is not. Trains Skill_Shooting (8) per
+    SHOT, hit or miss, as the melee attack trains per swing: the gun's experiencePerSwing is the
+    amount (Items.xml), so experiencePerWorkTick is nought.
+  -->
+  <JobDef>
+    <defName>Job_AttackRanged</defName>
+    <driver>27</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <trainsSkill>8</trainsSkill>
+  </JobDef>
+
 </Defs>

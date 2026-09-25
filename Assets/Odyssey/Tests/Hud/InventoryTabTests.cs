@@ -178,7 +178,9 @@ namespace Odyssey.Tests.Hud
             Assume.That(6 + ItemLabels.Keys.Length, Is.GreaterThan(InventoryLayout.RowsPerPage),
                 "the fixture no longer overflows a page");
 
-            Assert.That(model.PageCount, Is.EqualTo(2));
+            // At least two: the fixture grows with the item table (the pistol made it three pages,
+            // design 47), and what is asserted is the paging and the heading, not the arithmetic.
+            Assert.That(model.PageCount, Is.GreaterThanOrEqualTo(2));
             Assert.That(model.Rows.Count, Is.EqualTo(InventoryLayout.RowsPerPagedPage),
                 "a paged table gives one row to its foot");
             model.SetPage(1);

@@ -39,11 +39,24 @@ namespace Odyssey.Hud
             "ui.res.berries", "ui.res.mushrooms",
             // The kitchen (design 48 §4), handles 14 to 16, after the wild foods: the meal, the vegetable meal, the burnt one.
             "ui.res.meal", "ui.res.meal.veg", "ui.res.meal.burnt",
+            // The pistol (design 47), ItemHandle 17, after the kitchen's meals.
+            "ui.item.pistol",
         };
 
         public static string IconKey(int def) =>
             def >= 0 && def < Keys.Length ? Keys[def] : "ui.res.scrap";
 
         public static string Label(int def) => Registry.Label(IconKey(def));
+
+        /// <summary>
+        /// A thing's name with how well it was made after it — "Pistol (Decent)" — or the bare name for
+        /// a thing with no tier (design 47 §11). Both words are the registry's; only the brackets are
+        /// the layout's.
+        /// </summary>
+        public static string Label(int def, int quality)
+        {
+            string key = QualityLabels.Key(quality);
+            return key.Length == 0 ? Label(def) : Label(def) + " (" + Registry.Label(key) + ")";
+        }
     }
 }

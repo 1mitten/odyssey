@@ -131,6 +131,10 @@ namespace Odyssey.Presentation.Audio
         // which sits on the same camera.
         Vector3 _listener;
 
+        /// <summary>Where the listener was at the last Sync: the camera. A gunshot measures its
+        /// distance from here to choose between the crack and the thump (design 47 §4c-bis).</summary>
+        public Vector3 ListenerPosition => _listener;
+
         // The two things the clock changes: the music, and the sound of being outdoors. Both are
         // a looping track per phase, crossfaded on a pair of ping-ponged voices, so both are one
         // class used twice rather than the same forty lines written out again.
