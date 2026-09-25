@@ -74,6 +74,14 @@ namespace Odyssey.Sim.Pawns
 
         public uint Seed { get; internal set; }
 
+        /// <summary>
+        /// The debug menu's <i>Jumps always fail</i> (design 46 §6): every jump over a stream falls
+        /// short while it is set, because a one-in-thirty event is not something a playtest can
+        /// wait for. <b>Debug only: unsaved and unhashed</b>, like the rest of the menu's switches —
+        /// a run that used it is not a run anybody compares against.
+        /// </summary>
+        public bool DebugJumpsAlwaysFail { get; set; }
+
         /// <summary>The standing orders, when the world has them. Null in a bare pawn fixture.</summary>
         public DesignationGrid? Designations { get; set; }
 
@@ -117,6 +125,13 @@ namespace Odyssey.Sim.Pawns
         public Weather.WeatherSystem? Weather { get; set; }
 
         /// <summary>
+        /// Where the rain stops, column by column: the one owner of "is this cell under cover"
+        /// (design 43 §6). Pace, growth and an animal looking for cover all ask it. Null in a bare
+        /// pawn fixture, where nothing is under cover and there is no weather to be under.
+        /// </summary>
+        public World.SkyColumns? Sky { get; set; }
+
+        /// <summary>
         /// The power grid (design 32): lines, the orders for them, the buildings that make and
         /// spend power, and the nets between. Null in a bare pawn fixture, exactly as
         /// <see cref="Temperature"/> is — a fixture that never meant to wire anything has nothing
@@ -146,8 +161,10 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// The presentation chunk grid, when a renderer is attached, so a job that edits the world
-        /// can say which chunk to re-mesh. Null for a purely headless run.
+        /// The chunk grid a job that edits the world tells which cell changed: the drawing re-meshes
+        /// the chunk, and the sky map (<see cref="Sky"/>) recomputes the column. Every colony has
+        /// one — <c>ColonyWorld.Build</c> makes its own when no renderer hands one in, because
+        /// since design 43 the simulation reads it too. Null only in a bare pawn fixture.
         /// </summary>
         public ChunkGrid? Chunks { get; set; }
 
