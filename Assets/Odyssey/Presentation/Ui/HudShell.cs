@@ -898,6 +898,7 @@ namespace Odyssey.Presentation.Ui
             MarkWalls();
             ReadBarKeys();
             UpdateContextMenu();
+            UpdateGearPopovers();
 
             // The roster sweep ends when the button does, wherever the pointer happens to be when
             // it ends — a card's own PointerUp never arrives if the release landed off the strip.

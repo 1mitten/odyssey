@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Hud;
 
@@ -46,6 +47,16 @@ namespace Odyssey.Tests.Hud
             Assert.That(GearLayout.PopoverLeft(0, HudLayout.InspectWidth), Is.EqualTo(569));
             Assert.That(GearLayout.PopoverLeft(HudLayout.Edge, HudLayout.InspectWidth),
                 Is.GreaterThan(HudLayout.Edge + HudLayout.InspectWidth));
+        }
+
+        /// <summary>The lock is a shackle and a body, the chevron one stroke; both parse and stay in the 24 box.</summary>
+        [Test]
+        public void TheTwoMarksParse()
+        {
+            IReadOnlyList<SvgPath.Subpath> lockMark = SvgPath.Parse(HudIcons.Lock);
+            Assert.That(lockMark, Has.Count.EqualTo(2), "the shackle and the body");
+            Assert.That(lockMark[1].Closed, Is.True);
+            Assert.That(SvgPath.Parse(HudIcons.ChevronDown), Has.Count.EqualTo(1));
         }
 
         [Test]

@@ -1692,7 +1692,10 @@ namespace Odyssey.Hud
         /// loadout of the colonist on the pane, refreshed with the Health tab on the pane's cadence
         /// and rebuilt only when something it shows moved.
         /// </summary>
-        public readonly GearModel Gear = new GearModel();
+        public readonly GearModel Gear = new GearModel { Preview = new GearPreview() };
+
+        /// <summary>The Gear tab's preview (design 47 §4), the debug menu's switch: the one the model reads.</summary>
+        public GearPreview GearPreview => Gear.Preview!;
 
         /// <summary>
         /// The draft's key names, one per face of the one button (design 33 §2f). Public so the

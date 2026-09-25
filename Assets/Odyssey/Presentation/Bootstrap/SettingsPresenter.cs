@@ -130,6 +130,7 @@ namespace Odyssey.Presentation.Bootstrap
             // One key, one rule, one place. The order itself is the director's and is tested
             // without an engine; all that happens here is the doing of it.
             switch (_director.Escape(
+                        _shell != null && _shell.GearPopoverOpen,
                         _shell != null && _shell.ContextMenuOpen,
                         _designate != null && _designate.ToolArmed,
                         _shell != null && _shell.BuildPaletteOpen,
@@ -148,6 +149,10 @@ namespace Odyssey.Presentation.Bootstrap
                     // The menu a right-click raised at the pointer (design 33 §7a): the last thing
                     // raised, so the first thing Escape puts away.
                     _shell?.CloseContextMenu();
+                    break;
+                case EscapeAction.CloseGearPopover:
+                    // A popover the Gear tab raised beside the pane (design 47 §3).
+                    _shell?.CloseGearPopovers();
                     break;
                 case EscapeAction.DisarmTool:
                     _designate?.PutToolAway();

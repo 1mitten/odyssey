@@ -31,6 +31,13 @@ namespace Odyssey.Hud
         public const string ChevronLeft = "M15 5 8 12l7 7";
         public const string ChevronRight = "M9 5l7 7-7 7";
 
+        /// <summary>
+        /// The Gear tab's two marks (design 47 §2, Claude Design's paths): the lock on a pack slot
+        /// with no pack, and the loadout cell's down chevron — the right one turned a quarter.
+        /// </summary>
+        public const string Lock = "M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5z";
+        public const string ChevronDown = "M5 9l7 7 7-7";
+
         /// <summary>The path registered under an icon key, or null for a key with none.</summary>
         public static string? PathOf(string iconKey) => iconKey switch
         {

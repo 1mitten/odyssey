@@ -224,6 +224,13 @@ namespace Odyssey.Hud
         /// tool down instead. Appended rather than placed by rung so no value moves.
         /// </summary>
         CloseContextMenu,
+
+        /// <summary>
+        /// Close a Gear tab popover — an item's, Pick from stores or the loadout picker (design 47
+        /// §3). Second from the top: raised from the pane by a click, standing beside it, and the
+        /// last thing the player opened unless a right-click came after it. Appended so no value moves.
+        /// </summary>
+        CloseGearPopover,
     }
 
     /// <summary>
@@ -1761,8 +1768,23 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The same rule with the Assign tab in it (design 43 §6), which docks in the Work tab's
-        /// corner beside the others and unwinds at their rung. The one the presenter calls.
+        /// corner beside the others and unwinds at their rung.
         /// </summary>
+        /// <summary>
+        /// The whole rule with the Gear tab's popovers in it (design 47 §3): under the context menu,
+        /// over everything else, so Escape puts away the popover before the tab, the pane or a tool.
+        /// The one the presenter calls.
+        /// </summary>
+        public EscapeAction Escape(bool gearPopoverOpen, bool contextMenuOpen, bool toolArmed, bool paletteOpen,
+            bool menuOpen, bool workOpen, bool almanacOpen, bool animalsOpen, bool inventoryOpen,
+            bool researchOpen, bool assignOpen, MenuScreen? startScreen)
+        {
+            if (contextMenuOpen) return EscapeAction.CloseContextMenu;
+            if (gearPopoverOpen) return EscapeAction.CloseGearPopover;
+            return Escape(false, toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
+                inventoryOpen, researchOpen, assignOpen, startScreen);
+        }
+
         public EscapeAction Escape(bool contextMenuOpen, bool toolArmed, bool paletteOpen, bool menuOpen,
             bool workOpen, bool almanacOpen, bool animalsOpen, bool inventoryOpen, bool researchOpen,
             bool assignOpen, MenuScreen? startScreen)

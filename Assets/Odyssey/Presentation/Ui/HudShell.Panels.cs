@@ -221,6 +221,7 @@ namespace Odyssey.Presentation.Ui
             if (MenuOpen) ToggleMenu(false);
             CloseBedPicker();
             CloseContextMenu();
+            CloseGearPopovers();
         }
 
         /// <summary>

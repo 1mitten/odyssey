@@ -1001,6 +1001,11 @@ namespace Odyssey.Presentation.Ui
 
         void OnSessionChanged()
         {
+            // The Gear tab's preview is a session's, never a save's (design 47 §4): off in each new one.
+            _gearPreview.Reset();
+            CloseGearPopovers();
+            RefreshGearPreviewRow();
+
             // A world arriving from the start screen is drawn behind the curtain for a few frames
             // (CurtainFrames); Update counts them down. Anything else — a session torn down, the
             // shell attaching to a world that is already up — shows at once.

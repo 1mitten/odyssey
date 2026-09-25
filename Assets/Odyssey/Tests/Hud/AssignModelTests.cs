@@ -173,6 +173,19 @@ namespace Odyssey.Tests.Hud
                 assignOpen: false, null), Is.EqualTo(EscapeAction.OpenPanel), "the control: nothing open");
         }
 
+        /// <summary>A Gear tab popover goes before anything but a right-click's menu (design 47 §3).</summary>
+        [Test]
+        public void EscapeClosesAGearPopoverBeforeThePaneOrATool()
+        {
+            var settings = new SettingsDirector();
+            Assert.That(settings.Escape(true, false, true, false, false, false, false, false, false, false,
+                assignOpen: false, null), Is.EqualTo(EscapeAction.CloseGearPopover), "before the tool");
+            Assert.That(settings.Escape(true, true, false, false, false, false, false, false, false, false,
+                assignOpen: false, null), Is.EqualTo(EscapeAction.CloseContextMenu), "the right-click's menu first");
+            Assert.That(settings.Escape(false, false, true, false, false, false, false, false, false, false,
+                assignOpen: false, null), Is.EqualTo(EscapeAction.DisarmTool), "the control: no popover");
+        }
+
         [Test]
         public void TheBarsAssignItemIsLiveOnF4()
         {

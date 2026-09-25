@@ -122,7 +122,7 @@ namespace Odyssey.Hud
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey,
             SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
-            JumpsFailKey,
+            JumpsFailKey, GearPreviewKey,
             WeatherTabKey, WeatherClearKey, WeatherOvercastKey, WeatherDrizzleKey, WeatherRainKey,
             WeatherDownpourKey, WeatherStormKey, RainParticlesKey, WetGlossKey,
         };
@@ -196,6 +196,12 @@ namespace Odyssey.Hud
         /// Sends <see cref="IntentKind.DebugJumpsFail"/> with <c>A</c> 1 or 0.
         /// </summary>
         public const string JumpsFailKey = "ui.debug.jumpsfail";
+
+        /// <summary>
+        /// Dress every colonist's Gear tab in a made-up kit (design 47 §4), so the tab can be judged
+        /// before anything is worn. Interface state only: nothing is sent, saved or hashed.
+        /// </summary>
+        public const string GearPreviewKey = "ui.debug.gearpreview";
 
         /// <summary>The bandit (design 33 §1): a hostile person, the same intent as the colonist's with a kind.</summary>
         public const string SpawnBanditKey = "ui.debug.spawnbandit";
