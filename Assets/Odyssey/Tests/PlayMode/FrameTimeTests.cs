@@ -4339,6 +4339,127 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// Where a chunk's meshing time goes (design 38 §20d owed it; <c>06-rendering-and-camera.md</c>
+        /// §6c.7 sized the budget on 0.18 ms a chunk, and the skin took it to about 0.43). The played
+        /// meadow on Standard and Huge, a whole-board re-mesh with the budget off, timed by the
+        /// renderer's own per-chunk stopwatch rather than the frame's delta: the whole, the mesher's
+        /// phases (set-up, the cell walk, the grass sort, the skin), the ground-field refresh after it,
+        /// the indirect regather the next frame pays, and then each part left out in turn — its price
+        /// is the difference. Three rounds, the lowest kept, all in one world.
+        /// </summary>
+        [UnityTest, Explicit("a measurement for a decision, not a test"), Timeout(1800000)]
+        public IEnumerator TheMeshingByPart()
+        {
+            var lines = new List<string>();
+            var arms = new (string Name, ChunkMesher.MeshPart Skip, bool Tufts, bool Dressing, bool Memo)[]
+            {
+                ("everything", ChunkMesher.MeshPart.None, true, true, true),
+                ("relief memo off", ChunkMesher.MeshPart.None, true, true, false),
+                ("no tufts", ChunkMesher.MeshPart.None, false, true, true),
+                ("no dressing", ChunkMesher.MeshPart.None, true, false, true),
+                ("no terrain", ChunkMesher.MeshPart.Terrain, true, true, true),
+                ("no banks", ChunkMesher.MeshPart.Bank, true, true, true),
+                ("no floors", ChunkMesher.MeshPart.Floor, true, true, true),
+                ("no edifices", ChunkMesher.MeshPart.Edifice, true, true, true),
+                ("no crops", ChunkMesher.MeshPart.Crop, true, true, true),
+                ("no sort", ChunkMesher.MeshPart.Sort, true, true, true),
+                ("no skin", ChunkMesher.MeshPart.Skin, true, true, true),
+            };
+            foreach ((string board, int side) in new[] { ("standard", 120), ("huge", 240) })
+            {
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                    out OdysseyBootstrap boot, side, side, 16);
+                ChunkRenderer? renderer = null;
+                try
+                {
+                    yield return TimeFrames($"meshing/{board}/warm", boot, WarmupFrames, _ => { });
+                    renderer = boot.Renderer!;
+                    ChunkMesher mesher = renderer.Mesher;
+                    int budget = renderer.MeshBudgetPerFrame;
+                    renderer.MeshBudgetPerFrame = 0;
+                    var best = new double[arms.Length, 8];
+                    for (int a = 0; a < arms.Length; a++)
+                        for (int k = 0; k < 8; k++) best[a, k] = double.MaxValue;
+                    int chunks = 0;
+                    for (int round = 0; round < 3; round++)
+                    for (int a = 0; a < arms.Length; a++)
+                    {
+                        mesher.SkipForMeasure = arms[a].Skip;
+                        renderer.Tufts = arms[a].Tufts;
+                        renderer.Dressing = arms[a].Dressing;
+                        GroundRelief.MemoEnabled = arms[a].Memo;
+                        // The first re-mesh after a switch builds cold; the second is the one timed.
+                        boot.Model!.Remesh();
+                        yield return null;
+                        for (int settle = 0; settle < 5; settle++) yield return null;
+                        mesher.ResetPhaseTimes();
+                        boot.Model!.Remesh();
+                        yield return null;
+                        int meshed = renderer.ChunksMeshedThisFrame;
+                        double mesh = renderer.MeshingMs, field = renderer.FieldRefreshMs;
+                        double regather = renderer.IndirectRegatherMs;
+                        yield return null;
+                        regather += renderer.IndirectRegatherMs;
+                        if (meshed == 0) continue;
+                        chunks = meshed;
+                        double[] v =
+                        {
+                            (mesh + field) / meshed, mesh / meshed, mesher.PrologueMs / meshed, mesher.CellsMs / meshed,
+                            mesher.SortMs / meshed, mesher.SkinMs / meshed, field / meshed, regather / meshed,
+                        };
+                        for (int k = 0; k < v.Length; k++) best[a, k] = Math.Min(best[a, k], v[k]);
+                    }
+                    renderer.MeshBudgetPerFrame = budget;
+                    Assert.That(chunks, Is.GreaterThan(0), $"{board}: nothing was re-meshed");
+
+                    // The shipped budget draining a whole-board re-mesh: the count alone, then the
+                    // count and the time together. Frames to drain, and the worst frame's meshing.
+                    double timeBudget = renderer.MeshBudgetMs;
+                    foreach (bool timed in new[] { false, true, false, true })
+                    {
+                        renderer.MeshBudgetMs = timed ? timeBudget : 0d;
+                        boot.Model!.Remesh();
+                        int frames = 0, total = 0, mostChunks = 0;
+                        double worst = 0d, sum = 0d;
+                        do
+                        {
+                            yield return null;
+                            frames++;
+                            total += renderer.ChunksMeshedThisFrame;
+                            mostChunks = Math.Max(mostChunks, renderer.ChunksMeshedThisFrame);
+                            double spent = renderer.MeshingMs + renderer.FieldRefreshMs;
+                            worst = Math.Max(worst, spent);
+                            sum += spent;
+                        } while ((renderer.ChunksMeshDeferred > 0 || renderer.ChunksMeshedThisFrame > 0) && frames < 2000);
+                        lines.Add($"{board} drain, {(timed ? $"{budget} chunks or {timeBudget:0.0} ms" : $"{budget} chunks")}: " +
+                                  $"{total} chunks over {frames} frames, worst frame {worst:0.00} ms meshing " +
+                                  $"({mostChunks} chunks), mean {sum / Math.Max(1, frames):0.00} ms");
+                    }
+                    renderer.MeshBudgetMs = timeBudget;
+                    for (int a = 0; a < arms.Length; a++)
+                        lines.Add($"{board} {arms[a].Name}: {best[a, 0]:0.000} ms a chunk " +
+                                  $"(mesh {best[a, 1]:0.000} = set-up {best[a, 2]:0.000} + cells {best[a, 3]:0.000} + " +
+                                  $"sort {best[a, 4]:0.000} + skin {best[a, 5]:0.000}; field {best[a, 6]:0.000}; " +
+                                  $"regather after {best[a, 7]:0.000}), " +
+                                  $"{(a == 0 ? "" : $"saves {best[0, 0] - best[a, 0]:0.000}, ")}{chunks} chunks");
+                }
+                finally
+                {
+                    if (renderer != null)
+                    {
+                        renderer.Mesher.SkipForMeasure = ChunkMesher.MeshPart.None;
+                        renderer.Tufts = true;
+                        renderer.Dressing = true;
+                    }
+                    GroundRelief.MemoEnabled = true;
+                    UnityEngine.Object.Destroy(root);
+                }
+                yield return null;
+            }
+            Debug.Log($"[FrameTime] meshing by part ({SystemInfo.graphicsDeviceName}):\n" + string.Join("\n", lines));
+        }
+
+        /// <summary>
         /// The ground skin against the boxes it replaces (<c>docs/design/38-meadow-overhaul.md</c>
         /// §20): the played meadow on Standard and Huge, each at 640 x 480 and into a 3840 x 2160
         /// target, with <see cref="GroundSkin.Enabled"/> off and on in one world, and a whole-board

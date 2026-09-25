@@ -23,6 +23,12 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does changing a graphics setting still hitch, and is the board seen catching up?**
+  (`claude/mesh-cost`, design 38 §26.) Open Settings → Graphics and flick the Grass ladder, then Ground
+  relief, with the camera over thick meadow; then dig out a row of cells. A board-wide re-mesh now
+  spends at most about 2 ms a frame and takes about a third of a second to finish. Wrong answers: a
+  visible hitch when a setting changes, or chunks of old grass visibly swapping to new a few at a time.
+
 - **Can you click a campfire a terrace above you while building?** (`claude/terrace-click`,
   design 42 §3a amended.) On a lower terrace, open Build and raise a campfire on the terrace one step
   up, then click it with the palette still open: its pane should open, with *Make this the hearth*.
