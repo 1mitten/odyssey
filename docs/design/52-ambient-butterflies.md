@@ -1,6 +1,6 @@
 # 52 — Ambient butterflies, and the night they light
 
-**Built 2026-09-25, not yet played.** Branch `claude/ambient-butterflies`, worktree
+**Built 2026-09-26, not yet played — draft PR #234.** Branch `claude/ambient-butterflies`, worktree
 `D:\code\odyssey-butterflies`. The owner's request: *"decent looking and moving procedural generated
 butterflies (if performant) - if it does hinder performance - make sure it's a graphic setting. Also
 could you make them illuminate at night with varying colours to make night time look spectacular."*
