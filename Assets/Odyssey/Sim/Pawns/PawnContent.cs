@@ -207,7 +207,11 @@ namespace Odyssey.Sim.Pawns
         /// faction. Claimed by the combat contracts step.
         /// </summary>
         public const int Bandit = 3;
-        public const int Count = 4;
+
+        /// <summary>The frog of the banks (design 30 §8): kind 4, species 3.</summary>
+        public const int CulvertFrog = 4;
+
+        public const int Count = 5;
     }
 
     /// <summary>
@@ -910,6 +914,20 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public bool nocturnal;
 
+        /// <summary>
+        /// Keeps within this many cells of water, Chebyshev, or 0 for anywhere (design 30 §8): the
+        /// frog's bank. Every leg its mind picks ends this close to a water cell on its own layer
+        /// or the one below, and an animal that finds itself further out heads back to the
+        /// nearest bank it can reach. A world seeds it on the bank habitat.
+        /// </summary>
+        public int bankRadius;
+
+        /// <summary>
+        /// Stays out in the rain rather than heading for cover (design 43 §6, design 30 §8). The
+        /// shelter node's own flag, named in its summary for the day a species wanted it: a frog.
+        /// </summary>
+        public bool ignoresRain;
+
         /// <summary>The figure catalogue entry presentation draws this species with. Not read by the simulation.</summary>
         public string figureKey = string.Empty;
 
@@ -1598,9 +1616,11 @@ namespace Odyssey.Sim.Pawns
             content.Kinds = ByName<PawnKindDef>(defs,
                 "PawnKind_Colonist", "PawnKind_MiddenHog", "PawnKind_DuctRat",
                 // The debug-spawned hostile person (design 33 §1), appended.
-                "PawnKind_Bandit");
+                "PawnKind_Bandit",
+                // The frog of the banks (design 30 §8), appended.
+                "PawnKind_CulvertFrog");
             content.Species = ByName<SpeciesDef>(defs,
-                "Species_Person", "Species_MiddenHog", "Species_DuctRat");
+                "Species_Person", "Species_MiddenHog", "Species_DuctRat", "Species_CulvertFrog");
             content.KindSpecies = new int[content.Kinds.Length];
             for (int k = 0; k < content.Kinds.Length; k++)
             {

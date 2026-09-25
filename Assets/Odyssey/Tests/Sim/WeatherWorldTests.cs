@@ -251,6 +251,27 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Pawns.Sky!.ShelteredFromSky(job.TargetCell), Is.True, "it was sent somewhere dry");
         }
 
+        /// <summary>
+        /// <b>A frog stays out in the rain</b> (design 30 §8): <c>SpeciesDef.ignoresRain</c>, the
+        /// flag the shelter node's summary named for the day a species wanted it. The hog beside
+        /// it in the same downpour is the control.
+        /// </summary>
+        [Test]
+        public void AFrogStaysOutInTheRainWhereAHogGoesForCover()
+        {
+            var (colony, hog, _) = HogAndTree();
+            Pawn frog = colony.Pawns.Pawns.Spawn(Ground(colony, 12, 14), PawnKindIndex.CulvertFrog);
+            Assume.That(colony.Pawns.Sky!.ShelteredFromSky(frog.Cell), Is.False, "the frog starts in the open");
+            var node = new AnimalShelterThinkNode();
+            var job = new Job();
+
+            SetSky(colony, WeatherKind.Rain, 1000);
+            SettleSky(colony);
+            Assert.That(node.TryGiveJob(hog, colony.Pawns, job), Is.True, "the control: the hog minds the rain");
+            Assert.That(AnimalShelterThinkNode.Minds(frog, colony.Pawns), Is.False);
+            Assert.That(node.TryGiveJob(frog, colony.Pawns, job), Is.False, "the frog does not");
+        }
+
         [Test]
         public void AnAnimalCaughtInTheRainGoesUnderTheTree()
         {

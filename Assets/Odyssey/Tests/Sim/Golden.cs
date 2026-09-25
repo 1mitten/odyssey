@@ -570,8 +570,15 @@ namespace Odyssey.Tests.Sim
             // the merged code; GoldenColonyProbe on main (2a1cfa63) and on the merge is identical on
             // all three boards, so the hash sees more and no colony does anything different.
             // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
-            Generated = 13308657285820379759UL,
-            Simulated = 16876557663456853837UL,
+            // 2026-09-25, the culvert frog (design 30 §8): the meadow's table gained frogs on the
+            // bank and its density went 15 -> 21, so the board is seeded with three more animals
+            // (pawns 15 -> 18). GoldenColonyProbe against main (4c40e189): items, experience, passions and
+            // failed jobs identical; food, rest and mood differ by exactly three animals' untouched
+            // needs (3 x 800 / 800 / 600), and the rest — pawn cells, progress, wanders and waits
+            // started — is the animals' own. The colonists did the same things. The bare meadow
+            // and the city did not move: neither table has a frog.
+            Generated = 8386321266992628941UL,
+            Simulated = 15593654947337272922UL,
         };
 
         /// <summary>

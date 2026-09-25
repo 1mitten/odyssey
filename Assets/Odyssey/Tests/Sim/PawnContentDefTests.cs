@@ -310,7 +310,11 @@ namespace Odyssey.Tests.Sim
         // Medicine rows were dropped for design 37's (design 43 §15), so no handle moved. No golden
         // moved: the ledger is hashed only while a pawn has anything on it. Re-taken from the
         // merged pack.
-        const ulong ContentFingerprint = 5726159748193892954UL;
+        //
+        // 2026-09-25, the culvert frog (design 30 §8): Species_CulvertFrog and PawnKind_CulvertFrog
+        // appended (kind 4, species 3), and SpeciesDef gained bankRadius and ignoresRain, both
+        // nought/false on every other species. Taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 13268721479991923745UL;
 
 
         [Test]

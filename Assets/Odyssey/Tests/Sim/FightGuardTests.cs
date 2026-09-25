@@ -616,7 +616,11 @@ namespace Odyssey.Tests.Sim
             TestContext.WriteLine($"mixed brawls: {swings} swings over twelve seeds; {joining} pawn-ticks joining another colonist's fight");
             Assert.That(swings, Is.GreaterThan(200), "the control: the fights never happened");
             Assert.That(joining, Is.GreaterThan(0), "the control: no drafted colonist joined a fight");
-            Assert.That(kinds, Is.EqualTo((1 << PawnKindIndex.Count) - 1), "the control: not every kind fought");
+            // Every kind that fights: the culvert frog carries no attack and never turns
+            // (design 30 §8), so it is neither spawned here nor expected.
+            const int fighters = (1 << PawnKindIndex.Colonist) | (1 << PawnKindIndex.MiddenHog)
+                | (1 << PawnKindIndex.DuctRat) | (1 << PawnKindIndex.Bandit);
+            Assert.That(kinds, Is.EqualTo(fighters), "the control: not every kind fought");
         }
     }
 }

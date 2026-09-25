@@ -1060,10 +1060,20 @@ namespace Odyssey.Sim.Pawns
                 if (EdgeTarget.Fill(pawn, ctx, job, pawn.OwnMode)) return true;
             }
 
+            // A bank animal off its bank goes back to it before anything else (design 30 §8):
+            // spawned in a dry field, or run off by a fight. Where no water is near enough to
+            // find, it wanders like anyone rather than standing still for ever.
+            int bank = species.bankRadius;
+            if (bank > 0 && !Wildlife.WaterBank.Near(ctx.Cells, pawn.Cell, bank))
+            {
+                if (BankTarget.Fill(pawn, ctx, job, bank, pawn.OwnMode)) return true;
+                bank = 0;
+            }
+
             bool active = IsNight(ctx) == species.nocturnal;
             int legPerCent = active ? LegPerCent : LegPerCent / OffHoursFactor;
             if (rng.NextInt(100) < legPerCent &&
-                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, pawn.OwnMode, avoidSlopes: true))
+                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, pawn.OwnMode, avoidSlopes: true, bankRadius: bank))
                 return true;
 
             int span = species.restTicksMax > species.restTicksMin
@@ -1129,7 +1139,7 @@ namespace Odyssey.Sim.Pawns
         public static bool Minds(Pawn pawn, PawnContext ctx)
         {
             Weather.WeatherSystem? weather = ctx.Weather;
-            return weather != null && ctx.Sky != null && !pawn.Leaving
+            return weather != null && ctx.Sky != null && !pawn.Leaving && !pawn.Species.ignoresRain
                 && weather.RainPerMille(weather.Now) >= RainGatePerMille;
         }
 
@@ -1446,7 +1456,9 @@ namespace Odyssey.Sim.Pawns
         /// and a body resting in it is drawn on the ramp and then snaps to the floor when it sets
         /// off). Walking <i>through</i> one is unchanged. Animals only, for now: a colonist's
         /// wander is the mental break's, and moving it would move every golden.</para>
-        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, int radius, TraverseMode mode, bool avoidSlopes)
+        /// <para><paramref name="bankRadius"/>, when above nought, refuses any destination further
+        /// than that from water (design 30 §8): the frog's legs all end on its bank.</para>
+        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, int radius, TraverseMode mode, bool avoidSlopes, int bankRadius = 0)
         {
             var rng = DeterministicRandom.ForTick(
                 ctx.Seed, ctx.CurrentTick, PawnPurpose.Wander ^ (uint)pawn.Id.Value);
@@ -1463,6 +1475,7 @@ namespace Odyssey.Sim.Pawns
                 int cell = size.Index(x, z, from.Y);
                 if (cell == pawn.Cell) continue;
                 if (avoidSlopes && ctx.Nav.Grid.CostClass[cell] == Worldgen.Natural.NaturalContent.CostClassSlope) continue;
+                if (bankRadius > 0 && !Wildlife.WaterBank.Near(ctx.Cells, cell, bankRadius)) continue;
                 if (!ctx.Reachable(pawn, cell, mode)) continue;
 
                 job.Reset(JobIndex.Wander);
@@ -1472,6 +1485,75 @@ namespace Odyssey.Sim.Pawns
             }
 
             return false;
+        }
+    }
+
+    /// <summary>
+    /// The way back to the water for an animal that keeps to a bank and has strayed from it
+    /// (design 30 §8). Looks outward ring by ring for the nearest water cell on the animal's own
+    /// layer or the one below, up to <see cref="SearchRadius"/>, and walks to the reachable cell
+    /// round it nearest the animal. Asked only while the animal is off its bank, so its cost —
+    /// a few thousand reads at worst — is paid by a stray and never by a frog at home.
+    /// </summary>
+    static class BankTarget
+    {
+        /// <summary>How far a stray looks for water before it gives up and wanders.</summary>
+        public const int SearchRadius = 20;
+
+        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, int bankRadius, TraverseMode mode)
+        {
+            GridSize size = ctx.Size;
+            Odyssey.Sim.World.CellGrid grid = ctx.Cells;
+            CellRef from = size.FromIndex(pawn.Cell);
+            for (int ring = 1; ring <= SearchRadius; ring++)
+            {
+                for (int dz = -ring; dz <= ring; dz++)
+                for (int dx = -ring; dx <= ring; dx++)
+                {
+                    if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz)) != ring) continue;
+                    int x = from.X + dx, z = from.Z + dz;
+                    if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
+                    for (int y = from.Y; y >= from.Y - 1 && y >= 0; y--)
+                    {
+                        if (!Worldgen.Natural.NaturalContent.IsWater(grid.Terrain[size.Index(x, z, y)])) continue;
+                        int target = NearestBankCell(pawn, ctx, x, z, y, bankRadius, mode);
+                        if (target < 0) continue;
+                        job.Reset(JobIndex.Wander);
+                        job.TargetCell = target;
+                        job.Mode = mode;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Of the cells round a water cell at (<paramref name="wx"/>, <paramref name="wz"/>) on its
+        /// layer or the one above — the bank stands a layer over a cut stream — the one nearest
+        /// the animal that it may enter and can reach, or −1.
+        /// </summary>
+        static int NearestBankCell(Pawn pawn, PawnContext ctx, int wx, int wz, int wy, int bankRadius, TraverseMode mode)
+        {
+            GridSize size = ctx.Size;
+            CellRef from = size.FromIndex(pawn.Cell);
+            int best = -1, bestDistance = int.MaxValue;
+            for (int y = wy; y <= wy + 1 && y < size.SizeY; y++)
+            for (int dz = -bankRadius; dz <= bankRadius; dz++)
+            for (int dx = -bankRadius; dx <= bankRadius; dx++)
+            {
+                int x = wx + dx, z = wz + dz;
+                if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
+                int cell = size.Index(x, z, y);
+                if (!ctx.Nav.Grid.CanEnter(cell, mode)) continue;
+                if (ctx.Nav.Grid.CostClass[cell] == Worldgen.Natural.NaturalContent.CostClassSlope) continue;
+                int distance = System.Math.Abs(x - from.X) + System.Math.Abs(z - from.Z);
+                if (distance >= bestDistance) continue;
+                if (!ctx.Reachable(pawn, cell, mode)) continue;
+                best = cell;
+                bestDistance = distance;
+            }
+            return best;
         }
     }
 

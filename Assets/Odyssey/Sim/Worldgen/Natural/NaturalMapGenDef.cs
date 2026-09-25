@@ -45,20 +45,28 @@ namespace Odyssey.Sim.Worldgen.Natural
         public MapType mapType = MapType.Natural;
 
         /// <summary>
-        /// The meadow's animals (design 30 §1): hog sounders in the woodland, rats by the rock.
-        /// The natural board's default whether or not <see cref="MakeWooded"/> is called, because
+        /// The meadow's animals (design 30 §1): hog sounders in the woodland, rats by the rock,
+        /// frogs in twos to fours on the banks of its water (§8). The natural board's default whether or not <see cref="MakeWooded"/> is called, because
         /// the untouched def has trees and rock too; <see cref="MakeBarren"/> is what clears it.
         /// </summary>
         public static Pawns.Wildlife.WildlifeEntry[] MeadowWildlife() => new[]
         {
             new Pawns.Wildlife.WildlifeEntry("PawnKind_MiddenHog", 3, 3, 5, Pawns.Wildlife.Habitat.Woodland),
             new Pawns.Wildlife.WildlifeEntry("PawnKind_DuctRat", 2, 1, 1, Pawns.Wildlife.Habitat.Rock),
+            new Pawns.Wildlife.WildlifeEntry("PawnKind_CulvertFrog", 2, 2, 4, Pawns.Wildlife.Habitat.Bank),
         };
+
+        /// <summary>
+        /// Animals per ten thousand reachable surface columns (design 30 §2). Fifteen until the
+        /// frogs; raised by the frogs' share of the weights (7/5) so that adding a kind left the
+        /// hogs and the rats as common as they were rather than dividing the same number three ways.
+        /// </summary>
+        public const int MeadowDensity = 21;
 
         public NaturalMapGenDef()
         {
             wildlife = MeadowWildlife();
-            wildlifePer10000Columns = 15;
+            wildlifePer10000Columns = MeadowDensity;
         }
 
         /// <summary>
@@ -146,7 +154,7 @@ namespace Odyssey.Sim.Worldgen.Natural
 
             // And its animals (design 30 §1), which the bare board this may follow had cleared.
             wildlife = MeadowWildlife();
-            wildlifePer10000Columns = 15;
+            wildlifePer10000Columns = MeadowDensity;
             return this;
         }
 
