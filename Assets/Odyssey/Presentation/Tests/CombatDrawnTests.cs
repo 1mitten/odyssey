@@ -8,6 +8,7 @@ using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pawns;
 using UnityEditor;
 using UnityEngine;
@@ -256,8 +257,46 @@ namespace Odyssey.Tests.Presentation
             foreach (CombatClipEntry entry in catalogue.Find(id)?.combat ?? new List<CombatClipEntry>())
             {
                 if (entry.clip == null) continue;
+                // A blow at 0 s passes the line below trivially and is drawn at the very start of
+                // its own wind-up: HeavyCombo01C measured that until its misspelt WindUp cut was
+                // read (design 33 §22).
+                Assert.That(entry.impactSeconds, Is.GreaterThan(0f),
+                    $"{entry.clipName} measured no impact; its WindUp cut was not found");
                 Assert.That(CombatPose.ClipTime(24, 24, entry.impactSeconds),
                     Is.EqualTo(entry.impactSeconds).Within(1e-5f), entry.clipName);
+            }
+        }
+
+        /// <summary>
+        /// A blunt weapon swings and never stabs (owner, 2026-09-25: <i>"only swinging type moves
+        /// can be used with these weapons"</i>). Read from the content rather than from a list of
+        /// two names, so a third blunt weapon is held to it the day it is added; and the swing rows
+        /// each carry every combo step the director cycles through, so no step falls back to the
+        /// computed pose. Clip names are committed, so this runs on the runner too.
+        /// </summary>
+        [Test]
+        public void ABluntWeaponOnlySwings()
+        {
+            ModuleCatalogue catalogue = Catalogue();
+            int blunt = 0;
+            foreach (ItemDef item in ContentPack.Pawns().Items)
+            {
+                if (item.weapon == null || item.weapon.damageKind != DamageKind.Blunt) continue;
+                blunt++;
+                CombatRole role = CombatPose.SwingRole(item.weapon.style);
+                List<CombatClipEntry> clips = catalogue.Find(CombatPose.RowOf(role) ?? "")?.combat ?? new List<CombatClipEntry>();
+                Assert.That(clips, Is.Not.Empty, $"{item.defName} swings as {role}, which has no clips");
+                foreach (CombatClipEntry entry in clips)
+                    Assert.That(entry.clipName, Does.Not.Contain("Stab"),
+                        $"{item.defName} is blunt and {role} would draw {entry.clipName}");
+            }
+            Assert.That(blunt, Is.GreaterThanOrEqualTo(2), "the bat and the crowbar are blunt");
+
+            foreach (string id in new[] { ModuleIds.CombatSwingLight, ModuleIds.CombatSwingHeavy })
+            {
+                var variants = new List<string>();
+                foreach (CombatClipEntry entry in catalogue.Find(id)!.combat) variants.Add(entry.variant);
+                Assert.That(variants, Is.EquivalentTo(CombatVariant.Combo), $"{id} covers every combo step");
             }
         }
 

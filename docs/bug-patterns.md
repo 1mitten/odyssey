@@ -603,6 +603,26 @@ fixture had just queued still going through. It landed on the dev machine and di
 
 ## The register
 
+### 2026-09-25 — A claim handed to a pawn outlives the thing it was a claim on (P14-adjacent)
+
+**Symptom, recorded at the combat Phase 4 integration and fixed after the gate.** A bed demolished
+under a patient left her holding its head-cell reservation until she got up, days later, so a new bed
+raised on that cell read as taken.
+
+**Cause.** The rescue's lay hands the bed's reservation to the patient, and her `Job_Downed` holds it
+until it ends. Every holder of a claim usually has a job that re-asks whether its target is still
+there — the sleeper's, the rescuer's `StillFree` — but a patient's job does nothing but wait, so
+nothing re-asked. `ConstructionGrid.Demolish` already cleared everything else that points at a
+building that has gone (damage rows, deconstruct orders, stores, power); claims were not on its list.
+
+**Fix.** `Demolish` releases a downed pawn's claim on a bed it removes, from the table and her own
+`HeldReservations` together. `RescueTests.ABedDemolishedUnderHerLetsGoOfHer`, seen failing without it.
+`33-combat.md` §11h.
+
+**The check this earns.** *When a claim is handed to a pawn whose job only waits, the thing that
+removes the target must release it.* A job that waits never re-asks; that is the same shape as the
+lost step (2026-09-24, below): a wait is a place nobody looks again.
+
 ### 2026-09-24 — A wait that trusts a path the save does not keep (P14-adjacent; found by the gate)
 
 **Symptom, found by the combat gate before anybody played it.** A save taken at the first swing of

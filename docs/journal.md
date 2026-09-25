@@ -12286,6 +12286,63 @@ One test had been measuring swing speed without saying so. Three bandits at a on
 three walls with the machete and two with the slower blunt weapons, because fewer walls fell in the
 run. The test is now pinned to the machete it was measured with. Nobody stood about either way.
 
+## 2026-09-24 — Meadow: the shoreline is geometry, not shading
+
+The target was the reference's stream (#13): a soft edge, murky green water, no grid. Three shading
+attempts failed before the fourth, and the reason is worth keeping. Sinking a bank under the water
+line and laying water over it left the edge at the underwater wall, because the depth fade made the
+thin water clear. Driving the edge from a soft board field instead gave a soft blob — over square
+geometry, which showed wherever the blob and the cells disagreed: pits onto the sand bed at a water
+cell's corners, the bank's sawtooth where it overran. **A soft edge painted over a square hole is
+still a square hole.** What worked was making the ground itself cross the water line on a line of
+its own: the bank and the bed as one height field, each of nine points a cell at `(1 − w)` of a layer
+above the bed by how much water surrounds it. Every cell's centre keeps its height, so nothing in the
+simulation moved.
+
+The deep water's cross of squares survived a correct blend, and the way it was found is the lesson.
+Drawing the shader's own intermediate terms as colour, one at a time — the field, then the depth each
+material thought it was, then the lit colour — showed each term right and the result wrong: the two
+palette colours reached the shader as globals and `_BaseColor` as a material property, and the two
+do not share a colour-space path, so a ratio of them was a different constant per material. Four
+Unity runs, each a few minutes, against an afternoon of reasoning from screenshots.
+
+Measured in one run on Standard and Huge at 640 × 480 and 4K: draw calls identical, instances up by
+the banks, meshing 7–9% dearer a chunk. Design 38 §24.
+
+## 2026-09-25 — Water that can be clicked, and water that moves
+
+The owner played the shoreline and found two regressions. The first was not one. "I couldn't click on
+a lot of the water tiles anymore" was measured through the rig's own pick path before anything was
+read: 280 of 307 aimed points on the played board missed their water — and the control, the old
+square shore, missed exactly the same 280. The picker had always met water at its bed, two metres
+under the surface and two metres past the aim at the play camera's angle; the new shoreline only made
+the water inviting to click. **A report of a regression is a report of a bug, and the control is what
+says which.** Water is met on its surface now, and a shore bank on its fan through the same
+`HeightAt` the figures stand on, so one surface owner answers both.
+
+The second was real: the ripples lived in the normal, invisible at 48 degrees, which the falls had
+already taught once. Motion is carried by colour — streaks drifting along a flow derived from the
+water network, swells on still water, a breathing rim at the shore — on the game's clock, so a
+paused world holds still. Design 38 §24f.
+
+## 2026-09-25 — The bat and the crowbar stop stabbing
+
+The owner: *"correct crowbar and baseball bat not to have the stabbing motion — only swinging type
+moves."* The heavy clip row, which only those two weapons use, alternated a swing with the pack's
+`HeavyStab01`. The owner chose the pack's three-step heavy combo, `HeavyCombo01A`, `B`, `C`, and
+left the blades alone.
+
+Two of the three clips had never been looked at, so a probe measured them before they went in, with
+the stab as the control that had to fail. The first metric (how much of the hand's motion before
+the impact went forward) passed the stab as a swing and was thrown out. What separates them is
+whether the hand moves along the arm during the blow, which a thrust does and a swing does not: the
+stab scored 70 %, the three heavy combos 18–23 %.
+
+The probe also found that `HeavyCombo01C` would have landed its blow at 0 s. The pack spells that
+one cut `...01CWindUp` without the underscore, and the impact measurement found nothing and returned
+zero. The existing test accepted a zero, so it now requires an impact above zero, and a new test
+holds every blunt weapon, read from the content, to a row with no stab in it. Design 33 §22.
+
 ## 2026-09-25 — Health designed: six regions over the pool, and a brief for the tab
 
 The owner asked for the health system's basics, planned from what the repo holds, so Claude

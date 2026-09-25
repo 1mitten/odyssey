@@ -33,6 +33,12 @@ namespace Odyssey.Presentation.Rendering
 
         readonly WorldRenderModel _model;
         readonly ChunkMesher _mesher;
+
+        /// <summary>What the ground is at each column, for the shaders (design 38 §24).</summary>
+        readonly GroundField _field;
+
+        /// <summary>See <see cref="GroundField"/>; exposed for tests.</summary>
+        public GroundField Field => _field;
         readonly MaterialCache _materials = new MaterialCache();
         readonly ChunkBatch?[] _batches;
 
@@ -40,6 +46,7 @@ namespace Odyssey.Presentation.Rendering
         {
             _model = model;
             _mesher = new ChunkMesher(model);
+            _field = new GroundField(model);
             _batches = new ChunkBatch?[model.Chunks.Count];
             Skirt = new TerrainSkirt(model, _materials);
         }
@@ -1007,6 +1014,8 @@ namespace Odyssey.Presentation.Rendering
 
         public void Render(int activeLayer, SliceSettings slice)
         {
+            // The ground field and the water colours, before anything that reads them draws.
+            _field.Publish();
             _drawnSlice = slice;
             _drawnLayer = activeLayer;
 
@@ -1361,6 +1370,8 @@ namespace Odyssey.Presentation.Rendering
                 // The skin's apron meets the surround at its level, which the skirt settles.
                 _mesher.SurroundLevel = Skirt.Enabled && Skirt.Built ? Skirt.SurfaceLayer : -1;
                 _mesher.Mesh(batch, chunkIndex);
+                // What the ground is at each column changes only when a chunk does (design 38 §24).
+                _field.RefreshChunk(chunkIndex);
                 _indirect?.MarkDirty(chunkIndex);
                 _meshedThisFrame++;
                 ChunksMeshedThisFrame++;
@@ -4066,6 +4077,7 @@ namespace Odyssey.Presentation.Rendering
 
         public void Dispose()
         {
+            _field.Dispose();
             for (int i = 0; i < _batches.Length; i++) _batches[i]?.Dispose();
             Skirt.Dispose();
             _materials.Dispose();

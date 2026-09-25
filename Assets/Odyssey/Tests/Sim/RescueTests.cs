@@ -282,6 +282,41 @@ namespace Odyssey.Tests.Sim
             Assert.That(Holds(colony, patient, bed), Is.False, "she kept the bed after getting up");
         }
 
+        /// <summary>
+        /// A bed taken down under her lets go of her (design 33 §11h). The bed's reservation passed
+        /// to her on the lay and `Job_Downed` held it until she got up — so with the bed demolished she
+        /// kept a claim on bare ground for days, and a bed raised on exactly that cell read as taken.
+        /// </summary>
+        [Test]
+        public void ABedDemolishedUnderHerLetsGoOfHer()
+        {
+            var (colony, rescuer, patient, by) = Three(colonists: 3, beds: 3);
+            Stand(colony, patient, Near(colony, 8, 4));
+            Down(colony, patient, by);
+            Draft(colony, rescuer);
+            Rescue(colony, rescuer, patient);
+            RunTheRescue(colony, rescuer);
+            Assume.That(InABed(colony, patient), Is.True);
+            int bed = patient.Cell;
+            long key = RescueRules.BedKey(bed);
+            Assert.That(Holds(colony, patient, bed), Is.True, "the control: the bed is hers");
+            Assert.That(colony.Pawns.Reservations.CanReserve(rescuer.Id, key), Is.False, "the control: nobody else may have it");
+
+            Assert.That(colony.Construction.Demolish(colony.Pawns, bed, out _), Is.True);
+
+            Assert.That(Holds(colony, patient, bed), Is.False, "she kept a claim on the cell her bed stood on");
+            Assert.That(patient.HeldReservations, Has.No.Member(key), "she still believes she holds it");
+            Assert.That(colony.Pawns.Reservations.CanReserve(rescuer.Id, key), Is.True, "the cell still reads as taken");
+            Assert.That(patient.Downed, Is.True, "demolishing a bed is not healing her");
+            Assert.That(RescueRules.NeedsRescue(patient, colony.Pawns), Is.True, "out of a bed, she needs rescuing again");
+
+            int held = 0;
+            foreach (Pawn pawn in colony.Pawns.Pawns.All) held += pawn.HeldReservations.Count;
+            Assert.That(colony.Pawns.Reservations.ActiveClaims, Is.EqualTo(held), "the table and the pawns disagree");
+            colony.World.Tick(200);
+            Assert.That(patient.Downed, Is.True, "Job_Downed let her up when its reservation went");
+        }
+
         // ---- nobody left in a pair of arms --------------------------------------------------------
 
         [TestCase("released")]
