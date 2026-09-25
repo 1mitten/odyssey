@@ -77,8 +77,9 @@ namespace Odyssey.Tests.Hud
                 foreach (SettingsLayout.KeyGroup group in column)
                     foreach (HotkeyAction action in group.Actions)
                         Assert.That(seen.Add(action), Is.True, $"{action} is on the Keys tab twice");
-            Assert.That(seen.Count, Is.EqualTo(25),
-                "the Keys tab lists the 24 actions it listed before the rebuild, and walls-down (H, design 42)");
+            Assert.That(seen.Count, Is.EqualTo(26),
+                "the Keys tab lists the 24 actions it listed before the rebuild, walls-down (H, design 42) " +
+                "and the Assign tab (F4, design 43)");
         }
 
         [Test]
@@ -106,6 +107,8 @@ namespace Odyssey.Tests.Hud
             yield return SettingsLayout.ResetIcon;
             yield return HudIcons.Home;
             yield return HudIcons.Cycle;
+            yield return HudIcons.ChevronLeft;
+            yield return HudIcons.ChevronRight;
         }
 
         [Test]

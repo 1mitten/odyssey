@@ -831,3 +831,12 @@ ui.inventory.hud.hint,Go moves the camera to that place and selects it. Clicking
 ui.inventory.hud.empty,Nothing is in a store yet.,ui.inventory.hud,INV,The table when the colony's stores are empty
 ui.inventory.hud.nomatch,No item matches.,ui.inventory.hud,INV,The table when a search finds nothing
 ui.home.centred,Home is centred here,ui.home,M3,"This campfire is the hearth: home is the base joined to it"
+ui.home.hearth,Hearth,ui.home,HA,"This campfire is the colony's hearth: home is the base joined to it"
+ui.tab.assign,Assign,ui.tab,HA,"Where each colonist may work, and what she does about danger"
+ui.keys.assign,Assign tab,ui.keys,HA,"Open and close the Assign tab"
+ui.assign.colonist,Colonist,ui.assign,HA,"The colonist, in the roster's order. Click to select her"
+ui.assign.area,Area,ui.assign,HA,"Where she may work. Press a cell to change it"
+ui.assign.response,Response,ui.assign,HA,"What she does about danger. Press a cell to change it"
+ui.assign.anywhere,Anywhere,ui.assign,HA,"She takes work wherever it is"
+ui.assign.home,Home,ui.assign,HA,"She takes no work outside home, and walks home when idle. A draft overrides it"
+ui.assign.nohearth,No hearth yet,ui.assign,HA,"There is no hearth, so there is no home and Home keeps nobody in. Mark a campfire as the hearth"

@@ -764,6 +764,7 @@ namespace Odyssey.Hud
             { "ui.tab.schedule", HudCategory.Work },
             { "ui.tab.research", HudCategory.Record },
             { "ui.tab.colonists", HudCategory.People },
+            { "ui.tab.assign", HudCategory.People },
             { "ui.tab.animals", HudCategory.People },
             { "ui.tab.wildlife", HudCategory.People },
             { "ui.tab.bills", HudCategory.Work },

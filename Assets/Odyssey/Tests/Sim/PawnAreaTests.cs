@@ -145,6 +145,19 @@ namespace Odyssey.Tests.Sim
             Assert.That(value, Is.EqualTo((int)PawnArea.Home));
         }
 
+        /// <summary>
+        /// The numbers the Assign tab sends and reads (<c>AssignModel.Anywhere</c> 0, <c>Home</c>
+        /// 1), held on this side as <c>AssignModelTests</c> holds them on the interface's: the two
+        /// assemblies cannot see each other's constants.
+        /// </summary>
+        [Test]
+        public void TheAreasAreTheNumbersTheInterfaceSends()
+        {
+            Assert.That((int)PawnArea.Anywhere, Is.EqualTo(0));
+            Assert.That((int)PawnArea.Home, Is.EqualTo(1));
+            Assert.That(AreaAspects.AreaName, Is.EqualTo("odyssey.pawn.area"));
+        }
+
         // ---- the gate (§4b, §4c) ----------------------------------------------------------------
 
         [Test]

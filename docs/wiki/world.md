@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-126 entries, 100 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+127 entries, 101 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -89,6 +89,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Storage** | `ui.tab.storage` | What a store takes, and how much it matters <br>**Needs:** an open crate seen from above | no art | M3 |
 | **Tile** | `ui.tab.tile` | The ground itself, under whatever is standing on it <br>**Needs:** a single square of ground, in plan | no art | M3 |
 | **Inventory** | `ui.tab.inventory` | Everything in the colony's stores, and which store holds it | no art | INV |
+| **Assign** | `ui.tab.assign` | Where each colonist may work, and what she does about danger <br>**Needs:** drawn with ui.tab.colonists' art (HudCommands.IconOf) | no art | HA |
 
 ## Game speed
 

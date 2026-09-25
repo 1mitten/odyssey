@@ -316,6 +316,15 @@ ui.overlay.roofs,-,,,a roofed-area mark. Pairs with the missing roof tool icon,-
 ui.overlay.zones,08,,,folded map,med,shared
 ui.overlay.power,08,,,battery,high,shared
 ui.overlay.home,-,,,"a house, drawn as a path (docs/reference/mockups/home-glyph.svg)",-,gap
+ui.home.hearth,-,,,"the home glyph, drawn as a path (docs/reference/mockups/home-glyph.svg)",-,gap
+ui.tab.assign,-,,,"drawn with ui.tab.colonists' art (HudCommands.IconOf)",-,gap
+ui.keys.assign,-,,,"a key binding; no icon",-,gap
+ui.assign.colonist,-,,,"a column heading; no icon",-,gap
+ui.assign.area,-,,,"a column heading; no icon",-,gap
+ui.assign.response,-,,,"a column heading; no icon",-,gap
+ui.assign.anywhere,-,,,"a setting value; no icon",-,gap
+ui.assign.home,-,,,"a setting value; no icon",-,gap
+ui.assign.nohearth,-,,,"a note; no icon",-,gap
 ui.overlay.salvage,05,,,powered drill,med,shared
 ui.overlay.support,04,,,"metal beam, I-section",med,shared
 ui.overlay.traffic,-,,,footfall. An abstract with no obvious source,-,gap

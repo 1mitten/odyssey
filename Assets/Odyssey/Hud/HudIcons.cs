@@ -27,6 +27,10 @@ namespace Odyssey.Hud
         /// <summary>The cycle mark's stroke, in path units.</summary>
         public const float CycleStroke = 2.4f;
 
+        /// <summary>A pager's two chevrons (design 43 §6), stroked.</summary>
+        public const string ChevronLeft = "M15 5 8 12l7 7";
+        public const string ChevronRight = "M9 5l7 7-7 7";
+
         /// <summary>The path registered under an icon key, or null for a key with none.</summary>
         public static string? PathOf(string iconKey) => iconKey switch
         {
