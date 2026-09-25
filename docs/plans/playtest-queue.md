@@ -23,6 +23,22 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the Health tab read, and does a hurt colonist get tended?** (`claude/relaxed-heisenberg-zxy63b`,
+  PR #213, design 43.) Debug menu > Spawn > Hurt a colonist near a colonist, then open her pane on
+  Health: two columns, the left leg (or wherever) with a red bar and a warning mark, Bleeding
+  counting hours, Tended 0/1. Give medkits, leave Doctor on for somebody, and watch them walk over,
+  kneel beside her and tend: the mark turns to a cross and the hours vanish. Click a region to see
+  its injuries; click again to go back. A wrong answer is a tab that clips or scrolls, a figure that
+  overflows its column, a doctor who never comes or stands on her, or a mark drawn as a box.
+- **Is the fight still a fight?** (Same branch, design 43 §14b.) Spawn 3 bandits against armed
+  colonists. With pain shock, people go down at about two thirds of the bar, and a bandit cut with a
+  machete bleeds to death where it lies. A wrong answer is fights over in two blows, colonists
+  dying in fights nobody ordered, or bandits that never go down.
+- **Does a fall hurt the way it should?** (Same branch, design 43 §7.) Build a floor, stand a
+  colonist on it and take out its support: one layer bruises her and she walks on; a longer drop
+  breaks something and three layers put her down. A wrong answer is a miner hurt by stepping into her
+  own dig, or a fall with no injury on the Health tab.
+
 - **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
   Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest
   over bare arms and black trousers, and carry a crowbar or a bat; click one and the pane shows a

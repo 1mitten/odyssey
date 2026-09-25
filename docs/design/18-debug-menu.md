@@ -95,7 +95,9 @@ teaching a habit ("kill just despawns") that a later health system would have to
 **Overtaken 2026-09-25.** The pool exists since combat C2 (design 33) and design 43 §11 puts *Hurt*,
 *Heal* and *Kill* on the Spawn tab through the one damage owner, so a debug kill is a real death
 that leaves a corpse and is mourned — the thing this paragraph was waiting for. Unit H6 of
-`docs/plans/health.md`.
+`docs/plans/health.md`. **Built 2026-09-25**: Hurt, Heal and Kill on the Spawn tab's Colonists
+group act on the colonist nearest the camera (`IntentKind.DebugHealth`), and Give medkits sits with
+the items.
 
 **Build gating.** No release build exists yet, so the panel is reachable in every build the same way
 every other panel is.

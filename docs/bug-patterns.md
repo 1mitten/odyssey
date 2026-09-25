@@ -2624,6 +2624,32 @@ guard and the other had nothing, and the guard's own prose was the specification
   three mining tests fail and the rest pass, which is what says the tests fail on the reported bug
   and not on something adjacent.
 
+### 2026-09-25 — A new way to go down met three rules that assumed there was only one (health)
+
+**Symptom.** Adding the body (design 43) turned the combat gate red three different ways on the
+same afternoon, none of them in the new code: *Job_Downed failed*, *a bandit stood on Fighting at a
+target already gone* for 60–68 ticks, and two fighters sharing a tile in the mixed brawls.
+
+**Cause: each rule was written when a pawn could only go down, or stop, one way.** Before the body a
+pawn went down only under a blow and never died lying down, so (1) a death always ended its job as
+a failure, and the gate's sentinel on `Job_Downed` failures had never seen a death; (2) an attack
+on a pawn that went down ended on the attacker's own next tick, which a *stunned* attacker does not
+get, and nothing but a blow downed anybody so it never mattered; (3) `Melee.SideOf` counted where a
+pawn stands and where it walks, but not the cell an interrupted step is still landing on. Bleeding
+downs and kills people between blows, and pain shock changes who stands where, so all three were
+reached at once.
+
+- **The pattern:** a rule whose "only one way" was true by accident of what existed. It fails the
+  day a second way arrives, and it fails in a system nobody touched.
+- **Where to look for more:** every sentinel written as "this never happens" (a failure counter that
+  must be nought), every per-tick rule that trusts the actor to get a tick, every claim computed
+  from a pawn's position that ignores a move in flight.
+- **The fixes:** `Remove` ends `Job_Downed` as a success on death, as `JobHandle.Downed` says it
+  may; `CombatSystem.EndAttacksOnTheDowned` ends non-lethal attacks when anybody goes down, as
+  `EndAttacksOn` already did for the dead; `SideOf` counts `FinishingStepTo`.
+- **The check:** the combat gate (`BanditSoakTests.TheGateWithRaids`), `FightGuardTests.MixedBrawlsOnManySeeds`
+  and `FightGuardTests.AStepStillLandingIsHeld`, which fails with the `SideOf` line removed.
+
 ### 2026-09-22 — Every portrait on the setup screen was magenta (P14)
 
 **Symptom.** The owner's screenshot: three candidate cards and a detail pane, every colonist a flat

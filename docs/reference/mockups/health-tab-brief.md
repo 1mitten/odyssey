@@ -230,6 +230,10 @@ code (4). Every recommendation taken as offered.
 
 ## Built
 
-Not yet. When the mockups come back: record the height chosen and any mark paths here, amend
-`docs/design/43-health.md` §10 where the design departed from it, and build H5 of
-`docs/plans/health.md`.
+**Built ahead of the mockups, 2026-09-25** (owner: *"implement it"*), to this prompt's own content:
+two columns of seven on the Skills tab's grid and row builder (`HealthTab`, `HudShell.Combat.cs`),
+the region click, the condition and weapon moved to the header line, the marks as the HUD's own
+warning triangle (bleed) and medical cross (tend). Every figure fits the level column, so per cents
+and points are bare numbers and the full reading is in the hover. The animal state is not built: an
+animal still has no tabs. Design 43 §14a has each departure. **The prompt still stands**: when the
+mockups come back, build what they show and record the height and any mark paths here.

@@ -12327,3 +12327,34 @@ Nothing in the line bumps it.
 The brief follows the animals brief's shape and hands Claude Design the pane's real geometry —
 seven 19-px rows in two 256-px columns — with the rule that a taller tab must be a stated
 number, because `InspectTabBody` moves every tab at once. Six states, one file each.
+
+## 2026-09-25 — Health built: the body turns the fight
+
+The owner approved the plan with "implement it", and H1 to H6 went in on the same branch in one
+day, in a cloud container with no Unity. The .NET SDK came from the Ubuntu archive after the
+Microsoft host was refused by the network policy; the fast tier then ran as normal.
+
+**The body sits over the pool, not under it.** Every point a person loses is on a region, and the
+pool is checked against the ledger every hour of the combat gate rather than derived from it, so no
+reader of hit points changed and no golden moved for H1 and H2. Two design decisions moved in the
+build, both recorded in design 43 §14a: a vital region at nought downs rather than kills, because
+design 33's owner rule is that an unordered fight ends in downs; and injuries go out as aspects,
+because nothing in the shared assembly needed to learn what an injury is.
+
+**The measurement design 43 asked for changed the game more than anything else in it.** Before the
+body the colony lost the combat gate on every seed. After it the colony stands on every seed and no
+colonist dies, because pain shock downs bandits a third sooner and a downed bandit cut by a machete
+bleeds out where it lies. That is the owner's to judge; the lever is one number.
+
+**Three combat faults were waiting for a second way to go down** — a death while downed failing the
+downed job, a stunned attacker left standing on a downed target, and a side chosen on the cell a
+stunned colonist was still stepping into. None was in new code. `docs/bug-patterns.md` has the
+pattern: a rule whose "only one way" was an accident of what existed.
+
+**A doctor chasing a colonist on her feet never arrived**, because the shared walk toil clears the
+path when the destination changes. The fix was already in the codebase: the fight's own
+`Melee.ChooseSide` picks a free cell beside somebody and is asked again only when they leave it.
+
+The Health tab was built to the brief's own content ahead of the mockups. Presentation cannot be
+compiled here, so the view was type-checked against stubs of the Unity types it uses; the owner's
+first Unity run is its first real compile, and that is said in every place it could be missed.

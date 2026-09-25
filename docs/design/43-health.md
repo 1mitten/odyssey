@@ -1,6 +1,8 @@
 # 43 — Health: six regions, afflictions, bleeding, tending, falls
 
-**Designed 2026-09-25, nothing built.** The interview is `docs/research/health-interview.md`
+**Designed and built 2026-09-25** — H1–H6 of `docs/plans/health.md` on
+`claude/relaxed-heisenberg-zxy63b` (PR 1mitten/odyssey#213); §14 is what the build changed and
+measured, and it wins where it and §1–§13 disagree. The interview is `docs/research/health-interview.md`
 (four answers, every recommendation taken); the research is `docs/research/a-02-health.md`; the
 units are `docs/plans/health.md`; the brief that Claude Design draws the tab from is
 `docs/reference/mockups/health-tab-brief.md`. Health is **M6** in the brief
@@ -322,3 +324,75 @@ a bed; downed by pain with a leg at zero; a region clicked; a hog (pool only).
 - **One damage owner.** A second `HpMilli -=` anywhere is the bug pattern this document was
   written to avoid.
 - **The tab fits the Skills grid unless the designer says a number.**
+
+## 14. As built, 2026-09-25
+
+H1–H6 are in. The fast tier is 1,520 Sim and 1,103 Hud, green; the Long tier is 48 of 48; the three
+content gates pass. **Neither Unity tier has run** — the build was done in a cloud container with no
+Unity — so the Presentation half (the Health tab's view and the state line) was type-checked only
+against stubs of the UnityEngine types it touches. The owner's first Unity run is the first real
+compile of `HudShell.Combat.cs`.
+
+### 14a. What the build changed from §1–§13, and why
+
+| Was designed | Is built | Why |
+|---|---|---|
+| Head or torso at nought is death (a-02:55) | **A vital region at nought puts consciousness at nought, which downs.** Death stays the pool's line and blood loss | The combat gate asserts that an unordered fight ends in downs, never deaths (design 33 §3, the owner's rule). A head at 25 points would have killed colonists standing up |
+| The injury records published as an `InjuryView` | **As aspects**, two a record (`odyssey.pawn.health.injury.{r}.{k}` and `.care`), sparse | The reason skills are aspects: nothing in `Sim.Contracts` had to learn what an injury is, and eighteen records is a bounded list |
+| Doctor as the Rescue work type relabelled | **`Work_Doctor`, a new work type** | The Work tab already draws `ui.work.doctor` among its 22; a relabel would have left that column dead |
+| Medicine bumps the save format 9 → 10 | **No format bump anywhere in the line** | Skill and priority arrays are saved length-prefixed; the Melee skill arrived the same way (design 33 line 1076). The ledger is its own keyed section |
+| `tendSpeedCurve` on `HealthDef` | **The Doctor work type's curve** (400 + 60 a level) | One owner of tend speed; the curve in two places was the first bug pattern waiting |
+| `Thought_Fell` replaced by the injury | **Both**: the memory stays and the injury comes on top | A fall is frightening as well as painful, and the four collapse tests that pin the memory keep their meaning |
+| Falls wired into all three `Falling` call sites | **A collapse hurts from one layer; any drop of two or more hurts** | A miner stepping into the hole she dug and a deconstructor lowering herself off her own slab are steps. The callers already disagreed about the memory for this reason; they disagree about damage the same way |
+| Fall damage for animals unspecified | **Scaled by the species' pool** against a person's hundred | a-02's own "health scale" for other bodies. A rat's one-layer fall is about 2 points, a hog's 9 |
+| The tab's rows "arranged by the designer" | **Built to the brief's own content** ahead of the mockups | The owner said "implement it". Every figure fits the Skills tab's 22 px level column: per cents and points as bare numbers, the bleed as "14h", the tends as "2/3"; the full readings are in each row's hover |
+| The animal state of the brief (a hog's Health row) | **Unchanged: an animal still has no tabs** | The pane never gave an animal a tab box, and adding one is a layout decision for the mockups |
+
+### 14b. The measurement §3 asked for: the combat gate, before and after
+
+Ten days, three seeds, seven raids of thirteen bandits, the colony drafting and gathering as a
+player would (`BanditSoakTests.TheGateWithRaids`); taken on commit 379f49c and on d4b62f2, the same
+container.
+
+| Seed | Before: downed (colonists), died, colonists standing at day ten | After: downed (colonists), died, colonists standing at day ten |
+|---|---|---|
+| 1 | 12 (5), 0, 0 of 5 | 15 (2), 10 bandits, 4 of 5 |
+| 2 | 15 (5), 0, 1 of 5 | 16 (3), 12 bandits, 4 of 5 |
+| 3 | 17 (5), 0, 0 of 5 | 22 (5), 11 bandits, 3 of 5 |
+
+**The body turned the fight.** Before it, every seed ended with the colony down; after it, the
+colony stands on every seed and **no colonist died on any**. Two things did it, both from this
+design: pain shock downs a bandit at 64 points instead of 100, and a colonist's machete now cuts,
+so a downed bandit nobody tends bleeds out. The bandits that died, died of blood loss. That answers
+the owner's open question from the combat report — *whether four armed colonists should lose to
+three bandits* — with "not any more", and it is the owner's to judge whether that is the game they
+want (§12).
+
+### 14c. Three faults the new fights reached, fixed
+
+- **A downed pawn that died ended `Job_Downed` as a failure**, which the gate's sentinel reads as
+  "got up by the wrong door". Nobody had ever died lying down before bleeding. `JobHandle.Downed`
+  says the job lasts "until healed, rescued or dead", so a death now ends it as a success.
+- **An attacker stunned when its target went down stood on it for the whole stun** (the gate's
+  "Fighting at a target already gone", 60–68 ticks). Death already ended every attack at once
+  (design 33 §9e); going down now does the same for every attack not ordered to the death
+  (`CombatSystem.EndAttacksOnTheDowned`).
+- **An interrupted step's landing cell was not a held side**, so a bandit chose the cell a stunned
+  colonist was still stepping into and they shared a tile (`FightGuardTests.MixedBrawlsOnManySeeds`
+  seed 11). `Melee.SideOf` counts `FinishingStepTo` now; `FightGuardTests.AStepStillLandingIsHeld`.
+
+And one in the new code, found by its own tests: **a doctor chasing a colonist on her feet never
+arrived**, because the shared walk toil clears the path whenever the destination changes and the
+tend re-aimed at every step. It now chooses a free side with the fight's own `Melee.ChooseSide`
+and re-aims only once the patient has left it.
+
+### 14d. Open, the owner's (adds to §12)
+
+- **The fight's balance has moved a long way** (§14b). Pain shock is the lever: `painShockPerMille`
+  at 1001 switches it off.
+- **A standing patient walks on while she is tended.** The doctor follows and keeps the work done,
+  but a patient who waits would be quicker; a "patient" work type (`ui.work.patient`, drawn dim)
+  is the reference's answer.
+- **No medkit arrives except from the debug menu.** No scenario carries any and nothing makes them.
+- **Rescue runs before tend** at equal priority (the work types' order), so a downed colonist is
+  carried to bed and tended there.
