@@ -1074,6 +1074,13 @@ namespace Odyssey.Hud
         /// Thoughts, Social, Health and Log have no content to measure, and a guess at them would
         /// be empty space today bought against a design nobody has written.</para>
         /// </summary>
+        /// <summary>
+        /// How many rows the Thoughts tab has room for under its heading line (design 43 §5b): the
+        /// tab body, less the heading, in cell rows. Derived, so it follows the body when a skill
+        /// or a need moves it, and the model caps its list at it so the pane never grows.
+        /// </summary>
+        public static int ThoughtRows => (InspectTabBody - CellRow) / CellRow;
+
         public static int InspectTabBody
         {
             get

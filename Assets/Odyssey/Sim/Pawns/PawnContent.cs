@@ -87,29 +87,34 @@ namespace Odyssey.Sim.Pawns
         public bool renewsOnRepeat;
     }
 
+    /// <summary>
+    /// Aliases of <see cref="ThoughtHandle"/>, exactly as <see cref="WorkTypeIndex"/> aliases
+    /// <see cref="WorkHandle"/>: the interface names thoughts now (design 43 §5b), so the order is
+    /// written down on the contract's side and a test holds it to <c>FromDefs</c>.
+    /// </summary>
     public static class ThoughtIndex
     {
-        public const int Catharsis = 0;
-        public const int AteMeal = 1;
-        public const int SleptOnGround = 2;
+        public const int Catharsis = ThoughtHandle.Catharsis;
+        public const int AteMeal = ThoughtHandle.AteMeal;
+        public const int SleptOnGround = ThoughtHandle.SleptOnGround;
 
         /// <summary>Rode a floor down when it collapsed (U29).</summary>
-        public const int Fell = 3;
+        public const int Fell = ThoughtHandle.Fell;
 
         /// <summary>Woke from a night outside the temperature bands, cold side (design 28 §8).
         /// Appended, as every thought is — an index rides every saved memory.</summary>
-        public const int SleptCold = 4;
+        public const int SleptCold = ThoughtHandle.SleptCold;
 
         /// <summary>The same, hot side.</summary>
-        public const int SleptHot = 5;
+        public const int SleptHot = ThoughtHandle.SleptHot;
 
         /// <summary>Hurt by a colonist's blow (design 33 §12, friendly fire). Given by
         /// <c>FriendlyFireListener</c>; appended, as every thought is.</summary>
-        public const int AttackedByColonist = 6;
+        public const int AttackedByColonist = ThoughtHandle.AttackedByColonist;
 
         /// <summary>A colonist died; felt by every other colonist (design 33 §12).</summary>
-        public const int ColonistDied = 7;
-        public const int Count = 8;
+        public const int ColonistDied = ThoughtHandle.ColonistDied;
+        public const int Count = ThoughtHandle.Count;
     }
 
     /// <summary>

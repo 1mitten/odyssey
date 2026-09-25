@@ -62,6 +62,24 @@ ui.mood.content,Content,ui.mood,M2,Mood is comfortable
 ui.mood.strained,Strained,ui.mood,M2,Mood is falling. Watch this one
 ui.mood.breaking,Breaking,ui.mood,M2,At the threshold of a mental break
 ui.mood.broken,Breaking down,ui.mood,M2,In a mental break now
+ui.mind.now,Now,ui.mind,TM,"What is weighing on her at this moment, gone when its cause is"
+ui.mind.memories,Memories,ui.mind,TM,"Things that happened to her, each fading after its own time"
+ui.mind.target,Heading for,ui.mind,TM,"The mood everything listed pulls her toward; she drifts there, faster up than down"
+ui.mind.left,left,ui.mind,TM,"How long until a memory's oldest copy fades"
+ui.mind.nothing,Nothing on her mind,ui.mind,TM,"No need is short and no memory is held: she sits at the base"
+ui.mind.more,more,ui.mind,TM,"The rows past what the tab has room for, counted"
+ui.thought.catharsis,Blew off steam,ui.thought,TM,"The aftermath of a mental break that ran its course. Lighter for a while"
+ui.thought.atemeal,Ate a meal,ui.thought,TM,"A proper meal. A second in a row counts for less than the first"
+ui.thought.sleptonground,Slept on the ground,ui.thought,TM,"A night in the dirt with no bed under her"
+ui.thought.fell,Fell through a floor,ui.thought,TM,"Rode a collapsing floor down. Badly shaken, and a second fall adds to it"
+ui.thought.sleptcold,Slept cold,ui.thought,TM,"Woke from a night colder than is comfortable"
+ui.thought.slepthot,Slept too hot,ui.thought,TM,"Woke from a night hotter than is comfortable"
+ui.thought.attackedbycolonist,Attacked by a colonist,ui.thought,TM,"One of the colony swung at her. Lasts a day, from the latest swing"
+ui.thought.colonistdied,A colonist died,ui.thought,TM,"Felt by every other colonist for three days, up to three deaths at once"
+ui.thought.hunger,Hunger,ui.thought,TM,"Hungry costs mood; starving costs more. Eating clears it"
+ui.thought.tiredness,Tiredness,ui.thought,TM,"Tired costs mood; exhausted costs more. Sleep clears it"
+ui.thought.recreation,Recreation,ui.thought,TM,"Idle time lifts it and a long stretch of work without any wears it down"
+ui.thought.temperature,Temperature,ui.thought,TM,"Too cold or too hot where she is standing"
 ui.skill.construction,Construction,ui.skill,M2,"Building, and the quality of what is built"
 ui.skill.mining,Mining,ui.skill,M2,"Digging, rubble clearance and salvage extraction"
 ui.skill.salvage,Salvage,ui.skill,M2,Stripping a shell without wrecking what is in it

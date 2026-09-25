@@ -441,10 +441,11 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.Tabs[0].Name, Is.EqualTo("Needs"));
             Assert.That(pane.Tabs[0].Enabled, Is.True);
             Assert.That(pane.Tabs[1].Name, Is.EqualTo("Skills"));
-            Assert.That(pane.Tabs.Count(t => t.Enabled), Is.EqualTo(3),
-                "Needs, Skills and Health are live (Health since the combat contracts step, design " +
-                "33 §5); Gear, Thoughts, Social and Log are visible with reasons");
+            Assert.That(pane.Tabs.Count(t => t.Enabled), Is.EqualTo(4),
+                "Needs, Skills, Thoughts and Health are live (Health since the combat contracts step, " +
+                "design 33 §5; Thoughts since design 43 §5b); Gear, Social and Log are visible with reasons");
             Assert.That(pane.Tabs.Single(t => t.Name == "Health").Enabled, Is.True);
+            Assert.That(pane.Tabs.Single(t => t.Name == "Thoughts").Enabled, Is.True);
 
             Assert.That(pane.Commands, Is.Not.Empty);
             // The draft and the response (design 33 §2f, §18e) are the commands wired; the rest may

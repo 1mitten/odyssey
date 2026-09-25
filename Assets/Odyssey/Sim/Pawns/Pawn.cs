@@ -1014,6 +1014,32 @@ namespace Odyssey.Sim.Pawns
             return total;
         }
 
+        /// <summary>
+        /// What one thought is worth to her now, stack included, exactly as
+        /// <see cref="MemoryMoodOffset"/> counts it — each live copy scaled by its place among the
+        /// earlier live copies of the same thought — with how many copies are live and the tick
+        /// the soonest of them lapses (design 43 §5b). The sum over every thought is
+        /// <see cref="MemoryMoodOffset"/>, and <c>ThoughtsTabTests</c> holds it to that.
+        /// </summary>
+        public int MemoryContribution(int thoughtIndex, int currentTick, out int copies, out int soonestExpiry)
+        {
+            var def = Content.Thoughts[thoughtIndex];
+            int total = 0;
+            copies = 0;
+            soonestExpiry = int.MaxValue;
+            for (int i = 0; i < Memories.Count; i++)
+            {
+                var memory = Memories[i];
+                if (memory.ThoughtIndex != thoughtIndex || memory.ExpiryTick <= currentTick) continue;
+                int offset = def.moodOffset;
+                for (int k = 0; k < copies; k++) offset = offset * def.stackMultiplierPerMille / 1000;
+                total += offset;
+                copies++;
+                if (memory.ExpiryTick < soonestExpiry) soonestExpiry = memory.ExpiryTick;
+            }
+            return total;
+        }
+
         public void ExpireMemories(int currentTick)
         {
             for (int i = Memories.Count - 1; i >= 0; i--)

@@ -1,8 +1,8 @@
 # Colonists
 
-Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
+Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure. Traits, thoughts and mental breaks are design 43: a thought's description here is its tooltip on the Thoughts tab, and a trait's is its tooltip on the colonist's pane and the select screen.
 
-47 entries, 29 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+65 entries, 47 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -41,6 +41,34 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Strained** | `ui.mood.strained` | Mood is falling. Watch this one <br>**Needs:** mood face, strained | no art | M2 |
 | **Breaking** | `ui.mood.breaking` | At the threshold of a mental break <br>**Needs:** mood face, at the break threshold | no art | M2 |
 | **Breaking down** | `ui.mood.broken` | In a mental break now <br>**Needs:** mood face, in a break | no art | M2 |
+
+## Thoughts
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Blew off steam** | `ui.thought.catharsis` | The aftermath of a mental break that ran its course. Lighter for a while | no art | TM |
+| **Ate a meal** | `ui.thought.atemeal` | A proper meal. A second in a row counts for less than the first | no art | TM |
+| **Slept on the ground** | `ui.thought.sleptonground` | A night in the dirt with no bed under her | no art | TM |
+| **Fell through a floor** | `ui.thought.fell` | Rode a collapsing floor down. Badly shaken, and a second fall adds to it | no art | TM |
+| **Slept cold** | `ui.thought.sleptcold` | Woke from a night colder than is comfortable | no art | TM |
+| **Slept too hot** | `ui.thought.slepthot` | Woke from a night hotter than is comfortable | no art | TM |
+| **Attacked by a colonist** | `ui.thought.attackedbycolonist` | One of the colony swung at her. Lasts a day, from the latest swing | no art | TM |
+| **A colonist died** | `ui.thought.colonistdied` | Felt by every other colonist for three days, up to three deaths at once | no art | TM |
+| **Hunger** | `ui.thought.hunger` | Hungry costs mood; starving costs more. Eating clears it | no art | TM |
+| **Tiredness** | `ui.thought.tiredness` | Tired costs mood; exhausted costs more. Sleep clears it | no art | TM |
+| **Recreation** | `ui.thought.recreation` | Idle time lifts it and a long stretch of work without any wears it down | no art | TM |
+| **Temperature** | `ui.thought.temperature` | Too cold or too hot where she is standing | no art | TM |
+
+## The Thoughts tab's words
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Now** | `ui.mind.now` | What is weighing on her at this moment, gone when its cause is | no art | TM |
+| **Memories** | `ui.mind.memories` | Things that happened to her, each fading after its own time | no art | TM |
+| **Heading for** | `ui.mind.target` | The mood everything listed pulls her toward; she drifts there, faster up than down | no art | TM |
+| **left** | `ui.mind.left` | How long until a memory's oldest copy fades | no art | TM |
+| **Nothing on her mind** | `ui.mind.nothing` | No need is short and no memory is held: she sits at the base | no art | TM |
+| **more** | `ui.mind.more` | The rows past what the tab has room for, counted | no art | TM |
 
 ## Current activity
 

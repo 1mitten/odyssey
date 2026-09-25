@@ -51,9 +51,12 @@ SECTIONS = [
      "sits beside mining because taking a ruin apart without wrecking what is inside it is a "
      "different craft from digging. Work and schedule share one tab and one table, so they share "
      "a page here."),
-    ("colonists", "Colonists", ["ui.pawn", "ui.need", "ui.mood", "ui.status"],
+    ("colonists", "Colonists", ["ui.pawn", "ui.need", "ui.mood", "ui.trait", "ui.thought",
+                                "ui.break", "ui.mind", "ui.status"],
      "Who is on the map, what they need, how they feel and what they are doing right now. This is "
-     "the section with the least art: no sheet contains a human figure."),
+     "the section with the least art: no sheet contains a human figure. Traits, thoughts and "
+     "mental breaks are design 43: a thought's description here is its tooltip on the Thoughts "
+     "tab, and a trait's is its tooltip on the colonist's pane and the select screen."),
     ("health", "Health and anatomy", ["ui.health"],
      "Body parts, injuries and conditions. The anatomy sheet covers this better than any other "
      "part of the game, which is either fortunate or ominous."),
@@ -82,6 +85,8 @@ NS_TITLES = {
     "ui.command": "Commands", "ui.menu": "The context menu", "ui.work": "Work types", "ui.skill": "Skills",
     "ui.schedule": "Schedule blocks",
     "ui.pawn": "Kinds of pawn", "ui.need": "Needs", "ui.mood": "Mood states",
+    "ui.trait": "Traits", "ui.thought": "Thoughts", "ui.break": "Mental breaks",
+    "ui.mind": "The Thoughts tab's words",
     "ui.status": "Current activity", "ui.health": "Body parts and conditions",
     "ui.alert": "Alerts", "ui.bulletin": "Bulletins", "ui.toast": "Toasts",
     "ui.weather": "Weather",

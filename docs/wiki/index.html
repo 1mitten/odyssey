@@ -149,7 +149,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
 <li><a href="#commands">Commands<b>52</b></a></li>
 <li><a href="#work">Work and skills<b>42</b></a></li>
-<li><a href="#colonists">Colonists<b>47</b></a></li>
+<li><a href="#colonists">Colonists<b>65</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>45</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
@@ -162,9 +162,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>827</b><i>named entries</i></div>
+<div class="stat"><b>845</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>555</b><i>no art yet</i></div>
+<div class="stat m"><b>573</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1795,8 +1795,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">47 entries</em></h2>
-<p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
+<h2>Colonists <em class="count">65 entries</em></h2>
+<p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure. Traits, thoughts and mental breaks are design 43: a thought's description here is its tooltip on the Thoughts tab, and a trait's is its tooltip on the colonist's pane and the select screen.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -1945,6 +1945,122 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">In a mental break now<span class="need">Needs drawing: mood face, in a break</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M2</div>
+</div>
+</div>
+<h3 class="nsh">Thoughts</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.thought.catharsis" data-hay="blew off steam ui.thought.catharsis the aftermath of a mental break that ran its course. lighter for a while " data-gap="1">
+<div class="nm">Blew off steam<span class="k">ui.thought.catharsis</span></div>
+<div class="dsc">The aftermath of a mental break that ran its course. Lighter for a while</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.thought.atemeal" data-hay="ate a meal ui.thought.atemeal a proper meal. a second in a row counts for less than the first " data-gap="1">
+<div class="nm">Ate a meal<span class="k">ui.thought.atemeal</span></div>
+<div class="dsc">A proper meal. A second in a row counts for less than the first</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.thought.sleptonground" data-hay="slept on the ground ui.thought.sleptonground a night in the dirt with no bed under her " data-gap="1">
+<div class="nm">Slept on the ground<span class="k">ui.thought.sleptonground</span></div>
+<div class="dsc">A night in the dirt with no bed under her</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.thought.fell" data-hay="fell through a floor ui.thought.fell rode a collapsing floor down. badly shaken, and a second fall adds to it " data-gap="1">
+<div class="nm">Fell through a floor<span class="k">ui.thought.fell</span></div>
+<div class="dsc">Rode a collapsing floor down. Badly shaken, and a second fall adds to it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.thought.sleptcold" data-hay="slept cold ui.thought.sleptcold woke from a night colder than is comfortable " data-gap="1">
+<div class="nm">Slept cold<span class="k">ui.thought.sleptcold</span></div>
+<div class="dsc">Woke from a night colder than is comfortable</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.thought.slepthot" data-hay="slept too hot ui.thought.slepthot woke from a night hotter than is comfortable " data-gap="1">
+<div class="nm">Slept too hot<span class="k">ui.thought.slepthot</span></div>
+<div class="dsc">Woke from a night hotter than is comfortable</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.thought.attackedbycolonist" data-hay="attacked by a colonist ui.thought.attackedbycolonist one of the colony swung at her. lasts a day, from the latest swing " data-gap="1">
+<div class="nm">Attacked by a colonist<span class="k">ui.thought.attackedbycolonist</span></div>
+<div class="dsc">One of the colony swung at her. Lasts a day, from the latest swing</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.thought.colonistdied" data-hay="a colonist died ui.thought.colonistdied felt by every other colonist for three days, up to three deaths at once " data-gap="1">
+<div class="nm">A colonist died<span class="k">ui.thought.colonistdied</span></div>
+<div class="dsc">Felt by every other colonist for three days, up to three deaths at once</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.thought.hunger" data-hay="hunger ui.thought.hunger hungry costs mood; starving costs more. eating clears it " data-gap="1">
+<div class="nm">Hunger<span class="k">ui.thought.hunger</span></div>
+<div class="dsc">Hungry costs mood; starving costs more. Eating clears it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.thought.tiredness" data-hay="tiredness ui.thought.tiredness tired costs mood; exhausted costs more. sleep clears it " data-gap="1">
+<div class="nm">Tiredness<span class="k">ui.thought.tiredness</span></div>
+<div class="dsc">Tired costs mood; exhausted costs more. Sleep clears it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.thought.recreation" data-hay="recreation ui.thought.recreation idle time lifts it and a long stretch of work without any wears it down " data-gap="1">
+<div class="nm">Recreation<span class="k">ui.thought.recreation</span></div>
+<div class="dsc">Idle time lifts it and a long stretch of work without any wears it down</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.thought.temperature" data-hay="temperature ui.thought.temperature too cold or too hot where she is standing " data-gap="1">
+<div class="nm">Temperature<span class="k">ui.thought.temperature</span></div>
+<div class="dsc">Too cold or too hot where she is standing</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+</div>
+<h3 class="nsh">The Thoughts tab's words</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.mind.now" data-hay="now ui.mind.now what is weighing on her at this moment, gone when its cause is " data-gap="1">
+<div class="nm">Now<span class="k">ui.mind.now</span></div>
+<div class="dsc">What is weighing on her at this moment, gone when its cause is</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.memories" data-hay="memories ui.mind.memories things that happened to her, each fading after its own time " data-gap="1">
+<div class="nm">Memories<span class="k">ui.mind.memories</span></div>
+<div class="dsc">Things that happened to her, each fading after its own time</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.target" data-hay="heading for ui.mind.target the mood everything listed pulls her toward; she drifts there, faster up than down " data-gap="1">
+<div class="nm">Heading for<span class="k">ui.mind.target</span></div>
+<div class="dsc">The mood everything listed pulls her toward; she drifts there, faster up than down</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.left" data-hay="left ui.mind.left how long until a memory's oldest copy fades " data-gap="1">
+<div class="nm">left<span class="k">ui.mind.left</span></div>
+<div class="dsc">How long until a memory's oldest copy fades</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.nothing" data-hay="nothing on her mind ui.mind.nothing no need is short and no memory is held: she sits at the base " data-gap="1">
+<div class="nm">Nothing on her mind<span class="k">ui.mind.nothing</span></div>
+<div class="dsc">No need is short and no memory is held: she sits at the base</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.more" data-hay="more ui.mind.more the rows past what the tab has room for, counted " data-gap="1">
+<div class="nm">more<span class="k">ui.mind.more</span></div>
+<div class="dsc">The rows past what the tab has room for, counted</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
 </div>
 </div>
 <h3 class="nsh">Current activity</h3>
@@ -3716,7 +3832,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 827, "gaps": 555};</script>
+<script>window.WIKI={"total": 845, "gaps": 573};</script>
 <script>
 (function(){
   var D = window.WIKI;

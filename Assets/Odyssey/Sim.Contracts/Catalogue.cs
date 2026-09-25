@@ -257,6 +257,35 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// See <see cref="JobHandle"/>: memory thought indices (design 43 §4a). The order is
+    /// <c>PawnContent.FromDefs</c>'s thought list and <c>ThoughtIndex</c> aliases these, because a
+    /// thought's index rides every saved memory: <b>appended, never inserted</b>. The interface
+    /// names a thought by <see cref="Names"/> and never sees the Def.
+    /// </summary>
+    public static class ThoughtHandle
+    {
+        public const int Catharsis = 0;
+        public const int AteMeal = 1;
+        public const int SleptOnGround = 2;
+        public const int Fell = 3;
+        public const int SleptCold = 4;
+        public const int SleptHot = 5;
+        public const int AttackedByColonist = 6;
+        public const int ColonistDied = 7;
+        public const int Count = 8;
+
+        /// <summary>
+        /// The names a thought is published under (<c>odyssey.pawn.thought.&lt;name&gt;</c>) and
+        /// keyed by in the registry (<c>ui.thought.&lt;name&gt;</c>), parallel to the handles.
+        /// </summary>
+        public static readonly string[] Names =
+        {
+            "catharsis", "atemeal", "sleptonground", "fell", "sleptcold", "slepthot",
+            "attackedbycolonist", "colonistdied",
+        };
+    }
+
+    /// <summary>
     /// How a colonist's mood stands against her own break lines (design 43 §5a): the one answer the
     /// roster, the inspect pane and the alert all read, <b>published by the simulation</b> as
     /// <c>odyssey.pawn.mood.band</c>. The interface used to decide it from two constants of its own,

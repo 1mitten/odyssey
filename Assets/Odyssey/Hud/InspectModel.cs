@@ -126,6 +126,12 @@ namespace Odyssey.Hud
         /// touches nothing.</para>
         /// </summary>
         public HudColour? Tint;
+
+        /// <summary>
+        /// What the row says when hovered, or null for none. The registry's description for a
+        /// thought or a trait (design 43), so correcting the wiki corrects the tooltip.
+        /// </summary>
+        public string? Tooltip;
     }
 
     /// <summary>
@@ -216,6 +222,29 @@ namespace Odyssey.Hud
         /// <summary>The Health tab's row labels, by key.</summary>
         public const string HealthKey = "ui.combat.health", ConditionKey = "ui.combat.condition",
             WeaponKey = "ui.combat.weapon";
+
+        // ---- the Thoughts tab (design 43 §5b) ------------------------------------------------
+
+        /// <summary>
+        /// The line over the list: her mood and the target it is drifting to, in points out of a
+        /// hundred ("Mood 50 · Heading for 55"). Empty when the frame publishes no target.
+        /// </summary>
+        public string ThoughtHeading = string.Empty;
+
+        /// <summary>
+        /// What is on her mind, one row each, grouped <i>Now</i> (the situational offsets) then
+        /// <i>Memories</i>, worst first within each and a memory's ties by the soonest to lapse —
+        /// the tab exists to answer "why is she breaking", so the answer is the first row. A group
+        /// with nothing in it has no heading. Capped at <see cref="HudLayout.ThoughtRows"/> with the
+        /// remainder counted on the last row, so the pane stays one height.
+        /// </summary>
+        public readonly List<InspectRow> ThoughtRows = new List<InspectRow>();
+
+        long _thoughtsSignature = long.MinValue;
+        readonly List<(MindCatalogue.Source Source, int Value, int Left, int Count)> _nowScratch =
+            new List<(MindCatalogue.Source, int, int, int)>();
+        readonly List<(MindCatalogue.Source Source, int Value, int Left, int Count)> _memoryScratch =
+            new List<(MindCatalogue.Source, int, int, int)>();
 
         // ---- header
         public string Title = string.Empty;
@@ -542,6 +571,107 @@ namespace Odyssey.Hud
         ///
         /// <para>Three O(1) aspect lookups a refresh for the one pawn on the pane.</para>
         /// </summary>
+        /// <summary>
+        /// Fill <see cref="ThoughtRows"/> and <see cref="ThoughtHeading"/> from what the simulation
+        /// published (design 43 §4d). O(1) lookups, a dozen of them, for the one pawn on the pane;
+        /// the rows are rebuilt only when a published value moved, so a standing pane allocates
+        /// nothing.
+        /// </summary>
+        void RefreshThoughts(WorldSnapshot snapshot, in PawnView pawn)
+        {
+            _nowScratch.Clear();
+            _memoryScratch.Clear();
+            long signature = pawn.Mood;
+            bool targeted = snapshot.TryGetPawnAspect(pawn.Id, MindAspectNames.TargetKey, out int target);
+            signature = signature * 31 + (targeted ? target : -1);
+
+            foreach (MindCatalogue.Source source in MindCatalogue.Situational)
+            {
+                if (!snapshot.TryGetPawnAspect(pawn.Id, source.Value, out int value) || value == 0) continue;
+                _nowScratch.Add((source, value, 0, 1));
+                signature = signature * 31 + value;
+            }
+
+            foreach (MindCatalogue.Source source in MindCatalogue.Memories)
+            {
+                if (!snapshot.TryGetPawnAspect(pawn.Id, source.Value, out int value)) continue;
+                snapshot.TryGetPawnAspect(pawn.Id, source.Left, out int left);
+                if (!snapshot.TryGetPawnAspect(pawn.Id, source.Count, out int count)) count = 1;
+                _memoryScratch.Add((source, value, left, count));
+                // The time left is signed in at the resolution it is drawn at, so a pane open on a
+                // memory does not rebuild every tick for a number that reads the same.
+                signature = signature * 31 + value;
+                signature = signature * 31 + MindCatalogue.Left(left).GetHashCode();
+                signature = signature * 31 + count;
+            }
+
+            if (signature == _thoughtsSignature) return;
+            _thoughtsSignature = signature;
+
+            ThoughtHeading = targeted
+                ? Registry.Label("ui.need.mood") + " " + MindCatalogue.Points(pawn.Mood).TrimStart('+')
+                  + " · " + Registry.Label("ui.mind.target") + " " + MindCatalogue.Points(target).TrimStart('+')
+                : string.Empty;
+
+            // Worst first; a memory's tie goes to the one that lapses soonest.
+            _nowScratch.Sort((a, b) => a.Value.CompareTo(b.Value));
+            _memoryScratch.Sort((a, b) => a.Value != b.Value ? a.Value.CompareTo(b.Value) : a.Left.CompareTo(b.Left));
+
+            ThoughtRows.Clear();
+            int budget = HudLayout.ThoughtRows;
+            int wanted = (_nowScratch.Count > 0 ? _nowScratch.Count + 1 : 0)
+                       + (_memoryScratch.Count > 0 ? _memoryScratch.Count + 1 : 0);
+            if (wanted == 0)
+            {
+                ThoughtRows.Add(new InspectRow { Name = Registry.Label("ui.mind.nothing"), Value = string.Empty });
+                return;
+            }
+
+            // One row is kept for the count of what did not fit, when anything does not; and when
+            // both groups have something, the memories keep a heading and a row, so a long list of
+            // needs never hides every memory behind "+n more".
+            int room = wanted > budget ? budget - 1 : budget;
+            int reserved = _memoryScratch.Count > 0 && _nowScratch.Count > 0 ? 2 : 0;
+            int nowRoom = room - reserved;
+            int shown = 0;
+            AddGroup("ui.mind.now", _nowScratch, ref nowRoom, ref shown);
+            room = nowRoom + reserved;
+            AddGroup("ui.mind.memories", _memoryScratch, ref room, ref shown);
+            int hidden = _nowScratch.Count + _memoryScratch.Count - shown;
+            if (hidden > 0)
+                ThoughtRows.Add(new InspectRow { Name = "+" + hidden + " " + Registry.Label("ui.mind.more"), Value = string.Empty });
+        }
+
+        void AddGroup(string headingKey,
+            List<(MindCatalogue.Source Source, int Value, int Left, int Count)> rows, ref int room, ref int shown)
+        {
+            // A heading with no row under it says nothing, so a group needs room for both.
+            if (rows.Count == 0 || room < 2) return;
+            ThoughtRows.Add(new InspectRow
+            {
+                Name = Registry.Label(headingKey),
+                Value = string.Empty,
+                Tooltip = Registry.Describe(headingKey),
+            });
+            room--;
+            for (int i = 0; i < rows.Count && room > 0; i++, room--, shown++)
+            {
+                (MindCatalogue.Source source, int value, int left, int count) = rows[i];
+                string name = Registry.Label(source.Key);
+                if (count > 1) name += " x" + count;
+                string worth = MindCatalogue.Points(value);
+                ThoughtRows.Add(new InspectRow
+                {
+                    Name = name,
+                    Value = source.Memory
+                        ? worth + "  " + MindCatalogue.Left(left) + " " + Registry.Label("ui.mind.left")
+                        : worth,
+                    Tint = value > 0 ? HudTheme.Good : value < 0 ? HudTheme.Bad : (HudColour?)null,
+                    Tooltip = Registry.Describe(source.Key),
+                });
+            }
+        }
+
         void RefreshHealth(WorldSnapshot snapshot, in PawnView pawn)
         {
             bool pooled = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpMaxKey, out int max) && max > 0;
@@ -675,6 +805,7 @@ namespace Odyssey.Hud
                     SetPosition(pawn.Cell);
                     Layer = pawn.Cell.Y;
                     RefreshHealth(snapshot, pawn);
+                    RefreshThoughts(snapshot, pawn);
                 }
                 else
                 {
@@ -1613,7 +1744,8 @@ namespace Odyssey.Hud
             Tabs.Add(new InspectTab { Name = "Needs", Enabled = true, Reason = string.Empty });
             Tabs.Add(new InspectTab { Name = "Skills", Enabled = true, Reason = string.Empty });
             Tabs.Add(new InspectTab { Name = "Gear", Enabled = false, Reason = "equipment arrives with the inventory" });
-            Tabs.Add(new InspectTab { Name = "Thoughts", Enabled = false, Reason = "arrives with the thought log" });
+            // Live since design 43 §5b: what is on her mind, and why she is where she is.
+            Tabs.Add(new InspectTab { Name = "Thoughts", Enabled = true, Reason = string.Empty });
             Tabs.Add(new InspectTab { Name = "Social", Enabled = false, Reason = "M6" });
             // Live from the combat contracts step (design 33 §5): a colonist can be hurt now. The
             // tab's body is lane C's (HudShell.Combat.cs, CombatFeedbackModel) and is empty until

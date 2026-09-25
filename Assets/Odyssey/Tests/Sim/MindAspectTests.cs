@@ -1,6 +1,7 @@
 #nullable enable
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pawns;
 
 namespace Odyssey.Tests.Sim
@@ -110,9 +111,84 @@ namespace Odyssey.Tests.Sim
                 "an animal's mood never moves (design 29 §2), so it has no band to report");
         }
 
+        // ---- TM2: the Thoughts tab ---------------------------------------------------------
+
+        [Test]
+        public void EachThoughtsShareSumsToTheMemoryOffset()
+        {
+            var colony = Colony.Build();
+            Pawn pawn = colony.Ctx.Pawns.Spawn(colony.Cell(8, 8, 0));
+            pawn.AddMemory(ThoughtIndex.ColonistDied, 0);
+            pawn.AddMemory(ThoughtIndex.ColonistDied, 10);
+            pawn.AddMemory(ThoughtIndex.ColonistDied, 20);
+            pawn.AddMemory(ThoughtIndex.AteMeal, 30);
+            pawn.AddMemory(ThoughtIndex.SleptOnGround, 40);
+
+            int sum = 0;
+            for (int t = 0; t < ThoughtIndex.Count; t++) sum += pawn.MemoryContribution(t, 100, out _, out _);
+            Assert.That(sum, Is.EqualTo(pawn.MemoryMoodOffset(100)),
+                "the tab's rows must add up to what the mood is actually given, or it explains nothing");
+
+            int died = pawn.MemoryContribution(ThoughtIndex.ColonistDied, 100, out int copies, out int soonest);
+            Assert.That(copies, Is.EqualTo(3));
+            Assert.That(died, Is.EqualTo(-60 + -45 + -33), "the stack at the usual diminishing multiplier (design 33 §12b)");
+            Assert.That(soonest, Is.EqualTo(colony.Ctx.Content.Thoughts[ThoughtIndex.ColonistDied].durationTicks),
+                "the soonest copy is the one added first");
+        }
+
+        [Test]
+        public void MemoriesAndSituationalOffsetsArePublishedAsTheyCount()
+        {
+            var colony = Colony.Build();
+            Pawn pawn = colony.Ctx.Pawns.Spawn(colony.Cell(8, 8, 0));
+            pawn.Needs[NeedIndex.Food] = 60;     // the -120 band
+            pawn.AddMemory(ThoughtIndex.AttackedByColonist, 0);
+            colony.World.Tick();
+            WorldSnapshot frame = colony.World.Views.Current;
+            int tick = colony.World.CurrentTick;
+
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.Thought[ThoughtIndex.AttackedByColonist], out int worth), Is.True);
+            Assert.That(worth, Is.EqualTo(-80));
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.ThoughtLeft[ThoughtIndex.AttackedByColonist], out int left), Is.True);
+            Assert.That(left, Is.EqualTo(pawn.Memories[0].ExpiryTick - (tick - 1)).Or.EqualTo(pawn.Memories[0].ExpiryTick - tick));
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.ThoughtCount[ThoughtIndex.AttackedByColonist], out int count), Is.True);
+            Assert.That(count, Is.EqualTo(1));
+
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.Need[NeedIndex.Food], out int hunger), Is.True);
+            Assert.That(hunger, Is.EqualTo(colony.Ctx.Content.Needs[NeedIndex.Food].MoodOffset(pawn.Needs[NeedIndex.Food])));
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.Base, out int baseMood), Is.True);
+            Assert.That(baseMood, Is.EqualTo(colony.Ctx.Content.Mood.baseMood));
+
+            // The control: a thought she does not hold, and a need at no offset, publish nothing.
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.Thought[ThoughtIndex.Fell], out _), Is.False);
+            Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.Need[NeedIndex.Rest], out _), Is.False,
+                "sparse: a rested colonist's rest says nothing");
+        }
+
+        [Test]
+        public void TheThoughtHandlesAreTheContentsOrder()
+        {
+            // The interface names a thought by ThoughtHandle; the save stores FromDefs's index. The
+            // two orders must be one, and nothing but this can see both.
+            var content = ContentPack.Pawns();
+            Assert.That(content.Thoughts.Length, Is.EqualTo(ThoughtHandle.Count));
+            Assert.That(ThoughtHandle.Names.Length, Is.EqualTo(ThoughtHandle.Count));
+            for (int t = 0; t < ThoughtHandle.Count; t++)
+                Assert.That(content.Thoughts[t].defName.ToLowerInvariant(),
+                    Is.EqualTo("thought_" + ThoughtHandle.Names[t]), $"thought {t}");
+        }
+
         [Test]
         public void TheAspectNamesAreTheOnesTheInterfaceSpells()
         {
+            Assert.That(MindAspects.Base, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.base")));
+            Assert.That(MindAspects.Need[NeedIndex.Food], Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.need.food")));
+            Assert.That(MindAspects.Need[NeedIndex.Rest], Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.need.rest")));
+            Assert.That(MindAspects.Need[NeedIndex.Joy], Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.need.joy")));
+            Assert.That(MindAspects.Temperature, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.temperature")));
+            Assert.That(MindAspects.Thought[ThoughtIndex.Fell], Is.EqualTo(AspectKey.Of("odyssey.pawn.thought.fell")));
+            Assert.That(MindAspects.ThoughtLeft[ThoughtIndex.Fell], Is.EqualTo(AspectKey.Of("odyssey.pawn.thought.fell.left")));
+            Assert.That(MindAspects.ThoughtCount[ThoughtIndex.Fell], Is.EqualTo(AspectKey.Of("odyssey.pawn.thought.fell.count")));
             // Odyssey.Hud spells these in MindAspectNames and cannot reference this assembly.
             Assert.That(MindAspects.Band, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.band")));
             Assert.That(MindAspects.Target, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.target")));

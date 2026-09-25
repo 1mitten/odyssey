@@ -564,6 +564,7 @@ namespace Odyssey.Sim.Pawns
                     writer.AddPawnAspect(pawn.Id, MindAspects.Minor, pawn.MinorBreakLine());
                     writer.AddPawnAspect(pawn.Id, MindAspects.Major, pawn.MajorBreakLine());
                     writer.AddPawnAspect(pawn.Id, MindAspects.Extreme, pawn.ExtremeBreakLine());
+                    PublishThoughts(writer, pawn, world.CurrentTick);
                 }
 
                 // The rate she is paying work at right now (design 17 §3d), which is what the
@@ -680,6 +681,38 @@ namespace Odyssey.Sim.Pawns
         /// Defend join (§18) are unforced, and answer 0; so does a building, which has no pawn id
         /// and rides the order cell (<see cref="OrderCellOf"/>).
         /// </summary>
+        /// <summary>
+        /// What is on her mind (design 43 §5b): the base, the situational offsets that are not
+        /// nought, and every memory she holds with its stack and the time until it thins. Sparse
+        /// and bounded by the need and thought counts — four to eight rows for a colonist on an
+        /// ordinary day — and read by the Thoughts tab by name. Published for every colonist
+        /// rather than on a query, for the reason design 43 §4d gives.
+        /// </summary>
+        void PublishThoughts(SnapshotWriter writer, Pawn pawn, int tick)
+        {
+            PawnContent content = _ctx.Content;
+            writer.AddPawnAspect(pawn.Id, MindAspects.Base, content.Mood.baseMood);
+
+            for (int n = 0; n < NeedIndex.Count && n < MindAspects.Need.Length; n++)
+            {
+                int offset = content.Needs[n].MoodOffset(pawn.Needs[n]);
+                if (offset != 0) writer.AddPawnAspect(pawn.Id, MindAspects.Need[n], offset);
+            }
+
+            int temperature = content.Temperature.MoodOffset(pawn.AmbientTempC);
+            if (temperature != 0) writer.AddPawnAspect(pawn.Id, MindAspects.Temperature, temperature);
+
+            if (pawn.Memories.Count == 0) return;
+            for (int t = 0; t < content.Thoughts.Length && t < ThoughtHandle.Count; t++)
+            {
+                int worth = pawn.MemoryContribution(t, tick, out int copies, out int soonest);
+                if (copies == 0) continue;
+                writer.AddPawnAspect(pawn.Id, MindAspects.Thought[t], worth);
+                writer.AddPawnAspect(pawn.Id, MindAspects.ThoughtLeft[t], soonest - tick);
+                writer.AddPawnAspect(pawn.Id, MindAspects.ThoughtCount[t], copies);
+            }
+        }
+
         public static int OrderTargetOf(Pawn pawn)
         {
             Job? job = pawn.CurrentJob;
