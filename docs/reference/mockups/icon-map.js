@@ -2063,7 +2063,6 @@ window.ICON_GAPS = [
  "ui.health.nose",
  "ui.health.scar",
  "ui.health.shoulder",
- "ui.home.centred",
  "ui.home.hearth",
  "ui.item.boots",
  "ui.item.helmet",

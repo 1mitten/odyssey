@@ -98,7 +98,7 @@ namespace Odyssey.Tests.PlayMode
 
                 if (first.IsValid)
                 {
-                    directors.ChooseColonist(first, boot.World.Views.Current);
+                    directors.ChooseColonist(first, boot.World!.Views.Current);
                     for (int i = 0; i < 3; i++) yield return null;
                     Assert.That(directors.Assign.Open, Is.True, "choosing a colonist closed the Assign tab");
                 }

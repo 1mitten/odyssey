@@ -12351,3 +12351,29 @@ That is recorded with an incremental join named as the lever, not built.
 
 None of the three units moved a golden. The setting is hashed only when set, the hearth only while it
 exists, and the mask never.
+
+## 2026-09-25 — The Home view, the Assign tab and the hearth's header, to Claude Design's specification
+
+Claude Design answered the brief with a written specification rather than HTML. The owner pasted it
+in and it was built the same day as four commits on the same branch. Five places where it disagreed
+with the shipped HUD went to the owner first, and the answers are a table in design 43 §5. The
+pattern in them: **the spec's numbers came from the old mockup, and "match what ships" won every
+time.** The one rule the spec itself stated, "matching Power exactly", was the tie-break.
+
+Three things the work taught:
+
+- **Publishing every home cell's border would have drawn three outlines.** Home has a layer of
+  margin above and below, so on flat ground one base is home on three layers. Only cells a colonist
+  can stand in are published, and `WatchHomeTests` counts forty rows for an eleven-cell square as the
+  control.
+- **The version has to follow the rows, not the home.** Keyed on the home alone, a dig under the
+  border leaves the line drawn over a hole. Bumped on every dig, it rebuilds the edge for mining
+  anywhere on the board. It is keyed on both the home and the terrain, and it moves only when the rows actually
+  come out different. A dig outside home and a dig under the middle are the controls.
+- **A mid-frame republish is not free.** The first draft republished the views the moment the switch
+  moved, so the edge would appear on the same frame. That swaps the snapshot the rest of the frame is
+  drawing from. The switch now waits one frame, as power's does.
+
+None of the Presentation code has been compiled. This container has no Unity, and the fast tier builds
+only Sim and Hud. The edge pass, the hearth mark, the tab's shell, the pane's header and the Menu
+generalisation are all owed a Unity tier run on the owner's machine before the PR is judged.

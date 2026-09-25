@@ -2,7 +2,10 @@
 
 **Phase 3, 2026-09-25.** Interview: `docs/research/home-area-interview.md` (every recommendation
 taken, 2026-09-24). Design: `docs/design/43-home-area.md`. Brief: `docs/reference/mockups/home-area-brief.md`.
-**Approved 2026-09-25** (owner: *"approved start"*). H1, H2, HH and HP built; H3 and H4 wait on the brief.
+**Approved 2026-09-25** (owner: *"approved start"*). H1, H2, HH and HP built; **H3 and H4 built the same
+day to Claude Design's specification** (design 43 §5–§6), as commits HV (the switch and the channel), HE
+(the edge and the hearth mark), HA-A (the Assign tab) and HA-P (the hearth on the campfire's header).
+Their Presentation halves are unproven until the Unity tier runs on the owner's machine.
 All units land on `claude/sleepy-cannon-9d0evw` as separate commits, because this session may push
 only there.
 

@@ -147,12 +147,14 @@ build there is refused.
 
 ### 3g. The hearth on the pane and in the alerts (HP)
 
-- **The pane.** A campfire's pane carries a **hearth** row (`InspectModel.HearthRow`): on the hearth
-  it reads *Home is centred here* in the accent (`ui.home.centred`); on any other campfire it is a
-  press, *Make this the hearth* (`ui.command.sethearth`), which the shell turns into `SetHearth` on
-  the pane's cell, exactly as it turns the switch row into `SetPowerSwitch`. The press flag is set
-  **above** the rows' early return and the row's state is in the rebuild guard, so it neither dies on
-  the second refresh nor goes on offering after the fire became the hearth; both were seen to fail.
+- **The pane** (rebuilt to the spec, §6a). A campfire's pane is **wide**, as a store's is. On the
+  hearth the header carries a line under the name: the house at 12 px in the accent and *Hearth*
+  (`ui.home.hearth`) in the meta ink. On any other campfire, one `.action` button nine under the
+  header, *Make this the hearth* (`ui.command.sethearth`), which submits `SetHearth` on the pane's
+  cell. Both are header facts on `InspectModel` (`IsCampfire`, `IsHearth`, `OffersHearth`, `IsWide`),
+  set **above** the rows' early return and carried in the shell's rebuild signature, so the header
+  follows the hearth while the pane is held. The first build's readout row (*Home is centred here*,
+  `ui.home.centred`) is gone.
 - **No hearth** (`ui.alert.nohearth`, Warning) while somebody is kept home and there is no hearth:
   home does not exist, so she is kept nowhere. **Narrowed from the plan**, which also raised it while a
   campfire stands: the snapshot carries no list of campfires, and with nobody kept home no hearth is
@@ -268,83 +270,119 @@ a demolition is this rule working.
 
 ## 5. Seeing it
 
-### 5a. The view
+Built to **Claude Design's specification of 2026-09-25** (the owner's message, "Task: add Home, the
+hearth and the Assign tab"; the brief it answered is `docs/reference/mockups/home-area-brief.md`).
 
-`OverlayDirector.HomeVisible`, `ToggleHome`, `SetHome`, and `HudViews.Home = "ui.overlay.home"` after
-Power in `HudViews.Keys`, with its `IsOn` and `Toggle` cases. The strip's height already follows
-`Keys`. The button's glyph is a house, drawn from the SVG path the brief returns (`SvgPath` /
-`PathGlyph`), because no shipped font has one and the project draws its own icons (P13).
+### 5-rulings. Where the specification and the shipped interface disagreed (owner, 2026-09-25)
 
-### 5b. The Menu row, generalised
+| The spec said | Ruling | Why |
+|---|---|---|
+| An "assist" menu, or Assign? | **The Assign tab on F4**, as designed | no Assist menu exists; F4 was the dead Colonists slot |
+| Command bar 32 high, 14 px icons, active 12 %, dead 40 % | **Keep the shipped bar** (38, 16 px, 18 %, 42 %); only Assign goes live | the numbers came from the old mockup, and every panel sits on the bar |
+| Home button 36, "matching Power exactly"; hearth button 30 high | **Match what ships**: 34 like Power; the colonist pane's `.action`, 26 | the spec's own rule is "match exactly" |
+| The edge lifted 0.02 m | **Part the grass along the edge** while Home is on | the meadow's grass is 1.1 m and would hide it |
+| The campfire pane 560 (it shipped at 280) | **Campfires get the 560 pane**, as stores do | the button does not fit 280 |
 
-`HudShell.BuildMenuPopup` lights exactly one overlay row today, through an
-`if (key == PowerOverlayKey)` special case, and `ViewButton` re-lights only the power row after a
-press. That becomes: **a row is live if its key is in `HudViews.Keys`**, the live rows are held in one
-dictionary, and `MarkViews` lights the strip and the Menu from `HudViews.IsOn`. `PowerOverlayKey` is
-deleted. Without this, the second view is the second owner of "which overlays are live".
+The Menu row's house is drawn at the Menu's own 16 px (`IconBadge.BarSize`) rather than the spec's 20,
+on the same "match what ships" ruling: every other row's icon is 16.
+
+### 5a. The switch
+
+`OverlayDirector.HomeVisible` / `ToggleHome` / `SetHome`; `HudViews.Home = "ui.overlay.home"` after
+Power in `HudViews.Keys`. Off by default and not remembered between sessions, as Power is. The views
+strip's button is the same 34 px box and fills as Power's, the house drawn from the spec's path
+(`HudIcons.Home`, shipped as `docs/reference/mockups/home-glyph.svg`, registered under the icon key
+`home`) at 17 px, filled, the accent at 80 % while off and the text colour while on.
+
+**The Menu's Overlays rows are generalised**: `HudViews.MenuOverlays` is the one list, a row is live
+exactly when its key is in `HudViews.Keys` (`HudViews.IsLive`), the live rows are one dictionary, and
+`MarkViews` lights the strip and the Menu together. `PowerOverlayKey` and the power special case are
+gone.
+
+### 5b. The edge and the hearth mark
+
+**An edge and no wash.** `HomeEdgePass` (shaped like `PowerLinePass`) draws a flat strip
+**0.25 m wide** along every side of a published border cell that faces a cell which is not home,
+**0.02 m** above the draped floor plane — the accent at **70 %** on the active layer and **30 %** on the
+drawn layers below it, **nothing above** the active layer.
+
+- **Two meshes, two draw calls, whatever the size of home**: every strip on a tier is in one dynamic
+  mesh (16-bit indices to 65,000 vertices, 32-bit past), rebuilt only when `HomeVersion`, the active
+  layer or the lowest drawn layer moves, or after the view was hidden.
+- **Inset, so no corner is covered twice**: a strip lies inside its own cell against its side, as a
+  stockpile's edge does; a cell's south and north strips stop short of its west and east ones. At 70 %
+  a doubled corner would be a darker dot at every turn.
+- **Draped** by `GroundRelief.Drape` about the cell's floor centre, so it follows the roll of the
+  ground over bare earth and a built floor alike. The ramp at the foot of a terrace step is drawn by
+  the ground skin above that plane, and a strip there is hidden under it rather than laid on it —
+  recorded, not fixed.
+- **URP Unlit, transparent, depth-tested, no depth write**, queue 3000: what stands in front of the line
+  hides it, and it hides nothing. URP/Unlit is already in `ShaderInclusion`.
+- **The grass parts along the active line** (the owner's ruling): three stamps a side into the same
+  clearance field items and marks use (`GrassClearance`), radius 0.6 m, only while the view is on and
+  only on the active layer.
+
+**The hearth mark** (`HearthMarkView`, shaped like `CombatFloaterView`): the house, 28 px, filled in
+the accent at 70 %, 1.2 m above the hearth's ground, always facing the screen; shown only while the
+view is on, there is a hearth, and it is on the active layer.
 
 ### 5c. The channel
 
-The home is published **only while the view is on** (process §3: a channel only to a subscriber),
-through a `WatchHome` intent handled like `WatchPower` (`SimWorld`, `WorldViewStore.WatchHome`).
-While watched, a contributor publishes one `HomeCellView { CellIndex, Edges }` per home cell — the
-edge bits say which of its four sides border a cell that is not home — and a `HomeVersion` on the
-snapshot, cached against `HomeArea.Version` so an unchanged home republishes the rows it already has.
-Presentation filters to the drawn layers and never recomputes the growth (process §3: presentation
-never derives a number the simulation knows).
+The home is published **only while the view is on** (process §3), through `WatchHome`, handled by the
+world as `WatchPower` is and applied while paused. While watched, `HomeArea` (an `ISnapshotContributor`)
+publishes one `HomeCellView { CellIndex, Edges }` per border cell — edge bits 1 west, 2 east, 4 south,
+8 north — **and only cells a colonist could stand in**: not solid, and a floor or solid ground under
+them. That is what keeps the one layer of margin above and below a base — empty air and earth — from
+drawing two more outlines a storey apart.
 
-### 5d. The draw
-
-**Not baked into the chunk meshes.** A store's wash is a tint bit baked at mesh time, because a store
-changes only when painted. Home's edge moves five cells every time a wall goes up, and baking it would
-dirty every chunk the edge crosses on every placement. So it is an overlay, submitted only while the
-view is on, inside `FrameSection.Overlays`:
-
-- **An edge look** is a pass on `PowerLinePass`'s model: matrices rebuilt only when `HomeVersion` or
-  the drawn band moves, one instanced bucket.
-- **A wash look** rides the cell-plate path (`ChunkRenderer.DrawCellMark`, gathered before
-  `FlushCellPlates`), one colour, one instanced call per 1,023 plates.
-
-**The hearth wears a house mark while the Home view is on**, and looks like any campfire otherwise
-(round three, answer 8); the mark's shape and colour come from the brief with the rest.
-
-Which of the two, the colours and the thickness come from the brief and live in one Presentation
-constant set, `HomeLook` — never in `OrderColours`, which is the orders' table.
+`HomeVersion` moves **exactly when the rows change**. The rows depend on the home *and* on the
+terrain (a dug cell stops being standable without the home moving), so they are worked out again when
+`HomeArea.Version` or the nav graph's version moves, and the version is bumped only if they came out
+different: a mine dug outside home costs one pass over the border and moves nothing a reader caches.
+The switch goes out on the frame it is pressed and is answered on the next publish; the composition
+root never republishes mid-frame, which would swap the snapshot the rest of the frame is drawing.
 
 ## 6. The Assign tab (F4)
 
-The dead *Colonists* item on F4 becomes **Assign** (`ui.tab.assign`). `ui.tab.colonists` stays in the
-registry, as `ui.tab.schedule` and Wildlife did.
+### 6a. As built
 
-- **Shape**: the Work tab's. A frozen name column, one row per colonist in the roster's order, then
-  **Area** (Anywhere / Home) and **Response** (Fight back / Defend / Flee). A press on a cell moves it
-  to the next value, as the pane's Response button does. Twelve rows a page, a pager, never a
-  scrollbar. Width, column widths and row height are constants in `AssignLayout`, **taken from the
-  brief's returned HTML comment**; the window width adds its own padding and border
-  (`WorkGridLayout.PanelOuterWidth`'s rule).
-- **Model**: `Hud/AssignModel.cs`, Unity-free, reads `odyssey.pawn.area` and `odyssey.pawn.response`
-  and writes `SetPawnArea` and `SetHostilityResponse` the way `WorkGridModel` writes a priority.
-  **Colonists only**: a bandit or an animal in the snapshot is never a row.
-- **Director**: `Hud/AssignDirector.cs` on `AnimalsDirector`'s shape, in `HudDirectors`.
-- **Keys**: `HudKey.F4` between F3 and F5 (bindings are stored by name, so the enum's order is free);
-  `HotkeyAction.AssignTab` **appended**; a `Defaults` row; `HotkeyUnity` both ways; the Settings keys
-  page's Interface group.
-- **One docked tab at a time** has one owner per tab today — each tab's change handler closes the
-  others. Assign adds itself to the four handlers; folding the rule into `HudDirectors` is recorded,
-  not done here.
-- **Words**, all registry rows and all ASCII: `ui.tab.assign` *Assign*, `ui.keys.assign`,
-  `ui.assign.area` *Area*, `ui.assign.response` *Response*, `ui.assign.anywhere` *Anywhere*,
-  `ui.assign.home` *Home*, `ui.assign.nohearth` *No hearth yet*. The response values reuse
-  `ui.command.fightback`, `ui.command.defend`, `ui.command.flee`.
+The dead *Colonists* item on F4 is **Assign** (`ui.tab.assign`); `ui.tab.colonists` stays in the
+registry and lends the bar item its art (`HudCommands.IconOf`).
+
+- **Geometry** (`AssignLayout`, the spec's numbers): **536** wide = the 510 grid + 2 × (12 padding +
+  1 border), because a UI Toolkit width is a border box. Columns **192 / 150 / 150**, gaps **9**. Header
+  **34** with "ASSIGN (14)" — the count in 11 mono, 6 after the word — and a drawn X in a 22 box.
+  Column headings **30** (COLONIST · AREA · RESPONSE, 11 / 600 in the dim ink), "No hearth yet"
+  (12 / 400, meta ink) 9 after AREA while there is no hearth. Rows **30**, **12 a page**; a 20 px
+  portrait, the name at 14 / 500; two setting cells **24** high, 9 in each side, the value and an
+  **11 px** cycle mark (`HudIcons.Cycle`, stroked at **2.4**). The pager shows only past twelve: two
+  22 × 22 drawn chevrons with a 1 px border, the one at an end dimmed to 40 %, "1 / 2" in 12 mono.
+  **Height follows the page**, width never moves.
+- **The four states of a cell**: normal (the control border, text ink, dim mark); **cautious** — Home,
+  or Flee — border in the warning at 50 %, ink and mark in the warning; hover — accent border, accent
+  12 % fill, accent mark; and the **selected row** in the accent, its ink and mark on-accent, the warning
+  dropped.
+- **Model** (`AssignModel`, fast tier): colonists only, in the **roster's order**; area from
+  `odyssey.pawn.area`, response from `odyssey.pawn.response`; a press sends `SetPawnArea` or
+  `SetHostilityResponse` with the next value round the list, for that colonist alone.
+- **Behaviour**: F4 or the bar toggles it; Escape (its own rung, `EscapeAction.CloseAssign`) and the X
+  close it; opening it closes the inspect pane and the other docked tabs, and they close it. **Pressing
+  a name selects that colonist and takes the camera to her, and the tab stays open** — the Work tab's
+  rule, because the job of the tab is setting several people in a row.
+- **Keys**: `HudKey.F4` between F3 and F5 (bindings are stored by name, so nothing shifts);
+  `HotkeyAction.AssignTab` appended; on the Settings Keys page's Interface group.
+- **Words**: `ui.tab.assign`, `ui.keys.assign`, `ui.assign.colonist` / `area` / `response` /
+  `anywhere` / `home` / `nohearth`; the responses reuse `ui.command.fightback` / `defend` / `flee`.
+
+The grid is left open to the right for a fourth column.
 
 ## 7. What it costs (to be measured)
 
 | Arm | Where | Taken in |
 |---|---|---|
-| One home rebuild, all layers and one layer, Standard / Huge / scale target | `TickBenchmarkTests.WhatOneHomeRebuildCosts` | H1, measured below |
-| The busy arm unchanged with a home present | `TickBenchmarkTests`' existing busy arm | H1 |
-| The view off, on, and on over a forty-building base, one run | `FrameTimeTests.TheHomeViewAgainstTheFrame`, `Category("Measurement")` | H3 |
-| Draw calls with the view on | the same, structural half kept in the PR gate | H3 |
+| One home rebuild, all layers and one layer, Standard / Huge / scale target | `TickBenchmarkTests.WhatOneHomeRebuildCosts` | H1/HH, measured below |
+| The view off against on, over a hearth and walls every nine cells across the board, one run; draw calls 0 off and at most 2 on (the gate) | `FrameTimeTests.TheHomeViewCostsWhatItSubmits` (PlayMode; milliseconds logged, not asserted) | **owed**: needs the Unity tier on the owner's machine |
+| The edge pass alone: two calls whatever the size, a still frame rebuilds nothing | `HomeEdgePassTests` (EditMode) | **owed**: the same |
 
 Each number goes here with its machine and date.
 
@@ -407,6 +445,13 @@ measure again if a placement ever shows in a frame.
 - **Nothing is promoted when the hearth is lost.** The owner's answer; a campfire picked for the
   player would be a hearth they did not choose.
 - **The hearth is hashed only while set.** Hashing a -1 would move every golden.
+- **Only standable border cells are published.** Publishing every home cell's edge draws three
+  outlines a storey apart — the margin layers above and below are home too.
+- **`HomeVersion` follows the rows, not the home.** Keyed on the home alone, a dig under the border
+  leaves the edge drawn over a hole; bumped on every dig, a mine re-meshes the edge for nothing.
+- **The edge is two meshes, not instances.** A mesh a tier is two calls however big home grows; an
+  instanced strip is a call per 1,023.
+- **The grass parts along the edge.** Take the stamps out and the meadow hides the line.
 
 ## 9. Open for the owner, and follow-ons
 
@@ -423,6 +468,10 @@ measure again if a placement ever shows in a frame.
   radius, which the reference hangs on the same mask (a-18 finding 2). **Not** forbidding things
   dropped outside it: a-18 finds that is a per-item flag in the reference, not a home rule, which
   corrects a-03 line 108.
+- **One docked tab at a time** is written in every tab's change handler (six of them now, Assign
+  included). Folding it into `HudDirectors` is recorded, not done.
+- **The edge on a terrace ramp** is hidden under the ground skin (§5b). Laying it on the ramp needs
+  the skin's height function beside `GroundRelief`'s.
 - **More areas than Home** — the reference's named allowed areas. The Area column is a cycle of two
   today and becomes a picker the day there is a third.
 
@@ -447,14 +496,25 @@ measure again if a placement ever shows in a frame.
 | H2 | a new setting ends an outside job the same tick | *Anywhere* interrupts nothing |
 | H2 | Flee and self-defence are unchanged at Home | — |
 | H2 | an empty home restricts nobody | a one-bed home does |
-| H3 | nothing is published with the view off | rows and a version appear when watched |
-| H3 | the version moves with a bed | and not with a felled tree |
-| H3 | the Home view is its own switch | toggling it leaves Power alone |
-| H3 | every key in `HudViews.Keys` has a live Menu row | every other overlay row is dim |
-| H4 | the rows are the colonists | a bandit and a hog are not rows |
-| H4 | a press emits the next value's intent for that colonist | — |
-| H4 | a pager at thirteen colonists | none at twelve |
-| H4 | F4 is bound and Colonists is off the bar | `HotkeyClashTests`, `RegistryTests`, `HudFontTests` |
+| HV | nothing is published unwatched (`WatchHomeTests`) | the same colony watched has rows; switched off, none |
+| HV | only the standable layer is outlined: 40 rows for the hearth's square | three layers are home (the margin control) |
+| HV | the version stays on a still colony and moves with a wall | — |
+| HV | a dig under the border moves it | a dig outside home, and under the middle, do not |
+| HV | the Home view is its own switch (`HomeViewHudTests`) | toggling it leaves Power alone |
+| HV | every key in `HudViews.Keys` has a live Menu row | every other overlay row is dim |
+| HE | any home is at most two calls (`HomeEdgePassTests`, EditMode) | a bigger home is still two |
+| HE | a still frame rebuilds nothing | a new version or slice rebuilds |
+| HE | nothing above the active layer; the band decides the lower ones | layer 1 drawn once the band reaches it |
+| HE | no corner covered twice; the ring's area exactly | — |
+| HE | off submits nothing, on at most two (`FrameTimeTests.TheHomeViewCostsWhatItSubmits`) | the view drew something |
+| HA-A | the rows are the colonists in the roster's order (`AssignModelTests`) | a bandit and a hog are not rows |
+| HA-A | a press sends the next value for that colonist alone, and wraps | an animal and a bandit are refused |
+| HA-A | twelve a page and no pager at twelve; a shrunk colony goes back a page | — |
+| HA-A | "No hearth yet" with no hearth | none with one |
+| HA-A | 536 = 510 + chrome; Escape's rung; F4 live and bound | `HotkeyClashTests`, `RegistryTests`, `HudFontTests` |
+| HA-A | the window is 536 and the page's height, a row 30; choosing a colonist leaves it open (`DockedTabGeometryTests`, PlayMode) | — |
+| HA-P | a campfire offers, the hearth says so, a wall neither (`HearthHudTests`) | neither is a readout row any more |
+| HA-P | a campfire's pane is wide | a wall's is narrow |
 
 | HH | the first campfire raised becomes the hearth | a second does not; a wall never does |
 | HH | `SetHearth` moves it, and home moves with it | refused on a wall, open ground and a ruin's fire |

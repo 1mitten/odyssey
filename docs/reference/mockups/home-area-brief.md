@@ -221,5 +221,12 @@ draft overrides it; Claude Design draws all three pieces; Flee towards home late
 
 ## Built
 
-Nothing yet. When the files come back they go in this folder beside this brief, and design 43 §5d
-and §6 are amended with the look and the constants chosen.
+**Claude Design answered on 2026-09-25 with a written specification** rather than HTML files: the
+owner pasted it into the session ("Task: add Home, the hearth and the Assign tab"). It was built the
+same day on `claude/sleepy-cannon-9d0evw`, and design 43 §5 and §6 carry every constant chosen. The
+house glyph it gave is shipped beside this brief as `home-glyph.svg`.
+
+Where the specification and the shipped HUD disagreed, the owner ruled (design 43 §5-rulings): the
+Assign tab on F4 rather than an "assist" menu; the shipped command bar kept, with only Assign going
+live; the Home button 34 like Power and the hearth button the pane's own 26-high `.action`; the grass
+parted along the edge; and campfires given the 560 pane.

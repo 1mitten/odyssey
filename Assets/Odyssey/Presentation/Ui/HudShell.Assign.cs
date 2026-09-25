@@ -97,9 +97,9 @@ namespace Odyssey.Presentation.Ui
             head.style.flexShrink = 0;
             head.style.borderBottomWidth = HudTheme.BorderWidth;
             head.style.borderBottomColor = HudTokens.Convert(HudTheme.RowRule);
-            head.Add(ColumnHeading(AssignDirector.ColonistKey, AssignLayout.ColonistColumn, out _));
-            head.Add(Gap());
-            VisualElement areaHeading = ColumnHeading(AssignDirector.AreaKey, AssignLayout.AreaColumn, out _);
+            head.Add(AssignHeading(AssignDirector.ColonistKey, AssignLayout.ColonistColumn, out _));
+            head.Add(AssignGap());
+            VisualElement areaHeading = AssignHeading(AssignDirector.AreaKey, AssignLayout.AreaColumn, out _);
             _assignNoHearth = HudText.Make(Registry.Label(AssignDirector.NoHearthKey), HudTextRole.Meta);
             _assignNoHearth.style.color = HudTokens.TextMeta;
             _assignNoHearth.style.marginLeft = AssignLayout.NoHearthGap;
@@ -108,8 +108,8 @@ namespace Odyssey.Presentation.Ui
             areaHeading.Add(_assignNoHearth);
             areaHeading.style.overflow = Overflow.Visible;
             head.Add(areaHeading);
-            head.Add(Gap());
-            head.Add(ColumnHeading(AssignDirector.ResponseKey, AssignLayout.ResponseColumn, out _));
+            head.Add(AssignGap());
+            head.Add(AssignHeading(AssignDirector.ResponseKey, AssignLayout.ResponseColumn, out _));
             body.Add(head);
 
             // The rows, pooled once: a page's worth and never more.
@@ -148,11 +148,11 @@ namespace Odyssey.Presentation.Ui
                 });
                 view.Root.Add(view.NameCell);
 
-                view.Root.Add(Gap());
-                view.Area = SettingCell(AssignLayout.AreaColumn, () => CycleAssignArea(captured));
+                view.Root.Add(AssignGap());
+                view.Area = AssignSettingCell(AssignLayout.AreaColumn, () => CycleAssignArea(captured));
                 view.Root.Add(view.Area.Root);
-                view.Root.Add(Gap());
-                view.Response = SettingCell(AssignLayout.ResponseColumn, () => CycleAssignResponse(captured));
+                view.Root.Add(AssignGap());
+                view.Response = AssignSettingCell(AssignLayout.ResponseColumn, () => CycleAssignResponse(captured));
                 view.Root.Add(view.Response.Root);
 
                 body.Add(view.Root);
@@ -165,7 +165,7 @@ namespace Odyssey.Presentation.Ui
             _hud.Add(_assignPanel);
         }
 
-        static VisualElement Gap()
+        static VisualElement AssignGap()
         {
             var gap = new VisualElement { pickingMode = PickingMode.Ignore };
             gap.style.width = AssignLayout.ColumnGap;
@@ -173,7 +173,7 @@ namespace Odyssey.Presentation.Ui
             return gap;
         }
 
-        static VisualElement ColumnHeading(string key, int width, out Label label)
+        static VisualElement AssignHeading(string key, int width, out Label label)
         {
             var cell = new VisualElement();
             cell.style.width = width;
@@ -186,7 +186,7 @@ namespace Odyssey.Presentation.Ui
             return cell;
         }
 
-        AssignCell SettingCell(int width, System.Action press)
+        AssignCell AssignSettingCell(int width, System.Action press)
         {
             var cell = new AssignCell();
             cell.Root = new VisualElement();
@@ -369,12 +369,12 @@ namespace Odyssey.Presentation.Ui
                 view.Avatar.style.backgroundColor = selected
                     ? HudTokens.Convert(HudTheme.OnAccent.WithAlpha(0.25f))
                     : HudTokens.PanelBorder;
-                PaintCell(view.Area, selected, view.Row.AreaCautious);
-                PaintCell(view.Response, selected, view.Row.ResponseCautious);
+                PaintAssignCell(view.Area, selected, view.Row.AreaCautious);
+                PaintAssignCell(view.Response, selected, view.Row.ResponseCautious);
             }
         }
 
-        static void PaintCell(AssignCell cell, bool selected, bool cautious)
+        static void PaintAssignCell(AssignCell cell, bool selected, bool cautious)
         {
             Color border, fill = new Color(0f, 0f, 0f, 0f), ink, mark;
             if (selected)

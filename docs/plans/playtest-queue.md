@@ -23,14 +23,17 @@ the next session learns to ignore.
 
 ## Open
 
-- **Does the hearth read on a campfire's pane, and does ordering it down warn?** (`claude/sleepy-cannon-9d0evw`,
-  design 43 §3f–§3g.) Build two campfires. Click the first: its pane has a *hearth* row reading
-  *Home is centred here* in the accent colour. Click the second: the row reads *Make this the hearth*
-  and is pressable; press it, and the first campfire's pane now offers the press instead. Order the
-  hearth deconstructed: a *Hearth marked to come down* warning appears, and a click on it goes to the
-  fire. A wrong answer is a second campfire that already says it is the hearth, a press that does
-  nothing, a row that keeps offering after the press, or no warning. Keeping a colonist home cannot
-  be tried yet: its control is the Assign tab, which waits on the Claude Design files.
+- **Does home read, and can a colonist be kept in it?** (`claude/sleepy-cannon-9d0evw`, PR #214,
+  design 43 §5–§6.) Build a campfire and a hut round it. Press the **house** under Power in the views
+  strip: a thin cyan line should run round the base about five cells out, the grass parting along it,
+  and a small house should float over the campfire. A wrong answer is no line, a line hidden in the
+  grass, three stacked outlines, or a darker dot at every corner. Build a second campfire and click
+  it: the pane is wide and has a *Make this the hearth* button; press it and the house moves. Order
+  the hearth deconstructed: *Hearth marked to come down* appears. **F4** opens Assign: one row per
+  colonist; press a colonist's *Anywhere* cell and it turns to *Home* in amber. Mark a tree well
+  outside the line: that colonist should leave it and walk home when idle, while an *Anywhere*
+  colonist fells it. A wrong answer is a Home colonist working outside, or a tab that closes when you
+  click a name.
 - **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
   Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest
   over bare arms and black trousers, and carry a crowbar or a bat; click one and the pane shows a
