@@ -126,6 +126,12 @@ namespace Odyssey.Hud
         /// touches nothing.</para>
         /// </summary>
         public HudColour? Tint;
+
+        /// <summary>
+        /// What the row says when hovered, or null for none. The registry's description for a
+        /// thought or a trait (design 51), so correcting the wiki corrects the tooltip.
+        /// </summary>
+        public string? Tooltip;
     }
 
     /// <summary>
@@ -232,6 +238,24 @@ namespace Odyssey.Hud
         public const string HealthKey = "ui.combat.health", ConditionKey = "ui.combat.condition",
             WeaponKey = "ui.combat.weapon";
 
+        // ---- the Thoughts tab (design 51 §10, mockup 23b) ------------------------------------
+
+        /// <summary>The Thoughts tab: meter, breakdown, thoughts table and traits strip. Every word is its own.</summary>
+        public readonly ThoughtsTab Thoughts = new ThoughtsTab();
+
+        /// <summary>The colour of her mood against her own lines, for the Needs tab's bar as for the meter.</summary>
+        public HudColour MoodInk => Thoughts.MoodInk;
+
+        /// <summary>
+        /// Who she is (design 51 §5f): one row per trait, the name then what it does, tinted by
+        /// <see cref="TraitSummary.Tint"/> and described by the registry. Drawn on the Needs tab
+        /// under the bars, in the slack the fixed body leaves there. Empty for a colonist from
+        /// before traits, and the pane then says nothing about them.
+        /// </summary>
+        public readonly List<InspectRow> TraitRows = new List<InspectRow>();
+
+        long _traitsSignature = long.MinValue;
+
         // ---- header
         public string Title = string.Empty;
         public string Subtitle = string.Empty;
@@ -306,6 +330,26 @@ namespace Odyssey.Hud
         public int Food;
         public int Rest;      // 0..1000, the simulation's scale
         public int Mood;      // 0..1000, like Food and Rest
+
+        /// <summary>
+        /// The <see cref="Odyssey.Sim.Contracts.MoodBand"/> the simulation published for her (design
+        /// 44 §5a), which is what the pane names her mood by. Never derived here from
+        /// <see cref="Mood"/>: the lines are hers and move with traits.
+        /// </summary>
+        public int Band;
+
+        /// <summary>
+        /// The band as a word inside a sentence, "content" to "breaking down" — and in a break, which
+        /// one: "breaking down (tantrum)" (design 51 §5c). Rebuilt only when the band or the break
+        /// changes, so a standing pane allocates nothing.
+        /// </summary>
+        public string MoodWord => _moodWord ?? MoodBands.Word(Band);
+
+        /// <summary>The <see cref="BreakHandle"/> she is in, or -1 when she is in none.</summary>
+        public int BreakKind = -1;
+
+        string? _moodWord;
+        int _moodWordBand = -1, _moodWordBreak = -2;
 
         // ---- no selection: the colony summary
         public int ColonySize;
@@ -387,7 +431,7 @@ namespace Odyssey.Hud
         public void SetColonist(PawnId id)
         {
             // Another colonist: the Health tab's clicked region was about the last one.
-            if (Subject != InspectSubject.Colonist || id != Pawn) Health.Reset();
+            if (Subject != InspectSubject.Colonist || id != Pawn) { Health.Reset(); Thoughts.Reset(); }
             Subject = InspectSubject.Colonist;
             Pawn = id;
             Thing = ThingId.None;
@@ -565,6 +609,35 @@ namespace Odyssey.Hud
         int _healthHp = int.MinValue, _healthMax = int.MinValue, _healthWeapon = int.MinValue, _healthCondition = -1;
 
         /// <summary>
+        /// Fill <see cref="TraitRows"/> from the slots the simulation published (design 51 §4d),
+        /// rebuilding only when a slot changed — which, since traits never change, is once per
+        /// colonist the pane is opened on.
+        /// </summary>
+        void RefreshTraits(WorldSnapshot snapshot, in PawnView pawn)
+        {
+            long signature = pawn.Id.Value;
+            for (int slot = 0; slot < TraitHandle.MaxPerPawn; slot++)
+                signature = signature * 31 + (snapshot.TryGetPawnAspect(pawn.Id, MindAspectNames.TraitKey[slot], out int h) ? h + 1 : 0);
+            if (signature == _traitsSignature) return;
+            _traitsSignature = signature;
+
+            TraitRows.Clear();
+            for (int slot = 0; slot < TraitHandle.MaxPerPawn; slot++)
+            {
+                if (!snapshot.TryGetPawnAspect(pawn.Id, MindAspectNames.TraitKey[slot], out int handle)) continue;
+                TraitRows.Add(TraitSummary.Row(handle,
+                    Read(snapshot, pawn.Id, MindAspectNames.TraitMoodKey[slot], 0),
+                    Read(snapshot, pawn.Id, MindAspectNames.TraitNerveKey[slot], 0),
+                    Read(snapshot, pawn.Id, MindAspectNames.TraitLearnKey[slot], 1_000),
+                    Read(snapshot, pawn.Id, MindAspectNames.TraitWorkKey[slot], 1_000),
+                    Read(snapshot, pawn.Id, MindAspectNames.TraitCannotKey[slot], 0)));
+            }
+        }
+
+        static int Read(WorldSnapshot snapshot, PawnId pawn, AspectKey key, int otherwise) =>
+            snapshot.TryGetPawnAspect(pawn, key, out int value) ? value : otherwise;
+
+        /// <summary>
         /// The Health tab (design 33 §1: HP, state, weapon). The pool is <c>odyssey.pawn.hp.max</c>,
         /// published for every person always; <b>no <c>odyssey.pawn.hp</c> beside it means whole</b>
         /// (design 33 §5d). The condition is the flags' — downed, then stunned — else hurt while
@@ -723,9 +796,22 @@ namespace Odyssey.Hud
                     Food = pawn.Food;
                     Rest = pawn.Rest;
                     Mood = pawn.Mood;
+                    Band = MoodBands.Of(snapshot, pawn.Id);
+                    BreakKind = Band == MoodBand.Broken
+                        && snapshot.TryGetPawnAspect(pawn.Id, MindAspectNames.BreakKey, out int kind) ? kind : -1;
+                    if (Band != _moodWordBand || BreakKind != _moodWordBreak)
+                    {
+                        _moodWordBand = Band;
+                        _moodWordBreak = BreakKind;
+                        _moodWord = BreakKind >= 0 && BreakKind < BreakHandle.Count
+                            ? MoodBands.Word(Band) + " (" + Registry.Label("ui.break." + BreakHandle.Names[BreakKind]).ToLowerInvariant() + ")"
+                            : MoodBands.Word(Band);
+                    }
                     SetPosition(pawn.Cell);
                     Layer = pawn.Cell.Y;
                     RefreshHealth(snapshot, pawn);
+                    RefreshTraits(snapshot, pawn);
+                    Thoughts.Refresh(snapshot, pawn);
                 }
                 else
                 {
@@ -1707,7 +1793,8 @@ namespace Odyssey.Hud
             Tabs.Add(new InspectTab { Name = "Needs", Enabled = true, Reason = string.Empty });
             Tabs.Add(new InspectTab { Name = "Skills", Enabled = true, Reason = string.Empty });
             Tabs.Add(new InspectTab { Name = "Gear", Enabled = false, Reason = "equipment arrives with the inventory" });
-            Tabs.Add(new InspectTab { Name = "Thoughts", Enabled = false, Reason = "arrives with the thought log" });
+            // Live since design 51 §5b: what is on her mind, and why she is where she is.
+            Tabs.Add(new InspectTab { Name = "Thoughts", Enabled = true, Reason = string.Empty });
             Tabs.Add(new InspectTab { Name = "Social", Enabled = false, Reason = "M6" });
             // Live from the combat contracts step (design 33 §5): a colonist can be hurt now. The
             // tab's body is lane C's (HudShell.Combat.cs, CombatFeedbackModel) and is empty until

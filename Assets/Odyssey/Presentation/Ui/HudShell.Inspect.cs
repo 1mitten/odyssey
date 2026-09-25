@@ -295,7 +295,7 @@ namespace Odyssey.Presentation.Ui
             int layer = _inspect.Layer;
             int selected = _directors != null ? _directors.Selection.Pawns.Count : 0;
             string band = _inspect.ShowsColonistBody
-                ? MoodBands.Band(_inspect.Mood)
+                ? _inspect.MoodWord
                 : string.Empty;
 
             if (_metaLayer != layer || !ReferenceEquals(_metaPosition, _inspect.Position))
@@ -341,7 +341,7 @@ namespace Odyssey.Presentation.Ui
 
             SetNeed(0, _inspect.Food);
             SetNeed(1, _inspect.Rest);
-            SetNeed(2, _inspect.Mood);
+            SetNeed(2, _inspect.Mood, HudTokens.Convert(_inspect.MoodInk));
 
             for (int i = 0; i < _inspect.Skills.Count; i++)
             {
@@ -350,6 +350,8 @@ namespace Odyssey.Presentation.Ui
             }
 
             SyncHealthTab();
+            SyncThoughtsTab();
+            SyncTraitsRows(_inspect.ActiveTabName == "Needs");
         }
 
         /// <summary>
@@ -369,11 +371,17 @@ namespace Odyssey.Presentation.Ui
             // is the active tab the needs grid steps aside, as it does for Skills.
             bool health = active == "Health";
 
+            // The Thoughts tab (design 51 §5b), HudShell.Mind.cs: the needs grid steps aside for it
+            // as it does for the other two.
+            bool thoughts = active == "Thoughts";
+
             if (_needsGrid != null)
-                _needsGrid.style.display = skills || health ? DisplayStyle.None : DisplayStyle.Flex;
+                _needsGrid.style.display = skills || health || thoughts ? DisplayStyle.None : DisplayStyle.Flex;
             if (_skillsGrid != null)
                 _skillsGrid.style.display = skills ? DisplayStyle.Flex : DisplayStyle.None;
             ShowHealthTab(health);
+            ShowThoughtsTab(thoughts);
+            ShowTraitsRows(!(skills || health || thoughts));
 
             // A store's two tabs stand in the same box and one of them is drawn, exactly as the
             // colonist's needs and skills do — so changing tab changes which rows are shown and
@@ -573,14 +581,14 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         static Color ExperienceInk => HudTokens.Good;
 
-        void SetNeed(int index, int thousandths)
+        void SetNeed(int index, int thousandths, Color? ink = null)
         {
             if (index >= _needs.Count) return;
             NeedView view = _needs[index];
 
             float percent = Percent(thousandths);
             view.Fill.style.width = Length.Percent(percent);
-            view.Fill.style.backgroundColor = HudTokens.NeedBand(thousandths);
+            view.Fill.style.backgroundColor = ink ?? HudTokens.NeedBand(thousandths);
 
             // A need moves by fractions of a per cent between refreshes, so the label is rebuilt
             // only when the whole number it prints has actually changed.
@@ -628,7 +636,7 @@ namespace Odyssey.Presentation.Ui
                         // line (design 43 §10): "Building · content · Hurt · Machete".
                         string condition = _inspect.HealthCondition.Length > 0 ? " · " + _inspect.HealthCondition : string.Empty;
                         string weapon = _inspect.HealthWeapon.Length > 0 ? " · " + _inspect.HealthWeapon : string.Empty;
-                        return count + $"{_inspect.Job} · mood {MoodBands.Band(_inspect.Mood)}" + condition + weapon;
+                        return count + $"{_inspect.Job} · mood {_inspect.MoodWord}" + condition + weapon;
                     }
                 case InspectSubject.Item:
                     // The count used to be said here — "27 in the pile" — and it was missed
@@ -660,6 +668,8 @@ namespace Odyssey.Presentation.Ui
             _needsGrid = null;
             _skillsGrid = null;
             ForgetHealthTab();
+            ForgetThoughtsTab();
+            ForgetTraitsRows();
             _cellRowsGrid = null;
             _locationRow = null;
             _locationValue = null;
@@ -834,6 +844,9 @@ namespace Odyssey.Presentation.Ui
                 _needsGrid = grid;
                 tabBody.Add(grid);
 
+                // Who she is, under the bars (design 51 §5f), HudShell.Mind.cs.
+                BuildTraitsRows(tabBody);
+
                 _skillsGrid = new VisualElement();
                 _skillsGrid.AddToClassList("skills");
                 for (int i = 0; i < _inspect.Skills.Count; i++)
@@ -842,6 +855,9 @@ namespace Odyssey.Presentation.Ui
 
                 // The Health tab's body, in the same fixed-height box (design 33 §5).
                 BuildHealthTab(tabBody);
+
+                // The Thoughts tab's body (design 51 §5b), HudShell.Mind.cs, in the same box.
+                BuildThoughtsTab(tabBody);
 
                 _inspectBody.Add(tabBody);
 

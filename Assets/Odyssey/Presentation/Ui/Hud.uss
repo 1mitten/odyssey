@@ -1080,9 +1080,10 @@
    (owner, 2026-09-18: "it resizes every time … it needs to be at least a fixed size"). The
    tallest live tab sets the height here; a shorter one sits at the top of it with the slack
    below, so between tabs only the rows change. HudLayout.InspectTabBody is the same number and
-   HudStyleSheetTests holds the two together. */
+   HudStyleSheetTests holds the two together. 244 since the Thoughts tab's rebuild (design 51 §10,
+   mockup 23b), which is the tallest now. */
 .inspect__tabbody {
-    height: 157px;
+    height: 244px;
     margin-top: 9px;
 }
 
@@ -2963,7 +2964,10 @@
 .detail__trade { color: rgba(255, 255, 255, 0.66); height: 18px; }
 /* A section under the skills now rather than a third line of the record, so it reads as the block
    M7 will fill rather than as another fact about the person (owner, 2026-09-18). */
-.detail__traits { color: rgba(255, 255, 255, 0.50); height: 18px; }
+/* A line a trait, up to three (design 51 §5f): at least the one line the empty dash needs, and as
+   many more as the traits dealt. It was a fixed 18 px while it held only the dash, and the second
+   and third traits drew below its box. Last in a column that grows, so nothing sits under it. */
+.detail__traits { color: rgba(255, 255, 255, 0.50); min-height: 18px; }
 
 .setup__footer {
     flex-direction: row;

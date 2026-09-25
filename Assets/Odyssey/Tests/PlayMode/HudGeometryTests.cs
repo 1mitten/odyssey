@@ -863,6 +863,129 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// The Thoughts tab as UI Toolkit lays it out (design 51 §10, mockup 23b): a 244 px body
+        /// whatever the tab, so switching to it moves neither the pane nor its header; a 168 px
+        /// mood column; and nothing in the meter, the table or the traits strip drawn outside the
+        /// body. The fast tier holds the arithmetic; only a laid-out tree can say the breakdown did
+        /// not push the column past the strip, or a chip past the pane.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheThoughtsTabFitsItsBodyAndMovesNothing()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                // Cleared, as the portraits are, so the picture below is of this pane alone.
+                doc.panelSettings.clearColor = true;
+                doc.panelSettings.colorClearValue = new Color(0.06f, 0.08f, 0.09f, 1f);
+                yield return Settle(doc);
+                var world = boot.World;
+                Assert.That(world, Is.Not.Null, "no world to select a colonist in");
+                // Half an in-game hour, so she has been dealt her traits (the first tick) and her
+                // target has been worked out (the needs pass): a colonist mid-game, not at tick nought.
+                world!.Tick(1_200);
+                yield return Settle(doc);
+                PawnId first = FirstColonist(world.Views.Current);
+                Assert.That(first.IsValid, Is.True, "no colonist to open");
+                boot.Directors!.ChooseColonist(first, world.Views.Current);
+                yield return Settle(doc);
+
+                VisualElement pane = doc.rootVisualElement.Q(name: "inspect")!;
+                Rect onNeeds = pane.worldBound;
+
+                Label? thoughtsTab = doc.rootVisualElement.Query<Label>(className: "tab").ToList().Find(t => t.text == "Thoughts");
+                Assert.That(thoughtsTab, Is.Not.Null, "the pane built no Thoughts tab");
+                using (var press = PointerDownEvent.GetPooled())
+                {
+                    press.target = thoughtsTab;
+                    thoughtsTab!.SendEvent(press);
+                }
+                yield return Settle(doc);
+
+                VisualElement? body = doc.rootVisualElement.Q(name: "thoughts");
+                Assert.That(body, Is.Not.Null, "the pane built no Thoughts body");
+                Assert.That(body!.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex), "pressing the tab did not show it");
+                Assert.That(body.layout.height, Is.EqualTo(ThoughtsLayout.TabBody).Within(1f));
+                Assert.That(pane.worldBound.yMin, Is.EqualTo(onNeeds.yMin).Within(1f), "switching to Thoughts moved the header");
+                Assert.That(pane.worldBound.height, Is.EqualTo(onNeeds.height).Within(1f), "switching to Thoughts resized the pane");
+
+                VisualElement column = body.Q(name: "thoughts-mood")!;
+                Assert.That(column.layout.width, Is.EqualTo(ThoughtsLayout.LeftWidth).Within(1f));
+
+                // Her traits as chips in the foot, one each: the scene wakes at noon, and until
+                // 2026-09-26 nobody in it was dealt any (StartingSkillsTests says why).
+                int traits = boot.Colony!.Pawns.Pawns.Get(first)!.Traits.Count;
+                Assert.That(traits, Is.GreaterThan(0), "a colonist in the scene was dealt no traits");
+                int chips = 0;
+                foreach (VisualElement chip in body.Query(name: "thoughts-chip").ToList())
+                    if (chip.resolvedStyle.display == DisplayStyle.Flex) chips++;
+                Assert.That(chips, Is.EqualTo(traits), "a chip for each of her traits");
+
+                Rect frame = body.worldBound;
+                var spills = new System.Collections.Generic.List<string>();
+                ThoughtsSpills(body, frame, spills);
+                Debug.Log($"[HudGeometry] thoughts: body {body.layout}, column {column.layout}, pane {pane.worldBound}");
+                Debug.Log("[HudGeometry] thoughts aspects: " + MindAspectsOf(boot.World!.Views.Current, first));
+                Assert.That(spills, Is.Empty, "the Thoughts tab draws outside its body: " + string.Join("; ", spills));
+
+                // And a picture of it, for the eye: the one thing the boxes above cannot judge.
+                Directory.CreateDirectory("Logs");
+                yield return null;
+                Capture(doc, "Logs/thoughts-tab.png");
+                Debug.Log("[HudGeometry] wrote Logs/thoughts-tab.png");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>What the frame publishes about her mind, for the log beside the picture.</summary>
+        static string MindAspectsOf(WorldSnapshot frame, PawnId id)
+        {
+            var parts = new System.Text.StringBuilder();
+            foreach (string name in new[] { "odyssey.pawn.mood.target", "odyssey.pawn.mood.base", "odyssey.pawn.mood.line.minor",
+                "odyssey.pawn.mood.line.major", "odyssey.pawn.mood.need.food", "odyssey.pawn.mood.need.rest",
+                "odyssey.pawn.mood.need.joy", "odyssey.pawn.mood.temperature", "odyssey.pawn.trait.0",
+                "odyssey.pawn.trait.0.mood", "odyssey.pawn.trait.1", "odyssey.pawn.trait.1.mood", "odyssey.pawn.trait.2" })
+                parts.Append(name.Substring("odyssey.pawn.".Length)).Append('=')
+                    .Append(frame.TryGetPawnAspect(id, AspectKey.Of(name), out int v) ? v.ToString() : "-").Append(' ');
+            for (int th = 0; th < ThoughtHandle.Count; th++)
+                if (frame.TryGetPawnAspect(id, AspectKey.Of("odyssey.pawn.thought." + ThoughtHandle.Names[th]), out int w))
+                    parts.Append(ThoughtHandle.Names[th]).Append('=').Append(w).Append(' ');
+            foreach (PawnView pawn in frame.Pawns)
+                if (pawn.Id == id) parts.Append("mood=").Append(pawn.Mood);
+            return parts.ToString();
+        }
+
+        /// <summary>Out of the iterator, because a span's enumerator may not be held across a yield.</summary>
+        static PawnId FirstColonist(WorldSnapshot frame)
+        {
+            foreach (PawnView pawn in frame.Pawns)
+                if (pawn.IsColonist) return pawn.Id;
+            return default;
+        }
+
+        /// <summary>
+        /// Every shown child of <paramref name="element"/> inside <paramref name="frame"/>, less the
+        /// target tick, which the mockup stands 3 px proud of the meter by design.
+        /// </summary>
+        static void ThoughtsSpills(VisualElement element, Rect frame, System.Collections.Generic.List<string> spills)
+        {
+            for (int i = 0; i < element.childCount; i++)
+            {
+                VisualElement child = element[i];
+                if (child.resolvedStyle.display == DisplayStyle.None) continue;
+                Rect box = child.worldBound;
+                if (child.name != "thoughts-tick" && box.width > 0f && box.height > 0f &&
+                    (box.xMin < frame.xMin - 1f || box.xMax > frame.xMax + 1f ||
+                     box.yMin < frame.yMin - 1f || box.yMax > frame.yMax + 1f))
+                    spills.Add($"{child.GetType().Name} '{child.name}' at {box}");
+                ThoughtsSpills(child, frame, spills);
+            }
+        }
+
+        /// <summary>
         /// A popover raised from the command bar lands flush on the bar, carries a way out, and —
         /// unless it is the Build palette — sits over the button that raised it (owner,
         /// 2026-09-17).

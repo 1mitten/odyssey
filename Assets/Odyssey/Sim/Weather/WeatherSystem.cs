@@ -327,5 +327,17 @@ namespace Odyssey.Sim.Weather
         }
 
         int Clamp(int kind) => kind < 0 || kind >= _defs.Length ? 0 : kind;
+
+        /// <summary>
+        /// Put back the offset the last pass left on the temperature, after a load. The offset is
+        /// the temperature's field and nothing saves it; <see cref="Tick"/> writes it only on an
+        /// interval, so a world loaded between two ran the rest of the interval at nought where the
+        /// world it was saved from did not. Found by the raid gate's mid-raid save (2026-09-25).
+        /// </summary>
+        public void RestoreTemperatureOffset(int tick)
+        {
+            if (_ctx.Temperature == null) return;
+            _ctx.Temperature.WeatherOffsetC = _started ? ViewAt(tick - tick % IntervalTicks).TempOffsetC : 0;
+        }
     }
 }

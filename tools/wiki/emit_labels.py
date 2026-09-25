@@ -35,7 +35,7 @@ NAMES_OUT = os.path.join("Assets", "Odyssey", "Hud", "ColonistNames.g.cs")
 # generated file does not carry seven hundred tooltip seeds nothing draws: a research project's
 # description is the body of the Research tab's detail pane (docs/design/34-research-tab.md), and
 # writing it in C# would be the second copy the registry exists to prevent.
-DESCRIBED = ("ui.research.project",)
+DESCRIBED = ("ui.research.project", "ui.trait", "ui.thought", "ui.break", "ui.mind")
 
 
 def load_labels():

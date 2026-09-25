@@ -1,8 +1,8 @@
 # Colonists
 
-Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
+Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure. Traits, thoughts and mental breaks are design 51: a thought's description here is its tooltip on the Thoughts tab, and a trait's is its tooltip on the colonist's pane and the select screen.
 
-61 entries, 43 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+118 entries, 100 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -41,6 +41,83 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Strained** | `ui.mood.strained` | Mood is falling. Watch this one <br>**Needs:** mood face, strained | no art | M2 |
 | **Breaking** | `ui.mood.breaking` | At the threshold of a mental break <br>**Needs:** mood face, at the break threshold | no art | M2 |
 | **Breaking down** | `ui.mood.broken` | In a mental break now <br>**Needs:** mood face, in a break | no art | M2 |
+
+## Traits
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Tireless** | `ui.trait.tireless` | Works at everything far faster than most. Nobody has seen her sit down | no art | TM |
+| **Diligent** | `ui.trait.diligent` | Works at everything faster than most | no art | TM |
+| **Unhurried** | `ui.trait.unhurried` | Works at everything more slowly than most, and will not be rushed | no art | TM |
+| **Cheerful** | `ui.trait.cheerful` | Her mood sits a little higher, whatever the day brings | no art | TM |
+| **Sunny** | `ui.trait.sunny` | Her mood sits well above everyone else's | no art | TM |
+| **Gloomy** | `ui.trait.gloomy` | Her mood sits a little lower, whatever the day brings | no art | TM |
+| **Steady** | `ui.trait.steady` | Takes a good deal more than most before she breaks | no art | TM |
+| **Jumpy** | `ui.trait.jumpy` | Breaks sooner than most when things go badly | no art | TM |
+| **Quick study** | `ui.trait.quickstudy` | Learns every skill much faster than most | no art | TM |
+| **Slow study** | `ui.trait.slowstudy` | Learns every skill slowly | no art | TM |
+| **Soft hands** | `ui.trait.softhands` | Will not mine. Never has, never will | no art | TM |
+| **Black thumb** | `ui.trait.blackthumb` | Will not work a growing zone | no art | TM |
+| **Ham-fisted** | `ui.trait.hamfisted` | Will not build | no art | TM |
+
+## Thoughts
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Blew off steam** | `ui.thought.catharsis` | The aftermath of a mental break that ran its course. Lighter for a while | no art | TM |
+| **Ate a cooked meal** | `ui.thought.atemeal` | A meal somebody cooked. A second in a row counts for less than the first | no art | TM |
+| **Slept on the ground** | `ui.thought.sleptonground` | A night in the dirt with no bed under her | no art | TM |
+| **Fell through a floor** | `ui.thought.fell` | Rode a collapsing floor down. Badly shaken, and a second fall adds to it | no art | TM |
+| **Slept cold** | `ui.thought.sleptcold` | Woke from a night colder than is comfortable | no art | TM |
+| **Slept too hot** | `ui.thought.slepthot` | Woke from a night hotter than is comfortable | no art | TM |
+| **Attacked by a colonist** | `ui.thought.attackedbycolonist` | One of the colony swung at her. Lasts a day, from the latest swing | no art | TM |
+| **A colonist died** | `ui.thought.colonistdied` | Felt by every other colonist for three days, up to three deaths at once | no art | TM |
+| **Ate a ration pack** | `ui.thought.ateration` | Filling, and nothing more. A second in a row counts for less than the first | no art | TM |
+| **Ate a burnt meal** | `ui.thought.ateburnt` | The cook let it burn | no art | TM |
+| **Ate raw food** | `ui.thought.ateraw` | Carrots from the pile, or worse. Cooking it first would have been better | no art | TM |
+| **Hunger** | `ui.thought.hunger` | Hungry costs mood; starving costs more. Eating clears it | no art | TM |
+| **Tiredness** | `ui.thought.tiredness` | Tired costs mood; exhausted costs more. Sleep clears it | no art | TM |
+| **Recreation** | `ui.thought.recreation` | Idle time lifts it and a long stretch of work without any wears it down | no art | TM |
+| **Temperature** | `ui.thought.temperature` | Too cold or too hot where she is standing | no art | TM |
+
+## Mental breaks
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Daze** | `ui.break.wander` | A minor break: wanders aimlessly and does no work | no art | TM |
+| **Sulk** | `ui.break.sulk` | A minor break: goes to her own bed and stays there, doing nothing | no art | TM |
+| **Food binge** | `ui.break.binge` | A major break: eats whatever food she can reach, over and over | no art | TM |
+| **Tantrum** | `ui.break.tantrum` | A major break: smashes whatever the colony has built near her. Beds are spared | no art | TM |
+| **Berserk** | `ui.break.berserk` | An extreme break: attacks whoever is nearest. Draft the colony to bring her down; nobody is killed | no art | TM |
+
+## The Thoughts tab's words
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Traits** | `ui.mind.traits` | Who she is: dealt when she arrives, and hers for good | no art | TM |
+| **Work** | `ui.mind.work` | How much faster or slower than most she works at everything | no art | TM |
+| **Learns** | `ui.mind.learns` | How much faster or slower than most she learns every skill | no art | TM |
+| **Breaks sooner** | `ui.mind.breakssooner` | Her mood need not fall as far before she can break | no art | TM |
+| **Breaks later** | `ui.mind.breakslater` | Her mood must fall further than most before she can break | no art | TM |
+| **Cannot** | `ui.mind.cannot` | Work she will never do. The Work tab greys it | no art | TM |
+| **No thoughts right now** | `ui.mind.nothing` | No need is short and no memory is held: she sits at the base | no art | TM |
+| **more** | `ui.mind.more` | The rows past what the tab has room for, counted | no art | TM |
+| **Mood** | `ui.mind.mood` | Where her mood is, out of a hundred, and the column of what each thought is worth to it | no art | TM |
+| **Thought** | `ui.mind.thought` | What is weighing on her, or lifting her, and where it comes from | no art | TM |
+| **Lasts** | `ui.mind.lasts` | How long until a memory fades. A need or a condition lasts as long as its cause | no art | TM |
+| **Steady at** | `ui.mind.steady` | Her mood is where everything on her mind puts it | no art | TM |
+| **Rising to** | `ui.mind.rising` | Her mood is climbing toward where everything on her mind puts it | no art | TM |
+| **Falling to** | `ui.mind.falling` | Her mood is sinking toward where everything on her mind puts it | no art | TM |
+| **Base** | `ui.mind.base` | Where a colonist's mood rests with nothing on her mind | no art | TM |
+| **Thoughts** | `ui.mind.thoughts` | Conditions and memories together | no art | TM |
+| **Needs** | `ui.mind.needs` | Hunger, tiredness and recreation together | no art | TM |
+| **Need** | `ui.mind.source.need` | A need that is short, gone when it is met | no art | TM |
+| **Condition** | `ui.mind.source.condition` | Something about where she is, gone when it changes | no art | TM |
+| **Memory** | `ui.mind.source.memory` | Something that happened to her, fading after its own time | no art | TM |
+| **hour** | `ui.mind.hour` | One hour, as the Thoughts tab writes a memory's time left | no art | TM |
+| **hours** | `ui.mind.hours` | Hours, as the Thoughts tab writes a memory's time left | no art | TM |
+| **day** | `ui.mind.day` | One day, as the Thoughts tab writes a memory's time left | no art | TM |
+| **days** | `ui.mind.days` | Days, as the Thoughts tab writes a memory's time left | no art | TM |
 
 ## Current activity
 

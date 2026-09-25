@@ -542,6 +542,15 @@ namespace Odyssey.Sim.Pawns
 
         public List<Memory> Memories { get; } = new List<Memory>();
 
+        /// <summary>
+        /// Who she is (design 51 §5f): <see cref="TraitHandle"/> indices, two or three, dealt once by
+        /// <see cref="RollTraits"/> and never changed. <b>Empty for every pawn from before traits</b>
+        /// and for every pawn that is not a colonist, and an empty list changes nothing: every
+        /// factor below reads 1,000 and no work is disabled. Saved in
+        /// <c>odyssey.pawn.mind</c> and hashed only while not empty.
+        /// </summary>
+        public List<int> Traits { get; } = new List<int>(TraitHandle.MaxPerPawn);
+
         // ---- job state -------------------------------------------------------------------
 
         /// <summary>The job in progress, or null when the pawn is between jobs.</summary>
@@ -572,6 +581,13 @@ namespace Odyssey.Sim.Pawns
         // ---- mental state ----------------------------------------------------------------
 
         public int BreakTicksLeft { get; internal set; }
+
+        /// <summary>
+        /// Which break she is in, as an index into <see cref="PawnContent.Breaks"/> (design 51 §5c):
+        /// nought, the wander, for every break from before the taxonomy. Saved in
+        /// <c>odyssey.pawn.mind</c> and hashed only while not nought.
+        /// </summary>
+        public int BreakKind { get; internal set; }
 
         public bool IsBroken => BreakTicksLeft > 0;
 
@@ -672,7 +688,74 @@ namespace Odyssey.Sim.Pawns
             rising ? Content.Mood.risePerInterval : Content.Mood.fallPerInterval;
 
         /// <summary>Is the pawn eligible to break at all? A sleeping pawn never is.</summary>
-        public virtual bool CanMentalBreak() => !Asleep && !IsBroken && Mood < Content.Mood.breakThreshold;
+        public virtual bool CanMentalBreak() => !Asleep && !IsBroken && Mood < MinorBreakLine();
+
+        /// <summary>
+        /// The mood below which a minor break can be rolled (design 51 §4b): the content's line.
+        /// Virtual, because it is the one number a trait moves, and every other line is derived
+        /// from it.
+        /// </summary>
+        public virtual int MinorBreakLine()
+        {
+            int line = Content.Mood.breakThreshold;
+            for (int i = 0; i < Traits.Count; i++) line += Content.Traits[Traits[i]].breakThresholdOffset;
+            // Clamped so no trait can take the line off the scale either way (design 51 §4b). An
+            // untraited colonist's 350 is inside it, so the clamp moves nothing that existed.
+            return line < MinBreakLine ? MinBreakLine : line > MaxBreakLine ? MaxBreakLine : line;
+        }
+
+        /// <summary>The range a trait may move the minor line within. INVENTED.</summary>
+        public const int MinBreakLine = 100, MaxBreakLine = 500;
+
+        /// <summary>The traits' permanent offset to the mood target, in thousandths (design 51 §4e).</summary>
+        public int TraitMoodOffset()
+        {
+            int total = 0;
+            for (int i = 0; i < Traits.Count; i++) total += Content.Traits[Traits[i]].moodOffset;
+            return total;
+        }
+
+        /// <summary>The traits' factor on every work rate, per mille: 1,000 with none.</summary>
+        public int TraitWorkPerMille()
+        {
+            int factor = 1_000;
+            for (int i = 0; i < Traits.Count; i++)
+                factor = factor * Content.Traits[Traits[i]].workSpeedPerMille / 1_000;
+            return factor;
+        }
+
+        /// <summary>
+        /// Can she do this work at all? False only for a work type one of her traits disables
+        /// (design 51 §4e). The work scan asks through <see cref="WorkPriority"/>, and the Work tab
+        /// through the published <c>capable</c> aspect.
+        /// </summary>
+        public bool CanDo(int workType)
+        {
+            for (int i = 0; i < Traits.Count; i++)
+                if ((Content.TraitDisabledWork[Traits[i]] & (1 << workType)) != 0) return false;
+            return true;
+        }
+
+        /// <summary>The major line: four sevenths of the minor, the reference's ratio (a-19).</summary>
+        public int MajorBreakLine() => MinorBreakLine() * 4 / 7;
+
+        /// <summary>The extreme line: a seventh of the minor (a-19).</summary>
+        public int ExtremeBreakLine() => MinorBreakLine() / 7;
+
+        /// <summary>
+        /// Where her mood stands against her own lines, as a <see cref="MoodBand"/> (design 51
+        /// §5a). The one answer the interface reads; derived, never stored, so it is neither saved
+        /// nor hashed.
+        /// </summary>
+        public virtual int Band()
+        {
+            if (IsBroken) return MoodBand.Broken;
+            int minor = MinorBreakLine();
+            if (Mood < minor / 7) return MoodBand.BreakingExtreme;
+            if (Mood < minor * 4 / 7) return MoodBand.BreakingMajor;
+            if (Mood < minor) return MoodBand.BreakingMinor;
+            return Mood < minor + Content.Mood.strainMargin ? MoodBand.Strained : MoodBand.Content;
+        }
 
         /// <summary>
         /// The rate this pawn pays work at, in thousandths of a tick-at-standard-rate: 1,000 is
@@ -702,6 +785,9 @@ namespace Odyssey.Sim.Pawns
             // curve said (design 28 §8). Composed here rather than in the drivers so every job
             // inherits it from the one seam, exactly as condition is.
             rate = rate * Content.Temperature.WorkPerMille(AmbientTempC) / 1_000;
+            // And who she is (design 51 §4e): the diligence spectrum, after every other factor and
+            // before the floor, so no trait can price a tick of work at nothing.
+            rate = rate * TraitWorkPerMille() / 1_000;
             return rate < def.workRateFloorPerMille ? def.workRateFloorPerMille : rate;
         }
 
@@ -872,8 +958,12 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Whether the pawn will consider work at all this think.</summary>
         public virtual bool WillWork() => !IsBroken && !Asleep;
 
-        /// <summary>Player priority for a work type, 0 meaning disabled.</summary>
-        public virtual int WorkPriority(int workType) => WorkPriorities[workType];
+        /// <summary>
+        /// Player priority for a work type, 0 meaning disabled — and 0 for a work type a trait
+        /// forbids, whatever is stored (design 51 §4e). The work scan is the only caller, so a
+        /// forbidden type is never offered, and a priority set before is kept rather than lost.
+        /// </summary>
+        public virtual int WorkPriority(int workType) => CanDo(workType) ? WorkPriorities[workType] : 0;
 
         // ---- skills ----------------------------------------------------------------------
 
@@ -883,10 +973,16 @@ namespace Odyssey.Sim.Pawns
         public Passion PassionFor(int skill) => (Passion)Passions[skill];
 
         /// <summary>
-        /// The global learning factor, per mille. 1,000 until traits exist; the reference adds
-        /// trait and implant offsets here, which is why it is a seam and not a constant.
+        /// The global learning factor, per mille: the product of her traits' factors, 1,000 with
+        /// none (design 51 §4e). The seam existed for exactly this.
         /// </summary>
-        public virtual int LearningFactorPerMille() => 1_000;
+        public virtual int LearningFactorPerMille()
+        {
+            int factor = 1_000;
+            for (int i = 0; i < Traits.Count; i++)
+                factor = factor * Content.Traits[Traits[i]].learningPerMille / 1_000;
+            return factor;
+        }
 
         /// <summary>
         /// Earn experience in a skill: the base amount, scaled by the learning factor and the
@@ -1008,6 +1104,58 @@ namespace Odyssey.Sim.Pawns
             }
         }
 
+        /// <summary>
+        /// Deal this colonist's traits (design 51 §5f): two, and a third on
+        /// <see cref="PawnKindDef.thirdTraitPerCent"/>, each a weighted pick by
+        /// <see cref="TraitDef.commonality"/> among the traits she does not hold, is not already a
+        /// degree of the spectrum of, and does not conflict with either way. From
+        /// <see cref="RollSeed"/> and her own id on <see cref="PawnPurpose.Traits"/>, so the person
+        /// on the select card is the person who walks, and dealing traits moved no passion or skill.
+        ///
+        /// <para><b>Once.</b> A colonist already holding traits is left alone, which is what keeps a
+        /// load from dealing again, and the pawn from before traits — who has none and was saved
+        /// that way — is never dealt any: <c>StartingSkillsSystem</c> deals on the first tick only.</para>
+        /// </summary>
+        public virtual void RollTraits()
+        {
+            if (Traits.Count > 0 || Content.Traits.Length == 0) return;
+
+            var rng = DeterministicRandom.ForTick(RollSeed, Id.Value, PawnPurpose.Traits);
+            int count = 2 + (rng.NextInt(100) < Content.Kind.thirdTraitPerCent ? 1 : 0);
+            for (int pick = 0; pick < count; pick++)
+            {
+                int total = 0;
+                for (int t = 0; t < Content.Traits.Length; t++)
+                    if (MayTake(t)) total += Content.Traits[t].commonality;
+                if (total <= 0) return;
+
+                int roll = rng.NextInt(total);
+                for (int t = 0; t < Content.Traits.Length; t++)
+                {
+                    if (!MayTake(t)) continue;
+                    roll -= Content.Traits[t].commonality;
+                    if (roll >= 0) continue;
+                    Traits.Add(t);
+                    break;
+                }
+            }
+        }
+
+        /// <summary>Could she be dealt this trait beside the ones she holds?</summary>
+        bool MayTake(int trait)
+        {
+            if (Content.Traits[trait].commonality <= 0) return false;
+            int spectrum = Content.TraitSpectrum[trait];
+            for (int i = 0; i < Traits.Count; i++)
+            {
+                int held = Traits[i];
+                if (held == trait) return false;
+                if (spectrum >= 0 && Content.TraitSpectrum[held] == spectrum) return false;
+                if (System.Array.IndexOf(Content.TraitConflicts[held], trait) >= 0) return false;
+            }
+            return true;
+        }
+
         // ---- thoughts --------------------------------------------------------------------
 
         /// <summary>
@@ -1065,6 +1213,32 @@ namespace Odyssey.Sim.Pawns
                 int offset = def.moodOffset;
                 for (int k = 0; k < earlier; k++) offset = offset * def.stackMultiplierPerMille / 1000;
                 total += offset;
+            }
+            return total;
+        }
+
+        /// <summary>
+        /// What one thought is worth to her now, stack included, exactly as
+        /// <see cref="MemoryMoodOffset"/> counts it — each live copy scaled by its place among the
+        /// earlier live copies of the same thought — with how many copies are live and the tick
+        /// the soonest of them lapses (design 51 §5b). The sum over every thought is
+        /// <see cref="MemoryMoodOffset"/>, and <c>ThoughtsTabTests</c> holds it to that.
+        /// </summary>
+        public int MemoryContribution(int thoughtIndex, int currentTick, out int copies, out int soonestExpiry)
+        {
+            var def = Content.Thoughts[thoughtIndex];
+            int total = 0;
+            copies = 0;
+            soonestExpiry = int.MaxValue;
+            for (int i = 0; i < Memories.Count; i++)
+            {
+                var memory = Memories[i];
+                if (memory.ThoughtIndex != thoughtIndex || memory.ExpiryTick <= currentTick) continue;
+                int offset = def.moodOffset;
+                for (int k = 0; k < copies; k++) offset = offset * def.stackMultiplierPerMille / 1000;
+                total += offset;
+                copies++;
+                if (memory.ExpiryTick < soonestExpiry) soonestExpiry = memory.ExpiryTick;
             }
             return total;
         }
@@ -1163,7 +1337,20 @@ namespace Odyssey.Sim.Pawns
                 | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0)
                 | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
                 | (TreatedUntilTick != 0 ? 1 << 22 : 0) | (health ? 1 << 23 : 0)
-                | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0) | ((int)Area << 27));
+                | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0) | ((int)Area << 27)
+                // Bit 29: her traits (design 51 §3), walked only while she has any, so every pawn
+                // from before traits hashes as it did. It was 22 and then 23 in review, and treatment
+                // and health took each on main in turn (bug-patterns P12).
+                | (Traits.Count > 0 ? 1 << 29 : 0)
+                // Bit 28, above the area: the kind of break, while it is not the wander (design 51
+                // §3), so every break from before the taxonomy hashes as it did.
+                | (BreakKind != 0 ? 1 << 28 : 0));
+            if (BreakKind != 0) hash.Add(BreakKind);
+            if (Traits.Count > 0)
+            {
+                hash.Add(Traits.Count);
+                for (int i = 0; i < Traits.Count; i++) hash.Add(Traits[i]);
+            }
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             if (JumpLanding >= 0) hash.Add(JumpLanding);

@@ -36,7 +36,10 @@ namespace Odyssey.Sim.Pawns
 
         public void Tick(SimWorld world)
         {
-            if (world.CurrentTick != 0) return;
+            // The world's first tick, which is tick nought headless and noon in the scene
+            // (SimWorld.StartTick). It asked for nought until 2026-09-26, so the game never dealt a
+            // starting skill or a trait: every test builds at midnight and passed.
+            if (world.CurrentTick != world.StartTick) return;
 
             var pawns = _ctx.Pawns.All;
             // Each from its own seed since U40, which is the world's for every colonist the world
@@ -46,6 +49,14 @@ namespace Odyssey.Sim.Pawns
             // cannot shift another's.
             for (int i = 0; i < pawns.Count; i++)
                 if (pawns[i].IsPerson) pawns[i].RollStartingSkills();
+
+            // And who each colonist is (design 51 §5f), on the first tick for the reason the skills
+            // are: rolled at placement they would move every Generated golden, for no behaviour.
+            // Only now, so a colony loaded from before traits — past tick nought — is never dealt
+            // any, which is the owner's "new colonies only".
+            if (!_ctx.DealsTraits) return;
+            for (int i = 0; i < pawns.Count; i++)
+                if (pawns[i].IsColonist) pawns[i].RollTraits();
         }
     }
 }

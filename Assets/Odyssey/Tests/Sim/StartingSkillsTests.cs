@@ -60,6 +60,41 @@ namespace Odyssey.Tests.Sim
                 "five colonists over four skills rolled nothing but zero, or the roll never ran");
         }
 
+        /// <summary>
+        /// The scene wakes at noon (<c>OdysseyBootstrap.startHour</c>, 2026-09-16), so the game's
+        /// first tick is tick 30,000 and never tick nought. The pass that deals skills and traits
+        /// asked for tick nought, so in the game it never ran: no colonist was dealt a starting skill
+        /// or a trait, while every test, built at midnight, passed. Found by the Thoughts tab's
+        /// geometry test (2026-09-26), whose colonists had none. The same people at noon as at
+        /// midnight: the rolls are keyed on the seed and the id, never the clock.
+        /// </summary>
+        [Test]
+        public void AColonyThatWakesAtNoonIsDealtOnItsFirstTick()
+        {
+            ColonyWorld midnight = Build(1u);
+            ColonyWorld noon = ColonyWorld.Build(new ColonyRequest
+            {
+                Size = Size, Seed = 1u, Scenario = ScenarioDef.Bare(), Barren = true, StartTick = 30_000,
+            });
+            midnight.World.Tick();
+            noon.World.Tick();
+
+            int dealt = 0;
+            foreach (Pawn pawn in noon.Pawns.Pawns.All)
+            {
+                Pawn twin = midnight.Pawns.Pawns.Get(pawn.Id)!;
+                Assert.That(pawn.Skills, Is.EqualTo(twin.Skills), $"pawn {pawn.Id.Value}'s skills depend on the hour");
+                Assert.That(pawn.Traits, Is.EqualTo(twin.Traits), $"pawn {pawn.Id.Value}'s traits depend on the hour");
+                if (pawn.IsColonist && pawn.Traits.Count > 0) dealt++;
+            }
+            Assert.That(dealt, Is.GreaterThan(0), "nobody at noon was dealt a trait");
+
+            // Once: the second tick deals nothing again.
+            int before = noon.Pawns.Pawns.All[0].Traits.Count;
+            noon.World.Tick();
+            Assert.That(noon.Pawns.Pawns.All[0].Traits.Count, Is.EqualTo(before));
+        }
+
         [Test]
         public void RolledLevelsStayWithinTheSkillsOwnRange()
         {

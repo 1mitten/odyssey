@@ -210,7 +210,18 @@ namespace Odyssey.Tests.Sim
             for (int i = 0; i < colony.Needs.IntervalTicks * 2; i++) { Miserable(pawn); colony.World.Tick(); }
             Assert.That(pawn.IsBroken, Is.False, "and still a roll a few intervals later");
 
-            colony.Ctx.Content.Mood.breakMtbTicks = 15_000;
+            // Retuned by replacing the Def on this colony's own content, never by writing through
+            // it: the MoodDef is shared by every test in the process. All three clocks, because
+            // a miserable colonist is under the major line and it is the deepest that rolls
+            // (design 51 §5c).
+            MoodDef shipped = colony.Ctx.Content.Mood;
+            colony.Ctx.Content.Mood = new MoodDef
+            {
+                baseMood = shipped.baseMood, max = shipped.max,
+                risePerInterval = shipped.risePerInterval, fallPerInterval = shipped.fallPerInterval,
+                breakThreshold = shipped.breakThreshold, strainMargin = shipped.strainMargin,
+                breakMtbTicks = 15_000, majorMtbTicks = 15_000, extremeMtbTicks = 15_000,
+            };
             for (int i = 0; i < 120_000 && colony.Needs.BreaksTriggered == 0; i++)
             {
                 Miserable(pawn);
@@ -316,6 +327,54 @@ namespace Odyssey.Tests.Sim
             for (int i = 0; i < 1_000 && !pawn.Asleep; i++) colony.World.Tick();
             Assert.That(pawn.Asleep, Is.True);
             Assert.That(pawn.HeldReservations, Is.Empty, "the ground is not reservable");
+        }
+
+        /// <summary>
+        /// A starving sleeper wakes to eat (owner, 2026-09-25: <i>"if colonist is starving - yes they
+        /// would wake up"</i>). She went to bed exhausted before she was hungry, her food ran out in
+        /// her sleep, and a meal is within reach: she gets up long before she is rested and eats it.
+        /// </summary>
+        [Test]
+        public void AStarvingSleeperWakesToEat()
+        {
+            var colony = Colony.Build();
+            var pawn = colony.Ctx.Pawns.Spawn(colony.Cell(2, 2, 0));
+            pawn.Needs[NeedIndex.Rest] = 40;
+            for (int i = 0; i < 1_000 && !pawn.Asleep; i++) colony.World.Tick();
+            Assume.That(pawn.Asleep, Is.True);
+
+            pawn.Needs[NeedIndex.Food] = 0;
+            ThingId meal = colony.Ctx.Items.Spawn(ItemIndex.Meal, colony.Cell(6, 2, 0));
+
+            for (int i = 0; i < 3_000 && colony.Ctx.Items.Get(meal) != null; i++) colony.World.Tick();
+
+            Assert.That(colony.Ctx.Items.Get(meal), Is.Null, "she woke and ate it");
+            Assert.That(pawn.Needs[NeedIndex.Rest], Is.LessThan(colony.Ctx.Content.Kind.wakeThreshold),
+                "and she did not wait to be rested first");
+        }
+
+        /// <summary>
+        /// The control, and the guard: starving with nothing to eat, she sleeps on. Waking a
+        /// colonist who can eat nothing would put her straight back to bed and wake her again on
+        /// the next pass, all night.
+        /// </summary>
+        [Test]
+        public void AStarvingSleeperWithNothingToEatSleepsOn()
+        {
+            var colony = Colony.Build();
+            var pawn = colony.Ctx.Pawns.Spawn(colony.Cell(2, 2, 0));
+            pawn.Needs[NeedIndex.Rest] = 40;
+            for (int i = 0; i < 1_000 && !pawn.Asleep; i++) colony.World.Tick();
+            Assume.That(pawn.Asleep, Is.True);
+
+            pawn.Needs[NeedIndex.Food] = 0;
+            int ended = colony.Jobs.CompletedOf(JobIndex.Sleep);
+            for (int i = 0; i < 2_000; i++)
+            {
+                colony.World.Tick();
+                Assert.That(pawn.Asleep, Is.True, $"woke at tick {i} with nothing to eat");
+            }
+            Assert.That(colony.Jobs.CompletedOf(JobIndex.Sleep), Is.EqualTo(ended), "and no sleep ended to begin again");
         }
 
         [Test]

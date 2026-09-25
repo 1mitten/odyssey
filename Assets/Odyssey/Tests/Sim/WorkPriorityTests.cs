@@ -142,6 +142,9 @@ namespace Odyssey.Tests.Sim
         {
             ColonyWorld colony = Board();
             Pawn subject = colony.Pawns.Pawns.All[0];
+            // The subject takes the order whatever her seed dealt her (design 51 §4e: a trait can
+            // forbid construction); the others keep theirs, so the capable check below sees both.
+            subject.Traits.Clear();
             Set(colony, subject.Id.Value, WorkHandle.Construction, 2);
 
             WorldSnapshot frame = colony.World.Views.Current;
@@ -152,12 +155,13 @@ namespace Odyssey.Tests.Sim
                 if (!pawn.IsPerson) continue;   // the world's animals do no work (design 30)
                 Assert.That(frame.TryGetPawnAspect(pawn.Id, WorkAspects.Priority[w], out int p),
                     Is.True, "Every colonist's every work type, not only the selected one.");
-                Assert.That(p, Is.EqualTo(pawn.WorkPriority(w)));
+                Assert.That(p, Is.EqualTo(pawn.WorkPriorities[w]),
+                    "the stored priority, kept under a trait that forbids the work (design 51 §4e)");
 
                 Assert.That(frame.TryGetPawnAspect(pawn.Id, WorkAspects.Capable[w], out int c),
                     Is.True);
-                Assert.That(c, Is.EqualTo(1),
-                    "Nothing can answer this with a no yet: there are no traits and no health.");
+                Assert.That(c, Is.EqualTo(pawn.CanDo(w) ? 1 : 0),
+                    "A trait can answer this with a no now (design 51 §4e).");
             }
 
             Assert.That(frame.TryGetPawnAspect(subject.Id,

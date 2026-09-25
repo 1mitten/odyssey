@@ -2830,6 +2830,10 @@ meet months later as two worlds that hash alike and are not.
   `JobHandle`, `EdificeHandle` or a save section list. Read both sides' numbers before resolving.
 - **The fix:** the later branch moves (the area is bit 27), and recorded values stay where `main`
   recorded them (`main`'s intents first, the branch's after).
+- **Again the same day:** treatment took bit 22 on `main` while the traits held it in review. "Keep
+  both" compiled again, and traits moved to 23 and the break kind to 28 (design 51 §8a); an hour
+  later health (#213) took 23, and traits moved again to 29. Two in one day
+  means reading every conflict in `ContributeTo` as a numbering question, not a text one.
 
 ## A reader that caches against a version, shown a frame with nothing in it (2026-09-25)
 
@@ -2915,3 +2919,47 @@ only the blow that *crosses* the line kills. Found by review, not by a test — 
 - **The check:** a test of a consequence that is deferred must also run it from inside the
   deferred phase (`FallTests.AFatalFallInsideTheDeferredPhaseIsGoneTheSameTick`), and a removal
   that must not outlive its tick uses `DeferThisTick`.
+
+## A value pushed on a cadence and restored by nothing (2026-09-25)
+
+**A world resumed from a save ran 1.06 °C colder than the one it was saved from.** `WeatherSystem`
+writes `TemperatureSystem.WeatherOffsetC` on its 120-tick pass. The weather's own state is saved, but
+the offset is a field of the temperature, and nothing wrote it on a load. So until the next pass the
+resumed world's outdoor curve had no weather in it. Every colonist's felt temperature differed on the
+first tick, and the raid gate's save-and-resume hash with it.
+
+- **The pattern:** one system *pushes* a derived value into another on a cadence. A load restores the
+  pusher's state and never re-pushes, so the receiver runs stale until the next beat. It is invisible
+  whenever a save happens to land on the beat, or before the first push.
+- **The check:** step the saved and the resumed world in lockstep from the save and hash every tick.
+  The first split names the field. `RebuildDerived` is where anything pushed has to be pushed again,
+  and `WeatherSystem.RestoreTemperatureOffset` is the example.
+
+## A hold that skips the code which repairs a load (2026-09-25)
+
+**A bandit stunned half-way through a step stood still after a load, while the saved world landed the
+step.** Paths are not saved; after a load, the walk toil sees no path and asks for one. But a stun
+*holds the driver*, and the walk toil is the driver, so a stunned pawn with progress banked never
+asked. The original had its path and moved.
+
+- **The pattern:** a load leaves derived state to be rebuilt "the next time the code runs", and some
+  state stops that code running. Stun, knock-down, a finishing step: anything in
+  `JobSystem.HoldsDriver`.
+- **The check:** the same lockstep step as above. The repair lives in the hold itself: a stunned pawn
+  with progress, no path, nothing pending and a destination re-asks, exactly as the toil would.
+
+## A test world that starts where the game never does (2026-09-26)
+
+**No colonist in the game was dealt a starting skill or a trait.** `StartingSkillsSystem` acted on
+`CurrentTick == 0`. The scene has woken at noon since 2026-09-16 (`SimWorld.StartAtTick(30_000)`),
+so in the game its tick never came. Every headless test builds at midnight and passed. Traits were
+built on the same pass, so they too passed every tier and did nothing in the game.
+
+- **The pattern:** a rule keyed on a value the tests always have and the game never does: tick
+  nought, an empty board, a default setting. The test and the game differ in one number, the rule
+  reads exactly that number, and nothing on either side is wrong on its own.
+- **How it was found:** a picture. The Thoughts tab's PlayMode geometry test captured the laid-out
+  pane of a colonist in the real bootstrap, and she had no traits. Logging the live colony gave
+  tick 30,012.
+- **The check:** `StartingSkillsTests.AColonyThatWakesAtNoonIsDealtOnItsFirstTick` builds at noon.
+  Anything that means "the start of the colony" asks `SimWorld.StartTick`, never nought.

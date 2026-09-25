@@ -327,7 +327,10 @@ namespace Odyssey.Sim.Pawns
                 {
                     // Breaks are self-limiting: the aftermath lifts mood clear of the threshold,
                     // so a broken colonist recovers rather than cycling forever.
-                    pawn.AddMemory(_ctx.Content.Break.catharsisThought, tick);
+                    pawn.AddMemory(_ctx.Content.Breaks.Length > pawn.BreakKind
+                        ? _ctx.Content.Breaks[pawn.BreakKind].catharsisThought
+                        : _ctx.Content.Break.catharsisThought, tick);
+                    pawn.BreakKind = BreakHandle.Wander;
                     EndJob(pawn, JobStatus.Succeeded);
                 }
                 else if (pawn.CurrentJob != null && !IsBreakJob(pawn, pawn.CurrentJob))
@@ -355,6 +358,18 @@ namespace Odyssey.Sim.Pawns
             // where the blow put it. The knockback already ended its job, so there is nothing to
             // pause; what this holds back is the tree, which would otherwise give it a job — and
             // an order given meanwhile starts, and waits here until it stands.
+            //
+            // The path is not saved, and the walk toil that asks for it again after a load is the
+            // driver a stun holds. So a pawn stunned part way through a step stood still in a resumed
+            // world while the world it was saved from landed the step (the raid gate's mid-raid save,
+            // 2026-09-25). It asks here instead, exactly as the walk toil would. Only after a load:
+            // everywhere else a step in progress has its path, because clearing one zeroes it.
+            if (pawn.StunnedAt(tick) && pawn.MoveProgress != 0 && !pawn.HasPath && !pawn.PathPending
+                && pawn.Destination >= 0 && pawn.CurrentJob != null)
+            {
+                _ctx.Paths.Enqueue(new PathRequest(pawn.Id.Value, pawn.Cell, pawn.Destination, pawn.CurrentJob.Mode));
+                pawn.PathPending = true;
+            }
             if (HoldsDriver(pawn, tick)) return;
 
             // A colonist set to Defend or Flee (design 33 §18d) notices a fight or danger near her
@@ -395,8 +410,7 @@ namespace Odyssey.Sim.Pawns
             if (pawn.CurrentJob == null) Think(pawn, tick);
         }
 
-        bool IsBreakJob(Pawn pawn, Job job) =>
-            _ctx.Content.Jobs[job.DefIndex].driver == JobIndex.Wander;
+        bool IsBreakJob(Pawn pawn, Job job) => MentalBreaks.IsBreakJob(pawn, job, _ctx.Content);
 
         // ---- state ------------------------------------------------------------------------
         //
@@ -621,7 +635,10 @@ namespace Odyssey.Sim.Pawns
 
             switch (jobDefIndex)
             {
-                case JobIndex.Build: return BuildWorkGiver.CanBuild(pawn, ctx, target, out stand);
+                // Work her traits forbid is forbidden to an order too (design 51 §4e): the scan
+                // never offers it, and a player's order is the scan bypassed, not the person.
+                case JobIndex.Build:
+                    return pawn.CanDo(WorkTypeIndex.Construction) && BuildWorkGiver.CanBuild(pawn, ctx, target, out stand);
                 default: return false;
             }
         }
@@ -683,7 +700,11 @@ namespace Odyssey.Sim.Pawns
     // The think tree
     // =====================================================================================
 
-    /// <summary>A broken colonist wanders and does nothing useful. One behaviour; the taxonomy is later.</summary>
+    /// <summary>
+    /// A broken colonist does what her break does (design 51 §5c): wander, sulk at her bed, binge,
+    /// strike a building or strike whoever is nearest — <see cref="MentalBreaks.Fill"/>, one branch
+    /// per kind, and the wander when a break has nothing to do.
+    /// </summary>
     public sealed class MentalStateThinkNode : ThinkNode
     {
         public override string Name => "MentalState";
@@ -691,7 +712,7 @@ namespace Odyssey.Sim.Pawns
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
             if (!pawn.IsBroken) return false;
-            return WanderTarget.Fill(pawn, ctx, job);
+            return MentalBreaks.Fill(pawn, ctx, job);
         }
     }
 
@@ -715,7 +736,7 @@ namespace Odyssey.Sim.Pawns
                    TrySleep(pawn, ctx, job);
         }
 
-        static bool TryEat(Pawn pawn, PawnContext ctx, Job job)
+        internal static bool TryEat(Pawn pawn, PawnContext ctx, Job job)
         {
             var items = ctx.Items.Items;
             bool starving = pawn.StarvationSeverity > 0;

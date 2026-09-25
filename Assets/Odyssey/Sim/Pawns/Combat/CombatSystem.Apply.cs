@@ -103,6 +103,8 @@ namespace Odyssey.Sim.Pawns
             // Otherwise JobSystem.TickPawn fails the downed job on every tick of the break and the
             // downed node restarts it (design 33 §5j).
             pawn.BreakTicksLeft = 0;
+            // And with no catharsis: a break ended by a downing did not run its course (design 51 §5c).
+            pawn.BreakKind = BreakHandle.Wander;
             pawn.Downed = true;
             pawn.CombatTarget = 0;
             // Down outranks knocked down: it lies where it is either way, and the knock-down's clock

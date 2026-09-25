@@ -38,7 +38,10 @@ namespace Odyssey.Tests.Sim.Events
         // 2026-09-25, medical supplies (design 37 §5), at the merge with main: Incident_MedicalDrop
         // appended at index 4, after the bandit's two — the supply drop's worker again, four to
         // eight medical supplies, weight 40 (invented).
-        const ulong ContentFingerprint = 1850533508298769451UL;
+        // And the break taxonomy (design 51 §5c) on the merge with main: Incident_MentalBreak
+        // (Bad, Misc) appended at 5, after the medical drop, naming the Recorded worker - written
+        // down by the world when a colonist breaks, never fired. Re-taken from the merged pack.
+        const ulong ContentFingerprint = 7605656342009865975UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

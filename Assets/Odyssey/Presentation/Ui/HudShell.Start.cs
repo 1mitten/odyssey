@@ -137,8 +137,18 @@ namespace Odyssey.Presentation.Ui
             // Rolled, not Of: Of would answer from the name book, and slot 0's PawnId is the same
             // 1 the last colony's first colonist had — so a freshly dealt stranger would arrive
             // wearing the name somebody typed in a game that is already over.
+            // Who she is (design 51 §5f), written by the one owner the inspect pane uses, from the
+            // traits the simulation dealt this seed — the ones she will walk with.
+            var traits = new List<InspectRow>(rolled.Traits.Count);
+            foreach (int handle in rolled.Traits)
+            {
+                TraitDef trait = rolled.Content.Traits[handle];
+                traits.Add(TraitSummary.Row(handle, trait.moodOffset, trait.breakThresholdOffset,
+                    trait.learningPerMille, trait.workSpeedPerMille, rolled.Content.TraitDisabledWork[handle]));
+            }
+
             return new Candidate(seed, ColonistNames.Rolled(seed, id),
-                ColonistIdentity.Age(seed, id), ColonistIdentity.Occupation(seed, id), rows);
+                ColonistIdentity.Age(seed, id), ColonistIdentity.Occupation(seed, id), rows, traits);
         }
         readonly Dictionary<string, VisualElement> _startRowByKey = new Dictionary<string, VisualElement>();
 
@@ -587,8 +597,22 @@ namespace Odyssey.Presentation.Ui
         static Label SectionHeading(string key) =>
             HudText.Make(Registry.Label(key), HudTextRole.Name, ussClass: "setup__heading");
 
-        /// <summary>What an empty section reads as. The traits block until M7 fills it.</summary>
+        /// <summary>What an empty section reads as.</summary>
         const string EmptySection = "—";
+
+        /// <summary>Every trait's description, a line each, for the traits block's tooltip.</summary>
+        static string? TraitTooltip(Candidate candidate)
+        {
+            if (candidate.Traits.Count == 0) return null;
+            var text = new System.Text.StringBuilder();
+            foreach (InspectRow row in candidate.Traits)
+            {
+                if (string.IsNullOrEmpty(row.Tooltip)) continue;
+                if (text.Length > 0) text.Append('\n');
+                text.Append(row.Name).Append(": ").Append(row.Tooltip);
+            }
+            return text.Length > 0 ? text.ToString() : null;
+        }
 
         static VisualElement Captioned(string key, VisualElement control)
         {
@@ -876,10 +900,12 @@ namespace Odyssey.Presentation.Ui
             _detailFace.SetFace(ColonistFace.Of(current.Seed, shown));
             _detailFace.SetPortrait(_boot!.Portraits.For(current.Seed, shown));
 
-            // Empty until M7, by the owner's decision. It says "—" rather than nothing, because a
-            // section that is absent and one that is empty look identical and only one of them is
-            // a promise. The word "Traits" is the heading's now, not this line's.
-            HudText.Set(_detailTraits, EmptySection, HudTextRole.Body);
+            // Who she is (design 51 §5f): a line per trait, the name and what it does, rerolled
+            // with the card. "—" when a candidate has none, because a section that is absent and
+            // one that is empty look identical and only one of them is a promise.
+            string traitLines = current.TraitLines;
+            HudText.Set(_detailTraits, traitLines.Length > 0 ? traitLines : EmptySection, HudTextRole.Body);
+            _detailTraits.tooltip = TraitTooltip(current);
 
             for (int i = 0; i < current.Skills.Count && i < _detailSkillViews.Count; i++)
                 SetSkillLine(_detailSkillViews, i, current.Skills[i]);

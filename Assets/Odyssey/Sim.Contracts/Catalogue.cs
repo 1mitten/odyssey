@@ -358,6 +358,132 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// See <see cref="JobHandle"/>: the kinds of mental break (design 51 §5c). The order is
+    /// <c>PawnContent.FromDefs</c>'s break list, and a break's index rides every save taken while a
+    /// colonist is in one: <b>appended, never inserted</b>. The wander is nought, so every break
+    /// from before the taxonomy is one.
+    /// </summary>
+    public static class BreakHandle
+    {
+        public const int Wander = 0;
+        public const int Sulk = 1;
+        public const int Binge = 2;
+        public const int Tantrum = 3;
+        public const int Berserk = 4;
+        public const int Count = 5;
+
+        /// <summary>The names a break is keyed by in the registry (<c>ui.break.&lt;name&gt;</c>).</summary>
+        public static readonly string[] Names = { "wander", "sulk", "binge", "tantrum", "berserk" };
+
+        /// <summary>The tiers, as <c>MentalBreakDef.tier</c> counts them.</summary>
+        public const int Minor = 0, Major = 1, Extreme = 2;
+    }
+
+    /// <summary>
+    /// See <see cref="JobHandle"/>: trait indices (design 51 §4a, §4c). The order is
+    /// <c>PawnContent.FromDefs</c>'s trait list, and a trait's index rides every save that holds
+    /// it: <b>appended, never inserted</b>. The interface names a trait by <see cref="Names"/>
+    /// (<c>ui.trait.&lt;name&gt;</c>) and never sees the Def.
+    ///
+    /// <para><b>The thirteen are a placeholder set of our own</b>, every number INVENTED, until the
+    /// owner's table in <c>docs/research/traits-interview.md</c> replaces them. Renaming one in place
+    /// is safe until a colony that holds it is kept; after that, append.</para>
+    /// </summary>
+    public static class TraitHandle
+    {
+        public const int Tireless = 0;
+        public const int Diligent = 1;
+        public const int Unhurried = 2;
+        public const int Cheerful = 3;
+        public const int Sunny = 4;
+        public const int Gloomy = 5;
+        public const int Steady = 6;
+        public const int Jumpy = 7;
+        public const int QuickStudy = 8;
+        public const int SlowStudy = 9;
+        public const int SoftHands = 10;
+        public const int BlackThumb = 11;
+        public const int HamFisted = 12;
+        public const int Count = 13;
+
+        /// <summary>The names a trait is keyed by in the registry, parallel to the handles.</summary>
+        public static readonly string[] Names =
+        {
+            "tireless", "diligent", "unhurried", "cheerful", "sunny", "gloomy", "steady", "jumpy",
+            "quickstudy", "slowstudy", "softhands", "blackthumb", "hamfisted",
+        };
+
+        /// <summary>The most traits a colonist carries: two always, a third sometimes (design 51 §5f).</summary>
+        public const int MaxPerPawn = 3;
+    }
+
+    /// <summary>
+    /// See <see cref="JobHandle"/>: memory thought indices (design 51 §4a). The order is
+    /// <c>PawnContent.FromDefs</c>'s thought list and <c>ThoughtIndex</c> aliases these, because a
+    /// thought's index rides every saved memory: <b>appended, never inserted</b>. The interface
+    /// names a thought by <see cref="Names"/> and never sees the Def.
+    /// </summary>
+    public static class ThoughtHandle
+    {
+        public const int Catharsis = 0;
+        public const int AteMeal = 1;
+        public const int SleptOnGround = 2;
+        public const int Fell = 3;
+        public const int SleptCold = 4;
+        public const int SleptHot = 5;
+        public const int AttackedByColonist = 6;
+        public const int ColonistDied = 7;
+        // The kitchen's (design 48 §4), after main's at the merge (2026-09-25).
+        public const int AteRation = 8;
+        public const int AteBurnt = 9;
+        public const int AteRaw = 10;
+        public const int Count = 11;
+
+        /// <summary>
+        /// The names a thought is published under (<c>odyssey.pawn.thought.&lt;name&gt;</c>) and
+        /// keyed by in the registry (<c>ui.thought.&lt;name&gt;</c>), parallel to the handles.
+        /// </summary>
+        public static readonly string[] Names =
+        {
+            "catharsis", "atemeal", "sleptonground", "fell", "sleptcold", "slepthot",
+            "attackedbycolonist", "colonistdied", "ateration", "ateburnt", "ateraw",
+        };
+    }
+
+    /// <summary>
+    /// How a colonist's mood stands against her own break lines (design 51 §5a): the one answer the
+    /// roster, the inspect pane and the alert all read, <b>published by the simulation</b> as
+    /// <c>odyssey.pawn.mood.band</c>. The interface used to decide it from two constants of its own,
+    /// one of them a copy of the simulation's threshold, and called a colonist at the resting target
+    /// "strained" for it. The lines move with traits, so only the simulation can say.
+    /// </summary>
+    public static class MoodBand
+    {
+        /// <summary>At or above the minor line plus the strain margin: nothing near.</summary>
+        public const int Content = 0;
+
+        /// <summary>Within the strain margin above the minor line: close, and not yet at risk.</summary>
+        public const int Strained = 1;
+
+        /// <summary>Below the minor line: a minor break can be rolled.</summary>
+        public const int BreakingMinor = 2;
+
+        /// <summary>Below the major line: a major break can be rolled.</summary>
+        public const int BreakingMajor = 3;
+
+        /// <summary>Below the extreme line: an extreme break can be rolled.</summary>
+        public const int BreakingExtreme = 4;
+
+        /// <summary>In a mental break now.</summary>
+        public const int Broken = 5;
+
+        public const int Count = 6;
+
+        /// <summary>At or past the minor line: every band a break can be rolled in, and a break itself.</summary>
+        public static bool IsBreaking(int band) => band >= BreakingMinor;
+    }
+
+    /// <summary>
     /// See <see cref="JobHandle"/>: incident def indices, as <see cref="BulletinView"/> and
     /// <see cref="Intent"/> carry them. The order is <c>IncidentContent.Order</c> in the
     /// simulation and <c>IncidentLabels.Keys</c> in the interface, and a test on each side holds
@@ -383,8 +509,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Medical supplies from the sky (design 37 §5): the supply drop's worker, another cargo.
         /// After <see cref="BanditLeft"/> at the merge with main (2026-09-25); bandits shipped first.</summary>
         public const int MedicalDrop = 4;
+        /// <summary>
+        /// A colonist broke (design 51 §5c). Written down by the world when it happens and never
+        /// fired: after main's MedicalDrop at the merge (2026-09-25). The bulletin's subject is the <see cref="BreakHandle"/>, its amount the pawn.
+        /// </summary>
+        public const int MentalBreak = 5;
 
-        public const int Count = 5;
+        public const int Count = 6;
     }
 
     /// <summary>

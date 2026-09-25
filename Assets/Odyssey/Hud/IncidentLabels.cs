@@ -27,6 +27,8 @@ namespace Odyssey.Hud
             "ui.bulletin.theft",
             "ui.bulletin.banditleft",
             "ui.bulletin.medicaldrop",
+            // Written down by the world when a colonist breaks (design 51 §5c).
+            "ui.bulletin.mentalbreak",
         };
 
         /// <summary>The key for an incident the table does not know, so the fault is visible on screen.</summary>

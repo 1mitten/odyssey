@@ -15,6 +15,125 @@ namespace Odyssey.Tests.Hud
         static PawnView Colonist(int id, int food = 800, int mood = 800, int job = 0) =>
             new PawnView(new PawnId(id), new CellRef(1, 1, 1), food, rest: 800, mood: mood, jobDef: job);
 
+        /// <summary>The band the simulation would publish for her (design 51 §5a).</summary>
+        static void Band(WorldSnapshot snapshot, int id, int band) =>
+            snapshot.AddPawnAspect(new PawnAspect(new PawnId(id), MindAspectNames.BandKey, band));
+
+        static WorldSnapshot OneColonist(int band)
+        {
+            var snapshot = Frame.Write();
+            snapshot.AddPawn(Colonist(1));
+            Band(snapshot, 1, band);
+            return snapshot;
+        }
+
+        /// <summary>
+        /// The break alert reads the published band and keeps no threshold (design 51 §5a): it is
+        /// raised at breaking, stands through strained and clears only at content — the hysteresis
+        /// the two copied numbers used to give, now against lines that are hers.
+        /// </summary>
+        [Test]
+        public void TheBreakAlertLatchesOnTheBandAndClearsAtContent()
+        {
+            var alerts = new AlertModel();
+
+            alerts.Refresh(OneColonist(MoodBand.Strained), 0.0);
+            Assert.That(alerts.Rows, Is.Empty, "strained is the roster's to show, not the alert's");
+
+            alerts.Refresh(OneColonist(MoodBand.BreakingMinor), 1.0);
+            Assert.That(alerts.Rows, Has.Count.EqualTo(1));
+            Assert.That(alerts.Rows[0].Key, Is.EqualTo(AlertModel.BreakKey));
+            Assert.That(alerts.Rows[0].Severity, Is.EqualTo(AlertSeverity.Warning));
+            Assert.That(alerts.Rows[0].Lead, Does.EndWith(AlertModel.BreakingTail));
+
+            alerts.Refresh(OneColonist(MoodBand.Strained), 2.0);
+            Assert.That(alerts.Rows, Has.Count.EqualTo(1), "it stands while she is only strained");
+
+            alerts.Refresh(OneColonist(MoodBand.Content), 3.0);
+            Assert.That(alerts.Rows, Is.Empty, "and clears once she is content");
+        }
+
+        [Test]
+        public void ABreakItselfIsWordedAndColouredApart()
+        {
+            var alerts = new AlertModel();
+            alerts.Refresh(OneColonist(MoodBand.BreakingExtreme), 0.0);
+            Assert.That(alerts.Rows[0].Severity, Is.EqualTo(AlertSeverity.Warning));
+
+            alerts.Refresh(OneColonist(MoodBand.Broken), 1.0);
+            Assert.That(alerts.Rows, Has.Count.EqualTo(1));
+            Assert.That(alerts.Rows[0].Severity, Is.EqualTo(AlertSeverity.Danger),
+                "the panel is rebuilt when a latched colonist goes from at risk to in a break");
+            Assert.That(alerts.Rows[0].Lead, Does.EndWith(AlertModel.BrokenTail));
+        }
+
+        /// <summary>
+        /// Dismissing the warning must not hide the break it warned of (review, 2026-09-25): the two
+        /// shared one dismiss key, cleared only at content, so a player who put away "close to
+        /// breaking" never heard that she had gone berserk. And a dismissed break is news again
+        /// the next time, because its dismissal lasts only as long as the break.
+        /// </summary>
+        [Test]
+        public void DismissingTheWarningDoesNotHideTheBreak()
+        {
+            var alerts = new AlertModel();
+            alerts.Refresh(OneColonist(MoodBand.BreakingMajor), 0.0);
+            alerts.Dismiss(alerts.Rows[0].DismissKey);
+            alerts.Refresh(OneColonist(MoodBand.BreakingMajor), 1.0);
+            Assert.That(alerts.Rows, Is.Empty, "the control: the warning is put away");
+
+            alerts.Refresh(OneColonist(MoodBand.Broken), 2.0);
+            Assert.That(alerts.Rows, Has.Count.EqualTo(1), "the break is its own news");
+            Assert.That(alerts.Rows[0].Severity, Is.EqualTo(AlertSeverity.Danger));
+
+            alerts.Dismiss(alerts.Rows[0].DismissKey);
+            alerts.Refresh(OneColonist(MoodBand.Broken), 3.0);
+            Assert.That(alerts.Rows, Is.Empty, "and can be put away in its turn");
+
+            alerts.Refresh(OneColonist(MoodBand.BreakingMinor), 4.0);
+            Assert.That(alerts.Rows, Is.Empty, "after it, the warning is still the one she dismissed");
+            alerts.Refresh(OneColonist(MoodBand.Broken), 5.0);
+            Assert.That(alerts.Rows, Has.Count.EqualTo(1), "a second break is news again");
+        }
+
+        /// <summary>
+        /// Two latched colonists swapping between at risk and in a break on one refresh leave every
+        /// count where it was; the panel still has to be rebuilt, or it keeps the old wording.
+        /// </summary>
+        [Test]
+        public void TwoColonistsSwappingBandsRewordThePanel()
+        {
+            WorldSnapshot Two(int first, int second)
+            {
+                var snapshot = Frame.Write();
+                snapshot.AddPawn(Colonist(1));
+                snapshot.AddPawn(Colonist(2));
+                Band(snapshot, 1, first);
+                Band(snapshot, 2, second);
+                return snapshot;
+            }
+
+            var alerts = new AlertModel();
+            alerts.Refresh(Two(MoodBand.Broken, MoodBand.BreakingMinor), 0.0);
+            Assert.That(alerts.Rows[0].Severity, Is.EqualTo(AlertSeverity.Danger));
+            Assert.That(alerts.Rows[0].Pawn.Value, Is.EqualTo(1));
+
+            alerts.Refresh(Two(MoodBand.BreakingMinor, MoodBand.Broken), 1.0);
+            AlertRow danger = alerts.Rows[0].Severity == AlertSeverity.Danger ? alerts.Rows[0] : alerts.Rows[1];
+            Assert.That(danger.Pawn.Value, Is.EqualTo(2), "the break row moved to the colonist now in one");
+        }
+
+        [Test]
+        public void ALowMoodWithNoBandRaisesNothing()
+        {
+            // The control for the two above: the mood alone, which is what the alert used to read.
+            var snapshot = Frame.Write();
+            snapshot.AddPawn(Colonist(1, mood: 50));
+            var alerts = new AlertModel();
+            alerts.Refresh(snapshot, 0.0);
+            Assert.That(alerts.Rows, Is.Empty);
+        }
+
         [Test]
         public void AQuietColonyRaisesNothing()
         {
@@ -106,6 +225,7 @@ namespace Odyssey.Tests.Hud
         {
             var snapshot = Frame.Write();
             snapshot.AddPawn(Colonist(1, food: 10, mood: 100));
+            Band(snapshot, 1, MoodBand.BreakingMinor);
 
             var alerts = new AlertModel();
             alerts.Refresh(snapshot, 0.0);
@@ -178,6 +298,7 @@ namespace Odyssey.Tests.Hud
         {
             var snapshot = Frame.Write();
             snapshot.AddPawn(Colonist(1, food: 10, mood: 100, job: -1));
+            Band(snapshot, 1, MoodBand.BreakingMinor);
 
             var alerts = new AlertModel();
             alerts.Refresh(snapshot, 0.0);

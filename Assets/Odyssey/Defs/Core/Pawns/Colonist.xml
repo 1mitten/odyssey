@@ -17,14 +17,70 @@
     <risePerInterval>7</risePerInterval>
     <fallPerInterval>5</fallPerInterval>
     <breakThreshold>350</breakThreshold>
-    <breakMtbTicks>600000</breakMtbTicks>
+    <!--
+      Design 51 §4b. Three lines: the minor is breakThreshold, the major four sevenths of it and
+      the extreme a seventh (a-19, the reference's ratios), all moved together by a trait. The mean
+      time between breaks is the deepest line's: four days, 0.8 and half a day, the reference's
+      figures as a-19 corrected a-01's older ten, three and 0.7.
+    -->
+    <breakMtbTicks>240000</breakMtbTicks>
+    <majorMtbTicks>48000</majorMtbTicks>
+    <extremeMtbTicks>30000</extremeMtbTicks>
+    <strainMargin>100</strainMargin>
   </MoodDef>
 
-  <!-- The one break behaviour the slice carries. The taxonomy is a later milestone. -->
+  <!--
+    The kinds of break (design 51 §5c). What each does is the think node's; these are the numbers.
+    Within a tier the pick is weighted by commonality among the breaks whose requirement holds
+    (binge wants food she can reach, tantrum a building in reach), falling through to a shallower
+    tier when none does. A break lasts one draw between minTicks and maxTicks, then catharsis.
+    Durations are a-19's shortened for a small colony (2,500 ticks is an hour). INVENTED weights.
+  -->
   <MentalBreakDef>
     <defName>Break_Wander</defName>
-    <durationTicks>7500</durationTicks>
+    <tier>0</tier>
+    <commonality>10</commonality>
+    <minTicks>5000</minTicks>
+    <maxTicks>10000</maxTicks>
     <wanderRadius>6</wanderRadius>
+    <catharsisThought>0</catharsisThought>
+  </MentalBreakDef>
+  <!-- Goes to her own bed and stays there doing nothing; with no bed, where she stands. -->
+  <MentalBreakDef>
+    <defName>Break_Sulk</defName>
+    <tier>0</tier>
+    <commonality>10</commonality>
+    <minTicks>10000</minTicks>
+    <maxTicks>30000</maxTicks>
+    <catharsisThought>0</catharsisThought>
+  </MentalBreakDef>
+  <!-- Eats the nearest food she can reach, again and again, whatever her hunger. -->
+  <MentalBreakDef>
+    <defName>Break_Binge</defName>
+    <tier>1</tier>
+    <commonality>10</commonality>
+    <minTicks>5000</minTicks>
+    <maxTicks>15000</maxTicks>
+    <catharsisThought>0</catharsisThought>
+  </MentalBreakDef>
+  <!-- Strikes the nearest colony building in reach, beds spared (the bandit's rule). -->
+  <MentalBreakDef>
+    <defName>Break_Tantrum</defName>
+    <tier>1</tier>
+    <commonality>10</commonality>
+    <minTicks>2500</minTicks>
+    <maxTicks>7500</maxTicks>
+    <reachCells>15</reachCells>
+    <catharsisThought>0</catharsisThought>
+  </MentalBreakDef>
+  <!-- Strikes the nearest standing pawn in reach. An unordered fight ends in a downing, not a death. -->
+  <MentalBreakDef>
+    <defName>Break_Berserk</defName>
+    <tier>2</tier>
+    <commonality>10</commonality>
+    <minTicks>7500</minTicks>
+    <maxTicks>15000</maxTicks>
+    <reachCells>20</reachCells>
     <catharsisThought>0</catharsisThought>
   </MentalBreakDef>
 

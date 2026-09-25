@@ -190,7 +190,8 @@ namespace Odyssey.Tests.Hud
             Assert.That(roster.Cards[0].Selected, Is.False);
             Assert.That(roster.Cards[1].Name, Is.EqualTo(ColonistNamePool.Names[1]));
             Assert.That(roster.Cards[1].Selected, Is.True);
-            Assert.That(MoodBands.Band(roster.Cards[1].Mood), Is.EqualTo("breaking"));
+            Assert.That(roster.Cards[1].MoodBand, Is.EqualTo(MoodBand.Content),
+                "no band published for her, so the card claims nothing it was not told");
         }
 
         /// <summary>
@@ -386,31 +387,36 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The bands are read against the scale the simulation actually publishes.
-        ///
-        /// Everything about mood in the interface was wrong until 2026-09-16 and none of it was
-        /// visible in a test, because the fixtures used a scale the game does not produce. A
-        /// colonist starts at 600 of 1000; against bands of 60 and 35 that is "content", and it
-        /// stays "content" all the way down to 35 — which is to say the whole of the range a
-        /// player would ever see was one band, every mood bar drew full, and a colonist could
-        /// not go red before they were practically dead.
-        ///
-        /// So this test names the simulation's own numbers rather than round ones: a colonist as
-        /// placed, a colonist in trouble, and the floor.
+        /// The band is the simulation's answer (design 51 §5a). This class used to read the mood
+        /// against 600 and 350 of its own, which called a colonist at the resting target of 500
+        /// strained for the whole game; the lines move with traits now, so a number here would be
+        /// a second owner of a line that is hers.
         /// </summary>
         [Test]
-        public void MoodBandsReadTheScaleTheSimulationPublishes()
+        public void MoodBandsReadTheBandTheSimulationPublishes()
         {
-            // Mood_Default in the content pack: baseMood 500, a colonist is placed at 600.
-            Assert.That(MoodBands.Band(600), Is.EqualTo("content"), "a colonist as placed is content");
-            Assert.That(MoodBands.Band(500), Is.EqualTo("strained"), "the mood base is not contentment");
-            Assert.That(MoodBands.Band(200), Is.EqualTo("breaking"), "a colonist in real trouble is breaking");
-            Assert.That(MoodBands.Band(0), Is.EqualTo("breaking"));
+            var snapshot = Frame.Write();
+            var resting = new PawnId(1);
+            var troubled = new PawnId(2);
+            var silent = new PawnId(3);
+            snapshot.AddPawn(new PawnView(resting, new CellRef(1, 1, 1), 800, 800, 500, -1));
+            snapshot.AddPawn(new PawnView(troubled, new CellRef(2, 1, 1), 800, 800, 500, -1));
+            snapshot.AddPawn(new PawnView(silent, new CellRef(3, 1, 1), 800, 800, 100, -1));
+            snapshot.AddPawnAspect(new PawnAspect(resting, MindAspectNames.BandKey, MoodBand.Content));
+            snapshot.AddPawnAspect(new PawnAspect(troubled, MindAspectNames.BandKey, MoodBand.BreakingMajor));
 
-            // And the bands have to divide the range a player can see, or the bar says one thing
-            // for the whole game. Three distinct answers across the middle of the scale.
-            Assert.That(MoodBands.Band(900), Is.Not.EqualTo(MoodBands.Band(500)));
-            Assert.That(MoodBands.Band(500), Is.Not.EqualTo(MoodBands.Band(200)));
+            Assert.That(MoodBands.Of(snapshot, resting), Is.EqualTo(MoodBand.Content),
+                "a colonist at the resting target is content: the owner's rule, and the fixed fault");
+            Assert.That(MoodBands.Of(snapshot, troubled), Is.EqualTo(MoodBand.BreakingMajor),
+                "the same mood reads as whatever her own lines say, which is the point");
+            Assert.That(MoodBands.Of(snapshot, silent), Is.EqualTo(MoodBand.Content),
+                "nothing published is nothing claimed, never a guess from the mood");
+
+            Assert.That(MoodBands.Word(MoodBand.Content), Is.EqualTo("content"));
+            Assert.That(MoodBands.Word(MoodBand.Strained), Is.EqualTo("strained"));
+            Assert.That(MoodBands.Word(MoodBand.BreakingMinor), Is.EqualTo("breaking"));
+            Assert.That(MoodBands.Word(MoodBand.BreakingExtreme), Is.EqualTo("breaking"));
+            Assert.That(MoodBands.Word(MoodBand.Broken), Is.EqualTo("breaking down"));
         }
     }
 
@@ -435,10 +441,11 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.Tabs[0].Name, Is.EqualTo("Needs"));
             Assert.That(pane.Tabs[0].Enabled, Is.True);
             Assert.That(pane.Tabs[1].Name, Is.EqualTo("Skills"));
-            Assert.That(pane.Tabs.Count(t => t.Enabled), Is.EqualTo(3),
-                "Needs, Skills and Health are live (Health since the combat contracts step, design " +
-                "33 §5); Gear, Thoughts, Social and Log are visible with reasons");
+            Assert.That(pane.Tabs.Count(t => t.Enabled), Is.EqualTo(4),
+                "Needs, Skills, Thoughts and Health are live (Health since the combat contracts step, " +
+                "design 33 §5; Thoughts since design 51 §5b); Gear, Social and Log are visible with reasons");
             Assert.That(pane.Tabs.Single(t => t.Name == "Health").Enabled, Is.True);
+            Assert.That(pane.Tabs.Single(t => t.Name == "Thoughts").Enabled, Is.True);
 
             Assert.That(pane.Commands, Is.Not.Empty);
             // The draft and the response (design 33 §2f, §18e) are the commands wired; the rest may

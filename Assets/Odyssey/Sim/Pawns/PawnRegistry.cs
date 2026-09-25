@@ -59,6 +59,12 @@ namespace Odyssey.Sim.Pawns
         /// <summary>How many kinds this build has: the bound a saved kind is checked against.</summary>
         public int KindCount => _ctx.Content.Kinds.Length == 0 ? 1 : _ctx.Content.Kinds.Length;
 
+        /// <summary>How many traits this build has: the bound a saved trait is checked against.</summary>
+        public int TraitCount => _ctx.Content.Traits.Length;
+
+        /// <summary>How many kinds of break this build has: the bound a saved break kind is checked against.</summary>
+        public int BreakCount => _ctx.Content.Breaks.Length == 0 ? 1 : _ctx.Content.Breaks.Length;
+
         /// <summary>
         /// Build a pawn of a kind at a cell (design 29 §1). Kind 0 is the colonist and is what
         /// <see cref="Spawn(int)"/> makes; anything else is an animal, and the caller has checked
@@ -183,6 +189,9 @@ namespace Odyssey.Sim.Pawns
             Pawn pawn = Spawn(index, kind, weaponDef);
             // An animal has no skills to be passionate about (design 29 §2).
             if (pawn.IsPerson) pawn.RollPassions();
+            // And a colonist arriving mid-game is a new colonist: dealt her traits now, on the same
+            // stream the first tick deals them on (design 51 §5f). A bandit has none.
+            if (pawn.IsColonist && _ctx.DealsTraits) pawn.RollTraits();
             return IntentRejection.None;
         }
 
@@ -331,6 +340,11 @@ namespace Odyssey.Sim.Pawns
             if (pawn == null) return IntentRejection.NotPermitted;
             if (intent.B < 0 || intent.B >= WorkTypeIndex.Count) return IntentRejection.NotPermitted;
             if (intent.C < 0 || intent.C > 4) return IntentRejection.NotPermitted;
+
+            // A work type a trait forbids takes no priority but never (design 51 §4e). Refused
+            // rather than stored: the cell is inert on the Work tab, so a press arriving here is a
+            // caller that did not ask, and a stored number nobody can use is a number in the hash.
+            if (intent.C != 0 && !pawn.CanDo(intent.B)) return IntentRejection.NotPermitted;
 
             if (pawn.WorkPriorities[intent.B] == (byte)intent.C)
                 return IntentRejection.AlreadyInThatState;
@@ -658,9 +672,9 @@ namespace Odyssey.Sim.Pawns
                 {
                     writer.AddPawnAspect(pawn.Id, WorkAspects.Priority[w], pawn.WorkPriorities[w]);
 
-                    // Nothing can answer this with a no yet — there are no traits and no health
-                    // model — so it is a constant one today. Published anyway: see WorkAspects.
-                    writer.AddPawnAspect(pawn.Id, WorkAspects.Capable[w], 1);
+                    // A trait can answer this with a no (design 51 §4e): the Work tab was written
+                    // to grey an incapable cell, and now one can be.
+                    writer.AddPawnAspect(pawn.Id, WorkAspects.Capable[w], pawn.CanDo(w) ? 1 : 0);
                 }
 
                 // The day, one aspect an hour. Twenty-four rows a colonist is the most this
@@ -677,6 +691,23 @@ namespace Odyssey.Sim.Pawns
                 // could only ever give the second. Reinterpreted rather than converted — an aspect
                 // carries an int and a seed is a uint, and every bit of it matters.
                 writer.AddPawnAspect(pawn.Id, SkillAspects.RollSeed, unchecked((int)pawn.RollSeed));
+
+                // State of mind (design 51 §4d): the band every surface reads and the target the
+                // Thoughts tab heads with. The interface kept a copy of the threshold until this and
+                // called the resting target strained for it; the lines move with traits, so only this
+                // side can say. A colonist's, because nobody else's mood moves (Pawn.NeedsTick).
+                // Her base and her minor and major lines are published for the Thoughts tab's meter
+                // and breakdown (design 51 §10); the extreme line has no reader and is not.
+                if (pawn.IsColonist)
+                {
+                    writer.AddPawnAspect(pawn.Id, MindAspects.Band, pawn.Band());
+                    writer.AddPawnAspect(pawn.Id, MindAspects.Target, pawn.MoodTarget);
+                    writer.AddPawnAspect(pawn.Id, MindAspects.Base, _ctx.Content.Mood.baseMood);
+                    writer.AddPawnAspect(pawn.Id, MindAspects.MinorLine, pawn.MinorBreakLine());
+                    writer.AddPawnAspect(pawn.Id, MindAspects.MajorLine, pawn.MajorBreakLine());
+                    if (pawn.IsBroken) writer.AddPawnAspect(pawn.Id, MindAspects.Break, pawn.BreakKind);
+                    PublishThoughts(writer, pawn, world.CurrentTick);
+                }
 
                 // The rate she is paying work at right now (design 17 §3d), which is what the
                 // stroke clock is scaled by. Asked of the driver on the same terms as the view's
@@ -795,6 +826,55 @@ namespace Odyssey.Sim.Pawns
             // §5d, §13i): the cell of it she strikes at.
             if (CombatJobs.IsAttack(job.DefIndex) && job.PlayerForced && pawn.CombatTarget == 0) return job.TargetCell;
             return -1;
+        }
+
+        /// <summary>
+        /// What is on her mind (design 51 §5b): the situational offsets that are not nought, and every memory she holds with its stack and the time until it thins. Sparse
+        /// and bounded by the need and thought counts — four to eight rows for a colonist on an
+        /// ordinary day — and read by the Thoughts tab by name. Published for every colonist
+        /// rather than on a query, for the reason design 51 §4d gives.
+        /// </summary>
+        void PublishThoughts(SnapshotWriter writer, Pawn pawn, int tick)
+        {
+            PawnContent content = _ctx.Content;
+
+            for (int n = 0; n < NeedIndex.Count && n < MindAspects.Need.Length; n++)
+            {
+                int offset = content.Needs[n].MoodOffset(pawn.Needs[n]);
+                if (offset != 0) writer.AddPawnAspect(pawn.Id, MindAspects.Need[n], offset);
+            }
+
+            // Who she is, slot by slot (design 51 §5f), with each effect only while it is not the
+            // default. Traits never change, so this is the same handful of rows every tick; it is
+            // published rather than cached on the interface's side for the reason every aspect is.
+            for (int slot = 0; slot < pawn.Traits.Count && slot < MindAspects.Trait.Length; slot++)
+            {
+                int handle = pawn.Traits[slot];
+                TraitDef trait = content.Traits[handle];
+                writer.AddPawnAspect(pawn.Id, MindAspects.Trait[slot], handle);
+                if (trait.moodOffset != 0) writer.AddPawnAspect(pawn.Id, MindAspects.TraitMood[slot], trait.moodOffset);
+                if (trait.breakThresholdOffset != 0)
+                    writer.AddPawnAspect(pawn.Id, MindAspects.TraitNerve[slot], trait.breakThresholdOffset);
+                if (trait.learningPerMille != 1_000)
+                    writer.AddPawnAspect(pawn.Id, MindAspects.TraitLearn[slot], trait.learningPerMille);
+                if (trait.workSpeedPerMille != 1_000)
+                    writer.AddPawnAspect(pawn.Id, MindAspects.TraitWork[slot], trait.workSpeedPerMille);
+                if (content.TraitDisabledWork[handle] != 0)
+                    writer.AddPawnAspect(pawn.Id, MindAspects.TraitCannot[slot], content.TraitDisabledWork[handle]);
+            }
+
+            int temperature = content.Temperature.MoodOffset(pawn.AmbientTempC);
+            if (temperature != 0) writer.AddPawnAspect(pawn.Id, MindAspects.Temperature, temperature);
+
+            if (pawn.Memories.Count == 0) return;
+            for (int t = 0; t < content.Thoughts.Length && t < ThoughtHandle.Count; t++)
+            {
+                int worth = pawn.MemoryContribution(t, tick, out int copies, out int soonest);
+                if (copies == 0) continue;
+                writer.AddPawnAspect(pawn.Id, MindAspects.Thought[t], worth);
+                writer.AddPawnAspect(pawn.Id, MindAspects.ThoughtLeft[t], soonest - tick);
+                writer.AddPawnAspect(pawn.Id, MindAspects.ThoughtCount[t], copies);
+            }
         }
 
         /// <summary>

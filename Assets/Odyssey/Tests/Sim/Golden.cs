@@ -494,6 +494,23 @@ namespace Odyssey.Tests.Sim
         /// Cooking took the eighth skill, so Shooting is the ninth, <c>Job_AttackRanged</c> the
         /// twenty-eighth job and the pistol the eighteenth item. <b>Measured</b> the same way; the
         /// merge commit says what the probe found.</para>
+        ///
+        /// <para><b>The three Simulated moved on 2026-09-25, for traits (design 51 §3, TM3); no
+        /// Generated moved.</b> Every colonist is dealt two or three traits on the first tick —
+        /// not at placement, which is exactly why the Generated hashes stand — and the hash sees
+        /// them. <b>Measured</b>: <c>GoldenColonyProbe</c> before and after, on this branch. Every
+        /// census number is identical on all three boards — live things, stacks, item cells, pawn
+        /// cells, food, rest, progress, experience, jobs started and failed — <b>except total
+        /// mood</b>, which moved by the outlook traits the seeds dealt: +60 on the meadow, −120 on
+        /// the city, −120 on the played board. No colonist went anywhere or did anything else
+        /// differently; nobody in a golden colony is dealt a trait that forbids work they do.</para>
+        ///
+        /// <para><b>Re-baked again the same day, on the merge with the weather (#203)</b>, from the
+        /// merged code: each side had moved the three Simulated for its own reason. No Generated
+        /// moved against <c>main</c>'s. <b>Measured</b>: <c>GoldenColonyProbe</c> on merged
+        /// <c>main</c> (fccdebc) and on the merge differs in total mood alone, by the same +60,
+        /// −120 and −120 the traits moved it before the weather arrived; every other census number
+        /// is identical on all three boards.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -508,8 +525,10 @@ namespace Odyssey.Tests.Sim
             // (ODYSSEY_REGOLDEN=1), on top of the weather's own re-bake: the combined job, item,
             // skill and incident tables moved the hash the same way any content append does.
             // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            // And the traits line merged with main, 2026-09-25, twice (the second after health, #213,
+            // which took bit 23, so traits are bit 29): re-taken from the merged code each time.
             Generated = 14881731598722590511UL,
-            Simulated = 5300718913518332604UL,
+            Simulated = 15826032566761705167UL,
         };
 
         /// <summary>
@@ -570,8 +589,10 @@ namespace Odyssey.Tests.Sim
             // the merged code; GoldenColonyProbe on main (2a1cfa63) and on the merge is identical on
             // all three boards, so the hash sees more and no colony does anything different.
             // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            // And the traits line merged with main, 2026-09-25, twice (the second after health, #213,
+            // which took bit 23, so traits are bit 29): re-taken from the merged code each time.
             Generated = 13308657285820379759UL,
-            Simulated = 16876557663456853837UL,
+            Simulated = 14573761820048901469UL,
         };
 
         /// <summary>
@@ -614,8 +635,10 @@ namespace Odyssey.Tests.Sim
             // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
             // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            // And the traits line merged with main, 2026-09-25, twice (the second after health, #213,
+            // which took bit 23, so traits are bit 29): re-taken from the merged code each time.
             Generated = 14180088319569370523UL,
-            Simulated = 7648152829369388509UL,
+            Simulated = 15239040274249764UL,
         };
     }
 }

@@ -13643,3 +13643,128 @@ against a 0.11 ms floor, while Huge at 4K read −0.23. Two readings that disagr
 cost. The rerun repeated both states and added a no-shadow arm, and gave +0.15 against a floor of
 0.40. A floor measured on one state only understates the noise at 4K by four to six times, so
 **repeat both states before quoting a 4K difference**.
+
+
+## 2026-09-25 — Traits and mental health, from interview to gate in a day (design 51)
+
+The owner asked to plan traits and mental health and said they would supply some traits. Grounding
+found more built than the request assumed and one thing plainly wrong. A mood system already ran
+(an integer drifting to a target, eight memories, one threshold, one break), and **a fed, rested
+colonist with nothing on her mind read "strained" for the whole game**: the interface held 600 and
+350 of its own, and the resting target is 500. Traits did not exist at all.
+
+Two interview rounds settled the scope: traits, three break lines with a small taxonomy, the
+Thoughts tab; new colonies only; two or three traits; five effect kinds; shown on the select card
+and the pane; the owner fills a table. Four research lanes ran, **every one with its page reads
+refused by the container's egress proxy**, so each file marks what came from a search snippet and
+what from memory. The one correction worth recording: a-01's mean times between breaks (10 / 3 /
+0.7 days) are the pre-1.0 figures, and the current ones are 4 / 0.8 / 0.5.
+
+The build went unit by unit behind the fast tier, installed from the system packages because the
+.NET download hosts were refused. The decisions that are not obvious from the code:
+
+- **The band crossed the seam.** Once traits move the break line, only the simulation knows where
+  a colonist's lines are, so a threshold in the interface would be two owners of one number. The
+  alert latches at breaking and clears at content, the hysteresis it had.
+- **Traits are dealt on the first tick, not at placement**, on a stream of their own. At placement
+  they would have moved every `Generated` golden for no behaviour, which is why starting skills
+  moved there too. The probe then showed the `Simulated` goldens moved in total mood alone.
+- **Fourteen existing tests failed the day traits arrived**, not because anything broke but
+  because their seeds dealt the watched colonist *Ham-fisted* or *Diligent*. The answer was a
+  scenario switch the fixtures turn off, each with a reason, rather than a trait-free default: the
+  goldens keep traits on, so the hashed runs still see them.
+- **A break's kind and length are drawn after the draw that decides it**, so which colonists break
+  is unchanged for every seed.
+- **The publish cost was measured and then cut.** About 0.03 ms a tick at fifty colonists, all in
+  the snapshot, none in the pawn phase and no allocation. The base and the three lines were
+  dropped because nothing read them. The lever left is a `QueryPawn` intent.
+
+The gate saw all five breaks on each of three seeds, 26 to 29 breaks a seed, with nobody dead, the
+lockstep twin identical and a mid-break save resuming the same. **Nothing here has run in Unity**:
+the three shell files are unproven until it compiles them. Found in passing and not fixed: two
+random purposes share a salt.
+
+## 2026-09-25 — Traits and mental health renumbered to design 44, on the merge with weather
+
+PR #215 went conflicted the hour it opened: `main` had taken the weather (#203), whose design is
+**43**, while this line was built under the same number. The traits document is **design 44**
+now, and every reference this branch wrote was moved with it — matched against the branch's own
+diff, line for line, so the weather's own "design 43" in files both sides touched was left
+exactly as it was. The entry above keeps its heading as corrected; nothing else in the history
+moved.
+
+The two lines meet in the goldens and nowhere else in code: the weather lowered every golden
+colony's mood by about 200 (its own probe), and traits move it again by the outlook the seeds
+deal. The goldens were re-baked on the merged code and probed against merged `main`.
+
+## 2026-09-25 — Traits reviewed, merged with main a second time, and design 51
+
+PR #215 was conflicted again: `main` had taken the kitchen, the bill list, ranged combat, medical
+supplies, the scenery and the selection highlight. That last one also took **design 44**, so the traits
+are **design 51** now; two branches in flight already hold 50. As before, only lines this branch wrote
+were renumbered.
+
+The merge was not only resolution. Treatment had taken bit 22 of the pawn's hash word, the same
+collision P12 recorded a day earlier, so traits moved to 23 and the break kind to 28. The kitchen's
+three new thoughts needed contract handles and names, or the Thoughts tab could not say what a
+colonist ate. And guns changed what an attack job is. A berserker holding a pistol is given a shot, and
+combat swaps her between shot and swing by reach, so a break that allowed only the swing would have
+ended every shot as a failure.
+
+**The Long tier failed twice, and neither failure was the traits'.** The raid gate's mid-raid save
+stopped resuming identically. Stepping the saved and the resumed world in lockstep from the save
+showed them equal at the load and split one tick later, first in a colonist's felt temperature and
+then in a bandit's move progress. So two separate faults of `main`'s own, each exposed only because
+the traits had moved the colony so a save landed on it:
+
+- The weather's temperature offset is written on its 120-tick pass and restored by nothing.
+- A stunned pawn never re-asks for the path that a load drops, because the toil that re-asks is the
+  one a stun holds.
+
+Both are fixed in the merge commit, because the gate cannot pass without them.
+
+The field soak failed a colonist for 2,100 ticks at zero food, against a bound its own comment calls
+a reachability check. She had gone to bed exhausted at 5% food and slept until rested, as the sleep
+driver says she should. The streak is now held while she sleeps, and whether a starving colonist
+should wake is the owner's decision. **Measure before reading a failure as a regression**: the
+instinct was that the merge had broken eating, and a job log showed one sleep and one walk.
+
+The review's own findings were smaller and mostly on screen:
+- The mood bar still coloured itself by a copied 60/40 cut beside the band's word.
+- One dismiss key covered both the warning and the break, so a player could miss a berserker.
+- The select card's traits overflowed their box.
+- The Thoughts headings never drew heavier.
+- An open pane allocated on every refresh.
+- A forced order ignored a trait's forbidden work.
+
+One slip to record against myself. I split the fixes out of the merge commit with a `git checkout`
+that discarded the unstaged working tree, taking the fixes with it. The `git add -A` just before it
+had written every file into the object store, and the fifteen blobs were found by their write time
+and matched by a string only the fix contained. Stage by path and commit; never follow a partial
+reset with a whole-tree checkout.
+
+## 2026-09-25 — A starving sleeper wakes
+
+The owner answered the question the field soak raised: *"if colonist is starving - yes they would
+wake up"*. The sleep driver now ends a sleep at zero food when `TryEat` would find her something,
+asked on the needs cadence so it costs nothing until somebody is starving. The guard is the other
+half: with no food, waking her would put her back to bed and wake her on the next pass all night,
+so she sleeps on. The soak's zero-streak bound was restored to what it was, and holds.
+
+## 2026-09-26 — The Thoughts tab to mockup 23b, and a colony that was never dealt anything
+
+The owner sent a Claude Design brief for the Thoughts tab and asked for it built in the game's own
+parts. Every token and type size in it turned out to be the game's already, so what was new was
+layout. The calls are tabled in design 51 §10. The largest is that every tab's body is now 244 px,
+because the pane has one height and this tab is the tallest. The one that changes a rule is that
+the mood is coloured by her own break lines on both tabs, which the mockup asked for and which is
+more honest than the band colouring §8a had put in the night before.
+
+A PlayMode test lays the real pane out and saves a picture of it. **The picture found a bug no
+test could:** the colonist had no traits, and her breakdown did not add up. The second was only
+tick nought (no needs pass yet). The first was that the scene wakes at noon, and the pass that
+deals starting skills and traits asked for tick nought. So since 2026-09-16 no colonist in the
+game has had starting skills, and the traits built this week would never have appeared. Every
+tier was green, because every test world starts at midnight. Fixed with `SimWorld.StartTick` and
+a test that builds at noon. It is recorded as a bug pattern, because the shape (a test world that
+starts where the game never does) will come back.

@@ -209,6 +209,10 @@ namespace Odyssey.Sim.Pawns
                 // The bullets in the air (design 47 §2c): appended, no format bump. A save from
                 // before guns has no section and loads with nothing in flight.
                 pawns.Projectiles,
+                // Each colonist's traits and the kind of break she is in (design 51 §3). Appended;
+                // absent from an older save, which loads with no traits and every break a wander —
+                // which is what that colony had.
+                new PawnMindSection(pawns.Pawns),
             };
         }
 
@@ -322,6 +326,12 @@ namespace Odyssey.Sim.Pawns
             // The power records against what is standing: the repair for a file where the two
             // disagree, and nothing at all on every file this build wrote (design 32 §8).
             Pawns.Power?.Reconcile();
+
+            // The weather's pull on the outdoor curve (design 43), which lives on the temperature
+            // and is written only on the weather's own pass: a load between two passes ran the rest
+            // of that interval with no offset while the original ran with one, and the first thing
+            // to read it — a colonist's felt temperature, a pace — diverged the resumed world.
+            Pawns.Weather?.RestoreTemperatureOffset(World.CurrentTick);
 
             // **The whole graph, not the dirty blocks** (design 33 §19a). `NavGraph.Rebuild` floods
             // only the blocks something marked, and a load writes the cell arrays wholesale without
@@ -450,6 +460,7 @@ namespace Odyssey.Sim.Pawns
             var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns())
             {
                 Chunks = chunks,
+                DealsTraits = request.Scenario == null || request.Scenario.traits,
             };
             var solver = new SupportSolver(grid);
             var support = new SupportSystem(grid, solver, chunks);

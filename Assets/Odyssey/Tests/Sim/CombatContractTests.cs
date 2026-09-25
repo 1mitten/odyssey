@@ -34,6 +34,9 @@ namespace Odyssey.Tests.Sim
             return ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: false);
         }
 
+        static bool TraitsAllowBuilding(ColonyWorld colony, int trait) =>
+            (colony.Pawns.Content.TraitDisabledWork[trait] & (1 << WorkTypeIndex.Construction)) == 0;
+
         static IntentRejection Send(ColonyWorld colony, Intent intent)
         {
             colony.World.Intents.ClearRejected();
@@ -771,6 +774,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Construction.Place(Size.FromIndex(site), BuildingHandle.Wall, StuffHandle.Wood), Is.EqualTo(IntentRejection.None));
             colony.Construction.Deliver(site, 5);
 
+            // About who may take an order, not about traits: a seed that dealt her Ham-fisted would
+            // refuse the control for a reason this test is not about (design 51 §4e).
+            colonist.Traits.RemoveAll(t => !TraitsAllowBuilding(colony, t));
             Assert.That(JobSystem.CanForce(colonist, colony.Pawns, JobIndex.Build, site), Is.True, "the control");
             Assert.That(JobSystem.CanForce(bandit, colony.Pawns, JobIndex.Build, site), Is.False, "a bandit took an order");
             colonist.Downed = true;

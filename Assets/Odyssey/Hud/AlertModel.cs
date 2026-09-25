@@ -66,7 +66,8 @@ namespace Odyssey.Hud
             PawnId pawn = default,
             CellRef? cell = null,
             string targetPrefix = "",
-            string detail = "")
+            string detail = "",
+            int dismissSalt = 0)
         {
             Key = key;
             TargetName = targetName;
@@ -78,7 +79,7 @@ namespace Odyssey.Hud
             Count = count;
             Pawn = pawn;
             Cell = cell;
-            DismissKey = ComputeDismissKey(key, pawn, cell);
+            DismissKey = ComputeDismissKey(key, pawn, cell) ^ dismissSalt;
         }
 
         public AlertRow(string key, string lead, string detail, AlertSeverity severity, int count)
@@ -124,11 +125,10 @@ namespace Odyssey.Hud
         /// <summary>Food a colonist must climb back to before the starving alert can clear.</summary>
         public const int StarveClearAt = 300;
 
-        /// <summary>Mood at or under which a colonist counts as close to breaking.</summary>
-        public const int BreakAt = MoodBands.Strained;
-
-        /// <summary>Mood a colonist must climb back to before the breaking alert can clear.</summary>
-        public const int BreakClearAt = MoodBands.Content;
+        // The break alert has no threshold of its own (design 51 §5a). It is raised when the
+        // simulation says a colonist is breaking — below her own minor line, or in a break — and
+        // stands until it says she is content again, so the strained band between is the same
+        // hysteresis the two copied numbers used to give, drawn from lines that are hers.
 
         /// <summary>Seconds a colony must be idle before the panel says so.</summary>
         public const double IdleSustain = 3.0;
@@ -213,6 +213,8 @@ namespace Odyssey.Hud
         int _wasDry = -1;
         int _wasStarving = -1;
         int _wasBreaking = -1;
+        int _wasBroken = -1;
+        long _wasBrokenIds;
         bool _wasIdle;
         int _wasColony = -1;
         int _wasNoBed;
@@ -280,6 +282,8 @@ namespace Odyssey.Hud
         {
             int starving = 0;
             int breaking = 0;
+            int broken = 0;
+            long brokenIds = 0;
             int idle = 0;
             int noBed = 0;
             long noBedIds = 0;
@@ -312,14 +316,22 @@ namespace Odyssey.Hud
                     _dismissed.Remove(AlertRow.ComputeDismissKey(StarveKey, pawn.Id, default));
                 }
 
-                if (Latch(_breaking, id, pawn.Mood, BreakAt, BreakClearAt, ref _latchVersion))
+                int band = MoodBands.Of(snapshot, pawn.Id);
+                if (LatchBand(_breaking, id, band, ref _latchVersion))
                 {
                     breaking++;
+                    // A break itself is worded and coloured apart from the risk of one, so the
+                    // panel is rebuilt when a latched colonist crosses between the two.
+                    if (band == MoodBand.Broken) { broken++; brokenIds = brokenIds * 31 + id; }
                 }
                 else
                 {
                     _dismissed.Remove(AlertRow.ComputeDismissKey(BreakKey, pawn.Id, default));
                 }
+                // The break's own row is dismissed apart from the warning before it, and only for
+                // as long as that break lasts: the next one is news again.
+                if (band != MoodBand.Broken)
+                    _dismissed.Remove(AlertRow.ComputeDismissKey(BreakKey, pawn.Id, default) ^ BrokenDismissSalt);
 
                 if (pawn.JobDef < 0) idle++;
 
@@ -423,7 +435,7 @@ namespace Odyssey.Hud
                     if (orders[i].CellIndex == hearth && orders[i].Kind == DeconstructOrderKind) { hearthDown = true; break; }
             }
 
-            if (starving == _wasStarving && breaking == _wasBreaking &&
+            if (starving == _wasStarving && breaking == _wasBreaking && broken == _wasBroken && brokenIds == _wasBrokenIds &&
                 (noHearth ? keptHome : 0) == _wasNoHearth && (hearthDown ? hearth : -1) == _wasHearthDown &&
                 dark == _wasDark && shortW == _wasShortW && dry == _wasDry &&
                 idleStands == _wasIdle && storeStuck == _wasStoreStuck && colonists == _wasColony &&
@@ -437,6 +449,8 @@ namespace Odyssey.Hud
             _wasDry = dry;
             _wasStarving = starving;
             _wasBreaking = breaking;
+            _wasBroken = broken;
+            _wasBrokenIds = brokenIds;
             _wasIdle = idleStands;
             _wasStoreStuck = storeStuck;
             _wasColony = colonists;
@@ -477,17 +491,22 @@ namespace Odyssey.Hud
                 PawnView pawn = pawns[i];
                 if (_breaking.Contains(pawn.Id.Value))
                 {
-                    int dismissKey = AlertRow.ComputeDismissKey(BreakKey, pawn.Id, default);
+                    // A break and the risk of one are dismissed apart (design 51 §5a): dismissing
+                    // "close to breaking" must not hide the break when it comes.
+                    bool inABreak = MoodBands.Of(snapshot, pawn.Id) == MoodBand.Broken;
+                    int salt = inABreak ? BrokenDismissSalt : 0;
+                    int dismissKey = AlertRow.ComputeDismissKey(BreakKey, pawn.Id, default) ^ salt;
                     if (!_dismissed.Contains(dismissKey))
                     {
                         string name = ColonistNames.Of(snapshot, pawn.Id);
                         Rows.Add(new AlertRow(
                             BreakKey,
                             name,
-                            " is close to breaking",
-                            AlertSeverity.Warning,
+                            inABreak ? BrokenTail : BreakingTail,
+                            inABreak ? AlertSeverity.Danger : AlertSeverity.Warning,
                             count: 1,
-                            pawn: pawn.Id));
+                            pawn: pawn.Id,
+                            dismissSalt: salt));
                     }
                 }
             }
@@ -649,6 +668,36 @@ namespace Odyssey.Hud
                     }
                 }
             }
+        }
+
+        /// <summary>The break alert's two tails: at risk of a break, and in one.</summary>
+        public const string BreakingTail = " is close to breaking", BrokenTail = " is breaking down";
+
+        /// <summary>Folded into a break row's dismiss key, so the break and the warning before it are dismissed apart.</summary>
+        public const int BrokenDismissSalt = 0x2F6B_1D35;
+
+        /// <summary>
+        /// <see cref="Latch"/> on a <see cref="MoodBand"/>: raised at breaking or broken, standing
+        /// through strained, cleared only at content.
+        /// </summary>
+        static bool LatchBand(HashSet<int> raised, int id, int band, ref int version)
+        {
+            bool already = raised.Contains(id);
+            if (MoodBand.IsBreaking(band) || (already && band != MoodBand.Content))
+            {
+                if (!already)
+                {
+                    raised.Add(id);
+                    version++;
+                }
+                return true;
+            }
+            if (already)
+            {
+                raised.Remove(id);
+                version++;
+            }
+            return false;
         }
 
         static bool Latch(HashSet<int> raised, int id, int value, int at, int clearAt, ref int version)

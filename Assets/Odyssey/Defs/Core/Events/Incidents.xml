@@ -117,4 +117,18 @@
     <worker>Recorded</worker>
   </IncidentDef>
 
+  <!--
+    A colonist broke (design 51 §5c). Bad, because a colonist lost control; on the panel so the
+    player can see which break and jump to where it began. Recorded when it happens; nothing fires it.
+  -->
+  <IncidentDef>
+    <defName>Incident_MentalBreak</defName>
+    <label>mental break</label>
+    <description>A colonist had a mental break. Recorded when it happens; nothing fires it</description>
+    <bulletinKey>ui.bulletin.mentalbreak</bulletinKey>
+    <favourability>Bad</favourability>
+    <category>Misc</category>
+    <worker>Recorded</worker>
+  </IncidentDef>
+
 </Defs>
