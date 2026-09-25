@@ -130,6 +130,41 @@
     <knockbackPerMille>500</knockbackPerMille>
     <knockbackBluntPerMille>750</knockbackBluntPerMille>
     <knockedDownTicks>90</knockedDownTicks>
+
+    <!--
+      The gun (design 47 sections 2a, 2c, 3b). The hit chance is shootingPerCell at the shooter's
+      level, raised to the distance in 2.5 m cells, times the gun's own accuracy at that distance,
+      floored at hitFloorPerMille. RAISED 2026-09-25 on the owner's first play ("seemed to miss a
+      lot ... keep it more accurate"): the reference's 747 / 903 / 951 left a level-0 colonist at
+      16 per cent at 12.5 m and 2 at 25 m, and fire at will engages anything in range. Now 876 /
+      943 / 983, which with the pistol's bands gives about 45 / 64 / 79 per cent at 12.5 m and
+      17 / 36 / 55 at 25 m: skill still buys the reach. OURS, tunable here. The floor is the
+      reference's 2 per cent.
+    -->
+    <shootingPerCell>
+      <li><level>0</level><perMille>876</perMille></li>
+      <li><level>10</level><perMille>943</perMille></li>
+      <li><level>20</level><perMille>983</perMille></li>
+    </shootingPerCell>
+    <hitFloorPerMille>20</hitFloorPerMille>
+    <!-- No partial cover (owner): a wall blocks the line or it does not. The slot a cover value reads. -->
+    <coverPerMille>1000</coverPerMille>
+    <!--
+      A bystander on the bullet's line: never hit within 5 m of the shooter, the full species
+      chance from 12 m, linear between - the reference's 5 and 12 tiles, kept in metres.
+    -->
+    <interceptDeadZoneMm>5000</interceptDeadZoneMm>
+    <interceptFullMm>12000</interceptFullMm>
+    <!--
+      A miss carries on past its target along the line of fire, by r cells, r = min(3, 1 +
+      (1000 - hit) x 3 / 1000): one cell for a good shot, three for a hopeless one, and it ends
+      where the line stops - a wall, the ground (owner, 2026-09-25: misses "way off" and "not even
+      in a place a gun would fire to" were the old box round the target). Both 3s are INVENTED.
+    -->
+    <scatterMaxCells>3</scatterMaxCells>
+    <scatterPerMissPerMille>3</scatterPerMissPerMille>
+    <!-- How often a drafted gun-holder looks for something in sight to shoot. INVENTED; R5 measures it. -->
+    <rangedScanTicks>15</rangedScanTicks>
   </CombatDef>
 
 </Defs>

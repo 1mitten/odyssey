@@ -81,7 +81,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(JobHandle.Treat, Is.EqualTo(23));
             Assert.That(JobHandle.Forage, Is.EqualTo(25));
             Assert.That(JobHandle.Cook, Is.EqualTo(26));
-            Assert.That(JobHandle.Count, Is.EqualTo(27));
+            // And the ranged line's (design 47 §3a), 27 after the kitchen's.
+            Assert.That(JobHandle.AttackRanged, Is.EqualTo(27));
+            Assert.That(JobHandle.Count, Is.EqualTo(28));
             Assert.That(new[] { ItemHandle.Bat, ItemHandle.Crowbar, ItemHandle.Machete, ItemHandle.ArcBlade },
                 Is.EqualTo(new[] { 7, 8, 9, 10 }));
             // Medical supplies at 11 (design 37), the wild foods at 12 and 13 (design 45 §6), and
@@ -90,7 +92,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(new[] { ItemHandle.Berries, ItemHandle.Mushrooms }, Is.EqualTo(new[] { 12, 13 }));
             Assert.That(new[] { ItemHandle.CookedMeal, ItemHandle.VegetableMeal, ItemHandle.BurntMeal },
                 Is.EqualTo(new[] { 14, 15, 16 }));
-            Assert.That(ItemHandle.Count, Is.EqualTo(17));
+            // The pistol at 17, after the kitchen's meals (design 47).
+            Assert.That(ItemHandle.Pistol, Is.EqualTo(17));
+            Assert.That(ItemHandle.Count, Is.EqualTo(18));
             Assert.That(WorkHandle.Rescue, Is.EqualTo(5));
             Assert.That(WorkHandle.Doctor, Is.EqualTo(6));
             // 8 since the kitchen appended Work_Cooking at 7 (design 48).
@@ -101,7 +105,9 @@ namespace Odyssey.Tests.Sim
             // kitchen appended Skill_Cooking at 7 (design 48).
             Assert.That(SkillIndex.Medicine, Is.EqualTo(6));
             Assert.That(SkillIndex.Cooking, Is.EqualTo(7));
-            Assert.That(SkillIndex.Count, Is.EqualTo(8));
+            // And Shooting at 8 (design 47), after the kitchen: nine.
+            Assert.That(SkillIndex.Shooting, Is.EqualTo(8));
+            Assert.That(SkillIndex.Count, Is.EqualTo(9));
             Assert.That(PawnKindIndex.Bandit, Is.EqualTo(3));
             Assert.That(PawnKindIndex.Count, Is.EqualTo(4));
 
@@ -120,10 +126,13 @@ namespace Odyssey.Tests.Sim
             PawnContent content = ContentPack.Pawns();
             Assert.That(content.Jobs.Skip(17).Select(j => j.defName), Is.EqualTo(new[]
                 { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue", "Job_Steal",
-                  "Job_Treat", "Job_Patient", "Job_Forage", "Job_Cook" }));
+                  "Job_Treat", "Job_Patient", "Job_Forage", "Job_Cook", "Job_AttackRanged" }));
             for (int i = 0; i < content.Jobs.Length; i++)
                 Assert.That(content.Jobs[i].driver, Is.EqualTo(i), content.Jobs[i].defName + " names another driver");
             Assert.That(content.Jobs[JobIndex.AttackMelee].trainsSkill, Is.EqualTo(SkillIndex.Melee));
+            Assert.That(content.Jobs[JobIndex.AttackRanged].trainsSkill, Is.EqualTo(SkillIndex.Shooting));
+            Assert.That(content.Skills[SkillIndex.Shooting].defName, Is.EqualTo("Skill_Shooting"));
+            Assert.That(SkillIndex.Names[SkillIndex.Shooting], Is.EqualTo("shooting"));
 
             Assert.That(content.Skills[SkillIndex.Melee].defName, Is.EqualTo("Skill_Melee"));
             Assert.That(content.WorkTypes[WorkTypeIndex.Rescue].defName, Is.EqualTo("Work_Rescue"));
@@ -133,7 +142,11 @@ namespace Odyssey.Tests.Sim
                 { "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade", "Item_MedicalSupplies",
                   "Item_Berries", "Item_Mushrooms",
                   // The kitchen (design 48), after the wild foods.
-                  "Item_CookedMeal", "Item_VegetableMeal", "Item_BurntMeal" }));
+                  "Item_CookedMeal", "Item_VegetableMeal", "Item_BurntMeal",
+                  // The pistol (design 47), after the kitchen.
+                  "Item_Pistol" }));
+            Assert.That(content.Items[ItemIndex.Pistol].weapon!.ranged, Is.Not.Null, "the pistol is a gun");
+            Assert.That(content.Items[ItemIndex.Machete].weapon!.ranged, Is.Null, "a machete is not");
             Assert.That(content.Kinds[PawnKindIndex.Bandit].defName, Is.EqualTo("PawnKind_Bandit"));
         }
 

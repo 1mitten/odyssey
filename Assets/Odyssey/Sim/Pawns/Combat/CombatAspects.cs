@@ -82,6 +82,10 @@ namespace Odyssey.Sim.Pawns
         public static readonly AspectKey Hp = AspectKey.Of(HpName);
         public static readonly AspectKey HpMax = AspectKey.Of(HpMaxName);
         public static readonly AspectKey Weapon = AspectKey.Of(WeaponName);
+
+        /// <summary>The held weapon's quality, a <c>QualityHandle</c> value; absent for none (design 47 §11).</summary>
+        public const string WeaponQualityName = "odyssey.pawn.weapon.quality";
+        public static readonly AspectKey WeaponQuality = AspectKey.Of(WeaponQualityName);
         public static readonly AspectKey OrderTarget = AspectKey.Of(OrderTargetName);
         public static readonly AspectKey RescueNoBed = AspectKey.Of(RescueNoBedName);
         public static readonly AspectKey RescuePatient = AspectKey.Of(RescuePatientName);

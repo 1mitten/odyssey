@@ -52,7 +52,8 @@ namespace Odyssey.Sim.Pawns
         /// <para><b>Scales with the pawns on the board</b>, one pass, and for a flight the flee-cell
         /// search (at most twenty-five column searches), which is made only when there is danger.</para>
         /// </summary>
-        public static bool Choose(PawnContext ctx, Pawn pawn, out Pawn? foe, out bool joining, out int fleeCell)
+        public static bool Choose(PawnContext ctx, Pawn pawn, out Pawn? foe, out bool joining, out int fleeCell,
+            bool sight = true)
         {
             foe = null;
             joining = false;
@@ -60,7 +61,7 @@ namespace Odyssey.Sim.Pawns
             switch (pawn.Response)
             {
                 case HostilityResponse.Defend:
-                    foe = Melee.HoldTarget(ctx, pawn, out joining);
+                    foe = Melee.HoldTarget(ctx, pawn, out joining, sight);
                     return foe != null;
                 case HostilityResponse.Flee:
                     foe = Melee.DangerTo(ctx, pawn);
@@ -78,7 +79,7 @@ namespace Odyssey.Sim.Pawns
         /// it and lets it go once it is on no colonist (design 33 §15c). Unforced either way: it is
         /// her own idea, and a forced job is the player's.
         /// </summary>
-        public static bool Fill(Pawn pawn, Pawn foe, bool joining, int fleeCell, Job job)
+        public static bool Fill(PawnContext ctx, Pawn pawn, Pawn foe, bool joining, int fleeCell, Job job)
         {
             if (fleeCell >= 0)
             {
@@ -88,7 +89,7 @@ namespace Odyssey.Sim.Pawns
                 return true;
             }
 
-            job.Reset(JobIndex.AttackMelee);
+            job.Reset(CombatJobs.AttackJobFor(pawn, ctx, foe));
             job.TargetCell = foe.Cell;
             job.Mode = TraverseMode.Colonist;
             if (joining) job.DestCell = AttackMeleeJobDriver.Joining;
@@ -113,10 +114,11 @@ namespace Odyssey.Sim.Pawns
             Job? job = pawn.CurrentJob;
             if (job == null || job.PlayerForced) return false;
             int def = job.DefIndex;
-            if (def == JobIndex.AttackMelee || def == JobIndex.Flee || def == JobIndex.Downed || def == JobIndex.Rescue)
+            if (CombatJobs.IsAttack(def) || def == JobIndex.Flee || def == JobIndex.Downed || def == JobIndex.Rescue)
                 return false;
 
-            return Choose(ctx, pawn, out _, out _, out _);
+            // The sight scan on its cadence (design 47 §2d): asked every tick, it walks lines.
+            return Choose(ctx, pawn, out _, out _, out _, Ranged.ScanDue(ctx, pawn));
         }
 
         /// <summary>
@@ -129,7 +131,7 @@ namespace Odyssey.Sim.Pawns
         {
             if (job.PlayerForced) return true;
             if (job.DefIndex == JobIndex.Flee) return response == HostilityResponse.Flee;
-            if (job.DefIndex != JobIndex.AttackMelee) return true;
+            if (!CombatJobs.IsAttack(job.DefIndex)) return true;
             if (response == HostilityResponse.Flee) return false;
             return job.DestCell != AttackMeleeJobDriver.Joining || response == HostilityResponse.Defend;
         }

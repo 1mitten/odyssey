@@ -125,7 +125,9 @@ namespace Odyssey.Hud
             // Live with medical supplies (design 37): treating trains it, and it buys speed at it.
             new Entry("ui.skill.medicine", "medicine", string.Empty),
             new Entry("ui.skill.social", NotSimulated, "no other people"),
-            new Entry("ui.skill.shooting", NotSimulated, "no combat"),
+            // Live from the ranged line's contracts step (design 47 §3a): Skill_Shooting, rolled at
+            // the start and read by the per-cell accuracy curve.
+            new Entry("ui.skill.shooting", "shooting", string.Empty),
             // Live from the combat contracts step (design 33 §5): Skill_Melee, rolled at the start
             // and read by the hit and dodge curves.
             new Entry("ui.skill.melee", "melee", string.Empty),

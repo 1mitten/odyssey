@@ -1587,6 +1587,7 @@ namespace Odyssey.Presentation.World
             // pose from the same state. A clock advanced inside it would run at double speed under
             // the player loop and single speed in an editor harness that steps the graph by hand —
             // which is to say, wrong in the game and right in every picture taken of the game.
+            figure.FiredThisFrame = false;
             if (pawn.GestureSerial != figure.SeenSerial)
             {
                 // First sighting records and poses nothing. A figure leased for a colonist who has
@@ -1596,6 +1597,13 @@ namespace Odyssey.Presentation.World
                 // other gesture is drawn as — GestureOf would otherwise read it as a lift.
                 if (figure.SeenSerial >= 0 && pawn.Gesture == PawnGesture.Strike)
                     BeginStrike(figure, in pawn);
+                // A shot is the gun's (design 47 §4b): it starts the recoil and the slide, never a
+                // crouch — GestureOf would read it as a lift as it would a strike.
+                else if (figure.SeenSerial >= 0 && pawn.Gesture == PawnGesture.Fire)
+                {
+                    figure.FireClock = 0f;
+                    figure.FiredThisFrame = true;
+                }
                 else if (figure.SeenSerial >= 0 && pawn.Gesture != PawnGesture.None)
                 {
                     figure.Gesture = pawn.Gesture;
@@ -1894,6 +1902,9 @@ namespace Odyssey.Presentation.World
                 : SitPose.Settle(figure.SitWeight, pawn.Seated ? 1f : 0f, deltaTime);
             // The weapon in the right hand, now that the tool, the load and the lie are known.
             ShowWeapon(figure, in pawn, carrying: carryDef >= 0 || carryingSomebody, deltaTime);
+            // The gun's state for the frame (design 47 §4b), after the weapon has been put in the
+            // hand or at the hip.
+            PoseGun(figure, in pawn, deltaTime);
 
             // Face the work. A pawn that has stopped walking has no heading left — that is what
             // makes PawnPose hand back a zero vector — so without the work cell the figure would

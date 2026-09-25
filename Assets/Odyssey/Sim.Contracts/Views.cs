@@ -47,6 +47,14 @@ namespace Odyssey.Sim.Contracts
         /// <see cref="CombatEventView"/> on the tick it is decided.
         /// </summary>
         Strike = 4,
+
+        /// <summary>
+        /// A gun has been fired (design 47 §4b): reported on the tick the aim completes and the
+        /// bullet leaves, so a figure starts its recoil then. Where the bullet goes and what it
+        /// hits arrive as a <see cref="ProjectileView"/> and, at the impact, a
+        /// <see cref="CombatEventView"/>.
+        /// </summary>
+        Fire = 5,
     }
 
     /// <summary>
@@ -560,6 +568,16 @@ namespace Odyssey.Sim.Contracts
         /// knows what fell. Reported once, by the blow that crossed nought.
         /// </summary>
         Demolished = 12,
+
+        /// <summary>
+        /// A gun was fired (design 47 §2c). <see cref="CombatEventView.Attacker"/> is the shooter,
+        /// <see cref="CombatEventView.Target"/> whom she aimed at, <see cref="CombatEventView.Cell"/>
+        /// the cell the bullet will end in — the target's on a rolled hit, the scatter cell on a
+        /// miss — so the flash knows its direction, and <see cref="CombatEventView.Amount"/> the
+        /// flight in ticks. What it hits is reported at the impact as a <see cref="Hit"/> or a
+        /// <see cref="Miss"/>.
+        /// </summary>
+        Shot = 13,
     }
 
     /// <summary>
@@ -738,6 +756,61 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// A bullet in flight (design 47 §2c): the skyfaller's shape, sideways. The simulation owns the
+    /// flight — who fired it, where it started and ends, when it left and when it lands — and
+    /// presentation draws the streak wherever along that line the frame falls. <b>The hit, the
+    /// damage and the end cell are the simulation's; the muzzle, the streak and the flash are
+    /// presentation's.</b>
+    ///
+    /// <para>What the bullet hits is not here: it is decided on <see cref="ImpactTick"/>, against
+    /// whoever is on the line then, and published as a <see cref="CombatEventView"/>.</para>
+    /// </summary>
+    public readonly struct ProjectileView
+    {
+        public readonly PawnId Shooter;
+
+        /// <summary>
+        /// Whom it was aimed at, or <c>default</c> for nobody. Carried so a hit's streak can end on
+        /// the target's drawn body rather than on its cell's centre (design 47 §4c).
+        /// </summary>
+        public readonly PawnId Target;
+
+        /// <summary>The shooter's cell when it was fired.</summary>
+        public readonly CellRef Start;
+
+        /// <summary>The cell it ends in if nothing takes it first: the target's on a rolled hit, the scatter cell on a miss.</summary>
+        public readonly CellRef End;
+
+        public readonly int FireTick;
+
+        /// <summary>The tick it lands on. Decided at the fire, so a save mid-flight lands it on the same tick.</summary>
+        public readonly int ImpactTick;
+
+        /// <summary>The weapon, as an <see cref="ItemHandle"/> value.</summary>
+        public readonly int Weapon;
+
+        /// <summary>
+        /// The shot was aimed true (design 47 §2c, amended): it lands on <see cref="Target"/> wherever
+        /// it stands at the impact, so its streak follows the target's body rather than ending at
+        /// <see cref="End"/>. False for a miss, whose streak passes the target and ends at <see cref="End"/>.
+        /// </summary>
+        public readonly bool Aimed;
+
+        public ProjectileView(PawnId shooter, PawnId target, CellRef start, CellRef end, int fireTick, int impactTick, int weapon,
+            bool aimed = false)
+        {
+            Aimed = aimed;
+            Shooter = shooter;
+            Target = target;
+            Start = start;
+            End = end;
+            FireTick = fireTick;
+            ImpactTick = impactTick;
+            Weapon = weapon;
+        }
+    }
+
+    /// <summary>
     /// One number a feature has published about one pawn, under a name it chose itself.
     ///
     /// <para><b>What this is for.</b> <see cref="PawnView"/> is a struct every consumer reads, in
@@ -823,9 +896,13 @@ namespace Odyssey.Sim.Contracts
 
         public bool Contained => Container != 0;
 
+        /// <summary>How well it was made, a <see cref="QualityHandle"/> value, or 0 for a thing with no quality (design 47 §11).</summary>
+        public readonly byte Quality;
+
         public ThingView(ThingId id, CellRef cell, int defIndex, int stuffIndex, int stack = 1,
-            int container = 0, byte slot = 0)
+            int container = 0, byte slot = 0, byte quality = 0)
         {
+            Quality = quality;
             Id = id;
             Cell = cell;
             DefIndex = defIndex;
@@ -1445,6 +1522,7 @@ namespace Odyssey.Sim.Contracts
         CellDetail[] _cellDetails = Array.Empty<CellDetail>();
         BulletinView[] _bulletins = Array.Empty<BulletinView>();
         FallingView[] _falling = Array.Empty<FallingView>();
+        ProjectileView[] _projectiles = Array.Empty<ProjectileView>();
         ConduitView[] _conduits = Array.Empty<ConduitView>();
         HomeCellView[] _homeCells = Array.Empty<HomeCellView>();
         PowerDeviceView[] _powerDevices = Array.Empty<PowerDeviceView>();
@@ -1534,6 +1612,8 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>How many things are in the air right now. Nearly always zero.</summary>
         public int FallingCount { get; private set; }
+
+        public int ProjectileCount { get; private set; }
 
         /// <summary>How many line cells this frame carries — see <see cref="ConduitView"/> for which.</summary>
         public int ConduitCount { get; private set; }
@@ -1662,6 +1742,9 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>Everything in the air, in launch order. See <see cref="FallingView"/>.</summary>
         public ReadOnlySpan<FallingView> Falling => new ReadOnlySpan<FallingView>(_falling, 0, FallingCount);
+
+        /// <summary>Every bullet in flight, in the order it was fired. See <see cref="ProjectileView"/>.</summary>
+        public ReadOnlySpan<ProjectileView> Projectiles => new ReadOnlySpan<ProjectileView>(_projectiles, 0, ProjectileCount);
 
         public ReadOnlySpan<PawnView> Pawns => new ReadOnlySpan<PawnView>(_pawns, 0, PawnCount);
         public ReadOnlySpan<ThingView> Things => new ReadOnlySpan<ThingView>(_things, 0, ThingCount);
@@ -1923,6 +2006,7 @@ namespace Odyssey.Sim.Contracts
             CellDetailCount = 0;
             BulletinCount = 0;
             FallingCount = 0;
+            ProjectileCount = 0;
             ConduitCount = 0;
             PowerDeviceCount = 0;
             PowerNetCount = 0;
@@ -2010,6 +2094,12 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _falling, FallingCount + 1);
             _falling[FallingCount++] = view;
+        }
+
+        internal void AddProjectile(in ProjectileView view)
+        {
+            Grow(ref _projectiles, ProjectileCount + 1);
+            _projectiles[ProjectileCount++] = view;
         }
 
         internal void AddPawn(in PawnView view)

@@ -37,9 +37,14 @@ namespace Odyssey.Sim.Pawns
 
             Pawn? target = _ctx.Pawns.Get(new PawnId(intent.B));
             if (target == null || target == pawn || Melee.IsDead(target)) return IntentRejection.NotPermitted;
+            // With a gun, a target she can see in range is as good as one she can walk to (design
+            // 47 §2d): a bandit on a roof she cannot climb to is still an order she can carry out.
+            RangedDef? gun = _ctx.WeaponRules.ArmamentOf(pawn, _ctx).Attack.ranged;
             if (!Melee.InReach(_ctx, pawn, target, TraverseMode.Colonist)
-                && !_ctx.CanTravel(pawn, target.Cell, TraverseMode.Colonist))
+                && !_ctx.CanTravel(pawn, target.Cell, TraverseMode.Colonist)
+                && !(gun != null && Ranged.CanHit(_ctx, pawn.Cell, target.Cell, gun)))
                 return IntentRejection.NotPermitted;
+            int attack = CombatJobs.AttackJobFor(pawn, _ctx, target);
 
             // The same order again — a confirm-click, sent for every selected drafted colonist — is
             // a no-op. Restarting threw away the swing in the air while the pawn's swing clock
@@ -47,7 +52,7 @@ namespace Odyssey.Sim.Pawns
             // anything (review, 2026-09-23). Ordered on a target gone down since, the order is new:
             // it carries on to the death.
             int toTheDeath = target.Downed ? AttackMeleeJobDriver.ToTheDeath : -1;
-            if (pawn.CurrentJob is { DefIndex: JobIndex.AttackMelee, PlayerForced: true } current
+            if (pawn.CurrentJob is { PlayerForced: true } current && current.DefIndex == attack
                 && pawn.CombatTarget == target.Id.Value && current.DestCell == toTheDeath)
                 return IntentRejection.AlreadyInThatState;
 
@@ -60,7 +65,7 @@ namespace Odyssey.Sim.Pawns
             pawn.CombatTarget = target.Id.Value;
 
             Job job = pawn.JobBuffer;
-            job.Reset(JobIndex.AttackMelee);
+            job.Reset(attack);
             job.TargetCell = target.Cell;
             job.DestCell = toTheDeath;
             job.PlayerForced = true;
@@ -83,6 +88,8 @@ namespace Odyssey.Sim.Pawns
         IntentRejection OrderAttackBuilding(Pawn pawn, CellRef at)
         {
             if (!_ctx.Size.Contains(at.X, at.Z, at.Y)) return IntentRejection.NotPermitted;
+            // Not with a gun yet (design 47 §2d, R6): the ranged driver cannot shoot a building.
+            if (!CombatJobs.CanBreakBuildings(pawn, _ctx)) return IntentRejection.NotPermitted;
             if (!BuildingTargets.TryFind(_ctx, _ctx.Size.Index(at), out BuildingTarget target)) return IntentRejection.NotPermitted;
             if (!BuildingTargets.CanReach(_ctx, pawn, target, TraverseMode.Colonist)) return IntentRejection.NotPermitted;
 

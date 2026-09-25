@@ -20,6 +20,7 @@ namespace Odyssey.Tests.Presentation
         static readonly string[] Rows =
         {
             ModuleIds.ItemBat, ModuleIds.ItemCrowbar, ModuleIds.ItemMachete, ModuleIds.ItemArcBlade,
+            ModuleIds.ItemPistol,
         };
 
         [Test]

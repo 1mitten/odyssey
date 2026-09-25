@@ -102,7 +102,16 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Cook = 26;
 
-        public const int Count = 27;
+
+        /// <summary>
+        /// Stand where the line to a target is open and shoot at it (design 47 §2d): the ranged
+        /// attack, claimed by the ranged line's contracts step (R0); 27, after medical supplies' Treat and Patient, the forager's Forage and the kitchen's Cook, which reached main first. Above
+        /// <c>JobSystem.HashedAlways</c>, so its counters reach the hash only once one has run and
+        /// its registration moved no golden.
+        /// </summary>
+        public const int AttackRanged = 27;
+
+        public const int Count = 28;
     }
 
     /// <summary>
@@ -264,7 +273,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A meal the cook let catch: edible, less filling, and nobody enjoys it.</summary>
         public const int BurntMeal = 16;
 
-        public const int Count = 17;
+
+        /// The pistol (design 47): the first ranged weapon, appended by the ranged line's contracts
+        /// step; 17, after medical supplies, the wild foods and the kitchen's meals, which reached main first. Code says <c>Pistol</c>; every screen says what <c>ui.item.pistol</c> says.
+        /// </summary>
+        public const int Pistol = 17;
+
+        public const int Count = 18;
     }
 
     /// <summary>

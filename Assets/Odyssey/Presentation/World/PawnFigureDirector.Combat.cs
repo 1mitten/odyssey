@@ -52,9 +52,11 @@ namespace Odyssey.Presentation.World
         /// swinging a tool, so <c>WorkStyle.IndexForJob</c> falling through to the axe (or, with
         /// nothing else near, reading as the hammer) is a mistake and not a placeholder — the work
         /// focus there is for the figure's own kneel and stand, in <c>TreatJobDriver</c>.
+        /// Nor for <c>Job_AttackRanged</c> (design 47 §4b), whose focus is the aim's.
         /// </summary>
         public static bool PlaysWorkStroke(in PawnView pawn) =>
-            pawn.Working && pawn.JobDef != JobHandle.AttackMelee && pawn.JobDef != JobHandle.Treat;
+            pawn.Working && pawn.JobDef != JobHandle.AttackMelee && pawn.JobDef != JobHandle.Treat
+            && pawn.JobDef != JobHandle.AttackRanged;
 
         /// <summary>
         /// Every item def's attack style, or null for an item that is not a weapon — the family a
@@ -191,6 +193,33 @@ namespace Odyssey.Presentation.World
                 return true;
             }
             head = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Where a pawn's figure's chest is drawn this frame, if it has a figure (design 47 §4c): the
+        /// rig's chest bone for a person, the middle of the drawn box for an animal, else
+        /// <see cref="ProjectileDirector.ChestHeight"/> over the drawn feet. What a bullet's streak
+        /// ends on, so a hit visibly connects with the body wherever the figure has walked to.
+        /// </summary>
+        public bool TryGetChest(PawnId pawn, out Vector3 chest)
+        {
+            if (_byPawn.TryGetValue(pawn.Value, out Figure? figure) && figure.Transform != null)
+            {
+                if (figure.Chest != null)
+                {
+                    chest = figure.Chest.position;
+                    return true;
+                }
+                if (TryGetAnimalBox(pawn, out Matrix4x4 place, out _))
+                {
+                    chest = place.GetColumn(3);
+                    return true;
+                }
+                chest = figure.Transform.position + Vector3.up * ProjectileDirector.ChestHeight;
+                return true;
+            }
+            chest = default;
             return false;
         }
 

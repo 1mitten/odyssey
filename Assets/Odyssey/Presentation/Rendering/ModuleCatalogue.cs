@@ -896,6 +896,9 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemCookedMeal = Prefix + "item.meal.cooked";
         public const string ItemVegetableMeal = Prefix + "item.meal.vegetable";
         public const string ItemBurntMeal = Prefix + "item.meal.burnt";
+        // The pistol (design 47 §4a), claimed by the ranged line's contracts step: POLYGON Battle
+        // Royale's SM_Wep_Pistol_Heavy_01, the ground item and the held prop alike.
+        public const string ItemPistol = Prefix + "item.pistol";
 
 
         /// <summary>
@@ -915,6 +918,7 @@ namespace Odyssey.Presentation.Rendering
             ItemBerries, ItemMushrooms,
             // The kitchen (design 48 §4), handles 14 to 16.
             ItemCookedMeal, ItemVegetableMeal, ItemBurntMeal,
+            ItemPistol,
         };
 
         /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>

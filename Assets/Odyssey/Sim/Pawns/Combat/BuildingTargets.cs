@@ -138,7 +138,9 @@ namespace Odyssey.Sim.Pawns
         public static int DamageFactorPerMille(DamageKind kind, ushort stuff)
         {
             int handle = ConstructionContent.StuffForValue(stuff);
-            if (handle == StuffHandle.None) return 1_000;
+            // A bullet strikes every material as it comes (design 47 §2c): the material table is
+            // written for an edge and a head, and a bullet is neither.
+            if (kind == DamageKind.Bullet || handle == StuffHandle.None) return 1_000;
             StuffDef def = ConstructionContent.StuffAt(handle);
             return kind == DamageKind.Sharp ? def.sharpDamagePerMille : def.bluntDamagePerMille;
         }
@@ -355,7 +357,7 @@ namespace Odyssey.Sim.Pawns
         public static SwingOutcome Resolve(Pawn attacker, in Armament armament, in BuildingTarget target, PawnContext ctx, int tick)
         {
             var roll = DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.MeleeDamage ^ (uint)attacker.Id.Value);
-            int damage = MeleeRules.DamageMilli(armament.Attack, ctx, roll);
+            int damage = WeaponQuality.Damage(MeleeRules.DamageMilli(armament.Attack, ctx, roll), armament);
             long scaled = (long)damage * DamageFactorPerMille(armament.Attack.damageKind, target.Stuff) / 1_000;
             return new SwingOutcome(CombatEventKind.Hit, scaled > int.MaxValue ? int.MaxValue : (int)scaled);
         }

@@ -43,10 +43,9 @@ namespace Odyssey.Sim.Pawns
             return ctx.Nav.IsLegalStep(a, b, mode);
         }
 
-        /// <summary>Is <paramref name="other"/> in a melee job aimed at <paramref name="me"/> right now?</summary>
+        /// <summary>Is <paramref name="other"/> in an attack — a swing or a shot (design 47) — aimed at <paramref name="me"/> right now?</summary>
         public static bool IsAttacking(Pawn other, Pawn me) =>
-            other.CombatTarget == me.Id.Value && other.CurrentJob != null
-            && other.CurrentJob.DefIndex == JobIndex.AttackMelee;
+            other.CombatTarget == me.Id.Value && CombatJobs.InAttack(other);
 
         /// <summary>
         /// Something a colonist hits without being told to (design 33 §1): a standing hostile, or
@@ -112,8 +111,15 @@ namespace Odyssey.Sim.Pawns
         /// same rule, so she joins exactly the fights a drafted colonist on her hold would. Her
         /// per-tick notice asks it only while something hostile is about
         /// (<see cref="AnythingHostile"/>).</para>
+        /// <para><b>With a gun</b> (design 47 §2d) there is a second answer between the two: after a
+        /// threat in reach — fired at point-blank — <b>the nearest threat in range and in sight</b>
+        /// (<see cref="Ranged.NearestTargetInSight"/>), shot at from where she stands; only then a
+        /// fight to join. The sight scan walks lines, so a caller asking every tick passes
+        /// <paramref name="sight"/> only on its cadence (<see cref="Ranged.ScanDue"/>); a caller
+        /// that is giving a job passes true, so the answer that ended a hold is the answer the node
+        /// then gives.</para>
         /// </summary>
-        public static Pawn? HoldTarget(PawnContext ctx, Pawn me, out bool joining)
+        public static Pawn? HoldTarget(PawnContext ctx, Pawn me, out bool joining, bool sight = true)
         {
             joining = false;
             int radius = ctx.Content.Combat.helpRadiusCells;
@@ -127,6 +133,18 @@ namespace Odyssey.Sim.Pawns
             {
                 Pawn other = pawns[i];
                 if (IsThreatTo(other, me) && InReach(ctx, me, other, TraverseMode.Colonist)) return other;
+            }
+
+            if (sight)
+            {
+                RangedDef? gun = ctx.WeaponRules.ArmamentOf(me, ctx).Attack.ranged;
+                Pawn? seen = gun != null ? Ranged.NearestTargetInSight(ctx, me, gun) : null;
+                if (seen != null) return seen;
+            }
+
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                Pawn other = pawns[i];
 
                 // Another colonist's fight: not one aimed at me, which the blow above answers once
                 // it is in reach.
@@ -234,8 +252,7 @@ namespace Odyssey.Sim.Pawns
         /// tile. The job, not the target, is the question: the rescue names its patient in the same
         /// field and is not an attack.
         /// </summary>
-        public static bool IsInAnAttack(Pawn pawn) =>
-            pawn.CurrentJob != null && pawn.CurrentJob.DefIndex == JobIndex.AttackMelee && IsStanding(pawn);
+        public static bool IsInAnAttack(Pawn pawn) => CombatJobs.InAttack(pawn) && IsStanding(pawn);
 
         /// <summary>
         /// The side an attacker holds (design 33 §7c): the cell she is walking to, else the one she

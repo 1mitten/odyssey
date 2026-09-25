@@ -515,8 +515,8 @@ namespace Odyssey.Tests.Hud
             pane.Refresh(snapshot);
 
             Assert.That(pane.Skills.Count, Is.EqualTo(SkillCatalogue.All.Length));
-            Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(7),
-                "mining, chopping, construction, growing, melee, medicine and cooking are the seven the " +
+            Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(8),
+                "mining, chopping, construction, growing, melee, medicine, cooking and shooting are the eight the " +
                 "simulation backs; hauling is a work type and not a skill in the design's list");
 
             SkillRow mining = pane.Skills.Single(s => s.IconKey == "ui.skill.mining");
@@ -560,6 +560,8 @@ namespace Odyssey.Tests.Hud
                     "ui.skill.medicine",
                     // Live since the kitchen (design 48).
                     "ui.skill.cooking",
+                    // And since the ranged line's (design 47 §3a).
+                    "ui.skill.shooting",
                 }),
                 "the live rows are the simulation's own skills, each under its own name");
 

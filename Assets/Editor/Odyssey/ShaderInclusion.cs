@@ -85,6 +85,11 @@ namespace Odyssey.EditorTools
             // Rain (the rain-look prototype): streaks and splashes drawn procedurally.
             "Odyssey/Rain",
 
+            // A bullet's streak and a muzzle's flash (design 47 §4c), drawn instanced by
+            // ProjectileDirector. The shader reads its shape out of the instance matrix, so there
+            // is no fallback that draws it: without this row a player fires invisible bullets.
+            "Odyssey/Tracer",
+
             // The sky, and it was not on the first draft of this list — `ShaderInclusionTests`
             // found it on the run that was meant to confirm the fix, along with `Standard` below.
             // Worth recording rather than quietly adding: a list of runtime-found shaders

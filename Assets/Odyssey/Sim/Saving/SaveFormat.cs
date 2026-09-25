@@ -260,8 +260,18 @@ namespace Odyssey.Sim.Saving
         /// for the same reason storage's two did not; the pawn record's layout is what forced the
         /// bump, exactly as it did at 6. A file at 8 ends where the new field begins, and a
         /// colonist from one had never been cold by a definition that did not exist.</para>
+        ///
+        /// <para>10 (design 47, ranged combat): <b>no layout changed</b> — the skill arrays are
+        /// length-prefixed and the loader clamps, so a seventh skill reads from a six-skill file
+        /// as nought. The bump guards one thing: a colonist from a file below 10 is dealt her
+        /// Shooting level once, after every section has loaded
+        /// (<see cref="Odyssey.Sim.Pawns.PawnRegistry.BackfillSkills"/>, called by
+        /// <c>ColonyWorld.Load</c>). The deal draws in skill order and skips a skill already holding
+        /// experience, so the first six come out exactly as they were dealt and the re-deal is
+        /// idempotent. <b>Do not tidy the guard away</b>: without the version it would re-deal
+        /// Shooting on every load of a colonist who has never fired.</para>
         /// </remarks>
-        public const int CurrentFormatVersion = 9;
+        public const int CurrentFormatVersion = 10;
 
         public static void Save(SimWorld world, Stream stream, IReadOnlyList<ISaveable> components,
             SaveRecipe? recipe = null)
