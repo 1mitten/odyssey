@@ -98,6 +98,7 @@ namespace Odyssey.Hud
         {
             into.Clear();
             if (cell.HasValue) OfferEquip(selection, snapshot, cell.Value, into);
+            OfferTend(selection, snapshot, under, into);
 
             if (into.Count == 0) return false;
             into.Add(new ContextMenuRow(CancelKey, Registry.Label(CancelKey), enabled: true, string.Empty, Nothing));
@@ -174,6 +175,45 @@ namespace Odyssey.Hud
 
             var order = new[] { new Intent(IntentKind.OrderEquip, weapon.Cell, equipper.Value, weapon.Id.Value) };
             return new ContextMenuRow(EquipKey, label, enabled: true, string.Empty, order);
+        }
+
+        /// <summary>The Tend row's verb (design 43 §11): "Tend", "Treat this patient".</summary>
+        public const string TendKey = "ui.command.tend";
+
+        /// <summary>
+        /// Tend, on a colonist under the pointer who has an injury nobody has tended (design 43
+        /// §11), read off the body's sparse aspects. The primary colonist of the selection — the
+        /// first standing one, drafted or not — is sent; a selection whose every colonist is down
+        /// gets the row disabled, reason "Downed"; a patient in the selection is not sent to
+        /// herself. No colonist selected, no row.
+        /// </summary>
+        static void OfferTend(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot, PawnId under,
+            List<ContextMenuRow> into)
+        {
+            if (!under.IsValid || !snapshot.TryGetPawn(under, out PawnView patient) || !patient.IsColonist) return;
+            if (!snapshot.TryGetPawnAspect(under, HealthAspectNames.InjuriesKey, out int injuries) || injuries <= 0) return;
+            snapshot.TryGetPawnAspect(under, HealthAspectNames.TendedKey, out int tended);
+            if (tended >= injuries) return;
+
+            bool anyColonist = false;
+            PawnId doctor = PawnId.None;
+            for (int i = 0; i < selection.Count && !doctor.IsValid; i++)
+            {
+                if (selection[i] == under) continue;
+                if (!snapshot.TryGetPawn(selection[i], out PawnView view) || !view.IsColonist) continue;
+                anyColonist = true;
+                if (!view.IsDowned) doctor = view.Id;
+            }
+            if (!anyColonist) return;
+
+            string label = Registry.Label(TendKey);
+            if (!doctor.IsValid)
+            {
+                into.Add(new ContextMenuRow(TendKey, label, enabled: false, Registry.Label(DownedReasonKey), Nothing));
+                return;
+            }
+            var order = new[] { new Intent(IntentKind.OrderTend, patient.Cell, doctor.Value, under.Value) };
+            into.Add(new ContextMenuRow(TendKey, label, enabled: true, string.Empty, order));
         }
 
         /// <summary>

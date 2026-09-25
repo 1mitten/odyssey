@@ -1,83 +1,106 @@
 #nullable enable
 using System.Collections.Generic;
 using Odyssey.Hud;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Odyssey.Presentation.Ui
 {
     /// <summary>
-    /// <see cref="HudShell"/>: the fight's Health tab (design 33 §1, §5f). <b>Lane C's file</b>
-    /// (<c>docs/plans/combat-contracts.md</c>): one of the two Presentation files the interface lane
-    /// writes, so it never edits a file the drawing lane owns. The corpse's and the bandit's
-    /// panes need nothing here — their shape is <c>InspectModel</c>'s answer, read by
-    /// <c>HudShell.Inspect</c> — and the Spawn rows are <c>HudShell.Debug</c>'s.
+    /// <see cref="HudShell"/>: the Health tab (design 43 §10; design 33 §5f before it). Two columns
+    /// of seven on the Skills tab's own grid — the same <see cref="SkillLine"/> builder, the same
+    /// <c>.skills</c> and <c>.skill</c> classes — so the tab is one hand with the Skills tab beside
+    /// it and costs the pane's fixed tab body nothing.
     ///
     /// <para><c>HudShell.Inspect</c> calls the four methods below: build the tab body into the
     /// colonist's fixed-height box, forget it when the pane is rebuilt, show or hide it with the
     /// tab strip, and sync it fifteen times a second. <b>Every word and number is the model's</b>
-    /// (<see cref="InspectModel.HealthValue"/>, <see cref="InspectModel.HealthPerMille"/>,
-    /// <see cref="InspectModel.HealthInk"/>, <see cref="InspectModel.HealthRows"/>, tested in the
-    /// fast tier); this file only draws them, and writes an element only when its value moved.</para>
+    /// (<see cref="HealthTab"/>, tested in the fast tier); this file only draws them, and writes an
+    /// element only when its value moved.</para>
     ///
-    /// <para><b>The shape</b>: the hit points as a need bar is drawn — the same builder, so the
-    /// bar reads like Food and Rest beside it on the Needs tab — then the condition and the weapon
-    /// as two label-and-value rows, in the tile readout's classes.</para>
+    /// <para><b>The grid wraps row by row</b>, so the lines are added left, right, left, right: the
+    /// left column is the regions and pain, the right the pool, the capacities, the blood, the
+    /// bleed and the tend. A click on a region line selects it (<see cref="HealthTab.Select"/>) and
+    /// the model answers with that region's injuries in the right column.</para>
+    ///
+    /// <para><b>The mark</b> at the end of a line sits where a skill's passion lozenges sit, and is
+    /// a drawn glyph (<c>docs/bug-patterns.md</c> P13): the warning triangle in the bad ink for a
+    /// bleed, the medical cross in the good ink for a tend. The HUD has no blood drop; a proposed
+    /// one is the brief's to return.</para>
     /// </summary>
     public sealed partial class HudShell
     {
         /// <summary>The Health tab's body, built once per subject into the pane's tab box.</summary>
         VisualElement? _healthBody;
 
-        /// <summary>The hit-point bar, a need bar in every respect but its numbers.</summary>
-        NeedView? _healthBar;
+        readonly List<HealthLineView> _healthLeft = new List<HealthLineView>();
+        readonly List<HealthLineView> _healthRight = new List<HealthLineView>();
 
-        /// <summary>The rows under the bar: condition, weapon.</summary>
-        VisualElement? _healthRowsGrid;
-
-        readonly List<HealthRowView> _healthRows = new List<HealthRowView>();
-
-        // The last values written, so a refresh that says the same thing writes nothing.
-        string? _healthValueShown;
-        int _healthFillShown = int.MinValue;
-
-        sealed class HealthRowView
+        sealed class HealthLineView
         {
-            public VisualElement Root = null!;
-            public Label Name = null!;
-            public Label Value = null!;
-            public string LastName = string.Empty;
-            public string LastValue = string.Empty;
+            public SkillLineView Line = null!;
+            public HudGlyph Mark = null!;
+            public string LastName = "\u0000";
+            public string LastValue = "\u0000";
+            public string LastIcon = "\u0000";
+            public string LastTip = "\u0000";
+            public int LastBar = int.MinValue;
+            public HudColour LastInk;
+            public HealthMark LastMark = (HealthMark)255;
+            public int LastSelected = -1;
+            public int LastEmpty = -1;
         }
 
         /// <summary>Build the Health tab's body into <paramref name="tabBody"/>, hidden until the tab is shown.</summary>
         void BuildHealthTab(VisualElement tabBody)
         {
             _healthBody = new VisualElement();
+            _healthBody.AddToClassList("skills");
             _healthBody.style.display = DisplayStyle.None;
+            _healthLeft.Clear();
+            _healthRight.Clear();
 
-            var grid = new VisualElement();
-            grid.AddToClassList("needs");
-            _healthBar = Need(grid, InspectModel.HealthKey);
-            _healthBody.Add(grid);
-
-            _healthRowsGrid = new VisualElement();
-            _healthBody.Add(_healthRowsGrid);
-            _healthRows.Clear();
-            _healthValueShown = null;
-            _healthFillShown = int.MinValue;
+            for (int row = 0; row < HealthTab.Rows; row++)
+            {
+                _healthLeft.Add(HealthLine(_healthBody, left: true, row));
+                _healthRight.Add(HealthLine(_healthBody, left: false, row));
+            }
 
             tabBody.Add(_healthBody);
+        }
+
+        HealthLineView HealthLine(VisualElement grid, bool left, int row)
+        {
+            var view = new HealthLineView { Line = SkillLine(grid, withBar: true) };
+
+            // The passion lozenges make way for the mark.
+            for (int i = 0; i < view.Line.Passion.childCount; i++)
+                view.Line.Passion[i].style.display = DisplayStyle.None;
+            view.Mark = new HudGlyph(HudGlyphKind.Placeholder, 14f, HudTokens.TextMeta);
+            view.Mark.style.display = DisplayStyle.None;
+            view.Line.Passion.Add(view.Mark);
+
+            // A region line is a button: the model says which one it is on each sync.
+            if (left)
+            {
+                int index = row;
+                view.Line.Root.RegisterCallback<ClickEvent>(_ =>
+                {
+                    int region = _inspect.Health.Left[index].Region;
+                    if (region < 0) return;
+                    _inspect.Health.Select(region);
+                    SyncHealthTab();
+                });
+            }
+            return view;
         }
 
         /// <summary>The pane is being rebuilt for another subject: drop what was built.</summary>
         void ForgetHealthTab()
         {
             _healthBody = null;
-            _healthBar = null;
-            _healthRowsGrid = null;
-            _healthRows.Clear();
-            _healthValueShown = null;
-            _healthFillShown = int.MinValue;
+            _healthLeft.Clear();
+            _healthRight.Clear();
         }
 
         /// <summary>Show the body while the Health tab is the active one, hide it otherwise.</summary>
@@ -93,55 +116,83 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void SyncHealthTab()
         {
-            if (_healthBody == null || _healthBar == null || _healthRowsGrid == null) return;
-
-            int fill = _inspect.HealthPerMille;
-            if (fill != _healthFillShown)
+            if (_healthBody == null) return;
+            HealthTab tab = _inspect.Health;
+            for (int row = 0; row < HealthTab.Rows && row < _healthLeft.Count; row++)
             {
-                _healthFillShown = fill;
-                _healthBar.Fill.style.width = Length.Percent(fill / 10f);
-                _healthBar.Fill.style.backgroundColor = HudTokens.Convert(_inspect.HealthInk);
+                SetHealthLine(_healthLeft[row], tab.Left[row]);
+                SetHealthLine(_healthRight[row], tab.Right[row]);
+            }
+        }
+
+        static void SetHealthLine(HealthLineView view, in HealthLine line)
+        {
+            SkillLineView skill = view.Line;
+
+            int empty = line.Empty ? 1 : 0;
+            if (view.LastEmpty != empty)
+            {
+                view.LastEmpty = empty;
+                skill.Root.style.visibility = line.Empty ? Visibility.Hidden : Visibility.Visible;
+            }
+            if (line.Empty) return;
+
+            if (view.LastIcon != line.IconKey)
+            {
+                view.LastIcon = line.IconKey;
+                skill.Icon.SetKey(line.IconKey);
+            }
+            if (view.LastName != line.Name)
+            {
+                view.LastName = line.Name;
+                HudText.Set(skill.Name, line.Name, skill.NameRole);
+            }
+            if (view.LastValue != line.Value)
+            {
+                view.LastValue = line.Value;
+                HudText.Set(skill.Value, line.Value, skill.LevelRole);
+            }
+            if (view.LastTip != line.Tip)
+            {
+                view.LastTip = line.Tip;
+                skill.Root.tooltip = line.Tip;
             }
 
-            if (!ReferenceEquals(_healthValueShown, _inspect.HealthValue))
+            if (skill.Track != null && skill.Fill != null && (view.LastBar != line.Bar || !view.LastInk.Equals(line.Ink)))
             {
-                _healthValueShown = _inspect.HealthValue;
-                HudText.Set(_healthBar.Value, _inspect.HealthValue, HudTextRole.Meta);
-            }
-
-            List<InspectRow> rows = _inspect.HealthRows;
-            while (_healthRows.Count < rows.Count)
-            {
-                var view = new HealthRowView();
-                view.Root = new VisualElement();
-                view.Root.AddToClassList("inspect__row");
-                view.Name = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__rowname");
-                view.Value = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__rowvalue");
-                view.Root.Add(view.Name);
-                view.Root.Add(view.Value);
-                _healthRowsGrid.Add(view.Root);
-                _healthRows.Add(view);
-            }
-            while (_healthRows.Count > rows.Count)
-            {
-                _healthRowsGrid.Remove(_healthRows[_healthRows.Count - 1].Root);
-                _healthRows.RemoveAt(_healthRows.Count - 1);
-            }
-
-            for (int i = 0; i < rows.Count; i++)
-            {
-                HealthRowView view = _healthRows[i];
-                InspectRow row = rows[i];
-                if (view.LastName != row.Name)
+                view.LastBar = line.Bar;
+                view.LastInk = line.Ink;
+                skill.Track.style.display = line.Bar < 0 ? DisplayStyle.None : DisplayStyle.Flex;
+                if (line.Bar >= 0)
                 {
-                    view.LastName = row.Name;
-                    HudText.Set(view.Name, row.Name, HudTextRole.Meta);
+                    skill.Fill.style.width = Length.Percent(line.Bar / 10f);
+                    skill.Fill.style.backgroundColor = HudTokens.Convert(line.Ink);
                 }
-                if (view.LastValue != row.Value)
+            }
+
+            if (view.LastMark != line.Mark)
+            {
+                view.LastMark = line.Mark;
+                view.Mark.style.display = line.Mark == HealthMark.None ? DisplayStyle.None : DisplayStyle.Flex;
+                if (line.Mark == HealthMark.Bleeding)
                 {
-                    view.LastValue = row.Value;
-                    HudText.Set(view.Value, row.Value, HudTextRole.Meta);
+                    view.Mark.Kind = HudGlyphKind.AlertTriangle;
+                    view.Mark.Tint = HudTokens.Bad;
                 }
+                else if (line.Mark == HealthMark.Tended)
+                {
+                    view.Mark.Kind = HudGlyphKind.CategoryMedicine;
+                    view.Mark.Tint = HudTokens.Good;
+                }
+            }
+
+            int selected = line.Selected ? 1 : 0;
+            if (view.LastSelected != selected)
+            {
+                view.LastSelected = selected;
+                skill.Root.style.backgroundColor = line.Selected ? HudTokens.Accent : new StyleColor(StyleKeyword.Null);
+                skill.Name.style.color = line.Selected ? HudTokens.OnAccent : new StyleColor(StyleKeyword.Null);
+                skill.Value.style.color = line.Selected ? HudTokens.OnAccent : new StyleColor(StyleKeyword.Null);
             }
         }
     }

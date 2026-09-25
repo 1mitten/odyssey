@@ -525,9 +525,10 @@ namespace Odyssey.Tests.Sim
             // (ODYSSEY_REGOLDEN=1), on top of the weather's own re-bake: the combined job, item,
             // skill and incident tables moved the hash the same way any content append does.
             // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
-            // And the traits line merged with main, 2026-09-25: re-taken from the merged code.
+            // And the traits line merged with main, 2026-09-25, twice (the second after health, #213,
+            // which took bit 23, so traits are bit 29): re-taken from the merged code each time.
             Generated = 14881731598722590511UL,
-            Simulated = 5977541109357525295UL,
+            Simulated = 15826032566761705167UL,
         };
 
         /// <summary>
@@ -588,9 +589,10 @@ namespace Odyssey.Tests.Sim
             // the merged code; GoldenColonyProbe on main (2a1cfa63) and on the merge is identical on
             // all three boards, so the hash sees more and no colony does anything different.
             // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
-            // And the traits line merged with main, 2026-09-25: re-taken from the merged code.
+            // And the traits line merged with main, 2026-09-25, twice (the second after health, #213,
+            // which took bit 23, so traits are bit 29): re-taken from the merged code each time.
             Generated = 13308657285820379759UL,
-            Simulated = 15210900784579842621UL,
+            Simulated = 14573761820048901469UL,
         };
 
         /// <summary>
@@ -633,9 +635,10 @@ namespace Odyssey.Tests.Sim
             // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
             // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
-            // And the traits line merged with main, 2026-09-25: re-taken from the merged code.
+            // And the traits line merged with main, 2026-09-25, twice (the second after health, #213,
+            // which took bit 23, so traits are bit 29): re-taken from the merged code each time.
             Generated = 14180088319569370523UL,
-            Simulated = 12229425832587843780UL,
+            Simulated = 15239040274249764UL,
         };
     }
 }

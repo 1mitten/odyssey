@@ -24,6 +24,39 @@ namespace Odyssey.Tests.Sim
             return ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: false);
         }
 
+        /// <summary>
+        /// Take the body away from every species on this board (design 43 §8): a person keeps the
+        /// pool alone, as every pawn did before health, so a test of the pool's own lines — down at
+        /// nought, dead at minus half — or of a mechanic that only needs somebody to stay standing
+        /// is not decided by pain shock first. Replaces the record's own array, never a Def every
+        /// other record shares (CLAUDE.md, "a test that retunes content replaces the Def").
+        /// </summary>
+        public static ColonyWorld Bodiless(ColonyWorld colony)
+        {
+            colony.Pawns.Content.SpeciesHealth = new HealthDef?[colony.Pawns.Content.Species.Length];
+            foreach (Pawn pawn in colony.Pawns.Pawns.All) pawn.Health = null;
+            return colony;
+        }
+
+        /// <summary>Stand a pawn whole: the pool full and nothing on the ledger, which is what whole is.</summary>
+        public static void MakeWhole(Pawn pawn)
+        {
+            pawn.HpMilli = pawn.HpMaxMilli;
+            pawn.Health = null;
+        }
+
+        /// <summary>
+        /// Set a pawn's hit points and keep the ledger in step (design 43 §2: the pool's loss is the
+        /// ledger's points): healing towards the pool comes off the worst injury first, exactly as
+        /// the heal does. Only ever raises a pawn's hit points.
+        /// </summary>
+        public static void RaiseHp(Pawn pawn, int milli)
+        {
+            int gain = milli - pawn.HpMilli;
+            pawn.HpMilli = milli;
+            if (gain > 0) pawn.Health?.Heal(gain);
+        }
+
         public static IntentRejection Send(ColonyWorld colony, Intent intent)
         {
             colony.World.Intents.ClearRejected();

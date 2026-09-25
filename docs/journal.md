@@ -13468,6 +13468,100 @@ both sides appended after it, so resolving an append hunk needs a look at the jo
 the hunk. And a catalogue rebuild is not a neutral step: it re-resolved a colonist whose prefab
 name two packs share. The merged asset was already right, so the rebuild was thrown away.
 Design 47 §13.
+## 2026-09-25 — Health designed: six regions over the pool, and a brief for the tab
+
+The owner asked for the health system's basics, planned from what the repo holds, so Claude
+Design could draw the Health tab. Three read-only sweeps grounded it, and the ground was firmer
+than the status line said: `CLAUDE.md`'s "no health model" had been stale since combat C2. There
+is a hit-point pool per pawn, downed at 0 and dead at −50 %, one place that loses it, bed-only
+healing, rescue, a corpse registry and the hooks that mourn a death; two severity bars that slow
+work and never hurt; three fall sites that move a pawn and hand out a memory; twenty-eight
+`ui.health.*` keys with nothing behind them; and a Health tab that reads "73 / 100" in a pane
+whose tab body is a fixed 157 px. `a-02-health.md` had the whole reference model and a fall
+table since 2026-09-16.
+
+**The pool is already the reference's lethal line.** A pool of 100 that kills at −50 is "150
+points of damage is death"; downed at 0 is a coarse pain shock. So the design leaves the pool
+alone — nothing saved, hashed, published or drawn about it moves — and adds where the damage is.
+That was the observation that made six regions cheap: they sit *over* the pool as a checked
+invariant, not under it as a replacement.
+
+Four questions, four answers, every recommendation taken: six regions (head, torso, two arms,
+two legs) rather than a pool with a list of words or the forty-part tree the panel catalogue had
+assumed, which needs a tree control the HUD has not got; bleeding, tending and fall damage in,
+lethal cold and hunger and infection out; the brief reaches the Health tab only; documents
+before code. Design 43 holds the numbers, each cited to a line of `a-02` or marked invented.
+
+Two things worth keeping from the writing. **Afflictions merge by region and kind**, so a person
+carries at most eighteen records whatever the fight was, and the save, the hash, the snapshot
+and the tab's region-clicked state all read a bounded list — a merge rule chosen for the
+interface turned out to be the bound the simulation wanted. And **pain shock at 800 ‰ downs at
+about 64 points where the pool downs at 100**, which will shorten every fight; the soak's
+downs-per-raid before and after is the measurement, and it is the first real lever on the
+owner's open question about four colonists losing to three bandits.
+
+Two corrections came from the code after the plan was approved, and both went into the
+documents rather than being carried: the plan had proposed relabelling Rescue as Doctor to avoid
+a 23rd Work-tab column, and the 22 drawn columns already include Doctor, Rescue and Patient; and
+the plan expected the Medicine skill to bump the save format, when Melee had arrived with none.
+Nothing in the line bumps it.
+
+The brief follows the animals brief's shape and hands Claude Design the pane's real geometry —
+seven 19-px rows in two 256-px columns — with the rule that a taller tab must be a stated
+number, because `InspectTabBody` moves every tab at once. Six states, one file each.
+
+## 2026-09-25 — Health built: the body turns the fight
+
+The owner approved the plan with "implement it", and H1 to H6 went in on the same branch in one
+day, in a cloud container with no Unity. The .NET SDK came from the Ubuntu archive after the
+Microsoft host was refused by the network policy; the fast tier then ran as normal.
+
+**The body sits over the pool, not under it.** Every point a person loses is on a region, and the
+pool is checked against the ledger every hour of the combat gate rather than derived from it, so no
+reader of hit points changed and no golden moved for H1 and H2. Two design decisions moved in the
+build, both recorded in design 43 §14a: a vital region at nought downs rather than kills, because
+design 33's owner rule is that an unordered fight ends in downs; and injuries go out as aspects,
+because nothing in the shared assembly needed to learn what an injury is.
+
+**The measurement design 43 asked for changed the game more than anything else in it.** Before the
+body the colony lost the combat gate on every seed. After it the colony stands on every seed and no
+colonist dies, because pain shock downs bandits a third sooner and a downed bandit cut by a machete
+bleeds out where it lies. That is the owner's to judge; the lever is one number.
+
+**Three combat faults were waiting for a second way to go down** — a death while downed failing the
+downed job, a stunned attacker left standing on a downed target, and a side chosen on the cell a
+stunned colonist was still stepping into. None was in new code. `docs/bug-patterns.md` has the
+pattern: a rule whose "only one way" was an accident of what existed.
+
+**A doctor chasing a colonist on her feet never arrived**, because the shared walk toil clears the
+path when the destination changes. The fix was already in the codebase: the fight's own
+`Melee.ChooseSide` picks a free cell beside somebody and is asked again only when they leave it.
+
+The Health tab was built to the brief's own content ahead of the mockups. Presentation cannot be
+compiled here, so the view was type-checked against stubs of the Unity types it uses; the owner's
+first Unity run is its first real compile, and that is said in every place it could be missed.
+
+## 2026-09-25 — Health merged onto medical supplies: one doctor
+
+While PR #213 waited, `main` shipped design 37 — its own Doctor column, Medicine skill, a box of
+medical supplies and a treatment that heals the pool. The merge conflicted in 31 files and every
+one of them was the same question: two designs, both the owner's, each with its own doctor.
+
+**Main's job is the vehicle and the tend is its last line.** `Job_Treat` was shipped, drawn,
+kneeling and owner-played; the tend is one call. So `Job_Tend`, `Item_Medkit` and the branch's own
+handles went, and nothing the owner approved on either side was lost: +40 under 80 %, the
+cooldown, self-treatment and the patient who goes to bed from 37; the tend at skill × potency and
+"any tend stops every bleed" from 43. The one rule neither had: **a bleeding colonist is a
+patient whatever her pool**, because 37 alone leaves a cut colonist at 88 % to bleed out.
+
+**The merge found two faults in 37's driver** that its ignored test had been hiding — a guard
+asked on every tick of the work it gates (`docs/bug-patterns.md`, the newest entry) — and **two
+collisions no conflict marker showed**: both branches took hash bit 22, and both minted SHA-256's
+eleventh round constant for a random stream, so where a blow landed would have been decided by
+the stream jump's roll. Neither is a textual conflict; both were found by reading what each side
+had claimed from the shared tables. A test that had passed by luck on the old stream said so the
+moment the stream moved. No golden moved.
+
 
 ## 2026-09-25 — Traits and mental health, from interview to gate in a day (design 51)
 

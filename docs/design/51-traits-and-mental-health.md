@@ -321,7 +321,7 @@ passes, one on each half, then the merge, then the fixes.
 
 | Where | Was | Is | Why |
 |---|---|---|---|
-| `Pawn.ContributeTo` | traits bit 22, break kind bit 23 | traits **23**, break kind **28** | treatment took 22 on `main`: the P12 hash-bit collision a second time |
+| `Pawn.ContributeTo` | traits bit 22, break kind bit 23 | traits **29**, break kind **28** | treatment took 22 on `main`, and health (#213) took 23 an hour later: the P12 hash-bit collision twice more |
 | `IncidentHandle` | `MentalBreak` 4 | **5**, after `MedicalDrop` | `main` shipped first |
 | `ThoughtHandle` | 8 thoughts | **11**: `AteRation`, `AteBurnt`, `AteRaw` with `ui.thought.*` names | the Thoughts tab names every thought; the kitchen added three |
 | `ui.thought.atemeal` | *Ate a meal* | *Ate a cooked meal* | the kitchen made it the cooked meal's (+50) |
@@ -370,7 +370,8 @@ left as it is.
   scenario's miner dealt *Soft hands* keeps Mining 1 and never mines. Deliberate in `TraitTests`.
 - The salt collision (`AnimalMind`, `DeconstructRefund`) predates this line; it is on `main`.
 
-**Verified.** Fast tier 1,789 Sim and 1,189 Hud, Long 53, the three content gates. Goldens: the
+**Verified**, after a third merge with `main` for health (#213): fast tier 1,834 Sim and 1,203 Hud,
+Long 53, the three content gates. Goldens: the
 three `Simulated` re-baked from the merged code, every `Generated` equal to `main`'s, and
 `GoldenColonyProbe` on `origin/main` against the merge differs in total mood alone (+60, −120, −120).
 The Unity tiers are in the PR's status, not here, because they ran after this was written.

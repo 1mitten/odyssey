@@ -304,6 +304,13 @@ namespace Odyssey.Tests.Sim
         // The ranged line merged with main (medical supplies, the scenery), 2026-09-25: re-taken from the merged pack.
         // And merged with the kitchen (design 48), 2026-09-25: the ranged handles to 27 / 17 / 8; re-taken.
         //
+        // Health (design 43), merged onto all of that, 2026-09-25: a new HealthDef, Health_Person,
+        // carrying the six regions and the pain, blood, tend and fall numbers, named by
+        // Species_Person's new `health` field. Its own Job_Tend, Item_Medkit and Doctor and
+        // Medicine rows were dropped for design 37's (design 43 §15), so no handle moved. No golden
+        // moved: the ledger is hashed only while a pawn has anything on it. Re-taken from the
+        // merged pack.
+        //
         // Moved a twenty-seventh time, deliberately, 2026-09-25, by the published mood band (design
         // 44 §5a, TM1): MoodDef gained strainMargin (100, INVENTED), how far above the minor line a
         // colonist still reads strained. No golden moved: the band is a report and is not hashed.
@@ -320,7 +327,8 @@ namespace Odyssey.Tests.Sim
         // Tantrum, Berserk). No golden moved: no golden colony falls below a break line.
         // The traits line merged with main (the kitchen, the ranged line, medical supplies, the
         // scenery), 2026-09-25: neither side's number covers the merged pack; re-taken from it.
-        const ulong ContentFingerprint = 11725652141118685457UL;
+        // The traits line merged with main again (health, #213), 2026-09-25: re-taken from the merged pack.
+        const ulong ContentFingerprint = 17725009630213531592UL;
 
 
         [Test]

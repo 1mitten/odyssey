@@ -232,6 +232,54 @@ namespace Odyssey.Sim.Pawns
             return armed > 0 ? IntentRejection.None : IntentRejection.AlreadyInThatState;
         }
 
+        /// <summary>
+        /// The debug menu's Hurt, Heal and Kill (design 43 §11): on the colonist nearest the cell
+        /// the menu was opened over. Hurt is a 20-point wound on a region by melee coverage; heal
+        /// fills the pool, clears the ledger and stands her up; kill goes through
+        /// <see cref="CombatSystem.Kill"/>, so she leaves a corpse and is mourned. Design 18 once
+        /// declined these because <c>Pawn</c> had no health; with one owner of damage and one way
+        /// to die, a debug kill is a real death rather than a despawn.
+        /// </summary>
+        public IntentRejection HandleDebugHealth(Intent intent)
+        {
+            CombatSystem? combat = _ctx.Combat;
+            if (combat == null) return IntentRejection.NotPermitted;
+            int tick = _ctx.World?.CurrentTick ?? _ctx.CurrentTick;
+            int at = _ctx.Size.Contains(intent.Cell) ? _ctx.Size.Index(intent.Cell) : -1;
+
+            Pawn? nearest = null;
+            int best = int.MaxValue;
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                Pawn pawn = _pawns[i];
+                if (!pawn.IsColonist || Melee.IsDead(pawn)) continue;
+                int distance = at < 0 ? 0 : _ctx.Distance(at, pawn.Cell);
+                if (distance >= best) continue;
+                nearest = pawn;
+                best = distance;
+            }
+            if (nearest == null) return IntentRejection.NotPermitted;
+
+            switch (intent.A)
+            {
+                case 0:
+                    combat.Hurt(nearest, null, 20_000, AfflictionKind.Wound, HitSet.Melee, -1, tick);
+                    return IntentRejection.None;
+                case 1:
+                    if (nearest.HpMilli == nearest.HpMaxMilli && !nearest.HasHealthState && !nearest.Downed)
+                        return IntentRejection.AlreadyInThatState;
+                    nearest.HpMilli = nearest.HpMaxMilli;
+                    nearest.Health = null;
+                    if (nearest.Downed) combat.Recover(nearest, tick);
+                    return IntentRejection.None;
+                case 2:
+                    combat.Kill(nearest, null, -1, tick);
+                    return IntentRejection.None;
+                default:
+                    return IntentRejection.NotPermitted;
+            }
+        }
+
         /// <summary>How far round the spawn point a debug spawn looks for a free tile, in rings.</summary>
         public const int SpawnSpreadRings = 4;
 
@@ -573,6 +621,9 @@ namespace Odyssey.Sim.Pawns
                 // comes. Asked only of the downed, so a colony nobody has hurt pays one flag.
                 if (pawn.Downed && RescueRules.NeedsRescue(pawn, _ctx) && RescueRules.BedFor(pawn, pawn, _ctx) < 0)
                     writer.AddPawnAspect(pawn.Id, CombatAspects.RescueNoBed, 1);
+                // The body (design 43 §9), sparse: a pawn with nothing on its ledger publishes
+                // nothing new, so a healthy colony's rows did not move.
+                if (pawn.HasHealthState) HealthAspects.Publish(writer, pawn, _ctx.Content.DayTicks);
                 if (pawn.EquippedItem != 0)
                 {
                     var weapon = _ctx.Items.Get(new ThingId(pawn.EquippedItem));

@@ -51,6 +51,27 @@ the next session learns to ignore.
   into a hillside tunnel: the layer above should still be see-through, as before. A wrong answer is
   a fire that does nothing, a click that selects the ground beside it, or rock drawn solid over a
   tunnel with Walls down off.
+- **Does the Health tab read, and does a hurt colonist get treated?** (`claude/relaxed-heisenberg-zxy63b`,
+  PR #213, design 43, merged with medical supplies §15.) Debug menu > Spawn > Hurt a colonist near a
+  colonist, then open her pane on Health: two columns, a region with a red bar and a warning mark,
+  Bleeding counting hours, Tended 0/1. She should stop what she is doing and lie down (in a bed if
+  there is one) although her bar is still high: a bleeding colonist is a patient. Leave Doctor on
+  for somebody and watch them fetch one box of medical supplies, kneel beside her and treat her: the
+  mark turns to a cross, the hours vanish and her bar fills as they work. Click a region to see its
+  injuries; click again to go back. Then press Hurt on one colonist until she goes down (four presses), and watch
+  that she stays down until the treatment ends and then gets up, with one box gone from the pile.
+  A wrong answer is a tab that clips or scrolls, a figure that overflows its column, a bleeding
+  colonist who carries on working, a doctor who never comes or stands on her, a patient who stands
+  up half-way through her treatment, or a mark drawn as a box.
+- **Is the fight still a fight?** (Same branch, design 43 §14b.) Spawn 3 bandits against armed
+  colonists. With pain shock, people go down at about two thirds of the bar, and a bandit cut with a
+  machete bleeds to death where it lies. A wrong answer is fights over in two blows, colonists
+  dying in fights nobody ordered, or bandits that never go down.
+- **Does a fall hurt the way it should?** (Same branch, design 43 §7.) Build a floor, stand a
+  colonist on it and take out its support: one layer bruises her and she walks on; a longer drop
+  breaks something and three layers put her down. A wrong answer is a miner hurt by stepping into her
+  own dig, or a fall with no injury on the Health tab.
+
 - **Does the selection highlight make it obvious who is selected?** (`claude/selection-highlight`, design 44.)
   Click a colonist, an item, a wall, a tree and a patch of ground. Each should gain a thin white line round its own
   shape and look a touch brighter; the ground gets a pale wash. Then walk a selected colonist behind a wall: a
@@ -586,6 +607,10 @@ the next session learns to ignore.
   but the hurt colonist, supplies to hand, and health below 60: they should treat themselves,
   slowly. Wrong looks like: a doctor carrying the whole pile, a patient walking about with 30
   health, a colonist lying down and getting up on the spot, or nobody fetching the case at all.
+  **Once health (#213) is in, two numbers here move** (design 43 §15): a colonist goes down from
+  pain with about a third of her bar left, so a treatment stands her up at about 75 rather than 40,
+  and she will not then go to bed; and a colonist with a cut lies down for the doctor whatever
+  her bar says, until she is treated.
 
 - **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
   Spawn a bandit, draft two colonists, select both and right-click it: a translucent red ring

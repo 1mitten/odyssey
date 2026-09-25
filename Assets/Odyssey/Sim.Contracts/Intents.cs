@@ -339,6 +339,23 @@ namespace Odyssey.Sim.Contracts
         /// Handler: <c>Kitchen.HandleEditBill</c>. Appended last, so no recorded intent renumbers.
         /// </summary>
         EditBill,
+
+        /// <summary>
+        /// Debug-menu-only (design 43 §11): act on the colonist nearest <see cref="Intent.Cell"/>
+        /// — <c>A</c> 0 hurts her (a 20-point wound on a region by the blow's own coverage), 1 heals
+        /// her whole and stands her up, 2 kills her. Through the one owner of damage and the one
+        /// way to die, so a debug kill leaves a corpse and is mourned. Appended; not applied while
+        /// paused, like the other debug spawns.
+        /// </summary>
+        DebugHealth,
+
+        /// <summary>
+        /// Send one colonist to treat another (design 43 §5, §11, §15): <c>A</c> is the doctor's
+        /// <c>PawnId</c> value and <c>B</c> the patient's. Drafted or not, as the Equip order is; the
+        /// same <c>Job_Treat</c> the Doctor work type gives, supplies fetched if any can be reached.
+        /// Handler: <c>JobSystem.HandleOrderTend</c>. Appended.
+        /// </summary>
+        OrderTend,
     }
 
     /// <summary>What an <see cref="IntentKind.EditBill"/> does, as its <c>A</c> carries it.</summary>
@@ -449,6 +466,7 @@ namespace Odyssey.Sim.Contracts
             IntentKind.OrderAttack => true,
             IntentKind.OrderEquip => true,
             IntentKind.OrderRescue => true,
+            IntentKind.OrderTend => true,
             // A colonist's response (design 33 §18c): a setting over a colonist, on a pane you open
             // while paused, and a button that read one thing while the world did another until you
             // pressed play would be the slab fault again.
