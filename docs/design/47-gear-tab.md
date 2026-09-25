@@ -124,10 +124,10 @@ Every number is in `Odyssey.Hud.GearLayout`; Presentation writes none of its own
 
 ## 7. Not yet proven
 
-**Presentation was not compiled.** The session that built it had no Unity, only a Roslyn syntax
-parse, and the fast tier compiles neither Presentation nor Editor. The Unity tier is owed:
-
-- the EditMode compile;
-- `HudGeometryTests` and the overlap cases with the pane 87 px taller (371 rather than 284 at 1×);
-- `DockedTabGeometryTests`;
-- a look at 1920 × 1080.
+**Presentation was not compiled** by the session that built it, which had no Unity. **Compiled and
+run 2026-09-26**, after merging `main`: EditMode 4,162 / 4,124 passed / 1 failed, PlayMode 158 /
+140 / 1. `HudGeometryTests` and `DockedTabGeometryTests` pass with the pane at 244. Neither failure
+is the tab's: `WeaponSheathGapTests` fails identically on `main` (the bat on one rig, 3.2 cm off the
+body against a 3.0 cm limit, since ranged combat), and `RescueFigureTests` saw the rescue order not
+take on one random seed (835334603) while passing on `main` in two other worktrees — nothing in this
+branch reaches the rescue. Still owed: a look at 1920 × 1080.
