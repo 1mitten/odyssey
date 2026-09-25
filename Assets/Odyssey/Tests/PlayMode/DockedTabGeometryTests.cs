@@ -75,14 +75,7 @@ namespace Odyssey.Tests.PlayMode
                 directors.Assign.SetOpen(true);
                 for (int i = 0; i < 5; i++) yield return null;
                 Assert.That(directors.Inventory.Open, Is.False, "Assign shares the corner, so it closes Inventory");
-                int colonists = 0;
-                Odyssey.Sim.Contracts.PawnId first = default;
-                foreach (Odyssey.Sim.Contracts.PawnView pawn in boot.World!.Views.Current.Pawns)
-                {
-                    if (!pawn.IsColonist) continue;
-                    if (colonists == 0) first = pawn.Id;
-                    colonists++;
-                }
+                int colonists = Colonists(boot.World!.Views.Current, out Odyssey.Sim.Contracts.PawnId first);
                 int rows = Mathf.Min(colonists, AssignLayout.RowsPerPage);
                 VisualElement assign = doc.rootVisualElement.Q("assign");
                 AssertWindow(assign, AssignLayout.TabWidth,
@@ -117,6 +110,23 @@ namespace Odyssey.Tests.PlayMode
             {
                 Object.DestroyImmediate(root);
             }
+        }
+
+        /// <summary>
+        /// How many colonists the frame holds, and the first of them. Out here because a span's
+        /// enumerator is a ref struct, which an iterator method may not hold across a yield.
+        /// </summary>
+        static int Colonists(Odyssey.Sim.Contracts.WorldSnapshot frame, out Odyssey.Sim.Contracts.PawnId first)
+        {
+            int colonists = 0;
+            first = default;
+            foreach (Odyssey.Sim.Contracts.PawnView pawn in frame.Pawns)
+            {
+                if (!pawn.IsColonist) continue;
+                if (colonists == 0) first = pawn.Id;
+                colonists++;
+            }
+            return colonists;
         }
 
         static void AssertWindow(VisualElement? window, int width, int height, string what)

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Odyssey.Hud;
+using Odyssey.Presentation.Ui;
 using Odyssey.Sim.Contracts;
 using UnityEngine;
 using UnityEngine.Rendering;
