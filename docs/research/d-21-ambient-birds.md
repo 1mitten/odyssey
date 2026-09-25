@@ -241,3 +241,16 @@ the instanced drawing and the shader do not change.
   effective field of view differs from Unity's default at runtime — both are one measurement each.
 - Whether the owner wants murmuration-scale flocks, which is the observation that decides between
   options 1 and 2.
+
+## Sketch (2026-09-25)
+
+The recommendation drawn: `docs/reference/mockups/birds/meadow-birds.html` (hosted:
+https://claude.ai/artifact/7Y3abzdRug1KTkjU1xFiTZ), with twelve stills beside it, shot in headless
+Chromium through the game's own camera (48° pitch, 40° field of view). It shows four species (rook,
+buzzard, wood pigeon, swallow) at 28–32 triangles each, flat-shaded, wings flapped in the vertex
+shader by a per-vertex weight, one instanced call per species plus a ground-shadow call. The scenery
+is placeholder three.js. Every behaviour number in it is invented and is there to be judged, not
+kept. What the stills settle is readability: at ×1.75 a rook flock still shows as dark marks at
+160 m (`06-game-160m.png`), and at life size it has almost disappeared (`07-…-life-size.png`). The
+ground-feeding pigeon reads as a dart at 16 m (`03-game-20m-pigeons.png`). That is the case for a
+modelled pigeon if ground birds are wanted.
