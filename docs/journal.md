@@ -12324,3 +12324,21 @@ The second was real: the ripples lived in the normal, invisible at 48 degrees, w
 already taught once. Motion is carried by colour — streaks drifting along a flow derived from the
 water network, swells on still water, a breathing rim at the shore — on the game's clock, so a
 paused world holds still. Design 38 §24f.
+
+## 2026-09-25 — The bat and the crowbar stop stabbing
+
+The owner: *"correct crowbar and baseball bat not to have the stabbing motion — only swinging type
+moves."* The heavy clip row, which only those two weapons use, alternated a swing with the pack's
+`HeavyStab01`. The owner chose the pack's three-step heavy combo, `HeavyCombo01A`, `B`, `C`, and
+left the blades alone.
+
+Two of the three clips had never been looked at, so a probe measured them before they went in, with
+the stab as the control that had to fail. The first metric (how much of the hand's motion before
+the impact went forward) passed the stab as a swing and was thrown out. What separates them is
+whether the hand moves along the arm during the blow, which a thrust does and a swing does not: the
+stab scored 70 %, the three heavy combos 18–23 %.
+
+The probe also found that `HeavyCombo01C` would have landed its blow at 0 s. The pack spells that
+one cut `...01CWindUp` without the underscore, and the impact measurement found nothing and returned
+zero. The existing test accepted a zero, so it now requires an impact above zero, and a new test
+holds every blunt weapon, read from the content, to a row with no stab in it. Design 33 §22.
