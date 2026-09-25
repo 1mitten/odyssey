@@ -2,15 +2,16 @@
 
 **2026-09-25.** From `docs/research/gear-interview.md` (twenty-two owner answers). The interface is
 designed once by Claude Design (`docs/reference/mockups/gear-brief.md`) and built a unit at a time.
-**Nothing is started**: the next phase is research (`a-19-apparel-and-gear.md`), then a design doc,
-then approval of this plan. Each unit is its own `claude/*` branch and PR, and goes through
+**G1 is built** (2026-09-25, `docs/design/47-gear-tab.md`), widened by the owner to the whole tab
+with a Hud-side preview of everything past the hand. The rest waits on research
+(`a-19-apparel-and-gear.md`) and its own design doc. Each unit is its own `claude/*` branch and PR, and goes through
 `docs/process.md`.
 
 ## Units
 
 | Unit | Delivers | Sim, save, hash | Depends on |
 |---|---|---|---|
-| **G1** Gear tab and weapon verbs | The Gear tab enabled for people: the paper doll with **Weapon live**, **Body** reading *Issued jumpsuit*, the other four slots and the kit drawn empty with their reason; **Unequip** and **Drop** on the weapon tile (one new intent, `WeaponHand.PutDown` reused); the pane's tab names moved into the registry (design 33 §9d asks for it in this commit); `HudLayout.InspectTabBody` re-derived if the doll is taller than Skills | One intent. No golden moves unless a test uses it. | Claude Design's answer |
+| **G1** Gear tab and weapon verbs — **built 2026-09-25, design 47** | The Gear tab enabled for people: the paper doll with **Weapon live**, **Body** reading *Issued jumpsuit*, the other four slots and the kit drawn empty with their reason; **Unequip** and **Drop** on the weapon tile (one new intent, `WeaponHand.PutDown` reused); the pane's tab names moved into the registry (design 33 §9d asks for it in this commit); `HudLayout.InspectTabBody` re-derived if the doll is taller than Skills | One intent. No golden moves unless a test uses it. | Claude Design's answer |
 | **G2** Trip caps | `ItemDef.carryLimit` per commodity in the XML; a haul lifts `min(stack, carryLimit)` with `ColonyItems.SplitOff`; the wiki shows the cap | Behaviour change: goldens re-baked and measured with `GoldenColonyProbe` | a-19 numbers |
 | **G3** The kit | `ItemDef.size` (Pocket / Pack / Arms) and `kitCap`; two belt slots per person, items `CarriedBy` the pawn with a slot index; *Take into kit* and *Drop*; a doctor treats from her own kit first; a ration is eaten from the kit | New section `odyssey.gear`, saved and hashed; re-bake | G1 |
 | **G4** Apparel core (design 29 CL1–CL3, CL5) | `ApparelDef`: slot, art, warmth, armour, rain, mood; Head, Face, Body and Back worn, saved and drawn (garment = body-mesh swap, headgear on the head socket, the pack on a new back socket unlocking four kit slots); quality rolled from `Quality.xml`; *Wear* and *Remove* | Worn slots saved and hashed; far-form buckets keyed on the piece | G3 |

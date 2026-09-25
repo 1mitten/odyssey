@@ -23,6 +23,15 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the Gear tab read at a glance?** (`claude/vigilant-bardeen-8idplc`, design 47.) Select a
+  colonist, open **Gear**: she should show the issued jumpsuit, empty slots and two empty belt slots
+  with four locked. Arm her (Debug → Spawn a weapon, right-click *Equip*), then press the weapon tile
+  and try **Unequip** (it lies at her feet and a hauler takes it) and **Drop** (it stays, forbidden).
+  With an empty hand, the weapon tile's *Pick from stores* should list the stored weapons. Then Debug
+  → Cheats → **Preview full kit** and judge the full 21c look. A wrong answer is the pane jumping when
+  you change tab, a popover over the doll, the kit row or the effects line clipped, or you still
+  opening every tile to know what she wears.
+
 - **Can you click a campfire a terrace above you while building?** (`claude/terrace-click`,
   design 42 §3a amended.) On a lower terrace, open Build and raise a campfire on the terrace one step
   up, then click it with the palette still open: its pane should open, with *Make this the hearth*.

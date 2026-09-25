@@ -13171,3 +13171,31 @@ condition) is answered as quality only, reusing the beds' five tiers, with no we
 **The first unit moves no golden**: the Gear tab with the weapon live and Unequip / Drop, every
 later slot drawn empty with its reason. It is the first time the colonist pane's tab body may grow
 past the Skills tab, which design 14 said would happen "once, when they arrive".
+
+## 2026-09-25 — The Gear tab, built to Claude Design's specification (design 47)
+
+Claude Design answered the gear brief with a written specification of the Gear tab, 21a to 21f, and
+the owner asked for all of it. Asked what "all" meant — 21c's cap, coat, vest, pack and kit need a
+simulation that does not exist — the owner took the recommendation: **the whole tab, the hand
+real, everything else a debug-menu preview**, and the tab body at 244 on every tab rather than a
+pane that grows when Gear is chosen.
+
+**The hand got the one thing it lacked, a way to let go.** `OrderUnequip` is one appended intent
+through `WeaponHand.PutDown`; Unequip and Drop differ by the forbidden flag alone, which is the
+difference their registry descriptions ("put it down", "leave this here") already drew. Pick from
+stores sends the right-click menu's own equip order through one shared builder, because two
+buttons that send different orders for the same weapon is the one-rule-two-owners fault (P1).
+
+**The preview is the Research tab's bargain again**: interface state, never saved or hashed, off
+each session, and never the hand. It lets the owner judge 21c in the running game before a single
+garment exists, and it cannot leak into a colony.
+
+**Three corrections to the brief came out of building it.** The degree sign is in both fonts —
+the brief had told Claude Design otherwise — so the warmth reads "4 to 26 °C" through a new
+`TemperatureLabels.Range`, the form's one owner. The registry has always called the flashlight a
+Torch. And a weapon has no quality in the simulation, so the tile says none rather than inventing
+"Normal".
+
+**Presentation was not compiled.** This session had .NET but no Unity; the models are covered by
+the fast tier (35 new Hud tests, 7 Sim), the view by a Roslyn syntax parse and a read-through. The
+Unity tier is owed before merge.

@@ -271,4 +271,10 @@ means keep what you have; the end state designed once; the names Gear, Kit, Load
 
 ## Built
 
-Nothing yet.
+**Claude Design answered on 2026-09-25 with a written specification of the Gear tab** (states 21a–21f,
+target 21c), pasted into the session by the owner, who then asked for *"all of it"*: the whole tab,
+the hand real and everything else a debug-menu preview. It was built the same day on
+`claude/vigilant-bardeen-8idplc`; `docs/design/47-gear-tab.md` carries every constant, the preview
+and the six places the build departs from the specification (§5). The Loadout column, its editor
+and the Strip row of the right-click menu (pieces 2 and 3) were not specified back and are units
+G6 and G7.
