@@ -125,12 +125,15 @@ namespace Odyssey.Tests.Sim
 
             // What one mined cell costs, on the board a player is actually given. Taken after
             // Gather, because it digs.
+            nav.ResetRebuildTimes();
             double perEdit = TimePerEdit(grid, nav, seed);
+            string split = RebuildSplit(nav);
 
             var report = new StringBuilder();
             report.AppendLine($"--- {label} {size.SizeX} x {size.SizeZ} x {size.SizeY} (seed {seed}) ---");
             report.AppendLine($"generated in {generation.ElapsedMilliseconds} ms; full nav rebuild {rebuild.ElapsedMilliseconds} ms");
             report.AppendLine($"rebuild after one mined cell: {perEdit:F3} ms mean of 200");
+            report.AppendLine($"  of which, per rebuild: {split}");
             report.AppendLine($"regions {s.Regions} live of {nav.RegionCapacity} allocated; links {s.Links}");
             report.AppendLine($"cells in regions {s.CellsInRegions} of {size.CellCount} ({Percent(s.CellsInRegions, size.CellCount)}); " +
                               $"mean region {Mean(s.CellsInRegions, s.Regions)} cells, largest {s.LargestRegion}");
@@ -229,6 +232,22 @@ namespace Odyssey.Tests.Sim
             }
 
             return taken == 0 ? 0 : watch.Elapsed.TotalMilliseconds / taken;
+        }
+
+        /// <summary>
+        /// Where a rebuild's time went (HT1): each <see cref="NavGraph.RebuildSegment"/>'s mean per
+        /// rebuild, in milliseconds, from the graph's own counters.
+        /// </summary>
+        static string RebuildSplit(NavGraph nav)
+        {
+            if (nav.RebuildsTimed == 0) return "no rebuild timed";
+            var parts = new List<string>();
+            foreach (NavGraph.RebuildSegment segment in Enum.GetValues(typeof(NavGraph.RebuildSegment)))
+            {
+                double ms = nav.RebuildTicks[(int)segment] * 1000.0 / Stopwatch.Frequency / nav.RebuildsTimed;
+                parts.Add($"{segment} {ms:F3}");
+            }
+            return string.Join(", ", parts) + $" ms ({nav.RebuildsTimed} rebuilds)";
         }
 
         static Stats Gather(NavGraph nav, GridSize size)

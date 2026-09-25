@@ -286,6 +286,52 @@ namespace Odyssey.Sim.Pathing
 
         public bool HasDirtyWork => _anyDirty;
 
+        /// <summary>The segments of <see cref="Rebuild"/>, in the order they run (HT1).</summary>
+        public enum RebuildSegment
+        {
+            /// <summary>Collecting the affected zones, freeing and re-flooding the dirty blocks.</summary>
+            Flood,
+
+            /// <summary>Rebuilding the links of every affected zone.</summary>
+            Links,
+
+            /// <summary>The per-cell portal edge table, from every live portal link.</summary>
+            Portals,
+
+            /// <summary>The region adjacency CSR, from every live link.</summary>
+            Adjacency,
+
+            /// <summary>The districts of every traverse mode.</summary>
+            Districts,
+
+            /// <summary>The layer-change estimate, from every live portal link.</summary>
+            Estimate,
+        }
+
+        /// <summary>
+        /// Stopwatch ticks spent in each <see cref="RebuildSegment"/> since construction or the last
+        /// <see cref="ResetRebuildTimes"/> (HT1). Counters on the graph rather than segments behind
+        /// the tick's <c>PhaseSink</c>, whose seven phases sum to the tick and would stop doing so.
+        /// A measurement: never saved, never hashed, never read by the simulation.
+        /// </summary>
+        public long[] RebuildTicks { get; } = new long[6];
+
+        /// <summary>How many rebuilds did work since the counters were last reset.</summary>
+        public int RebuildsTimed { get; private set; }
+
+        public void ResetRebuildTimes()
+        {
+            Array.Clear(RebuildTicks, 0, RebuildTicks.Length);
+            RebuildsTimed = 0;
+        }
+
+        long Lap(RebuildSegment segment, long since)
+        {
+            long now = System.Diagnostics.Stopwatch.GetTimestamp();
+            RebuildTicks[(int)segment] += now - since;
+            return now;
+        }
+
         // =====================================================================================
         // Rebuild
         // =====================================================================================
@@ -302,6 +348,7 @@ namespace Odyssey.Sim.Pathing
             for (int b = 0; b < BlockCount; b++) if (_dirty[b]) _dirtyList.Add(b);
             if (_dirtyList.Count == 0) { _anyDirty = false; return false; }
 
+            long t = System.Diagnostics.Stopwatch.GetTimestamp();
             CollectAffectedZones();
 
             // Free first, everything, then allocate. Because the free lists hand out the lowest
@@ -316,17 +363,24 @@ namespace Odyssey.Sim.Pathing
             _freeLinkCursor = 0;
 
             for (int i = 0; i < _dirtyList.Count; i++) FloodBlock(_dirtyList[i]);
+            t = Lap(RebuildSegment.Flood, t);
             for (int i = 0; i < _affectedZones.Count; i++) BuildZoneLinks(_affectedZones[i]);
 
             if (_freeRegionCursor > 0) _freeRegions.RemoveRange(0, _freeRegionCursor);
             if (_freeLinkCursor > 0) _freeLinks.RemoveRange(0, _freeLinkCursor);
             _freeRegionCursor = 0;
             _freeLinkCursor = 0;
+            t = Lap(RebuildSegment.Links, t);
 
             RebuildPortalEdges();
+            t = Lap(RebuildSegment.Portals, t);
             RebuildAdjacency();
+            t = Lap(RebuildSegment.Adjacency, t);
             RecomputeDistricts();
+            t = Lap(RebuildSegment.Districts, t);
             RecomputeLayerChangeEstimate();
+            Lap(RebuildSegment.Estimate, t);
+            RebuildsTimed++;
 
             for (int i = 0; i < _dirtyList.Count; i++) _dirty[_dirtyList[i]] = false;
             _anyDirty = false;

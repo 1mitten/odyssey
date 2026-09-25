@@ -130,3 +130,70 @@ So pathfinding falls from roughly 65% of the old tick to roughly 45%, not to not
 The lesson generalises: a plausible causal story attached to a real number is still a guess until it is measured separately.
 
 Still unmeasured, and honestly so: the right chunk and region size for a stamped ruined city (unmeasurable until mapgen exists), whether the cell A-star needs Burst at all (a D1 follow-up), and HPA-style crossing-distance caching under constant editing, for which no published measurement was found.
+
+## 7. Keeping the region graph current without walking the board (HT1, 2026-09-25)
+
+The hardening plan's first unit (`docs/plans/vertical-slice.md` §HT, audit §2a). **The one cost in
+the simulation that grows with the board rather than with what is happening on it.**
+
+### 7a. Measured first
+
+`NavGraph.Rebuild` after one mined cell, split by segment (`NavGraph.RebuildTicks`, printed by
+`NavGraphStatisticsTests`; mean of 200 rebuilds, the Windows dev machine, CoreCLR, 2026-09-25, the
+played map). Only the first two segments are local to the edit; the other four walk every region or
+link on the board:
+
+| Board | Rebuild | Flood | Links | **Portals** | **Adjacency** | **Districts** | **Estimate** |
+|---|---|---|---|---|---|---|---|
+| Standard 120 × 120 × 16 | 0.330 ms | 0.027 | 0.092 | 0.083 | 0.018 | 0.102 | 0.003 |
+| Large 180 × 180 × 24 | 0.733 | 0.034 | 0.100 | 0.196 | 0.048 | 0.330 | 0.008 |
+| Huge 240 × 240 × 16 | 1.233 | 0.041 | 0.118 | 0.338 | 0.076 | 0.623 | 0.016 |
+| Scale target 250 × 250 × 40 | **1.795** | 0.048 | 0.121 | 0.422 | 0.126 | **1.000** | 0.018 |
+| Ruined city, scale target | **3.454** | 0.044 | 0.148 | 0.355 | 0.254 | **2.559** | 0.043 |
+
+So the audit's "districts" is half of it on the natural map and three quarters on the city, and the
+**portal table is the second cost** (a dictionary cleared, every portal link re-added and sorted). The
+local work is 0.17 ms: **the 0.2 ms target means all four global passes go**, not districts alone.
+
+### 7b. The decisions
+
+- **Districts are repaired, not re-flooded — and not by the audit's option 1 as written.**
+  "Re-flood the components the edit touched" is the full pass again on a real board, because nearly
+  every region on the surface is one district: the touched component *is* the board. What is done
+  instead:
+  - **A split** of an old district can only happen if the regions that bordered the edit — the
+    surviving ends of every link freed, and the new regions in the re-flooded blocks — stop reaching
+    each other. (Any path between two surviving regions either avoids the edit, or enters and leaves
+    it through border regions.) So a search starts from each border region, searches that meet are
+    joined (union-find), and the search stops the moment each old district's borders are one group.
+    The ordinary edit meets within a few steps, through the block just rebuilt. A search that runs
+    out of frontier first has found a closed piece: it gets a fresh id, at the cost of that piece.
+  - **A merge** — a new link joining two old districts — relabels the **smaller** one, by the member
+    counts kept per district.
+  - **Ids are kept per mode with a free list and a member count**; nothing compares them for order,
+    and they are **not in the state hash** (`NavGraph.ContributeTo`, which would have hashed them, has
+    no caller; its comment said otherwise). `DistrictCount` stays the number of live districts.
+  - The full `RecomputeDistricts` stays: the first build, a load (`MarkAllDirty`) and the oracle.
+- **Adjacency keeps its order exactly**: each region's incident links in ascending link id, as the
+  CSR built them — the abstract search walks them in that order, so a path, and with it every golden,
+  depends on it. Stored as a slotted CSR (each region owns a run of slots with room to grow), so
+  `AdjacencyStart/Count/Link` keep their meaning and no caller changes. Only freed and built links, and
+  freed and allocated regions, touch it.
+- **Portal edges are maintained per cell** as portal links are freed and built, each cell's chain in
+  ascending target cell as before, from a pool with a free list. **The estimate** counts portal links
+  as they come and go.
+
+### 7c. The oracle
+
+`NavGraph.DerivedTablesDisagree()` rebuilds all four tables from scratch **inside the same graph** —
+where ids agree, unlike a second graph — and says what differs: adjacency order exactly, portal chains
+exactly, districts as a partition (a bijection between the two labellings), the live district count
+and the estimate. It runs after every round of `IncrementalRebuildTests`' randomised edits and of a new
+randomised run on generated maps, beside the existing checks (the id-independent fingerprint against a
+graph built from scratch, and every path identical). Each piece was built with the oracle failing
+first when it was withheld.
+
+### 7d. Done when
+
+The scale-target rebuild after one mined cell is **under 0.2 ms** on this machine, with every path
+checksum, every golden and `NavGraphStatisticsTests`' region counts unchanged.
