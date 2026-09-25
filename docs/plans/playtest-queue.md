@@ -23,6 +23,12 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does changing a graphics setting still hitch, and is the board seen catching up?**
+  (`claude/mesh-cost`, design 38 §26.) Open Settings → Graphics and flick the Grass ladder, then Ground
+  relief, with the camera over thick meadow; then dig out a row of cells. A board-wide re-mesh now
+  spends at most about 2 ms a frame and takes about a third of a second to finish. Wrong answers: a
+  visible hitch when a setting changes, or chunks of old grass visibly swapping to new a few at a time.
+
 - **Does the new bill list read at a glance, and is anything on it in the way?** (`claude/bills-pane`,
   design 49, stacked on `claude/cooking`.) Click an **Electric Cooker** with no power: the pane is
   wider (680), a warn strip reads **No power** with a green **Switch off** beside it, and the tile's

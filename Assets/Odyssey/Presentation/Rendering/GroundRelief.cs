@@ -149,7 +149,17 @@ namespace Odyssey.Presentation.Rendering
         public static float FieldAt(float worldX, float worldZ, float amplitude, float period)
         {
             if (amplitude == 0f) return 0f;
+            if (OnTheLattice(worldX, worldZ, amplitude, period, out int slot))
+            {
+                float known = _memoHeight[slot];
+                if (!float.IsNaN(known)) return known;
+                return _memoHeight[slot] = ComputeField(worldX, worldZ, amplitude, period);
+            }
+            return ComputeField(worldX, worldZ, amplitude, period);
+        }
 
+        static float ComputeField(float worldX, float worldZ, float amplitude, float period)
+        {
             float k = 2f * Mathf.PI / Mathf.Max(1f, period);
             float sum = 0f;
             for (int i = 0; i < Waves.Length; i++)
@@ -183,7 +193,24 @@ namespace Odyssey.Presentation.Rendering
             slopeX = 0f;
             slopeZ = 0f;
             if (amplitude == 0f) return;
+            if (OnTheLattice(worldX, worldZ, amplitude, period, out int slot))
+            {
+                if (float.IsNaN(_memoSlopeX[slot]))
+                {
+                    ComputeSlope(worldX, worldZ, amplitude, period, out _memoSlopeX[slot], out _memoSlopeZ[slot]);
+                }
+                slopeX = _memoSlopeX[slot];
+                slopeZ = _memoSlopeZ[slot];
+                return;
+            }
+            ComputeSlope(worldX, worldZ, amplitude, period, out slopeX, out slopeZ);
+        }
 
+        static void ComputeSlope(float worldX, float worldZ, float amplitude, float period,
+            out float slopeX, out float slopeZ)
+        {
+            slopeX = 0f;
+            slopeZ = 0f;
             float k = 2f * Mathf.PI / Mathf.Max(1f, period);
             for (int i = 0; i < Waves.Length; i++)
             {
@@ -197,6 +224,78 @@ namespace Odyssey.Presentation.Rendering
             slopeX *= amplitude;
             slopeZ *= amplitude;
         }
+
+        // ------------------------------------------------------------ the lattice memo
+
+        /// <summary>
+        /// The board's field remembered on the half-cell lattice (design 38 §20f). Every drape the
+        /// mesher asks for is at a cell's centre or a face's, and every skin corner at a cell's
+        /// corner, so all of them are multiples of <see cref="Lattice"/> — and the field there never
+        /// changes while the amplitude and the wavelength do not. Re-meshing a chunk asked for the
+        /// same few thousand sums of sines every time it was re-meshed: a quarter of its cost, measured
+        /// (<c>FrameTimeTests.TheMeshingByPart</c>).
+        ///
+        /// <para><b>Bit for bit what it replaces</b>: a value is computed by the same function from
+        /// the same floats the first time it is asked for, and handed back after that. Only exact
+        /// lattice points are remembered — a tuft at a hashed offset still computes — and only the
+        /// board's own field; the surround's hills ask at another amplitude and never touch it. Filled
+        /// lazily, so nothing is paid for ground nobody draws. Main thread only, as all meshing is.</para>
+        /// </summary>
+        public static bool MemoEnabled { get; set; } = true;
+
+        /// <summary>The spacing of the remembered points: half a cell.</summary>
+        public const float Lattice = CellMetrics.SizeXZ * 0.5f;
+
+        /// <summary>Lattice points a side the memo will grow to: 2,048 is 2.5 km, past any board.</summary>
+        const int MaxSide = 2048;
+
+        static float[] _memoHeight = System.Array.Empty<float>();
+        static float[] _memoSlopeX = System.Array.Empty<float>();
+        static float[] _memoSlopeZ = System.Array.Empty<float>();
+        static int _memoSide;
+        static float _memoAmplitude = float.NaN, _memoPeriod = float.NaN;
+
+        static bool OnTheLattice(float worldX, float worldZ, float amplitude, float period, out int slot)
+        {
+            slot = -1;
+            if (!MemoEnabled || amplitude != Amplitude || period != Period) return false;
+            if (worldX < 0f || worldZ < 0f) return false;
+            int i = (int)(worldX / Lattice), j = (int)(worldZ / Lattice);
+            // Exactly on the lattice, not merely near it: a point a hair off would be handed a
+            // neighbour's value, which is close and is not the contract.
+            if (i * Lattice != worldX || j * Lattice != worldZ) return false;
+            if (i >= MaxSide || j >= MaxSide) return false;
+
+            if (amplitude != _memoAmplitude || period != _memoPeriod)
+            {
+                _memoAmplitude = amplitude;
+                _memoPeriod = period;
+                Forget(_memoSide);
+            }
+            if (i >= _memoSide || j >= _memoSide)
+                Forget(Mathf.Min(MaxSide, Mathf.NextPowerOfTwo(Mathf.Max(i, j) + 1)));
+
+            slot = i + j * _memoSide;
+            return true;
+        }
+
+        static void Forget(int side)
+        {
+            int count = side * side;
+            if (_memoHeight.Length != count)
+            {
+                _memoHeight = new float[count];
+                _memoSlopeX = new float[count];
+                _memoSlopeZ = new float[count];
+            }
+            _memoSide = side;
+            System.Array.Fill(_memoHeight, float.NaN);
+            System.Array.Fill(_memoSlopeX, float.NaN);
+            System.Array.Fill(_memoSlopeZ, float.NaN);
+        }
+
+        /// <summary>How many lattice points are remembered, for a test.</summary>
+        public static int MemoSide => _memoSide;
 
         /// <summary>
         /// The steepest the field can ever be at a given amplitude, as a rise per metre.
