@@ -64,7 +64,7 @@ namespace Odyssey.Presentation.World
         public const string Masc = "Masc";
         public const string Femn = "Femn";
 
-        /// <summary>Combo steps, played in turn: a light swing alternates A, B, C; a heavy one A, B.</summary>
+        /// <summary>Combo steps, played in turn, A, B, C, by a light swing and a heavy one alike.</summary>
         public static readonly string[] Combo = { "A", "B", "C" };
     }
 
