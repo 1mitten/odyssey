@@ -28,6 +28,20 @@ namespace Odyssey.Tests.PlayMode
     /// </summary>
     public class BushPickTests
     {
+        /// <summary>
+        /// Whatever this file built goes, however its test ended. A failure thrown inside a nested
+        /// coroutine does not run the outer test's <c>finally</c>, and a world left standing draws
+        /// into every test after it — on the runner it was a second camera over the tree-grouping
+        /// shots and a second trace clashing with the traced session's file.
+        /// </summary>
+        [TearDown]
+        public void DestroyTheWorld()
+        {
+            GameObject? left = GameObject.Find("BushPick");
+            if (left != null) UnityEngine.Object.DestroyImmediate(left);
+            ChunkMesher.BerriesOnTheCrown = true;
+        }
+
         [UnityTest]
         public IEnumerator AClickOnADrawnBushGivesTheBush()
         {
@@ -37,6 +51,8 @@ namespace Odyssey.Tests.PlayMode
                 yield return Settle(boot, rig);
                 var after = new Tally();
                 yield return Measure(boot, rig, after);
+                if (after.NoArt)
+                    Assert.Ignore("no bush art resolved on this machine, so there is no drawn bush to aim at");
                 // Before the fix (the same measurement, 2026-09-25, the bush claimed only where the
                 // ray crossed its cell's floor): centre 14/18 wrong, crown 56/73 wrong.
                 Debug.Log($"[BushPick] {after}");
@@ -122,6 +138,7 @@ namespace Odyssey.Tests.PlayMode
 
         sealed class Tally
         {
+            public bool NoArt;
             public int Occluded, GroundTakenByTheBush;
             public int Bushes, Berry, Picked, CentrePoints, CentreWrong, CrownPoints, CrownWrong, NamedWrong,
                 GroundPoints, GroundWrong;
@@ -175,7 +192,6 @@ namespace Odyssey.Tests.PlayMode
             var model = boot.Model!;
             ChunkMesher mesher = boot.Renderer!.Mesher;
             MethodInfo cellAt = typeof(SliceCameraRig).GetMethod("CellAt", BindingFlags.Instance | BindingFlags.NonPublic)!;
-            Assert.That(cellAt, Is.Not.Null, "SliceCameraRig.CellAt is the pick path this measures");
             Camera cam = rig.Camera;
 
             // Framed on the bushes nearest the start, then on a second patch further out.
@@ -204,7 +220,10 @@ namespace Odyssey.Tests.PlayMode
                     if (mesher.TryBushPlacement(c.X, c.Z, c.Y, out _, out _)) placedCount++;
                 }
             Debug.Log($"[BushPick] {undergrowth} bush cells on the board, {placedCount} with a drawn placement; focus {near}");
-            if (placedCount == 0) Assert.Ignore("no bush art resolved on this machine, so there is no drawn bush to aim at");
+            // Reported, not thrown: an exception inside a nested coroutine does not unwind the
+            // outer test's finally, so the world it built would outlive the test and draw into
+            // every one after it (it did, on the runner: a second camera and a clashing trace).
+            if (placedCount == 0) { tally.NoArt = true; yield break; }
             foreach (CellRef focus in focuses)
             {
                 rig.FocusOn(focus, 36f);
