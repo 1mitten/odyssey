@@ -12285,3 +12285,39 @@ moves.
 One test had been measuring swing speed without saying so. Three bandits at a one-sided wall struck
 three walls with the machete and two with the slower blunt weapons, because fewer walls fell in the
 run. The test is now pinned to the machete it was measured with. Nobody stood about either way.
+
+## 2026-09-25 — The home area: interviewed, designed, briefed, nothing built
+
+The owner asked for a home zone: a switch beside Power that shows the colony's home, which is its
+outermost buildings and zones plus a perimeter of five, and a new tab to keep a colonist *Home* or let
+her go *Anywhere*, for safety. Nothing of it existed. The registry had reserved *Allowed area* and
+*Set area*, the panel catalogue had reserved an *Assign* tab, and combat §18h had deferred a
+colony-wide rules panel until there was a second rule. This is the second rule.
+
+Eight questions in two rounds, and every recommendation was taken. Home is **derived**, not painted:
+everything placed, grown by five cells as a square, per layer with one layer of margin. Felling and
+mining marks do not count, because the danger is the work outside and counting it would bring the
+danger in. The setting goes on an **Assign** tab on F4, beside the Response it mirrors, and the
+draft overrides it.
+
+Three things the exploration settled that the interview could not:
+
+- **A new colony has no home.** The played scenario gives no beds and no stockpile, and the loose
+  piles are items. So an empty home must restrict nobody, or a colonist set to Home on the first
+  morning has nothing she may do.
+- **The rebuild is lazy, not on a cadence.** A cadence has a phase. A save between a placement and
+  the next rebuild would load a world whose mask differs from its twin's until the cadence caught up.
+  A rebuild on the first question about a dirty layer is always the pure function of the hashed world.
+- **`Reachable` splits in two.** It is the question every giver asks, which makes it the right gate
+  for work. But the fight asks it too, and a gated fight would stop a Home colonist defending herself
+  at the edge of home. `CanTravel` is the physical question, and the combat files move to it.
+
+The research subagent could read no page: the proxy refuses the wikis. Its file is built from search
+extracts and recollection, marked, and it still earned its place. The reference gates eating as well
+as work and opens the gate at starvation, and gating food outright is the genre's known trap. So
+design 43 takes the escape hatch. It also found that forbidding things dropped outside home is a
+per-item flag in the reference, not a home rule, which corrects a line in a-03.
+
+The Claude Design brief asks for the tab, a house glyph as an SVG path, and the look on the board.
+The look is an overlay rather than a baked tint, because home's edge moves five cells with every wall
+and baking it would re-mesh chunks on every placement.
