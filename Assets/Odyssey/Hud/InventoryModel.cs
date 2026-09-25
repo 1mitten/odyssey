@@ -39,9 +39,15 @@ namespace Odyssey.Hud
         internal int BestStack;
 
         /// <summary>"Stockpile 3", "Shelf 2": the names the inspect pane gives the same stores.</summary>
-        public string Name =>
-            Registry.Label(Shelf ? PaletteTools.Shelf : PaletteTools.Stockpile) + " "
-            + Ordinal.ToString(CultureInfo.InvariantCulture);
+        public string Name => NameOf(Shelf, Ordinal);
+
+        /// <summary>
+        /// A store's name from its kind and number — the one form the pane, the Inventory tab and
+        /// the Gear tab's Pick from stores all write, so none of them can call Stockpile 3 anything else.
+        /// </summary>
+        public static string NameOf(bool shelf, int ordinal) =>
+            Registry.Label(shelf ? PaletteTools.Shelf : PaletteTools.Stockpile) + " "
+            + ordinal.ToString(CultureInfo.InvariantCulture);
     }
 
     /// <summary>One commodity the colony's stores hold, and where.</summary>

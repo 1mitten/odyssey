@@ -6,8 +6,9 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The gear seam (design 33 §9d): what a pawn holds, as the Gear tab will list it when it is
-    /// built. One row today — the weapon in the hand, drawn or at the hip, or the bare hands.
+    /// The gear seam (design 33 §9d): what a pawn holds in the hand — the weapon, drawn or at the
+    /// hip, or the bare hands. The hand is one of six rows since the Gear tab went live (design 47);
+    /// the rest of the tab's model is <c>GearTabModelTests</c>.
     /// </summary>
     public class GearModelTests
     {
@@ -23,10 +24,11 @@ namespace Odyssey.Tests.Hud
             return frame;
         }
 
+        /// <summary>The hand's row. A person has six rows since the Gear tab went live (design 47).</summary>
         static GearRow Only(GearModel gear)
         {
-            Assert.That(gear.Rows.Count, Is.EqualTo(1), "a person holds exactly one row of gear today");
-            return gear.Rows[0];
+            Assert.That(gear.Rows.Count, Is.EqualTo(GearModel.SlotCount), "a person has one row per slot");
+            return gear.Row(GearSlot.Weapon);
         }
 
         [Test]

@@ -29,6 +29,14 @@ namespace Odyssey.Tests.Hud
         public void ATemperatureReadsTheSameWhereverItIsWritten(int centiC, string expected) =>
             Assert.That(TemperatureLabels.Describe(centiC), Is.EqualTo(expected));
 
+        /// <summary>The Gear tab's warmth: whole degrees, the unit once (design 47 §2).</summary>
+        [TestCase(400, 2600, "4 to 26 °C")]
+        [TestCase(1600, 2600, "16 to 26 °C")]
+        [TestCase(-300, 2600, "-3 to 26 °C")]
+        [TestCase(-50, 2699, "0 to 26 °C")]
+        public void ARangeIsWholeDegreesWithTheUnitOnce(int low, int high, string expected) =>
+            Assert.That(TemperatureLabels.Range(low, high), Is.EqualTo(expected));
+
         /// <summary>
         /// Nothing else spells the unit out.
         ///

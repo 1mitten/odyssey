@@ -1086,9 +1086,9 @@ namespace Odyssey.Hud
         /// between tabs is which rows are drawn.</para>
         ///
         /// <para>Derived rather than written down, so that a fourteenth skill or a fourth need
-        /// moves it. It is deliberately <i>not</i> a maximum over the seven disabled tabs — Gear,
-        /// Thoughts, Social, Health and Log have no content to measure, and a guess at them would
-        /// be empty space today bought against a design nobody has written.</para>
+        /// moves it. It is a maximum over the <i>live</i> tabs only — Thoughts, Social and Log have
+        /// no content to measure. Gear joined them on 2026-09-25 (design 47) and, at 244, is now
+        /// the one that sets it: Needs and Skills sit at the top of the box with slack below.</para>
         /// </summary>
         public static int InspectTabBody
         {
@@ -1096,7 +1096,9 @@ namespace Odyssey.Hud
             {
                 int needs = InspectNeedRows * NeedRow + (InspectNeedRows - 1) * NeedRowGap;
                 int skills = SkillCatalogue.Rows * SkillRow + (SkillCatalogue.Rows - 1) * SkillRowGap;
-                return Math.Max(needs, skills);
+                // The Gear tab (design 47) is the tallest since it went live, and every tab stands
+                // in its 244 so that choosing it never moves the header (owner, 2026-09-25).
+                return Math.Max(Math.Max(needs, skills), GearLayout.BodyHeight);
             }
         }
 

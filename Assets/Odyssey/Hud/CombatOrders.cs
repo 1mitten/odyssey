@@ -93,6 +93,21 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
+        /// Send <paramref name="colonist"/> to take <paramref name="weapon"/> into the hand
+        /// (design 33 §7a). One builder for the right-click menu's Equip row and the Gear tab's
+        /// Pick from stores, so the two can never send different orders for the same click.
+        /// </summary>
+        public static Intent Equip(PawnId colonist, in ThingView weapon) =>
+            new Intent(IntentKind.OrderEquip, weapon.Cell, colonist.Value, weapon.Id.Value);
+
+        /// <summary>
+        /// Empty <paramref name="colonist"/>'s hand (design 47 §3): <b>Unequip</b> leaves the weapon
+        /// to the haulers, <b>Drop</b> (<paramref name="leaveHere"/>) forbids it where it lies.
+        /// </summary>
+        public static Intent Unequip(PawnId colonist, bool leaveHere) =>
+            new Intent(IntentKind.OrderUnequip, default, colonist.Value, leaveHere ? 1 : 0);
+
+        /// <summary>
         /// Is this item def a weapon — one of the four melee weapons of design 33 §1? Parallel to
         /// the item table's <c>Weapons</c> category, which this assembly cannot read: the four are
         /// appended together in <see cref="ItemHandle"/> and a test walks the whole table.

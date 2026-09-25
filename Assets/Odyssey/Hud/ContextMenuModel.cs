@@ -172,7 +172,7 @@ namespace Odyssey.Hud
             if (!equipper.IsValid)
                 return new ContextMenuRow(EquipKey, label, enabled: false, Registry.Label(DownedReasonKey), Nothing);
 
-            var order = new[] { new Intent(IntentKind.OrderEquip, weapon.Cell, equipper.Value, weapon.Id.Value) };
+            var order = new[] { CombatOrders.Equip(equipper, weapon) };
             return new ContextMenuRow(EquipKey, label, enabled: true, string.Empty, order);
         }
 

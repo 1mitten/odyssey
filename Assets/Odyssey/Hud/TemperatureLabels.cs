@@ -36,5 +36,21 @@ namespace Odyssey.Hud
             int magnitude = centiC < 0 ? -centiC : centiC;
             return (centiC < 0 ? "-" : "") + magnitude / 100 + "." + magnitude % 100 / 10 + Unit;
         }
+
+        /// <summary>
+        /// A range in whole degrees with the unit once, as the Gear tab's warmth reads (design 47
+        /// §2): 400 and 2,600 are "4 to 26 °C", −300 and 2,600 are "-3 to 26 °C". Whole degrees,
+        /// because a comfortable range is a band, not a reading, and "4.0 to 26.0 °C" is two
+        /// decimals nobody needs; truncated toward nought, like <see cref="Describe"/>.
+        /// </summary>
+        public static string Range(int lowCentiC, int highCentiC) =>
+            Whole(lowCentiC) + " to " + Whole(highCentiC) + Unit;
+
+        static string Whole(int centiC)
+        {
+            int magnitude = centiC < 0 ? -centiC : centiC;
+            int degrees = magnitude / 100;
+            return (centiC < 0 && degrees != 0 ? "-" : "") + degrees;
+        }
     }
 }
