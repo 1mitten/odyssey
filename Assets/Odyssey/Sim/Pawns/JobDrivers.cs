@@ -409,6 +409,10 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public static int StandBeside(PawnContext ctx, Pawn pawn, int tree)
         {
+            // The thing worked on must be hers to work on as well as the cell she stands in
+            // (design 43 §4c): a tree just outside home is outside home, whichever side of the
+            // line the stump is felled from.
+            if (!ctx.MayWork(pawn, tree)) return -1;
             GridSize size = ctx.Size;
             CellRef at = size.FromIndex(tree);
             int best = -1, bestDistance = int.MaxValue;

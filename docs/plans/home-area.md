@@ -2,7 +2,7 @@
 
 **Phase 3, 2026-09-25.** Interview: `docs/research/home-area-interview.md` (every recommendation
 taken, 2026-09-24). Design: `docs/design/43-home-area.md`. Brief: `docs/reference/mockups/home-area-brief.md`.
-**Approved 2026-09-25** (owner: *"approved start"*). H1 built; H2 next; H3 and H4 wait on the brief.
+**Approved 2026-09-25** (owner: *"approved start"*). H1 and H2 built; H3 and H4 wait on the brief.
 All units land on `claude/sleepy-cannon-9d0evw` as separate commits, because this session may push
 only there.
 

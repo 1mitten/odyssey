@@ -229,6 +229,7 @@ namespace Odyssey.Sim.Pawns
                 // A colonist's response to danger (design 33 §18c), on the pipeline because a new
                 // setting may end a fight or a flight she started under the old one.
                 .AddIntentHandler(IntentKind.SetHostilityResponse, pipeline.HandleSetHostilityResponse)
+                .AddIntentHandler(IntentKind.SetPawnArea, pipeline.HandleSetPawnArea)
                 // The Work tab's one command (design 27). It belongs to the registry because a
                 // priority is a field on a pawn and the registry is the one owner of those; the
                 // job pipeline only ever reads it.

@@ -292,6 +292,13 @@ namespace Odyssey.Sim.Contracts
         /// downed or not. Handler: <c>JobSystem.HandleSetHostilityResponse</c>.
         /// </summary>
         SetHostilityResponse,
+
+        /// <summary>
+        /// Set where one colonist may work (design 43 §4a): <c>A</c> is her <c>PawnId</c> value and
+        /// <c>B</c> the area — 0 anywhere, 1 home. A standing setting, not an order: it may be set
+        /// on any colonist, drafted, downed or not. Handler: <c>JobSystem.HandleSetPawnArea</c>.
+        /// </summary>
+        SetPawnArea,
     }
 
     /// <summary>
@@ -380,6 +387,9 @@ namespace Odyssey.Sim.Contracts
             // while paused, and a button that read one thing while the world did another until you
             // pressed play would be the slab fault again.
             IntentKind.SetHostilityResponse => true,
+            // Where a colonist may work (design 43 §4a): the same kind of setting, on a tab you
+            // open while paused.
+            IntentKind.SetPawnArea => true,
             _ => false,
         };
     }

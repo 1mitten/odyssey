@@ -1,6 +1,6 @@
 # 43 — The home area, and keeping a colonist home
 
-**Status: approved 2026-09-25 (owner: *"approved start"*). H1, the mask, is built; H2 next. H3 and
+**Status: approved 2026-09-25 (owner: *"approved start"*). H1, the mask, and H2, the setting and the gate, are built. H3 and
 H4 wait on the Claude Design brief** (`docs/reference/mockups/home-area-brief.md`). Branch
 `claude/sleepy-cannon-9d0evw`. Units H1–H5 in `docs/plans/home-area.md`.
 **Read first:** the interview `docs/research/home-area-interview.md`; the reference
@@ -173,7 +173,7 @@ public bool MayWork(Pawn pawn, int cell) =>
 | Hauling *from* a cell | yes | answer 6 |
 | Hauling *to* a store or shelf | never matters | a store is home by construction (§3a) |
 | Hauling to open ground (a refused thing's fallback) | yes | the fallback asks `MayWork` too |
-| A right-click forced build | yes, refused with `NotPermitted` | answer 6; `CanForce` reaches the gate through `BuildWorkGiver.CanBuild` |
+| A right-click forced order | yes, refused with `NotPermitted` | answer 6. **A forced build is never refused in practice**: a site is home by itself (§3a), so every site is inside home, and a builder kept home walks out to any site the player orders. Found by the tests (H2); fetching a weapon outside home is the order that is refused |
 | Sleeping, the fireside, the idle wander | yes | an assumption (§2): a Home colonist stays home. Beds are inside by construction |
 | Eating | yes, **until she is starving** | the reference and Dwarf Fortress both gate food and both open the gate at starvation, because gating it outright is the genre's known trap (a-18 finding 9). Starving means `Pawn.StarvationSeverity > 0` (WS3), so there is no second threshold |
 | Rescue | yes | it is a work giver; say if a downed colonist outside should still be fetched |

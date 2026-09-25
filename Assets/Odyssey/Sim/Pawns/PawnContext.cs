@@ -262,15 +262,43 @@ namespace Odyssey.Sim.Pawns
             ColonyItems.Distance(a, b, Size, Content.Movement.layerChangeEstimate);
 
         /// <summary>
-        /// Can this pawn get there at all? Two array reads and an integer comparison — never a
-        /// search. A work-giver scan asks this thousands of times per tick against candidate
-        /// targets, and it is the reason the district table exists.
+        /// May this pawn take this cell as the place a job acts on or is done from? It can get
+        /// there (<see cref="CanTravel(Pawn, int, TraverseMode)"/>) and it may work there
+        /// (<see cref="MayWork"/>). Two array reads and an integer comparison for anybody not kept
+        /// home — never a search. A work-giver scan asks this thousands of times per tick against
+        /// candidate targets, and it is the reason the district table exists.
+        ///
+        /// <para><b>This is the question every work giver asks</b>, which is why the home gate is
+        /// in it (design 43 §4b): a giver written next month is gated without knowing it. A
+        /// question that is purely physical — the fight, the flight, the walk of a job already
+        /// begun — asks <see cref="CanTravel(Pawn, int, TraverseMode)"/> instead, or a colonist
+        /// kept home would stop defending herself at the edge of home.</para>
         /// </summary>
         public bool Reachable(Pawn pawn, int cell) => Reachable(pawn, cell, pawn.Mode);
 
         public bool Reachable(Pawn pawn, int cell, TraverseMode mode) =>
+            CanTravel(pawn, cell, mode) && MayWork(pawn, cell);
+
+        /// <summary>Can this pawn get there at all? Physical only: no setting is asked.</summary>
+        public bool CanTravel(Pawn pawn, int cell) => CanTravel(pawn, cell, pawn.Mode);
+
+        public bool CanTravel(Pawn pawn, int cell, TraverseMode mode) =>
             (uint)cell < (uint)Size.CellCount &&
             Nav.Grid.CanEnter(cell, mode) &&
             Nav.Reachable(pawn.Cell, cell, mode);
+
+        /// <summary>
+        /// May she work in this cell (design 43 §4b)? Yes unless she is a colonist kept home,
+        /// undrafted, and the cell is outside a home that exists. <b>The only reader of
+        /// <see cref="Pawn.Area"/></b> apart from the walk home; a giver that asks the setting
+        /// itself is a second owner of the rule. One byte comparison for a colonist at the default.
+        /// </summary>
+        public bool MayWork(Pawn pawn, int cell) =>
+            pawn.Area == PawnArea.Anywhere
+            || pawn.Drafted
+            || !pawn.IsColonist
+            || Home == null
+            || Home.IsEmpty
+            || Home.Contains(cell);
     }
 }

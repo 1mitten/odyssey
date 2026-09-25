@@ -91,7 +91,7 @@ namespace Odyssey.Sim.Pawns
             if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
 
             int dest = StandAt(cell.X, cell.Z, cell.Y);
-            if (dest < 0 || !_ctx.Reachable(pawn, dest, TraverseMode.Colonist)) return IntentRejection.NotPermitted;
+            if (dest < 0 || !_ctx.CanTravel(pawn, dest, TraverseMode.Colonist)) return IntentRejection.NotPermitted;
             dest = Spread(pawn, dest);
 
             int tick = IntentTick;
@@ -180,7 +180,7 @@ namespace Odyssey.Sim.Pawns
                 // house. The click has been lifted already; the spread is round where she stands.
                 int cell = size.Index(x, z, at.Y);
                 if (!_ctx.Cells.IsWalkable(cell) || Taken(pawn, cell)) continue;
-                if (!_ctx.Reachable(pawn, cell, TraverseMode.Colonist)) continue;
+                if (!_ctx.CanTravel(pawn, cell, TraverseMode.Colonist)) continue;
                 return cell;
             }
 

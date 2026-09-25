@@ -180,6 +180,9 @@ namespace Odyssey.Sim.Pawns
                 // Appended, after the ledger whose load clears it; absent from an older save, which
                 // loads with no entry about anything, as none then was.
                 pawns.Incidents!.Ledger.DetailSection,
+                // Where each colonist may work (design 43 §4a). Appended; absent from an older
+                // save, which loads with everybody at Anywhere, as everybody then was.
+                new Saving.AssignSection(pawns.Pawns),
             };
         }
 

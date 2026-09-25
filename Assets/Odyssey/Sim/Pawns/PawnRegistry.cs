@@ -486,6 +486,9 @@ namespace Odyssey.Sim.Pawns
                 // The response (design 33 §18c), at anything but the default.
                 if (pawn.Response != HostilityResponse.FightBack)
                     writer.AddPawnAspect(pawn.Id, CombatAspects.Response, (int)pawn.Response);
+                // Where she may work (design 43 §4a), at anything but the default.
+                if (pawn.Area != PawnArea.Anywhere)
+                    writer.AddPawnAspect(pawn.Id, AreaAspects.Area, (int)pawn.Area);
                 // Lying where she fell with no bed to be carried to (design 33 §11d): why nobody
                 // comes. Asked only of the downed, so a colony nobody has hurt pays one flag.
                 if (pawn.Downed && RescueRules.NeedsRescue(pawn, _ctx) && RescueRules.BedFor(pawn, pawn, _ctx) < 0)

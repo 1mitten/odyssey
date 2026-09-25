@@ -181,6 +181,15 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public HostilityResponse Response { get; internal set; }
 
+        /// <summary>
+        /// Where she may work (design 43 §4): anywhere — the default — or only inside the colony's
+        /// home. A standing setting from the Assign tab. Set through <c>SetPawnArea</c>. Saved in
+        /// <c>AssignSection</c> and folded into the hash beside the kind, <b>both only while it
+        /// is not the default</b>, so a colony nobody restricts saves and hashes as it did before.
+        /// Read by <c>PawnContext.MayWork</c> and the walk home, and by nothing else.
+        /// </summary>
+        public PawnArea Area { get; internal set; }
+
         /// <summary>The species this pawn's kind spawns as: what walks. See <see cref="SpeciesDef"/>.</summary>
         public SpeciesDef Species => Content.SpeciesOf(Kind);
 
@@ -1051,12 +1060,13 @@ namespace Odyssey.Sim.Pawns
             // The response (design 33 §18c) is two bits of the same word, nought at the default, so
             // a colony that never set one hashes as it did before. Bits 24 and 25: 22 and 23 are
             // left free for the line building beside this one.
+            // The area (design 43 §4a) is bit 26, nought at the default, for the same reason.
             bool combat = HasCombatState;
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
             hash.Add(Kind | (Leaving ? 1 << 16 : 0) | (Drafted ? 1 << 17 : 0)
                 | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0)
                 | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
-                | ((int)Response << 24));
+                | ((int)Response << 24) | ((int)Area << 26));
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             if (combat)
