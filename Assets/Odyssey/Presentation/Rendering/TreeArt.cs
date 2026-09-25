@@ -59,5 +59,56 @@ namespace Odyssey.Presentation.Rendering
 
         static int Pick(int x, int z, int count) =>
             count <= 1 ? 0 : Mathf.Min((int)(GroundScatter.Unit(x, z, 0x3D41u) * count), count - 1);
+
+        /// <summary>
+        /// Every row of the tree family whose first row is <paramref name="module"/>: that module
+        /// and each numbered variant the catalogue has art for. <b>The one owner of that list</b>;
+        /// the chunk mesher and the birds' perches both ask here (design 50 §6), so a rook sits on
+        /// the crown of the tree that is drawn.
+        /// </summary>
+        public static int[] VariantsOf(ModuleLibrary library, int module)
+        {
+            var variants = new System.Collections.Generic.List<int> { module };
+            string baseId = library[module].Id;
+            for (int v = 1; v < ModuleIds.MaxTreeVariants; v++)
+            {
+                string id = ModuleIds.TreeVariant(baseId, v);
+                if (library.Catalogue == null || library.Catalogue.Find(id) == null) continue;
+                int resolved = library.Resolve(id, ModuleShape.Pillar);
+                if (library[resolved].UsesArt && !library[resolved].IsEmpty) variants.Add(resolved);
+            }
+            return variants.ToArray();
+        }
+
+        /// <summary>
+        /// The top of the crown of the tree drawn in (x, z, y), in world metres, and how far its
+        /// crown reaches from the trunk: the row and the stance <c>ChunkMesher.EmitTree</c> uses,
+        /// read against the art's own bounds. False when the art has no size to read (an empty
+        /// module), which the caller answers with a stand-in height.
+        /// </summary>
+        public static bool CrownOf(ModuleLibrary library, int[] variants, ushort def, int x, int z, int y,
+            out Vector3 top, out float reach)
+        {
+            int module = variants[0];
+            float size = 1f;
+            if (variants.Length > 1)
+            {
+                module = variants[VariantFor(def, x, z, variants.Length)];
+                Stance(x, z, out _, out size);
+            }
+
+            Vector3 foot = GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)).MultiplyPoint3x4(Vector3.zero);
+            Bounds bounds = library[module].Bounds;
+            if (bounds.size.y <= 0.01f)
+            {
+                top = foot;
+                reach = 0f;
+                return false;
+            }
+
+            top = foot + Vector3.up * (bounds.max.y * size);
+            reach = Mathf.Max(bounds.extents.x, bounds.extents.z) * size;
+            return true;
+        }
     }
 }
