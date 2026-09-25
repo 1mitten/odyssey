@@ -1,7 +1,7 @@
 # Ranged combat in the reference: hit chance and the pistol numbers
 *Lane A (RimWorld mechanics) · 2026-09-25 · capped at 12 searches and 10 reads (12 searches used; 0 reads returned content — 17 fetch attempts, every one refused by the egress proxy)*
 
-> *Coordinator's note, 2026-09-25:* the container's proxy refused every content host this ran against, so the findings rest on search excerpts and the confidence line says so. After this ran the owner moved from "own layer only" to **shooting between layers** (design 44 §1); read the layer paragraph at the end with that in mind.
+> *Coordinator's note, 2026-09-25:* the container's proxy refused every content host this ran against, so the findings rest on search excerpts and the confidence line says so. After this ran the owner moved from "own layer only" to **shooting between layers** (design 47 §1); read the layer paragraph at the end with that in mind.
 
 ## Question
 

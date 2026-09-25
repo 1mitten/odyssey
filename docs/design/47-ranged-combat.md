@@ -1,12 +1,26 @@
-# 44 — Ranged combat: the pistol
+# 47 — Ranged combat: the pistol
 
 **Status (2026-09-25): designed, nothing built.** Ground, interview, research and this document are
 the whole of the work so far. The plan is `docs/plans/ranged-combat.md`, the interview
 `docs/research/ranged-interview.md`, the research `a-10-ranged-combat.md`, `a-10-projectile-path.md`,
 `c-3d-shot-line.md`, `d-21-projectile-rendering.md`, `d-22-procedural-aim-and-recoil.md` and
 `e-10-gun-animation-packs.md`. **The next hard stop is the owner's approval of this document** — §8
-lists the seven recommendations to confirm or overrule — and no gameplay code is written before it.
-Branch `claude/beautiful-cannon-pldakk`, **PR #220** (documents only).
+lists the recommendations to confirm or overrule — and no gameplay code is written before it.
+Branch `claude/beautiful-cannon-pldakk`, **PR #220** (documents, the baked gunshot and its bake
+script; no code).
+
+**Renumbered 44 → 47 on 2026-09-25**: `main` took 44 for the selection highlight while this was
+written, and 45 (nature) and 46 (jumping) are taken on open branches.
+
+**Reviewed 2026-09-25** against `main` after merging it, every code claim checked (§9). The review
+moved: the pistol to **POLYGON Battle Royale's `SM_Wep_Pistol_Heavy_01`** at the owner's request,
+measured (§4a); the four `PawnPurpose` salts, three of which were already taken (§3a); handles 23 /
+11 / 6, which three open PRs also claim (§3a); the aim's rate, which named a constant (§2d); blood,
+described as already reading `!= Blunt` (§2c); the draw and holster clip rows, which live in
+`SheathRows` (§4b); the tracer's reuse claims (§4c); and it **added** what the first draft left open
+about animation and flight — the low-ready carry, a draw that finishes inside the first aim, aim
+tracking, a hit that ends on the drawn body, a minimum visible streak, the states a gun cannot be
+fired from (§4b, §4c, §2e) — and **the gunshot sound**, supplied, baked and levelled (§4c-bis).
 
 It sits on design 33 (draft, melee, health, weapons) and changes none of its decisions: a gun is a
 second kind of attack on the seams the melee line left — decide at the wind-up's start, apply at the
@@ -28,11 +42,13 @@ Every decision below was the owner's in the interview of 2026-09-25 unless it sa
 |---|---|
 | Fire at will | a drafted colonist with a gun shoots the nearest hostile in range and sight without an order; an ordered target takes precedence; a per-colonist toggle is a later row |
 | A miss | scatters to a cell near the target, the spread growing with how bad the shot was; anything on the bullet's line — a colonist, a bandit, a wall — *can* take it |
-| Skill | **Shooting**, added now: a Def, a `SkillIndex` entry, save format 9 → 10, one golden re-bake, a fifth live row in the pane |
+| Skill | **Shooting**, added now: a Def, a `SkillIndex` entry, save format 9 → 10, one golden re-bake, a live row in the pane (the sixth; the first draft said fifth) |
 | Who has guns | colonists (from the ground and the debug Arm row) and a debug *Spawn pistol bandit*; ordinary raids stay melee |
 | The flight | **real**: the fire tick rolls, the impact tick is fire + distance / speed, the impact re-checks who is on the line; a target can step out of a long shot; drawn tick-exact so a hit lands on the body the numbers say |
 | Animation | **both**: procedural draw, aim, recoil and holster now; a clip-driven path takes over when a pack's rows are filled |
-| The look | **ballistic**: muzzle flash, a short bright tracer, dust or blood at the impact; the owner sources a gunshot sound |
+| The look | **ballistic**: muzzle flash, a short bright tracer, dust or blood at the impact; the owner sources a gunshot sound — **supplied 2026-09-25** (§4c-bis) |
+| The prop | **POLYGON Battle Royale's pistol** (owner, 2026-09-25, after the interview): `SM_Wep_Pistol_Heavy_01` (§4a) |
+| The shot's sound | the owner's recording, *"blend this into the environment and process it for every gun shot (and give it some variance)"* (§4c-bis) |
 | Height | **shoot between layers now**: line of sight is three-dimensional from the first commit; a slab, a roof, a closed door, a wall or rock in the line blocks; distance is Euclidean in metres over 2.5 × 2.5 × 3 m cells, so height adds to the range and to the fall-off, which is per gun |
 | Height bonus | **none**: the advantage of height is the clear line and the reach; the factor slot stays at 1 |
 | Readings taken, not corrected | *"two guns on … around the handle"* = both hands on the gun, around the grip; *"injuries … in latest seam"* = hit points through `CombatSystem.ApplySwing`, no body parts, no bleeding |
@@ -133,7 +149,8 @@ the drawing is not.
 `Entry { Shooter, Target (0 = none), Weapon, StartCell, EndCell, FireTick, ImpactTick, Aimed, DamageMilli }`
 
 - **`ImpactTick = FireTick + max(1, ceil(distanceMm / speedMmPerTick))`**, decided at launch, so a
-  save mid-flight lands on the same tick. Not `ITickable`: `CombatSystem.Tick` lands the bullets
+  save mid-flight lands on the same tick. **Unlike `Skyfallers`, deliberately not `ITickable`**
+  (`Skyfallers` is one, `Skyfallers.cs:26`): `CombatSystem.Tick` lands the bullets
   due at the top of its pass — Pawns phase, order 25, after the jobs and before movement, the same
   reason a swing lands there.
 - **The fire tick** (`RangedRules.Resolve`, the `IMeleeRules` shape, settable on `PawnContext`;
@@ -175,16 +192,26 @@ the drawing is not.
   may hit anyone at all — one `CombatDef` field if strays prove too deadly in play.
 - **Damage** goes through `CombatSystem.ApplySwing` — the one method a hit point is lost through,
   every hook — with `attacker` becoming `Pawn?`: a shooter killed in flight still lands her bullet
-  (no experience, no `React`). Experience goes to Shooting when the armament is ranged, else Melee
-  (one line). Friendly fire needs nothing new: `FriendlyFireListener.SwingResolved` gives
-  `Thought_AttackedByColonist` to a colonist hit or missed by a colonist exactly as for a blow. A
-  struck colonist retaliates through `React` — a charge on foot, or a return of fire if she holds a
-  gun; a hog rolls its revenge. Blood reads `damageKind != Blunt`, so a bullet bleeds as sharp.
-  `BuildingTargets` prices Bullet at 1,000 ‰ (today `Sharp ? … : blunt` would price it as blunt).
+  (no experience, no `React`). **That is three signatures, not one**: `ApplySwing`'s parameter,
+  `SwingReport.Attacker` (`CombatHooks.cs:45`, non-null today, so every `ISwingListener` must
+  handle null) and `StrikeBuilding`'s attacker (`CombatSystem.Buildings.cs:29`);
+  `DamageReport.Attacker` is already `Pawn?`. Experience goes to Shooting when the armament is
+  ranged, else Melee (`Apply.cs:29`, one line). Friendly fire needs nothing new:
+  `FriendlyFireListener.SwingResolved(in SwingReport)` gives `Thought_AttackedByColonist` to a
+  colonist hit or missed by a colonist exactly as for a blow. A struck colonist retaliates through
+  `React` — a charge on foot, or a return of fire if she holds a gun; a hog rolls its revenge.
+  **Blood must change to read `damageKind != Blunt`**: today `CombatFeedback.BloodSidesOf` and its
+  two neighbours test `== Sharp` (`CombatFeedback.cs:252, 259, 262`), so a bullet would not bleed
+  until P3 changes them. `BuildingTargets` prices Bullet at 1,000 ‰ (today `Sharp ? … : blunt`
+  would price it as blunt). **`RangedRules` never rolls knockback**: `MeleeRules.cs:92-95` gives
+  every non-blunt weapon the sharp knockback chance, which is harmless only because a bullet never
+  goes through `MeleeRules`. **The health line (PR #213) maps `Sharp ? Wound : Bruise`**, so on
+  whichever merges second a bullet must be added to the wound side, or it bruises.
 - **Saved** in its own keyed section, `odyssey.projectiles`, skipped when absent — no format number
   of its own. **Hashed only while non-empty**, the corpse registry's rule, so the registry's
   existence moves no golden; the R0 re-bake is the skill's alone.
-- **Published** as `ProjectileView { Shooter, Start, End, FireTick, ImpactTick, Weapon }` through
+- **Published** as `ProjectileView { Shooter, Target, Start, End, FireTick, ImpactTick, Weapon }`
+  (`Target` added on review, 0 for none, so a hit's streak can end on the drawn body, §4c) through
   `SnapshotWriter.AddProjectile` → `WorldSnapshot.Projectiles`, the `Falling` pattern. **The hit, the
   damage and the end cell are the simulation's; the muzzle, the streak and the flash are
   presentation's.**
@@ -193,7 +220,14 @@ the drawing is not.
 
 `AttackRangedJobDriver` (`Job_AttackRanged`, handle 23) is the melee driver's shape with the
 range-and-sight test where the reach test was. Toils `Approach = 0` and `Aim = 1`; `ToilProgress`
-counts the aim in milliwork (`Rates.Scale` a tick, so a slow colonist aims slowly). Everything it
+counts the aim in milliwork. **Corrected on review**: the first draft said "`Rates.Scale` a tick,
+so a slow colonist aims slowly", but `Rates.Scale` is the constant 1,000 (`Rates.cs:32`) and the
+melee wind-up adds it flat (`AttackMeleeJobDriver.cs:105`), so every colonist would aim alike. The
+aim advances by the pawn's **condition pace** — WS3's innate pace with starvation and rest on it,
+the thing that already slows a hungry colonist's walk — and **not** by a skill curve: Shooting buys
+accuracy (§2a), not speed, as the reference has it. `Pawn.WorkRatePerMille` is the wrong accessor
+(it is keyed on a work type, and there is no shooting work type); R3 names the condition-only one,
+and `RangedDriverTests` holds a starving colonist's aim to longer than a fed one's. Everything it
 decides with is saved — the toil and its progress, `Job.TargetCell`, `Job.WorkTicks`,
 `Job.DestCell` (`ToTheDeath` / `Joining` / −1, the melee constants), and on the pawn `CombatTarget`,
 `NextSwingTick`, `Destination`, `MoveProgress` — and it never reads a path; `LandTheStep` is copied
@@ -222,8 +256,9 @@ verbatim (design 33 §21c). Nothing new is held on the pawn: the bullet in fligh
 - **Fire at will.** One owner of "which attack job": `CombatJobs.AttackJobFor(pawn, ctx)` returns
   `AttackRanged` when `ArmamentOf(pawn).Attack.ranged != null`, else `AttackMelee`; `AttackJob.Fill`,
   `HostilityResponses.Fill`, `DraftedThinkNode`, `HandleOrderAttack` and the knockback re-issue all
-  call it. `Ranged.NearestTargetInSight(ctx, me, armament)` is one pass over the pawns —
-  `Melee.IsThreatTo` for a colonist, standing colonists for a bandit — within `rangeMm²`, nearest by
+  call it (`CombatJobs`, `AttackJobFor`, `CanBreakBuildings` and `Ranged` are **new**; nothing by
+  those names exists today). `Ranged.NearestTargetInSight(ctx, me, armament)` is one pass over the
+  pawns — `Melee.IsThreatTo` for a colonist, standing colonists for a bandit — within `rangeMm²`, nearest by
   squared millimetres, ties to the lower id, **the line walked only for a candidate nearer than the
   best so far** (the `DangerTo` bound), so the walks are bounded by the hostiles in range.
   `Melee.HoldTarget` for a gun-holder: (1) a threat in reach, unchanged, fired at point-blank; (2)
@@ -241,26 +276,51 @@ verbatim (design 33 §21c). Nothing new is held on the pawn: the bullet in fligh
   `TickBuilding` — stand in range with a line to the struck cell, bullet to the anchor,
   `StrikeBuilding` at impact — and lifts the refusal.
 
+### 2e. When a gun cannot be fired (added on review)
+
+Melee has no rule for any of these (`AttackMeleeJobDriver`, `Melee`, `CombatSystem`, `Draft` and
+`WeaponDraw` never mention water, ladders, jumps or loads), because a blow needs only reach. A gun
+needs both hands and a steady stance, so the ranged driver refuses to **start** an aim in each of
+them. An aim already running breaks in the same way as a lost line: back to `Approach`, no
+cooldown spent. Each is one predicate in `StartAim` and one test in `RangedDriverTests`.
+
+| State | Rule | Why |
+|---|---|---|
+| **Swimming** (the swim predicate design 20 uses; not a wading cell) | no aim; the chase walks on toward the first dry boundary with a line | both hands are in the water, and the float pose (design 20) has nowhere to put a gun |
+| **On a ladder or mid-jump** (a step in flight) | already covered: an aim starts only at a step boundary (§2d) | stated so nobody "fixes" it by letting the aim start mid-step |
+| **Carrying a load** | the load goes down first — the carry's own drop (`DropCarried`), then the aim | both hands; the carry (design 24) already owns putting a load down |
+| **Downed, asleep, stunned** | the job ends (downed, asleep) or the aim is lost (stunned, design 33 §5j) — melee's rules unchanged | |
+| **The target** swimming, on a ladder, mid-jump | can be shot: the line is walked to the cell it is in | only the shooter needs a stance |
+
 ## 3. Contracts
 
 ### 3a. Handles, claimed once (R0)
 
 Every table below is append-only and a save contract, so all of them are extended in one commit,
-the combat line's rule:
+the combat line's rule.
+
+**The numbers are the next free values on `main` on 2026-09-25, and three open PRs want the same
+ones** (checked on review): #213 (health) claims `JobHandle` 23 `Tend`, `ItemHandle` 11 `Medkit`,
+`SkillIndex` 6 `Medicine` and hash bit 22; #184 (medical supplies) claims `Treat` 23, `Patient` 24,
+`MedicalSupplies` 11, `Medicine` 6 and hash bit 22; #223 (forage) claims `Forage` 23, `Berries` 11
+and `Mushrooms` 12; #215 (traits) claims hash bits 22 and 23. None bumps the save format. **So R0
+takes the next free value at the moment it merges, grepped then, not the number written here** —
+whichever of those lands first moves this line's numbers up, and the table below is corrected in
+R0's own commit. The names do not move.
 
 | Table | Append | Where |
 |---|---|---|
 | `JobHandle` / `JobIndex` / `Jobs.xml` / `BuildDrivers` | 23 `AttackRanged` (`Job_AttackRanged`); above `JobSystem.HashedAlways`, so no golden moves until it runs | `Sim.Contracts/Catalogue.cs`, `PawnContent.cs`, `PawnRegistry.cs` |
 | `ItemHandle` | 11 `Pistol` (`Item_Pistol`, category Weapons, stack 1); the label is the registry's, `ui.item.pistol` = **Sidearm** — code says `Pistol`, every screen says what the CSV says | `Catalogue.cs`, `Items.xml`, `Hud/ItemLabels.cs` |
-| `SkillIndex` | 6 `Shooting` (`Skill_Shooting`); `SkillIndex.Names` gains `"shooting"`; `CombatContractTests` 6 → 7 | `PawnContent.cs`, `Skills.xml` |
+| `SkillIndex` | 6 `Shooting` (`Skill_Shooting`); `SkillIndex.Names` gains `"shooting"`; `CombatContractTests` skill count 6 → 7, **and its `JobHandle.Count` 23 → 24 and `ItemHandle.Count` 11 → 12** (`CombatContractTests.cs:77, 79, 84`) | `PawnContent.cs`, `Skills.xml` |
 | `AttackStyle` / `DamageKind` | `Pistol` = 4 / `Bullet` = 2 | `CombatDef.cs` |
 | `CombatEventKind` / `PawnGesture` | `Shot` = 13 / `Fire` = 5 | `Sim.Contracts/Views.cs` |
-| `PawnPurpose` | `RangedHit`, `RangedDamage`, `RangedScatter`, `RangedIntercept` — the next four SHA-256 round constants after `Knockback`; grep before claiming | `PawnContent.cs` |
+| `PawnPurpose` | `RangedHit`, `RangedDamage`, `RangedScatter`, `RangedIntercept`. **Corrected on review**: the first draft said "the next four SHA-256 round constants after `Knockback`", but `Knockback` (K9) is not the last — `Jump` (K10, `PawnContent.cs:1624`) and `WeatherSystem`'s two (K14, K15, `WeatherSystem.cs:13, 16`) are taken, and #213 claims K11. The free ones today are **K12 `0x72BE_5D74`, K13 `0x80DE_B1FE`, K16 `0xE49B_69C1`, K17 `0xEFBE_4786`**; grep every branch again at R0. (#213's own `HitRegion = 0x2431_85BE` collides with `main`'s `Jump` — reported to that line, not ours to fix.) | `PawnContent.cs` |
 | `GridSize` | `CellSizeXZMm = 2500`, `CellSizeYMm = 3000` — the first simulation-side owner of ADR 0002's numbers; `CellSizeHasOneOwnerTests` holds `CellMetrics` to them (the `HopPriceHasOneOwnerTests` pattern) | `Sim.Contracts` |
-| Save format | **9 → 10.** The skill arrays are length-prefixed and the loader clamps, so a seventh skill needs no bump for layout; the bump guards one thing — `if (FormatVersion < 10 && pawn.IsPerson) RollStartingSkills()` on load, so a colonist from an older file is dealt her Shooting level once. `RollStartingSkills` draws in index order and skips a skill already holding experience, so the first six deals are unchanged and the re-deal is idempotent. **Written into `SaveFormat`'s remark so nobody tidies the guard away and re-rolls on every load** | `SaveFormat.cs`, `PawnRegistry.Load` |
+| Save format | **9 → 10.** The skill arrays are length-prefixed and the loader clamps, so a seventh skill needs no bump for layout; the bump guards one thing — `if (FormatVersion < 10 && pawn.IsPerson) RollStartingSkills()` on load, so a colonist from an older file is dealt her Shooting level once. `RollStartingSkills` draws in index order and skips a skill already holding experience (`Pawn.cs:925-952`), so the first six deals are unchanged and the re-deal is idempotent. **Passions are not re-dealt on load**, so a colonist from an older save has no Shooting passion; accepted — dealing one would need its own guarded roll, and a passion is a thing a player notices appearing. **Written into `SaveFormat`'s remark so nobody tidies the guard away and re-rolls on every load** | `SaveFormat.cs`, `PawnRegistry.Load` |
 | Save section | `odyssey.projectiles`, keyed and skipped when absent; hashed only while non-empty | `ColonyWorld.SaveComponents`, `ColonyComposition` |
 | Registry CSVs | `ui.status.shooting`, `ui.debug.spawnpistol` ("Spawn sidearm"), `ui.debug.spawngunman` ("Spawn pistol bandit"); icon-map gap rows; wiki and `Registry.g.cs` rebuilt in the same commit. `ui.item.pistol` and `ui.skill.shooting` already exist | `docs/design/icon-keys.csv`, `icon-map.csv` |
-| Presentation catalogue | `ModuleIds.ItemPistol` appended to `ItemModules` (order = `ItemIndex`; `ModuleIdTests` holds it to `ItemIndex.Count`); four **empty** clip rows `CombatPistolAim`, `CombatPistolFire`, `CombatPistolDraw`, `CombatPistolHolster` | `ModuleCatalogue.cs`, `PlayScene.cs` |
+| Presentation catalogue | `ModuleIds.ItemPistol` appended to `ItemModules` (order = `ItemIndex`; `ModuleIdTests` holds it to `ItemIndex.Count`); four **empty** clip rows. **Corrected on review**: they are not all `CombatRows`. `CombatPistolAim` and `CombatPistolFire` are `CombatRows`, with two new `CombatRole` values and their `CombatPose.RowOf` entries (`CombatPose.cs:197`); `CombatPistolDraw` and `CombatPistolHolster` go in **`SheathRows`** beside the sword's draw and sheathe (`ModuleCatalogue.cs:789-807`, which says so), picked by `SheathClipFor` (`Sheath.cs:139`) by style (§4b) | `ModuleCatalogue.cs`, `PlayScene.cs`, `CombatPose.cs`, `Sheath.cs` |
 
 ### 3b. Defs and every number
 
@@ -312,12 +372,14 @@ order line mean an order for a shooter too.
 (the swing clock survives an aim) · `Apply.cs:29-30` (skill by armament; `Pawn?`) · `Apply.cs:242`
 `FightingBeside` (a ranged job with its target in sight) · `Knockback.cs:141, 159, 171` (re-issue by
 `AttackJobFor`) · `Melee.IsAttacking:47`, `IsInAnAttack:237`, `ColonistUnderAttackBy`,
-`HoldTarget:116-153` · `CombatThinkNodes.AttackJob.Fill:33-59`, `SelfDefence:108` ·
+`HoldTarget:116-153` · `CombatThinkNodes.AttackJob.Fill:33-59`, `SelfDefence:109` (and `:101`) ·
 `HostilityResponse.cs:91, 116, 132` · `WeaponDraw.TargetNear:57-63` · `MeleeRules.cs:71` (Bullet
 never stuns; dodge 0 for a defender mid-aim) · `BuildingTargets.cs:143` (Bullet ×1) · `Draft.cs:42-51`
 · `JobSystem.Attack.cs:40-63` (accepted when in range and sight **or** reachable; the building
-refusal) · `Pawn.UrgencyPerMille:678` (a shooter runs) · `PawnRegistry.OrderCellOf:650`,
-`OrderTargetOf:670` · `PawnRegistry.Spawn(cell, kind, weaponDef)` + `HandleSpawnPawn` reading
+refusal) · `JobSystem.Attack.cs:83-104` `OrderAttackBuilding` (hard-codes melee at `:89` and `:100`;
+the R3 refusal and R6's lift both land here) · `Pawn.UrgencyPerMille:712-713` (a shooter runs) ·
+`PawnRegistry.OrderCellOf:653`, `OrderTargetOf:673` · `PawnRegistry.Spawn(cell, kind, weaponDef)` — a
+**new overload** beside `Spawn(cell)` `:57` and `Spawn(cell, kind)` `:67` — + `HandleSpawnPawn` (`:134`) reading
 `intent.B` as `weaponDef + 1` (0 = the kind's own table) — the debug pistol bandit with no new kind:
 `PawnOutfit.Bandit` is keyed on `Person | Hostile`, so it keeps its helmet and vest · `PawnContext`
 (`Projectiles`, `RangedRules`) · `ColonyComposition` (build, hash, contribute) · `SaveFormat` and
@@ -329,17 +391,63 @@ weapon block is in its lottery — a test, not a change.
 `PawnFigureDirector.Combat.cs` `PlaysWorkStroke` (excludes the new job) · `CombatPose.SwingRole` /
 `StyleFor` (`Pistol` → the aim and fire roles) · `CombatFeedback.BloodSidesOf` (`!= Blunt`) and
 `Handle(Shot)` (the sound from the shooter's feet) · `SoundIds.ForCombat(Shot)` · `CombatSoundTiming`
-(a shot schedules no cue; it plays on its frame) · `CombatOrders.IsWeapon(Pistol)` · `JobLabels` row
-23 · `SkillCatalogue` live row · `DebugDirector` two rows · `WeaponProfileBake.Rows` · new files
+(a shot schedules no cue; it plays on its frame) · `SoundIds.CombatShot` / `CombatShotFar` and their
+two `AudioSetup` rows, plus `normalize = false` on the gunshot's import (§4c-bis) ·
+`CombatOrders.IsWeapon(Pistol)` · `JobLabels` row
+23 · `SkillCatalogue` live row (the **sixth**: construction, mining, growing, cutting and melee are live
+today, and `ui.skill.shooting` is marked `NotSimulated, "no combat"` at `SkillCatalogue.cs:114-129`) ·
+`DebugDirector` two rows · `WeaponProfileBake.Rows` · new files
 `PawnFigureDirector.Aim.cs` (or a partial beside `Combat.cs`) and `Presentation/World/ProjectileDirector.cs`.
 
 ## 4. Presentation
 
 ### 4a. The prop (P1)
 
-`SM_Wep_Pistol_01` on the pistol's own catalogue row, `prefabUnder` pinned to the Sci-Fi City
-folder (Battle Royale sorts first on a shared name), ground scale as the four weapons; the same row
-is the ground item and the held prop. **`FitPistol`**, chosen when `WeaponStyles[def] == Pistol`: the
+**POLYGON Battle Royale's `SM_Wep_Pistol_Heavy_01`** (owner, 2026-09-25: *"can we confirm we can
+use the pistol from the synty battle royale as the prop for gun"* — **confirmed**, measured below).
+The first draft named Sci-Fi City's `SM_Wep_Pistol_01` and said to pin it because "Battle Royale
+sorts first on a shared name"; that was false — Battle Royale ships **no** `SM_Wep_Pistol_01`
+(checked on review).
+
+**What Battle Royale offers**, read from the FBX geometry on 2026-09-25 (the reader calibrated
+against Sci-Fi City's pistol, which the committed inventory measures at 0.06 × 0.28 × 0.38 m and the
+reader at 0.062 × 0.281 × 0.378; Battle Royale was imported on 2026-09-22 and is not in
+`synty-inventory.csv` yet):
+
+| Prefab | Size (w × h × l) | Parts | Reads as |
+|---|---|---|---|
+| **`SM_Wep_Pistol_Heavy_01`** | 0.046 × 0.21 × 0.39 m | 5: frame, **slide**, magazine, trigger, hammer | a semi-automatic sidearm — **the pick** |
+| `SM_Wep_Pistol_Revolver_01` | 0.055 × 0.21 × 0.47 m | 11 (cylinder and six chambers) | a long revolver — the revolver of §6, later |
+| `SM_Wep_Revolver_Snub_01` | 0.055 × 0.18 × 0.26 m | 11 | a snub revolver |
+| `SM_Wep_Pistol_Flare_01` | — | — | a flare gun, not a weapon |
+
+The pick's facts, which the fit and the tracer depend on:
+
+- **Axes and pivot are the Sci-Fi pistol's convention**, so `FitPistol` is written once for both:
+  barrel along **+Z** (−0.094 to +0.296 m), grip down **−Y** (to −0.109 m), origin at the grip
+  behind the trigger, width along X (±0.023 m). The **muzzle** is at about **(0, 0.07, 0.296) m** in
+  the prefab's frame — the slide's front face at the bore's height, read off the slide mesh
+  (y 0.036–0.101, z to 0.250) and the frame (z to 0.296). P1 measures it off the drawn mesh as a
+  socket rather than trusting this number (P11), and the tracer and flash start there.
+- **One material, `PolygonBattleRoyale_Wep_01`**, on all five parts: the same Shader Graph
+  (`PolygonGeneric`'s `Generic_Basic`) as the melee weapons' `PolygonBattleRoyale_01_A`, so
+  `SyntyInstancingKeepAlive` already keeps its instanced variant for the player build. It is a
+  second material — the weapons atlas, `Textures/Weapons/Wep_Skin_01..05` — so a pistol on the
+  ground is one more instanced bucket, not a new shader.
+- **Five renderers in the held prop**, so a held pistol is five draws. Bounded by the 64-figure
+  ceiling (320 at most, and far fewer in any real fight); the far form draws no weapon. If P4 finds
+  it matters, the parts are baked into one mesh at load (they share the material).
+- **The slide is its own part**, `SM_Wep_Pistol_Heavy_Slide_01` — which buys a detail for nothing:
+  the slide cycles back ~2 cm and returns over 60 ms on `Fire` (§4b). Found by its name, so it falls
+  back to no cycling on any other prop.
+- **The ground scale is the four weapons' ×1.5**, and `prefabName` is unique across every pack, so
+  no `prefabUnder` is needed; it is pinned to `PolygonBattleRoyale` anyway so a future pack with the
+  same name cannot move it (the prefix match `MeadowFolder` already uses, `PlayScene.cs:1338`). The
+  same row is the ground item and the held prop.
+- **Licensed, so the usual rule**: the simulation and its tests never see it; without the pack the
+  pistol draws as the placeholder every item has, and `WeaponPropTests`' pistol arm ignores itself.
+
+**`FitPistol`**, chosen when `WeaponStyles[def] == Pistol`: the
 barrel is the long bounds axis pointed where the fist points, the grip is the second axis turned
 down the forearm's up, the palm at `WeaponGripFraction` along the **grip** rather than the barrel.
 `FitWeapon`'s blade rule would seat the barrel along the forearm and the palm on the slide.
@@ -376,21 +484,71 @@ absolutely each frame (`Tools.cs`'s rule).
   starting values.
 - **Draw and holster.** `WeaponSheath.Step` and `PoseSheath` drive the pistol as a sword — the
   two-second hold, the draft's instant put-away — but **the sheath rows are chosen by style**: the
-  pistol rows are empty, so a computed draw plays: right hand to the holster over 0.25 s, the prop
-  re-parented at the grasp instant (the sword draw's "hand on hilt" moment), then the arc up into
-  the aim over 0.35 s — **0.6 s** in all; holster the reverse at **0.8 s**, slower because nothing
+  pistol rows are empty, so a computed draw plays: right hand to the holster over **0.15 s**, the
+  prop re-parented at the grasp instant (the sword draw's "hand on hilt" moment), then the arc up
+  over **0.30 s** — **0.45 s** in all; holster the reverse at **0.8 s**, slower because nothing
   waits on it. The gun changes parent at the grasp instant and at no other time. Without this
   keying a checkout with the sword pack plays `A_Draw_Sword` on a pistol.
-- **The clip seam** (the owner's "both"). `ModuleIds.CombatPistolAim / Fire / Draw / Holster` are
-  declared in `ModuleIds.CombatRows` and `AddCombatRows` with no clips; `CombatClip(role)` already
-  returns null for an empty row, so the computed path takes over exactly as `PoseSheath` snaps
-  without the sword clips today. When a pack arrives, filling the rows is a `PlayScene` edit and a
+  **Corrected on review — the draw must finish inside the first aim.** The first draft's 0.6 s draw
+  was longer than the 0.5 s aim (30 ticks), and a colonist who draws *because* a target came near
+  (`WeaponDraw.TargetNear`) starts her aim on the same tick, so her first shot would have fired
+  with the gun still at her hip. So: the draw is 0.45 s; the arc's last beat **is** the aim's
+  ease-in (the aim weight starts rising at the grasp, not after the draw), so the two are one
+  motion; and **a `Fire` arriving mid-draw snaps the pose to aimed on that frame** — the flash
+  comes from wherever the muzzle is, and a gun is never seen firing from the holster. At 2× and 3×
+  the 0.5 s aim is 0.25 s and 0.17 s of real time and the draw (real time) cannot keep up; the snap
+  is what makes that honest rather than broken. `CombatDrawnTests` holds a `Fire` mid-draw to
+  "aimed that frame".
+- **Carrying the gun drawn, not aiming** (added on review — the first draft had a draw, an aim and
+  a holster but no pose for the time between). `PawnFlags.Drawn` and not in `Aim`: walking the
+  chase, standing through the cooldown with no line, holding position. **Low ready**: the pistol in
+  the right hand only, the barrel 40° down and forward, the forearm across the body, over the
+  graph's gait — the pose the melee weapons' drawn carry already has a slot for (`FitWeapon`'s
+  held seat, with `FitPistol` deciding the angle). The off hand is free. From 48° above it reads
+  as *armed, not shooting*, which is what the player needs to tell apart. Between two shots at
+  the same target, with the line still open, she **stays in the aim stance** through the cooldown
+  (`WorkFocus` holds, §2d); low ready is only for when she has nothing to shoot at.
+- **Tracking a moving target** (added on review). The aim point is `WorkCell`, which the driver
+  moves cell to cell as the target walks (§2d), so aimed straight at it the figure would snap
+  2.5 m at a time. The aim point is **the target figure's drawn chest** when it has a figure (the
+  director can resolve the target: `WorkCell` names the cell, and the figure standing on or
+  stepping out of it is the one), else the cell centre at chest height, **followed through the
+  same critically damped spring as the recoil at 120 ms**, so the arms swing smoothly after a
+  walking target and settle on a standing one.
+- **The slide** (added on review; the Battle Royale pistol's own part, §4a): on `Fire` the slide
+  child moves back 2 cm along the barrel and returns over 60 ms. Visible only zoomed in (10–20 m),
+  free, and falls back to nothing on a prop without a part of that name.
+- **Hit, down and death** need nothing new: a bullet's `Hit` goes through the same `CombatEvent`
+  the blow does, so the flinch, the hit reaction, the down and the corpse all play as for melee.
+  **No knockback** (stun 0, §2c) and **no critical**, so the knockback and critical reactions
+  never fire for a bullet. The struck figure's reaction is driven by the event, so it lands on the
+  impact tick, after the flight — not on the shot.
+- **The clip seam** (the owner's "both"). `ModuleIds.CombatPistolAim / Fire` are declared in
+  `ModuleIds.CombatRows` and `ModuleIds.CombatPistolDraw / Holster` in `SheathRows` (§3a), all with
+  no clips; `CombatClip(CombatRole, variant)` and `SheathClipFor` already return null for an empty
+  row, so the computed path takes over exactly as `PoseSheath` snaps without the sword clips today.
+  **Battle Royale ships no animation at all** ("characters set up with Mecanim with no animations
+  included", `e-10` finding 3), so the pistol's pack gives the prop and nothing to move it. When a pack arrives, filling the rows is a `PlayScene` edit and a
   catalogue rebuild (then `CharacterSwatches.Classify`, `docs/lessons.md`). **Before any purchase**,
   the cheapest experiment from `e-10`: one free pistol clip retargeted on to three Synty rigs at the
   height extremes, the sole read with `MeasureSole` — P11 says a third-party Humanoid clip may not
   stand on the floor. Third-party FBX goes under a gitignored folder on `Assets/Synty`'s terms.
-- **Far form** (past the 64-figure ceiling): no weapon and no stance, as today; the tracer still
-  says who is shooting.
+- **Far form** (past the 64-figure ceiling): no weapon and no stance, as today; the tracer and the
+  flash still say who is shooting.
+- **Every state, one table** (so nothing is left for the implementer to invent):
+
+| Sim state | Figure pose | Prop |
+|---|---|---|
+| undrafted, no target near | the graph's own | holstered at the left hip (§4a) |
+| drafted / target near, drawing | computed draw, 0.45 s | hip → right hand at the grasp |
+| drawn, nothing to shoot | **low ready**, over the gait | right hand |
+| `Aim` toil | isosceles aim, easing in over the aim, tracking | right hand, left cupping |
+| `Fire` (gesture / `Shot`) | recoil spring 250 ms; slide 60 ms | right hand, left cupping |
+| between shots, line open | the aim stance held | right hand, left cupping |
+| undrafted, or 2 s with no target | computed holster, 0.8 s | right hand → hip at the grasp |
+| struck, downed, dead | melee's reactions, unchanged | whatever a held sword does in the same state today — P2 copies it, does not decide it |
+| swimming, carrying | the swim / carry pose; no aim (§2e) | whatever a sword does in the same state today |
+| far form | none | none; tracer and flash only |
 
 ### 4c. The tracer, the flash, the impact and the sound (P3)
 
@@ -404,15 +562,45 @@ knowing what is in it (`d-21-projectile-rendering`).
   cell at chest height; end = the end cell at chest height. A streak from `p(t − tail)` to `p(t)`,
   the tail 0.15 of the flight and never under 2 m, width 0.08 m with a **2 px floor** in the vertex
   shader (a thinner additive line vanishes under anti-aliasing at the far zoom), emissive additive,
-  `ZTest` on, `ZWrite` off. **One matrix per bullet into one bucket, one instanced draw per frame**
-  through the `GatherCellPlate` machinery — already written, already counted in `DrawCalls`, split
-  at `MaxInstancesPerCall`; no allocation after the first frame. **Alternative, ranked first by
-  `d-21` for the general case:** the rain pass's own pattern — `RenderPrimitives` from a segment
-  buffer with the lerp in the vertex shader; the same one call, taken only if the rain shader's
-  buffer layout can carry a second segment type, else the bucket is the same picture on code that
-  exists. **Explicit render-queue values** so water, tracers and rain are never compared by distance
+  `ZTest` on, `ZWrite` off. **One matrix per bullet into one bucket, one instanced draw per frame**,
+  counted in `DrawCalls` and split at `MaxInstancesPerCall` (511); no allocation after the first
+  frame. **Corrected on review**: the first draft said "through the `GatherCellPlate` machinery —
+  already written". It is not reusable: `ChunkRenderer.GatherCellPlate` (`ChunkRenderer.cs:3953`)
+  is private, keyed by colour, and draws `UnitCube` with the opaque `BracketMaterial`. The
+  director **copies its pattern** (a pooled matrix array per material, one
+  `RenderMeshInstanced` per bucket) on its own quad and its own additive shader,
+  `Odyssey/Tracer`, committed, so it draws on a checkout with no pack. **The alternative**, ranked
+  first by `d-21` for the general case, was "the rain pass's own pattern — `RenderPrimitives` from
+  a segment buffer". **The rain pass has no segment buffer** (`RainDirector.cs:158, 163`: each drop
+  is placed in the vertex shader from its instance id and a clock), so that alternative is a new
+  buffer path of its own, not a reuse; with at most one bullet per armed pawn in flight (below) the
+  bucket is the cheaper thing to write and the same one call. **Explicit render-queue values** so water, tracers and rain are never compared by distance
   (P17): a batch sorts as one object by one bounds, and "let URP sort it" is the tie waiting to
   happen.
+  Rain is `Transparent+50` (`OdysseyRain.shader:44`); the tracer and flash take `Transparent+60`,
+  above it, so a tracer through rain is never hidden by the rain batch's single sort distance.
+- **A hit ends on the drawn body** (added on review — the owner's *"hits must visibly connect with
+  the target"*). The end cell's centre is where the numbers say the target is, but a walking
+  figure is drawn up to a cell off it, so a streak ending at the cell centre would stop in the air
+  beside the body. `ProjectileView` therefore carries **`Target`** (0 for none) beside the end
+  cell. While the target's figure stands on or is stepping out of `End`, the streak's end point
+  is that figure's **drawn chest, re-read every frame**, so the streak arrives at the body. On the
+  impact tick the simulation's `Hit` or `Miss` decides the rest: a `Hit` stops the streak there
+  and puts blood on that body; a `Miss` (the target stepped off the line, §2c) lets the streak run
+  on to the end cell, past the body — which is the near miss the owner asked to see.
+- **A streak is never shorter-lived than the eye** (added on review). A point-blank shot at
+  1,000 mm a tick flies 3 ticks — 50 ms at 1× and 17 ms, **one frame**, at 3×. The streak at the
+  moment of impact is kept as an **afterimage** at its final position, fading over **0.08 s of real
+  time** after the impact tick, so every shot is seen at every speed. It never extends the bullet:
+  it is drawn from the same bucket and holds no simulation state.
+- **Paused, the bullet hangs.** The lerp is `FallArc.Progress(tick, alpha, …)`, and alpha stops
+  with the clock, so a paused world shows every bullet mid-air — a free "bullet time" the player
+  can inspect. The flash (4 ticks) hangs with it; the afterimage fades in real time, so it
+  finishes even when paused.
+- **How many at once.** One shooter can have at most one bullet in flight: the longest flight is
+  26 m / 1,000 mm = 26 ticks and a pistol fires at most every 60 ticks (the cooldown counts from
+  the aim's start, §2d). So the bucket is
+  bounded by the armed pawns — well under one `MaxInstancesPerCall` for any colony there is.
 - **Cross-layer rule.** A bullet is drawn when **either** end's layer is inside the drawn band, and
   the streak is **clipped to the band's vertical extent**: a bullet from a hidden storey enters at
   the band's ceiling plane; one going into an undrawn cellar leaves at its floor plane. A ghosted
@@ -424,7 +612,15 @@ knowing what is in it (`d-21-projectile-rendering`).
 - **Muzzle flash.** On the `Shot` event, a camera-facing quad at the barrel end (the chest centre
   without a figure) for **4 ticks**, in the same bucket with a second material; a `FlashOf(pawn,
   until)` list on the director, bounded by figures. **No light in the first cut** — the one term that
-  scales with pixels at 4K; measure ten lit against ten unlit before adding it.
+  scales with pixels at 4K; measure ten lit against ten unlit before adding it. **The packs' own
+  effects were looked at and not taken for the first cut** (review): Battle Royale ships
+  `Bullet_Trail_FX`, `GunShot_Smoke_FX`, `Bullet_Shell_FX` and `BloodSplat_FX`, and Particle FX
+  ships `FX_Gunshot_01` and `FX_Gunshot_BarrelSmoke_01`. Each is a `ParticleSystem` on a
+  GameObject — a pooled instance per shot, a draw per system, and a licensed dependency the art-free
+  checkout must fall back from — where the bucket is one call and committed. They are the P3 look
+  experiment: one contact shot of our flash against `FX_Gunshot_01` at 20 m and 60 m, the owner
+  picks, and a pack effect, if chosen, plays **only** within the near-sound distance (§4c-bis) with
+  the bucket as the fallback.
 - **Impact.** On a `Hit` or `Miss` whose weapon is a gun: ground → `ChipDirector.Throw` with a new
   `ChipRecipe.Dust` (many, tiny, short, earth-coloured); a body → the existing blood spurt, its
   direction from the shooter's feet, which `CombatFeedback` already computes for any distance; a
@@ -433,18 +629,95 @@ knowing what is in it (`d-21-projectile-rendering`).
   dust lands there rather than on the body, and the sound at that cell is the "bullet by" rather than
   the thud. A hit is the streak *stopping* on the body plus blood plus the hit sound; hit and miss
   diverge on the tick the simulation decided them. **No shell**: under a pixel at this camera.
-- **Sound.** `SoundIds.CombatShot = "combat.shot"` and an `AudioSetup` row, played on the `Shot`
-  frame from the shooter's feet (`Handle` special-cases `Shot`); the impact keeps the thud (body,
-  building) and `CombatMiss` (ground) until the owner asks for a ricochet. **The clip is the owner's
-  to source and license** (`docs/reference/audio-sourcing.md`); the row ships silent until then, as
-  `CombatMiss` does today. `CombatSoundTests`' loudest-sample assertion extends to it.
+- **Sound** — §4c-bis. The impact keeps the thud (body, building) and `CombatMiss` (ground) until
+  the owner asks for a ricochet; a near miss's "bullet by" is `CombatMiss` at the scatter cell,
+  which is silent today, as it is for a dodged blow.
+
+### 4c-bis. The gunshot (added on review, 2026-09-25)
+
+The owner supplied the recording on 2026-09-25 — `freesound_community-single-pistol-gunshot-33-37187.mp3`
+(Pixabay, Pixabay Content License, the owner to confirm, as for every clip since the draft) — with
+*"blend this into the environment and process it for every gun shot (and give it some variance)"*.
+**It is baked and committed in this PR**; wiring it to the `Shot` event is P3, after approval, and
+until then nothing plays it.
+
+**The bake**, `tools/audio/bake_gunshot.sh`, every step measured and argued in its header:
+
+- **The source is brick-walled**: −6 LUFS integrated, +4.3 dBTP, a 200 ms plateau at 0 dBFS RMS and
+  4,082 samples at or over full scale. It is taken down 12 dB in float before anything else, so
+  nothing clips it twice; high-passed at 60 Hz (a DC offset and rumble); cut hard 2 ms before the
+  onset, so the report starts **within 7 ms of the first sample** on every near take and plays on
+  the `Shot` frame with no scheduling. The loudest 10 ms is *not* a timing constant (it wanders
+  across the plateau take to take), unlike the melee sounds; `CombatSoundTiming` schedules nothing
+  for a shot.
+- **Blended into the environment.** The recording is dry and close — a sound effect over the
+  world rather than a shot fired in it. Each take is the dry report plus an **outdoor space**: a
+  diffuse tail convolved from a synthesised impulse (pink noise decaying ~48 dB a second, 180 Hz –
+  3.2 kHz, 22 ms pre-delay for the ground) and one soft **slapback at 140 ms**, a treeline or a
+  terrace riser ~24 m off. No room: the colony is outdoors.
+- **Two distances, as two sounds**, because the director has **no per-voice filter** and a rolloff
+  curve can only make a sound quieter, never duller:
+
+  | Sound | Takes | What it is | Level (max momentary) |
+  |---|---|---|---|
+  | `combat-shot` | 3, at 1.00 / 0.95 / 1.06 speed | the dry crack forward, the space 13 dB under it | −14 LUFS, −3 dBFS peak (limited) |
+  | `combat-shot-far` | 2, at 1.00 / 0.96 | low-passed at 1.6 kHz (air takes a report's top within 100 m), the space only 3 dB under it, blooming 0.10–0.15 s after the onset | −20 LUFS |
+
+  −14 is the loudest thing in the game on purpose: 4.5 dB over the melee thud, 1 dB over the
+  critical slice's target.
+- **Variance, three layers**: pitch baked into the takes (pitch is most of what tells two reports
+  apart — the pick's and the swim's trick); **a different impulse per take**, so the tails differ
+  too and three shots are three shots, not one sample three times; and the director's per-play
+  pitch and volume variance on top.
+
+**The wiring (P3)**:
+
+| | `CombatShot` (`"combat.shot"`) | `CombatShotFar` (`"combat.shot-far"`) |
+|---|---|---|
+| Played when | the shooter is **within 70 m** of the listener | beyond 70 m |
+| Clips | `Variants("combat-shot")` | `Variants("combat-shot-far")` |
+| Volume / variance | 0.85, ±0.12, pitch ±0.04 | 0.8, ±0.10, pitch ±0.03 |
+| Min / max distance | 20 / 150 m | 50 / 400 m |
+| Priority | 90 — above every blow (100–140), below the alerts | 120 |
+| Cooldown | 0.03 s: two shots on one frame are one report; a volley a frame apart is a volley | 0.06 s |
+| Import | PCM, decompress on load, mono, **`normalize = false`** | same |
+
+`CombatFeedback.Handle` special-cases `Shot`: it measures the shooter's distance to the listener
+once and offers one of the two. **70 m** is the camera's own middle: it starts at 48 m and zooms
+10–160 m, so a player zoomed in on a fight hears the crack and one zoomed out over the colony hears
+the thump. A hard switch is honest here because each shot is a new sound. Nothing is faded
+between them.
+
+**The voice budget.** Sixteen pooled voices serve the colony (`AudioDirector.VoiceCount`). Ten
+shooters firing once a second with a 1.4 s tail keep about fourteen reports sounding at once. The
+director already steals by priority, and the gunshot's 90 means a fight steals from the chop
+and the carry rather than the other way round. **P4 counts `VoiceStarved` and `CooldownSkipped`
+in the gunfight arm** before anybody calls sixteen enough.
+
+**Two seams, recorded, not built**: a shot **under a roof** wants a room, not a meadow — the
+shelter rule (`SkyColumns`, design 43 §6a) already answers "is this column covered", and a third
+take set is one more bake with a short, bright impulse. And **nothing ducks for it or under it**:
+no bed is lowered for a shot and the rain does not muffle one — a fight in a storm is a playtest
+question, not a rule written in advance.
+
+**Found on the way, and not this unit's to fix: Unity is peak-normalising most of the game's
+mono sounds.** Every clip `.meta` except the six carry sounds and the menu bed has
+`normalize: 1`, `AudioSetup.Apply` never sets `importer.normalize`, and Unity's importer
+normalises the downmix when `forceToMono` is on, which `AudioSetup`'s own comment on the alerts
+already says "would throw away the loudness match the bake exists to produce". So the combat
+sounds' careful −21 / −18.5 / −16.8 LUFS ladder (`bake_combat.sh`), the swim stroke's −24 and the
+draft's level are each raised to a 0 dBFS peak on import. The gunshot's metas are committed with
+`normalize: 0`. The one-line fix for the rest (`importer.normalize = false` in `Apply`) **changes
+how loud every chop, blow and stroke is** and wants a listen, so it is its own small PR, not this
+one. **Unverified in Unity**: the evidence is the metas and the importer's documented behaviour;
+the check is `AudioClip.GetData` on `combat-hit` against the WAV's own −3.0 dBFS peak.
 
 ### 4d. Interface
 
 Right-click on a hostile from a gun-holder already routes through `CombatOrders.Route` →
 `OrderAttack`; `HandleOrderAttack` accepts a target in sight *or* reachable. The lock-on ring and the
 order line work unchanged once `OrderTargetOf` / `OrderCellOf` know the job. The skills pane gets
-its fifth live row through `SkillCatalogue` (all fourteen rows are listed whatever is live, so no
+its sixth live row through `SkillCatalogue` (all fourteen rows are listed whatever is live, so no
 layout moves). Debug: *Spawn sidearm*, *Spawn pistol bandit*; the Arm row already deals it.
 **Recorded limitation**: `PawnUnderRay` picks only pawns at or above the clicked cell's layer, so a
 bandit on a roof above the slice cannot be right-clicked until the slice is raised (fire at will
@@ -517,15 +790,23 @@ empty; `HudFontTests` on the new literals.
 `WeaponProfileTests`; `ModuleIdTests` (twelve items); `CombatDrawnTests` — the pistol rows resolve or
 fall back, `StyleFor(Pistol)` → the aim role, a `Fire` gesture starts the recoil and it decays to
 rest within 0.3 s, **the aim pitches down for a target a layer below** (a bone check on a rig,
-ignored without the art); `CellSizeHasOneOwnerTests`; `ProjectileDirectorTests` — N bullets are one
-draw call, the cross-layer clip (a bullet from a hidden storey starts at the band's ceiling; one to
-an undrawn cellar ends at its floor; a bullet with neither end drawn draws nothing).
+ignored without the art); **a `Fire` mid-draw snaps the pose to aimed on that frame**; **drawn and
+not aiming is low ready, not the aim**; **the aim point follows a walking target without a 2.5 m
+snap** (the spring, fed a scripted target path); **the slide cycles and returns within 60 ms, and a
+prop with no slide part does nothing**; `CellSizeHasOneOwnerTests`; `ProjectileDirectorTests` — N
+bullets are one draw call, the cross-layer clip (a bullet from a hidden storey starts at the band's
+ceiling; one to an undrawn cellar ends at its floor; a bullet with neither end drawn draws
+nothing), **a hit's streak ends on the target's drawn chest while it is stepping out of the end
+cell** (control: no target, the cell centre), **a one-tick flight still leaves a streak on screen
+for 0.08 s**, **a paused bullet does not move**. `AudioCatalogueTests` (or its equivalent): both
+shot rows resolve three and two clips, and **every gunshot clip imports with `normalize` off**.
 
 **PlayMode**: `FrameTimeTests.TheFrameWithGunfireInView` — peace, the brawl (existing) and a
 gunfight (ten pistol colonists drafted against ten bandits) in one run; the gunfight timed twice,
 once with `ProjectileDirector.Enabled = false` as the control (the `InstanceCellPlates` pattern);
 **the pass's draw calls ≤ 2 whatever the shooter count** is the structural gate that stays in the
-tier; the timing is `Category("Measurement")`.
+tier; the timing is `Category("Measurement")`. The same arm logs the audio director's
+`VoiceStarved` and `CooldownSkipped` over the gunfight (§4c-bis's voice budget).
 
 **Goldens**: all six move **once, in R0**, and the reason is the hash seeing more — a seventh skill,
 passion and daily-gain slot per colonist, a twelfth item allow-list slot, and each colonist's dealt
@@ -567,6 +848,15 @@ coin · a walk cache behind the symmetric key.
 - **The tracer is charged to Overlays, and this document says so.**
 - **No minimum range.** A gunner with an enemy on the next cell fires; she is not disarmed by
   adjacency.
+- **The draw is shorter than the first aim, and a shot mid-draw snaps to aimed.** Lengthening the
+  draw "because it looks better" puts the first shot out of the holster.
+- **A hit's streak ends on the drawn body, not the cell centre.** The owner's one hard requirement
+  for the look.
+- **The streak's afterimage.** Without it a point-blank shot at 3× is invisible.
+- **The gunshot imports with `normalize` off.** Turning it on raises every take to a 0 dBFS peak
+  and throws away the level the bake set.
+- **Two gunshot sounds by distance.** Collapsing them into one with a longer rolloff makes a
+  distant shot a quiet crack instead of a thump.
 
 ## 8. Open, and recommended for the owner to confirm
 
@@ -579,20 +869,64 @@ Recommended, for the owner to confirm or overrule before R0:
    coin.
 4. No dodge against bullets; no dodge for a pawn mid-aim; no criticals for bullets.
 5. Point-blank fire, no pistol-whip (the reference melees with the gun).
-6. The tracer as one instanced bucket charged to Overlays; the rain-pattern procedural pass as the
-   alternative.
+6. The tracer as one instanced bucket on our own shader, charged to Overlays; a new
+   `RenderPrimitives` buffer path as the alternative (the rain pass has none to share, §4c).
 7. Buildings under fire as R6, after the first playtest; until then a gun-holder ordered at a door
    is refused.
+8. *(Added on review.)* **Battle Royale's `SM_Wep_Pistol_Heavy_01` as the prop** (§4a) — the
+   owner asked for Battle Royale; of its three pistols this is the only semi-automatic.
+9. *(Added on review.)* The aim advances by **condition pace, not skill**: Shooting buys accuracy,
+   not speed (§2d).
+10. *(Added on review.)* **Low ready** between shots with nothing to shoot, the **0.45 s** draw
+    finishing inside the first aim, the **afterimage**, and the **states a gun cannot fire from**
+    (§2e, §4b, §4c).
+11. *(Added on review.)* **The gunshot as baked** (§4c-bis): outdoor space, two distances split at
+    70 m, three near and two far takes, −14 LUFS near. **Listen before approving**: the bake cannot
+    be judged from its numbers.
 
 Open, not settled from the code:
 
 - **Targeting up through a ghosted slice** (§4d).
-- **The gunshot clip** and its licence; whether a ground impact wants its own sound.
-- **Gun animations**: none in any pack; the computed stance ships; the pack experiment gates a
-  purchase (§4b).
+- **The gunshot's licence** — Pixabay Content License, the owner to confirm as for every clip since
+  the draft; whether a ground impact wants its own sound.
+- **Gun animations**: none in any pack (Battle Royale included); the computed stance ships; the pack
+  experiment gates a purchase (§4b).
+- **Unity's importer normalising the existing mono sounds** (§4c-bis): its own small PR, with a
+  listen.
+- **Handle numbers 23 / 11 / 6** race three open PRs (§3a); R0 takes what is free at its merge.
 - **The fire-at-will cost**: bounded on paper; R5 measures it beside the melee control before the
   cadence is called a number.
 - **`PawnFlags` is full**: any later "aiming" or "reloading" bit widens the flags word, which is a
   `PawnView` constructor change every hand-built view in the tests touches.
 - **The debug pistol bandit's weapon deal bypasses `WeaponFor`** (design 42's hash of the pawn); an
   eventual gunman kind restores the one owner.
+
+## 9. Review, 2026-09-25
+
+Reviewed on PR #220 after merging `main` (25 commits behind). Every code claim in §2–§4 was
+checked against the tree — about ninety symbols and twenty cited lines. Most held. What did not,
+and where it is now corrected:
+
+| Claim | Was | Is | Where |
+|---|---|---|---|
+| Design number | 44 | **47** — `main` took 44 (selection highlight); 45 and 46 are on open branches | title |
+| The prop | Sci-Fi City `SM_Wep_Pistol_01`, pinned because "Battle Royale sorts first on a shared name" | **Battle Royale `SM_Wep_Pistol_Heavy_01`**, measured; BR has no `SM_Wep_Pistol_01`, so the reason was false | §4a |
+| `PawnPurpose` salts | "the next four after `Knockback`" | K12, K13, K16, K17 — K10 is `Jump`, K14/K15 are the weather's, K11 is claimed by #213 | §3a |
+| Handles 23 / 11 / 6 | stated as free | free on `main`, claimed by #213, #184 and #223; R0 takes what is free at its merge | §3a |
+| `CombatContractTests` | skill count 6 → 7 | also `JobHandle.Count` 23 → 24 and `ItemHandle.Count` 11 → 12 | §3a |
+| The aim's rate | "`Rates.Scale` a tick, so a slow colonist aims slowly" | `Rates.Scale` is a constant; condition pace, not skill | §2d |
+| Blood for a bullet | "reads `!= Blunt`" (present tense) | reads `== Sharp` today; P3 changes three sites; #213's wound mapping needs the same | §2c |
+| `attacker` nullable | one parameter | three: `ApplySwing`, `SwingReport.Attacker`, `StrikeBuilding` | §2c |
+| Draw and holster clip rows | in `CombatRows` | in `SheathRows`; aim and fire need `CombatRole` values | §3a, §4b |
+| The tracer | "through the `GatherCellPlate` machinery — already written" | private, colour-keyed, opaque cubes; copy the pattern | §4c |
+| The alternative tracer | "the rain pass's segment buffer" | the rain has no segment buffer | §4c |
+| Skills pane | "fifth live row" | sixth | §1, §3f, §4d |
+| Stale lines | `SelfDefence:108`, `UrgencyPerMille:678`, `OrderCellOf:650`, `OrderTargetOf:670` | 109, 712–713, 653, 673; `OrderAttackBuilding` added | §3e |
+
+**Added, because the owner asked that animation, bullets and projectiles be thought through
+before execution**: the states a gun cannot fire from (§2e); the draw finishing inside the first
+aim and the snap on a shot mid-draw, low ready, tracking a moving target, the slide, hit reactions,
+and one table of every state's pose and prop (§4b); a hit that ends on the drawn body, the
+afterimage for short flights, the paused bullet, the in-flight bound, the render queue against the
+rain, and the packs' particle effects as a look experiment rather than a dependency (§4c); and the
+gunshot, supplied, baked and levelled, with its wiring and voice budget (§4c-bis).

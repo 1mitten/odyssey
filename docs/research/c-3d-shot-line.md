@@ -1,7 +1,7 @@
 # A shot line through layers: walking a 3D grid deterministically
 *Lane C (open-source reference code) · 2026-09-25 · capped at 10 searches and 8 reads (9 searches used, one of them a GitHub code search; 8 pages read, plus 7 fetch attempts refused by the egress proxy — RogueBasin, the RimWorld wiki, Sam Driver, Steam, Ludeon, the DF wiki and Red Blob Games — so the roguelike-community and RimWorld material below is from search snippets only and is marked as such)*
 
-> *Coordinator's note, 2026-09-25:* the Cataclysm-DDA source was read directly; the roguelike-community and reference-wiki material is from snippets. Design 44 §2 adopts the supercover walk, the slab read and the lenient corner rule as written here.
+> *Coordinator's note, 2026-09-25:* the Cataclysm-DDA source was read directly; the roguelike-community and reference-wiki material is from snippets. Design 47 §2 adopts the supercover walk, the slab read and the lenient corner rule as written here.
 
 ## Question
 

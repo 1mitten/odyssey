@@ -1,7 +1,7 @@
 # Drawing bullets: tracers, flashes and impacts in URP
 *Lane D (Unity architecture and feasibility) · 2026-09-25 · capped at 12 searches and 10 reads (12 searches and 10 fetch attempts used; 2 fetches returned a page, 8 were blocked by the container's egress proxy, so those findings rest on search excerpts of the page rather than the page)*
 
-> *Coordinator's note, 2026-09-25:* eight of ten page reads were refused by the container's proxy; the confidence line says which findings rest on excerpts. Design 44 §4 takes the instanced bucket first and names this file's procedural pass as the alternative.
+> *Coordinator's note, 2026-09-25:* eight of ten page reads were refused by the container's proxy; the confidence line says which findings rest on excerpts. Design 47 §4 takes the instanced bucket first and names this file's procedural pass as the alternative.
 
 ## Question
 

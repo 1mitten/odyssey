@@ -1,7 +1,7 @@
 # A procedural pistol stance: aim, both hands on the grip, recoil, draw and holster
 *Lane D (Unity architecture and feasibility) · 2026-09-25 · capped at 12 searches and 10 reads (12 searches and 10 read attempts used; 9 of the 10 reads were refused by the network proxy, so those findings are from search summaries, not full pages)*
 
-> *Coordinator's note, 2026-09-25:* nine of ten page reads were refused by the container's proxy; the starting numbers in the recommendation are labelled as extrapolation and design 44 §4 carries them as INVENTED.
+> *Coordinator's note, 2026-09-25:* nine of ten page reads were refused by the container's proxy; the starting numbers in the recommendation are labelled as extrapolation and design 47 §4 carries them as INVENTED.
 
 ## Question
 

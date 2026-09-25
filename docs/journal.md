@@ -12807,7 +12807,7 @@ swatch rectangles (3,026 lines), which `CharacterSwatches.Classify` fills and th
 reads — `docs/lessons.md` already says to run it after. Only the four jump links were wanted, so
 they were grafted into the committed asset by hand and the rebuild thrown away.
 
-## 2026-09-25 — Ranged combat: ground, interview, research and design 44
+## 2026-09-25 — Ranged combat: ground, interview, research and design 47
 
 The owner asked for the step after melee: guns, starting with a basic pistol — holstered like a
 melee weapon, two hands on the grip when ready, a visible aim time, a bullet that lands on the body
@@ -12843,11 +12843,66 @@ hand-rolled distributed aim in the existing post-graph pass, isosceles because i
 recoil a critically damped spring from one duration; and Synty sells no gun animation pack, so
 procedural first, with a three-rig retarget experiment before any purchase.
 
-**Design 44 and `docs/plans/ranged-combat.md`.** What it costs: save format 9 → 10 — the guard
+**Design 47 and `docs/plans/ranged-combat.md`.** What it costs: save format 9 → 10 — the guard
 behind a one-time deal of Shooting to older colonists, since the skill arrays are length-prefixed
 and nothing else needs the bump — and one golden re-bake in R0 for the seventh skill. The projectile
 registry hashes nothing while empty and the new job sits above `HashedAlways`, so no unit after R0
 moves a golden. A downed pawn never takes a stray bullet, which is the one rule that keeps the
 combat gate's invariant (an unordered fight ends in downs, never deaths) true under gunfire. The
 flags byte is full, so the aim stance derives from the published job rather than a new bit. Seven
-recommendations wait on the owner (design 44 §8). **Nothing built.**
+recommendations wait on the owner (design 47 §8). **Nothing built.**
+## 2026-09-25 — Ranged combat reviewed: design 44 becomes 47, the Battle Royale pistol, the gunshot
+
+The owner asked for PR #220 to be reviewed and fixed, for Battle Royale's pistol to be confirmed as
+the prop, and for the animation and the bullets to be thought through in the plan before any code.
+Mid-review they supplied a gunshot: *"blend this into the environment and process it for every gun
+shot (and give it some variance)"*.
+
+**Merged `main` first** (25 commits behind), and that alone found the first fault: `main` had given
+design 44 to the selection highlight, and 45 and 46 were taken on open branches. **Renumbered to 47.**
+
+**Every code claim checked by a subagent against the merged tree**, about ninety symbols. Most held.
+Five did not, and one of them would have cost a save contract: the four `PawnPurpose` salts were to
+be "the next four after `Knockback`", and three of those four are taken — `Jump`, and the weather's
+two. The aim was to be paced by `Rates.Scale`, which is a constant, so every colonist would have
+aimed alike. Blood was described as already reading `!= Blunt`; it reads `== Sharp`, so a bullet
+would not have bled. The draw and holster clip rows were put in `CombatRows`, whose own comment says
+they live in `SheathRows`. And the tracer was to go "through the `GatherCellPlate` machinery,
+already written" — which is private, colour-keyed and draws opaque cubes — with "the rain pass's
+segment buffer" as the alternative, and the rain has no segment buffer. Three open PRs (#213, #184,
+#223) also want job 23, item 11 and skill 6; R0 now takes whatever is free when it merges.
+
+**The pistol.** The draft had pinned Sci-Fi City's `SM_Wep_Pistol_01` "because Battle Royale sorts
+first on a shared name", and Battle Royale has no prefab of that name. Its pistols are the heavy
+semi-automatic, a long revolver, a snub revolver and a flare gun. Battle Royale is not in the committed
+inventory (imported after it), so the sizes were read straight from the FBX geometry. The reader was
+first checked against Sci-Fi City's pistol, which the inventory does have, and agreed to the
+centimetre. The pick is `SM_Wep_Pistol_Heavy_01`: 0.046 × 0.21 × 0.39 m, the Sci-Fi pistol's axis
+and pivot convention, five parts on one material. That material uses the melee weapons' shader, so no
+new instancing work is needed. The slide is its own part, which gives a cycling slide on each shot
+for free.
+
+**Thinking the animation and flight through** turned up five things the draft would have left the
+implementer to invent, two of them visible faults. The draw was 0.6 s against a 0.5 s aim, so a
+colonist drawing because a target came near would have fired from the hip. The draw is now 0.45 s
+and its last beat is the aim's ease-in, and a shot mid-draw snaps to aimed. A hit's streak ended at
+the target cell's centre, so on a walking target it would have stopped in the air beside the body,
+against the owner's one hard requirement. It now ends on the drawn chest. A point-blank shot flies
+three ticks, one frame at 3×, so every streak now keeps a 0.08 s afterimage. The draft also had no
+pose for "drawn, nothing to shoot at" (now low ready), and no rule for swimming, carrying, ladders or
+jumps (now §2e). Design 47 §4b has one table of every state's pose and prop.
+
+**The gunshot.** The source is brick-walled: +4.3 dBTP and 4,082 clipped samples in a 200 ms
+plateau. It was baked in float, 12 dB down before anything else. "Blend into the environment" became
+an outdoor space convolved from a synthesised impulse plus a 140 ms slapback. Because the audio
+director has no per-voice filter, the distance had to be baked too: three near takes and two far ones,
+low-passed and space-forward, picked at 70 m. Variance comes from pitch per take, a different impulse
+per take, and the director's own spread on top. The report starts within 7 ms of the first sample, so
+it plays on the shot's frame with nothing scheduled.
+
+**Found on the way:** every clip meta except the carry sounds and the menu bed has `normalize: 1`, and
+`AudioSetup` never turns it off. By Unity's documented behaviour, most of the game's mono sounds are
+therefore peak-normalised on import, undoing the loudness their bakes set. The gunshot's metas are
+committed with it off. The fix for the rest changes how loud every blow is, so it is its own PR, and
+it is unverified in Unity until somebody reads `GetData` on `combat-hit`.
+

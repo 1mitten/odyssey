@@ -18,7 +18,7 @@ Ensure animations for pulling out gun aiming and holstering and also some recoil
 fires is key."* And, mid-interview: *"also take into account height because projectile weapons can
 fire from many heights - but obviously get inaccurate with distance depending on the gun."*
 
-**Read next:** `docs/design/44-ranged-combat.md` (the design these answers decide),
+**Read next:** `docs/design/47-ranged-combat.md` (the design these answers decide),
 `docs/plans/ranged-combat.md`, and the six research files `a-10-ranged-combat`,
 `a-10-projectile-path`, `c-3d-shot-line`, `d-21-projectile-rendering`,
 `d-22-procedural-aim-and-recoil`, `e-10-gun-animation-packs`.
@@ -103,7 +103,7 @@ seam; a document of its own rather than a section of design 33.
 1. **Real flight against the reference's trigger-decided hit.** In the reference a shot rolled as a
    hit lands wherever the target now stands and the flight is drawn only; here a rolled hit on a
    target that stepped off the line is a miss at the end cell. A report that *"my 76 % shot missed"*
-   is this rule working, not a bug. Design 44 §2c narrows the re-check so a target that walked *into*
+   is this rule working, not a bug. Design 47 §2c narrows the re-check so a target that walked *into*
    the line is still hit.
 2. **Three-dimensional sight from the first commit against its cost.** The walk is a few dozen
    integer reads a shot (`c-3d-shot-line`), but it is a new simulation query whose correctness only
@@ -115,13 +115,27 @@ seam; a document of its own rather than a section of design 33.
    front of another can be hit by her; the reference is balanced on exactly that, and R5 measures the
    count before it is called a number.
 
+## 4a. After the interview (2026-09-25, on the PR)
+
+Two further answers, given while the design was in review, recorded here so the decision table stays
+whole:
+
+| # | Question | Answer |
+|---|---|---|
+| 11 | Which pistol? | **POLYGON Battle Royale's** — *"can we confirm we can use the pistol from the synty battle royale as the prop for gun"*. Confirmed and measured: `SM_Wep_Pistol_Heavy_01` (design 47 §4a). Battle Royale ships no animation, so the prop is all it gives. |
+| 12 | The gunshot sound | **Supplied** — `freesound_community-single-pistol-gunshot-33-37187.mp3`, *"blend this into the environment and process it for every gun shot (and give it some variance)"*. Baked by `tools/audio/bake_gunshot.sh` (design 47 §4c-bis). |
+
+And one instruction about the plan itself: *"make sure all the animations, bullets / projectiles are
+thought out in the plan before execution"* — which is why design 47 gained §2e, §4b's state table
+and the flight rules in §4c on review.
+
 ## 5. What this does not settle
 
-- The seven recommendations design 44 §8 puts to the owner: the exponent hit formula; the invented
+- The seven recommendations design 47 §8 puts to the owner: the exponent hit formula; the invented
   starting numbers (aim 30 ticks, 60 m/s, 26 m, the scatter constant); probabilistic interception
   with a downed pawn never taking a stray; no dodge or criticals against bullets; point-blank fire
   rather than pistol-whipping; the instanced tracer bucket; buildings under fire deferred to R6.
-- **The gunshot sound** — the owner sources and licenses the clip; the row ships silent until then.
+- **The gunshot sound** — supplied (§4a); the owner to confirm the Pixabay licence and listen to the bake.
 - **Targeting up through a ghosted slice** — `PawnUnderRay` picks only pawns at or above the clicked
   cell's layer, so a bandit on a roof above the slice cannot be right-clicked until the slice is
   raised (fire at will still engages it). Admitting a ghosted layer for a target changes what a

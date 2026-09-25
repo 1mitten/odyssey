@@ -1,7 +1,7 @@
 # The reference bullet: flight, miss scatter, interception and line of sight
 *Lane A (RimWorld mechanics) · 2026-09-25 · capped at 12 searches and 10 reads (12 searches and 10 read attempts used; 8 of the 10 reads were refused by the egress proxy — rimworldwiki.com, steamcommunity.com, rimworldbase.com, nexusmods.com and web.archive.org are all blocked from this container — and the other 2 returned nothing on the question. Every number below therefore comes through the search engine's summaries of the wiki and Steam pages rather than from the pages themselves; where a detail is my recollection of the reference and no summary confirmed it, the finding says so.)*
 
-> *Coordinator's note, 2026-09-25:* the container's proxy refused most content hosts, so the findings rest on search excerpts and the confidence line says so. After this ran the owner moved from "own layer only" to **shooting between layers** (design 44 §1); the recommendation's line-of-sight paragraph is superseded by `c-3d-shot-line.md`.
+> *Coordinator's note, 2026-09-25:* the container's proxy refused most content hosts, so the findings rest on search excerpts and the confidence line says so. After this ran the owner moved from "own layer only" to **shooting between layers** (design 47 §1); the recommendation's line-of-sight paragraph is superseded by `c-3d-shot-line.md`.
 
 ## Question
 

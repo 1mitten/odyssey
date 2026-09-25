@@ -1,7 +1,7 @@
 # Gun animation packs for the Synty rig
 *Lane E (Synty asset fit) · 2026-09-25 · capped at 12 searches and 10 reads (12 searches and 10 reads used; 9 of the 10 reads were blocked by the container's egress proxy, so store pages are known only through search snippets)*
 
-> *Coordinator's note, 2026-09-25:* every store page was refused by the container's proxy; prices and clip lists are from search snippets. The owner chose procedural-first with a clip seam (design 44 §1, question 6); the retarget experiment here is the gate before any purchase.
+> *Coordinator's note, 2026-09-25:* every store page was refused by the container's proxy; prices and clip lists are from search snippets. The owner chose procedural-first with a clip seam (design 47 §1, question 6); the retarget experiment here is the gate before any purchase.
 
 ## Question
 Which animation packs ship pistol draw, aim, fire, recoil and holster clips that retarget cleanly to the Synty humanoid rig, and on what licence and at what price?
