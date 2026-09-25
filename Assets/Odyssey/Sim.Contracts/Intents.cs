@@ -294,6 +294,22 @@ namespace Odyssey.Sim.Contracts
         SetHostilityResponse,
 
         /// <summary>
+        /// Debug only: set the sky now (design 43 §8, the debug menu's Weather tab). <c>A</c> is the
+        /// <see cref="WeatherKind"/>, <c>B</c> the intensity in per-mille (0 keeps the kind's own
+        /// roll), and <c>C</c> 1 to blend in over seconds rather than the two game hours a spell
+        /// takes. The spell then runs its rolled length and the season takes over again.
+        /// Handler: <c>WeatherSystem.HandleForce</c>.
+        /// </summary>
+        DebugSetWeather,
+
+        /// <summary>
+        /// Debug-menu-only (design 46 §6): every jump over a stream falls short while
+        /// <c>A</c> is non-zero, and none is forced to while it is nought. A switch on the pawn
+        /// context, unsaved and unhashed. Appended last, so no recorded intent renumbers.
+        /// </summary>
+        DebugJumpsFail,
+
+        /// <summary>
         /// Debug-menu-only (design 43 §11): act on the colonist nearest <see cref="Intent.Cell"/>
         /// — <c>A</c> 0 hurts her (a 20-point wound on a region by the blow's own coverage), 1 heals
         /// her whole and stands her up, 2 kills her. Through the one owner of damage and the one
@@ -303,10 +319,10 @@ namespace Odyssey.Sim.Contracts
         DebugHealth,
 
         /// <summary>
-        /// Send one colonist to tend another (design 43 §5, §11): <c>A</c> is the doctor's
+        /// Send one colonist to treat another (design 43 §5, §11, §15): <c>A</c> is the doctor's
         /// <c>PawnId</c> value and <c>B</c> the patient's. Drafted or not, as the Equip order is; the
-        /// doctor fetches a medkit if one can be reached, exactly as the Doctor work type's own tend
-        /// does. Handler: <c>JobSystem.HandleOrderTend</c>. Appended.
+        /// same <c>Job_Treat</c> the Doctor work type gives, supplies fetched if any can be reached.
+        /// Handler: <c>JobSystem.HandleOrderTend</c>. Appended.
         /// </summary>
         OrderTend,
     }
@@ -398,6 +414,10 @@ namespace Odyssey.Sim.Contracts
             // while paused, and a button that read one thing while the world did another until you
             // pressed play would be the slab fault again.
             IntentKind.SetHostilityResponse => true,
+            // Jumps always fail (design 46 §6): a switch the player flips in a menu, which is a
+            // thing opened while paused; a row that read "on" while no jump had heard would be
+            // the slab fault again. Nothing needs to run to make it true.
+            IntentKind.DebugJumpsFail => true,
             _ => false,
         };
     }

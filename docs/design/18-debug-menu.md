@@ -21,7 +21,8 @@ because the two cannot be open together.
 
 ## What is on it
 
-Two tabs since 2026-09-20 (owner: events want a tab of their own), in Settings' tab idiom.
+Four tabs, in Settings' tab idiom: Cheats and Events since 2026-09-20 (owner: events want a tab
+of their own), Spawn since 2026-09-22, and Weather since 2026-09-24.
 `DebugDirector.Tab` holds which is showing and opens on Cheats, because the overlay toggle is the
 row backtick was bound to for a day.
 
@@ -47,6 +48,29 @@ worker, ignoring the gates on purpose (design 23 §3). Today that is one row:
 | Skip one month | The same, twelve days at a time (~2.4 s), so **the year can be walked through**. Added 2026-09-22 with temperature: Rime is month five of six, and at a day a press the season the whole thermal model exists for was sixty presses away — which is not a playtest anybody runs. Six presses now take you Wash → Glare → Rime and back | `DebugSkipTicks` again, sized `Content.DayTicks * Calendar.DaysPerMonth` — both read rather than written, so a retuned calendar cannot leave this row skipping some other amount |
 | Skip to morning | Skips the night and hands the clock back at dawn, with a whole watchable day ahead — the harvest happens on screen, not inside the skip | `OdysseyBootstrap.DebugSkipToMorning` — the same batch tick, sized to the next dawn |
 | Ripen crops | Brings every standing crop to ripeness at once, daylight window and all — the harvest half without the four-day wait | `IntentKind.DebugRipen` → `GrowingZones.RipenAll`, refused with AlreadyInThatState when nothing stands |
+
+**Weather** (2026-09-24, commands since 2026-09-25). Each row commands the weather system
+(design 43 §8) with `IntentKind.DebugSetWeather`: a kind, an intensity, and a quick hand-over of
+300 ticks, a few seconds. The spell then runs its rolled length and the season takes over again.
+`DebugDirector.WeatherPresets` holds the rows, and the fast tier tests them. What each sky looks
+like is the content's (`Weather.xml`), so the tab cannot show a sky the game cannot roll. Pausing
+holds the sky; the command lands on the next tick.
+
+| Row | Kind · intensity | Backed by |
+|---|---|---|
+| Clear | Clear · 1000 | `WeatherSystem.HandleForce` |
+| Overcast | Cloudy · 1000: the grey day with no rain | the same |
+| Drizzle | Rain · 250 | the same |
+| Rain | Rain · 700 | the same |
+| Downpour | Rain · 1000 | the same |
+| Storm | Storm · 1000: the rarer dim day, wind ×1.3 | the same |
+| Draw as particles (toggle) | draws the same rain with the weather design's first-draft CPU particles, to compare them moving; drawing only | `RainParticles` |
+| Wet ground: gloss only (toggle) | draws wet ground as shine and puddles only, rather than richer and a little darker; drawing only | `_OdysseyRainLook.x` |
+
+**Rain keeps its colour; only the grey days drain it** (owner, 2026-09-25,
+`docs/research/rain-look-interview.md`). Zoomed out, a screen-space streak layer fades in between
+55 m and 95 m. `WeatherTabTests` (PlayMode) sends a row's own command through the real bootstrap
+and follows it into the draw calls.
 
 ### "Near the camera" is a column, not a cell (corrected 2026-09-19)
 

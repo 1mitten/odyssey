@@ -42,6 +42,13 @@ namespace Odyssey.Tests.Sim
                 Assert.That(victim.Health, Is.Not.Null, "a person was hurt and has no ledger");
                 Assert.That(victim.Health!.TotalSeverityMilli, Is.EqualTo(Loss(victim)), $"blow {i}: the pool and the ledger disagree");
                 if (victim.Downed) break;
+                // A tick between blows, as a swing's own cooldown always puts one. The region roll
+                // is keyed by the tick, the target and the attacker, so six blows on one tick are
+                // one roll six times by design: the test passed that way only while the stream
+                // happened to pick a limb, whose overflow into the torso made a second record. The
+                // merge that moved HitRegion off the jump's stream picked the head instead.
+                colony.World.Tick();
+                Assert.That(victim.Health!.TotalSeverityMilli, Is.EqualTo(Loss(victim)), $"after blow {i}'s tick: the pool and the ledger disagree");
             }
             Assert.That(victim.Health!.Count, Is.GreaterThan(1), "six blows all landed on one region: the roll never moved");
         }

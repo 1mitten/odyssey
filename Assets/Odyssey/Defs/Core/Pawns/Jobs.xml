@@ -274,20 +274,29 @@
   </JobDef>
 
   <!--
-    Tending the hurt (docs/design/43-health.md section 5): fetch a medkit if one can be reached,
-    walk to the patient and work over her. The 600 ticks are INVENTED (a-02 line 159 could not
-    find the reference's figure) and are paid at the Doctor work type's rate, which is the
-    Medicine skill's tend speed. Trains Medicine at every working job's 110. Not casually
-    interruptible, and a walking expiry like a rescue's: a patient can be a long way off.
+    Medical supplies (design 37), after Job_Steal at the merge with main (renumbered 22-23 ->
+    23-24; bandits shipped first). Job_Treat is a doctor fetching one unit (or none, a bare
+    dressing) and treating a patient, or a colonist treating herself: workTicks is one treatment
+    at the standard pace (600, INVENTED), which Work_Doctor's curve scales and self-treatment
+    triples. It trains medicine at growing's rate. Not casually interruptible: a doctor halfway
+    through a dressing finishes it.
+
+    Job_Patient is a hurt colonist lying in a bed (or on the ground, when there is none) until
+    she is back to the release line. She sleeps there, so rest and the bed's heal both run.
   -->
   <JobDef>
-    <defName>Job_Tend</defName>
+    <defName>Job_Treat</defName>
     <driver>23</driver>
     <casuallyInterruptible>false</casuallyInterruptible>
     <expiryTicks>12000</expiryTicks>
     <workTicks>600</workTicks>
     <trainsSkill>6</trainsSkill>
     <experiencePerWorkTick>110</experiencePerWorkTick>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Patient</defName>
+    <driver>24</driver>
   </JobDef>
 
 </Defs>

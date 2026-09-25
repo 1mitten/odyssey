@@ -430,6 +430,22 @@ namespace Odyssey.Presentation.World
             public float SwimWeight;
 
             /// <summary>
+            /// How far off the ground a jumping figure is, 0 to 1 (design 46 §7): the footing
+            /// fades by it, so the feet let go at the lip and plant again on the far one. Worked
+            /// out afresh every frame from the step, never eased — <c>JumpArc.Airborne</c> is
+            /// already continuous.
+            /// </summary>
+            public float AirWeight;
+
+            /// <summary>
+            /// The jump clip due in the action slot this frame, and how far into it: the take-off or
+            /// the landing, or null. Worked out afresh every frame from the step's phase, like the
+            /// air; <c>PoseCombat</c> shows it whenever the fight has nothing to show.
+            /// </summary>
+            public CombatClipEntry? JumpClip;
+            public float JumpClipTime;
+
+            /// <summary>
             /// The swim stroke's own clock, in seconds of game time.
             ///
             /// <para>A clock and not a phase taken from the step, which is the opposite choice to

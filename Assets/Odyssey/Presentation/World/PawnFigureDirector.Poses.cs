@@ -174,8 +174,10 @@ namespace Odyssey.Presentation.World
                 // **Nor a body the knock-down clip has put on its back** (design 33 §1): its boots
                 // are in the air by the clip's own authority, and planting them would drag it
                 // upright by the ankles.
+                // **Nor a body in the air over a stream** (design 46 §7): the footing would reach
+                // for the ground under the gap, which is water a layer down.
                 float planted = 1f - Mathf.Clamp01(Mathf.Max(
-                    Mathf.Max(figure.SwimWeight, figure.SleepWeight),
+                    Mathf.Max(Mathf.Max(figure.SwimWeight, figure.SleepWeight), figure.AirWeight),
                     figure.Fight.Unplanted * figure.Fight.Weight));
 
                 // A rig with no legs bound is not an error: a non-Humanoid prefab answers null to
@@ -537,6 +539,17 @@ namespace Odyssey.Presentation.World
             Pitch(figure.LeftUpperArm, axis, CarryPose.ShoulderPitch * weight);
             Pitch(figure.RightLowerArm, axis, CarryPose.ElbowBend * weight);
             Pitch(figure.LeftLowerArm, axis, CarryPose.ElbowBend * weight);
+
+            // A box is gripped by its two sides, not scooped underneath (owner, 2026-09-25: the
+            // medical kit). Out from the midline, about the figure's own forward axis, after the
+            // scoop rather than instead of it — the same order SleepPose's ArmOut is laid over its
+            // own pitch, and for the same reason.
+            if (CarryPose.GrippedBySides(figure.CarryDef))
+            {
+                Vector3 outAxis = figure.Transform.forward;
+                Pitch(figure.RightUpperArm, outAxis, -CarryPose.BoxGripOut * weight);
+                Pitch(figure.LeftUpperArm, outAxis, CarryPose.BoxGripOut * weight);
+            }
 
             CarryingFigures++;
         }

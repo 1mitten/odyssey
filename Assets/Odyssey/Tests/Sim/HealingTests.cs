@@ -15,12 +15,21 @@ namespace Odyssey.Tests.Sim
     {
         static int Day(ColonyWorld colony) => colony.Pawns.Content.DayTicks;
 
+        /// <summary>Doctor off for everybody, so only the bed heals.</summary>
+        static void NoDoctors(ColonyWorld colony)
+        {
+            foreach (Pawn pawn in colony.Pawns.Pawns.All) pawn.WorkPriorities[WorkTypeIndex.Doctor] = 0;
+        }
+
         [Test]
         public void AColonistHealsInABedAndNowhereElse()
         {
             var colony = Board(colonists: 3);
             colony.World.Tick(5);
             Pawn inBed = colony.Pawns.Pawns.All[0], onGround = colony.Pawns.Pawns.All[1], by = colony.Pawns.Pawns.All[2];
+            // The heal this asserts is the bed's; a doctor dressing the one on the ground is
+            // design 37's and MedicalTreatmentTests' (it heals her by bareHeal, which is the point).
+            NoDoctors(colony);
             int bed = colony.Pawns.Items.Beds[0];
             // Nobody carries the one on the ground to a bed: this is the healing, not the rescue.
             // Nor tends her: a tended injury heals anywhere (design 43 §6), and this is the bed's.

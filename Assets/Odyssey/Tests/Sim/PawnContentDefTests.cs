@@ -220,6 +220,14 @@ namespace Odyssey.Tests.Sim
         // had saved them). Neither side's number covers the merged pack, so it is re-taken from a
         // freshly loaded pack rather than adopted from either.
         //
+        // Moved again, 2026-09-24, by medical supplies (design 37, MD1): Item_MedicalSupplies appended
+        // at item 11 (Medicine, stackLimit 10, healPerUnit 40), and ItemDef gained healPerUnit, zero
+        // on every other item. Taken from a freshly loaded pack.
+        //
+        // And again the same day by MD2 (design 37): Skill_Medicine, Work_Doctor (rateSkill 6 on
+        // growing's curve), Job_Treat and Job_Patient, and CombatDef's eight treatment integers.
+        // Taken from a freshly loaded pack.
+        //
         // Moved a twenty-first time, 2026-09-24, by C5, friendly fire (design 33 §12): two thoughts
         // appended at indices 6 and 7 — Thought_AttackedByColonist (-80, one day, once) and
         // Thought_ColonistDied (-60, three days, three deep), the owner's -8 and -6 on our scale of
@@ -252,18 +260,24 @@ namespace Odyssey.Tests.Sim
         // traverse mode likewise, and PawnKindDef.weapon became weapons, the bandit's being a
         // crowbar or a bat where it was a machete. No golden moved: no golden has a bandit.
         //
-        // Moved a twenty-seventh time, deliberately, 2026-09-25, by the body (design 43 §2): a new
-        // HealthDef, Health_Person, carrying the six regions and the pain, blood, tend and fall
-        // numbers; SpeciesDef gained `health`, named on Species_Person only; and PawnContent the
-        // resolved SpeciesHealth table. No golden moved: the ledger is hashed only while a pawn has
-        // anything on it, and no golden window hurts anybody.
+        // Moved a twenty-seventh time, 2026-09-25, at the merge of medical supplies (design 37)
+        // with main: Job_Treat and Job_Patient renumbered 22-23 -> 23-24, after Job_Steal, since
+        // bandits shipped first. Neither side's number covers the merged pack, so it is re-taken
+        // from a freshly loaded pack rather than adopted from either.
         //
-        // Moved a twenty-eighth time, deliberately, 2026-09-25, by health's H3 (design 43 §5):
-        // Job_Tend at driver 23, Work_Doctor (order 6, the Medicine skill's 400 + 60 a level),
-        // Skill_Medicine, Item_Medkit (Medicine, ten to a stack), PawnContent.MedkitItem, and
-        // HealthDef lost tendSpeedCurve to the work type, which is its one owner. The goldens moved
-        // in the same commit, as more zeros; see Golden.cs.
-        const ulong ContentFingerprint = 1151783711695981964UL;
+        // 2026-09-25, design 46 §6: MovementDef gained jumpFailPerMille (30) and
+        // jumpFailCarryingPerMille (2,000) — the jump over a one-cell stream falling short.
+        //
+        // Moved a twenty-eighth time, 2026-09-25, at the merge with main (weather, the stream
+        // jump): neither side's number covers the merged pack, re-taken fresh.
+        //
+        // Moved a twenty-ninth time, deliberately, 2026-09-25, by health (design 43) merged onto
+        // medical supplies (design 37): a new HealthDef, Health_Person, carrying the six regions and
+        // the pain, blood, tend and fall numbers, named by Species_Person's new `health` field. The
+        // branch's own Job_Tend, Item_Medkit, Work_Doctor and Skill_Medicine were dropped for
+        // main's (design 43 §15), and HealthDef's medkit potency fields are the supplies'. No golden
+        // moved: the ledger is hashed only while a pawn has anything on it.
+        const ulong ContentFingerprint = 2772140661204901662UL;
 
 
         [Test]

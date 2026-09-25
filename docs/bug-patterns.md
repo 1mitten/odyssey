@@ -603,6 +603,34 @@ fixture had just queued still going through. It landed on the dev machine and di
 
 ## The register
 
+### 2026-09-25 — A gate invariant that counted the ticks a driver was not allowed to look (P1, in a test)
+
+**Symptom.** `BanditSoakTests.TheGateWithRaids` asserts that no attacker stays on *Fighting* at a
+target already gone for more than a tick. On `main` it passed; with PR #184 merged — new Defs, none of
+its code on the path — one seed read 40 to 109 ticks. The report blamed the combat retarget logic.
+
+**Cause.** The retarget logic was right. Every stale streak was a **drafted colonist, stunned**, whose
+bandit went down while she was stunned (the message said "a bandit"; the check covers every
+attacker). The job loop holds a stunned pawn's driver by design — a stun is a pause, not an
+interrupt (design 33 §5c) — so her attack could not end until the stun wore off, and it ended on the
+first tick after. The gate's watcher re-derived "should have noticed by now" without the job loop's
+hold rule: two owners of one rule, one of them incomplete. It passed on one random stream and failed
+on another, which is what made it look like a latent sim bug that #184 "exposed".
+
+**How it was found.** Measured, not reasoned: the watcher printed every field that could hold a
+driver at each new record — stun, knock-down, a kept step, the toil, the target's state — and one run
+showed all of them.
+
+**Fix.** The hold rule is one predicate, `JobSystem.HoldsDriver` (landing a kept step, stunned,
+knocked down), used by the job loop and by the gate, which counts only ticks the next job loop is free
+to act. The loop's behaviour is identical; no golden moved. With #184 merged all three seeds read 1;
+with the hold check withheld seed 2 reads 109 again. `33-combat.md` §21b.
+
+**The check this earns.** *An invariant about whether something reacted in time must ask the system
+whether it was allowed to react*, not copy the conditions: the copy is right until the system gains a
+reason to wait. And when a test flips on an unrelated merge, find what the failing trace was doing
+before deciding the code is fragile.
+
 ### 2026-09-25 — A claim handed to a pawn outlives the thing it was a claim on (P14-adjacent)
 
 **Symptom, recorded at the combat Phase 4 integration and fixed after the gate.** A bed demolished
@@ -2771,3 +2799,37 @@ answered what a 384-colonist sweep could not.
 to place colonists and to give up, and it reset that counter on walking off the board. The escape
 was reachable only while spawns succeeded. *Check: a retry loop's escape must be a counter that
 nothing resets, and a loop that ticks without yielding must be bounded by it.*
+
+## One channel, two meanings: the selection mask's G (2026-09-25)
+
+The selection highlight's mask wrote a selection's *strength* into G, and the composite read G as
+*coverage* ("is this pixel the thing", `outside = 1 - G`). While every strength was 1 the two
+meanings agreed. The rest of a box selection were drawn at 0.45, so each was 55 % "outside itself",
+and its own line (≈ 0.25 alpha) was laid over its whole body. The owner reported it as colonists
+"faded out".
+
+- **The pattern:** *one rule with two owners*, in a pixel format. One channel carried two
+  quantities, and a reader took it for one of them.
+- **What made it invisible:** every photograph and test used a single selection at strength 1.
+- **The check:** coverage and strength are separate channels (G = 1, A = strength), so a weaker
+  strength can only make a fainter line. `SelectionHighlightPlayTests` holds a group to one
+  strength. Design 44 §7.
+
+## A precondition asked on every tick of the work it gates (2026-09-25)
+
+Design 37's treatment asked "does she still need treating?" and "is she still lying still?" at the
+top of every tick, including every tick of the treatment itself — and the treatment is what
+answers both. Its heal lands in shares, so a patient at 60 % reached the 80 % cap half-way and
+stopped needing it; a downed patient passed the 15 % line a third of the way through, stood up and
+stopped lying still. Either way the job failed: the unit of supplies went back on the floor
+unused, no cooldown was set, and the next doctor started again from what was left — a free heal
+each time. Found merging health (design 43 §15c).
+
+- **The pattern:** *a rule that asks the built world and misses the order*, turned inward — a
+  guard on a job reading the very state the job is changing.
+- **What made it invisible:** the one test that walked a downed patient through a whole treatment
+  was `[Ignore]`d for an unrelated rescue fault, and the arithmetic tests called the heal directly.
+- **The check:** *split a driver's guards into "may this start" and "may this go on"*, and ask of
+  every guard on a working toil whether the work itself can falsify it. Getting up is asked once,
+  when the treatment ends (`Medical.GetUpIfAble`).
+  `TendTests.ADownedPatientGetsUpWhenHerTreatmentEndsAndTheUnitIsSpent`.

@@ -172,7 +172,8 @@ namespace Odyssey.Sim.Pawns
         public const int Equip = JobHandle.Equip;
         public const int Rescue = JobHandle.Rescue;
         public const int Steal = JobHandle.Steal;
-        public const int Tend = JobHandle.Tend;
+        public const int Treat = JobHandle.Treat;
+        public const int Patient = JobHandle.Patient;
         public const int Count = JobHandle.Count;
     }
 
@@ -322,11 +323,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int Rescue = WorkHandle.Rescue;
 
-        /// <summary>
-        /// Tending the hurt (design 43 §5). Its giver is an emergency one, as rescue's is: a cut
-        /// bleeding out outranks a wall at the same priority. The rate is the Medicine skill's
-        /// tend speed, which is the work type's curve.
-        /// </summary>
+        /// <summary>Treating the hurt (design 37). An emergency giver, like rescue's.</summary>
         public const int Doctor = WorkHandle.Doctor;
 
         public const int Count = WorkHandle.Count;
@@ -368,7 +365,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int Melee = 5;
 
-        /// <summary>Tending (design 43 §5): its level reads the tend quality curve and the Doctor work curve; every tend trains it.</summary>
+        /// <summary>Treating the hurt (design 37): buys speed at it and nothing else.</summary>
         public const int Medicine = 6;
         public const int Count = 7;
 
@@ -614,7 +611,7 @@ namespace Odyssey.Sim.Pawns
         public const int Crowbar = ItemHandle.Crowbar;
         public const int Machete = ItemHandle.Machete;
         public const int ArcBlade = ItemHandle.ArcBlade;
-        public const int Medkit = ItemHandle.Medkit;
+        public const int MedicalSupplies = ItemHandle.MedicalSupplies;
         public const int Count = ItemHandle.Count;
     }
 
@@ -647,6 +644,14 @@ namespace Odyssey.Sim.Pawns
         /// Read through <c>IWeaponRules</c>, never directly, so the lookup has one owner.
         /// </summary>
         public AttackDef? weapon;
+
+        /// <summary>
+        /// Hit points one unit restores when a doctor treats with it (design 37 §4), in whole
+        /// points. Zero means it is not medicine. Self-treatment and the treatment cap scale and
+        /// clamp it (<c>MedicalDef</c>); the amount itself is the item's, so a weaker item is one
+        /// Def row.
+        /// </summary>
+        public int healPerUnit;
     }
 
     /// <summary>Movement tuning. One unit of cost is 1/100 of a flat orthogonal cell crossing.</summary>
@@ -690,6 +695,20 @@ namespace Odyssey.Sim.Pawns
         /// first reason to run the game has, which is what §4f held the run for.
         /// </summary>
         public int draftedPacePerMille = 2_000;
+
+        /// <summary>
+        /// How often a well, unladen person's jump over a one-cell stream falls short, per mille
+        /// (design 46 §6): 30, one in thirty-three. INVENTED. A failed jump lands in the water
+        /// and costs a soaking and a few seconds; nothing is hurt until the health model can
+        /// carry an injury.
+        /// </summary>
+        public int jumpFailPerMille = 30;
+
+        /// <summary>
+        /// What carrying does to that chance, per mille of it: 2,000 doubles it. A load in the
+        /// arms, or a person being carried to a bed. INVENTED.
+        /// </summary>
+        public int jumpFailCarryingPerMille = 2_000;
     }
 
     /// <summary>
@@ -1106,13 +1125,6 @@ namespace Odyssey.Sim.Pawns
         public HealthDef?[] SpeciesHealth = System.Array.Empty<HealthDef?>();
 
         /// <summary>
-        /// The item a tend draws on (<see cref="HealthDef.medkit"/>), by index into
-        /// <see cref="Items"/>, or -1 when the content has none (design 43 §5). Resolved once, by
-        /// name, so the giver never compares a string.
-        /// </summary>
-        public int MedkitItem = -1;
-
-        /// <summary>
         /// The body a pawn of this kind has, or null: its species' <see cref="HealthDef"/>, and
         /// nothing for a content set built in code, which keeps the pool alone as it always did.
         /// </summary>
@@ -1355,22 +1367,22 @@ namespace Odyssey.Sim.Pawns
                 "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue",
                 // A bandit carrying something off the board (design 33 §17).
                 "Job_Steal",
-                // Tending the hurt (design 43 §5).
-                "Job_Tend");
+                // Medical supplies (design 37).
+                "Job_Treat", "Job_Patient");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",
                 // Appended with the combat line (design 33 §5): a pawn's priority array is indexed
                 // by this order, so it is a save contract like the rest.
                 "Work_Rescue",
-                // Tending the hurt (design 43 §5), appended.
+                // Medical supplies (design 37).
                 "Work_Doctor");
             content.Skills = ByName<SkillDef>(defs,
                 "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction",
                 "Skill_Growing",
                 // Appended with the combat line (design 33 §5).
                 "Skill_Melee",
-                // Tending (design 43 §5), appended.
+                // Medical supplies (design 37).
                 "Skill_Medicine");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal",
@@ -1380,8 +1392,8 @@ namespace Odyssey.Sim.Pawns
                 "Item_Carrots",
                 // The four melee weapons (design 33 §1, C3), appended together.
                 "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade",
-                // What a tend draws on (design 43 §5), appended.
-                "Item_Medkit");
+                // What a doctor treats with (design 37), appended.
+                "Item_MedicalSupplies");
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");
             content.Break = One<MentalBreakDef>(defs, "Break_Wander");
@@ -1423,9 +1435,6 @@ namespace Odyssey.Sim.Pawns
                     throw new DefLoadException(
                         $"HealthDef '{body.defName}' has {body.regions.Count} regions; a body has one to six.");
                 content.SpeciesHealth[s] = body;
-                if (content.MedkitItem < 0 && !string.IsNullOrEmpty(body.medkit))
-                    for (int i = 0; i < content.Items.Length; i++)
-                        if (content.Items[i].defName == body.medkit) { content.MedkitItem = i; break; }
             }
 
             // The weapon a kind arrives holding (design 33 §1), by name, once — after the items,
@@ -1674,16 +1683,23 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const uint Knockback = 0x1283_5B01;
 
+        /// <summary>
+        /// Whether a jump over a stream falls short (design 46 §6). SHA-256's eleventh round
+        /// constant.
+        /// </summary>
+        public const uint Jump = 0x2431_85BE;
+
         // ---- health (design 43) ----------------------------------------------------------------
 
         /// <summary>
-        /// Which region a hit lands on, by coverage (design 43 §2). SHA-256's eleventh round
-        /// constant, next after <see cref="Knockback"/>. Its own stream, so the body can move no
-        /// roll a fight made before it existed.
+        /// Which region a hit lands on, by coverage (design 43 §2). SHA-256's twelfth round
+        /// constant, next after <see cref="Jump"/>. Its own stream, so the body can move no roll a
+        /// fight made before it existed. (Built as the eleventh; the stream jump shipped first and
+        /// took it, so the merge moved it here rather than let two purposes share one stream.)
         /// </summary>
-        public const uint HitRegion = 0x2431_85BE;
+        public const uint HitRegion = 0x550C_7DC3;
 
-        /// <summary>How a fall's damage is split into hits and spread (design 43 §7). The twelfth.</summary>
-        public const uint FallSplit = 0x550C_7DC3;
+        /// <summary>How a fall's damage is split into hits and spread (design 43 §7). The thirteenth.</summary>
+        public const uint FallSplit = 0x72BE_5D74;
     }
 }

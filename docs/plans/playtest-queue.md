@@ -23,13 +23,18 @@ the next session learns to ignore.
 
 ## Open
 
-- **Does the Health tab read, and does a hurt colonist get tended?** (`claude/relaxed-heisenberg-zxy63b`,
-  PR #213, design 43.) Debug menu > Spawn > Hurt a colonist near a colonist, then open her pane on
-  Health: two columns, the left leg (or wherever) with a red bar and a warning mark, Bleeding
-  counting hours, Tended 0/1. Give medkits, leave Doctor on for somebody, and watch them walk over,
-  kneel beside her and tend: the mark turns to a cross and the hours vanish. Click a region to see
-  its injuries; click again to go back. A wrong answer is a tab that clips or scrolls, a figure that
-  overflows its column, a doctor who never comes or stands on her, or a mark drawn as a box.
+- **Does the Health tab read, and does a hurt colonist get treated?** (`claude/relaxed-heisenberg-zxy63b`,
+  PR #213, design 43, merged with medical supplies §15.) Debug menu > Spawn > Hurt a colonist near a
+  colonist, then open her pane on Health: two columns, a region with a red bar and a warning mark,
+  Bleeding counting hours, Tended 0/1. She should stop what she is doing and lie down (in a bed if
+  there is one) although her bar is still high: a bleeding colonist is a patient. Leave Doctor on
+  for somebody and watch them fetch one box of medical supplies, kneel beside her and treat her: the
+  mark turns to a cross, the hours vanish and her bar fills as they work. Click a region to see its
+  injuries; click again to go back. Then press Hurt on one colonist until she goes down (four presses), and watch
+  that she stays down until the treatment ends and then gets up, with one box gone from the pile.
+  A wrong answer is a tab that clips or scrolls, a figure that overflows its column, a bleeding
+  colonist who carries on working, a doctor who never comes or stands on her, a patient who stands
+  up half-way through her treatment, or a mark drawn as a box.
 - **Is the fight still a fight?** (Same branch, design 43 §14b.) Spawn 3 bandits against armed
   colonists. With pain shock, people go down at about two thirds of the bar, and a bandit cut with a
   machete bleeds to death where it lies. A wrong answer is fights over in two blows, colonists
@@ -39,6 +44,69 @@ the next session learns to ignore.
   breaks something and three layers put her down. A wrong answer is a miner hurt by stepping into her
   own dig, or a fall with no injury on the Health tab.
 
+- **Does the selection highlight make it obvious who is selected?** (`claude/selection-highlight`, design 44.)
+  Click a colonist, an item, a wall, a tree and a patch of ground. Each should gain a thin white line round its own
+  shape and look a touch brighter; the ground gets a pale wash. Then walk a selected colonist behind a wall: a
+  fainter line should show through. Settings →
+  Interface → *Selection style* → Brackets brings the old cursor back. **Second look (2026-09-25):**
+  box-select a group — every colonist should have the same full white outline, none faded or washed,
+  and none brightened; click one of them and that one alone brightens. Read the overlay's `gpu` line at 4K with
+  and without a selection. A wrong answer is a line you have to hunt for, a colonist who looks bleached, a
+  selection you lose indoors, or `gpu` moving by more than a few tenths of a millisecond.
+- **Which rain reads as a rainy day: §7's particles, or GPU rain with wet ground?** (`claude/rain-look`,
+  #203; design 43 §7, #202.) No Play needed. Open https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3, pick
+  the Play framing, and wipe between “§7 as written” and “+ wet ground”; then try the Far framing
+  with the downpour, and the Close framing for splashes on grass. A wrong answer is preferring the
+  particles (then §7 keeps the emitters and only the wet ground carries over), rain that reads as fog
+  at the far zoom, or a meadow that looks hailed on. **Now in Play too** (2026-09-24): backtick,
+  Weather, pick Rain or Downpour, and toggle *Draw as particles* to compare them moving. Read the
+  overlay's `gpu` line at your own resolution with Clear and then Downpour; the budget is 0.5 ms at
+  4K. A wrong answer is a sky that snaps rather than arrives, rain that keeps falling while paused,
+  or rain drawn inside the hut. **Second round (2026-09-25):** Rain, Drizzle and Downpour should
+  keep the colour of Clear; Storm is the grey one; zoom right out on Downpour and the rain should
+  still read. Toggle *Wet ground: gloss only* and say which of the two wet looks to keep.
+  **Third round (2026-09-25): the weather is real now.** Start a colony and leave it running a few
+  game days, skipping days with the debug menu: the sky should change by itself, mostly clear in
+  Glare, showery in Wash, grey in Rime, with the clock's glyph following. A wrong answer is a sky
+  that never changes, one that flips at midnight, or a storm every other day.
+- **Can you see who the rain is slowing?** (`claude/pace-readout`, design 17 §5a, 43 §6a.) New
+  game, backtick > Weather > Downpour. Click a colonist out in the open: under what she is doing the
+  pane should say about *Pace 90% · in the rain*, and hovering it should say *rain −10%* among the
+  rest. Walk her under a roof and it should go back to about 100% with the rain gone from both.
+  Draft her and the pace should roughly double (*drafted ×2*). Click a hog making for a tree, and
+  the same hog under it: both should read *Sheltering*, as should its row on the Animals tab (F5).
+  A wrong answer is: a line you do not notice without looking for it; a pace that is not what you
+  see her walk at; *in the rain* under a roof; a hog reading *Resting* under a tree in a downpour.
+- **Does the rain touch the world?** (`claude/weather-world`, design 43 §6a.) New game, backtick
+  > Weather > Downpour, and watch at normal speed:
+  - Colonists crossing open ground should walk visibly slower in the rain and at their usual pace
+    under a roof or under a tree.
+  - A field in the open should ripen faster than one under a roof. *Ripen crops* is no help here;
+    let the days run.
+  - Animals in the open should head for the nearest trees within a few seconds. Fell the tree one
+    stands under and it should get up and go to another.
+
+  A wrong answer is:
+  - a colonist slowed under a roof, or one who is not slowed at all in the open;
+  - an animal sheltering from a drizzle (the gate is 400 per mille), or one that stands in the rain
+    beside a tree it could reach;
+  - an animal still standing where its tree was, a minute after the tree is gone.
+
+  Also say whether a tenth off the walking pace is too little to notice.
+
+  **And listen** (the rain's sound, design 43 §7a). Weather tab, from Clear through Drizzle,
+  Rain, Downpour and Storm, a few seconds apart:
+  - Drizzle should be a light patter.
+  - Rain should thicken into a roar with no seam you can hear.
+  - A storm should be the loudest.
+  - The birds should fall back as the rain grows.
+  - Leave Downpour running for two minutes: neither loop should be heard to repeat or click.
+
+  A wrong answer is:
+  - a jump in level between two presses;
+  - a click, a breath or a recognisable moment every 40 or 80 seconds;
+  - rain still audible after the slice has gone underground;
+  - birds as loud in a storm as on a clear day.
 - **Do the bat and the crowbar only swing?** (`claude/blunt-swings`, design 33 §22.) Debug menu >
   Spawn 3 bandits, arm a colonist with a bat and another with a crowbar (*Arm every colonist*, or
   right-click > Equip), draft them and order attacks. Watch several blows in a row: each should be
@@ -46,6 +114,43 @@ the next session learns to ignore.
   any blow that thrusts the weapon straight forward, a blow that lands before the swing reaches the
   target (the third one especially, whose timing was broken until now), or the machete and blade
   swinging differently from before.
+
+- **Does a new game arrive cleanly?** (`claude/meadow-hitch-check`, design 38 §25.) From the title
+  screen, set up a colony and press Start. **Look for** the setup page freezing for about half a
+  second, then the starfield for a blink, then the colony — already smooth, no stutter as it appears.
+  **A wrong answer looks like:** a jolt or stall in the first moment the colony is on screen; the
+  starfield hanging on for a noticeable time; or the interface appearing before the world does.
+- **Does changing Grass in Settings stay smooth?** (same branch.) Settings -> Graphics -> Grass: step
+  through the rungs to Full and back during play. **A wrong answer looks like:** a visible hitch on
+  each press, or the grass just beyond the board's edge not matching the new density.
+- **Does a colonist jump a one-cell stream, and does it read as a jump?** (`claude/funny-allen-2qipcn`,
+  design 46.) The jump clips are linked in the committed catalogue since 2026-09-25; no rebuild is
+  needed. New game, find a stream one cell wide, right-click a drafted colonist to
+  the far bank. They walk to the lip, gather, leap and land on the far lip without touching the
+  water. A wrong answer is a figure that slides across level with the bank (the clips did not
+  resolve), a pause at the lip long enough to read as stuck, feet sliding on landing, or a colonist
+  who still swims a one-cell stream. **First play (2026-09-25):** took off in the water, legs still,
+  women the same as men — the catalogue had not been rebuilt, and the take-off was at the cell's
+  edge, which the shoreline draws under water. The lip is now the last dry ground; play again after
+  the rebuild. A wrong answer now is feet at or in the water at the gather, or a leap so long it
+  reads as a launch.
+- **Does a failed jump read as a slip and not a bug?** (same.) Debug menu > Cheats > *Jumps always
+  fail*, then the same order. They leap, come down in the water with a splash (silent until a splash
+  is sourced), float and climb out on the far side. A wrong answer is a figure that lies down in
+  mid-air, a snap as it reaches the water, or a colonist stuck in the stream.
+- **Does a hauler keep the load in its hands over the jump?** (same.) A wrong answer is the load
+  left behind at the lip or drawn in the air beside the colonist.
+- **Is one in thirty-three the right rate?** (same.) With the switch off, watch colonists cross for a
+  day. A wrong answer is never seeing one fall in, or seeing it so often it reads as clumsy.
+- **Can you always see where you sent a drafted colonist?** (same branch, design 33 §23.) Draft,
+  select, and right-click a spot behind trees or in long grass, then one behind a rise. The line,
+  the diamond, the landing ring and the colonist's bracket show through what is in front of them,
+  fainter. A wrong answer is a mark still lost behind a tree or a bank, a hidden part so faint it
+  might as well not be there, or so strong you cannot tell it is behind something.
+- **Does swimming sound like swimming?** (same branch, design 20 §9.) Zoom right in on a colonist
+  crossing water. One stroke sound per arm, on the hand going in; from the default zoom, silence.
+  A wrong answer is splashes out of step with the arms, a sound heard across the board, a machine-gun
+  run of splashes from several swimmers, or silence up close.
 
 - **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
   Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest
@@ -71,7 +176,6 @@ the next session learns to ignore.
   holding still on pause. **A wrong answer looks like:** a click on water selecting the bank or the
   tile beyond it; streaks flowing uphill or away from a fall; motion that reads as clouds or noise
   rather than water; or water still moving while the game is paused.
-
 - **Does the title screen's dock read well, and does Exit ask?** (`claude/settings-frame`, design
   40.) Press Play. A dark panel down the left edge with the layered mark and ODYSSEY, four
   coloured buttons and the build line at the foot, the starfield clear to the right. New game should
@@ -413,6 +517,21 @@ the next session learns to ignore.
   column is **271 px, down from 296**, so check the outdoor temperature on the clock still clears the
   speed buttons beside it — a wrong answer is the reading touching or running under them again; and
   spawn a bandit with nobody to fight near a campfire — a wrong answer is it settling at the fire.
+
+- **Medical supplies: the box, the doctor and the patient** (`claude/medical-supplies`, design 37
+  §9). Start a new game: there should be a red first-aid case among the starting piles, and it
+  should go to a stockpile or a shelf like anything else. Is it readable at play distance, or
+  too small? (The picture offered two olive boxes instead.) Then spawn a marauder and let it put
+  a colonist down. A colonist with Doctor on should walk to the case, carry **one** box to the
+  downed colonist, kneel, and the downed colonist should stand up at about 40. Once standing, they
+  should go and lie in a bed, and get up at about 80. Test the same with Doctor off for everybody
+  but the hurt colonist, supplies to hand, and health below 60: they should treat themselves,
+  slowly. Wrong looks like: a doctor carrying the whole pile, a patient walking about with 30
+  health, a colonist lying down and getting up on the spot, or nobody fetching the case at all.
+  **Once health (#213) is in, two numbers here move** (design 43 §15): a colonist goes down from
+  pain with about a third of her bar left, so a treatment stands her up at about 75 rather than 40,
+  and she will not then go to bed; and a colonist with a cut lies down for the doctor whatever
+  her bar says, until she is treated.
 
 - **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
   Spawn a bandit, draft two colonists, select both and right-click it: a translucent red ring

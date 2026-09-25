@@ -163,14 +163,16 @@ namespace Odyssey.Hud
         public const double StoreStuckSustain = 10.0;
 
         /// <summary>
-        /// A colonist with an injury nobody has tended (design 43 §11): Danger while it bleeds, with
-        /// the hours the bleed leaves her, Warning otherwise. One row a colonist; a click goes to her.
+        /// A colonist with an injury nobody has tended who is waiting on a doctor (design 43 §11,
+        /// §15): Danger while it bleeds, with the hours the bleed leaves her; Warning while she lies
+        /// downed with it. One row a colonist; a click goes to her. A colonist on her feet with a
+        /// bruise is not news: the doctor's round leaves her to bed rest (design 37 §4).
         /// </summary>
         public const string InjuredKey = "ui.alert.injured";
 
         /// <summary>
-        /// Somebody needs tending and there is no medkit anywhere on the board (design 43 §5): the
-        /// doctor will tend with bare hands, at a third of the potency and at most 70 per cent.
+        /// Somebody needs tending and there are no medical supplies anywhere on the board (design 43
+        /// §5, design 37): the doctor dresses the wound bare, for less heal and a worse tend.
         /// </summary>
         public const string NoMedicineKey = "ui.alert.nomedicine";
 
@@ -210,14 +212,14 @@ namespace Odyssey.Hud
         /// Has this pawn an injury nobody has tended? Read off the body's sparse aspects: the
         /// records counted against the tended. <paramref name="hours"/> is the bleed's, or nought.
         /// </summary>
-        static bool Untended(WorldSnapshot snapshot, PawnId id, out int hours)
+        static bool Untended(WorldSnapshot snapshot, in PawnView pawn, out int hours)
         {
             hours = 0;
-            if (!snapshot.TryGetPawnAspect(id, HealthAspectNames.InjuriesKey, out int injuries) || injuries <= 0) return false;
-            snapshot.TryGetPawnAspect(id, HealthAspectNames.TendedKey, out int tended);
+            if (!snapshot.TryGetPawnAspect(pawn.Id, HealthAspectNames.InjuriesKey, out int injuries) || injuries <= 0) return false;
+            snapshot.TryGetPawnAspect(pawn.Id, HealthAspectNames.TendedKey, out int tended);
             if (tended >= injuries) return false;
-            snapshot.TryGetPawnAspect(id, HealthAspectNames.BleedHoursKey, out hours);
-            return true;
+            snapshot.TryGetPawnAspect(pawn.Id, HealthAspectNames.BleedHoursKey, out hours);
+            return hours > 0 || pawn.IsDowned;
         }
 
         /// <summary>Dismiss an active alert until its condition clears and re-occurs.</summary>
@@ -308,7 +310,7 @@ namespace Odyssey.Hud
                 // Untended injuries (design 43 §11), read off the body's sparse aspects: a colonist
                 // nobody has hurt publishes none and costs one lookup. The bleed's hours are in the
                 // hash so a row that counts down is rewritten when its number moves.
-                if (Untended(snapshot, pawn.Id, out int hours))
+                if (Untended(snapshot, pawn, out int hours))
                 {
                     injured++;
                     injuredIds = injuredIds * 31 + id * 1_000 + hours;
@@ -316,14 +318,14 @@ namespace Odyssey.Hud
                 else _dismissed.Remove(AlertRow.ComputeDismissKey(InjuredKey, pawn.Id, default));
             }
 
-            // No medkit anywhere on the board while somebody needs one (design 43 §5).
+            // No medical supplies anywhere on the board while somebody needs them (design 43 §5, design 37).
             int noMedicine = 0;
             if (injured > 0)
             {
                 noMedicine = 1;
                 System.ReadOnlySpan<ThingView> things = snapshot.Things;
                 for (int i = 0; i < things.Length; i++)
-                    if (things[i].DefIndex == ItemHandle.Medkit) { noMedicine = 0; break; }
+                    if (things[i].DefIndex == ItemHandle.MedicalSupplies) { noMedicine = 0; break; }
             }
             if (noMedicine == 0) _dismissed.Remove(AlertRow.ComputeDismissKey(NoMedicineKey, default, default));
 
@@ -474,7 +476,7 @@ namespace Odyssey.Hud
             for (int i = 0; i < pawns.Length && injured > 0; i++)
             {
                 PawnView pawn = pawns[i];
-                if (!pawn.IsColonist || !Untended(snapshot, pawn.Id, out int hours)) continue;
+                if (!pawn.IsColonist || !Untended(snapshot, pawn, out int hours)) continue;
                 int dismissKey = AlertRow.ComputeDismissKey(InjuredKey, pawn.Id, default);
                 if (_dismissed.Contains(dismissKey)) continue;
                 Rows.Add(new AlertRow(
@@ -490,7 +492,7 @@ namespace Odyssey.Hud
                 Rows.Add(new AlertRow(
                     NoMedicineKey,
                     Registry.Label(NoMedicineKey),
-                    ": the doctor will tend with bare hands",
+                    ": the doctor will dress wounds bare",
                     AlertSeverity.Notice,
                     count: 1));
 

@@ -115,10 +115,10 @@ namespace Odyssey.Hud
         public static readonly IReadOnlyList<Entry> All = new[]
         {
             new Entry("ui.work.firefighting", NotSimulated, NoSkill, "firefighting arrives with fire (M5)"),
-            new Entry("ui.work.patient",      NotSimulated, NoSkill, "treatment arrives with health (M6)"),
-            new Entry("ui.work.bedrest",      NotSimulated, NoSkill, "treatment arrives with health (M6)"),
-            // Live from health's H3 (design 43 §5): Work_Doctor, whose emergency giver tends the hurt,
-            // paid at the Medicine skill's tend speed.
+            new Entry("ui.work.patient",      NotSimulated, NoSkill, "the hurt go to bed by themselves (design 37)"),
+            new Entry("ui.work.bedrest",      NotSimulated, NoSkill, "the hurt go to bed by themselves (design 37)"),
+            // Live with medical supplies (design 37): Work_Doctor's emergency giver treats the hurt,
+            // and Medicine buys speed at it.
             new Entry("ui.work.doctor",       "doctor",       "medicine",     "", WorkHandle.Doctor),
             new Entry("ui.work.warden",       NotSimulated, NoSkill, "prisoners arrive with factions (M7)"),
             new Entry("ui.work.handling",     NotSimulated, NoSkill, "animals arrive with M5"),

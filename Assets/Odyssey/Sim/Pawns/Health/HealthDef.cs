@@ -141,23 +141,23 @@ namespace Odyssey.Sim.Pawns
 
         // ---- tending (design 43 §5, §6) ------------------------------------------------------
 
-        /// <summary>The medkit's def, by name. Consumed by a tend when one can be reached.</summary>
-        public string medkit = "Item_Medkit";
-
         /// <summary>Tend quality per mille by Medicine level, before potency (a-02:42).</summary>
         public List<CurvePoint> tendQualityCurve = new List<CurvePoint>();
 
         /// <summary>Potency with bare hands, per mille (a-02:42: none is 0.3).</summary>
         public int bareHandsPotencyPerMille = 300;
 
-        /// <summary>Potency with a medkit, per mille (a-02:42: industrial is 1.0).</summary>
-        public int medkitPotencyPerMille = 1_000;
+        /// <summary>
+        /// Potency with medical supplies, per mille (a-02:42: industrial is 1.0). Supplies are any
+        /// item whose Def heals (<c>Medical.NearestSupplies</c>, design 37); one is used per treatment.
+        /// </summary>
+        public int suppliesPotencyPerMille = 1_000;
 
         /// <summary>The most quality bare hands can reach, per mille (a-02:42: 70 %).</summary>
         public int bareHandsCapPerMille = 700;
 
-        /// <summary>The most quality a medkit can reach, per mille (a-02:42: 100 %).</summary>
-        public int medkitCapPerMille = 1_000;
+        /// <summary>The most quality medical supplies can reach, per mille (a-02:42: 100 %).</summary>
+        public int suppliesCapPerMille = 1_000;
 
         /// <summary>A tended injury heals this many thousandths of a point a day at nought quality, anywhere (a-02:41: +4).</summary>
         public int tendHealMinPerDay = 4_000;
@@ -169,11 +169,11 @@ namespace Odyssey.Sim.Pawns
         /// A tend's quality at a Medicine level, per mille (a-02:42): the curve, times the
         /// potency of what was used, clamped by it. Integer, so it replays exactly.
         /// </summary>
-        public int TendQualityPerMille(int level, bool medkit)
+        public int TendQualityPerMille(int level, bool supplies)
         {
             int skill = CombatDef.Evaluate(tendQualityCurve, level);
-            int potency = medkit ? medkitPotencyPerMille : bareHandsPotencyPerMille;
-            int cap = medkit ? medkitCapPerMille : bareHandsCapPerMille;
+            int potency = supplies ? suppliesPotencyPerMille : bareHandsPotencyPerMille;
+            int cap = supplies ? suppliesCapPerMille : bareHandsCapPerMille;
             int quality = skill * potency / 1_000;
             if (quality < 0) quality = 0;
             return quality > cap ? cap : quality;

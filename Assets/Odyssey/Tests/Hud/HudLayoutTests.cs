@@ -143,6 +143,12 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(HudLayout.InspectHeader, Is.GreaterThanOrEqualTo(HudLayout.Avatar),
                 "the inspect header is shorter than the avatar it holds");
+
+            // The name, the activity line and the pace stand beside the portrait in its height
+            // (design 17 §5a). The header is fixed, so a line that does not fit is not a taller
+            // pane — it is text drawn over the tabs.
+            Assert.That(HudLayout.InspectHeaderText, Is.LessThanOrEqualTo(HudLayout.InspectHeader),
+                "the header's lines of text no longer fit beside the portrait");
         }
 
         [Test]

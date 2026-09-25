@@ -7,18 +7,20 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The body's two alerts (design 43 §11): a colonist with an injury nobody has tended gets a
-    /// row that goes to her — Danger with the hours while it bleeds, Warning otherwise — and "No
-    /// medicine" stands while somebody needs tending and there is no medkit on the board.
+    /// The body's two alerts (design 43 §11, §15): a colonist waiting on a doctor with an injury
+    /// nobody has tended gets a row that goes to her — Danger with the hours while it bleeds,
+    /// Warning while she lies downed — and "No medicine" stands while somebody needs tending and
+    /// there are no medical supplies on the board.
     /// </summary>
     public class HealthAlertTests
     {
         static readonly PawnId Ada = new PawnId(1), Bo = new PawnId(2);
 
-        static WorldSnapshot Board(int injuries, int tended, int hours, bool medkit)
+        static WorldSnapshot Board(int injuries, int tended, int hours, bool medkit, bool downed = false)
         {
             WorldSnapshot frame = Frame.Write();
-            frame.AddPawn(new PawnView(Ada, new CellRef(1, 1, 1), 800, 800, 800, JobHandle.Wait, flags: PawnFlags.Person));
+            frame.AddPawn(new PawnView(Ada, new CellRef(1, 1, 1), 800, 800, 800, JobHandle.Wait,
+                flags: PawnFlags.Person | (downed ? PawnFlags.Downed : 0)));
             frame.AddPawn(new PawnView(Bo, new CellRef(2, 1, 1), 800, 800, 800, JobHandle.Wait, flags: PawnFlags.Person));
             if (injuries > 0)
             {
@@ -26,7 +28,7 @@ namespace Odyssey.Tests.Hud
                 frame.AddPawnAspect(new PawnAspect(Ada, HealthAspectNames.TendedKey, tended));
                 if (hours > 0) frame.AddPawnAspect(new PawnAspect(Ada, HealthAspectNames.BleedHoursKey, hours));
             }
-            if (medkit) frame.AddThing(new ThingView(new ThingId(9), new CellRef(3, 1, 1), ItemHandle.Medkit, 0, 5));
+            if (medkit) frame.AddThing(new ThingView(new ThingId(9), new CellRef(3, 1, 1), ItemHandle.MedicalSupplies, 0, 5));
             return frame;
         }
 
@@ -43,14 +45,26 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void AnUntendedBruiseIsAWarningAndATendClearsIt()
+        public void ADownedColonistsBruiseIsAWarningAndATendClearsIt()
+        {
+            var alerts = new AlertModel();
+            alerts.Refresh(Board(injuries: 1, tended: 0, hours: 0, medkit: true, downed: true), 0.0);
+            Assert.That(alerts.Rows.Single(r => r.Key == AlertModel.InjuredKey).Severity, Is.EqualTo(AlertSeverity.Warning));
+
+            alerts.Refresh(Board(injuries: 1, tended: 1, hours: 0, medkit: true, downed: true), 0.0);
+            Assert.That(alerts.Rows.Any(r => r.Key == AlertModel.InjuredKey), Is.False, "the row outlived the tend");
+        }
+
+        /// <summary>
+        /// A bruise on a colonist on her feet waits for bed rest (design 37 §4): the doctor's round
+        /// never walks to her, so a row saying she needs tending would stand until she slept.
+        /// </summary>
+        [Test]
+        public void ABruiseOnAColonistOnHerFeetIsNotNews()
         {
             var alerts = new AlertModel();
             alerts.Refresh(Board(injuries: 1, tended: 0, hours: 0, medkit: true), 0.0);
-            Assert.That(alerts.Rows.Single(r => r.Key == AlertModel.InjuredKey).Severity, Is.EqualTo(AlertSeverity.Warning));
-
-            alerts.Refresh(Board(injuries: 1, tended: 1, hours: 0, medkit: true), 0.0);
-            Assert.That(alerts.Rows.Any(r => r.Key == AlertModel.InjuredKey), Is.False, "the row outlived the tend");
+            Assert.That(alerts.Rows.Any(r => r.Key == AlertModel.InjuredKey), Is.False);
         }
 
         [Test]

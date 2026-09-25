@@ -243,6 +243,16 @@ namespace Odyssey.Sim.Contracts
         public readonly bool Seated;
 
         /// <summary>
+        /// The step in hand is a jump over a stream that is falling short (design 46 §6): it
+        /// leaves the bank as a jump and comes down in the water at <see cref="NextCell"/>, where a
+        /// step of the same shape is otherwise a drop off the bank. A bool beside
+        /// <see cref="Seated"/> for <see cref="Seated"/>'s reasons — the flags byte is full, and
+        /// every figure on screen is posed whether or not anybody selected it. Derived from the
+        /// pawn's saved landing, so neither saved nor hashed here.
+        /// </summary>
+        public readonly bool JumpingShort;
+
+        /// <summary>
         /// The last momentary thing this pawn did, which stays reported until it does another.
         ///
         /// <para><b>Sticky, and that is the whole design.</b> Presentation reads the latest
@@ -339,9 +349,10 @@ namespace Odyssey.Sim.Contracts
             bool working = false, CellRef workCell = default,
             PawnGesture gesture = PawnGesture.None, byte gestureSerial = 0,
             bool asleep = false, int movePerMille = 0, int moveDeltaPerMille = 0,
-            int kind = 0, PawnFlags? flags = null, bool seated = false)
+            int kind = 0, PawnFlags? flags = null, bool seated = false, bool jumpingShort = false)
         {
             Seated = seated;
+            JumpingShort = jumpingShort;
             Kind = kind;
             Flags = flags ?? (kind == 0 ? PawnFlags.Person : PawnFlags.None);
             MovePerMille = movePerMille;
@@ -1434,6 +1445,9 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public int PowerVersion { get; private set; }
 
+        /// <summary>The sky this frame (design 43 §5), or <see cref="WeatherView.None"/> with no weather system.</summary>
+        public WeatherView Weather { get; private set; } = WeatherView.None;
+
         /// <summary>Line cells, in cell-index order within each kind. See <see cref="ConduitView"/>.</summary>
         public ReadOnlySpan<ConduitView> Conduits => new ReadOnlySpan<ConduitView>(_conduits, 0, ConduitCount);
 
@@ -1779,6 +1793,7 @@ namespace Odyssey.Sim.Contracts
             PowerDeviceCount = 0;
             PowerNetCount = 0;
             PowerVersion = 0;
+            Weather = WeatherView.None;
             CombatEventCount = 0;
             CorpseCount = 0;
             EdificeDamageCount = 0;
@@ -1835,6 +1850,8 @@ namespace Odyssey.Sim.Contracts
         }
 
         internal void SetPowerVersion(int version) => PowerVersion = version;
+
+        internal void SetWeather(in WeatherView view) => Weather = view;
 
         internal void AddBulletin(in BulletinView view)
         {

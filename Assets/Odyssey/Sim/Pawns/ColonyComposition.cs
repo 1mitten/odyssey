@@ -73,6 +73,10 @@ namespace Odyssey.Sim.Pawns
                 pawns.Cells, edificeSave, pawns.Items, pawns.Pawns, support.Solver);
             pawns.Designations = designations;
             pawns.Construction = construction;
+            // Every colony has a chunk grid, a headless one included: it is how an edit tells the
+            // sky map which columns moved (design 43 §6). ColonyWorld.Build makes one; this is for
+            // the fixtures that assemble a colony by hand.
+            pawns.Chunks ??= new ChunkGrid(pawns.Size);
             // So a site can carry its detour in the navigation flags, and so raising a building
             // can ask who is standing in it. Set here because this is the one place that holds
             // both the graph and the grid.
@@ -126,6 +130,13 @@ namespace Odyssey.Sim.Pawns
             // colony that forgot it would be a colony where nothing is ever cold.
             var temperature = new Temperature.TemperatureSystem(pawns, edifices, Worldgen.WorldContent.Climate);
             pawns.Temperature = temperature;
+            // The sky (design 43), which writes the outdoor curve's weather term before the thermal
+            // pass reads it: Order 35 against temperature's 50.
+            var weather = new Weather.WeatherSystem(pawns, Worldgen.WorldContent.Weathers);
+            pawns.Weather = weather;
+            // And where it reaches: the one shelter rule (design 43 §6), read by pace, growth and
+            // the animals. Derived, so it is neither saved nor hashed and needs no schedule slot.
+            pawns.Sky = new World.SkyColumns(pawns.Cells, edifices, pawns.Chunks);
             // Power (design 32). Built here for the same argument again, and handed to the
             // construction grid because that is where a line order arrives: a colony that forgot
             // it would have a Power category whose every tool silently did nothing.
@@ -183,6 +194,9 @@ namespace Odyssey.Sim.Pawns
                 // The thermal pass, beside the other world systems: Order 50 puts it after the
                 // enclosure solve (30) whatever line of this chain it sits on.
                 .AddSystem(_ => temperature)
+                .AddSystem(_ => weather)
+                .AddSnapshotContributor(weather)
+                .AddIntentHandler(IntentKind.DebugSetWeather, weather.HandleForce)
                 // The burn, and the lazy solve behind it. Order 45 puts it before the thermal pass
                 // (50), which asks it for heat on the same tick.
                 .AddSystem(_ => power)
@@ -238,6 +252,14 @@ namespace Odyssey.Sim.Pawns
                 // a debug-only wiring path a real colony would not otherwise get.
                 .AddIntentHandler(IntentKind.SpawnPawn, pawns.Pawns.HandleSpawnPawn)
                 .AddIntentHandler(IntentKind.DebugArmColonists, pawns.Pawns.HandleDebugArmColonists)
+                // Jumps always fail (design 46 §6): a switch on the context, read by the one roll.
+                .AddIntentHandler(IntentKind.DebugJumpsFail, intent =>
+                {
+                    bool on = intent.A != 0;
+                    if (pawns.DebugJumpsAlwaysFail == on) return IntentRejection.AlreadyInThatState;
+                    pawns.DebugJumpsAlwaysFail = on;
+                    return IntentRejection.None;
+                })
                 .AddIntentHandler(IntentKind.GiveResource, intent => pawns.Items.HandleGiveResource(intent, pawns.Cells))
                 // The two power commands that are not a build (design 32): taking a line up, and
                 // throwing a building's switch. Both belong to the power grid, the one owner of both.

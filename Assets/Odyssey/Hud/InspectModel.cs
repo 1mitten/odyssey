@@ -468,6 +468,30 @@ namespace Odyssey.Hud
             Job = JobLabels.Carrying(pawn.JobDef, carried, stack);
         }
 
+        /// <summary>
+        /// "Pace 90% · in the rain", the line under the activity line (design 17 §5a), and what
+        /// it is made of for its tooltip. Empty for anything the simulation published no pace for.
+        /// </summary>
+        public string Pace = string.Empty;
+
+        /// <summary>The factors of <see cref="Pace"/> that are not the standard walk, joined.</summary>
+        public string PaceTip = string.Empty;
+
+        // What the two pace strings were last built from. The same argument as _positionFor: they
+        // are composed, and the pane refreshes fifteen times a second.
+        PaceModel.Factors _paceFor;
+        bool _paceWritten;
+
+        void SetPace(WorldSnapshot snapshot, PawnId id)
+        {
+            PaceModel.Factors factors = PaceModel.Of(snapshot, id);
+            if (_paceWritten && factors.Equals(_paceFor)) return;
+            _paceFor = factors;
+            _paceWritten = true;
+            Pace = factors.Published ? PaceModel.Line(factors) : string.Empty;
+            PaceTip = factors.Published ? PaceModel.Tooltip(factors) : string.Empty;
+        }
+
         void SetPosition(CellRef cell)
         {
             if (_positionWritten && _positionFor == cell) return;
@@ -654,14 +678,19 @@ namespace Odyssey.Hud
                     {
                         Subtitle = AnimalWord;
                         // Its own mark in the carried half of the cache, so a colonist's line and
-                        // an animal's for the same job cannot be taken for each other.
-                        if (_jobFor != pawn.JobDef || _carriedFor != AnimalActivity)
+                        // an animal's for the same job cannot be taken for each other; the stack
+                        // half carries whether the rain has sent it for cover (design 43 §6a).
+                        bool sheltering = PawnKindLabels.IsSheltering(snapshot, pawn.Id);
+                        int shelterMark = sheltering ? 1 : 0;
+                        string activity = PawnKindLabels.ActivityKey(pawn.JobDef, sheltering);
+                        if (_jobFor != pawn.JobDef || _carriedFor != AnimalActivity || _stackFor != shelterMark)
                         {
                             _jobFor = pawn.JobDef;
                             _carriedFor = AnimalActivity;
-                            Job = PawnKindLabels.Activity(pawn.JobDef);
+                            _stackFor = shelterMark;
+                            Job = Registry.Label(activity);
                         }
-                        JobIconKey = PawnKindLabels.ActivityKey(pawn.JobDef);
+                        JobIconKey = activity;
                     }
                     else
                     {
@@ -683,6 +712,7 @@ namespace Odyssey.Hud
                     Subtitle = ColonistWord;
                     SetJob(snapshot, pawn);
                     JobIconKey = JobLabels.IconKey(pawn.JobDef);
+                    SetPace(snapshot, pawn.Id);
                     Food = pawn.Food;
                     Rest = pawn.Rest;
                     Mood = pawn.Mood;

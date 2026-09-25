@@ -481,8 +481,17 @@
 .clock__temp {
     color: rgba(240, 214, 122, 0.92);
     height: 28px;
-    margin-left: 8px;
+    margin-left: 4px;
     -unity-text-align: middle-right;
+}
+
+/* The sky on the clock (design 43 §5): a 16 px glyph before the reading, the reading's own
+   yellow, and its word in the tooltip - the row has no room for a word. */
+.clock__weather {
+    width: 16px;
+    height: 16px;
+    margin-left: 8px;
+    flex-shrink: 0;
 }
 
 .speed {
@@ -958,6 +967,15 @@
 
 /* Twenty-two and sixteen come to the thirty-eight the layout model gives the header. */
 .inspect__state {
+    color: rgba(255, 255, 255, 0.50);
+    white-space: nowrap;
+    height: 16px;
+    -unity-text-align: middle-left;
+}
+
+/* A colonist's pace, the header's third line (design 17 §5a). It fits because the 60 px portrait
+   sets the header, not the 38 px of text; HudLayoutTests holds the three lines inside it. */
+.inspect__pace {
     color: rgba(255, 255, 255, 0.50);
     white-space: nowrap;
     height: 16px;

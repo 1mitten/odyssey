@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
 {
-    /// <summary>The debug menu's two sections (owner, 2026-09-20: events want a tab of their own).</summary>
+    /// <summary>The debug menu's sections (owner, 2026-09-20: events want a tab of their own).</summary>
     public enum DebugTab
     {
         /// <summary>The overlay toggle and the grants: things done to the colony that exists.</summary>
@@ -15,6 +15,12 @@ namespace Odyssey.Hud
 
         /// <summary>Colonists, animals, the bandit and the weapons, placed near the camera (owner, 2026-09-22: a tab of its own).</summary>
         Spawn,
+
+        /// <summary>
+        /// The sky set by hand (owner, 2026-09-24: "we need to be able to test it"): each row commands
+        /// the weather system (design 43 §8), and two switches change only how the rain is drawn.
+        /// </summary>
+        Weather,
     }
 
     /// <summary>
@@ -40,6 +46,7 @@ namespace Odyssey.Hud
         public const string CheatsKey = "ui.debug.tab.cheats";
         public const string EventsKey = "ui.debug.tab.events";
         public const string SpawnTabKey = "ui.debug.tab.spawn";
+        public const string WeatherTabKey = "ui.debug.tab.weather";
         public const string SpawnPawnKey = "ui.debug.spawnpawn";
 
         /// <summary>The two animals (design 29 §7): the same intent as the colonist's, with a kind.</summary>
@@ -115,7 +122,80 @@ namespace Odyssey.Hud
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey,
             SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
+            JumpsFailKey,
+            WeatherTabKey, WeatherClearKey, WeatherOvercastKey, WeatherDrizzleKey, WeatherRainKey,
+            WeatherDownpourKey, WeatherStormKey, RainParticlesKey, WetGlossKey,
         };
+
+        public const string WeatherClearKey = "ui.debug.weather.clear",
+            WeatherOvercastKey = "ui.debug.weather.overcast",
+            WeatherDrizzleKey = "ui.debug.weather.drizzle",
+            WeatherRainKey = "ui.debug.weather.rain",
+            WeatherDownpourKey = "ui.debug.weather.downpour",
+            WeatherStormKey = "ui.debug.weather.storm";
+
+        /// <summary>
+        /// Draw wet ground as gloss only rather than richer and a little darker — the two
+        /// candidates the owner is choosing between by eye (2026-09-25).
+        /// </summary>
+        public const string WetGlossKey = "ui.debug.wetgloss";
+
+        /// <summary>Draw the rain as the weather design's §7 first wrote it (CPU particles), to compare.</summary>
+        public const string RainParticlesKey = "ui.debug.rainparticles";
+
+        /// <summary>
+        /// One sky the Weather tab sets (design 43 §8). Since the weather system exists these are
+        /// <b>commands to it</b>, not looks: a row sends <see cref="IntentKind.DebugSetWeather"/> with
+        /// a kind and an intensity, the sky blends in over a few seconds, and the spell then runs its
+        /// rolled length before the season takes over. What each kind looks like is the content's
+        /// (<c>Weather.xml</c>), so the tab can never show a sky the game cannot roll.
+        /// </summary>
+        public readonly struct WeatherPreset
+        {
+            public readonly string Key;
+            public readonly string Tooltip;
+            public readonly WeatherKind Kind;
+
+            /// <summary>The intensity the sky is set to, in per-mille: for rain, drizzle to downpour.</summary>
+            public readonly int IntensityPerMille;
+
+            public WeatherPreset(string key, string tooltip, WeatherKind kind, int intensityPerMille)
+            {
+                Key = key;
+                Tooltip = tooltip;
+                Kind = kind;
+                IntensityPerMille = intensityPerMille;
+            }
+
+            /// <summary>The command a click on this row sends: blend in quickly (C = 1).</summary>
+            public Intent ToIntent() => new Intent(IntentKind.DebugSetWeather, default, (int)Kind, IntensityPerMille, 1);
+        }
+
+        /// <summary>The Weather tab, top to bottom. The first is the game as it draws without weather.</summary>
+        public static readonly WeatherPreset[] WeatherPresets =
+        {
+            new WeatherPreset(WeatherClearKey, "Clears the sky now; the season takes over again when the spell ends",
+                WeatherKind.Clear, 1000),
+            new WeatherPreset(WeatherOvercastKey,
+                "A grey day with no rain: the sun and its shadows faded, the colour drained",
+                WeatherKind.Cloudy, 1000),
+            new WeatherPreset(WeatherDrizzleKey, "Light rain in full colour; the ground turns half wet",
+                WeatherKind.Rain, 250),
+            new WeatherPreset(WeatherRainKey, "Steady rain in full colour: softer light, wet ground, puddles starting",
+                WeatherKind.Rain, 700),
+            new WeatherPreset(WeatherDownpourKey, "The heaviest ordinary rain, still in colour: soaked ground and puddles",
+                WeatherKind.Rain, 1000),
+            new WeatherPreset(WeatherStormKey,
+                "The rarer dim day: heavy rain, the colour drained to grey, the wind bending grass and rain",
+                WeatherKind.Storm, 1000),
+        };
+
+        /// <summary>
+        /// Every jump over a stream falls short while this is on (design 46 §6), so a failed jump
+        /// can be watched: at one in thirty-three it is not something a playtest can wait for.
+        /// Sends <see cref="IntentKind.DebugJumpsFail"/> with <c>A</c> 1 or 0.
+        /// </summary>
+        public const string JumpsFailKey = "ui.debug.jumpsfail";
 
         /// <summary>The bandit (design 33 §1): a hostile person, the same intent as the colonist's with a kind.</summary>
         public const string SpawnBanditKey = "ui.debug.spawnbandit";
@@ -176,7 +256,7 @@ namespace Odyssey.Hud
         /// <summary>Three bandits at once, spread over neighbouring tiles; and every unarmed colonist given a weapon.</summary>
         public const string SpawnBanditsKey = "ui.debug.spawnbandits", ArmColonistsKey = "ui.debug.armcolonists";
 
-        /// <summary>The body's three rows (design 43 §11), on the colonist nearest the camera; and ten medkits.</summary>
+        /// <summary>The body's three rows (design 43 §11), on the colonist nearest the camera; and ten medical supplies.</summary>
         public const string HurtKey = "ui.debug.hurt", HealKey = "ui.debug.heal", KillKey = "ui.debug.kill",
             GiveMedkitsKey = "ui.debug.givemedkits";
 
@@ -228,13 +308,14 @@ namespace Odyssey.Hud
             Resource(GiveWoodKey, "Adds 50 wood near the camera", ItemHandle.Wood),
             Resource(GiveStoneKey, "Adds 50 stone near the camera", ItemHandle.Stone),
             Resource(GiveFoodKey, "Adds 50 meals near the camera", ItemHandle.Meal),
-            new SpawnRow(GiveMedkitsKey, "Adds 10 medkits near the camera. A doctor fetches one for every tend",
-                IntentKind.GiveResource, ItemHandle.Medkit, 10, GroupItemsKey),
+            new SpawnRow(GiveMedkitsKey, "Adds 10 medical supplies near the camera. A doctor uses one for every treatment",
+                IntentKind.GiveResource, ItemHandle.MedicalSupplies, 10, GroupItemsKey),
         };
 
         public static string TabKey(DebugTab tab) =>
             tab == DebugTab.Events ? EventsKey
             : tab == DebugTab.Spawn ? SpawnTabKey
+            : tab == DebugTab.Weather ? WeatherTabKey
             : CheatsKey;
 
         public bool Open { get; private set; }
@@ -262,6 +343,29 @@ namespace Odyssey.Hud
             if (Tab == tab) return;
             Tab = tab;
             TabChanged?.Invoke(tab);
+        }
+
+        /// <summary>Whether the rain is drawn by the particle control arm rather than the GPU.</summary>
+        public bool RainAsParticles { get; private set; }
+
+        /// <summary>Whether wet ground is drawn as gloss only, rather than richer and a little darker.</summary>
+        public bool WetGlossOnly { get; private set; }
+
+        /// <summary>Raised when one of the two drawing switches changes, and only then.</summary>
+        public event Action? WeatherChanged;
+
+        public void SetRainAsParticles(bool on)
+        {
+            if (RainAsParticles == on) return;
+            RainAsParticles = on;
+            WeatherChanged?.Invoke();
+        }
+
+        public void SetWetGlossOnly(bool on)
+        {
+            if (WetGlossOnly == on) return;
+            WetGlossOnly = on;
+            WeatherChanged?.Invoke();
         }
     }
 }

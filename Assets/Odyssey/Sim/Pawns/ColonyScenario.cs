@@ -88,6 +88,17 @@ namespace Odyssey.Sim.Pawns
         public int woodPerPile = 75;
 
         /// <summary>
+        /// Piles of medical supplies beside the food (design 37 §5): what the first fight is
+        /// treated with. Zero by default on the same terms as <see cref="stonePiles"/>, so
+        /// <see cref="Bare"/> and every golden are untouched; <see cref="Playtest"/> sets one pile
+        /// of six (owner, 2026-09-24).
+        /// </summary>
+        public int medicalPiles = 0;
+
+        /// <inheritdoc cref="medicalPiles"/>
+        public int medicalPerPile = 6;
+
+        /// <summary>
         /// Piles of scrap metal left lying about the board — old wreckage — per ten thousand
         /// columns (design 32 §14). Zero by default, so <see cref="Bare"/> and every golden built
         /// on it are untouched; <see cref="Playtest"/> sets it.
@@ -210,6 +221,8 @@ namespace Odyssey.Sim.Pawns
                 startingFellRadius = 0, startingMineRadius = 0, startingMineOutcrops = 0,
                 mealPiles = 3, salvage = 0,
                 stonePiles = 2, woodPiles = 2,
+                // One stack of six medical supplies (design 37, owner's number).
+                medicalPiles = 1,
                 // Old wreckage scattered over the board, the colony's first scrap metal and the
                 // only source of it until a scrap drop falls (design 32 §14). Seven piles per ten
                 // thousand columns is ten on the played 120 x 120 board.
@@ -754,7 +767,8 @@ namespace Odyssey.Sim.Pawns
             // start on" that nothing keeps in step with the first.
             int weapons = scenario.startingWeapons?.Length ?? 0;
             storeys.Want(scenario.mealLayerOffset,
-                scenario.mealPiles + scenario.stonePiles + scenario.woodPiles + weapons);
+                scenario.mealPiles + scenario.stonePiles + scenario.woodPiles
+                + scenario.medicalPiles + weapons);
             storeys.Want(scenario.bedLayerOffset, scenario.beds);
             storeys.Want(scenario.stockpileLayerOffset, scenario.stockpileCells);
             storeys.Search();
@@ -800,6 +814,8 @@ namespace Odyssey.Sim.Pawns
                 ItemIndex.Stone, scenario.stonePiles, scenario.stonePerPile);
             placedMaterials += PlacePiles(pawns, storeys, scenario.mealLayerOffset,
                 ItemIndex.Wood, scenario.woodPiles, scenario.woodPerPile);
+            placedMaterials += PlacePiles(pawns, storeys, scenario.mealLayerOffset,
+                ItemIndex.MedicalSupplies, scenario.medicalPiles, scenario.medicalPerPile);
 
             // The kit's weapons, after the materials and on the same storey: one a cell, on the
             // ground, in nobody's hand (design 33 §6D).

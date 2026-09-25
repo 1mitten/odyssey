@@ -2,7 +2,8 @@
 
 **Designed and built 2026-09-25** — H1–H6 of `docs/plans/health.md` on
 `claude/relaxed-heisenberg-zxy63b` (PR 1mitten/odyssey#213); §14 is what the build changed and
-measured, and it wins where it and §1–§13 disagree. The interview is `docs/research/health-interview.md`
+measured, and it wins where it and §1–§13 disagree; §15, the merge with medical supplies (design
+37), wins over both. The interview is `docs/research/health-interview.md`
 (four answers, every recommendation taken); the research is `docs/research/a-02-health.md`; the
 units are `docs/plans/health.md`; the brief that Claude Design draws the tab from is
 `docs/reference/mockups/health-tab-brief.md`. Health is **M6** in the brief
@@ -393,6 +394,74 @@ and re-aims only once the patient has left it.
 - **A standing patient walks on while she is tended.** The doctor follows and keeps the work done,
   but a patient who waits would be quicker; a "patient" work type (`ui.work.patient`, drawn dim)
   is the reference's answer.
-- **No medkit arrives except from the debug menu.** No scenario carries any and nothing makes them.
+- ~~**No medkit arrives except from the debug menu.**~~ Stale since the merge (§15): the starting kit
+  carries six medical supplies and the Medical drop brings four to eight.
 - **Rescue runs before tend** at equal priority (the work types' order), so a downed colonist is
   carried to bed and tended there.
+
+## 15. Merged with medical supplies (design 37), 2026-09-25
+
+`main` shipped design 37 (PR #184) while this branch was in review: its own Doctor work type,
+Medicine skill, `Item_MedicalSupplies` and a `Job_Treat` that heals the pool +40 under an 80 % cap,
+with a patient who goes to bed and a colonist who treats herself when nobody can come. Both designs
+are the owner's; neither knew of the other. **Where this section and §5 disagree, this wins.**
+
+### 15a. One doctor, one job, one item
+
+| This branch had | Is now | Why |
+|---|---|---|
+| `Job_Tend` (23), `TendWorkGiver`, `TendJobDriver` | **Deleted.** `Job_Treat` (main's 23) **ends in the tend**: every injury tended at the treater's quality, every bleed stopped (`Medical.Tend`) | Two doctors' jobs would be two owners of who a doctor walks to. Main's is shipped, has its art, its kneel and its owner-played heal-in-shares; the tend is one call at its end |
+| `Item_Medkit` (11), `PawnContent.MedkitItem`, `HealthDef.medkit` | **Main's `Item_MedicalSupplies`**; any item whose Def heals is "supplies" (`Medical.NearestSupplies`). `medkitPotency/CapPerMille` renamed `supplies…` | One box, one shelf row, one starting kit, one Medical drop |
+| Work_Doctor at 400 + 60 a level | **Main's 600 + 100** (cutting's and growing's curve) | Main's is shipped and owner-approved; a-02's tend-speed curve was ours to choose |
+| Nobody tends herself (§5) | **Main's self-treatment, now a tend as well**: bleeding, or under 60 % | Owner-approved in design 37. It tends at her own Medicine quality; no ×0.7, because the heal is already halved and the work tripled |
+| Right-click Tend sends `Job_Tend` | Sends **`Job_Treat`, player-forced**; the patient need not be lying still, so a drafted soldier bleeding where she stands can be reached | The order's handler keeps its name, `OrderTend`, and its label |
+| Give medkits | **Give medical supplies** (key unchanged) | |
+
+### 15b. The rules the two designs had to agree on
+
+- **A bleeding colonist is a patient whatever her pool and whatever the cooldown**
+  (`Medical.NeedsTreatment`). Design 37 alone leaves a colonist at 88 % alone — a scratch — and a
+  12-point cut there bleeds her to death in under a day and a half. She lies down for the doctor (or
+  treats herself if nobody can come and supplies can be reached), and stays lying while she bleeds.
+- **Inside the cooldown a treatment tends and heals nothing** (`Medical.Heals`), so a second cut
+  in a fight is tended without a stack of supplies replacing rest — design 37's reason for the
+  cooldown, kept. The cooldown is set only by a treatment that could heal.
+- **A treatment heals the ledger as well as the pool** (`Medical.ApplyShare`): the same points
+  off the worst injury first, in the same call, so §2's invariant holds on the treatment path too.
+  Without it a colonist treated to 70 % kept every injury, and pain shock kept her down.
+- **She gets up when the treatment ends, not on a share** (`Medical.GetUpIfAble`, asked from the
+  driver's `Cleanup`), and only once the body lets her (`Incapacitated`).
+- **The doctor's round still walks only to a patient lying still** (design 37: "a doctor chasing a
+  colonist walking about with a scratch is a pursuit"). Bleeding colonists come first, then the
+  nearest, as §5 had it.
+- **The Injured alert stands for a colonist waiting on a doctor**: Danger while bleeding, Warning
+  while downed with an untended injury. A bruise on a colonist on her feet waits for bed rest
+  under design 37 and is not news.
+
+### 15c. Two faults in design 37's driver the merge reached, fixed
+
+- **A downed patient got up a third of the way through her own treatment.** Getting up was asked
+  on every share, at 15 %; she then stopped lying still, the doctor's job failed, the unit went
+  back on the floor unused and no cooldown was set — a free heal every time a doctor started.
+  Design 37's own test of the case was `[Ignore]`d for an unrelated rescue fault, so nothing saw
+  it. `TendTests.ADownedPatientGetsUpWhenHerTreatmentEndsAndTheUnitIsSpent`.
+- **A treatment that reached the cap part-way failed the same way**, because "still needs
+  treatment" was asked on every tick of the work. It is asked before the work starts now; once
+  started, a treatment runs to the end.
+- And one smaller: a doctor displaced mid-treatment went back to the walk toil, which zeroed the
+  work done while the shares already paid stayed paid — one unit could heal more than its forty.
+  She now walks back inside the treatment toil and keeps the work, §14c's rule.
+
+### 15d. What the merge moved underneath
+
+- **Hash bit 22 was taken twice.** Main gave it to the treatment cooldown; the ledger is **bit 23**,
+  the other of the two design 33 left free.
+- **The region roll shared a stream with the stream jump.** Both were minted as SHA-256's eleventh
+  round constant. `HitRegion` is the twelfth now and `FallSplit` the thirteenth; two purposes on
+  one stream would have made a jump's roll decide where a blow landed.
+  `HealthTests.EveryPointOfTheBlowIsOnTheLedgerAndThePoolAgrees` then showed it had passed by luck:
+  six blows on one tick are one roll by design, and it now ticks between them, as a swing's own
+  cooldown always does.
+- **No golden moved.** Main's goldens hold unchanged on the merge: every handle the health line
+  needed is main's, and the ledger is hashed only while somebody is hurt. The content fingerprint
+  moved once, for `Health.xml`.

@@ -11,7 +11,7 @@ The work types a colonist can be assigned, in priority order of urgency, the ski
 | **Firefighting** | `ui.work.firefighting` | Put out fires. Always first | sheet 05 (tools and weapons), low | M7 |
 | **Patient** | `ui.work.patient` | Accept treatment when hurt | sheet 06 (action tiles), high | M7 |
 | **Bed rest** | `ui.work.bedrest` | Stay in bed while recovering | sheet 08 (salvage gear), high | M7 |
-| **Doctor** | `ui.work.doctor` | Tend the injured and operate | sheet 08 (salvage gear), high | M7 |
+| **Doctor** | `ui.work.doctor` | Treat the hurt, with medical supplies or without | sheet 08 (salvage gear), high | M3 |
 | **Warden** | `ui.work.warden` | Feed, talk to and recruit prisoners | sheet 06 (action tiles), med | M7 |
 | **Handling** | `ui.work.handling` | Tame, train and feed animals | sheet 06 (action tiles), high | M7 |
 | **Cooking** | `ui.work.cooking` | Prepare meals and butcher | sheet 06 (action tiles), high | M7 |
@@ -44,7 +44,7 @@ The work types a colonist can be assigned, in priority order of urgency, the ski
 | **Animals** | `ui.skill.animals` | Taming, training and husbandry | sheet 06 (action tiles), high | M2 |
 | **Crafting** | `ui.skill.crafting` | Bench work and item quality | sheet 06 (action tiles), high | M2 |
 | **Fabrication** | `ui.skill.fabrication` | Advanced production. Gates the best gear | sheet 06 (action tiles), high | M2 |
-| **Medicine** | `ui.skill.medicine` | Tending, surgery and survival odds | sheet 06 (action tiles), high | M2 |
+| **Medicine** | `ui.skill.medicine` | How fast a colonist treats the hurt | sheet 06 (action tiles), high | M2 |
 | **Social** | `ui.skill.social` | Negotiation, recruitment and warden work | sheet 08 (salvage gear), low | M2 |
 | **Shooting** | `ui.skill.shooting` | Ranged accuracy | sheet 06 (action tiles), high | M2 |
 | **Melee** | `ui.skill.melee` | Close combat, hit and parry | sheet 06 (action tiles), high | M2 |

@@ -62,12 +62,12 @@
     <!--
       Tending (design 43 sections 5 and 6). Quality by Medicine level is a-02 line 42's (the speed
       is the Doctor work type's curve in WorkTypes.xml, its one owner);
-      potency 0.3 bare-handed and 1.0 with a medkit, clamped at 70 and 100 per cent (a-02 line 42).
+      potency 0.3 bare-handed and 1.0 with medical supplies (Item_MedicalSupplies, design 37),
+      clamped at 70 and 100 per cent (a-02 line 42). The tend is the end of Job_Treat.
       A tended injury heals 4 points a day at nought quality up to 12 at full, anywhere (a-02
       line 41). The reference's random 0.75-1.25 is not taken: a deterministic tend is the same
       thing, and the spread bought nothing legible.
     -->
-    <medkit>Item_Medkit</medkit>
     <tendQualityCurve>
       <li><level>0</level><perMille>200</perMille></li>
       <li><level>5</level><perMille>700</perMille></li>
@@ -76,9 +76,9 @@
       <li><level>20</level><perMille>1550</perMille></li>
     </tendQualityCurve>
     <bareHandsPotencyPerMille>300</bareHandsPotencyPerMille>
-    <medkitPotencyPerMille>1000</medkitPotencyPerMille>
+    <suppliesPotencyPerMille>1000</suppliesPotencyPerMille>
     <bareHandsCapPerMille>700</bareHandsCapPerMille>
-    <medkitCapPerMille>1000</medkitCapPerMille>
+    <suppliesCapPerMille>1000</suppliesCapPerMille>
     <tendHealMinPerDay>4000</tendHealMinPerDay>
     <tendHealMaxPerDay>12000</tendHealMaxPerDay>
 

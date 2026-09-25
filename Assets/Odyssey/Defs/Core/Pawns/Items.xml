@@ -171,16 +171,17 @@
   </ItemDef>
 
   <!--
-    What a tend draws on (docs/design/43-health.md section 5; ui.res.medkit, "Field tending.
-    Consumed per treatment"): one consumed per tend, which lifts the tend's potency from bare
-    hands' 0.3 to 1.0 and its ceiling from 70 to 100 per cent (a-02 line 42). Ten to a stack,
-    INVENTED. No starting kit carries any yet: the debug menu gives them (design 43 section 11).
+    Medical supplies (design 37): what a doctor treats with. One unit is one treatment, and it
+    restores healPerUnit (40, the owner's number) under the treatment cap in Combat.xml's
+    MedicalDef. Ten to a stack, so a stack is one shelf bay and a starting kit of six is one pile.
+    The label a player reads is the registry's (ui.res.medkit, "Medical supplies").
   -->
   <ItemDef>
-    <defName>Item_Medkit</defName>
-    <label>medkit</label>
+    <defName>Item_MedicalSupplies</defName>
+    <label>medical supplies</label>
     <stackLimit>10</stackLimit>
     <category>Medicine</category>
+    <healPerUnit>40</healPerUnit>
   </ItemDef>
 
 </Defs>

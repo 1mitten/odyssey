@@ -43,7 +43,7 @@ What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the o
 | **Fungus** | `ui.res.fungus` | Grows without light. The underground staple | sheet 01 (raw materials), high | M1 |
 | **Stimulant** | `ui.res.stimulant` | Buys an hour of wakefulness at a cost | sheet 02 (food), med | M1 |
 | **Alcohol** | `ui.res.alcohol` | Recreation, and a problem for some | sheet 02 (food), high | M1 |
-| **Medkit** | `ui.res.medkit` | Field tending. Consumed per treatment | sheet 08 (salvage gear), high | M1 |
+| **Medical supplies** | `ui.res.medkit` | Dressings and drugs. One is used up per treatment | sheet 08 (salvage gear), high | M1 |
 | **Medicine** | `ui.res.medicine` | Compounded drugs. Better outcomes than a medkit | sheet 02 (food), low | M1 |
 | **Organ** | `ui.res.organ` | Harvested and kept cold. Surgery, or trade | sheet 07 (anatomy), high | M1 |
 | **Prosthetic** | `ui.res.prosthetic` | Replaces a lost part. Quality varies wildly | sheet 05 (tools and weapons), low | M1 |

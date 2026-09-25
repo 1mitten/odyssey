@@ -135,7 +135,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(WorkCatalogue.All.Count, Is.EqualTo(22));
             // Six since the combat contracts step (design 33 §5): Rescue's column went live with
             // Work_Rescue, whose giver answers no until C4 fills it.
-            // Seven since health's H3 (design 43 §5): the Doctor column went live with Work_Doctor.
+            // Seven since medical supplies (design 37): Doctor's column went live with Work_Doctor.
             Assert.That(WorkCatalogue.LiveCount, Is.EqualTo(7),
                 "Construction, Chopping, Mining, Hauling, Growing, Rescue and Doctor are what WorkTypes.xml runs.");
 

@@ -86,8 +86,7 @@ namespace Odyssey.Tests.Sim
                     // The combat contracts step (design 33 §5): SkillCatalogue's melee row went
                     // live in the same commit, and SkillCatalogueTests with it.
                     "melee",
-                    // Health's H3 (design 43 §5): SkillCatalogue's medicine row went live in the
-                    // same commit, and SkillCatalogueTests with it.
+                    // Medical supplies (design 37): SkillCatalogue's medicine row went live with it.
                     "medicine",
                 }),
                 "the simulation's skills have changed. A skill that trains is a skill the " +

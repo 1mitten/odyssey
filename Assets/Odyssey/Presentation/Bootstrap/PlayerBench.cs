@@ -49,6 +49,27 @@ namespace Odyssey.Presentation.Bootstrap
         /// §24), framed on the water nearest the colony at 32, 70 and 140 m.</summary>
         public const string ShoreArgument = "-odyssey-bench-shore";
 
+        /// <summary>
+        /// With <see cref="Argument"/>: the first-use hitch tour of design 38 §25 instead of any
+        /// timing arms. The world runs; the tour does, a few seconds apart, the first of each thing
+        /// a new colony meets — a wall, a zone, a felled tree, the Work tab, night, a supply drop —
+        /// and logs every slow frame beside the step it fell in and the shader variants the driver
+        /// was handed meanwhile (<c>GraphicsSettings.logWhenShaderIsCompiled</c>). It is the
+        /// measurement d-16 asks for before any warm-up is built.
+        /// </summary>
+        public const string HitchArgument = "-odyssey-bench-hitch";
+
+        /// <summary>The hitch tour, requested. Asked before the session is built, so the shader
+        /// log covers the load as well as the tour.</summary>
+        public static bool HitchRequested() => Requested() && Has(HitchArgument);
+
+        /// <summary>The tour's own limit: longer than the arms', and still a hard stop. The tour is
+        /// about 150 s, but the limit counts from the player's start, and one run on a busy machine
+        /// took 81 s to reach its thirtieth frame and was cut off at 240.</summary>
+        public const float HitchLimitSeconds = 360f;
+
+        static float Limit => Has(HitchArgument) ? HitchLimitSeconds : LimitSeconds;
+
         static bool Has(string wanted)
         {
             foreach (string argument in Environment.GetCommandLineArgs())
@@ -93,15 +114,15 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 try { Debug.LogError("[Bench] hard limit reached; killing the player"); } catch { }
                 System.Diagnostics.Process.GetCurrentProcess().Kill();
-            }, null, (int)((LimitSeconds + 20f) * 1000f), System.Threading.Timeout.Infinite);
+            }, null, (int)((Limit + 20f) * 1000f), System.Threading.Timeout.Infinite);
             _boot.StartCoroutine(Watchdog());
             return Guarded(Body());
         }
 
         IEnumerator Watchdog()
         {
-            yield return new WaitForSecondsRealtime(LimitSeconds);
-            Quit($"[Bench] watchdog: {LimitSeconds} s reached before the bench finished; quitting");
+            yield return new WaitForSecondsRealtime(Limit);
+            Quit($"[Bench] watchdog: {Limit} s reached before the bench finished; quitting");
         }
 
         void Quit(string why)
@@ -149,6 +170,12 @@ namespace Odyssey.Presentation.Bootstrap
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = -1;
 
+            if (Has(HitchArgument))
+            {
+                yield return HitchTour();
+                Quit("[Hitch] done");
+                yield break;
+            }
             // Wait for the session and for the board to mesh out.
             while (_boot.Renderer == null || _boot.Model == null) yield return null;
             yield return Still();
@@ -364,6 +391,248 @@ namespace Odyssey.Presentation.Bootstrap
                     () => { WaterShore.Enabled = false; _boot.Model!.Remesh(); },
                     () => { WaterShore.Enabled = true; _boot.Model!.Remesh(); });
             }
+        }
+
+        // ------------------------------------------------------------------ the hitch tour
+
+        /// <summary>A frame this long is a hitch a player notices (two frames at 60 Hz).</summary>
+        const float HitchMs = 33f;
+
+        /// <summary>A frame this long is a stall.</summary>
+        const float StallMs = 50f;
+
+        string _step = "load";
+        Odyssey.Presentation.Ui.HudShell? _shell;
+        bool _behindCurtain;
+        int _compiles;
+        readonly StringBuilder _hitchTable = new StringBuilder();
+
+        void CountCompile(string message, string stack, LogType type)
+        {
+            if (message == null) return;
+            if (message.IndexOf("shader", StringComparison.OrdinalIgnoreCase) < 0) return;
+            if (message.IndexOf("ompiled", StringComparison.Ordinal) < 0
+                && message.IndexOf("Uploaded", StringComparison.Ordinal) < 0
+                && message.IndexOf("variant", StringComparison.OrdinalIgnoreCase) < 0) return;
+            System.Threading.Interlocked.Increment(ref _compiles);
+        }
+
+        /// <summary>
+        /// The first of each thing a new colony meets, a few seconds apart, with every slow frame
+        /// logged beside the step it fell in (design 38 §25, d-16 step 1). Each step's own action is
+        /// guarded so one that cannot apply (no tree in reach, a panel that will not open) is logged
+        /// and the tour goes on; the run as a whole stays under <see cref="Guarded"/> and the
+        /// watchdog. The settings it touches are put back, so the owner's saved preferences are as
+        /// they were.
+        /// </summary>
+        IEnumerator HitchTour()
+        {
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = -1;
+            GraphicsSettings.logWhenShaderIsCompiled = true;
+            Application.logMessageReceivedThreaded += CountCompile;
+            _hitchTable.AppendLine("| step | frames | worst ms | over 33 ms | over 50 ms | shader variants |");
+            _hitchTable.AppendLine("|---|---|---|---|---|---|");
+
+            // Started without -odyssey-newgame, the tour begins where a player does: on the title
+            // screen, the process already warm from drawing it. New game is then pressed the way
+            // the menu presses it, so the step's slow frame is the wait a player sits through and
+            // the frames after it are the first the new world draws.
+            if (_boot.Renderer == null)
+            {
+                for (int i = 0; i < 30; i++) yield return null;
+                yield return Step("the title screen (the control)", null, 3f);
+                yield return Step("New game pressed: the session built, and its first frames",
+                    () => _boot.BuildSession(), 3f);
+            }
+            while (_boot.Renderer == null || _boot.Model == null) yield return null;
+
+            // What a player sees the moment the load lifts, before anything has settled.
+            yield return Step("the first 3 s after the load", null, 3f);
+            yield return Settle();
+
+            var urp = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+            Log($"[Hitch] header: {SystemInfo.graphicsDeviceName}, {SystemInfo.graphicsDeviceType}, " +
+                $"{Screen.width}x{Screen.height}, fullscreen {Screen.fullScreen}, render scale {urp?.renderScale ?? -1f}, " +
+                $"board {_boot.sizeX}x{_boot.sizeZ}x{_boot.layers}, development {Debug.isDebugBuild}");
+
+            var world = _boot.World!;
+            Odyssey.Sim.Contracts.CellRef home = FirstPawnCell() ?? default;
+            var size = world.Size;
+            int y = home.Y;
+            Odyssey.Sim.Contracts.CellRef At(int dx, int dz) =>
+                new Odyssey.Sim.Contracts.CellRef(Math.Clamp(home.X + dx, 1, size.SizeX - 2),
+                    Math.Clamp(home.Z + dz, 1, size.SizeZ - 2), y);
+            void Submit(Odyssey.Sim.Contracts.IntentKind kind, Odyssey.Sim.Contracts.CellRef cell, int a = 0, int b = 0, int c = 0) =>
+                world.Intents.Submit(new Odyssey.Sim.Contracts.Intent(kind, cell, a, b, c));
+
+            // The world runs, and quickly, so the orders below are carried out inside the tour.
+            for (int i = 0; i < 60 && world.GameSpeed != 3; i++)
+            {
+                Submit(Odyssey.Sim.Contracts.IntentKind.SetGameSpeed, default, 3);
+                yield return null;
+            }
+            yield return Step("steady play, nothing new (the control)", null, 5f);
+
+            yield return Step("build orders: a wall, a floor, a door", () =>
+            {
+                for (int i = 0; i < 5; i++)
+                    Submit(Odyssey.Sim.Contracts.IntentKind.PlaceBuilding, At(5 + i, 5),
+                        Odyssey.Sim.Contracts.BuildingHandle.Wall, Odyssey.Sim.Contracts.StuffHandle.Wood);
+                Submit(Odyssey.Sim.Contracts.IntentKind.PlaceBuilding, At(10, 5),
+                    Odyssey.Sim.Contracts.BuildingHandle.Door, Odyssey.Sim.Contracts.StuffHandle.Wood);
+                for (int dz = 0; dz < 3; dz++)
+                for (int dx = 0; dx < 3; dx++)
+                    Submit(Odyssey.Sim.Contracts.IntentKind.PlaceBuilding, At(-8 + dx, 5 + dz),
+                        Odyssey.Sim.Contracts.BuildingHandle.Floor, Odyssey.Sim.Contracts.StuffHandle.Wood);
+            }, 12f);
+
+            yield return Step("zones: a stockpile and a growing field", () =>
+            {
+                int anchor = size.Index(At(5, -8));
+                for (int dz = 0; dz < 3; dz++)
+                for (int dx = 0; dx < 3; dx++)
+                {
+                    Submit(Odyssey.Sim.Contracts.IntentKind.DesignateStorage, At(5 + dx, -8 + dz),
+                        anchor, (int)Odyssey.Sim.Storage.StoragePreset.Everything);
+                    Submit(Odyssey.Sim.Contracts.IntentKind.DesignateZone, At(-8 + dx, -8 + dz),
+                        Odyssey.Sim.Contracts.PlantHandle.Carrot + 1);
+                }
+            }, 6f);
+
+            yield return Step("an item dropped", () =>
+                Submit(Odyssey.Sim.Contracts.IntentKind.GiveResource, At(2, 2), Odyssey.Sim.Pawns.ItemIndex.Wood, 30), 6f);
+
+            yield return Step("trees marked for felling (and felled)", () =>
+            {
+                for (int dz = -6; dz <= 6; dz++)
+                for (int dx = -6; dx <= 6; dx++)
+                    Submit(Odyssey.Sim.Contracts.IntentKind.Designate, At(dx, dz),
+                        (int)Odyssey.Sim.Designations.DesignationKind.Fell);
+            }, 15f);
+
+            var directors = _boot.Directors;
+            yield return Step("the Work tab", () => directors?.Work.Toggle(), 3f);
+            yield return Step("the Research tab", () => { directors?.Work.Toggle(); directors?.Research.Toggle(); }, 3f);
+            yield return Step("the Inventory tab", () => { directors?.Research.Toggle(); directors?.Inventory.Toggle(); }, 3f);
+            yield return Step("Settings, the Graphics tab", () =>
+            {
+                directors?.Inventory.Toggle();
+                directors?.Settings.SetOpen(true);
+                directors?.Settings.SetTab(Odyssey.Hud.SettingsTab.Graphics);
+            }, 3f);
+
+            int density = directors?.Settings.Value(Odyssey.Hud.GraphicsLadder.VegetationDensity) ?? 0;
+            yield return Step("a setting changed: shadows off", () =>
+                directors?.Settings.Toggle(Odyssey.Hud.GraphicsOption.Shadows), 4f);
+            yield return Step("a setting changed: shadows back on", () =>
+                directors?.Settings.Toggle(Odyssey.Hud.GraphicsOption.Shadows), 4f);
+            yield return Step("a setting changed: grass to Full", () =>
+                directors?.Settings.SetValue(Odyssey.Hud.GraphicsLadder.VegetationDensity, 300), 5f);
+            yield return Step("a setting changed: grass back", () =>
+            {
+                directors?.Settings.SetValue(Odyssey.Hud.GraphicsLadder.VegetationDensity, density);
+                directors?.Settings.SetOpen(false);
+            }, 5f);
+
+            yield return Step("a supply drop falls", () =>
+                Submit(Odyssey.Sim.Contracts.IntentKind.InvokeIncident, default,
+                    Odyssey.Sim.Contracts.IncidentHandle.SupplyDrop), 9f);
+
+            yield return Step("the see-through fade", () =>
+            {
+                if (_boot.Renderer != null) _boot.Renderer.FadeEveryTreeForAPhotograph = true;
+            }, 3f);
+            yield return Step("the fade taken off", () =>
+            {
+                if (_boot.Renderer != null) _boot.Renderer.FadeEveryTreeForAPhotograph = false;
+            }, 2f);
+
+            yield return Step("dusk (19.5 h)", () => _boot.DaylightHourOverride = 19.5f, 4f);
+            yield return Step("night (23 h)", () => _boot.DaylightHourOverride = 23f, 4f);
+            yield return Step("day again", () => _boot.DaylightHourOverride = null, 3f);
+
+            Odyssey.Sim.Contracts.CellRef? water = NearestWater();
+            yield return Step("water and a fall brought into view", () =>
+            {
+                if (water.HasValue && _boot.cameraRig != null) _boot.cameraRig.FocusOn(water.Value, 30f);
+            }, 5f);
+            yield return Step("pulled back to 140 m", () =>
+            {
+                if (_boot.cameraRig != null) _boot.cameraRig.FocusOn(home, 140f);
+            }, 6f);
+            yield return Step("back to the colony", () =>
+            {
+                if (_boot.cameraRig != null) _boot.cameraRig.FocusOn(home, 32f);
+            }, 4f);
+            yield return Step("steady play again (the control)", null, 5f);
+
+            Application.logMessageReceivedThreaded -= CountCompile;
+            Log("[Hitch] table:\n" + _hitchTable);
+        }
+
+        /// <summary>
+        /// One step: apply it (guarded — a step that cannot apply is logged and the tour goes on),
+        /// then watch the frames for <paramref name="seconds"/>, logging every one over
+        /// <see cref="HitchMs"/> with the step it fell in.
+        /// </summary>
+        IEnumerator Step(string name, Action? apply, float seconds)
+        {
+            _step = name;
+            System.Threading.Interlocked.Exchange(ref _compiles, 0);
+            Log($"[Hitch] step: {name} (frame {Time.frameCount}, t {Time.realtimeSinceStartup:0.0} s)");
+            try { apply?.Invoke(); }
+            catch (Exception e) { Log($"[Hitch] step '{name}' could not apply: {e.GetType().Name}: {e.Message}"); }
+            // The frame the step applied in is drawn after this, so its curtain state is the one now.
+            _shell ??= UnityEngine.Object.FindFirstObjectByType<Odyssey.Presentation.Ui.HudShell>();
+            _behindCurtain = _shell != null && _shell.CurtainUp;
+
+            int frames = 0, over33 = 0, over50 = 0;
+            float worst = 0f;
+            var first = new StringBuilder();
+            float until = Time.realtimeSinceStartup + seconds;
+            while (Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+                frames++;
+                float ms = Time.unscaledDeltaTime * 1000f;
+                if (ms > worst) worst = ms;
+                if (frames <= 8)
+                {
+                    // A frame drawn behind the start screen is marked: the player never sees it.
+                    _shell ??= UnityEngine.Object.FindFirstObjectByType<Odyssey.Presentation.Ui.HudShell>();
+                    first.Append(ms.ToString("0.0")).Append(_behindCurtain ? "* " : " ");
+                }
+                _behindCurtain = _shell != null && _shell.CurtainUp;
+                if (ms > HitchMs)
+                {
+                    over33++;
+                    if (ms > StallMs) over50++;
+                    Log($"[Hitch] slow frame {Time.frameCount}: {ms:0.0} ms in '{name}' " +
+                        $"(submit {_boot.SubmitMs:0.00} ms, tick {_boot.TickMs:0.00} ms, " +
+                        $"meshed {_boot.Renderer?.ChunksMeshedThisFrame ?? 0} chunks, " +
+                        $"indirect regather {_boot.Renderer?.IndirectRegatherMs ?? 0:0.00} ms, gc {GC.CollectionCount(0)}/{GC.CollectionCount(1)}/{GC.CollectionCount(2)}, " +
+                        $"shader variants so far this step {_compiles}; split {SectionSplit()})");
+                }
+            }
+            _hitchTable.AppendLine($"| {name} | {frames} | {worst:0.0} | {over33} | {over50} | {_compiles} |");
+            Log($"[Hitch] {name}: the first eight frames, ms (* drawn behind the start screen): {first}");
+            Log($"[Hitch] {name}: worst {worst:0.0} ms over {frames} frames, {over33} over {HitchMs:0} ms, " +
+                $"{over50} over {StallMs:0} ms, {_compiles} shader variants");
+        }
+
+        /// <summary>The last frame's submit, section by section, largest first. Not in an iterator,
+        /// because the split is a span.</summary>
+        string SectionSplit()
+        {
+            ReadOnlySpan<double> split = _boot.FrameSectionMs;
+            var parts = new List<(double Ms, string Name)>();
+            for (int i = 0; i < split.Length && i < OdysseyBootstrap.SectionNames.Length; i++)
+                if (split[i] >= 0.5) parts.Add((split[i], OdysseyBootstrap.SectionNames[i]));
+            parts.Sort((a, b) => b.Ms.CompareTo(a.Ms));
+            var sb = new StringBuilder();
+            foreach (var p in parts) sb.Append(p.Name).Append(' ').Append(p.Ms.ToString("0.0")).Append(", ");
+            return sb.Length > 0 ? sb.ToString(0, sb.Length - 2) : "nothing over 0.5 ms";
         }
 
         Odyssey.Sim.Contracts.CellRef? NearestWater()

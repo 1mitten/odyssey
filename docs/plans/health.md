@@ -4,6 +4,8 @@
 `docs/research/health-interview.md` (four answers). **Approved and built the same day** (owner:
 *"implement it"*): H1–H6 on `claude/relaxed-heisenberg-zxy63b`, PR 1mitten/odyssey#213. H5 was
 built to the brief's own content ahead of the mockups; design 43 §14 records every departure.
+**Merged with `main`'s medical supplies (design 37) the same day**: H3's `Job_Tend`, medkit and
+handles gave way to design 37's, and the treatment now ends in the tend (design 43 §15).
 The shape follows `docs/plans/combat.md`: one contracts step first, because the handles it
 claims are save contracts; goldens moved once, measured; the fast tier for every lane and one
 integrator for Unity.
