@@ -1,6 +1,6 @@
 # 43 — The home area, and keeping a colonist home
 
-**Status: approved 2026-09-25 (owner: *"approved start"*). H1 (the mask), H2 (the setting and the
+**Status: approved 2026-09-25 (owner: *"approved start"*). **Played 2026-09-25 and ready to merge** (owner: *"it all works"*), after the review's five fixes. H1 (the mask), H2 (the setting and the
 gate), HH (the hearth, §3f) and HP (its pane row and alerts, §3g) are built. H3 and H4 wait on the Claude Design brief** (`docs/reference/mockups/home-area-brief.md`). Branch
 `claude/sleepy-cannon-9d0evw`. Units H1–H5 in `docs/plans/home-area.md`.
 **Read first:** the interview `docs/research/home-area-interview.md`; the reference

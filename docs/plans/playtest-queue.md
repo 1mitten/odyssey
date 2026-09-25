@@ -131,21 +131,6 @@ the next session learns to ignore.
   A wrong answer is splashes out of step with the arms, a sound heard across the board, a machine-gun
   run of splashes from several swimmers, or silence up close.
 
-- **Does home read, and can a colonist be kept in it?** (`claude/sleepy-cannon-9d0evw`, PR #214,
-  design 43 §5–§6.) Build a campfire and a hut round it. Press the **house** under Power in the views
-  strip: a thin cyan line should run round the base about five cells out, the grass parting along it,
-  and a small house should float over the campfire. A wrong answer is no line, a line hidden in the
-  grass, three stacked outlines, or a darker dot at every corner. Build a second campfire and click
-  it: the pane is wide and has a *Make this the hearth* button; press it and the house moves. Order
-  the hearth deconstructed: *Hearth marked to come down* appears. **F4** opens Assign: one row per
-  colonist; press a colonist's *Anywhere* cell and it turns to *Home* in amber. Mark a tree well
-  outside the line: that colonist should leave it and walk home when idle, while an *Anywhere*
-  colonist fells it. A wrong answer is a Home colonist working outside, or a tab that closes when you
-  click a name.
-  **After the review (2026-09-25):** switch Home off and on twice — the line should come back each
-  time; press a name in Assign — the tab stays and no pane covers it, and closing the tab shows her
-  pane; keep a colonist Home while she is two layers down a pit — she should climb out and come home.
-  The house over the hearth is **unproven**: the frame test logged it hidden, so say whether you see it.
 - **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
   Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest
   over bare arms and black trousers, and carry a crowbar or a bat; click one and the pane shows a
@@ -1261,6 +1246,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-25 | **The home area, the hearth and the Assign tab** (PR #214, `docs/design/43-home-area.md`), after the review's five fixes | working — owner: *"it all works get ready to merge in"* | none; ready to merge. The house over the hearth, which the frame test logged hidden, is covered by "it all works" |
 | 2026-09-24 | **Walls down, both rounds** (PR #197, `docs/design/42-walls-down.md`) | working — owner, first look: *"works brilliantly but a few things"*; after the second round: *"excellent - get this ready for merge"* | the first look moved two things (the R / F label went; a lower terrace counts as ground and only upper storeys hide, §3a); ready to merge |
 | 2026-09-24 | **Beating a wall down** (C6, `claude/combat-buildings`, `docs/design/33-combat.md` §13) | working — owner: *"Buildings work fine"* | none. The row's own question, whether a wall reads without a damage bar, was not raised, so none is built. The break-in row (§14b, §14d) stays open: it was built after that playtest |
 | 2026-09-24 | **What grass costs on the GPU at 4K** (PR #183, `docs/design/38-meadow-overhaul.md` §13) | measured — owner: *"6–7 ms on gpu (sometimes bit lower) without grass tufts. On — 7 ish — spikes up to 8 moving around"* | about 0.5–1 ms, peaks ~1.5; under the 2 ms line, so M4 plans for full cover; agrees with the batch arm |
