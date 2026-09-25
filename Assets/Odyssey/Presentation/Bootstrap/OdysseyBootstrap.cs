@@ -221,6 +221,12 @@ namespace Odyssey.Presentation.Bootstrap
         MenuAmbience? _menuBed;
         DaylightDirector? _daylight;
 
+        /// <summary>The weather as drawn: rain, wet ground and the grey sky (design 43 §7, prototype).</summary>
+        WeatherLook? _weather;
+
+        /// <summary>For tests and the overlay: the weather as drawn this session, or null.</summary>
+        public WeatherLook? Weather => _weather;
+
         /// <summary>The key light the day moves, kept so the renderer's shadow margin can sweep
         /// towards it (design 38 §18).</summary>
         Light? _keyLight;
@@ -235,6 +241,7 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>The wind the foliage reads, on the game clock (design 38 §4): a paused meadow
         /// holds still and a meadow at speed 3 hurries with everything else.</summary>
         readonly WindDirector _wind = new WindDirector();
+        readonly WaterDirector _water = new WaterDirector();
         Material? _actorMaterial;
         ColonistMaterials? _colonistMaterials;
 
@@ -1059,6 +1066,8 @@ namespace Odyssey.Presentation.Bootstrap
                 // the figures where a fallen body lies, for the pool under it.
                 _blood = new BloodDirector(_model, FindBody);
                 _combatFeedback.Blood = _blood;
+                // The weather as drawn (design 43 §7): the simulation's sky, read from the snapshot.
+                _weather = new WeatherLook(_model, transform);
             }
 
             // Which family each weapon swings in (design 33 §5j), read once off the content, so a
@@ -1088,6 +1097,8 @@ namespace Odyssey.Presentation.Bootstrap
             // The wind, unconditionally: it is not part of the day and night cycle, and a board
             // built with the cycle off still wants its grass moving.
             _wind.Apply(_world.CurrentTick);
+            _water.TicksPerSecond = ticksPerSecond;
+            _water.Apply(_world.CurrentTick, Time.unscaledDeltaTime);
             if (_figures != null)
             {
                 _figures.BlowLanded += OnBlowLanded;
@@ -1254,6 +1265,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             // And the wind on the same clock, for the same reason: a paused meadow holds still.
             _wind.Apply(_world.CurrentTick);
+            _water.Apply(_world.CurrentTick, Time.unscaledDeltaTime);
         }
 
         /// <summary>
@@ -1278,6 +1290,7 @@ namespace Odyssey.Presentation.Bootstrap
             _world.Tick(count);
             _daylight?.Apply(_world.CurrentTick);
             _wind.Apply(_world.CurrentTick);
+            _water.Apply(_world.CurrentTick, Time.unscaledDeltaTime);
         }
 
         /// <summary>
@@ -1594,6 +1607,15 @@ namespace Odyssey.Presentation.Bootstrap
             _combatFeedback.Consume(_world.Views.Current, _world, _figures, _audio,
                 bloodLowest, bloodHighest, _tickAlpha, ticksPerSecond);
             if (_renderer != null) _blood?.Draw(_renderer, bloodLowest, bloodHighest, slice, activeLayer);
+            // The weather (design 43 §7): the published sky, the ground wetting behind it on game
+            // time, drawn in two or three calls; counted in Overlays with what is laid over the world.
+            if (_weather != null && Directors != null)
+                _weather.Sync(_world.Views.Current.Weather, Directors.Debug.RainAsParticles, _daylight,
+                    cameraRig != null ? cameraRig.GetComponent<Camera>() : null,
+                    cameraRig != null ? cameraRig.Focus : transform.position,
+                    cameraRig != null ? cameraRig.TargetDistance : 48f,
+                    slice.BelowSurface(activeLayer), _world.CurrentTick, ticksPerSecond,
+                    _figures?.Running ?? true, Time.deltaTime, Directors.Debug.WetGlossOnly, _wind);
             _floaterView?.Draw(_combatFeedback.Floaters,
                 cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);
@@ -3939,6 +3961,7 @@ namespace Odyssey.Presentation.Bootstrap
             _audio?.Dispose();
             _daylight?.Dispose();
             _wind.Dispose();
+            _water.Dispose();
             // The corpses before the figures: a body still falling hands its lent figure back as
             // it goes, and after the figures that indexed a cleared list and threw out of the
             // teardown, which a pause on a death and a load reached (review, 2026-09-23).
@@ -3947,6 +3970,7 @@ namespace Odyssey.Presentation.Bootstrap
             _blood = null;
             _doors?.Dispose();
             _fires?.Dispose();
+            _weather?.Dispose();
             _floaterView?.Dispose();
             _combatFeedback.Floaters.Clear();
             _combatFeedback.Blood.Clear();
@@ -3980,6 +4004,7 @@ namespace Odyssey.Presentation.Bootstrap
             _figures = null;
             _doors = null;
             _fires = null;
+            _weather = null;
             _corpses = null;
             _floaterView = null;
             _colonistMaterials = null;

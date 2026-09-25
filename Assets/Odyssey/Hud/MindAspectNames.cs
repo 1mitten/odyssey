@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// The names a colonist's state of mind is published under (design 43 §4d), spelled on this
+    /// The names a colonist's state of mind is published under (design 44 §4d), spelled on this
     /// side of the seam because <c>Odyssey.Hud</c> cannot reference the simulation. The simulation
     /// mints the same strings in <c>MindAspects</c>, and <c>MindAspectTests</c> (Sim) holds the two
     /// to each other.
@@ -17,7 +17,7 @@ namespace Odyssey.Hud
         /// <summary>The target her mood drifts toward, 0..1000.</summary>
         public const string Target = "odyssey.pawn.mood.target";
 
-        /// <summary>Trait slot keys (design 43 §4d): the handle, then each effect.</summary>
+        /// <summary>Trait slot keys (design 44 §4d): the handle, then each effect.</summary>
         public static readonly AspectKey[] TraitKey = Slots(string.Empty);
         public static readonly AspectKey[] TraitMoodKey = Slots(".mood");
         public static readonly AspectKey[] TraitNerveKey = Slots(".nerve");

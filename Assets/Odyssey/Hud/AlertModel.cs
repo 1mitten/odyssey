@@ -124,7 +124,7 @@ namespace Odyssey.Hud
         /// <summary>Food a colonist must climb back to before the starving alert can clear.</summary>
         public const int StarveClearAt = 300;
 
-        // The break alert has no threshold of its own (design 43 §5a). It is raised when the
+        // The break alert has no threshold of its own (design 44 §5a). It is raised when the
         // simulation says a colonist is breaking — below her own minor line, or in a break — and
         // stands until it says she is content again, so the strained band between is the same
         // hysteresis the two copied numbers used to give, drawn from lines that are hers.

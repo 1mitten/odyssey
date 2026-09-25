@@ -34,7 +34,7 @@ namespace Odyssey.Tests.Sim
             scenario.beds = colonists;
             scenario.startingFellRadius = 0;
             // About which site is built first, not about who does it: no traits, so a colonist dealt Ham-fisted or
-            // Tireless by her seed cannot make this test about traits (design 43 §5f).
+            // Tireless by her seed cannot make this test about traits (design 44 §5f).
             scenario.traits = false;
             ColonyWorld colony = ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: false);
             // A forced-order test times one build against another, and a botch would put a thumb

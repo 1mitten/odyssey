@@ -253,15 +253,15 @@ namespace Odyssey.Tests.Sim
         // crowbar or a bat where it was a machete. No golden moved: no golden has a bandit.
         //
         // Moved a twenty-seventh time, deliberately, 2026-09-25, by the published mood band (design
-        // 43 §5a, TM1): MoodDef gained strainMargin (100, INVENTED), how far above the minor line a
+        // 44 §5a, TM1): MoodDef gained strainMargin (100, INVENTED), how far above the minor line a
         // colonist still reads strained. No golden moved: the band is a report and is not hashed.
         //
-        // Moved a twenty-eighth time, deliberately, 2026-09-25, by traits (design 43 §4c, TM3): the
+        // Moved a twenty-eighth time, deliberately, 2026-09-25, by traits (design 44 §4c, TM3): the
         // thirteen placeholder TraitDefs (every number INVENTED), PawnKindDef.thirdTraitPerCent
         // (30), and the resolved spectrum, conflict and disabled-work tables. The Simulated goldens
         // moved in the same commit, for the hash seeing the traits (Golden.cs says what else).
         //
-        // Moved a twenty-ninth time, deliberately, 2026-09-25, by the break taxonomy (design 43
+        // Moved a twenty-ninth time, deliberately, 2026-09-25, by the break taxonomy (design 44
         // §5c, TM5): MoodDef gained majorMtbTicks and extremeMtbTicks and breakMtbTicks went
         // 600,000 -> 240,000 (a-19's correction); MentalBreakDef lost durationTicks for minTicks and
         // maxTicks and gained tier, commonality and reachCells; four Defs appended (Sulk, Binge,

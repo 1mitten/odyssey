@@ -7,7 +7,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The Thoughts tab's model (design 43 §5b, TM2): what is on a colonist's mind, grouped
+    /// The Thoughts tab's model (design 44 §5b, TM2): what is on a colonist's mind, grouped
     /// <i>Now</i> then <i>Memories</i>, worst first, in points out of a hundred, capped so the pane
     /// stays one height. Everything here is read from aspects the simulation publishes; the
     /// control in each case is the same frame without them.

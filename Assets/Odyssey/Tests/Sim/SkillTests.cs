@@ -221,7 +221,7 @@ namespace Odyssey.Tests.Sim
             scenario.colonists = 3;
             scenario.beds = 3;
             // About experience per swing, not about who does it: no traits, so a colonist dealt Ham-fisted or
-            // Tireless by her seed cannot make this test about traits (design 43 §5f).
+            // Tireless by her seed cannot make this test about traits (design 44 §5f).
             scenario.traits = false;
             ColonyWorld colony = ColonyWorld.Build(size, 1u, scenario, barren: true, wooded: true);
 

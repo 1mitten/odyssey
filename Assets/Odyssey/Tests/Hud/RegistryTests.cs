@@ -45,6 +45,8 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void EveryDebugKeyIsARegisteredName()
         {
+            foreach (string key in WeatherLabels.IconKeys)
+                Assert.That(Registry.Label(key), Is.Not.Empty, key);
             foreach (string key in DebugDirector.IconKeys)
                 Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
         }

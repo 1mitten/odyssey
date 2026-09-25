@@ -292,6 +292,15 @@ namespace Odyssey.Sim.Contracts
         /// downed or not. Handler: <c>JobSystem.HandleSetHostilityResponse</c>.
         /// </summary>
         SetHostilityResponse,
+
+        /// <summary>
+        /// Debug only: set the sky now (design 43 §8, the debug menu's Weather tab). <c>A</c> is the
+        /// <see cref="WeatherKind"/>, <c>B</c> the intensity in per-mille (0 keeps the kind's own
+        /// roll), and <c>C</c> 1 to blend in over seconds rather than the two game hours a spell
+        /// takes. The spell then runs its rolled length and the season takes over again.
+        /// Handler: <c>WeatherSystem.HandleForce</c>.
+        /// </summary>
+        DebugSetWeather,
     }
 
     /// <summary>

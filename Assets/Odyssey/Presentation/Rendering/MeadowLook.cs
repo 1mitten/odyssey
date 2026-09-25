@@ -30,6 +30,15 @@ namespace Odyssey.Presentation.Rendering
         public Texture2D? leaves;
         public Texture2D? earth;
 
+        /// <summary>The marsh round streams and ponds, blended over the meadow by the ground field
+        /// rather than drawn cell by cell (design 38 §24). Optional: without it a marsh cell keeps
+        /// its own tiled texture.</summary>
+        public Texture2D? wet;
+
+        /// <summary>Whether marsh is painted into the meadow by the ground field. On the same switch
+        /// as the shoreline, so turning it off gives back the old look whole.</summary>
+        public static bool PaintsMarsh => WaterShore.Enabled && GroundActive && Loaded!.wet != null;
+
         /// <summary>The Meadow demo scene's own URP volume profile: its grade, not ours.</summary>
         public VolumeProfile? grade;
 
@@ -103,6 +112,7 @@ namespace Odyssey.Presentation.Rendering
             material.SetTexture(FlowersId, look.flowers);
             material.SetTexture(LeavesId, look.leaves);
             material.SetTexture(EarthId, look.earth);
+            if (look.wet != null) material.SetTexture(WetId, look.wet);
             return material;
         }
 
@@ -145,5 +155,6 @@ namespace Odyssey.Presentation.Rendering
         static readonly int FlowersId = Shader.PropertyToID("_Flowers");
         static readonly int LeavesId = Shader.PropertyToID("_Leaves");
         static readonly int EarthId = Shader.PropertyToID("_Earth");
+        static readonly int WetId = Shader.PropertyToID("_Wet");
     }
 }

@@ -1178,14 +1178,29 @@ namespace Odyssey.Presentation.Rendering
             BankLayout.Ramp dip;
             if (cellIndex == _dipIndex) { dips = _dipHas; dip = _dip; }
             else dips = BankLayout.BankDips(_model, x, z, y, out dip);
+            // Or the bed under the water, rising to meet the bank (design 38 §24).
+            bool shaped = dips || BankLayout.BedRises(_model, x, z, y, out dip);
             float h = CellMetrics.SizeY;
             float plane = (y + 1) * h;
-            Vector3 c0 = SkinCorner(x, z, plane, 0, dips ? dip.R0 * h : 0f);
-            Vector3 c1 = SkinCorner(x, z, plane, 1, dips ? dip.R1 * h : 0f);
-            Vector3 c2 = SkinCorner(x, z, plane, 2, dips ? dip.R2 * h : 0f);
-            Vector3 c3 = SkinCorner(x, z, plane, 3, dips ? dip.R3 * h : 0f);
+            Vector3 c0 = SkinCorner(x, z, plane, 0, shaped ? dip.R0 * h : 0f);
+            Vector3 c1 = SkinCorner(x, z, plane, 1, shaped ? dip.R1 * h : 0f);
+            Vector3 c2 = SkinCorner(x, z, plane, 2, shaped ? dip.R2 * h : 0f);
+            Vector3 c3 = SkinCorner(x, z, plane, 3, shaped ? dip.R3 * h : 0f);
             GroundSkinMesh skin = batch.Skin;
-            if (!dips || dip.SplitZeroTwo)
+            if (shaped && dip.Fan)
+            {
+                // Eight triangles fanned from the centre, the same eight BankLayout.Ramp.HeightAt
+                // reads back, so a figure on the shore stands on what is drawn.
+                Vector3 centre = SkinPoint(x, z, plane, 0.5f, 0.5f, dip.C * h);
+                _fanCorners[0] = c0; _fanCorners[1] = c1; _fanCorners[2] = c2; _fanCorners[3] = c3;
+                for (int e = 0; e < 4; e++)
+                {
+                    Vector3 mid = SkinPoint(x, z, plane, FanEdgeU[e], FanEdgeV[e], dip.Edge(e) * h);
+                    skin.Triangle(part.Material, tint, part.IsFallback, centre, _fanCorners[e], mid, Vector3.up);
+                    skin.Triangle(part.Material, tint, part.IsFallback, centre, mid, _fanCorners[(e + 1) & 3], Vector3.up);
+                }
+            }
+            else if (!shaped || dip.SplitZeroTwo)
             {
                 skin.Triangle(part.Material, tint, part.IsFallback, c0, c2, c1, Vector3.up);
                 skin.Triangle(part.Material, tint, part.IsFallback, c0, c3, c2, Vector3.up);
@@ -1213,9 +1228,43 @@ namespace Odyssey.Presentation.Rendering
                 Vector3 lowA = SkinCorner(x, z, bed, a, 0f);
                 Vector3 lowB = SkinCorner(x, z, bed, b, 0f);
                 var outward = new Vector3(Directions.DeltaX[dir], 0f, Directions.DeltaZ[dir]);
+                if (dip.Fan)
+                {
+                    // In two halves, through the edge's midpoint, or the wall stands proud of a
+                    // fan whose midpoint is lower than the line between its corners. The bed rises
+                    // to meet this edge, so the wall is behind it wherever the bed is skinned.
+                    int edge = FanEdgeOf(Directions.DeltaX[dir], Directions.DeltaZ[dir]);
+                    Vector3 topM = SkinPoint(x, z, plane, FanEdgeU[edge], FanEdgeV[edge], dip.Edge(edge) * h);
+                    Vector3 lowM = SkinPoint(x, z, bed, FanEdgeU[edge], FanEdgeV[edge], 0f);
+                    skin.Triangle(part.Material, tint, part.IsFallback, topA, topM, lowM, outward, vertical: true);
+                    skin.Triangle(part.Material, tint, part.IsFallback, topA, lowM, lowA, outward, vertical: true);
+                    skin.Triangle(part.Material, tint, part.IsFallback, topM, topB, lowB, outward, vertical: true);
+                    skin.Triangle(part.Material, tint, part.IsFallback, topM, lowB, lowM, outward, vertical: true);
+                    continue;
+                }
                 skin.Triangle(part.Material, tint, part.IsFallback, topA, topB, lowB, outward, vertical: true);
                 skin.Triangle(part.Material, tint, part.IsFallback, topA, lowB, lowA, outward, vertical: true);
             }
+        }
+
+        // A shore fan's edges, numbered as BankLayout.Ramp numbers them: −z, +x, +z, −x.
+        static readonly float[] FanEdgeU = { 0.5f, 1f, 0.5f, 0f };
+        static readonly float[] FanEdgeV = { 0f, 0.5f, 1f, 0.5f };
+        readonly Vector3[] _fanCorners = new Vector3[4];
+
+        static int FanEdgeOf(int dx, int dz) => dx > 0 ? 1 : dx < 0 ? 3 : dz > 0 ? 2 : 0;
+
+        /// <summary>
+        /// A point of the skin inside a cell, (fu, fv) from its low corner, with the ground relief
+        /// interpolated from the corners' — so an edge's midpoint lies on the straight edge a flat
+        /// neighbour draws, and the two meet without a crack.
+        /// </summary>
+        Vector3 SkinPoint(int x, int z, float planeY, float fu, float fv, float rise)
+        {
+            float r00 = CornerRelief(x, z), r10 = CornerRelief(x + 1, z);
+            float r01 = CornerRelief(x, z + 1), r11 = CornerRelief(x + 1, z + 1);
+            float relief = Mathf.Lerp(Mathf.Lerp(r00, r10, fu), Mathf.Lerp(r01, r11, fu), fv);
+            return new Vector3((x + fu) * CellMetrics.SizeXZ, planeY + rise + relief, (z + fv) * CellMetrics.SizeXZ);
         }
 
         /// <summary>

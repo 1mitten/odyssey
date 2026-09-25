@@ -5,7 +5,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Sim.Saving
 {
     /// <summary>
-    /// Each colonist's traits (design 43 §3), as one save section on exactly the terms of
+    /// Each colonist's traits (design 44 §3), as one save section on exactly the terms of
     /// <see cref="PawnSeedSection"/> and <see cref="PawnKindSection"/>: keyed by pawn id, skippable in
     /// both directions, and <b>no format bump</b>. A save written before traits has no section here,
     /// so <see cref="Load"/> never runs and every restored colonist has none — which is what she was,
@@ -13,7 +13,7 @@ namespace Odyssey.Sim.Saving
     ///
     /// <para><b>Only pawns with something to say are written</b>, so a colony of traitless pawns
     /// writes a count of nought. The record carries a trailing field for the kind of break a pawn is
-    /// in (design 43 §5c), written as nought until the break taxonomy fills it; it is here from the
+    /// in (design 44 §5c), written as nought until the break taxonomy fills it; it is here from the
     /// first write so the section never has to change shape.</para>
     ///
     /// <para>Hashing is <see cref="Pawn.ContributeTo"/>'s, not this section's.</para>

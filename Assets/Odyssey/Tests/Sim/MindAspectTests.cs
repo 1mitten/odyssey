@@ -7,7 +7,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The mood band, published by the simulation (design 43 §5a, TM1).
+    /// The mood band, published by the simulation (design 44 §5a, TM1).
     ///
     /// <para><b>What this replaced.</b> The interface held two thresholds of its own, 600 and 350,
     /// and read the mood against them — so a colonist at the resting target of 500, fed, rested and

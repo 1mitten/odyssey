@@ -35,7 +35,7 @@ namespace Odyssey.Tests.Sim.Events
         // 2026-09-24, the bandit (design 42): Incident_BanditLeft renamed Incident_BanditLeft,
         // its label and bulletin key with it. Index 3 unchanged; the ledger keeps indices.
         //
-        // 2026-09-25, the break taxonomy (design 43 §5c): Incident_MentalBreak (Bad, Misc)
+        // 2026-09-25, the break taxonomy (design 44 §5c): Incident_MentalBreak (Bad, Misc)
         // appended at 4, naming the Recorded worker — written down by the world when a colonist
         // breaks, never fired. Its subject is the break, its amount the colonist.
         const ulong ContentFingerprint = 3217851181232517750UL;

@@ -121,8 +121,7 @@ number in the fight is invented (§1), so this reads the tuning and is the owner
 - The questions at the end of §15i, §17i, §18h and §20e, and whether a bandit that can reach no
   side of any colonist should break a building instead of queueing (§19d).
 
-**Recorded, not fixed:** a thief climbs a ladder with a load a hauler would not (§17c); a patient
-keeps her reservation on a demolished bed's head cell until she gets up (§11h); a carried patient
+**Recorded, not fixed:** a thief climbs a ladder with a load a hauler would not (§17c); a carried patient
 past the 64-figure cap is drawn standing at her carrier's cell (§11h); `Skill_Hauling` accrues
 unseen (CLAUDE.md, known gaps). The draft sound's licence is still to be confirmed (§2i).
 

@@ -55,7 +55,7 @@ SECTIONS = [
                                 "ui.break", "ui.mind", "ui.status"],
      "Who is on the map, what they need, how they feel and what they are doing right now. This is "
      "the section with the least art: no sheet contains a human figure. Traits, thoughts and "
-     "mental breaks are design 43: a thought's description here is its tooltip on the Thoughts "
+     "mental breaks are design 44: a thought's description here is its tooltip on the Thoughts "
      "tab, and a trait's is its tooltip on the colonist's pane and the select screen."),
     ("health", "Health and anatomy", ["ui.health"],
      "Body parts, injuries and conditions. The anatomy sheet covers this better than any other "

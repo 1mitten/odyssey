@@ -422,7 +422,18 @@ namespace Odyssey.Tests.Sim
         /// seventeen job defs so it runs unchanged on both sides, was run on <c>main</c> (54df119a)
         /// and on the merge; the outputs are identical on all three boards.</para>
         ///
-        /// <para><b>The three Simulated moved on 2026-09-25, for traits (design 43 §3, TM3); no
+        /// <para><b>All six moved on 2026-09-25, by the weather (design 43, <c>weather-core</c>):
+        /// the first change here that is a colony doing something different, and meant to be.</b>
+        /// A new system is hashed (the sky: kind, intensity, the hand-over and the spell's end),
+        /// which moves the generated numbers before a tick runs. It writes the outdoor curve's
+        /// weather term, which moves the simulated numbers. <b>Measured</b>: <c>GoldenColonyProbe</c>
+        /// run on <c>origin/main</c> and on the branch differs in <b>mood alone</b>, 200 lower on each
+        /// board, as the rolled sky's cooler air crosses a comfort band. Food, rest, work
+        /// progress, experience, passions, jobs started and finished, and where every colonist
+        /// stands are identical on all three boards. The weather changed how the colonies feel,
+        /// and nothing they did.</para>
+        ///
+        /// <para><b>The three Simulated moved on 2026-09-25, for traits (design 44 §3, TM3); no
         /// Generated moved.</b> Every colonist is dealt two or three traits on the first tick —
         /// not at placement, which is exactly why the Generated hashes stand — and the hash sees
         /// them. <b>Measured</b>: <c>GoldenColonyProbe</c> before and after, on this branch. Every
@@ -431,6 +442,13 @@ namespace Odyssey.Tests.Sim
         /// mood</b>, which moved by the outlook traits the seeds dealt: +60 on the meadow, −120 on
         /// the city, −120 on the played board. No colonist went anywhere or did anything else
         /// differently; nobody in a golden colony is dealt a trait that forbids work they do.</para>
+        ///
+        /// <para><b>Re-baked again the same day, on the merge with the weather (#203)</b>, from the
+        /// merged code: each side had moved the three Simulated for its own reason. No Generated
+        /// moved against <c>main</c>'s. <b>Measured</b>: <c>GoldenColonyProbe</c> on merged
+        /// <c>main</c> (fccdebc) and on the merge differs in total mood alone, by the same +60,
+        /// −120 and −120 the traits moved it before the weather arrived; every other census number
+        /// is identical on all three boards.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -441,8 +459,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 10212350739386668344UL,
-            Simulated = 9605829972595283606UL,
+            Generated = 7623512122801076561UL,
+            Simulated = 2145543540055247580UL,
         };
 
         /// <summary>
@@ -467,8 +485,8 @@ namespace Odyssey.Tests.Sim
             // zeros in the job counters; the probe diffs clean.
             // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
             // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
-            Generated = 16337376216538696172UL,
-            Simulated = 17488753500495507298UL,
+            Generated = 13501204456710631653UL,
+            Simulated = 15426881758413318204UL,
         };
 
         /// <summary>
@@ -507,8 +525,8 @@ namespace Odyssey.Tests.Sim
             // 2026-09-23, wildlife (design 30): the ruin is seeded with its rats and hogs.
             // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
             // 2026-09-23, the combat contracts step; the widened probe diffs clean.
-            Generated = 16106640289945334159UL,
-            Simulated = 4353714152726793388UL,
+            Generated = 15627359971669991438UL,
+            Simulated = 17525433197060392735UL,
         };
     }
 }

@@ -1,4 +1,4 @@
-# 43 — Traits and mental health: who a colonist is, and what breaks them
+# 44 — Traits and mental health: who a colonist is, and what breaks them
 
 Branch `claude/peaceful-lamport-58fozw`. Interview 2026-09-25 (`docs/research/traits-interview.md`),
 research the same day (`a-18-traits.md`, `a-19-mental-breaks.md`, `b-mental-health-models.md`,
@@ -295,6 +295,15 @@ twin identical every hour, and a save taken mid-break resuming to the same hash 
 | `TraitRowsTests` | the summary words and tint; the pane's rows; a trait's mood under Now; the card's lines; the fit under the needs |
 | `MentalBreakTests` | the tier's clock and the fall-through; each of the five breaks when forced; the job filter; catharsis at the end and none on a downing; the Events record; a save mid-break |
 | `MindSoakTests` | the gate above |
+
+**Merged with `main` the same day (weather #203, shorelines #205, the bed release #207, the
+blunt swings #209)**, and renumbered from 43 to 44 because the weather had taken 43. On the merge:
+fast tier 1,530 Sim and 1,113 Hud, Long 52, all green, the three content gates passing. The
+`Simulated` goldens were re-baked from the merged code and `GoldenColonyProbe` on merged `main`
+(fccdebc) against the merge differs in total mood alone, by the same +60, −120 and −120 as before.
+**The two lines meet in mood.** The weather lowers a colonist's mood under a cool sky and traits
+move it by outlook, both against the same 450 content line; the first play under rain is where a
+rested colonist reading *strained* again would show (playtest queue).
 
 **Found on the way, not fixed** (outside this line): `PawnPurpose.AnimalMind` and
 `PawnPurpose.DeconstructRefund` are the same salt, `0x165667B1`, so those two streams agree —

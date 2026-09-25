@@ -166,7 +166,7 @@ namespace Odyssey.Tests.Hud
             var alerts = new AlertModel();
             WorldSnapshot board = Board(raiderMood: 10, raiderFood: 10);
             // Even with a band beside it, which the simulation never publishes for a bandit
-            // (design 43 §4d): the alert asks whether she is a colonist before it asks anything.
+            // (design 44 §4d): the alert asks whether she is a colonist before it asks anything.
             board.AddPawnAspect(new PawnAspect(Raider, MindAspectNames.BandKey, MoodBand.BreakingExtreme));
             alerts.Refresh(board, 0.0);
             Assert.That(alerts.Rows, Is.Empty, "a bandit was starving or breaking");

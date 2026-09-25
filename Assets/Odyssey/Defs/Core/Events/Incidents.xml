@@ -94,7 +94,7 @@
   </IncidentDef>
 
   <!--
-    A colonist broke (design 43 §5c). Bad, because a colonist lost control; on the panel so the
+    A colonist broke (design 44 §5c). Bad, because a colonist lost control; on the panel so the
     player can see which break and jump to where it began. Recorded when it happens; nothing fires it.
   -->
   <IncidentDef>

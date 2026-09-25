@@ -180,7 +180,10 @@ namespace Odyssey.Sim.Pawns
                 // Appended, after the ledger whose load clears it; absent from an older save, which
                 // loads with no entry about anything, as none then was.
                 pawns.Incidents!.Ledger.DetailSection,
-                // Each colonist's traits and the kind of break she is in (design 43 §3). Appended;
+                // The sky (design 43 §3): appended, no format bump. A save from before weather has
+                // no section and rolls a sky on its first pass, which is what a new world does.
+                pawns.Weather!,
+                // Each colonist's traits and the kind of break she is in (design 44 §3). Appended;
                 // absent from an older save, which loads with no traits and every break a wander —
                 // which is what that colony had.
                 new PawnMindSection(pawns.Pawns),

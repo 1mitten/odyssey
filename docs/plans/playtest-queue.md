@@ -23,22 +23,45 @@ the next session learns to ignore.
 
 ## Open
 
+- **Which rain reads as a rainy day: §7's particles, or GPU rain with wet ground?** (`claude/rain-look`,
+  #203; design 43 §7, #202.) No Play needed. Open https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3, pick
+  the Play framing, and wipe between “§7 as written” and “+ wet ground”; then try the Far framing
+  with the downpour, and the Close framing for splashes on grass. A wrong answer is preferring the
+  particles (then §7 keeps the emitters and only the wet ground carries over), rain that reads as fog
+  at the far zoom, or a meadow that looks hailed on. **Now in Play too** (2026-09-24): backtick,
+  Weather, pick Rain or Downpour, and toggle *Draw as particles* to compare them moving. Read the
+  overlay's `gpu` line at your own resolution with Clear and then Downpour; the budget is 0.5 ms at
+  4K. A wrong answer is a sky that snaps rather than arrives, rain that keeps falling while paused,
+  or rain drawn inside the hut. **Second round (2026-09-25):** Rain, Drizzle and Downpour should
+  keep the colour of Clear; Storm is the grey one; zoom right out on Downpour and the rain should
+  still read. Toggle *Wet ground: gloss only* and say which of the two wet looks to keep.
+  **Third round (2026-09-25): the weather is real now.** Start a colony and leave it running a few
+  game days, skipping days with the debug menu: the sky should change by itself, mostly clear in
+  Glare, showery in Wash, grey in Rime, with the clock's glyph following. A wrong answer is a sky
+  that never changes, one that flips at midnight, or a storm every other day.
+- **Do the bat and the crowbar only swing?** (`claude/blunt-swings`, design 33 §22.) Debug menu >
+  Spawn 3 bandits, arm a colonist with a bat and another with a crowbar (*Arm every colonist*, or
+  right-click > Equip), draft them and order attacks. Watch several blows in a row: each should be
+  a big two-handed swing or overhead chop, cycling through three different ones. A wrong answer is
+  any blow that thrusts the weapon straight forward, a blow that lands before the swing reaches the
+  target (the third one especially, whose timing was broken until now), or the machete and blade
+  swinging differently from before.
 - **Is a rested colonist content, and does the Thoughts tab say why a colonist feels as she
-  does?** (`claude/peaceful-lamport-58fozw`, design 43 §5a–§5b.) Start a colony and let it run a
+  does?** (`claude/peaceful-lamport-58fozw`, design 44 §5a–§5b.) Start a colony and let it run a
   day. A fed, rested colonist should read *content* on the pane, not *strained*. Open a colonist's
   Thoughts tab: a heading with her mood and where it is heading, then *Now* and *Memories*, worst
   first, each with its points and a memory's time left; hover a row for what it means. Have one
   colonist strike another (Ctrl-attack): the victim's tab shows *Attacked by a colonist -8* with
   about a day left. A wrong answer is text overflowing the pane, the pane changing height between
   tabs, rows you cannot read at a glance, or a mood you cannot explain from the rows.
-- **Do traits read on the select card and the pane, and do they matter?** (design 43 §5f.) On the
+- **Do traits read on the select card and the pane, and do they matter?** (design 44 §5f.) On the
   select screen, each candidate's detail pane lists two or three traits with what they do; Reroll
   changes them with the name and face; a kept card keeps them. In game, the Needs tab lists them
   under the bars, and a colonist with *Soft hands*, *Black thumb* or *Ham-fisted* has that column
   greyed on the Work tab and never does that work. The thirteen are placeholders. A wrong answer
   is traits you have to hover to understand, a card too tall for the screen, or a trait you cannot
   feel in play — say which, and fill the table in `docs/research/traits-interview.md`.
-- **Do the breaks read as breaks?** (design 43 §5c.) Debug is the fastest way: let a colony go
+- **Do the breaks read as breaks?** (design 44 §5c.) Debug is the fastest way: let a colony go
   hungry and without recreation until the band reads *breaking*. Watch for a *Mental break* row on
   the Events panel naming the break, and the pane saying *breaking down (sulk)* and so on. Sulk: she
   goes to her own bed and stands there. Binge: she eats and eats. Tantrum: she strikes a wall.
@@ -52,6 +75,23 @@ the next session learns to ignore.
   a far bandit keeps the helmet and the red. A wrong answer is hair or a beard poking through the
   helmet, a vest that is still camo, trousers that are red, a far bandit in camo or the white
   jumpsuit, or three bandits you cannot tell from colonists at play distance.
+
+- **Do the streams and ponds read as water with a natural edge?** (`claude/meadow-shorelines`,
+  design 38 §24.) New game; pan to the nearest stream and a pond, close in and pulled back.
+  **Look for** a shoreline that curves and cuts corners instead of following the cells, marsh as a
+  soft dark band rather than pale tiles, a pond's deep middle as a darker blob, and murky green-teal
+  water like the reference. Walk a colonist along a bank. **A wrong answer looks like:** a staircase
+  still visible along a diagonal stream; pale slivers or wedges at the water's edge; a colonist
+  standing in the water or floating over a bank; a waterfall missing or cut short; or the water too
+  dark to read as water at dusk.
+- **Can you click any water tile now, and does the water move?** (`claude/meadow-shorelines`,
+  design 38 §24f.) Click shallow water, deep water, a one-cell pool and the edge of a stream: each
+  should select the water tile. Click the grass beside it: that should still select the bank. Watch
+  a stream for a few seconds, then a pond, then pause. **Look for** light streaks drifting downstream,
+  gentle swells on ponds, a soft rim at the edge that slowly brightens and fades, and everything
+  holding still on pause. **A wrong answer looks like:** a click on water selecting the bank or the
+  tile beyond it; streaks flowing uphill or away from a fall; motion that reads as clouds or noise
+  rather than water; or water still moving while the game is paused.
 - **Does the title screen's dock read well, and does Exit ask?** (`claude/settings-frame`, design
   40.) Press Play. A dark panel down the left edge with the layered mark and ODYSSEY, four
   coloured buttons and the build line at the foot, the starfield clear to the right. New game should

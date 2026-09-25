@@ -11891,6 +11891,60 @@ calls whatever the fight, and a colony with no blood submits nothing. Negative c
 fail: the cap dropping the newest, the fade brightening before its hold ends, the fans wound face
 down, the per-frame ground check off, the water rule off.
 
+## 2026-09-24 — Weather, designed
+
+The seam 28 §10 left open gets its plan: design `43-weather.md` (written as 39), on `claude/weather-design`. The
+owner asked for rain that roofs stop, cloudy mid-days, sunnier ones, and weather that moves
+temperature, growth and animals; approved the shape (Clear/Cloudy/Rain, shared emitters, three
+phased PRs) and asked for the design as the PR — nothing built yet.
+
+**The one decision everything hangs off: the sky is map-wide state, asked like the roof grid is
+asked.** One `WeatherSystem` (WorldSystems, Order 45, before Temperature 50) holds kind,
+intensity in per-mille and the episode clock; every consumer — thermometer, pace, growth, animal
+minds, the rain drawing — asks it, and `WeatherOffsetC` gets its one writer at last. Episodes
+roll from a `WeatherDef` table weighted by `Calendar.SeasonOfYear`, last game-hours and blend
+over ≈2 h integer-linear, so the sky never flips at midnight and the first drop is an event.
+
+**Shelter composes two facts into one query**: `CellGrid.IsRoofed` (already built, already
+tested) plus a sparse tree-canopy map with the eviction half the patterns owe — chopping the
+tree dries the 3×3 under it, as a named test. Rain drawing is an emission rule and not a clip:
+shared emitters (the campfire's measured shape, no new shader, `ShaderInclusion` untouched)
+sample columns near the camera and spawn only where the sky reaches, so cost scales with bursts
+and never with cells. Overcast rides the hook 28 §10 named — `DaylightDirector` already owns sun,
+sky, ambient and fog.
+
+Rime's cold rain is the honest compromise of shipping rain before snow, and its weight in the
+invented table is lowest for that reason; snow, fog, storms, moisture, apparel, deterioration,
+accuracy, the firewatcher and the almanac's promised cold snap are recorded seams, each with the
+mechanism that will carry it when a follow-up asks.
+
+## 2026-09-24 — Weather, reviewed: the column, the order, and rain drawn on the GPU
+
+A review of the weather design (`claude/weather-design-review`, stacked on #190) against
+`origin/main` 3ca5098c, the design's own ground being 113 commits old by then. Five findings in the
+code, and one about the picture:
+
+- **The number.** 39 had gone to the settings window, and 40–42 are held in flight: the design is 43.
+- **The order.** Order 45 is `PowerGrid`'s. Weather is 35, ahead of growth as well as temperature,
+  so growth reads this pass's rain.
+- **The roof.** `CellGrid.IsRoofed`, the rule the design leaned on as "already built, already
+  tested", looks one layer up for a slab and nothing else, and nothing tests it. A tall room or a
+  cave mouth would have been rained in. The owner becomes a per-column rain-stop height with one
+  pure function, read by the simulation and by the render mirror's texture, and held together by
+  an agreement test.
+- **The canopy.** A counted canopy map had two decrement sites to hook (felling and a collapsing
+  floor), and a rebuild on load would have resurrected felled trees, because neither path marks
+  its record removed. Derived from the grid per dirty column instead.
+- **The save.** A new keyed section needs no format bump.
+
+**The picture is the larger change.** The design drew rain with the campfire's shared particle
+systems. From this camera a falling streak is the weakest sign of rain (two-thirds of its length,
+two pixels a frame at the far zoom), and a CPU particle per drop is paid in the budget that is
+already tight. §7 now draws streaks and splashes procedurally on the GPU (two draws, no per-drop
+CPU), masks them with a texture of the same column rule, and gives the ground a wetness term, the
+part that actually reads from above. The owner had approved the emitters, so both are photographed
+on `claude/rain-look` and the choice stays theirs.
+
 ## 2026-09-24 — The settings window: one fixed, centred frame
 
 The owner brought an approved design (the rail layout, mockups 14a-14e) and one instruction on top:
@@ -12286,7 +12340,237 @@ One test had been measuring swing speed without saying so. Three bandits at a on
 three walls with the machete and two with the slower blunt weapons, because fewer walls fell in the
 run. The test is now pinned to the machete it was measured with. Nobody stood about either way.
 
-## 2026-09-25 — Traits and mental health, from interview to gate in a day (design 43)
+## 2026-09-24 — Meadow: the shoreline is geometry, not shading
+
+The target was the reference's stream (#13): a soft edge, murky green water, no grid. Three shading
+attempts failed before the fourth, and the reason is worth keeping. Sinking a bank under the water
+line and laying water over it left the edge at the underwater wall, because the depth fade made the
+thin water clear. Driving the edge from a soft board field instead gave a soft blob — over square
+geometry, which showed wherever the blob and the cells disagreed: pits onto the sand bed at a water
+cell's corners, the bank's sawtooth where it overran. **A soft edge painted over a square hole is
+still a square hole.** What worked was making the ground itself cross the water line on a line of
+its own: the bank and the bed as one height field, each of nine points a cell at `(1 − w)` of a layer
+above the bed by how much water surrounds it. Every cell's centre keeps its height, so nothing in the
+simulation moved.
+
+The deep water's cross of squares survived a correct blend, and the way it was found is the lesson.
+Drawing the shader's own intermediate terms as colour, one at a time — the field, then the depth each
+material thought it was, then the lit colour — showed each term right and the result wrong: the two
+palette colours reached the shader as globals and `_BaseColor` as a material property, and the two
+do not share a colour-space path, so a ratio of them was a different constant per material. Four
+Unity runs, each a few minutes, against an afternoon of reasoning from screenshots.
+
+Measured in one run on Standard and Huge at 640 × 480 and 4K: draw calls identical, instances up by
+the banks, meshing 7–9% dearer a chunk. Design 38 §24.
+
+## 2026-09-25 — Water that can be clicked, and water that moves
+
+The owner played the shoreline and found two regressions. The first was not one. "I couldn't click on
+a lot of the water tiles anymore" was measured through the rig's own pick path before anything was
+read: 280 of 307 aimed points on the played board missed their water — and the control, the old
+square shore, missed exactly the same 280. The picker had always met water at its bed, two metres
+under the surface and two metres past the aim at the play camera's angle; the new shoreline only made
+the water inviting to click. **A report of a regression is a report of a bug, and the control is what
+says which.** Water is met on its surface now, and a shore bank on its fan through the same
+`HeightAt` the figures stand on, so one surface owner answers both.
+
+The second was real: the ripples lived in the normal, invisible at 48 degrees, which the falls had
+already taught once. Motion is carried by colour — streaks drifting along a flow derived from the
+water network, swells on still water, a breathing rim at the shore — on the game's clock, so a
+paused world holds still. Design 38 §24f.
+
+## 2026-09-25 — The bat and the crowbar stop stabbing
+
+The owner: *"correct crowbar and baseball bat not to have the stabbing motion — only swinging type
+moves."* The heavy clip row, which only those two weapons use, alternated a swing with the pack's
+`HeavyStab01`. The owner chose the pack's three-step heavy combo, `HeavyCombo01A`, `B`, `C`, and
+left the blades alone.
+
+Two of the three clips had never been looked at, so a probe measured them before they went in, with
+the stab as the control that had to fail. The first metric (how much of the hand's motion before
+the impact went forward) passed the stab as a swing and was thrown out. What separates them is
+whether the hand moves along the arm during the blow, which a thrust does and a swing does not: the
+stab scored 70 %, the three heavy combos 18–23 %.
+
+The probe also found that `HeavyCombo01C` would have landed its blow at 0 s. The pack spells that
+one cut `...01CWindUp` without the underscore, and the impact measurement found nothing and returned
+zero. The existing test accepted a zero, so it now requires an impact above zero, and a new test
+holds every blunt weapon, read from the content, to a row with no stab in it. Design 33 §22.
+
+## 2026-09-24 — Rain, photographed and timed (the rain-look prototype)
+
+The weather design (#190) drew rain with the campfire's shared particle systems. The review
+(`claude/weather-design-review`) argued for GPU-drawn rain and a wet ground, and this branch
+exists so the owner can choose by eye and by number rather than by argument. **Prototype, not the
+visuals PR**: presentation only, nothing in a cell, a save or the hash, and the cover map reads the
+render mirror, where the design will have the simulation own the column rule.
+
+**What is here.**
+- `Odyssey/Rain`: streaks and splashes from two `Graphics.RenderPrimitives` calls, with every drop
+  placed in the vertex shader.
+- `OdysseyWeather.hlsl`: the four globals and the wetness term, which `Odyssey/MeadowGround` and
+  `Odyssey/Foliage` now read.
+- `SkyHeightMap`: the height the rain stops at, per column, as a texture.
+- `Overcast` and `OvercastVolume`: the grey day.
+- `RainParticles`: §7 as written, kept as the control.
+- `RainCheck`: 8 variants × 4 framings.
+- `FrameTimeTests.TheRainAgainstTheFrame`: six arms with a zero-intensity control.
+- Research `d-20-rain-rendering.md`.
+
+**Three faults the pictures found that no test would have.**
+- `float3(column + drift, y)` packs the height into z, so every streak was placed below the ground.
+- URP flips the projection when it draws into a texture, so `UNITY_MATRIX_P._m11` is negative
+  there. A pixel size computed from it went negative and the visibility fade culled every splash.
+- A grey day that only dimmed the sun still looked sunny under the Meadow ambient. The ambient has
+  to fall too, and saturation needs a volume, because it is not a property of a light.
+
+Two diagnostic shots settled the first two. One drew a fixed quad in clip space, which proved the
+draw executed. The other coloured that quad by three conditions, which found the flipped projection.
+
+**Measured, one run, 5070 Ti, D3D11, with one other editor open.** At 640 × 480 nothing separates
+from the controls: off and zero differ by 0.11 ms. At 4K the controls themselves differ by 0.57 ms.
+The GPU arm at 0.7 lands between them (8.67 against 8.38 and 8.95); the downpour is 0.29 ms above
+the higher control; the particles are 0.54 ms above it with 30 % fewer drops than their target.
+GPU time is unavailable in a batch run, so the 0.5 ms budget is still owed to a Play session.
+
+**Not done.** The cut-away frame drew the roof it was meant to hide even after the grid was edited
+and the board re-meshed, so it was dropped rather than shipped wrong; how rain looks stopping at a
+hidden roof is unphotographed. Wet walls, roofs and paving need a shader we own. Pictures and the
+cost table: https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3
+
+## 2026-09-24 — The rain in Play: a Weather tab on the debug menu
+
+The owner merged the reviewed plan and asked to be able to test the rain. There was nothing to
+test yet: the simulation has no weather, and the prototype ran only inside `RainCheck`.
+
+**What is new.** The debug menu has a fourth tab, Weather. It has five presets (Clear, Overcast,
+Drizzle, Rain, Downpour) and a toggle that draws the same rain with §7's CPU particles.
+`WeatherLook` owns everything drawn: the cover map, the GPU rain, the particle arm and the grey
+volume. The bootstrap calls it once a frame with the preset. A preset is a target, not a switch:
+- cloud and rain close on it over about two game seconds;
+- the ground wets over about eight and dries three times slower;
+- the whole tab runs on game time, so pausing holds the sky and speed 3 moves it three times as fast.
+
+The cover map now follows the world. `SkyHeightMap.SyncDirty` compares every chunk's version once
+a frame (a few hundred integer comparisons) and re-walks only the columns of the chunks that
+changed. It runs only while there is rain or wet ground to mask.
+
+**One cost found and guarded.** Setting `DaylightDirector.Cloud` forced an ambient-probe update.
+While cloud eased in, that would have re-integrated the probe every frame for two seconds, and
+that call is too expensive to run every frame. The probe now follows cover in steps of 0.1.
+
+**For the weather core.** The simulation already has a column rule, `CellGrid.SkyLanding(x, z)`,
+which the supply drop uses to find where something falling lands. It is the natural owner of
+design 43 §6's rain-stop height. Build that on it rather than beside it (P1).
+
+**Tests.**
+- `DebugDirectorTests`: two new tests of the preset table and its events, in the fast tier.
+- `WeatherTabTests` (PlayMode): sets the downpour on the director the rows call, waits for game
+  time and checks two rain calls at full count. Then it checks that the particle toggle stops them
+  and the particles live, and that Clear stops the rain while the ground stays wet.
+- It cannot press the row itself, for the standing reason that no test here can click.
+
+## 2026-09-25 — Rain in colour, the storm, and rain you can see zoomed out
+
+The owner played the Weather tab and made two points. The rain drained the meadow to grey (*"we
+want to be colourful when it rains … then have dim days"*), and zoomed out *"I couldn't really see
+any rain"*. Two rounds of interview settled the answers (`docs/research/rain-look-interview.md`).
+
+**Two light terms where there was one.** `Overcast.Grade(state, cover, gloom)`:
+- *Cover* dims the sun (to 70 % at full), softens the shadows (to 55 %), nudges the sky towards a
+  cool blue-grey at its own brightness, and adds a little haze. It never drains colour.
+- *Gloom* does the draining: sun and ambient towards grey, sky towards cloud, thick haze, and the
+  grey volume's weight.
+- Only Overcast and Storm carry gloom. Rain, Drizzle and Downpour keep a clear day's colour.
+- The fast tier holds the split (`RainKeepsItsColourAndOnlyTheDimDaysDrainIt`), because it is the
+  owner's rule and the easiest thing to undo by retuning a preset.
+
+**The storm** is its own preset and, in design 43 (PR #208), its own kind with about one wet spell
+in four. Heavy rain, gloom 1, wind ×1.3.
+- The wind multiplies `WindDirector.Strength` only, never the gust period. The gust phase is the
+  tick divided by the period, so easing the period at tick 100,000 would spin the phase and every
+  blade in the meadow would thrash while the storm arrived. The fast tier caps the multiplier at
+  1.4, where the grass shader's own bend cap begins.
+
+**Wet ground keeps its colour, two ways, for the owner to choose between by eye:**
+- *Richer*, the default: saturation ×1.3, darkened to ×0.8.
+- *Gloss only*: the colour untouched; shine and puddles carry the wet.
+
+The owner asked why gloss alone was not recommended. At the 48° camera the Fresnel reflectance is
+about 2 % (the water measurement), so gloss shows only where it catches the sun. Rather than argue
+it, both are photographed, and the Weather tab can switch between them.
+
+**Zoomed out, a screen-space layer.** It is the third draw of `Odyssey/Rain`, so no new shader had
+to be registered.
+- One full-screen triangle, drawn with depth test Always.
+- Two layers of streak columns in screen pixels, each column offset at random so it never reads
+  as a comb (d-20).
+- It slants with the wind across the screen, and falls down the image whichever way URP flips the
+  target (`_ProjectionParams.x`).
+- It is masked by the cover map at the depth behind each pixel: over a roof it draws (the rain
+  lands on the roof), and into a cut-away room it does not.
+- It fades in between 55 m and 95 m, where the 3D drops shrink to a couple of pixels.
+- At 160 m it reads as heavy rain; the sheet's `max` framing is the picture.
+
+**Cost, from the full PlayMode tier (a CI runner job was on the same machine).** At 4K the
+controls read 8.77 ms (off) and 9.57 ms (zero), so the floor is about 0.8 ms. The GPU arm at 0.7
+is 8.29 ms. The downpour is 9.13 ms. The downpour **zoomed out, screen layer included**, is 8.41 ms.
+All three are inside the floor, so the layer adds nothing this machine can separate from noise. The
+particle arm is 12.23 ms with 11,850 drops alive: about 2.7 ms above the higher control, and the
+only arm that clears the floor. The batch run cannot read GPU time, so the Play session's `gpu`
+line is still what settles the 0.5 ms budget.
+
+## 2026-09-25 — The weather, built: a sky that rolls by season
+
+The owner asked for weather that *"makes sense — some days rain, storm, sunny and depending on
+season"*, and for the PR to be ready to merge. Until now the rain was a look set by hand. This
+builds the sky itself, design 43's `weather-core`, and drives the look from it, so #203 carries the
+design, the system and the picture together.
+
+**The sky is a handful of integers.**
+- `WeatherSystem` holds the kind and intensity rolling in, the pair blending out, the start and
+  length of the hand-over, and the tick the spell ends.
+- When the spell ends it rolls the next from the season's weights (`Weather.xml`: Wash showery,
+  Glare bright, Rime grey and nearly dry, Storm about one wet spell in four), then a length and an
+  intensity from the kind's own bounds.
+- It hands over integer-linear across two game hours.
+- The whole pass is O(1) at the thermal pass's cadence.
+- It is the one writer of `WeatherOffsetC`, which temperature had carried unwritten since design 28.
+- It publishes a `WeatherView` of blended terms for the drawing: cloud (dims, keeps colour), gloom
+  (drains), rain, wind and the temperature offset.
+- `Kind` is whichever holds the larger share, so the clock's glyph changes once, at the half.
+
+**The debug tab commands it.** The Weather rows used to be looks. They are now
+`DebugSetWeather` commands with a kind and an intensity, blending in over 300 ticks, and the spell
+then runs its rolled length before the season takes over. The tab cannot show a sky the game
+cannot roll.
+
+**Measured before the goldens were written.**
+- All six numbers moved: the generated ones because a system is hashed, the simulated ones because
+  the offset moves the thermometer.
+- `GoldenColonyProbe` on `origin/main` and on the branch differs in **mood alone**, 200 lower on
+  each board, as the rolled sky's cooler air crosses a comfort band.
+- Food, rest, progress, experience, jobs and positions are identical. The weather changed how the
+  colonies feel and nothing they did.
+
+**One test had been measuring the sky without knowing it.**
+`BedTests.AnOwnerClimbsToABedOnHigherGroundAndSleepsThere` puts its Epic bed out of doors. Seed 1's
+first roll was cool enough to cost a tenth of the sleep rate, so the bed restored 63 against the
+70 asserted. The test is about the bed's tier, so it now holds the sky at clear with the debug
+command. That is the right fix, because weather moving an unroofed sleeper's rest is design 43
+working.
+
+**The clock shows a glyph, not a word.** The clock's one row is 271 px and already held time,
+date and temperature. The owner reported an overflow there on 2026-09-23, and a second line was
+rejected at the 20 % coverage ceiling. So the sky is a 16 px drawn `HudGlyph` (sun, cloud, cloud
+with rain, cloud with a bolt) with the word in its tooltip, from the registry.
+
+**Not built:** `weather-world` (§8's second step) and rain audio.
+
+**Flakes seen, not fixed:** one unnamed Sim test and one unnamed Long-tier test each failed once
+and passed on the re-run, on a machine with a CI job running beside it.
+
+## 2026-09-25 — Traits and mental health, from interview to gate in a day (design 44)
 
 The owner asked to plan traits and mental health and said they would supply some traits. Grounding
 found more built than the request assumed and one thing plainly wrong. A mood system already ran
@@ -12324,3 +12608,16 @@ The gate saw all five breaks on each of three seeds, 26 to 29 breaks a seed, wit
 lockstep twin identical and a mid-break save resuming the same. **Nothing here has run in Unity**:
 the three shell files are unproven until it compiles them. Found in passing and not fixed: two
 random purposes share a salt.
+
+## 2026-09-25 — Traits and mental health renumbered to design 44, on the merge with weather
+
+PR #215 went conflicted the hour it opened: `main` had taken the weather (#203), whose design is
+**43**, while this line was built under the same number. The traits document is **design 44**
+now, and every reference this branch wrote was moved with it — matched against the branch's own
+diff, line for line, so the weather's own "design 43" in files both sides touched was left
+exactly as it was. The entry above keeps its heading as corrected; nothing else in the history
+moved.
+
+The two lines meet in the goldens and nowhere else in code: the weather lowered every golden
+colony's mood by about 200 (its own probe), and traits move it again by the outlook the seeds
+deal. The goldens were re-baked on the merged code and probed against merged `main`.

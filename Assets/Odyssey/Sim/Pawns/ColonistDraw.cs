@@ -51,7 +51,7 @@ namespace Odyssey.Sim.Pawns
             var pawn = new Pawn(IdForSlot(slot), cell: -1, content) { RollSeed = seed };
             pawn.RollPassions();
             pawn.RollStartingSkills();
-            // The traits on the card are the traits she walks with (design 43 §5f): the same
+            // The traits on the card are the traits she walks with (design 44 §5f): the same
             // stream, the same seed, the same id the colony will give her.
             pawn.RollTraits();
             return pawn;

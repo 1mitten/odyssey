@@ -1434,6 +1434,9 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public int PowerVersion { get; private set; }
 
+        /// <summary>The sky this frame (design 43 §5), or <see cref="WeatherView.None"/> with no weather system.</summary>
+        public WeatherView Weather { get; private set; } = WeatherView.None;
+
         /// <summary>Line cells, in cell-index order within each kind. See <see cref="ConduitView"/>.</summary>
         public ReadOnlySpan<ConduitView> Conduits => new ReadOnlySpan<ConduitView>(_conduits, 0, ConduitCount);
 
@@ -1779,6 +1782,7 @@ namespace Odyssey.Sim.Contracts
             PowerDeviceCount = 0;
             PowerNetCount = 0;
             PowerVersion = 0;
+            Weather = WeatherView.None;
             CombatEventCount = 0;
             CorpseCount = 0;
             EdificeDamageCount = 0;
@@ -1835,6 +1839,8 @@ namespace Odyssey.Sim.Contracts
         }
 
         internal void SetPowerVersion(int version) => PowerVersion = version;
+
+        internal void SetWeather(in WeatherView view) => Weather = view;
 
         internal void AddBulletin(in BulletinView view)
         {

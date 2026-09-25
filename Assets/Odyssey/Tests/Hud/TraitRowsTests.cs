@@ -7,7 +7,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// Traits on the screen (design 43 §5f, TM4): the words a trait is written in, the pane's rows
+    /// Traits on the screen (design 44 §5f, TM4): the words a trait is written in, the pane's rows
     /// under the needs, the trait's mood on the Thoughts tab, and the select card's lines. All
     /// from numbers the simulation published; the control in each case is a frame without them.
     /// </summary>

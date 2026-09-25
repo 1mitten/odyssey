@@ -157,6 +157,7 @@ namespace Odyssey.Presentation.Ui
         Label _clockTime = null!;
         Label _clockDate = null!;
         Label _clockTemp = null!;
+        HudGlyph? _clockWeather;
         readonly List<VisualElement> _speedButtons = new List<VisualElement>();
 
         // ---- alerts (A5)
@@ -675,6 +676,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.RowRequested += OnSessionRow;
             _directors.Debug.Changed += OnDebugChanged;
             _directors.Debug.TabChanged += OnDebugTabChanged;
+            _directors.Debug.WeatherChanged += RefreshDebugWeather;
             _directors.Work.Changed += OnWorkChanged;
             _directors.Work.ModeChanged += OnWorkModeChanged;
             _directors.Animals.Changed += OnAnimalsChanged;
@@ -742,6 +744,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.RowRequested -= OnSessionRow;
             _directors.Debug.Changed -= OnDebugChanged;
             _directors.Debug.TabChanged -= OnDebugTabChanged;
+            _directors.Debug.WeatherChanged -= RefreshDebugWeather;
             _directors.Work.Changed -= OnWorkChanged;
             _directors.Work.ModeChanged -= OnWorkModeChanged;
             _directors.Inventory.Changed -= OnInventoryChanged;

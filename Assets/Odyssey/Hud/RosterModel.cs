@@ -34,7 +34,7 @@ namespace Odyssey.Hud
         public string Name;
         public int Mood;        // 0..1000, the simulation's own scale, as food and rest are
 
-        /// <summary>The <see cref="MoodBand"/> the simulation published for her (design 43 §5a).</summary>
+        /// <summary>The <see cref="MoodBand"/> the simulation published for her (design 44 §5a).</summary>
         public int MoodBand;
         public int Food;        // 0..1000
         public int Rest;        // 0..1000
@@ -244,7 +244,7 @@ namespace Odyssey.Hud
     }
 
     /// <summary>
-    /// The mood band's words, read from the band <b>the simulation publishes</b> (design 43 §5a).
+    /// The mood band's words, read from the band <b>the simulation publishes</b> (design 44 §5a).
     ///
     /// <para><b>This class used to hold two thresholds of its own</b>, 600 and 350, the second a
     /// copy of the simulation's break threshold under a comment saying the threshold "is not

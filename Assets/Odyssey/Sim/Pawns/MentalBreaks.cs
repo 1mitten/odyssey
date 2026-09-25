@@ -5,7 +5,7 @@ using Odyssey.Sim.Pathing;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// The mental-break taxonomy (design 43 §5c): which break a colonist falls into, and what each
+    /// The mental-break taxonomy (design 44 §5c): which break a colonist falls into, and what each
     /// one does as a job. <b>One owner</b> for both halves, so the requirement that makes a break
     /// eligible and the search that gives it something to do cannot disagree — a tantrum chosen
     /// because a wall was in reach is a tantrum that finds that wall.
@@ -21,7 +21,7 @@ namespace Odyssey.Sim.Pawns
     public static class MentalBreaks
     {
         /// <summary>
-        /// Which break, from the tier she is under (design 43 §5c): a weighted pick by
+        /// Which break, from the tier she is under (design 44 §5c): a weighted pick by
         /// <see cref="MentalBreakDef.commonality"/> among that tier's breaks whose requirement holds,
         /// falling through to the next shallower tier when none does, and to the wander at the end.
         /// Draws from <paramref name="rng"/>, the break's own stream, after the draw that decided the
@@ -88,7 +88,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// May a colonist in this break be running this job? Her break's own jobs, and the wander
-        /// every break falls back to; anything else is ended as a failure (design 43 §5c).
+        /// every break falls back to; anything else is ended as a failure (design 44 §5c).
         /// </summary>
         public static bool IsBreakJob(Pawn pawn, Job job, PawnContent content)
         {

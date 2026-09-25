@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// What the Thoughts tab can list (design 43 §5b): the situational sources and the memories,
+    /// What the Thoughts tab can list (design 44 §5b): the situational sources and the memories,
     /// each with the registry key that names it and the aspect it is published under. The names
     /// are <see cref="ThoughtHandle.Names"/> on the contract, so this class spells only the
     /// prefixes; <c>MindAspectTests</c> (Sim) holds the simulation's spelling to the same strings.

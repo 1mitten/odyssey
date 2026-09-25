@@ -4,7 +4,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// The names a colonist's state of mind is published under (design 43 §4d): the band and the
+    /// The names a colonist's state of mind is published under (design 44 §4d): the band and the
     /// target, the break she is in, her traits and what is on her mind. Built the way <see cref="SkillAspects"/> is, and for
     /// its reason: the interface asks by name and <c>Sim.Contracts</c> learns nothing new.
     ///
@@ -21,7 +21,7 @@ namespace Odyssey.Sim.Pawns
         public static readonly AspectKey Target = AspectKey.Of("odyssey.pawn.mood.target");
 
 
-        /// <summary>The <see cref="BreakHandle"/> she is in, while she is in one (design 43 §5c).</summary>
+        /// <summary>The <see cref="BreakHandle"/> she is in, while she is in one (design 44 §5c).</summary>
         public static readonly AspectKey Break = AspectKey.Of("odyssey.pawn.break");
 
 
@@ -49,7 +49,7 @@ namespace Odyssey.Sim.Pawns
         public static readonly AspectKey[] ThoughtCount = MintThought(".count");
 
         /// <summary>
-        /// Her traits by slot (design 43 §4d): <c>odyssey.pawn.trait.0</c> to <c>.2</c> carry the
+        /// Her traits by slot (design 44 §4d): <c>odyssey.pawn.trait.0</c> to <c>.2</c> carry the
         /// <see cref="TraitHandle"/>, and the rest the effects, each only while it is not the
         /// default, so the interface derives no number the simulation knows.
         /// </summary>

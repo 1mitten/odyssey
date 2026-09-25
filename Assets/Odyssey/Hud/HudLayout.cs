@@ -1075,7 +1075,7 @@ namespace Odyssey.Hud
         /// be empty space today bought against a design nobody has written.</para>
         /// </summary>
         /// <summary>
-        /// How many rows the Thoughts tab has room for under its heading line (design 43 §5b): the
+        /// How many rows the Thoughts tab has room for under its heading line (design 44 §5b): the
         /// tab body, less the heading, in cell rows. Derived, so it follows the body when a skill
         /// or a need moves it, and the model caps its list at it so the pane never grows.
         /// </summary>

@@ -37,7 +37,7 @@ namespace Odyssey.Tests.Sim
             // nutrition, so the eater "ate" one and the carrot pile went untouched.
             if (!meals) { scenario.mealPiles = 0; scenario.mealsPerPile = 0; }
             // About the crop loop, not about who does it: no traits, so a colonist dealt Ham-fisted or
-            // Tireless by her seed cannot make this test about traits (design 43 §5f).
+            // Tireless by her seed cannot make this test about traits (design 44 §5f).
             scenario.traits = false;
             return ColonyWorld.Build(Size, seed, scenario);
         }

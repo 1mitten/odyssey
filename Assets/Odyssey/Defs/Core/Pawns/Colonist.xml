@@ -18,7 +18,7 @@
     <fallPerInterval>5</fallPerInterval>
     <breakThreshold>350</breakThreshold>
     <!--
-      Design 43 §4b. Three lines: the minor is breakThreshold, the major four sevenths of it and
+      Design 44 §4b. Three lines: the minor is breakThreshold, the major four sevenths of it and
       the extreme a seventh (a-19, the reference's ratios), all moved together by a trait. The mean
       time between breaks is the deepest line's: four days, 0.8 and half a day, the reference's
       figures as a-19 corrected a-01's older ten, three and 0.7.
@@ -30,7 +30,7 @@
   </MoodDef>
 
   <!--
-    The kinds of break (design 43 §5c). What each does is the think node's; these are the numbers.
+    The kinds of break (design 44 §5c). What each does is the think node's; these are the numbers.
     Within a tier the pick is weighted by commonality among the breaks whose requirement holds
     (binge wants food she can reach, tantrum a building in reach), falling through to a shallower
     tier when none does. A break lasts one draw between minTicks and maxTicks, then catharsis.

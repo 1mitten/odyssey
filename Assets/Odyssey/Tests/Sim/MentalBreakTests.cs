@@ -10,7 +10,7 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The three break lines and the taxonomy (design 43 §5c, TM5): which break a colonist falls
+    /// The three break lines and the taxonomy (design 44 §5c, TM5): which break a colonist falls
     /// into from the deepest line she is under, what each one does, how it ends, and that a break
     /// is saved, hashed and seen. Each behaviour is forced — the kind and the counter set on the
     /// pawn — so the test is about the break and not about the dice that start one.

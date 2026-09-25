@@ -73,7 +73,7 @@ namespace Odyssey.Sim.Pawns
         public int CurrentTick { get; internal set; }
 
         /// <summary>
-        /// Whether colonists in this world are dealt traits (design 43 §5f): the scenario's
+        /// Whether colonists in this world are dealt traits (design 44 §5f): the scenario's
         /// <see cref="ScenarioDef.traits"/>, set once when the world is built.
         /// </summary>
         public bool DealsTraits { get; set; } = true;
@@ -118,6 +118,9 @@ namespace Odyssey.Sim.Pawns
         /// the outdoor curve and nothing here is the wiser.
         /// </summary>
         public Temperature.TemperatureSystem? Temperature { get; set; }
+
+        /// <summary>The sky (design 43). Null in a bare pawn fixture, which is a world without weather.</summary>
+        public Weather.WeatherSystem? Weather { get; set; }
 
         /// <summary>
         /// The power grid (design 32): lines, the orders for them, the buildings that make and

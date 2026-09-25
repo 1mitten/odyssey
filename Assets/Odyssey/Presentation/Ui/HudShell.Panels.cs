@@ -934,6 +934,12 @@ namespace Odyssey.Presentation.Ui
             // HudLayoutTests.TheStripIsAlwaysOneRowAndNoFurther does not have, taking the resting
             // interface to 20.27% of a 1280x720 viewport against a 20% ceiling.
             _clockTemp = HudText.Make(string.Empty, HudTextRole.Body, numeric: true, "clock__temp");
+            // The sky, as a glyph before the reading (design 43 §5). A glyph and not a word because
+            // the row has no room for one (above); the word is its tooltip, from the registry.
+            _clockWeather = new HudGlyph(HudGlyphKind.WeatherClear, 16f, new Color(0.94f, 0.84f, 0.48f, 0.92f));
+            _clockWeather.AddToClassList("clock__weather");
+            _clockWeather.pickingMode = PickingMode.Position;
+            line.Add(_clockWeather);
             line.Add(_clockTemp);
 
             clock.Add(line);
@@ -1135,6 +1141,23 @@ namespace Odyssey.Presentation.Ui
             HudText.Set(_clockTemp, temperature == null
                 ? string.Empty
                 : TemperatureLabels.Describe(temperature.OutdoorTempC(tick)), HudTextRole.Body);
+
+            // The sky (design 43 §5): the kind holding the larger share, which changes once, at the
+            // half of a hand-over, rather than flickering.
+            if (_clockWeather != null)
+            {
+                WeatherView sky = world.Views.Current.Weather;
+                string word = WeatherLabels.Describe(sky);
+                _clockWeather.style.display = word.Length == 0 ? DisplayStyle.None : DisplayStyle.Flex;
+                _clockWeather.Kind = sky.Kind switch
+                {
+                    WeatherKind.Cloudy => HudGlyphKind.WeatherCloudy,
+                    WeatherKind.Rain => HudGlyphKind.WeatherRain,
+                    WeatherKind.Storm => HudGlyphKind.WeatherStorm,
+                    _ => HudGlyphKind.WeatherClear,
+                };
+                _clockWeather.tooltip = word;
+            }
         }
 
         void RefreshSpeed()

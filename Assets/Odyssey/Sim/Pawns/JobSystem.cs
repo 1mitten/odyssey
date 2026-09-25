@@ -669,7 +669,7 @@ namespace Odyssey.Sim.Pawns
     // =====================================================================================
 
     /// <summary>
-    /// A broken colonist does what her break does (design 43 §5c): wander, sulk at her bed, binge,
+    /// A broken colonist does what her break does (design 44 §5c): wander, sulk at her bed, binge,
     /// strike a building or strike whoever is nearest — <see cref="MentalBreaks.Fill"/>, one branch
     /// per kind, and the wander when a break has nothing to do.
     /// </summary>

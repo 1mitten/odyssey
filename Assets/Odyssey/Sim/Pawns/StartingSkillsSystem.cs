@@ -47,7 +47,7 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < pawns.Count; i++)
                 if (pawns[i].IsPerson) pawns[i].RollStartingSkills();
 
-            // And who each colonist is (design 43 §5f), on the first tick for the reason the skills
+            // And who each colonist is (design 44 §5f), on the first tick for the reason the skills
             // are: rolled at placement they would move every Generated golden, for no behaviour.
             // Only now, so a colony loaded from before traits — past tick nought — is never dealt
             // any, which is the owner's "new colonies only".

@@ -137,7 +137,7 @@ namespace Odyssey.Presentation.Ui
             // Rolled, not Of: Of would answer from the name book, and slot 0's PawnId is the same
             // 1 the last colony's first colonist had — so a freshly dealt stranger would arrive
             // wearing the name somebody typed in a game that is already over.
-            // Who she is (design 43 §5f), written by the one owner the inspect pane uses, from the
+            // Who she is (design 44 §5f), written by the one owner the inspect pane uses, from the
             // traits the simulation dealt this seed — the ones she will walk with.
             var traits = new List<InspectRow>(rolled.Traits.Count);
             foreach (int handle in rolled.Traits)
@@ -900,7 +900,7 @@ namespace Odyssey.Presentation.Ui
             _detailFace.SetFace(ColonistFace.Of(current.Seed, shown));
             _detailFace.SetPortrait(_boot!.Portraits.For(current.Seed, shown));
 
-            // Who she is (design 43 §5f): a line per trait, the name and what it does, rerolled
+            // Who she is (design 44 §5f): a line per trait, the name and what it does, rerolled
             // with the card. "—" when a candidate has none, because a section that is absent and
             // one that is empty look identical and only one of them is a promise.
             string traitLines = current.TraitLines;

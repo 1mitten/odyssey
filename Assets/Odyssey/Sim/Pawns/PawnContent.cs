@@ -89,7 +89,7 @@ namespace Odyssey.Sim.Pawns
 
     /// <summary>
     /// Aliases of <see cref="ThoughtHandle"/>, exactly as <see cref="WorkTypeIndex"/> aliases
-    /// <see cref="WorkHandle"/>: the interface names thoughts now (design 43 §5b), so the order is
+    /// <see cref="WorkHandle"/>: the interface names thoughts now (design 44 §5b), so the order is
     /// written down on the contract's side and a test holds it to <c>FromDefs</c>.
     /// </summary>
     public static class ThoughtIndex
@@ -118,7 +118,7 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// Who a colonist is (design 43 §4c, §5f): one degree of a spectrum, or a singular trait, with
+    /// Who a colonist is (design 44 §4c, §5f): one degree of a spectrum, or a singular trait, with
     /// the five effects the owner allowed. Every effect defaults to "none" — nought, or 1,000 per
     /// mille — so a trait says only what it changes.
     ///
@@ -186,14 +186,14 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// How far above the minor line a colonist still reads <i>strained</i> rather than content
-        /// (design 43 §5a). 100 puts an untraited colonist's content line at 450, below the resting
+        /// (design 44 §5a). 100 puts an untraited colonist's content line at 450, below the resting
         /// target of 500, which is the owner's "a rested, fed colonist is Content". INVENTED.
         /// </summary>
         public int strainMargin = 100;
     }
 
     /// <summary>
-    /// One kind of mental break (design 43 §5c): which tier it belongs to, how likely it is among
+    /// One kind of mental break (design 44 §5c): which tier it belongs to, how likely it is among
     /// that tier's breaks, and how long it lasts. What it <i>does</i> is the think node's one branch
     /// per <see cref="BreakHandle"/>; the Def carries the numbers.
     /// </summary>
@@ -941,7 +941,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// The chance, in per cent, that a colonist is dealt a third trait beside the two everyone
-        /// has (design 43 §5f; owner: "two or three"). INVENTED.
+        /// has (design 44 §5f; owner: "two or three"). INVENTED.
         /// </summary>
         public int thirdTraitPerCent = 30;
 
@@ -1127,7 +1127,7 @@ namespace Odyssey.Sim.Pawns
         public NeedDef[] Needs = System.Array.Empty<NeedDef>();
         public ThoughtDef[] Thoughts = System.Array.Empty<ThoughtDef>();
 
-        /// <summary>Every trait, in <see cref="TraitHandle"/> order (design 43 §4a).</summary>
+        /// <summary>Every trait, in <see cref="TraitHandle"/> order (design 44 §4a).</summary>
         public TraitDef[] Traits = System.Array.Empty<TraitDef>();
 
         /// <summary>Each trait's spectrum as a small integer, or -1 on its own, resolved at load.</summary>
@@ -1146,7 +1146,7 @@ namespace Odyssey.Sim.Pawns
         public MentalBreakDef Break = new MentalBreakDef();
 
         /// <summary>
-        /// Every kind of break, in <c>BreakHandle</c> order (design 43 §4a); <see cref="Break"/> is
+        /// Every kind of break, in <c>BreakHandle</c> order (design 44 §4a); <see cref="Break"/> is
         /// the first, the wander, and every break from before the taxonomy is one.
         /// </summary>
         public MentalBreakDef[] Breaks = System.Array.Empty<MentalBreakDef>();
@@ -1395,7 +1395,7 @@ namespace Odyssey.Sim.Pawns
                 "Thought_SleptCold", "Thought_SleptHot",
                 // Friendly fire (design 33 §12).
                 "Thought_AttackedByColonist", "Thought_ColonistDied");
-            // Traits (design 43 §4c). Appended, never inserted: a trait's index rides every save
+            // Traits (design 44 §4c). Appended, never inserted: a trait's index rides every save
             // that holds one. A pack without the table is a pack from before traits, and its
             // colonists simply have none.
             if (defs.HasTable<TraitDef>())
@@ -1444,7 +1444,7 @@ namespace Odyssey.Sim.Pawns
                 "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade");
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");
-            // The kinds of break (design 43 §5c). Appended, never inserted: a break's index rides
+            // The kinds of break (design 44 §5c). Appended, never inserted: a break's index rides
             // every save taken mid-break. The wander is first, so every break from before is one.
             content.Breaks = ByName<MentalBreakDef>(defs,
                 "Break_Wander", "Break_Sulk", "Break_Binge", "Break_Tantrum", "Break_Berserk");
@@ -1627,7 +1627,7 @@ namespace Odyssey.Sim.Pawns
         public const uint Passion = 0xC2B2_AE35;
 
         /// <summary>
-        /// A colonist's traits (design 43 §5f), drawn from (roll seed, pawn id) like the passions
+        /// A colonist's traits (design 44 §5f), drawn from (roll seed, pawn id) like the passions
         /// and the starting skills, and on a stream of its own so dealing traits moved no passion
         /// and no skill for any seed. Not a salt already in this list: two purposes sharing one
         /// are two streams that agree.

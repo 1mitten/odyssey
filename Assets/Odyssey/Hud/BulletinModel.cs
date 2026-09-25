@@ -208,7 +208,7 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// A mental break's row (design 43 §5c): the incident's name and which break — "Mental
+        /// A mental break's row (design 44 §5c): the incident's name and which break — "Mental
         /// break · Tantrum". The entry's subject is the <see cref="BreakHandle"/>, not an item.
         /// </summary>
         public static string BreakTitle(string key, int breakKind)
