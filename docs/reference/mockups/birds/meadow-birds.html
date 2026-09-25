@@ -1,0 +1,811 @@
+<title>Meadow Birds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#eef0ea; --paper:#f8f9f5; --ink:#1d2320; --ink-2:#4a544e; --ink-3:#77817a;
+  --line:#d3d8cf; --accent:#3c6e4f; --accent-ink:#ffffff; --chip:#e2e7dd; --warn:#9a5b1e;
+  --stage:#c9d6c0;
+  --sans:"Archivo Narrow","Arial Narrow",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#161a18; --paper:#1d2220; --ink:#e7ebe5; --ink-2:#b3bcb5; --ink-3:#86908a;
+    --line:#333b36; --accent:#7fb592; --accent-ink:#0f1511; --chip:#262d29; --warn:#e0a060;
+    --stage:#232a26; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#161a18; --paper:#1d2220; --ink:#e7ebe5; --ink-2:#b3bcb5; --ink-3:#86908a;
+  --line:#333b36; --accent:#7fb592; --accent-ink:#0f1511; --chip:#262d29; --warn:#e0a060;
+  --stage:#232a26; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.45;padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+header{display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+h1{font-size:40px;line-height:1.05;margin:0;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:24px;margin:0;font-weight:600;text-wrap:balance}
+p{margin:0;max-width:68ch;color:var(--ink-2)}
+.lede{font-size:18px}
+.stagebox{display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.stage{position:relative;width:100%;aspect-ratio:16/9;max-width:100%;background:var(--stage)}
+.stage canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;gap:4px;pointer-events:none}
+.hud span{font-family:var(--mono);font-size:12px;background:rgba(18,22,20,.72);color:#e9eee8;padding:3px 7px;border-radius:3px;width:max-content;max-width:calc(100vw - 60px);font-variant-numeric:tabular-nums}
+.hud .big{font-size:13px}
+.caption{position:absolute;right:10px;bottom:10px;font-family:var(--mono);font-size:12px;background:rgba(18,22,20,.72);color:#e9eee8;padding:3px 7px;border-radius:3px;pointer-events:none}
+.controls{display:flex;flex-wrap:wrap;gap:14px 22px;padding:14px;border-top:1px solid var(--line)}
+.ctl{display:flex;flex-direction:column;gap:5px;min-width:0}
+.ctl>label,.ctl>.lab{font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.seg{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:4px;overflow:hidden;width:max-content;max-width:100%}
+.seg button{font:500 15px var(--sans);background:transparent;color:var(--ink);border:0;border-right:1px solid var(--line);padding:6px 12px;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg button:focus-visible,.act:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=range]{width:220px;max-width:100%;accent-color:var(--accent)}
+.act{font:600 15px var(--sans);background:var(--chip);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:6px 12px;cursor:pointer}
+.act:hover{border-color:var(--accent)}
+.zoomrow{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+.species{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.sp{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.sp h3{margin:0;font-size:20px;font-weight:700;display:flex;align-items:center;gap:10px}
+.sw{display:inline-flex;gap:3px}
+.sw i{width:14px;height:14px;border-radius:2px;display:block;border:1px solid rgba(0,0,0,.15)}
+.sp .role{font-size:15px;color:var(--ink-2)}
+dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:14px}
+dt{font-family:var(--mono);font-size:12px;color:var(--ink-3);padding-top:1px}
+dd{margin:0;font-variant-numeric:tabular-nums}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:15px}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;align-items:start}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.card svg{width:100%;height:auto;max-width:100%}
+ol,ul{margin:0;padding-left:20px;color:var(--ink-2);display:flex;flex-direction:column;gap:6px;max-width:70ch}
+code{font-family:var(--mono);font-size:.88em}
+.note{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+@media (max-width:560px){h1{font-size:32px}.stage{aspect-ratio:4/3}}
+@media (prefers-reduced-motion:reduce){.seg button{transition:none}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Odyssey · research sketch · d-23 / e-12 · not in the game</div>
+  <h1>Meadow Birds</h1>
+  <p class="lede">What the proposed birds would look like: four species, each built from 28–32 flat-shaded triangles, whose wings flap in the shader. They fly in small flocks over the Meadow board and are seen through the game's own camera (48° pitch, 40° field of view, 10–160 m). The trees, hut and colonist are placeholders. The birds are the proposal.</p>
+</header>
+
+<section class="stagebox" aria-label="3D sketch">
+  <div class="stage" id="stage">
+    <canvas id="c" aria-label="Birds flying over a low-poly meadow"></canvas>
+    <div class="hud" id="hud"></div>
+    <div class="caption" id="cap">drag to turn · wheel to zoom</div>
+  </div>
+  <div class="controls">
+    <div class="ctl"><span class="lab">View</span>
+      <div class="seg" data-key="view"><button data-v="game" aria-pressed="true">Game camera</button><button data-v="lineup">Close-up lineup</button></div></div>
+    <div class="ctl"><label for="zoom">Camera distance</label>
+      <div class="zoomrow"><input id="zoom" type="range" min="10" max="160" step="1" value="60"><span id="zoomv">60 m</span></div></div>
+    <div class="ctl"><span class="lab">Time</span>
+      <div class="seg" data-key="time"><button data-v="day" aria-pressed="true">Day</button><button data-v="dusk">Dusk</button><button data-v="night">Night</button></div></div>
+    <div class="ctl"><span class="lab">Weather</span>
+      <div class="seg" data-key="weather"><button data-v="clear" aria-pressed="true">Clear</button><button data-v="rain">Rain</button><button data-v="storm">Storm</button></div></div>
+    <div class="ctl"><span class="lab">Drawn size</span>
+      <div class="seg" data-key="scale"><button data-v="1">Life size</button><button data-v="1.75" aria-pressed="true">×1.75</button></div></div>
+    <div class="ctl"><span class="lab">Show</span>
+      <div class="seg" data-key="wire"><button data-v="0" aria-pressed="true">Shaded</button><button data-v="1">Triangles</button></div></div>
+    <div class="ctl"><span class="lab">Try</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="act" id="walk">Walk a colonist to the pigeons</button><button class="act" id="fell">Fell the rookery tree</button></div></div>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:12px">
+  <h2>The four birds</h2>
+  <p>We start with birds that read from 160 m: crow-sized and dark, or one large bird that circles. Songbirds are left out because at the far zoom they would be a pixel or two.</p>
+  <div class="species" id="species"></div>
+</section>
+
+<section class="two">
+  <div class="card">
+    <h2>How one bird is built</h2>
+    <svg viewBox="0 0 420 250" role="img" aria-label="Top view of the bird mesh with wing weights">
+      <g fill="none" stroke="currentColor" stroke-width="1.2" style="color:var(--ink-3)">
+        <line x1="20" y1="125" x2="400" y2="125" stroke-dasharray="3 4"/>
+      </g>
+      <!-- wings -->
+      <polygon points="195,112 150,60 70,40 60,52 170,118" style="fill:var(--chip);stroke:var(--ink-2)" stroke-width="1.2"/>
+      <polygon points="195,138 150,190 70,210 60,198 170,132" style="fill:var(--chip);stroke:var(--ink-2)" stroke-width="1.2"/>
+      <line x1="150" y1="60" x2="170" y2="118" style="stroke:var(--ink-3)" stroke-dasharray="3 3"/>
+      <line x1="150" y1="190" x2="170" y2="132" style="stroke:var(--ink-3)" stroke-dasharray="3 3"/>
+      <!-- body -->
+      <polygon points="300,125 262,112 200,110 150,118 118,112 118,138 150,132 200,140 262,138" style="fill:var(--ink);stroke:var(--ink)" stroke-width="1"/>
+      <polygon points="300,125 316,125 300,121" style="fill:var(--warn)"/>
+      <g font-family="IBM Plex Mono, monospace" font-size="11" style="fill:var(--ink-2)">
+        <text x="204" y="100">w = 0 (shoulder)</text>
+        <text x="158" y="58">w = 0.45 (elbow)</text>
+        <text x="30" y="30">w = 1 (tip)</text>
+        <text x="8" y="150">tail, 2 tris</text>
+        <text x="290" y="108">head, beak</text>
+        <text x="150" y="236">2 panels a wing, bends at the elbow</text>
+      </g>
+    </svg>
+    <ul>
+      <li><b>Body:</b> a six-sided spindle, 12 triangles. Head, beak and tail fan add 6 more. <b>Wings:</b> an inner and an outer panel each, 4 triangles a side (the buzzard's tip has 2 more for its fingered primaries). Every face is flat-shaded in one colour, like the Synty atlas swatches.</li>
+      <li><b>Flap:</b> each vertex carries a wing weight <code>w</code> (0 at the shoulder, 0.45 at the elbow, 1 at the tip) and a side sign. The vertex shader lifts it by <code>sin(t·f + phase) · A · w^1.4</code>, so the outer panel travels further than the inner one and the wing bends.</li>
+      <li><b>Per bird:</b> one matrix plus three floats (phase, flap strength, fold). Folded wings are for a perched bird. One species is one instanced draw call, and its ground shadows are one more.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>What they do</h2>
+    <div class="tbl" style="border:0">
+    <table style="min-width:0">
+      <thead><tr><th>When</th><th>Birds</th></tr></thead>
+      <tbody>
+        <tr><td>Day, clear</td><td>Two rook flocks circle and land in treetops for 10–30 s. Pigeons feed on the open grass. A buzzard circles slowly at 35 m. Swallows skim low over the grass and the pond.</td></tr>
+        <tr><td>A colonist comes within 8 m</td><td>The perched birds burst up together, climb, then circle back and land somewhere else.</td></tr>
+        <tr><td>The tree or roof under them changes</td><td>Same scatter. The trigger is the chunk's version changing, not a physics event.</td></tr>
+        <tr><td>Dusk</td><td>Rooks gather at the rookery (the tallest trees) and settle there. Swallows and the buzzard leave.</td></tr>
+        <tr><td>Night</td><td>No flying birds. Roosting rooks stay as dark shapes in the rookery.</td></tr>
+        <tr><td>Rain</td><td>Half the flocks stay perched and the buzzard lands. It follows the birdsong, which already fades in rain.</td></tr>
+        <tr><td>Storm</td><td>No birds in the air.</td></tr>
+        <tr><td>Always</td><td>Birds can't be clicked or selected. They are never in a cell, a save or the state hash, and they never block anything.</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:12px">
+  <h2>How big they are on screen</h2>
+  <p>How many pixels a bird's wingspan covers at 1080p through the 40° camera: <code>px ≈ span × 1,080 / (0.728 × distance)</code>. Double it for 4K. The rows are drawn at ×1.75.</p>
+  <div class="tbl"><table id="pxtable"><thead><tr><th>Bird</th><th>Real span</th><th>Drawn span</th><th>at 20 m</th><th>at 40 m</th><th>at 80 m</th><th>at 160 m</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section class="card">
+  <h2>Decisions this sketch is for</h2>
+  <ol>
+    <li><b>Is ×1.75 right?</b> Turn Drawn size to Life size at 160 m: the rooks become specks. At ×1.75 they read, but up close, at 10–20 m, they look too big.</li>
+    <li><b>Ground birds or only flying ones?</b> The pigeons feed on the grass here, pecking with a head bob that's also done in the shader. If that's too crude up close, it's the one case for the Quaternius pigeon model.</li>
+    <li><b>Which of the four?</b> Rooks and the buzzard give the most for the least. Swallows are only visible within about 60 m.</li>
+  </ol>
+  <p class="note">Sketch only: three.js in a web page, placeholder scenery, invented numbers. Research: docs/research/d-23-ambient-birds.md, e-12-bird-models.md.</p>
+</section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+// ---------- deterministic random ----------
+let seed = 1337;
+function rnd(){ seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+function rr(a,b){ return a + (b-a)*rnd(); }
+
+// ---------- species ----------
+const SPECIES = [
+  { key:"rook", name:"Rook", latin:"flocks, treetops, the rookery at dusk",
+    span:0.90, len:0.46, body:0x23242c, wing:0x2b2e3a, under:0x1b1c22, beak:0x8d8f93,
+    flapHz:3.2, flapAmp:0.28, glide:0.35, flock:"2 flocks of 8–16", alt:"8–25 m",
+    habitat:"Woodland edge; lands in treetops and on roofs", tris:0 },
+  { key:"buzzard", name:"Buzzard", latin:"one or two, circling",
+    span:1.25, len:0.55, body:0x6a4a32, wing:0x5d402b, under:0xcdb690, beak:0x3a3530,
+    flapHz:2.2, flapAmp:0.22, glide:0.9, flock:"1–2", alt:"30–45 m",
+    habitat:"Circles in slow loops over open ground", tris:0, fingers:true },
+  { key:"pigeon", name:"Wood pigeon", latin:"feeds on the grass",
+    span:0.75, len:0.41, body:0x8a909c, wing:0x7d8594, under:0xb59a9e, beak:0xe0c070,
+    flapHz:4.5, flapAmp:0.3, glide:0.2, flock:"1 flock of 6–12", alt:"0–15 m",
+    habitat:"Feeds on open grass; scatters from colonists", tris:0 },
+  { key:"swallow", name:"Swallow", latin:"skims the grass and water",
+    span:0.33, len:0.19, body:0x1f2b52, wing:0x1a2446, under:0xe8dccb, beak:0x8b3a26,
+    flapHz:6.0, flapAmp:0.26, glide:0.45, flock:"3–6", alt:"0.5–4 m",
+    habitat:"Low and fast over grass and the pond; summer days only", tris:0, forked:true },
+];
+
+// ---------- mesh builder (one bird, span 1, nose +x, up +y, left wing +z) ----------
+function buildBird(sp){
+  const pos=[], col=[], w=[], side=[];
+  const C = new THREE.Color();
+  function tri(a,b,c,color,wa,wb,wc,s){
+    pos.push(...a,...b,...c);
+    C.setHex(color); for(let i=0;i<3;i++) col.push(C.r,C.g,C.b);
+    w.push(wa||0,wb||0,wc||0); side.push(s||0,s||0,s||0);
+  }
+  const L = sp.len/sp.span;          // body length relative to span
+  const nose=[ L*0.55,0.0,0], tail=[-L*0.45,0.01,0];
+  const r = L*0.13;                   // body radius
+  // spindle ring at x = L*0.1
+  const ring=[]; for(let i=0;i<6;i++){ const a=i/6*Math.PI*2; ring.push([L*0.08, Math.cos(a)*r*0.85, Math.sin(a)*r]); }
+  const ringB=[]; for(let i=0;i<6;i++){ const a=i/6*Math.PI*2; ringB.push([-L*0.22, Math.cos(a)*r*0.55, Math.sin(a)*r*0.6]); }
+  for(let i=0;i<6;i++){ const j=(i+1)%6; const top = (i===0||i===5||i===1);
+    tri(nose, ring[j], ring[i], top?sp.body:sp.under);
+    tri(ring[i], ring[j], ringB[i], top?sp.body:sp.under);
+  }
+  // rear cone to tail point (fewer tris: 4)
+  tri(ringB[0],ringB[1],tail,sp.body); tri(ringB[5],ringB[0],tail,sp.body);
+  tri(ringB[2],ringB[3],tail,sp.under); tri(ringB[3],ringB[4],tail,sp.under);
+  // beak
+  const bk=[L*0.55+L*0.16,-0.005,0];
+  tri([L*0.5,0.012,0.012],[L*0.5,0.012,-0.012],bk,sp.beak);
+  tri([L*0.5,-0.01,0.012],bk,[L*0.5,0.012,0.012],sp.beak);
+  // tail fan
+  const tw = sp.forked? 0.16:0.11, tl = sp.forked? L*0.55 : L*0.32;
+  if(sp.forked){
+    tri(tail,[-L*0.45-tl, 0.0, tw],[-L*0.45-tl*0.55,0,0],sp.wing);
+    tri(tail,[-L*0.45-tl*0.55,0,0],[-L*0.45-tl, 0.0,-tw],sp.wing);
+  } else {
+    tri(tail,[-L*0.45-tl, 0.0, tw],[-L*0.45-tl, 0.0,-tw],sp.wing);
+    tri(tail,[-L*0.45-tl*0.9, 0.0, 0],[-L*0.45-tl, 0.0, tw],sp.wing);
+  }
+  // wings: shoulder at x in [-0.02L, 0.14L], elbow at z=0.22, tip z=0.5
+  const sweep = sp.key==="swallow"? 0.16 : 0.05;
+  for(const s of [1,-1]){
+    const shF=[L*0.14,0.02,s*r*0.8], shB=[-L*0.10,0.02,s*r*0.8];
+    const elF=[L*0.10-sweep*0.5,0.03,s*0.24], elB=[-L*0.20-sweep*0.3,0.03,s*0.22];
+    const chordTip = sp.key==="buzzard"?0.13:(sp.key==="swallow"?0.035:0.07);
+    const tipF=[-sweep*1.6+0.02,0.03,s*0.5], tipB=[-sweep*1.6-chordTip,0.03,s*0.47];
+    const W=sp.wing, U=sp.under;
+    // top faces
+    tri(shF, elF, shB, W, 0,0.45,0, s); tri(shB, elF, elB, W, 0,0.45,0.45, s);
+    tri(elF, tipF, elB, W, 0.45,1,0.45, s); tri(elB, tipF, tipB, W, 0.45,1,1, s);
+    if(sp.fingers){ const f1=[tipB[0]-0.04,0.03,s*0.44];
+      tri(elB, tipB, f1, W, 0.45,1,0.95, s); tri(tipF,[tipF[0]+0.02,0.03,s*0.53],tipB,W,1,1,1,s); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute("color", new THREE.Float32BufferAttribute(col,3));
+  g.setAttribute("aWing", new THREE.Float32BufferAttribute(w,1));
+  g.setAttribute("aSide", new THREE.Float32BufferAttribute(side,1));
+  sp.tris = pos.length/9;
+  return g;
+}
+
+// ---------- scene ----------
+const canvas = document.getElementById("c");
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 16/9, 0.3, 900);
+const sun = new THREE.DirectionalLight(0xfff1d8, 1.0);
+const hemi = new THREE.HemisphereLight(0xcfe3ff, 0x4a5a38, 0.55);
+scene.add(sun, hemi);
+scene.fog = new THREE.Fog(0xb9cbd6, 180, 520);
+
+const uniforms = {
+  uTime:{value:0}, uSunDir:{value:new THREE.Vector3(0.4,0.8,0.3).normalize()},
+  uSunCol:{value:new THREE.Color(0xfff1d8)}, uAmb:{value:new THREE.Color(0x8d9a8a)},
+  uScale:{value:1.75}, uFogCol:{value:new THREE.Color(0xb9cbd6)}, uFogNear:{value:180}, uFogFar:{value:520},
+  uFlapHz:{value:3}, uFlapAmp:{value:0.5}, uWire:{value:0}
+};
+
+// terrain: a height function with two terraces and a stream hollow
+function heightAt(x,z){
+  return 0; // flat for the sketch: the terraces are not what is being judged
+}
+const groundMat = new THREE.MeshStandardMaterial({vertexColors:true, flatShading:true});
+(function makeGround(){
+  const N=110, S=2.5, half=N*S/2;
+  const pos=[], col=[]; const c=new THREE.Color();
+  function v(x,z){ return [x, heightAt(x,z), z]; }
+  for(let i=0;i<N;i++) for(let j=0;j<N;j++){
+    const x0=-half+i*S, z0=-half+j*S, x1=x0+S, z1=z0+S;
+    const cx=(x0+x1)/2, cz=(z0+z1)/2;
+    const h=heightAt(cx,cz);
+    const pond = Math.hypot(cx+28, cz-18) < 11;
+    const n = Math.sin(cx*0.31)*Math.cos(cz*0.27)*0.5+Math.sin(cx*0.07+cz*0.05)*0.5;
+    if(pond) c.setHex(0x4d7470); else c.setRGB(0.38+n*0.03, 0.54+n*0.05, 0.27+n*0.02);
+    const y = pond? h-0.25 : h;
+    const q=[[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]];
+    pos.push(...q[0],...q[2],...q[1], ...q[0],...q[3],...q[2]);
+    for(let k=0;k<6;k++) col.push(c.r,c.g,c.b);
+    // risers
+    const hx=heightAt(cx+S,cz), hz=heightAt(cx,cz+S);
+    c.setHex(0x7a6a52);
+    if(hx!==h){ const lo=Math.min(h,hx), hi=Math.max(h,hx);
+      pos.push(x1,lo,z0, x1,hi,z1, x1,lo,z1,  x1,lo,z0, x1,hi,z0, x1,hi,z1); for(let k=0;k<6;k++) col.push(c.r,c.g,c.b); }
+    if(hz!==h){ const lo=Math.min(h,hz), hi=Math.max(h,hz);
+      pos.push(x0,lo,z1, x1,lo,z1, x1,hi,z1,  x0,lo,z1, x1,hi,z1, x0,hi,z1); for(let k=0;k<6;k++) col.push(c.r,c.g,c.b); }
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute("color",new THREE.Float32BufferAttribute(col,3));
+  g.computeVertexNormals();
+  const m=new THREE.Mesh(g,groundMat); m.material.side=THREE.DoubleSide; scene.add(m);
+})();
+
+const far=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000), new THREE.MeshStandardMaterial({color:0x5f8741,roughness:1}));
+far.rotation.x=-Math.PI/2; far.position.y=-0.05; scene.add(far);
+// trees
+const trees=[];
+const trunkMat=new THREE.MeshStandardMaterial({color:0x5b4430, flatShading:true});
+const leafMats=[0x4f7a35,0x5d8a3a,0x44692f,0x6b9440].map(c=>new THREE.MeshStandardMaterial({color:c, flatShading:true}));
+function addTree(x,z,h,rookery){
+  const y=heightAt(x,z); const g=new THREE.Group();
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.22*h/10,0.35*h/10,h*0.55,6),trunkMat); trunk.position.y=h*0.275; g.add(trunk);
+  const m=leafMats[Math.floor(rnd()*leafMats.length)];
+  const blobs=[[0,h*0.62,0,h*0.26],[h*0.12,h*0.78,0.05*h,h*0.2],[-h*0.1,h*0.74,-0.07*h,h*0.19],[0,h*0.9,0,h*0.14]];
+  let top=0;
+  for(const b of blobs){ const s=new THREE.Mesh(new THREE.IcosahedronGeometry(b[3],0),m); s.position.set(b[0],b[1],b[2]); s.rotation.set(rnd()*3,rnd()*3,0); g.add(s); top=Math.max(top,b[1]+b[3]*0.8); }
+  g.position.set(x,y,z); scene.add(g);
+  const t={x,z,y,h,top:y+top,group:g,rookery:!!rookery,felled:false};
+  trees.push(t); return t;
+}
+seed=77;
+// woodland to the north-east, clearing in the middle
+for(let i=0;i<70;i++){
+  const a=rnd()*Math.PI*2, d=rr(38,120);
+  const x=Math.cos(a)*d+20, z=Math.sin(a)*d-10;
+  if(Math.hypot(x+28,z-18)<14) continue;
+  addTree(x,z,rr(8,13));
+}
+const rookeryTrees=[addTree(-46,-42,16,true),addTree(-40,-47,15,true),addTree(-50,-35,15.5,true)];
+for(const t of rookeryTrees) t.group.traverse(o=>{ if(o.material===leafMats[0]||o.material===leafMats[1]||o.material===leafMats[2]||o.material===leafMats[3]) o.material=new THREE.MeshStandardMaterial({color:0x3f6230,flatShading:true}); });
+
+// hut with a roof (a perch)
+const hut=new THREE.Group();
+const wallMat=new THREE.MeshStandardMaterial({color:0x9a8468,flatShading:true});
+const roofMat=new THREE.MeshStandardMaterial({color:0x6d4b3a,flatShading:true});
+const walls=new THREE.Mesh(new THREE.BoxGeometry(7.5,3,5),wallMat); walls.position.y=1.5; hut.add(walls);
+const roofG=new THREE.CylinderGeometry(0.01,4.2,2.2,4,1); const roof=new THREE.Mesh(roofG,roofMat);
+roof.rotation.y=Math.PI/4; roof.scale.set(1.3,1,0.85); roof.position.y=4.1; hut.add(roof);
+hut.position.set(6,heightAt(6,4),4); scene.add(hut);
+const roofRidge={x:6,z:4,y:heightAt(6,4)+5.0};
+// campfire
+const fire=new THREE.Mesh(new THREE.ConeGeometry(0.5,0.8,5),new THREE.MeshBasicMaterial({color:0xf0a040})); fire.position.set(-3,heightAt(-3,10)+0.4,10); scene.add(fire);
+
+// colonist placeholder
+const colonist=new THREE.Group();
+const suit=new THREE.MeshStandardMaterial({color:0xE8EDF6,flatShading:true});
+const skin=new THREE.MeshStandardMaterial({color:0xc99a78,flatShading:true});
+const legs=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.9,0.3),suit); legs.position.y=0.45; colonist.add(legs);
+const torso=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.7,0.32),suit); torso.position.y=1.25; colonist.add(torso);
+const head=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.3,0.28),skin); head.position.y=1.78; colonist.add(head);
+scene.add(colonist);
+const colState={x:-6,z:14,tx:-6,tz:14,speed:1.6};
+colonist.position.set(colState.x,heightAt(colState.x,colState.z),colState.z);
+const pigeonField={x:-14,z:-6};
+
+// rain streaks (simple lines)
+const rainN=2500; const rainG=new THREE.BufferGeometry(); const rp=new Float32Array(rainN*6);
+rainG.setAttribute("position",new THREE.BufferAttribute(rp,3));
+const rain=new THREE.LineSegments(rainG,new THREE.LineBasicMaterial({color:0xcfd8e0,transparent:true,opacity:0.35}));
+rain.visible=false; scene.add(rain);
+const rainSeed=[]; for(let i=0;i<rainN;i++) rainSeed.push([rr(-90,90),rr(0,60),rr(-90,90)]);
+
+// ---------- bird material ----------
+function birdMaterial(sp, shadow){
+  return new THREE.ShaderMaterial({
+    uniforms: Object.assign(THREE.UniformsUtils.clone(uniforms), {uFlapHz:{value:sp.flapHz}, uFlapAmp:{value:sp.flapAmp}, uShadow:{value:shadow?1:0}, uForce:{value:-1}}),
+    vertexColors:true, side:THREE.DoubleSide, transparent:!!shadow, depthWrite:!shadow,
+    vertexShader:`
+      attribute float aWing; attribute float aSide;
+      attribute float iPhase; attribute float iFlap; attribute float iFold; attribute float iGround;
+      uniform float uTime, uScale, uFlapHz, uFlapAmp, uShadow, uForce;
+      varying vec3 vCol; varying vec3 vWorld; varying float vFogDepth;
+      void main(){
+        vec3 p = position;
+        float w = pow(aWing, 1.4);
+        float flap = uForce >= 0.0 ? uForce : iFlap;
+        float fold = uForce >= 0.0 ? 0.0 : iFold;
+        float s = sin(uTime*uFlapHz*6.2831853 + iPhase);
+        // flap: lift tips; fold pulls tips in toward the body
+        p.y += s * uFlapAmp * w * flap * (1.0 - fold);
+        p.x -= abs(s) * 0.06 * w * flap * (1.0 - fold);
+        p.z = mix(p.z, p.z*0.28, fold*step(0.01,aWing));
+        p.x = mix(p.x, p.x - 0.14*aWing, fold);
+        p.y = mix(p.y, p.y + 0.02*aWing, fold);
+        p *= uScale;
+        #ifdef USE_INSTANCING
+        vec4 wp = modelMatrix * instanceMatrix * vec4(p,1.0);
+        #else
+        vec4 wp = modelMatrix * vec4(p,1.0);
+        #endif
+        if (uShadow > 0.5) { wp.y = iGround + 0.06; }
+        vWorld = wp.xyz; vCol = color;
+        vec4 mv = viewMatrix * wp; vFogDepth = -mv.z;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader:`
+      uniform vec3 uSunDir, uSunCol, uAmb, uFogCol; uniform float uFogNear, uFogFar, uShadow, uWire;
+      varying vec3 vCol; varying vec3 vWorld; varying float vFogDepth;
+      void main(){
+        if (uShadow > 0.5) { gl_FragColor = vec4(0.05,0.08,0.04,0.28); return; }
+        vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
+        float d = abs(dot(n, uSunDir));
+        vec3 c = vCol * (uAmb + uSunCol*d*0.9);
+        float f = smoothstep(uFogNear, uFogFar, vFogDepth);
+        gl_FragColor = vec4(mix(c, uFogCol, f), 1.0);
+      }`,
+    extensions:{derivatives:true}
+  });
+}
+
+// ---------- flocks ----------
+const MAXB = 40;
+const species = {};
+for(const sp of SPECIES){
+  const g = buildBird(sp);
+  const ig = new THREE.InstancedBufferGeometry(); ig.copy(g); ig.instanceCount = MAXB;
+  const attrs = {};
+  for(const n of ["iPhase","iFlap","iFold","iGround"]){ attrs[n]=new THREE.InstancedBufferAttribute(new Float32Array(MAXB),1); ig.setAttribute(n,attrs[n]); }
+  const mesh = new THREE.InstancedMesh(ig, birdMaterial(sp,false), MAXB); mesh.frustumCulled=false;
+  const shadow = new THREE.InstancedMesh(ig, birdMaterial(sp,true), MAXB); shadow.frustumCulled=false;
+  scene.add(mesh, shadow);
+  const wire = new THREE.LineSegments(new THREE.WireframeGeometry(g), new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.8}));
+  wire.visible=false;
+  species[sp.key] = {sp, geo:g, mesh, shadow, attrs, birds:[], wire};
+}
+
+function Bird(kind, home){
+  return {kind, x:home.x+rr(-6,6), y:rr(10,20), z:home.z+rr(-6,6), vx:rr(-1,1), vy:0, vz:rr(-1,1),
+    heading:0, bank:0, pitch:0, phase:rr(0,6.28), flap:1, fold:0, state:"fly", perch:null, slot:[rr(-4,4),rr(-1.5,1.5),rr(-4,4)],
+    peck:rr(0,6.28), visible:true};
+}
+seed=4242;
+// flocks: leader objects
+const flocks=[];
+function addFlock(kind,n,cx,cz,opts){
+  const f=Object.assign({kind, n, cx, cz, t:rr(0,100), birds:[], mode:"fly", timer:rr(6,14), target:null, lx:cx, ly:18, lz:cz, lvx:0, lvz:0, alt:18, radius:40, speed:9, active:n}, opts||{});
+  for(let i=0;i<n;i++){ const b=Bird(kind,{x:cx,z:cz}); f.birds.push(b); species[kind].birds.push(b); }
+  flocks.push(f); return f;
+}
+const rookA=addFlock("rook",14,-30,-20,{alt:20,radius:45,speed:10});
+const rookB=addFlock("rook",9,30,-30,{alt:15,radius:38,speed:9});
+const pigeons=addFlock("pigeon",10,pigeonField.x,pigeonField.z,{alt:9,radius:25,speed:11,mode:"ground",timer:9999});
+const buzz=addFlock("buzzard",1,10,-10,{alt:38,radius:26,speed:8.5,soar:true});
+const swal=addFlock("swallow",5,-28,18,{alt:2.5,radius:22,speed:13,skim:true});
+
+const state={view:"game", time:"day", weather:"clear", scale:1.75, wire:0, zoom:60, yaw:-0.6, t:0, lineupYaw:0.4};
+
+function perchPointsFor(flock){
+  // candidate perches: tree tops (not felled) and the roof ridge
+  const pts=[];
+  const candidates = trees.filter(t=>!t.felled && Math.hypot(t.x-flock.lx,t.z-flock.lz)<90);
+  candidates.sort((a,b)=>Math.hypot(a.x-flock.lx,a.z-flock.lz)-Math.hypot(b.x-flock.lx,b.z-flock.lz));
+  let pick = (state.time==="dusk"||state.time==="night") ? rookeryTrees.filter(t=>!t.felled) : candidates.slice(0,4);
+  if (!pick.length) pick = candidates.slice(0,3);
+  if (rnd()<0.25 && state.time==="day") return {roof:true, pts:null};
+  return {tree:pick, pts:null};
+}
+function assignPerches(f){
+  const p=perchPointsFor(f);
+  f.birds.forEach((b,i)=>{
+    if(p.roof){ b.perch={x:roofRidge.x+(-3.2+ (i%8)*0.9)*1.0, y:roofRidge.y+0.05, z:roofRidge.z, heading:0, tree:null}; }
+    else { const t=p.tree[i%p.tree.length]; const a=rr(0,6.28), r=rr(0.5,t.h*0.18);
+      b.perch={x:t.x+Math.cos(a)*r, y:t.top-rr(0.2,1.2), z:t.z+Math.sin(a)*r, heading:rr(0,6.28), tree:t}; }
+  });
+}
+
+function setMode(f,m){ f.mode=m; f.timer = m==="perch"? rr(10,30) : rr(8,18); if(m==="landing") assignPerches(f); }
+
+function scatter(f, fromX, fromZ){
+  if(f.mode==="perch"||f.mode==="landing"||f.mode==="ground"){
+    f.mode="scatter"; f.timer=3.5; f.scatterFrom={x:fromX,z:fromZ};
+    f.birds.forEach(b=>{ b.state="fly"; const dx=b.x-fromX, dz=b.z-fromZ, d=Math.hypot(dx,dz)||1; b.vx=dx/d*7+rr(-2,2); b.vz=dz/d*7+rr(-2,2); b.vy=rr(5,8); b.perch=null; });
+  }
+}
+
+const tmpM=new THREE.Matrix4(), tmpQ=new THREE.Quaternion(), tmpE=new THREE.Euler(0,0,0,"YZX"), tmpS=new THREE.Vector3(1,1,1), tmpP=new THREE.Vector3();
+
+function allowedActive(f){
+  const w=state.weather, t=state.time;
+  if(f.kind==="swallow") return (t==="day" && w==="clear");
+  if(f.kind==="buzzard") return (t==="day" && w==="clear");
+  if(t==="night") return f.kind==="rook"; // roosting only
+  if(w==="storm") return f.kind!=="pigeon"? false : false;
+  return true;
+}
+
+function updateFlock(f, dt){
+  const active = allowedActive(f);
+  f.t += dt;
+  // leader path
+  if (f.soar){
+    f.lx = f.cx + Math.cos(f.t*0.28)*f.radius + Math.sin(f.t*0.05)*20;
+    f.lz = f.cz + Math.sin(f.t*0.28)*f.radius;
+    f.ly = f.alt + Math.sin(f.t*0.4)*2;
+  } else if (f.skim){
+    f.lx = f.cx + Math.sin(f.t*0.55)*f.radius;
+    f.lz = f.cz + Math.sin(f.t*1.1)*f.radius*0.5;
+    f.ly = heightAt(f.lx,f.lz) + f.alt + Math.sin(f.t*2)*0.8;
+  } else {
+    f.lx = f.cx + Math.cos(f.t*f.speed/f.radius)*f.radius + Math.sin(f.t*0.13)*10;
+    f.lz = f.cz + Math.sin(f.t*f.speed/f.radius*1.0)*f.radius*0.7;
+    f.ly = f.alt + Math.sin(f.t*0.3)*3;
+  }
+  // mode machine (rooks, pigeons)
+  const wantPerch = (state.time==="dusk"||state.time==="night"||state.weather!=="clear");
+  if (f.kind==="rook"){
+    f.timer -= dt;
+    if (!active && state.weather==="storm" && f.mode!=="perch") { setMode(f,"landing"); }
+    if (f.mode==="fly" && (f.timer<=0 || wantPerch)) setMode(f,"landing");
+    else if (f.mode==="perch" && f.timer<=0 && !wantPerch) setMode(f,"fly");
+    else if (f.mode==="scatter" && f.timer<=0) setMode(f, wantPerch? "landing":"fly");
+    if (f.mode==="landing" && state.time!=="day" && f.birds[0].perch && !f.birds[0].perch.tree?.rookery) setMode(f,"landing");
+  }
+  if (f.kind==="pigeon"){
+    f.timer -= dt;
+    if (f.mode==="scatter" && f.timer<=0){ f.mode="circle"; f.timer=rr(10,14); }
+    else if (f.mode==="circle" && f.timer<=0){ f.mode="toground"; }
+  }
+  let landed=0;
+  f.birds.forEach((b,i)=>{
+    b.visible = true;
+    if (state.time==="night" && f.kind!=="rook") b.visible=false;
+    if ((f.kind==="swallow"||f.kind==="buzzard") && !active) b.visible=false;
+    if (state.weather==="storm" && f.kind==="pigeon") b.visible=false;
+    if (!b.visible) return;
+    let tx,ty,tz, maxSpd=f.speed*1.25;
+    if (f.mode==="ground" || f.mode==="toground"){
+      const a = i*2.399 + b.slot[0]*0.3, r = 1.0+Math.sqrt(i)*1.5 + b.slot[2]*0.25;
+      tx = pigeonField.x + Math.cos(a)*r + Math.sin(state.t*0.2+i)*0.8;
+      tz = pigeonField.z + Math.sin(a)*r + Math.cos(state.t*0.17+i)*0.8;
+      ty = heightAt(tx,tz)+0.0;
+      const d=Math.hypot(tx-b.x,tz-b.z), dy=b.y-ty;
+      if (f.mode==="toground" && d<0.6 && dy<0.5){ b.state="ground"; }
+      if (f.mode==="ground") b.state="ground";
+      if (b.state==="ground"){ b.x+=(tx-b.x)*Math.min(1,dt*0.6); b.z+=(tz-b.z)*Math.min(1,dt*0.6); b.y=heightAt(b.x,b.z)+0.02;
+        b.vx=(tx-b.x)*0.6; b.vz=(tz-b.z)*0.6; b.vy=0; b.fold=Math.min(1,b.fold+dt*3); b.flap=0; landed++; return; }
+      maxSpd = Math.max(3, Math.min(f.speed, d*0.9));
+    } else if ((f.mode==="landing"||f.mode==="perch") && b.perch){
+      tx=b.perch.x; ty=b.perch.y; tz=b.perch.z;
+      const d=Math.hypot(tx-b.x,ty-b.y,tz-b.z);
+      if (d<0.35 || b.state==="perched"){ b.state="perched"; b.x=tx; b.y=ty; b.z=tz; b.vx=b.vy=b.vz=0; b.fold=Math.min(1,b.fold+dt*2.5); b.flap=0; landed++; return; }
+      maxSpd = Math.max(2.2, Math.min(f.speed*1.2, d*0.8));
+    } else {
+      const k=b.slot; const cs=Math.cos(i), sn=Math.sin(i);
+      tx=f.lx + k[0] + Math.sin(state.t*0.7+i)*1.5; ty=f.ly + k[1]; tz=f.lz + k[2] + Math.cos(state.t*0.6+i)*1.5;
+      if (f.mode==="scatter"){ tx=b.x+b.vx*3; ty=b.y+4; tz=b.z+b.vz*3; }
+      b.state="fly";
+    }
+    // steering
+    let ax=(tx-b.x), ay=(ty-b.y), az=(tz-b.z);
+    const dl=Math.hypot(ax,ay,az)||1;
+    const want=Math.min(maxSpd, dl*1.2);
+    const dvx=ax/dl*want-b.vx, dvy=ay/dl*want-b.vy, dvz=az/dl*want-b.vz;
+    const steer= f.mode==="scatter"? 1.2 : 2.2;
+    // separation within flock
+    let sx=0,sz=0,sy=0;
+    for(const o of f.birds){ if(o===b) continue; const ex=b.x-o.x, ey=b.y-o.y, ez=b.z-o.z, e=ex*ex+ey*ey+ez*ez; if(e<4&&e>0.0001){ sx+=ex/e; sy+=ey/e; sz+=ez/e; } }
+    const pvx=b.vx, pvz=b.vz;
+    b.vx+= (dvx*steer + sx*2)*dt; b.vy+=(dvy*steer + sy*2)*dt; b.vz+=(dvz*steer+sz*2)*dt;
+    b.x+=b.vx*dt; b.y+=b.vy*dt; b.z+=b.vz*dt;
+    const gy=heightAt(b.x,b.z)+0.3; if(b.y<gy) { b.y=gy; b.vy=Math.max(0,b.vy); }
+    // attitude
+    const sp=Math.hypot(b.vx,b.vz);
+    if (sp>0.3){ const h=Math.atan2(-b.vz,b.vx); let dh=h-b.heading; while(dh>Math.PI)dh-=6.2832; while(dh<-Math.PI)dh+=6.2832; b.heading+=dh*Math.min(1,dt*4);
+      const turn = dh/Math.max(dt,0.001); b.bank += (Math.max(-0.9,Math.min(0.9,turn*0.12)) - b.bank)*Math.min(1,dt*3); }
+    b.pitch += (Math.atan2(b.vy, Math.max(sp,0.5))*0.6 - b.pitch)*Math.min(1,dt*3);
+    // flap strength: climbing and landing flap hard, level flight glides by species
+    const climbing = b.vy>0.8 || f.mode==="scatter" || (dl<6 && (f.mode==="landing"||f.mode==="toground"));
+    const sp0=SPECIES.find(s=>s.key===f.kind);
+    const glidePhase = 0.5+0.5*Math.sin(state.t*0.35 + i*1.7);
+    let targetFlap = climbing? 1.3 : (glidePhase < sp0.glide ? 0.05 : 0.9);
+    if (f.soar) targetFlap = (Math.sin(state.t*0.15)>0.93)? 0.9 : 0.02;
+    b.flap += (targetFlap-b.flap)*Math.min(1,dt*3);
+    b.fold = Math.max(0,b.fold-dt*3);
+  });
+  if (f.kind==="rook" && f.mode==="landing" && landed===f.birds.length) { f.mode="perch"; f.timer=rr(10,30); }
+  if (f.kind==="pigeon" && f.mode==="toground" && landed===f.birds.length){ f.mode="ground"; }
+}
+
+function writeInstances(){
+  for(const key in species){
+    const S=species[key]; let n=0;
+    for(const b of S.birds){
+      if(!b.visible) continue;
+      let pitch=b.pitch, y=b.y;
+      if (b.state==="ground"){ // peck: head-bob as a small pitch nod
+        b.peck += 0.016*6; const bob=Math.sin(b.peck*0.7 + b.phase); pitch = 0.45 - Math.max(0,bob)*0.9; y += 0.12*state.scale;
+      }
+      // Euler order: yaw (y), then pitch (z), then bank (x)
+      tmpQ.setFromEuler(new THREE.Euler(b.state==="fly"? -b.bank:0, (b.state==="perched"&&b.perch)? b.perch.heading : (b.state==="ground"? b.phase*3 + Math.sin(state.t*0.3+b.phase)*0.6 : b.heading), b.state==="perched"? 0.3 : pitch, "YZX"));
+      tmpP.set(b.x,y,b.z);
+      const s = (b.state==="ground"||b.state==="perched")? 0.85 : 1;
+      tmpS.set(s,s,s);
+      tmpM.compose(tmpP,tmpQ,tmpS);
+      S.mesh.setMatrixAt(n,tmpM); S.shadow.setMatrixAt(n,tmpM);
+      S.attrs.iPhase.array[n]=b.phase; S.attrs.iFlap.array[n]=b.flap; S.attrs.iFold.array[n]=b.fold;
+      S.attrs.iGround.array[n]=heightAt(b.x,b.z) + ((b.state==="perched")? 0 : 0);
+      n++;
+    }
+    S.mesh.count=n; S.shadow.count= (state.time==="day" && state.weather==="clear")? n : 0;
+    S.mesh.instanceMatrix.needsUpdate=true; S.shadow.instanceMatrix.needsUpdate=true;
+    for(const a in S.attrs) S.attrs[a].needsUpdate=true;
+    S.mesh.visible = state.view==="game"; S.shadow.visible = state.view==="game";
+  }
+}
+
+// ---------- lineup view ----------
+const lineScene = new THREE.Scene();
+lineScene.add(new THREE.HemisphereLight(0xdfeaf5,0x55663f,0.7));
+const lineSun = new THREE.DirectionalLight(0xfff1d8,1.0); lineSun.position.set(0.4,0.8,0.5); lineScene.add(lineSun);
+const lineup = new THREE.Group(); lineScene.add(lineup);
+const lineupBirds=[];
+(function(){
+  const order=["swallow","pigeon","rook","buzzard"]; let x=-2.9;
+  const pad = new THREE.Mesh(new THREE.BoxGeometry(11,0.1,3.4), new THREE.MeshStandardMaterial({color:0x6f8f58,roughness:1}));
+  pad.position.set(0,-0.9,0); lineup.add(pad);
+  for(const k of order){
+    const S=species[k]; const sp=S.sp;
+    const m=new THREE.Mesh(S.geo, birdMaterial(sp,false));
+    m.material.uniforms.uScale.value = sp.span;
+    m.position.set(x, 0.2, 0); m.rotation.set(0, Math.PI/2 - 0.5, 0.06);
+    lineup.add(m);
+    const w=S.wire; w.scale.setScalar(sp.span); w.position.copy(m.position); w.rotation.copy(m.rotation); lineup.add(w);
+    lineupBirds.push({m,w,sp});
+    // a 1 m bar under each for scale
+    x += sp.span*0.5 + 1.35 + (k==="pigeon"?0.2:0);
+  }
+  // the colonist for scale
+  const c=colonist.clone(); c.position.set(4.2,-0.85,0.2); c.rotation.y=-0.4; lineup.add(c);
+  lineup.userData.col=c;
+})();
+
+// ---------- sky / time / weather ----------
+function applyLook(){
+  const t=state.time, w=state.weather;
+  let sky, sunC, sunI, amb, fog;
+  if (t==="day"){ sky=0xb9cbd6; sunC=0xfff1d8; sunI=1.0; amb=0x8d9a8a; }
+  else if (t==="dusk"){ sky=0xd9a27a; sunC=0xffb070; sunI=0.75; amb=0x6d5e62; }
+  else { sky=0x1b2433; sunC=0x7f95c8; sunI=0.25; amb=0x2c3548; }
+  if (w==="rain"){ sky = t==="night"?0x1a2028:(t==="dusk"?0x9c8a80:0xa9b6bd); }
+  if (w==="storm"){ sky = t==="night"?0x121519:0x6f7a82; sunI*=0.45; }
+  clearHex=sky; renderer.setClearColor(sky); scene.fog.color.setHex(sky);
+  sun.color.setHex(sunC); sun.intensity=sunI; hemi.intensity = t==="night"?0.2:0.55;
+  const sd = t==="dusk"? new THREE.Vector3(-0.8,0.25,0.3) : new THREE.Vector3(0.4,0.8,0.3);
+  sd.normalize(); sun.position.copy(sd);
+  for(const key in species){ for(const m of [species[key].mesh.material, species[key].shadow.material]){
+    m.uniforms.uSunDir.value.copy(sd); m.uniforms.uSunCol.value.setHex(sunC).multiplyScalar(sunI);
+    m.uniforms.uAmb.value.setHex(amb); m.uniforms.uFogCol.value.setHex(sky); m.uniforms.uScale.value=state.scale; } }
+  for(const lb of lineupBirds){ const u=lb.m.material.uniforms; u.uSunDir.value.set(0.4,0.8,0.5).normalize(); u.uSunCol.value.setHex(0xfff1d8); u.uAmb.value.setHex(0x8d9a8a); u.uFogCol.value.setHex(0xb9cbd6); u.uFogNear.value=500; u.uFogFar.value=900; }
+  rain.visible = (w!=="clear") && state.view==="game";
+  rain.material.opacity = w==="storm"?0.5:0.3;
+}
+
+// ---------- camera ----------
+const target=new THREE.Vector3(-6,2,0);
+function placeCamera(){
+  if (state.view==="lineup"){
+    camera.fov=32; camera.near=0.05; camera.updateProjectionMatrix();
+    camera.position.set(Math.sin(state.lineupYaw)*8.2, 6.2, Math.cos(state.lineupYaw)*8.2);
+    camera.lookAt(0.6,-0.2,0); return;
+  }
+  camera.fov=40; camera.near=0.3; camera.updateProjectionMatrix();
+  const pitch=48*Math.PI/180, d=state.zoom;
+  camera.position.set(target.x + Math.cos(pitch)*d*Math.sin(state.yaw), target.y + Math.sin(pitch)*d, target.z + Math.cos(pitch)*d*Math.cos(state.yaw));
+  camera.lookAt(target);
+}
+
+// ---------- HUD ----------
+const hud=document.getElementById("hud");
+function pxAt(span, d, h){ return span * h / (2*d*Math.tan(20*Math.PI/180)); }
+function updateHud(){
+  if (state.view==="lineup"){
+    hud.innerHTML = lineupBirds.map(l=>`<span>${l.sp.name}: ${l.sp.tris} triangles · ${l.sp.span.toFixed(2)} m span</span>`).join("") + `<span>colonist 1.9 m, for scale</span>`;
+    return;
+  }
+  let flying=0, total=0; for(const k in species){ total+=species[k].mesh.count; for(const b of species[k].birds) if(b.visible && b.state==="fly") flying++; }
+  const rookSpan = 0.90*state.scale;
+  hud.innerHTML = `<span class="big">${state.zoom} m · 48° · fov 40°</span>`+
+    `<span>rook ${rookSpan.toFixed(2)} m span → ${pxAt(rookSpan,state.zoom,1080).toFixed(0)} px at 1080p, ${pxAt(rookSpan,state.zoom,2160).toFixed(0)} at 4K</span>`+
+    `<span>${total} birds drawn, ${flying} flying · 4 species = 4 draw calls + 4 shadow</span>`;
+}
+
+// ---------- species cards & table ----------
+(function(){
+  const box=document.getElementById("species");
+  const hex=n=>"#"+n.toString(16).padStart(6,"0");
+  box.innerHTML = SPECIES.map(sp=>`
+    <article class="sp">
+      <h3><span class="sw"><i style="background:${hex(sp.body)}"></i><i style="background:${hex(sp.wing)}"></i><i style="background:${hex(sp.under)}"></i><i style="background:${hex(sp.beak)}"></i></span>${sp.name}</h3>
+      <div class="role">${sp.habitat}</div>
+      <dl>
+        <dt>Mesh</dt><dd>${sp.tris} triangles</dd>
+        <dt>Span</dt><dd>${sp.span.toFixed(2)} m real, ${(sp.span*1.75).toFixed(2)} m drawn</dd>
+        <dt>Flap</dt><dd>${sp.flapHz.toFixed(1)} beats/s · glides ${Math.round(sp.glide*100)}% of the time</dd>
+        <dt>Group</dt><dd>${sp.flock}</dd>
+        <dt>Height</dt><dd>${sp.alt}</dd>
+      </dl>
+    </article>`).join("");
+  const tb=document.querySelector("#pxtable tbody");
+  tb.innerHTML = SPECIES.map(sp=>{
+    const d=sp.span*1.75; const cells=[20,40,80,160].map(m=>{ const p=pxAt(d,m,1080); return `<td class="num">${p.toFixed(0)} px</td>`; }).join("");
+    return `<tr><td>${sp.name}</td><td class="num">${sp.span.toFixed(2)} m</td><td class="num">${d.toFixed(2)} m</td>${cells}</tr>`;
+  }).join("");
+})();
+
+// ---------- controls ----------
+function setSeg(key,val){
+  document.querySelectorAll(`.seg[data-key="${key}"] button`).forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.v===String(val))));
+}
+function set(key,val){
+  if(key==="scale") val=parseFloat(val);
+  if(key==="wire") val=parseInt(val,10);
+  state[key]=val; setSeg(key,val);
+  if(key==="view"){ lineup.visible = val==="lineup"; }
+  if(key==="time"||key==="weather"){ flocks.forEach(f=>{ if(f.kind==="rook"){ setMode(f, (state.time!=="day"||state.weather!=="clear")?"landing":"fly"); f.birds.forEach(b=>{ if(b.state==="perched") b.state="fly"; }); } }); }
+  if(key==="wire" && val===1 && state.view!=="lineup"){ state.view="lineup"; setSeg("view","lineup"); lineup.visible=true; }
+  for(const lb of lineupBirds){ lb.w.visible = state.wire===1; lb.m.material.uniforms.uForce.value = state.wire===1? 0 : 0.6; }
+  applyLook();
+}
+document.querySelectorAll(".seg").forEach(seg=>seg.addEventListener("click",e=>{ const b=e.target.closest("button"); if(b) set(seg.dataset.key,b.dataset.v); }));
+const zoom=document.getElementById("zoom"), zoomv=document.getElementById("zoomv");
+zoom.addEventListener("input",()=>{ state.zoom=+zoom.value; zoomv.textContent=zoom.value+" m"; });
+document.getElementById("walk").addEventListener("click",()=>{ colState.tx=pigeonField.x+3; colState.tz=pigeonField.z+2; if(state.view!=="game") set("view","game"); });
+document.getElementById("fell").addEventListener("click",()=>{
+  const live = rookeryTrees.concat(trees).filter(t=>!t.felled);
+  // fell whichever tree the most perched rooks are on
+  let best=null,bc=-1; for(const t of live){ let c=0; for(const f of flocks) for(const b of f.birds) if(b.state==="perched"&&b.perch&&b.perch.tree===t) c++; if(c>bc){bc=c;best=t;} }
+  if(!best) return; best.felled=true; best.group.rotation.z = 1.45; best.group.position.y -= 0.2;
+  flocks.forEach(f=>{ if(f.birds.some(b=>b.perch&&b.perch.tree===best)) scatter(f,best.x,best.z); });
+  if(state.view!=="game") set("view","game");
+});
+let drag=null;
+canvas.addEventListener("pointerdown",e=>{ drag={x:e.clientX}; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener("pointermove",e=>{ if(!drag) return; const dx=e.clientX-drag.x; drag.x=e.clientX; if(state.view==="lineup") state.lineupYaw-=dx*0.01; else state.yaw-=dx*0.006; });
+canvas.addEventListener("pointerup",()=>drag=null);
+canvas.addEventListener("wheel",e=>{ if(state.view!=="game") return; e.preventDefault(); state.zoom=Math.max(10,Math.min(160,Math.round(state.zoom*(e.deltaY>0?1.08:0.925)))); zoom.value=state.zoom; zoomv.textContent=state.zoom+" m"; },{passive:false});
+
+// ---------- loop ----------
+function resize(){ const r=stage.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect=r.width/r.height; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(stage);
+
+function step(dt){
+  state.t+=dt;
+  for(const key in species){ species[key].mesh.material.uniforms.uTime.value=state.t; species[key].shadow.material.uniforms.uTime.value=state.t; }
+  for(const lb of lineupBirds){ lb.m.material.uniforms.uTime.value=state.t; }
+  // colonist walk
+  const dx=colState.tx-colState.x, dz=colState.tz-colState.z, d=Math.hypot(dx,dz);
+  if(d>0.1){ const s=Math.min(d,colState.speed*dt); colState.x+=dx/d*s; colState.z+=dz/d*s; colonist.rotation.y=Math.atan2(dx,dz); }
+  colonist.position.set(colState.x,heightAt(colState.x,colState.z),colState.z);
+  if (Math.hypot(colState.x-pigeonField.x,colState.z-pigeonField.z)<8 && pigeons.mode==="ground") scatter(pigeons,colState.x,colState.z);
+  if (pigeons.mode==="circle"){ pigeons.lx=pigeonField.x+Math.cos(state.t*0.5)*18; pigeons.lz=pigeonField.z+Math.sin(state.t*0.5)*18; }
+  if (pigeons.mode==="circle" && pigeons.timer<3){ colState.tx=-6; colState.tz=14; }
+  flocks.forEach(f=>updateFlock(f,dt));
+  if (pigeons.mode==="circle"){ pigeons.lx=pigeonField.x+Math.cos(state.t*0.5)*18; pigeons.ly=12; pigeons.lz=pigeonField.z+Math.sin(state.t*0.5)*18; }
+  // rain
+  if (rain.visible){ const p=rain.geometry.attributes.position.array; const fall= state.weather==="storm"?28:20;
+    for(let i=0;i<rainN;i++){ const s=rainSeed[i]; let y=(s[1]-state.t*fall)%60; if(y<0)y+=60; const x=s[0]+target.x, z=s[2]+target.z;
+      p[i*6]=x; p[i*6+1]=y; p[i*6+2]=z; p[i*6+3]=x+0.15; p[i*6+4]=y+1.2; p[i*6+5]=z; }
+    rain.geometry.attributes.position.needsUpdate=true; }
+  writeInstances();
+}
+function draw(){
+  if (state.view==="lineup"){ renderer.setClearColor(0xc4d3db); renderer.render(lineScene,camera); applyClear(); }
+  else renderer.render(scene,camera);
+}
+let clearHex=0xb9cbd6; function applyClear(){ renderer.setClearColor(clearHex); }
+let last=performance.now(), hudT=0;
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  if(!window.__frozen) step(dt);
+  placeCamera(); draw();
+  hudT+=dt; if(hudT>0.25){ updateHud(); hudT=0; }
+  requestAnimationFrame(frame);
+}
+// public hooks for scripted screenshots
+window.sketch = {
+  set, warp(sec){ for(let i=0;i<sec*30;i++) step(1/30); updateHud(); },
+  zoom(z){ state.zoom=z; zoom.value=z; zoomv.textContent=z+" m"; },
+  yaw(y){ state.yaw=y; }, lineupYaw(y){ state.lineupYaw=y; }, target(x,y,z){ target.set(x,y,z); },
+  walk(){ document.getElementById("walk").click(); }, fell(){ document.getElementById("fell").click(); },
+  freeze(v){ window.__frozen=v; }, render(){ placeCamera(); draw(); updateHud(); },
+  follow(i){ const f=flocks[i]; target.set(f.lx, Math.max(2,f.ly-6), f.lz); },
+  flocks, state
+};
+resize(); applyLook(); setSeg("scale",1.75);
+for(const lb of lineupBirds){ lb.m.material.uniforms.uForce.value = 0.6; }
+// warm the scene so the first frame already has birds in the air and pigeons on the grass
+for(let i=0;i<150;i++) step(1/30);
+updateHud();
+requestAnimationFrame(frame);
+})();
+</script>
