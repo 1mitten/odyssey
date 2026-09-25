@@ -13123,3 +13123,32 @@ through walls, `134b7f24`) was never added to the always-included shaders, so `u
 refused on `main` as well as here — neither test tier can see it, because both run in the editor
 where every shader exists. `ShaderInclusion.Apply` added its one GUID to `GraphicsSettings.asset`;
 the player then booted into a colony with a clean log.
+
+## 2026-09-25 — The bill list, one control for everything that takes orders (design 49)
+
+The owner sent mockup *20a*, a rebuild of the workbench pane, and asked for it to be **composite**:
+cooking now, crafting later, anything that takes orders uses the same control. And not to follow
+it where it would steer away from the HUD as it is — *especially the tile part*.
+
+**The control is `BillList`, and the rules stay in `BillsModel`.** What takes bills became a table
+(`BillsModel.Stations`: edifice, needs power, the recipe Add adds) rather than two `==` checks, so a
+bench is a row there and a row in the recipe tables. The view decides nothing: the status line and
+its ink, the stepper's limits, the progress fraction and the strip are all model properties with
+fast-tier tests, and every number is a `BillsLayout` constant with a width budget
+(`TheRowsColumnsFitThePaneWithRoomForTheName`: the name keeps 180 px of the 680).
+
+**The cooker's pane was 280 wide.** The cooking branch's rows never fitted it — `IsWide` knew the
+campfire and not the galley. A station's pane is now `.inspect--bench`, 680, pinned to the constant
+by `HudStyleSheetTests`.
+
+**Three departures from the mockup, each for a reason in the game.** Reorder stays (the mockup had
+only pause and delete; the top bill is worked first, so order is a setting the game has), as a
+stacked pair in one 28 px box. The status line under a working bill says **nothing** rather than
+*Anyone can do this*, a worker rule that does not exist. And the mode words stay the registry's,
+because the mockup's are the reference game's strings. The header and the tile facts are the
+pane's own, per the owner.
+
+**One reversal of design 48.** The list is as tall as its content, not five rows' height always.
+The pane grows upward from the bottom, and Add a bill sits under the rows, so adding one moves
+nothing under the pointer; the fixed block was 240 px of empty pane under one bill. Removing a bill
+does shift the rows above it; that is in the playtest row.

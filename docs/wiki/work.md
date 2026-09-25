@@ -2,7 +2,7 @@
 
 The work types a colonist can be assigned, in priority order of urgency, the skills that govern how well they do them, and the schedule blocks that say when. Salvaging is ours: it sits beside mining because taking a ruin apart without wrecking what is inside it is a different craft from digging. Work and schedule share one tab and one table, so they share a page here.
 
-52 entries, 17 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+53 entries, 18 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Work types
 
@@ -73,13 +73,14 @@ The work types a colonist can be assigned, in priority order of urgency, the ski
 |---|---|---|---|---|
 | **Bills** | `ui.bill.heading` | What this station is told to make. The top one is worked first <br>**Needs:** a list of orders pinned up. Our own concept | no art | M3 |
 | **Add a bill** | `ui.bill.add` | Put a new order at the bottom of the list <br>**Needs:** a plus. Interface furniture drawn as a HudGlyph | no art | M3 |
-| **No bills** | `ui.bill.none` | Nothing will be cooked here until a bill is added <br>**Needs:** an empty list. Interface words, no icon wanted | no art | M3 |
+| **No bills yet** | `ui.bill.none` | Nothing will be made here until a bill is added <br>**Needs:** an empty list. Interface words, no icon wanted | no art | M3 |
 | **Until you have** | `ui.bill.mode.until` | Cook while the colony holds fewer than this many meals, and start again when it drops below <br>**Needs:** Interface words, no icon wanted | no art | M3 |
 | **Make** | `ui.bill.mode.times` | Cook this many, then stop <br>**Needs:** Interface words, no icon wanted | no art | M3 |
 | **Forever** | `ui.bill.mode.forever` | Never stop cooking <br>**Needs:** Interface words, no icon wanted | no art | M3 |
-| **Suspended** | `ui.bill.suspended` | Stopped by you. The next bill down is worked instead <br>**Needs:** a pause mark. Interface furniture drawn as a HudGlyph | no art | M3 |
+| **Paused** | `ui.bill.suspended` | Stopped by you. The next bill down is worked instead <br>**Needs:** a pause mark. Interface furniture drawn as a HudGlyph | no art | M3 |
 | **Done** | `ui.bill.done` | This bill's count is met. It starts again by itself when it needs to <br>**Needs:** a tick. Interface furniture drawn as a HudGlyph | no art | M3 |
 | **No power** | `ui.bill.unpowered` | The electric cooker needs power to cook. Nothing on the hob will spoil in the meantime <br>**Needs:** a broken plug. Our own concept | no art | M3 |
+| **Waiting for power** | `ui.bill.waiting` | This bill will be worked once the station has power again <br>**Needs:** Interface words, no icon wanted | no art | M3 |
 
 ---
 

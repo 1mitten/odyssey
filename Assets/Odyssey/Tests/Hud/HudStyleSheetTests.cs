@@ -305,6 +305,7 @@ namespace Odyssey.Tests.Hud
             (".inspect", "bottom", () => HudLayout.InspectBottom, "inspect bottom offset"),
             (".inspect", "width", () => HudLayout.InspectWidth, "inspect width"),
             (".inspect--narrow", "width", () => HudLayout.InspectNarrowWidth, "tile readout width"),
+            (".inspect--bench", "width", () => BillsLayout.PaneWidth, "a station's pane (design 49)"),
             (".inspect__hdr", "height", () => HudLayout.InspectHeader, "inspect header"),
             (".inspect__nameline", "height", () => HudLayout.InspectNameLine, "the header's name line"),
             (".inspect__state", "height", () => HudLayout.InspectTextLine, "the header's activity line"),
