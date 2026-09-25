@@ -118,4 +118,19 @@
     <order>5</order>
   </WorkTypeDef>
 
+  <!--
+    Tending the hurt (docs/design/43-health.md section 5): the ui.work.doctor column, live from
+    health's H3. Its one giver is an emergency one, as rescue's is. The rate is the Medicine
+    skill's tend speed, a-02 line 42's: 40 per cent at level 0, 100 at 10, 160 at 20, which is
+    400 plus 60 a level - the one place tend speed is written.
+  -->
+  <WorkTypeDef>
+    <defName>Work_Doctor</defName>
+    <label>doctor</label>
+    <order>6</order>
+    <rateSkill>6</rateSkill>
+    <workRateBasePerMille>400</workRateBasePerMille>
+    <workRateSlopePerLevel>60</workRateSlopePerLevel>
+  </WorkTypeDef>
+
 </Defs>

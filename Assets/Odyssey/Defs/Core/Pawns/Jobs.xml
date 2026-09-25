@@ -273,4 +273,21 @@
     <casuallyInterruptible>false</casuallyInterruptible>
   </JobDef>
 
+  <!--
+    Tending the hurt (docs/design/43-health.md section 5): fetch a medkit if one can be reached,
+    walk to the patient and work over her. The 600 ticks are INVENTED (a-02 line 159 could not
+    find the reference's figure) and are paid at the Doctor work type's rate, which is the
+    Medicine skill's tend speed. Trains Medicine at every working job's 110. Not casually
+    interruptible, and a walking expiry like a rescue's: a patient can be a long way off.
+  -->
+  <JobDef>
+    <defName>Job_Tend</defName>
+    <driver>23</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+    <workTicks>600</workTicks>
+    <trainsSkill>6</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+  </JobDef>
+
 </Defs>

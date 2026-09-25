@@ -150,7 +150,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#commands">Commands<b>52</b></a></li>
 <li><a href="#work">Work and skills<b>42</b></a></li>
 <li><a href="#colonists">Colonists<b>47</b></a></li>
-<li><a href="#health">Health and anatomy<b>28</b></a></li>
+<li><a href="#health">Health and anatomy<b>39</b></a></li>
 <li><a href="#events">Events<b>45</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
 <li><a href="#world">World and interface<b>125</b></a></li>
@@ -162,9 +162,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>827</b><i>named entries</i></div>
+<div class="stat"><b>842</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>555</b><i>no art yet</i></div>
+<div class="stat m"><b>570</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -2098,7 +2098,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="health" data-sec="1">
-<h2>Health and anatomy <em class="count">28 entries</em></h2>
+<h2>Health and anatomy <em class="count">39 entries</em></h2>
 <p class="blurb">Body parts, injuries and conditions. The anatomy sheet covers this better than any other part of the game, which is either fortunate or ominous.</p>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -2269,6 +2269,72 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Under, and safe to operate on<span class="need">Needs drawing: under anaesthetic. A syringe or a mask would do</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M6</div>
+</div>
+<div class="row gap" id="ui.health.arm.left" data-hay="left arm ui.health.arm.left half of what her hands can do " data-gap="1">
+<div class="nm">Left arm<span class="k">ui.health.arm.left</span></div>
+<div class="dsc">Half of what her hands can do</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">HE</div>
+</div>
+<div class="row gap" id="ui.health.arm.right" data-hay="right arm ui.health.arm.right half of what her hands can do " data-gap="1">
+<div class="nm">Right arm<span class="k">ui.health.arm.right</span></div>
+<div class="dsc">Half of what her hands can do</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">HE</div>
+</div>
+<div class="row gap" id="ui.health.leg.left" data-hay="left leg ui.health.leg.left half of her walking " data-gap="1">
+<div class="nm">Left leg<span class="k">ui.health.leg.left</span></div>
+<div class="dsc">Half of her walking</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">HE</div>
+</div>
+<div class="row gap" id="ui.health.leg.right" data-hay="right leg ui.health.leg.right half of her walking " data-gap="1">
+<div class="nm">Right leg<span class="k">ui.health.leg.right</span></div>
+<div class="dsc">Half of her walking</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">HE</div>
+</div>
+<div class="row gap" id="ui.health.pain" data-hay="pain ui.health.pain every point of injury hurts. at 80 per cent she goes down " data-gap="1">
+<div class="nm">Pain<span class="k">ui.health.pain</span></div>
+<div class="dsc">Every point of injury hurts. At 80 per cent she goes down</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">HE</div>
+</div>
+<div class="row gap" id="ui.health.consciousness" data-hay="consciousness ui.health.consciousness what pain and blood loss take. under 30 per cent she goes down " data-gap="1">
+<div class="nm">Consciousness<span class="k">ui.health.consciousness</span></div>
+<div class="dsc">What pain and blood loss take. Under 30 per cent she goes down</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">HE</div>
+</div>
+<div class="row gap" id="ui.health.moving" data-hay="moving ui.health.moving her legs, and how awake she is. how fast she walks " data-gap="1">
+<div class="nm">Moving<span class="k">ui.health.moving</span></div>
+<div class="dsc">Her legs, and how awake she is. How fast she walks</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">HE</div>
+</div>
+<div class="row gap" id="ui.health.manipulation" data-hay="manipulation ui.health.manipulation her arms, and how awake she is. how fast she works " data-gap="1">
+<div class="nm">Manipulation<span class="k">ui.health.manipulation</span></div>
+<div class="dsc">Her arms, and how awake she is. How fast she works</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">HE</div>
+</div>
+<div class="row gap" id="ui.health.bruise" data-hay="bruise ui.health.bruise from a blunt blow or a short fall. hurts, and never bleeds " data-gap="1">
+<div class="nm">Bruise<span class="k">ui.health.bruise</span></div>
+<div class="dsc">From a blunt blow or a short fall. Hurts, and never bleeds</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">HE</div>
+</div>
+<div class="row gap" id="ui.health.tended" data-hay="tended ui.health.tended treated. the bleeding has stopped, and it heals out of bed " data-gap="1">
+<div class="nm">Tended<span class="k">ui.health.tended</span></div>
+<div class="dsc">Treated. The bleeding has stopped, and it heals out of bed</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">HE</div>
+</div>
+<div class="row gap" id="ui.health.todeath" data-hay="to death ui.health.todeath how long the bleeding leaves her, untreated " data-gap="1">
+<div class="nm">to death<span class="k">ui.health.todeath</span></div>
+<div class="dsc">How long the bleeding leaves her, untreated</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">HE</div>
 </div>
 </div>
 <p class="empty" hidden>No entries in this section match.</p>
@@ -3716,7 +3782,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 827, "gaps": 555};</script>
+<script>window.WIKI={"total": 842, "gaps": 570};</script>
 <script>
 (function(){
   var D = window.WIKI;

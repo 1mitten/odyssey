@@ -410,6 +410,17 @@ ui.health.fracture,Fracture,ui.health,M6,"Broken, not severed"
 ui.health.missing,Missing part,ui.health,M6,Gone. Replace or adapt
 ui.health.implant,Implant,ui.health,M6,"Fitted, and working"
 ui.health.anaesthetic,Anaesthetic,ui.health,M6,"Under, and safe to operate on"
+ui.health.arm.left,Left arm,ui.health,HE,"Half of what her hands can do"
+ui.health.arm.right,Right arm,ui.health,HE,"Half of what her hands can do"
+ui.health.leg.left,Left leg,ui.health,HE,Half of her walking
+ui.health.leg.right,Right leg,ui.health,HE,Half of her walking
+ui.health.pain,Pain,ui.health,HE,"Every point of injury hurts. At 80 per cent she goes down"
+ui.health.consciousness,Consciousness,ui.health,HE,"What pain and blood loss take. Under 30 per cent she goes down"
+ui.health.moving,Moving,ui.health,HE,"Her legs, and how awake she is. How fast she walks"
+ui.health.manipulation,Manipulation,ui.health,HE,"Her arms, and how awake she is. How fast she works"
+ui.health.bruise,Bruise,ui.health,HE,"From a blunt blow or a short fall. Hurts, and never bleeds"
+ui.health.tended,Tended,ui.health,HE,"Treated. The bleeding has stopped, and it heals out of bed"
+ui.health.todeath,to death,ui.health,HE,"How long the bleeding leaves her, untreated"
 ui.item.knife,Knife,ui.item,M3,"Close work, and butchery"
 ui.item.sword,Blade,ui.item,M3,Reach and damage in melee
 ui.item.club,Club,ui.item,M3,Blunt. Downs rather than kills
@@ -523,6 +534,10 @@ ui.debug.spawnarcblade,Spawn arc blade,ui.debug,CB,"Adds an arc blade near the c
 ui.debug.spawnrat,Spawn duct rat,ui.debug,AN,"Adds a duct rat near the camera"
 ui.debug.spawnbandits,Spawn 3 bandits,ui.debug,CB,"Adds three bandits near the camera, each on its own tile"
 ui.debug.armcolonists,Arm every colonist,ui.debug,CB,"Every colonist standing with nothing in hand takes a random melee weapon"
+ui.debug.hurt,Hurt a colonist,ui.debug,HE,"The colonist nearest the camera takes a 20-point cut, which bleeds until somebody tends it"
+ui.debug.heal,Heal a colonist,ui.debug,HE,The colonist nearest the camera is made whole and gets up
+ui.debug.kill,Kill a colonist,ui.debug,HE,"The colonist nearest the camera dies where she stands, and is mourned"
+ui.debug.givemedkits,Give medkits,ui.debug,HE,Adds 10 medkits near the camera
 ui.debug.group.colonists,Colonists,ui.debug,CB,"The Spawn tab heading over the colonist rows"
 ui.debug.group.hostiles,Hostiles,ui.debug,CB,"The Spawn tab heading over the bandit rows"
 ui.debug.group.animals,Animals,ui.debug,CB,"The Spawn tab heading over the animal rows"

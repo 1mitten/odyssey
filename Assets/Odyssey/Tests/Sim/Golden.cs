@@ -421,6 +421,17 @@ namespace Odyssey.Tests.Sim
         /// the reason given above. <b>Measured</b>: <c>GoldenColonyProbe</c>, reading the first
         /// seventeen job defs so it runs unchanged on both sides, was run on <c>main</c> (54df119a)
         /// and on the merge; the outputs are identical on all three boards.</para>
+        ///
+        /// <para><b>All six moved again on 2026-09-25, by health's H3 (design 43 §5) — the first
+        /// kind, the hash seeing more.</b> Every handle tending needs was claimed at once:
+        /// <c>Job_Tend</c> (two more zeros in the job counters), <c>Skill_Medicine</c> (a seventh
+        /// experience, passion and daily-gain slot, rolled on streams that draw the first six
+        /// exactly as before), <c>Work_Doctor</c> (a seventh priority) and <c>Item_Medkit</c> (a
+        /// slot in every storage allow list). The body's ledger is hashed only while a pawn has
+        /// anything on it, and nothing in these windows is hurt, so H1 and H2 moved nothing.
+        /// <b>Measured</b>: <c>GoldenColonyProbe</c> run on the commit before health (379f49c) and
+        /// on this one: the outputs diff clean on all three boards — every census number, the
+        /// first five skills' experience and passions, the jobs started and failed.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -431,8 +442,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 10212350739386668344UL,
-            Simulated = 8860197422024298715UL,
+            Generated = 5861348134596726069UL,
+            Simulated = 13815386141261495008UL,
         };
 
         /// <summary>
@@ -457,8 +468,10 @@ namespace Odyssey.Tests.Sim
             // zeros in the job counters; the probe diffs clean.
             // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
             // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
-            Generated = 16337376216538696172UL,
-            Simulated = 16703233559271607928UL,
+            // 2026-09-25, health's H3 (the meadow's remarks): tending's four handles, hashed as more
+            // zeros; the probe diffs clean against the commit before health.
+            Generated = 5189564746966039670UL,
+            Simulated = 10706784249471341773UL,
         };
 
         /// <summary>
@@ -497,8 +510,9 @@ namespace Odyssey.Tests.Sim
             // 2026-09-23, wildlife (design 30): the ruin is seeded with its rats and hogs.
             // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
             // 2026-09-23, the combat contracts step; the widened probe diffs clean.
-            Generated = 16106640289945334159UL,
-            Simulated = 9493899456924685757UL,
+            // 2026-09-25, health's H3; the probe diffs clean.
+            Generated = 16706744741442193975UL,
+            Simulated = 7503129706193660889UL,
         };
     }
 }

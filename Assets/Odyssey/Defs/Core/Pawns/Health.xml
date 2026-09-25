@@ -60,18 +60,14 @@
     </bloodStages>
 
     <!--
-      Tending (design 43 sections 5 and 6). Speed and quality by Medicine level are a-02 line 42's;
+      Tending (design 43 sections 5 and 6). Quality by Medicine level is a-02 line 42's (the speed
+      is the Doctor work type's curve in WorkTypes.xml, its one owner);
       potency 0.3 bare-handed and 1.0 with a medkit, clamped at 70 and 100 per cent (a-02 line 42).
       A tended injury heals 4 points a day at nought quality up to 12 at full, anywhere (a-02
       line 41). The reference's random 0.75-1.25 is not taken: a deterministic tend is the same
       thing, and the spread bought nothing legible.
     -->
     <medkit>Item_Medkit</medkit>
-    <tendSpeedCurve>
-      <li><level>0</level><perMille>400</perMille></li>
-      <li><level>10</level><perMille>1000</perMille></li>
-      <li><level>20</level><perMille>1600</perMille></li>
-    </tendSpeedCurve>
     <tendQualityCurve>
       <li><level>0</level><perMille>200</perMille></li>
       <li><level>5</level><perMille>700</perMille></li>

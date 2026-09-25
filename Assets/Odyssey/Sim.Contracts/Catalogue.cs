@@ -77,7 +77,14 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Steal = 22;
 
-        public const int Count = 23;
+        /// <summary>
+        /// Fetch a medkit if one can be reached, walk to a hurt colonist and tend every injury she
+        /// has (design 43 §5). Appended after the combat line; the job system hashes its counters
+        /// only once one has run.
+        /// </summary>
+        public const int Tend = 23;
+
+        public const int Count = 24;
     }
 
     /// <summary>
@@ -130,7 +137,10 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Rescue = 5;
 
-        public const int Count = 6;
+        /// <summary>Tending the hurt (design 43 §5): the <c>ui.work.doctor</c> column, live from health's H3.</summary>
+        public const int Doctor = 6;
+
+        public const int Count = 7;
 
         /// <summary>What a work type the simulation does not run answers to. Never sent.</summary>
         public const int None = -1;
@@ -205,7 +215,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Sharp, and the best thing a colonist can hold.</summary>
         public const int ArcBlade = 10;
 
-        public const int Count = 11;
+        /// <summary>
+        /// What a tend draws on (design 43 §5): one consumed per tend, and a better tend than bare
+        /// hands. Category Medicine. Appended by health's H3.
+        /// </summary>
+        public const int Medkit = 11;
+
+        public const int Count = 12;
     }
 
     /// <summary>

@@ -144,9 +144,6 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The medkit's def, by name. Consumed by a tend when one can be reached.</summary>
         public string medkit = "Item_Medkit";
 
-        /// <summary>Tend speed per mille by Medicine level (a-02:42: 40 % at 0, 100 % at 10, 160 % at 20).</summary>
-        public List<CurvePoint> tendSpeedCurve = new List<CurvePoint>();
-
         /// <summary>Tend quality per mille by Medicine level, before potency (a-02:42).</summary>
         public List<CurvePoint> tendQualityCurve = new List<CurvePoint>();
 
@@ -167,6 +164,20 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>And this many at full quality (a-02:41: +12).</summary>
         public int tendHealMaxPerDay = 12_000;
+
+        /// <summary>
+        /// A tend's quality at a Medicine level, per mille (a-02:42): the curve, times the
+        /// potency of what was used, clamped by it. Integer, so it replays exactly.
+        /// </summary>
+        public int TendQualityPerMille(int level, bool medkit)
+        {
+            int skill = CombatDef.Evaluate(tendQualityCurve, level);
+            int potency = medkit ? medkitPotencyPerMille : bareHandsPotencyPerMille;
+            int cap = medkit ? medkitCapPerMille : bareHandsCapPerMille;
+            int quality = skill * potency / 1_000;
+            if (quality < 0) quality = 0;
+            return quality > cap ? cap : quality;
+        }
 
         // ---- falls (design 43 §7) ------------------------------------------------------------
 

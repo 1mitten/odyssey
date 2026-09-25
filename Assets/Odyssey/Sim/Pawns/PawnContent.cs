@@ -172,6 +172,7 @@ namespace Odyssey.Sim.Pawns
         public const int Equip = JobHandle.Equip;
         public const int Rescue = JobHandle.Rescue;
         public const int Steal = JobHandle.Steal;
+        public const int Tend = JobHandle.Tend;
         public const int Count = JobHandle.Count;
     }
 
@@ -321,6 +322,13 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int Rescue = WorkHandle.Rescue;
 
+        /// <summary>
+        /// Tending the hurt (design 43 §5). Its giver is an emergency one, as rescue's is: a cut
+        /// bleeding out outranks a wall at the same priority. The rate is the Medicine skill's
+        /// tend speed, which is the work type's curve.
+        /// </summary>
+        public const int Doctor = WorkHandle.Doctor;
+
         public const int Count = WorkHandle.Count;
 
         /// <summary>
@@ -334,7 +342,7 @@ namespace Odyssey.Sim.Pawns
         /// than a missing aspect — which is why growing is in both or in neither.</para>
         /// </summary>
         public static readonly string[] Names =
-            { "haul", "cutting", "mining", "construction", "growing", "rescue" };
+            { "haul", "cutting", "mining", "construction", "growing", "rescue", "doctor" };
     }
 
     /// <summary>
@@ -359,7 +367,10 @@ namespace Odyssey.Sim.Pawns
         /// Claimed by the combat contracts step.
         /// </summary>
         public const int Melee = 5;
-        public const int Count = 6;
+
+        /// <summary>Tending (design 43 §5): its level reads the tend quality curve and the Doctor work curve; every tend trains it.</summary>
+        public const int Medicine = 6;
+        public const int Count = 7;
 
         /// <summary>
         /// The names skills are published under, parallel to the indices above.
@@ -369,7 +380,7 @@ namespace Odyssey.Sim.Pawns
         /// assembly or sharing an enum with it. The prefix is the project's, the middle is this
         /// feature's, and the leaf is the value — the same shape as an icon key.</para>
         /// </summary>
-        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee" };
+        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee", "medicine" };
     }
 
     /// <summary>
@@ -603,6 +614,7 @@ namespace Odyssey.Sim.Pawns
         public const int Crowbar = ItemHandle.Crowbar;
         public const int Machete = ItemHandle.Machete;
         public const int ArcBlade = ItemHandle.ArcBlade;
+        public const int Medkit = ItemHandle.Medkit;
         public const int Count = ItemHandle.Count;
     }
 
@@ -1094,6 +1106,13 @@ namespace Odyssey.Sim.Pawns
         public HealthDef?[] SpeciesHealth = System.Array.Empty<HealthDef?>();
 
         /// <summary>
+        /// The item a tend draws on (<see cref="HealthDef.medkit"/>), by index into
+        /// <see cref="Items"/>, or -1 when the content has none (design 43 §5). Resolved once, by
+        /// name, so the giver never compares a string.
+        /// </summary>
+        public int MedkitItem = -1;
+
+        /// <summary>
         /// The body a pawn of this kind has, or null: its species' <see cref="HealthDef"/>, and
         /// nothing for a content set built in code, which keeps the pool alone as it always did.
         /// </summary>
@@ -1335,18 +1354,24 @@ namespace Odyssey.Sim.Pawns
                 // The combat line, claimed together by its contracts step (design 33 §5).
                 "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue",
                 // A bandit carrying something off the board (design 33 §17).
-                "Job_Steal");
+                "Job_Steal",
+                // Tending the hurt (design 43 §5).
+                "Job_Tend");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",
                 // Appended with the combat line (design 33 §5): a pawn's priority array is indexed
                 // by this order, so it is a save contract like the rest.
-                "Work_Rescue");
+                "Work_Rescue",
+                // Tending the hurt (design 43 §5), appended.
+                "Work_Doctor");
             content.Skills = ByName<SkillDef>(defs,
                 "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction",
                 "Skill_Growing",
                 // Appended with the combat line (design 33 §5).
-                "Skill_Melee");
+                "Skill_Melee",
+                // Tending (design 43 §5), appended.
+                "Skill_Medicine");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal",
                 // Appended, never inserted: an item handle is stored in every stack, every haul
@@ -1354,7 +1379,9 @@ namespace Odyssey.Sim.Pawns
                 // (docs/design/22-growing.md §2).
                 "Item_Carrots",
                 // The four melee weapons (design 33 §1, C3), appended together.
-                "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade");
+                "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade",
+                // What a tend draws on (design 43 §5), appended.
+                "Item_Medkit");
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");
             content.Break = One<MentalBreakDef>(defs, "Break_Wander");
@@ -1396,6 +1423,9 @@ namespace Odyssey.Sim.Pawns
                     throw new DefLoadException(
                         $"HealthDef '{body.defName}' has {body.regions.Count} regions; a body has one to six.");
                 content.SpeciesHealth[s] = body;
+                if (content.MedkitItem < 0 && !string.IsNullOrEmpty(body.medkit))
+                    for (int i = 0; i < content.Items.Length; i++)
+                        if (content.Items[i].defName == body.medkit) { content.MedkitItem = i; break; }
             }
 
             // The weapon a kind arrives holding (design 33 §1), by name, once — after the items,

@@ -117,7 +117,9 @@ namespace Odyssey.Hud
             new Entry("ui.work.firefighting", NotSimulated, NoSkill, "firefighting arrives with fire (M5)"),
             new Entry("ui.work.patient",      NotSimulated, NoSkill, "treatment arrives with health (M6)"),
             new Entry("ui.work.bedrest",      NotSimulated, NoSkill, "treatment arrives with health (M6)"),
-            new Entry("ui.work.doctor",       NotSimulated, NoSkill, "medicine arrives with health (M6)"),
+            // Live from health's H3 (design 43 §5): Work_Doctor, whose emergency giver tends the hurt,
+            // paid at the Medicine skill's tend speed.
+            new Entry("ui.work.doctor",       "doctor",       "medicine",     "", WorkHandle.Doctor),
             new Entry("ui.work.warden",       NotSimulated, NoSkill, "prisoners arrive with factions (M7)"),
             new Entry("ui.work.handling",     NotSimulated, NoSkill, "animals arrive with M5"),
             new Entry("ui.work.cooking",      NotSimulated, NoSkill, "cooking arrives with M5"),

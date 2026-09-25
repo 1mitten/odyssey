@@ -162,8 +162,20 @@ namespace Odyssey.Hud
         /// </summary>
         public const double StoreStuckSustain = 10.0;
 
+        /// <summary>
+        /// A colonist with an injury nobody has tended (design 43 §11): Danger while it bleeds, with
+        /// the hours the bleed leaves her, Warning otherwise. One row a colonist; a click goes to her.
+        /// </summary>
+        public const string InjuredKey = "ui.alert.injured";
+
+        /// <summary>
+        /// Somebody needs tending and there is no medkit anywhere on the board (design 43 §5): the
+        /// doctor will tend with bare hands, at a third of the potency and at most 70 per cent.
+        /// </summary>
+        public const string NoMedicineKey = "ui.alert.nomedicine";
+
         /// <summary>Every key this panel can put on screen, for the registry test.</summary>
-        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey, StoreStuckKey, PowerLossKey, NoFuelKey, NoRescueBedKey };
+        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey, StoreStuckKey, PowerLossKey, NoFuelKey, NoRescueBedKey, InjuredKey, NoMedicineKey };
 
         public readonly List<AlertRow> Rows = new List<AlertRow>();
 
@@ -186,10 +198,27 @@ namespace Odyssey.Hud
         int _wasColony = -1;
         int _wasNoBed;
         long _wasNoBedIds;
+        int _wasInjured = -1;
+        long _wasInjuredIds;
+        int _wasNoMedicine = -1;
         int _latchVersion;
         int _wasLatchVersion = -1;
         int _dismissVersion;
         int _wasDismissVersion = -1;
+
+        /// <summary>
+        /// Has this pawn an injury nobody has tended? Read off the body's sparse aspects: the
+        /// records counted against the tended. <paramref name="hours"/> is the bleed's, or nought.
+        /// </summary>
+        static bool Untended(WorldSnapshot snapshot, PawnId id, out int hours)
+        {
+            hours = 0;
+            if (!snapshot.TryGetPawnAspect(id, HealthAspectNames.InjuriesKey, out int injuries) || injuries <= 0) return false;
+            snapshot.TryGetPawnAspect(id, HealthAspectNames.TendedKey, out int tended);
+            if (tended >= injuries) return false;
+            snapshot.TryGetPawnAspect(id, HealthAspectNames.BleedHoursKey, out hours);
+            return true;
+        }
 
         /// <summary>Dismiss an active alert until its condition clears and re-occurs.</summary>
         public void Dismiss(int dismissKey)
@@ -230,6 +259,8 @@ namespace Odyssey.Hud
             int idle = 0;
             int noBed = 0;
             long noBedIds = 0;
+            int injured = 0;
+            long injuredIds = 0;
 
             // Colonists only (design 33 §5d): these are the colony's alerts, and a bandit or an
             // animal is neither hungry on the colony's account nor part of whether it is idle. A
@@ -273,7 +304,28 @@ namespace Odyssey.Hud
                     noBedIds = noBedIds * 31 + id;
                 }
                 else _dismissed.Remove(AlertRow.ComputeDismissKey(NoRescueBedKey, pawn.Id, default));
+
+                // Untended injuries (design 43 §11), read off the body's sparse aspects: a colonist
+                // nobody has hurt publishes none and costs one lookup. The bleed's hours are in the
+                // hash so a row that counts down is rewritten when its number moves.
+                if (Untended(snapshot, pawn.Id, out int hours))
+                {
+                    injured++;
+                    injuredIds = injuredIds * 31 + id * 1_000 + hours;
+                }
+                else _dismissed.Remove(AlertRow.ComputeDismissKey(InjuredKey, pawn.Id, default));
             }
+
+            // No medkit anywhere on the board while somebody needs one (design 43 §5).
+            int noMedicine = 0;
+            if (injured > 0)
+            {
+                noMedicine = 1;
+                System.ReadOnlySpan<ThingView> things = snapshot.Things;
+                for (int i = 0; i < things.Length; i++)
+                    if (things[i].DefIndex == ItemHandle.Medkit) { noMedicine = 0; break; }
+            }
+            if (noMedicine == 0) _dismissed.Remove(AlertRow.ComputeDismissKey(NoMedicineKey, default, default));
 
             Forget(_starving, snapshot, ref _latchVersion);
             Forget(_breaking, snapshot, ref _latchVersion);
@@ -337,6 +389,7 @@ namespace Odyssey.Hud
                 dark == _wasDark && shortW == _wasShortW && dry == _wasDry &&
                 idleStands == _wasIdle && storeStuck == _wasStoreStuck && colonists == _wasColony &&
                 noBed == _wasNoBed && noBedIds == _wasNoBedIds &&
+                injured == _wasInjured && injuredIds == _wasInjuredIds && noMedicine == _wasNoMedicine &&
                 _latchVersion == _wasLatchVersion && _dismissVersion == _wasDismissVersion)
                 return;
 
@@ -350,6 +403,9 @@ namespace Odyssey.Hud
             _wasColony = colonists;
             _wasNoBed = noBed;
             _wasNoBedIds = noBedIds;
+            _wasInjured = injured;
+            _wasInjuredIds = injuredIds;
+            _wasNoMedicine = noMedicine;
             _wasLatchVersion = _latchVersion;
             _wasDismissVersion = _dismissVersion;
             Rows.Clear();
@@ -411,6 +467,32 @@ namespace Odyssey.Hud
                     count: 1,
                     pawn: pawn.Id));
             }
+
+            // Untended injuries (design 43 §11): Danger while bleeding, with how long it leaves her,
+            // else Warning. A downed colonist already has the rescue's row or the downed flag; this
+            // is the one that says a doctor is owed.
+            for (int i = 0; i < pawns.Length && injured > 0; i++)
+            {
+                PawnView pawn = pawns[i];
+                if (!pawn.IsColonist || !Untended(snapshot, pawn.Id, out int hours)) continue;
+                int dismissKey = AlertRow.ComputeDismissKey(InjuredKey, pawn.Id, default);
+                if (_dismissed.Contains(dismissKey)) continue;
+                Rows.Add(new AlertRow(
+                    InjuredKey,
+                    ColonistNames.Of(snapshot, pawn.Id),
+                    hours > 0 ? " is bleeding: " + hours + " h " + Registry.Label("ui.health.todeath") : " needs tending",
+                    hours > 0 ? AlertSeverity.Danger : AlertSeverity.Warning,
+                    count: 1,
+                    pawn: pawn.Id));
+            }
+
+            if (noMedicine > 0 && !_dismissed.Contains(AlertRow.ComputeDismissKey(NoMedicineKey, default, default)))
+                Rows.Add(new AlertRow(
+                    NoMedicineKey,
+                    Registry.Label(NoMedicineKey),
+                    ": the doctor will tend with bare hands",
+                    AlertSeverity.Notice,
+                    count: 1));
 
             // A dark net is Danger: whatever it was keeping warm is going cold now. The cell is a
             // consumer on it, so a click on the row goes to what has stopped, which is where the

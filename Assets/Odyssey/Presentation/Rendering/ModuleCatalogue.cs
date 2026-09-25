@@ -852,6 +852,10 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemMachete = Prefix + "item.machete";
         public const string ItemArcBlade = Prefix + "item.arcblade";
 
+        // A medkit on the ground or on a shelf (design 43 §5). No catalogue row yet, so it draws
+        // as the stand-in marker until one is chosen: the gap shows, as the renderer intends.
+        public const string ItemMedkit = Prefix + "item.medkit";
+
 
         /// <summary>
         /// Module ids for item def indices, in <c>ItemIndex</c> order.
@@ -866,6 +870,7 @@ namespace Odyssey.Presentation.Rendering
         {
             ItemMeal, ItemSalvage, ItemWood, ItemStone, ItemIronOre, ItemCoal, ItemCarrots,
             ItemBat, ItemCrowbar, ItemMachete, ItemArcBlade,
+            ItemMedkit,
         };
 
         /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>

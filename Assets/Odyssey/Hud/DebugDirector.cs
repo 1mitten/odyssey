@@ -111,7 +111,7 @@ namespace Odyssey.Hud
         {
             PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey,
             SpawnBanditKey, SpawnBatKey, SpawnCrowbarKey, SpawnMacheteKey, SpawnArcBladeKey,
-            SpawnBanditsKey, ArmColonistsKey,
+            SpawnBanditsKey, ArmColonistsKey, HurtKey, HealKey, KillKey, GiveMedkitsKey,
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey,
             SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
@@ -176,6 +176,10 @@ namespace Odyssey.Hud
         /// <summary>Three bandits at once, spread over neighbouring tiles; and every unarmed colonist given a weapon.</summary>
         public const string SpawnBanditsKey = "ui.debug.spawnbandits", ArmColonistsKey = "ui.debug.armcolonists";
 
+        /// <summary>The body's three rows (design 43 §11), on the colonist nearest the camera; and ten medkits.</summary>
+        public const string HurtKey = "ui.debug.hurt", HealKey = "ui.debug.heal", KillKey = "ui.debug.kill",
+            GiveMedkitsKey = "ui.debug.givemedkits";
+
         /// <summary>How many a resource row grants: the Cheats tab's old fifty, moved here with the rows.</summary>
         public const int GiveAmount = 50;
 
@@ -201,6 +205,12 @@ namespace Odyssey.Hud
             new SpawnRow(ArmColonistsKey,
                 "Every colonist standing with nothing in hand takes a random melee weapon, at once. Armed colonists keep theirs",
                 IntentKind.DebugArmColonists, 0, 0, GroupColonistsKey),
+            new SpawnRow(HurtKey, "The colonist nearest the camera takes a 20-point cut, which bleeds until somebody tends it",
+                IntentKind.DebugHealth, 0, 0, GroupColonistsKey),
+            new SpawnRow(HealKey, "The colonist nearest the camera is made whole and gets up",
+                IntentKind.DebugHealth, 1, 0, GroupColonistsKey),
+            new SpawnRow(KillKey, "The colonist nearest the camera dies where she stands, and is mourned",
+                IntentKind.DebugHealth, 2, 0, GroupColonistsKey),
             Pawn(SpawnBanditKey, "Adds a hostile bandit near the camera, armed. It hunts whoever is still standing",
                 PawnKindLabels.Bandit, GroupHostilesKey),
             Pawn(SpawnBanditsKey, "Adds three bandits near the camera, each on its own tile",
@@ -218,6 +228,8 @@ namespace Odyssey.Hud
             Resource(GiveWoodKey, "Adds 50 wood near the camera", ItemHandle.Wood),
             Resource(GiveStoneKey, "Adds 50 stone near the camera", ItemHandle.Stone),
             Resource(GiveFoodKey, "Adds 50 meals near the camera", ItemHandle.Meal),
+            new SpawnRow(GiveMedkitsKey, "Adds 10 medkits near the camera. A doctor fetches one for every tend",
+                IntentKind.GiveResource, ItemHandle.Medkit, 10, GroupItemsKey),
         };
 
         public static string TabKey(DebugTab tab) =>

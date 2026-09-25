@@ -23,7 +23,12 @@ namespace Odyssey.Tests.Sim
             Pawn inBed = colony.Pawns.Pawns.All[0], onGround = colony.Pawns.Pawns.All[1], by = colony.Pawns.Pawns.All[2];
             int bed = colony.Pawns.Items.Beds[0];
             // Nobody carries the one on the ground to a bed: this is the healing, not the rescue.
-            foreach (Pawn pawn in colony.Pawns.Pawns.All) pawn.WorkPriorities[WorkTypeIndex.Rescue] = 0;
+            // Nor tends her: a tended injury heals anywhere (design 43 §6), and this is the bed's.
+            foreach (Pawn pawn in colony.Pawns.Pawns.All)
+            {
+                pawn.WorkPriorities[WorkTypeIndex.Rescue] = 0;
+                pawn.WorkPriorities[WorkTypeIndex.Doctor] = 0;
+            }
             Stand(colony, inBed, bed);
             Stand(colony, onGround, Near(colony, 8, 8));
             Assume.That(bed, Is.Not.EqualTo(onGround.Cell));

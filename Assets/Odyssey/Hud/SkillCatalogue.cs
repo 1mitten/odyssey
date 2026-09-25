@@ -120,7 +120,9 @@ namespace Odyssey.Hud
             new Entry("ui.skill.animals", NotSimulated, "no creature simulation"),
             new Entry("ui.skill.crafting", NotSimulated, "no bench work"),
             new Entry("ui.skill.fabrication", NotSimulated, "no production chain"),
-            new Entry("ui.skill.medicine", NotSimulated, "wounds heal in bed, untreated"),
+            // Live from health's H3 (design 43 §5): Skill_Medicine, read by the tend quality curve
+            // and the Doctor work curve, and trained by every tend.
+            new Entry("ui.skill.medicine", "medicine", string.Empty),
             new Entry("ui.skill.social", NotSimulated, "no other people"),
             new Entry("ui.skill.shooting", NotSimulated, "no combat"),
             // Live from the combat contracts step (design 33 §5): Skill_Melee, rolled at the start

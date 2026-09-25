@@ -257,7 +257,13 @@ namespace Odyssey.Tests.Sim
         // numbers; SpeciesDef gained `health`, named on Species_Person only; and PawnContent the
         // resolved SpeciesHealth table. No golden moved: the ledger is hashed only while a pawn has
         // anything on it, and no golden window hurts anybody.
-        const ulong ContentFingerprint = 1532016128955935994UL;
+        //
+        // Moved a twenty-eighth time, deliberately, 2026-09-25, by health's H3 (design 43 §5):
+        // Job_Tend at driver 23, Work_Doctor (order 6, the Medicine skill's 400 + 60 a level),
+        // Skill_Medicine, Item_Medkit (Medicine, ten to a stack), PawnContent.MedkitItem, and
+        // HealthDef lost tendSpeedCurve to the work type, which is its one owner. The goldens moved
+        // in the same commit, as more zeros; see Golden.cs.
+        const ulong ContentFingerprint = 1151783711695981964UL;
 
 
         [Test]

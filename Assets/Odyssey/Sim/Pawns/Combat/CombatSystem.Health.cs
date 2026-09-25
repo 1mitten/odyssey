@@ -49,6 +49,48 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// A fall of <paramref name="layers"/> (design 43 §7): <c>15 × n^1.5</c> whole points
+        /// (a-02:91), scaled by the species' pool against a person's hundred (a-02's health scale),
+        /// landed as two to four blunt hits on the bottom-facing regions with a fifth either way
+        /// (a-02:101), the worst of them a fracture from two layers. Through <see cref="Hurt"/>, so
+        /// a fall that kills is mourned. A pawn with no body takes the points on its pool.
+        /// </summary>
+        public void Fall(Pawn pawn, int layers, int tick)
+        {
+            if (layers <= 0 || Melee.IsDead(pawn)) return;
+            HealthDef? table = pawn.Body ?? _ctx.Content.HealthOf(PawnKindIndex.Colonist);
+            if (table == null) return;
+
+            long total = (long)table.FallDamageMilli(layers) * pawn.Species.healthPoints / 100;
+            if (total <= 0) return;
+
+            var roll = DeterministicRandom.ForTick(_ctx.Seed, tick, PawnPurpose.FallSplit ^ (uint)pawn.Id.Value);
+            int span = table.fallHitsMax - table.fallHitsMin + 1;
+            int hits = table.fallHitsMin + (span > 1 ? roll.NextInt(span) : 0);
+            if (hits < 1) hits = 1;
+
+            int each = (int)(total / hits);
+            int spread = (int)((long)each * table.fallSpreadPerMille / 1_000);
+            var blows = new int[hits];
+            int worst = 0;
+            for (int i = 0; i < hits; i++)
+            {
+                int blow = each - spread + (spread > 0 ? roll.NextInt(2 * spread + 1) : 0);
+                blows[i] = blow < 1 ? 1 : blow;
+                if (blows[i] > blows[worst]) worst = i;
+            }
+
+            HealthDef? body = pawn.Body;
+            for (int i = 0; i < hits; i++)
+            {
+                if (_ctx.Pawns.Get(pawn.Id) != pawn || Melee.IsDead(pawn)) return;
+                AfflictionKind kind = i == worst && layers >= table.fallFractureFromLayers ? AfflictionKind.Fracture : AfflictionKind.Bruise;
+                int region = body != null ? RollRegion(body, pawn, null, HitSet.Fall, tick, i + 1) : -1;
+                Hurt(pawn, null, blows[i], kind, HitSet.Fall, -1, tick, region);
+            }
+        }
+
+        /// <summary>
         /// Put the points on the body: a region by the set's coverage (or the one asked for), what a
         /// limb cannot hold passed to the region it names (a-02:20), the rest kept where it fell. A
         /// pawn with no body keeps the pool alone and this does nothing.

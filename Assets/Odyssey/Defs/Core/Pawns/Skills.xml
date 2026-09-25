@@ -128,4 +128,14 @@
     <label>melee</label>
   </SkillDef>
 
+  <!--
+    Tending (docs/design/43-health.md section 5), live from health's H3: the Skills row stops
+    being greyed out and the starting roll deals every colonist a level in it. The level reads
+    Health.xml's tend quality curve and the Doctor work type's rate; every tend trains it.
+  -->
+  <SkillDef ParentName="SkillBase">
+    <defName>Skill_Medicine</defName>
+    <label>medicine</label>
+  </SkillDef>
+
 </Defs>

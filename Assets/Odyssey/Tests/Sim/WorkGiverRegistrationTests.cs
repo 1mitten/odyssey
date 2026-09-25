@@ -125,10 +125,12 @@ namespace Odyssey.Tests.Sim
             // Rescue leads everything (design 33 §5, C4): it is the one emergency giver, and an
             // emergency is scanned ahead of every ordinary giver at the same priority, whatever the
             // work types' order says. A colonist bleeding out on the grass outranks the wall.
+            // Tend follows it (design 43 §5): the second emergency giver, after rescue by the work
+            // types' order, so a downed colonist is carried to a bed and tended there.
             var names = Shipped().Givers.Select(g => g.Name).ToArray();
             Assert.That(names, Is.EqualTo(new[]
             {
-                "Rescue", "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
+                "Rescue", "Tend", "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
                 "Harvest", "Sow", "Fell", "Mine", "Refuel", "Haul",
             }));
         }
