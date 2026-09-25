@@ -575,6 +575,9 @@ namespace Odyssey.Presentation.Bootstrap
             // thing it will see is a world.
             _menuBed = new MenuAmbience(audioCatalogue, transform, gameObject.layer);
 
+            // The hitch tour (design 38 §25) wants the driver's shader log from the load onward, so
+            // the switch goes on before the session is built rather than when the tour starts.
+            if (PlayerBench.HitchRequested()) UnityEngine.Rendering.GraphicsSettings.logWhenShaderIsCompiled = true;
             if (buildOnPlay || StartedFromTheCommandLine()) BuildSession();
             // The player benchmark (design 38 §18e): a development player told -odyssey-bench
             // times its arms on the colony it just built, writes the table to the log and quits.
