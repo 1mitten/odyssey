@@ -139,6 +139,12 @@ namespace Odyssey.Hud
         /// <summary>The galley (design 48 §5): the electric cooker, where bills are worked.</summary>
         public const string Galley = "ui.arch.tool.galley";
 
+        /// <summary>Sandbags (design 50 §4): cheap low cover, always stone, dragged as a line.</summary>
+        public const string Sandbag = "ui.arch.tool.sandbag";
+
+        /// <summary>The barricade (design 50 §4): low cover of wood or stone, dragged as a line.</summary>
+        public const string Barricade = "ui.arch.tool.barricade";
+
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
 
@@ -198,7 +204,9 @@ namespace Odyssey.Hud
             // Power (design 32): the line and its undoing, then what makes power and what spends
             // it. Battery and reactor stay drawn and disabled — the shape of what is coming.
             ("ui.arch.category.power", new[] { Conduit, Unwire, Generator, Heater, "ui.arch.tool.battery", "ui.arch.tool.reactor" }),
-            ("ui.arch.category.security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
+            // Security (design 50): cover first, because it is what exists; the turret and the trap
+            // stay drawn and disabled.
+            ("ui.arch.category.security", new[] { Sandbag, Barricade, "ui.arch.tool.turret", "ui.arch.tool.trap" }),
             ("ui.arch.category.floors", new[] { Paving, "ui.arch.tool.grating", "ui.arch.tool.tile" }),
             // The dumping-zone chip left on 2026-09-20: a new stockpile accepts everything, so a
             // second tool here would make exactly what the first one makes. Its registry key
@@ -368,6 +376,15 @@ namespace Odyssey.Hud
             new PaletteTool(Galley,
                 d => d.ArmBuild(BuildingHandle.Galley),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Galley,
+                wantsMaterial: true),
+            // Cover (design 50 §4). Sandbags are always stone, so they offer no material; the
+            // barricade is wood or stone like a wall.
+            new PaletteTool(Sandbag,
+                d => d.ArmBuild(BuildingHandle.Sandbags),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Sandbags),
+            new PaletteTool(Barricade,
+                d => d.ArmBuild(BuildingHandle.Barricade),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Barricade,
                 wantsMaterial: true),
             new PaletteTool(Mine, Toggle(DesignateTool.Mine), Holding(DesignateTool.Mine)),
             new PaletteTool(Fell, Toggle(DesignateTool.Fell), Holding(DesignateTool.Fell)),

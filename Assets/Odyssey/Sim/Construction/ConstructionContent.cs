@@ -246,6 +246,15 @@ namespace Odyssey.Sim.Construction
         /// design 33's "a building destroyed in combat leaves nothing" for them.
         /// </summary>
         public int wreckRefundPerMille;
+
+        /// <summary>
+        /// The one material it is always built of, as a <see cref="StuffHandle"/>, or
+        /// <see cref="StuffHandle.None"/> for "the one the player chose". The sandbags' rule
+        /// (design 50 §4): filled bags are not a choice of wood or stone, and the placeholder
+        /// recipe is five stone. <c>ConstructionGrid.Place</c> takes this over whatever the order
+        /// named, so the palette need not offer a material at all.
+        /// </summary>
+        public int fixedStuff;
     }
 
     /// <summary>
@@ -502,6 +511,8 @@ namespace Odyssey.Sim.Construction
             "Building_Bed", "Building_Door", "Building_Shelf", "Building_Campfire",
             "Building_Conduit", "Building_Generator", "Building_Heater",
             "Building_Galley",
+            // Cover (design 50 §4), BuildingHandle 13 and 14.
+            "Building_Sandbags", "Building_Barricade",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -689,6 +700,32 @@ namespace Odyssey.Sim.Construction
                     costCount = 15, partItem = ItemHandle.Salvage, partCount = 10,
                     workToBuild = 300, minSkill = 0,
                     iconKey = "ui.arch.tool.galley", maxHitPoints = 100, coverPerMille = 500,
+                },
+
+                // Sandbags (design 50 §4): the cheap, quick cover. One cell, dragged as a line like a
+                // wall, crossed at +150 and never stood on, 55 % low cover. Always stone — five, the
+                // placeholder the owner asked for until the recipes are decided — so the palette
+                // offers no material. The shelf's work; a quarter left behind when fighting destroys
+                // one. All INVENTED but the 55, which is the reference's.
+                new BuildingDef
+                {
+                    defName = "Building_Sandbags", label = "sandbags", edifice = CoreContent.EdificeSandbags,
+                    blocking = false, needsClearCell = true, passThrough = true, crossCost = 150,
+                    costCount = 5, fixedStuff = StuffHandle.Stone, workToBuild = 180, minSkill = 0,
+                    iconKey = "ui.arch.tool.sandbag", maxHitPoints = 300, coverPerMille = 550,
+                    wreckRefundPerMille = 250,
+                },
+
+                // The barricade (design 50 §4): the same cover built of the player's wood or stone,
+                // its hit points following the material, slower to cross (+250) and to build (the
+                // reference's 320 against 180). Timber rails in wood, a dry-stone wall in stone.
+                new BuildingDef
+                {
+                    defName = "Building_Barricade", label = "barricade", edifice = CoreContent.EdificeBarricade,
+                    blocking = false, needsClearCell = true, passThrough = true, crossCost = 250,
+                    costCount = 5, workToBuild = 320, minSkill = 0,
+                    iconKey = "ui.arch.tool.barricade", maxHitPoints = 300, coverPerMille = 550,
+                    wreckRefundPerMille = 250,
                 },
             };
         }

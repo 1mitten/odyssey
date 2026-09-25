@@ -52,6 +52,16 @@ namespace Odyssey.Sim.Pathing
         /// </summary>
         BuildSite = 1 << 10,
 
+        /// <summary>
+        /// Something that is crossed but never stood on stands here (design 50 §5): sandbags or a
+        /// barricade. The cell stays walkable — a line of cover seals nobody in — and costs its
+        /// own crossing price (<see cref="NavGrid.PassCostAt"/>) to enter. Whether a pawn may
+        /// <i>stop</i> here is <c>Standing.CanStandAt</c>'s, which reads this flag. Registered by
+        /// the construction grid, like <see cref="BuildSite"/>, because the nav layer does not know
+        /// what an edifice is.
+        /// </summary>
+        PassThrough = 1 << 12,
+
         // 1 << 11 was ClimbOnly, removed with climbing
         // (owner, 2026-09-16). A colonist jumps up one block or drops down one; anything deeper
         // needs a ladder, which is a built thing. Nothing grants standing without a floor any
@@ -64,7 +74,7 @@ namespace Odyssey.Sim.Pathing
         /// Bits owned by registration rather than by the terrain. A flag rebuild recomputes
         /// everything else from the <see cref="CellGrid"/> and preserves these.
         /// </summary>
-        Sticky = Door | DoorOpen | Connector | Hazard | BuildSite,
+        Sticky = Door | DoorOpen | Connector | Hazard | BuildSite | PassThrough,
     }
 
     /// <summary>
@@ -570,7 +580,31 @@ namespace Odyssey.Sim.Pathing
                 if (diagonal) siteCost = (siteCost * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
                 cost += siteCost;
             }
+            // Climbing over cover (design 50 §4). NavGraph.StepCost charges the same, and
+            // CrossingHasOneOwnerTests holds the two together.
+            if ((f & NavFlags.PassThrough) != 0)
+            {
+                int crossCost = PassCostAt(index);
+                if (diagonal) crossCost = (crossCost * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
+                cost += crossCost;
+            }
             return cost;
+        }
+
+        /// <summary>
+        /// What climbing over the thing in a <see cref="NavFlags.PassThrough"/> cell costs on top of
+        /// the step, or nought. Sparse — a colony has a few dozen such cells on a board of a
+        /// million — and read only for a cell that carries the flag.
+        /// </summary>
+        public int PassCostAt(int index) => _passCost.TryGetValue(index, out int cost) ? cost : 0;
+
+        readonly System.Collections.Generic.Dictionary<int, int> _passCost = new System.Collections.Generic.Dictionary<int, int>();
+
+        /// <summary>Record, or with nought forget, what crossing a cell costs. <c>NavGraph.SetPassThrough</c> is the one caller.</summary>
+        internal void SetPassCost(int index, int cost)
+        {
+            if (cost > 0) _passCost[index] = cost;
+            else _passCost.Remove(index);
         }
     }
 }

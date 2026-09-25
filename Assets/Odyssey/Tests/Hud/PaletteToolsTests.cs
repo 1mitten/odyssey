@@ -376,6 +376,9 @@ namespace Odyssey.Tests.Hud
                 PaletteTools.Generator, PaletteTools.Heater,
                 // The kitchen (design 48 §5): the galley is built of wood or stone like the heater.
                 PaletteTools.Galley,
+                // Cover (design 50 §4): the barricade is wood or stone; sandbags are always stone
+                // and ask nothing.
+                PaletteTools.Barricade,
             };
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(tool.WantsMaterial, Is.EqualTo(System.Array.IndexOf(built, tool.Key) >= 0),

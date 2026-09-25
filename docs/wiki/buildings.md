@@ -82,9 +82,9 @@ Everything on the architect menu: what can be built, and the one-off orders that
 | **Vent** | `ui.arch.tool.vent` | Lets two rooms share air | sheet 04 (manufactured), med | M3 |
 | **Turret** | `ui.arch.tool.turret` | Shoots hostiles. Needs power and ammunition <br>**Needs:** an automated gun. M6 needs it | no art | M3 |
 | **Trap** | `ui.arch.tool.trap` | One-shot, cheap, forgettable by your own colonists | sheet 03 (camp and crafting), high | M3 |
-| **Barricade** | `ui.arch.tool.barricade` | Cover without blocking sight | sheet 08 (salvage gear), high | M3 |
+| **Barricade** | `ui.arch.tool.barricade` | Low cover of wood or stone. Climbed over, never stood on | sheet 08 (salvage gear), high | M3 |
 | **Blast door** | `ui.arch.tool.blastdoor` | Slow, strong, holds a breach <br>**Needs:** a heavy blast door, distinct from a normal door | no art | M3 |
-| **Sandbags** | `ui.arch.tool.sandbag` | Fast cover from salvage | sheet 08 (salvage gear), high | M3 |
+| **Sandbags** | `ui.arch.tool.sandbag` | Cheap, quick low cover. Climbed over, never stood on | sheet 08 (salvage gear), high | M3 |
 | **Searchlight** | `ui.arch.tool.searchlight` | Light where you need to shoot | sheet 08 (salvage gear), med | M3 |
 | **Floor** | `ui.arch.tool.deckplate` | Laid on ground you already walk on | sheet 04 (manufactured), high | M3 |
 | **Grating** | `ui.arch.tool.grating` | See and fall through. Light passes | sheet 04 (manufactured), med | M3 |

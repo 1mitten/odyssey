@@ -798,6 +798,13 @@ namespace Odyssey.Sim.Pathing
                 if (diagonal) site = (site * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
                 cost += site;
             }
+            // The mirror of NavGrid.EnterCost's crossing clause (design 50 §4).
+            if ((f & NavFlags.PassThrough) != 0)
+            {
+                int cross = Grid.PassCostAt(targetCell);
+                if (diagonal) cross = (cross * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
+                cost += cross;
+            }
             return cost;
         }
 
@@ -1277,6 +1284,22 @@ namespace Odyssey.Sim.Pathing
             if (already == site) return;
             if (site) Grid.Flags[cell] |= NavFlags.BuildSite;
             else Grid.Flags[cell] &= ~NavFlags.BuildSite;
+            MarkDirty(cell);
+        }
+
+        /// <summary>
+        /// Mark a cell as holding something crossed but never stood on (design 50 §5), at
+        /// <paramref name="crossCost"/> on top of the step; nought unmarks it. Registration, like
+        /// <see cref="SetBuildSite"/>: the construction grid is the one caller.
+        /// </summary>
+        public void SetPassThrough(int cell, int crossCost)
+        {
+            bool on = crossCost > 0;
+            bool already = (Grid.Flags[cell] & NavFlags.PassThrough) != 0;
+            if (already == on && Grid.PassCostAt(cell) == (on ? crossCost : 0)) return;
+            if (on) Grid.Flags[cell] |= NavFlags.PassThrough;
+            else Grid.Flags[cell] &= ~NavFlags.PassThrough;
+            Grid.SetPassCost(cell, on ? crossCost : 0);
             MarkDirty(cell);
         }
 

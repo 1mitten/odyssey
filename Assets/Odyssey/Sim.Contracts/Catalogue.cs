@@ -500,7 +500,13 @@ namespace Odyssey.Sim.Contracts
         /// design 45, which reached main first. See <c>CoreContent.EdificeGalley</c>.</summary>
         public const int Galley = 22;
 
-        public const int Count = 23;
+        /// <summary>Sandbags (design 50 §4): low cover, crossed but never stood on. See <c>CoreContent.EdificeSandbags</c>.</summary>
+        public const int Sandbags = 23;
+
+        /// <summary>The barricade (design 50 §4): the same cover built of wood or stone.</summary>
+        public const int Barricade = 24;
+
+        public const int Count = 25;
     }
 
     /// <summary>
@@ -590,7 +596,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>The galley (design 48 §5): one cell, powered, where meals are cooked from bills.</summary>
         public const int Galley = 12;
 
-        public const int Count = 13;
+        /// <summary>Sandbags (design 50 §4): cheap low cover, always stone, dragged as a line.</summary>
+        public const int Sandbags = 13;
+
+        /// <summary>The barricade (design 50 §4): low cover of the player's wood or stone.</summary>
+        public const int Barricade = 14;
+
+        public const int Count = 15;
     }
 
     /// <summary>
