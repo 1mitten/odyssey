@@ -230,6 +230,12 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>For tests and the overlay: the weather as drawn this session, or null.</summary>
         public WeatherLook? Weather => _weather;
 
+        /// <summary>The butterflies near the camera (design 52): drawn, never simulated.</summary>
+        ButterflyDirector? _butterflies;
+
+        /// <summary>The butterflies, for the tests, the settings and the overlay. Null between sessions.</summary>
+        public ButterflyDirector? Butterflies => _butterflies;
+
         /// <summary>The key light the day moves, kept so the renderer's shadow margin can sweep
         /// towards it (design 38 §18).</summary>
         Light? _keyLight;
@@ -390,6 +396,12 @@ namespace Odyssey.Presentation.Bootstrap
             Doors,
             /// <summary>Orders, zones, sites, the tool preview and the cursors.</summary>
             Overlays,
+            /// <summary>
+            /// The butterflies (design 52): the meadow's step, the buffer upload and its one or two
+            /// procedural calls. Its own line so the Butterflies ladder's cost can be read off the
+            /// overlay and the trace, which is what decides the presets' rungs (§9).
+            /// </summary>
+            Butterflies,
             Count,
         }
 
@@ -1096,6 +1108,12 @@ namespace Odyssey.Presentation.Bootstrap
                 _combatFeedback.Projectiles = _projectiles;
                 // The weather as drawn (design 43 §7): the simulation's sky, read from the snapshot.
                 _weather = new WeatherLook(_model, transform);
+                // The butterflies (design 52), seeded from the world so a board shows the same
+                // meadow twice, and sized by the player's rung.
+                _butterflies = new ButterflyDirector(_model, _world.Seed)
+                {
+                    Capacity = Preferences.Value(GraphicsLadder.Butterflies),
+                };
             }
 
             // Which family each weapon swings in (design 33 §5j), read once off the content, so a
@@ -1353,6 +1371,22 @@ namespace Odyssey.Presentation.Bootstrap
             int morning = day / 6;
             int now = _world.CurrentTick % day;
             int skip = (morning - now + day) % day;
+            if (skip == 0) skip = day;
+            DebugSkipTicks(skip);
+        }
+
+        /// <summary>
+        /// Skip to ten at night — the night key, fully dark — with seven and a half hours of night
+        /// ahead, so the butterflies' glow can be watched rather than glimpsed (design 52 §5). The
+        /// same ordinary ticks as <see cref="DebugSkipToMorning"/>.
+        /// </summary>
+        public void DebugSkipToNight()
+        {
+            if (_world == null || Colony == null) return;
+            int day = Colony.Pawns.Content.DayTicks;
+            int night = day / 24 * 22;
+            int now = _world.CurrentTick % day;
+            int skip = (night - now + day) % day;
             if (skip == 0) skip = day;
             DebugSkipTicks(skip);
         }
@@ -1681,6 +1715,22 @@ namespace Odyssey.Presentation.Bootstrap
             _hearthMark?.Draw(_world.Views.Current, Directors?.Overlays?.HomeVisible ?? false, activeLayer,
                 cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);
+
+            // The butterflies after the weather, which has eased the rain and cloud they read, and
+            // in the band the blood is drawn in. Real seconds while the world runs and none on a
+            // pause: a ten-beat wing at speed 3 would strobe (design 52 §7). The hour, the season
+            // and the sky are the game's.
+            if (_butterflies != null)
+            {
+                float hour = _daylight != null && _daylight.Hour >= 0f ? _daylight.Hour : Daylight.HourOf(_world.CurrentTick);
+                _butterflies.Sync(_world.Views.Current.Running ? Time.deltaTime : 0f, _world.CurrentTick, hour,
+                    _weather?.Cloud ?? 0f, _weather?.Rain ?? _world.Views.Current.Weather.RainPerMille / 1000f,
+                    _crowd,
+                    cameraRig != null ? cameraRig.Focus : transform.position,
+                    cameraRig != null ? cameraRig.TargetDistance : 48f,
+                    bloodLowest, bloodHighest, slice.BelowSurface(activeLayer));
+            }
+            MarkSection(FrameSection.Butterflies);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
 
@@ -4235,6 +4285,7 @@ namespace Odyssey.Presentation.Bootstrap
             _doors?.Dispose();
             _fires?.Dispose();
             _weather?.Dispose();
+            _butterflies?.Dispose();
             _floaterView?.Dispose();
             _hearthMark?.Dispose();
             _hearthMark = null;
@@ -4273,6 +4324,7 @@ namespace Odyssey.Presentation.Bootstrap
             _doors = null;
             _fires = null;
             _weather = null;
+            _butterflies = null;
             _corpses = null;
             _floaterView = null;
             _colonistMaterials = null;

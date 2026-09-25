@@ -84,6 +84,10 @@ namespace Odyssey.Presentation.Ui
                 "Skips the night and hands back the clock at dawn, with a whole watchable day "
                     + "ahead: the harvest happens on screen, not inside the skip",
                 () => _boot!.DebugSkipToMorning()));
+            _debugCheats.Add(DebugActionRow(DebugDirector.SkipNightKey,
+                "Skips to ten at night, fully dark, with seven hours of night ahead: the "
+                    + "butterflies' glow at its brightest (design 52)",
+                () => _boot!.DebugSkipToNight()));
             _debugCheats.Add(DebugActionRow(DebugDirector.RipenCropsKey,
                 "Brings every standing crop to ripeness at once, daylight window and all - "
                     + "the harvest half without the four-day wait",
