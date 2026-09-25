@@ -12848,3 +12848,37 @@ resolved the jump clips and, in the same write, emptied every colonist row's hai
 swatch rectangles (3,026 lines), which `CharacterSwatches.Classify` fills and the recolouring
 reads — `docs/lessons.md` already says to run it after. Only the four jump links were wanted, so
 they were grafted into the committed asset by hand and the rebuild thrown away.
+
+## 2026-09-25 — The pace on the pane, and what the rain is doing to people and animals
+
+The owner, after the rain landed: *"I notice the move speed is not shown anywhere so I couldn't
+tell whether people were moving slower."* The move rate had been published every tick since `WS3`,
+and nothing read it.
+
+**What was built** (`claude/pace-readout`, design 17 §5a, 43 §6a):
+- The colonist pane has a third header line, `Pace 90% · in the rain`. Its tooltip names each
+  factor that is not 1,000.
+- An animal making for cover, or waiting under it, reads *Sheltering*.
+- The owner placed "in the rain" on the Pace line, beside the number it explains, rather than in
+  the tooltip or on the activity line.
+
+**Four choices worth keeping.**
+- **The headline is the product of the published factors, not the published rate.** The pane cannot
+  read content, so it cannot know the base walk. Composing from the factors means the number and
+  its tooltip cannot disagree. A test pins the base at one cost unit a tick, which is when the two
+  are equal.
+- **The factors are the rate's own methods, asked again.** They are not a second formula.
+  `PaceAspectTests` multiplies the published factors back to the published rate exactly, across all
+  eight combinations of starving, raining and drafted.
+- **Sparse.** A dry, fed, undrafted colonist pays one row: 64 → 65 a colonist, measured by
+  `AspectScaleTests`. Design 31's "57" was already stale; the work priorities and the schedule had
+  added seven since.
+- **Sheltering is derived, not recorded.** A job def of its own would have moved every golden, and
+  a flag would have had to be saved. The shelter node's rain gate became `Minds`, which the node and
+  the readout both ask. So the readout cannot say *Sheltering* in a drizzle that the node ignores.
+
+**The room was measured, not assumed.** The pane's header is fixed at the portrait's 60 px and its
+text was 38. The third line makes 54. That sum is now a constant with a test, as are the three line
+heights against the stylesheet, so a fourth line fails rather than drawing over the tabs.
+
+No golden moved. The colony probe matches `origin/main` on all three boards. Not yet played.

@@ -117,6 +117,15 @@ ui.status.rescuing,Rescuing,ui.status,CB,Carrying the downed to a bed
 ui.status.stealing,Stealing,ui.status,CB,"A bandit carrying something off the board"
 ui.status.treating,Treating,ui.status,M3,"Tending the hurt, or herself"
 ui.status.patient,Resting as a patient,ui.status,M3,In bed until the wound allows getting up
+ui.status.sheltering,Sheltering,ui.status,WE,"An animal waiting out the rain under a roof or a tree, or walking to one"
+ui.status.inrain,In the rain,ui.status,WE,"A colonist under open sky while it rains, and walking slower for it. Said beside her pace"
+ui.stat.pace,Pace,ui.stat,WE,"How fast a colonist walks, as a share of the standard walk. Not the tile's walk speed, which is the ground"
+ui.stat.pace.rolled,Rolled,ui.stat,WE,"The pace a colonist was born with, between 85% and 115% of the standard walk"
+ui.stat.pace.condition,Condition,ui.stat,WE,"What hunger, cold or heat is taking off her pace. Never above 100%, never below 70%"
+ui.stat.pace.rain,Rain,ui.stat,WE,"What walking in the rain under open sky takes off her pace. A roof or a tree gives it back"
+ui.stat.pace.drafted,Drafted,ui.stat,WE,"A drafted colonist runs"
+ui.stat.pace.running,Running,ui.stat,WE,"Running to a fight or away from one"
+ui.stat.pace.standard,The standard walk,ui.stat,WE,"The pace tooltip when nothing is making her faster or slower"
 ui.combat.miss,Miss,ui.combat,CB,A swing that did not land
 ui.combat.dodge,Dodge,ui.combat,CB,A swing the target stepped out of
 ui.combat.stunned,Stunned,ui.combat,CB,"Knocked senseless by a blunt blow, for a moment"
