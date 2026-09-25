@@ -63,8 +63,10 @@ namespace Odyssey.Presentation.Bootstrap
         /// log covers the load as well as the tour.</summary>
         public static bool HitchRequested() => Requested() && Has(HitchArgument);
 
-        /// <summary>The tour's own limit: longer than the arms', and still a hard stop.</summary>
-        public const float HitchLimitSeconds = 240f;
+        /// <summary>The tour's own limit: longer than the arms', and still a hard stop. The tour is
+        /// about 150 s, but the limit counts from the player's start, and one run on a busy machine
+        /// took 81 s to reach its thirtieth frame and was cut off at 240.</summary>
+        public const float HitchLimitSeconds = 360f;
 
         static float Limit => Has(HitchArgument) ? HitchLimitSeconds : LimitSeconds;
 
@@ -168,14 +170,14 @@ namespace Odyssey.Presentation.Bootstrap
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = -1;
 
-            // Wait for the session and for the board to mesh out.
-            while (_boot.Renderer == null || _boot.Model == null) yield return null;
             if (Has(HitchArgument))
             {
                 yield return HitchTour();
                 Quit("[Hitch] done");
                 yield break;
             }
+            // Wait for the session and for the board to mesh out.
+            while (_boot.Renderer == null || _boot.Model == null) yield return null;
             yield return Still();
             yield return Settle();
 
@@ -400,6 +402,8 @@ namespace Odyssey.Presentation.Bootstrap
         const float StallMs = 50f;
 
         string _step = "load";
+        Odyssey.Presentation.Ui.HudShell? _shell;
+        bool _behindCurtain;
         int _compiles;
         readonly StringBuilder _hitchTable = new StringBuilder();
 
@@ -429,6 +433,19 @@ namespace Odyssey.Presentation.Bootstrap
             Application.logMessageReceivedThreaded += CountCompile;
             _hitchTable.AppendLine("| step | frames | worst ms | over 33 ms | over 50 ms | shader variants |");
             _hitchTable.AppendLine("|---|---|---|---|---|---|");
+
+            // Started without -odyssey-newgame, the tour begins where a player does: on the title
+            // screen, the process already warm from drawing it. New game is then pressed the way
+            // the menu presses it, so the step's slow frame is the wait a player sits through and
+            // the frames after it are the first the new world draws.
+            if (_boot.Renderer == null)
+            {
+                for (int i = 0; i < 30; i++) yield return null;
+                yield return Step("the title screen (the control)", null, 3f);
+                yield return Step("New game pressed: the session built, and its first frames",
+                    () => _boot.BuildSession(), 3f);
+            }
+            while (_boot.Renderer == null || _boot.Model == null) yield return null;
 
             // What a player sees the moment the load lifts, before anything has settled.
             yield return Step("the first 3 s after the load", null, 3f);
@@ -566,9 +583,13 @@ namespace Odyssey.Presentation.Bootstrap
             Log($"[Hitch] step: {name} (frame {Time.frameCount}, t {Time.realtimeSinceStartup:0.0} s)");
             try { apply?.Invoke(); }
             catch (Exception e) { Log($"[Hitch] step '{name}' could not apply: {e.GetType().Name}: {e.Message}"); }
+            // The frame the step applied in is drawn after this, so its curtain state is the one now.
+            _shell ??= UnityEngine.Object.FindFirstObjectByType<Odyssey.Presentation.Ui.HudShell>();
+            _behindCurtain = _shell != null && _shell.CurtainUp;
 
             int frames = 0, over33 = 0, over50 = 0;
             float worst = 0f;
+            var first = new StringBuilder();
             float until = Time.realtimeSinceStartup + seconds;
             while (Time.realtimeSinceStartup < until)
             {
@@ -576,18 +597,42 @@ namespace Odyssey.Presentation.Bootstrap
                 frames++;
                 float ms = Time.unscaledDeltaTime * 1000f;
                 if (ms > worst) worst = ms;
+                if (frames <= 8)
+                {
+                    // A frame drawn behind the start screen is marked: the player never sees it.
+                    _shell ??= UnityEngine.Object.FindFirstObjectByType<Odyssey.Presentation.Ui.HudShell>();
+                    first.Append(ms.ToString("0.0")).Append(_behindCurtain ? "* " : " ");
+                }
+                _behindCurtain = _shell != null && _shell.CurtainUp;
                 if (ms > HitchMs)
                 {
                     over33++;
                     if (ms > StallMs) over50++;
                     Log($"[Hitch] slow frame {Time.frameCount}: {ms:0.0} ms in '{name}' " +
                         $"(submit {_boot.SubmitMs:0.00} ms, tick {_boot.TickMs:0.00} ms, " +
-                        $"meshed {_boot.Renderer?.ChunksMeshedThisFrame ?? 0} chunks, shader variants so far this step {_compiles})");
+                        $"meshed {_boot.Renderer?.ChunksMeshedThisFrame ?? 0} chunks, " +
+                        $"indirect regather {_boot.Renderer?.IndirectRegatherMs ?? 0:0.00} ms, gc {GC.CollectionCount(0)}/{GC.CollectionCount(1)}/{GC.CollectionCount(2)}, " +
+                        $"shader variants so far this step {_compiles}; split {SectionSplit()})");
                 }
             }
             _hitchTable.AppendLine($"| {name} | {frames} | {worst:0.0} | {over33} | {over50} | {_compiles} |");
+            Log($"[Hitch] {name}: the first eight frames, ms (* drawn behind the start screen): {first}");
             Log($"[Hitch] {name}: worst {worst:0.0} ms over {frames} frames, {over33} over {HitchMs:0} ms, " +
                 $"{over50} over {StallMs:0} ms, {_compiles} shader variants");
+        }
+
+        /// <summary>The last frame's submit, section by section, largest first. Not in an iterator,
+        /// because the split is a span.</summary>
+        string SectionSplit()
+        {
+            ReadOnlySpan<double> split = _boot.FrameSectionMs;
+            var parts = new List<(double Ms, string Name)>();
+            for (int i = 0; i < split.Length && i < OdysseyBootstrap.SectionNames.Length; i++)
+                if (split[i] >= 0.5) parts.Add((split[i], OdysseyBootstrap.SectionNames[i]));
+            parts.Sort((a, b) => b.Ms.CompareTo(a.Ms));
+            var sb = new StringBuilder();
+            foreach (var p in parts) sb.Append(p.Name).Append(' ').Append(p.Ms.ToString("0.0")).Append(", ");
+            return sb.Length > 0 ? sb.ToString(0, sb.Length - 2) : "nothing over 0.5 ms";
         }
 
         Odyssey.Sim.Contracts.CellRef? NearestWater()
