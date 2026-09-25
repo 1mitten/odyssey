@@ -3,8 +3,8 @@
 **Designed 2026-09-25** after an interview of three rounds (`docs/research/ranged-interview.md`;
 every answer is in the decision table of `docs/design/44-ranged-combat.md` §1). **Not yet approved
 for code**: the next hard stop is the owner's reading of design 44, whose §8 lists seven
-recommendations to confirm or overrule. This planning work is on `claude/beautiful-cannon-pldakk`
-(documents only). The research is `a-10-ranged-combat`, `a-10-projectile-path`, `c-3d-shot-line`,
+recommendations to confirm or overrule. This planning work is on `claude/beautiful-cannon-pldakk`,
+**PR #220** (documents only). The research is `a-10-ranged-combat`, `a-10-projectile-path`, `c-3d-shot-line`,
 `d-21-projectile-rendering`, `d-22-procedural-aim-and-recoil` and `e-10-gun-animation-packs`.
 
 ## Units

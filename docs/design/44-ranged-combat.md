@@ -6,7 +6,7 @@ the whole of the work so far. The plan is `docs/plans/ranged-combat.md`, the int
 `c-3d-shot-line.md`, `d-21-projectile-rendering.md`, `d-22-procedural-aim-and-recoil.md` and
 `e-10-gun-animation-packs.md`. **The next hard stop is the owner's approval of this document** — §8
 lists the seven recommendations to confirm or overrule — and no gameplay code is written before it.
-Branch `claude/beautiful-cannon-pldakk` (documents only).
+Branch `claude/beautiful-cannon-pldakk`, **PR #220** (documents only).
 
 It sits on design 33 (draft, melee, health, weapons) and changes none of its decisions: a gun is a
 second kind of attack on the seams the melee line left — decide at the wind-up's start, apply at the
