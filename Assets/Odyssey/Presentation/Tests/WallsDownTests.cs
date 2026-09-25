@@ -280,12 +280,21 @@ namespace Odyssey.Tests.Presentation
             Assert.That(slice.BelowSurface(10), Is.True, "walls up: today's rule, unchanged");
             Assert.That(slice.GhostsAbove(10), Is.True, "and the one layer above is an x-ray");
 
+            // Walls down is the choice (landscapeGround) and the drawing (wallsLowered) together.
+            slice.landscapeGround = true;
             slice.wallsLowered = true;
             Assert.That(slice.BelowSurface(10), Is.False, "walls down: L10 is ground");
             Assert.That(slice.GhostsAbove(10), Is.False, "so nothing above it is see-through");
             Assert.That(slice.HidesStackedOn(10, 11), Is.True, "and upper storeys above it are hidden instead");
             Assert.That(slice.BelowSurface(9), Is.False, "the lowest ground is ground");
             Assert.That(slice.BelowSurface(8), Is.True, "beneath all of it is a tunnel, and keeps its x-ray");
+
+            // Building raises the walls and leaves the ground where it is (2026-09-25): the terrace
+            // above stays solid and clickable, and the storeys stand because the walls do.
+            slice.wallsLowered = false;
+            Assert.That(slice.BelowSurface(10), Is.False, "walls raised to build: L10 is still ground");
+            Assert.That(slice.GhostsAbove(10), Is.False, "so the terrace above is not an x-ray");
+            Assert.That(slice.HidesStackedOn(10, 11), Is.False, "and nothing above is hidden while building");
         }
 
         // ------------------------------------------------------------------ the picker
