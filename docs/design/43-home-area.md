@@ -228,7 +228,7 @@ public bool MayWork(Pawn pawn, int cell) =>
 |---|---|---|
 | Every work giver's target and the cell she would stand on | yes | answer 6; the reference's rule (a-03) |
 | Hauling *from* a cell | yes | answer 6 |
-| Hauling *to* a store or shelf | never matters | a store is home by construction (§3a) |
+| Hauling *to* a store or shelf | yes: a store at an outpost is passed over for the best one inside | a store counts as placed, but since the hearth (§3f) one at an outpost is not home. The store search asks `MayWork` beside the reach, so she stores inside rather than dropping the haul because the best store in the colony was one she may not use (review, 2026-09-25) |
 | Hauling to open ground (a refused thing's fallback) | yes | the fallback asks `MayWork` too |
 | A right-click forced order | yes, refused with `NotPermitted` | answer 6. A forced build at an outpost is refused, and one beside the base is taken. Before the hearth (§3f) every site was home by itself, so no forced build could be refused; H2's tests found it |
 | Sleeping, the fireside, the idle wander | yes | an assumption (§2): a Home colonist stays home. Beds are inside by construction |
@@ -249,11 +249,16 @@ Assign tab's Area column says **"No hearth yet"** in its header while that is tr
 ### 4e. Walking home
 
 In `IdleThinkNode.TryGiveJob`, before the fireside roll: a colonist at *Home*, undrafted, standing
-outside a non-empty home gets a walk to the **nearest home cell she can travel to**, searched on her
-own layer first and then the layers beside it. The home cells of a layer are held sorted, so the
-choice is deterministic. It runs only for a colonist standing outside, which is rare, and scales with
-the home cells on one layer. The fireside and the wander need no change: both ask the gated
+outside a non-empty home gets a walk to the **nearest home cell she can travel to, on any layer**
+(`HomeArea.Cells`); a tie keeps the lower cell index, so the choice is deterministic. It runs only
+for a colonist standing outside, which is rare, and scales with the home's cells. The fireside and the wander need no change: both ask the gated
 `Reachable`, so their targets are inside home already.
+
+**The first build searched only her own layer and the two beside it, and that was a bug** (review,
+2026-09-25). Home reaches one layer past what was built, so a colonist two layers down a quarry, or
+two terraces up, has no home cell within one layer of her — and everything else she might do is
+gated too, so she stood still for good. `HomeWalkBackTests` digs a quarry one, two and three deep;
+two and three failed before the fix, and a colonist at *Anywhere* at the bottom is the control.
 
 ### 4f. A new setting answers at once
 
@@ -339,6 +344,13 @@ drawing two more outlines a storey apart.
 terrain (a dug cell stops being standable without the home moving), so they are worked out again when
 `HomeArea.Version` or the nav graph's version moves, and the version is bumped only if they came out
 different: a mine dug outside home costs one pass over the border and moves nothing a reader caches.
+**`HomeVersion` also moves whenever watching starts**, whether or not the rows did. The frame the
+switch is pressed on carries no rows, and the edge pass rebuilds on showing — against that frame's
+version. If the next frame's rows came with the same version the pass would never build again, and
+every switch-on after the first drew nothing (review, 2026-09-25;
+`WatchHomeTests.WatchingAgainMovesTheVersionSoAReaderBuildsTheRows`). The first switch-on had worked
+only because the rows were new then.
+
 The switch goes out on the frame it is pressed and is answered on the next publish; the composition
 root never republishes mid-frame, which would swap the snapshot the rest of the frame is drawing.
 
@@ -368,7 +380,11 @@ registry and lends the bar item its art (`HudCommands.IconOf`).
 - **Behaviour**: F4 or the bar toggles it; Escape (its own rung, `EscapeAction.CloseAssign`) and the X
   close it; opening it closes the inspect pane and the other docked tabs, and they close it. **Pressing
   a name selects that colonist and takes the camera to her, and the tab stays open** — the Work tab's
-  rule, because the job of the tab is setting several people in a row.
+  rule, because the job of the tab is setting several people in a row. **The inspect pane waits while
+  the tab is open** (`HudShell.SyncInspectShown`) and comes up for whoever was chosen when it closes:
+  both dock bottom-left above the bar, and the first build drew the pane over the tab (review,
+  2026-09-25; `DockedTabGeometryTests`). The Work tab could keep its rule because it is not docked in
+  that corner.
 - **Keys**: `HudKey.F4` between F3 and F5 (bindings are stored by name, so nothing shifts);
   `HotkeyAction.AssignTab` appended; on the Settings Keys page's Interface group.
 - **Words**: `ui.tab.assign`, `ui.keys.assign`, `ui.assign.colonist` / `area` / `response` /
@@ -401,9 +417,11 @@ not the target laptop**; the owner's Windows machine will read lower.
 | Scale target 250 x 250 x 40 | 63,759 | 25.12 ms | 1.76 ms | 8.79 ms | **0.96 ms** |
 
 **What it says.** A placement is O(layer), so it follows the board's width and not the colony: 0.23
-ms on the board the game ships with, three times that on Huge. It is paid once per tick in which
-anything was placed however many cells were — a stockpile drag of a hundred cells is one rebuild —
-and never at rest, never for felling, mining or walking. The load's cost is paid once, inside the
+ms on the board the game ships with, three times that on Huge. A stockpile drag of a hundred cells is one rebuild, and it is never paid at rest, never for felling,
+mining or walking. **It is not strictly once per tick**: a rebuild happens on the first question after
+a placement, so placements and questions interleaved within one tick — two builders finishing in the
+same tick with a colonist kept home thinking between them — rebuild twice. Nobody asks at all unless
+somebody is kept home or the Home view is on, because `MayWork` reads the setting first. The load's cost is paid once, inside the
 loading screen.
 
 **With the hearth (HH, the same machine, three runs each).** The base now carries a campfire, and
@@ -523,6 +541,11 @@ measure again if a placement ever shows in a frame.
 | HH | an outpost sixteen cells out is not home | it joins when a wall at eight reaches it |
 | HH | a forced build at an outpost is refused | one beside the base is taken |
 | HH | saved, loaded and hashed; a twin agrees 300 ticks after a load | — |
+| review | kept home at the bottom of a quarry 1, 2 and 3 deep, she walks back (`HomeWalkBackTests`) | at *Anywhere* she stays at the bottom |
+| review | watched again, the version moves and the rows arrive (`WatchHomeTests`) | a still, watched colony keeps its version |
+| review | kept home, she stores inside when the best store is at an outpost (`PawnAreaTests`) | at *Anywhere* she uses the outpost; with the gate taken out of the store search she never stores it |
+| review | the No-hearth count and the hearth-down cell follow the colony (`HearthHudTests`) | — |
+| review | a name pressed in Assign leaves the pane hidden; closing Assign shows it (`DockedTabGeometryTests`, PlayMode) | — |
 
 Breakages seen to fail: no flood (outposts counted), no automatic hearth, demolish keeping the hearth.
 

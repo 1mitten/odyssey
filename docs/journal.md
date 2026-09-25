@@ -12932,3 +12932,36 @@ Three things the work taught:
 None of the Presentation code has been compiled. This container has no Unity, and the fast tier builds
 only Sim and Hud. The edge pass, the hearth mark, the tab's shell, the pane's header and the Menu
 generalisation are all owed a Unity tier run on the owner's machine before the PR is judged.
+
+## 2026-09-25 — The home area reviewed, merged with main, five faults fixed
+
+A review of PR #214 on its own worktree, then a merge of the 70 commits `main` had taken meanwhile.
+
+**The merge was not a formality.** `main` had given bit 26 of the pawn's kind word to a jump in the air
+(design 46 §6), the bit this branch gave the area. The textual conflict invited keeping both lines,
+which compiles and OR-s two states into one bit, so the hash could not tell a colonist kept home from
+one mid-jump. The area is bit 27. `main`'s weather is also "design 43"; recorded, not renamed.
+
+Five faults, each with a test that failed first and a control:
+
+- **The walk home searched three layers.** Home reaches one layer past what was built, so a colonist two
+  layers down a quarry had no home cell within reach of the search, and everything else she might do
+  was gated too: she stood at the bottom for good. A probe dug quarries one, two and three deep; two
+  and three failed. The search is over every home cell now.
+- **Switching the Home view on a second time drew nothing.** The frame the switch is pressed on carries
+  no rows, the edge pass rebuilt against it, and the next frame's rows came under the same version
+  because the home had not moved. The first switch-on worked only because the rows were new. The
+  version now moves whenever watching starts.
+- **A name pressed in Assign opened the inspect pane over the tab**: both dock bottom-left. The Work
+  tab's "stay open" rule was copied without its reason, which is that the Work tab lives elsewhere.
+  The pane waits while Assign is open and shows the chosen colonist when it closes.
+- **The two hearth alerts watched yes/no**, so the No-hearth count and the hearth-down cell went stale
+  while the row stayed up.
+- **"A store is home by construction" stopped being true with the hearth.** A store at an outpost is
+  not home, and the store search never asked, so a colonist kept home dropped the haul whenever the
+  colony's best store was one she may not use. The search asks `MayWork` now. The first version of the
+  test failed for the wrong reason: two one-cell stores filled with the starting piles before the item
+  under test had a turn. The control caught that; the gate taken out is the check that it tests the fix.
+
+The lesson worth keeping is the first one: **a conflict in a bit-packed hash word is a semantic
+conflict**, and "keep both sides" is the wrong default there.
