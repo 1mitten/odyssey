@@ -112,8 +112,18 @@ namespace Odyssey.EditorTools
             /// </summary>
             public readonly System.Func<float[]>? Placeholder;
 
+            /// <summary>
+            /// Whether the importer peak-normalises the clip, or null to leave the importer's own
+            /// setting alone. Unity normalises the downmix when <see cref="Mono"/> is on, which
+            /// raises every take to a 0 dBFS peak and throws away the level a bake set. <b>Only the
+            /// gunshot says false today</b> (design 47 §4c-bis): turning it off for every clip
+            /// changes how loud every chop, blow and stroke is, and that is its own change, wanting
+            /// a listen.
+            /// </summary>
+            public readonly bool? Normalize;
+
             public ClipSpec(string name, AudioCompressionFormat format, AudioClipLoadType loadType,
-                bool mono, bool loadInBackground, System.Func<float[]>? placeholder)
+                bool mono, bool loadInBackground, System.Func<float[]>? placeholder, bool? normalize = null)
             {
                 Name = name;
                 Format = format;
@@ -121,6 +131,7 @@ namespace Odyssey.EditorTools
                 Mono = mono;
                 LoadInBackground = loadInBackground;
                 Placeholder = placeholder;
+                Normalize = normalize;
             }
         }
 
@@ -187,6 +198,14 @@ namespace Odyssey.EditorTools
                 mono: true, loadInBackground: false, placeholder: null),
             new("combat-hit", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: true, loadInBackground: false, placeholder: null),
+            // The gunshot (design 47 §4c-bis), baked by tools/audio/bake_gunshot.sh: three near
+            // takes and two far. The blows' class for the blows' reason — it plays on the Shot's
+            // own frame — and **not normalised**: the bake sets the near takes at -14 LUFS and the
+            // far at -20, and the importer's normalise would raise both to a 0 dBFS peak.
+            new("combat-shot", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            new("combat-shot-far", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
             new("alert-normal", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: false, loadInBackground: false, Alert),
             new("alert-negative", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
@@ -277,7 +296,7 @@ namespace Odyssey.EditorTools
                         kept++;
                     }
 
-                    Import(path, spec.Format, spec.LoadType, spec.Mono, spec.LoadInBackground);
+                    Import(path, spec.Format, spec.LoadType, spec.Mono, spec.LoadInBackground, spec.Normalize);
                 }
             }
 
@@ -711,6 +730,31 @@ namespace Odyssey.EditorTools
                     SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
                     Priority = 110, Cooldown = 0f,
                 },
+                // The gunshot (design 47 §4c-bis), two sounds by distance: CombatFeedback plays the
+                // crack when the shooter is within 70 m of the listener and the thump beyond, so a
+                // player zoomed in on a fight hears the one and one pulled back over the colony the
+                // other. Priority 90 is above every blow (100-140) and below the alerts, so a fight
+                // steals voices from the chop and the carry rather than the other way round. The
+                // near cooldown makes two shots on one frame one report; a volley a frame apart is
+                // still a volley.
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.CombatShot,
+                    Clips = Variants("combat-shot"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.85f, VolumeVariance = 0.12f, PitchVariance = 0.04f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 150f,
+                    Priority = 90, Cooldown = 0.03f,
+                },
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.CombatShotFar,
+                    Clips = Variants("combat-shot-far"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.8f, VolumeVariance = 0.10f, PitchVariance = 0.03f,
+                    SpatialBlend = 1f, MinDistance = 50f, MaxDistance = 400f,
+                    Priority = 120, Cooldown = 0.06f,
+                },
                 // The alerts. Zero variance on all five: a chime is a signal and a signal that
                 // wobbles reads as a fault, which is the opposite of what the work sounds want
                 // variance for. 2D, top voice priority, and a cooldown long enough that two
@@ -856,7 +900,7 @@ namespace Odyssey.EditorTools
         // ---- plumbing ----
 
         static void Import(string path, AudioCompressionFormat format, AudioClipLoadType loadType,
-            bool mono, bool loadInBackground)
+            bool mono, bool loadInBackground, bool? normalize = null)
         {
             AssetDatabase.ImportAsset(path);
             if (AssetImporter.GetAtPath(path) is not AudioImporter importer) return;
@@ -871,8 +915,28 @@ namespace Odyssey.EditorTools
             // mono threw away the image it was mixed with.
             importer.forceToMono = mono;
             importer.loadInBackground = loadInBackground;
+            if (normalize.HasValue) SetNormalize(importer, normalize.Value);
             importer.SaveAndReimport();
         }
+
+        /// <summary>
+        /// The importer's normalise switch, which the scripting API does not expose, written
+        /// through its serialised form. Throws when the field cannot be found, so a Unity that
+        /// renames it fails the build rather than quietly normalising the gunshot again.
+        /// </summary>
+        static void SetNormalize(AudioImporter importer, bool value)
+        {
+            var serialized = new SerializedObject(importer);
+            SerializedProperty? property = NormalizeProperty(serialized)
+                ?? throw new System.InvalidOperationException(
+                    "[AudioSetup] the audio importer has no normalise field; the gunshot would import normalised.");
+            property.boolValue = value;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>The importer's serialised normalise field: <c>m_Normalize</c>, as the .meta writes <c>normalize</c>.</summary>
+        internal static SerializedProperty? NormalizeProperty(SerializedObject importer) =>
+            importer.FindProperty("m_Normalize") ?? importer.FindProperty("normalize");
 
         /// <summary>A 16-bit PCM mono WAV. Nothing compressed, nothing platform-specific: the
         /// importer decides what the engine actually keeps.</summary>
