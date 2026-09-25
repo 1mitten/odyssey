@@ -94,6 +94,11 @@ namespace Odyssey.Tests.Sim
             Assert.That(SetArea(colony, hog, PawnArea.Home), Is.EqualTo(IntentRejection.NotPermitted));
         }
 
+        /// <summary>The interface reads this name (<c>Odyssey.Hud.AreaAspectNames</c>); both sides pin the literal.</summary>
+        [Test]
+        public void TheAspectIsSpelledAsTheInterfaceReadsIt() =>
+            Assert.That(AreaAspects.AreaName, Is.EqualTo("odyssey.pawn.area"));
+
         [Test]
         public void ItAppliesWhilePaused() =>
             Assert.That(PausedIntents.AppliesWhilePaused(IntentKind.SetPawnArea), Is.True);

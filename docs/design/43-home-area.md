@@ -1,7 +1,7 @@
 # 43 — The home area, and keeping a colonist home
 
 **Status: approved 2026-09-25 (owner: *"approved start"*). H1 (the mask), H2 (the setting and the
-gate) and HH (the hearth, §3f) are built. H3 and H4 wait on the Claude Design brief** (`docs/reference/mockups/home-area-brief.md`). Branch
+gate), HH (the hearth, §3f) and HP (its pane row and alerts, §3g) are built. H3 and H4 wait on the Claude Design brief** (`docs/reference/mockups/home-area-brief.md`). Branch
 `claude/sleepy-cannon-9d0evw`. Units H1–H5 in `docs/plans/home-area.md`.
 **Read first:** the interview `docs/research/home-area-interview.md`; the reference
 `docs/research/a-18-home-and-allowed-areas.md`; design 33 §18 (the combat response, whose shape the
@@ -144,6 +144,25 @@ Home is everything placed, grown as §3b says, **and then only the piece that co
 **It closes the gap H2's tests found**: a build site counts as placed, so a far site used to make an
 island of home and a colonist kept home walked out to it. A far site is an outpost now, and a forced
 build there is refused.
+
+### 3g. The hearth on the pane and in the alerts (HP)
+
+- **The pane.** A campfire's pane carries a **hearth** row (`InspectModel.HearthRow`): on the hearth
+  it reads *Home is centred here* in the accent (`ui.home.centred`); on any other campfire it is a
+  press, *Make this the hearth* (`ui.command.sethearth`), which the shell turns into `SetHearth` on
+  the pane's cell, exactly as it turns the switch row into `SetPowerSwitch`. The press flag is set
+  **above** the rows' early return and the row's state is in the rebuild guard, so it neither dies on
+  the second refresh nor goes on offering after the fire became the hearth; both were seen to fail.
+- **No hearth** (`ui.alert.nohearth`, Warning) while somebody is kept home and there is no hearth:
+  home does not exist, so she is kept nowhere. **Narrowed from the plan**, which also raised it while a
+  campfire stands: the snapshot carries no list of campfires, and with nobody kept home no hearth is
+  only a colony that has not marked one.
+- **Hearth marked to come down** (`ui.alert.hearthdown`, Warning) while a deconstruct order stands on
+  the hearth; a click goes to it. This is the "warned first" of round three's answer 3. Its dismissal
+  key is made from the cell it points at, as the row's own is, so a dismissal sticks until the order
+  goes.
+- **The interface reads the area setting** as `odyssey.pawn.area` through `Hud/AreaAspectNames`, a
+  string pinned on both sides as the combat names are.
 
 ### 3e. Not saved, not hashed
 

@@ -23,6 +23,14 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the hearth read on a campfire's pane, and does ordering it down warn?** (`claude/sleepy-cannon-9d0evw`,
+  design 43 §3f–§3g.) Build two campfires. Click the first: its pane has a *hearth* row reading
+  *Home is centred here* in the accent colour. Click the second: the row reads *Make this the hearth*
+  and is pressable; press it, and the first campfire's pane now offers the press instead. Order the
+  hearth deconstructed: a *Hearth marked to come down* warning appears, and a click on it goes to the
+  fire. A wrong answer is a second campfire that already says it is the hearth, a press that does
+  nothing, a row that keeps offering after the press, or no warning. Keeping a colonist home cannot
+  be tried yet: its control is the Assign tab, which waits on the Claude Design files.
 - **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
   Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest
   over bare arms and black trousers, and carry a crowbar or a bat; click one and the pane shows a

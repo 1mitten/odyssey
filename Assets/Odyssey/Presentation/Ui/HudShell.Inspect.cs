@@ -937,6 +937,7 @@ namespace Odyssey.Presentation.Ui
                     if (!captured.IsPick) return;
                     if (captured.IsSwitch) ThrowPowerSwitch();
                     else if (captured.IsOrderAction) ActOnOrder();
+                    else if (captured.IsHearth) MakeHearth();
                     else ToggleBedPicker(captured.Root);
                 });
 
@@ -966,7 +967,8 @@ namespace Odyssey.Presentation.Ui
                 // thing and the one a player found by accident.
                 bool switchPick = row.Name == InspectModel.PowerSwitchRow && _inspect.PowerSwitchUnderPane;
                 bool linePick = row.Name == InspectModel.OrderActionRow && _inspect.OrderActionUnderPane;
-                bool pick = (row.Name == "owner" && _inspect.BedUnderPane) || switchPick || linePick;
+                bool hearthPick = row.Name == InspectModel.HearthRow && _inspect.HearthActionUnderPane;
+                bool pick = (row.Name == "owner" && _inspect.BedUnderPane) || switchPick || linePick || hearthPick;
                 // The pickable row's value is set in the heavier Row role, which is where weight
                 // lives: the stylesheet may not set type (TheSheetSetsNoTypeAtAll), so "make the
                 // assign button bolder" is a role here rather than a font-style there.
@@ -1002,17 +1004,20 @@ namespace Odyssey.Presentation.Ui
                 view.Root.EnableInClassList("inspect__row--danger", danger);
                 view.Root.EnableInClassList("inspect__row--warn", warn);
 
-                if (view.IsPick != pick || view.IsSwitch != switchPick || view.IsOrderAction != linePick)
+                if (view.IsPick != pick || view.IsSwitch != switchPick || view.IsOrderAction != linePick
+                    || view.IsHearth != hearthPick)
                 {
                     view.IsPick = pick;
                     view.IsSwitch = switchPick;
                     view.IsOrderAction = linePick;
+                    view.IsHearth = hearthPick;
                     view.Root.EnableInClassList("inspect__row--pick", pick);
                     view.Chevron.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
                     // The bed's glyph is a bed: the switch and line rows wear the chevron alone.
-                    view.Glyph.style.display = pick && !switchPick && !linePick ? DisplayStyle.Flex : DisplayStyle.None;
+                    view.Glyph.style.display = pick && !switchPick && !linePick && !hearthPick ? DisplayStyle.Flex : DisplayStyle.None;
                     view.Root.tooltip = switchPick ? "Switch it on or off — at once, nobody is sent"
                         : linePick ? row.Value + " — at once, nobody is sent"
+                        : hearthPick ? row.Value + " — home becomes the base joined to this fire"
                         : pick ? "Choose whose bed this is" : null;
                 }
             }
@@ -1032,6 +1037,15 @@ namespace Odyssey.Presentation.Ui
         /// Throw the switch of the power building under the pane (design 32 §5): an intent, like
         /// every command, applied while paused and at once — no colonist walks over to do it.
         /// </summary>
+        /// <summary>
+        /// Make the campfire under the pane the hearth (design 43 §3f): an intent, applied while
+        /// paused, refused by the simulation unless a campfire of ours stands there.
+        /// </summary>
+        void MakeHearth()
+        {
+            _boot?.World?.Intents.Submit(new Intent(IntentKind.SetHearth, _inspect.Cell));
+        }
+
         void ThrowPowerSwitch()
         {
             _boot?.World?.Intents.Submit(new Intent(IntentKind.SetPowerSwitch, _inspect.Cell,
