@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-134 entries, 108 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+135 entries, 109 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -137,6 +137,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Quality** | `ui.settings.quality` | Set every lever on this page at once, from Low to Ultra. Custom once any is moved by hand | no art | MF |
 | **Grass** | `ui.settings.vegetation` | How thick the grass is strewn, from bare ground to every cell. Decoration, in no cell and no save | no art | MF |
 | **Grass distance** | `ui.settings.grassdist` | How far from the camera grass is still drawn. Past it the ground carries the field | no art | MF |
+| **Butterflies** | `ui.settings.butterflies` | How many butterflies the meadow near the camera may hold, from none to a swarm. They glow at night. Decoration, in no cell and no save | no art | AB |
 | **Grass shadows** | `ui.settings.foliageshadows` | Whether grass casts shadows. Off, as it has always shipped: a shadow centimetres long on grass the same colour | no art | MF |
 | **Resolution** | `ui.settings.resolution` | How many pixels the game is drawn at. Only a built game can change it | no art | M3 |
 | **Exit game** | `ui.settings.exit` | Leave the game. The row asks twice, because leaving is not undoable | no art | M3 |

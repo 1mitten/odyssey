@@ -129,6 +129,14 @@ namespace Odyssey.Hud
         /// submitted, so it costs nothing to move. Past it the ground texture carries the field.
         /// </summary>
         GrassDistance,
+
+        /// <summary>
+        /// How many butterflies the meadow near the camera may hold (design 52 §8) — the
+        /// <c>ButterflyMeadow</c>'s capacity, handed over unchanged. Off draws and steps nothing.
+        /// Appended last so no stored rung moves. Read as the frame is drawn, so it costs no
+        /// re-mesh: a press resizes a few arrays, once.
+        /// </summary>
+        Butterflies,
     }
 
     /// <summary>
@@ -375,6 +383,9 @@ namespace Odyssey.Hud
         /// under.</summary>
         public const string VegetationKey = "ui.settings.vegetation";
 
+        /// <summary>The butterflies' row (design 52 §8), and the key its rung is stored under.</summary>
+        public const string ButterfliesKey = "ui.settings.butterflies";
+
         /// <summary>
         /// Where the grass-tufts toggle kept its yes or no until 2026-09-24. Read once, by
         /// <see cref="UseStore"/>, so a player who had the grass off still has it off: the new
@@ -446,6 +457,7 @@ namespace Odyssey.Hud
             QualityKey,
             VegetationKey,
             "ui.settings.grassdist",
+            ButterfliesKey,
             "ui.settings.foliageshadows",
         };
 
@@ -519,6 +531,7 @@ namespace Odyssey.Hud
         {
             GraphicsLadder.VegetationDensity,
             GraphicsLadder.GrassDistance,
+            GraphicsLadder.Butterflies,
         };
 
         static readonly GraphicsLadder[] LadderOrder = Concat(DisplayOrder, DetailOrder);
@@ -555,6 +568,14 @@ namespace Odyssey.Hud
         static readonly int[] VegetationRungs = { 0, 30, 60, 150, 300 };
         static readonly int[] GrassDistanceRungs = { 60, 120, 250, Unlimited };
 
+        // Butterflies the meadow near the camera may hold (owner, 2026-09-25: Off / Few / Many /
+        // Swarm, "lively, about 150-300" at the default). A cap, not a count: the grass in view,
+        // the zoom, the season and the weather all thin it (design 52 §3).
+        static readonly int[] ButterflyRungs = { 0, 80, ShippedButterflies, 500 };
+
+        /// <summary>The butterflies the game ships with, and the rung the Medium and High presets keep.</summary>
+        public const int ShippedButterflies = 200;
+
         /// <summary>The grass density the game ships with, and the rung the Medium and High
         /// presets keep.</summary>
         public const int ShippedVegetation = 60;
@@ -590,6 +611,7 @@ namespace Odyssey.Hud
             GraphicsLadder.DisplayMode => DisplayModeRungs,
             GraphicsLadder.VegetationDensity => VegetationRungs,
             GraphicsLadder.GrassDistance => GrassDistanceRungs,
+            GraphicsLadder.Butterflies => ButterflyRungs,
             _ => VSyncRungs,
         };
 
@@ -615,6 +637,7 @@ namespace Odyssey.Hud
             GraphicsLadder.DisplayMode => BorderlessWindow,
             GraphicsLadder.VegetationDensity => ShippedVegetation,
             GraphicsLadder.GrassDistance => Unlimited,
+            GraphicsLadder.Butterflies => ShippedButterflies,
             _ => 0,
         };
 
@@ -629,6 +652,7 @@ namespace Odyssey.Hud
             GraphicsLadder.DisplayMode => "ui.settings.displaymode",
             GraphicsLadder.VegetationDensity => VegetationKey,
             GraphicsLadder.GrassDistance => "ui.settings.grassdist",
+            GraphicsLadder.Butterflies => ButterfliesKey,
             _ => GraphicsKey,
         };
 
@@ -670,6 +694,13 @@ namespace Odyssey.Hud
                 _ => "Full",
             },
             GraphicsLadder.GrassDistance => rung == Unlimited ? "All" : rung + " m",
+            GraphicsLadder.Butterflies => rung switch
+            {
+                0 => "Off",
+                80 => "Few",
+                ShippedButterflies => "Many",
+                _ => "Swarm",
+            },
             _ => rung.ToString(),
         };
 
@@ -717,6 +748,13 @@ namespace Odyssey.Hud
             GraphicsLadder.GrassDistance => rung == Unlimited
                 ? "Grass wherever the camera can see"
                 : $"Grass to {rung} m from the camera. Past it the ground carries the field",
+            GraphicsLadder.Butterflies => rung switch
+            {
+                0 => "No butterflies. Nothing is stepped or drawn",
+                80 => "A scattering over the grass near the camera. For a machine that is short of time",
+                ShippedButterflies => "A lively meadow, and a spectacle at night. What the game ships with",
+                _ => "Clouds of them, and a night full of lights. The dearest rung",
+            },
             _ => string.Empty,
         };
 
@@ -749,7 +787,7 @@ namespace Odyssey.Hud
         public static readonly GraphicsLadder[] PresetLadders =
         {
             GraphicsLadder.ShadowDistance, GraphicsLadder.RenderScale, GraphicsLadder.AntiAliasing,
-            GraphicsLadder.VegetationDensity, GraphicsLadder.GrassDistance,
+            GraphicsLadder.VegetationDensity, GraphicsLadder.GrassDistance, GraphicsLadder.Butterflies,
         };
 
         /// <summary>
@@ -815,6 +853,14 @@ namespace Odyssey.Hud
                 QualityPreset.Medium => 120,
                 _ => Unlimited,
             },
+            // Provisional until design 52 §9's measurement: a rung that costs more than its preset
+            // can afford moves down, and the reason goes there.
+            GraphicsLadder.Butterflies => preset switch
+            {
+                QualityPreset.Low => 80,
+                QualityPreset.Ultra => 500,
+                _ => ShippedButterflies,
+            },
             _ => DefaultOf(ladder),
         };
 
@@ -831,10 +877,10 @@ namespace Odyssey.Hud
         /// <summary>What one preset costs or buys, said on hover.</summary>
         public static string PresetTooltip(QualityPreset preset) => preset switch
         {
-            QualityPreset.Low => "For a laptop. Drawn at 70%, half the grass, near shadows, no surrounding land",
+            QualityPreset.Low => "For a laptop. Drawn at 70%, half the grass, near shadows, no surrounding land, fewer butterflies",
             QualityPreset.Medium => "Drawn at 85%, grass to 120 m, shadows over the working area",
             QualityPreset.High => "What the game ships with",
-            QualityPreset.Ultra => "High with grass on every cell",
+            QualityPreset.Ultra => "High with grass on every cell and a swarm of butterflies",
             _ => "Set by hand. Pick a preset to put every lever back on one",
         };
 
