@@ -71,8 +71,17 @@ namespace Odyssey.Sim.Worldgen.Natural
         public int RockCells;
         public int BedrockCells;
         public int Trees;
+        /// <summary>Birches (design 45 §3). The name is the tree pass's first one, kept for its readers.</summary>
         public int Conifers;
+        /// <summary>Every tree that is not a birch: the meadow trees, fruit trees and giants together.</summary>
         public int Broadleaves;
+        public int MeadowTrees;
+        public int FruitTrees;
+        public int GiantTrees;
+        /// <summary>Bushes the undergrowth pass placed, berry bushes included (design 45 §4).</summary>
+        public int Bushes;
+        public int BerryBushes;
+        public int BushesRefusedOnTerraceSteps;
         public int TreesClearedForStart;
 
         /// <summary>
@@ -271,6 +280,13 @@ namespace Odyssey.Sim.Worldgen.Natural
         }
 
         public List<TreePlacement> Trees { get; } = new List<TreePlacement>();
+
+        /// <summary>Where the loose stones lie and how many to a stack (design 45 §6). The
+        /// colony spawns them; the map only chooses the spots.</summary>
+        public List<(int Cell, int Count)> LooseRocks { get; } = new List<(int, int)>();
+
+        /// <summary>Where the first mushrooms come up and how many to a find (design 45 §6).</summary>
+        public List<(int Cell, int Count)> MushroomSpots { get; } = new List<(int, int)>();
         public List<RockOutcrop> Outcrops { get; } = new List<RockOutcrop>();
         public List<CavernChamber> Caverns { get; } = new List<CavernChamber>();
         public List<OreDeposit> OreDeposits { get; } = new List<OreDeposit>();
@@ -361,7 +377,7 @@ namespace Odyssey.Sim.Worldgen.Natural
                 Edifices[handle] = placed;
             }
             Grid.Edifice[index] = -1;
-            Grid.Flags[index] &= ~CellFlags.BlockingEdifice;
+            Grid.Flags[index] &= ~(CellFlags.BlockingEdifice | CellFlags.Undergrowth);
         }
 
         /// <summary>The placed edifices, referenced from <see cref="CellGrid.Edifice"/> by index.</summary>
@@ -400,5 +416,9 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// prevent. Water landed first and keeps the number it shipped with.</para>
         /// </summary>
         Caverns = 9,
+
+        /// <summary>The bushes (design 45 §4), appended after caverns so no earlier pass draws
+        /// differently.</summary>
+        Undergrowth = 10,
     }
 }

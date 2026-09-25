@@ -1,6 +1,7 @@
 #nullable enable
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
+using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -371,8 +372,12 @@ namespace Odyssey.Sim.Pawns
 
             int cell = Job.DestCell;
             // Somebody else felled it, or the player changed their mind: stop, do not swing at air.
-            if (designations.At(cell) != DesignationKind.Fell || !designations.IsTree(cell))
+            if (designations.At(cell) != DesignationKind.Fell || !designations.IsFellable(cell))
                 return JobStatus.Failed;
+            // The species decides the work and the yield (design 45 §2), so a birch comes down
+            // quicker than a giant and a bush yields nothing at all.
+            WildPlantDef? plant = designations.WildPlantAt(cell);
+            if (plant == null) return JobStatus.Failed;
 
             if (ToilIndex == 0)
             {
@@ -395,12 +400,13 @@ namespace Odyssey.Sim.Pawns
             int rate = Pawn.WorkRatePerMille(WorkTypeIndex.Cutting);
             ToilProgress += rate;
             Work(ctx);
-            if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].workTicks * Rates.Scale)
+            if (ToilProgress < plant.clearWorkTicks * Rates.Scale)
                 return JobStatus.Ongoing;
 
             designations.Clear(cell);
-            int yield = ctx.Content.WoodPerTree;
-            ctx.Defer(_ => FellTree(ctx, cell, yield));
+            int item = plant.clearYields.Length == 0 ? -1 : ctx.Content.ItemIndexOf(plant.clearYields);
+            int yield = item < 0 ? 0 : plant.clearYieldCount;
+            ctx.Defer(_ => FellTree(ctx, cell, item, yield));
 
             // The tree falls now; the woodcutter straightens up before walking off.
             NextToil();
@@ -438,10 +444,15 @@ namespace Odyssey.Sim.Pawns
             return best;
         }
 
-        static void FellTree(PawnContext ctx, int cell, int yield)
+        static void FellTree(PawnContext ctx, int cell, int item, int yield)
         {
+            // A bush prices its cell (design 45 §4), so taking it out changes what the cell costs
+            // to cross and navigation has to re-read it; a tree blocks nothing and costs nothing.
+            bool bush = ctx.Cells.IsUndergrowth(cell);
             ctx.Cells.RemoveEdifice(cell);
             ctx.Chunks?.MarkDirty(ctx.Size.FromIndex(cell));
+            if (bush) ctx.Nav.MarkDirty(cell);
+            if (item < 0 || yield <= 0) return;
 
             // Where the tree stood, or the nearest cell nearby that can take the wood — which
             // includes a pile of wood from the tree next door with room on it, so a stand of
@@ -449,8 +460,8 @@ namespace Odyssey.Sim.Pawns
             // within three cells is a board packed solid with things, which nothing in the game
             // can produce yet; losing the wood then is the least bad answer, because spawning
             // onto a cell that cannot take it would corrupt the cell index.
-            int at = ctx.Items.NearestCellWithSpace(ctx.Cells, cell, ItemIndex.Wood, yield, maxRadius: 3);
-            if (at >= 0) ctx.Items.Spawn(ItemIndex.Wood, at, yield);
+            int at = ctx.Items.NearestCellWithSpace(ctx.Cells, cell, item, yield, maxRadius: 3);
+            if (at >= 0) ctx.Items.Spawn(item, at, yield);
         }
     }
 }

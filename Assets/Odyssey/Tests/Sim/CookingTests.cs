@@ -577,6 +577,18 @@ namespace Odyssey.Tests.Sim
             Assert.That(content.Items[Burnt].ateThought, Is.EqualTo(ThoughtIndex.AteBurnt));
             Assert.That(content.Items[Carrots].ateThought, Is.EqualTo(ThoughtIndex.AteRaw));
 
+            // Every food that is not cooked is raw: the wild foods (design 45) as much as the
+            // carrots. foodTier defaults to 0, the cooked meal's, so a raw food that forgot to say
+            // so would be taken before a meal — which is what the merge with main nearly shipped.
+            for (int i = 0; i < content.Items.Length; i++)
+            {
+                ItemDef food = content.Items[i];
+                if (food.nutrition <= 0 || i == Meal || i == VegMeal || i == Burnt || i == Rations) continue;
+                Assert.That(food.rawIngredient, Is.True, food.defName + " is raw food a cook can use");
+                Assert.That(food.foodTier, Is.GreaterThanOrEqualTo(3), food.defName + " ranks under the ration and the burnt meal");
+                Assert.That(food.ateThought, Is.EqualTo(ThoughtIndex.AteRaw), food.defName + " is thought of as raw");
+            }
+
             int meal = content.Thoughts[ThoughtIndex.AteMeal].moodOffset;
             int ration = content.Thoughts[ThoughtIndex.AteRation].moodOffset;
             int burntMood = content.Thoughts[ThoughtIndex.AteBurnt].moodOffset;

@@ -216,7 +216,7 @@ namespace Odyssey.Presentation.Rendering
         /// all.
         /// </summary>
         public static TreeSpecies SpeciesOf(ushort edifice) =>
-            edifice == NaturalContent.EdificeTreeConifer ? TreeSpecies.Conifer : TreeSpecies.Broadleaf;
+            edifice == NaturalContent.EdificeTreeBirch ? TreeSpecies.Conifer : TreeSpecies.Broadleaf;
 
         /// <summary>
         /// The nearest stride at or above <paramref name="want"/> that shares no factor with

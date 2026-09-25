@@ -425,7 +425,7 @@ namespace Odyssey.Sim.Worldgen
         public const ushort EdificeHeater = 16;
 
         /// <summary>The galley (design 48 §5): the electric cooker, where meals are cooked from bills.</summary>
-        public const ushort EdificeGalley = 17;
+        public const ushort EdificeGalley = 22;
 
         /// <summary>
         /// The city's ten, which are the first ten of the one table. Loaded from

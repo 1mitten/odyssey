@@ -35,7 +35,9 @@ namespace Odyssey.Hud
             "ui.item.bat", "ui.item.crowbar", "ui.item.machete", "ui.item.arcblade",
             // Medical supplies (design 37), handle 11. The key is the old "medkit" one, relabelled.
             "ui.res.medkit",
-            // The kitchen (design 48 §4), handles 12 to 14: the meal, the vegetable meal, the burnt one.
+            // The wild foods (design 45 §6), ItemHandle 12 and 13, after medical supplies.
+            "ui.res.berries", "ui.res.mushrooms",
+            // The kitchen (design 48 §4), handles 14 to 16, after the wild foods: the meal, the vegetable meal, the burnt one.
             "ui.res.meal", "ui.res.meal.veg", "ui.res.meal.burnt",
         };
 

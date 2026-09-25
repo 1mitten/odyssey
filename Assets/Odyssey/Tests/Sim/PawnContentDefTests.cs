@@ -270,6 +270,19 @@ namespace Odyssey.Tests.Sim
         //
         // Moved a twenty-eighth time, 2026-09-25, at the merge with main (weather, the stream
         // jump): neither side's number covers the merged pack, re-taken fresh.
+        // Moved again, 2026-09-25, by design 45 (the scenery made real): the tuning's woodPerTree
+        // is gone, because what a felled tree yields is its species' own now, in
+        // World/WildPlants.xml. Taken from a freshly loaded pack.
+        // 2026-09-25, design 46 §6: MovementDef gained jumpFailPerMille (30) and
+        // jumpFailCarryingPerMille (2,000) — the jump over a one-cell stream falling short.
+        // Both, 2026-09-25, on merging main into the scenery line: re-taken from the merged pack.
+        //
+        // And again the same day by M13 (design 45 §6): Job_Forage appended at 23, and
+        // Item_Berries and Item_Mushrooms at 11 and 12 (Food, 60 and 70, stacks of 75). Taken from
+        // a freshly loaded pack.
+        // M13 on the merged line, 2026-09-25: re-taken from the merged pack.
+        // The scenery line merged with medical supplies, 2026-09-25: Job_Forage renumbered 23 -> 25
+        // and Item_Berries/Item_Mushrooms 11-12 -> 12-13, after main's. Re-taken from the merged pack.
         //
         // Moved a twenty-ninth time, deliberately, 2026-09-25, by the kitchen (design 48 §4-§5):
         // Skill_Cooking, Work_Cooking and Job_Cook appended; the three meals appended as items;
@@ -278,7 +291,9 @@ namespace Odyssey.Tests.Sim
         // +50 as the cooked meal's, and AteRation (+20), AteBurnt (-40) and AteRaw (-50) were
         // appended; and the work types' scan ranks moved to put cooking between growing and
         // cutting. Every golden moves with it, measured in the same commit.
-        const ulong ContentFingerprint = 14652093262965555693UL;
+        // Both lines together, 2026-09-25: the kitchen merged with the wild foods; Job_Cook
+        // renumbered 25 -> 26 and the meals 12-14 -> 14-16. Re-taken from the merged pack.
+        const ulong ContentFingerprint = 9919548149345567235UL;
 
 
         [Test]

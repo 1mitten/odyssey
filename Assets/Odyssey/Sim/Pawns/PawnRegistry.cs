@@ -353,7 +353,9 @@ namespace Odyssey.Sim.Pawns
             // Medical supplies (design 37): 23 and 24, after Steal.
             new TreatJobDriver(),
             new PatientJobDriver(),
-            // The kitchen (design 48 §5), JobHandle 25.
+            // Picking a berry bush (design 45 §6), JobHandle 25, after medical supplies.
+            new ForageJobDriver(),
+            // The kitchen (design 48 §5), JobHandle 26, after the forager's.
             new Cooking.CookJobDriver(),
         };
 

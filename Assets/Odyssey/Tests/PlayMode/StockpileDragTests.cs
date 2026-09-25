@@ -285,6 +285,13 @@ namespace Odyssey.Tests.PlayMode
                 int frames = 0, meshed = 0, deferredMax = 0;
                 int[] seen = { -1, -1 };
                 int[] firstCell = { -1, -1 };
+                // The frame each store was first published: a drag becomes a store on the next
+                // tick, and ticks are paced by the clock, so how many frames pass before it says
+                // how fast the machine draws and nothing about the renderer. Counted from here,
+                // as TwoStockpilesAreBothDrawnPromptly does (on the runner, with no art to
+                // draw and a busy machine, the drag-to-drawn count read 12 and then 15).
+                int[] publishedOn = { -1, -1 };
+                long tick0 = boot.World.Views.Current.Tick;
                 float until = Time.realtimeSinceStartup + 10f;
                 int stride = boot.World.Size.LayerStride;
                 while (Time.realtimeSinceStartup < until && (seen[0] < 0 || seen[1] < 0))
@@ -300,7 +307,11 @@ namespace Odyssey.Tests.PlayMode
                     for (int s = 0; s < stores.Length; s++)
                     {
                         int zone = stores[s].Zone;
-                        if (zone < 2 && firstCell[zone] < 0) firstCell[zone] = stores[s].CellIndex;
+                        if (zone < 2 && firstCell[zone] < 0)
+                        {
+                            firstCell[zone] = stores[s].CellIndex;
+                            publishedOn[zone] = frames;
+                        }
                     }
                     for (int z = 0; z < 2; z++)
                     {
@@ -317,10 +328,19 @@ namespace Odyssey.Tests.PlayMode
                           $"{idleFramesDeferring} frames deferring (max {idleDeferredMax}); after the drags " +
                           $"drawn at frames [{seen[0]}, {seen[1]}], {meshed} meshed over {frames} frames, " +
                           $"max deferred {deferredMax}, cells {firstCell[0]} / {firstCell[1]}, " +
+                          $"published at frames [{publishedOn[0]}, {publishedOn[1]}], " +
+                          $"{boot.World.Views.Current.Tick - tick0} ticks, " +
                           $"{boot.World.Views.Current.Stores.Length} store cells");
                 for (int z = 0; z < 2; z++)
-                    Assert.That(seen[z], Is.InRange(0, 10),
-                        $"stockpile {z + 1} was not in the drawn batches within ten frames (-1: never, in ten seconds)");
+                {
+                    Assert.That(publishedOn[z], Is.Not.EqualTo(-1),
+                        $"stockpile {z + 1} was never published, in ten seconds");
+                    Assert.That(seen[z], Is.Not.EqualTo(-1),
+                        $"stockpile {z + 1} was published and never in the drawn batches, in ten seconds");
+                    Assert.That(seen[z] - publishedOn[z], Is.InRange(0, 10),
+                        $"stockpile {z + 1} was not in the drawn batches within ten frames of being published " +
+                        $"(frame {seen[z]}, published on {publishedOn[z]})");
+                }
             }
             finally
             {

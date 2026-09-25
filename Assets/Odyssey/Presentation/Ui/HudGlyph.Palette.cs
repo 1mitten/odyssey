@@ -407,6 +407,18 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, p(12, 12), p(16.5f, 8));
                     return;
 
+                // Harvest (design 45 §6): a cluster of three berries under a leaf, the thing the
+                // order is for rather than a tool, because picking is done by hand.
+                case HudGlyphKind.ToolHarvest:
+                    Circle(painter, p(8.5f, 14.5f), 3.2f * scale);
+                    Circle(painter, p(15.5f, 14.5f), 3.2f * scale);
+                    Circle(painter, p(12, 19), 3.2f * scale);
+                    Polyline(painter, true, p(12, 11), p(12, 5));
+                    Polyline(painter, false, p(12, 7), p(17, 3.5f), p(19, 7.5f));
+                    painter.ClosePath();
+                    painter.Stroke();
+                    return;
+
                 // Stockpile: a crate with its lid seam. The tools in this category answer "where
                 // things go" — the crate is the where, and the seam is what says box rather
                 // than slab.
@@ -538,6 +550,7 @@ namespace Odyssey.Presentation.Ui
             { "ui.arch.tool.planter", HudGlyphKind.ToolPlanter },
 
             { PaletteTools.Fell, HudGlyphKind.ToolFell },
+            { PaletteTools.Harvest, HudGlyphKind.ToolHarvest },
             { PaletteTools.Mine, HudGlyphKind.ToolMine },
             { PaletteTools.Deconstruct, HudGlyphKind.ToolDeconstruct },
             { PaletteTools.Cancel, HudGlyphKind.ToolCancel },

@@ -300,7 +300,22 @@
   </JobDef>
 
   <!--
-    The kitchen (design 48 section 5), JobHandle 25. One job for both halves of a bill: fetching a
+    Picking a berry bush (design 45 section 6), driver 25: after medical
+    supplies' Treat and Patient at the merge with main, which shipped them first. No workTicks: the work is the plant's own, in
+    World/WildPlants.xml, as felling's is. Growing's skill and experience, because it is picking
+    a crop.
+  -->
+  <JobDef>
+    <defName>Job_Forage</defName>
+    <driver>25</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>4</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
+  <!--
+    The kitchen (design 48 section 5), JobHandle 26, after the forager's 25 (nature reached main first). One job for both halves of a bill: fetching a
     load of raw food into a station's pan, and cooking what the pan holds. The work is the
     recipe's (Recipes.xml) and not this def's, so there is no workTicks here - Job_Build's
     argument. It trains cooking at every working job's rate. Not casually interruptible: a cook
@@ -309,7 +324,7 @@
   -->
   <JobDef>
     <defName>Job_Cook</defName>
-    <driver>25</driver>
+    <driver>26</driver>
     <casuallyInterruptible>false</casuallyInterruptible>
     <expiryTicks>12000</expiryTicks>
     <trainsSkill>7</trainsSkill>

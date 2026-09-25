@@ -219,7 +219,7 @@ namespace Odyssey.Tests.Presentation
         {
             var world = new RenderTestWorld(8, 8, 4)
                 .Solid(4, 4, 0)
-                .Edifice(4, 4, 1, NaturalContent.EdificeTreeConifer, blocking: false)
+                .Edifice(4, 4, 1, NaturalContent.EdificeTreeBirch, blocking: false)
                 .Publish();
 
             bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, activeLayer: 1, Depth(1), out CellRef cell);

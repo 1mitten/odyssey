@@ -23,8 +23,8 @@ namespace Odyssey.Tests.Presentation
         public void ATreeResolvesToItsOwnModuleAndNotToTheWall()
         {
             var world = new RenderTestWorld(6, 6, 3)
-                .Solid(2, 2, 0).Edifice(2, 2, 1, NaturalContent.EdificeTreeConifer, blocking: false)
-                .Solid(3, 2, 0).Edifice(3, 2, 1, NaturalContent.EdificeTreeBroadleaf, blocking: false)
+                .Solid(2, 2, 0).Edifice(2, 2, 1, NaturalContent.EdificeTreeBirch, blocking: false)
+                .Solid(3, 2, 0).Edifice(3, 2, 1, NaturalContent.EdificeTreeMeadow, blocking: false)
                 .Solid(4, 2, 0).Edifice(4, 2, 1, CoreContent.EdificeWall)
                 .Publish();
 
@@ -45,7 +45,7 @@ namespace Odyssey.Tests.Presentation
             // The mesher emits a wall as up to four face panels and everything else as one body.
             // A tree drawn as panels would be the grey-box fault by another route.
             var world = new RenderTestWorld(6, 6, 3)
-                .Solid(2, 2, 0).Edifice(2, 2, 1, NaturalContent.EdificeTreeConifer, blocking: false)
+                .Solid(2, 2, 0).Edifice(2, 2, 1, NaturalContent.EdificeTreeBirch, blocking: false)
                 .Publish();
 
             int module = world.Model.EdificeModule(world.Index(2, 2, 1));

@@ -1990,6 +1990,23 @@ namespace Odyssey.EditorTools
             // own art at 0.6 is about 0.38 m across, in the band the ore lumps sit in. Pillow for
             // the reason the crop stages give — a mound is the honest fallback for a vegetable,
             // where the pillar's stake is the shape of a signpost.
+            // The wild foods (design 45 §6). A cluster of berries is the Farm pack's strawberry, the
+            // one small red fruit in the packs, and it is also what a ripe berry bush wears; a
+            // mushroom is the Meadow pack's own. Sized as one lump you could carry, like the rest.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemBerries, shape = ModuleShape.Pillow,
+                prefabName = "SM_Prop_Strawberry_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(2.5f, 2.5f, 2.5f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemMushrooms, shape = ModuleShape.Pillow,
+                prefabName = "SM_Prop_Mushroom_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.0f, 1.0f, 1.0f),
+            });
             rows.Add(new ModuleEntry
             {
                 moduleId = ModuleIds.ItemCarrots, shape = ModuleShape.Pillow,

@@ -886,6 +886,12 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Medical supplies (design 37): a small box, the same art on the ground, on a shelf and in an armful.</summary>
         public const string ItemMedicalSupplies = Prefix + "item.medicalsupplies";
 
+        /// <summary>Wild berries (design 45 §6): one berry cluster, heaped by the stack, and worn
+        /// by a ripe berry bush.</summary>
+        public const string ItemBerries = Prefix + "item.berries";
+
+        /// <summary>Mushrooms (design 45 §6): one mushroom, heaped by the stack.</summary>
+        public const string ItemMushrooms = Prefix + "item.mushrooms";
         /// <summary>The kitchen's three meals (design 48 §4): a tray of food on the ground, on a shelf and in an armful.</summary>
         public const string ItemCookedMeal = Prefix + "item.meal.cooked";
         public const string ItemVegetableMeal = Prefix + "item.meal.vegetable";
@@ -906,7 +912,8 @@ namespace Odyssey.Presentation.Rendering
             ItemMeal, ItemSalvage, ItemWood, ItemStone, ItemIronOre, ItemCoal, ItemCarrots,
             ItemBat, ItemCrowbar, ItemMachete, ItemArcBlade,
             ItemMedicalSupplies,
-            // The kitchen (design 48 §4), handles 12 to 14.
+            ItemBerries, ItemMushrooms,
+            // The kitchen (design 48 §4), handles 14 to 16.
             ItemCookedMeal, ItemVegetableMeal, ItemBurntMeal,
         };
 

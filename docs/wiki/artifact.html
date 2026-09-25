@@ -138,16 +138,16 @@ footer code{font-size:11.5px;color:var(--ink2)}
 </div></div></header>
 <div class="wrap">
 <nav aria-label="Sections"><h2>Sections</h2><ul class="navlist">
-<li><a href="#commodities">Commodities<b>52</b></a></li>
+<li><a href="#commodities">Commodities<b>54</b></a></li>
 <li><a href="#items">Items and equipment<b>34</b></a></li>
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
 <li><a href="#commands">Commands<b>53</b></a></li>
 <li><a href="#work">Work and skills<b>57</b></a></li>
-<li><a href="#colonists">Colonists<b>59</b></a></li>
+<li><a href="#colonists">Colonists<b>60</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>48</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
-<li><a href="#world">World and interface<b>129</b></a></li>
+<li><a href="#world">World and interface<b>134</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
 </ul></nav>
 <main>
@@ -156,15 +156,15 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>883</b><i>named entries</i></div>
+<div class="stat"><b>891</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>611</b><i>no art yet</i></div>
+<div class="stat m"><b>619</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
 <p id="nohits" class="empty" hidden>Nothing matches that search.</p>
 <section id="commodities" data-sec="1">
-<h2>Commodities <em class="count">52 entries</em></h2>
+<h2>Commodities <em class="count">54 entries</em></h2>
 <p class="blurb">What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the ore classes a wilderness colony sim would have, because the setting is a dead city and the ground is already full of manufactured things. These names appear in the resource ledger, in every bill and in every trade, so they are the names worth arguing about first.</p>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -375,6 +375,18 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.res.carrots" data-hay="carrots ui.res.carrots the first field crop. eaten straight, no cooking and no spoilage " data-gap="1">
 <div class="nm">Carrots<span class="k">ui.res.carrots</span></div>
 <div class="dsc">The first field crop. Eaten straight, no cooking and no spoilage</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.res.berries" data-hay="berries ui.res.berries picked from a wild berry bush. eaten straight; the bush grows more a handful of red berries" data-gap="1">
+<div class="nm">Berries<span class="k">ui.res.berries</span></div>
+<div class="dsc">Picked from a wild berry bush. Eaten straight; the bush grows more<span class="need">Needs drawing: a handful of red berries</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.res.mushrooms" data-hay="mushrooms ui.res.mushrooms found under the trees. eaten straight; more come up somewhere else two capped mushrooms" data-gap="1">
+<div class="nm">Mushrooms<span class="k">ui.res.mushrooms</span></div>
+<div class="dsc">Found under the trees. Eaten straight; more come up somewhere else<span class="need">Needs drawing: two capped mushrooms</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -891,9 +903,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> salvage gear</div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.arch.tool.fell" data-hay="chop trees ui.arch.tool.fell cut a tree down for wood an axe against a trunk" data-gap="1">
-<div class="nm">Chop trees<span class="k">ui.arch.tool.fell</span></div>
-<div class="dsc">Cut a tree down for wood<span class="need">Needs drawing: an axe against a trunk</span></div>
+<div class="row gap" id="ui.arch.tool.fell" data-hay="chop and clear ui.arch.tool.fell cut a tree down for wood, or clear a bush out of the way an axe against a trunk" data-gap="1">
+<div class="nm">Chop and clear<span class="k">ui.arch.tool.fell</span></div>
+<div class="dsc">Cut a tree down for wood, or clear a bush out of the way<span class="need">Needs drawing: an axe against a trunk</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -915,9 +927,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill low">low</span> tools and weapons</div>
 <div class="ms">M3</div>
 </div>
-<div class="row" id="ui.arch.tool.harvest" data-hay="harvest ui.arch.tool.harvest take the crop " data-gap="0">
+<div class="row" id="ui.arch.tool.harvest" data-hay="harvest ui.arch.tool.harvest pick the berries from a ripe berry bush. they grow back in three days " data-gap="0">
 <div class="nm">Harvest<span class="k">ui.arch.tool.harvest</span></div>
-<div class="dsc">Take the crop</div>
+<div class="dsc">Pick the berries from a ripe berry bush. They grow back in three days</div>
 <div class="art"><span class="pill">high</span> tools and weapons</div>
 <div class="ms">M3</div>
 </div>
@@ -1905,7 +1917,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">59 entries</em></h2>
+<h2>Colonists <em class="count">60 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -2099,6 +2111,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.status.harvesting" data-hay="harvesting ui.status.harvesting cutting a ripe crop and gathering it " data-gap="1">
 <div class="nm">Harvesting<span class="k">ui.status.harvesting</span></div>
 <div class="dsc">Cutting a ripe crop and gathering it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.status.foraging" data-hay="picking ui.status.foraging picking the berries off a wild bush a hand picking a berry" data-gap="1">
+<div class="nm">Picking<span class="k">ui.status.foraging</span></div>
+<div class="dsc">Picking the berries off a wild bush<span class="need">Needs drawing: a hand picking a berry</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -2942,7 +2960,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">129 entries</em></h2>
+<h2>World and interface <em class="count">134 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -3013,15 +3031,45 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.terrain.tree.conifer" data-hay="conifer ui.terrain.tree.conifer an evergreen of the meadow. chopped for wood " data-gap="1">
-<div class="nm">Conifer<span class="k">ui.terrain.tree.conifer</span></div>
-<div class="dsc">An evergreen of the meadow. Chopped for wood</div>
+<div class="row gap" id="ui.terrain.tree.birch" data-hay="birch ui.terrain.tree.birch a slim white-barked tree. quick to chop, not much wood in it a slim pale-trunked tree" data-gap="1">
+<div class="nm">Birch<span class="k">ui.terrain.tree.birch</span></div>
+<div class="dsc">A slim white-barked tree. Quick to chop, not much wood in it<span class="need">Needs drawing: a slim pale-trunked tree</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.terrain.tree.broadleaf" data-hay="broadleaf ui.terrain.tree.broadleaf a broad-crowned tree of the meadow. chopped for wood " data-gap="1">
-<div class="nm">Broadleaf<span class="k">ui.terrain.tree.broadleaf</span></div>
-<div class="dsc">A broad-crowned tree of the meadow. Chopped for wood</div>
+<div class="row gap" id="ui.terrain.tree.meadow" data-hay="meadow tree ui.terrain.tree.meadow a broad round-crowned tree of the open meadow. chopped for wood a round-crowned tree" data-gap="1">
+<div class="nm">Meadow tree<span class="k">ui.terrain.tree.meadow</span></div>
+<div class="dsc">A broad round-crowned tree of the open meadow. Chopped for wood<span class="need">Needs drawing: a round-crowned tree</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.tree.fruit" data-hay="fruit tree ui.terrain.tree.fruit a low spreading tree. it will bear fruit one day; for now it is wood a low tree with a spreading crown" data-gap="1">
+<div class="nm">Fruit tree<span class="k">ui.terrain.tree.fruit</span></div>
+<div class="dsc">A low spreading tree. It will bear fruit one day; for now it is wood<span class="need">Needs drawing: a low tree with a spreading crown</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.tree.giant" data-hay="giant tree ui.terrain.tree.giant a rare old giant. slow to bring down, and a great deal of wood a towering tree dwarfing a figure" data-gap="1">
+<div class="nm">Giant tree<span class="k">ui.terrain.tree.giant</span></div>
+<div class="dsc">A rare old giant. Slow to bring down, and a great deal of wood<span class="need">Needs drawing: a towering tree dwarfing a figure</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.bush" data-hay="bush ui.terrain.bush dense undergrowth. slow to push through; cleared before anything is built here a round green bush" data-gap="1">
+<div class="nm">Bush<span class="k">ui.terrain.bush</span></div>
+<div class="dsc">Dense undergrowth. Slow to push through; cleared before anything is built here<span class="need">Needs drawing: a round green bush</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.bush.berry" data-hay="berry bush ui.terrain.bush.berry a bush that bears berries a bush dotted with red berries" data-gap="1">
+<div class="nm">Berry bush<span class="k">ui.terrain.bush.berry</span></div>
+<div class="dsc">A bush that bears berries<span class="need">Needs drawing: a bush dotted with red berries</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.bush.picked" data-hay="picked berry bush ui.terrain.bush.picked a berry bush picked bare, growing its berries back a bare bush with no berries" data-gap="1">
+<div class="nm">Picked berry bush<span class="k">ui.terrain.bush.picked</span></div>
+<div class="dsc">A berry bush picked bare, growing its berries back<span class="need">Needs drawing: a bare bush with no berries</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -3944,7 +3992,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 883, "gaps": 611};</script>
+<script>window.WIKI={"total": 891, "gaps": 619};</script>
 <script>
 (function(){
   var D = window.WIKI;

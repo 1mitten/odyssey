@@ -44,6 +44,13 @@ the next session learns to ignore.
   The cooker is the POLYGON Shops stove: say whether it is the right size, and whether it faces the
   side the cook stands on. **Known:** the pan shows no food going raw → cooked yet, and the meals are
   Sci-Fi food trays.
+- **Can you click a campfire a terrace above you while building?** (`claude/terrace-click`,
+  design 42 §3a amended.) On a lower terrace, open Build and raise a campfire on the terrace one step
+  up, then click it with the palette still open: its pane should open, with *Make this the hearth*.
+  Click one on your own terrace near its edge too. Then turn Walls down off in Settings and look
+  into a hillside tunnel: the layer above should still be see-through, as before. A wrong answer is
+  a fire that does nothing, a click that selects the ground beside it, or rock drawn solid over a
+  tunnel with Walls down off.
 - **Does the selection highlight make it obvious who is selected?** (`claude/selection-highlight`, design 44.)
   Click a colonist, an item, a wall, a tree and a patch of ground. Each should gain a thin white line round its own
   shape and look a touch brighter; the ground gets a pale wash. Then walk a selected colonist behind a wall: a
@@ -53,6 +60,25 @@ the next session learns to ignore.
   and none brightened; click one of them and that one alone brightens. Read the overlay's `gpu` line at 4K with
   and without a selection. A wrong answer is a line you have to hunt for, a colonist who looks bleached, a
   selection you lose indoors, or `gpu` moving by more than a few tenths of a millisecond.
+- **The scenery made real** (design 45, `claude/meadow-forage` on `claude/meadow-nature`). New game
+  on the meadow. Look for: a felled tree going over away from its cutter and sinking; bushes you can
+  walk through but that slow a colonist; *Chop and clear* over a bush, then a wall there; a berry
+  bush's red clusters, the **Harvest** chip on it, eight berries beside it and the bush bare for
+  three days; mushrooms by the trees coming back elsewhere once eaten; grey stones in the grass
+  hauled once a store takes stone. Wrong answers: a giant that looks like any other tree; a bush
+  you cannot tell is a berry bush; the stones reading as litter rather than rock; a seven-button
+  orders strip that reads long (then Harvest moves off it).
+  **Since the first play (§12):** click anywhere on a bush's crown — ripe, picked or plain — and
+  the pane names the bush; the berries sit on the bush. Wrong: a click on a bush naming the grass,
+  or a berry hanging in the air beside its bush.
+  **And placing (§13):** arm a wall or an order and drag over tall grass and a bush — the grass under
+  the drag lies flat and the bush fades while you place, and comes back when you disarm. Wrong: a
+  blueprint you still cannot see, a bush that stays faded after placing, or grass that pops.
+  **And every order's cell is bare (§13a):** drag a Harvest box, a Chop box and a Mine box over tall
+  grass, and place a wall — no blade lies on any plate and the plates are whole under a faded bush or
+  tree. Wrong: grass across a plate, a leaf-shaped hole in one, or a bare square left behind after
+  the order is cancelled or done.
+
 - **Which rain reads as a rainy day: §7's particles, or GPU rain with wet ground?** (`claude/rain-look`,
   #203; design 43 §7, #202.) No Play needed. Open https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3, pick
   the Play framing, and wipe between “§7 as written” and “+ wet ground”; then try the Far framing

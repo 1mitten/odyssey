@@ -114,7 +114,9 @@ namespace Odyssey.Tests.Sim
         // Moved once, deliberately, 2026-09-25, the kitchen (design 48 §5): Building_Galley
         // appended at handle 12 — 350 W, 15 stuff and 10 scrap, 300 ticks, 100 hit points — in the
         // XML and the code oracle together. Nothing else in the table moved.
-        const ulong BuildingFingerprint = 6523920865622285533UL;
+        // Moved on merging main (design 45): the galley's edifice renumbered 17 -> 22, after the
+        // wild things, which reached main first. Re-taken from the merged table.
+        const ulong BuildingFingerprint = 12620201722140175747UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

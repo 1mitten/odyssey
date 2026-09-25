@@ -230,7 +230,7 @@ namespace Odyssey.Tests.Presentation
                 for (int y = 0; y <= 1; y++) world.Solid(x, z, y, NaturalContent.TerrainSubsoil);
                 world.Solid(x, z, 1, NaturalContent.TerrainGrass);
             }
-            world.Edifice(1, 1, 2, NaturalContent.EdificeTreeBroadleaf, blocking: false);
+            world.Edifice(1, 1, 2, NaturalContent.EdificeTreeMeadow, blocking: false);
             world.Publish();
 
             foreach (int code in TintsOf(MeshLayer(world, 1)))

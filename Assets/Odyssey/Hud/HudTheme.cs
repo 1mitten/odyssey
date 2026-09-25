@@ -705,6 +705,7 @@ namespace Odyssey.Hud
         public static HudColour? PinnedActionHue(string key) => key switch
         {
             PaletteTools.Fell => OrderColours.Hue(DesignateTool.Fell),
+            PaletteTools.Harvest => OrderColours.Hue(DesignateTool.Harvest),
             PaletteTools.Mine => OrderColours.Hue(DesignateTool.Mine),
             PaletteTools.Deconstruct => OrderColours.Hue(DesignateTool.Deconstruct),
             PaletteTools.Cancel => OrderColours.Hue(DesignateTool.Cancel),

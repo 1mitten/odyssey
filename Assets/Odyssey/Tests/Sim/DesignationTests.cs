@@ -35,7 +35,7 @@ namespace Odyssey.Tests.Sim
 
             var edifices = new List<PlacedEdifice>();
             int tree = size.Index(3, 3, Layer);
-            edifices.Add(new PlacedEdifice { CellIndex = tree, Def = NaturalContent.EdificeTreeConifer, Stuff = NaturalContent.StuffWood });
+            edifices.Add(new PlacedEdifice { CellIndex = tree, Def = NaturalContent.EdificeTreeBirch, Stuff = NaturalContent.StuffWood });
             grid.Edifice[tree] = 0;
 
             // The ruined city's: a concrete wall the generator stamped, so Built is false.

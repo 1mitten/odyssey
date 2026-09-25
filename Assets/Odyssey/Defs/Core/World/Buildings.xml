@@ -460,14 +460,14 @@
 
   <!--
     THE GALLEY (design 48 section 5): the electric cooker, where meals are cooked from bills.
-    edifice 17 is CoreContent.EdificeGalley. a-18's electric stove draws 350 W, whenever it is
+    edifice 22 is CoreContent.EdificeGalley, after the wild things of design 45. a-18's electric stove draws 350 W, whenever it is
     switched on, as the heater does. One cell, blocking, rotating, wanting a clear cell; built of
     wood or stone with scrap metal in its workings, the heater's recipe a little heavier.
   -->
   <BuildingDef>
     <defName>Building_Galley</defName>
     <label>galley</label>
-    <edifice>17</edifice>
+    <edifice>22</edifice>
     <blocking>true</blocking>
     <rotates>true</rotates>
     <needsClearCell>true</needsClearCell>

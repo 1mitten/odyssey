@@ -1423,6 +1423,12 @@ namespace Odyssey.Presentation.Bootstrap
         /// out, asked here once and written to the slice, which every pass then reads — the one
         /// place the rule is evaluated, so no two passes can disagree about it.
         /// </summary>
+        /// <summary>
+        /// The player's Walls down choice, before build mode takes it out: where the ground is
+        /// (<see cref="SliceSettings.landscapeGround"/>), not what is drawn.
+        /// </summary>
+        bool WallsChosenDown() => Directors?.Settings.IsOn(GraphicsOption.WallsDown) ?? false;
+
         bool WallsLoweredNow()
         {
             HudDirectors? directors = Directors;
@@ -1448,6 +1454,7 @@ namespace Odyssey.Presentation.Bootstrap
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
             SliceSettings slice = cameraRig != null ? cameraRig.slice : new SliceSettings();
             slice.wallsLowered = WallsLoweredNow();
+            slice.landscapeGround = WallsChosenDown();
             slice.landscapeFloor = _model.LowestOutdoorLayer;
 
             _frameTimer.Restart();
@@ -2096,6 +2103,12 @@ namespace Odyssey.Presentation.Bootstrap
                 // The two-cell mark went with them and needs no replacement: a bed's ghost spans
                 // both of its cells on its own, which is what makes the footprint legible now.
                 DrawSiteGhost(cell, sites[i].Building, sites[i].Stuff, sites[i].Facing);
+                // The grass lies flat under a waiting order until it is built (design 45 §13), as
+                // it does under an order's mark and an item: a blueprint seen through grass is a
+                // blueprint not seen.
+                PlacementClearing.Rect(cell, cell, out Vector2 low, out Vector2 high);
+                _renderer.Clearance.StampRect(low, high, PlacementClearing.Margin * 0.5f);
+                _renderer.Clearance.CutRect(low, high);
 
                 // **A slab does not rise, so it must not be drawn rising** (owner, 2026-09-17:
                 // "these little gaps or white lines appearing on the builds"). DrawCellFill grows
@@ -2467,8 +2480,19 @@ namespace Odyssey.Presentation.Bootstrap
             if (_renderer == null || _designate == null) return;
 
             DesignateDirector director = _designate.Director;
+            _placement.Clear();
+            bool armed = director.Tool != DesignateTool.None && PlacementClearing.Enabled;
             if (!director.TryPreview(out CellRef min, out CellRef max))
             {
+                if (armed && director.Hover is CellRef hover && _grid != null)
+                {
+                    CellRef at = hover;
+                    ConstructionGrid? sites = _colony?.Construction;
+                    if (director.Tool == DesignateTool.Build && sites != null)
+                        at = _grid.Size.FromIndex(sites.WhereItWouldLand(_grid.Index(hover), director.Building));
+                    _placement.Add((at, at));
+                }
+                ClearForPlacement(armed);
                 DrawHoverGhost(director);
                 return;
             }
@@ -2491,12 +2515,19 @@ namespace Odyssey.Presentation.Bootstrap
                 _previewLayer = min.Y;
                 _previewIsSlab = ConstructionContent.BuildingAt(director.Building).slab;
                 BuildPreview.Gather(min, max, _previewLayerAt ??= PreviewLayerAt, _previewBoxes);
+                if (armed)
+                    for (int i = 0; i < _previewBoxes.Count; i++)
+                        _placement.Add((_previewBoxes[i].Min, _previewBoxes[i].Max));
+                ClearForPlacement(armed);
 
                 for (int i = 0; i < _previewBoxes.Count; i++)
                     DrawRunGhosts(_previewBoxes[i], director.Building, director.Stuff, director.Facing);
 
                 return;
             }
+
+            if (armed) _placement.Add((min, max));
+            ClearForPlacement(armed);
 
             // The order tools' own colours, below the build branch rather than above it, because
             // build no longer has one: a ghost is tinted by its material or by its refusal, so a
@@ -2511,6 +2542,24 @@ namespace Odyssey.Presentation.Bootstrap
             for (int x = min.X; x <= max.X; x++)
                 _renderer.DrawCellMark(new CellRef(x, z, min.Y), tint);
         }
+
+        /// <summary>
+        /// While any build or order tool is armed, clear the ground and the growth over what it
+        /// would act on so the ghost can be seen (design 45 §13; owner, 2026-09-25: "the
+        /// grass/bushes/foliage is getting in the way of placing any orders — I can't see the
+        /// blueprint"): the grass lies flat under the footprint, and the bushes and trees standing
+        /// over it or in front of it fade. The footprint is the dragged box — the build's boxes
+        /// where it steps up a riser — or the cell under the pointer. Nothing while no tool is
+        /// armed, so the bushes keep their "never fade" everywhere else.
+        /// </summary>
+        void ClearForPlacement(bool armed)
+        {
+            Vector3 eye = cameraRig != null ? cameraRig.transform.position : Vector3.zero;
+            _renderer!.SetPlacement(_placement, eye);
+            PlacementClearing.Stamp(_renderer.Clearance, armed, _placement);
+        }
+
+        readonly List<(CellRef Min, CellRef Max)> _placement = new List<(CellRef Min, CellRef Max)>();
 
         /// <summary>
         /// The thing under the pointer, before any button has been pressed.

@@ -510,6 +510,14 @@ namespace Odyssey.Tests.Sim
             // zeros in the job counters; the probe diffs clean.
             // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
             // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
+            // 2026-09-25, the scenery made real (design 45, M5): the trees carry their species
+            // and the undergrowth pass placed bushes, each an edifice with its flag, so the
+            // generated board moved. The probe against main: the generated census is identical
+            // (the same people, the same items, the same starting cells) and the simulated one
+            // differs only where it should - the fifteen colonists wander through bushes at a
+            // price, so they made 95 wanders in the ten thousand ticks where they made 105, and
+            // ended on different cells. Food, rest, mood and experience are unchanged. The bare
+            // meadow and the city did not move: neither grows a bush.
             // 2026-09-25, jumping a one-cell stream (design 46): Simulated only, and this board
             // only — the bare meadow and the city have no stream and did not move, nor did
             // Generated. The colonists behaved differently, and in one way: they take different
@@ -520,8 +528,25 @@ namespace Odyssey.Tests.Sim
             // differs in exactly the same three numbers and nothing else.
             // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
-            Generated = 13297203415180101697UL,
-            Simulated = 4861233867343888290UL,
+            // 2026-09-25, both at once on merging main into the scenery line: the bushes' wander
+            // price and the stream jump together. Re-taken from the merged code, not adopted from
+            // either side; the probe against main is in the merge commit's message.
+            // 2026-09-25 again, M13 (design 45 §6): the map lays its loose stones and first
+            // mushrooms - 680 stone in 136 stacks and 89 mushrooms in 22, by the probe - and one
+            // more stack of mushrooms came up in the ten thousand ticks. Every colonist number is
+            // the M5 run's to the digit (cells, food, rest, mood, progress, the 95 wanders): the
+            // colony has no store, so nobody carried a stone, and nobody was hungry enough to
+            // walk to a mushroom. The bare meadow and the city did not move.
+            // Both lines together, 2026-09-25: M13's stones and mushrooms on the merged M5-and-jump
+            // board; re-taken from the merged code.
+            // The scenery line merged with medical supplies (design 37), 2026-09-25: re-taken from the
+            // merged code; the probe against main is in the merge commit's message.
+            // The kitchen merged with the wild foods, 2026-09-25: an eighth work priority and skill
+            // on every colonist and Job_Cook's counter pair, on the wild-food board. Re-taken from
+            // the merged code; GoldenColonyProbe on main (2a1cfa63) and on the merge is identical on
+            // all three boards, so the hash sees more and no colony does anything different.
+            Generated = 1045594947919303250UL,
+            Simulated = 11044222309838476707UL,
         };
 
         /// <summary>

@@ -86,6 +86,13 @@ namespace Odyssey.Hud
         /// make rerouting a wire under a floor cost the floor. This takes the line and nothing else.
         /// </summary>
         RemoveConduit = 8,
+
+        /// <summary>
+        /// Pick a ripe berry bush (design 45 §6). A verb applied to what is already in a cell, like
+        /// <see cref="Fell"/>; a bush that has been picked, or anything that is not a berry bush,
+        /// is refused by the simulation cell by cell.
+        /// </summary>
+        Harvest = 9,
     }
 
     /// <summary>
