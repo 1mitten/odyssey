@@ -48,10 +48,10 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Steps taken as a hop: one block up or down, with nothing built.</summary>
         public int HopSteps { get; private set; }
 
-        /// <summary>Jumps over a stream that landed on the far bank (design 43).</summary>
+        /// <summary>Jumps over a stream that landed on the far bank (design 44).</summary>
         public int JumpSteps { get; private set; }
 
-        /// <summary>Jumps over a stream that fell short, into the water (design 43 §6).</summary>
+        /// <summary>Jumps over a stream that fell short, into the water (design 44 §6).</summary>
         public int JumpsFailed { get; private set; }
         public int PathsServed { get; private set; }
         public int PathsFailed { get; private set; }
@@ -155,7 +155,7 @@ namespace Odyssey.Sim.Pawns
                     return;
                 }
 
-                // Take-off (design 43 §6). The one roll that decides a jump is made the first
+                // Take-off (design 44 §6). The one roll that decides a jump is made the first
                 // tick it is the step in hand, before any of its price is paid, so the drawing
                 // knows where it lands for the whole of the step rather than finding out at the
                 // end — which would move the figure 2.5 m in a frame.
@@ -223,7 +223,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Roll a jump over a stream once, at take-off, and record where it lands (design 43 §6).
+        /// Roll a jump over a stream once, at take-off, and record where it lands (design 44 §6).
         /// Returns the cell the step now ends in: the far bank, or the water short of it.
         ///
         /// <para>The chance is <see cref="MovementDef.jumpFailPerMille"/>, scaled up by
@@ -251,7 +251,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// The chance a jump falls short, per mille (design 43 §6): the base, doubled (by default)
+        /// The chance a jump falls short, per mille (design 44 §6): the base, doubled (by default)
         /// while carrying, and divided by the pawn's condition — 1.0 when well, 1.43 at the floor.
         /// Clamped to 1,000. Public so the formula is tested as a formula and not only through a
         /// one-in-thirty event.
@@ -266,7 +266,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// The one roll (design 43 §6), on <see cref="PawnPurpose.Jump"/> keyed by the tick and the
+        /// The one roll (design 44 §6), on <see cref="PawnPurpose.Jump"/> keyed by the tick and the
         /// pawn — the melee roll's discipline — so a lockstep twin rolls the same.
         /// </summary>
         public static bool FallsShort(uint seed, int tick, int pawnId, int failPerMille)
@@ -323,7 +323,7 @@ namespace Odyssey.Sim.Pawns
             CellRef pa = _ctx.Size.FromIndex(from);
             CellRef pb = _ctx.Size.FromIndex(to);
 
-            // A jump over a one-cell stream (design 43). Without this it fell through to
+            // A jump over a one-cell stream (design 44). Without this it fell through to
             // EnterCost and was charged as one flat cell for two cells of ground — the planner and
             // the mover disagreeing about a price, which is the fault HopCost exists to prevent.
             if (NavGraph.IsJump(pa, pb)) return NavGraph.JumpCost();

@@ -7,7 +7,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Presentation.World
 {
     /// <summary>
-    /// Jumping a one-cell stream, as the live figures draw it (design 43 §7). Where the figure is
+    /// Jumping a one-cell stream, as the live figures draw it (design 44 §7). Where the figure is
     /// comes from <see cref="JumpArc"/> through <see cref="PawnPose"/>; what its body does comes
     /// from here — the pack's take-off and landing clips in the combat action slot, timed from the
     /// step's phase at speed nought as a sword swing is, and the air weight the footing fades by.

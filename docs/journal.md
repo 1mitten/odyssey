@@ -12575,7 +12575,7 @@ and passed on the re-run, on a machine with a CI job running beside it.
 The owner: *"A colonist/bandit assumes to swim across a stream. If the stream is 1 tile … the colonist
 will jump across and there is already synty animation."* An interview settled the rest: one cell only,
 people with their load, water only, wading kept, walking pace, and a jump that can fail into the
-water with the harm left for the health model (design 43 §2).
+water with the harm left for the health model (design 44 §2).
 
 Two things in the code decided more than the interview did. **A stream is not level with its banks**
 — it is cut a layer down — so crossing one was never a wade at all but a drop in and a hop out, 290
@@ -12603,3 +12603,8 @@ fewer wander legs, with needs, items and experience identical.
 **The Unity tier was not run.** This session had no Unity, so the drawing — `JumpArc`, the clips in
 the combat slot, the splash — is unproven beyond reading, and the catalogue rows were added to the
 asset by hand with empty clip references until the owner's rebuild fills them.
+
+**Renumbered 43 → 44 on merging `main`**, which took 43 for the weather (#208) while this was in
+review. Left as 43, `Intents.cs` would have cited "design 43 §6" for the jump and "design 43 §8" for
+the sky three lines apart. Only the lines this branch added were rewritten; the weather's own
+references are untouched.

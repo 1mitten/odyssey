@@ -136,7 +136,7 @@ namespace Odyssey.Presentation.Rendering
             // rate, and it keeps the old meaning — a cost unit as a hundredth of a step — because
             // that is what those fixtures were written against.</para>
             //
-            // Both halves are StepProgress's now, shared with the jump's clips (design 43 §7).
+            // Both halves are StepProgress's now, shared with the jump's clips (design 44 §7).
             //
             // Along `travel` and not along `heading`: the bearing has had its vertical part taken
             // out on purpose, and a pawn that moved along it would climb a shaft without going
@@ -144,7 +144,7 @@ namespace Odyssey.Presentation.Rendering
             // walks along the drawn ground instead of cutting the chord between two cell centres.
             float t = StepProgress(in pawn, tickAlpha, movePerTick);
 
-            // **A jump over a stream is drawn from its own curve** (design 43 §7), and before
+            // **A jump over a stream is drawn from its own curve** (design 44 §7), and before
             // anything below touches it: the wading branch would take a short jump for a step into
             // the water, the ground clamp would sample the bank under whichever cell the figure is
             // "over" when it is 2.5 m from both, and the sidestep would push a body in mid-air.
@@ -310,7 +310,7 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>
         /// How far through its step a pawn is, 0 to 1, at this frame: the published progress and
         /// the sub-tick carry, exactly as <see cref="Of"/> reads it — one copy, so anything else
-        /// timed to a step (the jump's clips, design 43 §7) cannot drift from where the figure is.
+        /// timed to a step (the jump's clips, design 44 §7) cannot drift from where the figure is.
         /// </summary>
         public static float StepProgress(in PawnView pawn, float tickAlpha, int movePerTick)
         {

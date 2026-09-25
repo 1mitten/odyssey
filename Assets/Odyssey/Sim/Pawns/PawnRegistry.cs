@@ -463,7 +463,7 @@ namespace Odyssey.Sim.Pawns
                     pawn.Kind,
                     flags,
                     seated,
-                    // A jump falling short lands a layer below the bank it left (design 43 §6).
+                    // A jump falling short lands a layer below the bank it left (design 44 §6).
                     pawn.JumpLanding >= 0 && pawn.JumpLanding / size.LayerStride != pawn.Cell / size.LayerStride));
 
                 // The fight (design 33 §5), sparse, and for animals as much as people: the health

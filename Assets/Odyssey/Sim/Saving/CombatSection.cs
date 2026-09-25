@@ -25,7 +25,7 @@ namespace Odyssey.Sim.Saving
     /// began. Four ints appended to every record, so a record is read the same way whatever is set;
     /// layouts 1 and 2 still load, with nobody knocked down and no swing in the air.</para>
     ///
-    /// <para><b>Layout 4</b> is the jump over a stream (design 43 §6): where the jump in the air
+    /// <para><b>Layout 4</b> is the jump over a stream (design 44 §6): where the jump in the air
     /// lands, one int appended to every record. It lives here beside the finishing step because
     /// both are a step the world cannot re-derive; layouts 1 to 3 load with nobody in the air.</para>
     ///
@@ -46,7 +46,7 @@ namespace Odyssey.Sim.Saving
         /// The record layout this build writes. 1 is C1's: flags, quiet tick, finishing step. 2 is
         /// the combat contracts step's: C1's four, then the eight combat fields. 3 appends the
         /// knock-down clock and the pending swing (design 33 §9b, §9g). 4 appends the jump's landing
-        /// (design 43 §6).
+        /// (design 44 §6).
         /// </summary>
         public const int Layout = 4;
 
@@ -175,7 +175,7 @@ namespace Odyssey.Sim.Saving
                     pawn.FinishingStepTo = finishing;
                 }
 
-                // A jump in the air (design 43 §6), rebuilt as the one step it is, landing where it
+                // A jump in the air (design 44 §6), rebuilt as the one step it is, landing where it
                 // was rolled to land. Never rolled again: the roll is made only while no landing
                 // is set. When an order interrupted the jump the finishing step is this same cell
                 // and the path above is already right.

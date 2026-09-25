@@ -173,7 +173,7 @@ namespace Odyssey.Sim.Pawns
         public int FinishingStepTo { get; internal set; } = -1;
 
         /// <summary>
-        /// Where the jump in hand will land, or -1 (design 43 §6): the far bank, or the water short
+        /// Where the jump in hand will land, or -1 (design 44 §6): the far bank, or the water short
         /// of it.
         ///
         /// <para>Set the tick a jump becomes the step in hand, by the one roll that decides it, and
@@ -1028,7 +1028,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// A jump fell short (design 43 §6): the step in hand now ends in the water under the gap,
+        /// A jump fell short (design 44 §6): the step in hand now ends in the water under the gap,
         /// and the path ends there too. The job's walk asks for a new one from the water on the
         /// tick it lands, so the hop out is planned like any other.
         /// </summary>
@@ -1080,7 +1080,7 @@ namespace Odyssey.Sim.Pawns
             // The response (design 33 §18c) is two bits of the same word, nought at the default, so
             // a colony that never set one hashes as it did before. Bits 24 and 25: 22 and 23 are
             // left free for the line building beside this one.
-            // A jump in the air (design 43 §6) is bit 26, and its landing is walked only while
+            // A jump in the air (design 44 §6) is bit 26, and its landing is walked only while
             // there is one, so a colony that never jumps hashes as it did before jumping.
             bool combat = HasCombatState;
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;

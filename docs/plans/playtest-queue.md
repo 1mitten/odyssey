@@ -47,7 +47,7 @@ the next session learns to ignore.
   target (the third one especially, whose timing was broken until now), or the machete and blade
   swinging differently from before.
 - **Does a colonist jump a one-cell stream, and does it read as a jump?** (`claude/funny-allen-2qipcn`,
-  design 43.) **Rebuild the module catalogue first** (the jump rows are in the asset with empty clip
+  design 44.) **Rebuild the module catalogue first** (the jump rows are in the asset with empty clip
   references until then). New game, find a stream one cell wide, right-click a drafted colonist to
   the far bank. They walk to the lip, gather, leap and land on the far lip without touching the
   water. A wrong answer is a figure that slides across level with the bank (the clips did not

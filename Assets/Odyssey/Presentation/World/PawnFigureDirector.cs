@@ -1111,7 +1111,7 @@ namespace Odyssey.Presentation.World
             _frameTicks = snapshot.Tick + tickAlpha;
             FightingFigures = 0;
 
-            // And the part-tick itself, for the jump's clips (design 43 §7): timed from the step
+            // And the part-tick itself, for the jump's clips (design 44 §7): timed from the step
             // exactly as PawnPose places the figure on it, through PawnPose.StepProgress.
             _tickAlpha = tickAlpha;
             _movePerTick = movePerTick;
@@ -1590,7 +1590,7 @@ namespace Odyssey.Presentation.World
                 figure.SeenSerial = pawn.GestureSerial;
             }
 
-            // A jump over a stream (design 43 §7): how far off the ground, and which clip is due —
+            // A jump over a stream (design 44 §7): how far off the ground, and which clip is due —
             // before the fight is posed, because the jump borrows the fight's slot.
             PoseJump(figure, in pawn);
 
@@ -1759,7 +1759,7 @@ namespace Odyssey.Presentation.World
             // water carries what it was carrying, works where it was working, and pays the third
             // speed the cost class has always charged. The helpless-swimmer rules are deep water's
             // and are not built — docs/design/20-swimming-and-water.md.
-            // A jump falling short is the exception (design 43 §7): its step runs from the bank
+            // A jump falling short is the exception (design 44 §7): its step runs from the bank
             // into the water like a wade, but the body is in the air for most of it and must not
             // lie down until it is nearly at the water line.
             float afloat = ForceSwim ?? (JumpArc.IsJump(in pawn) && pawn.JumpingShort

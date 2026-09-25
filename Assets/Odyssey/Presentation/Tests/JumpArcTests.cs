@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Odyssey.Tests.Presentation
 {
     /// <summary>
-    /// How a figure is drawn jumping a one-cell stream, or falling short into it (design 43 §7).
+    /// How a figure is drawn jumping a one-cell stream, or falling short into it (design 44 §7).
     ///
     /// <para>Everything here is on a board with no world under it — flat ground, no relief, no
     /// banks — so the numbers are the arc's own and not the terrain's. What only a board can show

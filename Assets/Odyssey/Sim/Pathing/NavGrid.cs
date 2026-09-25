@@ -278,7 +278,7 @@ namespace Odyssey.Sim.Pathing
 
         /// <summary>
         /// Jumping a one-cell stream, bank to bank on one layer: two cells of ground for the
-        /// price of two cells of ground (design 43 §3).
+        /// price of two cells of ground (design 44 §3).
         ///
         /// <para><b>Below the 290 it replaces</b> — <see cref="Drop"/> into the channel and
         /// <see cref="JumpUp"/> out of it — so a colonist offered both jumps. <b>Not below 200</b>,

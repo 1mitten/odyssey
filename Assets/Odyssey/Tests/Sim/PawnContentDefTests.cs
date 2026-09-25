@@ -251,7 +251,7 @@ namespace Odyssey.Tests.Sim
         // renamed PawnKind_Bandit -> PawnKind_Bandit (index 3 unchanged, so no save moves), its
         // traverse mode likewise, and PawnKindDef.weapon became weapons, the bandit's being a
         // crowbar or a bat where it was a machete. No golden moved: no golden has a bandit.
-        // 2026-09-25, design 43 §6: MovementDef gained jumpFailPerMille (30) and
+        // 2026-09-25, design 44 §6: MovementDef gained jumpFailPerMille (30) and
         // jumpFailCarryingPerMille (2,000) — the jump over a one-cell stream falling short.
         const ulong ContentFingerprint = 17786154627329906510UL;
 

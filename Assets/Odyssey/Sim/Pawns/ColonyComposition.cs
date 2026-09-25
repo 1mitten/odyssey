@@ -243,7 +243,7 @@ namespace Odyssey.Sim.Pawns
                 // a debug-only wiring path a real colony would not otherwise get.
                 .AddIntentHandler(IntentKind.SpawnPawn, pawns.Pawns.HandleSpawnPawn)
                 .AddIntentHandler(IntentKind.DebugArmColonists, pawns.Pawns.HandleDebugArmColonists)
-                // Jumps always fail (design 43 §6): a switch on the context, read by the one roll.
+                // Jumps always fail (design 44 §6): a switch on the context, read by the one roll.
                 .AddIntentHandler(IntentKind.DebugJumpsFail, intent =>
                 {
                     bool on = intent.A != 0;

@@ -339,7 +339,7 @@ namespace Odyssey.Presentation.Audio
             _airborne.AddRange(_airborneNow);
         }
 
-        // ---- a jump falling short (design 43 §7) ----------------------------------------------
+        // ---- a jump falling short (design 44 §7) ----------------------------------------------
 
         readonly Dictionary<int, CellRef> _fallingShort = new();
         readonly Dictionary<int, CellRef> _fallingShortNow = new();

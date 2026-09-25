@@ -243,7 +243,7 @@ namespace Odyssey.Sim.Contracts
         public readonly bool Seated;
 
         /// <summary>
-        /// The step in hand is a jump over a stream that is falling short (design 43 §6): it
+        /// The step in hand is a jump over a stream that is falling short (design 44 §6): it
         /// leaves the bank as a jump and comes down in the water at <see cref="NextCell"/>, where a
         /// step of the same shape is otherwise a drop off the bank. A bool beside
         /// <see cref="Seated"/> for <see cref="Seated"/>'s reasons — the flags byte is full, and

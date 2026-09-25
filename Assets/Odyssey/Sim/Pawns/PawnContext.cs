@@ -75,7 +75,7 @@ namespace Odyssey.Sim.Pawns
         public uint Seed { get; internal set; }
 
         /// <summary>
-        /// The debug menu's <i>Jumps always fail</i> (design 43 §6): every jump over a stream falls
+        /// The debug menu's <i>Jumps always fail</i> (design 44 §6): every jump over a stream falls
         /// short while it is set, because a one-in-thirty event is not something a playtest can
         /// wait for. <b>Debug only: unsaved and unhashed</b>, like the rest of the menu's switches —
         /// a run that used it is not a run anybody compares against.

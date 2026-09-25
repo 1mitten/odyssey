@@ -9,7 +9,7 @@ namespace Odyssey.Presentation.Rendering
 {
     /// <summary>
     /// How a figure is drawn jumping a one-cell stream, bank to bank, or falling short into it
-    /// (design 43 §7). The jump's sibling of <see cref="HopArc"/>, and on the same terms: the
+    /// (design 44 §7). The jump's sibling of <see cref="HopArc"/>, and on the same terms: the
     /// simulation decides that a jump happens, what it costs and where it lands
     /// (<c>NavGraph.IsJumpAcross</c>, <c>NavGraph.JumpCost</c>, <c>Pawn.JumpLanding</c>); this only
     /// decides where the figure is between the two ends. It cannot move a pawn or touch the hash.

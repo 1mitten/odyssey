@@ -134,7 +134,7 @@ namespace Odyssey.Sim.Pawns
             bool midStep = pawn.HasPath && pawn.MoveProgress > 0;
             int next = midStep ? pawn.Path[pawn.PathIndex] : -1;
             int progress = pawn.MoveProgress;
-            // A jump in the air keeps where it lands (design 43 §6): without this the kept step
+            // A jump in the air keeps where it lands (design 44 §6): without this the kept step
             // would be taken off the bank a second time, and rolled a second time.
             int landing = pawn.JumpLanding;
 

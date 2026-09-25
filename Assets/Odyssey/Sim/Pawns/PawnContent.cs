@@ -681,7 +681,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// How often a well, unladen person's jump over a one-cell stream falls short, per mille
-        /// (design 43 §6): 30, one in thirty-three. INVENTED. A failed jump lands in the water
+        /// (design 44 §6): 30, one in thirty-three. INVENTED. A failed jump lands in the water
         /// and costs a soaking and a few seconds; nothing is hurt until the health model can
         /// carry an injury.
         /// </summary>
@@ -1618,7 +1618,7 @@ namespace Odyssey.Sim.Pawns
         public const uint Knockback = 0x1283_5B01;
 
         /// <summary>
-        /// Whether a jump over a stream falls short (design 43 §6). SHA-256's eleventh round
+        /// Whether a jump over a stream falls short (design 44 §6). SHA-256's eleventh round
         /// constant.
         /// </summary>
         public const uint Jump = 0x2431_85BE;

@@ -202,7 +202,7 @@ namespace Odyssey.Presentation.Ui
         bool DebugJumpsFailOn => _debugJumpsFailColony != null && ReferenceEquals(_debugJumpsFailColony, _boot?.Colony);
 
         /// <summary>
-        /// Jumps always fail (design 43 §6): flips the switch on the pawn context through its
+        /// Jumps always fail (design 44 §6): flips the switch on the pawn context through its
         /// intent, which applies while paused, and shows which it is.
         /// </summary>
         void ToggleJumpsFail()

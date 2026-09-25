@@ -468,7 +468,7 @@ namespace Odyssey.Tests.Sim
             // zeros in the job counters; the probe diffs clean.
             // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
             // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
-            // 2026-09-25, jumping a one-cell stream (design 43): Simulated only, and this board
+            // 2026-09-25, jumping a one-cell stream (design 44): Simulated only, and this board
             // only — the bare meadow and the city have no stream and did not move, nor did
             // Generated. The colonists behaved differently, and in one way: they take different
             // routes. The probe against main is identical in items, needs, mood, experience,

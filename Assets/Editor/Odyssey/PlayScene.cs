@@ -2027,7 +2027,7 @@ namespace Odyssey.EditorTools
         }
 
         /// <summary>
-        /// Jumping a one-cell stream (design 43 §7): Base Locomotion's walking take-off and landing,
+        /// Jumping a one-cell stream (design 44 §7): Base Locomotion's walking take-off and landing,
         /// Polygon, in place, one per body. <b>Both clips live in the take-off's file</b>
         /// (<c>A_Jump_Walking_Femn.fbx</c> holds <c>A_Jump_Walking_Femn</c> and
         /// <c>A_Land_Walking_Femn</c>), so each entry names its file beside its clip and is resolved
@@ -2060,7 +2060,7 @@ namespace Odyssey.EditorTools
 
         /// <summary>
         /// Resolve the jump rows' clips by file and exact clip name, in place only, Humanoid only
-        /// (design 43 §7). A clip that is missing leaves the figure holding its gait through the
+        /// (design 44 §7). A clip that is missing leaves the figure holding its gait through the
         /// jump, which is what a checkout without the pack does anyway.
         /// </summary>
         static void ResolveJumpClips(List<ModuleEntry> rows)
@@ -2193,7 +2193,7 @@ namespace Odyssey.EditorTools
             foreach (ModuleEntry row in rows)
             foreach (CombatClipEntry entry in row.combat)
             {
-                // The jump's rows are Base Locomotion's, not the Sword Combat pack's (design 43 §7).
+                // The jump's rows are Base Locomotion's, not the Sword Combat pack's (design 44 §7).
                 if (Array.IndexOf(ModuleIds.JumpRows, row.moduleId) >= 0) continue;
 
                 entry.clip = FindSwordCombatClip(entry.clipName, out string? path);

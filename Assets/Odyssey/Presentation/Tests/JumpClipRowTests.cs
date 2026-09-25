@@ -9,7 +9,7 @@ using UnityEngine;
 namespace Odyssey.Tests.Presentation
 {
     /// <summary>
-    /// The jump's two clips in the committed catalogue (design 43 §7): the take-off and the landing,
+    /// The jump's two clips in the committed catalogue (design 44 §7): the take-off and the landing,
     /// each naming the masculine and the feminine clip and the file both live in; every clip that
     /// resolved is Base Locomotion's in-place, Humanoid walking jump, and as long as
     /// <see cref="JumpArc"/> assumes; where none did — the runner — the figure holds its gait.

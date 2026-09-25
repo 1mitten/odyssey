@@ -1,4 +1,4 @@
-# 43 — Jumping a one-cell stream
+# 44 — Jumping a one-cell stream
 
 **Status:** designed and built 2026-09-25, **not yet played, and the Unity tier has not been run**
 (the session that built it had no Unity: the simulation half is proven in the fast and Long tiers,
