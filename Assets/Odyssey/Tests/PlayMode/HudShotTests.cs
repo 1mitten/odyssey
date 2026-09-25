@@ -339,6 +339,124 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// The bill list (design 49), photographed on three stations: an electric cooker with no
+        /// power (the status strip up, three bills in their three modes, one paused), a campfire
+        /// with bills and no strip, and a campfire with none. Writes <c>Logs/bills-*.png</c>, a
+        /// crop of the bottom-left corner where the pane docks. Asserts only that the control is
+        /// on the pane and at the bench width; the rest is for an eye.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator PhotographTheBillList()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot);
+            RenderTexture? target = null;
+            try
+            {
+                yield return new WaitForSecondsRealtime(0.5f);
+                for (int i = 0; i < 20; i++) yield return null;
+                Assert.That(boot.Colony, Is.Not.Null, "no colony to put a station in");
+                Odyssey.Sim.Pawns.ColonyWorld colony = boot.Colony!;
+                Odyssey.Sim.Cooking.Kitchen kitchen = colony.Pawns.Kitchen!;
+
+                var doc = root.GetComponentInChildren<UIDocument>();
+                var settings = Object.Instantiate(doc.panelSettings);
+                target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB)
+                {
+                    antiAliasing = 2,
+                };
+                settings.clearColor = true;
+                settings.colorClearValue = new Color(0.36f, 0.58f, 0.22f);
+                settings.targetTexture = target;
+                doc.panelSettings = settings;
+
+                var free = new List<int>();
+                Odyssey.Sim.Contracts.GridSize size = colony.Grid.Size;
+                Odyssey.Sim.Contracts.CellRef start = colony.Start;
+                for (int dz = -4; dz <= 4 && free.Count < 3; dz += 2)
+                for (int dx = -4; dx <= 4 && free.Count < 3; dx += 2)
+                {
+                    int x = start.X + dx, z = start.Z + dz;
+                    if (!size.Contains(x, z, start.Y)) continue;
+                    int index = size.Index(x, z, start.Y);
+                    if (colony.Construction.Allows(index, Odyssey.Sim.Contracts.BuildingHandle.Galley)) free.Add(index);
+                }
+                Assert.That(free.Count, Is.EqualTo(3), "no room near the start for three stations");
+
+                int Raise(int cell, int building)
+                {
+                    Assert.That(colony.Construction.Place(size.FromIndex(cell), building,
+                        Odyssey.Sim.Contracts.StuffHandle.Wood), Is.EqualTo(Odyssey.Sim.Contracts.IntentRejection.None));
+                    colony.Construction.Deliver(cell, Odyssey.Sim.Construction.ConstructionContent.BuildingAt(building).costCount);
+                    Assert.That(colony.Construction.Raise(colony.Pawns, cell), Is.True);
+                    return cell;
+                }
+
+                void Edit(int cell, int op, int b = 0, int c = 0) =>
+                    kitchen.HandleEditBill(new Odyssey.Sim.Contracts.Intent(Odyssey.Sim.Contracts.IntentKind.EditBill,
+                        size.FromIndex(cell), op, b, c));
+
+                int cooker = Raise(free[0], Odyssey.Sim.Contracts.BuildingHandle.Galley);
+                int fire = Raise(free[1], Odyssey.Sim.Contracts.BuildingHandle.Campfire);
+                int bare = Raise(free[2], Odyssey.Sim.Contracts.BuildingHandle.Campfire);
+                foreach (int station in new[] { cooker, fire })
+                {
+                    for (int b = 0; b < 3; b++) Edit(station, Odyssey.Sim.Contracts.BillEdit.Add, Odyssey.Sim.Contracts.RecipeHandle.Meal);
+                    Edit(station, Odyssey.Sim.Contracts.BillEdit.SetMode, 1, Odyssey.Sim.Contracts.BillModeHandle.Times);
+                    Edit(station, Odyssey.Sim.Contracts.BillEdit.SetTarget, 1, 25);
+                    Edit(station, Odyssey.Sim.Contracts.BillEdit.SetMode, 2, Odyssey.Sim.Contracts.BillModeHandle.Forever);
+                    Edit(station, Odyssey.Sim.Contracts.BillEdit.SetSuspended, 2, 1);
+                }
+                kitchen.Invalidate();
+
+                IEnumerator Shoot(int cell, string name)
+                {
+                    // As a click does (SelectionPresenter): ask the tile's question, republish, then
+                    // select. ChooseCell alone leaves the pane reading "Ground", with no answer.
+                    boot.World!.Intents.Submit(new Odyssey.Sim.Contracts.Intent(
+                        Odyssey.Sim.Contracts.IntentKind.QueryCell, size.FromIndex(cell)));
+                    boot.World.RepublishViews();
+                    boot.Directors!.Selection.ChooseCell(size.FromIndex(cell));
+                    // The pane refreshes fifteen times a second and a batch frame is a millisecond or
+                    // two, so frames alone do not reach the next refresh: wait in real time.
+                    yield return new WaitForSecondsRealtime(1f);
+                    for (int i = 0; i < 10; i++) yield return null;
+
+                    const int cropW = 1120, cropH = 820;
+                    RenderTexture previous = RenderTexture.active;
+                    RenderTexture.active = target;
+                    var image = new Texture2D(cropW, cropH, TextureFormat.RGB24, false);
+                    image.ReadPixels(new Rect(0, 0, cropW, cropH), 0, 0);
+                    image.Apply();
+                    RenderTexture.active = previous;
+                    Directory.CreateDirectory(Path.GetFullPath("Logs"));
+                    File.WriteAllBytes(Path.GetFullPath("Logs/bills-" + name + ".png"), image.EncodeToPNG());
+                    Object.Destroy(image);
+                    var list = doc.rootVisualElement.Q<BillList>();
+                    var inspect = doc.rootVisualElement.Q(className: "inspect");
+                    Debug.Log($"[BillShot] {name}: {doc.rootVisualElement.Query<BillList>().ToList().Count} lists, inspect classes " +
+                              $"[{(inspect == null ? "none" : string.Join(" ", inspect.GetClasses()))}], edifice at the cell " +
+                              $"{colony.Grid.Edifice[cell]}");
+                    Assert.That(list, Is.Not.Null, name + ": the pane has no bill list");
+                    Assert.That(list!.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex), name + ": the bill list is hidden");
+                    var pane = doc.rootVisualElement.Q(className: "inspect--bench");
+                    Assert.That(pane, Is.Not.Null, name + ": the pane is not at the bench width");
+                    Assert.That(pane!.resolvedStyle.width, Is.EqualTo(BillsLayout.PaneWidth).Within(0.5f));
+
+                    Debug.Log($"[BillShot] Logs/bills-{name}.png, pane {pane.resolvedStyle.width} x {pane.resolvedStyle.height}");
+                }
+
+                yield return Shoot(cooker, "nopower");
+                yield return Shoot(fire, "campfire");
+                yield return Shoot(bare, "empty");
+            }
+            finally
+            {
+                Object.Destroy(root);
+                if (target != null) target.Release();
+            }
+        }
+
         /// <summary>The play scene's HUD stack, as <c>HudSmokeTests</c> builds it.</summary>
         static GameObject Build(out OdysseyBootstrap boot) => Build(out boot, buildOnPlay: true);
 

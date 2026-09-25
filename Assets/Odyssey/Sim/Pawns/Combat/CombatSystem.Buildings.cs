@@ -26,7 +26,7 @@ namespace Odyssey.Sim.Pawns
         /// <para>Public so a test can land an exact blow; the only caller in the game is the
         /// resolver, inside <see cref="Tick"/>.</para>
         /// </summary>
-        public void StrikeBuilding(Pawn attacker, in BuildingTarget building, int struckCell, in Armament armament,
+        public void StrikeBuilding(Pawn? attacker, in BuildingTarget building, int struckCell, in Armament armament,
             in SwingOutcome outcome, int tick)
         {
             int before = BuildingTargets.HpMilli(_ctx, building);
@@ -38,12 +38,13 @@ namespace Odyssey.Sim.Pawns
             int weapon = armament.ItemDef;
             int after = before - outcome.DamageMilli;
             _ctx.EdificeDamage.Set(building.Anchor, after);
-            _ctx.CombatLog.Report(CombatEventKind.Hit, attacker.Id, default, _ctx.Size.FromIndex(struckCell), tick,
+            PawnId by = attacker?.Id ?? default;
+            _ctx.CombatLog.Report(CombatEventKind.Hit, by, default, _ctx.Size.FromIndex(struckCell), tick,
                 outcome.DamageMilli, weapon);
 
             if (after > 0) return;
 
-            _ctx.CombatLog.Report(CombatEventKind.Demolished, attacker.Id, default, _ctx.Size.FromIndex(building.Anchor), tick,
+            _ctx.CombatLog.Report(CombatEventKind.Demolished, by, default, _ctx.Size.FromIndex(building.Anchor), tick,
                 building.Edifice, weapon);
             int handle = building.Handle;
             _ctx.Defer(_ => Demolish(handle));

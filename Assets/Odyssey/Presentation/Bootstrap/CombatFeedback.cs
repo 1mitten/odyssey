@@ -77,6 +77,37 @@ namespace Odyssey.Presentation.Bootstrap
         public BloodSides BloodSides { get; set; } = BloodSides.AllBlunt;
 
         /// <summary>
+        /// Which family each item def fights in, read once off the content
+        /// (<see cref="CombatPose.StylesOf"/>): what tells a bullet's <c>Hit</c> and <c>Miss</c> from a
+        /// blow's (design 47 §4c). Empty until the composition root fills it, and then no weapon is a gun.
+        /// </summary>
+        public AttackStyle?[] WeaponStyles { get; set; } = Array.Empty<AttackStyle?>();
+
+        /// <summary>
+        /// Where bullets are drawn (design 47 §4c): handed every <c>Shot</c> and every gun's
+        /// <c>Hit</c> and <c>Miss</c>, before its own draw in the same frame. Null draws none.
+        /// Cleared with the world.
+        /// </summary>
+        public ProjectileDirector? Projectiles { get; set; }
+
+        /// <summary>
+        /// Within this distance of the listener a shot is the crack, beyond it the thump
+        /// (design 47 §4c-bis): the camera's own middle, which starts at 48 m and zooms 10 to 160.
+        /// </summary>
+        public const float ShotNearMetres = 70f;
+
+        /// <summary>Which of the two gunshots a shot this far from the listener plays (design 47 §4c-bis).</summary>
+        public static string ShotSoundFor(float metresFromListener) =>
+            metresFromListener <= ShotNearMetres ? SoundIds.CombatShot : SoundIds.CombatShotFar;
+
+        /// <summary>Whether a weapon is a gun: its style is the pistol's.</summary>
+        public bool IsGun(int weapon) =>
+            weapon >= 0 && weapon < WeaponStyles.Length && WeaponStyles[weapon] == AttackStyle.Pistol;
+
+        /// <summary>Dust thrown by missed bullets since the world last changed. For tests.</summary>
+        public int DustThrown { get; private set; }
+
+        /// <summary>
         /// How high on a standing person a blow lands, and on one lying down, in metres: the chest,
         /// and just off the ground. INVENTED, for the spurt's origin; an animal's is 0.6 of its
         /// drawn box.
@@ -110,9 +141,11 @@ namespace Odyssey.Presentation.Bootstrap
                 _world = world;
                 _watermark = events.Length > 0 ? events[events.Length - 1].Id : 0;
                 Handled = 0;
+                DustThrown = 0;
                 Floaters.Clear();
                 Blood.Clear();
                 Sounds.Clear();
+                Projectiles?.Clear();
                 return;
             }
 
@@ -156,6 +189,27 @@ namespace Odyssey.Presentation.Bootstrap
         {
             figures?.OnCombatEvent(combatEvent);
 
+            // A gun (design 47 §4c): the shot lights the muzzle and starts the streak, and is heard
+            // at once from the shooter's feet - near or far by the listener's distance, and nothing
+            // scheduled (CombatSoundTiming times blows, not shots). A bullet that goes into the
+            // ground or a wall throws dust where it stopped, on a drawn layer only, as a word floats.
+            if (combatEvent.Kind == CombatEventKind.Shot)
+            {
+                Projectiles?.OnCombatEvent(combatEvent, snapshot, figures);
+                SoundTheShot(combatEvent, snapshot, figures, audio);
+                Handed?.Invoke(combatEvent);
+                return;
+            }
+            bool bullet = (combatEvent.Kind == CombatEventKind.Hit || combatEvent.Kind == CombatEventKind.Miss)
+                          && IsGun(combatEvent.Weapon);
+            if (bullet)
+            {
+                Projectiles?.OnCombatEvent(combatEvent, snapshot, figures);
+                bool intoTheGround = combatEvent.Kind == CombatEventKind.Miss || !combatEvent.Target.IsValid;
+                if (intoTheGround && combatEvent.Cell.Y >= lowestLayer && combatEvent.Cell.Y <= highestLayer)
+                    ThrowDust(combatEvent, snapshot, figures);
+            }
+
             Vector3 at = WhereOf(combatEvent, snapshot, figures, out float height, out int layer);
             Bleed(combatEvent, snapshot, figures, at);
 
@@ -174,6 +228,39 @@ namespace Odyssey.Presentation.Bootstrap
                     CombatFeedbackModel.FloatingSeconds(combatEvent));
 
             Handed?.Invoke(combatEvent);
+        }
+
+        /// <summary>
+        /// The report (design 47 §4c-bis): the shooter's distance to the listener measured once,
+        /// the crack within <see cref="ShotNearMetres"/> and the thump beyond, from her feet.
+        /// </summary>
+        void SoundTheShot(in CombatEventView shot, WorldSnapshot snapshot, PawnFigureDirector? figures,
+            AudioDirector? audio)
+        {
+            if (audio == null) return;
+            Vector3 feet;
+            if (figures != null && figures.TryGetFeet(shot.Attacker, out Vector3 drawn)) feet = drawn;
+            else if (snapshot.TryGetPawn(shot.Attacker, out PawnView shooter))
+                feet = GroundRelief.Lift(CellMetrics.FloorCentre(shooter.Cell));
+            else feet = GroundRelief.Lift(CellMetrics.FloorCentre(shot.Cell));
+            audio.PlayOneShot(ShotSoundFor(Vector3.Distance(feet, audio.ListenerPosition)), feet);
+        }
+
+        /// <summary>
+        /// Dust where a bullet went into the ground (design 47 §4c), thrown back towards the shooter
+        /// through the chips' one particle system (<see cref="ChipRecipe.Dust"/>).
+        /// </summary>
+        void ThrowDust(in CombatEventView miss, WorldSnapshot snapshot, PawnFigureDirector? figures)
+        {
+            Vector3 at = GroundRelief.Lift(CellMetrics.FloorCentre(miss.Cell));
+            Vector3 back = Vector3.up;
+            if (miss.Attacker.IsValid && snapshot.TryGetPawn(miss.Attacker, out PawnView shooter))
+            {
+                back = GroundRelief.Lift(CellMetrics.FloorCentre(shooter.Cell)) - at;
+                back.y = 0f;
+            }
+            DustThrown++;
+            figures?.Chips?.Throw(ChipRecipe.Dust, at, back);
         }
 
         /// <summary>
@@ -237,7 +324,8 @@ namespace Odyssey.Presentation.Bootstrap
 
         /// <summary>
         /// Which blows cut, by item def and by pawn kind, read once off the content — the Defs are
-        /// the one owner of which weapon is sharp (<c>Items.xml</c>, <c>Species.xml</c>,
+        /// the one owner of which weapon is sharp. <b>Anything not blunt bleeds as sharp</b>, so a
+        /// bullet (<see cref="DamageKind.Bullet"/>) opens a wound as an edge does (design 47 §4c) (<c>Items.xml</c>, <c>Species.xml</c>,
         /// <c>Combat.xml</c>'s fists). Resolved in <see cref="Odyssey.Hud.BloodSides.IsSharp"/> in the order
         /// <c>WeaponRules.ArmamentOf</c> arms a pawn.
         /// </summary>
@@ -249,17 +337,17 @@ namespace Odyssey.Presentation.Bootstrap
             for (int i = 0; i < weapons.Length; i++)
             {
                 AttackDef? attack = content.Items[i]?.weapon;
-                weapons[i] = attack == null ? (bool?)null : attack.damageKind == DamageKind.Sharp;
+                weapons[i] = attack == null ? (bool?)null : attack.damageKind != DamageKind.Blunt;
             }
 
             var naturals = new bool?[content.Kinds.Length];
             for (int kind = 0; kind < naturals.Length; kind++)
             {
                 AttackDef? natural = content.SpeciesOf(kind).naturalAttack;
-                naturals[kind] = natural == null ? (bool?)null : natural.damageKind == DamageKind.Sharp;
+                naturals[kind] = natural == null ? (bool?)null : natural.damageKind != DamageKind.Blunt;
             }
 
-            return new BloodSides(weapons, naturals, content.Combat.fists.damageKind == DamageKind.Sharp);
+            return new BloodSides(weapons, naturals, content.Combat.fists.damageKind != DamageKind.Blunt);
         }
 
         /// <summary>

@@ -561,7 +561,10 @@ namespace Odyssey.Hud
             bool pooled = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpMaxKey, out int max) && max > 0;
             if (!pooled) max = 0;
             int hp = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpKey, out int published) ? published : max;
-            int weapon = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponKey, out int held) ? held : -1;
+            int weaponDef = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponKey, out int held) ? held : -1;
+            int tier = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponQualityKey, out int q) ? q : 0;
+            // The tier rides the cache key: a better weapon of the same kind is a different line.
+            int weapon = weaponDef < 0 ? -1 : weaponDef * 16 + tier;
             int condition = pawn.IsDowned ? 3 : pawn.IsStunned ? 2 : hp < max ? 1 : 0;
 
             if (hp == _healthHp && max == _healthMax && weapon == _healthWeapon && condition == _healthCondition)
@@ -591,7 +594,7 @@ namespace Odyssey.Hud
             HealthRows.Add(new InspectRow
             {
                 Name = Registry.Label(WeaponKey),
-                Value = weapon >= 0 ? ItemLabels.Label(weapon) : Registry.Label("ui.combat.barehands"),
+                Value = weaponDef >= 0 ? ItemLabels.Label(weaponDef, tier) : Registry.Label("ui.combat.barehands"),
             });
         }
 
@@ -609,6 +612,8 @@ namespace Odyssey.Hud
             Commands.Clear();
             _bedUnderPane = false;
             _powerSwitchUnderPane = false;
+            TileEdifice = 0;
+            TileCellIndex = -1;
             _orderActionUnderPane = false;
             IsCampfire = false;
             IsHearth = false;
@@ -758,7 +763,7 @@ namespace Odyssey.Hud
                     // headline is "Wood × 27" and the line below says where it is lying.
                     Title = thing.Stack > 1
                         ? ItemLabels.Label(thing.DefIndex) + " × " + thing.Stack
-                        : ItemLabels.Label(thing.DefIndex);
+                        : ItemLabels.Label(thing.DefIndex, thing.Quality);
                     Subtitle = "item";
                     Stack = thing.Stack;
                     ItemIconKey = ItemLabels.IconKey(thing.DefIndex);
@@ -1126,6 +1131,16 @@ namespace Odyssey.Hud
         bool _powerSwitchUnderPane;
 
         /// <summary>
+        /// What stands in the tile under the pane, as an <see cref="EdificeHandle"/> value, or 0.
+        /// Cleared every refresh and set by <see cref="SetCellRows"/> with the other tile flags, so
+        /// the bill list (design 48 §5) is shown for exactly the station the answer is about.
+        /// </summary>
+        public int TileEdifice { get; private set; }
+
+        /// <summary>The whole-world index of the tile the answer is about, or -1 before there is one.</summary>
+        public int TileCellIndex { get; private set; } = -1;
+
+        /// <summary>
         /// Whether the pane holds an order whose action row can be pressed: a building site's
         /// Cancel, or a line's — Cancel an order, Remove a laid line, Keep one marked to come up
         /// (design 32 §14; owner, 2026-09-23: "the same for any building blueprint that has been
@@ -1174,7 +1189,13 @@ namespace Odyssey.Hud
         public bool OffersHearth => IsCampfire && !IsHearth;
 
         /// <summary>A store's pane and a campfire's are the full 560; every other tile's is the narrow column.</summary>
-        public bool IsWide => IsStore || IsCampfire;
+        public bool IsWide => IsStore || IsCampfire || IsStation;
+
+        /// <summary>
+        /// Something that takes bills stands in the tile (design 49): the pane is the bench width
+        /// and carries the bill list. A campfire is one, so it is wide on both counts.
+        /// </summary>
+        public bool IsStation => BillsModel.IsStation(TileEdifice);
 
         /// <summary>The header line on the hearth, and the button on any other campfire.</summary>
         public const string HearthKey = "ui.home.hearth";
@@ -1270,6 +1291,8 @@ namespace Odyssey.Hud
             // piece of quality-bearing furniture would, and the row it grew would open the *bed*
             // picker over it. Three characters against a report.
             _bedUnderPane = detail.EdificeQuality > 0 && detail.Edifice == EdificeHandle.Bed;
+            TileEdifice = detail.Edifice;
+            TileCellIndex = detail.CellIndex;
             if (snapshot.TryGetPowerDevice(detail.CellIndex, out PowerDeviceView switchable))
             {
                 _powerSwitchUnderPane = true;

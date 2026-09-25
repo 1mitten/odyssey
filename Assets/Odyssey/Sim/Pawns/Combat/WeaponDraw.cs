@@ -51,13 +51,17 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Is this pawn in a melee attack on a pawn within <see cref="Reach"/> tiles? The attack job
-        /// and not merely a named target: a rescue names its patient in the same field.
+        /// Is this pawn in a melee attack on a pawn within <see cref="Reach"/> tiles — or in a ranged
+        /// attack on anybody, at any distance (design 47 §3d): a gun is drawn to be fired, and it
+        /// is fired from far off. The attack job and not merely a named target: a rescue names its
+        /// patient in the same field.
         /// </summary>
         public static bool TargetNear(PawnContext ctx, Pawn pawn)
         {
-            if (pawn.CombatTarget == 0 || pawn.CurrentJob == null
-                || pawn.CurrentJob.DefIndex != JobIndex.AttackMelee) return false;
+            if (pawn.CombatTarget == 0 || pawn.CurrentJob == null) return false;
+            int def = pawn.CurrentJob.DefIndex;
+            if (def == JobIndex.AttackRanged) return ctx.Pawns.Get(new PawnId(pawn.CombatTarget)) != null;
+            if (def != JobIndex.AttackMelee) return false;
             Pawn? target = ctx.Pawns.Get(new PawnId(pawn.CombatTarget));
             return target != null && Within(ctx.Size, pawn.Cell, target.Cell, Reach);
         }

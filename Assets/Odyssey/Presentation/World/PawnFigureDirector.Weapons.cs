@@ -84,6 +84,9 @@ namespace Odyssey.Presentation.World
             bool handBusy = figure.WorkWeight > 0.001f || carrying;
             Look? face = LookAt(figure.Look);
             PoseSheath(figure, in pawn, handBusy, face != null && face.Feminine, deltaTime);
+            // A gun is placed absolutely while it aims, so it goes back to its fitted place in the
+            // fist first, every frame (design 47 §4b).
+            ReseatGun(figure);
         }
 
         /// <summary>Put the weapon away: into the pool, lent as a corpse, or any figure changing hands.</summary>
@@ -101,6 +104,8 @@ namespace Odyssey.Presentation.World
                 figure.Weapon = null;
             }
             figure.WeaponDef = def;
+            figure.IsGun = IsGunDef(def);
+            figure.GunSlide = null;
             if (def < 0 || figure.RightHand == null) return;
 
             string? module = ModuleIds.Item(def);

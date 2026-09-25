@@ -199,6 +199,12 @@ namespace Odyssey.Sim.Pawns
                 // Which campfire is the hearth (design 43 §3f). Appended; absent from an older
                 // save, which loads with none, as there then was.
                 pawns.Hearth!,
+                // The kitchen (design 48 §5): every station's bills and pan. Appended, no format
+                // bump; a save from before the kitchen has no section and loads with no bills.
+                pawns.Kitchen!,
+                // The bullets in the air (design 47 §2c): appended, no format bump. A save from
+                // before guns has no section and loads with nothing in flight.
+                pawns.Projectiles,
             };
         }
 
@@ -233,6 +239,7 @@ namespace Odyssey.Sim.Pawns
         public SaveHeader Load(Stream stream)
         {
             var header = WorldSave.Load(World, stream, SaveComponents);
+            Pawns.Pawns.BackfillSkills(header.FormatVersion);
             RebuildDerived();
             return header;
         }
@@ -247,6 +254,7 @@ namespace Odyssey.Sim.Pawns
         public SaveHeader LoadFromFile(string path)
         {
             var header = WorldSave.LoadFromFile(path, World, SaveComponents);
+            Pawns.Pawns.BackfillSkills(header.FormatVersion);
             RebuildDerived();
             return header;
         }

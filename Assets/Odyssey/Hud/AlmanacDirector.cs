@@ -136,7 +136,7 @@ namespace Odyssey.Hud
                 if (title.StartsWith("Concrete", StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, "Concrete");
                 if (title.StartsWith("Steel", StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, "Steel");
 
-                if (title.StartsWith("Ration", StringComparison.OrdinalIgnoreCase) || iconKey == "ui.res.meal")
+                if (title.StartsWith("Ration", StringComparison.OrdinalIgnoreCase) || iconKey == "ui.res.rations")
                     return (AlmanacKeys.Items, "Ration Pack");
                 if (title.StartsWith(AlmanacKeys.Carrots, StringComparison.OrdinalIgnoreCase) || iconKey == "ui.res.carrots")
                     return (AlmanacKeys.Items, AlmanacKeys.Carrots);

@@ -13155,3 +13155,329 @@ re-mesh at eleven chunks a frame, the worst frame spent 8.6–12 ms meshing, bec
 near the camera cost about a millisecond each. The budget is milliseconds as well as chunks now, two of
 them, which also stops a count charging a slower laptop more for the same chunks; the worst frame is
 2.8–3.8 ms and a board takes a third of a second rather than a sixth to finish arriving.
+
+
+## 2026-09-25 — Cooking, interviewed and designed (CK)
+
+The owner asked how the colony cooks, with the POLYGON Shops pack in hand: a cooker, fridges,
+plates, cutlery and meat in raw, cooked and burnt states. Their chain was a hog's raw meat hauled to
+a fridge, cooked, and eaten on a plate with a knife and fork, with the cooker and fridge on power
+and the cook's skill deciding when food burns. Mid-interview they added that every cooking and
+eating animation must make sense.
+
+**The ground was almost empty.** Eating is the nearest thing with nutrition, eaten standing where it
+lies, with the same +20 for everything. There is no recipe, bill, station, spoilage, meat, table or
+chair. What does exist lines up well:
+
+- the power grid already answers "is this building powered";
+- a shelf is a built store, and a def with both slots and a power draw already registers as both;
+- the refuel and treatment jobs are a fetch-and-work template;
+- a hog can already be killed.
+
+The one real obstacle was the corpse, which is a record nothing can remove.
+
+**Twelve questions, every recommendation taken** (`docs/research/cooking-interview.md`). The ones
+that shape the most:
+
+- butcher on the spot rather than haul corpses;
+- rot yes, but not temperature-driven;
+- one step from raw to meal, from any raw food, so the kitchen works on carrots before the first
+  hunt;
+- a burnt meal rather than food poisoning, because health is not in;
+- the campfire cooks too, because a colony without a generator should not be stuck on raw carrots;
+- **kitchen first**, so the first PR has something to cook.
+
+**Four research lanes.**
+
+- `a-18` found the reference's simple meal is already the owner's one-step any-raw recipe
+  (500 in, 900 out).
+- `a-19` found the three merge sites and the one split site. It named the bug most likely to ship:
+  a stack changing kind under a hauler walking more of the same kind to it.
+- `e-10` measured the pack without importing it. It ships PolygonGeneric with identical GUIDs and 109
+  older `.mat` files, so it is imported as `PolygonShops/` only, and only while no editor holds the
+  shared junction.
+- `e-11` disagreed with the note in `SitPose.cs` that a sit cannot be computed. That is true of the
+  floor and not of a chair, so one contact sheet decides before dining is written. It also found
+  every stoop in the game is 66 mm deep because its depth scales with the clamped
+  `StandingHipHeight`, P11 for a third time.
+
+**Decisions made without the owner, in design 48:**
+
+- **No handle numbers.** Two open PRs claim the next ones.
+- **The ration pack gives up `ui.res.meal`** to the cooked meal.
+- **A campfire meal costs one wood**, rather than building a fuel hopper the campfire never had.
+- **The burn roll is made when cooking starts**, so the pan can darken before a burnt meal comes out.
+- **A meal with any meat in it is a Meal; without, a Vegetable meal.** Two defs, not per-stack
+  ingredient memory.
+
+Four things go back to the owner at the plan review (design 48 §13):
+
+- the mood table, because today every food is +20 and a carrot colony would lose mood;
+- galley or cooker, and cold store or fridge;
+- whether rotten food is hauled or deleted;
+- whether an unpowered fridge rots faster than the floor, as storage decision 24 says of every
+  container.
+
+## 2026-09-25 — The kitchen built (K1)
+
+Approved with *"go for it"*, which took every recommendation in design 48 §13.
+
+**The simulation came first and came out clean.** A `Kitchen` keyed by edifice holds each station's
+bills and its pan, in a save section of its own, so there was no format bump. It is hashed only
+once a station is used. One job, `Job_Cook`, carries one load a job into the pan, or cooks what the
+pan holds; the burn is rolled once when cooking starts. The pan belongs to the station, so a power
+cut mid-cook leaves the meal on the hob with its work banked. `AMealOnTheHobWaitsOutAPowerCut`
+proves it: same three carrots, work unmoved while dark, finished after.
+
+**Two things the build found that the design had wrong.**
+
+- **The mood table was in the wrong units.** Design 48 proposed +12 / +4 / −4 / −5 / −3 against
+  "today's +20", but mood here runs 0–1000 and today's +20 is two of the reference's points. It is
+  now +50 meal, +20 ration (exactly what every food gave before, so a ration colony feels nothing
+  new), −40 burnt, −50 raw, −30 no table. Found while writing `Thoughts.xml`; the intent is
+  unchanged.
+- **`ColonyWorld.SaveComponents` is a list you add to by hand.** The kitchen's save section would
+  have been written by nothing. `BillsAndThePanComeBackFromASave` would have caught it; it was
+  caught first by reading.
+
+**And one fault the old code would have shown.** `WorkStyle.IndexForJob` falls through to the axe
+for any job it does not list, so a cook at a stove would have chopped at it. `JobHandle.Cook` has a
+style of its own now: a frying pan (Battle Royale's, the only one installed) tossed in a short
+stroke, with a small sizzle of flecks. `EveryStyleNamesAToolAndSomethingToThrow` refused a
+chip-less style, rightly.
+
+**The goldens moved and the colonies did not.** A pawn record carries an eighth work priority and
+an eighth skill, and the job system one more counter pair. `GoldenColonyProbe` on `main` and on the
+branch is identical on all three boards.
+
+**Waiting for the Shops pack.** The galley row points at its stove and draws the tinted block until
+the pack is imported. The food going raw → cooked → burnt in the pan waits for its models too; the
+station already publishes what that needs. The import is held because every worktree's
+`Assets/Synty` is one folder, and another session had an editor open on it.
+
+**A merge mid-run cost a round.** Stashing uncommitted work before merging `main` meant a conflicted
+merge could not take the stash back. It was resolved, committed and then popped, and nothing was
+lost. Commit before merging, not stash.
+
+**And a fault on `main` the player build found.** `Odyssey/SeeThroughMark` (the draft's marks drawn
+through walls, `134b7f24`) was never added to the always-included shaders, so `unity.sh build`
+refused on `main` as well as here — neither test tier can see it, because both run in the editor
+where every shader exists. `ShaderInclusion.Apply` added its one GUID to `GraphicsSettings.asset`;
+the player then booted into a colony with a clean log.
+
+## 2026-09-25 — The bill list, one control for everything that takes orders (design 49)
+
+The owner sent mockup *20a*, a rebuild of the workbench pane, and asked for it to be **composite**:
+cooking now, crafting later, anything that takes orders uses the same control. And not to follow
+it where it would steer away from the HUD as it is — *especially the tile part*.
+
+**The control is `BillList`, and the rules stay in `BillsModel`.** What takes bills became a table
+(`BillsModel.Stations`: edifice, needs power, the recipe Add adds) rather than two `==` checks, so a
+bench is a row there and a row in the recipe tables. The view decides nothing: the status line and
+its ink, the stepper's limits, the progress fraction and the strip are all model properties with
+fast-tier tests, and every number is a `BillsLayout` constant with a width budget
+(`TheRowsColumnsFitThePaneWithRoomForTheName`: the name keeps 180 px of the 680).
+
+**The cooker's pane was 280 wide.** The cooking branch's rows never fitted it — `IsWide` knew the
+campfire and not the galley. A station's pane is now `.inspect--bench`, 680, pinned to the constant
+by `HudStyleSheetTests`.
+
+**Three departures from the mockup, each for a reason in the game.** Reorder stays (the mockup had
+only pause and delete; the top bill is worked first, so order is a setting the game has), as a
+stacked pair in one 28 px box. The status line under a working bill says **nothing** rather than
+*Anyone can do this*, a worker rule that does not exist. And the mode words stay the registry's,
+because the mockup's are the reference game's strings. The header and the tile facts are the
+pane's own, per the owner.
+
+**One reversal of design 48.** The list is as tall as its content, not five rows' height always.
+The pane grows upward from the bottom, and Add a bill sits under the rows, so adding one moves
+nothing under the pointer; the fixed block was 240 px of empty pane under one bill. Removing a bill
+does shift the rows above it; that is in the playtest row.
+
+## 2026-09-25 — Ranged combat: ground, interview, research and design 47
+
+The owner asked for the step after melee: guns, starting with a basic pistol — holstered like a
+melee weapon, two hands on the grip when ready, a visible aim time, a bullet that lands on the body
+when it hits and passes close when it misses, injuries through the current seam, and draw, aim,
+recoil and holster animation. Mid-turn: *"take into account height because projectile weapons can
+fire from many heights - but obviously get inaccurate with distance depending on the gun."*
+
+**Ground.** Three read-only surveys. Nothing ranged exists — no range on a weapon, no line of sight,
+no Shooting index, no projectile, no gun clip in any pack, no gunshot sound — but the melee line was
+built so a second kind of attack slots in (decide at the wind-up's start, apply at the impact, one
+damage method), the registry already named the sidearm, the skill, ammo and Hold position, and
+design 13's G8 had named the gun pose two months ago and never started it. The supply drop is the
+precedent for a flight the simulation owns and presentation lerps.
+
+**Interview**, ten questions in three rounds, `docs/research/ranged-interview.md`. Every recommended
+answer was taken, with one reversal: *own layer only* became *shoot between layers now* when the
+owner raised height, and no height bonus. The tensions chosen into are its §4 — real flight against
+the reference's trigger-decided hit, three-dimensional sight from the first commit, procedural
+against a pack, a 5 m dead zone against friendly fire.
+
+**Research**, six capped subagents, one question each. The container's proxy refused nearly every
+content host, so five of the six rest on search excerpts and say so in their cap lines; the sixth
+(`c-3d-shot-line`) read Cataclysm-DDA's z-level line-of-sight source directly and is the strongest.
+What they settled: the reference decides a hit at the trigger and only draws the flight, so ours is
+deliberately narrower (a target that stepped off the line is missed; one that walked into it is
+hit); the hit formula is the reference's exponent — per-cell accuracy raised to the distance, so
+skill buys reach — scaled by metres rather than cells; interception is probabilistic (40 % × body
+size, a dead zone in front of the shooter); the line is an integer supercover between cell centres
+at mid-height with Cataclysm's lenient corner rule, because the strict rule blocks a colonist firing
+down off the lip of her own terrace; tracers are one instanced bucket or the rain pass's own
+pattern, with fixed render-queue values so they never tie with rain or water; the stance is a
+hand-rolled distributed aim in the existing post-graph pass, isosceles because it reads from above,
+recoil a critically damped spring from one duration; and Synty sells no gun animation pack, so
+procedural first, with a three-rig retarget experiment before any purchase.
+
+**Design 47 and `docs/plans/ranged-combat.md`.** What it costs: save format 9 → 10 — the guard
+behind a one-time deal of Shooting to older colonists, since the skill arrays are length-prefixed
+and nothing else needs the bump — and one golden re-bake in R0 for the seventh skill. The projectile
+registry hashes nothing while empty and the new job sits above `HashedAlways`, so no unit after R0
+moves a golden. A downed pawn never takes a stray bullet, which is the one rule that keeps the
+combat gate's invariant (an unordered fight ends in downs, never deaths) true under gunfire. The
+flags byte is full, so the aim stance derives from the published job rather than a new bit. Seven
+recommendations wait on the owner (design 47 §8). **Nothing built.**
+## 2026-09-25 — Ranged combat reviewed: design 44 becomes 47, the Battle Royale pistol, the gunshot
+
+The owner asked for PR #220 to be reviewed and fixed, for Battle Royale's pistol to be confirmed as
+the prop, and for the animation and the bullets to be thought through in the plan before any code.
+Mid-review they supplied a gunshot: *"blend this into the environment and process it for every gun
+shot (and give it some variance)"*.
+
+**Merged `main` first** (25 commits behind), and that alone found the first fault: `main` had given
+design 44 to the selection highlight, and 45 and 46 were taken on open branches. **Renumbered to 47.**
+
+**Every code claim checked by a subagent against the merged tree**, about ninety symbols. Most held.
+Five did not, and one of them would have cost a save contract: the four `PawnPurpose` salts were to
+be "the next four after `Knockback`", and three of those four are taken — `Jump`, and the weather's
+two. The aim was to be paced by `Rates.Scale`, which is a constant, so every colonist would have
+aimed alike. Blood was described as already reading `!= Blunt`; it reads `== Sharp`, so a bullet
+would not have bled. The draw and holster clip rows were put in `CombatRows`, whose own comment says
+they live in `SheathRows`. And the tracer was to go "through the `GatherCellPlate` machinery,
+already written" — which is private, colour-keyed and draws opaque cubes — with "the rain pass's
+segment buffer" as the alternative, and the rain has no segment buffer. Three open PRs (#213, #184,
+#223) also want job 23, item 11 and skill 6; R0 now takes whatever is free when it merges.
+
+**The pistol.** The draft had pinned Sci-Fi City's `SM_Wep_Pistol_01` "because Battle Royale sorts
+first on a shared name", and Battle Royale has no prefab of that name. Its pistols are the heavy
+semi-automatic, a long revolver, a snub revolver and a flare gun. Battle Royale is not in the committed
+inventory (imported after it), so the sizes were read straight from the FBX geometry. The reader was
+first checked against Sci-Fi City's pistol, which the inventory does have, and agreed to the
+centimetre. The pick is `SM_Wep_Pistol_Heavy_01`: 0.046 × 0.21 × 0.39 m, the Sci-Fi pistol's axis
+and pivot convention, five parts on one material. That material uses the melee weapons' shader, so no
+new instancing work is needed. The slide is its own part, which gives a cycling slide on each shot
+for free.
+
+**Thinking the animation and flight through** turned up five things the draft would have left the
+implementer to invent, two of them visible faults. The draw was 0.6 s against a 0.5 s aim, so a
+colonist drawing because a target came near would have fired from the hip. The draw is now 0.45 s
+and its last beat is the aim's ease-in, and a shot mid-draw snaps to aimed. A hit's streak ended at
+the target cell's centre, so on a walking target it would have stopped in the air beside the body,
+against the owner's one hard requirement. It now ends on the drawn chest. A point-blank shot flies
+three ticks, one frame at 3×, so every streak now keeps a 0.08 s afterimage. The draft also had no
+pose for "drawn, nothing to shoot at" (now low ready), and no rule for swimming, carrying, ladders or
+jumps (now §2e). Design 47 §4b has one table of every state's pose and prop.
+
+**The gunshot.** The source is brick-walled: +4.3 dBTP and 4,082 clipped samples in a 200 ms
+plateau. It was baked in float, 12 dB down before anything else. "Blend into the environment" became
+an outdoor space convolved from a synthesised impulse plus a 140 ms slapback. Because the audio
+director has no per-voice filter, the distance had to be baked too: three near takes and two far ones,
+low-passed and space-forward, picked at 70 m. Variance comes from pitch per take, a different impulse
+per take, and the director's own spread on top. The report starts within 7 ms of the first sample, so
+it plays on the shot's frame with nothing scheduled.
+
+**Found on the way:** every clip meta except the carry sounds and the menu bed has `normalize: 1`, and
+`AudioSetup` never turns it off. By Unity's documented behaviour, most of the game's mono sounds are
+therefore peak-normalised on import, undoing the loudness their bakes set. The gunshot's metas are
+committed with it off. The fix for the rest changes how loud every blow is, so it is its own PR, and
+it is unverified in Unity until somebody reads `GetData` on `combat-hit`.
+
+## 2026-09-25 — Ranged combat built: the pistol from the contracts to the gunshot
+
+The owner approved design 47 (*"approved - execute"*). Built the same day on `claude/ranged-combat`,
+stacked on PR #220: R0–R4, H1 and P1–P3. R5, R6, P4 and a player build are owed.
+
+**R0 moved every golden once and nothing moved them again.** A seventh skill made the hash see more
+of every colonist; the colony probe on `origin/main` and on the branch was identical on all three
+boards, line for line. Every later unit asserted the goldens and they held. That is the payoff of
+hashing the bullet registry only while something flies, and of putting the new job above
+`HashedAlways`.
+
+**Two of the design's rules would have been wrong in play, and the build changed them** (design 47
+§10). "The intended target on any crossed cell is a certain hit" would have turned most misses into
+hits, because a miss's line to its scatter cell usually crosses the target's own cell. So only a
+shot aimed true takes its target, and the near miss the owner asked to see falls out of that. And a
+colonist standing in the way of another colonist's bullet would have turned on her. She now
+remembers being hit and does not fight back.
+
+**The pistol keeps the sword pack's draw.** The design had keyed the draw off for a computed arc.
+But the pistol holsters at the left hip, and the sword draw from the left hip is a cross-draw,
+which is how a left-hip holster is drawn. An authored clip with its grasp moment already measured
+beats a computed arc; a shot mid-draw cuts it to the hand.
+
+**The catalogue lesson held again.** Rebuilding the module catalogue deleted 3,022 lines, the
+colonists' swatches, before `CharacterSwatches.Classify` put them back. After that the diff was the
+one pistol row. The lessons file already said this; reading the diff stat is what caught it.
+
+**Parallel lanes.** Line of sight (R1) and the tracer, flash and sound (P3) were built by agents in
+their own worktrees while R0–R4 and P1/P2 were built here. Both merged without a conflict. P3 found
+five places where §4c met the code differently, recorded in its §4c-ter. The most useful:
+`AudioImporter.normalize` has no scripting API, so the gunshot's normalise-off is written through
+the importer's serialised form.
+
+## 2026-09-25 — Guns after the first play: more accurate, hits that land, weapon quality
+
+The owner played the pistol: *"really decent and everything seemed to work well"*, but it missed a
+lot from a height, some shots went "way off", and hits did not connect with the target. All three
+had a cause in the code, and design 47 §10a has the table.
+
+**The misses from a height were arithmetic, not geometry.** The reference's curve, raised to the
+distance in cells, is harsh: a level-0 colonist hit 16 per cent at 12.5 m and 2 at 25. Fire at will
+engages anything in range, and a height gives clear lines to far targets, so most shots were long
+shots. The curve is raised; skill still buys the reach.
+
+**The shots going down were the old scatter.** It drew a miss's cell from a box round the target in
+the target's layer, which from a terrace often meant a cell inside the terrace. A miss now carries
+on past its target along its own line and ends where that line first stops.
+
+**Hits not connecting were the "real flight" rule working as designed.** A shot rolled to hit was
+walked to the cell the target stood in when it was fired, so a walking target was missed by most of
+them. The owner's words overrule the design: a shot aimed true now lands on its target wherever it
+stands, and only cover it stepped behind or a body that stepped in front can take it. The streak
+follows the body. Worth recording for the next time "realism" is proposed: the owner judged by what
+they saw, and a rule the player reads as a bug is a bug.
+
+**Weapon quality** was asked for in the same message. It reuses the beds' tiers and roll, with two
+new factors on each tier (damage and hit chance) for every weapon. It is rolled when a weapon is
+made, from a stand-in maker's skill until crafting exists: a find at 6, a bandit's gear at 2. It
+is saved under the format-10 bump this line already makes, and hashed only when set, so no golden
+moved (design 47 §11).
+
+*Sidearm* is *Pistol* now.
+
+## 2026-09-25 — The reach rule: a gun-holder next to an enemy clubs it
+
+The owner saw a pistol outclass a machete at one tile and asked what the reference does. Our own
+research had the answer on file (`a-10-projectile-path` finding 17): an adjacent enemy is fought
+in melee, gun or no gun, with a weak blow every gun carries. The design had departed from it for
+simplicity, recommending point-blank fire, and play showed the cost. Built as design 47 §12: the
+switch has one owner (`CombatSystem.SwapByReach`, after the jobs), an order survives the swap, an
+aim broken by an enemy stepping in is lost with its clock given back, and the gun's blow is data.
+The lesson worth keeping: the research recommended this and the design overrode it without a
+measurement. When a design departs from its own research, say what observation would prove the
+departure wrong. Here it was one tile of play.
+
+## 2026-09-25 — Ranged combat merged with main, and a big battle
+
+The owner played a big battle on the reach rule and said *"great job"*, so the line was made ready
+to merge. Main had moved sixty commits, and three of them took the handles the plan had warned
+were raced: the ranged job is 27, the pistol 17, Shooting 8, after medical supplies, the wild foods and the kitchen. Main had also changed what
+`Reachable` means — it now asks whether a colonist may work there as well as travel — and the
+melee line had already moved to `CanTravel`; the ranged line's two sites followed. The goldens
+moved once more and the colony probe diffs clean against main on every board. Two lessons. The
+textual merge silently dropped the closing tag of the last element in three Def files, because
+both sides appended after it, so resolving an append hunk needs a look at the join and not only
+the hunk. And a catalogue rebuild is not a neutral step: it re-resolved a colonist whose prefab
+name two packs share. The merged asset was already right, so the rebuild was thrown away.
+Design 47 §13.

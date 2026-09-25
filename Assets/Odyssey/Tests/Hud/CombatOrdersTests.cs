@@ -304,12 +304,13 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void TheFourWeaponsAreWeaponsAndNothingElseIs()
+        public void TheWeaponsAreWeaponsAndNothingElseIs()
         {
             for (int def = 0; def < ItemHandle.Count; def++)
             {
                 bool weapon = def == ItemHandle.Bat || def == ItemHandle.Crowbar
-                    || def == ItemHandle.Machete || def == ItemHandle.ArcBlade;
+                    || def == ItemHandle.Machete || def == ItemHandle.ArcBlade
+                    || def == ItemHandle.Pistol;
                 Assert.That(CombatOrders.IsWeapon(def), Is.EqualTo(weapon), $"item def {def}");
             }
             Assert.That(CombatOrders.IsWeapon(-1), Is.False);

@@ -17,7 +17,7 @@ Things a colonist carries, wears or fights with, as distinct from the bulk commo
 | **Drill** | `ui.item.drill` | Powered cutting. Fast salvage | sheet 05 (tools and weapons), high | M3 |
 | **Axe** | `ui.item.axe` | Cutting, and chopping | sheet 05 (tools and weapons), high | M3 |
 | **Cutting torch** | `ui.item.cutter` | Opens a hull. Opens a wall | sheet 05 (tools and weapons), low | M3 |
-| **Sidearm** | `ui.item.pistol` | Short range, always to hand | sheet 05 (tools and weapons), high | M3 |
+| **Pistol** | `ui.item.pistol` | Short range, always to hand | sheet 05 (tools and weapons), high | M3 |
 | **Rifle** | `ui.item.rifle` | The standard ranged weapon | sheet 05 (tools and weapons), med | M3 |
 | **Scattergun** | `ui.item.shotgun` | Devastating close, useless far <br>**Needs:** a scattergun, distinguishable from the rifle | no art | M3 |
 | **Crossbow** | `ui.item.crossbow` | Silent, slow, makeable | sheet 05 (tools and weapons), high | M3 |

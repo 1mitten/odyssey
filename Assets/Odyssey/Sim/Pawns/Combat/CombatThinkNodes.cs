@@ -32,9 +32,10 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     static class AttackJob
     {
-        public static bool Fill(Pawn pawn, Pawn target, Job job, TraverseMode mode)
+        public static bool Fill(PawnContext ctx, Pawn pawn, Pawn target, Job job, TraverseMode mode)
         {
-            job.Reset(JobIndex.AttackMelee);
+            // A swing or a shot, by what she holds and how near it is (design 47 §2d, §12).
+            job.Reset(CombatJobs.AttackJobFor(pawn, ctx, target));
             job.TargetCell = target.Cell;
             job.Mode = mode;
             pawn.CombatTarget = target.Id.Value;
@@ -87,7 +88,7 @@ namespace Odyssey.Sim.Pawns
             if (pawn.Response == HostilityResponse.Flee)
             {
                 if (HostilityResponses.Choose(ctx, pawn, out Pawn? danger, out _, out int fleeCell))
-                    return HostilityResponses.Fill(pawn, danger!, false, fleeCell, job);
+                    return HostilityResponses.Fill(ctx, pawn, danger!, false, fleeCell, job);
                 // No danger near her: nothing to fight, even with a blow still remembered — she
                 // does not walk back to whoever struck her. Danger and nowhere to run: cornered,
                 // and she fights back below.
@@ -97,16 +98,27 @@ namespace Odyssey.Sim.Pawns
             if (pawn.RetaliateAgainst != 0 && ctx.CurrentTick < pawn.RetaliateUntilTick)
             {
                 Pawn? foe = ctx.Pawns.Get(new PawnId(pawn.RetaliateAgainst));
-                if (foe != null && Melee.IsStanding(foe) && ctx.CanTravel(pawn, foe.Cell, TraverseMode.Colonist))
-                    return AttackJob.Fill(pawn, foe, job, TraverseMode.Colonist);
+                if (foe != null && Melee.IsStanding(foe) && CanFight(ctx, pawn, foe, TraverseMode.Colonist))
+                    return AttackJob.Fill(ctx, pawn, foe, job, TraverseMode.Colonist);
             }
 
             if (pawn.Response == HostilityResponse.Defend
                 && HostilityResponses.Choose(ctx, pawn, out Pawn? fight, out bool joining, out _))
-                return HostilityResponses.Fill(pawn, fight!, joining, -1, job);
+                return HostilityResponses.Fill(ctx, pawn, fight!, joining, -1, job);
 
             Pawn? threat = Melee.AdjacentThreat(ctx, pawn);
-            return threat != null && AttackJob.Fill(pawn, threat, job, TraverseMode.Colonist);
+            return threat != null && AttackJob.Fill(ctx, pawn, threat, job, TraverseMode.Colonist);
+        }
+
+        /// <summary>
+        /// Can she fight <paramref name="foe"/> from here — reach it, or, with a gun, see it in range
+        /// (design 47 §2d)? A gun-holder struck from a roof she cannot climb to shoots back.
+        /// </summary>
+        internal static bool CanFight(PawnContext ctx, Pawn pawn, Pawn foe, TraverseMode mode)
+        {
+            if (ctx.CanTravel(pawn, foe.Cell, mode)) return true;
+            RangedDef? gun = ctx.WeaponRules.ArmamentOf(pawn, ctx).Attack.ranged;
+            return gun != null && Ranged.CanHit(ctx, pawn.Cell, foe.Cell, gun);
         }
     }
 
@@ -137,11 +149,19 @@ namespace Odyssey.Sim.Pawns
             TraverseMode mode = pawn.OwnMode;
 
             Pawn? foe = ColonistToFight(pawn, ctx, mode);
-            if (foe != null) return AttackJob.Fill(pawn, foe, job, mode);
+            if (foe != null) return AttackJob.Fill(ctx, pawn, foe, job, mode);
+
+            // A gun reaches what a walk cannot (design 47 §2d): a colonist on a roof it cannot
+            // climb to, but can see, is shot at from where it stands.
+            RangedDef? gun = ctx.WeaponRules.ArmamentOf(pawn, ctx).Attack.ranged;
+            Pawn? seen = gun != null ? Ranged.NearestTargetInSight(ctx, pawn, gun) : null;
+            if (seen != null) return AttackJob.Fill(ctx, pawn, seen, job, mode);
 
             // Nobody to reach: the base (design 33 §14b). Only here, so a building never draws a
-            // bandit from a colonist it could get to.
-            if (BuildingTargets.TryNearestColonyTarget(ctx, pawn, mode, out BuildingTarget building))
+            // bandit from a colonist it could get to. Not with a gun, until the ranged driver can
+            // shoot at one (design 47 §2d, R6): a pistol bandit falls through to theft.
+            if (CombatJobs.CanBreakBuildings(pawn, ctx)
+                && BuildingTargets.TryNearestColonyTarget(ctx, pawn, mode, out BuildingTarget building))
                 return AttackJob.FillBuilding(ctx, pawn, building, job, mode);
 
             // Nobody to fight and nothing to break: what it came for (design 33 §17). Last, so a
@@ -158,7 +178,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public static bool HasAFight(Pawn pawn, PawnContext ctx, TraverseMode mode) =>
             ColonistToFight(pawn, ctx, mode) != null
-            || BuildingTargets.TryNearestColonyTarget(ctx, pawn, mode, out _);
+            || (CombatJobs.CanBreakBuildings(pawn, ctx) && BuildingTargets.TryNearestColonyTarget(ctx, pawn, mode, out _));
 
         /// <summary>
         /// The colonist the hunt takes: the one who struck it while it remembers her and she stands
@@ -211,7 +231,7 @@ namespace Odyssey.Sim.Pawns
 
             TraverseMode mode = pawn.OwnMode;
             if (!ctx.CanTravel(pawn, foe.Cell, mode)) return false;
-            return AttackJob.Fill(pawn, foe, job, mode);
+            return AttackJob.Fill(ctx, pawn, foe, job, mode);
         }
     }
 }

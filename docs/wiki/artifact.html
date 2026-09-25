@@ -138,12 +138,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 </div></div></header>
 <div class="wrap">
 <nav aria-label="Sections"><h2>Sections</h2><ul class="navlist">
-<li><a href="#commodities">Commodities<b>52</b></a></li>
+<li><a href="#commodities">Commodities<b>54</b></a></li>
 <li><a href="#items">Items and equipment<b>34</b></a></li>
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
 <li><a href="#commands">Commands<b>53</b></a></li>
-<li><a href="#work">Work and skills<b>42</b></a></li>
-<li><a href="#colonists">Colonists<b>59</b></a></li>
+<li><a href="#work">Work and skills<b>57</b></a></li>
+<li><a href="#colonists">Colonists<b>61</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>48</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
@@ -156,15 +156,15 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>872</b><i>named entries</i></div>
+<div class="stat"><b>894</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>600</b><i>no art yet</i></div>
+<div class="stat m"><b>622</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
 <p id="nohits" class="empty" hidden>Nothing matches that search.</p>
 <section id="commodities" data-sec="1">
-<h2>Commodities <em class="count">52 entries</em></h2>
+<h2>Commodities <em class="count">54 entries</em></h2>
 <p class="blurb">What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the ore classes a wilderness colony sim would have, because the setting is a dead city and the ground is already full of manufactured things. These names appear in the resource ledger, in every bill and in every trade, so they are the names worth arguing about first.</p>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -312,11 +312,23 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> food</div>
 <div class="ms">M1</div>
 </div>
-<div class="row" id="ui.res.meal" data-hay="meal ui.res.meal cooked at a galley. mood as well as nutrition " data-gap="0">
+<div class="row" id="ui.res.meal" data-hay="meal ui.res.meal cooked at an electric cooker or a campfire. the best food there is, and it rots in four days " data-gap="0">
 <div class="nm">Meal<span class="k">ui.res.meal</span></div>
-<div class="dsc">Cooked at a galley. Mood as well as nutrition</div>
+<div class="dsc">Cooked at an electric cooker or a campfire. The best food there is, and it rots in four days</div>
 <div class="art"><span class="pill">high</span> food</div>
-<div class="ms">M1</div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.res.meal.veg" data-hay="vegetable meal ui.res.meal.veg a meal cooked without meat. as filling and as welcome as one with a bowl of cooked vegetables. the food sheet's bowl may serve once the art is judged" data-gap="1">
+<div class="nm">Vegetable meal<span class="k">ui.res.meal.veg</span></div>
+<div class="dsc">A meal cooked without meat. As filling and as welcome as one with<span class="need">Needs drawing: a bowl of cooked vegetables. The food sheet's bowl may serve once the art is judged</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.res.meal.burnt" data-hay="burnt meal ui.res.meal.burnt a meal the cook let catch. edible, less filling, and nobody enjoys it a blackened bowl of food. our own concept" data-gap="1">
+<div class="nm">Burnt meal<span class="k">ui.res.meal.burnt</span></div>
+<div class="dsc">A meal the cook let catch. Edible, less filling, and nobody enjoys it<span class="need">Needs drawing: a blackened bowl of food. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
 </div>
 <div class="row" id="ui.res.protein" data-hay="protein paste ui.res.protein reclaimed nutrition. edible; that is all " data-gap="0">
 <div class="nm">Protein paste<span class="k">ui.res.protein</span></div>
@@ -554,8 +566,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill low">low</span> tools and weapons</div>
 <div class="ms">M3</div>
 </div>
-<div class="row" id="ui.item.pistol" data-hay="sidearm ui.item.pistol short range, always to hand " data-gap="0">
-<div class="nm">Sidearm<span class="k">ui.item.pistol</span></div>
+<div class="row" id="ui.item.pistol" data-hay="pistol ui.item.pistol short range, always to hand " data-gap="0">
+<div class="nm">Pistol<span class="k">ui.item.pistol</span></div>
 <div class="dsc">Short range, always to hand</div>
 <div class="art"><span class="pill">high</span> tools and weapons</div>
 <div class="ms">M3</div>
@@ -981,9 +993,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">med</span> action tiles</div>
 <div class="ms">M3</div>
 </div>
-<div class="row" id="ui.arch.tool.galley" data-hay="galley ui.arch.tool.galley cooks meals " data-gap="0">
-<div class="nm">Galley<span class="k">ui.arch.tool.galley</span></div>
-<div class="dsc">Cooks meals</div>
+<div class="row" id="ui.arch.tool.galley" data-hay="electric cooker ui.arch.tool.galley cooks meals from bills. needs power " data-gap="0">
+<div class="nm">Electric Cooker<span class="k">ui.arch.tool.galley</span></div>
+<div class="dsc">Cooks meals from bills. Needs power</div>
 <div class="art"><span class="pill">high</span> camp and crafting</div>
 <div class="ms">M3</div>
 </div>
@@ -1538,7 +1550,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="work" data-sec="1">
-<h2>Work and skills <em class="count">42 entries</em></h2>
+<h2>Work and skills <em class="count">57 entries</em></h2>
 <p class="blurb">The work types a colonist can be assigned, in priority order of urgency, the skills that govern how well they do them, and the schedule blocks that say when. Salvaging is ours: it sits beside mining because taking a ruin apart without wrecking what is inside it is a different craft from digging. Work and schedule share one tab and one table, so they share a page here.</p>
 <h3 class="nsh">Work types</h3>
 <div class="tbl">
@@ -1579,11 +1591,11 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M7</div>
 </div>
-<div class="row" id="ui.work.cooking" data-hay="cooking ui.work.cooking prepare meals and butcher " data-gap="0">
+<div class="row" id="ui.work.cooking" data-hay="cooking ui.work.cooking work the bills at an electric cooker or a campfire " data-gap="0">
 <div class="nm">Cooking<span class="k">ui.work.cooking</span></div>
-<div class="dsc">Prepare meals and butcher</div>
+<div class="dsc">Work the bills at an electric cooker or a campfire</div>
 <div class="art"><span class="pill">high</span> action tiles</div>
-<div class="ms">M7</div>
+<div class="ms">M3</div>
 </div>
 <div class="row" id="ui.work.hunting" data-hay="hunting ui.work.hunting kill wild animals for meat " data-gap="0">
 <div class="nm">Hunting<span class="k">ui.work.hunting</span></div>
@@ -1697,11 +1709,11 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M2</div>
 </div>
-<div class="row" id="ui.skill.cooking" data-hay="cooking ui.skill.cooking meal quality, and food poisoning avoided " data-gap="0">
+<div class="row" id="ui.skill.cooking" data-hay="cooking ui.skill.cooking how fast a colonist cooks, and how seldom the meal burns " data-gap="0">
 <div class="nm">Cooking<span class="k">ui.skill.cooking</span></div>
-<div class="dsc">Meal quality, and food poisoning avoided</div>
+<div class="dsc">How fast a colonist cooks, and how seldom the meal burns</div>
 <div class="art"><span class="pill">high</span> action tiles</div>
-<div class="ms">M2</div>
+<div class="ms">M3</div>
 </div>
 <div class="row" id="ui.skill.growing" data-hay="growing ui.skill.growing yield and harvest speed " data-gap="0">
 <div class="nm">Growing<span class="k">ui.skill.growing</span></div>
@@ -1804,10 +1816,108 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="ms">M7</div>
 </div>
 </div>
+<h3 class="nsh">Recipes</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.recipe.meal" data-hay="cook a meal ui.recipe.meal any raw food, three carrots' worth, into one meal a pan with food in it. our own concept" data-gap="1">
+<div class="nm">Cook a meal<span class="k">ui.recipe.meal</span></div>
+<div class="dsc">Any raw food, three carrots' worth, into one meal<span class="need">Needs drawing: a pan with food in it. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+</div>
+<h3 class="nsh">Bills, and the words of a station's pane</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.bill.heading" data-hay="bills ui.bill.heading what this station is told to make. the top one is worked first a list of orders pinned up. our own concept" data-gap="1">
+<div class="nm">Bills<span class="k">ui.bill.heading</span></div>
+<div class="dsc">What this station is told to make. The top one is worked first<span class="need">Needs drawing: a list of orders pinned up. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.add" data-hay="add a bill ui.bill.add put a new order at the bottom of the list a plus. interface furniture drawn as a hudglyph" data-gap="1">
+<div class="nm">Add a bill<span class="k">ui.bill.add</span></div>
+<div class="dsc">Put a new order at the bottom of the list<span class="need">Needs drawing: a plus. Interface furniture drawn as a HudGlyph</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.none" data-hay="no bills yet ui.bill.none nothing will be made here until a bill is added an empty list. interface words, no icon wanted" data-gap="1">
+<div class="nm">No bills yet<span class="k">ui.bill.none</span></div>
+<div class="dsc">Nothing will be made here until a bill is added<span class="need">Needs drawing: an empty list. Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.mode.until" data-hay="until you have ui.bill.mode.until cook while the colony holds fewer than this many meals, and start again when it drops below interface words, no icon wanted" data-gap="1">
+<div class="nm">Until you have<span class="k">ui.bill.mode.until</span></div>
+<div class="dsc">Cook while the colony holds fewer than this many meals, and start again when it drops below<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.mode.times" data-hay="make ui.bill.mode.times cook this many, then stop interface words, no icon wanted" data-gap="1">
+<div class="nm">Make<span class="k">ui.bill.mode.times</span></div>
+<div class="dsc">Cook this many, then stop<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.mode.forever" data-hay="forever ui.bill.mode.forever never stop cooking interface words, no icon wanted" data-gap="1">
+<div class="nm">Forever<span class="k">ui.bill.mode.forever</span></div>
+<div class="dsc">Never stop cooking<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.suspended" data-hay="paused ui.bill.suspended stopped by you. the next bill down is worked instead a pause mark. interface furniture drawn as a hudglyph" data-gap="1">
+<div class="nm">Paused<span class="k">ui.bill.suspended</span></div>
+<div class="dsc">Stopped by you. The next bill down is worked instead<span class="need">Needs drawing: a pause mark. Interface furniture drawn as a HudGlyph</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.done" data-hay="done ui.bill.done this bill's count is met. it starts again by itself when it needs to a tick. interface furniture drawn as a hudglyph" data-gap="1">
+<div class="nm">Done<span class="k">ui.bill.done</span></div>
+<div class="dsc">This bill's count is met. It starts again by itself when it needs to<span class="need">Needs drawing: a tick. Interface furniture drawn as a HudGlyph</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.unpowered" data-hay="no power ui.bill.unpowered the electric cooker needs power to cook. nothing on the hob will spoil in the meantime a broken plug. our own concept" data-gap="1">
+<div class="nm">No power<span class="k">ui.bill.unpowered</span></div>
+<div class="dsc">The electric cooker needs power to cook. Nothing on the hob will spoil in the meantime<span class="need">Needs drawing: a broken plug. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.waiting" data-hay="waiting for power ui.bill.waiting this bill will be worked once the station has power again interface words, no icon wanted" data-gap="1">
+<div class="nm">Waiting for power<span class="k">ui.bill.waiting</span></div>
+<div class="dsc">This bill will be worked once the station has power again<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.needs" data-hay="each meal: raw food, about 3 carrots ui.bill.needs a meal takes 500 of any raw food by nutrition: three carrots, or meat once there is any interface words, no icon wanted" data-gap="1">
+<div class="nm">Each meal: raw food, about 3 carrots<span class="k">ui.bill.needs</span></div>
+<div class="dsc">A meal takes 500 of any raw food by nutrition: three carrots, or meat once there is any<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.needs.fire" data-hay="each meal: raw food, about 3 carrots, and 1 wood ui.bill.needs.fire a campfire burns one wood for every meal it cooks interface words, no icon wanted" data-gap="1">
+<div class="nm">Each meal: raw food, about 3 carrots, and 1 wood<span class="k">ui.bill.needs.fire</span></div>
+<div class="dsc">A campfire burns one wood for every meal it cooks<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.supply" data-hay="raw food for {n} meals ui.bill.supply what the raw food on the map, in stores and on the ground, would cook into interface words, no icon wanted" data-gap="1">
+<div class="nm">Raw food for {n} meals<span class="k">ui.bill.supply</span></div>
+<div class="dsc">What the raw food on the map, in stores and on the ground, would cook into<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.nosupply" data-hay="no raw food on the map ui.bill.nosupply nothing to cook. grow carrots, or use the debug menu's give carrots an empty basket. our own concept" data-gap="1">
+<div class="nm">No raw food on the map<span class="k">ui.bill.nosupply</span></div>
+<div class="dsc">Nothing to cook. Grow carrots, or use the debug menu's Give carrots<span class="need">Needs drawing: an empty basket. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+</div>
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">59 entries</em></h2>
+<h2>Colonists <em class="count">61 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -2124,6 +2234,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.status.cooking" data-hay="cooking ui.status.cooking at an electric cooker or a campfire, or fetching food for the pan a figure stirring a pan. blocked on the missing human figure" data-gap="1">
+<div class="nm">Cooking<span class="k">ui.status.cooking</span></div>
+<div class="dsc">At an electric cooker or a campfire, or fetching food for the pan<span class="need">Needs drawing: a figure stirring a pan. Blocked on the missing human figure</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 <div class="row gap" id="ui.status.sheltering" data-hay="sheltering ui.status.sheltering an animal waiting out the rain under a roof or a tree, or walking to one " data-gap="1">
 <div class="nm">Sheltering<span class="k">ui.status.sheltering</span></div>
 <div class="dsc">An animal waiting out the rain under a roof or a tree, or walking to one</div>
@@ -2135,6 +2251,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">A colonist under open sky while it rains, and walking slower for it. Said beside her pace</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.status.shooting" data-hay="shooting ui.status.shooting standing where the line is open and firing at a target " data-gap="1">
+<div class="nm">Shooting<span class="k">ui.status.shooting</span></div>
+<div class="dsc">Standing where the line is open and firing at a target</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RC</div>
 </div>
 </div>
 <h3 class="nsh">Pace and what it is made of</h3>
@@ -3876,7 +3998,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 872, "gaps": 600};</script>
+<script>window.WIKI={"total": 894, "gaps": 622};</script>
 <script>
 (function(){
   var D = window.WIKI;
