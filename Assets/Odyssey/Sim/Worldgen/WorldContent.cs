@@ -107,7 +107,8 @@ namespace Odyssey.Sim.Worldgen
         /// load half of it.
         /// </summary>
         public static DefLoader Register(DefLoader loader) =>
-            loader.Register<TerrainDef>().Register<OreKindDef>().Register<PlantDef>().Register<ClimateDef>();
+            loader.Register<TerrainDef>().Register<OreKindDef>().Register<PlantDef>().Register<ClimateDef>()
+                .Register<Weather.WeatherDef>();
 
         /// <summary>
         /// The whole terrain table, in index order. A missing or misspelt kind throws here
@@ -144,6 +145,25 @@ namespace Odyssey.Sim.Worldgen
         {
             _table = null;
             _climate = null;
+            _weathers = null;
+        }
+
+        /// <summary>The weather kinds in <see cref="Contracts.WeatherKind"/> order, one Def each (design 43 §4).</summary>
+        public static readonly string[] WeatherOrder =
+        {
+            "Weather_Clear", "Weather_Cloudy", "Weather_Rain", "Weather_Storm",
+        };
+
+        static Weather.WeatherDef[]? _weathers;
+
+        /// <summary>The weather table the running game reads, indexed by <see cref="Contracts.WeatherKind"/>.</summary>
+        public static Weather.WeatherDef[] Weathers => _weathers ??= WeathersFromDefs(ContentPack.Core);
+
+        public static Weather.WeatherDef[] WeathersFromDefs(DefDatabase defs)
+        {
+            var table = new Weather.WeatherDef[WeatherOrder.Length];
+            for (int i = 0; i < WeatherOrder.Length; i++) table[i] = One<Weather.WeatherDef>(defs, WeatherOrder[i]);
+            return table;
         }
 
         static ClimateDef? _climate;
