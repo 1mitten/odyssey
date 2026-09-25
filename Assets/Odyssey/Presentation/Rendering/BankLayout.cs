@@ -219,19 +219,57 @@ namespace Odyssey.Presentation.Rendering
             public Ramp(float r0, float r1, float r2, float r3, bool splitZeroTwo)
             {
                 R0 = r0; R1 = r1; R2 = r2; R3 = r3; SplitZeroTwo = splitZeroTwo;
+                E0 = E1 = E2 = E3 = C = 0f;
+                Fan = false;
+            }
+
+            /// <summary>
+            /// A shore (design 38 §24): the four corners, the four edge midpoints and the centre,
+            /// drawn as eight triangles fanned from the centre. Edge i runs from corner i to corner
+            /// i + 1: 0 is the −z edge, 1 the +x, 2 the +z, 3 the −x.
+            /// </summary>
+            public Ramp(float r0, float r1, float r2, float r3,
+                float e0, float e1, float e2, float e3, float centre)
+            {
+                R0 = r0; R1 = r1; R2 = r2; R3 = r3;
+                E0 = e0; E1 = e1; E2 = e2; E3 = e3; C = centre;
+                SplitZeroTwo = true;
+                Fan = true;
             }
 
             public readonly float R0, R1, R2, R3;
             public readonly bool SplitZeroTwo;
 
+            /// <summary>The edge midpoints and the centre, where <see cref="Fan"/> is set.</summary>
+            public readonly float E0, E1, E2, E3, C;
+
+            /// <summary>Nine points and eight triangles rather than four and two.</summary>
+            public readonly bool Fan;
+
             public float Corner(int i) => i switch { 0 => R0, 1 => R1, 2 => R2, _ => R3 };
 
+            public float Edge(int i) => i switch { 0 => E0, 1 => E1, 2 => E2, _ => E3 };
+
             /// <summary>
-            /// The rise at (u, v) in the cell, both 0..1 from corner 0 — exactly the two triangles
-            /// the mesher draws, so a reader and the picture cannot disagree.
+            /// The rise at (u, v) in the cell, both 0..1 from corner 0 — exactly the triangles the
+            /// mesher draws, so a reader and the picture cannot disagree.
             /// </summary>
             public float HeightAt(float u, float v)
             {
+                if (Fan)
+                {
+                    // Which of the eight triangles (centre, an edge's midpoint, a corner), and
+                    // where in it: a is the way along to the midpoint, b the way on to the corner.
+                    float du = u - 0.5f, dv = v - 0.5f;
+                    bool px = du >= 0f, pz = dv >= 0f;
+                    int corner = px ? (pz ? 2 : 1) : (pz ? 3 : 0);
+                    float ax = Mathf.Abs(du), az = Mathf.Abs(dv);
+                    int edge;
+                    float a, b;
+                    if (ax >= az) { edge = px ? 1 : 3; b = 2f * az; a = 2f * (ax - az); }
+                    else { edge = pz ? 2 : 0; b = 2f * ax; a = 2f * (az - ax); }
+                    return C + a * (Edge(edge) - C) + b * (Corner(corner) - C);
+                }
                 if (SplitZeroTwo)
                     return u >= v
                         ? R0 + (R1 - R0) * u + (R2 - R1) * v
@@ -343,16 +381,97 @@ namespace Odyssey.Presentation.Rendering
                 if (!model.IsSolid(n) && !OpenWater(model, n)) return false;
             }
 
-            float drop = -WaterBankDrop / CellMetrics.SizeY;
-            float r0 = CornerWet(model, x, z, y, 0) ? drop : 0f;
-            float r1 = CornerWet(model, x, z, y, 1) ? drop : 0f;
-            float r2 = CornerWet(model, x, z, y, 2) ? drop : 0f;
-            float r3 = CornerWet(model, x, z, y, 3) ? drop : 0f;
-            int low = (r0 < 0f ? 1 : 0) + (r1 < 0f ? 1 : 0) + (r2 < 0f ? 1 : 0) + (r3 < 0f ? 1 : 0);
+            bool w0 = CornerWet(model, x, z, y, 0), w1 = CornerWet(model, x, z, y, 1);
+            bool w2 = CornerWet(model, x, z, y, 2), w3 = CornerWet(model, x, z, y, 3);
+            int low = (w0 ? 1 : 0) + (w1 ? 1 : 0) + (w2 ? 1 : 0) + (w3 ? 1 : 0);
             if (low == 0) return false;
+
+            // The shoreline (design 38 §24): one surface with the bed, shaped by how much of the
+            // water layer round each point is water. See ShoreFan.
+            if (WaterShore.Enabled)
+            {
+                dip = ShoreFan(model, x, z, y, bed: false);
+                return true;
+            }
+
+            float drop = -WaterBankDrop / CellMetrics.SizeY;
+            float r0 = w0 ? drop : 0f, r1 = w1 ? drop : 0f, r2 = w2 ? drop : 0f, r3 = w3 ? drop : 0f;
 
             dip = new Ramp(r0, r1, r2, r3, SplitFor(r0, r1, r2, r3));
             return true;
+        }
+
+        /// <summary>
+        /// The bed under open water, rising towards the shore to meet the bank (design 38 §24): a
+        /// solid earth cell with water directly over it, shaped as <see cref="ShoreFan"/> says,
+        /// with rises measured up from its top — the water cell's floor. False where the shoreline
+        /// is off, or where the bed is surrounded by water and stays flat.
+        /// </summary>
+        public static bool BedRises(WorldRenderModel model, int x, int z, int y, out Ramp rise)
+        {
+            rise = default;
+            if (!WaterShore.Enabled || !GroundSkin.Enabled) return false;
+            GridSize size = model.Size;
+            if (!size.Contains(x, z, y) || y + 1 >= size.SizeY) return false;
+            int index = size.Index(x, z, y);
+            if (!model.IsSolid(index) || !model.IsEarth(index) || model.IsCutFace(index)) return false;
+            if (!OpenWater(model, index + size.LayerStride)) return false;
+
+            rise = ShoreFan(model, x, z, y, bed: true);
+            return rise.R0 != 0f || rise.R1 != 0f || rise.R2 != 0f || rise.R3 != 0f
+                || rise.E0 != 0f || rise.E1 != 0f || rise.E2 != 0f || rise.E3 != 0f;
+        }
+
+        /// <summary>
+        /// **The shore as one surface** (design 38 §24). Where a bank meets water the ground used to
+        /// stop at the cell's edge and drop down a wall to the bed, so the water's edge was always
+        /// a cell's edge and a diagonal stream came out as a staircase. Now the bank and the bed
+        /// are one height field, sampled at nine points a cell: each point stands at
+        /// <c>(1 − w)</c> of a layer above the bed, where <c>w</c> is how much of the water layer
+        /// round that point is water — bilinear over the cells whose centres surround it.
+        ///
+        /// <para>So every cell's centre is exactly where it was (a bank's centre is dry land at its
+        /// top, a water cell's is its bed), and so is the line between two dry centres — the places
+        /// a colonist stands and walks keep their heights, and the simulation hears nothing. What
+        /// moves is the ground between: a straight bank slopes into the water in a straight line,
+        /// and a staircase of cells has its corners cut, because a corner shared by one water cell
+        /// and three dry ones is a quarter water. The water line is where that surface crosses the
+        /// water's height (<c>w</c> of about 0.28), inside the bank, clear of the cell's edge.</para>
+        ///
+        /// <para>Rises in cell heights from the cell's top: a bank (the water beside it at its own
+        /// layer) from 0 down to −w; a bed (the water over it) up by 1 − w. Out of the board and air
+        /// count as dry for a bank — a box beside it keeps its flat top, and the corners must agree
+        /// — and as water for a bed, so a bed at a fall's lip stays flat under the sheet.</para>
+        /// </summary>
+        static Ramp ShoreFan(WorldRenderModel model, int x, int z, int y, bool bed)
+        {
+            int layer = bed ? y + 1 : y;
+            float Point(int corner) => CornerWater(model, x, z, layer, corner, bed);
+            float Mid(int edge) => (Wet(model, x, z, layer, bed)
+                + Wet(model, x + EdgeX[edge], z + EdgeZ[edge], layer, bed)) * 0.5f;
+            float Rise(float w) => bed ? 1f - w : -w;
+            float centre = Rise(Wet(model, x, z, layer, bed));
+            return new Ramp(Rise(Point(0)), Rise(Point(1)), Rise(Point(2)), Rise(Point(3)),
+                Rise(Mid(0)), Rise(Mid(1)), Rise(Mid(2)), Rise(Mid(3)), centre);
+        }
+
+        static readonly int[] EdgeX = { 0, 1, 0, -1 };
+        static readonly int[] EdgeZ = { -1, 0, 1, 0 };
+
+        static float Wet(WorldRenderModel model, int x, int z, int layer, bool dryIsSolidOnly)
+        {
+            GridSize size = model.Size;
+            if (!size.Contains(x, z, layer)) return dryIsSolidOnly ? 1f : 0f;
+            int index = size.Index(x, z, layer);
+            if (OpenWater(model, index)) return 1f;
+            return dryIsSolidOnly && !model.IsSolid(index) ? 1f : 0f;
+        }
+
+        static float CornerWater(WorldRenderModel model, int x, int z, int layer, int corner, bool bed)
+        {
+            int cx = CornerX[corner], cz = CornerZ[corner];
+            return (Wet(model, x, z, layer, bed) + Wet(model, x + cx, z, layer, bed)
+                + Wet(model, x, z + cz, layer, bed) + Wet(model, x + cx, z + cz, layer, bed)) * 0.25f;
         }
 
         /// <summary>

@@ -23,13 +23,14 @@ namespace Odyssey.Tests.Presentation
     public class GroundSkinTests
     {
         const int Side = 12;
-        bool _skinWas;
+        bool _skinWas, _shoreWas;
         float _reliefWas;
 
         [SetUp]
         public void SetUp()
         {
             _skinWas = GroundSkin.Enabled;
+            _shoreWas = WaterShore.Enabled;
             _reliefWas = GroundRelief.Amplitude;
             GroundSkin.Enabled = true;
             GroundRelief.Amplitude = 0f;
@@ -40,6 +41,7 @@ namespace Odyssey.Tests.Presentation
         public void TearDown()
         {
             GroundSkin.Enabled = _skinWas;
+            WaterShore.Enabled = _shoreWas;
             GroundRelief.Amplitude = _reliefWas;
             BankLayout.Reset();
         }
@@ -184,11 +186,13 @@ namespace Odyssey.Tests.Presentation
         /// <summary>
         /// A stream bank runs down into the water instead of stopping at a square rim: the corners
         /// on the water side drop to just above the water line, and a colonist on the bank is drawn
-        /// on that slope.
+        /// on that slope. The square shore, with the shoreline off; the shoreline's own shape is
+        /// <see cref="ShorelineTests"/>.
         /// </summary>
         [Test]
         public void AStreamBankSlopesIntoTheWater()
         {
+            WaterShore.Enabled = false;
             RenderTestWorld world = Stream();
             Assert.That(BankLayout.BankDips(world.Model, 4, 4, 1, out BankLayout.Ramp dip), Is.True, "the bank does not dip");
             float drop = -BankLayout.WaterBankDrop / CellMetrics.SizeY;

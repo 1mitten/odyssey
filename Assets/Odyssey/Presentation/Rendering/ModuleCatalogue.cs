@@ -754,7 +754,7 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>A light one-handed swing: <c>LightCombo01A/B/C</c>, alternated.</summary>
         public const string CombatSwingLight = CombatBase + ".swing.light";
 
-        /// <summary>A heavy swing: <c>HeavyCombo01A</c>, <c>HeavyStab01</c>.</summary>
+        /// <summary>A heavy swing: <c>HeavyCombo01A/B/C</c>, alternated. Never a stab — it is the blunt weapons' row.</summary>
         public const string CombatSwingHeavy = CombatBase + ".swing.heavy";
 
         /// <summary>Taking a blow, by direction: <c>Hit_F/B/L/R_React</c>.</summary>

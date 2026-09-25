@@ -432,8 +432,7 @@ namespace Odyssey.Presentation.World
             if (fight.Downed || (IsHeldPhase(fight.Action) && fight.Variant != CombatVariant.End)) return;
 
             CombatRole role = CombatPose.SwingRole(style);
-            int steps = role == CombatRole.SwingHeavy ? 2 : 3;
-            string variant = CombatVariant.Combo[Mathf.Abs(fight.Combo) % steps];
+            string variant = CombatVariant.Combo[Mathf.Abs(fight.Combo) % CombatVariant.Combo.Length];
             fight.Combo++;
 
             fight.Action = role;
