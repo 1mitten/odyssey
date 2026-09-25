@@ -36,6 +36,9 @@ namespace Odyssey.Tests.Sim
             // zero-stack meals standing on the board, and a zero-stack meal still has its
             // nutrition, so the eater "ate" one and the carrot pile went untouched.
             if (!meals) { scenario.mealPiles = 0; scenario.mealsPerPile = 0; }
+            // About the crop loop, not about who does it: no traits, so a colonist dealt Ham-fisted or
+            // Tireless by her seed cannot make this test about traits (design 43 §5f).
+            scenario.traits = false;
             return ColonyWorld.Build(Size, seed, scenario);
         }
 

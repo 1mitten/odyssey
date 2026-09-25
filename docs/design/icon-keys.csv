@@ -62,6 +62,19 @@ ui.mood.content,Content,ui.mood,M2,Mood is comfortable
 ui.mood.strained,Strained,ui.mood,M2,Mood is falling. Watch this one
 ui.mood.breaking,Breaking,ui.mood,M2,At the threshold of a mental break
 ui.mood.broken,Breaking down,ui.mood,M2,In a mental break now
+ui.trait.tireless,Tireless,ui.trait,TM,"Works at everything far faster than most. Nobody has seen her sit down"
+ui.trait.diligent,Diligent,ui.trait,TM,"Works at everything faster than most"
+ui.trait.unhurried,Unhurried,ui.trait,TM,"Works at everything more slowly than most, and will not be rushed"
+ui.trait.cheerful,Cheerful,ui.trait,TM,"Her mood sits a little higher, whatever the day brings"
+ui.trait.sunny,Sunny,ui.trait,TM,"Her mood sits well above everyone else's"
+ui.trait.gloomy,Gloomy,ui.trait,TM,"Her mood sits a little lower, whatever the day brings"
+ui.trait.steady,Steady,ui.trait,TM,"Takes a good deal more than most before she breaks"
+ui.trait.jumpy,Jumpy,ui.trait,TM,"Breaks sooner than most when things go badly"
+ui.trait.quickstudy,Quick study,ui.trait,TM,"Learns every skill much faster than most"
+ui.trait.slowstudy,Slow study,ui.trait,TM,"Learns every skill slowly"
+ui.trait.softhands,Soft hands,ui.trait,TM,"Will not mine. Never has, never will"
+ui.trait.blackthumb,Black thumb,ui.trait,TM,"Will not work a growing zone"
+ui.trait.hamfisted,Ham-fisted,ui.trait,TM,"Will not build"
 ui.mind.now,Now,ui.mind,TM,"What is weighing on her at this moment, gone when its cause is"
 ui.mind.memories,Memories,ui.mind,TM,"Things that happened to her, each fading after its own time"
 ui.mind.target,Heading for,ui.mind,TM,"The mood everything listed pulls her toward; she drifts there, faster up than down"

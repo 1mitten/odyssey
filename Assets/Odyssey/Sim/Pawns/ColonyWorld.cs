@@ -180,6 +180,10 @@ namespace Odyssey.Sim.Pawns
                 // Appended, after the ledger whose load clears it; absent from an older save, which
                 // loads with no entry about anything, as none then was.
                 pawns.Incidents!.Ledger.DetailSection,
+                // Each colonist's traits and the kind of break she is in (design 43 §3). Appended;
+                // absent from an older save, which loads with no traits and every break a wander —
+                // which is what that colony had.
+                new PawnMindSection(pawns.Pawns),
             };
         }
 
@@ -405,6 +409,7 @@ namespace Odyssey.Sim.Pawns
             var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns())
             {
                 Chunks = chunks,
+                DealsTraits = request.Scenario == null || request.Scenario.traits,
             };
             var solver = new SupportSolver(grid);
             var support = new SupportSystem(grid, solver, chunks);

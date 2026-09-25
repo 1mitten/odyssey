@@ -118,6 +118,44 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
+    /// Who a colonist is (design 43 §4c, §5f): one degree of a spectrum, or a singular trait, with
+    /// the five effects the owner allowed. Every effect defaults to "none" — nought, or 1,000 per
+    /// mille — so a trait says only what it changes.
+    ///
+    /// <para><b>A spectrum</b> is a name several traits share (diligence, outlook, nerve,
+    /// learning): a colonist holds at most one of them. <b>Conflicts</b> name traits by defName
+    /// and exclude each other both ways, whichever lists the other. Both are resolved to handles
+    /// once at load (<see cref="PawnContent.TraitSpectrum"/>, <see cref="PawnContent.TraitConflicts"/>),
+    /// and a name that resolves to nothing throws there rather than at the first roll.</para>
+    /// </summary>
+    public class TraitDef : Def
+    {
+        /// <summary>The spectrum this trait is a degree of, or empty for a trait on its own.</summary>
+        public string spectrum = string.Empty;
+
+        /// <summary>A plain weight in the roll: common 30, normal 20, rare 8 (INVENTED).</summary>
+        public int commonality = 20;
+
+        /// <summary>Traits no colonist may hold beside this one, by defName.</summary>
+        public string[] conflicts = System.Array.Empty<string>();
+
+        /// <summary>A permanent offset to the mood target, in thousandths, like a thought's.</summary>
+        public int moodOffset;
+
+        /// <summary>Added to the minor break line; the major and extreme follow it (a-19).</summary>
+        public int breakThresholdOffset;
+
+        /// <summary>A factor on experience gained, per mille.</summary>
+        public int learningPerMille = 1_000;
+
+        /// <summary>A factor on the rate every work type is paid at, per mille.</summary>
+        public int workSpeedPerMille = 1_000;
+
+        /// <summary>Work types this colonist can never do, by <see cref="WorkTypeIndex.Names"/>.</summary>
+        public string[] disabledWork = System.Array.Empty<string>();
+    }
+
+    /// <summary>
     /// Mood: a difficulty base plus the sum of active thought offsets, approached by drift.
     ///
     /// The drift is what makes mood read as a mood. Snapping to the target turns a single bad
@@ -877,6 +915,12 @@ namespace Odyssey.Sim.Pawns
         public int passionMajorPerCent = 15;
 
         /// <summary>
+        /// The chance, in per cent, that a colonist is dealt a third trait beside the two everyone
+        /// has (design 43 §5f; owner: "two or three"). INVENTED.
+        /// </summary>
+        public int thirdTraitPerCent = 30;
+
+        /// <summary>
         /// Starting skill levels (U37), one independent roll per skill. Index is the level,
         /// value is its weight out of the sum of the whole table; level 0 needs no entry beyond
         /// index 0 carrying the largest share. INVENTED: there is no RimWorld number to take
@@ -1057,12 +1101,30 @@ namespace Odyssey.Sim.Pawns
     {
         public NeedDef[] Needs = System.Array.Empty<NeedDef>();
         public ThoughtDef[] Thoughts = System.Array.Empty<ThoughtDef>();
+
+        /// <summary>Every trait, in <see cref="TraitHandle"/> order (design 43 §4a).</summary>
+        public TraitDef[] Traits = System.Array.Empty<TraitDef>();
+
+        /// <summary>Each trait's spectrum as a small integer, or -1 on its own, resolved at load.</summary>
+        public int[] TraitSpectrum = System.Array.Empty<int>();
+
+        /// <summary>Each trait's conflicts as handles, both directions folded in, resolved at load.</summary>
+        public int[][] TraitConflicts = System.Array.Empty<int[]>();
+
+        /// <summary>Each trait's disabled work types as a bit per <see cref="WorkTypeIndex"/>, resolved at load.</summary>
+        public int[] TraitDisabledWork = System.Array.Empty<int>();
         public JobDef[] Jobs = System.Array.Empty<JobDef>();
         public WorkTypeDef[] WorkTypes = System.Array.Empty<WorkTypeDef>();
         public SkillDef[] Skills = System.Array.Empty<SkillDef>();
         public ItemDef[] Items = System.Array.Empty<ItemDef>();
         public MoodDef Mood = new MoodDef();
         public MentalBreakDef Break = new MentalBreakDef();
+
+        /// <summary>
+        /// Every kind of break, in <c>BreakHandle</c> order (design 43 §4a); <see cref="Break"/> is
+        /// the first, the wander, and every break from before the taxonomy is one.
+        /// </summary>
+        public MentalBreakDef[] Breaks = System.Array.Empty<MentalBreakDef>();
         public MovementDef Movement = new MovementDef();
 
         /// <summary>The fight's numbers (design 33 §1): the curves, bare hands, healing, the windows.</summary>
@@ -1268,6 +1330,7 @@ namespace Odyssey.Sim.Pawns
         public static DefLoader Register(DefLoader loader) =>
             loader.Register<NeedDef>()
                 .Register<ThoughtDef>()
+                .Register<TraitDef>()
                 .Register<JobDef>()
                 .Register<WorkTypeDef>()
                 .Register<SkillDef>()
@@ -1307,6 +1370,20 @@ namespace Odyssey.Sim.Pawns
                 "Thought_SleptCold", "Thought_SleptHot",
                 // Friendly fire (design 33 §12).
                 "Thought_AttackedByColonist", "Thought_ColonistDied");
+            // Traits (design 43 §4c). Appended, never inserted: a trait's index rides every save
+            // that holds one. A pack without the table is a pack from before traits, and its
+            // colonists simply have none.
+            if (defs.HasTable<TraitDef>())
+            {
+                content.Traits = ByName<TraitDef>(defs,
+                    "Trait_Tireless", "Trait_Diligent", "Trait_Unhurried",
+                    "Trait_Cheerful", "Trait_Sunny", "Trait_Gloomy",
+                    "Trait_Steady", "Trait_Jumpy",
+                    "Trait_QuickStudy", "Trait_SlowStudy",
+                    "Trait_SoftHands", "Trait_BlackThumb", "Trait_HamFisted");
+                ResolveTraits(content);
+            }
+
             content.Jobs = ByName<JobDef>(defs,
                 "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine",
                 "Job_Deliver", "Job_Build", "Job_Deconstruct",
@@ -1343,6 +1420,7 @@ namespace Odyssey.Sim.Pawns
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");
             content.Break = One<MentalBreakDef>(defs, "Break_Wander");
+            content.Breaks = new[] { content.Break };
             content.Movement = One<MovementDef>(defs, "Movement_Colonist");
             content.Kind = One<PawnKindDef>(defs, "PawnKind_Colonist");
             content.Temperature = One<TemperatureDef>(defs, "Temperature_Colonist");
@@ -1435,6 +1513,57 @@ namespace Odyssey.Sim.Pawns
             return content;
         }
 
+        /// <summary>
+        /// Turn the traits' names into handles once, so the roll and the effects never read a
+        /// string: spectra to small integers, conflicts to handle lists with both directions
+        /// folded in, disabled work to a bit mask. A name that resolves to nothing throws here.
+        /// </summary>
+        static void ResolveTraits(PawnContent content)
+        {
+            TraitDef[] traits = content.Traits;
+            content.TraitSpectrum = new int[traits.Length];
+            content.TraitDisabledWork = new int[traits.Length];
+            var spectra = new System.Collections.Generic.List<string>();
+            var conflicts = new System.Collections.Generic.List<int>[traits.Length];
+            for (int t = 0; t < traits.Length; t++) conflicts[t] = new System.Collections.Generic.List<int>();
+
+            for (int t = 0; t < traits.Length; t++)
+            {
+                TraitDef trait = traits[t];
+                if (string.IsNullOrEmpty(trait.spectrum)) content.TraitSpectrum[t] = -1;
+                else
+                {
+                    int s = spectra.IndexOf(trait.spectrum);
+                    if (s < 0) { s = spectra.Count; spectra.Add(trait.spectrum); }
+                    content.TraitSpectrum[t] = s;
+                }
+
+                foreach (string work in trait.disabledWork ?? System.Array.Empty<string>())
+                {
+                    int w = System.Array.IndexOf(WorkTypeIndex.Names, work);
+                    if (w < 0)
+                        throw new DefLoadException($"{trait.defName} disables work '{work}', which is not a work type.");
+                    content.TraitDisabledWork[t] |= 1 << w;
+                }
+
+                foreach (string other in trait.conflicts ?? System.Array.Empty<string>())
+                {
+                    int o = System.Array.FindIndex(traits, d => d.defName == other);
+                    if (o < 0)
+                        throw new DefLoadException($"{trait.defName} conflicts with '{other}', which is not a trait.");
+                    if (!conflicts[t].Contains(o)) conflicts[t].Add(o);
+                    if (!conflicts[o].Contains(t)) conflicts[o].Add(t);
+                }
+            }
+
+            content.TraitConflicts = new int[traits.Length][];
+            for (int t = 0; t < traits.Length; t++)
+            {
+                conflicts[t].Sort();
+                content.TraitConflicts[t] = conflicts[t].ToArray();
+            }
+        }
+
         static T[] ByName<T>(DefDatabase defs, params string[] names) where T : Def
         {
             var array = new T[names.Length];
@@ -1461,6 +1590,14 @@ namespace Odyssey.Sim.Pawns
         public const uint MentalBreak = 0x9E37_79B1;
         public const uint Wander = 0x85EB_CA6B;
         public const uint Passion = 0xC2B2_AE35;
+
+        /// <summary>
+        /// A colonist's traits (design 43 §5f), drawn from (roll seed, pawn id) like the passions
+        /// and the starting skills, and on a stream of its own so dealing traits moved no passion
+        /// and no skill for any seed. Not a salt already in this list: two purposes sharing one
+        /// are two streams that agree.
+        /// </summary>
+        public const uint Traits = 0x7FEB_352D;
 
         /// <summary>
         /// An animal deciding between a leg and a rest, and how long the rest is (design 29 §3).

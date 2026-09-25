@@ -421,6 +421,16 @@ namespace Odyssey.Tests.Sim
         /// the reason given above. <b>Measured</b>: <c>GoldenColonyProbe</c>, reading the first
         /// seventeen job defs so it runs unchanged on both sides, was run on <c>main</c> (54df119a)
         /// and on the merge; the outputs are identical on all three boards.</para>
+        ///
+        /// <para><b>The three Simulated moved on 2026-09-25, for traits (design 43 §3, TM3); no
+        /// Generated moved.</b> Every colonist is dealt two or three traits on the first tick —
+        /// not at placement, which is exactly why the Generated hashes stand — and the hash sees
+        /// them. <b>Measured</b>: <c>GoldenColonyProbe</c> before and after, on this branch. Every
+        /// census number is identical on all three boards — live things, stacks, item cells, pawn
+        /// cells, food, rest, progress, experience, jobs started and failed — <b>except total
+        /// mood</b>, which moved by the outlook traits the seeds dealt: +60 on the meadow, −120 on
+        /// the city, −120 on the played board. No colonist went anywhere or did anything else
+        /// differently; nobody in a golden colony is dealt a trait that forbids work they do.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -432,7 +442,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = false,
             Generated = 10212350739386668344UL,
-            Simulated = 8860197422024298715UL,
+            Simulated = 9605829972595283606UL,
         };
 
         /// <summary>
@@ -458,7 +468,7 @@ namespace Odyssey.Tests.Sim
             // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
             // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
             Generated = 16337376216538696172UL,
-            Simulated = 16703233559271607928UL,
+            Simulated = 17488753500495507298UL,
         };
 
         /// <summary>
@@ -498,7 +508,7 @@ namespace Odyssey.Tests.Sim
             // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
             // 2026-09-23, the combat contracts step; the widened probe diffs clean.
             Generated = 16106640289945334159UL,
-            Simulated = 9493899456924685757UL,
+            Simulated = 4353714152726793388UL,
         };
     }
 }

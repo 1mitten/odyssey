@@ -32,6 +32,9 @@ namespace Odyssey.Tests.Sim
             scenario.colonists = colonists;
             scenario.beds = colonists;
             scenario.startingFellRadius = 0;
+            // About floors and paving, not about who does it: no traits, so a colonist dealt Ham-fisted or
+            // Tireless by her seed cannot make this test about traits (design 43 §5f).
+            scenario.traits = false;
             return ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: wooded);
         }
 

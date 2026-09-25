@@ -59,6 +59,12 @@ namespace Odyssey.Sim.Pawns
         /// <summary>How many kinds this build has: the bound a saved kind is checked against.</summary>
         public int KindCount => _ctx.Content.Kinds.Length == 0 ? 1 : _ctx.Content.Kinds.Length;
 
+        /// <summary>How many traits this build has: the bound a saved trait is checked against.</summary>
+        public int TraitCount => _ctx.Content.Traits.Length;
+
+        /// <summary>How many kinds of break this build has: the bound a saved break kind is checked against.</summary>
+        public int BreakCount => _ctx.Content.Breaks.Length == 0 ? 1 : _ctx.Content.Breaks.Length;
+
         /// <summary>
         /// Build a pawn of a kind at a cell (design 29 §1). Kind 0 is the colonist and is what
         /// <see cref="Spawn(int)"/> makes; anything else is an animal, and the caller has checked
@@ -150,6 +156,9 @@ namespace Odyssey.Sim.Pawns
             Pawn pawn = Spawn(index, kind);
             // An animal has no skills to be passionate about (design 29 §2).
             if (pawn.IsPerson) pawn.RollPassions();
+            // And a colonist arriving mid-game is a new colonist: dealt her traits now, on the same
+            // stream the first tick deals them on (design 43 §5f). A bandit has none.
+            if (pawn.IsColonist && _ctx.DealsTraits) pawn.RollTraits();
             return IntentRejection.None;
         }
 
@@ -248,6 +257,11 @@ namespace Odyssey.Sim.Pawns
             if (pawn == null) return IntentRejection.NotPermitted;
             if (intent.B < 0 || intent.B >= WorkTypeIndex.Count) return IntentRejection.NotPermitted;
             if (intent.C < 0 || intent.C > 4) return IntentRejection.NotPermitted;
+
+            // A work type a trait forbids takes no priority but never (design 43 §4e). Refused
+            // rather than stored: the cell is inert on the Work tab, so a press arriving here is a
+            // caller that did not ask, and a stored number nobody can use is a number in the hash.
+            if (intent.C != 0 && !pawn.CanDo(intent.B)) return IntentRejection.NotPermitted;
 
             if (pawn.WorkPriorities[intent.B] == (byte)intent.C)
                 return IntentRejection.AlreadyInThatState;
@@ -533,9 +547,9 @@ namespace Odyssey.Sim.Pawns
                 {
                     writer.AddPawnAspect(pawn.Id, WorkAspects.Priority[w], pawn.WorkPriorities[w]);
 
-                    // Nothing can answer this with a no yet — there are no traits and no health
-                    // model — so it is a constant one today. Published anyway: see WorkAspects.
-                    writer.AddPawnAspect(pawn.Id, WorkAspects.Capable[w], 1);
+                    // A trait can answer this with a no (design 43 §4e): the Work tab was written
+                    // to grey an incapable cell, and now one can be.
+                    writer.AddPawnAspect(pawn.Id, WorkAspects.Capable[w], pawn.CanDo(w) ? 1 : 0);
                 }
 
                 // The day, one aspect an hour. Twenty-four rows a colonist is the most this

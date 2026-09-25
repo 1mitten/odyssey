@@ -197,6 +197,9 @@ namespace Odyssey.Sim.Pawns
             // factors read, and gone the moment the colonist warms up (design 28 §8).
             target += _ctx.Content.Temperature.MoodOffset(pawn.AmbientTempC);
             target += pawn.MemoryMoodOffset(tick);
+            // Who she is: a trait's permanent offset, situational in the sense that it is
+            // recomputed here and never stored as a thought (design 43 §4e).
+            target += pawn.TraitMoodOffset();
 
             if (target < 0) target = 0;
             if (target > mood.max) target = mood.max;

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Traits (design 43 §4c): who a colonist is, dealt two or three at a time from her own seed on the
+  first tick and never changed. THIS IS A PLACEHOLDER SET OF OUR OWN, every number INVENTED, until
+  the owner fills the table in docs/research/traits-interview.md. The names are ours (clean room).
+
+  Handles are the order in PawnContent.FromDefs and TraitHandle, not the order here: appended,
+  never inserted, because a trait's index rides every save that holds it.
+
+  Units. moodOffset and breakThresholdOffset are thousandths of mood, as a thought's offset is; the
+  interface shows them as points out of a hundred (+60 is "Mood +6"). learningPerMille and
+  workSpeedPerMille are factors, 1000 meaning none. commonality is a plain weight: common 30,
+  normal 20, rare 8. A spectrum holds one degree per colonist; conflicts exclude both ways.
+
+  What a trait may change is the owner's list (interview Q4): permanent mood, the break threshold,
+  learning speed, work speed, and work a colonist cannot do. Nothing else is read.
+-->
+<Defs>
+  <!-- Diligence: how fast she works at everything. -->
+  <TraitDef>
+    <defName>Trait_Tireless</defName>
+    <spectrum>diligence</spectrum>
+    <commonality>8</commonality>
+    <workSpeedPerMille>1350</workSpeedPerMille>
+    <conflicts><li>Trait_SoftHands</li></conflicts>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_Diligent</defName>
+    <spectrum>diligence</spectrum>
+    <commonality>20</commonality>
+    <workSpeedPerMille>1200</workSpeedPerMille>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_Unhurried</defName>
+    <spectrum>diligence</spectrum>
+    <commonality>20</commonality>
+    <workSpeedPerMille>800</workSpeedPerMille>
+  </TraitDef>
+
+  <!-- Outlook: where her mood sits when nothing else is happening. -->
+  <TraitDef>
+    <defName>Trait_Cheerful</defName>
+    <spectrum>outlook</spectrum>
+    <commonality>20</commonality>
+    <moodOffset>60</moodOffset>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_Sunny</defName>
+    <spectrum>outlook</spectrum>
+    <commonality>8</commonality>
+    <moodOffset>120</moodOffset>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_Gloomy</defName>
+    <spectrum>outlook</spectrum>
+    <commonality>20</commonality>
+    <moodOffset>-60</moodOffset>
+  </TraitDef>
+
+  <!-- Nerve: how low her mood must go before she can break. Negative is steadier. -->
+  <TraitDef>
+    <defName>Trait_Steady</defName>
+    <spectrum>nerve</spectrum>
+    <commonality>20</commonality>
+    <breakThresholdOffset>-90</breakThresholdOffset>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_Jumpy</defName>
+    <spectrum>nerve</spectrum>
+    <commonality>20</commonality>
+    <breakThresholdOffset>80</breakThresholdOffset>
+  </TraitDef>
+
+  <!-- Learning: how fast her skills grow. -->
+  <TraitDef>
+    <defName>Trait_QuickStudy</defName>
+    <spectrum>learning</spectrum>
+    <commonality>20</commonality>
+    <learningPerMille>1750</learningPerMille>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_SlowStudy</defName>
+    <spectrum>learning</spectrum>
+    <commonality>20</commonality>
+    <learningPerMille>400</learningPerMille>
+  </TraitDef>
+
+  <!-- Work she will not do. The Work tab greys the column, and the scan never offers it. -->
+  <TraitDef>
+    <defName>Trait_SoftHands</defName>
+    <commonality>30</commonality>
+    <disabledWork><li>mining</li></disabledWork>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_BlackThumb</defName>
+    <commonality>30</commonality>
+    <disabledWork><li>growing</li></disabledWork>
+  </TraitDef>
+  <TraitDef>
+    <defName>Trait_HamFisted</defName>
+    <commonality>30</commonality>
+    <disabledWork><li>construction</li></disabledWork>
+  </TraitDef>
+</Defs>

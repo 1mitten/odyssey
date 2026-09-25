@@ -53,6 +53,9 @@ namespace Odyssey.Tests.Sim
             scenario.colonists = 0;
             scenario.beds = 0;
             scenario.startingFellRadius = 0;
+            // About the rate curve, to the tick, not about who does it: no traits, so a colonist dealt Ham-fisted or
+            // Tireless by her seed cannot make this test about traits (design 43 §5f).
+            scenario.traits = false;
             return ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: true);
         }
 

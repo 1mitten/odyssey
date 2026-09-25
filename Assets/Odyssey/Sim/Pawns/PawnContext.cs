@@ -72,6 +72,12 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The current tick, refreshed at the top of each pawn system.</summary>
         public int CurrentTick { get; internal set; }
 
+        /// <summary>
+        /// Whether colonists in this world are dealt traits (design 43 §5f): the scenario's
+        /// <see cref="ScenarioDef.traits"/>, set once when the world is built.
+        /// </summary>
+        public bool DealsTraits { get; set; } = true;
+
         public uint Seed { get; internal set; }
 
         /// <summary>The standing orders, when the world has them. Null in a bare pawn fixture.</summary>

@@ -257,6 +257,44 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// See <see cref="JobHandle"/>: trait indices (design 43 §4a, §4c). The order is
+    /// <c>PawnContent.FromDefs</c>'s trait list, and a trait's index rides every save that holds
+    /// it: <b>appended, never inserted</b>. The interface names a trait by <see cref="Names"/>
+    /// (<c>ui.trait.&lt;name&gt;</c>) and never sees the Def.
+    ///
+    /// <para><b>The thirteen are a placeholder set of our own</b>, every number INVENTED, until the
+    /// owner's table in <c>docs/research/traits-interview.md</c> replaces them. Renaming one in place
+    /// is safe until a colony that holds it is kept; after that, append.</para>
+    /// </summary>
+    public static class TraitHandle
+    {
+        public const int Tireless = 0;
+        public const int Diligent = 1;
+        public const int Unhurried = 2;
+        public const int Cheerful = 3;
+        public const int Sunny = 4;
+        public const int Gloomy = 5;
+        public const int Steady = 6;
+        public const int Jumpy = 7;
+        public const int QuickStudy = 8;
+        public const int SlowStudy = 9;
+        public const int SoftHands = 10;
+        public const int BlackThumb = 11;
+        public const int HamFisted = 12;
+        public const int Count = 13;
+
+        /// <summary>The names a trait is keyed by in the registry, parallel to the handles.</summary>
+        public static readonly string[] Names =
+        {
+            "tireless", "diligent", "unhurried", "cheerful", "sunny", "gloomy", "steady", "jumpy",
+            "quickstudy", "slowstudy", "softhands", "blackthumb", "hamfisted",
+        };
+
+        /// <summary>The most traits a colonist carries: two always, a third sometimes (design 43 §5f).</summary>
+        public const int MaxPerPawn = 3;
+    }
+
+    /// <summary>
     /// See <see cref="JobHandle"/>: memory thought indices (design 43 §4a). The order is
     /// <c>PawnContent.FromDefs</c>'s thought list and <c>ThoughtIndex</c> aliases these, because a
     /// thought's index rides every saved memory: <b>appended, never inserted</b>. The interface

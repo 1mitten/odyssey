@@ -255,7 +255,12 @@ namespace Odyssey.Tests.Sim
         // Moved a twenty-seventh time, deliberately, 2026-09-25, by the published mood band (design
         // 43 §5a, TM1): MoodDef gained strainMargin (100, INVENTED), how far above the minor line a
         // colonist still reads strained. No golden moved: the band is a report and is not hashed.
-        const ulong ContentFingerprint = 16782104352789909026UL;
+        //
+        // Moved a twenty-eighth time, deliberately, 2026-09-25, by traits (design 43 §4c, TM3): the
+        // thirteen placeholder TraitDefs (every number INVENTED), PawnKindDef.thirdTraitPerCent
+        // (30), and the resolved spectrum, conflict and disabled-work tables. The Simulated goldens
+        // moved in the same commit, for the hash seeing the traits (Golden.cs says what else).
+        const ulong ContentFingerprint = 15424607032684955989UL;
 
 
         [Test]

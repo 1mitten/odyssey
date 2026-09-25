@@ -25,6 +25,14 @@ namespace Odyssey.Sim.Pawns
     {
         public int colonists = 5;
 
+        /// <summary>
+        /// Are this scenario's colonists dealt traits (design 43 §5f)? True for every scenario a
+        /// player starts. A test fixture about something else — how a floor is fed, how a sower
+        /// kneels, what a level-twenty miner digs in a tick — sets it false, so a colonist dealt
+        /// <i>Ham-fisted</i> or <i>Tireless</i> by her seed cannot make that test about traits.
+        /// </summary>
+        public bool traits = true;
+
         public int mealPiles = 12;
 
         /// <summary>

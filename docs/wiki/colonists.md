@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure. Traits, thoughts and mental breaks are design 43: a thought's description here is its tooltip on the Thoughts tab, and a trait's is its tooltip on the colonist's pane and the select screen.
 
-65 entries, 47 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+78 entries, 60 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -41,6 +41,24 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Strained** | `ui.mood.strained` | Mood is falling. Watch this one <br>**Needs:** mood face, strained | no art | M2 |
 | **Breaking** | `ui.mood.breaking` | At the threshold of a mental break <br>**Needs:** mood face, at the break threshold | no art | M2 |
 | **Breaking down** | `ui.mood.broken` | In a mental break now <br>**Needs:** mood face, in a break | no art | M2 |
+
+## Traits
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Tireless** | `ui.trait.tireless` | Works at everything far faster than most. Nobody has seen her sit down | no art | TM |
+| **Diligent** | `ui.trait.diligent` | Works at everything faster than most | no art | TM |
+| **Unhurried** | `ui.trait.unhurried` | Works at everything more slowly than most, and will not be rushed | no art | TM |
+| **Cheerful** | `ui.trait.cheerful` | Her mood sits a little higher, whatever the day brings | no art | TM |
+| **Sunny** | `ui.trait.sunny` | Her mood sits well above everyone else's | no art | TM |
+| **Gloomy** | `ui.trait.gloomy` | Her mood sits a little lower, whatever the day brings | no art | TM |
+| **Steady** | `ui.trait.steady` | Takes a good deal more than most before she breaks | no art | TM |
+| **Jumpy** | `ui.trait.jumpy` | Breaks sooner than most when things go badly | no art | TM |
+| **Quick study** | `ui.trait.quickstudy` | Learns every skill much faster than most | no art | TM |
+| **Slow study** | `ui.trait.slowstudy` | Learns every skill slowly | no art | TM |
+| **Soft hands** | `ui.trait.softhands` | Will not mine. Never has, never will | no art | TM |
+| **Black thumb** | `ui.trait.blackthumb` | Will not work a growing zone | no art | TM |
+| **Ham-fisted** | `ui.trait.hamfisted` | Will not build | no art | TM |
 
 ## Thoughts
 
