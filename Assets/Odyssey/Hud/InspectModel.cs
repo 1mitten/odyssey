@@ -606,15 +606,6 @@ namespace Odyssey.Hud
         int _healthHp = int.MinValue, _healthMax = int.MinValue, _healthWeapon = int.MinValue, _healthCondition = -1;
 
         /// <summary>
-        /// The Health tab (design 33 §1: HP, state, weapon). The pool is <c>odyssey.pawn.hp.max</c>,
-        /// published for every person always; <b>no <c>odyssey.pawn.hp</c> beside it means whole</b>
-        /// (design 33 §5d). The condition is the flags' — downed, then stunned — else hurt while
-        /// below the pool, else unhurt. The weapon is <c>odyssey.pawn.weapon</c>'s item, else bare
-        /// hands.
-        ///
-        /// <para>Three O(1) aspect lookups a refresh for the one pawn on the pane.</para>
-        /// </summary>
-        /// <summary>
         /// Fill <see cref="TraitRows"/> from the slots the simulation published (design 44 §4d),
         /// rebuilding only when a slot changed — which, since traits never change, is once per
         /// colonist the pane is opened on.
@@ -653,9 +644,11 @@ namespace Odyssey.Hud
         {
             _nowScratch.Clear();
             _memoryScratch.Clear();
-            long signature = pawn.Mood;
+            // Signed in at the resolution the heading draws, so a mood drifting a thousandth at a
+            // time does not rebuild the rows on every refresh for a number that reads the same.
+            long signature = MindCatalogue.PointsOf(pawn.Mood);
             bool targeted = snapshot.TryGetPawnAspect(pawn.Id, MindAspectNames.TargetKey, out int target);
-            signature = signature * 31 + (targeted ? target : -1);
+            signature = signature * 31 + (targeted ? MindCatalogue.PointsOf(target) : -100_000);
 
             foreach (MindCatalogue.Source source in MindCatalogue.Situational)
             {
@@ -683,7 +676,7 @@ namespace Odyssey.Hud
                 // The time left is signed in at the resolution it is drawn at, so a pane open on a
                 // memory does not rebuild every tick for a number that reads the same.
                 signature = signature * 31 + value;
-                signature = signature * 31 + MindCatalogue.Left(left).GetHashCode();
+                signature = signature * 31 + MindCatalogue.LeftOf(left);
                 signature = signature * 31 + count;
             }
 
@@ -754,6 +747,15 @@ namespace Odyssey.Hud
             }
         }
 
+        /// <summary>
+        /// The Health tab (design 33 §1: HP, state, weapon). The pool is <c>odyssey.pawn.hp.max</c>,
+        /// published for every person always; <b>no <c>odyssey.pawn.hp</c> beside it means whole</b>
+        /// (design 33 §5d). The condition is the flags' — downed, then stunned — else hurt while
+        /// below the pool, else unhurt. The weapon is <c>odyssey.pawn.weapon</c>'s item, else bare
+        /// hands.
+        ///
+        /// <para>Three O(1) aspect lookups a refresh for the one pawn on the pane.</para>
+        /// </summary>
         void RefreshHealth(WorldSnapshot snapshot, in PawnView pawn)
         {
             bool pooled = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpMaxKey, out int max) && max > 0;

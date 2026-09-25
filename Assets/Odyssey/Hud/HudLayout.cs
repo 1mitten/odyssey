@@ -1090,13 +1090,6 @@ namespace Odyssey.Hud
         /// Thoughts, Social, Health and Log have no content to measure, and a guess at them would
         /// be empty space today bought against a design nobody has written.</para>
         /// </summary>
-        /// <summary>
-        /// How many rows the Thoughts tab has room for under its heading line (design 44 §5b): the
-        /// tab body, less the heading, in cell rows. Derived, so it follows the body when a skill
-        /// or a need moves it, and the model caps its list at it so the pane never grows.
-        /// </summary>
-        public static int ThoughtRows => (InspectTabBody - CellRow) / CellRow;
-
         public static int InspectTabBody
         {
             get
@@ -1106,6 +1099,19 @@ namespace Odyssey.Hud
                 return Math.Max(needs, skills);
             }
         }
+
+        /// <summary>
+        /// How many rows the Thoughts tab has room for under its heading line (design 44 §5b): the
+        /// tab body, less the heading, in cell rows. Derived, so it follows the body when a skill
+        /// or a need moves it, and the model caps its list at it so the pane never grows.
+        /// </summary>
+        public static int ThoughtRows => (InspectTabBody - CellRow) / CellRow;
+
+        /// <summary>
+        /// The needs grid's height: <see cref="InspectNeedRows"/> rows of <see cref="NeedRow"/> with
+        /// a <see cref="NeedRowGap"/> between each. What the traits block sits under (design 44 §5f).
+        /// </summary>
+        public static int InspectNeedsHeight => InspectNeedRows * NeedRow + (InspectNeedRows - 1) * NeedRowGap;
 
         // ------------------------------------------------------------------ the start screen
 

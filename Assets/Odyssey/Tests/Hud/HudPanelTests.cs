@@ -67,6 +67,62 @@ namespace Odyssey.Tests.Hud
             Assert.That(alerts.Rows[0].Lead, Does.EndWith(AlertModel.BrokenTail));
         }
 
+        /// <summary>
+        /// Dismissing the warning must not hide the break it warned of (review, 2026-09-25): the two
+        /// shared one dismiss key, cleared only at content, so a player who put away "close to
+        /// breaking" never heard that she had gone berserk. And a dismissed break is news again
+        /// the next time, because its dismissal lasts only as long as the break.
+        /// </summary>
+        [Test]
+        public void DismissingTheWarningDoesNotHideTheBreak()
+        {
+            var alerts = new AlertModel();
+            alerts.Refresh(OneColonist(MoodBand.BreakingMajor), 0.0);
+            alerts.Dismiss(alerts.Rows[0].DismissKey);
+            alerts.Refresh(OneColonist(MoodBand.BreakingMajor), 1.0);
+            Assert.That(alerts.Rows, Is.Empty, "the control: the warning is put away");
+
+            alerts.Refresh(OneColonist(MoodBand.Broken), 2.0);
+            Assert.That(alerts.Rows, Has.Count.EqualTo(1), "the break is its own news");
+            Assert.That(alerts.Rows[0].Severity, Is.EqualTo(AlertSeverity.Danger));
+
+            alerts.Dismiss(alerts.Rows[0].DismissKey);
+            alerts.Refresh(OneColonist(MoodBand.Broken), 3.0);
+            Assert.That(alerts.Rows, Is.Empty, "and can be put away in its turn");
+
+            alerts.Refresh(OneColonist(MoodBand.BreakingMinor), 4.0);
+            Assert.That(alerts.Rows, Is.Empty, "after it, the warning is still the one she dismissed");
+            alerts.Refresh(OneColonist(MoodBand.Broken), 5.0);
+            Assert.That(alerts.Rows, Has.Count.EqualTo(1), "a second break is news again");
+        }
+
+        /// <summary>
+        /// Two latched colonists swapping between at risk and in a break on one refresh leave every
+        /// count where it was; the panel still has to be rebuilt, or it keeps the old wording.
+        /// </summary>
+        [Test]
+        public void TwoColonistsSwappingBandsRewordThePanel()
+        {
+            WorldSnapshot Two(int first, int second)
+            {
+                var snapshot = Frame.Write();
+                snapshot.AddPawn(Colonist(1));
+                snapshot.AddPawn(Colonist(2));
+                Band(snapshot, 1, first);
+                Band(snapshot, 2, second);
+                return snapshot;
+            }
+
+            var alerts = new AlertModel();
+            alerts.Refresh(Two(MoodBand.Broken, MoodBand.BreakingMinor), 0.0);
+            Assert.That(alerts.Rows[0].Severity, Is.EqualTo(AlertSeverity.Danger));
+            Assert.That(alerts.Rows[0].Pawn.Value, Is.EqualTo(1));
+
+            alerts.Refresh(Two(MoodBand.BreakingMinor, MoodBand.Broken), 1.0);
+            AlertRow danger = alerts.Rows[0].Severity == AlertSeverity.Danger ? alerts.Rows[0] : alerts.Rows[1];
+            Assert.That(danger.Pawn.Value, Is.EqualTo(2), "the break row moved to the colonist now in one");
+        }
+
         [Test]
         public void ALowMoodWithNoBandRaisesNothing()
         {

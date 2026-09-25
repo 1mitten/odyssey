@@ -70,9 +70,20 @@ namespace Odyssey.Hud
         /// </summary>
         public static string Points(int thousandths)
         {
-            int magnitude = (System.Math.Abs(thousandths) + 5) / 10;
+            int magnitude = PointsOf(thousandths);
+            if (magnitude < 0) magnitude = -magnitude;
             if (magnitude == 0) return "0";
             return (thousandths > 0 ? "+" : "-") + magnitude;
+        }
+
+        /// <summary>
+        /// <see cref="Points"/> as a number, signed: what the pane draws, for a signature to compare
+        /// without building the string.
+        /// </summary>
+        public static int PointsOf(int thousandths)
+        {
+            int magnitude = (System.Math.Abs(thousandths) + 5) / 10;
+            return thousandths < 0 ? -magnitude : magnitude;
         }
 
         /// <summary>How long until a memory thins, as the clock's hours or days: "5h", "2d".</summary>
@@ -81,6 +92,17 @@ namespace Odyssey.Hud
             long hour = GameClock.TicksPerDay / 24;
             if (ticks < GameClock.TicksPerDay) return ((ticks + hour - 1) / hour) + "h";
             return ((ticks + GameClock.TicksPerDay / 2) / GameClock.TicksPerDay) + "d";
+        }
+
+        /// <summary>
+        /// <see cref="Left"/> as a number that changes exactly when its text does: hours below a day,
+        /// and days offset clear of them above.
+        /// </summary>
+        public static long LeftOf(int ticks)
+        {
+            long hour = GameClock.TicksPerDay / 24;
+            if (ticks < GameClock.TicksPerDay) return (ticks + hour - 1) / hour;
+            return 1_000 + (ticks + GameClock.TicksPerDay / 2) / GameClock.TicksPerDay;
         }
     }
 }

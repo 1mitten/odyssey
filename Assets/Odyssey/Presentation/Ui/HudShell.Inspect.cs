@@ -341,7 +341,7 @@ namespace Odyssey.Presentation.Ui
 
             SetNeed(0, _inspect.Food);
             SetNeed(1, _inspect.Rest);
-            SetNeed(2, _inspect.Mood);
+            SetNeed(2, _inspect.Mood, HudTokens.MoodBand(_inspect.Band));
 
             for (int i = 0; i < _inspect.Skills.Count; i++)
             {
@@ -581,14 +581,14 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         static Color ExperienceInk => HudTokens.Good;
 
-        void SetNeed(int index, int thousandths)
+        void SetNeed(int index, int thousandths, Color? ink = null)
         {
             if (index >= _needs.Count) return;
             NeedView view = _needs[index];
 
             float percent = Percent(thousandths);
             view.Fill.style.width = Length.Percent(percent);
-            view.Fill.style.backgroundColor = HudTokens.NeedBand(thousandths);
+            view.Fill.style.backgroundColor = ink ?? HudTokens.NeedBand(thousandths);
 
             // A need moves by fractions of a per cent between refreshes, so the label is rebuilt
             // only when the whole number it prints has actually changed.

@@ -38,10 +38,15 @@ namespace Odyssey.Presentation.Ui
             public Label Value = null!;
             public string LastName = string.Empty;
             public string LastValue = string.Empty;
-            public string? LastTint;
+            public HudColour? LastTint;
+            public bool TintKnown;
             public string? LastTooltip;
             public bool LastHeading;
         }
+
+        static bool SameColour(HudColour? a, HudColour? b) =>
+            a.HasValue == b.HasValue && (!a.HasValue
+                || (a.Value.R == b!.Value.R && a.Value.G == b.Value.G && a.Value.B == b.Value.B && a.Value.A == b.Value.A));
 
         /// <summary>Build the Thoughts tab's body into <paramref name="tabBody"/>, hidden until the tab is shown.</summary>
         void BuildThoughtsTab(VisualElement tabBody)
@@ -185,18 +190,24 @@ namespace Odyssey.Presentation.Ui
                 {
                     view.LastName = row.Name;
                     view.LastHeading = heading;
-                    HudText.Set(view.Name, row.Name, heading ? HudTextRole.Row : HudTextRole.Meta);
+                    // Apply as well as Set: Set only cases the text, and the step and weight are the
+                    // role's, so a heading written with Set alone drew at the rows' own size.
+                    HudTextRole role = heading ? HudTextRole.Row : HudTextRole.Meta;
+                    HudText.Apply(view.Name, role);
+                    HudText.Set(view.Name, row.Name, role);
                 }
                 if (view.LastValue != row.Value)
                 {
                     view.LastValue = row.Value;
                     HudText.Set(view.Value, row.Value, HudTextRole.Meta);
-                    view.LastTint = null;
+                    view.TintKnown = false;
                 }
 
-                string? tint = row.Tint?.Hex;
-                if (view.LastTint != tint)
+                // Compared by its channels, not by Hex, which formats a string on every refresh.
+                HudColour? tint = row.Tint;
+                if (!view.TintKnown || !SameColour(view.LastTint, tint))
                 {
+                    view.TintKnown = true;
                     view.LastTint = tint;
                     if (row.Tint is HudColour colour) view.Value.style.color = HudTokens.Convert(colour);
                     else view.Value.style.color = StyleKeyword.Null;

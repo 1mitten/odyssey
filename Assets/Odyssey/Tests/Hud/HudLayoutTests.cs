@@ -51,6 +51,21 @@ namespace Odyssey.Tests.Hud
         /// <para>A modal that runs off the top of a small canvas hides its own first row, and the
         /// row a start screen hides first is New game.</para>
         /// </summary>
+        /// <summary>
+        /// The traits block sits under the needs bars in the slack the fixed body leaves there
+        /// (design 44 §5f): a heading and a row per trait, at most <see cref="Odyssey.Sim.Contracts.TraitHandle.MaxPerPawn"/>.
+        /// Cited by <c>HudShell.BuildTraitsRows</c> and missing until the review of 2026-09-25; it
+        /// fits with nine pixels to spare today, and a fourth trait, a fourth need or a taller row
+        /// would overflow a pane that is meant never to grow.
+        /// </summary>
+        [Test]
+        public void TheTraitsFitUnderTheNeeds()
+        {
+            int traits = (1 + Odyssey.Sim.Contracts.TraitHandle.MaxPerPawn) * HudLayout.CellRow;
+            Assert.That(HudLayout.InspectNeedsHeight + traits, Is.LessThanOrEqualTo(HudLayout.InspectTabBody),
+                $"needs {HudLayout.InspectNeedsHeight} + traits {traits} against a body of {HudLayout.InspectTabBody}");
+        }
+
         [Test]
         public void TheStartScreenFitsEveryCanvasThisGameDraws()
         {

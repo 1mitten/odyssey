@@ -623,6 +623,16 @@ namespace Odyssey.Presentation.Ui
             thousandths >= 600 ? Good : thousandths >= 400 ? Warn : Bad;
 
         /// <summary>
+        /// The mood bar's colour, from the band the simulation published rather than from
+        /// <see cref="NeedBand"/>'s 60/40 (design 44 §5a): content is good, strained is warn, and
+        /// breaking or broken is bad. The mood's lines move with traits, so a fixed cut here would
+        /// paint a rested colonist amber beside the word "content".
+        /// </summary>
+        public static Color MoodBand(int band) =>
+            band == Odyssey.Sim.Contracts.MoodBand.Content ? Good
+            : band == Odyssey.Sim.Contracts.MoodBand.Strained ? Warn : Bad;
+
+        /// <summary>
         /// One <see cref="Odyssey.Hud.HudColour"/> as a Unity colour.
         ///
         /// <para><b>Public since the Build palette</b>, which is the first part of the HUD whose

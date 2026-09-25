@@ -18,8 +18,20 @@ namespace Odyssey.Hud
     public static class TraitSummary
     {
         /// <summary>The registry key that names a trait.</summary>
-        public static string Key(int handle) =>
-            handle >= 0 && handle < TraitHandle.Count ? "ui.trait." + TraitHandle.Names[handle] : "ui.trait.unknown";
+        public static string Key(int handle)
+        {
+            if (handle < 0 || handle >= TraitHandle.Count) return "ui.trait.unknown";
+            // Built once: the Thoughts tab asks for it on every refresh of an open pane.
+            if (_keys == null)
+            {
+                var keys = new string[TraitHandle.Count];
+                for (int t = 0; t < keys.Length; t++) keys[t] = "ui.trait." + TraitHandle.Names[t];
+                _keys = keys;
+            }
+            return _keys[handle];
+        }
+
+        static string[]? _keys;
 
         /// <summary>What a trait does, in a few words, from its published effects.</summary>
         public static string Of(int mood, int nerve, int learnPerMille, int workPerMille, int cannotMask)
