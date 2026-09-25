@@ -160,6 +160,65 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>How cleared a point is, 0 to 1. The shader's own read, in C#, for tests.</summary>
+        /// <summary>
+        /// Lay the grass flat over a rectangle in X and Z, at full strength inside it and falling
+        /// off over <paramref name="margin"/> metres outside (design 45 §13): what a placement's
+        /// footprint clears, one stamp however many cells it covers. True if anything was written.
+        /// </summary>
+        public bool StampRect(Vector2 low, Vector2 high, float margin)
+        {
+            if (!StampRectInto(_field, Origin, low, high, margin)) return false;
+            Stamps++;
+            return true;
+        }
+
+        /// <summary>The same, into any field: the pure half, for tests.</summary>
+        public static bool StampRectInto(byte[] field, Vector2 origin, Vector2 low, Vector2 high, float margin)
+        {
+            float edge = Mathf.Max(margin, 1e-3f) / MetresPerTexel;
+            float lx = (low.x - origin.x) / MetresPerTexel, lz = (low.y - origin.y) / MetresPerTexel;
+            float hx = (high.x - origin.x) / MetresPerTexel, hz = (high.y - origin.y) / MetresPerTexel;
+
+            int x0 = Mathf.Max(Mathf.FloorToInt(lx - edge), 0), x1 = Mathf.Min(Mathf.CeilToInt(hx + edge), Resolution - 1);
+            int z0 = Mathf.Max(Mathf.FloorToInt(lz - edge), 0), z1 = Mathf.Min(Mathf.CeilToInt(hz + edge), Resolution - 1);
+            if (x0 > x1 || z0 > z1) return false;
+
+            // The inside is written flat, a row at a time, and only the margin band pays for a
+            // distance: a large drag is tens of thousands of texels, and a square root each was two
+            // milliseconds of a frame (design 45 §13, measured).
+            int ix0 = Mathf.Max(Mathf.CeilToInt(lx - 0.5f), x0), ix1 = Mathf.Min(Mathf.FloorToInt(hx - 0.5f), x1);
+            bool wrote = false;
+            for (int z = z0; z <= z1; z++)
+            {
+                float pz = z + 0.5f;
+                float dz = pz < lz ? lz - pz : pz > hz ? pz - hz : 0f;
+                if (dz > edge) continue;
+                int row = z * Resolution;
+                bool insideRow = dz == 0f;
+                for (int x = x0; x <= x1; x++)
+                {
+                    if (insideRow && x >= ix0 && x <= ix1)
+                    {
+                        for (; x <= ix1; x++)
+                            if (field[row + x] != 255) { field[row + x] = 255; wrote = true; }
+                        x = ix1;
+                        continue;
+                    }
+                    float px = x + 0.5f;
+                    float dx = px < lx ? lx - px : px > hx ? px - hx : 0f;
+                    float outside = dx == 0f ? dz : dz == 0f ? dx : Mathf.Sqrt(dx * dx + dz * dz);
+                    if (outside > edge) continue;
+                    var value = (byte)(255f * (1f - outside / edge) + 0.5f);
+                    if (value > field[row + x])
+                    {
+                        field[row + x] = value;
+                        wrote = true;
+                    }
+                }
+            }
+            return wrote;
+        }
+
         public float At(Vector3 world)
         {
             int x = Mathf.FloorToInt((world.x - Origin.x) / MetresPerTexel);

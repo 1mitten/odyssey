@@ -13088,3 +13088,14 @@ not kept. **The berries floated**: placed on a ring by the footprint's half-diag
 the bush's turn nor its crown's shape. They go through the bush's own drawn matrix onto the upper
 dome of its bounds now, 15 % inside. Before and after photographs are `BushPickTests.TheBerryBushAtThePlayCamera`.
 
+## 2026-09-25 — Placing over growth (design 45 §13)
+
+The owner could not see a blueprint through the meadow. While any tool is armed the footprint's
+grass now lies flat (one stamp per footprint box into the existing clearance texture) and the
+bushes and trees over it fade by the colonists' see-through partition — the one place a bush
+fades; a waiting site keeps its grass flat until built. The first timing was the lesson: a 24 x 24
+box cost 2.4 ms, and the frame split put all of it in the overlays section, where the stamp runs —
+a square root for each of ~50,000 texels. Writing the inside flat and paying only in the margin
+took it to +0.47 ms over the same box without the clearing, most of that the faded trees' extra
+draws. Measured in one world, three arms (cleared, armed without, nothing armed).
+

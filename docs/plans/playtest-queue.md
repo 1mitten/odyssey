@@ -43,6 +43,9 @@ the next session learns to ignore.
   **Since the first play (§12):** click anywhere on a bush's crown — ripe, picked or plain — and
   the pane names the bush; the berries sit on the bush. Wrong: a click on a bush naming the grass,
   or a berry hanging in the air beside its bush.
+  **And placing (§13):** arm a wall or an order and drag over tall grass and a bush — the grass under
+  the drag lies flat and the bush fades while you place, and comes back when you disarm. Wrong: a
+  blueprint you still cannot see, a bush that stays faded after placing, or grass that pops.
 
 - **Which rain reads as a rainy day: §7's particles, or GPU rain with wet ground?** (`claude/rain-look`,
   #203; design 43 §7, #202.) No Play needed. Open https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3, pick

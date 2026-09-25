@@ -136,6 +136,101 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// A wall dragged across a bush and tall grass, from the play camera, with the placement
+        /// cleared and without it (design 45 §13): <c>placing-before.png</c> and
+        /// <c>placing-after.png</c> in <c>Logs/look/</c>. Then the frame, timed with a 24 x 24 box
+        /// armed against nothing armed, in the same world. Explicit.
+        /// </summary>
+        [UnityTest, Explicit("a photograph and a timing for judging the placement clearing, not a test")]
+        public IEnumerator PlacingOverABushAndTallGrass()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out SliceCameraRig rig);
+            RenderTexture? target = null;
+            Camera cam = rig.Camera;
+            try
+            {
+                yield return Settle(boot, rig);
+                var colony = boot.Colony!;
+                var size = colony.Grid.Size;
+                CellRef start = colony.Start;
+                int bush = -1, best = int.MaxValue;
+                for (int i = 0; i < size.CellCount; i++)
+                {
+                    if (!colony.Grid.IsUndergrowth(i)) continue;
+                    CellRef at = size.FromIndex(i);
+                    int d = Math.Abs(at.X - start.X) + Math.Abs(at.Z - start.Z);
+                    if (d < best) { best = d; bush = i; }
+                }
+                Assert.That(bush, Is.GreaterThanOrEqualTo(0), "no bush on the board");
+                CellRef b = size.FromIndex(bush);
+                var ground = new CellRef(b.X, b.Z, b.Y - 1);
+
+                var presenter = boot.GetComponent<DesignatePresenter>();
+                DesignateDirector director = presenter.Director;
+                director.ArmBuild(BuildingHandle.Wall);
+                director.Begin(new CellRef(b.X - 3, b.Z, ground.Y));
+                director.DragTo(new CellRef(b.X + 3, b.Z, ground.Y));
+
+                target = new RenderTexture(1920, 1080, 24) { name = "placing" };
+                cam.targetTexture = target;
+                Directory.CreateDirectory(Path.GetFullPath("Logs/look"));
+                rig.FocusOn(b, 16f);
+                for (int i = 0; i < 150; i++) yield return null;
+
+                PlacementClearing.Enabled = false;
+                for (int i = 0; i < 20; i++) yield return null;
+                yield return Photograph("placing-before", target);
+                PlacementClearing.Enabled = true;
+                for (int i = 0; i < 20; i++) yield return null;
+                yield return Photograph("placing-after", target);
+                Debug.Log($"[Placing] faded for the placement: {boot.Renderer!.InstancesFadedForPlacement}; " +
+                          $"clearance stamps {boot.Renderer.Clearance.Stamps}");
+
+                // The frame with a large box armed, against the same world with nothing armed.
+                cam.targetTexture = null;
+                rig.FocusOn(b, 40f);
+                for (int i = 0; i < 60; i++) yield return null;
+                director.Begin(new CellRef(b.X - 12, b.Z - 12, ground.Y));
+                director.DragTo(new CellRef(b.X + 11, b.Z + 11, ground.Y));
+                // Three arms in one world, twice round and the lower kept: the box armed with the
+                // clearing, the box armed without it, and nothing armed.
+                var means = new float[3];
+                for (int arm = 0; arm < 3; arm++) means[arm] = float.MaxValue;
+                for (int round = 0; round < 2; round++)
+                for (int arm = 0; arm < 3; arm++)
+                {
+                    PlacementClearing.Enabled = arm != 1;
+                    if (arm == 2) director.Tool = DesignateTool.None;
+                    else if (director.Tool == DesignateTool.None)
+                    {
+                        director.ArmBuild(BuildingHandle.Wall);
+                        director.Begin(new CellRef(b.X - 12, b.Z - 12, ground.Y));
+                        director.DragTo(new CellRef(b.X + 11, b.Z + 11, ground.Y));
+                    }
+                    for (int i = 0; i < 60; i++) yield return null;
+                    float total = 0f;
+                    for (int i = 0; i < 180; i++) { yield return null; total += Time.unscaledDeltaTime * 1000f; }
+                    means[arm] = Mathf.Min(means[arm], total / 180f);
+                    var r = boot.Renderer!;
+                    Debug.Log($"[Placing] arm {arm} round {round}: {total / 180f:0.00} ms, submit {boot.SubmitMs:0.000}, " +
+                              $"World {boot.FrameSectionMs[(int)OdysseyBootstrap.FrameSection.World]:0.000}, {r.DrawCalls} calls, " +
+                              $"{r.InstancesDrawn} instances, {r.IndirectDrawCalls} indirect, faded {r.InstancesFaded}/{r.InstancesFadedForPlacement}, " +
+                              $"placement rects {r.Placement.Count}, split {string.Join(" ", System.Linq.Enumerable.Select(boot.FrameSectionMs.ToArray(), v => v.ToString("0.00")))}");
+                }
+                PlacementClearing.Enabled = true;
+                Debug.Log($"[Placing] frame with a 24 x 24 wall box armed: cleared {means[0]:0.00} ms, " +
+                          $"not cleared {means[1]:0.00} ms; nothing armed {means[2]:0.00} ms");
+            }
+            finally
+            {
+                PlacementClearing.Enabled = true;
+                cam.targetTexture = null;
+                if (target != null) target.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
         sealed class Tally
         {
             public bool NoArt;

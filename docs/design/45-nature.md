@@ -253,3 +253,27 @@ set 15 % inside so they sit in the leaves. The meshes are not readable at run ti
 the art is copied: the bounds are the resolved module's. **Left out**: the berries do not sway with
 the bush's wind bow (0.18 of the grass's); set into the leaves the difference is a few centimetres.
 `ChunkMesher.BerriesOnTheCrown = false` draws them as first built, for the before photograph.
+
+## 13. Placing over growth (2026-09-25)
+
+Owner, playing #222: *"the grass/bushes/foliage is getting in the way of placing any orders — I
+can't see the blueprint and that needs to be clear so I know where I'm placing these blueprints."*
+
+While **any build or order tool is armed** the footprint it would act on — the cell under the
+pointer, the dragged box, or a build's boxes where it steps up a riser — is cleared, and nothing is
+cleared while no tool is armed (`PlacementClearing`, `OdysseyBootstrap.ClearForPlacement`):
+
+- **The grass lies flat** under the footprint and 0.8 m round it: one soft rectangle per footprint
+  box stamped into the clearance field the tufts, stands, flowers and cover already read
+  (`GrassClearance.StampRect`), updated every frame as the pointer or the drag moves.
+- **Bushes, stones and trees standing over the footprint fade**, through the see-through
+  partition the colonists use. A bush near a placement comes off the indirect path for those
+  frames so it can. **This is the one exception to "bushes never fade"**: a colonist walking through
+  a bush still does not fade it.
+- **A waiting site keeps its grass flat** until it is built, as an order's mark and an item do.
+
+**Measured** (`BushPickTests.PlacingOverABushAndTallGrass`, a 24 × 24 wall box armed, three arms in
+one world): 2.57 ms cleared, 2.10 ms armed without the clearing, 2.11 ms with nothing armed. The
+first version cost 2.4 ms, all of it a square root per texel of the stamp; the inside of the
+rectangle is written flat now and only the margin pays for a distance. Photographs:
+`placing-before.png` and `placing-after.png` from the same test.

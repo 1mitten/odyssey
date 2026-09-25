@@ -251,6 +251,75 @@ namespace Odyssey.Presentation.Rendering
         public SightLines? Sight { get; set; }
 
         /// <summary>
+        /// The footprint of what the armed tool would place, as whole-cell rectangles, or empty
+        /// when nothing is armed (design 45 §13). Set by the composition root once a frame; drawn
+        /// against on the next. Bushes and trees standing over it fade — the one place a bush
+        /// fades — and trees between the camera and it fade by <see cref="PlacementSight"/>.
+        /// </summary>
+        public readonly System.Collections.Generic.List<(CellRef Min, CellRef Max)> Placement =
+            new System.Collections.Generic.List<(CellRef Min, CellRef Max)>();
+
+        /// <summary>Lines from the eye to the placement's footprint, for the trees in front of it.</summary>
+        public readonly SightLines PlacementSight = new SightLines();
+
+        /// <summary>
+        /// Set the footprint for the frames to come, and the lines trees in front of it fade along
+        /// (eye to the middle of each rectangle and its four corners, a metre up).
+        /// </summary>
+        public void SetPlacement(System.Collections.Generic.IReadOnlyList<(CellRef Min, CellRef Max)> footprint, Vector3 eye)
+        {
+            Placement.Clear();
+            PlacementSight.Clear();
+            for (int i = 0; i < footprint.Count; i++)
+            {
+                Placement.Add(footprint[i]);
+                PlacementClearing.Rect(footprint[i].Min, footprint[i].Max, out Vector2 low, out Vector2 high);
+                float y = Mathf.Min(footprint[i].Min.Y, footprint[i].Max.Y) * CellMetrics.SizeY + 1f;
+                PlacementSight.Add(eye, new Vector3((low.x + high.x) * 0.5f, y, (low.y + high.y) * 0.5f));
+                PlacementSight.Add(eye, new Vector3(low.x, y, low.y));
+                PlacementSight.Add(eye, new Vector3(high.x, y, low.y));
+                PlacementSight.Add(eye, new Vector3(low.x, y, high.y));
+                PlacementSight.Add(eye, new Vector3(high.x, y, high.y));
+            }
+        }
+
+        /// <summary>Instances faded this frame because they stood over or before a placement.</summary>
+        public int InstancesFadedForPlacement { get; private set; }
+
+        /// <summary>Does a chunk's box on this layer meet the placement footprint?</summary>
+        bool PlacementTouches(in Bounds bounds, int layer)
+        {
+            if (Placement.Count == 0) return false;
+            for (int i = 0; i < Placement.Count; i++)
+            {
+                (CellRef min, CellRef max) = Placement[i];
+                int y0 = Mathf.Min(min.Y, max.Y) - 1, y1 = Mathf.Max(min.Y, max.Y) + 1;
+                if (layer < y0 || layer > y1) continue;
+                PlacementClearing.Rect(min, max, out Vector2 low, out Vector2 high);
+                if (bounds.max.x + TallestOverhang < low.x || bounds.min.x - TallestOverhang > high.x) continue;
+                if (bounds.max.z + TallestOverhang < low.y || bounds.min.z - TallestOverhang > high.y) continue;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>How far past its chunk a drawn thing can reach sideways.</summary>
+        float TallestOverhang => _mesher.OverhangResolved;
+
+        /// <summary>Does this placed thing stand over the placement's footprint?</summary>
+        bool OverPlacement(in Bounds placed)
+        {
+            for (int i = 0; i < Placement.Count; i++)
+            {
+                PlacementClearing.Rect(Placement[i].Min, Placement[i].Max, out Vector2 low, out Vector2 high);
+                if (placed.max.x < low.x - PlacementClearing.Margin || placed.min.x > high.x + PlacementClearing.Margin) continue;
+                if (placed.max.z < low.y - PlacementClearing.Margin || placed.min.z > high.y + PlacementClearing.Margin) continue;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// The camera's frustum planes, six of them, or null for "draw the whole band".
         ///
         /// <para>Set per frame by the composition root, the same way <see cref="Sight"/> is, so
@@ -514,6 +583,8 @@ namespace Odyssey.Presentation.Rendering
         // decides per segment what the chunk path decided per bucket.
         int _renderStamp;
         int[] _chunkDrawnStamp = System.Array.Empty<int>();
+        int[] _chunkPlacingStamp = System.Array.Empty<int>();
+        bool _placingHere;
         float[] _chunkDistance = System.Array.Empty<float>();
         float[] _chunkSqrDistance = System.Array.Empty<float>();
         readonly System.Collections.Generic.Dictionary<(int, int, int), bool> _indirectKinds =
@@ -1089,6 +1160,8 @@ namespace Odyssey.Presentation.Rendering
             System.Array.Clear(ChunkCallsByKind, 0, ChunkCallsByKind.Length);
             TreeBuckets = 0;
             TreeInstances = 0;
+            InstancesFadedForPlacement = 0;
+            if (_chunkPlacingStamp.Length != _batches.Length) _chunkPlacingStamp = new int[_batches.Length];
             if (_chunkDrawnStamp.Length != _batches.Length)
             {
                 _chunkDrawnStamp = new int[_batches.Length];
@@ -1173,6 +1246,10 @@ namespace Odyssey.Presentation.Rendering
                     bool sight = !ghost && Sight != null && Sight.Any
                                  && Sight.Touches(batch.Bounds, TallestModuleMetres);
                     if (sight) ChunksSightTested++;
+                    // And the placement (design 45 §13): the chunk's bushes come off the indirect
+                    // path for as long as a footprint is near them, so they can fade.
+                    _placingHere = !ghost && PlacementTouches(batch.Bounds, layer);
+                    if (_placingHere) _chunkPlacingStamp[index] = _renderStamp;
 
                     // Once per chunk: every bucket's level of detail is chosen against it.
                     float sqrDistance = ViewerPosition.HasValue ? batch.Bounds.SqrDistance(ViewerPosition.Value) : 0f;
@@ -1335,6 +1412,9 @@ namespace Odyssey.Presentation.Rendering
         {
             int chunk = segment.ChunkIndex;
             if (_chunkDrawnStamp[chunk] != _renderStamp) return default;
+            // A bush beside a placement is drawn by the chunk path this frame, to fade (design 45 §13).
+            if (_chunkPlacingStamp[chunk] == _renderStamp
+                && TintCode.IsTree(group.Tint) && TintCode.IsDressing(group.Tint)) return default;
             if (TintCode.IsFoliage(group.Tint) && ViewerPosition.HasValue
                 && _chunkSqrDistance[chunk] > FoliageDrawDistance * FoliageDrawDistance)
                 return default;
@@ -1406,7 +1486,9 @@ namespace Odyssey.Presentation.Rendering
                     if (!DrawTrees) continue;
                 }
                 // Drawn by the indirect path instead (design 38 §22); a ghosted layer keeps this one.
-                if (_indirectActive && !ghost && body && IsIndirectKind(bucket)) continue;
+                // A bush near a placement is drawn here instead, so it can fade (design 45 §13).
+                bool placingBush = _placingHere && TintCode.IsTree(bucket.Tint) && TintCode.IsDressing(bucket.Tint);
+                if (_indirectActive && !ghost && body && !placingBush && IsIndirectKind(bucket)) continue;
 
                 ResolvedModule resolved = _model.Library[bucket.Module];
 
@@ -1449,7 +1531,9 @@ namespace Odyssey.Presentation.Rendering
 
                 // Once per bucket, not per part: it splits the bucket's matrices, which every part
                 // of a level shares.
-                int faded = (sight || (FadeEveryTreeForAPhotograph && TintCode.IsTree(bucket.Tint))) && !NeverFades(bucket.Tint) ? Partition(bucket) : 0;
+                bool bySight = (sight || (FadeEveryTreeForAPhotograph && TintCode.IsTree(bucket.Tint))) && !NeverFades(bucket.Tint);
+                bool byPlacement = _placingHere && !ghost && (TintCode.IsTree(bucket.Tint) || TintCode.IsDressing(bucket.Tint));
+                int faded = bySight || byPlacement ? Partition(bucket, bySight, byPlacement) : 0;
                 bool proxyCasts = false;
                 float variety = TintCode.IsDressing(bucket.Tint) ? BushStandVariety : TreeStandVariety;
 
@@ -1647,7 +1731,7 @@ namespace Odyssey.Presentation.Rendering
         /// placement is recovered once per bucket and the module's own bounds — which is what the
         /// selection cursor already fits to a thing — is placed by it.</para>
         /// </summary>
-        int Partition(InstanceBucket bucket)
+        int Partition(InstanceBucket bucket, bool bySight = true, bool byPlacement = false)
         {
             ResolvedModule module = _model.Library[bucket.Module];
             if (module.IsEmpty) return 0;
@@ -1669,7 +1753,7 @@ namespace Odyssey.Presentation.Rendering
                 return bucket.Count;
             }
 
-            if (Sight == null) return 0;
+            if (Sight == null && !byPlacement) return 0;
 
             Matrix4x4 unplace = module.Parts[bucket.Part].Local.inverse;
             Bounds local = module.Bounds;
@@ -1677,7 +1761,7 @@ namespace Odyssey.Presentation.Rendering
             // Trees and bushes fade for every line; anything else only for the primary lines
             // (the selected colonists), which is what it always did (design 38 §19).
             bool vegetation = TintCode.IsTree(bucket.Tint);
-            if (!vegetation && Sight.Primary == 0) return 0;
+            if (!byPlacement && !vegetation && Sight!.Primary == 0) return 0;
 
             if (_faded.Length < bucket.Count)
             {
@@ -1701,8 +1785,12 @@ namespace Odyssey.Presentation.Rendering
             {
                 Matrix4x4 m = bucket.Matrices[i];
                 Bounds placed = SightLines.Place(local, m * unplace);
-                if (vegetation ? Sight.Blocks(placed) : Sight.BlocksPrimary(placed))
+                bool seen = bySight && Sight != null && (vegetation ? Sight.Blocks(placed) : Sight.BlocksPrimary(placed));
+                bool placing = byPlacement && (OverPlacement(placed)
+                    || (vegetation && !TintCode.IsDressing(bucket.Tint) && PlacementSight.Blocks(placed)));
+                if (seen || placing)
                 {
+                    if (placing && !seen) InstancesFadedForPlacement++;
                     _faded[fadedCount++] = m;
                     continue;
                 }
