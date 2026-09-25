@@ -23,6 +23,15 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does a new game arrive cleanly?** (`claude/meadow-hitch-check`, design 38 §25.) From the title
+  screen, set up a colony and press Start. **Look for** the setup page freezing for about half a
+  second, then the starfield for a blink, then the colony — already smooth, no stutter as it appears.
+  **A wrong answer looks like:** a jolt or stall in the first moment the colony is on screen; the
+  starfield hanging on for a noticeable time; or the interface appearing before the world does.
+- **Does changing Grass in Settings stay smooth?** (same branch.) Settings -> Graphics -> Grass: step
+  through the rungs to Full and back during play. **A wrong answer looks like:** a visible hitch on
+  each press, or the grass just beyond the board's edge not matching the new density.
+
 - **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
   Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest
   over bare arms and black trousers, and carry a crowbar or a bat; click one and the pane shows a
