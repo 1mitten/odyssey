@@ -29,6 +29,11 @@ namespace Odyssey.Sim.Saving
     /// lands, one int appended to every record. It lives here beside the finishing step because
     /// both are a step the world cannot re-derive; layouts 1 to 3 load with nobody in the air.</para>
     ///
+    /// <para><b>Layout 5</b> is medical supplies (design 37): the cooldown until this pawn may be
+    /// treated again, appended after the jump — the jump reached main first, and a shipped layout
+    /// number is a save contract like everything else that is. Layouts 1 to 4 load with nobody
+    /// ever treated.</para>
+    ///
     /// <para><b>The response</b> (design 33 §18c) rides in two bits of the flags word, with no
     /// layout change, and a colonist whose response is not the default has a record for it.</para>
     ///
@@ -46,9 +51,9 @@ namespace Odyssey.Sim.Saving
         /// The record layout this build writes. 1 is C1's: flags, quiet tick, finishing step. 2 is
         /// the combat contracts step's: C1's four, then the eight combat fields. 3 appends the
         /// knock-down clock and the pending swing (design 33 §9b, §9g). 4 appends the jump's landing
-        /// (design 46 §6).
+        /// (design 46 §6). 5 appends the treatment cooldown (design 37).
         /// </summary>
-        public const int Layout = 4;
+        public const int Layout = 5;
 
         const int FlagDrafted = 1;
         const int FlagDowned = 2;
@@ -104,6 +109,10 @@ namespace Odyssey.Sim.Saving
 
                 // Layout 4.
                 writer.Write(pawn.JumpLanding);
+
+                // Layout 5: medical supplies (design 37), after the jump — the jump reached main
+                // first and a shipped layout number is a save contract.
+                writer.Write(pawn.TreatedUntilTick);
             }
             _scratch.Clear();
         }
@@ -144,6 +153,9 @@ namespace Odyssey.Sim.Saving
                 // Layout 4: nobody in the air before it.
                 int jumpLanding = layout >= 4 ? reader.ReadInt() : -1;
 
+                // Layout 5: nobody had been treated before medicine existed.
+                int treatedUntil = layout >= 5 ? reader.ReadInt() : 0;
+
                 Pawn? pawn = _pawns.Get(new Contracts.PawnId(id));
                 if (pawn == null) continue;
 
@@ -165,6 +177,7 @@ namespace Odyssey.Sim.Saving
                 pawn.PendingSwing = pendingSwing;
                 pawn.PendingDamageMilli = pendingDamage;
                 pawn.PendingStunTicks = pendingStun;
+                pawn.TreatedUntilTick = treatedUntil;
 
                 // A step an order interrupted, rebuilt as the one-step path it was (design 33
                 // §2d). The pawn section has already restored the progress into it, and

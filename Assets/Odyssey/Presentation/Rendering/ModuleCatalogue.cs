@@ -876,6 +876,9 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemMachete = Prefix + "item.machete";
         public const string ItemArcBlade = Prefix + "item.arcblade";
 
+        /// <summary>Medical supplies (design 37): a small box, the same art on the ground, on a shelf and in an armful.</summary>
+        public const string ItemMedicalSupplies = Prefix + "item.medicalsupplies";
+
 
         /// <summary>
         /// Module ids for item def indices, in <c>ItemIndex</c> order.
@@ -890,6 +893,7 @@ namespace Odyssey.Presentation.Rendering
         {
             ItemMeal, ItemSalvage, ItemWood, ItemStone, ItemIronOre, ItemCoal, ItemCarrots,
             ItemBat, ItemCrowbar, ItemMachete, ItemArcBlade,
+            ItemMedicalSupplies,
         };
 
         /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>

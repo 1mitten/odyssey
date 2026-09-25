@@ -143,9 +143,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
 <li><a href="#commands">Commands<b>53</b></a></li>
 <li><a href="#work">Work and skills<b>42</b></a></li>
-<li><a href="#colonists">Colonists<b>56</b></a></li>
+<li><a href="#colonists">Colonists<b>58</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
-<li><a href="#events">Events<b>47</b></a></li>
+<li><a href="#events">Events<b>48</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
 <li><a href="#world">World and interface<b>129</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>861</b><i>named entries</i></div>
+<div class="stat"><b>864</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>589</b><i>no art yet</i></div>
+<div class="stat m"><b>592</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -390,9 +390,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> food</div>
 <div class="ms">M1</div>
 </div>
-<div class="row" id="ui.res.medkit" data-hay="medkit ui.res.medkit field tending. consumed per treatment " data-gap="0">
-<div class="nm">Medkit<span class="k">ui.res.medkit</span></div>
-<div class="dsc">Field tending. Consumed per treatment</div>
+<div class="row" id="ui.res.medkit" data-hay="medical supplies ui.res.medkit dressings and drugs. one is used up per treatment " data-gap="0">
+<div class="nm">Medical supplies<span class="k">ui.res.medkit</span></div>
+<div class="dsc">Dressings and drugs. One is used up per treatment</div>
 <div class="art"><span class="pill">high</span> salvage gear</div>
 <div class="ms">M1</div>
 </div>
@@ -1549,11 +1549,11 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> salvage gear</div>
 <div class="ms">M7</div>
 </div>
-<div class="row" id="ui.work.doctor" data-hay="doctor ui.work.doctor tend the injured and operate " data-gap="0">
+<div class="row" id="ui.work.doctor" data-hay="doctor ui.work.doctor treat the hurt, with medical supplies or without " data-gap="0">
 <div class="nm">Doctor<span class="k">ui.work.doctor</span></div>
-<div class="dsc">Tend the injured and operate</div>
+<div class="dsc">Treat the hurt, with medical supplies or without</div>
 <div class="art"><span class="pill">high</span> salvage gear</div>
-<div class="ms">M7</div>
+<div class="ms">M3</div>
 </div>
 <div class="row" id="ui.work.warden" data-hay="warden ui.work.warden feed, talk to and recruit prisoners " data-gap="0">
 <div class="nm">Warden<span class="k">ui.work.warden</span></div>
@@ -1721,9 +1721,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M2</div>
 </div>
-<div class="row" id="ui.skill.medicine" data-hay="medicine ui.skill.medicine tending, surgery and survival odds " data-gap="0">
+<div class="row" id="ui.skill.medicine" data-hay="medicine ui.skill.medicine how fast a colonist treats the hurt " data-gap="0">
 <div class="nm">Medicine<span class="k">ui.skill.medicine</span></div>
-<div class="dsc">Tending, surgery and survival odds</div>
+<div class="dsc">How fast a colonist treats the hurt</div>
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M2</div>
 </div>
@@ -1795,7 +1795,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">56 entries</em></h2>
+<h2>Colonists <em class="count">58 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -2094,6 +2094,18 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">CB</div>
 </div>
+<div class="row gap" id="ui.status.treating" data-hay="treating ui.status.treating tending the hurt, or herself hands dressing a wound. blocked on the missing human figure" data-gap="1">
+<div class="nm">Treating<span class="k">ui.status.treating</span></div>
+<div class="dsc">Tending the hurt, or herself<span class="need">Needs drawing: hands dressing a wound. Blocked on the missing human figure</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.status.patient" data-hay="resting as a patient ui.status.patient in bed until the wound allows getting up a figure lying in bed. blocked on the missing human figure" data-gap="1">
+<div class="nm">Resting as a patient<span class="k">ui.status.patient</span></div>
+<div class="dsc">In bed until the wound allows getting up<span class="need">Needs drawing: a figure lying in bed. Blocked on the missing human figure</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 <div class="row gap" id="ui.status.sheltering" data-hay="sheltering ui.status.sheltering an animal waiting out the rain under a roof or a tree, or walking to one " data-gap="1">
 <div class="nm">Sheltering<span class="k">ui.status.sheltering</span></div>
 <div class="dsc">An animal waiting out the rain under a roof or a tree, or walking to one</div>
@@ -2332,7 +2344,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="events" data-sec="1">
-<h2>Events <em class="count">47 entries</em></h2>
+<h2>Events <em class="count">48 entries</em></h2>
 <p class="blurb">Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.</p>
 <h3 class="nsh">Alerts</h3>
 <div class="tbl">
@@ -2512,6 +2524,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.bulletin.scrapdrop" data-hay="scrap drop ui.bulletin.scrapdrop scrap metal fell from the sky scrap metal falling from the sky. our own concept" data-gap="1">
 <div class="nm">Scrap drop<span class="k">ui.bulletin.scrapdrop</span></div>
 <div class="dsc">Scrap metal fell from the sky<span class="need">Needs drawing: scrap metal falling from the sky. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bulletin.medicaldrop" data-hay="medical drop ui.bulletin.medicaldrop medical supplies fell from the sky medical supplies falling from the sky. our own concept" data-gap="1">
+<div class="nm">Medical drop<span class="k">ui.bulletin.medicaldrop</span></div>
+<div class="dsc">Medical supplies fell from the sky<span class="need">Needs drawing: medical supplies falling from the sky. Our own concept</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -3810,7 +3828,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 861, "gaps": 589};</script>
+<script>window.WIKI={"total": 864, "gaps": 592};</script>
 <script>
 (function(){
   var D = window.WIKI;

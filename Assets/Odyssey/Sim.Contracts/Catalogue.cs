@@ -77,7 +77,17 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Steal = 22;
 
-        public const int Count = 23;
+        // Medical (design 37), claimed after Steal at the merge with main (2026-09-25): bandits
+        // shipped first and a shipped handle is a save contract, so the unshipped pair moved from
+        // 22-23 to 23-24. No save with a Treat or Patient job in it has left this branch.
+
+        /// <summary>Treat a patient, with medical supplies or without, or treat yourself (design 37).</summary>
+        public const int Treat = 23;
+
+        /// <summary>A hurt colonist lying in a bed until she is well enough to get up (design 37).</summary>
+        public const int Patient = 24;
+
+        public const int Count = 25;
     }
 
     /// <summary>
@@ -130,7 +140,10 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Rescue = 5;
 
-        public const int Count = 6;
+        /// <summary>Treating the hurt (design 37): the ui.work.doctor column. An emergency giver.</summary>
+        public const int Doctor = 6;
+
+        public const int Count = 7;
 
         /// <summary>What a work type the simulation does not run answers to. Never sent.</summary>
         public const int None = -1;
@@ -205,7 +218,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Sharp, and the best thing a colonist can hold.</summary>
         public const int ArcBlade = 10;
 
-        public const int Count = 11;
+        /// <summary>
+        /// A box of dressings and drugs: what a doctor treats with (design 37). Category
+        /// Medicine, ten to a stack, so a stack is one shelf bay.
+        /// </summary>
+        public const int MedicalSupplies = 11;
+
+        public const int Count = 12;
     }
 
     /// <summary>
@@ -279,7 +298,11 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A bandit with nothing to fight, break or take walked off the board empty-handed (design 33 §17).</summary>
         public const int BanditLeft = 3;
 
-        public const int Count = 4;
+        /// <summary>Medical supplies from the sky (design 37 §5): the supply drop's worker, another cargo.
+        /// After <see cref="BanditLeft"/> at the merge with main (2026-09-25); bandits shipped first.</summary>
+        public const int MedicalDrop = 4;
+
+        public const int Count = 5;
     }
 
     /// <summary>

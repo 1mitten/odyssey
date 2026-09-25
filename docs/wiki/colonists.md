@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-56 entries, 38 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+58 entries, 40 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -70,6 +70,8 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Equipping** | `ui.status.equipping` | Fetching a weapon to hold | no art | CB |
 | **Rescuing** | `ui.status.rescuing` | Carrying the downed to a bed | no art | CB |
 | **Stealing** | `ui.status.stealing` | A bandit carrying something off the board | no art | CB |
+| **Treating** | `ui.status.treating` | Tending the hurt, or herself <br>**Needs:** hands dressing a wound. Blocked on the missing human figure | no art | M3 |
+| **Resting as a patient** | `ui.status.patient` | In bed until the wound allows getting up <br>**Needs:** a figure lying in bed. Blocked on the missing human figure | no art | M3 |
 | **Sheltering** | `ui.status.sheltering` | An animal waiting out the rain under a roof or a tree, or walking to one | no art | WE |
 | **In the rain** | `ui.status.inrain` | A colonist under open sky while it rains, and walking slower for it. Said beside her pace | no art | WE |
 

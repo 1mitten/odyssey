@@ -273,4 +273,30 @@
     <casuallyInterruptible>false</casuallyInterruptible>
   </JobDef>
 
+  <!--
+    Medical supplies (design 37), after Job_Steal at the merge with main (renumbered 22-23 ->
+    23-24; bandits shipped first). Job_Treat is a doctor fetching one unit (or none, a bare
+    dressing) and treating a patient, or a colonist treating herself: workTicks is one treatment
+    at the standard pace (600, INVENTED), which Work_Doctor's curve scales and self-treatment
+    triples. It trains medicine at growing's rate. Not casually interruptible: a doctor halfway
+    through a dressing finishes it.
+
+    Job_Patient is a hurt colonist lying in a bed (or on the ground, when there is none) until
+    she is back to the release line. She sleeps there, so rest and the bed's heal both run.
+  -->
+  <JobDef>
+    <defName>Job_Treat</defName>
+    <driver>23</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+    <workTicks>600</workTicks>
+    <trainsSkill>6</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Patient</defName>
+    <driver>24</driver>
+  </JobDef>
+
 </Defs>

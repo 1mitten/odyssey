@@ -512,6 +512,17 @@ the next session learns to ignore.
   speed buttons beside it — a wrong answer is the reading touching or running under them again; and
   spawn a bandit with nobody to fight near a campfire — a wrong answer is it settling at the fire.
 
+- **Medical supplies: the box, the doctor and the patient** (`claude/medical-supplies`, design 37
+  §9). Start a new game: there should be a red first-aid case among the starting piles, and it
+  should go to a stockpile or a shelf like anything else. Is it readable at play distance, or
+  too small? (The picture offered two olive boxes instead.) Then spawn a marauder and let it put
+  a colonist down. A colonist with Doctor on should walk to the case, carry **one** box to the
+  downed colonist, kneel, and the downed colonist should stand up at about 40. Once standing, they
+  should go and lie in a bed, and get up at about 80. Test the same with Doctor off for everybody
+  but the hurt colonist, supplies to hand, and health below 60: they should treat themselves,
+  slowly. Wrong looks like: a doctor carrying the whole pile, a patient walking about with 30
+  health, a colonist lying down and getting up on the spot, or nobody fetching the case at all.
+
 - **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
   Spawn a bandit, draft two colonists, select both and right-click it: a translucent red ring
   should appear wide round its feet and snap in, in a fifth of a second, flash once as it lands

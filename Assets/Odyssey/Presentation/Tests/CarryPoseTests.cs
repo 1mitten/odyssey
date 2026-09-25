@@ -172,6 +172,17 @@ namespace Odyssey.Tests.Presentation
             Assert.That(CarryPose.Drawn(1f), Is.False, "a swimmer is still holding a bundle");
         }
 
+        [Test]
+        public void OnlyTheMedicalKitIsGrippedBySides()
+        {
+            // Everything else keeps the scoop (owner, 2026-09-25: only the box asked for a
+            // different grip). A wrong answer here puts every haul of wood in a two-handed grip
+            // that was authored for one box.
+            Assert.That(CarryPose.GrippedBySides(ItemIndex.MedicalSupplies), Is.True);
+            Assert.That(CarryPose.GrippedBySides(ItemIndex.Wood), Is.False);
+            Assert.That(CarryPose.GrippedBySides(ItemIndex.Meal), Is.False);
+        }
+
         // ---- the armful --------------------------------------------------------------------
 
         [Test]
