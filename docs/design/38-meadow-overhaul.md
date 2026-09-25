@@ -260,7 +260,7 @@ measurements here.
 | **M8** | Hills worldgen and the per-column slice. | Goldens measured. |
 | **M9** | **Built 2026-09-24** (§20): the ground skin — ramps, flat tops, stream banks and an apron to the surround — on `claude/meadow-skin`. The ground keeps the `MeadowGround` shader. | **Third Play.** |
 | **M10** | The surround continues the skin (§7). | Seam-free at the rim. |
-| **M11** | Loading and warm-up (§8). | No compile after hand-over. |
+| **M11** | **Measured and built 2026-09-25** (§25): no first-use hitch in play; no warm-up built; three curtain frames behind a cover on New game; a grass rung re-strews only the surround's tufts. | Owner's look at the hand-over. |
 | **M12** | Atmosphere (§10). | Play. |
 | **M13** | Loose rocks, mushrooms, berry bushes. Fruit later. | Goldens; wiki. |
 
@@ -1396,3 +1396,77 @@ more instructions in a pass that already runs); 640 × 480 **2.26 / 2.03 / 2.09 
 **8.35 / 9.08 / 8.65 / 8.63 ms**. The two stills disagree by 0.3 ms, and the motion sits inside that
 spread, so its cost is below what this machine can separate. The flow texture is built once and
 again only when water changes. The player bench (`-odyssey-bench-shore`) is still the real GPU figure.
+
+## 25. M11: first use, measured (2026-09-25)
+
+d-16's rule was *measure first*: build no warm-up machinery unless something compiles after the
+loading screen. The measurement is a scripted tour in the development player
+(`-odyssey-bench -odyssey-bench-hitch`, `PlayerBench.HitchTour`): from the title screen it presses
+New game the way the menu does, then does, a few seconds apart, the first of everything a new colony
+meets — build orders, zones, a dropped item, trees felled, the Work, Research and Inventory tabs,
+Settings with shadows toggled and grass to Full and back, a supply drop, the see-through fade, dusk,
+night, water in view, 140 m out and back. Every frame over 33 ms is logged with its step, its submit
+split and the shader variants the driver was handed (`GraphicsSettings.logWhenShaderIsCompiled`).
+It quits on its own (a 360 s watchdog, a guarded coroutine, and a process kill after that).
+`BuildSession` now logs its own laps (`[Session] built in …`).
+
+### 25a. What it found
+
+**No first-use hitch in play.** After the world is up, every step's worst frame is under 33 ms and
+no shader variant reaches the driver. Two things were not, and both are fixed:
+
+| Moment | Before | After |
+|---|---|---|
+| New game: the build frame | 793 ms, visible | 575 ms, **behind the cover** |
+| the next frame (the GPU meeting the world) | **102.5 ms, visible** | 69.5 ms, behind the cover |
+| the one after | 18.7 ms, visible | 8.2 ms, behind the cover |
+| **the first frames the player sees** | 102.5, 18.7, 9.5, 4.7 ms | **5.6, 3.8, 5.3, 3.8 ms** |
+| a grass rung pressed (to Full) | 57.9 + 38.4 ms | worst 24–31 ms |
+| a grass rung pressed (back) | 47.7 ms | worst 14–29 ms |
+
+(Timings from separate tour runs in one development player on the RTX 5070 Ti, 1920 × 1080 windowed;
+the CI runner and other sessions shared the machine for some of them, so read the shape rather than
+the digits. The build frame is the session build — 380–540 ms across runs, a third of it `PrimeAll`
+— plus the first world submit, whose largest part is the colonist figures at about 100–160 ms.)
+
+**The final run, complete** (`Logs/hitch-final.log`, the tour from the title screen with both fixes
+in): the build frame 1,473 ms and the next 108 ms, **both drawn behind the cover**, then 7.9 ms
+behind it and **4.4, 4.2, 3.4, 7.9 ms visible**. Every one of the tour's 24 steps after that has its
+worst frame under 33 ms — the grass rung to Full at 28.9, the Work tab at 21.0, everything else
+under 23 — and no shader variant reaches the driver. (Another Unity batch run was on the machine,
+which is why the build took 923 ms here against 380–540 ms elsewhere.)
+
+**The first reading was misread, and how.** The first tour ran with `-odyssey-newgame`, which builds
+the world inside the same `Start` the tour begins in, so its "1,573 ms frame 2" was the player's own
+start-up — every scene object's `Start`, the session build and the first render — landing in the
+first frame's delta. Nothing about it was a post-load stall. Starting the tour on the title screen and
+pressing New game from inside it is what showed the real shape: a frozen screen while the world is
+built (expected), then a **102.5 ms frame the moment the world appears**, with only 6 ms of it
+submission — the driver and the GPU meeting the world's pipelines and textures for the first time.
+
+### 25b. What was built
+
+- **Curtain frames** (`HudShell.CurtainFrames` = 3). A world arriving from the start screen is covered
+  by the start screen's own starfield — a new element, the top-most in the tree — for three frames
+  and then shown. **A cover, not a delayed hand-over**: the first version kept the start screen up and
+  handed over three frames late, and the tour found the reveal frame at 43 ms, because the in-game
+  interface's first layout had moved with the delay onto the frame the player saw. The hand-over
+  happens when the world is built, as it always did, under the cover. A second press of Start while
+  the cover is up builds nothing. The cost does not vanish — it is paid while the player is still
+  looking at the picture they were already looking at — which is all d-16 promised of it.
+- **A grass rung re-strews only the surround's tufts** (`TerrainSkirt.RebuildTufts`). The rung called
+  `TerrainSkirt.Build`, which surveys the whole board and lays every tile and tree out to 1,220 m
+  again — about 50 ms in the frame the rung was pressed. The tufts' batches carry the foliage tint
+  and nothing else in the surround does, so dropping exactly those from the index and strewing again
+  gives the same lists a full build would.
+
+**Not built, on the evidence:** a `GraphicsStateCollection`, a `ShaderVariantCollection` warm-up, and a
+loading screen with stages. Nothing compiles after the hand-over, so there is nothing for them to warm.
+
+### 25c. Owed
+
+- The menu path's wait itself (the frozen setup page for about half a second while the world is
+  built) has no feedback. It is short today; a board four times the size may want a word on screen.
+- The colonist figures are the largest part of the first world submit (100–160 ms). Behind the cover
+  now, but the obvious place to look if the wait grows.
+- `-odyssey-newgame` (the test path) has no start screen to hold, so it still shows its first frames.

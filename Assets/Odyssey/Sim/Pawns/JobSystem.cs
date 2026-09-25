@@ -299,6 +299,22 @@ namespace Odyssey.Sim.Pawns
         // state nor a second copy of who is asleep.
         readonly List<Pawn> _woken = new List<Pawn>();
 
+        /// <summary>
+        /// Does the job loop hold this pawn's driver on <paramref name="tick"/> — not tick it, not
+        /// end its job, not think for it? Three things hold it, all in <see cref="TickPawn"/>:
+        /// landing a step an order interrupted (design 33 §2d), a stun (§4 C3, §5c: a pause, not an
+        /// interrupt, so a drafted colonist keeps the player's order) and a knock-down (§9b). <b>The
+        /// one owner of that rule</b>: the job loop asks it, and so does anything that has to know
+        /// whether a driver could have acted — the combat gate's "an attacker on a target already
+        /// gone" counts only ticks the driver was free to notice (2026-09-25; a stunned colonist
+        /// whose target went down read as a stall for the length of the stun).
+        /// </summary>
+        public static bool HoldsDriver(Pawn pawn, int tick) =>
+            (pawn.FinishingStepTo >= 0 && LandingStep(pawn)) || pawn.StunnedAt(tick) || pawn.KnockedDownAt(tick);
+
+        /// <summary>Still part way through the step an order interrupted.</summary>
+        static bool LandingStep(Pawn pawn) => pawn.HasPath && pawn.Cell != pawn.FinishingStepTo;
+
         void TickPawn(Pawn pawn, int tick)
         {
             if (pawn.BreakTicksLeft > 0)
@@ -327,11 +343,7 @@ namespace Odyssey.Sim.Pawns
             // the stance she happens to be on — would otherwise start while the figure was still
             // stepping away. The mover clears the mark on arrival; this is the backstop for a
             // step that was dropped by something else.
-            if (pawn.FinishingStepTo >= 0)
-            {
-                if (pawn.HasPath && pawn.Cell != pawn.FinishingStepTo) return;
-                pawn.FinishingStepTo = -1;
-            }
+            if (pawn.FinishingStepTo >= 0 && !LandingStep(pawn)) pawn.FinishingStepTo = -1;
 
             // A stun holds the pawn where it is (design 33 §4 C3, §5c): its job neither ticks nor
             // ends, and it does not think. So a stunned hauler keeps her load, a sleeper his bed and
@@ -343,7 +355,7 @@ namespace Odyssey.Sim.Pawns
             // where the blow put it. The knockback already ended its job, so there is nothing to
             // pause; what this holds back is the tree, which would otherwise give it a job — and
             // an order given meanwhile starts, and waits here until it stands.
-            if (pawn.StunnedAt(tick) || pawn.KnockedDownAt(tick)) return;
+            if (HoldsDriver(pawn, tick)) return;
 
             // A colonist set to Defend or Flee (design 33 §18d) notices a fight or danger near her
             // while she works: the tree runs only between jobs, and a colonist felling a tree would
@@ -504,11 +516,13 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// The whole of an animal's mind. Shared: the nodes hold no state. The fight's two nodes
         /// (design 33 §5) stand ahead of the idle one and decline for an animal nobody has hurt,
-        /// so an animal at peace thinks exactly as it did before combat.
+        /// so an animal at peace thinks exactly as it did before combat. The rain's node (design
+        /// 43 §6) stands between them, the same pattern: it declines on a dry sky and for an
+        /// animal already under cover, so a dry day thinks as it always did.
         /// </summary>
         static readonly ThinkNode[] AnimalTree =
         {
-            new DownedThinkNode(), new AnimalCombatThinkNode(), new AnimalIdleThinkNode(),
+            new DownedThinkNode(), new AnimalCombatThinkNode(), new AnimalShelterThinkNode(), new AnimalIdleThinkNode(),
         };
 
         /// <summary>
@@ -1046,6 +1060,109 @@ namespace Odyssey.Sim.Pawns
             int day = ctx.Content.DayTicks;
             int hour = day <= 0 ? 12 : (int)((long)(ctx.CurrentTick % day) * 24 / day);
             return hour >= NightFrom || hour < NightTo;
+        }
+    }
+
+    /// <summary>
+    /// An animal caught in the rain heads for cover (design 43 §6): past
+    /// <see cref="RainGatePerMille"/> of rain, an animal standing where the sky reaches walks to
+    /// the nearest sheltered cell within its species' wander radius, and one already under cover
+    /// stays there while the rain holds. Declines on a dry sky, so a dry day's mind is the idle
+    /// node's alone.
+    ///
+    /// <para><b>It keeps no list of cover.</b> Every question goes to the one shelter owner
+    /// (<see cref="World.SkyColumns"/>), so a tree felled or a roof taken down while the animal
+    /// waits is gone from the next answer: the wait is short (<see cref="WaitTicks"/>), the next
+    /// think finds the animal exposed, and it looks again.</para>
+    ///
+    /// <para>An animal leaving the board keeps leaving — it is walking out of the weather
+    /// anyway. Species that do not mind the rain arrive as a <c>SpeciesDef</c> flag when a
+    /// playtest asks for one.</para>
+    /// </summary>
+    public sealed class AnimalShelterThinkNode : ThinkNode
+    {
+        public override string Name => "AnimalShelter";
+
+        /// <summary>How hard it has to rain before an animal minds, per mille. The design's; INVENTED.</summary>
+        public const int RainGatePerMille = 400;
+
+        /// <summary>
+        /// How long an animal under cover waits before it asks again: the weather's own pass, so
+        /// the rain easing and the cover going are both noticed within one of the sky's steps.
+        /// </summary>
+        public const int WaitTicks = Weather.WeatherSystem.IntervalTicks;
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            Weather.WeatherSystem? weather = ctx.Weather;
+            World.SkyColumns? sky = ctx.Sky;
+            if (weather == null || sky == null || pawn.Leaving) return false;
+            if (weather.RainPerMille(weather.Now) < RainGatePerMille) return false;
+
+            if (sky.ShelteredFromSky(pawn.Cell))
+            {
+                job.Reset(JobIndex.Wait);
+                job.Mode = pawn.OwnMode;
+                job.WorkTicks = WaitTicks;
+                return true;
+            }
+
+            int cover = ShelterTarget.Find(ctx, pawn, pawn.Species.wanderRadius, pawn.OwnMode);
+            if (cover < 0) return false;
+            job.Reset(JobIndex.Wander);
+            job.TargetCell = cover;
+            job.Mode = pawn.OwnMode;
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// The nearest sheltered cell an animal can reach (design 43 §6), in the shape of
+    /// <c>FleeJobDriver.FindFleeCell</c> and <c>FiresideTarget</c>: a fixed scan, so the answer is
+    /// a function of the board and never of a die.
+    /// </summary>
+    static class ShelterTarget
+    {
+        /// <summary>
+        /// Square rings outward from the animal, nearest ring first; within a ring the columns in a
+        /// fixed order and the nearest by the travel estimate, first found on a tie. In each column
+        /// the walkable cell nearest the animal's own layer, which is where a terrace puts the
+        /// ground under a tree one step up or down. -1 when nothing within
+        /// <paramref name="radius"/> is under cover and reachable.
+        ///
+        /// <para><b>Scales with the radius squared and nothing else</b>: at most (2r + 1)² column
+        /// searches, each a few cell reads, a sky lookup and a reachability read — about 300 for
+        /// the hog's radius, and only while it rains on an animal in the open.</para>
+        /// </summary>
+        public static int Find(PawnContext ctx, Pawn pawn, int radius, TraverseMode mode)
+        {
+            World.SkyColumns? sky = ctx.Sky;
+            if (sky == null) return -1;
+
+            GridSize size = ctx.Size;
+            CellRef at = size.FromIndex(pawn.Cell);
+            for (int ring = 1; ring <= radius; ring++)
+            {
+                int best = -1, bestDistance = int.MaxValue;
+                for (int dz = -ring; dz <= ring; dz++)
+                for (int dx = -ring; dx <= ring; dx++)
+                {
+                    if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz)) != ring) continue;
+                    int x = at.X + dx, z = at.Z + dz;
+                    if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
+
+                    int cell = ctx.Cells.NearestWalkableInColumn(x, z, at.Y);
+                    if (cell < 0 || cell == pawn.Cell) continue;
+                    if (!sky.ShelteredFromSky(cell)) continue;
+                    int distance = ctx.Distance(pawn.Cell, cell);
+                    if (distance >= bestDistance) continue;
+                    if (!ctx.Reachable(pawn, cell, mode)) continue;
+                    bestDistance = distance;
+                    best = cell;
+                }
+                if (best >= 0) return best;
+            }
+            return -1;
         }
     }
 

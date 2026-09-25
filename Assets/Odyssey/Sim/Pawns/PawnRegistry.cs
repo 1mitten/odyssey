@@ -315,6 +315,7 @@ namespace Odyssey.Sim.Pawns
         public Pawn Adopt(Pawn pawn)
         {
             pawn.DriverPool = BuildDrivers();
+            pawn.Context = _ctx;
             _byId[pawn.Id.Value] = _pawns.Count;
             _pawns.Add(pawn);
             if (pawn.Id.Value >= _nextId) _nextId = pawn.Id.Value + 1;
@@ -465,7 +466,9 @@ namespace Odyssey.Sim.Pawns
                     moveDeltaPerMille,
                     pawn.Kind,
                     flags,
-                    seated));
+                    seated,
+                    // A jump falling short lands a layer below the bank it left (design 46 §6).
+                    pawn.JumpLanding >= 0 && pawn.JumpLanding / size.LayerStride != pawn.Cell / size.LayerStride));
 
                 // The fight (design 33 §5), sparse, and for animals as much as people: the health
                 // bar is drawn over the hurt, the downed and the drafted, and a hog can be all
@@ -799,6 +802,7 @@ namespace Odyssey.Sim.Pawns
             {
                 var pawn = new Pawn(new PawnId(reader.ReadInt()), reader.ReadInt(), _ctx.Content);
                 pawn.DriverPool = BuildDrivers();
+                pawn.Context = _ctx;
 
                 int needCount = reader.ReadInt();
                 for (int n = 0; n < needCount; n++)

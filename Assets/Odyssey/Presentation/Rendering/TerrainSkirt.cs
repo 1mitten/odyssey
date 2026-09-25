@@ -400,6 +400,34 @@ namespace Odyssey.Presentation.Rendering
             BuildTrees(treeModules, treeThemes);
         }
 
+        /// <summary>
+        /// Re-strew the first ring's tufts at the current <see cref="TuftDensity"/>, leaving the
+        /// ground, the woods and the bushes as they are.
+        ///
+        /// <para><b>Why not <see cref="Build"/>.</b> A grass rung changes nothing out here but the
+        /// tufts, and <see cref="Build"/> surveys the whole board and lays every tile and every tree
+        /// out to 1,220 m again: measured at about 50 ms in the frame the rung was pressed, the one
+        /// first-use hitch the M10 tour found in play (design 38 §25). The tufts' batches carry the
+        /// foliage tint and nothing else does, so dropping exactly those batches from the index and
+        /// strewing again gives the same lists a full build would.</para>
+        /// </summary>
+        public void RebuildTufts()
+        {
+            if (!Built || _tiles.Count == 0) { Build(); return; }
+
+            var stale = new List<(int, int, int, int, bool, bool, int)>();
+            var tuftBatches = new HashSet<Batch>(_tufts);
+            foreach (var pair in _index)
+                if (tuftBatches.Contains(pair.Value)) stale.Add(pair.Key);
+            foreach (var key in stale) _index.Remove(key);
+            _tufts.Clear();
+
+            float surfaceY = SurfaceLayer * CellMetrics.SizeY;
+            for (int i = 0; i < _tiles.Count; i++)
+                if (_tiles[i].Band == 0) EmitTufts(_tiles[i], surfaceY);
+            TuftInstances = CountOf(_tufts);
+        }
+
         // ------------------------------------------------------------- survey
 
         /// <summary>

@@ -279,6 +279,7 @@ Shader "Odyssey/MeadowGround"
             #pragma target 3.5
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "OdysseyWeather.hlsl"
 
             struct Attributes
             {
@@ -322,10 +323,15 @@ Shader "Odyssey/MeadowGround"
                 float3 normalWS = NormalizeNormalPerPixel(input.normalWS);
 
                 SurfaceData surface = (SurfaceData)0;
-                surface.albedo = MeadowAlbedo(input.positionWS, normalWS) * _BaseColor.rgb;
+                // Rain darkens and glosses the ground wherever the sky reaches it (OdysseyWeather).
+                float3 albedo = MeadowAlbedo(input.positionWS, normalWS) * _BaseColor.rgb;
+                float smoothness = _Smoothness;
+                OdysseyWetten(albedo, smoothness, OdysseyWetAt(input.positionWS, normalWS),
+                              input.positionWS, normalWS);
+                surface.albedo = albedo;
                 surface.alpha = 1;
                 surface.metallic = 0;
-                surface.smoothness = _Smoothness;
+                surface.smoothness = smoothness;
                 surface.normalTS = half3(0, 0, 1);
                 surface.occlusion = 1;
 

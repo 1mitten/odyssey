@@ -4630,7 +4630,12 @@ than forked):
 - **no attacker on a target already gone** for more than one tick: a pawn despawned, dead, or down
   when the attack was not to the death; a building no longer standing. The driver ends the job on
   the tick it sees one, so one tick — the fight's pass downing a target after the jobs ran — is the
-  bound.
+  bound. **Only ticks the driver is free to see it** (corrected 2026-09-25): a stunned or
+  knocked-down attacker, or one landing a kept step, has its driver held by the job loop and cannot
+  end its job — a stun is a pause, not an interrupt (§5c), so a drafted colonist keeps the player's
+  order through it. The gate asks the job system's own rule, `JobSystem.HoldsDriver`, rather than
+  counting through the hold; counting through it read a stunned colonist whose bandit went down as
+  a 109-tick stall on one seed whenever the random stream moved.
 - **no bandit on *Fighting* at a building** without a step or a swing for more than **500
   ticks**: every unforced attack thinks again at `rechooseTicks` (300), and since §19b one whose
   every side is held ends at once, so the owner's "said they were fighting but kinda stood around"
@@ -4787,3 +4792,41 @@ swing clip's impact to be above zero.
 - **The catalogue change is ten lines.** Rebuilding it drops every colonist's `appearance` block
   unless `CharacterSwatches.Classify` follows (`docs/lessons.md`); rebuilt-and-classified, it is
   byte-identical to the committed asset apart from line endings.
+
+## 23. The draft's marks are seen through what stands in front of them (2026-09-25)
+
+The owner: *"fix the targeting when drafting — the lines/selection can [not] be seen because of the
+graphics … always make sure these lines/selections when you move a colonist under draft that you
+can see them and they aren't obscured by terrain, bushes, trees etc."* The diamond, the order line,
+the landing and lock-on rings and the hostile marker were drawn in the selection bracket's
+material, depth-tested like any solid, so the Meadow's grass and trees, a bank or the rolling ground
+hid them — more since the meadow overhaul made the grass lush on every tile.
+
+**Drawn twice, not drawn over everything.** `Odyssey/SeeThroughMark` has two passes whose depth
+tests never both pass for a pixel: where nothing is in front, the mark as it was (`ZTest LEqual`);
+where something is, the same mark at half its opacity (`ZTest Greater`,
+`ChunkRenderer.SeeThroughHiddenStrength`). The power lines' answer, `ZTest Always`, was rejected for
+these: a ring on the ground would be drawn across the colonist standing in it, and a line would lose
+which side of a tree it passes. Queue `Transparent+100`, after the foliage and the water, so every
+occluder is in the depth buffer when the mark is tested. Two LightModes (`SRPDefaultUnlit`,
+`UniversalForward`) because URP draws one pass per LightMode per renderer. Unlit with the power
+line's top-lit shade, so dusk or a shadow cannot dim a steering mark either.
+
+**Which marks.** `DrawSegment`, `DrawMarker(Vector3…)` and `DrawRing` always; `DrawSelectionBracket`
+only when the caller asks (`seeThrough: true`), which the bootstrap does for a selected colonist
+and a selected animal. A cell's outline, an order's outline and an item's bracket stay depth-tested:
+a row of queued walls seen through a hill is noise, and those do not move behind things.
+
+**With the selection highlight** (design 44, merged the same day), the bracket is the *Brackets*
+style in Settings → Interface, and only there does a selected pawn's bracket take this material.
+The default *Highlight* style has its own answer to the same problem — a line at 0.4 drawn through
+whatever stands in front — so the two agree: whichever the player picks, a selected colonist is not
+lost behind a tree. The draft's diamond, line and rings are drawn in both styles and always see through.
+
+**Cost**: the same submissions as before, one per mark, and one cached material per colour; the ring
+alphas are quantised by their models, so the set is bounded. The shader is in
+`ShaderInclusion.Required` with its keep-alive material, so a player keeps it and its instanced
+variant.
+
+**Not yet looked at**: whether half strength is right against the lush grass, and whether a mark
+seen through the roof of a building the colonist is inside reads as help or clutter.

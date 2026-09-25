@@ -15,9 +15,9 @@ namespace Odyssey.Tests.Presentation
     /// </summary>
     public class TerrainSkirtTests
     {
-        static RenderTestWorld Meadow(int trees)
+        static RenderTestWorld Meadow(int trees, ModuleLibrary? library = null)
         {
-            var world = new RenderTestWorld(12, 12, 4);
+            var world = library != null ? new RenderTestWorld(12, 12, 4, library) : new RenderTestWorld(12, 12, 4);
             for (int z = 0; z < 12; z++)
             for (int x = 0; x < 12; x++)
                 world.Solid(x, z, 0, NaturalContent.TerrainGrass);
@@ -158,6 +158,76 @@ namespace Odyssey.Tests.Presentation
                 materials.Dispose();
             }
         }
+
+        /// <summary>
+        /// A grass rung re-strews the surround's tufts and leaves its ground and wood alone
+        /// (design 38 §25): rebuilding all of it on the rung was a 50 ms frame in play.
+        /// </summary>
+        [Test]
+        public void RestrewingTheTuftsLeavesTheGroundAndTheWoodAlone()
+        {
+            var world = Meadow(trees: 20);
+            TerrainSkirt skirt = SkirtFor(world, out MaterialCache materials);
+            try
+            {
+                string ground = skirt.CensusOf(TerrainSkirt.SkirtPart.Ground).ToString();
+                string trees = skirt.CensusOf(TerrainSkirt.SkirtPart.Trees).ToString();
+                Assert.That(skirt.GroundInstances, Is.GreaterThan(0));
+
+                skirt.TuftDensity = 300;
+                skirt.RebuildTufts();
+
+                Assert.That(skirt.CensusOf(TerrainSkirt.SkirtPart.Ground).ToString(), Is.EqualTo(ground),
+                    "re-strewing the tufts touched the ground");
+                Assert.That(skirt.CensusOf(TerrainSkirt.SkirtPart.Trees).ToString(), Is.EqualTo(trees),
+                    "re-strewing the tufts touched the wood");
+            }
+            finally
+            {
+                skirt.Dispose();
+                materials.Dispose();
+            }
+        }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// And the tufts it strews are the ones a full build would have: same batches, same
+        /// instances. Needs the tuft art, so it ignores itself where the packs are absent.
+        /// </summary>
+        [Test]
+        public void RestrewingTheTuftsGivesWhatAFullBuildWould()
+        {
+            var catalogue = UnityEditor.AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(
+                "Assets/Odyssey/Presentation/ModuleCatalogue.asset");
+            if (catalogue == null) Assert.Ignore("no module catalogue on this machine");
+            using var library = new ModuleLibrary(catalogue);
+            var world = Meadow(trees: 20, library);
+
+            var materials = new MaterialCache();
+            var restrewn = new TerrainSkirt(world.Model, materials) { SubmitToGpu = false, TuftDensity = 60 };
+            var built = new TerrainSkirt(world.Model, materials) { SubmitToGpu = false, TuftDensity = 300 };
+            try
+            {
+                restrewn.Build();
+                if (restrewn.TuftInstances == 0)
+                    Assert.Ignore("no tuft art resolved on this machine, so there are no tufts to compare");
+                restrewn.TuftDensity = 300;
+                restrewn.RebuildTufts();
+                built.Build();
+
+                Assert.That(restrewn.TuftInstances, Is.EqualTo(built.TuftInstances));
+                Assert.That(restrewn.CensusOf(TerrainSkirt.SkirtPart.Tufts).ToString(),
+                    Is.EqualTo(built.CensusOf(TerrainSkirt.SkirtPart.Tufts).ToString()),
+                    "the re-strewn tufts are not the ones a full build lays");
+            }
+            finally
+            {
+                restrewn.Dispose();
+                built.Dispose();
+                materials.Dispose();
+            }
+        }
+#endif
 
         [Test]
         public void ACloneWithoutThePacksGetsNoStrewnGreyCubes()

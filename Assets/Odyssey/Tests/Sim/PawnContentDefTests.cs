@@ -264,7 +264,13 @@ namespace Odyssey.Tests.Sim
         // with main: Job_Treat and Job_Patient renumbered 22-23 -> 23-24, after Job_Steal, since
         // bandits shipped first. Neither side's number covers the merged pack, so it is re-taken
         // from a freshly loaded pack rather than adopted from either.
-        const ulong ContentFingerprint = 17514960997662400843UL;
+        //
+        // 2026-09-25, design 46 §6: MovementDef gained jumpFailPerMille (30) and
+        // jumpFailCarryingPerMille (2,000) — the jump over a one-cell stream falling short.
+        //
+        // Moved a twenty-eighth time, 2026-09-25, at the merge with main (weather, the stream
+        // jump): neither side's number covers the merged pack, re-taken fresh.
+        const ulong ContentFingerprint = 16924157478448908115UL;
 
 
         [Test]

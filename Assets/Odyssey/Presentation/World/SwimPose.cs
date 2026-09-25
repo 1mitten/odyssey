@@ -83,6 +83,39 @@ namespace Odyssey.Presentation.World
             EaseSeconds = 0.35f;
         }
 
+        /// <summary>
+        /// How far into the baked swim stroke its loudest moment is, in seconds — the splash of the
+        /// hand going in. Measured off the three files <c>tools/audio/bake_swim.sh</c> writes
+        /// (0.182, 0.194, 0.171 s): <b>re-bake, re-measure and move this in the same commit.</b>
+        /// </summary>
+        public const float StrokeSoundPeakSeconds = 0.18f;
+
+        /// <summary>
+        /// How much of a swimmer a figure must be before its strokes are heard: past half way into
+        /// the water, so a colonist wading in off a bank is silent until it is plainly swimming.
+        /// </summary>
+        public const float StrokeSoundWeight = 0.5f;
+
+        /// <summary>
+        /// How many strokes should start sounding between two readings of a swim clock (design 20
+        /// §9; owner, 2026-09-25). <b>One per arm</b>, each timed so the sound's loudest moment
+        /// lands as that hand reaches fully forward into the water — the right at a quarter of the
+        /// cycle, the left at three quarters — which is <see cref="StrokeSoundPeakSeconds"/> of
+        /// clock before it.
+        ///
+        /// <para>Off the stroke the player sees rather than off the cells crossed: a cell of water
+        /// takes as long as the simulation says, and a splash per cell would drift across the arms.
+        /// Counted, not tested for one crossing, so a long frame that spans two entries owes two.</para>
+        /// </summary>
+        public static int StrokeSoundsBetween(float clockBefore, float clockAfter)
+        {
+            if (clockAfter <= clockBefore) return 0;
+            float lead = StrokeSoundPeakSeconds * StrokesPerSecond;
+            float offset = 0.25f - lead;
+            int Entries(float clock) => Mathf.FloorToInt((clock * StrokesPerSecond - offset) * 2f);
+            return Entries(clockAfter) - Entries(clockBefore);
+        }
+
         /// <summary>The phase of the stroke cycle at this clock reading, 0 to 1.</summary>
         public static float Phase(float clock)
         {

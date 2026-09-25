@@ -86,6 +86,10 @@ namespace Odyssey.Presentation.World
         /// </summary>
         float _frameTicks;
 
+        /// <summary>This frame's part-tick and the Defs' fallback pace, for <c>PawnPose.StepProgress</c> (design 46 §7).</summary>
+        float _tickAlpha;
+        int _movePerTick;
+
         /// <summary>The combat rows' usable clips by row id, read out of the catalogue once.</summary>
         Dictionary<string, List<CombatClipEntry>>? _combatRows;
 
@@ -326,7 +330,8 @@ namespace Odyssey.Presentation.World
         /// </summary>
         Playable BuildCombatLayer(PlayableGraph graph, AnimationMixerPlayable gaits, bool animal, CombatState fight)
         {
-            if (animal || !HasCombatClips) return gaits;
+            // A jump's clips use the same slot (design 46 §7), so the layer is built for either.
+            if (animal || !(HasCombatClips || HasJumpClips)) return gaits;
 
             bool sheath = HasSheathClips;
             fight.Layer = AnimationLayerMixerPlayable.Create(graph, sheath ? 3 : 2);
@@ -702,6 +707,14 @@ namespace Odyssey.Presentation.World
                     fight.Overlaid = true;
                     fight.Computed = fight.Computed.Plus(flinch);
                 }
+            }
+
+            // A jump over a stream takes the slot whenever the fight has nothing to show in it
+            // (design 46 §7). Timed from the step, not by the frame's seconds, so it needs no dt.
+            if (showing == null && figure.JumpClip != null)
+            {
+                showing = figure.JumpClip;
+                showingTime = figure.JumpClipTime;
             }
 
             ShowCombatClip(figure, showing, showingTime, dt);
