@@ -453,6 +453,11 @@ namespace Odyssey.Sim.Pathing
             byte beneath = under < CostClassByTerrain.Length ? CostClassByTerrain[under] : (byte)0;
             if (beneath != 0) return beneath;
 
+            // A bush, which is an edifice rather than a terrain and says so with a flag (design
+            // 45 §4). After the terrain, so water keeps its own claim, and before the slope,
+            // which a bush never stands on: the undergrowth pass keeps them off a terrace foot.
+            if (grid.IsUndergrowth(index)) return Worldgen.Natural.NaturalContent.CostClassBush;
+
             // **A slope, which no terrain says and the shape of the ground does.**
             //
             // The cell at the foot of a terrace step is drawn as a ramp from the lower floor to

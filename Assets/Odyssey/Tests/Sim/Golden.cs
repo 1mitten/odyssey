@@ -468,8 +468,16 @@ namespace Odyssey.Tests.Sim
             // zeros in the job counters; the probe diffs clean.
             // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
             // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
-            Generated = 13501204456710631653UL,
-            Simulated = 10130121137038686342UL,
+            // 2026-09-25, the scenery made real (design 45, M5): the trees carry their species
+            // and the undergrowth pass placed bushes, each an edifice with its flag, so the
+            // generated board moved. The probe against main: the generated census is identical
+            // (the same people, the same items, the same starting cells) and the simulated one
+            // differs only where it should - the fifteen colonists wander through bushes at a
+            // price, so they made 95 wanders in the ten thousand ticks where they made 105, and
+            // ended on different cells. Food, rest, mood and experience are unchanged. The bare
+            // meadow and the city did not move: neither grows a bush.
+            Generated = 15825491946805197463UL,
+            Simulated = 14309432275701294178UL,
         };
 
         /// <summary>

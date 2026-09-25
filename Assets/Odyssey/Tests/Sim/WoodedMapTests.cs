@@ -150,7 +150,7 @@ namespace Odyssey.Tests.Sim
         public void EveryTreeStandsOnItsOwnGroundAndBlocksNothing()
         {
             // A tree sits in the air cell above the ground it grows from and a colonist walks
-            // through it (NaturalContent.EdificeTreeConifer): woodland is a supply of wood, not
+            // through it (NaturalContent.EdificeTreeBirch): woodland is a supply of wood, not
             // a wall. The board is terraced now, so this walks the trees the report lists rather
             // than one layer of the grid — on a stepped map a single layer is not the surface.
             var (grid, outcome) = Generate(120, 120, 16);

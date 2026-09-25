@@ -44,7 +44,7 @@ Everything on the architect menu: what can be built, and the one-off orders that
 | **Haul urgently** | `ui.arch.tool.haulurgent` | Jump this to the top of the haul list | sheet 08 (salvage gear), low | M3 |
 | **Cancel** | `ui.arch.tool.cancel` | Remove designations and orders <br>**Needs:** a cancel mark. Trivial to draw, and in the HUD constantly | no art | M3 |
 | **Forbid** | `ui.arch.tool.forbid` | Hands off this | sheet 08 (salvage gear), high | M3 |
-| **Chop trees** | `ui.arch.tool.fell` | Cut a tree down for wood <br>**Needs:** an axe against a trunk | no art | M3 |
+| **Chop and clear** | `ui.arch.tool.fell` | Cut a tree down for wood, or clear a bush out of the way <br>**Needs:** an axe against a trunk | no art | M3 |
 | **Allow** | `ui.arch.tool.allowitem` | Hands back on | sheet 08 (salvage gear), high | M3 |
 | **Clear rubble** | `ui.arch.tool.clearrubble` | Remove loose debris from a cell | sheet 05 (tools and weapons), high | M3 |
 | **Extinguish** | `ui.arch.tool.extinguish` | Put this fire out now | sheet 05 (tools and weapons), low | M3 |

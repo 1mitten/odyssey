@@ -186,7 +186,7 @@ ui.arch.tool.salvage,Salvage,ui.arch.tool,M3,"Strip a ruin. Slower than deconstr
 ui.arch.tool.haulurgent,Haul urgently,ui.arch.tool,M3,Jump this to the top of the haul list
 ui.arch.tool.cancel,Cancel,ui.arch.tool,M3,Remove designations and orders
 ui.arch.tool.forbid,Forbid,ui.arch.tool,M3,Hands off this
-ui.arch.tool.fell,Chop trees,ui.arch.tool,M3,Cut a tree down for wood
+ui.arch.tool.fell,Chop and clear,ui.arch.tool,M3,"Cut a tree down for wood, or clear a bush out of the way"
 ui.arch.tool.allowitem,Allow,ui.arch.tool,M3,Hands back on
 ui.arch.tool.clearrubble,Clear rubble,ui.arch.tool,M3,Remove loose debris from a cell
 ui.arch.tool.extinguish,Extinguish,ui.arch.tool,M3,Put this fire out now
@@ -455,8 +455,13 @@ ui.terrain.rock,Rock,ui.terrain,M1,"Natural stone. Mined, not cleared"
 ui.terrain.subsoil,Subsoil,ui.terrain,M1,"The band between soil and rock. Cheap to dig"
 ui.terrain.bedrock,Bedrock,ui.terrain,M1,"The floor of the world. Deliberately punitive to mine"
 ui.terrain.packedgravel,Packed Gravel,ui.terrain,M3,"Stony ground, packed hard. Firm footing, poor soil"
-ui.terrain.tree.conifer,Conifer,ui.terrain,M3,"An evergreen of the meadow. Chopped for wood"
-ui.terrain.tree.broadleaf,Broadleaf,ui.terrain,M3,"A broad-crowned tree of the meadow. Chopped for wood"
+ui.terrain.tree.birch,Birch,ui.terrain,M3,"A slim white-barked tree. Quick to chop, not much wood in it"
+ui.terrain.tree.meadow,Meadow tree,ui.terrain,M3,"A broad round-crowned tree of the open meadow. Chopped for wood"
+ui.terrain.tree.fruit,Fruit tree,ui.terrain,M3,"A low spreading tree. It will bear fruit one day; for now it is wood"
+ui.terrain.tree.giant,Giant tree,ui.terrain,M3,"A rare old giant. Slow to bring down, and a great deal of wood"
+ui.terrain.bush,Bush,ui.terrain,M3,"Dense undergrowth. Slow to push through; cleared before anything is built here"
+ui.terrain.bush.berry,Berry bush,ui.terrain,M3,"A bush that bears berries"
+ui.terrain.bush.picked,Picked berry bush,ui.terrain,M3,"A berry bush picked bare, growing its berries back"
 ui.terrain.carrot,Carrot,ui.terrain,M3,"A root vegetable of the meadow. Grown in zones, cut at full growth"
 ui.settings.panel,Settings,ui.settings,M1,"What the game does, not what the colony does"
 ui.settings.graphics,Graphics,ui.settings,M1,"How the world is drawn. None of it reaches the simulation"

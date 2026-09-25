@@ -136,7 +136,7 @@ namespace Odyssey.Tests.Presentation
             int planted = 0;
             for (int z = 0; z < 16 && planted < 64; z++)
             for (int x = 0; x < 16 && planted < 64; x++, planted++)
-                world.Edifice(x, z, 1, NaturalContent.EdificeTreeConifer, blocking: false);
+                world.Edifice(x, z, 1, NaturalContent.EdificeTreeBirch, blocking: false);
 
             world.Publish();
 

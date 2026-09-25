@@ -17,7 +17,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// and nothing iterates a dictionary. <see cref="NaturalMapResult.GridHash"/> is the single
     /// number a test compares.
     ///
-    /// The ten passes:
+    /// The eleven passes:
     ///   1. heightfield — gentle terracing from integer value noise;
     ///   2. water plan — where the ponds, streams and rivers go, and the columns they lower;
     ///   3. strata — bedrock, rock, subsoil, soil surface, air;
@@ -27,7 +27,8 @@ namespace Odyssey.Sim.Worldgen.Natural
     ///   7. trees — clumped on grass, harvestable, non-blocking;
     ///   8. caverns — sealed voids in the rock, with no way in but a pick;
     ///   9. ore — depth-weighted lumps inside the rock, hung on cavern walls where there are any;
-    ///  10. start — a flat, clear, dry landing site that can reach the map, plus the checks.
+    ///  10. start — a flat, clear, dry landing site that can reach the map, plus the checks;
+    ///  11. undergrowth — bushes, some bearing berries, walked through and cleared (design 45).
     ///
     /// Each is a separately constructible <see cref="INaturalGenPass"/>, so a test can run the
     /// first three and assert on the strata rather than on the finished map.
@@ -39,7 +40,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// </summary>
     public static class NaturalMapGenerator
     {
-        public const int PassCount = 10;
+        public const int PassCount = 11;
 
         /// <summary>The passes in order. A new one is inserted here and nowhere else.</summary>
         public static INaturalGenPass[] CreatePasses() =>
@@ -62,6 +63,9 @@ namespace Odyssey.Sim.Worldgen.Natural
                 new CavernPass(),
                 new OrePass(),
                 new NaturalStartPass(),
+                // After the start, because it keeps clear of the landing site the start chose,
+                // and last because nothing before it may stand where a bush does.
+                new UndergrowthPass(),
             };
 
         /// <summary>Generate a full wilderness map with parameters scaled to the grid.</summary>

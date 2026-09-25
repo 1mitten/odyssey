@@ -147,7 +147,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>45</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
-<li><a href="#world">World and interface<b>125</b></a></li>
+<li><a href="#world">World and interface<b>130</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
 </ul></nav>
 <main>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>836</b><i>named entries</i></div>
+<div class="stat"><b>841</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>564</b><i>no art yet</i></div>
+<div class="stat m"><b>569</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -879,9 +879,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> salvage gear</div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.arch.tool.fell" data-hay="chop trees ui.arch.tool.fell cut a tree down for wood an axe against a trunk" data-gap="1">
-<div class="nm">Chop trees<span class="k">ui.arch.tool.fell</span></div>
-<div class="dsc">Cut a tree down for wood<span class="need">Needs drawing: an axe against a trunk</span></div>
+<div class="row gap" id="ui.arch.tool.fell" data-hay="chop and clear ui.arch.tool.fell cut a tree down for wood, or clear a bush out of the way an axe against a trunk" data-gap="1">
+<div class="nm">Chop and clear<span class="k">ui.arch.tool.fell</span></div>
+<div class="dsc">Cut a tree down for wood, or clear a bush out of the way<span class="need">Needs drawing: an axe against a trunk</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -2732,7 +2732,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">125 entries</em></h2>
+<h2>World and interface <em class="count">130 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -2803,15 +2803,45 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.terrain.tree.conifer" data-hay="conifer ui.terrain.tree.conifer an evergreen of the meadow. chopped for wood " data-gap="1">
-<div class="nm">Conifer<span class="k">ui.terrain.tree.conifer</span></div>
-<div class="dsc">An evergreen of the meadow. Chopped for wood</div>
+<div class="row gap" id="ui.terrain.tree.birch" data-hay="birch ui.terrain.tree.birch a slim white-barked tree. quick to chop, not much wood in it a slim pale-trunked tree" data-gap="1">
+<div class="nm">Birch<span class="k">ui.terrain.tree.birch</span></div>
+<div class="dsc">A slim white-barked tree. Quick to chop, not much wood in it<span class="need">Needs drawing: a slim pale-trunked tree</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.terrain.tree.broadleaf" data-hay="broadleaf ui.terrain.tree.broadleaf a broad-crowned tree of the meadow. chopped for wood " data-gap="1">
-<div class="nm">Broadleaf<span class="k">ui.terrain.tree.broadleaf</span></div>
-<div class="dsc">A broad-crowned tree of the meadow. Chopped for wood</div>
+<div class="row gap" id="ui.terrain.tree.meadow" data-hay="meadow tree ui.terrain.tree.meadow a broad round-crowned tree of the open meadow. chopped for wood a round-crowned tree" data-gap="1">
+<div class="nm">Meadow tree<span class="k">ui.terrain.tree.meadow</span></div>
+<div class="dsc">A broad round-crowned tree of the open meadow. Chopped for wood<span class="need">Needs drawing: a round-crowned tree</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.tree.fruit" data-hay="fruit tree ui.terrain.tree.fruit a low spreading tree. it will bear fruit one day; for now it is wood a low tree with a spreading crown" data-gap="1">
+<div class="nm">Fruit tree<span class="k">ui.terrain.tree.fruit</span></div>
+<div class="dsc">A low spreading tree. It will bear fruit one day; for now it is wood<span class="need">Needs drawing: a low tree with a spreading crown</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.tree.giant" data-hay="giant tree ui.terrain.tree.giant a rare old giant. slow to bring down, and a great deal of wood a towering tree dwarfing a figure" data-gap="1">
+<div class="nm">Giant tree<span class="k">ui.terrain.tree.giant</span></div>
+<div class="dsc">A rare old giant. Slow to bring down, and a great deal of wood<span class="need">Needs drawing: a towering tree dwarfing a figure</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.bush" data-hay="bush ui.terrain.bush dense undergrowth. slow to push through; cleared before anything is built here a round green bush" data-gap="1">
+<div class="nm">Bush<span class="k">ui.terrain.bush</span></div>
+<div class="dsc">Dense undergrowth. Slow to push through; cleared before anything is built here<span class="need">Needs drawing: a round green bush</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.bush.berry" data-hay="berry bush ui.terrain.bush.berry a bush that bears berries a bush dotted with red berries" data-gap="1">
+<div class="nm">Berry bush<span class="k">ui.terrain.bush.berry</span></div>
+<div class="dsc">A bush that bears berries<span class="need">Needs drawing: a bush dotted with red berries</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.bush.picked" data-hay="picked berry bush ui.terrain.bush.picked a berry bush picked bare, growing its berries back a bare bush with no berries" data-gap="1">
+<div class="nm">Picked berry bush<span class="k">ui.terrain.bush.picked</span></div>
+<div class="dsc">A berry bush picked bare, growing its berries back<span class="need">Needs drawing: a bare bush with no berries</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -3710,7 +3740,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 836, "gaps": 564};</script>
+<script>window.WIKI={"total": 841, "gaps": 569};</script>
 <script>
 (function(){
   var D = window.WIKI;

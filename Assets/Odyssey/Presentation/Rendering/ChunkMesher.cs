@@ -398,7 +398,7 @@ namespace Odyssey.Presentation.Rendering
                 // still is. That covers the campfire the owner asked about and the bed and the
                 // shelf, which have had the same fault since they landed and nobody had looked.
                 ushort built = _model.EdificeDef(above);
-                if (built != CoreContent.EdificeNone && !NaturalContent.IsTree(built)) return;
+                if (built != CoreContent.EdificeNone && !NaturalContent.IsNatural(built)) return;
             }
 
             EnsureScatterModules();
@@ -626,7 +626,7 @@ namespace Odyssey.Presentation.Rendering
                     if (edifice != CoreContent.EdificeNone)
                     {
                         if (NaturalContent.IsTree(edifice)) woodEdge = true;
-                        else ringFree = false;
+                        else if (!NaturalContent.IsBush(edifice)) ringFree = false;
                     }
                     if (_model.IsSolid(up) && _model.DrawnTerrain(up) == NaturalContent.TerrainRock) nearRock = true;
                 }
@@ -648,6 +648,20 @@ namespace Odyssey.Presentation.Rendering
                 if (small == MeadowDressing.Kind.Rock && inClearing) continue;
                 PlaceDressing(batch, small, x, z, surface, daylit, spread: 0.7f, slot: slot);
             }
+        }
+
+        /// <summary>
+        /// A bush the simulation placed (design 45 §4), standing in the air cell above its grass.
+        /// Drawn whatever the grass ladder and the dressing switch say, because it is a thing a
+        /// colonist pushes through and a builder has to clear: turning the grass off must not hide
+        /// it. A checkout without the packs has no bush art and draws nothing, the tufts' rule.
+        /// </summary>
+        void EmitBush(ChunkBatch batch, ushort def, int x, int z, int y)
+        {
+            EnsureDressModules();
+            if (_dressModules.Length == 0) return;
+            Vector3 surface = CellMetrics.FloorCentre(x, z, y);
+            PlaceDressing(batch, MeadowDressing.Kind.Bush, x, z, surface, daylit: true, spread: 0.5f);
         }
 
         void PlaceDressing(ChunkBatch batch, MeadowDressing.Kind kind, int x, int z, Vector3 surface,
@@ -704,7 +718,7 @@ namespace Odyssey.Presentation.Rendering
             if (_model.IsSolid(above)) return false;
             if (_model.Floor(above) != CoreContent.SlabNone) return false;
             ushort built = _model.EdificeDef(above);
-            return built == CoreContent.EdificeNone || NaturalContent.IsTree(built);
+            return built == CoreContent.EdificeNone || NaturalContent.IsNatural(built);
         }
 
         /// <summary>
@@ -756,6 +770,9 @@ namespace Odyssey.Presentation.Rendering
         /// Only rows the catalogue actually has are asked for, so a checkout whose catalogue
         /// predates the variants — or has no packs — gets its one tree, and no "missing art" noise.
         /// </summary>
+        /// <summary>The same, for the topple (design 45 §5): a falling tree wears the row it stood in.</summary>
+        public int[] TreeVariants(int module) => TreeVariantsOf(module);
+
         int[] TreeVariantsOf(int module)
         {
             if (_treeVariants.TryGetValue(module, out int[]? known)) return known;
@@ -1159,7 +1176,7 @@ namespace Odyssey.Presentation.Rendering
             if (y > 0 && !_model.IsSolid(index - size.LayerStride)) return false;
             if (_model.Floor(above) != CoreContent.SlabNone) return false;
             ushort edifice = _model.EdificeDef(above);
-            if (edifice != 0 && !Odyssey.Sim.Worldgen.Natural.NaturalContent.IsTree(edifice)) return false;
+            if (edifice != 0 && !Odyssey.Sim.Worldgen.Natural.NaturalContent.IsNatural(edifice)) return false;
             return true;
         }
 
@@ -1372,6 +1389,17 @@ namespace Odyssey.Presentation.Rendering
         {
             ushort def = _model.EdificeDef(index);
             if (def == CoreContent.EdificeNone) return;
+
+            // A bush (design 45 §4) is a thing the simulation placed, drawn by the dressing's own
+            // path so it looks exactly as the dressing's bushes did — the Meadow art, the jittered
+            // placement, the tint that casts no shadow and never fades. It has no module of its
+            // own, so it goes before the module test that would turn it away.
+            if (NaturalContent.IsBush(def))
+            {
+                EmitBush(batch, def, x, z, y);
+                return;
+            }
+
             int module = _model.EdificeModule(index);
             if (module == 0) return;
 
@@ -1755,14 +1783,15 @@ namespace Odyssey.Presentation.Rendering
 
             // Which tree this is, and which way it faces (the look pass, design 38 §17): a species
             // has several pieces of art, chosen per cell, each turned and sized a little by the
-            // hash so a wood is not one tree stamped in rows. A species with one row — no packs,
-            // or the old art — is drawn exactly as before.
+            // hash so a wood is not one tree stamped in rows. Which rows are the species' own is
+            // the simulation's species (design 45 §3), not a hash: a giant is a giant because the
+            // simulation says so and fells like one. A family with one row — no packs, or the old
+            // art — is drawn exactly as before.
             int[] variants = TreeVariantsOf(module);
             if (variants.Length > 1)
             {
-                module = variants[MeadowDressing.TreeVariant(x, z, variants.Length)];
-                float yaw = GroundScatter.Unit(x, z, 0x6A09u) * 360f;
-                float size = 0.9f + GroundScatter.Unit(x, z, 0x6A0Bu) * 0.25f;
+                module = variants[TreeArt.VariantFor(def, x, z, variants.Length)];
+                TreeArt.Stance(x, z, out float yaw, out float size);
                 placement *= Matrix4x4.TRS(Vector3.zero, Quaternion.Euler(0f, yaw, 0f), Vector3.one * size);
             }
 

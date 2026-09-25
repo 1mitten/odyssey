@@ -77,14 +77,11 @@ namespace Odyssey.Presentation.Rendering
             bool odd = ((x + z) & 1) == 1;
             float scale = Mathf.Min(density, 5f);
 
-            if (even)
-            {
-                float want = Want(Field(x, z, 14f, SaltField + 1u), 0.45f);
-                if (woodEdge) want = Mathf.Max(want, 0.7f);
-                float chance = want * 0.4f * Mathf.Sqrt(scale);
-                if (GroundScatter.Unit(x, z, SaltBush) < chance) return Kind.Bush;
-            }
-            else if (odd)
+            // The even lattice was the bushes'. They are the simulation's now (design 45 §4) —
+            // placed by UndergrowthPass on this same lattice at this rule's shipped density and
+            // drawn from their edifice — so the dressing leaves those cells to it.
+            if (even) return Kind.None;
+            if (odd)
             {
                 float want = Want(Field(x, z, 18f, SaltField + 2u), 0.2f);
                 float chance = Mathf.Min(0.9f, want * 0.7f * Mathf.Sqrt(scale));
@@ -150,23 +147,6 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Which variant of a family a piece is.</summary>
         public static int VariantFor(int x, int z, uint salt, int variants) =>
             variants <= 1 ? 0 : (int)(GroundScatter.Hash(x, z, salt + 23u) % (uint)variants);
-
-        /// <summary>
-        /// Which art a tree wears, weighted so the last variant — the fifteen-metre giant — is
-        /// rare: one tree in forty of its species, and the rest shared evenly.
-        /// </summary>
-        public static int TreeVariant(int x, int z, int variants)
-        {
-            if (variants <= 1) return 0;
-            float u = GroundScatter.Unit(x, z, 0x3D41u);
-            if (variants >= 5)
-            {
-                if (u < 0.025f) return variants - 1;
-                u = (u - 0.025f) / 0.975f;
-                return Mathf.Min((int)(u * (variants - 1)), variants - 2);
-            }
-            return Mathf.Min((int)(u * variants), variants - 1);
-        }
 
         /// <summary>The salt a kind's placement and variant draw on, so kinds are independent.</summary>
         public static uint SaltOf(Kind kind) => kind switch

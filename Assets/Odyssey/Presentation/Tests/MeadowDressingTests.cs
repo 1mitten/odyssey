@@ -42,15 +42,19 @@ namespace Odyssey.Tests.Presentation
             }
         }
 
+        /// <summary>
+        /// The dressing strews no bushes of its own any more: they are the simulation's (design
+        /// 45 §4), placed on the even lattice by the undergrowth pass and drawn from their edifice.
+        /// The tall grass keeps to its own half of the checkerboard.
+        /// </summary>
         [Test]
-        public void BushesAndTallGrassKeepToTheirOwnLattices()
+        public void TheDressingLeavesTheBushLatticeToTheSimulation()
         {
             for (int z = 0; z < Side; z++)
             for (int x = 0; x < Side; x++)
             {
                 MeadowDressing.Kind big = MeadowDressing.BigPiece(x, z, 5f, woodEdge: true);
-                if (big == MeadowDressing.Kind.Bush)
-                    Assert.That((x & 1) == 0 && (z & 1) == 0, Is.True, $"a bush at ({x},{z}) is off its lattice");
+                Assert.That(big, Is.Not.EqualTo(MeadowDressing.Kind.Bush), $"a drawn bush at ({x},{z})");
                 if (big == MeadowDressing.Kind.TallGrass)
                     Assert.That(((x + z) & 1) == 1, Is.True, $"a grass stand at ({x},{z}) is off its lattice");
             }
@@ -115,23 +119,6 @@ namespace Odyssey.Tests.Presentation
                 if (MeadowDressing.SmallPiece(x, z, 2, 1f, nearRock: false) == MeadowDressing.Kind.Rock) far++;
             }
             Assert.That(near, Is.GreaterThan(far * 5), $"{near} stones by rock against {far} in open meadow");
-        }
-
-        [Test]
-        public void TheGiantTreeIsRare()
-        {
-            int giants = 0, trees = 0;
-            for (int z = 0; z < Side; z++)
-            for (int x = 0; x < Side; x++)
-            {
-                trees++;
-                if (MeadowDressing.TreeVariant(x, z, 5) == 4) giants++;
-            }
-            float share = giants / (float)trees;
-            Assert.That(share, Is.InRange(0.01f, 0.05f), $"the giant is {share:P1} of broadleaf trees");
-            for (int z = 0; z < 50; z++)
-            for (int x = 0; x < 50; x++)
-                Assert.That(MeadowDressing.TreeVariant(x, z, 3), Is.InRange(0, 2));
         }
     }
 }

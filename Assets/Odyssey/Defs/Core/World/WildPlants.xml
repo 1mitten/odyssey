@@ -1,0 +1,67 @@
+<Defs>
+
+  <!--
+    The wild things that stand in a cell: four trees by species, and two bushes (design 45 §2).
+
+    ORDER IS NOT DECIDED HERE. Which edifice id each one is decided by
+    WorldContent.WildPlantOrder and NaturalContent.WildPlantSlot, a save contract like every
+    other content order; the order below is the same one only so the file reads as the table does.
+
+    Every number is INVENTED inside the owner's envelope (2026-09-25): wood and work scale with
+    size - the birch small and quick, the meadow tree medium, the giant a great deal of both, the
+    fruit tree medium. Before species every tree yielded 27 wood for 800 ticks; with the mixture
+    the tree pass deals (58 per cent birch, then meadow, fruit and one broadleaf in forty a giant)
+    the average tree now yields 25.6. A bush is cleared for nothing: it is in the way, not a crop.
+  -->
+
+  <WildPlantDef>
+    <defName>WildPlant_Birch</defName>
+    <label>birch</label>
+    <description>A slim white-barked tree. Quick to fell, and not much wood in it.</description>
+    <clearWorkTicks>650</clearWorkTicks>
+    <clearYields>Item_Wood</clearYields>
+    <clearYieldCount>22</clearYieldCount>
+  </WildPlantDef>
+
+  <WildPlantDef>
+    <defName>WildPlant_MeadowTree</defName>
+    <label>meadow tree</label>
+    <description>A broad round-crowned tree of the open meadow.</description>
+    <clearWorkTicks>900</clearWorkTicks>
+    <clearYields>Item_Wood</clearYields>
+    <clearYieldCount>32</clearYieldCount>
+  </WildPlantDef>
+
+  <WildPlantDef>
+    <defName>WildPlant_FruitTree</defName>
+    <label>fruit tree</label>
+    <description>A low spreading tree. It will bear fruit one day; for now it is wood.</description>
+    <clearWorkTicks>800</clearWorkTicks>
+    <clearYields>Item_Wood</clearYields>
+    <clearYieldCount>28</clearYieldCount>
+  </WildPlantDef>
+
+  <WildPlantDef>
+    <defName>WildPlant_GiantTree</defName>
+    <label>giant tree</label>
+    <description>A fifteen-metre old giant. Rare, slow to bring down, and a great deal of wood.</description>
+    <clearWorkTicks>2400</clearWorkTicks>
+    <clearYields>Item_Wood</clearYields>
+    <clearYieldCount>100</clearYieldCount>
+  </WildPlantDef>
+
+  <WildPlantDef>
+    <defName>WildPlant_Bush</defName>
+    <label>bush</label>
+    <description>Dense undergrowth. Slow to push through, and in the way of anything built.</description>
+    <clearWorkTicks>250</clearWorkTicks>
+  </WildPlantDef>
+
+  <WildPlantDef>
+    <defName>WildPlant_BerryBush</defName>
+    <label>berry bush</label>
+    <description>A bush that bears berries.</description>
+    <clearWorkTicks>250</clearWorkTicks>
+  </WildPlantDef>
+
+</Defs>

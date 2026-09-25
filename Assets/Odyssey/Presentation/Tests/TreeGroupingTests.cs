@@ -33,7 +33,7 @@ namespace Odyssey.Tests.Presentation
             {
                 world.Solid(x, z, 1, NaturalContent.TerrainGrass);
                 if ((x * 31 + z * 17) % 37 == 0)
-                    world.Edifice(x, z, 2, NaturalContent.EdificeTreeBroadleaf, blocking: false);
+                    world.Edifice(x, z, 2, NaturalContent.EdificeTreeMeadow, blocking: false);
             }
             return world.Publish();
         }

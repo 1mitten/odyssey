@@ -338,8 +338,13 @@ namespace Odyssey.Sim.Contracts
         public const int VaultWall = 8;
         public const int UtilityTap = 9;
 
-        public const int TreeConifer = 10;
-        public const int TreeBroadleaf = 11;
+        /// <summary>The birch: small, quick to fell, little wood (design 45 §2). It was the
+        /// conifer until the species became the simulation's; an old save's conifers load as
+        /// birches, which is what the art had drawn them as since the Meadow look pass.</summary>
+        public const int TreeBirch = 10;
+
+        /// <summary>The meadow tree, the medium broadleaf. Was the broadleaf (design 45 §2).</summary>
+        public const int TreeMeadow = 11;
 
         /// <summary>
         /// The bed, and the first edifice id the interface names that no generator stamps: 12,
@@ -367,7 +372,25 @@ namespace Odyssey.Sim.Contracts
         /// power. See <c>CoreContent.EdificeHeater</c>.</summary>
         public const int Heater = 16;
 
-        public const int Count = 17;
+        // The wild things (design 45 §2), after the heater because edifice ids are one space
+        // shared with the buildings: the trees' ten and eleven were never a range to extend.
+
+        /// <summary>A fruit tree: medium, its fruit deferred.</summary>
+        public const int TreeFruit = 17;
+
+        /// <summary>The giant meadow tree: rare, slow to fell, a great deal of wood.</summary>
+        public const int TreeGiant = 18;
+
+        /// <summary>A bush: walked through slowly, cleared before anything is built on it.</summary>
+        public const int Bush = 19;
+
+        /// <summary>A berry bush with its berries on.</summary>
+        public const int BerryBush = 20;
+
+        /// <summary>A berry bush that has been picked and is growing its berries back.</summary>
+        public const int BerryBushPicked = 21;
+
+        public const int Count = 22;
     }
 
     /// <summary>

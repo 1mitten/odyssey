@@ -55,8 +55,8 @@ namespace Odyssey.Tests.Presentation
                 if (GroundScatter.Hash(x, z, 0x7011u) % 1000u >= DensityPerMille) continue;
 
                 ushort def = GroundScatter.Hash(x, z, 0x4413u) % 1000u < 400u
-                    ? NaturalContent.EdificeTreeBroadleaf
-                    : NaturalContent.EdificeTreeConifer;
+                    ? NaturalContent.EdificeTreeMeadow
+                    : NaturalContent.EdificeTreeBirch;
 
                 world.Edifice(x, z, TreeLayer, def, NaturalContent.StuffWood, blocking: false);
                 placed.Add((x, z, def));

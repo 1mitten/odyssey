@@ -187,7 +187,7 @@ namespace Odyssey.Sim.Designations
             // and watching nothing happen.
             return kind switch
             {
-                DesignationKind.Fell when IsTree(above) => above,
+                DesignationKind.Fell when IsFellable(above) => above,
                 DesignationKind.Deconstruct when CanDeconstruct(above) => above,
                 _ => index,
             };
@@ -217,7 +217,7 @@ namespace Odyssey.Sim.Designations
                 case DesignationKind.Deconstruct:
                     return CanDeconstruct(index);
                 case DesignationKind.Fell:
-                    return IsTree(index);
+                    return IsFellable(index);
                 default:
                     return false;
             }
@@ -249,7 +249,7 @@ namespace Odyssey.Sim.Designations
             if (_grid.Terrain[index] == NaturalContent.TerrainBedrock) return false;
 
             int above = index + _grid.Size.LayerStride;
-            return above >= _grid.Size.CellCount || !IsTree(above);
+            return above >= _grid.Size.CellCount || !IsFellable(above);
         }
 
         /// <summary>
@@ -316,6 +316,20 @@ namespace Odyssey.Sim.Designations
 
         /// <summary>Whether a tree stands in the cell right now.</summary>
         public bool IsTree(int index) => TryEdificeDef(index, out ushort def) && NaturalContent.IsTree(def);
+
+        /// <summary>A bush of either kind stands here (design 45 §4).</summary>
+        public bool IsBush(int index) => TryEdificeDef(index, out ushort def) && NaturalContent.IsBush(def);
+
+        /// <summary>
+        /// What the Fell order may name: a tree to chop or a bush to clear (design 45 §4). One
+        /// order for both because they are one act — something wild is taken out of the cell — and
+        /// the work and the yield are the plant's own, read off its Def by the driver.
+        /// </summary>
+        public bool IsFellable(int index) => TryEdificeDef(index, out ushort def) && NaturalContent.IsNatural(def);
+
+        /// <summary>The wild plant standing here, or null. What the fell driver works and yields by.</summary>
+        public WildPlantDef? WildPlantAt(int index) =>
+            TryEdificeDef(index, out ushort def) ? NaturalContent.WildPlantAt(def) : null;
 
         /// <summary>
         /// Can this be taken apart? Only what the colony built itself.

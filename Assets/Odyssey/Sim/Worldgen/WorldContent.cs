@@ -103,12 +103,39 @@ namespace Odyssey.Sim.Worldgen
         };
 
         /// <summary>
+        /// The wild things, in <see cref="NaturalContent.WildPlantSlot"/> order (design 45 §2): an
+        /// edifice id's Def is found by its slot here, so this pairing is a save contract like
+        /// <see cref="TerrainOrder"/>. Appended, never inserted.
+        /// </summary>
+        public static readonly string[] WildPlantOrder =
+        {
+            "WildPlant_Birch",
+            "WildPlant_MeadowTree",
+            "WildPlant_FruitTree",
+            "WildPlant_GiantTree",
+            "WildPlant_Bush",
+            "WildPlant_BerryBush",
+        };
+
+        static WildPlantDef[]? _wildPlants;
+
+        /// <summary>The wild plant table from the core pack, in <see cref="WildPlantOrder"/>.</summary>
+        public static WildPlantDef[] WildPlants => _wildPlants ??= WildPlantsFromDefs(ContentPack.Core);
+
+        public static WildPlantDef[] WildPlantsFromDefs(DefDatabase defs)
+        {
+            var table = new WildPlantDef[WildPlantOrder.Length];
+            for (int i = 0; i < WildPlantOrder.Length; i++) table[i] = One<WildPlantDef>(defs, WildPlantOrder[i]);
+            return table;
+        }
+
+        /// <summary>
         /// The Def types the world content is made of, registered in one place so a caller cannot
         /// load half of it.
         /// </summary>
         public static DefLoader Register(DefLoader loader) =>
             loader.Register<TerrainDef>().Register<OreKindDef>().Register<PlantDef>().Register<ClimateDef>()
-                .Register<Weather.WeatherDef>();
+                .Register<Weather.WeatherDef>().Register<WildPlantDef>();
 
         /// <summary>
         /// The whole terrain table, in index order. A missing or misspelt kind throws here
@@ -144,6 +171,7 @@ namespace Odyssey.Sim.Worldgen
         internal static void Forget()
         {
             _table = null;
+            _wildPlants = null;
             _climate = null;
             _weathers = null;
         }

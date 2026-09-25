@@ -251,7 +251,11 @@ namespace Odyssey.Tests.Sim
         // renamed PawnKind_Bandit -> PawnKind_Bandit (index 3 unchanged, so no save moves), its
         // traverse mode likewise, and PawnKindDef.weapon became weapons, the bandit's being a
         // crowbar or a bat where it was a machete. No golden moved: no golden has a bandit.
-        const ulong ContentFingerprint = 9430633263010007866UL;
+        //
+        // Moved again, 2026-09-25, by design 45 (the scenery made real): the tuning's woodPerTree
+        // is gone, because what a felled tree yields is its species' own now, in
+        // World/WildPlants.xml. Taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 14288726203637930146UL;
 
 
         [Test]

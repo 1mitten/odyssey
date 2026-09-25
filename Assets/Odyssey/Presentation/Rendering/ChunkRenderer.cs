@@ -22,7 +22,7 @@ namespace Odyssey.Presentation.Rendering
     /// Depth shading and ghosting are chosen at draw time from the same buckets, so moving the
     /// slice up or down does no meshing work whatsoever.
     /// </summary>
-    public sealed class ChunkRenderer : System.IDisposable
+    public sealed partial class ChunkRenderer : System.IDisposable
     {
         /// <summary>
         /// Instances per call. <c>RenderMeshInstanced</c> takes up to 1023, but the ceiling halves
@@ -2046,6 +2046,8 @@ namespace Odyssey.Presentation.Rendering
             System.Collections.Generic.HashSet<int>? drawnAsFigures = null,
             ICarriedLoads? carried = null)
         {
+            // Before the early return: a tree falls whether or not anybody is standing there.
+            DrawTopples(snapshot);
             if (snapshot.PawnCount == 0 && snapshot.ThingCount == 0) return;
 
             // Down to the bottom of the landscape, not merely to the depth budget — the same

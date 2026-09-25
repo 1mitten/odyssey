@@ -84,15 +84,21 @@ namespace Odyssey.Tests.Sim
         /// measured, not assumed — which is exactly right: the bare board grows no trees, so a
         /// guard on tree placement cannot touch it. Anything else moving would have meant something
         /// else had come along with it.</para>
+        ///
+        /// <para><b>Re-based a third time on 2026-09-25, by design 45, and again the barren column
+        /// is the evidence.</b> Trees became species — the same trees in the same cells, carrying
+        /// four edifice ids where there were two — and the undergrowth pass placed bushes, each an
+        /// edifice with its own flag bit. Every <c>dry</c> number moved; <b>every <c>barren</c> number
+        /// is the one this table already held</b>, measured, because the bare board grows neither.</para>
         /// </remarks>
         static readonly (GridSize size, uint seed, ulong dry, ulong barren)[] BeforeWater =
         {
-            (new GridSize(64, 64, 20), 1u, 0x5911510576db1f4cUL, 0x5ba75a6d28bea325UL),
-            (new GridSize(64, 64, 20), 7u, 0xba365f4d6969037aUL, 0x5ba75a6d28bea325UL),
-            (new GridSize(64, 64, 20), 42u, 0xb6ea29eda6833100UL, 0x5ba75a6d28bea325UL),
-            (new GridSize(120, 120, 16), 1u, 0x0ffd97de5fbe075cUL, 0xc0dc37cc3b1edd25UL),
-            (new GridSize(120, 120, 16), 7u, 0x312abe0d7a34cce1UL, 0xc0dc37cc3b1edd25UL),
-            (new GridSize(120, 120, 16), 42u, 0x7dc9cb380f55e99bUL, 0xc0dc37cc3b1edd25UL),
+            (new GridSize(64, 64, 20), 1u, 0x94bd80785a5dcce0UL, 0x5ba75a6d28bea325UL),
+            (new GridSize(64, 64, 20), 7u, 0x73d4b2ce2a816929UL, 0x5ba75a6d28bea325UL),
+            (new GridSize(64, 64, 20), 42u, 0xbcf541841cc12611UL, 0x5ba75a6d28bea325UL),
+            (new GridSize(120, 120, 16), 1u, 0x72bd1d555391b46dUL, 0xc0dc37cc3b1edd25UL),
+            (new GridSize(120, 120, 16), 7u, 0x8b6673f0bdffec70UL, 0xc0dc37cc3b1edd25UL),
+            (new GridSize(120, 120, 16), 42u, 0xf1fa23293f14341bUL, 0xc0dc37cc3b1edd25UL),
         };
 
         [Test]
