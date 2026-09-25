@@ -4630,7 +4630,12 @@ than forked):
 - **no attacker on a target already gone** for more than one tick: a pawn despawned, dead, or down
   when the attack was not to the death; a building no longer standing. The driver ends the job on
   the tick it sees one, so one tick — the fight's pass downing a target after the jobs ran — is the
-  bound.
+  bound. **Only ticks the driver is free to see it** (corrected 2026-09-25): a stunned or
+  knocked-down attacker, or one landing a kept step, has its driver held by the job loop and cannot
+  end its job — a stun is a pause, not an interrupt (§5c), so a drafted colonist keeps the player's
+  order through it. The gate asks the job system's own rule, `JobSystem.HoldsDriver`, rather than
+  counting through the hold; counting through it read a stunned colonist whose bandit went down as
+  a 109-tick stall on one seed whenever the random stream moved.
 - **no bandit on *Fighting* at a building** without a step or a swing for more than **500
   ticks**: every unforced attack thinks again at `rechooseTicks` (300), and since §19b one whose
   every side is held ends at once, so the owner's "said they were fighting but kinda stood around"
