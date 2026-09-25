@@ -23,7 +23,7 @@ the next session learns to ignore.
 
 ## Open
 
-- **Do the birds read as birds, and is the size right at every zoom?** (`claude/wizardly-ride-wely6j`,
+- **Do the birds read as birds, and is the size right at every zoom?** (PR #230, `claude/wizardly-ride-wely6j`,
   design 50.) New game, clear weather, midday. Pull the camera from 10 m out to 160 m: close in a rook
   is its real size beside a colonist, far out it is drawn ×1.75, and a dark flock should still read
   as birds at the furthest zoom. Watch a flock come down on treetops, then walk a colonist under it:
