@@ -620,6 +620,9 @@ namespace Odyssey.Presentation.Ui
             // once today, and if that ever changes the later one should be the one on top.
             BuildLeavePrompt();
 
+            // Last of all, above every modal: the cover a new world is drawn behind (CurtainFrames).
+            BuildCurtain();
+
             _hud.RegisterCallback<GeometryChangedEvent>(_ => OnResized());
 
             // A session coming or going is the one thing that decides whether the start screen is
@@ -818,6 +821,10 @@ namespace Odyssey.Presentation.Ui
 
         void Update()
         {
+            // The curtain (HudShell.Start.cs, CurtainFrames): the new world has been drawn behind
+            // the start screen for long enough, so the screen gives way now.
+            if (_curtain > 0 && --_curtain == 0) LiftCurtain();
+
             var world = _boot!.World;
             if (world == null || _hud == null) return;
             if (_directors == null)
