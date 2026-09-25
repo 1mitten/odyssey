@@ -130,6 +130,13 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Mean ticks between breaks while below the threshold. 10 in-game days.</summary>
         public int breakMtbTicks = 600_000;
+
+        /// <summary>
+        /// How far above the minor line a colonist still reads <i>strained</i> rather than content
+        /// (design 43 §5a). 100 puts an untraited colonist's content line at 450, below the resting
+        /// target of 500, which is the owner's "a rested, fed colonist is Content". INVENTED.
+        /// </summary>
+        public int strainMargin = 100;
     }
 
     /// <summary>The one break behaviour the slice carries. The taxonomy is a later milestone.</summary>

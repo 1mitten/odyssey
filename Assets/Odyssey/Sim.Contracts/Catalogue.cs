@@ -257,6 +257,39 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// How a colonist's mood stands against her own break lines (design 43 §5a): the one answer the
+    /// roster, the inspect pane and the alert all read, <b>published by the simulation</b> as
+    /// <c>odyssey.pawn.mood.band</c>. The interface used to decide it from two constants of its own,
+    /// one of them a copy of the simulation's threshold, and called a colonist at the resting target
+    /// "strained" for it. The lines move with traits, so only the simulation can say.
+    /// </summary>
+    public static class MoodBand
+    {
+        /// <summary>At or above the minor line plus the strain margin: nothing near.</summary>
+        public const int Content = 0;
+
+        /// <summary>Within the strain margin above the minor line: close, and not yet at risk.</summary>
+        public const int Strained = 1;
+
+        /// <summary>Below the minor line: a minor break can be rolled.</summary>
+        public const int BreakingMinor = 2;
+
+        /// <summary>Below the major line: a major break can be rolled.</summary>
+        public const int BreakingMajor = 3;
+
+        /// <summary>Below the extreme line: an extreme break can be rolled.</summary>
+        public const int BreakingExtreme = 4;
+
+        /// <summary>In a mental break now.</summary>
+        public const int Broken = 5;
+
+        public const int Count = 6;
+
+        /// <summary>At or past the minor line: every band a break can be rolled in, and a break itself.</summary>
+        public static bool IsBreaking(int band) => band >= BreakingMinor;
+    }
+
+    /// <summary>
     /// See <see cref="JobHandle"/>: incident def indices, as <see cref="BulletinView"/> and
     /// <see cref="Intent"/> carry them. The order is <c>IncidentContent.Order</c> in the
     /// simulation and <c>IncidentLabels.Keys</c> in the interface, and a test on each side holds

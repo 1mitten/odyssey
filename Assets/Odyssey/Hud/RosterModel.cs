@@ -33,6 +33,9 @@ namespace Odyssey.Hud
         public uint Seed;
         public string Name;
         public int Mood;        // 0..1000, the simulation's own scale, as food and rest are
+
+        /// <summary>The <see cref="MoodBand"/> the simulation published for her (design 43 §5a).</summary>
+        public int MoodBand;
         public int Food;        // 0..1000
         public int Rest;        // 0..1000
         public int JobDef;      // JobHandle value, -1 idle
@@ -186,6 +189,7 @@ namespace Odyssey.Hud
                     Seed = seed,
                     Name = ColonistNames.Of(seed, pawn.Id),
                     Mood = pawn.Mood,
+                    MoodBand = MoodBands.Of(snapshot, pawn.Id),
                     Food = pawn.Food,
                     Rest = pawn.Rest,
                     JobDef = pawn.JobDef,
@@ -240,30 +244,51 @@ namespace Odyssey.Hud
     }
 
     /// <summary>
-    /// The three display bands of the mood bar. These are interface-side reading aids, not
-    /// simulation thresholds: the break threshold is simulation content and is not published,
-    /// so the bar says "this one looks unhappy" rather than claiming a number it was not given.
+    /// The mood band's words, read from the band <b>the simulation publishes</b> (design 43 §5a).
+    ///
+    /// <para><b>This class used to hold two thresholds of its own</b>, 600 and 350, the second a
+    /// copy of the simulation's break threshold under a comment saying the threshold "is not
+    /// published". So a colonist at the resting target of 500 — fed, rested, nothing on her mind —
+    /// read <i>strained</i> for the whole game, and the owner asked for that to stop. The lines
+    /// move with traits now, which only the simulation knows, so the band is its answer and this
+    /// class keeps no number at all.</para>
     /// </summary>
     public static class MoodBands
     {
         /// <summary>
-        /// Thousandths, like every other need the frame publishes.
-        ///
-        /// These read 60 and 35 until 2026-09-16, against a mood the simulation keeps from 0 to
-        /// 1000 and starts a colonist at 600. Nothing in the interface had ever shown a mood
-        /// correctly as a result: every bar was clamped to a hundred and therefore drawn full,
-        /// every colonist was described as "content" whatever had happened to them, and the
-        /// red low-mood state could not be reached at all, because it wanted a value under 35
-        /// and the lowest a colonist can actually reach is 0 — which is to say it would only
-        /// ever have fired on a colonist already at the very bottom. The fixtures agreed with
-        /// the bug: the model tests passed moods of 80 and 30, which is not a scale the game
-        /// ever produces.
+        /// The band published for <paramref name="pawn"/>, or <see cref="MoodBand.Content"/> when the
+        /// frame carries none — a frame built by hand, or one for a pawn whose mood does not move.
+        /// Content rather than a guess from the mood: guessing is the copied threshold again.
         /// </summary>
-        public const int Content = 600;
-        public const int Strained = 350;
+        public static int Of(WorldSnapshot snapshot, PawnId pawn) =>
+            snapshot.TryGetPawnAspect(pawn, MindAspectNames.BandKey, out int band)
+                && band >= 0 && band < MoodBand.Count
+                ? band
+                : MoodBand.Content;
 
-        /// <summary>Content, Strained or Breaking — the band name, for the inspect pane.</summary>
-        public static string Band(int mood) =>
-            mood >= Content ? "content" : mood >= Strained ? "strained" : "breaking";
+        /// <summary>The registry key that names a band.</summary>
+        public static string KeyOf(int band) =>
+            band == MoodBand.Content ? "ui.mood.content"
+            : band == MoodBand.Strained ? "ui.mood.strained"
+            : band == MoodBand.Broken ? "ui.mood.broken"
+            : "ui.mood.breaking";
+
+        static string[]? _words;
+
+        /// <summary>
+        /// The band as a word inside a sentence ("mood content"): the registry's label in lower
+        /// case, built once, so a pane refreshing fifteen times a second allocates nothing.
+        /// </summary>
+        public static string Word(int band)
+        {
+            if (_words == null)
+            {
+                var words = new string[MoodBand.Count];
+                for (int b = 0; b < words.Length; b++)
+                    words[b] = Registry.Label(KeyOf(b)).ToLowerInvariant();
+                _words = words;
+            }
+            return band >= 0 && band < MoodBand.Count ? _words[band] : _words[MoodBand.Content];
+        }
     }
 }

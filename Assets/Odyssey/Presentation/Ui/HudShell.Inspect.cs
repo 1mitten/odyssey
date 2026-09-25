@@ -276,7 +276,7 @@ namespace Odyssey.Presentation.Ui
             int layer = _inspect.Layer;
             int selected = _directors != null ? _directors.Selection.Pawns.Count : 0;
             string band = _inspect.ShowsColonistBody
-                ? MoodBands.Band(_inspect.Mood)
+                ? _inspect.MoodWord
                 : string.Empty;
 
             if (_metaLayer != layer || !ReferenceEquals(_metaPosition, _inspect.Position))
@@ -588,7 +588,7 @@ namespace Odyssey.Presentation.Ui
                         string count = _directors != null && _directors.Selection.HasMultiple
                             ? $"{_directors.Selection.Pawns.Count} selected · "
                             : string.Empty;
-                        return count + $"{_inspect.Job} · mood {MoodBands.Band(_inspect.Mood)}";
+                        return count + $"{_inspect.Job} · mood {_inspect.MoodWord}";
                     }
                 case InspectSubject.Item:
                     // The count used to be said here — "27 in the pile" — and it was missed

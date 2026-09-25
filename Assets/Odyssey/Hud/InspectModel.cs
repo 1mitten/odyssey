@@ -292,6 +292,16 @@ namespace Odyssey.Hud
         public int Rest;      // 0..1000, the simulation's scale
         public int Mood;      // 0..1000, like Food and Rest
 
+        /// <summary>
+        /// The <see cref="Odyssey.Sim.Contracts.MoodBand"/> the simulation published for her (design
+        /// 43 §5a), which is what the pane names her mood by. Never derived here from
+        /// <see cref="Mood"/>: the lines are hers and move with traits.
+        /// </summary>
+        public int Band;
+
+        /// <summary>The band as a word inside a sentence, "content" to "breaking down".</summary>
+        public string MoodWord => MoodBands.Word(Band);
+
         // ---- no selection: the colony summary
         public int ColonySize;
         public readonly List<int> JobCounts = new List<int>();
@@ -661,6 +671,7 @@ namespace Odyssey.Hud
                     Food = pawn.Food;
                     Rest = pawn.Rest;
                     Mood = pawn.Mood;
+                    Band = MoodBands.Of(snapshot, pawn.Id);
                     SetPosition(pawn.Cell);
                     Layer = pawn.Cell.Y;
                     RefreshHealth(snapshot, pawn);

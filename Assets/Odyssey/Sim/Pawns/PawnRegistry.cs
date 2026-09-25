@@ -553,6 +553,19 @@ namespace Odyssey.Sim.Pawns
                 // carries an int and a seed is a uint, and every bit of it matters.
                 writer.AddPawnAspect(pawn.Id, SkillAspects.RollSeed, unchecked((int)pawn.RollSeed));
 
+                // State of mind (design 43 §4d): the band every surface reads, the target, and her
+                // own three lines. The interface kept a copy of the threshold until this and called
+                // the resting target strained for it; the lines move with traits, so only this side
+                // can say. A colonist's, because nobody else's mood moves (Pawn.NeedsTick).
+                if (pawn.IsColonist)
+                {
+                    writer.AddPawnAspect(pawn.Id, MindAspects.Band, pawn.Band());
+                    writer.AddPawnAspect(pawn.Id, MindAspects.Target, pawn.MoodTarget);
+                    writer.AddPawnAspect(pawn.Id, MindAspects.Minor, pawn.MinorBreakLine());
+                    writer.AddPawnAspect(pawn.Id, MindAspects.Major, pawn.MajorBreakLine());
+                    writer.AddPawnAspect(pawn.Id, MindAspects.Extreme, pawn.ExtremeBreakLine());
+                }
+
                 // The rate she is paying work at right now (design 17 §3d), which is what the
                 // stroke clock is scaled by. Asked of the driver on the same terms as the view's
                 // Working above — a swing in place, not merely a job — because the clock only

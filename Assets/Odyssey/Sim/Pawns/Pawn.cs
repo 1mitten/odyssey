@@ -615,7 +615,35 @@ namespace Odyssey.Sim.Pawns
             rising ? Content.Mood.risePerInterval : Content.Mood.fallPerInterval;
 
         /// <summary>Is the pawn eligible to break at all? A sleeping pawn never is.</summary>
-        public virtual bool CanMentalBreak() => !Asleep && !IsBroken && Mood < Content.Mood.breakThreshold;
+        public virtual bool CanMentalBreak() => !Asleep && !IsBroken && Mood < MinorBreakLine();
+
+        /// <summary>
+        /// The mood below which a minor break can be rolled (design 43 §4b): the content's line.
+        /// Virtual, because it is the one number a trait moves, and every other line is derived
+        /// from it.
+        /// </summary>
+        public virtual int MinorBreakLine() => Content.Mood.breakThreshold;
+
+        /// <summary>The major line: four sevenths of the minor, the reference's ratio (a-19).</summary>
+        public int MajorBreakLine() => MinorBreakLine() * 4 / 7;
+
+        /// <summary>The extreme line: a seventh of the minor (a-19).</summary>
+        public int ExtremeBreakLine() => MinorBreakLine() / 7;
+
+        /// <summary>
+        /// Where her mood stands against her own lines, as a <see cref="MoodBand"/> (design 43
+        /// §5a). The one answer the interface reads; derived, never stored, so it is neither saved
+        /// nor hashed.
+        /// </summary>
+        public virtual int Band()
+        {
+            if (IsBroken) return MoodBand.Broken;
+            int minor = MinorBreakLine();
+            if (Mood < minor / 7) return MoodBand.BreakingExtreme;
+            if (Mood < minor * 4 / 7) return MoodBand.BreakingMajor;
+            if (Mood < minor) return MoodBand.BreakingMinor;
+            return Mood < minor + Content.Mood.strainMargin ? MoodBand.Strained : MoodBand.Content;
+        }
 
         /// <summary>
         /// The rate this pawn pays work at, in thousandths of a tick-at-standard-rate: 1,000 is

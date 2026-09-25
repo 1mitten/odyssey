@@ -251,7 +251,11 @@ namespace Odyssey.Tests.Sim
         // renamed PawnKind_Bandit -> PawnKind_Bandit (index 3 unchanged, so no save moves), its
         // traverse mode likewise, and PawnKindDef.weapon became weapons, the bandit's being a
         // crowbar or a bat where it was a machete. No golden moved: no golden has a bandit.
-        const ulong ContentFingerprint = 9430633263010007866UL;
+        //
+        // Moved a twenty-seventh time, deliberately, 2026-09-25, by the published mood band (design
+        // 43 §5a, TM1): MoodDef gained strainMargin (100, INVENTED), how far above the minor line a
+        // colonist still reads strained. No golden moved: the band is a report and is not hashed.
+        const ulong ContentFingerprint = 16782104352789909026UL;
 
 
         [Test]

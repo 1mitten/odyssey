@@ -124,11 +124,10 @@ namespace Odyssey.Hud
         /// <summary>Food a colonist must climb back to before the starving alert can clear.</summary>
         public const int StarveClearAt = 300;
 
-        /// <summary>Mood at or under which a colonist counts as close to breaking.</summary>
-        public const int BreakAt = MoodBands.Strained;
-
-        /// <summary>Mood a colonist must climb back to before the breaking alert can clear.</summary>
-        public const int BreakClearAt = MoodBands.Content;
+        // The break alert has no threshold of its own (design 43 §5a). It is raised when the
+        // simulation says a colonist is breaking — below her own minor line, or in a break — and
+        // stands until it says she is content again, so the strained band between is the same
+        // hysteresis the two copied numbers used to give, drawn from lines that are hers.
 
         /// <summary>Seconds a colony must be idle before the panel says so.</summary>
         public const double IdleSustain = 3.0;
@@ -182,6 +181,7 @@ namespace Odyssey.Hud
         int _wasDry = -1;
         int _wasStarving = -1;
         int _wasBreaking = -1;
+        int _wasBroken = -1;
         bool _wasIdle;
         int _wasColony = -1;
         int _wasNoBed;
@@ -227,6 +227,7 @@ namespace Odyssey.Hud
         {
             int starving = 0;
             int breaking = 0;
+            int broken = 0;
             int idle = 0;
             int noBed = 0;
             long noBedIds = 0;
@@ -256,9 +257,13 @@ namespace Odyssey.Hud
                     _dismissed.Remove(AlertRow.ComputeDismissKey(StarveKey, pawn.Id, default));
                 }
 
-                if (Latch(_breaking, id, pawn.Mood, BreakAt, BreakClearAt, ref _latchVersion))
+                int band = MoodBands.Of(snapshot, pawn.Id);
+                if (LatchBand(_breaking, id, band, ref _latchVersion))
                 {
                     breaking++;
+                    // A break itself is worded and coloured apart from the risk of one, so the
+                    // panel is rebuilt when a latched colonist crosses between the two.
+                    if (band == MoodBand.Broken) broken++;
                 }
                 else
                 {
@@ -333,7 +338,7 @@ namespace Odyssey.Hud
                 if (dryCell < 0) dryCell = d.HeadCell;
             }
 
-            if (starving == _wasStarving && breaking == _wasBreaking &&
+            if (starving == _wasStarving && breaking == _wasBreaking && broken == _wasBroken &&
                 dark == _wasDark && shortW == _wasShortW && dry == _wasDry &&
                 idleStands == _wasIdle && storeStuck == _wasStoreStuck && colonists == _wasColony &&
                 noBed == _wasNoBed && noBedIds == _wasNoBedIds &&
@@ -345,6 +350,7 @@ namespace Odyssey.Hud
             _wasDry = dry;
             _wasStarving = starving;
             _wasBreaking = breaking;
+            _wasBroken = broken;
             _wasIdle = idleStands;
             _wasStoreStuck = storeStuck;
             _wasColony = colonists;
@@ -384,11 +390,12 @@ namespace Odyssey.Hud
                     if (!_dismissed.Contains(dismissKey))
                     {
                         string name = ColonistNames.Of(snapshot, pawn.Id);
+                        bool inABreak = MoodBands.Of(snapshot, pawn.Id) == MoodBand.Broken;
                         Rows.Add(new AlertRow(
                             BreakKey,
                             name,
-                            " is close to breaking",
-                            AlertSeverity.Warning,
+                            inABreak ? BrokenTail : BreakingTail,
+                            inABreak ? AlertSeverity.Danger : AlertSeverity.Warning,
                             count: 1,
                             pawn: pawn.Id));
                     }
@@ -485,6 +492,33 @@ namespace Odyssey.Hud
                     }
                 }
             }
+        }
+
+        /// <summary>The break alert's two tails: at risk of a break, and in one.</summary>
+        public const string BreakingTail = " is close to breaking", BrokenTail = " is breaking down";
+
+        /// <summary>
+        /// <see cref="Latch"/> on a <see cref="MoodBand"/>: raised at breaking or broken, standing
+        /// through strained, cleared only at content.
+        /// </summary>
+        static bool LatchBand(HashSet<int> raised, int id, int band, ref int version)
+        {
+            bool already = raised.Contains(id);
+            if (MoodBand.IsBreaking(band) || (already && band != MoodBand.Content))
+            {
+                if (!already)
+                {
+                    raised.Add(id);
+                    version++;
+                }
+                return true;
+            }
+            if (already)
+            {
+                raised.Remove(id);
+                version++;
+            }
+            return false;
         }
 
         static bool Latch(HashSet<int> raised, int id, int value, int at, int clearAt, ref int version)
