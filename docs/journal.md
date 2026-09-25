@@ -13616,3 +13616,30 @@ eleventh round constant for a random stream, so where a blow landed would have b
 the stream jump's roll. Neither is a textual conflict; both were found by reading what each side
 had claimed from the shared tables. A test that had passed by luck on the old stream said so the
 moment the stream moved. No golden moved.
+
+## 2026-09-25 — The birds played, measured in Unity, and made ready to merge (design 50 §8a)
+
+The owner played PR #230 on `D:\code\odyssey-birds` and said *"superb - if this is performant -
+get it ready to be merged in"*. It had never been compiled in Unity: the build container had no
+editor. Merging `origin/main` (33 commits behind) gave three conflicts, all additions on both sides
+(the bird and tracer shader rows in `ShaderInclusion`, the journal, the playtest queue). The birds
+touch no simulation file, so the ranged merge's lesson (hash bits and random streams colliding
+with no conflict marker) had nothing to find here.
+
+**EditMode on the merge: 4,152, one failure, and it is `main`'s.**
+`WeaponSheathGapTests.EverySheathedWeaponSitsAgainstTheHip` reads the bat on
+`Character_MilitaryMale_01` 3.2 cm off the body against a 0.8–3.0 window. A clean `origin/main`
+worktree fails the same assertion with the same numbers. The runner has no Synty, so the test
+ignores itself there and CI cannot see it. It needs its own fix.
+
+**The performance question had no Unity answer**, only the fast tier's 8 µs under .NET 8. So
+`BirdDirector` gained `Enabled` (the control, and the seam a settings switch would use) and
+`CastShadows`, and `FrameTimeTests.TheBirdsAgainstTheFrame` times one world per board with the
+birds off and on. The CPU section is 0.018–0.032 ms, and every frame difference is inside its own
+noise.
+
+**The first run lied, and the arm's design is why.** Off / on / off read +1.53 ms at Standard 4K
+against a 0.11 ms floor, while Huge at 4K read −0.23. Two readings that disagree in sign are not a
+cost. The rerun repeated both states and added a no-shadow arm, and gave +0.15 against a floor of
+0.40. A floor measured on one state only understates the noise at 4K by four to six times, so
+**repeat both states before quoting a 4K difference**.

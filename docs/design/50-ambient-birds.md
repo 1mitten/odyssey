@@ -1,6 +1,6 @@
 # 50 — Ambient birds
 
-**Built 2026-09-25, not yet played**, branch `claude/wizardly-ride-wely6j`. The owner's request
+**Built and played 2026-09-25, measured in Unity, ready to merge** (owner: *"superb"*), branch `claude/wizardly-ride-wely6j`. The owner's request
 ("could we procedurally generate some birds flying around … or even a low poly bird"), researched
 in `docs/research/d-23-ambient-birds.md` and `e-12-bird-models.md`, sketched in
 `docs/reference/mockups/birds/` (hosted: https://claude.ai/artifact/7Y3abzdRug1KTkjU1xFiTZ), and
@@ -136,6 +136,29 @@ to fell the tree has already put the flock up before the tree falls.
   slower, so read this as the order of magnitude. The first Play session reads `Birds` off the
   overlay. A number over 0.1 ms is the cue for the compute path d-23 ranked second; the mesh and
   shader do not change.
+
+### 8a. Measured in Unity (2026-09-25)
+
+`FrameTimeTests.TheBirdsAgainstTheFrame`: the played meadow on Standard and Huge, at 640 x 480 and
+into a 3840 x 2160 target, each timed **off, on, off, on, and on without shadows** in one world.
+`BirdDirector.Enabled` is the control and `CastShadows` the shadow arm; the arm asserts that off
+drew nothing and on drew birds in at most one call a species. RTX 5070 Ti, a quiet machine.
+
+| Board | Birds | `FrameSection.Birds` | Frame, birds on − off | Noise (off vs off, on vs on) |
+|---|---|---|---|---|
+| Standard, 640 x 480 | 21 | 0.018 ms | +0.04 ms | 0.04 |
+| Standard, 4K | 21 | 0.021 ms | +0.15 ms | 0.40 |
+| Huge, 640 x 480 | 46 | 0.030 ms | +0.08 ms | 0.17 |
+| Huge, 4K | 46 | 0.032 ms | −0.09 ms | 0.62 |
+
+**The CPU step is a third of the 0.1 ms line on Huge, and the frame cannot tell the birds are
+there**: every difference is inside the spread of two identical arms, and so is their shadow
+(−0.36 to +0.26). The compute path is not needed.
+
+**The first run read +1.53 ms at Standard 4K and did not reproduce.** That run had one repeat
+(off, on, off), and the floor it measured (0.11) came from the two "off" arms only. The rerun
+with a repeated "on" put the 4K noise at 0.40–0.62 ms, four to six times the first floor. So a
+4K arm needs both states repeated before a difference is a cost; the arm now does that.
 
 ## 9. The build
 

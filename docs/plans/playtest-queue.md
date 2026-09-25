@@ -23,18 +23,6 @@ the next session learns to ignore.
 
 ## Open
 
-- **Do the birds read as birds, and is the size right at every zoom?** (PR #230, `claude/wizardly-ride-wely6j`,
-  design 50.) New game, clear weather, midday. Pull the camera from 10 m out to 160 m: close in a rook
-  is its real size beside a colonist, far out it is drawn ×1.75, and a dark flock should still read
-  as birds at the furthest zoom. Watch a flock come down on treetops, then walk a colonist under it:
-  the whole flock goes up at once. Skip to 19:00 (debug menu, *Skip one day* or the clock): the rooks
-  gather in one stand of trees and sit there until 06:00. The buzzard circles high and is gone in rain
-  and after dark. Set the weather to Storm: no rook in the air. A wrong answer is a flock you only
-  find by looking for it at 160 m, a rook that looks too big next to a colonist close in, birds
-  sitting in mid-air beside a crown or buried inside one, a flock that never lands, a bird that pops
-  in or out in view, or birds flying through the camera at the closest zoom. The overlay's **Birds**
-  line is the cost: over 0.1 ms is the cue for the GPU path.
-
 - **Does changing a graphics setting still hitch, and is the board seen catching up?**
   (`claude/mesh-cost`, design 38 §26.) Open Settings → Graphics and flick the Grass ladder, then Ground
   relief, with the camera over thick meadow; then dig out a row of cells. A board-wide re-mesh now
@@ -1336,6 +1324,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-25 | **Ambient birds** (PR #230, `docs/design/50-ambient-birds.md`): rooks and a buzzard, their size at every zoom, perching, the scatter, the rookery, the weather | working — owner: *"superb - if this is performant - get it ready to be merged in"* | measured, then ready to merge: `FrameSection.Birds` 0.018–0.032 ms, and the frame at 640 x 480 and 4K is inside its own noise with the birds on (design 50 §8a) |
 | 2026-09-25 | **Ranged combat, three rounds** (PR #225, `docs/design/47-ranged-combat.md` §10a–§12): the aim, the shot, the tracer, the sound, then accuracy from a height, weapon quality and the reach rule | working — owner, first play: *"it's really decent and everything seemed to work well"*; after the reach rule: *"great job - just played a big battle"* | the first play raised the accuracy, sent a miss past its target into the ground and landed a hit on the body wherever it stands (§10a); asked for weapon quality (§11) and the reach rule (§12), both built and played in the big battle. Ready to merge. The frame with gunfire (P4) is still unmeasured |
 | 2026-09-25 | **The home area, the hearth and the Assign tab** (PR #214, `docs/design/43-home-area.md`), after the review's five fixes | working — owner: *"it all works get ready to merge in"* | none; ready to merge. The house over the hearth, which the frame test logged hidden, is covered by "it all works" |
 | 2026-09-24 | **Walls down, both rounds** (PR #197, `docs/design/42-walls-down.md`) | working — owner, first look: *"works brilliantly but a few things"*; after the second round: *"excellent - get this ready for merge"* | the first look moved two things (the R / F label went; a lower terrace counts as ground and only upper storeys hide, §3a); ready to merge |
