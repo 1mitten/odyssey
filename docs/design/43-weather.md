@@ -354,7 +354,41 @@ the second lever, if the grade alone reads flat. Whether heavy cloud should also
 shadow map, the largest single term in a 4K frame (d-19), is a measurement for this PR.
 
 **Sound belongs in this PR, not in a seam.** Rain with no sound reads as a screensaver: a loop
-scaled by intensity, and a drum under a roof from the same column map.
+scaled by intensity, and a drum under a roof from the same column map. **The loop is built (§7a);
+the drum under a roof is not.**
+
+### 7a. The rain's sound, as built (2026-09-25)
+
+Two recordings the owner supplied, one for light rain and one for heavy, baked into seamless
+stereo loops at equal loudness (`tools/audio/bake_rain.sh`; the measurements are in
+`docs/reference/audio-sourcing.md`). `RainMix.Of` says how much of each to play, from the published
+`WeatherView`. `AudioDirector.StepRain` eases each level toward that over three seconds and plays
+them as two 2D voices on the Ambience bus.
+
+**One continuous sound.** Both beds start together on the first rain and stop together when the
+rain has faded out. Between those two moments only their volumes move, on an equal-power
+crossfade, so rain going from light to heavy never starts a clip.
+
+**By weather type** (every number invented, for the owner to tune by ear):
+
+| Sky | What plays | The outdoor bed (birds) |
+|---|---|---|
+| Clear, Cloudy | nothing | as before |
+| Drizzle (rain under 450 per mille) | the light bed alone, quieter the lighter it is | about −2 dB |
+| Rain (450–850) | the heavy bed rises under the light one | stepping back |
+| Downpour (850+) | the heavy bed, with the light one kept at 30% for its close drips | about −8 dB |
+| Storm | a downpour whatever its intensity, about 1.6 dB louder | about −12 dB |
+
+- **A storm is recognised by its wind**, 1,300 per mille at full, because the wind is continuous
+  across a hand-over and `Kind` flips at its midpoint.
+- **Underground there is no rain to hear.** This is the outdoor bed's own rule: the slice under the
+  surface layer.
+- **Paused, the rain keeps sounding**, as the outdoor bed does. The drawn rain holds still. The
+  owner's playtest can say whether that reads wrong.
+
+**Not built:** the drum under a roof. The listener is the camera, which is always outside, so
+"under a roof" would have to mean the focus column, and it isn't clear that is what a player
+hears as being indoors. It is owed, and it should come from a playtest.
 
 **Pause, speed, slice, cut-away.**
 - The rain clock is game seconds, as `WindDirector`'s is, so a paused world holds its drops and
@@ -408,10 +442,11 @@ Three PRs, each green on both tiers and playable at the keyboard:
    reads in the corner.*
 2. **`claude/weather-world`** — `ShelteredFromSky` (roof + canopy, with eviction), the pace
    factor, the growth multiply, `AnimalShelterThinkNode`, fixture tests, TickBenchmark rows.
-   *Rain touches pawns, crops and animals.* **Built 2026-09-25 (§6a).** Still owed:
+   *Rain touches pawns, crops and animals.* **Built 2026-09-25 (§6a), and the rain's sound with it
+   (§7a).** Still owed:
    - a colonist's "In the rain" and an animal's "Sheltering" on the inspect pane, each waiting on
      a registry key;
-   - rain audio, which step 3's own paragraph in §7 places here and which nothing plays yet.
+   - the rain drumming on a roof (§7a).
 3. **`claude/weather-visuals`** — grown from `claude/rain-look`: `RainDirector` and
    `Odyssey/Rain` (streaks, splashes), the sky texture read off the column map, wetness in the
    ground and foliage shaders, `Overcast` in `DaylightDirector`, the rain loop, the density rung

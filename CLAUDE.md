@@ -278,6 +278,7 @@ this file.
 | The carry sounds, and their mix | `docs/design/24-carrying.md` §12 |
 | The title screen's bed, and the hand-over into a world | `docs/design/17-start-flow.md` §12 |
 | The audio framework itself | ADR 0010, `docs/reference/audio-sourcing.md` |
+| The rain's sound, light against heavy, what each weather plays | `docs/design/43-weather.md` §7a, `RainMix`, `tools/audio/bake_rain.sh` |
 | Icons | `docs/design/11-icon-library.md`, ADR 0007 |
 
 ### What runs today

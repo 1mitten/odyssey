@@ -194,6 +194,20 @@ namespace Odyssey.Presentation.Audio
         public const string AmbienceWater = AmbiencePrefix + "water";
 
         /// <summary>
+        /// Light rain: drips and patter over a soft hiss, the owner's gentle-rain recording
+        /// (<c>tools/audio/bake_rain.sh</c>). The drizzle end of rain, and kept faintly under a
+        /// downpour for its close detail. How loud it is is <see cref="RainMix"/>'s, read off the
+        /// published sky, never the clip's (design 43 §7).
+        /// </summary>
+        public const string AmbienceRainLight = AmbiencePrefix + "rain.light";
+
+        /// <summary>
+        /// Heavy rain: a steady roar with no individual drops, the owner's heavier recording. Rises
+        /// under the light bed as rain passes about half intensity, and carries a storm.
+        /// </summary>
+        public const string AmbienceRainHeavy = AmbiencePrefix + "rain.heavy";
+
+        /// <summary>
         /// The sound of the world outdoors by day — the bed under everything else, birds and air
         /// and distance. Unlike the water bed it is not measured from anything: being outdoors is
         /// not a quantity, it is where you are, so it plays flat whenever the slice is at or

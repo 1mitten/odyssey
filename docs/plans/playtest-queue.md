@@ -55,6 +55,20 @@ the next session learns to ignore.
   - an animal still standing where its tree was, a minute after the tree is gone.
 
   Also say whether a tenth off the walking pace is too little to notice.
+
+  **And listen** (the rain's sound, design 43 §7a). Weather tab, from Clear through Drizzle,
+  Rain, Downpour and Storm, a few seconds apart:
+  - Drizzle should be a light patter.
+  - Rain should thicken into a roar with no seam you can hear.
+  - A storm should be the loudest.
+  - The birds should fall back as the rain grows.
+  - Leave Downpour running for two minutes: neither loop should be heard to repeat or click.
+
+  A wrong answer is:
+  - a jump in level between two presses;
+  - a click, a breath or a recognisable moment every 40 or 80 seconds;
+  - rain still audible after the slice has gone underground;
+  - birds as loud in a storm as on a clear day.
 - **Do the bat and the crowbar only swing?** (`claude/blunt-swings`, design 33 §22.) Debug menu >
   Spawn 3 bandits, arm a colonist with a bat and another with a crowbar (*Arm every colonist*, or
   right-click > Equip), draft them and order attacks. Watch several blows in a row: each should be

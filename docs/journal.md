@@ -12625,3 +12625,35 @@ hog. The animal boards now start at 08:00.
 
 **Owed:** a colonist's "In the rain" and an animal's "Sheltering" on the inspect pane (neither has
 a registry key, so no UI was invented), and rain audio.
+
+## 2026-09-25 — The rain is heard
+
+The owner supplied two recordings, a gentle rain and a heavier one, with the brief to use the
+lighter for light rain and the heavier for heavy, to vary it by weather type, and to make it
+seamless. Design 43 §7a has what was built, and `docs/reference/audio-sourcing.md` has the
+measurements.
+
+**The recordings were measured before they were cut.** Second by second, the gentle rain is
+steady for 46 s and then fades by about 7 dB over its second half. Looping the whole file would
+have swelled every forty seconds, so only the first half loops. The heavy rain is steady end to
+end, and its ends match to 0.2 LU.
+
+**Levelled by loudness, not by peak.** Every other bed is peak-normalised. The gentle rain's drips
+give it a crest about 8 dB higher than the roar's, so at a shared peak it would have been 7–8 LU
+quieter, and moving between them would have been a jump. Both are now −23 LUFS, and the limiter
+that keeps the drips under −3 dBFS touched 101 samples in 4.46 million.
+
+**Seamless, and checked by measurement rather than by ear.** Both loops fold their own tails over
+their heads with equal-power fades, because a linear fade between two uncorrelated noises dips 3 dB
+in the middle. `tools/audio/loop_seam.py` compares the step at the wrap with the file's own
+ordinary steps, and the level across the wrap with the file's own wander. Both files pass by a wide
+margin. The two beds also never restart against each other: both run for as long as it rains and
+only their weights move.
+
+**By weather type.** A drizzle is the light bed alone, rain crossfades into the roar, a downpour
+keeps a little of the drips on top, and a storm is a louder downpour recognised by its wind. The
+birds step back under all of it, most in a storm. Every number is invented and set out in
+`RainMix` for tuning by ear.
+
+**Not built:** the rain drumming on a roof. The listener is the camera, which is always outside,
+so it isn't obvious what "indoors" should mean to the ear. A playtest should decide that.
