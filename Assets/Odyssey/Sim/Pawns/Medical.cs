@@ -118,28 +118,49 @@ namespace Odyssey.Sim.Pawns
         /// <param name="suppliesDef">The item used, or -1 for a bare dressing.</param>
         public static int HealedMilli(Pawn patient, PawnContext ctx, int suppliesDef, bool self)
         {
-            CombatDef combat = ctx.Content.Combat;
-            long heal = (suppliesDef >= 0 ? ctx.Content.Items[suppliesDef].healPerUnit : combat.bareHeal)
-                        * (long)Rates.Scale;
-            if (self) heal = heal * combat.selfHealPerMille / 1_000;
-
-            int capPerMille = self ? combat.selfCapPerMille : combat.treatCapPerMille;
-            long cap = (long)patient.HpMaxMilli * capPerMille / 1_000;
-
-            long after = patient.HpMilli + heal;
+            long after = patient.HpMilli + HealDelta(ctx, suppliesDef, self);
+            long cap = CapMilli(patient, ctx, self);
             if (after > cap) after = cap;
             return after < patient.HpMilli ? patient.HpMilli : (int)after;
         }
 
-        /// <summary>
-        /// Apply a finished treatment: the pool, the cooldown, and — for a pawn who was down and is
-        /// now past the line — getting up, at the end of the tick through the combat system, which
-        /// owns that rule.
-        /// </summary>
-        public static void Apply(Pawn patient, PawnContext ctx, int healedMilli)
+        /// <summary>The raw heal a treatment is worth before the cap, in thousandths: constant for
+        /// the whole toil, since neither the supplies used nor whether it is self-treatment change
+        /// mid-treatment.</summary>
+        public static long HealDelta(PawnContext ctx, int suppliesDef, bool self)
         {
-            patient.HpMilli = healedMilli;
-            patient.TreatedUntilTick = ctx.CurrentTick + ctx.Content.Combat.treatedCooldownTicks;
+            CombatDef combat = ctx.Content.Combat;
+            long heal = (suppliesDef >= 0 ? ctx.Content.Items[suppliesDef].healPerUnit : combat.bareHeal)
+                        * (long)Rates.Scale;
+            return self ? heal * combat.selfHealPerMille / 1_000 : heal;
+        }
+
+        /// <summary>The pool <paramref name="patient"/>'s treatment may not heal past, in thousandths.</summary>
+        public static long CapMilli(Pawn patient, PawnContext ctx, bool self)
+        {
+            int capPerMille = self ? ctx.Content.Combat.selfCapPerMille : ctx.Content.Combat.treatCapPerMille;
+            return (long)patient.HpMaxMilli * capPerMille / 1_000;
+        }
+
+        /// <summary>
+        /// Add a share of a treatment to the pool, clamped to <paramref name="capMilli"/>, and —
+        /// for a pawn who was down and is now past the line — getting up, at the end of the tick
+        /// through the combat system, which owns that rule.
+        ///
+        /// <para><b>Called every tick the treatment toil progresses</b>, not once at the end
+        /// (owner, 2026-09-25: a bar that fills as she works rather than jumping at the finish, and
+        /// "pulled away for a partial heal" landing for real rather than being lost). The share is
+        /// the toil's own to work out — see <c>TreatJobDriver</c> — because it is the one place that
+        /// knows how much of the work is done; this only ever adds and only ever up to the cap, so
+        /// a caller cannot overshoot it by calling twice.</para>
+        /// </summary>
+        public static void ApplyShare(Pawn patient, PawnContext ctx, long shareMilli, long capMilli)
+        {
+            if (shareMilli <= 0) return;
+            long after = patient.HpMilli + shareMilli;
+            if (after > capMilli) after = capMilli;
+            if (after <= patient.HpMilli) return;
+            patient.HpMilli = (int)after;
 
             if (!patient.Downed) return;
             if ((long)patient.HpMilli * 1_000 < (long)patient.HpMaxMilli * ctx.Content.Combat.downedRecoverAtPerMille)
@@ -406,18 +427,34 @@ namespace Odyssey.Sim.Pawns
                     if (ToilProgress == 0 && !Medical.IsBedCell(ctx, patient.Cell))
                         Pawn.BeginGesture(PawnGesture.Sow);
 
+                    ColonyItem? carried = Job.CarriedItem >= 0 ? ctx.Items.Get(new ThingId(Job.CarriedItem)) : null;
+                    if (Job.TargetItem != ThingId.None && carried == null) return JobStatus.Failed;
+                    int suppliesDef = carried != null ? carried.DefIndex : -1;
+
                     CombatDef combat = ctx.Content.Combat;
-                    int work = ctx.Content.Jobs[Job.DefIndex].workTicks * (Self ? combat.selfWorkFactor : 1);
+                    long totalTicks = (long)ctx.Content.Jobs[Job.DefIndex].workTicks
+                        * (Self ? combat.selfWorkFactor : 1) * Rates.Scale;
+
+                    // The health bar over her head fills as the work does, not at the end (owner,
+                    // 2026-09-25): each tick adds this toil's own share of the whole heal, worked
+                    // out from the work done this tick against the work the whole treatment takes —
+                    // never from the pool itself, which a caller reading it mid-treatment must not
+                    // perturb the arithmetic of. Summed over every tick this lands exactly the full
+                    // heal, because a share is a difference of two cumulative fractions and every
+                    // tick but the rounding on the last is accounted for by the one before it.
+                    long before = System.Math.Min(ToilProgress, totalTicks);
                     ToilProgress += Pawn.WorkRatePerMille(WorkTypeIndex.Doctor);
                     Work(ctx);
-                    if ((long)ToilProgress < (long)work * Rates.Scale) return JobStatus.Ongoing;
+                    long after = System.Math.Min(ToilProgress, totalTicks);
+
+                    long heal = Medical.HealDelta(ctx, suppliesDef, Self);
+                    long share = totalTicks > 0 ? heal * after / totalTicks - heal * before / totalTicks : heal;
+                    Medical.ApplyShare(patient, ctx, share, Medical.CapMilli(patient, ctx, Self));
+
+                    if (ToilProgress < totalTicks) return JobStatus.Ongoing;
 
                     Pawn.BeginGesture(PawnGesture.None);
-                    ColonyItem? carried = Job.CarriedItem >= 0 ? ctx.Items.Get(new ThingId(Job.CarriedItem)) : null;
-                    int suppliesDef = carried != null ? carried.DefIndex : -1;
-                    if (Job.TargetItem != ThingId.None && carried == null) return JobStatus.Failed;
-
-                    Medical.Apply(patient, ctx, Medical.HealedMilli(patient, ctx, suppliesDef, Self));
+                    patient.TreatedUntilTick = ctx.CurrentTick + combat.treatedCooldownTicks;
                     if (carried != null)
                     {
                         ctx.Items.Despawn(carried);

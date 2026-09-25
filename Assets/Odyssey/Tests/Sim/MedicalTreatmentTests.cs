@@ -88,6 +88,44 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(Pool(pawn, combat.selfCapPerMille)), "and never past 60 per cent");
         }
 
+        /// <summary>
+        /// The pool rises as a treatment's shares are added, not all at once at the end — the
+        /// health bar's own contract (owner, 2026-09-25: "a small energy bar appear when healing
+        /// someone so you can see their health increase... you could get pulled away for a partial
+        /// heal"). Summed, every share a treatment could ever pay out lands exactly the one
+        /// <see cref="Odyssey.Sim.Pawns.Medical.HealedMilli"/> would have set in one call.
+        /// </summary>
+        [Test]
+        public void SharesSumToTheSameHealAndLeaveWhatIsAlreadyPaidIfCutOff()
+        {
+            var colony = Board(colonists: 1);
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            var ctx = colony.Pawns;
+
+            pawn.HpMilli = 0;
+            int full = Odyssey.Sim.Pawns.Medical.HealedMilli(pawn, ctx, Medical, self: false);
+            long heal = Odyssey.Sim.Pawns.Medical.HealDelta(ctx, Medical, self: false);
+            long cap = Odyssey.Sim.Pawns.Medical.CapMilli(pawn, ctx, self: false);
+
+            // Ten shares of a tenth each: the bar over her head should be a tenth full after one.
+            for (int i = 1; i <= 10; i++)
+            {
+                Odyssey.Sim.Pawns.Medical.ApplyShare(pawn, ctx, heal / 10, cap);
+                if (i == 1)
+                    Assert.That(pawn.HpMilli, Is.EqualTo((int)(heal / 10)),
+                        "one share in ten landed, not the whole treatment");
+            }
+            Assert.That(pawn.HpMilli, Is.EqualTo(full), "ten shares of a tenth sum to the one call's own answer");
+
+            // Cut off after three of ten: what landed stays, nothing more and nothing lost.
+            pawn.HpMilli = 0;
+            for (int i = 0; i < 3; i++) Odyssey.Sim.Pawns.Medical.ApplyShare(pawn, ctx, heal / 10, cap);
+            int partial = pawn.HpMilli;
+            Assert.That(partial, Is.GreaterThan(0).And.LessThan(full), "an interruption should leave a partial heal, not none and not the whole");
+            colony.World.Tick(50);
+            Assert.That(pawn.HpMilli, Is.EqualTo(partial), "a share nobody paid does not land on its own");
+        }
+
         [Test]
         public void SplittingOneOffAStackLeavesTheRestWhereItLies()
         {
