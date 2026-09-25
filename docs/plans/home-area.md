@@ -2,7 +2,9 @@
 
 **Phase 3, 2026-09-25.** Interview: `docs/research/home-area-interview.md` (every recommendation
 taken, 2026-09-24). Design: `docs/design/43-home-area.md`. Brief: `docs/reference/mockups/home-area-brief.md`.
-**Phase gate: this plan waits for the owner's approval of design 43. No unit is started.**
+**Approved 2026-09-25** (owner: *"approved start"*). H1 built; H2 next; H3 and H4 wait on the brief.
+All units land on `claude/sleepy-cannon-9d0evw` as separate commits, because this session may push
+only there.
 
 ## Units
 
@@ -19,10 +21,12 @@ Each unit is its own `claude/home-*` branch and PR, merged in this order. H1 and
 
 ## Files, by unit
 
-- **H1**: add `Sim/World/ColonyFootprint.cs`, `Sim/Home/HomeArea.cs`, `Tests/Sim/HomeAreaTests.cs`;
-  modify `Sim/World/ZoneGrid.cs`, `Sim/Construction/ConstructionGrid.cs`, `Sim/Power/PowerGrid.cs`,
-  `Sim/Pawns/PawnContext.cs`, `Sim/Pawns/ColonyComposition.cs`, `Sim/Pawns/ColonyWorld.cs`,
-  `Tests/Sim/TickBenchmarkTests.cs`.
+- **H1** (built 2026-09-25): added `Sim/World/ColonyFootprint.cs` (held by `CellGrid.Footprint`),
+  `Sim/World/HomeArea.cs`, `Tests/Sim/HomeAreaTests.cs`; modified `Sim/World/CellGrid.cs`,
+  `Sim/World/ZoneGrid.cs`, `Sim/World/SupportSolver.cs` (a collapsed floor of ours),
+  `Sim/Construction/ConstructionGrid.cs`, `Sim/Power/PowerGrid.cs`, `Sim/Storage/StorageZones.cs`,
+  `Sim/Growing/GrowingZones.cs`, `Sim/Pawns/PawnContext.cs`, `Sim/Pawns/ColonyComposition.cs`,
+  `Sim/Pawns/ColonyWorld.cs`, `Tests/Sim/TickBenchmarkTests.cs`.
 - **H2**: add `Sim/Pawns/PawnArea.cs`, `Sim/Saving/AssignSection.cs`, `Sim/Pawns/AreaAspects.cs`,
   `Sim/Pawns/JobSystem.Area.cs`, `Tests/Sim/PawnAreaTests.cs`; modify `Sim/Pawns/Pawn.cs`,
   `Sim.Contracts/Intents.cs`, `Sim/Pawns/PawnRegistry.cs`, `Sim/Pawns/PawnContext.cs`,

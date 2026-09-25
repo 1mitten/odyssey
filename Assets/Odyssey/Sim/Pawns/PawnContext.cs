@@ -180,6 +180,12 @@ namespace Odyssey.Sim.Pawns
         public Storage.StorageUnits? StorageUnits { get; set; }
 
         /// <summary>
+        /// The colony's home (design 43): everything placed, grown by five cells. Null in a bare
+        /// fixture that assembles no colony, where nothing is ever restricted.
+        /// </summary>
+        public World.HomeArea? Home { get; set; }
+
+        /// <summary>
         /// Where a thing is, as a cell a colonist can walk to: its own cell, the cell of the store
         /// holding it, or -1 while it is in a pair of hands.
         ///

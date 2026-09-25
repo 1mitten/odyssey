@@ -50,7 +50,14 @@ namespace Odyssey.Sim.World
             Support = new byte[count];
             Flags = new CellFlags[count];
             for (int i = 0; i < count; i++) Edifice[i] = -1;
+            Footprint = new ColonyFootprint(size);
         }
+
+        /// <summary>
+        /// Which layers something the colony placed has changed on (design 43 §3a). Held here so
+        /// that every writer that already holds the grid can say so; read by the home area.
+        /// </summary>
+        public ColonyFootprint Footprint { get; }
 
         public int Index(int x, int z, int y) => Size.Index(x, z, y);
         public int Index(CellRef cell) => Size.Index(cell);

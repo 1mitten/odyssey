@@ -132,6 +132,10 @@ namespace Odyssey.Sim.Pawns
             var power = new Power.PowerGrid(pawns.Cells, edifices);
             pawns.Power = power;
             construction.Power = power;
+
+            // The home (design 43): derived from everything above, so it is built last and is
+            // neither a system, a hashable nor a save section. It rebuilds itself when asked.
+            pawns.Home = new World.HomeArea(pawns);
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
             builder
                 // The world itself, first: it is what everything below reads, and it ticks

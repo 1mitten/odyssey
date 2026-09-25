@@ -1,8 +1,8 @@
 # 43 — The home area, and keeping a colonist home
 
-**Status: designed 2026-09-25; nothing built. Waiting on the owner's approval and on the Claude
-Design brief** (`docs/reference/mockups/home-area-brief.md`). Branch `claude/sleepy-cannon-9d0evw`
-(documents only). Units H1–H5 in `docs/plans/home-area.md`.
+**Status: approved 2026-09-25 (owner: *"approved start"*). H1, the mask, is built; H2 next. H3 and
+H4 wait on the Claude Design brief** (`docs/reference/mockups/home-area-brief.md`). Branch
+`claude/sleepy-cannon-9d0evw`. Units H1–H5 in `docs/plans/home-area.md`.
 **Read first:** the interview `docs/research/home-area-interview.md`; the reference
 `docs/research/a-18-home-and-allowed-areas.md`; design 33 §18 (the combat response, whose shape the
 setting copies); design 32 §9 and §14 (the power view, whose shape the Home view copies);
@@ -55,6 +55,10 @@ below is the checklist: a placement path that does not touch is a home that sile
 | Stockpiles and growing zones | every cell of either | `ZoneGrid.Join` / `Leave` / `Clear` — the one container both zone owners go through |
 | Power lines | every line and every line order | `PowerGrid`'s line add and remove, its site add and remove |
 
+- **Edifices and floors are read off the grid, not off the record list.** A collapse takes a floor
+  without telling anybody, so the grid is what is actually standing; a cell counts when its floor is
+  ours or its edifice handle names a record that is `Built` and not `Removed`. The collapse touches
+  the footprint only for a floor of ours, so a cavern falling in costs the home nothing.
 - **Shelves are edifices**, so they are counted once, as edifices. Counting `StorageUnits` as well
   would be a second owner of the same cell.
 - **Worldgen ruins are not ours.** A city's walls are placed with `Built == false` and never count.
@@ -278,12 +282,38 @@ registry, as `ui.tab.schedule` and Wildlife did.
 
 | Arm | Where | Taken in |
 |---|---|---|
-| One home rebuild, all layers and one layer, Standard / Huge / scale target | `TickBenchmarkTests.WhatOneHomeRebuildCosts` | H1 |
+| One home rebuild, all layers and one layer, Standard / Huge / scale target | `TickBenchmarkTests.WhatOneHomeRebuildCosts` | H1, measured below |
 | The busy arm unchanged with a home present | `TickBenchmarkTests`' existing busy arm | H1 |
 | The view off, on, and on over a forty-building base, one run | `FrameTimeTests.TheHomeViewAgainstTheFrame`, `Category("Measurement")` | H3 |
 | Draw calls with the view on | the same, structural half kept in the PR gate | H3 |
 
 Each number goes here with its machine and date.
+
+### 7a. The rebuild (H1, 2026-09-25)
+
+A base of floors written straight into the grid — a 40 x 40 block and 200 cells scattered over the
+whole surface layer — then timed: every layer rebuilt, which is what a load costs, and one placement,
+which rebuilds the placement's layer and composes the three it reaches. Machine: the cloud container
+this session ran in, a 4-core Intel Xeon at 2.10 GHz, .NET 8 on Linux. **Not the owner's machine and
+not the target laptop**; the owner's Windows machine will read lower.
+
+| Board | Home cells | Every layer, Debug | One placement, Debug | Every layer, Release | One placement, Release |
+|---|---|---|---|---|---|
+| Standard 120 x 120 x 16 | 37,551 | 2.17 ms | 0.37 ms | 1.34 ms | **0.23 ms** |
+| Huge 240 x 240 x 16 | 65,646 | 9.19 ms | 1.41 ms | 4.29 ms | **0.70 ms** |
+| Scale target 250 x 250 x 40 | 63,759 | 25.12 ms | 1.76 ms | 8.79 ms | **0.96 ms** |
+
+**What it says.** A placement is O(layer), so it follows the board's width and not the colony: 0.23
+ms on the board the game ships with, three times that on Huge. It is paid once per tick in which
+anything was placed however many cells were — a stockpile drag of a hundred cells is one rebuild —
+and never at rest, never for felling, mining or walking. The load's cost is paid once, inside the
+loading screen.
+
+**The lever, not pulled.** The scattered cells make the seeded area the whole layer, which is the
+worst case. A real base is compact, and limiting the growth and the composition to the seeds'
+bounding box plus the perimeter would make a placement follow the base rather than the board. It is
+recorded rather than built because the shipped board's number does not need it; Huge is where to
+measure again if a placement ever shows in a frame.
 
 ## 8. Do not undo by tidying
 

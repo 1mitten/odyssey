@@ -248,6 +248,10 @@ namespace Odyssey.Sim.Pawns
         {
             _solver.SolveFull();
 
+            // The home (design 43 §3c) is derived from everything that just came back, and nothing
+            // it read before the load is still true.
+            Pawns.Cells.Footprint.TouchAll();
+
             // A built ladder's connector is derived, not saved — the same argument as support, one
             // level along (U43). The edifice comes back with the save; the portal it opens between
             // two layers is worked out again here, before the rebuild that turns it into an edge.
