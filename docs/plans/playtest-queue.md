@@ -23,6 +23,15 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do guns read — the aim, the shot, the tracer, the near miss, the sound?** (`claude/ranged-combat`, design 47.)
+  Debug menu → Spawn → *Arm every colonist* until one holds a *Sidearm* (or *Spawn sidearm* and equip it), draft
+  her, then *Spawn pistol bandit* ten cells off. She should draw from the left hip, raise the pistol in both hands
+  and fire unordered; each shot kicks the gun and chest and flashes at the muzzle, and a streak crosses to the
+  target. A hit ends on the body with blood; a miss runs past and throws dust. The report is loud up close and a
+  dull thump zoomed out. **A wrong answer looks like**: the gun floating off the hands, the barrel not at the target,
+  a streak ending in the air beside a walking body, a near miss you cannot tell from a hit, or a sound that is too
+  loud or too dry. Also watch a gunfight on a terrace: a colonist on the upper step should fire down at the foot.
+
 - **Does the selection highlight make it obvious who is selected?** (`claude/selection-highlight`, design 44.)
   Click a colonist, an item, a wall, a tree and a patch of ground. Each should gain a thin white line round its own
   shape and look a touch brighter; the ground gets a pale wash. Then walk a selected colonist behind a wall: a

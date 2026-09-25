@@ -12906,3 +12906,35 @@ therefore peak-normalised on import, undoing the loudness their bakes set. The g
 committed with it off. The fix for the rest changes how loud every blow is, so it is its own PR, and
 it is unverified in Unity until somebody reads `GetData` on `combat-hit`.
 
+## 2026-09-25 — Ranged combat built: the pistol from the contracts to the gunshot
+
+The owner approved design 47 (*"approved - execute"*). Built the same day on `claude/ranged-combat`,
+stacked on PR #220: R0–R4, H1 and P1–P3. R5, R6, P4 and a player build are owed.
+
+**R0 moved every golden once and nothing moved them again.** A seventh skill made the hash see more
+of every colonist; the colony probe on `origin/main` and on the branch was identical on all three
+boards, line for line. Every later unit asserted the goldens and they held. That is the payoff of
+hashing the bullet registry only while something flies, and of putting the new job above
+`HashedAlways`.
+
+**Two of the design's rules would have been wrong in play, and the build changed them** (design 47
+§10). "The intended target on any crossed cell is a certain hit" would have turned most misses into
+hits, because a miss's line to its scatter cell usually crosses the target's own cell. So only a
+shot aimed true takes its target, and the near miss the owner asked to see falls out of that. And a
+colonist standing in the way of another colonist's bullet would have turned on her. She now
+remembers being hit and does not fight back.
+
+**The pistol keeps the sword pack's draw.** The design had keyed the draw off for a computed arc.
+But the pistol holsters at the left hip, and the sword draw from the left hip is a cross-draw,
+which is how a left-hip holster is drawn. An authored clip with its grasp moment already measured
+beats a computed arc; a shot mid-draw cuts it to the hand.
+
+**The catalogue lesson held again.** Rebuilding the module catalogue deleted 3,022 lines, the
+colonists' swatches, before `CharacterSwatches.Classify` put them back. After that the diff was the
+one pistol row. The lessons file already said this; reading the diff stat is what caught it.
+
+**Parallel lanes.** Line of sight (R1) and the tracer, flash and sound (P3) were built by agents in
+their own worktrees while R0–R4 and P1/P2 were built here. Both merged without a conflict. P3 found
+five places where §4c met the code differently, recorded in its §4c-ter. The most useful:
+`AudioImporter.normalize` has no scripting API, so the gunshot's normalise-off is written through
+the importer's serialised form.
