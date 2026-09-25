@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Who a raid is made of (docs/design/50-raids.md section 8): the debug menu's dropdown, and what a
+  storyteller will draw from. Each row is a hostile kind and its share of the band per mille; the
+  shares sum to 1000, and a band is split by largest remainder, so the counts are exact. The order
+  of these three is IncidentContent.MixOrder's, which is the contract: append a new mix there.
+-->
+<Defs>
+
+  <!-- Hand to hand: crowbars and bats (design 42). -->
+  <RaidMixDef>
+    <defName>RaidMix_Bandits</defName>
+    <label>bandits</label>
+    <description>A band of bandits with crowbars and bats</description>
+    <labelKey>ui.raid.mix.bandits</labelKey>
+    <entries>
+      <li><kind>PawnKind_Bandit</kind><perMille>1000</perMille></li>
+    </entries>
+  </RaidMixDef>
+
+  <!-- Every one of them with a pistol (design 47). -->
+  <RaidMixDef>
+    <defName>RaidMix_Gunmen</defName>
+    <label>gunmen</label>
+    <description>A band of gunmen, every one with a pistol</description>
+    <labelKey>ui.raid.mix.gunmen</labelKey>
+    <entries>
+      <li><kind>PawnKind_Gunman</kind><perMille>1000</perMille></li>
+    </entries>
+  </RaidMixDef>
+
+  <!-- The owner's "a mix of melee and projectiles": about seven in ten hand to hand. INVENTED. -->
+  <RaidMixDef>
+    <defName>RaidMix_Mixed</defName>
+    <label>mixed</label>
+    <description>Mostly bandits, with a few gunmen among them</description>
+    <labelKey>ui.raid.mix.mixed</labelKey>
+    <entries>
+      <li><kind>PawnKind_Bandit</kind><perMille>700</perMille></li>
+      <li><kind>PawnKind_Gunman</kind><perMille>300</perMille></li>
+    </entries>
+  </RaidMixDef>
+
+</Defs>

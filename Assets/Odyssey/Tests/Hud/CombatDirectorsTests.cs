@@ -156,18 +156,17 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The ranged line's two rows (design 47 §4d). The pistol bandit is the bandit's own kind with
-        /// the weapon in <c>B</c>, plus one — 0 being "the kind's own table", which every other pawn
-        /// row sends, so the plain bandit row is the control. The pistol is one item, granted as the
-        /// other weapons are.
+        /// The ranged line's two rows (design 47 §4d). The gunman is a kind of its own since the raid
+        /// (design 50 §8), armed from its own table, so the row sends nothing in <c>B</c>, as every
+        /// other pawn row does. The pistol is one item, granted as the other weapons are.
         /// </summary>
         [Test]
         public void TheRangedRowsSendWhatTheySay()
         {
             DebugDirector.SpawnRow gunman = RowFor(DebugDirector.SpawnGunmanKey);
             Assert.That(gunman.Kind, Is.EqualTo(IntentKind.SpawnPawn));
-            Assert.That(gunman.A, Is.EqualTo(PawnKindLabels.Bandit));
-            Assert.That(gunman.B, Is.EqualTo(ItemHandle.Pistol + 1));
+            Assert.That(gunman.A, Is.EqualTo(PawnKindLabels.Gunman));
+            Assert.That(gunman.B, Is.EqualTo(0), "the gunman deals its pistol from its own table");
             Assert.That(gunman.Group, Is.EqualTo(DebugDirector.GroupHostilesKey));
             Assert.That(RowFor(DebugDirector.SpawnBanditKey).B, Is.EqualTo(0), "the plain bandit deals from its own table");
 

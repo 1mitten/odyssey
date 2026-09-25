@@ -616,7 +616,9 @@ namespace Odyssey.Tests.Sim
             TestContext.WriteLine($"mixed brawls: {swings} swings over twelve seeds; {joining} pawn-ticks joining another colonist's fight");
             Assert.That(swings, Is.GreaterThan(200), "the control: the fights never happened");
             Assert.That(joining, Is.GreaterThan(0), "the control: no drafted colonist joined a fight");
-            Assert.That(kinds, Is.EqualTo((1 << PawnKindIndex.Count) - 1), "the control: not every kind fought");
+            // Every kind the sweep spawns: the colonist, both animals and the bandit. The gunman
+            // (design 50 §8) is a shooter and this is the hand-to-hand guard, so it is not spawned.
+            Assert.That(kinds, Is.EqualTo((1 << PawnKindIndex.Gunman) - 1), "the control: not every kind fought");
         }
     }
 }

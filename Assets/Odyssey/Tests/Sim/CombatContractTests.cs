@@ -109,7 +109,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(SkillIndex.Shooting, Is.EqualTo(8));
             Assert.That(SkillIndex.Count, Is.EqualTo(9));
             Assert.That(PawnKindIndex.Bandit, Is.EqualTo(3));
-            Assert.That(PawnKindIndex.Count, Is.EqualTo(4));
+            // 5 since the raid appended the gunman at 4 (design 50 §8).
+            Assert.That(PawnKindIndex.Gunman, Is.EqualTo(4));
+            Assert.That(PawnKindIndex.Count, Is.EqualTo(5));
 
             // IntentKind is an enum whose numbers an intent log carries: the three orders are
             // together and after everything main shipped first (power's four, since the merge of

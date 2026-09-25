@@ -207,7 +207,12 @@ namespace Odyssey.Sim.Pawns
         /// faction. Claimed by the combat contracts step.
         /// </summary>
         public const int Bandit = 3;
-        public const int Count = 4;
+
+        /// <summary>
+        /// The bandit with a pistol (design 50 §8): its own kind so a raid mix can name it. Appended.
+        /// </summary>
+        public const int Gunman = 4;
+        public const int Count = 5;
     }
 
     /// <summary>
@@ -1598,7 +1603,9 @@ namespace Odyssey.Sim.Pawns
             content.Kinds = ByName<PawnKindDef>(defs,
                 "PawnKind_Colonist", "PawnKind_MiddenHog", "PawnKind_DuctRat",
                 // The debug-spawned hostile person (design 33 §1), appended.
-                "PawnKind_Bandit");
+                "PawnKind_Bandit",
+                // The bandit with a pistol, a raid's second kind (design 50 §8), appended.
+                "PawnKind_Gunman");
             content.Species = ByName<SpeciesDef>(defs,
                 "Species_Person", "Species_MiddenHog", "Species_DuctRat");
             content.KindSpecies = new int[content.Kinds.Length];

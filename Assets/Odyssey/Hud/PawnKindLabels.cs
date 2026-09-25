@@ -7,7 +7,7 @@ namespace Odyssey.Hud
     /// What a pawn's kind is called, and what an animal is doing, by registry key (design 29
     /// §2, §8). Parallel to the simulation's <c>PawnKindIndex</c> exactly as
     /// <see cref="JobLabels"/> is parallel to its <c>JobIndex</c>: the colonist is 0, the midden
-    /// hog 1, the duct rat 2, the bandit 3, appended and never inserted. A kind past the table
+    /// hog 1, the duct rat 2, the bandit 3, the gunman 4, appended and never inserted. A kind past the table
     /// reads with the generic animal label.
     ///
     /// <para><b>Whether a pawn is an animal is not this table's question any more</b> (design 33
@@ -23,7 +23,7 @@ namespace Odyssey.Hud
         /// cannot see) as <see cref="IconKeys"/> is. What the debug Spawn tab sends
         /// (<see cref="DebugDirector.SpawnRows"/>); the icon table's order is what a test holds.
         /// </summary>
-        public const int ColonistKind = 0, MiddenHogKind = 1, DuctRatKind = 2, Bandit = 3;
+        public const int ColonistKind = 0, MiddenHogKind = 1, DuctRatKind = 2, Bandit = 3, Gunman = 4;
         const string Animal = "ui.pawn.animal";
 
         public static readonly string[] IconKeys =
@@ -31,6 +31,8 @@ namespace Odyssey.Hud
             Colonist, "ui.pawn.hog", "ui.pawn.rat",
             // The debug-spawned hostile person (design 33 §1).
             "ui.pawn.bandit",
+            // The bandit with a pistol, a raid's second kind (design 50 §8).
+            "ui.pawn.gunman",
         };
 
         /// <summary>The two states an animal's mind has (design 29 §3), by the job it is running.</summary>
