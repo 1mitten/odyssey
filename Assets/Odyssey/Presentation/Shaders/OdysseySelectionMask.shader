@@ -2,8 +2,13 @@
 //
 // Two passes per draw, both against the camera's own depth attachment, which is bound read-only:
 //   Visible     ZTest LEqual  -> R = strength, B = strength * fill (a tile's top face)
-//   Silhouette  ZTest Always  -> G = strength
+//   Silhouette  ZTest Always  -> G = 1 (coverage), A = strength
 // Max blending, so the parts of one colonist, and several colonists, combine rather than add.
+//
+// **Coverage and strength are separate channels, and that was a bug before it was a rule.** G used
+// to carry the strength, and the composite reads G as "is this pixel the thing": at a strength of
+// 0.45 a box selection's other colonists were 55 % "outside themselves", so their own line was laid
+// over their whole body as a white film (owner, 2026-09-25: "faded out").
 //
 // The strength and the fill arrive as globals set before each draw, because a renderer drawn with
 // DrawRenderer takes no property block; the albedo and cut-off of alpha-clipped art are on a copy of
@@ -89,7 +94,7 @@ Shader "Odyssey/SelectionMask"
             half4 Frag(Varyings input) : SV_Target
             {
                 ClipToArt(input.uv);
-                return half4(0, _SelectionStrength, 0, 0);
+                return half4(0, 1, 0, _SelectionStrength);
             }
             ENDHLSL
         }

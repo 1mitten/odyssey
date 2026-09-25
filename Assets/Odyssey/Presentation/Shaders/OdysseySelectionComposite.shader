@@ -42,9 +42,10 @@ Shader "Odyssey/SelectionComposite"
         float _Lift;
         float _FillAlpha;
 
-        half3 Mask(float2 uv)
+        // R = seen, strength; G = the silhouette's coverage; B = a tile's wash; A = the silhouette's strength.
+        half4 Mask(float2 uv)
         {
-            return SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv).rgb;
+            return SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv);
         }
         ENDHLSL
 
@@ -65,7 +66,7 @@ Shader "Odyssey/SelectionComposite"
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 float2 uv = input.texcoord;
-                half3 centre = Mask(uv);
+                half4 centre = Mask(uv);
 
                 float2 texel = _BlitTexture_TexelSize.xy * _Radius;
                 half visible = 0, hidden = 0;
@@ -74,10 +75,10 @@ Shader "Odyssey/SelectionComposite"
                 {
                     float angle = (i + 0.5) * (6.2831853 / Taps);
                     float2 dir = float2(cos(angle), sin(angle));
-                    half3 outer = Mask(uv + dir * texel);
-                    half3 inner = Mask(uv + dir * texel * 0.5);
+                    half4 outer = Mask(uv + dir * texel);
+                    half4 inner = Mask(uv + dir * texel * 0.5);
                     visible = max(visible, max(outer.r, inner.r));
-                    hidden = max(hidden, max(outer.g, inner.g));
+                    hidden = max(hidden, max(outer.a, inner.a));
                 }
 
                 // The line lies outside the silhouette only: over the thing's own pixels, and over

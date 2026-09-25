@@ -177,9 +177,12 @@ namespace Odyssey.Tests.Presentation
             Assert.That(frame.Bounds.min.x, Is.LessThan(-10f));
             Assert.That(frame.Bounds.max.x, Is.GreaterThan(10f));
 
+            frame.Lifted = false;
             frame.Clear();
             Assert.That(frame.IsEmpty, Is.True);
             Assert.That(frame.Count, Is.Zero);
+            Assert.That(frame.Lifted, Is.True,
+                "a group's 'no lift' must not outlive the group into the next single selection");
         }
 
         [Test]

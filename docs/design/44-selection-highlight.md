@@ -16,7 +16,7 @@ can apply to tiles also where it highlights the tile … make sure it's performa
 | Behind a wall or a roof | **A dimmed line shows through**, so a colonist indoors is never lost |
 | A tile (ground, floor, water, a bank) | **A soft wash over its top face and the same line round it** |
 | Hover | **Not now.** Selection only; the pipeline takes a hover later at almost no cost |
-| A box selection | **The primary bright, the rest dimmer**, as the brackets already do (1.0 / 0.45) |
+| A box selection | ~~The primary bright, the rest dimmer~~ → **every member the same full white outline, and no brightening in a group** (first look, 2026-09-25, §7) |
 | Width | **About 2.5 px at 1080p**, scaled with the height of the frame so 4K reads the same |
 | Where the choice lives | **Settings → Interface**, *Selection style: Highlight / Brackets*, remembered |
 
@@ -29,7 +29,8 @@ and before post-processing:
    depth, against the camera's own depth attachment (read, never written). Two passes of
    `Odyssey/SelectionMask` per draw:
    - `Visible`: ZTest LEqual, writes **R** = strength (and **B** = strength × fill for a tile);
-   - `Silhouette`: ZTest Always, writes **G** = strength.
+   - `Silhouette`: ZTest Always, writes **G** = 1 (coverage) and **A** = strength. They are separate
+     channels because the composite reads G as "is this pixel the thing" (§7).
    Max blending, so overlapping parts and several selected colonists combine rather than add.
 2. **Composite.** `Odyssey/SelectionComposite`, two blits over the camera colour. Neither reads
    the scene, so there is no copy of the frame, and both are **scissored to the selection's own
@@ -38,7 +39,7 @@ and before post-processing:
      silhouette it draws the line, `max(visible ring, hidden ring × 0.4)`; over a tile's top face it
      draws the wash, 0.16.
    - *Lift*: **multiplies** the visible part of the thing by 1.12 (`Blend DstColor One`). §6a says
-     why this is not a blend towards white.
+     why this is not a blend towards white. Skipped for a group (`SelectionHighlight.Lifted`).
 
 **When nothing is selected, nothing is enqueued.** The feature costs zero passes, zero draws and zero
 pixels, which is the common case.
@@ -127,3 +128,21 @@ owner's first test (playtest queue).
 
 *(pending: `FrameTimeTests`-style arms in `SelectionHighlightPlayTests.TheSelectionHighlightAgainstTheFrame`,
 and the owner's `gpu` reading at 4K)*
+
+## 7. First look, 2026-09-25: a group is outlined alike and not brightened
+
+The owner: *"it worked well but when I select multiple colonists all of them bar one is faded out —
+having the white outline (but not wash them out) would be better."* Asked, they chose **the same
+full white outline on every selected colonist** and **no brightening at all in a group**. The
+brightening is kept for one thing picked out on its own.
+
+**The "faded out" was a bug before it was a preference.** The silhouette pass wrote the strength into
+G, and the composite reads G as coverage (`outside = 1 - G`). At the 0.45 given to the rest of a box
+selection, each of them was 55 % "outside itself", so its own line (0.45 × 0.55 ≈ 0.25 alpha) was
+laid over its whole body as a white film. Coverage is now G = 1 and the strength is in A, so a weaker
+strength can only ever make a fainter line. The 0.45 is kept for a later hover, and nothing in the
+game draws it today.
+
+Photographed (`highlight-group.png`): four colonists, four identical outlines, none washed. One of
+them stands partly behind a tree crown, and the dimmed line through the leaves is the first picture
+of the "behind something" case working.

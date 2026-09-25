@@ -3276,11 +3276,13 @@ namespace Odyssey.Presentation.Bootstrap
 
                     // Lit at its own edges (design 44): the live figure's renderers, or the far form
                     // the renderer captured as it drew it. Neither, and the brackets are drawn.
+                    // Every member of a group at full strength (owner, 2026-09-25: the dimmer
+                    // outline on the rest read as faded out); the pane and the cards already say
+                    // which one it is about.
                     if (_highlighting)
                     {
-                        float lit = i == 0 ? SelectionHighlight.Primary : SelectionHighlight.Secondary;
                         if (_figures != null && SelectionHighlight.Current.AddRenderers(
-                                _figures.FigureObject(pawn.Id.Value), lit) > 0) continue;
+                                _figures.FigureObject(pawn.Id.Value), SelectionHighlight.Primary) > 0) continue;
                         if (_renderer.HighlightPawnsCaptured.Contains(pawn.Id.Value)) continue;
                     }
 
@@ -3484,8 +3486,10 @@ namespace Odyssey.Presentation.Bootstrap
             if (selection.HasPawn)
             {
                 for (int i = 0; i < selection.Pawns.Count; i++)
-                    _renderer.HighlightPawns[selection.Pawns[i].Value] =
-                        i == 0 ? SelectionHighlight.Primary : SelectionHighlight.Secondary;
+                    _renderer.HighlightPawns[selection.Pawns[i].Value] = SelectionHighlight.Primary;
+                // A group is outlined and not brightened (owner, 2026-09-25): the lift is for
+                // the one thing a single click picked out.
+                frame.Lifted = !selection.HasMultiple;
                 return;
             }
             if (selection.HasThing)

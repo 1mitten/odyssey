@@ -111,14 +111,35 @@ namespace Odyssey.Tests.PlayMode
                 yield return Frames(3, camera);
                 Assert.That(SelectionHighlight.Current.IsEmpty, Is.False, "a selected tile was not lit");
 
+                Assert.That(SelectionHighlight.Current.Lifted, Is.True, "one thing selected is brightened as well");
+
                 // A colonist, where there is art to draw one; the stand-in marker is the brackets' job.
-                List<PawnId> colonists = Colonists(boot, 1);
+                List<PawnId> colonists = Colonists(boot, 3);
                 if (colonists.Count > 0 && boot.Figures != null && boot.Figures.CanDrawColonists)
                 {
                     directors.Selection.Choose(colonists[0]);
                     yield return Frames(3, camera);
                     Assert.That(SelectionHighlight.Current.Count, Is.GreaterThan(0),
                         "a selected colonist was not lit at their own edges");
+                }
+
+                // A group: outlined, every member at full strength, and not brightened (owner,
+                // 2026-09-25). Holds without the art too: the lift is decided by the selection.
+                if (colonists.Count > 1)
+                {
+                    directors.Selection.PickMany(colonists, false, SelectionChange.Boxed);
+                    yield return Frames(3, camera);
+                    Assert.That(SelectionHighlight.Current.Lifted, Is.False, "a group was brightened");
+                    foreach (SelectionHighlight.RendererDraw draw in SelectionHighlight.Current.Renderers)
+                        Assert.That(draw.Strength, Is.EqualTo(SelectionHighlight.Primary),
+                            "a member of the group was drawn fainter than the rest");
+                    foreach (SelectionHighlight.MeshDraw draw in SelectionHighlight.Current.Meshes)
+                        Assert.That(draw.Strength, Is.EqualTo(SelectionHighlight.Primary),
+                            "a member of the group was drawn fainter than the rest");
+
+                    directors.Selection.Choose(colonists[0]);
+                    yield return Frames(2, camera);
+                    Assert.That(SelectionHighlight.Current.Lifted, Is.True, "one colonist again, and brightened again");
                 }
 
                 directors.Settings.SetSelectionStyle(SelectionStyle.Brackets);

@@ -26,8 +26,10 @@ the next session learns to ignore.
 - **Does the selection highlight make it obvious who is selected?** (`claude/selection-highlight`, design 44.)
   Click a colonist, an item, a wall, a tree and a patch of ground. Each should gain a thin white line round its own
   shape and look a touch brighter; the ground gets a pale wash. Then walk a selected colonist behind a wall: a
-  fainter line should show through. Box-select a group: the one the pane is about is brightest. Settings →
-  Interface → *Selection style* → Brackets brings the old cursor back. Read the overlay's `gpu` line at 4K with
+  fainter line should show through. Settings →
+  Interface → *Selection style* → Brackets brings the old cursor back. **Second look (2026-09-25):**
+  box-select a group — every colonist should have the same full white outline, none faded or washed,
+  and none brightened; click one of them and that one alone brightens. Read the overlay's `gpu` line at 4K with
   and without a selection. A wrong answer is a line you have to hunt for, a colonist who looks bleached, a
   selection you lose indoors, or `gpu` moving by more than a few tenths of a millisecond.
 - **Which rain reads as a rainy day: §7's particles, or GPU rain with wet ground?** (`claude/rain-look`,

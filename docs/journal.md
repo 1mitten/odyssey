@@ -12614,3 +12614,18 @@ orange's near-zero blue channel furthest. The lift is now a second pass that mul
 **Cost, CPU side, one run** (1280 × 720, primitives, `TheSelectionHighlightAgainstTheFrame`): a
 render is 0.331 ms p50 with nothing selected and 0.350 ms with a tile. The GPU side is the owner's
 overlay reading at 4K. Not yet played.
+
+## 2026-09-25 — The selection highlight's first look: a group alike, and a channel that meant two things
+
+Played once. The owner: *"it worked well but when I select multiple colonists all of them bar one is
+faded out."* Asked, they chose the same full outline on every member of a group, and no brightening
+in a group at all.
+
+**The fade was a bug.** The mask's G channel carried both "how strongly selected" and "which pixels
+are the thing", and the composite read it as the second. At 0.45 strength the rest of a box
+selection were each 55 % "outside themselves", so their own line washed over their bodies. The fix
+separates the two: G is coverage, A is strength. The group rule is then two lines in the composition
+root and a `Lifted` flag the composite honours.
+
+This is `docs/bug-patterns.md`'s "one rule with two owners" in a pixel format: one channel, two
+meanings, and the bug was invisible while every strength was 1.

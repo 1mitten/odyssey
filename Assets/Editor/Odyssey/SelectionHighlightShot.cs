@@ -121,6 +121,7 @@ namespace Odyssey.EditorTools
                 SelectionHighlight.FeatureSeenFrame = int.MinValue;
                 SelectionHighlight frameList = SelectionHighlight.Current;
                 bool[] include = { true, true, true, true };
+                bool group = false;
 
                 ChunkRenderer active = renderer;
                 Odyssey.Presentation.World.PawnFigureDirector walking = figures;
@@ -132,10 +133,21 @@ namespace Odyssey.EditorTools
                     if (include[1] && colonist >= 0) active.HighlightPawns[colonist] = SelectionHighlight.Primary;
                     if (include[2]) active.HighlightThing = item;
 
+                    if (group)
+                    {
+                        frameList.Lifted = false;
+                        foreach (PawnView p in world.Views.Current.Pawns)
+                            if (p.IsColonist) active.HighlightPawns[p.Id.Value] = SelectionHighlight.Primary;
+                    }
+
                     active.ViewerPosition = rendering.transform.position;
                     active.Render(activeLayer, slice);
                     active.RenderActors(world.Views.Current, activeLayer, slice, actorMaterial,
                         drawnAsFigures: walking.Drawn);
+
+                    if (group)
+                        foreach (PawnView p in world.Views.Current.Pawns)
+                            if (p.IsColonist) frameList.AddRenderers(walking.FigureObject(p.Id.Value), SelectionHighlight.Primary);
 
                     if (include[1] && colonist >= 0) frameList.AddRenderers(walking.FigureObject(colonist), SelectionHighlight.Primary);
                     if (include[0] && tree >= 0) active.CollectCell(tree, frameList, SelectionHighlight.Primary, terrain: false);
@@ -181,6 +193,13 @@ namespace Odyssey.EditorTools
                 }
                 Only(3);
                 PlayScene.Shoot(camera, Centre(tile), 48f, 12f, "Logs/highlight-tile.png");
+
+                // A group: every colonist on the board, as a box selection draws them — each at full
+                // strength and none brightened (owner, 2026-09-25).
+                Only(-1);
+                group = true;
+                PlayScene.Shoot(camera, focus, 42f, 18f, "Logs/highlight-group.png");
+                group = false;
 
                 Debug.Log($"[HighlightShot] colonist {colonist}, tree {tree}, item {item?.Value ?? -1}, " +
                           $"figures {figures.FigureCount}, parts last frame {frameList.Count}, " +

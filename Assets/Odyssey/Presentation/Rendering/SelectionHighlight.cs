@@ -38,8 +38,18 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Whether the feature has been present within the last couple of frames.</summary>
         public static bool FeaturePresent => Time.frameCount - FeatureSeenFrame <= 2;
 
-        /// <summary>Strength of the primary selection, and of the rest of a box selection.</summary>
+        /// <summary>
+        /// Strength of a selection's line. Every member of a group is drawn at
+        /// <see cref="Primary"/> (owner, 2026-09-25); a weaker strength is kept for a later use
+        /// such as a hover, and is drawn as a fainter line and nothing else.
+        /// </summary>
         public const float Primary = 1f, Secondary = 0.45f;
+
+        /// <summary>
+        /// Whether the selection is brightened as well as outlined this frame. True for one thing,
+        /// false for a group of colonists (owner, 2026-09-25). Put back to true by <see cref="Clear"/>.
+        /// </summary>
+        public bool Lifted { get; set; } = true;
 
         /// <summary>One renderer drawn as it is, skinning and all.</summary>
         public struct RendererDraw
@@ -84,6 +94,7 @@ namespace Odyssey.Presentation.Rendering
             _meshes.Clear();
             _any = false;
             _bounds = default;
+            Lifted = true;
         }
 
         void Grow(in Bounds b)

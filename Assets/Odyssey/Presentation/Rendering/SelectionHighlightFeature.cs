@@ -154,6 +154,7 @@ namespace Odyssey.Presentation.Rendering
                 public TextureHandle Mask;
                 public Material Material = null!;
                 public Rect Scissor;
+                public bool Lift;
             }
 
             public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
@@ -203,13 +204,15 @@ namespace Odyssey.Presentation.Rendering
                     data.Mask = mask;
                     data.Material = _composite;
                     data.Scissor = scissor;
+                    data.Lift = Frame.Lifted;
                     builder.UseTexture(mask, AccessFlags.Read);
                     builder.SetRenderAttachment(colour, 0, AccessFlags.ReadWrite);
                     builder.SetRenderFunc((CompositeData pass, RasterGraphContext context) =>
                     {
                         context.cmd.EnableScissorRect(pass.Scissor);
                         Blitter.BlitTexture(context.cmd, pass.Mask, new Vector4(1f, 1f, 0f, 0f), pass.Material, LinePass);
-                        Blitter.BlitTexture(context.cmd, pass.Mask, new Vector4(1f, 1f, 0f, 0f), pass.Material, LiftPass);
+                        if (pass.Lift)
+                            Blitter.BlitTexture(context.cmd, pass.Mask, new Vector4(1f, 1f, 0f, 0f), pass.Material, LiftPass);
                         context.cmd.DisableScissorRect();
                     });
                 }
