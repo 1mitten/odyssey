@@ -8,7 +8,10 @@
 | Research | `docs/research/a-10-cover.md` |
 | Design | `docs/design/50-cover.md` |
 
-**Waiting for approval.** No unit is started.
+**Approved 2026-09-25** (owner: *"implement"*). **CV1–CV9 built the same day** on
+`claude/cool-darwin-akh02q` — this session may push only there — with `claude/ranged-combat` merged in;
+the Presentation half is not yet compiled in Unity. As built, and every departure: design 50 §12.
+CV6b (the art) is the owner's machine's work.
 
 It stacks on ranged combat, whose code is on `claude/ranged-combat` and not yet on `main`. Every unit
 branches from there (`claude/cover`), and **merges after ranged**. If ranged merges first, rebase

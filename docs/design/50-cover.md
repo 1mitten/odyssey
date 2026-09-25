@@ -1,9 +1,12 @@
 # 50: Cover, sandbags and the barricade
 
-**Status (2026-09-25): designed; nothing built.** The work so far is ground, the interview
-(`docs/research/cover-interview.md`, 27 answers), the research (`docs/research/a-10-cover.md`) and
-this document. The plan is `docs/plans/cover.md`. **The next hard stop is the owner's approval of this
-document.** §10 lists what to confirm or overrule, and no gameplay code is written before approval.
+**Status (2026-09-25): approved (owner: *"implement"*) and built, CV1–CV9, on
+`claude/cool-darwin-akh02q` — not yet run in Unity.** The simulation half (the rule, the shot, the
+pieces, pass-through, the AI, the crouch's aspect, the shot report) is proven in the fast and Long
+tiers; the Presentation half (drawing, the crouch pose, the building bars, the floater, the readout)
+compiles only in Unity and has not been compiled. §12 records what was built and where it departs
+from this document. The interview is `docs/research/cover-interview.md`, the research
+`docs/research/a-10-cover.md`, the plan `docs/plans/cover.md`.
 
 It sits on **design 47 (ranged combat)**, whose code is on `claude/ranged-combat` and not yet on
 `main` (only the design merged, PR #220). The build therefore stacks on that branch, and **the merge
@@ -113,7 +116,8 @@ holding, close to the edge more than far back, and full cover still means someth
 ### 2c. Combining
 
 `total = 1000 − Π(1000 − cᵢ) / 1000^(n−1)`: noisy-OR, folded one contributor at a time,
-`total += (1000 − total) × cᵢ / 1000`. For example, 550, 220 and 220 give 729.
+`total += (1000 − total) × cᵢ / 1000`. For example, 550, 220 and 220 give 726 in integers (729 in
+real numbers).
 
 ### 2d. The shot
 
@@ -392,3 +396,43 @@ publish with a `ShotReportView`, which is neither saved nor hashed. Every word c
 - `Cover.Evaluate` is eight cell reads and at most eight band tests per shot.
 - The AI search is bounded in §6.
 - Both are `Measurement` arms in CV9, each with a control in the same run.
+
+## 12. As built (2026-09-25)
+
+Nine commits on `claude/cool-darwin-akh02q`, which carries `claude/ranged-combat` merged in: **merge
+ranged first**. Every simulation claim below is a fast- or Long-tier test; every Presentation line is
+written against the code it sits beside and **has not been compiled** (no Unity in the session).
+
+| Unit | Built | Where |
+|---|---|---|
+| CV1 | `Cover.Evaluate`/`Cover.BaseAt`, integer bands (constants pinned either side of each edge), the ×1.75 diagonal, the shooter's distance, the descent in tangents, noisy-OR; cover on `BuildingDef` and `WildPlantDef`; `CombatDef`'s tunables replace the fixed slot | `Combat/Cover.cs`, `CoverTests` |
+| CV2 | the second roll and the weighted pick (salts `RangedCover`, `RangedCoverPick`); the covered strike and `CombatEventKind.Covered`; strays caught at half past the dead zone (`RangedCoverIntercept`); `CoverCell` saved behind flag bit 4, hashed only when set; `wreckRefundPerMille` | `RangedRules`, `CombatSystem.Ranged`, `Projectiles`, `CoverShotTests` |
+| CV3 | `Building_Sandbags` (handle 13, edifice 23, `fixedStuff` stone) and `Building_Barricade` (14, 24); `NavFlags.PassThrough` with a per-cell crossing price both searches charge; palette, glyph, labels, wiki | `ConstructionContent`, `NavGrid`, `NavGraph`, `CoverBuildingTests` |
+| CV4 | `Standing.CanStandAt`/`Resolve`; the walk toil, shooting, striking, choosing a side, eviction and the raise guard all ask it; the sweep | `Standing.cs`, `TrappedPawnSystem`, `StandingTests` |
+| CV5 | `CoverPosition.Find`, used by bandits and undrafted defenders | `CoverPosition.cs`, `CoverSeekingTests` |
+| CV6 | `CoverShape` (placeholder boxes, joined by a four-neighbour mask; sandbags in the sand terrain's colour), the ghost, the pick and mark heights; a hit-point bar over **every** struck building | `CoverShape.cs`, `ChunkMesher.EmitCover`, `OdysseyBootstrap` |
+| CV7 | `CombatAspects.CoverCrouch` derived at publish; the figure eases into a crouch of a third of its measured leg under the aim | `PawnRegistry.CoverCrouchOf`, `PawnFigureDirector.ApplyCoverCrouch` |
+| CV8 | the `QueryShot` question, `ShotReportView` from `ShotReportContributor`, the words in `ShotReadout`, the label beside the pointer; the *Cover* floater | `ShotReportContributor`, `Hud/ShotReadout.cs`, `HudShell.ShotReadout.cs` |
+| CV9 | the gate: three seeds, behind sandbags against the open, a lockstep twin, a mid-fight save | `CoverGateTests` |
+
+### 12a. Departures from the design above
+
+- **A seek window (§6).** The first build let a fighter look for cover whenever her line opened
+  with under 20 % of it, and `APistolBanditShootsAColonist` failed: the colonist ran, every step
+  changed the answer, and the bandit repositioned for four hundred ticks without firing. A fighter
+  now moves for cover only in the first `CoverPosition.SeekWindowTicks` (240) of an attack — read
+  off the saved tick the job began — and shoots from where she stands after that until the attack
+  is chosen afresh. The dance §6 warned about, found by an existing test.
+- **The sweep's grace (§5)** is read off `Pawn.JobStartTick` (saved), not a timer of its own: a
+  transient timer would step a pawn off at a different tick after a load and part a resumed run from
+  one never saved.
+- **The crouch's depth (§8a)** is `0.33 × Figure.LegLength`, a real length, and never
+  `StandingHipHeight`, which is the 0.2 m floor of its own clamp (P11).
+- **The readout's hover** is resolved in `SliceCameraRig.ResolvePointer` like every other pick, and
+  only while the readout could show (`WantsPointerCell`): `PointerCursorTests` forbids a pick anywhere
+  else, because that is where the one-frame lag of design 28 came from.
+- **The health bar (§7d)** turned out to have its model already (`CombatFeedbackModel.BuildingHealthBar`)
+  and no drawing; it is drawn in `DrawCombatMarks` with the pawns' bars, one gather per ink.
+- **Art (§7a, §7b)** is the placeholder boxes for both pieces. The Western Frontier and Meadow rows
+  and the Blender sandbag set are the owner's machine's work (`PlayScene.cs`, the catalogue asset,
+  `Assets/Art/Custom/Cover/`); `CoverShape` says so where it would be replaced.

@@ -13504,3 +13504,36 @@ test, because a missed caller fails silently.
 list), and no open branch claims 50. The code will stack on `claude/ranged-combat`. The owner asked
 whether ranged was merged, and it is not: only its design merged (PR #220). The merge order is
 therefore ranged, then cover. **Next:** the owner's approval of design 50 (§10 lists five points).
+
+## 2026-09-25 — Cover built (CV1–CV9), and the dance an old test caught
+
+The owner approved design 50 with one word, and the nine units went in the same day on this
+branch, with `claude/ranged-combat` merged in first because nothing about cover means anything
+without its line of sight and its bullet.
+
+**The rule is integers or it is nothing.** An angle band is a squared-cosine comparison by
+cross-multiplication, the ×1.75 diagonal penalty is a second table of edges rather than a multiply
+on an angle nobody computed, and the descent is graded in its tangent, so no `atan` enters a thing
+whose output feeds a roll. `CoverTests.TheRuleNeverTouchesAFloat` reads the file.
+
+**The one surprise was behavioural, and an existing test found it.** Cover-seeking as first written
+let a fighter look again whenever her line opened with under 20 % of cover. `APistolBanditShootsAColonist`
+went red: the colonist being shot at fled, each step moved the best cell, and the bandit repositioned
+for four hundred ticks without once firing. The fix is a window — cover is sought only in the first
+240 ticks of an attack, read off the saved tick the job began — and it is the reference's own shape:
+its raiders pick a position when they choose a target, not every step.
+
+**Two things are true only because the save was thought about.** The sweep that steps a pawn off a
+sandbag it came to rest on first kept its own timer; a colony saved and loaded would have stepped her
+off on a different tick from one never saved, and the resume gate would have parted. It reads
+`JobStartTick` now. And a covered bullet's cell rides flag bit 4 of the projectile record, so a file
+written before cover loads unchanged and no format number moved.
+
+**Pass-through-only cost less than feared.** The design braced for thirty-one callers; in practice
+the walk toil is the choke point every destination passes through, so snapping a goal there, plus
+the four pickers that choose where to *stop* (shooting, striking, a side, eviction), was enough. A
+day inside a ring of 48 sandbags: 4,351 pawn-ticks crossing it and the sweep never fired.
+
+**Not proven here:** the Presentation half — the joined boxes, the crouch, the building bars, the
+floater and the readout — has no compiler in a container without Unity. It follows the shelf's and
+the pawn bars' code line for line, and the owner's first Unity run is its test.

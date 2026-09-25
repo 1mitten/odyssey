@@ -23,6 +23,18 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do sandbags and a barricade read as cover, and does cover change a fight?** (`claude/cool-darwin-akh02q`,
+  design 50; stacked on ranged combat, **not yet compiled in Unity**.) Build → Security: drag a line of
+  **Sandbags** (always stone, no material to pick) and a **Barricade** (wood or stone). Walk a colonist
+  across: she climbs over slowly and never stops on top. Draft two colonists with pistols behind the
+  bags and use the debug menu's *Spawn pistol bandit* ten cells away: they crouch behind the bags; the
+  bandits step behind anything nearby before firing; *Cover* floats over bags that take a bullet and a
+  bar appears over each one hit. Select a drafted gun colonist and hover a bandit: the readout beside
+  the pointer gives the chance and what moved it. A wrong answer is a line that draws as separate
+  heaps (the joins), bags so tall the crouched colonist is hidden or so low she towers over them, a
+  colonist found standing on top of the bags, bandits that shuffle about without shooting, or a
+  readout that sits under the pointer or flickers. The pieces are placeholder boxes until the
+  Western Frontier timber, the Meadow stone wall and a Blender sandbag set are wired on your machine.
 - **Does the new bill list read at a glance, and is anything on it in the way?** (`claude/bills-pane`,
   design 49, stacked on `claude/cooking`.) Click an **Electric Cooker** with no power: the pane is
   wider (680), a warn strip reads **No power** with a green **Switch off** beside it, and the tile's
