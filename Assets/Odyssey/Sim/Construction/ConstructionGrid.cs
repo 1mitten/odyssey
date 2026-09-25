@@ -1696,8 +1696,10 @@ namespace Odyssey.Sim.Construction
         bool BlocksTheCell(int cell)
         {
             int building = _building[cell];
+            // Cover crossed but never stood on counts too (design 50 §5): nobody may be left
+            // standing in a sandbag the instant it goes up, and somebody climbing over waits.
             return building != BuildingHandle.None
-                   && ConstructionContent.BuildingAt(building).blocking;
+                   && (ConstructionContent.BuildingAt(building).blocking || ConstructionContent.BuildingAt(building).passThrough);
         }
 
         /// <summary>The far cell of a two-cell site, or -1. Read from the site as it stands.</summary>

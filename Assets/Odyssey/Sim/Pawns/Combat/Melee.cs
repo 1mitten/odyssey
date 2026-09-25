@@ -354,6 +354,8 @@ namespace Odyssey.Sim.Pawns
                     // Beside it: a cell she could strike it from, which is Melee.InReach's own test.
                     // A ring back: anywhere she can stand.
                     if (ring == 1 ? !ctx.Nav.IsLegalStep(cell, centre, mode) : !ctx.Nav.Grid.CanEnter(cell, mode)) continue;
+                    // Not on top of cover (design 50 §5): a side is somewhere to stand.
+                    if (!Standing.CanStandAt(ctx, cell)) continue;
                     if (!ctx.CanTravel(me, cell, mode)) continue;
 
                     int ex = x - m.X, ez = z - m.Z, ey = t.Y - m.Y;

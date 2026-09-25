@@ -50,6 +50,24 @@ namespace Odyssey.Sim.Pawns
         /// <summary>How many colonists this has had to dig out. For tests and the debug overlay.</summary>
         public int Freed { get; private set; }
 
+        /// <summary>
+        /// How many times a pawn found at rest on cover was stepped off it (design 50 §5). Every
+        /// picker refuses such a cell, so this counts the misses; the Long tier holds it low.
+        /// </summary>
+        public int SteppedOffCover { get; private set; }
+
+        /// <summary>How long a pawn may stand still on cover before being stepped off, in ticks.</summary>
+        public const int CoverRestGraceTicks = 30;
+
+        /// <summary>
+        /// Is she standing still on cover, and has been doing so in the job she is in for the
+        /// grace? Read only off saved state — the path, the destination and the tick her job began
+        /// — so a colony saved and loaded steps her off on the same tick as one never saved.
+        /// </summary>
+        static bool AtRestOnCover(Pawn pawn, int tick) =>
+            !pawn.HasPath && !pawn.PathPending && pawn.Destination < 0
+            && tick - pawn.JobStartTick >= CoverRestGraceTicks;
+
         public void Tick(SimWorld world)
         {
             var pawns = _pawns.Pawns.All;
@@ -66,6 +84,18 @@ namespace Odyssey.Sim.Pawns
                 // situation that was never wrong. Something solid or blocking standing in the
                 // cell is the only case this exists for, and a door the pawn can open is not it.
                 Pathing.NavFlags flags = _pawns.Nav.Grid.Flags[pawn.Cell];
+
+                // **At rest on cover crossed but never stood on** (design 50 §5): stepped off to the
+                // nearest cell she may stand in. Only at rest — somebody climbing over has a path —
+                // and only a moment into the job she is in, so a job that ends mid-crossing and a new
+                // one that walks on in the next tick never see the shove. Every picker already refuses such
+                // a cell; this is the net under the one that was missed.
+                if ((flags & Pathing.NavFlags.PassThrough) != 0)
+                {
+                    if (AtRestOnCover(pawn, world.CurrentTick) && PawnEviction.Evict(_pawns, pawn)) SteppedOffCover++;
+                    continue;
+                }
+
                 if ((flags & (Pathing.NavFlags.Solid | Pathing.NavFlags.Blocked)) == 0) continue;
                 if (_pawns.Nav.Grid.CanEnter(pawn.Cell, pawn.Mode)) continue;
 
