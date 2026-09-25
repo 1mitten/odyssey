@@ -188,6 +188,7 @@ namespace Odyssey.Sim.Pawns
         public const int Patient = JobHandle.Patient;
         public const int Forage = JobHandle.Forage;
         public const int Cook = JobHandle.Cook;
+        public const int AttackRanged = JobHandle.AttackRanged;
         public const int Count = JobHandle.Count;
     }
 
@@ -387,7 +388,14 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Cooking (design 48 §5): buys speed at the stove and keeps the meal from burning.</summary>
         public const int Cooking = 7;
-        public const int Count = 8;
+        /// <summary>
+        /// Ranged combat (design 47 §2a): the shooter's level reads the per-cell accuracy curve in
+        /// <see cref="CombatDef"/>, raised to the distance in cells, and every shot trains it, hit
+        /// or miss. Claimed by the ranged line's contracts step, 8 after medical supplies' Medicine and the kitchen's Cooking; a colonist from a save older than
+        /// format 10 is dealt it once on load (<see cref="PawnRegistry.BackfillSkills"/>).
+        /// </summary>
+        public const int Shooting = 8;
+        public const int Count = 9;
 
         /// <summary>
         /// The names skills are published under, parallel to the indices above.
@@ -397,7 +405,7 @@ namespace Odyssey.Sim.Pawns
         /// assembly or sharing an enum with it. The prefix is the project's, the middle is this
         /// feature's, and the leaf is the value — the same shape as an icon key.</para>
         /// </summary>
-        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee", "medicine", "cooking" };
+        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee", "medicine", "cooking", "shooting" };
     }
 
     /// <summary>
@@ -637,6 +645,7 @@ namespace Odyssey.Sim.Pawns
         public const int CookedMeal = ItemHandle.CookedMeal;
         public const int VegetableMeal = ItemHandle.VegetableMeal;
         public const int BurntMeal = ItemHandle.BurntMeal;
+        public const int Pistol = ItemHandle.Pistol;
         public const int Count = ItemHandle.Count;
     }
 
@@ -938,6 +947,22 @@ namespace Odyssey.Sim.Pawns
         /// of the species. Unread for a person.
         /// </summary>
         public int meleeSkill;
+
+        // ---- health (design 43 §2) ---------------------------------------------------------
+
+        /// <summary>
+        /// The body this species has, by the <see cref="HealthDef"/>'s defName, or empty for none.
+        /// A species with no body keeps the hit-point pool alone and nothing else: no regions, no
+        /// injuries, no bleeding, no tending — every animal today (design 43 §8).
+        /// </summary>
+        public string health = string.Empty;
+
+        /// <summary>
+        /// The chance, per mille, that a bullet crossing this pawn's cell takes it (design 47 §2c),
+        /// before the dead zone near the shooter scales it. The reference's 40 % × body size,
+        /// clamped to 4–80 %.
+        /// </summary>
+        public int interceptPerMille = 400;
     }
 
     /// <summary>What a pawn starts life with.</summary>
@@ -1263,6 +1288,23 @@ namespace Odyssey.Sim.Pawns
         public int[] KindSpecies = System.Array.Empty<int>();
 
         /// <summary>
+        /// The body each species has (<see cref="SpeciesDef.health"/>), by index into
+        /// <see cref="Species"/>, or null for none (design 43 §2). Read through <see cref="HealthOf"/>.
+        /// </summary>
+        public HealthDef?[] SpeciesHealth = System.Array.Empty<HealthDef?>();
+
+        /// <summary>
+        /// The body a pawn of this kind has, or null: its species' <see cref="HealthDef"/>, and
+        /// nothing for a content set built in code, which keeps the pool alone as it always did.
+        /// </summary>
+        public HealthDef? HealthOf(int kind)
+        {
+            if (Species.Length == 0 || (uint)kind >= (uint)KindSpecies.Length) return null;
+            int species = KindSpecies[kind];
+            return (uint)species < (uint)SpeciesHealth.Length ? SpeciesHealth[species] : null;
+        }
+
+        /// <summary>
         /// The item defs each kind may arrive holding (<see cref="PawnKindDef.weapons"/>), empty
         /// for bare hands. Read through <see cref="ArmsOnSpawn"/> and <see cref="WeaponFor"/>.
         /// </summary>
@@ -1445,7 +1487,8 @@ namespace Odyssey.Sim.Pawns
                 .Register<SpeciesDef>()
                 .Register<TemperatureDef>()
                 .Register<PawnTuningDef>()
-                .Register<CombatDef>();
+                .Register<CombatDef>()
+                .Register<HealthDef>();
 
         /// <summary>
         /// The same content, read from a loaded <see cref="DefDatabase"/> rather than built in
@@ -1494,7 +1537,9 @@ namespace Odyssey.Sim.Pawns
                 // Picking a berry bush (design 45 §6), appended after medical supplies.
                 "Job_Forage",
                 // The kitchen (design 48 §5).
-                "Job_Cook");
+                "Job_Cook",
+                // The ranged attack (design 47 §2d).
+                "Job_AttackRanged");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",
@@ -1513,7 +1558,9 @@ namespace Odyssey.Sim.Pawns
                 // Medical supplies (design 37).
                 "Skill_Medicine",
                 // The kitchen (design 48 §5).
-                "Skill_Cooking");
+                "Skill_Cooking",
+                // Appended with the ranged line (design 47 §3a).
+                "Skill_Shooting");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal",
                 // Appended, never inserted: an item handle is stored in every stack, every haul
@@ -1527,7 +1574,9 @@ namespace Odyssey.Sim.Pawns
                 // The wild foods (design 45 §6), appended together after medical supplies.
                 "Item_Berries", "Item_Mushrooms",
                 // The kitchen (design 48 §4), appended: the two meals and the burnt one.
-                "Item_CookedMeal", "Item_VegetableMeal", "Item_BurntMeal");
+                "Item_CookedMeal", "Item_VegetableMeal", "Item_BurntMeal",
+                // The pistol (design 47), the first ranged weapon.
+                "Item_Pistol");
             content.Recipes = ByName<RecipeDef>(defs, "Recipe_Meal");
             for (int r = 0; r < content.Recipes.Length; r++)
             {
@@ -1563,6 +1612,20 @@ namespace Odyssey.Sim.Pawns
                     throw new DefLoadException(
                         $"PawnKindDef '{content.Kinds[k].defName}' names species '{wanted}', which the content does not have.");
                 content.KindSpecies[k] = found;
+            }
+
+            // The body each species has (design 43 §2), by name, once. A body of more regions
+            // than a ledger can hold fails the load rather than a fight.
+            content.SpeciesHealth = new HealthDef?[content.Species.Length];
+            for (int s = 0; s < content.Species.Length; s++)
+            {
+                string wanted = content.Species[s].health;
+                if (string.IsNullOrEmpty(wanted)) continue;
+                HealthDef body = One<HealthDef>(defs, wanted);
+                if (body.regions.Count == 0 || body.regions.Count > PawnHealth.MaxRecords / 3)
+                    throw new DefLoadException(
+                        $"HealthDef '{body.defName}' has {body.regions.Count} regions; a body has one to six.");
+                content.SpeciesHealth[s] = body;
             }
 
             // The weapon a kind arrives holding (design 33 §1), by name, once — after the items,
@@ -1829,5 +1892,41 @@ namespace Odyssey.Sim.Pawns
         /// cooking starts. SHA-256's twelfth round constant.
         /// </summary>
         public const uint Burn = 0x550C_7DC3;
+        // The ranged line's four (design 47 §3a). SHA-256's thirteenth, fourteenth, seventeenth
+        // and eighteenth round constants: the eleventh is taken by the stream jump, the twelfth
+        // is cooking's Burn, and the fifteenth and sixteenth by the weather.
+
+        /// <summary>Whether a shot hits (design 47 §2a).</summary>
+        public const uint RangedHit = 0x72BE_5D74;
+
+        /// <summary>How hard a bullet strikes, within the spread — rolled for a miss too, because a stray still carries its weight.</summary>
+        public const uint RangedDamage = 0x80DE_B1FE;
+
+        /// <summary>Where a miss goes: the scatter cell round the target (design 47 §2c).</summary>
+        public const uint RangedScatter = 0xE49B_69C1;
+
+        /// <summary>Whether a bystander on the line takes the bullet, salted by the cell as well as the shooter.</summary>
+        public const uint RangedIntercept = 0xEFBE_4786;
+
+        /// <summary>
+        /// A weapon's quality when it is made (design 47 §11), salted by the thing's id. SHA-256's
+        /// nineteenth round constant.
+        /// </summary>
+        public const uint WeaponQuality = 0x0FC1_9DC6;
+
+        // ---- health (design 43) ----------------------------------------------------------------
+        // Built as the eleventh and twelfth, moved to the twelfth and thirteenth when the stream
+        // jump shipped first, and moved again when cooking (Burn) and ranged (RangedHit) shipped
+        // with those: two purposes on one stream would let a cooking or shooting roll decide
+        // where a blow lands. The twentieth and twenty-first are free.
+
+        /// <summary>
+        /// Which region a hit lands on, by coverage (design 43 §2). SHA-256's twentieth round
+        /// constant. Its own stream, so the body can move no roll a fight made before it existed.
+        /// </summary>
+        public const uint HitRegion = 0x240C_A1CC;
+
+        /// <summary>How a fall's damage is split into hits and spread (design 43 §7). The twenty-first.</summary>
+        public const uint FallSplit = 0x2DE9_2C6F;
     }
 }

@@ -61,12 +61,20 @@ namespace Odyssey.Sim.Pawns
             int tick = world.CurrentTick;
             int interval = _ctx.Content.NeedsIntervalTicks;
 
+            // The bullets due (design 47 §2c), before any shot is fired this tick.
+            LandDue(tick);
+
             var pawns = _ctx.Pawns.All;
             for (int i = 0; i < pawns.Count; i++)
             {
                 Pawn pawn = pawns[i];
 
+                // A gun-holder's reach rule (design 47 §12), before anything lands or fires: an enemy
+                // within reach is clubbed, not shot, and one that steps away is shot again.
+                SwapByReach(pawn, tick);
+
                 if (pawn.Driver is AttackMeleeJobDriver swing && swing.InWindup) LandOrLose(pawn, swing, tick);
+                else if (pawn.Driver is AttackRangedJobDriver aim && aim.InAim) FireOrLose(pawn, aim, tick);
 
                 // The clocks run out: back to nought, so a pawn over its fight carries no combat
                 // state and hashes exactly as it did before it (design 33 §6).
@@ -83,8 +91,13 @@ namespace Odyssey.Sim.Pawns
 
                 // Healing, on the needs cadence and the needs system's own phase spreading, over
                 // the hurt only: a whole pawn costs this one comparison.
-                if (pawn.HpMilli < pawn.HpMaxMilli && interval > 0 && (tick + pawn.Id.Value) % interval == 0)
-                    Heal(pawn, tick, interval);
+                if (interval > 0 && (tick + pawn.Id.Value) % interval == 0)
+                {
+                    if (pawn.HpMilli < pawn.HpMaxMilli) Heal(pawn, tick, interval);
+                    // The body (design 43 §4): bleeding, blood, and whether it still stands. A
+                    // pawn with nothing on its ledger costs one flag.
+                    if (pawn.HasHealthState) TickBody(pawn, tick, interval);
+                }
             }
         }
 
@@ -106,7 +119,7 @@ namespace Odyssey.Sim.Pawns
                 return;
             }
 
-            Armament armament = _ctx.WeaponRules.ArmamentOf(attacker, _ctx);
+            Armament armament = _ctx.WeaponRules.ArmamentOf(attacker, _ctx).Melee;
             if (!swing.WindupDone(armament)) return;
             bool decided = attacker.HasPendingSwing;
             SwingOutcome held = attacker.HeldSwing;
@@ -151,7 +164,9 @@ namespace Odyssey.Sim.Pawns
             CombatDef combat = _ctx.Content.Combat;
             int perDay;
             if (!pawn.IsPerson) perDay = combat.animalHealPerDay;
-            else if (pawn.IsColonist && InBed(pawn)) perDay = combat.bedHealPerDay;
+            // A colonist in a bed (design 33 §1), plus a tended injury's own heal wherever she is
+            // (design 43 §6, a-02:41): a tended colonist still at work heals too.
+            else if (pawn.IsColonist) perDay = (InBed(pawn) ? combat.bedHealPerDay : 0) + TendHealPerDay(pawn);
             else return;
 
             int day = _ctx.Content.DayTicks;
@@ -164,13 +179,18 @@ namespace Odyssey.Sim.Pawns
             if (amount <= 0) return;
 
             int hp = pawn.HpMilli + amount;
+            if (hp > pawn.HpMaxMilli) amount -= hp - pawn.HpMaxMilli;
             pawn.HpMilli = hp > pawn.HpMaxMilli ? pawn.HpMaxMilli : hp;
+            // The same points off the ledger, the worst injury first, in the same call: the pool
+            // and the ledger never disagree (design 43 §2).
+            pawn.Health?.Heal(amount);
 
             // Up when whole, for a colonist (design 33 §11c, owner): she heals only in a bed, and a
             // rescued colonist stays in it until she is. The content's threshold is the animals',
-            // which heal where they lie.
+            // which heal where they lie. And only once the body lets her (design 43 §3).
             int recoverAt = pawn.IsColonist ? 1_000 : combat.downedRecoverAtPerMille;
-            if (pawn.Downed && (long)pawn.HpMilli * 1_000 >= (long)pawn.HpMaxMilli * recoverAt)
+            if (pawn.Downed && (long)pawn.HpMilli * 1_000 >= (long)pawn.HpMaxMilli * recoverAt
+                && !pawn.CurrentVitals().Incapacitated)
                 Recover(pawn, tick);
         }
 

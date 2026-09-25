@@ -135,7 +135,10 @@ namespace Odyssey.Tests.Sim
         /// per cent of a plain bed's rest — the owner's interview answers, 2026-09-17. Update this
         /// only when the owner retunes a tier, and say which one moved.
         /// </summary>
-        const ulong QualityFingerprint = 11231177996547656315UL;
+        // 2026-09-25, design 47 §11: every tier gained weaponDamagePerMille and weaponAccuracyPerMille
+        // (Poor 900/900, Normal 1000/1000, Decent 1100/1050, Uber 1200/1100, Epic 1350/1150); no
+        // rest effectiveness moved. The owner asked for weapon quality "like you do with beds".
+        const ulong QualityFingerprint = 6254407845041903790UL;
 
         [Test]
         public void TheBuildingTableIsStillWhatItWas()

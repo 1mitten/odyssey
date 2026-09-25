@@ -190,6 +190,10 @@ namespace Odyssey.Sim.Pawns
                 // Appended, after the ledger whose load clears it; absent from an older save, which
                 // loads with no entry about anything, as none then was.
                 pawns.Incidents!.Ledger.DetailSection,
+                // The body's ledger (design 43 §9): who is injured where, and how much blood each
+                // has lost. Appended, after the combat section that restores the pool it sits over;
+                // absent from an older save, which loads with nobody injured.
+                new HealthSection(pawns.Pawns),
                 // The sky (design 43 §3): appended, no format bump. A save from before weather has
                 // no section and rolls a sky on its first pass, which is what a new world does.
                 pawns.Weather!,
@@ -202,6 +206,9 @@ namespace Odyssey.Sim.Pawns
                 // The kitchen (design 48 §5): every station's bills and pan. Appended, no format
                 // bump; a save from before the kitchen has no section and loads with no bills.
                 pawns.Kitchen!,
+                // The bullets in the air (design 47 §2c): appended, no format bump. A save from
+                // before guns has no section and loads with nothing in flight.
+                pawns.Projectiles,
             };
         }
 
@@ -236,6 +243,7 @@ namespace Odyssey.Sim.Pawns
         public SaveHeader Load(Stream stream)
         {
             var header = WorldSave.Load(World, stream, SaveComponents);
+            Pawns.Pawns.BackfillSkills(header.FormatVersion);
             RebuildDerived();
             return header;
         }
@@ -250,6 +258,7 @@ namespace Odyssey.Sim.Pawns
         public SaveHeader LoadFromFile(string path)
         {
             var header = WorldSave.LoadFromFile(path, World, SaveComponents);
+            Pawns.Pawns.BackfillSkills(header.FormatVersion);
             RebuildDerived();
             return header;
         }

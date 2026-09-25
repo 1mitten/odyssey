@@ -35,6 +35,12 @@ the next session learns to ignore.
   in or out in view, or birds flying through the camera at the closest zoom. The overlay's **Birds**
   line is the cost: over 0.1 ms is the cue for the GPU path.
 
+- **Does changing a graphics setting still hitch, and is the board seen catching up?**
+  (`claude/mesh-cost`, design 38 §26.) Open Settings → Graphics and flick the Grass ladder, then Ground
+  relief, with the camera over thick meadow; then dig out a row of cells. A board-wide re-mesh now
+  spends at most about 2 ms a frame and takes about a third of a second to finish. Wrong answers: a
+  visible hitch when a setting changes, or chunks of old grass visibly swapping to new a few at a time.
+
 - **Does the new bill list read at a glance, and is anything on it in the way?** (`claude/bills-pane`,
   design 49, stacked on `claude/cooking`.) Click an **Electric Cooker** with no power: the pane is
   wider (680), a warn strip reads **No power** with a green **Switch off** beside it, and the tile's
@@ -63,6 +69,27 @@ the next session learns to ignore.
   into a hillside tunnel: the layer above should still be see-through, as before. A wrong answer is
   a fire that does nothing, a click that selects the ground beside it, or rock drawn solid over a
   tunnel with Walls down off.
+- **Does the Health tab read, and does a hurt colonist get treated?** (`claude/relaxed-heisenberg-zxy63b`,
+  PR #213, design 43, merged with medical supplies §15.) Debug menu > Spawn > Hurt a colonist near a
+  colonist, then open her pane on Health: two columns, a region with a red bar and a warning mark,
+  Bleeding counting hours, Tended 0/1. She should stop what she is doing and lie down (in a bed if
+  there is one) although her bar is still high: a bleeding colonist is a patient. Leave Doctor on
+  for somebody and watch them fetch one box of medical supplies, kneel beside her and treat her: the
+  mark turns to a cross, the hours vanish and her bar fills as they work. Click a region to see its
+  injuries; click again to go back. Then press Hurt on one colonist until she goes down (four presses), and watch
+  that she stays down until the treatment ends and then gets up, with one box gone from the pile.
+  A wrong answer is a tab that clips or scrolls, a figure that overflows its column, a bleeding
+  colonist who carries on working, a doctor who never comes or stands on her, a patient who stands
+  up half-way through her treatment, or a mark drawn as a box.
+- **Is the fight still a fight?** (Same branch, design 43 §14b.) Spawn 3 bandits against armed
+  colonists. With pain shock, people go down at about two thirds of the bar, and a bandit cut with a
+  machete bleeds to death where it lies. A wrong answer is fights over in two blows, colonists
+  dying in fights nobody ordered, or bandits that never go down.
+- **Does a fall hurt the way it should?** (Same branch, design 43 §7.) Build a floor, stand a
+  colonist on it and take out its support: one layer bruises her and she walks on; a longer drop
+  breaks something and three layers put her down. A wrong answer is a miner hurt by stepping into her
+  own dig, or a fall with no injury on the Health tab.
+
 - **Does the selection highlight make it obvious who is selected?** (`claude/selection-highlight`, design 44.)
   Click a colonist, an item, a wall, a tree and a patch of ground. Each should gain a thin white line round its own
   shape and look a touch brighter; the ground gets a pale wash. Then walk a selected colonist behind a wall: a
@@ -566,6 +593,10 @@ the next session learns to ignore.
   but the hurt colonist, supplies to hand, and health below 60: they should treat themselves,
   slowly. Wrong looks like: a doctor carrying the whole pile, a patient walking about with 30
   health, a colonist lying down and getting up on the spot, or nobody fetching the case at all.
+  **Once health (#213) is in, two numbers here move** (design 43 §15): a colonist goes down from
+  pain with about a third of her bar left, so a treatment stands her up at about 75 rather than 40,
+  and she will not then go to bed; and a colonist with a cut lies down for the doctor whatever
+  her bar says, until she is treated.
 
 - **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
   Spawn a bandit, draft two colonists, select both and right-click it: a translucent red ring
@@ -1305,6 +1336,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-25 | **Ranged combat, three rounds** (PR #225, `docs/design/47-ranged-combat.md` §10a–§12): the aim, the shot, the tracer, the sound, then accuracy from a height, weapon quality and the reach rule | working — owner, first play: *"it's really decent and everything seemed to work well"*; after the reach rule: *"great job - just played a big battle"* | the first play raised the accuracy, sent a miss past its target into the ground and landed a hit on the body wherever it stands (§10a); asked for weapon quality (§11) and the reach rule (§12), both built and played in the big battle. Ready to merge. The frame with gunfire (P4) is still unmeasured |
 | 2026-09-25 | **The home area, the hearth and the Assign tab** (PR #214, `docs/design/43-home-area.md`), after the review's five fixes | working — owner: *"it all works get ready to merge in"* | none; ready to merge. The house over the hearth, which the frame test logged hidden, is covered by "it all works" |
 | 2026-09-24 | **Walls down, both rounds** (PR #197, `docs/design/42-walls-down.md`) | working — owner, first look: *"works brilliantly but a few things"*; after the second round: *"excellent - get this ready for merge"* | the first look moved two things (the R / F label went; a lower terrace counts as ground and only upper storeys hide, §3a); ready to merge |
 | 2026-09-24 | **Beating a wall down** (C6, `claude/combat-buildings`, `docs/design/33-combat.md` §13) | working — owner: *"Buildings work fine"* | none. The row's own question, whether a wall reads without a damage bar, was not raised, so none is built. The break-in row (§14b, §14d) stays open: it was built after that playtest |

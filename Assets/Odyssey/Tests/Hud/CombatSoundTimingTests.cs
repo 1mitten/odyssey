@@ -85,6 +85,20 @@ namespace Odyssey.Tests.Hud
             Assert.That(schedule[1].ImpactTick, Is.EqualTo(130));
         }
 
+        /// <summary>
+        /// A shot (design 47 §4c-bis) schedules no cue and sounds nothing through the melee schedule:
+        /// the report is played on the frame of the <c>Shot</c> by the feedback director, and its onset
+        /// is within a frame of the file's first sample, so nothing waits for it.
+        /// </summary>
+        [Test]
+        public void AShotSchedulesNothing()
+        {
+            var schedule = new CombatSoundSchedule();
+            Assert.That(schedule.Hear(Event(CombatEventKind.Shot, 130, A, B, amount: 8, weapon: Bat), Sides(), Colonist),
+                Is.EqualTo(CombatCue.None));
+            Assert.That(schedule.Count, Is.EqualTo(0));
+        }
+
         [Test]
         public void EveryLandedHitThudsOnItsFrameAndAMissOrADodgeDoesNot()
         {

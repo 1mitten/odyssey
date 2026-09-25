@@ -13143,6 +13143,19 @@ few per cent, under, behind or nothing is the ray passing through and never allo
 `SaveProbe` gained a hearth report on the way: every campfire in a save, which is the hearth, the
 ground round each, and what the pane is told when each is clicked.
 
+## 2026-09-25 — What a chunk costs to mesh (design 38 §26)
+
+The owed re-measure of the meshing budget. Two findings. The per-chunk figure the design carried,
+0.43 ms, was the frame's delta shared out over the chunks meshed in it; timed round `Mesh` itself it
+is 0.31–0.43 on Standard, and the part the design suspected, the skin's mesh upload, is 0.003. A
+quarter of it was the ground relief — four sines a point, at the same lattice of centres and corners,
+every re-mesh — so the board's field is now remembered on that lattice, bit for bit, and a chunk is
+23–30 % cheaper. And the average was the wrong number to size a budget on: draining a whole-board
+re-mesh at eleven chunks a frame, the worst frame spent 8.6–12 ms meshing, because the grassy chunks
+near the camera cost about a millisecond each. The budget is milliseconds as well as chunks now, two of
+them, which also stops a count charging a slower laptop more for the same chunks; the worst frame is
+2.8–3.8 ms and a board takes a third of a second rather than a sixth to finish arriving.
+
 
 ## 2026-09-25 — Cooking, interviewed and designed (CK)
 
@@ -13422,3 +13435,184 @@ checked the director, the perch source, `TreeArt` and the EditMode test against 
 planted error was caught, so the check is live. It proves the Unity calls and the C#. It does not
 prove the shader or the bootstrap edit, which only Unity compiles.
 
+## 2026-09-25 — Ranged combat built: the pistol from the contracts to the gunshot
+
+The owner approved design 47 (*"approved - execute"*). Built the same day on `claude/ranged-combat`,
+stacked on PR #220: R0–R4, H1 and P1–P3. R5, R6, P4 and a player build are owed.
+
+**R0 moved every golden once and nothing moved them again.** A seventh skill made the hash see more
+of every colonist; the colony probe on `origin/main` and on the branch was identical on all three
+boards, line for line. Every later unit asserted the goldens and they held. That is the payoff of
+hashing the bullet registry only while something flies, and of putting the new job above
+`HashedAlways`.
+
+**Two of the design's rules would have been wrong in play, and the build changed them** (design 47
+§10). "The intended target on any crossed cell is a certain hit" would have turned most misses into
+hits, because a miss's line to its scatter cell usually crosses the target's own cell. So only a
+shot aimed true takes its target, and the near miss the owner asked to see falls out of that. And a
+colonist standing in the way of another colonist's bullet would have turned on her. She now
+remembers being hit and does not fight back.
+
+**The pistol keeps the sword pack's draw.** The design had keyed the draw off for a computed arc.
+But the pistol holsters at the left hip, and the sword draw from the left hip is a cross-draw,
+which is how a left-hip holster is drawn. An authored clip with its grasp moment already measured
+beats a computed arc; a shot mid-draw cuts it to the hand.
+
+**The catalogue lesson held again.** Rebuilding the module catalogue deleted 3,022 lines, the
+colonists' swatches, before `CharacterSwatches.Classify` put them back. After that the diff was the
+one pistol row. The lessons file already said this; reading the diff stat is what caught it.
+
+**Parallel lanes.** Line of sight (R1) and the tracer, flash and sound (P3) were built by agents in
+their own worktrees while R0–R4 and P1/P2 were built here. Both merged without a conflict. P3 found
+five places where §4c met the code differently, recorded in its §4c-ter. The most useful:
+`AudioImporter.normalize` has no scripting API, so the gunshot's normalise-off is written through
+the importer's serialised form.
+
+## 2026-09-25 — Guns after the first play: more accurate, hits that land, weapon quality
+
+The owner played the pistol: *"really decent and everything seemed to work well"*, but it missed a
+lot from a height, some shots went "way off", and hits did not connect with the target. All three
+had a cause in the code, and design 47 §10a has the table.
+
+**The misses from a height were arithmetic, not geometry.** The reference's curve, raised to the
+distance in cells, is harsh: a level-0 colonist hit 16 per cent at 12.5 m and 2 at 25. Fire at will
+engages anything in range, and a height gives clear lines to far targets, so most shots were long
+shots. The curve is raised; skill still buys the reach.
+
+**The shots going down were the old scatter.** It drew a miss's cell from a box round the target in
+the target's layer, which from a terrace often meant a cell inside the terrace. A miss now carries
+on past its target along its own line and ends where that line first stops.
+
+**Hits not connecting were the "real flight" rule working as designed.** A shot rolled to hit was
+walked to the cell the target stood in when it was fired, so a walking target was missed by most of
+them. The owner's words overrule the design: a shot aimed true now lands on its target wherever it
+stands, and only cover it stepped behind or a body that stepped in front can take it. The streak
+follows the body. Worth recording for the next time "realism" is proposed: the owner judged by what
+they saw, and a rule the player reads as a bug is a bug.
+
+**Weapon quality** was asked for in the same message. It reuses the beds' tiers and roll, with two
+new factors on each tier (damage and hit chance) for every weapon. It is rolled when a weapon is
+made, from a stand-in maker's skill until crafting exists: a find at 6, a bandit's gear at 2. It
+is saved under the format-10 bump this line already makes, and hashed only when set, so no golden
+moved (design 47 §11).
+
+*Sidearm* is *Pistol* now.
+
+## 2026-09-25 — The reach rule: a gun-holder next to an enemy clubs it
+
+The owner saw a pistol outclass a machete at one tile and asked what the reference does. Our own
+research had the answer on file (`a-10-projectile-path` finding 17): an adjacent enemy is fought
+in melee, gun or no gun, with a weak blow every gun carries. The design had departed from it for
+simplicity, recommending point-blank fire, and play showed the cost. Built as design 47 §12: the
+switch has one owner (`CombatSystem.SwapByReach`, after the jobs), an order survives the swap, an
+aim broken by an enemy stepping in is lost with its clock given back, and the gun's blow is data.
+The lesson worth keeping: the research recommended this and the design overrode it without a
+measurement. When a design departs from its own research, say what observation would prove the
+departure wrong. Here it was one tile of play.
+
+## 2026-09-25 — Ranged combat merged with main, and a big battle
+
+The owner played a big battle on the reach rule and said *"great job"*, so the line was made ready
+to merge. Main had moved sixty commits, and three of them took the handles the plan had warned
+were raced: the ranged job is 27, the pistol 17, Shooting 8, after medical supplies, the wild foods and the kitchen. Main had also changed what
+`Reachable` means — it now asks whether a colonist may work there as well as travel — and the
+melee line had already moved to `CanTravel`; the ranged line's two sites followed. The goldens
+moved once more and the colony probe diffs clean against main on every board. Two lessons. The
+textual merge silently dropped the closing tag of the last element in three Def files, because
+both sides appended after it, so resolving an append hunk needs a look at the join and not only
+the hunk. And a catalogue rebuild is not a neutral step: it re-resolved a colonist whose prefab
+name two packs share. The merged asset was already right, so the rebuild was thrown away.
+Design 47 §13.
+## 2026-09-25 — Health designed: six regions over the pool, and a brief for the tab
+
+The owner asked for the health system's basics, planned from what the repo holds, so Claude
+Design could draw the Health tab. Three read-only sweeps grounded it, and the ground was firmer
+than the status line said: `CLAUDE.md`'s "no health model" had been stale since combat C2. There
+is a hit-point pool per pawn, downed at 0 and dead at −50 %, one place that loses it, bed-only
+healing, rescue, a corpse registry and the hooks that mourn a death; two severity bars that slow
+work and never hurt; three fall sites that move a pawn and hand out a memory; twenty-eight
+`ui.health.*` keys with nothing behind them; and a Health tab that reads "73 / 100" in a pane
+whose tab body is a fixed 157 px. `a-02-health.md` had the whole reference model and a fall
+table since 2026-09-16.
+
+**The pool is already the reference's lethal line.** A pool of 100 that kills at −50 is "150
+points of damage is death"; downed at 0 is a coarse pain shock. So the design leaves the pool
+alone — nothing saved, hashed, published or drawn about it moves — and adds where the damage is.
+That was the observation that made six regions cheap: they sit *over* the pool as a checked
+invariant, not under it as a replacement.
+
+Four questions, four answers, every recommendation taken: six regions (head, torso, two arms,
+two legs) rather than a pool with a list of words or the forty-part tree the panel catalogue had
+assumed, which needs a tree control the HUD has not got; bleeding, tending and fall damage in,
+lethal cold and hunger and infection out; the brief reaches the Health tab only; documents
+before code. Design 43 holds the numbers, each cited to a line of `a-02` or marked invented.
+
+Two things worth keeping from the writing. **Afflictions merge by region and kind**, so a person
+carries at most eighteen records whatever the fight was, and the save, the hash, the snapshot
+and the tab's region-clicked state all read a bounded list — a merge rule chosen for the
+interface turned out to be the bound the simulation wanted. And **pain shock at 800 ‰ downs at
+about 64 points where the pool downs at 100**, which will shorten every fight; the soak's
+downs-per-raid before and after is the measurement, and it is the first real lever on the
+owner's open question about four colonists losing to three bandits.
+
+Two corrections came from the code after the plan was approved, and both went into the
+documents rather than being carried: the plan had proposed relabelling Rescue as Doctor to avoid
+a 23rd Work-tab column, and the 22 drawn columns already include Doctor, Rescue and Patient; and
+the plan expected the Medicine skill to bump the save format, when Melee had arrived with none.
+Nothing in the line bumps it.
+
+The brief follows the animals brief's shape and hands Claude Design the pane's real geometry —
+seven 19-px rows in two 256-px columns — with the rule that a taller tab must be a stated
+number, because `InspectTabBody` moves every tab at once. Six states, one file each.
+
+## 2026-09-25 — Health built: the body turns the fight
+
+The owner approved the plan with "implement it", and H1 to H6 went in on the same branch in one
+day, in a cloud container with no Unity. The .NET SDK came from the Ubuntu archive after the
+Microsoft host was refused by the network policy; the fast tier then ran as normal.
+
+**The body sits over the pool, not under it.** Every point a person loses is on a region, and the
+pool is checked against the ledger every hour of the combat gate rather than derived from it, so no
+reader of hit points changed and no golden moved for H1 and H2. Two design decisions moved in the
+build, both recorded in design 43 §14a: a vital region at nought downs rather than kills, because
+design 33's owner rule is that an unordered fight ends in downs; and injuries go out as aspects,
+because nothing in the shared assembly needed to learn what an injury is.
+
+**The measurement design 43 asked for changed the game more than anything else in it.** Before the
+body the colony lost the combat gate on every seed. After it the colony stands on every seed and no
+colonist dies, because pain shock downs bandits a third sooner and a downed bandit cut by a machete
+bleeds out where it lies. That is the owner's to judge; the lever is one number.
+
+**Three combat faults were waiting for a second way to go down** — a death while downed failing the
+downed job, a stunned attacker left standing on a downed target, and a side chosen on the cell a
+stunned colonist was still stepping into. None was in new code. `docs/bug-patterns.md` has the
+pattern: a rule whose "only one way" was an accident of what existed.
+
+**A doctor chasing a colonist on her feet never arrived**, because the shared walk toil clears the
+path when the destination changes. The fix was already in the codebase: the fight's own
+`Melee.ChooseSide` picks a free cell beside somebody and is asked again only when they leave it.
+
+The Health tab was built to the brief's own content ahead of the mockups. Presentation cannot be
+compiled here, so the view was type-checked against stubs of the Unity types it uses; the owner's
+first Unity run is its first real compile, and that is said in every place it could be missed.
+
+## 2026-09-25 — Health merged onto medical supplies: one doctor
+
+While PR #213 waited, `main` shipped design 37 — its own Doctor column, Medicine skill, a box of
+medical supplies and a treatment that heals the pool. The merge conflicted in 31 files and every
+one of them was the same question: two designs, both the owner's, each with its own doctor.
+
+**Main's job is the vehicle and the tend is its last line.** `Job_Treat` was shipped, drawn,
+kneeling and owner-played; the tend is one call. So `Job_Tend`, `Item_Medkit` and the branch's own
+handles went, and nothing the owner approved on either side was lost: +40 under 80 %, the
+cooldown, self-treatment and the patient who goes to bed from 37; the tend at skill × potency and
+"any tend stops every bleed" from 43. The one rule neither had: **a bleeding colonist is a
+patient whatever her pool**, because 37 alone leaves a cut colonist at 88 % to bleed out.
+
+**The merge found two faults in 37's driver** that its ignored test had been hiding — a guard
+asked on every tick of the work it gates (`docs/bug-patterns.md`, the newest entry) — and **two
+collisions no conflict marker showed**: both branches took hash bit 22, and both minted SHA-256's
+eleventh round constant for a random stream, so where a blow landed would have been decided by
+the stream jump's roll. Neither is a textual conflict; both were found by reading what each side
+had claimed from the shared tables. A test that had passed by luck on the old stream said so the
+moment the stream moved. No golden moved.

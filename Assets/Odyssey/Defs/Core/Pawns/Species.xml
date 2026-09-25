@@ -31,6 +31,14 @@
     -->
     <healthPoints>100</healthPoints>
     <deathAtPerMille>-500</deathAtPerMille>
+    <!--
+      Health (docs/design/43-health.md section 2): a person has a body of six regions over the
+      pool. The animals name none and keep the pool alone (section 8).
+    -->
+    <health>Health_Person</health>
+    <!-- A bullet crossing a person's cell takes it 400 times in a thousand before the dead zone
+         (design 47 section 2c): the reference's 40 % at a person's size. -->
+    <interceptPerMille>400</interceptPerMille>
   </SpeciesDef>
 
   <!--
@@ -64,6 +72,9 @@
     <deathAtPerMille>-500</deathAtPerMille>
     <revengePerMille>700</revengePerMille>
     <meleeSkill>6</meleeSkill>
+    <!-- A hog is a bigger body than a person on the line: 500 (design 47, the reference's
+         size scaling). -->
+    <interceptPerMille>500</interceptPerMille>
     <naturalAttack>
       <damage>6</damage>
       <cooldownTicks>150</cooldownTicks>
@@ -102,6 +113,8 @@
     <deathAtPerMille>-500</deathAtPerMille>
     <revengePerMille>50</revengePerMille>
     <meleeSkill>3</meleeSkill>
+    <!-- A rat is hardly there: 40, the reference's floor. -->
+    <interceptPerMille>40</interceptPerMille>
     <naturalAttack>
       <damage>2</damage>
       <cooldownTicks>90</cooldownTicks>

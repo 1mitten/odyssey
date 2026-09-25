@@ -213,6 +213,21 @@ namespace Odyssey.Hud
         /// <summary>The bar's ink, from <see cref="CombatFeedbackModel.HealthBarColour"/>.</summary>
         public HudColour HealthInk = CombatFeedbackModel.HealthGood;
 
+        /// <summary>
+        /// The Health tab's two columns (design 43 §10): the regions and pain, and the pool, the
+        /// capacities, the blood, the bleed and the tend — or a clicked region's injuries.
+        /// </summary>
+        public readonly HealthTab Health = new HealthTab();
+
+        /// <summary>
+        /// "Hurt", "Stunned" or "Downed" for the header's state line, and empty for a colonist who
+        /// is whole (design 43 §10: the condition left the tab for the line beside the job).
+        /// </summary>
+        public string HealthCondition = string.Empty;
+
+        /// <summary>What is in her hand, for the header's state line; empty for bare hands.</summary>
+        public string HealthWeapon = string.Empty;
+
         /// <summary>The Health tab's row labels, by key.</summary>
         public const string HealthKey = "ui.combat.health", ConditionKey = "ui.combat.condition",
             WeaponKey = "ui.combat.weapon";
@@ -371,6 +386,8 @@ namespace Odyssey.Hud
         // strings (review, 2026-09-23).
         public void SetColonist(PawnId id)
         {
+            // Another colonist: the Health tab's clicked region was about the last one.
+            if (Subject != InspectSubject.Colonist || id != Pawn) Health.Reset();
             Subject = InspectSubject.Colonist;
             Pawn = id;
             Thing = ThingId.None;
@@ -561,8 +578,14 @@ namespace Odyssey.Hud
             bool pooled = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpMaxKey, out int max) && max > 0;
             if (!pooled) max = 0;
             int hp = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpKey, out int published) ? published : max;
-            int weapon = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponKey, out int held) ? held : -1;
+            int weaponDef = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponKey, out int held) ? held : -1;
+            int tier = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponQualityKey, out int q) ? q : 0;
+            // The tier rides the cache key: a better weapon of the same kind is a different line.
+            int weapon = weaponDef < 0 ? -1 : weaponDef * 16 + tier;
             int condition = pawn.IsDowned ? 3 : pawn.IsStunned ? 2 : hp < max ? 1 : 0;
+
+            // The body's two columns (design 43 §10), rebuilt only when a number they quote moved.
+            Health.Refresh(snapshot, pawn.Id, hp, max);
 
             if (hp == _healthHp && max == _healthMax && weapon == _healthWeapon && condition == _healthCondition)
                 return;
@@ -591,8 +614,13 @@ namespace Odyssey.Hud
             HealthRows.Add(new InspectRow
             {
                 Name = Registry.Label(WeaponKey),
-                Value = weapon >= 0 ? ItemLabels.Label(weapon) : Registry.Label("ui.combat.barehands"),
+                Value = weaponDef >= 0 ? ItemLabels.Label(weaponDef, tier) : Registry.Label("ui.combat.barehands"),
             });
+
+            // The header's line carries these now (design 43 §10); the rows above stay the one place
+            // they are worded, so the words cannot drift apart.
+            HealthCondition = condition == 0 ? string.Empty : HealthRows[0].Value;
+            HealthWeapon = weapon >= 0 ? HealthRows[1].Value : string.Empty;
         }
 
         /// <summary>Thousandths to whole points, up to the next one: on her feet is never "0". Nought below it.</summary>
@@ -760,7 +788,7 @@ namespace Odyssey.Hud
                     // headline is "Wood × 27" and the line below says where it is lying.
                     Title = thing.Stack > 1
                         ? ItemLabels.Label(thing.DefIndex) + " × " + thing.Stack
-                        : ItemLabels.Label(thing.DefIndex);
+                        : ItemLabels.Label(thing.DefIndex, thing.Quality);
                     Subtitle = "item";
                     Stack = thing.Stack;
                     ItemIconKey = ItemLabels.IconKey(thing.DefIndex);

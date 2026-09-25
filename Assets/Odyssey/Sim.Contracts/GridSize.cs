@@ -53,6 +53,19 @@ namespace Odyssey.Sim.Contracts
             return new CellRef(x, z, y);
         }
 
+        /// <summary>
+        /// A cell's width and depth on the ground, in millimetres: ADR 0002's 2.5 m, fixed and
+        /// irreversible. <b>The simulation's one owner of the cell size</b> (design 47 §3a): until
+        /// the pistol nothing simulated needed a metre, because every rule spoke in cells, and a
+        /// shot's fall-off is the first that does (<c>RangedGeometry</c>). Presentation's
+        /// <c>CellMetrics.SizeXZ</c> is the same number in metres, and
+        /// <c>CellSizeHasOneOwnerTests</c> fails the day the two disagree.
+        /// </summary>
+        public const int CellSizeXZMm = 2500;
+
+        /// <summary>A cell's height, one storey, in millimetres: ADR 0002's 3.0 m. See <see cref="CellSizeXZMm"/>.</summary>
+        public const int CellSizeYMm = 3000;
+
         /// <summary>The scale target from the brief: a 625 m square district, forty layers deep.</summary>
         public static GridSize ScaleTarget => new GridSize(250, 250, 40);
 

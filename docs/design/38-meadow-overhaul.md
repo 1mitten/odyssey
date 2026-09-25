@@ -1470,3 +1470,70 @@ loading screen with stages. Nothing compiles after the hand-over, so there is no
 - The colonist figures are the largest part of the first world submit (100–160 ms). Behind the cover
   now, but the obvious place to look if the wait grows.
 - `-odyssey-newgame` (the test path) has no start screen to hold, so it still shows its first frames.
+
+## 26. What a chunk costs to mesh, and a budget in milliseconds (2026-09-25)
+
+§20d owed it: the skin took a chunk's meshing from about 0.2 ms to "0.43", and the eleven-chunk
+budget (`06-rendering-and-camera.md` §6c.7) had been sized on 0.18.
+
+### 26a. Measured by part
+
+`FrameTimeTests.TheMeshingByPart` (Explicit): the played meadow, a whole-board re-mesh with the budget
+off, timed by the renderer's own stopwatch round `ChunkMesher.Mesh` and the ground-field refresh —
+not the frame's delta shared out, which is where 0.43 came from and which overstated it — and the
+mesher's own phases (a few timestamps a chunk, never one a cell). Then each part left out in turn
+(`ChunkMesher.SkipForMeasure`, a measurement seam) and priced by its absence. Three rounds, the lowest
+kept, all in one world. RTX 5070 Ti, two editors open elsewhere on the machine:
+
+| Standard, a chunk | before | after the memo |
+|---|---|---|
+| whole | 0.314–0.429 ms | 0.288–0.329 ms |
+| set-up (corner relief, bucket indexes) | 0.062–0.079 | 0.021–0.022 |
+| the cell walk | 0.229–0.317 | 0.238–0.273 |
+| of which terrain | ~0.11 | ~0.11 |
+| of which tufts / dressing | ~0.035 / ~0.035 | same |
+| grass sort, skin build, field refresh, regather | ≤0.02 each | same |
+
+Huge is the same shape, about a fifth dearer a chunk (0.40 against 0.52 with the memo off, in one
+run). **The mesh upload the design suspected is nothing**: the skin build is 0.003–0.010 ms.
+
+### 26b. The relief remembered on the half-cell lattice
+
+The set-up was the ground relief: 676 corner heights a chunk, each a sum of four sines, recomputed on
+every re-mesh — and every drape in the cell walk (a cell's centre, a face's) is a height and a
+gradient at the same few points, again. They never change while the amplitude and the wavelength
+do not. `GroundRelief` now remembers the board's field at every multiple of 1.25 m it is asked for
+(`MemoEnabled`, `Lattice`): **bit for bit** what it replaces, computed by the same function from
+the same floats the first time and handed back after; exact lattice points only (a tuft at a hashed
+offset still computes); the board's field only (the surround's hills ask at another amplitude and
+never touch it); filled lazily, keyed on amplitude and period. **−0.08 to −0.12 ms a chunk, 23–30 %**,
+measured against the memo switched off in the same run.
+
+### 26c. The budget is milliseconds as well as chunks
+
+`ChunkRenderer.MeshBudgetMs`, 2.0 by default, beside the count of eleven; whichever is reached first
+ends the frame's meshing, and one chunk is always meshed so a board always finishes. A count charges
+a slower machine more — the RTX 3050/3060 laptop the Low preset is held to would pay the most for the
+same eleven — and the average hides the chunks that matter: **draining a whole-board re-mesh with the
+count alone, the worst frame spent 8.6–12.0 ms meshing** (the thick meadow near the camera is about
+a millisecond a chunk), where the mean said 3.3. With the time as well:
+
+| a whole-board re-mesh draining | frames | worst frame | mean |
+|---|---|---|---|
+| Standard, 11 chunks | 9 | 11.0–12.0 ms | 3.0–3.1 ms |
+| Standard, 11 chunks or 2 ms | 14–15 | 2.8–3.3 ms | 1.8–2.0 ms |
+| Huge, 11 chunks | 11 | 8.6–9.3 ms | 3.7 ms |
+| Huge, 11 chunks or 2 ms | 19–21 | 3.5–3.8 ms | 2.1 ms |
+
+The worst frame is still over two milliseconds by one chunk, because the clock is asked before a
+chunk and not during one. The price is the drain: a re-meshed board finishes arriving in about a
+third of a second at 60 fps rather than a sixth. `MeshBudgetTests.AFrameStopsMeshingWhenItsMillisecondsAreSpentButAlwaysMeshesOne`
+holds the rule. Neither limit applies while the count is off, which is how every measurement that
+re-meshes a whole board in one frame says so.
+
+### 26d. Not done
+
+- The terrain walk is still the largest part (~0.11 ms a chunk on Standard): neighbour scans — the
+  bank and bed checks, the skin-top test, the open-sky column walk, the exposed-face test — each
+  cheap, none worth an afternoon alone. The next step there is a profiler, not a guess.
+- The tufts and dressing lift each clump onto the relief at a hashed offset, off the lattice.

@@ -528,7 +528,9 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void FitWeaponBothWays(Figure figure, Transform prop)
         {
-            FitWeapon(figure, prop);
+            // A gun is held by its grip, not its butt (design 47 §4a).
+            if (figure.IsGun) FitPistol(figure, prop);
+            else FitWeapon(figure, prop);
             figure.WeaponHandPosition = prop.localPosition;
             figure.WeaponHandRotation = prop.localRotation;
             figure.WeaponAtHip = false;
@@ -737,6 +739,8 @@ namespace Odyssey.Presentation.World
 
             // A blow, a reaction or a held state takes the whole body: the draw or sheathe is done at once.
             if (figure.SheathAction != SheathChange.None && fight.Action != CombatRole.None) StopSheath(figure);
+            // So does a shot mid-draw (design 47 §4b): the gun is never seen firing from the hip.
+            if (figure.SheathAction == SheathChange.Draw && figure.FiredThisFrame) StopSheath(figure);
 
             CombatClipEntry? playing = figure.SheathClip;
             AnimationClip? animation = playing != null ? playing.clip : null;

@@ -29,6 +29,7 @@ namespace Odyssey.Sim.Pawns
             Reservations = new ReservationManager();
             Pawns = new PawnRegistry(this);
             Corpses = new CorpseRegistry(cells.Size, content);
+            Projectiles = new Projectiles(cells.Size);
         }
 
         // ---- the fight's seams (design 33 §5) ---------------------------------------------------
@@ -44,6 +45,9 @@ namespace Odyssey.Sim.Pawns
         /// <summary>What a pawn swings with, and whether it may take a weapon up (lane D).</summary>
         public IWeaponRules WeaponRules { get; set; } = new WeaponRules();
 
+        /// <summary>Whether a shot is aimed true, how hard, where a miss goes (design 47). Settable so a test or a mod can swap it.</summary>
+        public IRangedRules RangedRules { get; set; } = new RangedRules();
+
         /// <summary>Damage, downed and died, heard by whoever registered (C3, C4, C5).</summary>
         public CombatHooks CombatHooks { get; } = new CombatHooks();
 
@@ -55,6 +59,9 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>What is left of each struck building (C6). Saved and hashed while there is any.</summary>
         public EdificeDamage EdificeDamage { get; } = new EdificeDamage();
+
+        /// <summary>Every bullet in flight (design 47 §2c). Saved, and hashed while there is any.</summary>
+        public Projectiles Projectiles { get; }
 
         /// <summary>The fight's own pass, when the world has one. Null in a bare pawn fixture.</summary>
         public CombatSystem? Combat { get; set; }
@@ -283,6 +290,16 @@ namespace Odyssey.Sim.Pawns
         {
             if (World == null) throw new System.InvalidOperationException("no world is being ticked");
             World.Defer(action);
+        }
+
+        /// <summary>
+        /// <see cref="Defer"/>, but inside the deferred phase it runs this tick
+        /// (<see cref="SimWorld.DeferThisTick"/>): a death that happens during a collapse.
+        /// </summary>
+        public void DeferThisTick(System.Action<SimWorld> action)
+        {
+            if (World == null) throw new System.InvalidOperationException("no world is being ticked");
+            World.DeferThisTick(action);
         }
 
         internal void Sync(SimWorld world)

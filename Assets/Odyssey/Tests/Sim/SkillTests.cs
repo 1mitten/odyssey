@@ -90,6 +90,9 @@ namespace Odyssey.Tests.Sim
                     "medicine",
                     // The kitchen (design 48): SkillCatalogue's cooking row went live with it.
                     "cooking",
+                    // The ranged line's contracts step (design 47 §3a): SkillCatalogue's shooting
+                    // row went live in the same commit, and SkillCatalogueTests with it.
+                    "shooting",
                 }),
                 "the simulation's skills have changed. A skill that trains is a skill the " +
                 "colonist pane must stop calling unavailable: add or remove the matching live " +
