@@ -12657,3 +12657,22 @@ birds step back under all of it, most in a storm. Every number is invented and s
 
 **Not built:** the rain drumming on a roof. The listener is the camera, which is always outside,
 so it isn't obvious what "indoors" should mean to the ear. A playtest should decide that.
+
+## 2026-09-25 — M11: first use, measured, and the frame the world appears
+
+d-16 said measure before building any warm-up, so a scripted tour went into the development player:
+the first of everything a new colony meets, each frame over 33 ms logged with its step and the shader
+variants the driver was handed. **After the world is up, nothing hitches and nothing compiles** — so
+no state collection, no variant warm-up and no staged loading screen were built.
+
+The first reading misled. Started with `-odyssey-newgame`, the tour began in the same `Start` that
+builds the world, so its 1.6 s "frame 2" was the player's own start-up. Pressing New game from the
+title screen, inside the tour, showed the real shape: the frozen setup page while the world is built,
+then a **102.5 ms frame the instant the world appeared** — 6 ms of it submission, the rest the driver
+meeting the world for the first time. Curtain frames fix exactly that, and the first version of them
+taught something: holding the start screen and handing over late moved the interface's first layout
+onto the reveal (43 ms). The fix is a cover — the starfield, top-most — over a hand-over that happens
+when the world is built. The player now sees 5.6, 3.8, 5.3 ms.
+
+The one hitch in play was a grass rung: 58 and 38 ms, because it rebuilt the whole surround to change
+its tufts. It re-strews the tufts alone now. Design 38 §25.

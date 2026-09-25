@@ -296,6 +296,22 @@ namespace Odyssey.Sim.Pawns
         // state nor a second copy of who is asleep.
         readonly List<Pawn> _woken = new List<Pawn>();
 
+        /// <summary>
+        /// Does the job loop hold this pawn's driver on <paramref name="tick"/> — not tick it, not
+        /// end its job, not think for it? Three things hold it, all in <see cref="TickPawn"/>:
+        /// landing a step an order interrupted (design 33 §2d), a stun (§4 C3, §5c: a pause, not an
+        /// interrupt, so a drafted colonist keeps the player's order) and a knock-down (§9b). <b>The
+        /// one owner of that rule</b>: the job loop asks it, and so does anything that has to know
+        /// whether a driver could have acted — the combat gate's "an attacker on a target already
+        /// gone" counts only ticks the driver was free to notice (2026-09-25; a stunned colonist
+        /// whose target went down read as a stall for the length of the stun).
+        /// </summary>
+        public static bool HoldsDriver(Pawn pawn, int tick) =>
+            (pawn.FinishingStepTo >= 0 && LandingStep(pawn)) || pawn.StunnedAt(tick) || pawn.KnockedDownAt(tick);
+
+        /// <summary>Still part way through the step an order interrupted.</summary>
+        static bool LandingStep(Pawn pawn) => pawn.HasPath && pawn.Cell != pawn.FinishingStepTo;
+
         void TickPawn(Pawn pawn, int tick)
         {
             if (pawn.BreakTicksLeft > 0)
@@ -324,11 +340,7 @@ namespace Odyssey.Sim.Pawns
             // the stance she happens to be on — would otherwise start while the figure was still
             // stepping away. The mover clears the mark on arrival; this is the backstop for a
             // step that was dropped by something else.
-            if (pawn.FinishingStepTo >= 0)
-            {
-                if (pawn.HasPath && pawn.Cell != pawn.FinishingStepTo) return;
-                pawn.FinishingStepTo = -1;
-            }
+            if (pawn.FinishingStepTo >= 0 && !LandingStep(pawn)) pawn.FinishingStepTo = -1;
 
             // A stun holds the pawn where it is (design 33 §4 C3, §5c): its job neither ticks nor
             // ends, and it does not think. So a stunned hauler keeps her load, a sleeper his bed and
@@ -340,7 +352,7 @@ namespace Odyssey.Sim.Pawns
             // where the blow put it. The knockback already ended its job, so there is nothing to
             // pause; what this holds back is the tree, which would otherwise give it a job — and
             // an order given meanwhile starts, and waits here until it stands.
-            if (pawn.StunnedAt(tick) || pawn.KnockedDownAt(tick)) return;
+            if (HoldsDriver(pawn, tick)) return;
 
             // A colonist set to Defend or Flee (design 33 §18d) notices a fight or danger near her
             // while she works: the tree runs only between jobs, and a colonist felling a tree would

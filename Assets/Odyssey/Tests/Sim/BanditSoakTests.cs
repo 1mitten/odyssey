@@ -302,7 +302,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(onBoard + dead + departed, Is.EqualTo(ids.Count), "a bandit is unaccounted for");
             Assert.That(midway, Is.Not.Null, "the saved raid never swung, so nothing was saved mid-fight");
             Assert.That(resumed, Is.EqualTo(original), "a save taken mid-raid did not resume the same");
-            Assert.That(longestStale, Is.LessThanOrEqualTo(1), "a bandit stood on Fighting at a target already gone");
+            Assert.That(longestStale, Is.LessThanOrEqualTo(1), "an attacker, bandit or colonist, stayed on Fighting at a target already gone while nothing held its job");
             // The same stand at a colonist is printed and not held to a bound: a bandit that can get
             // no side of her queues a ring back (design 33 §7c), which §19d measured at 2,506 ticks and
             // left, by design, for the owner. Read 95 on all three seeds when this was written.
@@ -340,7 +340,14 @@ namespace Odyssey.Tests.Sim
                     gone = target == null || Melee.IsDead(target)
                         || (target.Downed && pawn.CurrentJob!.DestCell != AttackMeleeJobDriver.ToTheDeath);
                 }
-                int run = gone ? (stale.TryGetValue(id, out int s) ? s + 1 : 1) : 0;
+                // Only ticks the driver is free to notice: CurrentTick is the tick the next job loop
+                // runs, and a driver it holds — stunned, knocked down, landing a step — neither ticks
+                // nor ends its job (design 33 §5c: a stun is a pause, not an interrupt). Counting
+                // those read a stunned colonist whose target went down as a 109-tick stall, on one
+                // seed in three whenever the random stream moved (2026-09-25). The rule is the job
+                // system's own, not a copy of it.
+                int held = stale.TryGetValue(id, out int s) ? s : 0;
+                int run = !gone ? 0 : JobSystem.HoldsDriver(pawn, tick) ? held : held + 1;
                 stale[id] = run;
                 if (run > longestStale) longestStale = run;
 
