@@ -23,6 +23,15 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the selection highlight make it obvious who is selected?** (`claude/selection-highlight`, design 44.)
+  Click a colonist, an item, a wall, a tree and a patch of ground. Each should gain a thin white line round its own
+  shape and look a touch brighter; the ground gets a pale wash. Then walk a selected colonist behind a wall: a
+  fainter line should show through. Settings →
+  Interface → *Selection style* → Brackets brings the old cursor back. **Second look (2026-09-25):**
+  box-select a group — every colonist should have the same full white outline, none faded or washed,
+  and none brightened; click one of them and that one alone brightens. Read the overlay's `gpu` line at 4K with
+  and without a selection. A wrong answer is a line you have to hunt for, a colonist who looks bleached, a
+  selection you lose indoors, or `gpu` moving by more than a few tenths of a millisecond.
 - **The scenery made real** (design 45, `claude/meadow-forage` on `claude/meadow-nature`). New game
   on the meadow. Look for: a felled tree going over away from its cutter and sinking; bushes you can
   walk through but that slow a colonist; *Chop and clear* over a bush, then a wall there; a berry
@@ -48,6 +57,36 @@ the next session learns to ignore.
   game days, skipping days with the debug menu: the sky should change by itself, mostly clear in
   Glare, showery in Wash, grey in Rime, with the clock's glyph following. A wrong answer is a sky
   that never changes, one that flips at midnight, or a storm every other day.
+- **Does the rain touch the world?** (`claude/weather-world`, design 43 §6a.) New game, backtick
+  > Weather > Downpour, and watch at normal speed:
+  - Colonists crossing open ground should walk visibly slower in the rain and at their usual pace
+    under a roof or under a tree.
+  - A field in the open should ripen faster than one under a roof. *Ripen crops* is no help here;
+    let the days run.
+  - Animals in the open should head for the nearest trees within a few seconds. Fell the tree one
+    stands under and it should get up and go to another.
+
+  A wrong answer is:
+  - a colonist slowed under a roof, or one who is not slowed at all in the open;
+  - an animal sheltering from a drizzle (the gate is 400 per mille), or one that stands in the rain
+    beside a tree it could reach;
+  - an animal still standing where its tree was, a minute after the tree is gone.
+
+  Also say whether a tenth off the walking pace is too little to notice.
+
+  **And listen** (the rain's sound, design 43 §7a). Weather tab, from Clear through Drizzle,
+  Rain, Downpour and Storm, a few seconds apart:
+  - Drizzle should be a light patter.
+  - Rain should thicken into a roar with no seam you can hear.
+  - A storm should be the loudest.
+  - The birds should fall back as the rain grows.
+  - Leave Downpour running for two minutes: neither loop should be heard to repeat or click.
+
+  A wrong answer is:
+  - a jump in level between two presses;
+  - a click, a breath or a recognisable moment every 40 or 80 seconds;
+  - rain still audible after the slice has gone underground;
+  - birds as loud in a storm as on a clear day.
 - **Do the bat and the crowbar only swing?** (`claude/blunt-swings`, design 33 §22.) Debug menu >
   Spawn 3 bandits, arm a colonist with a bat and another with a crowbar (*Arm every colonist*, or
   right-click > Equip), draft them and order attacks. Watch several blows in a row: each should be

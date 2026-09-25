@@ -65,6 +65,11 @@ namespace Odyssey.EditorTools
             // The power lines (design 32 §9), drawn over everything. Found by name like the rest.
             "Odyssey/PowerLine",
 
+            // The selection highlight (design 44): its mask and its composite, both found by
+            // name from the renderer feature. Without them a player falls back to the brackets.
+            "Odyssey/SelectionMask",
+            "Odyssey/SelectionComposite",
+
             // Meadow foliage (design 38 §4). Without it a player strips the shader and the cache
             // falls back to the pack's own, so the meadow draws but its wind runs on wall time.
             "Odyssey/Foliage",

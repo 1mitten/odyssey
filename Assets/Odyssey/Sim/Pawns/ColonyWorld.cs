@@ -311,6 +311,12 @@ namespace Odyssey.Sim.Pawns
             // changes nothing there.
             _nav.MarkAllDirty();
             _nav.Rebuild();
+
+            // The sky map is derived from the grid, and a load writes the grid wholesale without
+            // telling the chunk grid a thing: rebuilt whole (design 43 §6). Now, so a board-wide
+            // walk is paid inside the loading rather than on the first tick that asks.
+            Pawns.Sky?.MarkAllDirty();
+            Pawns.Sky?.Sync();
         }
 
         /// <summary>
@@ -323,7 +329,8 @@ namespace Odyssey.Sim.Pawns
         /// natural generator with hills, rock and ore.</param>
         /// <param name="chunks">The presentation chunk grid, when a renderer will be attached, so
         /// the support system and the jobs that edit the world can mark chunks dirty. Null for a
-        /// purely headless run.</param>
+        /// purely headless run, which then gets one of its own: the sky map hears edits through it
+        /// (design 43 §6).</param>
         /// <param name="mapType">Natural by owner instruction, which is what the scene loads. The
         /// ruined city is still generated and still tested (ADR 0008), and is what the M2 demo
         /// needs, because it is the only map with storeys to climb between.</param>
@@ -397,7 +404,10 @@ namespace Odyssey.Sim.Pawns
 
             GridSize size = request.Size;
             uint seed = request.Seed;
-            ChunkGrid? chunks = request.Chunks;
+            // A world without a renderer still needs the chunk grid: it is how the sky map hears
+            // which columns an edit touched (design 43 §6), and a headless run that never heard
+            // would keep a felled tree's shade for ever and disagree with the played game.
+            ChunkGrid chunks = request.Chunks ?? new ChunkGrid(size);
 
             MapGenDef gen = DefFor(request.Map, size, request.Barren, request.Wooded, request.SurfaceRelief);
             if (!request.Wildlife)

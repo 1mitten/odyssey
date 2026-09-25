@@ -315,6 +315,7 @@ namespace Odyssey.Sim.Pawns
         public Pawn Adopt(Pawn pawn)
         {
             pawn.DriverPool = BuildDrivers();
+            pawn.Context = _ctx;
             _byId[pawn.Id.Value] = _pawns.Count;
             _pawns.Add(pawn);
             if (pawn.Id.Value >= _nextId) _nextId = pawn.Id.Value + 1;
@@ -798,6 +799,7 @@ namespace Odyssey.Sim.Pawns
             {
                 var pawn = new Pawn(new PawnId(reader.ReadInt()), reader.ReadInt(), _ctx.Content);
                 pawn.DriverPool = BuildDrivers();
+                pawn.Context = _ctx;
 
                 int needCount = reader.ReadInt();
                 for (int n = 0; n < needCount; n++)

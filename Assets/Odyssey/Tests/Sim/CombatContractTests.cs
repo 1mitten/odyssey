@@ -192,7 +192,7 @@ namespace Odyssey.Tests.Sim
         public void TheAnimalAndHostileMindsHaveTheirSeamsInOrder()
         {
             Assert.That(JobSystem.AnimalMind.Select(n => n.Name),
-                Is.EqualTo(new[] { "Downed", "AnimalCombat", "AnimalIdle" }));
+                Is.EqualTo(new[] { "Downed", "AnimalCombat", "AnimalShelter", "AnimalIdle" }));
             Assert.That(JobSystem.HostileMind.Select(n => n.Name),
                 Is.EqualTo(new[] { "Downed", "Hostile", "Idle" }));
         }

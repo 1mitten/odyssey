@@ -81,6 +81,23 @@ namespace Odyssey.Presentation.World
             }
         }
 
+        /// <summary>
+        /// The door cell whose leaf the selection highlight wants this frame, or -1 (design 44 §3).
+        /// Set before <see cref="Sync"/>; the leaf is caught where it is drawn, open or shut.
+        /// </summary>
+        public int CaptureCell { get; set; } = -1;
+
+        Matrix4x4 _captured;
+        bool _hasCaptured;
+
+        /// <summary>The captured leaf's module and placement, when it was drawn this frame.</summary>
+        public bool TryGetCapturedLeaf(out ResolvedModule? module, out Matrix4x4 placement)
+        {
+            placement = _captured;
+            module = _hasCaptured && _leafModule != 0 ? _library[_leafModule] : null;
+            return module != null && !module.IsEmpty;
+        }
+
         public float OpenFactor(int cellIndex) =>
             _states.TryGetValue(cellIndex, out DoorState s) ? s.OpenFactor : 0f;
 
@@ -102,6 +119,7 @@ namespace Odyssey.Presentation.World
         {
             EnsureDoorList();
             _placementCount = 0;
+            _hasCaptured = false;
 
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model.LowestOutdoorLayer));
             int highest = slice.HighestVisibleLayer(activeLayer, _model.Size.SizeY);
@@ -165,6 +183,7 @@ namespace Odyssey.Presentation.World
                 Matrix4x4 placement = root * Matrix4x4.Translate(slide);
 
                 AppendPlacement(placement);
+                if (cellIndex == CaptureCell) { _captured = placement; _hasCaptured = true; }
             }
 
             SubmitPlacements();
