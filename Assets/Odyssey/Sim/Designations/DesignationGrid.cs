@@ -23,6 +23,12 @@ namespace Odyssey.Sim.Designations
 
         /// <summary>Cut a tree down for wood. Only on a tree.</summary>
         Fell = 3,
+
+        /// <summary>
+        /// Pick a ripe berry bush (design 45 §6). One picking and the order is done; the bush grows
+        /// its berries back and waits for the next.
+        /// </summary>
+        Harvest = 4,
     }
 
     /// <summary>
@@ -188,6 +194,7 @@ namespace Odyssey.Sim.Designations
             return kind switch
             {
                 DesignationKind.Fell when IsFellable(above) => above,
+                DesignationKind.Harvest when IsRipeBerryBush(above) => above,
                 DesignationKind.Deconstruct when CanDeconstruct(above) => above,
                 _ => index,
             };
@@ -218,6 +225,8 @@ namespace Odyssey.Sim.Designations
                     return CanDeconstruct(index);
                 case DesignationKind.Fell:
                     return IsFellable(index);
+                case DesignationKind.Harvest:
+                    return IsRipeBerryBush(index);
                 default:
                     return false;
             }
@@ -326,6 +335,10 @@ namespace Odyssey.Sim.Designations
         /// the work and the yield are the plant's own, read off its Def by the driver.
         /// </summary>
         public bool IsFellable(int index) => TryEdificeDef(index, out ushort def) && NaturalContent.IsNatural(def);
+
+        /// <summary>A berry bush with its berries on: what the Harvest order may name.</summary>
+        public bool IsRipeBerryBush(int index) =>
+            TryEdificeDef(index, out ushort def) && def == NaturalContent.EdificeBerryBush;
 
         /// <summary>The wild plant standing here, or null. What the fell driver works and yields by.</summary>
         public WildPlantDef? WildPlantAt(int index) =>
@@ -437,7 +450,7 @@ namespace Odyssey.Sim.Designations
         /// <summary><c>Designate(cell, A = kind)</c>.</summary>
         public IntentRejection HandleDesignate(Intent intent)
         {
-            if (intent.A <= 0 || intent.A > (int)DesignationKind.Fell) return IntentRejection.NotPermitted;
+            if (intent.A <= 0 || intent.A > (int)DesignationKind.Harvest) return IntentRejection.NotPermitted;
             return Designate(intent.Cell, (DesignationKind)intent.A);
         }
 

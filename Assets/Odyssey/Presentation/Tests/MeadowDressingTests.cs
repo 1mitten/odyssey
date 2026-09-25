@@ -118,7 +118,9 @@ namespace Odyssey.Tests.Presentation
                 if (MeadowDressing.SmallPiece(x, z, 2, 1f, nearRock: true) == MeadowDressing.Kind.Rock) near++;
                 if (MeadowDressing.SmallPiece(x, z, 2, 1f, nearRock: false) == MeadowDressing.Kind.Rock) far++;
             }
-            Assert.That(near, Is.GreaterThan(far * 5), $"{near} stones by rock against {far} in open meadow");
+            // The loose stones are the simulation's now (design 45 §6): stacks of stone at these
+            // spots, drawn as the heap they are. The dressing draws none of its own.
+            Assert.That(near + far, Is.Zero, "the dressing strews no stones of its own");
         }
     }
 }

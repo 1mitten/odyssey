@@ -172,6 +172,7 @@ namespace Odyssey.Sim.Pawns
         public const int Equip = JobHandle.Equip;
         public const int Rescue = JobHandle.Rescue;
         public const int Steal = JobHandle.Steal;
+        public const int Forage = JobHandle.Forage;
         public const int Count = JobHandle.Count;
     }
 
@@ -603,6 +604,8 @@ namespace Odyssey.Sim.Pawns
         public const int Crowbar = ItemHandle.Crowbar;
         public const int Machete = ItemHandle.Machete;
         public const int ArcBlade = ItemHandle.ArcBlade;
+        public const int Berries = ItemHandle.Berries;
+        public const int Mushrooms = ItemHandle.Mushrooms;
         public const int Count = ItemHandle.Count;
     }
 
@@ -1329,7 +1332,9 @@ namespace Odyssey.Sim.Pawns
                 // The combat line, claimed together by its contracts step (design 33 §5).
                 "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue",
                 // A bandit carrying something off the board (design 33 §17).
-                "Job_Steal");
+                "Job_Steal",
+                // Picking a berry bush (design 45 §6), appended.
+                "Job_Forage");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",
@@ -1348,7 +1353,9 @@ namespace Odyssey.Sim.Pawns
                 // (docs/design/22-growing.md §2).
                 "Item_Carrots",
                 // The four melee weapons (design 33 §1, C3), appended together.
-                "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade");
+                "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade",
+                // The wild foods (design 45 §6), appended together.
+                "Item_Berries", "Item_Mushrooms");
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");
             content.Break = One<MentalBreakDef>(defs, "Break_Wander");

@@ -49,6 +49,8 @@ namespace Odyssey.Hud
             // A bandit carrying something off the board (design 33 §17), JobHandle 22. With a
             // load in its arms the line reads "Stealing · Meal × 12" by Carrying below.
             "ui.status.stealing",
+            // Picking a berry bush (design 45 §6), JobHandle 23.
+            "ui.status.foraging",
         };
 
         public static string IconKey(int jobDef) =>

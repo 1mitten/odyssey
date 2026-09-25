@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-47 entries, 29 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+48 entries, 30 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -53,6 +53,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Chopping** | `ui.status.felling` | Cutting a tree down for wood <br>**Needs:** an axe swung at a trunk | no art | M3 |
 | **Sowing** | `ui.status.sowing` | Breaking ground and planting a zone cell | no art | M3 |
 | **Harvesting** | `ui.status.harvesting` | Cutting a ripe crop and gathering it | no art | M3 |
+| **Picking** | `ui.status.foraging` | Picking the berries off a wild bush <br>**Needs:** a hand picking a berry | no art | M3 |
 | **Refuelling** | `ui.status.refuelling` | Carrying fuel to a generator and filling it | no art | M3 |
 | **Sleeping** | `ui.status.sleeping` | Asleep, and should stay that way | sheet 08 (salvage gear), high | M2 |
 | **Eating** | `ui.status.eating` | Taking a meal | sheet 02 (food), high | M2 |

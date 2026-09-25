@@ -140,6 +140,11 @@ namespace Odyssey.Presentation.Rendering
             // call ours: twelve drawn, seventy-five stacked, the same limit as wood and stone).
             // Carried as the rubble armful, which three cradled carrots read as naturally.
             new Recipe(1, Most, 12, 0.45f, 0.18f, lyingDown: true),   // carrots
+            null, null, null, null,                      // the four weapons
+            // The wild foods (design 45 §6), heaped like carrots: a picking of eight draws as
+            // eight clusters, and a store square holds at twelve.
+            new Recipe(1, Most, 12, 0.45f, 0.20f),       // berries
+            new Recipe(1, 6, 12, 0.50f, 0.25f),          // mushrooms
         };
 
         /// <summary>Whether this item kind is drawn as scattered rubble at all.</summary>

@@ -505,8 +505,16 @@ namespace Odyssey.Tests.Sim
             // 2026-09-25, both at once on merging main into the scenery line: the bushes' wander
             // price and the stream jump together. Re-taken from the merged code, not adopted from
             // either side; the probe against main is in the merge commit's message.
-            Generated = 15825491946805197463UL,
-            Simulated = 14569220115774448341UL,
+            // 2026-09-25 again, M13 (design 45 §6): the map lays its loose stones and first
+            // mushrooms - 680 stone in 136 stacks and 89 mushrooms in 22, by the probe - and one
+            // more stack of mushrooms came up in the ten thousand ticks. Every colonist number is
+            // the M5 run's to the digit (cells, food, rest, mood, progress, the 95 wanders): the
+            // colony has no store, so nobody carried a stone, and nobody was hungry enough to
+            // walk to a mushroom. The bare meadow and the city did not move.
+            // Both lines together, 2026-09-25: M13's stones and mushrooms on the merged M5-and-jump
+            // board; re-taken from the merged code.
+            Generated = 4420052086884279926UL,
+            Simulated = 2076346992943437312UL,
         };
 
         /// <summary>

@@ -142,6 +142,10 @@ namespace Odyssey.Sim.Pawns
             // it would have a Power category whose every tool silently did nothing.
             var power = new Power.PowerGrid(pawns.Cells, edifices);
             pawns.Power = power;
+            // The wild between orders (design 45 §6). It swaps edifice kinds in place, so it holds
+            // the same list the construction grid and the save section do.
+            var nature = new NatureSystem(pawns, edifices);
+            pawns.Nature = nature;
             construction.Power = power;
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
             builder
@@ -202,6 +206,7 @@ namespace Odyssey.Sim.Pawns
                 .AddSystem(_ => power)
                 .AddSnapshotContributor(power)
                 .AddTickable(_ => new SkillSystem(pawns))
+                .AddTickable(_ => nature)
                 .AddTickable(_ => pawns.Pawns)
                 // The dead and the struck buildings (design 33 §5): hashed only while either holds
                 // anything, so their registration moves no golden. Beside the pawns because the

@@ -30,6 +30,8 @@ namespace Odyssey.Sim.Worldgen.Natural
         const uint SaltField = 0xB0C1u;
         const uint SaltBush = 0x7C1Fu;
         const uint SaltBerry = 0x5B3Du;
+        const uint SaltRock = 0x19D5u;
+        const uint SaltMushroom = 0x2E77u;
 
         /// <summary>One, in the 16-bit fixed point the field and the chances are kept in.</summary>
         const int One = 1 << 16;
@@ -85,7 +87,112 @@ namespace Odyssey.Sim.Worldgen.Natural
                 ctx.Report.Bushes++;
                 if (berries) ctx.Report.BerryBushes++;
             }
+
+            PlaceLooseRocks(ctx, key);
+            PlaceMushrooms(ctx, key);
         }
+
+        /// <summary>
+        /// The dressing's loose stones, made real (design 45 §6): its slot-two rule at the shipped
+        /// rung — 18 per cent of cells beside rock, 1.2 per cent in open meadow — each a stack of
+        /// three to seven stone. Only the spots are chosen here; the colony spawns the stacks,
+        /// because an item belongs to the pawn world and a map is generated before there is one.
+        /// </summary>
+        static void PlaceLooseRocks(NaturalGenContext ctx, uint key)
+        {
+            var gen = ctx.Gen;
+            if (gen.looseRockNearPerMille <= 0 && gen.looseRockOpenPerMille <= 0) return;
+            GridSize size = ctx.Size;
+            CellRef start = ctx.Report.StartCell;
+            int clear = gen.undergrowthClearRadius;
+
+            for (int z = 0; z < size.SizeZ; z++)
+            for (int x = 0; x < size.SizeX; x++)
+            {
+                int cell = OpenGround(ctx, x, z);
+                if (cell < 0) continue;
+                int dx = x - start.X, dz = z - start.Z;
+                if (dx * dx + dz * dz <= clear * clear) continue;
+
+                int perMille = NearRock(ctx, x, z) ? gen.looseRockNearPerMille : gen.looseRockOpenPerMille;
+                if (Unit(x, z, key ^ SaltRock) >= (long)perMille * One / 1000) continue;
+                if (TerraceFoot.IsFoot(ctx.Grid, cell)) continue;
+                int count = 3 + (int)(Hash(x, z, key ^ SaltRock ^ 0x55u) % 5u);
+                ctx.LooseRocks.Add((cell, count));
+            }
+        }
+
+        /// <summary>
+        /// The first mushrooms (design 45 §6): beside one tree in <see cref="MushroomOneInTrees"/>,
+        /// three to five to a find, by the same rule <c>NatureSystem</c> grows them back with.
+        /// </summary>
+        static void PlaceMushrooms(NaturalGenContext ctx, uint key)
+        {
+            if (ctx.Gen.bushPerMille <= 0) return;
+            foreach (TreePlacement tree in ctx.Trees)
+            {
+                if (ctx.Grid.Edifice[tree.CellIndex] < 0) continue;
+                CellRef at = ctx.Size.FromIndex(tree.CellIndex);
+                uint h = Hash(at.X, at.Z, key ^ SaltMushroom);
+                if (h % MushroomOneInTrees != 0) continue;
+                int cell = BesideTree(ctx.Grid, tree.CellIndex, (int)((h >> 8) & 7));
+                if (cell < 0) continue;
+                ctx.MushroomSpots.Add((cell, 3 + (int)((h >> 12) % 3u)));
+            }
+        }
+
+        /// <summary>One tree in this many has mushrooms beside it when the world begins.</summary>
+        public const uint MushroomOneInTrees = 40;
+
+        /// <summary>The walkable cell over this column's grass, if nothing stands in it, else -1.</summary>
+        static int OpenGround(NaturalGenContext ctx, int x, int z)
+        {
+            int column = ctx.Column(x, z);
+            int surface = ctx.SurfaceY[column];
+            if (ctx.TopSolidY[column] != surface || ctx.Water[column] != 0) return -1;
+            int ground = ctx.Index(x, z, surface);
+            if (ctx.Grid.Terrain[ground] != NaturalContent.TerrainGrass) return -1;
+            int cell = ground + ctx.Size.LayerStride;
+            if (cell >= ctx.Size.CellCount || ctx.Grid.Edifice[cell] >= 0) return -1;
+            return ctx.Grid.IsWalkable(cell) ? cell : -1;
+        }
+
+        /// <summary>Is rock beside this column — an outcrop standing up, or a rock surface?</summary>
+        static bool NearRock(NaturalGenContext ctx, int x, int z)
+        {
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dz == 0) continue;
+                int nx = x + dx, nz = z + dz;
+                if ((uint)nx >= (uint)ctx.Size.SizeX || (uint)nz >= (uint)ctx.Size.SizeZ) continue;
+                int column = ctx.Column(nx, nz);
+                if (ctx.TopSolidY[column] > ctx.SurfaceY[column]) return true;
+                if (ctx.Grid.Terrain[ctx.Index(nx, nz, ctx.TopSolidY[column])] == NaturalContent.TerrainRock) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// The cell beside a tree, in one of the eight directions, where a mushroom may come up:
+        /// open, walkable ground with nothing standing in it and no bank drawn over it. -1 if not.
+        /// The one rule both the generator's first mushrooms and the regrowth use.
+        /// </summary>
+        public static int BesideTree(CellGrid grid, int tree, int dir)
+        {
+            GridSize size = grid.Size;
+            CellRef at = size.FromIndex(tree);
+            int x = at.X + DirX[dir & 7], z = at.Z + DirZ[dir & 7];
+            if (!size.Contains(x, z, at.Y)) return -1;
+            int cell = size.Index(x, z, at.Y);
+            if (!grid.IsWalkable(cell) || grid.Edifice[cell] >= 0 || grid.Floor[cell] != 0) return -1;
+            if (NaturalContent.IsWater(grid.Terrain[cell])) return -1;
+            if (TerraceFoot.IsFoot(grid, cell)) return -1;
+            return cell;
+        }
+
+        static readonly int[] DirX = { 1, 1, 0, -1, -1, -1, 0, 1 };
+        static readonly int[] DirZ = { 0, 1, 1, 1, 0, -1, -1, -1 };
 
         /// <summary>Is a tree standing in any of the eight columns around this one?</summary>
         static bool WoodEdge(NaturalGenContext ctx, int x, int z)

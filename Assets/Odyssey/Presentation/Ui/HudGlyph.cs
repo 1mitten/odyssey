@@ -151,6 +151,7 @@ namespace Odyssey.Presentation.Ui
         ToolDeconstruct,
         ToolCancel,
         ToolGrowZone,
+        ToolHarvest,
         ToolStockpile,
         ToolDumping,
         PlantCarrot,

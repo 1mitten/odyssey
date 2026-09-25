@@ -138,6 +138,10 @@ namespace Odyssey.Hud
 
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
+
+        /// <summary>Pick a ripe berry bush (design 45 §6). The key predates the order, as the
+        /// growing zone's did.</summary>
+        public const string Harvest = "ui.arch.tool.harvest";
         public const string Cancel = "ui.arch.tool.cancel";
         public const string Deconstruct = "ui.arch.tool.deconstruct";
 
@@ -270,7 +274,7 @@ namespace Odyssey.Hud
         /// builds one button per entry. Cancel stays last: it is the one a player reaches for
         /// blind, and a fixed last position is how a hand learns where it is.</para>
         /// </summary>
-        public static readonly string[] Pinned = { Fell, Mine, Deconstruct, GrowZone, Stockpile, Cancel };
+        public static readonly string[] Pinned = { Fell, Harvest, Mine, Deconstruct, GrowZone, Stockpile, Cancel };
 
         /// <summary>
         /// The word the armed banner uses for an order: the order's own name, the one the wiki
@@ -359,6 +363,7 @@ namespace Odyssey.Hud
                 wantsMaterial: true),
             new PaletteTool(Mine, Toggle(DesignateTool.Mine), Holding(DesignateTool.Mine)),
             new PaletteTool(Fell, Toggle(DesignateTool.Fell), Holding(DesignateTool.Fell)),
+            new PaletteTool(Harvest, Toggle(DesignateTool.Harvest), Holding(DesignateTool.Harvest)),
             new PaletteTool(Cancel, Toggle(DesignateTool.Cancel), Holding(DesignateTool.Cancel)),
             new PaletteTool(Deconstruct, Toggle(DesignateTool.Deconstruct), Holding(DesignateTool.Deconstruct)),
             new PaletteTool(GrowZone, Toggle(DesignateTool.GrowZone), Holding(DesignateTool.GrowZone),

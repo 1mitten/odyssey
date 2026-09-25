@@ -74,10 +74,13 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(new[] { 17, 18, 19, 20, 21 }));
             // One more after them since design 33 §17: the thief's, appended.
             Assert.That(JobHandle.Steal, Is.EqualTo(22));
-            Assert.That(JobHandle.Count, Is.EqualTo(23));
+            // And the forager's since design 45 §6.
+            Assert.That(JobHandle.Forage, Is.EqualTo(23));
+            Assert.That(JobHandle.Count, Is.EqualTo(24));
             Assert.That(new[] { ItemHandle.Bat, ItemHandle.Crowbar, ItemHandle.Machete, ItemHandle.ArcBlade },
                 Is.EqualTo(new[] { 7, 8, 9, 10 }));
-            Assert.That(ItemHandle.Count, Is.EqualTo(11));
+            Assert.That(new[] { ItemHandle.Berries, ItemHandle.Mushrooms }, Is.EqualTo(new[] { 11, 12 }));
+            Assert.That(ItemHandle.Count, Is.EqualTo(13));
             Assert.That(WorkHandle.Rescue, Is.EqualTo(5));
             Assert.That(WorkHandle.Count, Is.EqualTo(6));
             Assert.That(SkillIndex.Melee, Is.EqualTo(5));
@@ -99,7 +102,7 @@ namespace Odyssey.Tests.Sim
         {
             PawnContent content = ContentPack.Pawns();
             Assert.That(content.Jobs.Skip(17).Select(j => j.defName), Is.EqualTo(new[]
-                { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue", "Job_Steal" }));
+                { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue", "Job_Steal", "Job_Forage" }));
             for (int i = 0; i < content.Jobs.Length; i++)
                 Assert.That(content.Jobs[i].driver, Is.EqualTo(i), content.Jobs[i].defName + " names another driver");
             Assert.That(content.Jobs[JobIndex.AttackMelee].trainsSkill, Is.EqualTo(SkillIndex.Melee));
@@ -109,7 +112,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(WorkTypeIndex.Names[WorkTypeIndex.Rescue], Is.EqualTo("rescue"));
             Assert.That(SkillIndex.Names[SkillIndex.Melee], Is.EqualTo("melee"));
             Assert.That(content.Items.Skip(7).Select(i => i.defName), Is.EqualTo(new[]
-                { "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade" }));
+                { "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade", "Item_Berries", "Item_Mushrooms" }));
             Assert.That(content.Kinds[PawnKindIndex.Bandit].defName, Is.EqualTo("PawnKind_Bandit"));
         }
 

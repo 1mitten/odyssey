@@ -2788,3 +2788,24 @@ and its own line (≈ 0.25 alpha) was laid over its whole body. The owner report
 - **The check:** coverage and strength are separate channels (G = 1, A = strength), so a weaker
   strength can only make a fainter line. `SelectionHighlightPlayTests` holds a group to one
   strength. Design 44 §7.
+
+## A per-frame pass sized by what the colony owns, until the map owned things too (2026-09-25)
+
+**Symptom.** Design 45 made the map's loose stones and mushrooms real items, and the first 4K
+reading of Huge against the base commit was 1.8 ms worse, all of it in `FrameSection.Actors`
+(0.089 -> 1.421 ms).
+
+**Cause.** The actor pass walked every thing in the snapshot every frame — scattered its heap,
+lifted each lump onto the ground, stamped the grass — with a layer test and no view test. That was
+free while the only things on a board were a colony's few dozen; a pass sized by the colony became
+a pass sized by the board the day the generator put things down. The chunk pass had been culled
+to the frustum since HT8; this one never was.
+
+**Fix.** A cell box against the frustum, asked before anything else about the thing
+(`ChunkRenderer.RenderThings`, `ThingsOutsideFrustum` counts what it skipped). Actors 0.096 ms on
+Huge.
+
+**The check that catches the next one.** When content moves from drawn to simulated, time the
+frame by `FrameSection` on the largest board in the same run as the base commit
+(`FrameTimeTests.TheNatureAgainstTheFrame` is written to run on both). A section that moves by the
+board's size rather than the colony's is a pass with no cull.

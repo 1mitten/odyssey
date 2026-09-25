@@ -704,15 +704,55 @@ namespace Odyssey.Presentation.Rendering
             EnsureDressModules();
             if (_dressModules.Length == 0) return;
             Vector3 surface = CellMetrics.FloorCentre(x, z, y);
-            PlaceDressing(batch, MeadowDressing.Kind.Bush, x, z, surface, daylit: true, spread: 0.5f);
+            Vector3 bush = PlaceDressing(batch, MeadowDressing.Kind.Bush, x, z, surface, daylit: true, spread: 0.5f);
+            if (def == NaturalContent.EdificeBerryBush) EmitBerries(batch, x, z, bush);
         }
 
-        void PlaceDressing(ChunkBatch batch, MeadowDressing.Kind kind, int x, int z, Vector3 surface,
+        /// <summary>
+        /// The berries on a ripe berry bush (design 45 §6): a ring of berry clusters round the
+        /// crown, so a ripe bush reads from the play camera and a picked one — the same bush with
+        /// none — reads as bare. <paramref name="bush"/> is (x, z, radius) of the bush as placed,
+        /// the disc the renderer already keeps; the clusters sit on its shoulder.
+        /// </summary>
+        void EmitBerries(ChunkBatch batch, int x, int z, Vector3 bush)
+        {
+            if (_berryModule < 0)
+            {
+                _berryModule = 0;
+                if (_model.Library.Catalogue != null && _model.Library.Catalogue.Find(ModuleIds.ItemBerries) != null)
+                {
+                    int module = _model.Library.Resolve(ModuleIds.ItemBerries, ModuleShape.Pillow);
+                    if (_model.Library[module].UsesArt && !_model.Library[module].IsEmpty) _berryModule = module;
+                }
+            }
+            if (_berryModule == 0 || bush.z <= 0f) return;
+
+            float top = _lastBushTop;
+            int tint = TintCode.Dressing(TintCode.Stuff(CoreContent.StuffNone));
+            const int Clusters = 7;
+            float turn = GroundScatter.Unit(x, z, 0xBE44u) * 360f;
+            for (int i = 0; i < Clusters; i++)
+            {
+                float angle = (turn + i * (360f / Clusters)) * Mathf.Deg2Rad;
+                float reach = bush.z * (0.55f + 0.2f * GroundScatter.Unit(x + i, z, 0xBE45u));
+                float height = top * (0.45f + 0.35f * GroundScatter.Unit(x, z + i, 0xBE46u));
+                var at = new Vector3(bush.x + Mathf.Cos(angle) * reach, 0f, bush.y + Mathf.Sin(angle) * reach);
+                at.y = _bushBase + height;
+                AddBody(batch, _berryModule, tint, Matrix4x4.TRS(at, Quaternion.Euler(0f, angle * 57f, 0f), Vector3.one));
+            }
+        }
+
+        int _berryModule = -1;
+
+        /// <summary>The height and the foot of the bush <see cref="PlaceDressing"/> last placed.</summary>
+        float _lastBushTop, _bushBase;
+
+        Vector3 PlaceDressing(ChunkBatch batch, MeadowDressing.Kind kind, int x, int z, Vector3 surface,
             bool daylit, float spread, int slot = 0)
         {
             int[] family = _dressModules[(int)kind];
-            if (family.Length == 0) return;
-            if ((DressingKinds & (1 << (int)kind)) == 0) return;
+            if (family.Length == 0) return Vector3.zero;
+            if ((DressingKinds & (1 << (int)kind)) == 0) return Vector3.zero;
             uint salt = MeadowDressing.SaltOf(kind) + (uint)slot * 104729u;
             int which = MeadowDressing.VariantFor(x, z, salt, family.Length);
             MeadowDressing.Placement(x, z, salt, spread,
@@ -741,9 +781,13 @@ namespace Odyssey.Presentation.Rendering
             if (kind == MeadowDressing.Kind.Bush)
             {
                 Vector3 extent = _model.Library[family[which]].Bounds.extents * scale;
-                batch.BushDiscs.Add(new Vector3(at.x, at.z,
-                    Mathf.Sqrt(extent.x * extent.x + extent.z * extent.z)));
+                var disc = new Vector3(at.x, at.z, Mathf.Sqrt(extent.x * extent.x + extent.z * extent.z));
+                batch.BushDiscs.Add(disc);
+                _lastBushTop = _model.Library[family[which]].Bounds.max.y * scale;
+                _bushBase = at.y;
+                return disc;
             }
+            return Vector3.zero;
         }
 
         /// <summary>

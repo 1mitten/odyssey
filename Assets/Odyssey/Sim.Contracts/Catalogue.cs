@@ -77,7 +77,10 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Steal = 22;
 
-        public const int Count = 23;
+        /// <summary>Pick a ripe berry bush (design 45 §6): the Harvest order, worked as growing.</summary>
+        public const int Forage = 23;
+
+        public const int Count = 24;
     }
 
     /// <summary>
@@ -205,7 +208,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Sharp, and the best thing a colonist can hold.</summary>
         public const int ArcBlade = 10;
 
-        public const int Count = 11;
+        /// <summary>Wild berries, picked from a berry bush (design 45 §6). Raw food.</summary>
+        public const int Berries = 11;
+
+        /// <summary>Mushrooms, found under trees (design 45 §6). Raw food.</summary>
+        public const int Mushrooms = 12;
+
+        public const int Count = 13;
     }
 
     /// <summary>
