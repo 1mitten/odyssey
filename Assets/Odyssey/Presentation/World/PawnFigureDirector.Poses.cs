@@ -174,7 +174,7 @@ namespace Odyssey.Presentation.World
                 // **Nor a body the knock-down clip has put on its back** (design 33 §1): its boots
                 // are in the air by the clip's own authority, and planting them would drag it
                 // upright by the ankles.
-                // **Nor a body in the air over a stream** (design 44 §7): the footing would reach
+                // **Nor a body in the air over a stream** (design 46 §7): the footing would reach
                 // for the ground under the gap, which is water a layer down.
                 float planted = 1f - Mathf.Clamp01(Mathf.Max(
                     Mathf.Max(Mathf.Max(figure.SwimWeight, figure.SleepWeight), figure.AirWeight),

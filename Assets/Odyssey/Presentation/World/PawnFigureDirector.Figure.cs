@@ -430,7 +430,7 @@ namespace Odyssey.Presentation.World
             public float SwimWeight;
 
             /// <summary>
-            /// How far off the ground a jumping figure is, 0 to 1 (design 44 §7): the footing
+            /// How far off the ground a jumping figure is, 0 to 1 (design 46 §7): the footing
             /// fades by it, so the feet let go at the lip and plant again on the far one. Worked
             /// out afresh every frame from the step, never eased — <c>JumpArc.Airborne</c> is
             /// already continuous.

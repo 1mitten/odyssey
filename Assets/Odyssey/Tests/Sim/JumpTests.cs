@@ -12,7 +12,7 @@ using Odyssey.Sim.Worldgen.Natural;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// Jumping a one-cell stream (design 44): the rule, its price, and where it is not allowed.
+    /// Jumping a one-cell stream (design 46): the rule, its price, and where it is not allowed.
     ///
     /// <para>The fixture is a stream laid the way the generator lays one, because a hand-built
     /// stream at the walking layer — which is what <c>WaterTests.WadingCostsThreeTimesWalking</c>
@@ -252,7 +252,7 @@ namespace Odyssey.Tests.Sim
         // ---------------------------------------------------------------- the rebuild
 
         /// <summary>
-        /// The ownership argument of design 44 §5, proved rather than argued: a jump link is owned by
+        /// The ownership argument of design 46 §5, proved rather than argued: a jump link is owned by
         /// the block holding its near end and the dirty radius was not widened, so random edits to
         /// ground, floors and water must leave the incremental graph identical to one built from
         /// scratch. The sibling of <c>PathingTests.IncrementalRebuildMatchesAFullRebuildOverRandomisedEdits</c>,
@@ -307,7 +307,7 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// How many one-cell crossings the board the game loads actually has (design 44 §8). A
+        /// How many one-cell crossings the board the game loads actually has (design 46 §8). A
         /// measurement as much as a test: if the played board had none, no golden could move, no
         /// colonist would ever jump in play, and the owner would find nothing to try.
         /// </summary>
@@ -350,7 +350,7 @@ namespace Odyssey.Tests.Sim
     }
 
     /// <summary>
-    /// A colonist and her jump, through the game's own composition root (design 44 §6): the
+    /// A colonist and her jump, through the game's own composition root (design 46 §6): the
     /// barren board with one channel carved straight across it, a drafted colonist ordered to the
     /// far side, and the roll forced each way — by the debug switch for a fall, and by a
     /// replaced movement Def for a clean jump, because a test that waited on a one-in-thirty

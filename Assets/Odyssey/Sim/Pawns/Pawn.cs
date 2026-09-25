@@ -173,7 +173,7 @@ namespace Odyssey.Sim.Pawns
         public int FinishingStepTo { get; internal set; } = -1;
 
         /// <summary>
-        /// Where the jump in hand will land, or -1 (design 44 §6): the far bank, or the water short
+        /// Where the jump in hand will land, or -1 (design 46 §6): the far bank, or the water short
         /// of it.
         ///
         /// <para>Set the tick a jump becomes the step in hand, by the one roll that decides it, and
@@ -675,7 +675,29 @@ namespace Odyssey.Sim.Pawns
                 * InnatePacePerMille() / 1_000
                 * ConditionPerMille() / 1_000
                 * Species.movePerMille / 1_000
+                * WeatherPerMille() / 1_000
                 * UrgencyPerMille() / 1_000;
+
+        /// <summary>
+        /// The rain (design 43 §5): the sky's pace factor while this pawn stands where the sky
+        /// reaches, and exactly 1,000 under a roof, under a canopy, on a dry day, or in a world
+        /// with no weather — so nobody's speed moved on a dry sky. Walking and running alike,
+        /// which is why it sits before the run in the product. Asked of the weather system at the
+        /// pawn's own cell each time, so stepping under a roof gives the pace back on that step.
+        /// Apparel will buy it back one day as one more factor here (§9).
+        /// </summary>
+        public virtual int WeatherPerMille()
+        {
+            Weather.WeatherSystem? weather = Context?.Weather;
+            return weather == null ? 1_000 : weather.PacePerMilleAt(Cell);
+        }
+
+        /// <summary>
+        /// The colony this pawn lives in, set by the registry that adopts or loads it. Read for
+        /// what is the world's rather than the pawn's — the sky over its cell. Null for a pawn
+        /// built outside a registry: a candidate on the setup screen, or a bare fixture.
+        /// </summary>
+        public PawnContext? Context { get; internal set; }
 
         /// <summary>
         /// The run (design 17 §4f, design 33 §2h): a drafted colonist moves at
@@ -1028,7 +1050,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// A jump fell short (design 44 §6): the step in hand now ends in the water under the gap,
+        /// A jump fell short (design 46 §6): the step in hand now ends in the water under the gap,
         /// and the path ends there too. The job's walk asks for a new one from the water on the
         /// tick it lands, so the hop out is planned like any other.
         /// </summary>
@@ -1080,7 +1102,7 @@ namespace Odyssey.Sim.Pawns
             // The response (design 33 §18c) is two bits of the same word, nought at the default, so
             // a colony that never set one hashes as it did before. Bits 24 and 25: 22 and 23 are
             // left free for the line building beside this one.
-            // A jump in the air (design 44 §6) is bit 26, and its landing is walked only while
+            // A jump in the air (design 46 §6) is bit 26, and its landing is walked only while
             // there is one, so a colony that never jumps hashes as it did before jumping.
             bool combat = HasCombatState;
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;

@@ -452,7 +452,7 @@ namespace Odyssey.Sim.Pathing
                 }
 
                 // A jump over a one-cell stream, two cells straight across on this layer (design
-                // 44). Priced by NavGraph.JumpCost and ruled by NavGraph.IsJumpAcross, never
+                // 46). Priced by NavGraph.JumpCost and ruled by NavGraph.IsJumpAcross, never
                 // restated here, for the hop's reason: three places that must agree.
                 {
                     int gJump = g + jump;

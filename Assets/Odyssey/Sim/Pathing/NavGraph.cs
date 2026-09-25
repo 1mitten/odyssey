@@ -18,7 +18,7 @@ namespace Odyssey.Sim.Pathing
         Fall = 2,
 
         /// <summary>
-        /// A jump over a one-cell stream, bank to bank on one layer (design 44 §5). Not a
+        /// A jump over a one-cell stream, bank to bank on one layer (design 46 §5). Not a
         /// <see cref="Portal"/>, although it is built like a hop: the layer-change estimate counts
         /// portals as ways between layers, and a jump is not one.
         /// </summary>
@@ -652,7 +652,7 @@ namespace Odyssey.Sim.Pathing
                     // lives in TryHopEdge, because the cell above may be in any region at all.
                     TryHopEdges(block, c, x, z, y);
 
-                    // Jumps over a one-cell stream (design 44 §5): +x and +z only, so each pair
+                    // Jumps over a one-cell stream (design 46 §5): +x and +z only, so each pair
                     // is built once, by the block holding the near end — and bounded by the board
                     // rather than the block, so a jump may reach into the next one. Every cell the
                     // rule reads is within a cell of the gap, which is why the dirty radius needs
@@ -1433,7 +1433,7 @@ namespace Odyssey.Sim.Pathing
                     return Grid.CanWalkInto(c1, mode) && Grid.CanWalkInto(c2, mode);
                 }
 
-                // A jump over a one-cell stream (design 44). Without this case the mover drops
+                // A jump over a one-cell stream (design 46). Without this case the mover drops
                 // every path the planner makes through one.
                 if ((dx == 2 && dz == 0) || (dx == 0 && dz == 2))
                     return IsJumpAcross(from, to, mode);
@@ -1496,7 +1496,7 @@ namespace Odyssey.Sim.Pathing
         }
 
         /// <summary>
-        /// The shape of a jump: two cells straight across on one layer (design 44 §4). Pure
+        /// The shape of a jump: two cells straight across on one layer (design 46 §4). Pure
         /// geometry, like <see cref="IsHop"/>; <see cref="IsJumpAcross"/> is the rule.
         /// </summary>
         public static bool IsJump(CellRef a, CellRef b)
@@ -1511,13 +1511,13 @@ namespace Odyssey.Sim.Pathing
 
         /// <summary>
         /// Who may jump: people. An animal that cannot wade a stream is not given a second way
-        /// across it (design 44 §2).
+        /// across it (design 46 §2).
         /// </summary>
         public const byte JumpMask = (byte)(TraverseModes.AllMask & ~TraverseModes.AnimalMask);
 
         /// <summary>
         /// May this mode jump from <paramref name="from"/> to <paramref name="to"/> across the
-        /// stream between them? <b>The one owner of the rule</b> (design 44 §4): the cell search,
+        /// stream between them? <b>The one owner of the rule</b> (design 46 §4): the cell search,
         /// the region graph and the per-tick legality check all ask it, so they cannot disagree.
         ///
         /// <para>Both ends stand on solid terrain — bank to bank, never a built floor to a built
@@ -1553,7 +1553,7 @@ namespace Odyssey.Sim.Pathing
 
         /// <summary>
         /// Where a jump from <paramref name="from"/> to <paramref name="to"/> lands if it falls
-        /// short: the water under the gap (design 44 §6).
+        /// short: the water under the gap (design 46 §6).
         /// </summary>
         public int ShortLanding(int from, int to) => JumpMiddle(from, to) - Size.LayerStride;
 

@@ -2773,3 +2773,18 @@ answered what a 384-colonist sweep could not.
 to place colonists and to give up, and it reset that counter on walking off the board. The escape
 was reachable only while spawns succeeded. *Check: a retry loop's escape must be a counter that
 nothing resets, and a loop that ticks without yielding must be bounded by it.*
+
+## One channel, two meanings: the selection mask's G (2026-09-25)
+
+The selection highlight's mask wrote a selection's *strength* into G, and the composite read G as
+*coverage* ("is this pixel the thing", `outside = 1 - G`). While every strength was 1 the two
+meanings agreed. The rest of a box selection were drawn at 0.45, so each was 55 % "outside itself",
+and its own line (≈ 0.25 alpha) was laid over its whole body. The owner reported it as colonists
+"faded out".
+
+- **The pattern:** *one rule with two owners*, in a pixel format. One channel carried two
+  quantities, and a reader took it for one of them.
+- **What made it invisible:** every photograph and test used a single selection at strength 1.
+- **The check:** coverage and strength are separate channels (G = 1, A = strength), so a weaker
+  strength can only make a fainter line. `SelectionHighlightPlayTests` holds a group to one
+  strength. Design 44 §7.

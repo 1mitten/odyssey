@@ -73,6 +73,10 @@ namespace Odyssey.Sim.Pawns
                 pawns.Cells, edificeSave, pawns.Items, pawns.Pawns, support.Solver);
             pawns.Designations = designations;
             pawns.Construction = construction;
+            // Every colony has a chunk grid, a headless one included: it is how an edit tells the
+            // sky map which columns moved (design 43 §6). ColonyWorld.Build makes one; this is for
+            // the fixtures that assemble a colony by hand.
+            pawns.Chunks ??= new ChunkGrid(pawns.Size);
             // So a site can carry its detour in the navigation flags, and so raising a building
             // can ask who is standing in it. Set here because this is the one place that holds
             // both the graph and the grid.
@@ -130,6 +134,9 @@ namespace Odyssey.Sim.Pawns
             // pass reads it: Order 35 against temperature's 50.
             var weather = new Weather.WeatherSystem(pawns, Worldgen.WorldContent.Weathers);
             pawns.Weather = weather;
+            // And where it reaches: the one shelter rule (design 43 §6), read by pace, growth and
+            // the animals. Derived, so it is neither saved nor hashed and needs no schedule slot.
+            pawns.Sky = new World.SkyColumns(pawns.Cells, edifices, pawns.Chunks);
             // Power (design 32). Built here for the same argument again, and handed to the
             // construction grid because that is where a line order arrives: a colony that forgot
             // it would have a Power category whose every tool silently did nothing.
@@ -243,7 +250,7 @@ namespace Odyssey.Sim.Pawns
                 // a debug-only wiring path a real colony would not otherwise get.
                 .AddIntentHandler(IntentKind.SpawnPawn, pawns.Pawns.HandleSpawnPawn)
                 .AddIntentHandler(IntentKind.DebugArmColonists, pawns.Pawns.HandleDebugArmColonists)
-                // Jumps always fail (design 44 §6): a switch on the context, read by the one roll.
+                // Jumps always fail (design 46 §6): a switch on the context, read by the one roll.
                 .AddIntentHandler(IntentKind.DebugJumpsFail, intent =>
                 {
                     bool on = intent.A != 0;

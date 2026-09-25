@@ -23,6 +23,15 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the selection highlight make it obvious who is selected?** (`claude/selection-highlight`, design 44.)
+  Click a colonist, an item, a wall, a tree and a patch of ground. Each should gain a thin white line round its own
+  shape and look a touch brighter; the ground gets a pale wash. Then walk a selected colonist behind a wall: a
+  fainter line should show through. Settings →
+  Interface → *Selection style* → Brackets brings the old cursor back. **Second look (2026-09-25):**
+  box-select a group — every colonist should have the same full white outline, none faded or washed,
+  and none brightened; click one of them and that one alone brightens. Read the overlay's `gpu` line at 4K with
+  and without a selection. A wrong answer is a line you have to hunt for, a colonist who looks bleached, a
+  selection you lose indoors, or `gpu` moving by more than a few tenths of a millisecond.
 - **Which rain reads as a rainy day: §7's particles, or GPU rain with wet ground?** (`claude/rain-look`,
   #203; design 43 §7, #202.) No Play needed. Open https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3, pick
   the Play framing, and wipe between “§7 as written” and “+ wet ground”; then try the Far framing
@@ -39,6 +48,36 @@ the next session learns to ignore.
   game days, skipping days with the debug menu: the sky should change by itself, mostly clear in
   Glare, showery in Wash, grey in Rime, with the clock's glyph following. A wrong answer is a sky
   that never changes, one that flips at midnight, or a storm every other day.
+- **Does the rain touch the world?** (`claude/weather-world`, design 43 §6a.) New game, backtick
+  > Weather > Downpour, and watch at normal speed:
+  - Colonists crossing open ground should walk visibly slower in the rain and at their usual pace
+    under a roof or under a tree.
+  - A field in the open should ripen faster than one under a roof. *Ripen crops* is no help here;
+    let the days run.
+  - Animals in the open should head for the nearest trees within a few seconds. Fell the tree one
+    stands under and it should get up and go to another.
+
+  A wrong answer is:
+  - a colonist slowed under a roof, or one who is not slowed at all in the open;
+  - an animal sheltering from a drizzle (the gate is 400 per mille), or one that stands in the rain
+    beside a tree it could reach;
+  - an animal still standing where its tree was, a minute after the tree is gone.
+
+  Also say whether a tenth off the walking pace is too little to notice.
+
+  **And listen** (the rain's sound, design 43 §7a). Weather tab, from Clear through Drizzle,
+  Rain, Downpour and Storm, a few seconds apart:
+  - Drizzle should be a light patter.
+  - Rain should thicken into a roar with no seam you can hear.
+  - A storm should be the loudest.
+  - The birds should fall back as the rain grows.
+  - Leave Downpour running for two minutes: neither loop should be heard to repeat or click.
+
+  A wrong answer is:
+  - a jump in level between two presses;
+  - a click, a breath or a recognisable moment every 40 or 80 seconds;
+  - rain still audible after the slice has gone underground;
+  - birds as loud in a storm as on a clear day.
 - **Do the bat and the crowbar only swing?** (`claude/blunt-swings`, design 33 §22.) Debug menu >
   Spawn 3 bandits, arm a colonist with a bat and another with a crowbar (*Arm every colonist*, or
   right-click > Equip), draft them and order attacks. Watch several blows in a row: each should be
@@ -46,8 +85,17 @@ the next session learns to ignore.
   any blow that thrusts the weapon straight forward, a blow that lands before the swing reaches the
   target (the third one especially, whose timing was broken until now), or the machete and blade
   swinging differently from before.
+
+- **Does a new game arrive cleanly?** (`claude/meadow-hitch-check`, design 38 §25.) From the title
+  screen, set up a colony and press Start. **Look for** the setup page freezing for about half a
+  second, then the starfield for a blink, then the colony — already smooth, no stutter as it appears.
+  **A wrong answer looks like:** a jolt or stall in the first moment the colony is on screen; the
+  starfield hanging on for a noticeable time; or the interface appearing before the world does.
+- **Does changing Grass in Settings stay smooth?** (same branch.) Settings -> Graphics -> Grass: step
+  through the rungs to Full and back during play. **A wrong answer looks like:** a visible hitch on
+  each press, or the grass just beyond the board's edge not matching the new density.
 - **Does a colonist jump a one-cell stream, and does it read as a jump?** (`claude/funny-allen-2qipcn`,
-  design 44.) The jump clips are linked in the committed catalogue since 2026-09-25; no rebuild is
+  design 46.) The jump clips are linked in the committed catalogue since 2026-09-25; no rebuild is
   needed. New game, find a stream one cell wide, right-click a drafted colonist to
   the far bank. They walk to the lip, gather, leap and land on the far lip without touching the
   water. A wrong answer is a figure that slides across level with the bank (the clips did not

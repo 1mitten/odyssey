@@ -4817,6 +4817,12 @@ only when the caller asks (`seeThrough: true`), which the bootstrap does for a s
 and a selected animal. A cell's outline, an order's outline and an item's bracket stay depth-tested:
 a row of queued walls seen through a hill is noise, and those do not move behind things.
 
+**With the selection highlight** (design 44, merged the same day), the bracket is the *Brackets*
+style in Settings → Interface, and only there does a selected pawn's bracket take this material.
+The default *Highlight* style has its own answer to the same problem — a line at 0.4 drawn through
+whatever stands in front — so the two agree: whichever the player picks, a selected colonist is not
+lost behind a tree. The draft's diamond, line and rings are drawn in both styles and always see through.
+
 **Cost**: the same submissions as before, one per mark, and one cached material per colour; the ring
 alphas are quantised by their models, so the set is bounded. The shader is in
 `ShaderInclusion.Required` with its keep-alive material, so a player keeps it and its instanced

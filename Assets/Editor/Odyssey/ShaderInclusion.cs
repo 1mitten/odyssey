@@ -65,6 +65,11 @@ namespace Odyssey.EditorTools
             // The power lines (design 32 §9), drawn over everything. Found by name like the rest.
             "Odyssey/PowerLine",
 
+            // The selection highlight (design 44): its mask and its composite, both found by
+            // name from the renderer feature. Without them a player falls back to the brackets.
+            "Odyssey/SelectionMask",
+            "Odyssey/SelectionComposite",
+
             // The draft's marks and the selection brackets (design 33 §23), seen through what
             // stands in front of them.
             "Odyssey/SeeThroughMark",

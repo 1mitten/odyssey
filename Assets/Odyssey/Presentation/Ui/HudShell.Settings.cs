@@ -52,6 +52,7 @@ namespace Odyssey.Presentation.Ui
         readonly Dictionary<int, Label> _scaleRungs = new();
         readonly Dictionary<int, Label> _cameraRungs = new();
         readonly Dictionary<BuildPaletteLayout, Label> _layoutRungs = new();
+        readonly Dictionary<SelectionStyle, Label> _selectionRungs = new();
         readonly Dictionary<GraphicsOption, SwitchView> _settingRows = new();
 
         /// <summary>One rank of segments per number ladder, so a value that moves lights its own
@@ -523,6 +524,16 @@ namespace Odyssey.Presentation.Ui
                     },
                     layout => _directors?.Settings.SetBuildPaletteLayout(layout),
                     _layoutRungs, numeric: false));
+
+            // How the selected thing is marked (design 44): lit at its own edges, or the brackets.
+            Row(Section(cols[1], SettingsTab.Interface, SettingsLayout.SelectionGroupKey), SettingsDirector.SelectionStyleKey,
+                Segmented(SettingsDirector.SelectionStyles,
+                    style => style == SelectionStyle.Highlight ? "Highlight" : "Brackets",
+                    style => style == SelectionStyle.Highlight
+                        ? "A line round the thing itself, and a wash over a tile. The default"
+                        : "Corner brackets round the thing's box",
+                    style => _directors?.Settings.SetSelectionStyle(style),
+                    _selectionRungs, numeric: false));
         }
 
         // ============================================================ Graphics
@@ -1267,6 +1278,8 @@ namespace Odyssey.Presentation.Ui
         void OnCameraSpeedChanged(int percent) => LightRung(_cameraRungs, percent);
 
         void OnBuildLayoutChanged(BuildPaletteLayout layout) => LightRung(_layoutRungs, layout);
+
+        void OnSelectionStyleChanged(SelectionStyle style) => LightRung(_selectionRungs, style);
 
         /// <summary>A number ladder moved: light its segment, and re-answer the two questions one
         /// ladder asks of another — the frame cap behind VSync, the resolution behind the mode.</summary>

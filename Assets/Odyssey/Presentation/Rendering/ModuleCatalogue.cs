@@ -526,7 +526,7 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>
         /// The file the clip lives in, when that is not its own name — a jump's landing is inside
-        /// the take-off's file (design 44 §7). Empty for every row whose clip is its file's.
+        /// the take-off's file (design 46 §7). Empty for every row whose clip is its file's.
         /// </summary>
         [Tooltip("The FBX the clip is in, by name, when that is not the clip's own name. Empty = the same.")]
         public string fileName = string.Empty;
@@ -807,7 +807,7 @@ namespace Odyssey.Presentation.Rendering
         public static readonly string[] SheathRows = { CombatDraw, CombatSheathe };
 
         /// <summary>
-        /// Jumping a one-cell stream (design 44 §7): the take-off, <c>A_Jump_Walking_Masc</c> and
+        /// Jumping a one-cell stream (design 46 §7): the take-off, <c>A_Jump_Walking_Masc</c> and
         /// <c>_Femn</c> from Base Locomotion, the variant by the body's sex as the sheath's is.
         /// In place; the arc is <c>JumpArc</c>'s. Played in the combat action slot.
         /// </summary>

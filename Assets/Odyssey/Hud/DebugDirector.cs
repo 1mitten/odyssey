@@ -191,7 +191,7 @@ namespace Odyssey.Hud
         };
 
         /// <summary>
-        /// Every jump over a stream falls short while this is on (design 44 §6), so a failed jump
+        /// Every jump over a stream falls short while this is on (design 46 §6), so a failed jump
         /// can be watched: at one in thirty-three it is not something a playtest can wait for.
         /// Sends <see cref="IntentKind.DebugJumpsFail"/> with <c>A</c> 1 or 0.
         /// </summary>

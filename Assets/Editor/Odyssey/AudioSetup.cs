@@ -204,6 +204,14 @@ namespace Odyssey.EditorTools
                 mono: false, loadInBackground: true, () => Outdoor(12f, day: true)),
             new("ambience-night", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
                 mono: false, loadInBackground: true, () => Outdoor(12f, day: false)),
+            // The rain beds (design 43 §7), baked by tools/audio/bake_rain.sh: stereo because rain
+            // is the air all round, and streamed like the outdoor beds because they are long loops
+            // that play together for hours. No placeholder — synthesised rain is white noise, and
+            // a clone without the clips hears a dry sky, which is honest.
+            new("rain-light", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
+                mono: false, loadInBackground: true, placeholder: null),
+            new("rain-heavy", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
+                mono: false, loadInBackground: true, placeholder: null),
 
             // A fire is a place you stand near, so it is mono. Compressed in memory rather than
             // decompressed, because it is a long loop that plays continuously: ADPCM decodes for
@@ -762,6 +770,25 @@ namespace Odyssey.EditorTools
                 Clip = Require("water"),
                 Volume = 0.32f, FadeSeconds = 2.5f, MinDistance = 60f, MaxDistance = 300f,
             });
+
+            // The rain (design 43 §7). Both clips are baked to -23 LUFS, so one volume serves
+            // both and RainMix's weights are loudness. 0.6 puts a downpour about 4 dB over the
+            // day bed as it plays (the day bed is -20.4 LUFS at 0.28, so -31.5 in the mix; a
+            // downpour is -23 at 0.6, -27.4) and a drizzle a little under it, while RainMix hushes
+            // the birds. FadeSeconds is how long a change of sky takes to be heard: three, so a
+            // forced storm swells in rather than switches on. INVENTED; tuned by ear.
+            AddRain(SoundIds.AmbienceRainLight, "rain-light");
+            AddRain(SoundIds.AmbienceRainHeavy, "rain-heavy");
+
+            void AddRain(string id, string name)
+            {
+                AudioClip? clip = Clip(name);
+                if (clip == null) return;
+                catalogue.Ambience.Add(new AudioCatalogue.AmbienceDef
+                {
+                    Id = id, Clip = clip, Volume = 0.6f, FadeSeconds = 3f,
+                });
+            }
 
             // The outdoor bed: the floor of the mix, under the work rather than beside it —
             // night lower than day, because the world is quieter after dark and the bed

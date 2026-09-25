@@ -581,6 +581,9 @@ namespace Odyssey.Presentation.Bootstrap
             // thing it will see is a world.
             _menuBed = new MenuAmbience(audioCatalogue, transform, gameObject.layer);
 
+            // The hitch tour (design 38 §25) wants the driver's shader log from the load onward, so
+            // the switch goes on before the session is built rather than when the tour starts.
+            if (PlayerBench.HitchRequested()) UnityEngine.Rendering.GraphicsSettings.logWhenShaderIsCompiled = true;
             if (buildOnPlay || StartedFromTheCommandLine()) BuildSession();
             // The player benchmark (design 38 §18e): a development player told -odyssey-bench
             // times its arms on the colony it just built, writes the table to the log and quits.
@@ -786,6 +789,10 @@ namespace Odyssey.Presentation.Bootstrap
             // density beside them: the field has to be reachable from the mesher, the picker and
             // the figures alike, and it is a property of how the world is drawn rather than of any
             // one of them.
+            // Where a new session's wait goes (design 38 §25): lap times logged at the end.
+            var buildClock = Stopwatch.StartNew();
+            var laps = new System.Text.StringBuilder();
+            void Lap(string name) { laps.Append(name).Append(' ').Append(buildClock.ElapsedMilliseconds).Append(" ms, "); }
             GroundRelief.Amplitude = groundRelief;
             GroundRelief.Period = groundReliefPeriod;
 
@@ -886,6 +893,7 @@ namespace Odyssey.Presentation.Bootstrap
                 Mirror = (grid, outcome) => new GridMirrorContributor(grid, outcome.Edifices, model),
             });
             generation.Stop();
+            Lap("generated");
 
             _colony = colony;
             _grid = colony.Grid;
@@ -984,6 +992,7 @@ namespace Odyssey.Presentation.Bootstrap
                        randomCastEachSession ? "rolled for this session, overruling every pawn's own seed — copy it into colonistLookSeed to keep this cast" :
                        "the fallback only; every colonist is dealt from their own roll seed"));
 
+            Lap("colony ready");
             _renderer = new ChunkRenderer(_model)
             {
                 CastShadows = castShadows,
@@ -1025,6 +1034,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Live figures for the pawns on screen. Everything else keeps the baked instanced
             // form, and so does everybody if the packs are absent or the catalogue has no gaits.
+            Lap("renderer and surround");
             _figures = new PawnFigureDirector(moduleCatalogue, transform, gameObject.layer)
             {
                 Appearances = appearances,
@@ -1042,6 +1052,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Over the preferences this component has held since it woke, not over fresh ones:
             // the same settings panel and the same key bindings serve every session.
+            Lap("figures");
             FindTheSiblingPresenters();
             Directors = new HudDirectors(size.SizeY, outcome.StartCell.Y, Preferences, Keys);
             Directors.Slice.LayerChanged += OnActiveLayerChanged;
@@ -1086,6 +1097,7 @@ namespace Odyssey.Presentation.Bootstrap
             // The light through the day. It finds the scene's own sun rather than making one,
             // because the scene builder already places it and two directional lights is a
             // doubled key nobody would think to look for.
+            Lap("directors, audio, props");
             Light? key = sun != null ? sun : FindKeyLight();
             _keyLight = key;
             if (daylightCycle && key != null)
@@ -1147,9 +1159,15 @@ namespace Odyssey.Presentation.Bootstrap
             // tell apart from the wait they are already in, and it buys a first frame that is
             // whole. Everything after this frame is budgeted (6c.7).
             if (_renderer != null && cameraRig != null)
+            {
+                Lap("light and look");
                 _renderer.PrimeAll(cameraRig.ActiveLayer, cameraRig.slice);
+                Lap("meshed (PrimeAll)");
+            }
 
             SessionChanged?.Invoke();
+            Lap("listeners");
+            Debug.Log($"[Session] built in {buildClock.ElapsedMilliseconds} ms: {laps}");
 
             Debug.Log(
                 $"[Odyssey] world {size} seed {sessionSeed} generated in {generation.ElapsedMilliseconds} ms. " +
@@ -1560,6 +1578,8 @@ namespace Odyssey.Presentation.Bootstrap
                     cameraRig != null ? cameraRig.Focus : transform.position,
                     activeLayer);
             MarkSection(FrameSection.Audio);
+
+            PrepareSelectionHighlight(_world.Views.Current);
 
             if (_actorMaterial != null)
                 _renderer.RenderActors(_world.Views.Current, activeLayer, slice, _actorMaterial,
@@ -3274,6 +3294,18 @@ namespace Odyssey.Presentation.Bootstrap
                     if (!snapshot.TryGetPawn(selection.Pawns[i], out PawnView pawn)) continue;
                     Color strength = i == 0 ? colour : SecondarySelectionColour;
 
+                    // Lit at its own edges (design 44): the live figure's renderers, or the far form
+                    // the renderer captured as it drew it. Neither, and the brackets are drawn.
+                    // Every member of a group at full strength (owner, 2026-09-25: the dimmer
+                    // outline on the rest read as faded out); the pane and the cards already say
+                    // which one it is about.
+                    if (_highlighting)
+                    {
+                        if (_figures != null && SelectionHighlight.Current.AddRenderers(
+                                _figures.FigureObject(pawn.Id.Value), SelectionHighlight.Primary) > 0) continue;
+                        if (_renderer.HighlightPawnsCaptured.Contains(pawn.Id.Value)) continue;
+                    }
+
                     // An animal is bracketed as its own drawn box, turned the way it faces, with
                     // the item bracket's margin (owner, 2026-09-22: the cell-sized column round a
                     // hog highlighted the whole tile). A colonist keeps the one fixed box below.
@@ -3297,6 +3329,9 @@ namespace Odyssey.Presentation.Bootstrap
 
             // A corpse is bracketed as the body lying there (design 33 §5f), not as its cell: it
             // is a person's length along the ground and knee high.
+            if (_highlighting && _corpses != null && selection != null && selection.HasCorpse
+                && SelectionHighlight.Current.AddRenderers(_corpses.BodyObject(selection.Corpse), SelectionHighlight.Primary) > 0)
+                return;
             if (_corpses != null && _corpses.TryBracket(selection, out Matrix4x4 corpsePlace, out Vector3 corpseBox))
             {
                 _renderer.DrawSelectionBracket(corpsePlace, corpseBox, colour);
@@ -3321,6 +3356,10 @@ namespace Odyssey.Presentation.Bootstrap
                     cell = things[i].Cell;
                     break;
                 }
+
+                // Captured by the renderer as its lumps were appended, at the matrices they were
+                // drawn at (design 44 §3): on the ground, on a shelf or landing.
+                if (_highlighting && _renderer.HighlightCaptured > 0) return;
 
                 ResolvedModule item = _model.Library[
                     _model.Library.Resolve(ModuleIds.Item(selection.ThingDef), ModuleShape.Pillar)];
@@ -3347,6 +3386,7 @@ namespace Odyssey.Presentation.Bootstrap
                 int head = _model.BedHeadAt(index);
                 if (head >= 0)
                 {
+                    if (_highlighting && HighlightCell(head, terrain: false)) return;
                     CellRef at = _model.Size.FromIndex(head);
                     BedShape.WorldBounds(
                         at.X, at.Z, at.Y, _model.BedFacing(head),
@@ -3362,6 +3402,7 @@ namespace Odyssey.Presentation.Bootstrap
             // ShelfShape rather than being built from the cell here.
             if (_model.EdificeDef(index) == CoreContent.EdificeShelf)
             {
+                if (_highlighting && HighlightCell(index, terrain: false)) return;
                 ShelfShape.WorldBounds(cell.X, cell.Z, cell.Y, _model.EdificeFacing(index),
                     out Vector3 shelfCentre, out Vector3 shelfSize);
                 _renderer.DrawSelectionBracket(shelfCentre, shelfSize + Vector3.one * ItemCursorMargin, colour);
@@ -3370,6 +3411,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             if (_model.IsSolid(index) || _model.EdificeDef(index) != CoreContent.EdificeNone)
             {
+                if (_highlighting && HighlightCell(index, terrain: _model.IsSolid(index))) return;
                 _renderer.DrawCellHighlight(cell, colour);
                 return;
             }
@@ -3378,7 +3420,7 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 float lift = WaterLine.SurfaceAbove(_model, cell);
                 Matrix4x4 placement = GroundRelief.Drape(CellMetrics.FloorCentre(cell) + Vector3.up * lift);
-                _renderer.DrawFloorBracket(placement, colour);
+                FloorMark(placement, colour);
                 return;
             }
 
@@ -3393,10 +3435,10 @@ namespace Odyssey.Presentation.Bootstrap
                     _bracketRises[1] = ramp.R1 * h;
                     _bracketRises[2] = ramp.R3 * h;
                     _bracketRises[3] = ramp.R2 * h;
-                    _renderer.DrawFloorBracket(GroundRelief.Drape(CellMetrics.FloorCentre(cell)), colour, _bracketRises);
+                    FloorMark(GroundRelief.Drape(CellMetrics.FloorCentre(cell)), colour, _bracketRises);
                     return;
                 }
-                _renderer.DrawFloorBracket(cell, colour);
+                FloorMark(cell, colour);
                 return;
             }
 
@@ -3408,7 +3450,7 @@ namespace Odyssey.Presentation.Bootstrap
                     Matrix4x4 placement = GroundRelief.Drape(CellMetrics.FloorCentre(cell)) *
                                           Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[bank.Rotation], 0f)) *
                                           BankLayout.StraightBankShear();
-                    _renderer.DrawFloorBracket(placement, colour);
+                    FloorMark(placement, colour);
                 }
                 else
                 {
@@ -3421,16 +3463,98 @@ namespace Odyssey.Presentation.Bootstrap
                         float localZ = ((k & 2) == 0 ? -1f : 1f) * 0.5f;
                         cornerRises[k] = (BankMesh.HeightAt(bank.Kind, localX, localZ) + 0.5f) * CellMetrics.SizeY;
                     }
-                    _renderer.DrawFloorBracket(place, colour, cornerRises);
+                    FloorMark(place, colour, cornerRises);
                 }
                 return;
             }
 
-            _renderer.DrawFloorBracket(cell, colour);
+            FloorMark(cell, colour);
         }
 
         /// <summary>The ramp bracket's four corner rises, reused so the cursor allocates nothing a frame.</summary>
         readonly float[] _bracketRises = new float[4];
+
+        /// <summary>
+        /// Whether this frame's selection is being lit at its own edges (design 44) rather than
+        /// bracketed: the player's style, and the renderer feature there to draw it. Decided once a
+        /// frame by <see cref="PrepareSelectionHighlight"/>.
+        /// </summary>
+        bool _highlighting;
+
+        /// <summary>
+        /// Start the frame's selection highlight, before the actors are drawn: the list emptied, and
+        /// the renderer and the doors told what to catch as they draw it (design 44 §3). A selected
+        /// item or a colonist past the figure cap is captured at the matrices it is drawn at, so
+        /// nothing here has a second copy of where anything goes.
+        /// </summary>
+        void PrepareSelectionHighlight(WorldSnapshot snapshot)
+        {
+            SelectionHighlight frame = SelectionHighlight.Current;
+            frame.Clear();
+            SelectionHighlight.Camera = cameraRig != null ? cameraRig.Camera : null;
+
+            SelectionDirector? selection = Directors?.Selection;
+            _highlighting = _renderer != null && _model != null && selection != null && !selection.IsEmpty
+                            && Directors!.Settings.SelectionStyle == SelectionStyle.Highlight
+                            && SelectionHighlight.FeaturePresent;
+
+            if (_doors != null) _doors.CaptureCell = -1;
+            if (_renderer == null) return;
+            _renderer.BeginHighlight(_highlighting ? frame : null);
+            if (!_highlighting || selection == null || _model == null) return;
+
+            if (selection.HasPawn)
+            {
+                for (int i = 0; i < selection.Pawns.Count; i++)
+                    _renderer.HighlightPawns[selection.Pawns[i].Value] = SelectionHighlight.Primary;
+                // A group is outlined and not brightened (owner, 2026-09-25): the lift is for
+                // the one thing a single click picked out.
+                frame.Lifted = !selection.HasMultiple;
+                return;
+            }
+            if (selection.HasThing)
+            {
+                _renderer.HighlightThing = selection.Thing;
+                return;
+            }
+            if (selection.Cell is CellRef cell && _doors != null && _model.Size.Contains(cell.X, cell.Z, cell.Y))
+            {
+                int index = _model.Size.Index(cell.X, cell.Z, cell.Y);
+                if (_model.EdificeDef(index) == CoreContent.EdificeDoor) _doors.CaptureCell = index;
+            }
+        }
+
+        /// <summary>
+        /// One cell's building — and its ground, for a solid cell — added to the highlight as the
+        /// chunk draws it, with the door leaf where the doors drew one. False when that is nothing,
+        /// and the caller draws the brackets instead.
+        /// </summary>
+        bool HighlightCell(int index, bool terrain)
+        {
+            if (_renderer == null) return false;
+            SelectionHighlight frame = SelectionHighlight.Current;
+            int added = _renderer.CollectCell(index, frame, SelectionHighlight.Primary, terrain);
+            if (_doors != null && index == _doors.CaptureCell
+                && _doors.TryGetCapturedLeaf(out ResolvedModule? leaf, out Matrix4x4 leafAt) && leaf != null)
+            {
+                frame.AddModule(leaf, leafAt, SelectionHighlight.Primary);
+                added++;
+            }
+            return added > 0;
+        }
+
+        /// <summary>A tile's cursor: washed and outlined while the highlight is on, bracketed otherwise.</summary>
+        void FloorMark(CellRef cell, Color colour) =>
+            FloorMark(GroundRelief.Drape(CellMetrics.FloorCentre(cell)), colour);
+
+        void FloorMark(Matrix4x4 placement, Color colour, float[]? cornerRises = null)
+        {
+            if (_renderer == null) return;
+            if (_highlighting)
+                _renderer.CollectSurface(placement, SelectionHighlight.Current, SelectionHighlight.Primary, cornerRises);
+            else
+                _renderer.DrawFloorBracket(placement, colour, cornerRises);
+        }
 
         void OnGUI()
         {
