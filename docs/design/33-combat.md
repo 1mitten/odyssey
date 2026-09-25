@@ -4485,6 +4485,10 @@ would be a lurch nobody asked for. So the press now selects the card at once (th
 and **the slice change and the camera jump wait for the release**, and happen only for a plain
 click. A Shift-click still never jumps.
 
+**Superseded 2026-09-25** (owner): a plain single click now selects only and moves nothing; a
+**double** click on the card takes the slice and the camera to her and zooms in close. The press and
+the release keep the roles above. `14-hud-layout.md` §10.
+
 **What was there.** The strip already had a Shift-drag (`_sweepingRoster`) that **toggled** every
 card it entered — the catalogue's A2 "drag-select a range" (`10-ui-panel-catalogue.md`), built as a
 toggle. It is replaced: a Shift-drag now adds, which is what Shift means on the world's box

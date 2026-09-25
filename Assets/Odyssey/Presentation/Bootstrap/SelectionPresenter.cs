@@ -28,8 +28,9 @@ namespace Odyssey.Presentation.Bootstrap
     /// </summary>
     public sealed class SelectionPresenter : MonoBehaviour
     {
-        /// <summary>Two presses closer than this, on the same colonist, are a double click.</summary>
-        const float DoubleClickSeconds = 0.35f;
+        /// <summary>Two presses closer than this, on the same colonist, are a double click — one
+        /// threshold shared with the roster card's double click, owned by <see cref="DoubleClick"/>.</summary>
+        const float DoubleClickSeconds = DoubleClick.Seconds;
 
         OdysseyBootstrap? _bootstrap;
         SliceCameraRig? _rig;
