@@ -53,7 +53,7 @@ namespace Odyssey.Sim.Pathing
     /// that adjacency. An incremental rebuild and a full rebuild therefore agree on structure,
     /// on successor order, and on every path that follows from them.</para>
     /// </summary>
-    public sealed class NavGraph
+    public sealed partial class NavGraph
     {
         /// <summary>A region block: 10 x 10 cells of one layer. Never larger, never vertical.</summary>
         public const int BlockSize = 10;
@@ -379,6 +379,7 @@ namespace Odyssey.Sim.Pathing
                     if (_linkKind[l] == LinkKind.Portal) AddPortalEdges(l);
                     InsertAdjacent(_linkA[l], l);
                     InsertAdjacent(_linkB[l], l);
+                    NoteBuiltLink(l);
                 }
 
             if (_freeRegionCursor > 0) _freeRegions.RemoveRange(0, _freeRegionCursor);
@@ -390,7 +391,7 @@ namespace Odyssey.Sim.Pathing
             t = Lap(RebuildSegment.Portals, t);
             if (_adjWaste > 1024 && _adjWaste * 2 > _adjUsed) PackAdjacency();
             t = Lap(RebuildSegment.Adjacency, t);
-            RecomputeDistricts();
+            UpdateDistricts();
             t = Lap(RebuildSegment.Districts, t);
             RecomputeLayerChangeEstimate();
             Lap(RebuildSegment.Estimate, t);
@@ -487,6 +488,7 @@ namespace Odyssey.Sim.Pathing
             for (int r = _blockRegionHead[block]; r != -1;)
             {
                 int next = _regionNextInBlock[r];
+                LeaveDistricts(r);
                 _regionAlive[r] = false;
                 _regionKind[r] = RegionKind.None;
                 _regionVersion[r]++;
@@ -510,6 +512,10 @@ namespace Odyssey.Sim.Pathing
 
             _regionAlive[id] = true;
             _regionKind[id] = kind;
+            // In no district until the repair puts it in one. A recycled id was reset as it was
+            // freed; a new one comes out of Array.Resize at 0, which is somebody's district (HT1).
+            for (int m = 0; m < TraverseModes.Count; m++) _district[m][id] = -1;
+            AddRepairSeed(id);
             _regionBlock[id] = block;
             _regionMinCell[id] = minCell;
             _regionCells[id] = 0;
@@ -634,6 +640,8 @@ namespace Odyssey.Sim.Pathing
                 if (_linkKind[l] == LinkKind.Portal) RemovePortalEdges(l);
                 RemoveAdjacent(_linkA[l], l);
                 RemoveAdjacent(_linkB[l], l);
+                AddRepairSeed(_linkA[l]);
+                AddRepairSeed(_linkB[l]);
                 _linkAlive[l] = false;
                 _freeLinks.Add(l);
                 l = next;
@@ -1746,6 +1754,16 @@ namespace Odyssey.Sim.Pathing
 
                 if (_districtCount[m] != next)
                     return $"mode {(TraverseMode)m}: {_districtCount[m]} districts, expected {next}";
+                if (_districtsBuilt)
+                {
+                    var members = new Dictionary<int, int>();
+                    for (int r = 0; r < _regionCount; r++)
+                        if (_regionAlive[r] && _district[m][r] >= 0)
+                            members[_district[m][r]] = members.TryGetValue(_district[m][r], out int c) ? c + 1 : 1;
+                    foreach (KeyValuePair<int, int> kv in members)
+                        if (_districtSize[m][kv.Key] != kv.Value)
+                            return $"mode {(TraverseMode)m}: district {kv.Key} counts {_districtSize[m][kv.Key]} members, has {kv.Value}";
+                }
                 var forward = new Dictionary<int, int>();
                 var backward = new Dictionary<int, int>();
                 for (int r = 0; r < _regionCount; r++)
@@ -1795,7 +1813,12 @@ namespace Odyssey.Sim.Pathing
             var districtRep = new int[TraverseModes.Count][];
             for (int m = 0; m < TraverseModes.Count; m++)
             {
-                districtRep[m] = new int[Math.Max(1, _districtCount[m])];
+                // Sized by the largest id in use, not the live count: a repaired graph reuses ids
+                // from a free list, so its ids are not 0..count-1 (HT1).
+                int maxId = -1;
+                for (int r = 0; r < _regionCount; r++)
+                    if (_regionAlive[r] && _district[m][r] > maxId) maxId = _district[m][r];
+                districtRep[m] = new int[Math.Max(1, maxId + 1)];
                 for (int i = 0; i < districtRep[m].Length; i++) districtRep[m][i] = int.MaxValue;
                 for (int r = 0; r < _regionCount; r++)
                 {

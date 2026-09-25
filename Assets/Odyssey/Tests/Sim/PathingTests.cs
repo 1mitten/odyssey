@@ -400,6 +400,99 @@ namespace Odyssey.Tests.Sim
         static GridSize Size(CellGrid cells) => cells.Size;
 
         /// <summary>
+        /// Two halves of a board six blocks square, joined by one gap in a wall at x = 30, so each
+        /// half reaches blocks the edit never dirties (HT1). Returns the board, the graph and a cell
+        /// in each half.
+        /// </summary>
+        static (CellGrid Cells, NavGraph Nav, int West, int East, int Gap) TwoHalves(bool gapOpen)
+        {
+            // Six blocks by six: an edit dirties two, well under the quarter of the board at which a
+            // rebuild numbers every district afresh, so this is the repair and not the full pass.
+            var cells = NavWorld.MakeCells(60, 60, 1);
+            for (int z = 0; z < 60; z++) cells.Flags[cells.Index(30, z, 0)] |= CellFlags.SolidTerrain;
+            int gap = cells.Index(30, 25, 0);
+            if (gapOpen) cells.Flags[gap] &= ~CellFlags.SolidTerrain;
+            var nav = new NavGraph(cells);
+            nav.Rebuild();
+            return (cells, nav, cells.Index(2, 2, 0), cells.Index(57, 57, 0), gap);
+        }
+
+        /// <summary>
+        /// Filling the one gap splits a district in two, and both pieces keep regions far from the
+        /// edit: the search from one side runs out of frontier first, and that closed piece must
+        /// take a fresh id while the other keeps the old one (design 05 §7b).
+        /// </summary>
+        [Test]
+        public void FillingTheOneGapSplitsTheWorldInTwo()
+        {
+            var (cells, nav, west, east, gap) = TwoHalves(gapOpen: true);
+            Assert.That(nav.Reachable(west, east, TraverseMode.Colonist), Is.True, "the control: one world");
+
+            NavWorld.SetSolid(cells, nav, gap, true);
+            nav.Rebuild();
+
+            Assert.That(nav.DerivedTablesDisagree(), Is.Null);
+            Assert.That(nav.Reachable(west, east, TraverseMode.Colonist), Is.False, "the halves still read as one");
+            Assert.That(nav.DistrictCount(TraverseMode.Colonist), Is.EqualTo(2));
+        }
+
+        /// <summary>
+        /// Opening the gap merges two districts whose far ends the edit never reached: the smaller
+        /// district's id is walked out from its own regions and replaced, not just the regions the
+        /// search visited (design 05 §7b).
+        /// </summary>
+        [Test]
+        public void OpeningTheGapMergesTheTwoHalves()
+        {
+            var (cells, nav, west, east, gap) = TwoHalves(gapOpen: false);
+            Assert.That(nav.Reachable(west, east, TraverseMode.Colonist), Is.False, "the control: two worlds");
+
+            NavWorld.SetSolid(cells, nav, gap, false);
+            nav.Rebuild();
+
+            Assert.That(nav.DerivedTablesDisagree(), Is.Null);
+            Assert.That(nav.Reachable(west, east, TraverseMode.Colonist), Is.True, "the halves still read as two");
+            Assert.That(nav.DistrictCount(TraverseMode.Colonist), Is.EqualTo(1));
+        }
+
+
+        /// <summary>
+        /// The split only the ends of a <i>freed</i> link can see (HT1, design 05 §7b). A dead-end
+        /// room in one block, reached by a corridor from the block next door; the corridor is walled
+        /// at the last cell before the boundary. The link across the boundary is freed and not built
+        /// again, so the room's region is at the end of nothing new — only the freed link names it.
+        /// Its block is not dirty, so it is not re-flooded either. Without the freed link's ends as
+        /// seeds, the room keeps the district of the world outside it.
+        /// </summary>
+        [Test]
+        public void WallingARoomOffAcrossABlockBoundaryGivesItADistrictOfItsOwn()
+        {
+            // Everything solid, then carve: an open yard in the first block (x 0..8), a corridor along
+            // z = 5 from x = 0 to x = 14, and a room at x 12..16 in the second block.
+            // Four blocks by four, so the edit is repaired and not the full pass (see TwoHalves).
+            var cells = NavWorld.MakeCells(40, 40, 1);
+            for (int i = 0; i < cells.Size.CellCount; i++) cells.Flags[i] |= CellFlags.SolidTerrain;
+            void Open(int x, int z) => cells.Flags[cells.Index(x, z, 0)] &= ~CellFlags.SolidTerrain;
+            for (int x = 0; x <= 8; x++) for (int z = 0; z <= 9; z++) Open(x, z);
+            for (int x = 0; x <= 14; x++) Open(x, 5);
+            for (int x = 12; x <= 16; x++) for (int z = 3; z <= 7; z++) Open(x, z);
+
+            var nav = new NavGraph(cells);
+            nav.Rebuild();
+            int yard = cells.Index(2, 2, 0), room = cells.Index(14, 4, 0);
+            Assert.That(nav.Reachable(yard, room, TraverseMode.Colonist), Is.True, "the control: the room is reached");
+
+            // x = 9 is the last cell of the first block; the corridor crosses into the second at 10.
+            NavWorld.SetSolid(cells, nav, cells.Index(9, 5, 0), true);
+            nav.Rebuild();
+
+            Assert.That(nav.DerivedTablesDisagree(), Is.Null);
+            Assert.That(nav.Reachable(yard, room, TraverseMode.Colonist), Is.False, "the walled room still reads as reachable");
+            Assert.That(nav.DistrictCount(TraverseMode.Colonist), Is.EqualTo(2));
+        }
+
+
+        /// <summary>
         /// A hole mined in one block is fallen into from the block next door. The edit dirties
         /// the block holding the hole; the fall edge belongs to the block holding the ledge. If
         /// the rebuild does not widen to the horizontal neighbours, that edge never appears, and
