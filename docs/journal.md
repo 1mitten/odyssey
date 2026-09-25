@@ -13016,6 +13016,102 @@ EditMode is 3,848 / 3,814 / 0 failed and PlayMode 150 / 138 / 0, and the Home vi
 measured +0.07 ms and two draw calls. That arm logs the hearth mark as not shown and asserts nothing
 about it, so whether the house appears is still a question for Play.
 
+## 2026-09-25 — M5 and M13: the scenery becomes real things (design 45)
+
+The Meadow look pass had strewn the board with drawn bushes and stones, placed by a hash of the
+cell and simulated not at all. The owner decided which of them become real (bushes and loose
+stones at the same spots and density, mushrooms under trees, berry bushes as a kind of bush), what
+a bush does (walked through slowly, cleared before anything is built on it, yields nothing), what
+the food does (berries picked by order and regrowing over days, mushrooms foraged once and
+reappearing elsewhere), and that trees become species in the simulation so the art, the wood and
+the work agree. Design 45 holds the decisions; this entry holds the reasoning that is not in it.
+
+**The species cost no worldgen draw.** The tree pass already rolled a `species` number per column
+for conifer-or-broadleaf; the four species are that roll rescaled across the broadleaf band, with
+the look pass's own rarity (one broadleaf in forty a giant, the rest one meadow tree to three
+fruit trees). So every tree stands where it stood, and what moved in the goldens is what a tree is,
+never where the wood is. Birch and meadow keep the ids 10 and 11 so an old save's trees load as
+the species its art already drew them as; the fruit tree, the giant and the bushes take 17-21,
+after the buildings, because edifice ids are one space. That made the natural ids non-contiguous,
+and **four range tests in `WorldRenderModel` would have drawn a bush as a tree or indexed past a
+table**. They are predicates now (`IsTree`, `IsBush`, `IsNatural`), and the shelf's old comment —
+the day a range test drew every shelf as a conifer — is why nothing compares an id against a range.
+
+**A bush's price has to be readable without the edifice list.** Navigation prices a cell by a byte,
+and the grid holds an edifice's handle, not its kind. The answer is a flag bit on the cell
+(`CellFlags.Undergrowth`, bit 7), set where a bush is placed and cleared by `RemoveEdifice` with
+the bush, so the only way out for a bush is the only place the flag goes. Clearing marks
+navigation dirty, which a tree never needed.
+
+**The build and zone guard was free.** A site, a growing zone and a stockpile each already refuse a
+cell with any edifice in it, which is how trees have always been handled. Nothing new was written.
+
+**The dressing's rules were ported, not shared.** The simulation cannot see presentation and does
+not use floats, so the bush rule (even lattice, 14-cell field over 0.45, 0.7 at a wood edge, times
+0.4) and the stone rule (18 per cent beside rock, 1.2 elsewhere) are restated in 16.16 fixed point
+over the same FNV hash — keyed on the world seed this time, which the dressing's never was.
+
+**Measured, not assumed.** `GoldenColonyProbe` was run on the base commit, on M5 and on M13 and the
+outputs diffed. M5: the generated census identical, the fifteen colonists wandering 95 times in
+10,000 ticks where they wandered 105 (a bush costs +50), nothing else different. M13: 680 stone in
+136 stacks and 89 mushrooms in 22 on the generated board, one more mushroom stack after the run,
+every colonist number identical to M5's — the golden colony has no store, so nobody hauls, and
+nobody was hungry enough to walk to a mushroom. The bare meadow and the city moved in neither. The
+water test's six dry-map hashes re-based and all six barren ones held, which is the evidence that
+nothing but the new passes touched the grid. The starting placement signature is unchanged once
+the map's own items are left out of it.
+
+**The frame found a pass with no cull.** The first 4K run against the base commit read the
+Standard frame flat and Huge 1.8 ms worse, and the split put all of it in `Actors`: 0.089 to
+1.421 ms. The actor pass drew every thing on the board every frame — scattered into its heap,
+lifted rock by rock, stamped into the grass — wherever the camera pointed, which was invisible while
+a colony's few dozen things were all there were. A cell box against the frustum, asked first, took
+it to 0.096. Measured back to back on this machine (RTX 5070 Ti), base then branch: Standard 4K
+6.98 -> 6.71 ms, Huge 4K 6.62 -> 6.83 ms, batch 1.81 -> 1.82 and 2.49 -> 2.34; `World` flat
+(1.007 -> 0.979, 1.710 -> 1.697), so the bushes cost what the dressing's did; the tick 0.007 ->
+0.008 ms at Standard, 0.021 -> 0.020 at Huge (P12 holds).
+
+**One owner decision left open.** The Harvest chip is pinned beside Chop and clear, which makes the
+orders strip seven; the rule that caps it asks for a paragraph and got one, and the paragraph says
+Harvest is the one to move if seven reads long.
+
+## 2026-09-25 — Bushes you can click, and berries on the bush (design 45 §12)
+
+Two faults from the owner's first play of #222. **Clicking a bush named the grass**: measured
+through the rig's real pick path, 14 of 18 clicks on a bush's middle and 56 of 73 on its crown
+missed, because a 2–3 m bush was claimed only where the ray crossed its cell's floor, and the ray
+aimed at the crown reaches the floor a metre or two on — or, in its own column, the ground block
+below, which the solid-cell rule claims first. The bush is a box to its drawn crown now, its height
+noted by the mesher that drew it: 0 of 18 and 1 of 68, and no ground in front of a bush is taken by
+it. Shrinking and re-centring the bushes was tried as a second arm and bought nothing, so it was
+not kept. **The berries floated**: placed on a ring by the footprint's half-diagonal with neither
+the bush's turn nor its crown's shape. They go through the bush's own drawn matrix onto the upper
+dome of its bounds now, 15 % inside. Before and after photographs are `BushPickTests.TheBerryBushAtThePlayCamera`.
+
+## 2026-09-25 — Placing over growth (design 45 §13)
+
+The owner could not see a blueprint through the meadow. While any tool is armed the footprint's
+grass now lies flat (one stamp per footprint box into the existing clearance texture) and the
+bushes and trees over it fade by the colonists' see-through partition — the one place a bush
+fades; a waiting site keeps its grass flat until built. The first timing was the lesson: a 24 x 24
+box cost 2.4 ms, and the frame split put all of it in the overlays section, where the stamp runs —
+a square root for each of ~50,000 texels. Writing the inside flat and paying only in the margin
+took it to +0.47 ms over the same box without the clearing, most of that the faded trees' extra
+draws. Measured in one world, three arms (cleared, armed without, nothing armed).
+
+## 2026-09-25 — An ordered cell is bare (design 45 §13a)
+
+The owner's screenshot of a harvest box in rain: flattened blades lying across every pink plate.
+Flattening was the wrong verb for a mark — the plate is on the ground, so a blade laid on the ground
+lies over it — and the mark cleared a 1.1 m disc in a 2.5 m cell besides. The fix is a second field
+beside the clearing that the foliage shader discards against, per fragment, written as coverage so
+the cut's edge is the cell's to a few centimetres (`OrderCutTests` walks three cells across every
+texel phase). It lives in the one gatherer every plate goes through, which is how "all orders
+should be checked" is answered once rather than per order. The photograph found a second, larger
+fault the screenshot had hidden: faded crowns write depth and share the plates' transparent queue,
+so where the instanced batch sorted second, half the harvest box was simply not drawn. Marks now
+draw one queue earlier.
+
 ## 2026-09-25 — A campfire a terrace up could not be clicked: the ground followed the walls
 
 The first play of the home area passed (*"it all works"*), then: *"I created another campfire and I

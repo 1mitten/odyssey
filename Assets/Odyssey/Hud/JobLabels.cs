@@ -51,6 +51,8 @@ namespace Odyssey.Hud
             "ui.status.stealing",
             // Medical supplies (design 37): Job_Treat and Job_Patient, 23 and 24, after Steal.
             "ui.status.treating", "ui.status.patient",
+            // Picking a berry bush (design 45 §6), JobHandle 25, after medical supplies.
+            "ui.status.foraging",
         };
 
         public static string IconKey(int jobDef) =>

@@ -75,12 +75,16 @@ namespace Odyssey.Tests.Sim
             // One more after them since design 33 §17: the thief's, appended.
             Assert.That(JobHandle.Steal, Is.EqualTo(22));
             // 25 since medical supplies appended Job_Treat and Job_Patient at 23 and 24 (design
-            // 37), after the thief's — bandits shipped first at the merge with main.
-            Assert.That(JobHandle.Count, Is.EqualTo(25));
+            // 37), after the thief's — bandits shipped first at the merge with main. And the
+            // forager's after them (design 45 §6): 25, where it was 23 before medical reached main.
+            Assert.That(JobHandle.Forage, Is.EqualTo(25));
+            Assert.That(JobHandle.Count, Is.EqualTo(26));
             Assert.That(new[] { ItemHandle.Bat, ItemHandle.Crowbar, ItemHandle.Machete, ItemHandle.ArcBlade },
                 Is.EqualTo(new[] { 7, 8, 9, 10 }));
-            // 12 since medical supplies were appended at 11 (design 37).
-            Assert.That(ItemHandle.Count, Is.EqualTo(12));
+            // Medical supplies at 11 (design 37), then the wild foods at 12 and 13 (design 45 §6).
+            Assert.That(ItemHandle.MedicalSupplies, Is.EqualTo(11));
+            Assert.That(new[] { ItemHandle.Berries, ItemHandle.Mushrooms }, Is.EqualTo(new[] { 12, 13 }));
+            Assert.That(ItemHandle.Count, Is.EqualTo(14));
             Assert.That(WorkHandle.Rescue, Is.EqualTo(5));
             Assert.That(WorkHandle.Count, Is.EqualTo(7));
             Assert.That(SkillIndex.Melee, Is.EqualTo(5));
@@ -104,7 +108,7 @@ namespace Odyssey.Tests.Sim
             PawnContent content = ContentPack.Pawns();
             Assert.That(content.Jobs.Skip(17).Select(j => j.defName), Is.EqualTo(new[]
                 { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue", "Job_Steal",
-                  "Job_Treat", "Job_Patient" }));
+                  "Job_Treat", "Job_Patient", "Job_Forage" }));
             for (int i = 0; i < content.Jobs.Length; i++)
                 Assert.That(content.Jobs[i].driver, Is.EqualTo(i), content.Jobs[i].defName + " names another driver");
             Assert.That(content.Jobs[JobIndex.AttackMelee].trainsSkill, Is.EqualTo(SkillIndex.Melee));
@@ -113,8 +117,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(content.WorkTypes[WorkTypeIndex.Rescue].defName, Is.EqualTo("Work_Rescue"));
             Assert.That(WorkTypeIndex.Names[WorkTypeIndex.Rescue], Is.EqualTo("rescue"));
             Assert.That(SkillIndex.Names[SkillIndex.Melee], Is.EqualTo("melee"));
-            Assert.That(content.Items.Skip(7).Take(4).Select(i => i.defName), Is.EqualTo(new[]
-                { "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade" }));
+            Assert.That(content.Items.Skip(7).Select(i => i.defName), Is.EqualTo(new[]
+                { "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade", "Item_MedicalSupplies",
+                  "Item_Berries", "Item_Mushrooms" }));
             Assert.That(content.Kinds[PawnKindIndex.Bandit].defName, Is.EqualTo("PawnKind_Bandit"));
         }
 

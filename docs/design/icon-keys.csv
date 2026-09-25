@@ -32,6 +32,8 @@ ui.res.stone,Stone,ui.res,M3,"Broken rock from a mined face. Heavy, and there is
 ui.res.ironore,Iron ore,ui.res,M3,Raw ore. Worthless until something smelts it
 ui.res.coal,Coal,ui.res,M3,"Burns hot. Found deeper than iron, and for that reason"
 ui.res.carrots,Carrots,ui.res,M3,"The first field crop. Eaten straight, no cooking and no spoilage"
+ui.res.berries,Berries,ui.res,M3,"Picked from a wild berry bush. Eaten straight; the bush grows more"
+ui.res.mushrooms,Mushrooms,ui.res,M3,"Found under the trees. Eaten straight; more come up somewhere else"
 ui.res.grain,Grain,ui.res,M1,"Bulk staple. Stores well, needs cooking"
 ui.res.fungus,Fungus,ui.res,M1,Grows without light. The underground staple
 ui.res.stimulant,Stimulant,ui.res,M1,Buys an hour of wakefulness at a cost
@@ -98,6 +100,7 @@ ui.status.mining,Mining,ui.status,M2,"Cutting into rubble, concrete or rock"
 ui.status.felling,Chopping,ui.status,M3,Cutting a tree down for wood
 ui.status.sowing,Sowing,ui.status,M3,Breaking ground and planting a zone cell
 ui.status.harvesting,Harvesting,ui.status,M3,Cutting a ripe crop and gathering it
+ui.status.foraging,Picking,ui.status,M3,Picking the berries off a wild bush
 ui.status.refuelling,Refuelling,ui.status,M3,Carrying fuel to a generator and filling it
 ui.status.sleeping,Sleeping,ui.status,M2,"Asleep, and should stay that way"
 ui.status.eating,Eating,ui.status,M2,Taking a meal
@@ -197,11 +200,11 @@ ui.arch.tool.salvage,Salvage,ui.arch.tool,M3,"Strip a ruin. Slower than deconstr
 ui.arch.tool.haulurgent,Haul urgently,ui.arch.tool,M3,Jump this to the top of the haul list
 ui.arch.tool.cancel,Cancel,ui.arch.tool,M3,Remove designations and orders
 ui.arch.tool.forbid,Forbid,ui.arch.tool,M3,Hands off this
-ui.arch.tool.fell,Chop trees,ui.arch.tool,M3,Cut a tree down for wood
+ui.arch.tool.fell,Chop and clear,ui.arch.tool,M3,"Cut a tree down for wood, or clear a bush out of the way"
 ui.arch.tool.allowitem,Allow,ui.arch.tool,M3,Hands back on
 ui.arch.tool.clearrubble,Clear rubble,ui.arch.tool,M3,Remove loose debris from a cell
 ui.arch.tool.extinguish,Extinguish,ui.arch.tool,M3,Put this fire out now
-ui.arch.tool.harvest,Harvest,ui.arch.tool,M3,Take the crop
+ui.arch.tool.harvest,Harvest,ui.arch.tool,M3,"Pick the berries from a ripe berry bush. They grow back in three days"
 ui.arch.tool.conduit,Conduit,ui.arch.tool,M3,Carries power. Connects vertically
 ui.arch.tool.unwire,Remove conduit,ui.arch.tool,M3,"Takes a conduit up, and nothing else in the cell"
 ui.arch.tool.battery,Battery,ui.arch.tool,M3,Stores charge against the night
@@ -471,8 +474,13 @@ ui.terrain.rock,Rock,ui.terrain,M1,"Natural stone. Mined, not cleared"
 ui.terrain.subsoil,Subsoil,ui.terrain,M1,"The band between soil and rock. Cheap to dig"
 ui.terrain.bedrock,Bedrock,ui.terrain,M1,"The floor of the world. Deliberately punitive to mine"
 ui.terrain.packedgravel,Packed Gravel,ui.terrain,M3,"Stony ground, packed hard. Firm footing, poor soil"
-ui.terrain.tree.conifer,Conifer,ui.terrain,M3,"An evergreen of the meadow. Chopped for wood"
-ui.terrain.tree.broadleaf,Broadleaf,ui.terrain,M3,"A broad-crowned tree of the meadow. Chopped for wood"
+ui.terrain.tree.birch,Birch,ui.terrain,M3,"A slim white-barked tree. Quick to chop, not much wood in it"
+ui.terrain.tree.meadow,Meadow tree,ui.terrain,M3,"A broad round-crowned tree of the open meadow. Chopped for wood"
+ui.terrain.tree.fruit,Fruit tree,ui.terrain,M3,"A low spreading tree. It will bear fruit one day; for now it is wood"
+ui.terrain.tree.giant,Giant tree,ui.terrain,M3,"A rare old giant. Slow to bring down, and a great deal of wood"
+ui.terrain.bush,Bush,ui.terrain,M3,"Dense undergrowth. Slow to push through; cleared before anything is built here"
+ui.terrain.bush.berry,Berry bush,ui.terrain,M3,"A bush that bears berries"
+ui.terrain.bush.picked,Picked berry bush,ui.terrain,M3,"A berry bush picked bare, growing its berries back"
 ui.terrain.carrot,Carrot,ui.terrain,M3,"A root vegetable of the meadow. Grown in zones, cut at full growth"
 ui.settings.panel,Settings,ui.settings,M1,"What the game does, not what the colony does"
 ui.settings.graphics,Graphics,ui.settings,M1,"How the world is drawn. None of it reaches the simulation"

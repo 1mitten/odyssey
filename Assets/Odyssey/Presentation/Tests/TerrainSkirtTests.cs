@@ -26,7 +26,7 @@ namespace Odyssey.Tests.Presentation
             int planted = 0;
             for (int z = 0; z < 12 && planted < trees; z++)
             for (int x = 0; x < 12 && planted < trees; x++, planted++)
-                world.Edifice(x, z, 1, NaturalContent.EdificeTreeConifer, blocking: false);
+                world.Edifice(x, z, 1, NaturalContent.EdificeTreeBirch, blocking: false);
 
             return world.Publish();
         }
@@ -133,7 +133,7 @@ namespace Odyssey.Tests.Presentation
                 world.Solid(x, z, 1, NaturalContent.TerrainGrass);
             }
 
-            world.Edifice(2, 2, 2, NaturalContent.EdificeTreeConifer, blocking: false);
+            world.Edifice(2, 2, 2, NaturalContent.EdificeTreeBirch, blocking: false);
             world.Publish();
 
             TerrainSkirt skirt = SkirtFor(world, out MaterialCache materials);

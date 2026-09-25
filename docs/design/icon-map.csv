@@ -423,6 +423,16 @@ ui.terrain.water.deep,-,,,"flat dark water, no bed visible",-,gap
 ui.terrain.rock,-,,,"a face of natural stone",-,gap
 ui.terrain.subsoil,-,,,"a tile of dug earth",-,gap
 ui.terrain.bedrock,-,,,"a tile of dark, banded stone",-,gap
+ui.terrain.tree.birch,-,,,"a slim pale-trunked tree",-,gap
+ui.terrain.tree.meadow,-,,,"a round-crowned tree",-,gap
+ui.terrain.tree.fruit,-,,,"a low tree with a spreading crown",-,gap
+ui.terrain.tree.giant,-,,,"a towering tree dwarfing a figure",-,gap
+ui.terrain.bush,-,,,"a round green bush",-,gap
+ui.terrain.bush.berry,-,,,"a bush dotted with red berries",-,gap
+ui.terrain.bush.picked,-,,,"a bare bush with no berries",-,gap
+ui.res.berries,-,,,"a handful of red berries",-,gap
+ui.res.mushrooms,-,,,"two capped mushrooms",-,gap
+ui.status.foraging,-,,,"a hand picking a berry",-,gap
 ui.storage.priority.last,-,,,"a single chevron pointing down, the bottom rung of a ladder",-,gap
 ui.storage.priority.low,-,,,"a chevron pointing down above a short level bar",-,gap
 ui.storage.priority.normal,-,,,"a level bar, pointing neither up nor down",-,gap

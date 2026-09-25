@@ -353,6 +353,8 @@ namespace Odyssey.Sim.Pawns
             // Medical supplies (design 37): 23 and 24, after Steal.
             new TreatJobDriver(),
             new PatientJobDriver(),
+            // Picking a berry bush (design 45 §6), JobHandle 25, after medical supplies.
+            new ForageJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------

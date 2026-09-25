@@ -270,7 +270,20 @@ namespace Odyssey.Tests.Sim
         //
         // Moved a twenty-eighth time, 2026-09-25, at the merge with main (weather, the stream
         // jump): neither side's number covers the merged pack, re-taken fresh.
-        const ulong ContentFingerprint = 16924157478448908115UL;
+        // Moved again, 2026-09-25, by design 45 (the scenery made real): the tuning's woodPerTree
+        // is gone, because what a felled tree yields is its species' own now, in
+        // World/WildPlants.xml. Taken from a freshly loaded pack.
+        // 2026-09-25, design 46 §6: MovementDef gained jumpFailPerMille (30) and
+        // jumpFailCarryingPerMille (2,000) — the jump over a one-cell stream falling short.
+        // Both, 2026-09-25, on merging main into the scenery line: re-taken from the merged pack.
+        //
+        // And again the same day by M13 (design 45 §6): Job_Forage appended at 23, and
+        // Item_Berries and Item_Mushrooms at 11 and 12 (Food, 60 and 70, stacks of 75). Taken from
+        // a freshly loaded pack.
+        // M13 on the merged line, 2026-09-25: re-taken from the merged pack.
+        // The scenery line merged with medical supplies, 2026-09-25: Job_Forage renumbered 23 -> 25
+        // and Item_Berries/Item_Mushrooms 11-12 -> 12-13, after main's. Re-taken from the merged pack.
+        const ulong ContentFingerprint = 2326022620442813876UL;
 
 
         [Test]

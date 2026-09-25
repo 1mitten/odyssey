@@ -33,6 +33,8 @@ namespace Odyssey.Hud
             "ui.item.bat", "ui.item.crowbar", "ui.item.machete", "ui.item.arcblade",
             // Medical supplies (design 37), handle 11. The key is the old "medkit" one, relabelled.
             "ui.res.medkit",
+            // The wild foods (design 45 §6), ItemHandle 12 and 13, after medical supplies.
+            "ui.res.berries", "ui.res.mushrooms",
         };
 
         public static string IconKey(int def) =>

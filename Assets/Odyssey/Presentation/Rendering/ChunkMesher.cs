@@ -441,7 +441,7 @@ namespace Odyssey.Presentation.Rendering
                 // still is. That covers the campfire the owner asked about and the bed and the
                 // shelf, which have had the same fault since they landed and nobody had looked.
                 ushort built = _model.EdificeDef(above);
-                if (built != CoreContent.EdificeNone && !NaturalContent.IsTree(built)) return;
+                if (built != CoreContent.EdificeNone && !NaturalContent.IsNatural(built)) return;
             }
 
             EnsureScatterModules();
@@ -669,7 +669,7 @@ namespace Odyssey.Presentation.Rendering
                     if (edifice != CoreContent.EdificeNone)
                     {
                         if (NaturalContent.IsTree(edifice)) woodEdge = true;
-                        else ringFree = false;
+                        else if (!NaturalContent.IsBush(edifice)) ringFree = false;
                     }
                     if (_model.IsSolid(up) && _model.DrawnTerrain(up) == NaturalContent.TerrainRock) nearRock = true;
                 }
@@ -692,6 +692,147 @@ namespace Odyssey.Presentation.Rendering
                 PlaceDressing(batch, small, x, z, surface, daylit, spread: 0.7f, slot: slot);
             }
         }
+
+        /// <summary>
+        /// A bush the simulation placed (design 45 §4), standing in the air cell above its grass.
+        /// Drawn whatever the grass ladder and the dressing switch say, because it is a thing a
+        /// colonist pushes through and a builder has to clear: turning the grass off must not hide
+        /// it. A checkout without the packs has no bush art and draws nothing, the tufts' rule.
+        /// </summary>
+        void EmitBush(ChunkBatch batch, ushort def, int x, int z, int y)
+        {
+            if ((DressingKinds & (1 << (int)MeadowDressing.Kind.Bush)) == 0) return;
+            if (!TryBushPlacement(x, z, y, out Matrix4x4 placed, out int module)) return;
+
+            AddBody(batch, module, TintCode.Dressing(TintCode.Tree(TreeSpecies.Broadleaf)), placed);
+            // Its drawn height, for the click (design 45 §12): the crown's top over the cell's floor.
+            _model.NoteBushTop(_model.Size.Index(x, z, y),
+                placed.MultiplyPoint3x4(new Vector3(0f, _model.Library[module].Bounds.max.y, 0f)).y
+                - CellMetrics.FloorCentre(x, z, y).y);
+
+            // Where the bush stands and how wide, for the renderer's "is this thing under a bush"
+            // (design 38 §19): the half-diagonal of its footprint, so any bearing is covered.
+            float scale = placed.lossyScale.x;
+            Vector3 extent = _model.Library[module].Bounds.extents * scale;
+            Vector3 at = placed.GetColumn(3);
+            batch.BushDiscs.Add(new Vector3(at.x, at.z, Mathf.Sqrt(extent.x * extent.x + extent.z * extent.z)));
+
+            if (def == NaturalContent.EdificeBerryBush) EmitBerries(batch, x, z, placed, module);
+        }
+
+        /// <summary>
+        /// Where and how a bush in this cell is drawn: which of the Meadow bushes, and its matrix —
+        /// the jitter, the turn and the size of <see cref="MeadowDressing.Placement"/>, lifted onto
+        /// the ground and the skin. The one owner of that answer, asked by the mesher to draw the
+        /// bush and hang its berries, and by anything that has to know where a drawn bush is (the
+        /// pick measurement, design 45 §12). False when there is no bush art.
+        /// </summary>
+        public bool TryBushPlacement(int x, int z, int y, out Matrix4x4 placed, out int module)
+        {
+            placed = Matrix4x4.identity;
+            module = 0;
+            EnsureDressModules();
+            if (_dressModules.Length == 0) return false;
+            int[] family = _dressModules[(int)MeadowDressing.Kind.Bush];
+            if (family.Length == 0) return false;
+
+            uint salt = MeadowDressing.SaltOf(MeadowDressing.Kind.Bush);
+            module = family[MeadowDressing.VariantFor(x, z, salt, family.Length)];
+            MeadowDressing.Placement(x, z, salt, BushSpread,
+                out float offsetX, out float offsetZ, out float yaw, out float scale);
+            scale *= BushScale;
+
+            Vector3 surface = CellMetrics.FloorCentre(x, z, y);
+            Vector3 at = GroundRelief.Lift(
+                surface + new Vector3(offsetX * CellMetrics.SizeXZ, 0f, offsetZ * CellMetrics.SizeXZ));
+            at.y += SkinRise(x, z, surface.y, at.x, at.z);
+            placed = Matrix4x4.TRS(at, Quaternion.Euler(0f, yaw, 0f), new Vector3(scale, scale, scale));
+            return true;
+        }
+
+        /// <summary>
+        /// How far a simulated bush may stand off its cell's centre, as a fraction of the cell: the
+        /// dressing's own half cell. A setting so a measurement can move it; the pick fix of design
+        /// 45 §12 was measured not to need it moved (<c>BushPickTests</c>).
+        /// </summary>
+        public static float BushSpread { get; set; } = 0.5f;
+
+        /// <summary>The drawn size of a simulated bush against the dressing's; one, as it was.</summary>
+        public static float BushScale { get; set; } = 1f;
+
+        /// <summary>
+        /// The berries on a ripe berry bush (design 45 §6, §12): clusters set <b>on the bush's own
+        /// crown</b>, placed through the bush's drawn matrix so they turn, size and stand with it.
+        ///
+        /// <para>The crown is taken as the ellipsoid the bush's bounds describe, from its middle
+        /// height upwards, and each cluster is set a little inside that surface — the Meadow bushes
+        /// are lumpy, the meshes are not readable at run time to find the true surface, and a
+        /// cluster sunk into the leaves reads as growing there where one outside it reads as
+        /// floating. The bounds are the resolved module's, so nothing of the art is copied.</para>
+        /// </summary>
+        void EmitBerries(ChunkBatch batch, int x, int z, in Matrix4x4 bush, int bushModule)
+        {
+            if (_berryModule < 0)
+            {
+                _berryModule = 0;
+                if (_model.Library.Catalogue != null && _model.Library.Catalogue.Find(ModuleIds.ItemBerries) != null)
+                {
+                    int module = _model.Library.Resolve(ModuleIds.ItemBerries, ModuleShape.Pillow);
+                    if (_model.Library[module].UsesArt && !_model.Library[module].IsEmpty) _berryModule = module;
+                }
+            }
+            if (_berryModule == 0) return;
+
+            Bounds crown = _model.Library[bushModule].Bounds;
+            int tint = TintCode.Dressing(TintCode.Stuff(CoreContent.StuffNone));
+            if (!BerriesOnTheCrown)
+            {
+                // As first built, for a before-and-after photograph only: a ring at a fraction of
+                // the footprint's half-diagonal, heights off the bush's top, with neither the bush's
+                // turn nor the crown's shape — which is why they floated (design 45 §12).
+                float scale = bush.lossyScale.x;
+                Vector3 foot = bush.GetColumn(3);
+                float radius = new Vector2(crown.extents.x, crown.extents.z).magnitude * scale;
+                float topY = crown.max.y * scale;
+                float spin = GroundScatter.Unit(x, z, 0xBE44u) * 360f;
+                for (int i = 0; i < 7; i++)
+                {
+                    float angle = (spin + i * (360f / 7)) * Mathf.Deg2Rad;
+                    float reach = radius * (0.55f + 0.2f * GroundScatter.Unit(x + i, z, 0xBE45u));
+                    float height = topY * (0.45f + 0.35f * GroundScatter.Unit(x, z + i, 0xBE46u));
+                    var at = new Vector3(foot.x + Mathf.Cos(angle) * reach, foot.y + height, foot.z + Mathf.Sin(angle) * reach);
+                    AddBody(batch, _berryModule, tint, Matrix4x4.TRS(at, Quaternion.Euler(0f, angle * 57f, 0f), Vector3.one));
+                }
+                return;
+            }
+            float turn = GroundScatter.Unit(x, z, 0xBE44u) * 360f;
+            for (int i = 0; i < BerryClusters; i++)
+            {
+                float azimuth = (turn + i * (360f / BerryClusters)) * Mathf.Deg2Rad;
+                // Between the crown's shoulder and near its top, where a berry is seen from above.
+                float elevation = (42f + 33f * GroundScatter.Unit(x + i, z, 0xBE45u)) * Mathf.Deg2Rad;
+                var onCrown = new Vector3(
+                    Mathf.Cos(elevation) * Mathf.Cos(azimuth) * crown.extents.x,
+                    Mathf.Sin(elevation) * crown.extents.y,
+                    Mathf.Cos(elevation) * Mathf.Sin(azimuth) * crown.extents.z) * BerryDepth;
+                Vector3 local = crown.center + onCrown;
+                Vector3 world = bush.MultiplyPoint3x4(local);
+                AddBody(batch, _berryModule, tint, Matrix4x4.TRS(world,
+                    Quaternion.Euler(0f, azimuth * Mathf.Rad2Deg, 0f), Vector3.one));
+            }
+        }
+
+        /// <summary>False draws the berries as they were first built, for a before photograph (design 45 §12).</summary>
+        public static bool BerriesOnTheCrown { get; set; } = true;
+
+        /// <summary>Clusters on a ripe berry bush.</summary>
+        public const int BerryClusters = 8;
+
+        /// <summary>How far out along the crown ellipsoid a cluster sits: under one, so it is in the
+        /// leaves and not beside them.</summary>
+        public const float BerryDepth = 0.85f;
+
+        int _berryModule = -1;
 
         void PlaceDressing(ChunkBatch batch, MeadowDressing.Kind kind, int x, int z, Vector3 surface,
             bool daylit, float spread, int slot = 0)
@@ -747,7 +888,7 @@ namespace Odyssey.Presentation.Rendering
             if (_model.IsSolid(above)) return false;
             if (_model.Floor(above) != CoreContent.SlabNone) return false;
             ushort built = _model.EdificeDef(above);
-            return built == CoreContent.EdificeNone || NaturalContent.IsTree(built);
+            return built == CoreContent.EdificeNone || NaturalContent.IsNatural(built);
         }
 
         /// <summary>
@@ -799,6 +940,9 @@ namespace Odyssey.Presentation.Rendering
         /// Only rows the catalogue actually has are asked for, so a checkout whose catalogue
         /// predates the variants — or has no packs — gets its one tree, and no "missing art" noise.
         /// </summary>
+        /// <summary>The same, for the topple (design 45 §5): a falling tree wears the row it stood in.</summary>
+        public int[] TreeVariants(int module) => TreeVariantsOf(module);
+
         int[] TreeVariantsOf(int module)
         {
             if (_treeVariants.TryGetValue(module, out int[]? known)) return known;
@@ -1202,7 +1346,7 @@ namespace Odyssey.Presentation.Rendering
             if (y > 0 && !_model.IsSolid(index - size.LayerStride)) return false;
             if (_model.Floor(above) != CoreContent.SlabNone) return false;
             ushort edifice = _model.EdificeDef(above);
-            if (edifice != 0 && !Odyssey.Sim.Worldgen.Natural.NaturalContent.IsTree(edifice)) return false;
+            if (edifice != 0 && !Odyssey.Sim.Worldgen.Natural.NaturalContent.IsNatural(edifice)) return false;
             return true;
         }
 
@@ -1415,6 +1559,17 @@ namespace Odyssey.Presentation.Rendering
         {
             ushort def = _model.EdificeDef(index);
             if (def == CoreContent.EdificeNone) return;
+
+            // A bush (design 45 §4) is a thing the simulation placed, drawn by the dressing's own
+            // path so it looks exactly as the dressing's bushes did — the Meadow art, the jittered
+            // placement, the tint that casts no shadow and never fades. It has no module of its
+            // own, so it goes before the module test that would turn it away.
+            if (NaturalContent.IsBush(def))
+            {
+                EmitBush(batch, def, x, z, y);
+                return;
+            }
+
             int module = _model.EdificeModule(index);
             if (module == 0) return;
 
@@ -1798,14 +1953,15 @@ namespace Odyssey.Presentation.Rendering
 
             // Which tree this is, and which way it faces (the look pass, design 38 §17): a species
             // has several pieces of art, chosen per cell, each turned and sized a little by the
-            // hash so a wood is not one tree stamped in rows. A species with one row — no packs,
-            // or the old art — is drawn exactly as before.
+            // hash so a wood is not one tree stamped in rows. Which rows are the species' own is
+            // the simulation's species (design 45 §3), not a hash: a giant is a giant because the
+            // simulation says so and fells like one. A family with one row — no packs, or the old
+            // art — is drawn exactly as before.
             int[] variants = TreeVariantsOf(module);
             if (variants.Length > 1)
             {
-                module = variants[MeadowDressing.TreeVariant(x, z, variants.Length)];
-                float yaw = GroundScatter.Unit(x, z, 0x6A09u) * 360f;
-                float size = 0.9f + GroundScatter.Unit(x, z, 0x6A0Bu) * 0.25f;
+                module = variants[TreeArt.VariantFor(def, x, z, variants.Length)];
+                TreeArt.Stance(x, z, out float yaw, out float size);
                 placement *= Matrix4x4.TRS(Vector3.zero, Quaternion.Euler(0f, yaw, 0f), Vector3.one * size);
             }
 

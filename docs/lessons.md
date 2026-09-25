@@ -2726,3 +2726,16 @@ main's machines would have silently lost their footprint fit. After any merge th
 generated asset, regenerate it (`unity.sh exec Odyssey.EditorTools.PlayScene.RebuildCatalogue`,
 then `CharacterSwatches.Classify` and `AudioSetup.Build`). Then compare its ids against both parents
 before trusting it.
+
+## An assertion inside a nested coroutine leaks the test's world (2026-09-25)
+
+`BushPickTests` called `Assert.Ignore` inside a coroutine it `yield return`ed from its `[UnityTest]`.
+On the runner, which has no art, that fired — and the outer test's `finally`, which destroys the
+world it built, never ran: an exception thrown in a nested enumerator stops the test without
+unwinding the outer iterator. The bootstrap, its camera and its trace outlived the test, and two
+tests that ran after it in the same process failed for reasons that had nothing to do with them
+(`GroupingTheTreesDoesNotChangeThePicture` photographed through the leaked camera; the traced
+session's file hit a sharing violation with the leaked session's). **Report from a nested
+coroutine and assert in the outer method, and give a file that builds worlds a `[TearDown]` that
+destroys them by name.** The symptom is a failure in a *different* test that only appears once the
+new file is in the run.

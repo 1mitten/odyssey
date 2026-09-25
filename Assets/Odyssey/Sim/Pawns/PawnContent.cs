@@ -174,6 +174,7 @@ namespace Odyssey.Sim.Pawns
         public const int Steal = JobHandle.Steal;
         public const int Treat = JobHandle.Treat;
         public const int Patient = JobHandle.Patient;
+        public const int Forage = JobHandle.Forage;
         public const int Count = JobHandle.Count;
     }
 
@@ -612,6 +613,8 @@ namespace Odyssey.Sim.Pawns
         public const int Machete = ItemHandle.Machete;
         public const int ArcBlade = ItemHandle.ArcBlade;
         public const int MedicalSupplies = ItemHandle.MedicalSupplies;
+        public const int Berries = ItemHandle.Berries;
+        public const int Mushrooms = ItemHandle.Mushrooms;
         public const int Count = ItemHandle.Count;
     }
 
@@ -1044,7 +1047,6 @@ namespace Odyssey.Sim.Pawns
         public int thinkLoopLimit = 10;
         public int thinkLoopWindowTicks = 60;
         public int standDownTicks = 120;
-        public int woodPerTree = 27;
         public int stonePerRock = 8;
         public int stoneChanceOneIn = 1;
         public int orePerCell = 15;
@@ -1080,6 +1082,21 @@ namespace Odyssey.Sim.Pawns
         public WorkTypeDef[] WorkTypes = System.Array.Empty<WorkTypeDef>();
         public SkillDef[] Skills = System.Array.Empty<SkillDef>();
         public ItemDef[] Items = System.Array.Empty<ItemDef>();
+
+        /// <summary>
+        /// The item table slot of a def name, or -1 if the content has no such item. What a Def
+        /// that names its yield by <c>[DefReference]</c> is resolved through — a crop, a tree, a
+        /// bush — rather than each keeping a handle of its own: an item handle is a save contract,
+        /// and deriving one at load would be a second place to keep it in step. The table is a
+        /// dozen entries long and this is asked once a harvest.
+        /// </summary>
+        public int ItemIndexOf(string defName)
+        {
+            for (int i = 0; i < Items.Length; i++)
+                if (string.Equals(Items[i].defName, defName, System.StringComparison.Ordinal))
+                    return i;
+            return -1;
+        }
         public MoodDef Mood = new MoodDef();
         public MentalBreakDef Break = new MentalBreakDef();
         public MovementDef Movement = new MovementDef();
@@ -1195,13 +1212,6 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Job starts allowed inside <see cref="ThinkLoopWindowTicks"/> before a stand-down.</summary>
         public int ThinkLoopLimit = 10;
-
-        /// <summary>
-        /// Wood a felled tree leaves on the ground: 27, the pine class's vanilla yield
-        /// (docs/research/a-08-plants-growing-food.md §1; the oak class gives 46). One stack of
-        /// 75, so a single haul clears it.
-        /// </summary>
-        public int WoodPerTree = 27;
 
         /// <summary>Stone a plain rock cell leaves. ASSUMED, like everything else here.</summary>
         public int StonePerRock = 8;
@@ -1341,7 +1351,9 @@ namespace Odyssey.Sim.Pawns
                 // A bandit carrying something off the board (design 33 §17).
                 "Job_Steal",
                 // Medical supplies (design 37).
-                "Job_Treat", "Job_Patient");
+                "Job_Treat", "Job_Patient",
+                // Picking a berry bush (design 45 §6), appended after medical supplies.
+                "Job_Forage");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",
@@ -1366,7 +1378,9 @@ namespace Odyssey.Sim.Pawns
                 // The four melee weapons (design 33 §1, C3), appended together.
                 "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade",
                 // What a doctor treats with (design 37), appended.
-                "Item_MedicalSupplies");
+                "Item_MedicalSupplies",
+                // The wild foods (design 45 §6), appended together after medical supplies.
+                "Item_Berries", "Item_Mushrooms");
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");
             content.Break = One<MentalBreakDef>(defs, "Break_Wander");
@@ -1449,7 +1463,6 @@ namespace Odyssey.Sim.Pawns
             content.ThinkLoopLimit = tuning.thinkLoopLimit;
             content.ThinkLoopWindowTicks = tuning.thinkLoopWindowTicks;
             content.StandDownTicks = tuning.standDownTicks;
-            content.WoodPerTree = tuning.woodPerTree;
             content.StonePerRock = tuning.stonePerRock;
             content.StoneChanceOneIn = tuning.stoneChanceOneIn;
             content.OrePerCell = tuning.orePerCell;

@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-129 entries, 103 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+134 entries, 108 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -19,8 +19,13 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Subsoil** | `ui.terrain.subsoil` | The band between soil and rock. Cheap to dig <br>**Needs:** a tile of dug earth | no art | M1 |
 | **Bedrock** | `ui.terrain.bedrock` | The floor of the world. Deliberately punitive to mine <br>**Needs:** a tile of dark, banded stone | no art | M1 |
 | **Packed Gravel** | `ui.terrain.packedgravel` | Stony ground, packed hard. Firm footing, poor soil | no art | M3 |
-| **Conifer** | `ui.terrain.tree.conifer` | An evergreen of the meadow. Chopped for wood | no art | M3 |
-| **Broadleaf** | `ui.terrain.tree.broadleaf` | A broad-crowned tree of the meadow. Chopped for wood | no art | M3 |
+| **Birch** | `ui.terrain.tree.birch` | A slim white-barked tree. Quick to chop, not much wood in it <br>**Needs:** a slim pale-trunked tree | no art | M3 |
+| **Meadow tree** | `ui.terrain.tree.meadow` | A broad round-crowned tree of the open meadow. Chopped for wood <br>**Needs:** a round-crowned tree | no art | M3 |
+| **Fruit tree** | `ui.terrain.tree.fruit` | A low spreading tree. It will bear fruit one day; for now it is wood <br>**Needs:** a low tree with a spreading crown | no art | M3 |
+| **Giant tree** | `ui.terrain.tree.giant` | A rare old giant. Slow to bring down, and a great deal of wood <br>**Needs:** a towering tree dwarfing a figure | no art | M3 |
+| **Bush** | `ui.terrain.bush` | Dense undergrowth. Slow to push through; cleared before anything is built here <br>**Needs:** a round green bush | no art | M3 |
+| **Berry bush** | `ui.terrain.bush.berry` | A bush that bears berries <br>**Needs:** a bush dotted with red berries | no art | M3 |
+| **Picked berry bush** | `ui.terrain.bush.picked` | A berry bush picked bare, growing its berries back <br>**Needs:** a bare bush with no berries | no art | M3 |
 | **Carrot** | `ui.terrain.carrot` | A root vegetable of the meadow. Grown in zones, cut at full growth | no art | M3 |
 
 ## Weather

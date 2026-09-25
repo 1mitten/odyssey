@@ -299,4 +299,19 @@
     <driver>24</driver>
   </JobDef>
 
+  <!--
+    Picking a berry bush (design 45 section 6), driver 25: after medical
+    supplies' Treat and Patient at the merge with main, which shipped them first. No workTicks: the work is the plant's own, in
+    World/WildPlants.xml, as felling's is. Growing's skill and experience, because it is picking
+    a crop.
+  -->
+  <JobDef>
+    <defName>Job_Forage</defName>
+    <driver>25</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>4</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
 </Defs>

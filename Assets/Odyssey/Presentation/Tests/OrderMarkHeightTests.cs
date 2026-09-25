@@ -102,7 +102,7 @@ namespace Odyssey.Tests.Presentation
         public void AFellOrderStaysOnTheGroundTheTreeStandsIn()
         {
             RenderTestWorld world = FlatGround()
-                .Edifice(5, 5, Layer, NaturalContent.EdificeTreeConifer, blocking: false)
+                .Edifice(5, 5, Layer, NaturalContent.EdificeTreeBirch, blocking: false)
                 .Publish();
 
             Assert.That(MarkAt(world, 5, 5, Layer), Is.EqualTo(0f).Within(0.001f),

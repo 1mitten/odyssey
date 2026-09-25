@@ -298,18 +298,45 @@ namespace Odyssey.Sim.Worldgen.Natural
                     continue;
                 }
 
-                ushort def = species < gen.broadleafChance
-                    ? NaturalContent.EdificeTreeBroadleaf
-                    : NaturalContent.EdificeTreeConifer;
+                ushort def = SpeciesOf(species, gen.broadleafChance);
                 ctx.PlaceEdifice(treeIndex, def, NaturalContent.StuffWood, blocking: false);
                 ctx.Trees.Add(new TreePlacement(treeIndex, def));
                 ctx.HasTree[column] = true;
-                if (def == NaturalContent.EdificeTreeBroadleaf) broadleaves++; else conifers++;
+                if (def == NaturalContent.EdificeTreeBirch) conifers++; else broadleaves++;
+                if (def == NaturalContent.EdificeTreeMeadow) ctx.Report.MeadowTrees++;
+                else if (def == NaturalContent.EdificeTreeFruit) ctx.Report.FruitTrees++;
+                else if (def == NaturalContent.EdificeTreeGiant) ctx.Report.GiantTrees++;
             }
 
             ctx.Report.Trees = ctx.Trees.Count;
             ctx.Report.Conifers = conifers;
             ctx.Report.Broadleaves = broadleaves;
         }
+
+        /// <summary>
+        /// Which species a tree is, from the species roll the pass has always drawn (design 45
+        /// §3). No new draw is taken, so every tree stands where it stood before species existed
+        /// and the woods are the same shape; only what each tree is changes.
+        ///
+        /// <para>At or above the broadleaf chance, a birch. Below it the roll is rescaled across
+        /// the broadleaf band to 0-999: under <see cref="GiantPerMille"/> the giant, under
+        /// <see cref="MeadowPerMille"/> the meadow tree, and the rest fruit trees - the mixture
+        /// the Meadow look pass drew by hash, one broadleaf in forty a giant and the remainder
+        /// split one meadow tree to three fruit trees, so the woods look as they did.</para>
+        /// </summary>
+        public static ushort SpeciesOf(int roll, int broadleafChance)
+        {
+            if (roll >= broadleafChance || broadleafChance <= 0) return NaturalContent.EdificeTreeBirch;
+            int band = roll * 1000 / broadleafChance;
+            if (band < GiantPerMille) return NaturalContent.EdificeTreeGiant;
+            if (band < MeadowPerMille) return NaturalContent.EdificeTreeMeadow;
+            return NaturalContent.EdificeTreeFruit;
+        }
+
+        /// <summary>Of the broadleaf band, per mille that are giants: one in forty.</summary>
+        public const int GiantPerMille = 25;
+
+        /// <summary>Of the broadleaf band, per mille below which a tree is a giant or a meadow tree.</summary>
+        public const int MeadowPerMille = 270;
     }
 }

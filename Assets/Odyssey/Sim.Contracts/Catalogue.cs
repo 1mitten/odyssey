@@ -87,7 +87,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A hurt colonist lying in a bed until she is well enough to get up (design 37).</summary>
         public const int Patient = 24;
 
-        public const int Count = 25;
+
+        /// <summary>Pick a ripe berry bush (design 45 §6): the Harvest order, worked as growing.
+        /// 25, after medical supplies' Treat and Patient: they reached main first, and a shipped
+        /// handle is a save contract. It was 23 on its branch; no save with it had left.</summary>
+        public const int Forage = 25;
+
+        public const int Count = 26;
     }
 
     /// <summary>
@@ -224,7 +230,15 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int MedicalSupplies = 11;
 
-        public const int Count = 12;
+
+        /// <summary>Wild berries, picked from a berry bush (design 45 §6). Raw food. 12, after
+        /// medical supplies at the merge with main (it was 11 on its branch).</summary>
+        public const int Berries = 12;
+
+        /// <summary>Mushrooms, found under trees (design 45 §6). Raw food.</summary>
+        public const int Mushrooms = 13;
+
+        public const int Count = 14;
     }
 
     /// <summary>
@@ -361,8 +375,13 @@ namespace Odyssey.Sim.Contracts
         public const int VaultWall = 8;
         public const int UtilityTap = 9;
 
-        public const int TreeConifer = 10;
-        public const int TreeBroadleaf = 11;
+        /// <summary>The birch: small, quick to fell, little wood (design 45 §2). It was the
+        /// conifer until the species became the simulation's; an old save's conifers load as
+        /// birches, which is what the art had drawn them as since the Meadow look pass.</summary>
+        public const int TreeBirch = 10;
+
+        /// <summary>The meadow tree, the medium broadleaf. Was the broadleaf (design 45 §2).</summary>
+        public const int TreeMeadow = 11;
 
         /// <summary>
         /// The bed, and the first edifice id the interface names that no generator stamps: 12,
@@ -390,7 +409,25 @@ namespace Odyssey.Sim.Contracts
         /// power. See <c>CoreContent.EdificeHeater</c>.</summary>
         public const int Heater = 16;
 
-        public const int Count = 17;
+        // The wild things (design 45 §2), after the heater because edifice ids are one space
+        // shared with the buildings: the trees' ten and eleven were never a range to extend.
+
+        /// <summary>A fruit tree: medium, its fruit deferred.</summary>
+        public const int TreeFruit = 17;
+
+        /// <summary>The giant meadow tree: rare, slow to fell, a great deal of wood.</summary>
+        public const int TreeGiant = 18;
+
+        /// <summary>A bush: walked through slowly, cleared before anything is built on it.</summary>
+        public const int Bush = 19;
+
+        /// <summary>A berry bush with its berries on.</summary>
+        public const int BerryBush = 20;
+
+        /// <summary>A berry bush that has been picked and is growing its berries back.</summary>
+        public const int BerryBushPicked = 21;
+
+        public const int Count = 22;
     }
 
     /// <summary>

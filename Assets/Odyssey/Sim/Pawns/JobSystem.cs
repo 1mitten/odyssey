@@ -1881,7 +1881,7 @@ namespace Odyssey.Sim.Pawns
             {
                 int cell = cells[i];
                 if (designations.At(cell) != DesignationKind.Fell) continue;
-                if (!designations.IsTree(cell)) continue;
+                if (!designations.IsFellable(cell)) continue;
 
                 long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;

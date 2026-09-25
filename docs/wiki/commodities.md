@@ -2,7 +2,7 @@
 
 What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the ore classes a wilderness colony sim would have, because the setting is a dead city and the ground is already full of manufactured things. These names appear in the resource ledger, in every bill and in every trade, so they are the names worth arguing about first.
 
-50 entries, 5 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+52 entries, 7 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
@@ -39,6 +39,8 @@ What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the o
 | **Iron ore** | `ui.res.ironore` | Raw ore. Worthless until something smelts it <br>**Needs:** dark rock flecked with rust-orange | no art | M3 |
 | **Coal** | `ui.res.coal` | Burns hot. Found deeper than iron, and for that reason <br>**Needs:** glossy black lumps | no art | M3 |
 | **Carrots** | `ui.res.carrots` | The first field crop. Eaten straight, no cooking and no spoilage | no art | M3 |
+| **Berries** | `ui.res.berries` | Picked from a wild berry bush. Eaten straight; the bush grows more <br>**Needs:** a handful of red berries | no art | M3 |
+| **Mushrooms** | `ui.res.mushrooms` | Found under the trees. Eaten straight; more come up somewhere else <br>**Needs:** two capped mushrooms | no art | M3 |
 | **Grain** | `ui.res.grain` | Bulk staple. Stores well, needs cooking | sheet 01 (raw materials), med | M1 |
 | **Fungus** | `ui.res.fungus` | Grows without light. The underground staple | sheet 01 (raw materials), high | M1 |
 | **Stimulant** | `ui.res.stimulant` | Buys an hour of wakefulness at a cost | sheet 02 (food), med | M1 |

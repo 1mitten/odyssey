@@ -369,7 +369,7 @@ namespace Odyssey.Presentation.Rendering
             // it (measured: SlicePickerBoardTests lost the water on every cascade).
             if (model.Terrain(above) != CoreContent.TerrainAir) return false;
             ushort edifice = model.EdificeDef(above);
-            if (edifice != 0 && !Odyssey.Sim.Worldgen.Natural.NaturalContent.IsTree(edifice)) return false;
+            if (edifice != 0 && !Odyssey.Sim.Worldgen.Natural.NaturalContent.IsNatural(edifice)) return false;
             if (y > 0 && !model.IsSolid(index - size.LayerStride)) return false;
 
             // Every open side must be water: a dry riser beside it is a terrace, not a bank.

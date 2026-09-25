@@ -23,6 +23,12 @@ namespace Odyssey.Sim.Designations
 
         /// <summary>Cut a tree down for wood. Only on a tree.</summary>
         Fell = 3,
+
+        /// <summary>
+        /// Pick a ripe berry bush (design 45 §6). One picking and the order is done; the bush grows
+        /// its berries back and waits for the next.
+        /// </summary>
+        Harvest = 4,
     }
 
     /// <summary>
@@ -187,7 +193,8 @@ namespace Odyssey.Sim.Designations
             // and watching nothing happen.
             return kind switch
             {
-                DesignationKind.Fell when IsTree(above) => above,
+                DesignationKind.Fell when IsFellable(above) => above,
+                DesignationKind.Harvest when IsRipeBerryBush(above) => above,
                 DesignationKind.Deconstruct when CanDeconstruct(above) => above,
                 _ => index,
             };
@@ -217,7 +224,9 @@ namespace Odyssey.Sim.Designations
                 case DesignationKind.Deconstruct:
                     return CanDeconstruct(index);
                 case DesignationKind.Fell:
-                    return IsTree(index);
+                    return IsFellable(index);
+                case DesignationKind.Harvest:
+                    return IsRipeBerryBush(index);
                 default:
                     return false;
             }
@@ -249,7 +258,7 @@ namespace Odyssey.Sim.Designations
             if (_grid.Terrain[index] == NaturalContent.TerrainBedrock) return false;
 
             int above = index + _grid.Size.LayerStride;
-            return above >= _grid.Size.CellCount || !IsTree(above);
+            return above >= _grid.Size.CellCount || !IsFellable(above);
         }
 
         /// <summary>
@@ -316,6 +325,24 @@ namespace Odyssey.Sim.Designations
 
         /// <summary>Whether a tree stands in the cell right now.</summary>
         public bool IsTree(int index) => TryEdificeDef(index, out ushort def) && NaturalContent.IsTree(def);
+
+        /// <summary>A bush of either kind stands here (design 45 §4).</summary>
+        public bool IsBush(int index) => TryEdificeDef(index, out ushort def) && NaturalContent.IsBush(def);
+
+        /// <summary>
+        /// What the Fell order may name: a tree to chop or a bush to clear (design 45 §4). One
+        /// order for both because they are one act — something wild is taken out of the cell — and
+        /// the work and the yield are the plant's own, read off its Def by the driver.
+        /// </summary>
+        public bool IsFellable(int index) => TryEdificeDef(index, out ushort def) && NaturalContent.IsNatural(def);
+
+        /// <summary>A berry bush with its berries on: what the Harvest order may name.</summary>
+        public bool IsRipeBerryBush(int index) =>
+            TryEdificeDef(index, out ushort def) && def == NaturalContent.EdificeBerryBush;
+
+        /// <summary>The wild plant standing here, or null. What the fell driver works and yields by.</summary>
+        public WildPlantDef? WildPlantAt(int index) =>
+            TryEdificeDef(index, out ushort def) ? NaturalContent.WildPlantAt(def) : null;
 
         /// <summary>
         /// Can this be taken apart? Only what the colony built itself.
@@ -423,7 +450,7 @@ namespace Odyssey.Sim.Designations
         /// <summary><c>Designate(cell, A = kind)</c>.</summary>
         public IntentRejection HandleDesignate(Intent intent)
         {
-            if (intent.A <= 0 || intent.A > (int)DesignationKind.Fell) return IntentRejection.NotPermitted;
+            if (intent.A <= 0 || intent.A > (int)DesignationKind.Harvest) return IntentRejection.NotPermitted;
             return Designate(intent.Cell, (DesignationKind)intent.A);
         }
 

@@ -224,11 +224,11 @@ namespace Odyssey.Tests.Hud
         public void ATreeTitlesThePaneAndTheGroundAnswersBeneathIt()
         {
             InspectModel model = Looking(FrameWith(
-                Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.TreeConifer)));
+                Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.TreeBirch)));
 
-            Assert.That(model.Title, Is.EqualTo("Conifer"));
+            Assert.That(model.Title, Is.EqualTo("Birch"));
             Assert.That(Rows(model), Is.EqualTo("walk speed=100%"));
-            Assert.That(model.CellIconKey, Is.EqualTo("ui.terrain.tree.conifer"));
+            Assert.That(model.CellIconKey, Is.EqualTo("ui.terrain.tree.birch"));
         }
 
         /// <summary>
