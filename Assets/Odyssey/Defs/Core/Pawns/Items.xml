@@ -91,6 +91,27 @@
   </ItemDef>
 
   <!--
+    The wild foods (design 45 section 6), both raw and eaten straight like carrots. INVENTED:
+    a picking of eight berries at 60 is 480, about half a meal; a find of mushrooms, three to five
+    at 70, is a snack. Both stack to 75 like every other raw commodity.
+  -->
+  <ItemDef>
+    <defName>Item_Berries</defName>
+    <label>berries</label>
+    <nutrition>60</nutrition>
+    <stackLimit>75</stackLimit>
+    <category>Food</category>
+  </ItemDef>
+
+  <ItemDef>
+    <defName>Item_Mushrooms</defName>
+    <label>mushrooms</label>
+    <nutrition>70</nutrition>
+    <stackLimit>75</stackLimit>
+    <category>Food</category>
+  </ItemDef>
+
+  <!--
     The four melee weapons (design 33 section 1, C3), the owner's four: a bat and a crowbar, blunt
     with a chance to stun, and a machete and a sci-fi blade, sharp. Real items, one to a stack,
     filed under Weapons, appended together by the combat contracts step. The names are our own

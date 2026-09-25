@@ -280,6 +280,13 @@ namespace Odyssey.Sim.Worldgen.Natural
         }
 
         public List<TreePlacement> Trees { get; } = new List<TreePlacement>();
+
+        /// <summary>Where the loose stones lie and how many to a stack (design 45 §6). The
+        /// colony spawns them; the map only chooses the spots.</summary>
+        public List<(int Cell, int Count)> LooseRocks { get; } = new List<(int, int)>();
+
+        /// <summary>Where the first mushrooms come up and how many to a find (design 45 §6).</summary>
+        public List<(int Cell, int Count)> MushroomSpots { get; } = new List<(int, int)>();
         public List<RockOutcrop> Outcrops { get; } = new List<RockOutcrop>();
         public List<CavernChamber> Caverns { get; } = new List<CavernChamber>();
         public List<OreDeposit> OreDeposits { get; } = new List<OreDeposit>();

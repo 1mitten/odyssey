@@ -60,8 +60,12 @@
   <WildPlantDef>
     <defName>WildPlant_BerryBush</defName>
     <label>berry bush</label>
-    <description>A bush that bears berries.</description>
+    <description>A bush that bears berries. Picked when ripe; they come back in three days.</description>
     <clearWorkTicks>250</clearWorkTicks>
+    <fruitYields>Item_Berries</fruitYields>
+    <fruitCount>8</fruitCount>
+    <fruitWorkTicks>300</fruitWorkTicks>
+    <fruitRegrowTicks>180000</fruitRegrowTicks>
   </WildPlantDef>
 
 </Defs>

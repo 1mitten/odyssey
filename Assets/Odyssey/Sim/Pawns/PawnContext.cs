@@ -168,6 +168,12 @@ namespace Odyssey.Sim.Pawns
         public Growing.GrowingZones? Growing { get; set; }
 
         /// <summary>
+        /// The wild between orders (design 45 §6): berry bushes growing back and mushrooms coming
+        /// up. Null in a bare pawn fixture, so the forage giver answers no there.
+        /// </summary>
+        public NatureSystem? Nature { get; set; }
+
+        /// <summary>
         /// Where the colony puts things down, or null in a world that has none — a bare test
         /// fixture, or a board before the composition root has wired one. Every read here is
         /// null-guarded for that reason and not out of habit: the haul giver answers "no

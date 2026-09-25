@@ -349,6 +349,8 @@ namespace Odyssey.Sim.Pawns
             new RescueJobDriver(),
             // A bandit carrying something off the board (design 33 §17), JobHandle 22.
             new StealJobDriver(),
+            // Picking a berry bush (design 45 §6), JobHandle 23.
+            new ForageJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------

@@ -83,6 +83,8 @@ namespace Odyssey.Sim.Worldgen.Natural
             surfaceRelief = 0;              // one flat surface layer, no terracing
             treeDensityPerMille = 0;
             bushPerMille = 0;
+            looseRockNearPerMille = 0;
+            looseRockOpenPerMille = 0;
             outcropsPer10000Columns = 0;
             oreDepositsPer10000Columns = 0;
             cavernsPer10000Columns = 0;     // the strata stay solid: a hole in them is a bug here
@@ -232,6 +234,12 @@ namespace Odyssey.Sim.Worldgen.Natural
 
         /// <summary>No bush within this many cells of the start (the dressing's clearing radius).</summary>
         public int undergrowthClearRadius = 4;
+
+        /// <summary>Per mille of open grass cells beside rock that hold a loose stone. The dressing's 0.18.</summary>
+        public int looseRockNearPerMille = 180;
+
+        /// <summary>Per mille of open grass cells elsewhere that hold one. The dressing's 0.012.</summary>
+        public int looseRockOpenPerMille = 12;
 
         // ---- pass 4, rock outcrops -----------------------------------------------------------
 

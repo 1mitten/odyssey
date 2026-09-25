@@ -116,11 +116,11 @@ namespace Odyssey.Presentation.Rendering
                     return Kind.None;
                 }
                 case 2:
-                {
-                    float chance = nearRock ? 0.18f : 0.012f;
-                    if (GroundScatter.Unit(x, z, SaltRock + slotSalt) < chance * Mathf.Sqrt(scale)) return Kind.Rock;
+                    // The stones were this slot's: 18 per cent of cells beside rock, 1.2 per cent in
+                    // the open. They are the simulation's now (design 45 §6) — the undergrowth pass
+                    // lays a stack of stone at those spots, hauled for stone and drawn as the heap
+                    // it is — so the dressing leaves them to it.
                     return Kind.None;
-                }
                 case 3:
                 {
                     float want = Want(Field(x, z, 23f, SaltField + 4u), 0.8f);

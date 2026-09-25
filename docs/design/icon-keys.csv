@@ -32,6 +32,8 @@ ui.res.stone,Stone,ui.res,M3,"Broken rock from a mined face. Heavy, and there is
 ui.res.ironore,Iron ore,ui.res,M3,Raw ore. Worthless until something smelts it
 ui.res.coal,Coal,ui.res,M3,"Burns hot. Found deeper than iron, and for that reason"
 ui.res.carrots,Carrots,ui.res,M3,"The first field crop. Eaten straight, no cooking and no spoilage"
+ui.res.berries,Berries,ui.res,M3,"Picked from a wild berry bush. Eaten straight; the bush grows more"
+ui.res.mushrooms,Mushrooms,ui.res,M3,"Found under the trees. Eaten straight; more come up somewhere else"
 ui.res.grain,Grain,ui.res,M1,"Bulk staple. Stores well, needs cooking"
 ui.res.fungus,Fungus,ui.res,M1,Grows without light. The underground staple
 ui.res.stimulant,Stimulant,ui.res,M1,Buys an hour of wakefulness at a cost
@@ -98,6 +100,7 @@ ui.status.mining,Mining,ui.status,M2,"Cutting into rubble, concrete or rock"
 ui.status.felling,Chopping,ui.status,M3,Cutting a tree down for wood
 ui.status.sowing,Sowing,ui.status,M3,Breaking ground and planting a zone cell
 ui.status.harvesting,Harvesting,ui.status,M3,Cutting a ripe crop and gathering it
+ui.status.foraging,Picking,ui.status,M3,Picking the berries off a wild bush
 ui.status.refuelling,Refuelling,ui.status,M3,Carrying fuel to a generator and filling it
 ui.status.sleeping,Sleeping,ui.status,M2,"Asleep, and should stay that way"
 ui.status.eating,Eating,ui.status,M2,Taking a meal
@@ -190,7 +193,7 @@ ui.arch.tool.fell,Chop and clear,ui.arch.tool,M3,"Cut a tree down for wood, or c
 ui.arch.tool.allowitem,Allow,ui.arch.tool,M3,Hands back on
 ui.arch.tool.clearrubble,Clear rubble,ui.arch.tool,M3,Remove loose debris from a cell
 ui.arch.tool.extinguish,Extinguish,ui.arch.tool,M3,Put this fire out now
-ui.arch.tool.harvest,Harvest,ui.arch.tool,M3,Take the crop
+ui.arch.tool.harvest,Harvest,ui.arch.tool,M3,"Pick the berries from a ripe berry bush. They grow back in three days"
 ui.arch.tool.conduit,Conduit,ui.arch.tool,M3,Carries power. Connects vertically
 ui.arch.tool.unwire,Remove conduit,ui.arch.tool,M3,"Takes a conduit up, and nothing else in the cell"
 ui.arch.tool.battery,Battery,ui.arch.tool,M3,Stores charge against the night

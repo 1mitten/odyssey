@@ -1525,6 +1525,7 @@ namespace Odyssey.Hud
             1 => "mining",
             2 => "deconstructing",
             3 => "chopping",
+            4 => "picking",
             _ => "working",
         };
 

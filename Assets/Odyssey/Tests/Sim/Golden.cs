@@ -476,8 +476,14 @@ namespace Odyssey.Tests.Sim
             // price, so they made 95 wanders in the ten thousand ticks where they made 105, and
             // ended on different cells. Food, rest, mood and experience are unchanged. The bare
             // meadow and the city did not move: neither grows a bush.
-            Generated = 15825491946805197463UL,
-            Simulated = 14309432275701294178UL,
+            // 2026-09-25 again, M13 (design 45 §6): the map lays its loose stones and first
+            // mushrooms - 680 stone in 136 stacks and 89 mushrooms in 22, by the probe - and one
+            // more stack of mushrooms came up in the ten thousand ticks. Every colonist number is
+            // the M5 run's to the digit (cells, food, rest, mood, progress, the 95 wanders): the
+            // colony has no store, so nobody carried a stone, and nobody was hungry enough to
+            // walk to a mushroom. The bare meadow and the city did not move.
+            Generated = 4420052086884279926UL,
+            Simulated = 6253867560465520915UL,
         };
 
         /// <summary>

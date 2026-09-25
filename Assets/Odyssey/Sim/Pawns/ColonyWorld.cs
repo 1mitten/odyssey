@@ -78,6 +78,13 @@ namespace Odyssey.Sim.Pawns
         public CellRef Start => Outcome.StartCell;
 
         /// <summary>
+        /// The first item the map put down rather than the scenario (design 45 §6): every item
+        /// before this index is the starting kit, every one from it on a loose stone or a mushroom
+        /// the generator placed. A test that pins the kit reads the ones before it.
+        /// </summary>
+        public int FirstNaturalItem { get; private set; }
+
+        /// <summary>
         /// The world's state, in the order a save writes it. Order is part of the format: items
         /// before pawns, because a pawn's job refers to an item handle and a half-loaded registry
         /// would resolve it against the wrong list.
@@ -159,6 +166,9 @@ namespace Odyssey.Sim.Pawns
                 // Who is drafted, and a step an order interrupted (design 33 §2a). Absent from an
                 // older save, which loads with nobody drafted.
                 new CombatSection(pawns.Pawns),
+                // The picked berry bushes (design 45 §6). Absent from an older save, which loads
+                // with every berry bush ripe - which, in a world where nobody could pick one, it was.
+                pawns.Nature!,
                 // Appended, as every section since the first has been: the room temperatures,
                 // keyed by room. A save from before temperature has no section and loads with
                 // every room at the outdoor curve — which is what it was, in a world where
@@ -451,6 +461,10 @@ namespace Odyssey.Sim.Pawns
             ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed,
                 scenario, request.Colonists);
             int marked = ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenario);
+            // The loose stones and the first mushrooms (design 45 §6): where the generator put
+            // them, after the scenario's own things so a starting pile always has its cell.
+            int firstNatural = pawns.Items.Items.Count;
+            if (outcome.Natural != null) NatureSeeder.Seed(pawns, outcome.Natural);
             // The world's animals, after its people and before its first tick (design 30 §2):
             // the seeder reads the trees and the rock the generator left and the clearing the
             // scenario is about to fell, and draws from the world's own seed.
@@ -459,6 +473,7 @@ namespace Odyssey.Sim.Pawns
 
             var built = new ColonyWorld(grid, pawns, designations, construction, world, outcome, scenario, placement,
                 solver, nav, jobs, gen, marked, request);
+            built.FirstNaturalItem = firstNatural;
             built.RebuildDerived();
             return built;
         }

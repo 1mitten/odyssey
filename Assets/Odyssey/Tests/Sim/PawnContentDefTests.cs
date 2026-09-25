@@ -255,7 +255,11 @@ namespace Odyssey.Tests.Sim
         // Moved again, 2026-09-25, by design 45 (the scenery made real): the tuning's woodPerTree
         // is gone, because what a felled tree yields is its species' own now, in
         // World/WildPlants.xml. Taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 14288726203637930146UL;
+        //
+        // And again the same day by M13 (design 45 §6): Job_Forage appended at 23, and
+        // Item_Berries and Item_Mushrooms at 11 and 12 (Food, 60 and 70, stacks of 75). Taken from
+        // a freshly loaded pack.
+        const ulong ContentFingerprint = 17088154382837571676UL;
 
 
         [Test]
