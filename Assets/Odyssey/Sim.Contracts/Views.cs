@@ -1111,12 +1111,20 @@ namespace Odyssey.Sim.Contracts
         /// <summary>There is meat in the pan: a meal, not a vegetable one.</summary>
         public readonly bool HasMeat;
 
+        /// <summary>
+        /// How many meals the raw food on the map would cook into, capped at 999 (design 48 §14):
+        /// what the pane says under "Each meal", and the nought that tells a player why nothing is
+        /// being cooked.
+        /// </summary>
+        public readonly short RawMeals;
+
         /// <summary>Where this station's bills start in <see cref="WorldSnapshot.Bills"/>, and how many.</summary>
         public readonly int FirstBill, BillCount;
 
         public StationView(int cellIndex, ushort edifice, bool ready, short panPerMille, short cookPerMille,
-            bool burning, bool hasMeat, int firstBill, int billCount)
+            bool burning, bool hasMeat, int firstBill, int billCount, short rawMeals = 0)
         {
+            RawMeals = rawMeals;
             CellIndex = cellIndex;
             Edifice = edifice;
             Ready = ready;

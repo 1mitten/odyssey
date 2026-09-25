@@ -142,7 +142,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#items">Items and equipment<b>34</b></a></li>
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
 <li><a href="#commands">Commands<b>53</b></a></li>
-<li><a href="#work">Work and skills<b>52</b></a></li>
+<li><a href="#work">Work and skills<b>56</b></a></li>
 <li><a href="#colonists">Colonists<b>59</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>48</b></a></li>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>877</b><i>named entries</i></div>
+<div class="stat"><b>882</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>605</b><i>no art yet</i></div>
+<div class="stat m"><b>610</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1538,7 +1538,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="work" data-sec="1">
-<h2>Work and skills <em class="count">52 entries</em></h2>
+<h2>Work and skills <em class="count">56 entries</em></h2>
 <p class="blurb">The work types a colonist can be assigned, in priority order of urgency, the skills that govern how well they do them, and the schedule blocks that say when. Salvaging is ours: it sits beside mining because taking a ruin apart without wrecking what is inside it is a different craft from digging. Work and schedule share one tab and one table, so they share a page here.</p>
 <h3 class="nsh">Work types</h3>
 <div class="tbl">
@@ -1868,6 +1868,30 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.bill.unpowered" data-hay="no power ui.bill.unpowered the electric cooker needs power to cook. nothing on the hob will spoil in the meantime a broken plug. our own concept" data-gap="1">
 <div class="nm">No power<span class="k">ui.bill.unpowered</span></div>
 <div class="dsc">The electric cooker needs power to cook. Nothing on the hob will spoil in the meantime<span class="need">Needs drawing: a broken plug. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.needs" data-hay="each meal: raw food, about 3 carrots ui.bill.needs a meal takes 500 of any raw food by nutrition: three carrots, or meat once there is any interface words, no icon wanted" data-gap="1">
+<div class="nm">Each meal: raw food, about 3 carrots<span class="k">ui.bill.needs</span></div>
+<div class="dsc">A meal takes 500 of any raw food by nutrition: three carrots, or meat once there is any<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.needs.fire" data-hay="each meal: raw food, about 3 carrots, and 1 wood ui.bill.needs.fire a campfire burns one wood for every meal it cooks interface words, no icon wanted" data-gap="1">
+<div class="nm">Each meal: raw food, about 3 carrots, and 1 wood<span class="k">ui.bill.needs.fire</span></div>
+<div class="dsc">A campfire burns one wood for every meal it cooks<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.supply" data-hay="raw food for {n} meals ui.bill.supply what the raw food on the map, in stores and on the ground, would cook into interface words, no icon wanted" data-gap="1">
+<div class="nm">Raw food for {n} meals<span class="k">ui.bill.supply</span></div>
+<div class="dsc">What the raw food on the map, in stores and on the ground, would cook into<span class="need">Needs drawing: Interface words, no icon wanted</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.bill.nosupply" data-hay="no raw food on the map ui.bill.nosupply nothing to cook. grow carrots, or use the debug menu's give carrots an empty basket. our own concept" data-gap="1">
+<div class="nm">No raw food on the map<span class="k">ui.bill.nosupply</span></div>
+<div class="dsc">Nothing to cook. Grow carrots, or use the debug menu's Give carrots<span class="need">Needs drawing: an empty basket. Our own concept</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -3914,7 +3938,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 877, "gaps": 605};</script>
+<script>window.WIKI={"total": 882, "gaps": 610};</script>
 <script>
 (function(){
   var D = window.WIKI;

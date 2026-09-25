@@ -268,6 +268,28 @@ namespace Odyssey.Tests.Sim
             Assert.That(frame.Bills[view.FirstBill + 1].Mode, Is.EqualTo(BillModeHandle.Forever));
         }
 
+        /// <summary>
+        /// The station says how many meals the raw food on the map would make (design 48 §14):
+        /// thirty carrots are 5,400 of nutrition, ten meals of 500; none says none.
+        /// </summary>
+        [Test]
+        public void TheStationPublishesHowMuchThereIsToCook()
+        {
+            ColonyWorld colony = Board();
+            var items = colony.Pawns.Items.Items;
+            for (int i = 0; i < items.Count; i++)
+                if (!items[i].Despawned && colony.Pawns.Content.Items[items[i].DefIndex].rawIngredient)
+                    colony.Pawns.Items.Despawn(items[i]);
+            int galley = PoweredGalley(colony);
+            Edit(colony, galley, BillEdit.Add, RecipeHandle.Meal);
+            colony.World.Tick();
+            Assert.That(colony.World.Views.Current.Stations[0].RawMeals, Is.Zero);
+
+            Stock(colony, Carrots, 30);
+            colony.World.Tick();
+            Assert.That(colony.World.Views.Current.Stations[0].RawMeals, Is.EqualTo(10));
+        }
+
         // ---- the cook -----------------------------------------------------------------------------
 
         /// <summary>

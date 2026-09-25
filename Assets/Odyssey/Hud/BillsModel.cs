@@ -68,6 +68,18 @@ namespace Odyssey.Hud
         /// <summary>The station's cell, as every command names it.</summary>
         public CellRef Cell { get; private set; }
 
+        /// <summary>What one meal takes here (design 48 §14): raw food, and a campfire's wood.</summary>
+        public string Needs { get; private set; } = string.Empty;
+
+        /// <summary>
+        /// How many meals the raw food on the map would make, or that there is none. Empty until the
+        /// station has been published — which it is from its first bill.
+        /// </summary>
+        public string Supply { get; private set; } = string.Empty;
+
+        /// <summary>There is no raw food at all: the supply line is a warning.</summary>
+        public bool NoSupply { get; private set; }
+
         /// <summary>One more bill would be refused: the list is full.</summary>
         public bool Full => Rows.Count >= MaxRows;
 
@@ -87,6 +99,10 @@ namespace Odyssey.Hud
             Cell = cell;
             Showing = IsStation(edifice);
             Ready = true;
+            Supply = string.Empty;
+            NoSupply = false;
+            Needs = !Showing ? string.Empty
+                : Registry.Label(edifice == EdificeHandle.Campfire ? "ui.bill.needs.fire" : "ui.bill.needs");
             if (!Showing) return;
 
             ReadOnlySpan<StationView> stations = snapshot.Stations;
@@ -95,6 +111,10 @@ namespace Odyssey.Hud
                 if (stations[s].CellIndex != cellIndex) continue;
                 StationView station = stations[s];
                 Ready = station.Ready;
+                NoSupply = station.RawMeals <= 0;
+                Supply = NoSupply ? Registry.Label("ui.bill.nosupply")
+                    : Registry.Label("ui.bill.supply").Replace("{n}",
+                        station.RawMeals.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
                 ReadOnlySpan<BillView> bills = snapshot.Bills;
                 for (int b = 0; b < station.BillCount; b++)

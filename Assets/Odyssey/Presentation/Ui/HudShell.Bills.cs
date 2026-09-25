@@ -26,6 +26,8 @@ namespace Odyssey.Presentation.Ui
 
         VisualElement? _billsBlock;
         Label? _billsStatus;
+        Label? _billsNeeds;
+        Label? _billsSupply;
         Label? _billsAdd;
         readonly List<BillRowView> _billRows = new List<BillRowView>();
         int _billsSignature = int.MinValue;
@@ -65,7 +67,8 @@ namespace Odyssey.Presentation.Ui
             _billsBlock.style.paddingLeft = 14;
             _billsBlock.style.paddingRight = 14;
             _billsBlock.style.paddingBottom = 8;
-            _billsBlock.style.height = BillHeaderHeight + BillStatusHeight + BillsModel.MaxRows * BillRowHeight + 8;
+            // The heading, what a meal takes, what there is, the state line, and five rows.
+            _billsBlock.style.height = BillHeaderHeight + 3 * BillStatusHeight + BillsModel.MaxRows * BillRowHeight + 8;
             _billsBlock.style.display = DisplayStyle.None;
 
             var header = new VisualElement();
@@ -85,6 +88,17 @@ namespace Odyssey.Presentation.Ui
             });
             header.Add(_billsAdd);
             _billsBlock.Add(header);
+
+            // What one meal takes, and what the map holds of it (owner, 2026-09-25: "I didn't know
+            // what ingredients I needed"). Both always there, so the rows below never move.
+            _billsNeeds = HudText.Make(string.Empty, HudTextRole.Meta);
+            _billsNeeds.style.height = BillStatusHeight;
+            _billsNeeds.tooltip = Registry.Label("ui.recipe.meal");
+            _billsBlock.Add(_billsNeeds);
+
+            _billsSupply = HudText.Make(string.Empty, HudTextRole.Meta);
+            _billsSupply.style.height = BillStatusHeight;
+            _billsBlock.Add(_billsSupply);
 
             _billsStatus = HudText.Make(string.Empty, HudTextRole.Meta);
             _billsStatus.style.height = BillStatusHeight;
@@ -200,6 +214,10 @@ namespace Odyssey.Presentation.Ui
             if (signature == _billsSignature) return;
             _billsSignature = signature;
 
+            HudText.Set(_billsNeeds!, _bills.Needs, HudTextRole.Meta);
+            HudText.Set(_billsSupply!, _bills.Supply, HudTextRole.Meta);
+            _billsSupply!.style.color = HudTokens.Convert(_bills.NoSupply ? HudTheme.Warn : HudTheme.TextMeta);
+            _billsSupply.tooltip = _bills.NoSupply ? "Grow carrots, or use the debug menu's Give carrots" : null;
             HudText.Set(_billsStatus!, _bills.Status, HudTextRole.Meta);
             _billsStatus!.style.color = HudTokens.Convert(_bills.Ready ? HudTheme.TextMeta : HudTheme.Warn);
             _billsAdd!.style.opacity = _bills.Full ? 0.35f : 1f;
@@ -239,6 +257,8 @@ namespace Odyssey.Presentation.Ui
             unchecked
             {
                 int hash = _bills.Ready ? 17 : 19;
+                hash = hash * 31 + _bills.Needs.GetHashCode();
+                hash = hash * 31 + _bills.Supply.GetHashCode();
                 hash = hash * 31 + _bills.Rows.Count;
                 for (int i = 0; i < _bills.Rows.Count; i++)
                 {
