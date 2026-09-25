@@ -13143,3 +13143,31 @@ few per cent, under, behind or nothing is the ray passing through and never allo
 `SaveProbe` gained a hearth report on the way: every campfire in a save, which is the hearth, the
 ground round each, and what the pane is told when each is clicked.
 
+
+## 2026-09-25 — Gear: interviewed, briefed, nothing built
+
+The owner asked for gear "like an RPG": a weapon equipped, small things carried with a limit, heavy
+things still carried, and hats and clothes. Twenty-two answers in six rounds
+(`docs/research/gear-interview.md`), a Claude Design brief for the end state
+(`docs/reference/mockups/gear-brief.md`), and eight staged units (`docs/plans/gear.md`). No code.
+
+**Slots, not weight.** The kit is two belt slots and four more with a pack, each a small stack of
+one kind of thing. A mass budget was the other serious candidate and was turned down on
+readability: a player can count six tiles at a glance and cannot do arithmetic on twenty
+colonists' kilograms, and nothing in `ItemDef` has a mass to budget. An item gets a *size*
+(pocket / pack / arms) instead, and the arms-only things — logs, stone, ore, scrap — never compete
+with the kit at all.
+
+**A trip cap, not a slowdown.** Heavy loads were the one place a weight model would have earned its
+keep, and the owner took the cap: a commodity says how many one colonist lifts in one trip, and a
+heavy haul costs trips rather than pace. It keeps clear of the standing rule that nobody invents an
+urgency model (design 24, WS4), and it is content rather than a rate.
+
+**The jumpsuit is the empty Body slot.** So no colonist is ever naked, no save needs a uniform
+invented for every existing colonist, and the Gear tab's empty Body tile reads *Issued jumpsuit* as
+a real entry. Design 29 §9's second open question is answered by it; its first (quality and
+condition) is answered as quality only, reusing the beds' five tiers, with no wear.
+
+**The first unit moves no golden**: the Gear tab with the weapon live and Unequip / Drop, every
+later slot drawn empty with its reason. It is the first time the colonist pane's tab body may grow
+past the Skills tab, which design 14 said would happen "once, when they arrive".
