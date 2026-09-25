@@ -98,6 +98,15 @@ namespace Odyssey.Presentation.World
 
         public bool Available => _materials[0] != null;
 
+        /// <summary>
+        /// Off, the sky is neither stepped nor drawn and costs nothing. The control the frame-time
+        /// arm times against (design 50 §8), and the seam a settings switch would use.
+        /// </summary>
+        public bool Enabled { get; set; } = true;
+
+        /// <summary>Whether a bird casts a shadow. On in the game; the frame-time arm turns it off to price it.</summary>
+        public bool CastShadows { get; set; } = true;
+
         /// <summary>Birds submitted last frame.</summary>
         public int LastDrawn { get; private set; }
 
@@ -115,6 +124,13 @@ namespace Odyssey.Presentation.World
         public void Sync(float gameSeconds, long tick, in WeatherView weather, ReadOnlySpan<PawnView> pawns,
             float cameraDistance, bool underground, int highestVisibleLayer)
         {
+            if (!Enabled)
+            {
+                LastDrawn = 0;
+                LastDrawCalls = 0;
+                return;
+            }
+
             _perches.HighestVisibleLayer = highestVisibleLayer;
 
             int walkers = Mathf.Min(pawns.Length, MaxWalkers);
@@ -184,7 +200,7 @@ namespace Odyssey.Presentation.World
                 var parameters = new RenderParams(material)
                 {
                     worldBounds = bounds,
-                    shadowCastingMode = ShadowCastingMode.On,
+                    shadowCastingMode = CastShadows ? ShadowCastingMode.On : ShadowCastingMode.Off,
                     receiveShadows = false,
                     matProps = _props[k],
                 };
