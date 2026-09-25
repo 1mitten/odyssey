@@ -23,6 +23,16 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does a cook turn carrots into meals from a bill, and does it read as cooking?** (`claude/cooking`,
+  design 48 K1.) Build a **galley** (Build → Production) on a powered line, or use a **campfire**.
+  Click it: the pane shows **Bills** with *Add a bill*. Add one, stock carrots, and watch: a cook
+  fetches three carrots, stands at the station tossing a frying pan, and puts a meal down. Try the
+  mode (press it: until you have → make → forever), the ‹ › target, suspend, reorder and remove;
+  switch the galley off mid-cook and back on. A campfire meal also costs one wood. A wrong answer is
+  a bill that does nothing, a pane that jumps when you add a row, a cook who swings at the stove
+  instead of tossing a pan, or colonists who still reach for carrots with a meal in the store.
+  **Known and waiting for the Shops import:** the galley draws as a plain block and the pan shows no
+  food going raw → cooked; the meals are Sci-Fi food trays.
 - **Does the selection highlight make it obvious who is selected?** (`claude/selection-highlight`, design 44.)
   Click a colonist, an item, a wall, a tree and a patch of ground. Each should gain a thin white line round its own
   shape and look a touch brighter; the ground gets a pale wash. Then walk a selected colonist behind a wall: a

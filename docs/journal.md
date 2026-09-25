@@ -13076,3 +13076,50 @@ Four things go back to the owner at the plan review (design 48 §13):
 - whether rotten food is hauled or deleted;
 - whether an unpowered fridge rots faster than the floor, as storage decision 24 says of every
   container.
+
+## 2026-09-25 — The kitchen built (K1)
+
+Approved with *"go for it"*, which took every recommendation in design 48 §13.
+
+**The simulation came first and came out clean.** A `Kitchen` keyed by edifice holds each station's
+bills and its pan, in a save section of its own, so there was no format bump. It is hashed only
+once a station is used. One job, `Job_Cook`, carries one load a job into the pan, or cooks what the
+pan holds; the burn is rolled once when cooking starts. The pan belongs to the station, so a power
+cut mid-cook leaves the meal on the hob with its work banked. `AMealOnTheHobWaitsOutAPowerCut`
+proves it: same three carrots, work unmoved while dark, finished after.
+
+**Two things the build found that the design had wrong.**
+
+- **The mood table was in the wrong units.** Design 48 proposed +12 / +4 / −4 / −5 / −3 against
+  "today's +20", but mood here runs 0–1000 and today's +20 is two of the reference's points. It is
+  now +50 meal, +20 ration (exactly what every food gave before, so a ration colony feels nothing
+  new), −40 burnt, −50 raw, −30 no table. Found while writing `Thoughts.xml`; the intent is
+  unchanged.
+- **`ColonyWorld.SaveComponents` is a list you add to by hand.** The kitchen's save section would
+  have been written by nothing. `BillsAndThePanComeBackFromASave` would have caught it; it was
+  caught first by reading.
+
+**And one fault the old code would have shown.** `WorkStyle.IndexForJob` falls through to the axe
+for any job it does not list, so a cook at a stove would have chopped at it. `JobHandle.Cook` has a
+style of its own now: a frying pan (Battle Royale's, the only one installed) tossed in a short
+stroke, with a small sizzle of flecks. `EveryStyleNamesAToolAndSomethingToThrow` refused a
+chip-less style, rightly.
+
+**The goldens moved and the colonies did not.** A pawn record carries an eighth work priority and
+an eighth skill, and the job system one more counter pair. `GoldenColonyProbe` on `main` and on the
+branch is identical on all three boards.
+
+**Waiting for the Shops pack.** The galley row points at its stove and draws the tinted block until
+the pack is imported. The food going raw → cooked → burnt in the pan waits for its models too; the
+station already publishes what that needs. The import is held because every worktree's
+`Assets/Synty` is one folder, and another session had an editor open on it.
+
+**A merge mid-run cost a round.** Stashing uncommitted work before merging `main` meant a conflicted
+merge could not take the stash back. It was resolved, committed and then popped, and nothing was
+lost. Commit before merging, not stash.
+
+**And a fault on `main` the player build found.** `Odyssey/SeeThroughMark` (the draft's marks drawn
+through walls, `134b7f24`) was never added to the always-included shaders, so `unity.sh build`
+refused on `main` as well as here — neither test tier can see it, because both run in the editor
+where every shader exists. `ShaderInclusion.Apply` added its one GUID to `GraphicsSettings.asset`;
+the player then booted into a colony with a clean log.
