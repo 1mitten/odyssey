@@ -2947,3 +2947,19 @@ asked. The original had its path and moved.
   `JobSystem.HoldsDriver`.
 - **The check:** the same lockstep step as above. The repair lives in the hold itself: a stunned pawn
   with progress, no path, nothing pending and a destination re-asks, exactly as the toil would.
+
+## A test world that starts where the game never does (2026-09-26)
+
+**No colonist in the game was dealt a starting skill or a trait.** `StartingSkillsSystem` acted on
+`CurrentTick == 0`. The scene has woken at noon since 2026-09-16 (`SimWorld.StartAtTick(30_000)`),
+so in the game its tick never came. Every headless test builds at midnight and passed. Traits were
+built on the same pass, so they too passed every tier and did nothing in the game.
+
+- **The pattern:** a rule keyed on a value the tests always have and the game never does: tick
+  nought, an empty board, a default setting. The test and the game differ in one number, the rule
+  reads exactly that number, and nothing on either side is wrong on its own.
+- **How it was found:** a picture. The Thoughts tab's PlayMode geometry test captured the laid-out
+  pane of a colonist in the real bootstrap, and she had no traits. Logging the live colony gave
+  tick 30,012.
+- **The check:** `StartingSkillsTests.AColonyThatWakesAtNoonIsDealtOnItsFirstTick` builds at noon.
+  Anything that means "the start of the colony" asks `SimWorld.StartTick`, never nought.

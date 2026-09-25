@@ -411,7 +411,17 @@ namespace Odyssey.Sim
                 throw new ArgumentOutOfRangeException(nameof(tick), tick, "a clock does not start before zero");
 
             CurrentTick = tick;
+            StartTick = tick;
         }
+
+        /// <summary>
+        /// The tick the world's first tick runs at: nought, or what <see cref="StartAtTick"/> set.
+        /// What "the first tick" means to a system that acts once at the start of a colony
+        /// (<c>StartingSkillsSystem</c>), which asked for tick nought and so never ran in a scene
+        /// that wakes at noon. Not saved: a loaded world is past its first tick, and this reads
+        /// nought there.
+        /// </summary>
+        public int StartTick { get; private set; }
 
         /// <summary>The random stream for this tick and a named purpose.</summary>
         public DeterministicRandom RandomForTick(uint purpose) =>

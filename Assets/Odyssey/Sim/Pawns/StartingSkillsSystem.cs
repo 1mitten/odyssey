@@ -36,7 +36,10 @@ namespace Odyssey.Sim.Pawns
 
         public void Tick(SimWorld world)
         {
-            if (world.CurrentTick != 0) return;
+            // The world's first tick, which is tick nought headless and noon in the scene
+            // (SimWorld.StartTick). It asked for nought until 2026-09-26, so the game never dealt a
+            // starting skill or a trait: every test builds at midnight and passed.
+            if (world.CurrentTick != world.StartTick) return;
 
             var pawns = _ctx.Pawns.All;
             // Each from its own seed since U40, which is the world's for every colonist the world
