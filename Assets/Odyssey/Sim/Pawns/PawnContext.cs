@@ -185,6 +185,9 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public World.HomeArea? Home { get; set; }
 
+        /// <summary>The campfire home is centred on (design 43 §3f). Null in a bare fixture.</summary>
+        public World.Hearth? Hearth { get; set; }
+
         /// <summary>
         /// Where a thing is, as a cell a colonist can walk to: its own cell, the cell of the store
         /// holding it, or -1 while it is in a pair of hands.

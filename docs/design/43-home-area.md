@@ -1,7 +1,7 @@
 # 43 — The home area, and keeping a colonist home
 
-**Status: approved 2026-09-25 (owner: *"approved start"*). H1, the mask, and H2, the setting and the gate, are built. H3 and
-H4 wait on the Claude Design brief** (`docs/reference/mockups/home-area-brief.md`). Branch
+**Status: approved 2026-09-25 (owner: *"approved start"*). H1 (the mask), H2 (the setting and the
+gate) and HH (the hearth, §3f) are built. H3 and H4 wait on the Claude Design brief** (`docs/reference/mockups/home-area-brief.md`). Branch
 `claude/sleepy-cannon-9d0evw`. Units H1–H5 in `docs/plans/home-area.md`.
 **Read first:** the interview `docs/research/home-area-interview.md`; the reference
 `docs/research/a-18-home-and-allowed-areas.md`; design 33 §18 (the combat response, whose shape the
@@ -32,6 +32,13 @@ from what the colony has placed), **a switch that shows it** (on the views strip
 | 6 | What Home stops | **No work outside; a draft overrides it.** She may walk through; idle outside, she walks home. |
 | 7 | The brief | Claude Design draws **the tab, the home glyph and the board look**. |
 | 8 | Flee towards home | **Not in this unit.** |
+
+**The hearth, round three (owner, 2026-09-25; every recommendation taken).** One campfire is the
+centre of home: any campfire can be it, and there is one at most; the first raised takes the title;
+*Make this the hearth* moves it; home is only the piece of the footprint joined to it, joined when
+the grown areas touch; taking it down leaves no hearth and so no home; it is called the **Hearth**;
+it wears a house mark while the Home view is on; and nothing else hangs on it yet. The table is in
+the interview, §6. **It changes §3's answer to "what is home" and closes the far-site gap H2 found.**
 
 **Assumptions written as decisions**, each for the owner to overturn: the view is called **Home**
 and the setting **Area**, with values **Anywhere** and **Home**; the tab is **Assign**; the view is
@@ -109,6 +116,35 @@ and the only repair would be to save the pending dirty set, which makes derived 
 Measured in H1 by `TickBenchmarkTests.WhatOneHomeRebuildCosts` on Standard, Huge and the scale target
 (§7).
 
+### 3f. The hearth: only the piece joined to it is home (round three)
+
+Home is everything placed, grown as §3b says, **and then only the piece that contains the hearth**.
+
+- **The hearth** is `Sim/World/Hearth`: one cell, -1 for none. Any campfire of ours can be it
+  (`Built`, not `Removed`, `EdificeCampfire`); a ruin's fire cannot. Campfires stay unlimited,
+  because they heat rooms and Rime needs one per sealed room.
+- **The first campfire raised while there is none becomes it** (`ConstructionGrid.RaiseEdifice` asks
+  `Hearth.OfferRaised`). The player moves it with `SetHearth(cell)` from a campfire's pane: refused
+  unless a campfire of ours stands there, `AlreadyInThatState` for the hearth itself, applied while
+  paused.
+- **Taking it down leaves none.** `ConstructionGrid.Demolish` tells it, and deconstruction and a
+  bandit's blows both end there. **Nothing is promoted**: another campfire standing stays a
+  campfire, and the next one raised, or the one the player marks, becomes the hearth. No hearth, no
+  home, and nobody is restricted (§4d).
+- **Joined** means a flood from the hearth's cell over the grown cells, four ways on a layer and one
+  up and one down. Two pieces join when their grown squares touch, which is buildings about eleven
+  cells apart; there is no second number to tune. An outpost joins the moment the base grows out to
+  meet it.
+- **Saved and hashed only while set** (`odyssey.hearth`, layout 1, no format bump). Unset it hashes
+  nothing, and no scenario or golden builds a campfire, so **no golden moved**.
+- **Published** as `WorldSnapshot.HearthCell`, one number, always.
+- **Every change of hearth marks every layer dirty**, because which piece is home depends on it
+  everywhere. It is rare, and costs one whole rebuild (§7a).
+
+**It closes the gap H2's tests found**: a build site counts as placed, so a far site used to make an
+island of home and a colonist kept home walked out to it. A far site is an outpost now, and a forced
+build there is refused.
+
 ### 3e. Not saved, not hashed
 
 Home is a pure function of hashed state: the edifices, floors, sites, zones and lines are all saved
@@ -173,7 +209,7 @@ public bool MayWork(Pawn pawn, int cell) =>
 | Hauling *from* a cell | yes | answer 6 |
 | Hauling *to* a store or shelf | never matters | a store is home by construction (§3a) |
 | Hauling to open ground (a refused thing's fallback) | yes | the fallback asks `MayWork` too |
-| A right-click forced order | yes, refused with `NotPermitted` | answer 6. **A forced build is never refused in practice**: a site is home by itself (§3a), so every site is inside home, and a builder kept home walks out to any site the player orders. Found by the tests (H2); fetching a weapon outside home is the order that is refused |
+| A right-click forced order | yes, refused with `NotPermitted` | answer 6. A forced build at an outpost is refused, and one beside the base is taken. Before the hearth (§3f) every site was home by itself, so no forced build could be refused; H2's tests found it |
 | Sleeping, the fireside, the idle wander | yes | an assumption (§2): a Home colonist stays home. Beds are inside by construction |
 | Eating | yes, **until she is starving** | the reference and Dwarf Fortress both gate food and both open the gate at starvation, because gating it outright is the genre's known trap (a-18 finding 9). Starving means `Pawn.StarvationSeverity > 0` (WS3), so there is no second threshold |
 | Rescue | yes | it is a work giver; say if a downed colonist outside should still be fetched |
@@ -183,10 +219,11 @@ public bool MayWork(Pawn pawn, int cell) =>
 
 ### 4d. An empty home restricts nobody
 
-The played scenario starts with **no beds and no stockpile** (`ScenarioDef.Playtest`, owner
-2026-09-20), so a new colony has no home until something is built or zoned. A colonist set to
+The played scenario starts with **no beds, no stockpile and no campfire** (`ScenarioDef.Playtest`,
+owner 2026-09-20), so a new colony has no home until a campfire is raised (§3f). **No hearth, no
+home**, whatever else is built. A colonist set to
 *Home* then would have nothing she may do at all. `MayWork` answers yes while home is empty, and the
-Assign tab's Area column says **"No home yet"** in its header while that is true (`ui.assign.nohome`).
+Assign tab's Area column says **"No hearth yet"** in its header while that is true (`ui.assign.nohearth`).
 
 ### 4e. Walking home
 
@@ -249,6 +286,9 @@ view is on, inside `FrameSection.Overlays`:
 - **A wash look** rides the cell-plate path (`ChunkRenderer.DrawCellMark`, gathered before
   `FlushCellPlates`), one colour, one instanced call per 1,023 plates.
 
+**The hearth wears a house mark while the Home view is on**, and looks like any campfire otherwise
+(round three, answer 8); the mark's shape and colour come from the brief with the rest.
+
 Which of the two, the colours and the thickness come from the brief and live in one Presentation
 constant set, `HomeLook` — never in `OrderColours`, which is the orders' table.
 
@@ -275,7 +315,7 @@ registry, as `ui.tab.schedule` and Wildlife did.
   not done here.
 - **Words**, all registry rows and all ASCII: `ui.tab.assign` *Assign*, `ui.keys.assign`,
   `ui.assign.area` *Area*, `ui.assign.response` *Response*, `ui.assign.anywhere` *Anywhere*,
-  `ui.assign.home` *Home*, `ui.assign.nohome` *No home yet*. The response values reuse
+  `ui.assign.home` *Home*, `ui.assign.nohearth` *No hearth yet*. The response values reuse
   `ui.command.fightback`, `ui.command.defend`, `ui.command.flee`.
 
 ## 7. What it costs (to be measured)
@@ -309,6 +349,22 @@ anything was placed however many cells were — a stockpile drag of a hundred ce
 and never at rest, never for felling, mining or walking. The load's cost is paid once, inside the
 loading screen.
 
+**With the hearth (HH, the same machine, three runs each).** The base now carries a campfire, and
+only the piece joined to it is home, so the flood from the hearth is part of every rebuild.
+
+| Board | Home cells | Every layer, Release | One placement, Release |
+|---|---|---|---|
+| Standard | 37,551 | 2.20–2.51 ms | **0.67–0.71 ms** |
+| Huge | 8,859 | 3.57–5.19 ms | 0.67–0.98 ms |
+| Scale target | 12,744 | 8.25–9.54 ms | 0.73–0.86 ms |
+
+**The flood costs what home holds.** On Standard the 200 scattered cells all join the block, so the
+whole board is one base of 37,551 cells and a placement went from 0.23 to 0.67 ms — about 0.45 ms of
+flood. On the bigger boards most scattered cells are now outposts, so home is smaller and the flood
+cheaper. This arm is the worst case for the flood: a real base of a 40 x 40 block is about 7,500 home
+cells over three layers, a fifth of this. The lever if a placement ever shows in a frame is an
+incremental join — reflood only when a placement could split or join pieces — named, not built.
+
 **The lever, not pulled.** The scattered cells make the seeded area the whole layer, which is the
 worst case. A real base is compact, and limiting the growth and the composition to the seeds'
 bounding box plus the perimeter would make a placement follow the base rather than the board. It is
@@ -327,11 +383,18 @@ measure again if a placement ever shows in a frame.
   row and a `Touch`.
 - **Home is an overlay, not a tint.** Baking it would re-mesh chunks on every placement (§5d).
 - **An empty home restricts nobody.**
+- **Home is only the piece joined to the hearth.** Dropping the flood would bring back the far-site
+  island H2 found.
+- **Nothing is promoted when the hearth is lost.** The owner's answer; a campfire picked for the
+  player would be a hearth they did not choose.
+- **The hearth is hashed only while set.** Hashing a -1 would move every golden.
 
 ## 9. Open for the owner, and follow-ons
 
-- **Flee towards home**: once home exists, a Flee colonist could prefer a flee cell inside it
-  (answer 8's hook, design 33 §18d).
+- **Flee towards home**: once home exists, a Flee colonist could prefer a flee cell inside it, or
+  run to the hearth (answer 8's hook, design 33 §18d; round three, answer 7).
+- **Bandits going for the hearth** as the raid's target, and **idlers preferring it** among fires
+  (round three, answer 7).
 - **Hand paint-over**: an add-and-exclude brush over the derived home, the reference's second half —
   one saved, hashed mask OR-ed and masked in `SeedLayer`'s output.
 - **Eating and sleeping** (§4c): gated, with the starvation escape hatch, is the recommendation; say
@@ -374,7 +437,17 @@ measure again if a placement ever shows in a frame.
 | H4 | a pager at thirteen colonists | none at twelve |
 | H4 | F4 is bound and Colonists is off the bar | `HotkeyClashTests`, `RegistryTests`, `HudFontTests` |
 
-Goldens: none should move in H1–H4. A moved golden is a finding.
+| HH | the first campfire raised becomes the hearth | a second does not; a wall never does |
+| HH | `SetHearth` moves it, and home moves with it | refused on a wall, open ground and a ruin's fire |
+| HH | taking the hearth down leaves none and no home | a standing campfire is not promoted; the next raised is |
+| HH | walls with no hearth make no home | a campfire beside them does |
+| HH | an outpost sixteen cells out is not home | it joins when a wall at eight reaches it |
+| HH | a forced build at an outpost is refused | one beside the base is taken |
+| HH | saved, loaded and hashed; a twin agrees 300 ticks after a load | — |
+
+Breakages seen to fail: no flood (outposts counted), no automatic hearth, demolish keeping the hearth.
+
+Goldens: none should move in H1–H4. A moved golden is a finding. None moved in HH.
 
 ## 11. Alternatives rejected
 

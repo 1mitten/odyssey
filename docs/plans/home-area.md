@@ -2,7 +2,7 @@
 
 **Phase 3, 2026-09-25.** Interview: `docs/research/home-area-interview.md` (every recommendation
 taken, 2026-09-24). Design: `docs/design/43-home-area.md`. Brief: `docs/reference/mockups/home-area-brief.md`.
-**Approved 2026-09-25** (owner: *"approved start"*). H1 and H2 built; H3 and H4 wait on the brief.
+**Approved 2026-09-25** (owner: *"approved start"*). H1, H2 and HH built; HP next; H3 and H4 wait on the brief.
 All units land on `claude/sleepy-cannon-9d0evw` as separate commits, because this session may push
 only there.
 
@@ -15,6 +15,8 @@ Each unit is its own `claude/home-*` branch and PR, merged in this order. H1 and
 |---|---|---|---|
 | **H1** the mask | `ColonyFootprint` (dirty layers, `Touch`) and `HomeArea` (`SeedLayer`, five-cell square growth per layer, one layer of margin, lazy rebuild, `Contains`, `IsEmpty`, `Version`, `CellsOn`, `EdgesOf`). `Touch` at every placement path in design 43 §3a. A `Home` seam on `PawnContext`; `RebuildDerived` marks all dirty. Neither saved nor hashed. | §3 | fast tier; `WhatOneHomeRebuildCosts` on three boards; no golden moves |
 | **H2** the setting and the gate | `Pawn.Area`, `AssignSection` (`odyssey.assign`), hash bit 26, aspect `odyssey.pawn.area`, intent `SetPawnArea` (paused, checked). `PawnContext.CanTravel` / `MayWork` split; the fight and the walk toil move to `CanTravel`; the open-ground haul fallback asks `MayWork`. The walk home in the idle node. A new setting ends an outside job. | §4 | fast tier; Long tier with one colonist at Home; lockstep twin; no golden moves |
+| **HH** the hearth | `Sim/World/Hearth` (one cell, saved and hashed only while set, `SetHearth`), the first campfire raised takes the title, demolish clears it, `HomeArea` floods from it so only the joined piece is home. Built 2026-09-25. | §3f | fast tier; Long tier; no golden moves |
+| **HP** the hearth's pane and alerts | The campfire pane's *Hearth* line and *Make this the hearth* button; *No hearth* and *The hearth is marked to come down* alerts; registry rows. | §3f, §5 | fast tier; content gates |
 | **H3** the view | `OverlayDirector.HomeVisible`, `HudViews.Home`; the Menu row generalised off `HudViews.Keys` and `PowerOverlayKey` deleted; the `WatchHome` channel publishing edge bits; the draw pass in the look the brief returns, inside `FrameSection.Overlays`; the house glyph from the brief's SVG path. Registry row `ui.overlay.home`. | §5 | fast tier; Unity tiers; `TheHomeViewAgainstTheFrame`; player build smoke |
 | **H4** the Assign tab | `AssignDirector`, `AssignLayout` (the brief's constants), `AssignModel` (colonists only, Area and Response cycling, twelve a page); F4 in `HudKey`, `HotkeyAction.AssignTab` appended, `Defaults`, `HotkeyUnity`, the Settings keys page; `HudShell.Assign.cs` via `DockedTab`; the four sibling tab handlers close Assign. Registry rows `ui.tab.assign`, `ui.keys.assign`, `ui.assign.*`. | §6 | fast tier; Unity tiers; `DockedTabGeometryTests` row |
 | **H5** close | Wiki and label registry rebuilt with all three content gates; `docs/wiki/artifact.html` republished; the measurements into design 43 §7 with machine and date; `CLAUDE.md` status row; a playtest-queue row; journal. | — | the three content gates |

@@ -135,6 +135,11 @@ namespace Odyssey.Sim.Pawns
 
             // The home (design 43): derived from everything above, so it is built last and is
             // neither a system, a hashable nor a save section. It rebuilds itself when asked.
+            // The hearth first: it is state the home reads, and the construction grid tells it when
+            // a campfire goes up or comes down.
+            var hearth = new World.Hearth(pawns.Cells, edifices);
+            pawns.Hearth = hearth;
+            construction.Hearth = hearth;
             pawns.Home = new World.HomeArea(pawns);
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
             builder
@@ -198,6 +203,11 @@ namespace Odyssey.Sim.Pawns
                 // corpses are what the pawns become.
                 .AddHashable(pawns.Corpses)
                 .AddHashable(pawns.EdificeDamage)
+                // The hearth (design 43 §3f): hashed only while there is one, so its registration
+                // moves no golden.
+                .AddHashable(hearth)
+                .AddSnapshotContributor(hearth)
+                .AddIntentHandler(IntentKind.SetHearth, hearth.HandleSetHearth)
                 .AddSnapshotContributor(pawns.Pawns)
                 .AddSnapshotContributor(pawns.Corpses)
                 // The telling of every fight, for presentation: never saved, never hashed.

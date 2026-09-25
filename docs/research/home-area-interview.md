@@ -115,3 +115,31 @@ Every recommendation was taken.
   the cleaning and firefighting radius — all things the reference hangs on the same mask (a-18).
 - **The look** — an edge, a wash, or both, and how a layer below reads under the x-ray — comes back
   from Claude Design.
+
+## 6. Round three: the hearth (2026-09-25)
+
+After H1 and H2 were built the owner asked: *"Maybe 1 campfire is the home centre - the thing that
+dictates it - only one can be built. Would this make sense and make it easier - ask me questions
+about the mechanic - what happens if you tried to deconstruct it - maybe you can move it?"*
+
+Two things were put to the owner first. **Campfires heat rooms**, and in Rime a sealed room needs its
+own, so capping them at one would cap heating. And **H2's tests had found a gap**: a build site is
+home by itself, so a far site made an island of home and a colonist kept home walked out to it. A
+hearth closes it. The genre has the shape too: Against the Storm's one main hearth among ordinary
+ones, Frostpunk's single generator.
+
+Eight questions in two rounds; every recommendation was taken.
+
+| # | Question | Answer |
+|---|---|---|
+| 1 | Which fire? | **Mark one campfire as the hearth.** Campfires stay unlimited. *Make this the hearth* on a campfire's pane; marking another is how home moves. |
+| 2 | How does it decide home? | **The base joined to it**: the earlier rule, keeping only the piece that contains the hearth. Outposts are not home. |
+| 3 | Deconstructed or smashed? | **Home goes with it.** Allowed, warned first; no hearth means no home and nobody restricted; an alert says so. |
+| 4 | When does a colony get one? | **The first campfire raised.** |
+| 5 | How close to join? | **When the grown areas touch**, about eleven cells; no new number. |
+| 6 | What is it called? | **Hearth.** |
+| 7 | Anything else now? | **No**: bandits targeting it, Flee running to it and idlers preferring it are recorded hooks. |
+| 8 | Does it look different? | **A house mark over it only while the Home view is on.** |
+
+Nothing is promoted when the hearth is lost: a campfire raised while there is none takes the title,
+or the player marks one. That is the reading of answers 3 and 4 together, recorded in design 43 §3f.

@@ -83,6 +83,9 @@ namespace Odyssey.Sim
         /// <summary>Say which drawing of the lines this frame's rows are. See <see cref="WorldSnapshot.PowerVersion"/>.</summary>
         public void SetPowerVersion(int version) => _target.SetPowerVersion(version);
 
+        /// <summary>Say where the hearth is. See <see cref="WorldSnapshot.HearthCell"/>.</summary>
+        public void SetHearthCell(int cell) => _target.SetHearthCell(cell);
+
         /// <summary>Publish one moment of a fight. See <see cref="CombatEventView"/>.</summary>
         public void AddCombatEvent(in CombatEventView view) => _target.AddCombatEvent(view);
 

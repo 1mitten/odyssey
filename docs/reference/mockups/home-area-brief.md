@@ -69,6 +69,20 @@ stronger edge). Use only colours from the tokens below, stated as a token plus a
 edge's width in metres or as a fraction of a 2.5 m cell, and its height above the ground if it
 stands proud of it.
 
+### 2b. The hearth
+
+Home is centred on one campfire, the **hearth**: the colony's home is only the part of what it
+has built that is joined to it. Any campfire can be made the hearth; there is one at most.
+
+- **On the board**, while the Home switch is on, draw a small **house mark** floating over the hearth
+  campfire, in the same colour as the home look. With the switch off it is an ordinary campfire and
+  carries no mark. Use the same house glyph as the switch, simplified if it must be.
+- **On the campfire's inspect pane** (the fixed pane at the bottom-left), draw two states: a campfire
+  that **is** the hearth, which says *Hearth* as a meta line under its name with the house glyph
+  beside it; and one that is not, which carries a single button, **Make this the hearth**, in the
+  style of the colonist pane's command buttons. Nothing else on the pane changes.
+- **No hearth yet** replaces "No home yet" as the Area column's note below.
+
 ### 3. The Assign tab
 
 The **Assign** tab is opened by **F4** or the *Assign* item on the command bar. It lists every
@@ -85,8 +99,8 @@ colonist and shows, per colonist, two settings the player changes by clicking:
   cell in its **hover** state.
 - **Home** and **Flee** are the two cautious values; say whether they should look different from
   their neighbours (for example the warn colour) or the same, and why.
-- **When the colony has no home yet** (nothing built), *Home* restricts nobody. The Area column
-  header then carries a short meta note, **"No home yet"**. Draw it in one state.
+- **When the colony has no hearth yet** (no campfire built), *Home* restricts nobody. The Area column
+  header then carries a short meta note, **"No hearth yet"**. Draw it in one state.
 - Column headers are **not** sortable in this version. Clicking a colonist's name **selects that
   colonist** (the game paints a selected row in the accent colour with dark ink on it); show one row
   selected.
@@ -159,14 +173,17 @@ against the shipped tokens is possible:
 
 1. `home-view-off.html` — the board screenshot with the HUD, the views strip showing Power and Home,
    both off.
-2. `home-view-on.html` — the same with Home on and the home area drawn on the board in your look.
+2. `home-view-on.html` — the same with Home on, the home area drawn on the board in your look and
+   the house mark over the hearth; show one small outpost outside home, not marked.
 3. `home-view-layer.html` — Home on, the player looking at a layer above the base, so the lower
    layer's home shows (or does not) beneath it.
 4. `assign-open.html` — the Assign tab open with ten colonists, one row selected, one Area cell in
    its hover state, no pager.
 5. `assign-paged.html` — fourteen colonists, the pager showing "1 / 2".
-6. `assign-nohome.html` — the tab with the "No home yet" note in the Area header.
+6. `assign-nohearth.html` — the tab with the "No hearth yet" note in the Area header.
 7. `home-glyph.svg` — the house, one path, 24 x 24 viewBox.
+8. `hearth-pane.html` — the campfire's inspect pane twice, side by side: the hearth, and a campfire
+   with the *Make this the hearth* button.
 
 At the top of each HTML file, in an HTML comment, list every measurement you chose that the system
 above did not fix — the table width, column widths, the Area and Response cell padding, the edge's
@@ -174,8 +191,8 @@ width and alpha, the wash's alpha — because those numbers become constants in 
 
 ### What not to do
 
-No painting tool, no brush, no area names, no area picker: home is worked out by the game and the
-only choice is Anywhere or Home. No new colours, faces or sizes. No scrollbars. No rounded, glowing,
+No painting tool, no brush, no area names, no area picker: home is worked out by the game from the
+hearth, and the only choices are Anywhere or Home, and which campfire is the hearth. No new colours, faces or sizes. No scrollbars. No rounded, glowing,
 translucent or gradient panels. No other colonist columns (skills, needs, mood, schedule). Do not
 rename *Home*, *Anywhere*, *Fight back*, *Defend*, *Flee* or *Assign*. No copying of RimWorld's
 layout: the table's shape is this game's Work tab, and the attachments show it.

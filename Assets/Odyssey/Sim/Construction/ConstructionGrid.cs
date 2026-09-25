@@ -109,6 +109,12 @@ namespace Odyssey.Sim.Construction
         /// </summary>
         public Power.PowerGrid? Power { get; set; }
 
+        /// <summary>
+        /// The hearth (design 43 §3f), told when a campfire is raised or anything is demolished.
+        /// Null in a bare fixture with no colony.
+        /// </summary>
+        public World.Hearth? Hearth { get; set; }
+
         public GridSize Size => _grid.Size;
 
         /// <summary>
@@ -1400,6 +1406,8 @@ namespace Odyssey.Sim.Construction
             if (second >= 0) _grid.Edifice[second] = _edifices.Count - 1;
             _grid.Footprint.Touch(cell);
             if (second >= 0) _grid.Footprint.Touch(second);
+            // The first campfire of a colony with no hearth becomes it (design 43 §3f).
+            if (def.edifice == CoreContent.EdificeCampfire) Hearth?.OfferRaised(cell);
             if (def.blocking)
             {
                 _grid.Flags[cell] |= CellFlags.BlockingEdifice;
@@ -1538,6 +1546,8 @@ namespace Odyssey.Sim.Construction
             if (second >= 0) _grid.RemoveEdifice(second);
             _grid.Footprint.Touch(was.CellIndex);
             if (second >= 0) _grid.Footprint.Touch(second);
+            // The hearth coming down leaves the colony without one; nothing takes its place.
+            Hearth?.Lost(was.CellIndex);
             PlacedEdifice gone = was;
             gone.Removed = true;
             _edifices[handle] = gone;

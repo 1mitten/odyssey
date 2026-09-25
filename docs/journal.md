@@ -12321,3 +12321,33 @@ per-item flag in the reference, not a home rule, which corrects a line in a-03.
 The Claude Design brief asks for the tab, a house glyph as an SVG path, and the look on the board.
 The look is an overlay rather than a baked tint, because home's edge moves five cells with every wall
 and baking it would re-mesh chunks on every placement.
+
+## 2026-09-25 — The home area built on the simulation side, and the hearth
+
+Design 43 was approved and the two simulation units went in. The home mask is derived from everything
+the colony placed, grown by five cells as a square, and rebuilt lazily on the first question after a
+placement. Colonists can be kept at *Home* through one gate, `PawnContext.MayWork`. It sits inside the
+`Reachable` every work giver already asks, so a giver written next month is gated without knowing it.
+The fight, the flight and the walk of a job already begun ask `CanTravel` instead.
+
+Two things the tests taught:
+
+- **The fight needed a test that could fail.** The first "she still fights back outside home" test
+  passed with the self-defence node gated. An adjacent attacker is fought through a path that asks no
+  reach at all. The test now has the bandit strike and step back out of reach, so she has to chase.
+  That runs the node and the attack driver, and gating either now fails it.
+- **A build site is home by itself**, so a far site made an island of home and a colonist kept home
+  walked out to it.
+
+The owner then proposed that one campfire should be the centre of home, and was interviewed in two
+rounds. Capping campfires at one would cap heating, since Rime needs one per sealed room. So any
+campfire can be marked the **hearth**, the first raised takes the title, and home is only the piece
+of the footprint joined to it. That closed the island gap as a side effect: a far site is an outpost,
+and a forced build there is refused.
+
+The flood from the hearth has a cost that follows how much is home. On the benchmark's worst case,
+where the whole standard board is one base of 37,551 cells, a placement went from 0.23 to 0.67 ms.
+That is recorded with an incremental join named as the lever, not built.
+
+None of the three units moved a golden. The setting is hashed only when set, the hearth only while it
+exists, and the mask never.

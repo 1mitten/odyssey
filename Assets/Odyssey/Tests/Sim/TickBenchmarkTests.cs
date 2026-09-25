@@ -496,6 +496,12 @@ namespace Odyssey.Tests.Sim
                 CellGrid cells = colony.Pawns.Cells;
                 CellRef stand = size.FromIndex(colony.Pawns.Pawns.All[0].Cell);
 
+                // The hearth (design 43 §3f), so the base is home: the flood from it is part of
+                // what a rebuild costs now.
+                Assert.That(colony.Construction.Place(new CellRef(stand.X + 3, stand.Z, stand.Y), BuildingHandle.Campfire,
+                    StuffHandle.Wood), Is.EqualTo(IntentRejection.None));
+                Assert.That(colony.Construction.Raise(colony.Pawns, colony.Construction.Sites[0]), Is.True);
+
                 for (int dx = -20; dx < 20; dx++)
                 for (int dz = -20; dz < 20; dz++)
                 {

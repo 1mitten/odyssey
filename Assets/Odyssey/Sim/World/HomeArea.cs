@@ -9,7 +9,11 @@ namespace Odyssey.Sim.World
 {
     /// <summary>
     /// The colony's home (design 43 §3): every cell the colony has put something on, grown by
-    /// <see cref="Perimeter"/> cells as a square on its own layer, and then one layer up and down.
+    /// <see cref="Perimeter"/> cells as a square on its own layer, and then one layer up and down —
+    /// <b>and of that, only the piece joined to the hearth</b> (§3f). Two pieces are joined when
+    /// their grown areas touch, face to face on a layer or one above the other, which is buildings
+    /// about eleven cells apart; anything further is an outpost and is not home. No hearth, no
+    /// home.
     ///
     /// <para><b>Derived, never painted, never saved, never hashed.</b> Every source is saved and
     /// hashed already — the floors, the edifice records, the build sites, the zones and the power
@@ -45,8 +49,14 @@ namespace Odyssey.Sim.World
         /// <summary>Per cell: grown from a seed on its own layer. The vertical margin is not in here.</summary>
         readonly bool[] _grown;
 
-        /// <summary>Per cell: home. <see cref="_grown"/> on this layer or the one above or below.</summary>
+        /// <summary>Per cell: <see cref="_grown"/> on this layer or the one above or below — every piece.</summary>
         readonly bool[] _home;
+
+        /// <summary>Per cell: home, the piece of <see cref="_home"/> joined to the hearth.</summary>
+        readonly bool[] _joined;
+
+        /// <summary>The cells of <see cref="_joined"/>, so the last answer is cleared in O(home) rather than O(board).</summary>
+        readonly List<int> _joinedCells = new List<int>();
 
         /// <summary>Seeds found on each layer at its last rebuild.</summary>
         readonly int[] _seedsOn;
@@ -67,6 +77,7 @@ namespace Odyssey.Sim.World
             int count = _size.CellCount;
             _grown = new bool[count];
             _home = new bool[count];
+            _joined = new bool[count];
             _seedsOn = new int[Math.Max(1, _size.SizeY)];
             _seed = new bool[_size.LayerStride];
             _alongX = new bool[_size.LayerStride];
@@ -86,7 +97,7 @@ namespace Odyssey.Sim.World
             get
             {
                 Refresh();
-                return _seedTotal == 0;
+                return _joinedCells.Count == 0;
             }
         }
 
@@ -95,7 +106,7 @@ namespace Odyssey.Sim.World
         {
             if ((uint)cell >= (uint)_size.CellCount) return false;
             Refresh();
-            return _home[cell];
+            return _joined[cell];
         }
 
         /// <summary>How many cells are home, on every layer. For tests and the benchmark.</summary>
@@ -104,9 +115,7 @@ namespace Odyssey.Sim.World
             get
             {
                 Refresh();
-                int n = 0;
-                for (int i = 0; i < _home.Length; i++) if (_home[i]) n++;
-                return n;
+                return _joinedCells.Count;
             }
         }
 
@@ -122,10 +131,10 @@ namespace Odyssey.Sim.World
             int inLayer = cell % stride;
             int x = inLayer % sx, z = inLayer / sx;
             byte edges = 0;
-            if (x == 0 || !_home[cell - 1]) edges |= 1;
-            if (x == sx - 1 || !_home[cell + 1]) edges |= 2;
-            if (z == 0 || !_home[cell - sx]) edges |= 4;
-            if (z == _size.SizeZ - 1 || !_home[cell + sx]) edges |= 8;
+            if (x == 0 || !_joined[cell - 1]) edges |= 1;
+            if (x == sx - 1 || !_joined[cell + 1]) edges |= 2;
+            if (z == 0 || !_joined[cell - sx]) edges |= 4;
+            if (z == _size.SizeZ - 1 || !_joined[cell + sx]) edges |= 8;
             return edges;
         }
 
@@ -154,9 +163,48 @@ namespace Odyssey.Sim.World
             _seedTotal = 0;
             for (int y = 0; y < layers; y++) _seedTotal += _seedsOn[y];
 
+            JoinToHearth();
+
             _footprint.ClearDirty();
             Version++;
             return grown;
+        }
+
+        /// <summary>
+        /// Keep only the piece of home the hearth stands in: a flood from its cell over
+        /// <see cref="_home"/>, four ways on a layer and one up and one down. O(home cells), plus
+        /// clearing the last answer through its own list.
+        /// </summary>
+        void JoinToHearth()
+        {
+            for (int i = 0; i < _joinedCells.Count; i++) _joined[_joinedCells[i]] = false;
+            _joinedCells.Clear();
+
+            int hearth = _ctx.Hearth?.Cell ?? -1;
+            if ((uint)hearth >= (uint)_size.CellCount || !_home[hearth]) return;
+
+            int stride = _size.LayerStride, sx = _size.SizeX, sz = _size.SizeZ, count = _size.CellCount;
+            _joined[hearth] = true;
+            _joinedCells.Add(hearth);
+            for (int head = 0; head < _joinedCells.Count; head++)
+            {
+                int c = _joinedCells[head];
+                int inLayer = c % stride;
+                int x = inLayer % sx, z = inLayer / sx;
+                if (x > 0) Join(c - 1);
+                if (x < sx - 1) Join(c + 1);
+                if (z > 0) Join(c - sx);
+                if (z < sz - 1) Join(c + sx);
+                if (c >= stride) Join(c - stride);
+                if (c + stride < count) Join(c + stride);
+            }
+        }
+
+        void Join(int c)
+        {
+            if (!_home[c] || _joined[c]) return;
+            _joined[c] = true;
+            _joinedCells.Add(c);
         }
 
         void Refresh()

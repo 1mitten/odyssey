@@ -1434,6 +1434,12 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public int PowerVersion { get; private set; }
 
+        /// <summary>
+        /// The hearth's cell, or -1 when the colony has none (design 43 §3f): the campfire home is
+        /// centred on. Always published; it is one number.
+        /// </summary>
+        public int HearthCell { get; private set; } = -1;
+
         /// <summary>Line cells, in cell-index order within each kind. See <see cref="ConduitView"/>.</summary>
         public ReadOnlySpan<ConduitView> Conduits => new ReadOnlySpan<ConduitView>(_conduits, 0, ConduitCount);
 
@@ -1779,6 +1785,7 @@ namespace Odyssey.Sim.Contracts
             PowerDeviceCount = 0;
             PowerNetCount = 0;
             PowerVersion = 0;
+            HearthCell = -1;
             CombatEventCount = 0;
             CorpseCount = 0;
             EdificeDamageCount = 0;
@@ -1835,6 +1842,8 @@ namespace Odyssey.Sim.Contracts
         }
 
         internal void SetPowerVersion(int version) => PowerVersion = version;
+
+        internal void SetHearthCell(int cell) => HearthCell = cell;
 
         internal void AddBulletin(in BulletinView view)
         {

@@ -183,6 +183,9 @@ namespace Odyssey.Sim.Pawns
                 // Where each colonist may work (design 43 §4a). Appended; absent from an older
                 // save, which loads with everybody at Anywhere, as everybody then was.
                 new Saving.AssignSection(pawns.Pawns),
+                // Which campfire is the hearth (design 43 §3f). Appended; absent from an older
+                // save, which loads with none, as there then was.
+                pawns.Hearth!,
             };
         }
 

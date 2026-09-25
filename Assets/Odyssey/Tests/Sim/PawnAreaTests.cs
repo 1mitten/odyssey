@@ -7,6 +7,7 @@ using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
 using static Odyssey.Tests.Sim.CombatFixture;
+using static Odyssey.Tests.Sim.HomeFixture;
 
 namespace Odyssey.Tests.Sim
 {
@@ -47,23 +48,27 @@ namespace Odyssey.Tests.Sim
 
         static HomeArea Home(ColonyWorld colony) => colony.Pawns.Home!;
 
+        /// <summary>A hearth beside the colony's start, so there is a home to keep anybody in (§3f).</summary>
+        static void WithHearth(ColonyWorld colony) => Campfire(colony, Size.FromIndex(Near(colony, -3, 4)));
+
         /// <summary>The ground under the standable cell this far from the start: something to mine.</summary>
         static int GroundNear(ColonyWorld colony, int dx, int dz) => Near(colony, dx, dz) - Size.LayerStride;
 
         static bool Marked(ColonyWorld colony, int cell) =>
             colony.Pawns.Designations!.At(cell) == DesignationKind.Mine;
 
-        /// <summary>One colonist, one bed (so there is a home), and a mining mark far outside it.</summary>
-        static (ColonyWorld colony, Pawn pawn, int rock) FarRock(int beds = 1)
+        /// <summary>One colonist, a hearth (so there is a home), and a mining mark far outside it.</summary>
+        static (ColonyWorld colony, Pawn pawn, int rock) FarRock(bool hearth = true)
         {
-            var colony = Board(colonists: 1, beds: beds);
+            var colony = Board(colonists: 1);
+            if (hearth) WithHearth(colony);
             Pawn pawn = colony.Pawns.Pawns.All[0];
             int rock = GroundNear(colony, 20, 0);
             Assume.That(colony.Pawns.Designations!.Designate(Size.FromIndex(rock), DesignationKind.Mine),
                 Is.EqualTo(IntentRejection.None), "the far ground would not take a mining mark");
-            if (beds > 0)
+            if (hearth)
             {
-                Assume.That(Home(colony).IsEmpty, Is.False, "the bed made no home");
+                Assume.That(Home(colony).IsEmpty, Is.False, "the hearth made no home");
                 Assume.That(Home(colony).Contains(rock), Is.False, "the far rock is inside home");
             }
             return (colony, pawn, rock);
@@ -151,11 +156,11 @@ namespace Odyssey.Tests.Sim
             Assert.That(Marked(anywhere, anywhereRock), Is.False, "nobody mined the rock at all: the test proves nothing");
         }
 
-        /// <summary>An empty home restricts nobody (§4d): a new colony has none.</summary>
+        /// <summary>No hearth, no home, and nobody restricted (§4d): a new colony has none.</summary>
         [Test]
         public void WithNoHomeAColonistKeptHomeStillWorks()
         {
-            var (colony, pawn, rock) = FarRock(beds: 0);
+            var (colony, pawn, rock) = FarRock(hearth: false);
             Assume.That(Home(colony).IsEmpty, Is.True);
             SetArea(colony, pawn, PawnArea.Home);
             Run(colony, 4_000);
@@ -172,6 +177,7 @@ namespace Odyssey.Tests.Sim
             var colony = Board(colonists: 1);
             Pawn pawn = colony.Pawns.Pawns.All[0];
             colony.World.Tick();
+            WithHearth(colony);
             SetArea(colony, pawn, PawnArea.Home);
 
             int far = Near(colony, 22, 0), near = Near(colony, 2, 2);
@@ -186,17 +192,30 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(IntentRejection.None), "the weapon inside home was refused too: the test proves nothing");
         }
 
-        /// <summary>A site is home by itself (§3a), so a builder kept home still goes to any site.</summary>
+        /// <summary>
+        /// A forced build at an outpost is refused (§4c): a site far from the base is not joined to
+        /// the hearth, so it is outside home. The same order on a site beside the base is taken.
+        /// </summary>
         [Test]
-        public void ABuildSiteIsAlwaysInsideHome()
+        public void AForcedBuildAtAnOutpostIsRefusedAndInsideIsTaken()
         {
             var colony = Board(colonists: 1);
+            Pawn pawn = colony.Pawns.Pawns.All[0];
             colony.World.Tick();
-            int far = Near(colony, 22, 0);
-            Assume.That(Home(colony).Contains(far), Is.False);
-            Assume.That(colony.Construction.Place(Size.FromIndex(far), BuildingHandle.Wall, StuffHandle.Wood),
-                Is.EqualTo(IntentRejection.None));
-            Assert.That(Home(colony).Contains(colony.Construction.Sites[0]), Is.True);
+            WithHearth(colony);
+            SetArea(colony, pawn, PawnArea.Home);
+
+            int far = Order(colony, Size.FromIndex(Near(colony, 22, 0)), BuildingHandle.Wall);
+            int near = Order(colony, Size.FromIndex(Near(colony, 2, -3)), BuildingHandle.Wall);
+            colony.Construction.Deliver(far, 5);
+            colony.Construction.Deliver(near, 5);
+            Assume.That(Home(colony).Contains(far), Is.False, "the outpost site is home");
+            Assume.That(Home(colony).Contains(near), Is.True);
+
+            Assert.That(Send(colony, new Intent(IntentKind.ForceJob, Size.FromIndex(far), JobIndex.Build, pawn.Id.Value)),
+                Is.EqualTo(IntentRejection.NotPermitted), "kept home, she was sent to build at an outpost");
+            Assert.That(Send(colony, new Intent(IntentKind.ForceJob, Size.FromIndex(near), JobIndex.Build, pawn.Id.Value)),
+                Is.EqualTo(IntentRejection.None), "the site inside home was refused too: the test proves nothing");
         }
 
         [Test]
@@ -205,6 +224,7 @@ namespace Odyssey.Tests.Sim
             var colony = Board(colonists: 1);
             Pawn pawn = colony.Pawns.Pawns.All[0];
             colony.World.Tick();
+            WithHearth(colony);
             SetArea(colony, pawn, PawnArea.Home);
             int far = Near(colony, 22, 0);
             Assume.That(Home(colony).Contains(far), Is.False);
@@ -225,6 +245,7 @@ namespace Odyssey.Tests.Sim
         {
             var colony = Board(colonists: 2);
             colony.World.Tick();
+            WithHearth(colony);
             Pawn kept = colony.Pawns.Pawns.All[0], free = colony.Pawns.Pawns.All[1];
             SetArea(colony, kept, PawnArea.Home);
             int far = Near(colony, 25, -10), farther = Near(colony, 25, 10);
@@ -244,6 +265,7 @@ namespace Odyssey.Tests.Sim
         {
             var colony = Board(colonists: 2);
             colony.World.Tick();
+            WithHearth(colony);
             Pawn a = colony.Pawns.Pawns.All[0], b = colony.Pawns.Pawns.All[1];
             int outside = Near(colony, 22, 0);
             int inside = a.Cell;
@@ -281,6 +303,7 @@ namespace Odyssey.Tests.Sim
             var colony = Board(colonists: 1);
             Pawn pawn = colony.Pawns.Pawns.All[0];
             colony.World.Tick();
+            WithHearth(colony);
             SetArea(colony, pawn, PawnArea.Home);
             int far = Near(colony, 22, 0), farther = Near(colony, 26, 0);
             Assume.That(Home(colony).Contains(far) || Home(colony).Contains(farther), Is.False);
@@ -314,6 +337,7 @@ namespace Odyssey.Tests.Sim
             var colony = ColonyWorld.Build(Size, 7u, scenario, barren: true, wooded: false);
             Pawn pawn = colony.Pawns.Pawns.All[0];
             colony.World.Tick();
+            WithHearth(colony);
             SetArea(colony, pawn, PawnArea.Home);
             int far = Near(colony, 22, 0);
             Assume.That(Home(colony).Contains(far), Is.False);
@@ -337,6 +361,7 @@ namespace Odyssey.Tests.Sim
             var colony = Board(colonists: 1);
             Pawn pawn = colony.Pawns.Pawns.All[0];
             colony.World.Tick();
+            WithHearth(colony);
             int outside = Near(colony, 22, 0), inside = pawn.Cell;
             PawnContext ctx = colony.Pawns;
 

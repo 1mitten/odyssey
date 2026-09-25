@@ -299,6 +299,13 @@ namespace Odyssey.Sim.Contracts
         /// on any colonist, drafted, downed or not. Handler: <c>JobSystem.HandleSetPawnArea</c>.
         /// </summary>
         SetPawnArea,
+
+        /// <summary>
+        /// Make the campfire in <c>Cell</c> the colony's hearth (design 43 §3f), the centre home is
+        /// grown from. Refused unless a campfire the colony built stands there. Handler:
+        /// <c>Hearth.HandleSetHearth</c>.
+        /// </summary>
+        SetHearth,
     }
 
     /// <summary>
@@ -390,6 +397,8 @@ namespace Odyssey.Sim.Contracts
             // Where a colonist may work (design 43 §4a): the same kind of setting, on a tab you
             // open while paused.
             IntentKind.SetPawnArea => true,
+            // The hearth (design 43 §3f): a choice made on a campfire's pane, paused or not.
+            IntentKind.SetHearth => true,
             _ => false,
         };
     }
