@@ -17,6 +17,9 @@ namespace Odyssey.Hud
             "ui.raid.mix.mixed",
         };
 
+        /// <summary>The mix the debug menu starts on: Mixed, the raid Def's own.</summary>
+        public const int Default = 2;
+
         public static string IconKey(int mix) =>
             mix >= 0 && mix < Keys.Length ? Keys[mix] : IncidentLabels.Unknown;
 
