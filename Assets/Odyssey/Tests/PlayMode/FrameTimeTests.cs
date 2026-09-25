@@ -39,7 +39,7 @@ namespace Odyssey.Tests.PlayMode
     /// picture unchanged, the budget held — stays untagged, because that claim is a test. The two
     /// canaries stay untagged too: they are the gate's one check that the game draws a frame at all.</para>
     /// </summary>
-    public class FrameTimeTests
+    public partial class FrameTimeTests
     {
         const int WarmupFrames = 60;
         const int TimedFrames = 180;

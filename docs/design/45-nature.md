@@ -1,6 +1,6 @@
 # 45 — Nature: the scenery becomes real things
 
-**Status: designed 2026-09-25, building.** Branch `claude/meadow-nature`, worktree
+**Status: designed and built 2026-09-25; not yet played.** Branch `claude/meadow-nature`, worktree
 `D:\code\odyssey-meadow-nature`. Two stacked pull requests: **M5** (tree species, bushes, the
 topple) and **M13** (loose rocks, mushrooms, berries). The Meadow plan is
 `38-meadow-overhaul.md` §10 (the M rows); the dressing this replaces is §17–§19 there.
@@ -192,3 +192,30 @@ the new keys has a sheet cell, and each is recorded as a gap in `icon-map.csv`.
 - **Things dropped into a bush cell** are drawn inside the bush; nothing keeps a hauler from
   putting a load there. Recorded, not fixed.
 - **Animals eating berries** — no animal eats anything yet.
+
+## 11. As built (2026-09-25)
+
+Two stacked branches: `claude/meadow-nature` (M5, §2–§5) and `claude/meadow-forage` on top of it
+(M13, §6). What differs from the plan above, and what was measured:
+
+- **The Harvest chip is pinned** beside Chop and clear, in its own berry hue (`OrderColours.Forage`),
+  with a drawn glyph (`HudGlyphKind.ToolHarvest`). That makes the orders strip seven long;
+  `PaletteToolsTests.ThePinnedRowStaysShort` carries the paragraph its rule asks for, and the
+  paragraph says it is an **owner decision to confirm** — if seven reads long, Harvest is the one
+  to move.
+- **A ripe berry bush wears berries**: seven clusters of the berry item's own art round its
+  shoulder, drawn by the mesher beside the bush; a picked bush is the same bush without them. The
+  swap is an edifice id (20 ↔ 21) in place, so the handle, the flag and the inspect pane follow.
+- **Loose stones are drawn by `ItemHeap`** as the stone lumps any stack of stone is, not with the
+  dressing's Meadow boulder art. Whether that reads as a stone lying in the grass is a playtest item.
+- **`NatureSystem` hashes nothing while nothing is picked**, so registering it moved no golden, and
+  the mushroom regrowth keeps no state (it counts the loose stacks every 6,000 ticks).
+- **The starting placement is unchanged, measured**: `ScenarioDefTests` pins the scenario's own
+  items, and with the map's items (after `ColonyWorld.FirstNaturalItem`) left out the signature is
+  the one it has always been.
+- **Goldens.** M5 moved the played board only; the probe (`GoldenColonyProbe`, diffed against the
+  base commit) shows the generated census identical and the colonists making 95 wanders where they
+  made 105 in 10,000 ticks, because a bush costs +50 to cross. M13 moved it again: 680 stone in
+  136 stacks and 89 mushrooms in 22 on the generated board, one more mushroom stack after the run,
+  and every colonist number identical to M5's. The bare meadow and the city never moved. The water
+  test's six dry-map hashes re-based; all six barren ones are byte-identical.
