@@ -202,8 +202,10 @@ namespace Odyssey.Hud
         bool _wasIdle;
         int _wasColony = -1;
         int _wasNoBed;
-        bool _wasNoHearth;
-        bool _wasHearthDown;
+        // What the two hearth rows say, not only whether they are up: the count kept home while
+        // there is no hearth (0 when the row is down), and the cell ordered down (-1 when none).
+        int _wasNoHearth;
+        int _wasHearthDown = -1;
         int _hearthDownDismissKey;
         long _wasNoBedIds;
         int _latchVersion;
@@ -368,7 +370,7 @@ namespace Odyssey.Hud
             }
 
             if (starving == _wasStarving && breaking == _wasBreaking &&
-                noHearth == _wasNoHearth && hearthDown == _wasHearthDown &&
+                (noHearth ? keptHome : 0) == _wasNoHearth && (hearthDown ? hearth : -1) == _wasHearthDown &&
                 dark == _wasDark && shortW == _wasShortW && dry == _wasDry &&
                 idleStands == _wasIdle && storeStuck == _wasStoreStuck && colonists == _wasColony &&
                 noBed == _wasNoBed && noBedIds == _wasNoBedIds &&
@@ -384,8 +386,8 @@ namespace Odyssey.Hud
             _wasStoreStuck = storeStuck;
             _wasColony = colonists;
             _wasNoBed = noBed;
-            _wasNoHearth = noHearth;
-            _wasHearthDown = hearthDown;
+            _wasNoHearth = noHearth ? keptHome : 0;
+            _wasHearthDown = hearthDown ? hearth : -1;
             _wasNoBedIds = noBedIds;
             _wasLatchVersion = _latchVersion;
             _wasDismissVersion = _dismissVersion;
@@ -488,7 +490,11 @@ namespace Odyssey.Hud
             if (hearthDown)
             {
                 CellRef at = snapshot.Size.FromIndex(hearth);
-                _hearthDownDismissKey = AlertRow.ComputeDismissKey(HearthDownKey, default, at);
+                int key = AlertRow.ComputeDismissKey(HearthDownKey, default, at);
+                // The hearth moved to another campfire that is also marked: a dismissal of the
+                // old one's warning is not a dismissal of this one's.
+                if (_hearthDownDismissKey != 0 && _hearthDownDismissKey != key) _dismissed.Remove(_hearthDownDismissKey);
+                _hearthDownDismissKey = key;
                 if (!_dismissed.Contains(_hearthDownDismissKey))
                     Rows.Add(new AlertRow(
                         HearthDownKey,

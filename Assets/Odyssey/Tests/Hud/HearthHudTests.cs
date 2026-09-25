@@ -96,12 +96,13 @@ namespace Odyssey.Tests.Hud
 
         // ---- the alerts ----------------------------------------------------------------------
 
-        static WorldSnapshot Colony(int hearth, bool keptHome, bool orderedDown = false)
+        static WorldSnapshot Colony(int hearth, bool keptHome, bool orderedDown = false, bool boKeptHome = false)
         {
             WorldSnapshot frame = Frame.Write();
             frame.AddPawn(new PawnView(Ada, new CellRef(1, 1, 1), 800, 800, 800, JobHandle.Wait, flags: PawnFlags.Person));
             frame.AddPawn(new PawnView(Bo, new CellRef(2, 1, 1), 800, 800, 800, JobHandle.Wait, flags: PawnFlags.Person));
             if (keptHome) frame.AddPawnAspect(new PawnAspect(Ada, AreaAspectNames.AreaKey, 1));
+            if (boKeptHome) frame.AddPawnAspect(new PawnAspect(Bo, AreaAspectNames.AreaKey, 1));
             frame.SetHearthCell(hearth);
             if (orderedDown && hearth >= 0) frame.AddOrder(new OrderView(hearth, AlertModel.DeconstructOrderKind, 0));
             return frame;
@@ -149,6 +150,30 @@ namespace Odyssey.Tests.Hud
             alerts.Refresh(Colony(hearth, keptHome: false, orderedDown: false), 2.0);
             alerts.Refresh(Colony(hearth, keptHome: false, orderedDown: true), 3.0);
             Assert.That(Raised(alerts, AlertModel.HearthDownKey), Is.True, "a new order was kept dismissed");
+        }
+
+        /// <summary>
+        /// The rows follow what they say, not only whether they are up. The panel skips its
+        /// rebuild when nothing it watches moved, and it watched the two conditions as yes/no —
+        /// so a second colonist kept home left "No hearth" counting one, and the hearth moving to
+        /// another marked campfire left the warning pointing at the old one.
+        /// </summary>
+        [Test]
+        public void TheRowsFollowTheCountAndTheCellNotOnlyWhetherTheyAreUp()
+        {
+            var alerts = new AlertModel();
+            alerts.Refresh(Colony(hearth: -1, keptHome: true), 0.0);
+            Assert.That(alerts.Rows.Single(r => r.Key == AlertModel.NoHearthKey).Count, Is.EqualTo(1));
+            alerts.Refresh(Colony(hearth: -1, keptHome: true, boKeptHome: true), 1.0);
+            Assert.That(alerts.Rows.Single(r => r.Key == AlertModel.NoHearthKey).Count, Is.EqualTo(2),
+                "a second colonist kept home did not move the count");
+
+            var size = new GridSize(10, 10, 4);
+            int first = size.Index(new CellRef(4, 4, 1)), second = size.Index(new CellRef(7, 2, 1));
+            alerts.Refresh(Colony(first, keptHome: false, orderedDown: true), 2.0);
+            alerts.Refresh(Colony(second, keptHome: false, orderedDown: true), 3.0);
+            Assert.That(alerts.Rows.Single(r => r.Key == AlertModel.HearthDownKey).Cell, Is.EqualTo(new CellRef(7, 2, 1)),
+                "the hearth moved to another marked campfire and the warning still points at the old one");
         }
 
         [Test]

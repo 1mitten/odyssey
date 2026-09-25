@@ -101,6 +101,16 @@ namespace Odyssey.Tests.PlayMode
                     directors.ChooseColonist(first, boot.World!.Views.Current);
                     for (int i = 0; i < 3; i++) yield return null;
                     Assert.That(directors.Assign.Open, Is.True, "choosing a colonist closed the Assign tab");
+                    // Both dock bottom-left, so the pane waits for the tab to close rather than
+                    // drawing over it — and then shows whoever was chosen.
+                    VisualElement? inspect = doc.rootVisualElement.Q("inspect");
+                    Assert.That(inspect, Is.Not.Null, "the inspect pane is not in the tree");
+                    Assert.That(inspect!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                        "the inspect pane opened over the Assign tab");
+                    directors.Assign.SetOpen(false);
+                    for (int i = 0; i < 3; i++) yield return null;
+                    Assert.That(inspect.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex),
+                        "closing the Assign tab did not bring back the chosen colonist's pane");
                 }
             }
             finally

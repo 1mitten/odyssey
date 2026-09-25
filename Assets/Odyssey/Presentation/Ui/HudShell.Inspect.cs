@@ -205,6 +205,20 @@ namespace Odyssey.Presentation.Ui
             _worldUi.Add(_inspectPanel);
         }
 
+        /// <summary>
+        /// Show the pane if something is selected and the corner is free. The Assign tab keeps the
+        /// corner while a name pressed in it selects a colonist (design 43 §6a), so the pane stays
+        /// away while the tab is open and comes up for whoever was chosen when it closes. Without
+        /// this the two drew over each other: both dock bottom-left, just above the bar.
+        /// </summary>
+        void SyncInspectShown()
+        {
+            bool assignHoldsTheCorner = _directors != null && _directors.Assign.Open;
+            _inspectPanel.style.display = _inspect.Subject != InspectSubject.None && !assignHoldsTheCorner
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
+        }
+
         void RefreshInspect()
         {
             var world = _boot!.World;
@@ -652,7 +666,7 @@ namespace Odyssey.Presentation.Ui
                 return;
             }
 
-            _inspectPanel.style.display = DisplayStyle.Flex;
+            SyncInspectShown();
 
             // The tile readout and a selected pile take a column; a colonist takes a band. The
             // pane is the same panel either way — one class says which shape it is standing in
@@ -1054,10 +1068,6 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// Throw the switch of the power building under the pane (design 32 §5): an intent, like
-        /// every command, applied while paused and at once — no colonist walks over to do it.
-        /// </summary>
-        /// <summary>
         /// Make the campfire under the pane the hearth (design 43 §3f): an intent, applied while
         /// paused, refused by the simulation unless a campfire of ours stands there.
         /// </summary>
@@ -1109,6 +1119,10 @@ namespace Odyssey.Presentation.Ui
             return button;
         }
 
+        /// <summary>
+        /// Throw the switch of the power building under the pane (design 32 §5): an intent, like
+        /// every command, applied while paused and at once — no colonist walks over to do it.
+        /// </summary>
         void ThrowPowerSwitch()
         {
             _boot?.World?.Intents.Submit(new Intent(IntentKind.SetPowerSwitch, _inspect.Cell,

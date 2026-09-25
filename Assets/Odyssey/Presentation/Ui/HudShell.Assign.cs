@@ -275,6 +275,8 @@ namespace Odyssey.Presentation.Ui
             bool open = _directors != null && _directors.Assign.Open;
             _assignPanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
             _assignItem?.EnableInClassList("cmd--on", open);
+            // The pane yields the corner while the tab is open, and takes it back on closing.
+            SyncInspectShown();
             if (!open) return;
 
             // It docks where the palette, the menu and the other tabs dock; one at a time. And
