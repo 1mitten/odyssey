@@ -22,7 +22,7 @@ namespace Odyssey.Sim.Pawns
             if (held != null)
             {
                 AttackDef? weapon = ctx.Content.Items[held.DefIndex].weapon;
-                if (weapon != null) return new Armament(weapon, held.DefIndex);
+                if (weapon != null) return new Armament(weapon, held.DefIndex, held.Quality);
             }
 
             AttackDef? natural = pawn.Species.naturalAttack;

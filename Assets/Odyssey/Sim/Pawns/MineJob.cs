@@ -121,6 +121,9 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public static int StandToMine(PawnContext ctx, Pawn pawn, int cell)
         {
+            // The rock itself must be hers to work (design 43 §4c), not only the stance: the
+            // stances above and below may be home through the vertical margin when the rock is not.
+            if (!ctx.MayWork(pawn, cell)) return -1;
             GridSize size = ctx.Size;
             CellRef at = size.FromIndex(cell);
 

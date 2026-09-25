@@ -84,6 +84,23 @@ namespace Odyssey.Presentation.Audio
         /// </summary>
         public const string CombatCritSlice = SoundPrefix + "combat.crit-slice";
 
+        /// <summary>
+        /// A pistol fired, heard near (design 47 §4c-bis): the dry crack with the outdoor space 13 dB
+        /// under it. Three takes, <c>combat-shot.wav</c>, <c>_01</c> and <c>_02</c>, baked by
+        /// <c>tools/audio/bake_gunshot.sh</c>. Played on the <c>Shot</c> event's own frame from the
+        /// shooter's feet when she is within <c>CombatFeedback.ShotNearMetres</c> of the listener;
+        /// nothing is scheduled, because the report starts within 7 ms of the first sample.
+        /// </summary>
+        public const string CombatShot = SoundPrefix + "combat.shot";
+
+        /// <summary>
+        /// A pistol fired, heard far (design 47 §4c-bis): low-passed, the space blooming under it.
+        /// Two takes, <c>combat-shot-far.wav</c> and <c>_01</c>. Beyond
+        /// <c>CombatFeedback.ShotNearMetres</c>; two sounds rather than one with a longer rolloff,
+        /// because a rolloff can only make a crack quieter, never duller.
+        /// </summary>
+        public const string CombatShotFar = SoundPrefix + "combat.shot-far";
+
         /// <summary>A blow meeting nothing — a miss or a dodge. Named, and in no catalogue yet.</summary>
         public const string CombatMiss = SoundPrefix + "combat.miss";
 

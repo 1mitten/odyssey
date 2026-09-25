@@ -22,22 +22,27 @@ namespace Odyssey.Presentation.Ui
         readonly IReadOnlyList<SvgPath.Subpath> _paths;
         readonly float _box;
         readonly bool _fill;
+        readonly float _stroke;
         Color _tint;
 
         /// <param name="d">The path, in a box of <paramref name="box"/> units.</param>
         /// <param name="fill">Fill the closed shapes rather than stroke them — the select's
-        /// triangle.</param>
+        /// triangle, the home glyph.</param>
+        /// <param name="stroke">The line's width in path units; the Assign tab's cycle mark is
+        /// heavier than the settings window's icons (design 43 §6).</param>
         public PathGlyph(string d, float size, Color tint, float box = SettingsLayout.IconBox,
-            bool fill = false)
-            : this(d, size, size, tint, box, fill)
+            bool fill = false, float stroke = SettingsLayout.IconStroke)
+            : this(d, size, size, tint, box, fill, stroke)
         {
         }
 
-        public PathGlyph(string d, float width, float height, Color tint, float box, bool fill)
+        public PathGlyph(string d, float width, float height, Color tint, float box, bool fill,
+            float stroke = SettingsLayout.IconStroke)
         {
             _paths = SvgPath.Parse(d);
             _box = box;
             _fill = fill;
+            _stroke = stroke;
             _tint = tint;
             pickingMode = PickingMode.Ignore;
             style.width = width;
@@ -73,7 +78,7 @@ namespace Odyssey.Presentation.Ui
             painter.fillColor = _tint;
             painter.lineCap = LineCap.Round;
             painter.lineJoin = LineJoin.Round;
-            painter.lineWidth = Mathf.Max(1f, SettingsLayout.IconStroke * scale);
+            painter.lineWidth = Mathf.Max(1f, _stroke * scale);
 
             for (int p = 0; p < _paths.Count; p++)
             {

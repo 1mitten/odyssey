@@ -237,7 +237,8 @@ namespace Odyssey.Hud
                 new KeyGroup(SettingsDirector.InterfaceKey, new[]
                 {
                     HotkeyAction.BuildPalette, HotkeyAction.WorkTab, HotkeyAction.InventoryTab,
-                    HotkeyAction.ResearchTab, HotkeyAction.AnimalsTab, HotkeyAction.DebugMenu,
+                    HotkeyAction.ResearchTab, HotkeyAction.AssignTab, HotkeyAction.AnimalsTab,
+                    HotkeyAction.DebugMenu,
                 }),
             },
         };

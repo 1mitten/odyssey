@@ -210,10 +210,11 @@ namespace Odyssey.Sim.Pawns
             if (designations == null) return false;
             if ((uint)cell >= (uint)ctx.Size.CellCount) return false;
             if (ctx.Cells.HasFloor(cell)) return false;
-            if (!designations.IsTree(cell)) return false;
+            if (!designations.IsFellable(cell)) return false;
 
             // A felled tree's teardown minus the yield: the handle goes and the chunk re-meshes.
-            // Navigation is not marked, because a tree blocks nothing and never did.
+            // Navigation is not marked here: a tree blocks nothing, and a bush's cell (design 45)
+            // lost the floor under it, which is an edit navigation is already told about.
             ctx.Cells.RemoveEdifice(cell);
             designations.Clear(cell);
             ctx.Chunks?.MarkDirty(ctx.Size.FromIndex(cell));

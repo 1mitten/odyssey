@@ -23,6 +23,34 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the new bill list read at a glance, and is anything on it in the way?** (`claude/bills-pane`,
+  design 49, stacked on `claude/cooking`.) Click an **Electric Cooker** with no power: the pane is
+  wider (680), a warn strip reads **No power** with a green **Switch off** beside it, and the tile's
+  own Switch row is gone. Add three bills with the full-width cyan **Add a bill**; cycle one's mode
+  (the cell with the round arrow), step a target with the red minus and green plus (shift for ten),
+  pause one (it fades, its buttons do not), move one with the stacked arrows, bin one. Then a
+  campfire, which has no strip. A wrong answer is a count or a number that is not centred, a row
+  whose name is cut off at a length you would use, the pane jumping under the pointer while you
+  press Add or the bin, or the reorder pair being too small to hit. Say whether the empty status
+  line on a working bill looks unfinished.
+- **Does a cook turn carrots into meals from a bill, and does it read as cooking?** (`claude/cooking`,
+  design 48 K1.) Build an **Electric Cooker** (Build → Production) on a powered line, or use a **campfire**.
+  Click it: the pane shows **Bills** with *Add a bill*. Add one, stock carrots, and watch: a cook
+  fetches three carrots, stands at the station tossing a frying pan, and puts a meal down. Try the
+  mode (press it: until you have → make → forever), the ‹ › target, suspend, reorder and remove;
+  switch the cooker off mid-cook and back on. A campfire meal also costs one wood. A wrong answer is
+  a bill that does nothing, a pane that jumps when you add a row, a cook who swings at the stove
+  instead of tossing a pan, or colonists who still reach for carrots with a meal in the store.
+  The cooker is the POLYGON Shops stove: say whether it is the right size, and whether it faces the
+  side the cook stands on. **Known:** the pan shows no food going raw → cooked yet, and the meals are
+  Sci-Fi food trays.
+- **Can you click a campfire a terrace above you while building?** (`claude/terrace-click`,
+  design 42 §3a amended.) On a lower terrace, open Build and raise a campfire on the terrace one step
+  up, then click it with the palette still open: its pane should open, with *Make this the hearth*.
+  Click one on your own terrace near its edge too. Then turn Walls down off in Settings and look
+  into a hillside tunnel: the layer above should still be see-through, as before. A wrong answer is
+  a fire that does nothing, a click that selects the ground beside it, or rock drawn solid over a
+  tunnel with Walls down off.
 - **Does the Health tab read, and does a hurt colonist get treated?** (`claude/relaxed-heisenberg-zxy63b`,
   PR #213, design 43, merged with medical supplies §15.) Debug menu > Spawn > Hurt a colonist near a
   colonist, then open her pane on Health: two columns, a region with a red bar and a warning mark,
@@ -53,6 +81,25 @@ the next session learns to ignore.
   and none brightened; click one of them and that one alone brightens. Read the overlay's `gpu` line at 4K with
   and without a selection. A wrong answer is a line you have to hunt for, a colonist who looks bleached, a
   selection you lose indoors, or `gpu` moving by more than a few tenths of a millisecond.
+- **The scenery made real** (design 45, `claude/meadow-forage` on `claude/meadow-nature`). New game
+  on the meadow. Look for: a felled tree going over away from its cutter and sinking; bushes you can
+  walk through but that slow a colonist; *Chop and clear* over a bush, then a wall there; a berry
+  bush's red clusters, the **Harvest** chip on it, eight berries beside it and the bush bare for
+  three days; mushrooms by the trees coming back elsewhere once eaten; grey stones in the grass
+  hauled once a store takes stone. Wrong answers: a giant that looks like any other tree; a bush
+  you cannot tell is a berry bush; the stones reading as litter rather than rock; a seven-button
+  orders strip that reads long (then Harvest moves off it).
+  **Since the first play (§12):** click anywhere on a bush's crown — ripe, picked or plain — and
+  the pane names the bush; the berries sit on the bush. Wrong: a click on a bush naming the grass,
+  or a berry hanging in the air beside its bush.
+  **And placing (§13):** arm a wall or an order and drag over tall grass and a bush — the grass under
+  the drag lies flat and the bush fades while you place, and comes back when you disarm. Wrong: a
+  blueprint you still cannot see, a bush that stays faded after placing, or grass that pops.
+  **And every order's cell is bare (§13a):** drag a Harvest box, a Chop box and a Mine box over tall
+  grass, and place a wall — no blade lies on any plate and the plates are whole under a faded bush or
+  tree. Wrong: grass across a plate, a leaf-shaped hole in one, or a bare square left behind after
+  the order is cancelled or done.
+
 - **Which rain reads as a rainy day: §7's particles, or GPU rain with wet ground?** (`claude/rain-look`,
   #203; design 43 §7, #202.) No Play needed. Open https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3, pick
   the Play framing, and wipe between “§7 as written” and “+ wet ground”; then try the Far framing
@@ -1271,6 +1318,8 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-25 | **Ranged combat, three rounds** (PR #225, `docs/design/47-ranged-combat.md` §10a–§12): the aim, the shot, the tracer, the sound, then accuracy from a height, weapon quality and the reach rule | working — owner, first play: *"it's really decent and everything seemed to work well"*; after the reach rule: *"great job - just played a big battle"* | the first play raised the accuracy, sent a miss past its target into the ground and landed a hit on the body wherever it stands (§10a); asked for weapon quality (§11) and the reach rule (§12), both built and played in the big battle. Ready to merge. The frame with gunfire (P4) is still unmeasured |
+| 2026-09-25 | **The home area, the hearth and the Assign tab** (PR #214, `docs/design/43-home-area.md`), after the review's five fixes | working — owner: *"it all works get ready to merge in"* | none; ready to merge. The house over the hearth, which the frame test logged hidden, is covered by "it all works" |
 | 2026-09-24 | **Walls down, both rounds** (PR #197, `docs/design/42-walls-down.md`) | working — owner, first look: *"works brilliantly but a few things"*; after the second round: *"excellent - get this ready for merge"* | the first look moved two things (the R / F label went; a lower terrace counts as ground and only upper storeys hide, §3a); ready to merge |
 | 2026-09-24 | **Beating a wall down** (C6, `claude/combat-buildings`, `docs/design/33-combat.md` §13) | working — owner: *"Buildings work fine"* | none. The row's own question, whether a wall reads without a damage bar, was not raised, so none is built. The break-in row (§14b, §14d) stays open: it was built after that playtest |
 | 2026-09-24 | **What grass costs on the GPU at 4K** (PR #183, `docs/design/38-meadow-overhaul.md` §13) | measured — owner: *"6–7 ms on gpu (sometimes bit lower) without grass tufts. On — 7 ish — spikes up to 8 moving around"* | about 0.5–1 ms, peaks ~1.5; under the 2 ms line, so M4 plans for full cover; agrees with the batch arm |

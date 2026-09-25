@@ -461,6 +461,39 @@ namespace Odyssey.Tests.Sim
         /// which are the four animals standing under cover in the 120-tick waits
         /// <c>AnimalShelterThinkNode</c> gives them. Both together: 300 started, 74 wanders, 217
         /// waits, 341,744 progress.</para>
+        ///
+        /// <para><b>All six moved on 2026-09-25, with the kitchen (design 48, K1).</b> Every
+        /// colonist carries an eighth work priority (<c>Work_Cooking</c>) and an eighth skill
+        /// (<c>Skill_Cooking</c>), and the job system one more counter pair (<c>Job_Cook</c>); all
+        /// are hashed. The kitchen itself is hashed only once a station has been used, and none of
+        /// these colonies has one. Eating changed too — the best tier first, and a thought that is
+        /// the food's own — but nobody in these windows gets hungry enough to eat.
+        /// <b>Measured</b>: <c>GoldenColonyProbe</c> run on <c>main</c> (837c895a) and on this
+        /// branch; the outputs are identical on all three boards, food, rest, mood, experience and
+        /// every job counted included. The hash sees more; no colony does anything different.</para>
+        ///
+        /// <para><b>All six moved on 2026-09-25, by the ranged line's contracts step (design 47 R0):
+        /// the hash seeing more, and no colony doing anything different.</b> Every person carries a
+        /// seventh skill, passion and daily-gain slot — Shooting — and each colonist is dealt a
+        /// level in it on the first tick, from the same stream the first six are dealt from and
+        /// after them, so the six come out exactly as they were. That moves the generated numbers
+        /// (the arrays are longer before a tick runs) and the simulated ones (the dealt level is
+        /// hashed). <b>Measured</b>: <c>GoldenColonyProbe</c> on <c>origin/main</c> (804c2e6a) and on
+        /// the branch is identical on all three boards, line for line — food, rest, mood, work
+        /// progress, the shared skills' experience and passions, jobs, and where every pawn
+        /// stands.</para>
+        ///
+        /// <para><b>And again at the ranged line's merge with <c>main</c> (2a1cfa63), for the same
+        /// reason.</b> Medical supplies had taken the seventh skill slot first, so Shooting is the
+        /// eighth, <c>Job_AttackRanged</c> the twenty-seventh job and the pistol the fifteenth
+        /// item: longer hashed tables, dealt after everything main deals. <b>Measured</b> the same
+        /// way: <c>GoldenColonyProbe</c> on <c>origin/main</c> and on the merge is identical on all
+        /// three boards, all nine census lines.</para>
+        ///
+        /// <para><b>And a third time at the merge with the kitchen (<c>origin/main</c> fc6b8ba6).</b>
+        /// Cooking took the eighth skill, so Shooting is the ninth, <c>Job_AttackRanged</c> the
+        /// twenty-eighth job and the pistol the eighteenth item. <b>Measured</b> the same way; the
+        /// merge commit says what the probe found.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -474,8 +507,9 @@ namespace Odyssey.Tests.Sim
             // Re-baked 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1), on top of the weather's own re-bake: the combined job, item,
             // skill and incident tables moved the hash the same way any content append does.
-            Generated = 9731137379822364786UL,
-            Simulated = 4414416609844227350UL,
+            // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            Generated = 14881731598722590511UL,
+            Simulated = 5300718913518332604UL,
         };
 
         /// <summary>
@@ -500,6 +534,14 @@ namespace Odyssey.Tests.Sim
             // zeros in the job counters; the probe diffs clean.
             // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
             // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
+            // 2026-09-25, the scenery made real (design 45, M5): the trees carry their species
+            // and the undergrowth pass placed bushes, each an edifice with its flag, so the
+            // generated board moved. The probe against main: the generated census is identical
+            // (the same people, the same items, the same starting cells) and the simulated one
+            // differs only where it should - the fifteen colonists wander through bushes at a
+            // price, so they made 95 wanders in the ten thousand ticks where they made 105, and
+            // ended on different cells. Food, rest, mood and experience are unchanged. The bare
+            // meadow and the city did not move: neither grows a bush.
             // 2026-09-25, jumping a one-cell stream (design 46): Simulated only, and this board
             // only — the bare meadow and the city have no stream and did not move, nor did
             // Generated. The colonists behaved differently, and in one way: they take different
@@ -510,8 +552,26 @@ namespace Odyssey.Tests.Sim
             // differs in exactly the same three numbers and nothing else.
             // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
-            Generated = 13020442238468853983UL,
-            Simulated = 937054880534657713UL,
+            // 2026-09-25, both at once on merging main into the scenery line: the bushes' wander
+            // price and the stream jump together. Re-taken from the merged code, not adopted from
+            // either side; the probe against main is in the merge commit's message.
+            // 2026-09-25 again, M13 (design 45 §6): the map lays its loose stones and first
+            // mushrooms - 680 stone in 136 stacks and 89 mushrooms in 22, by the probe - and one
+            // more stack of mushrooms came up in the ten thousand ticks. Every colonist number is
+            // the M5 run's to the digit (cells, food, rest, mood, progress, the 95 wanders): the
+            // colony has no store, so nobody carried a stone, and nobody was hungry enough to
+            // walk to a mushroom. The bare meadow and the city did not move.
+            // Both lines together, 2026-09-25: M13's stones and mushrooms on the merged M5-and-jump
+            // board; re-taken from the merged code.
+            // The scenery line merged with medical supplies (design 37), 2026-09-25: re-taken from the
+            // merged code; the probe against main is in the merge commit's message.
+            // The kitchen merged with the wild foods, 2026-09-25: an eighth work priority and skill
+            // on every colonist and Job_Cook's counter pair, on the wild-food board. Re-taken from
+            // the merged code; GoldenColonyProbe on main (2a1cfa63) and on the merge is identical on
+            // all three boards, so the hash sees more and no colony does anything different.
+            // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            Generated = 13308657285820379759UL,
+            Simulated = 16876557663456853837UL,
         };
 
         /// <summary>
@@ -553,8 +613,9 @@ namespace Odyssey.Tests.Sim
             // 2026-09-25, weather-world: it rains here all run — pace and animal shelter (remarks).
             // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
-            Generated = 6499961642199718646UL,
-            Simulated = 17342170182267167369UL,
+            // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            Generated = 14180088319569370523UL,
+            Simulated = 7648152829369388509UL,
         };
     }
 }

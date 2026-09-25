@@ -270,14 +270,47 @@ namespace Odyssey.Tests.Sim
         //
         // Moved a twenty-eighth time, 2026-09-25, at the merge with main (weather, the stream
         // jump): neither side's number covers the merged pack, re-taken fresh.
+        // Moved again, 2026-09-25, by design 45 (the scenery made real): the tuning's woodPerTree
+        // is gone, because what a felled tree yields is its species' own now, in
+        // World/WildPlants.xml. Taken from a freshly loaded pack.
+        // 2026-09-25, design 46 §6: MovementDef gained jumpFailPerMille (30) and
+        // jumpFailCarryingPerMille (2,000) — the jump over a one-cell stream falling short.
+        // Both, 2026-09-25, on merging main into the scenery line: re-taken from the merged pack.
         //
-        // Moved a twenty-ninth time, deliberately, 2026-09-25, by health (design 43) merged onto
-        // medical supplies (design 37): a new HealthDef, Health_Person, carrying the six regions and
-        // the pain, blood, tend and fall numbers, named by Species_Person's new `health` field. The
-        // branch's own Job_Tend, Item_Medkit, Work_Doctor and Skill_Medicine were dropped for
-        // main's (design 43 §15), and HealthDef's medkit potency fields are the supplies'. No golden
-        // moved: the ledger is hashed only while a pawn has anything on it.
-        const ulong ContentFingerprint = 2772140661204901662UL;
+        // And again the same day by M13 (design 45 §6): Job_Forage appended at 23, and
+        // Item_Berries and Item_Mushrooms at 11 and 12 (Food, 60 and 70, stacks of 75). Taken from
+        // a freshly loaded pack.
+        // M13 on the merged line, 2026-09-25: re-taken from the merged pack.
+        // The scenery line merged with medical supplies, 2026-09-25: Job_Forage renumbered 23 -> 25
+        // and Item_Berries/Item_Mushrooms 11-12 -> 12-13, after main's. Re-taken from the merged pack.
+        //
+        // Moved a twenty-ninth time, deliberately, 2026-09-25, by the kitchen (design 48 §4-§5):
+        // Skill_Cooking, Work_Cooking and Job_Cook appended; the three meals appended as items;
+        // Recipe_Meal the first RecipeDef; ItemDef gained foodTier, rawIngredient, meat, ticksToRot
+        // and ateThought, set on the ration pack and the carrots; Thought_AteMeal went from +20 to
+        // +50 as the cooked meal's, and AteRation (+20), AteBurnt (-40) and AteRaw (-50) were
+        // appended; and the work types' scan ranks moved to put cooking between growing and
+        // cutting. Every golden moves with it, measured in the same commit.
+        // Both lines together, 2026-09-25: the kitchen merged with the wild foods; Job_Cook
+        // renumbered 25 -> 26 and the meals 12-14 -> 14-16. Re-taken from the merged pack.
+        // 2026-09-25, design 47 §3 (R0, the ranged line's contracts): Job_AttackRanged, Skill_Shooting
+        // and Item_Pistol appended; AttackDef gained a ranged block, CombatDef the shooting numbers
+        // (the per-cell curve, the floor, cover, the dead zone, the scatter, the scan cadence) and
+        // SpeciesDef interceptPerMille (person 400, hog 500, rat 40).
+        // 2026-09-25, design 47 on the owner's first play ("keep it more accurate"): shootingPerCell
+        // 876/943/983 and the pistol's bands 950/850/650/450; the pistol's label "pistol" (was sidearm).
+        // 2026-09-25, design 47 §12: the pistol's ranged block gained its own melee blow (blunt, 5,
+        // the fists' cadence) — an enemy within reach is clubbed, never shot.
+        // The ranged line merged with main (medical supplies, the scenery), 2026-09-25: re-taken from the merged pack.
+        // And merged with the kitchen (design 48), 2026-09-25: the ranged handles to 27 / 17 / 8; re-taken.
+        //
+        // Health (design 43), merged onto all of that, 2026-09-25: a new HealthDef, Health_Person,
+        // carrying the six regions and the pain, blood, tend and fall numbers, named by
+        // Species_Person's new `health` field. Its own Job_Tend, Item_Medkit and Doctor and
+        // Medicine rows were dropped for design 37's (design 43 §15), so no handle moved. No golden
+        // moved: the ledger is hashed only while a pawn has anything on it. Re-taken from the
+        // merged pack.
+        const ulong ContentFingerprint = 5726159748193892954UL;
 
 
         [Test]

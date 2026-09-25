@@ -154,6 +154,7 @@ namespace Odyssey.Presentation.World
         readonly int _campfireModule;
         readonly int _generatorModule;
         readonly int _heaterModule;
+        readonly int _galleyModule;
         readonly int _bedPillowModule;
         readonly int _shelfModule;
         readonly int _storeEdgeModule;
@@ -221,6 +222,7 @@ namespace Odyssey.Presentation.World
             _campfireModule = library.Resolve(ModuleIds.Campfire, ModuleShape.SolidBlock);
             _generatorModule = library.Resolve(ModuleIds.Generator, ModuleShape.SolidBlock);
             _heaterModule = library.Resolve(ModuleIds.Heater, ModuleShape.SolidBlock);
+            _galleyModule = library.Resolve(ModuleIds.Galley, ModuleShape.SolidBlock);
 
             // The pillow is a module of its own so it can be a rounded shape and a linen colour
             // whatever the bed's frame is made of (BedShape, PillowMesh).
@@ -343,11 +345,11 @@ namespace Odyssey.Presentation.World
             if (!Size.Contains(cell.X, cell.Z, cell.Y)) return false;
             int index = Size.Index(cell);
             ushort def = _edifice[index];
-            if (def >= NaturalContent.FirstEdifice && def < NaturalContent.EdificeCount) return true;
+            if (NaturalContent.IsTree(def)) return true;
             if (cell.Y > 0)
             {
                 ushort defBelow = _edifice[index - Size.LayerStride];
-                if (defBelow >= NaturalContent.FirstEdifice && defBelow < NaturalContent.EdificeCount) return true;
+                if (NaturalContent.IsTree(defBelow)) return true;
             }
             return false;
         }
@@ -356,12 +358,12 @@ namespace Odyssey.Presentation.World
         {
             if ((uint)index >= (uint)_edifice.Length) return false;
             ushort def = _edifice[index];
-            if (def >= NaturalContent.FirstEdifice && def < NaturalContent.EdificeCount) return true;
+            if (NaturalContent.IsTree(def)) return true;
             int below = index - Size.LayerStride;
             if (below >= 0 && (uint)below < (uint)_edifice.Length)
             {
                 ushort defBelow = _edifice[below];
-                if (defBelow >= NaturalContent.FirstEdifice && defBelow < NaturalContent.EdificeCount) return true;
+                if (NaturalContent.IsTree(defBelow)) return true;
             }
             return false;
         }
@@ -913,6 +915,12 @@ namespace Odyssey.Presentation.World
             // play camera's 48° is about a tenth of a cell of drift — in the same direction the
             // bed's own bug went.
             if (_edifice[index] == CoreContent.EdificeShelf) return ShelfShape.DeckTop;
+
+            // **The flames, which are what a player aims at** (design 43, 2026-09-25). A campfire
+            // offered only its floor, so a click on its visible body crossed that floor beyond it
+            // and a rolling neighbour in front could take the click instead — measured by
+            // CampfirePickTests. FireDirector draws the flames at this height; one number.
+            if (_edifice[index] == CoreContent.EdificeCampfire) return FireDirector.FlameHeight;
             return 0f;
         }
 
@@ -974,7 +982,7 @@ namespace Odyssey.Presentation.World
 
         /// <summary>
         /// Does this cell hold something <em>built</em> — a floor slab, or an edifice that is not a
-        /// tree? It is the difference between the upper storey of a house and a hilltop, and the
+        /// tree or a bush? It is the difference between the upper storey of a house and a hilltop, and the
         /// question walls-down asks of anything standing above the slice (design 42 §5).
         /// </summary>
         public bool IsBuiltAt(int index)
@@ -982,7 +990,7 @@ namespace Odyssey.Presentation.World
             if ((uint)index >= (uint)_edifice.Length) return false;
             if (_floor[index] != CoreContent.SlabNone) return true;
             ushort def = _edifice[index];
-            return def != CoreContent.EdificeNone && !NaturalContent.IsTree(def);
+            return def != CoreContent.EdificeNone && !NaturalContent.IsNatural(def);
         }
 
         /// <summary>
@@ -1035,11 +1043,13 @@ namespace Odyssey.Presentation.World
             // The generator and the heater, above the trees' range for the same reason (design 32).
             if (def == CoreContent.EdificeGenerator) return _generatorModule;
             if (def == CoreContent.EdificeHeater) return _heaterModule;
+            // The galley (design 48), above the trees' range for the same reason.
+            if (def == CoreContent.EdificeGalley) return _galleyModule;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below
             // to the wall module and the woodland rendered as a grid of grey boxes.
             if (def >= NaturalContent.FirstEdifice)
-                return def < NaturalContent.EdificeCount ? _naturalEdificeModule[def - NaturalContent.FirstEdifice] : 0;
+                return NaturalContent.IsNatural(def) ? _naturalEdificeModule[def] : 0;
             ref ModuleGroup group = ref _groups[_slot[index]];
             switch (def)
             {
@@ -1242,14 +1252,21 @@ namespace Odyssey.Presentation.World
             }
         }
 
-        /// <summary>Tree modules by natural edifice code, offset by <see cref="NaturalContent.FirstEdifice"/>.</summary>
+        /// <summary>
+        /// Tree modules by edifice id, indexed directly and sized to
+        /// <see cref="NaturalContent.EdificeLimit"/>: the natural ids are not contiguous (the
+        /// buildings sit between the first two trees and the rest, design 45 §2), so a slot is
+        /// filled only where <see cref="NaturalContent.IsNatural"/> says it is one of ours. A bush
+        /// has no module here — it is drawn by the dressing's own path.
+        /// </summary>
         static int[] ResolveNaturalEdifices(ModuleLibrary library)
         {
-            var table = new int[NaturalContent.EdificeCount - NaturalContent.FirstEdifice];
+            var table = new int[NaturalContent.EdificeLimit];
             for (int i = 0; i < table.Length; i++)
             {
-                var def = (ushort)(NaturalContent.FirstEdifice + i);
-                table[i] = library.Resolve(NaturalContent.ModuleForEdifice(def), ModuleShape.Pillar);
+                var def = (ushort)i;
+                string? id = NaturalContent.IsTree(def) ? NaturalContent.ModuleForEdifice(def) : null;
+                table[i] = id == null ? 0 : library.Resolve(id, ModuleShape.Pillar);
             }
             return table;
         }
@@ -1485,8 +1502,62 @@ namespace Odyssey.Presentation.World
             ChunkBounds(chunkIndex, out int x0, out int z0, out int y, out int x1, out int z1);
             for (int z = z0; z < z1; z++)
             for (int x = x0; x < x1; x++)
-                CopyCell(grid, edifices, Size.Index(x, z, y));
+            {
+                int index = Size.Index(x, z, y);
+                ushort was = _edifice[index];
+                CopyCell(grid, edifices, index);
+
+                // A tree that was standing and is not any more: felled, or taken by a collapse.
+                // Noted for the topple (design 45 §5), which draws it going over where it stood.
+                // Only here, on an edit, and never in RefreshAll: a world being loaded or built
+                // has no trees falling in it.
+                if (NaturalContent.IsTree(was) && _edifice[index] != was && _felled.Count < MaxFelledPending)
+                    _felled.Add(new FelledTree(index, was));
+            }
         }
+
+        /// <summary>
+        /// How high the bush drawn in this cell stands, in metres over its floor — what a click
+        /// on it is measured against (design 45 §12). Written by the mesher when it draws the bush,
+        /// because only the mesher knows which art and what size; until then, and for a bush with
+        /// no art, <see cref="DefaultBushTop"/>.
+        /// </summary>
+        public float BushTop(int index) => _bushTop.TryGetValue(index, out float top) ? top : DefaultBushTop;
+
+        /// <summary>The mesher's note of a drawn bush's height. Presentation only.</summary>
+        public void NoteBushTop(int index, float top) => _bushTop[index] = top;
+
+        /// <summary>A bush's height before its art has been measured: about the Meadow bushes' middle.</summary>
+        public const float DefaultBushTop = 1.4f;
+
+        readonly Dictionary<int, float> _bushTop = new Dictionary<int, float>();
+
+        /// <summary>A tree that has just left the mirror: where it stood and what it was.</summary>
+        public readonly struct FelledTree
+        {
+            public readonly int Cell;
+            public readonly ushort Def;
+            public FelledTree(int cell, ushort def) { Cell = cell; Def = def; }
+        }
+
+        /// <summary>
+        /// More felled trees than this between two frames are not drawn falling. A clear-cut of a
+        /// wood by a debug command or a collapse is not something anybody watches tree by tree,
+        /// and the list must not grow without a reader.
+        /// </summary>
+        public const int MaxFelledPending = 64;
+
+        readonly List<FelledTree> _felled = new List<FelledTree>();
+
+        /// <summary>Hand over the trees felled since the last call, oldest first, and forget them.</summary>
+        public void DrainFelled(List<FelledTree> into)
+        {
+            into.AddRange(_felled);
+            _felled.Clear();
+        }
+
+        /// <summary>The module a tree of this species is drawn from, before its variant is picked.</summary>
+        public int TreeModule(ushort def) => NaturalContent.IsTree(def) ? _naturalEdificeModule[def] : 0;
 
         void CopyCell(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices, int index)
         {

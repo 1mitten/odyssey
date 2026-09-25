@@ -493,3 +493,18 @@ Recorded, not fixed:
   §5 had made any untended injury a patient. The right-click Tend reaches it.
 - **Downed bandits bleed out in unordered fights** (§14b): design 33's "downs, never deaths" now
   holds for colonists only while somebody tends them. The owner's call.
+
+### 15f. The second merge, with ranged combat, cooking and the home area (2026-09-25)
+
+- **A bullet is a blow.** Ranged combat (design 47) lands its bullets through `ApplySwing`, which
+  wrote the pool inline on `main`; on the merge it goes through `Hurt` like a swing, so a bullet
+  lands on a region by the melee coverage, is a wound (the pistol is sharp) and bleeds. A shooter
+  killed while her bullet flew (`attacker` null) is handled by `Hurt` as a fall is.
+- **The streams moved a second time.** Cooking took the twelfth round constant for its burn roll
+  (the ranged line's own comment had left it for health) and ranged took the thirteenth, both of
+  them the keys §15d had moved `HitRegion` and `FallSplit` to. They are the **twentieth and
+  twenty-first** now, which nothing else uses.
+- **The home area took hash bit 27**; the ledger keeps bit 23.
+- **The number 43 is now three documents** — health, the home area and the weather — which
+  `CLAUDE.md`'s known gap about colliding numbers already records. Nothing is renamed.
+- No golden moved again; the content fingerprint was re-taken from the merged pack.

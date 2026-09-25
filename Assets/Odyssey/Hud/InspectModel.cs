@@ -578,7 +578,10 @@ namespace Odyssey.Hud
             bool pooled = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpMaxKey, out int max) && max > 0;
             if (!pooled) max = 0;
             int hp = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpKey, out int published) ? published : max;
-            int weapon = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponKey, out int held) ? held : -1;
+            int weaponDef = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponKey, out int held) ? held : -1;
+            int tier = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponQualityKey, out int q) ? q : 0;
+            // The tier rides the cache key: a better weapon of the same kind is a different line.
+            int weapon = weaponDef < 0 ? -1 : weaponDef * 16 + tier;
             int condition = pawn.IsDowned ? 3 : pawn.IsStunned ? 2 : hp < max ? 1 : 0;
 
             // The body's two columns (design 43 §10), rebuilt only when a number they quote moved.
@@ -611,7 +614,7 @@ namespace Odyssey.Hud
             HealthRows.Add(new InspectRow
             {
                 Name = Registry.Label(WeaponKey),
-                Value = weapon >= 0 ? ItemLabels.Label(weapon) : Registry.Label("ui.combat.barehands"),
+                Value = weaponDef >= 0 ? ItemLabels.Label(weaponDef, tier) : Registry.Label("ui.combat.barehands"),
             });
 
             // The header's line carries these now (design 43 §10); the rows above stay the one place
@@ -634,7 +637,11 @@ namespace Odyssey.Hud
             Commands.Clear();
             _bedUnderPane = false;
             _powerSwitchUnderPane = false;
+            TileEdifice = 0;
+            TileCellIndex = -1;
             _orderActionUnderPane = false;
+            IsCampfire = false;
+            IsHearth = false;
             IsStore = false;
             IsBuiltStore = false;
             StoreSummary = string.Empty;
@@ -781,7 +788,7 @@ namespace Odyssey.Hud
                     // headline is "Wood × 27" and the line below says where it is lying.
                     Title = thing.Stack > 1
                         ? ItemLabels.Label(thing.DefIndex) + " × " + thing.Stack
-                        : ItemLabels.Label(thing.DefIndex);
+                        : ItemLabels.Label(thing.DefIndex, thing.Quality);
                     Subtitle = "item";
                     Stack = thing.Stack;
                     ItemIconKey = ItemLabels.IconKey(thing.DefIndex);
@@ -1149,6 +1156,16 @@ namespace Odyssey.Hud
         bool _powerSwitchUnderPane;
 
         /// <summary>
+        /// What stands in the tile under the pane, as an <see cref="EdificeHandle"/> value, or 0.
+        /// Cleared every refresh and set by <see cref="SetCellRows"/> with the other tile flags, so
+        /// the bill list (design 48 §5) is shown for exactly the station the answer is about.
+        /// </summary>
+        public int TileEdifice { get; private set; }
+
+        /// <summary>The whole-world index of the tile the answer is about, or -1 before there is one.</summary>
+        public int TileCellIndex { get; private set; } = -1;
+
+        /// <summary>
         /// Whether the pane holds an order whose action row can be pressed: a building site's
         /// Cancel, or a line's — Cancel an order, Remove a laid line, Keep one marked to come up
         /// (design 32 §14; owner, 2026-09-23: "the same for any building blueprint that has been
@@ -1181,6 +1198,33 @@ namespace Odyssey.Hud
 
         /// <summary>Everything the power rows quote, folded into one number for the rebuild guard.</summary>
         int _cellRowsPower;
+
+        /// <summary>
+        /// The pane holds a campfire (design 43 §6). A campfire's pane is wide, as a store's is: the
+        /// hearth's button does not fit the 280 px tile column (owner, 2026-09-25). Cleared every
+        /// refresh and set before the cell rows' early return, as the bed's and the switch's flags
+        /// are, so neither answer can outlive the fire.
+        /// </summary>
+        public bool IsCampfire { get; private set; }
+
+        /// <summary>The pane's campfire is the hearth: the header says so, on a line under the name.</summary>
+        public bool IsHearth { get; private set; }
+
+        /// <summary>The pane's campfire is not the hearth, and one button under the header makes it so.</summary>
+        public bool OffersHearth => IsCampfire && !IsHearth;
+
+        /// <summary>A store's pane and a campfire's are the full 560; every other tile's is the narrow column.</summary>
+        public bool IsWide => IsStore || IsCampfire || IsStation;
+
+        /// <summary>
+        /// Something that takes bills stands in the tile (design 49): the pane is the bench width
+        /// and carries the bill list. A campfire is one, so it is wide on both counts.
+        /// </summary>
+        public bool IsStation => BillsModel.IsStation(TileEdifice);
+
+        /// <summary>The header line on the hearth, and the button on any other campfire.</summary>
+        public const string HearthKey = "ui.home.hearth";
+        public const string MakeHearthKey = "ui.command.sethearth";
 
         /// <summary>The switch row's key, which the shell compares against rather than against a word.</summary>
         public const string PowerSwitchRow = "switch";
@@ -1272,6 +1316,8 @@ namespace Odyssey.Hud
             // piece of quality-bearing furniture would, and the row it grew would open the *bed*
             // picker over it. Three characters against a report.
             _bedUnderPane = detail.EdificeQuality > 0 && detail.Edifice == EdificeHandle.Bed;
+            TileEdifice = detail.Edifice;
+            TileCellIndex = detail.CellIndex;
             if (snapshot.TryGetPowerDevice(detail.CellIndex, out PowerDeviceView switchable))
             {
                 _powerSwitchUnderPane = true;
@@ -1289,7 +1335,10 @@ namespace Odyssey.Hud
             // Set beside the bed's flag and **above** the early return below, for the reason that
             // whole paragraph exists: a flag cleared every refresh and set only after the return
             // is a control that dies on the second refresh and goes on looking alive.
-
+            // The hearth (design 43 §3f, §6) the same way: header facts, not rows, so they are not
+            // in the rows' guard; the shell's rebuild signature carries them instead.
+            IsCampfire = detail.Edifice == EdificeHandle.Campfire;
+            IsHearth = IsCampfire && snapshot.HearthCell == detail.CellIndex;
 
             if (_cellRowsFor == detail.CellIndex
                 && _cellRowsCost == detail.MoveCostPerMille
@@ -1580,6 +1629,7 @@ namespace Odyssey.Hud
             1 => "mining",
             2 => "deconstructing",
             3 => "chopping",
+            4 => "picking",
             _ => "working",
         };
 

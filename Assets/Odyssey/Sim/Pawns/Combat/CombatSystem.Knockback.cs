@@ -138,7 +138,7 @@ namespace Odyssey.Sim.Pawns
             // AttackDriverTests.EveryReportCarriesTheWeapon, 23 swings in 3,000 ticks, fell to 12
             // without this). Read before the job ends, because the cleanup clears the target.
             Job? job = target.CurrentJob;
-            bool ordered = job != null && job.DefIndex == JobIndex.AttackMelee && job.PlayerForced;
+            bool ordered = job != null && CombatJobs.IsAttack(job.DefIndex) && job.PlayerForced;
             int foe = target.CombatTarget, toTheDeath = job?.DestCell ?? -1;
             int struck = job?.TargetCell ?? -1;
             TraverseMode mode = job?.Mode ?? target.OwnMode;
@@ -156,7 +156,7 @@ namespace Odyssey.Sim.Pawns
             {
                 target.CombatTarget = foe;
                 Job again = target.JobBuffer;
-                again.Reset(JobIndex.AttackMelee);
+                again.Reset(CombatJobs.AttackJobFor(target, _ctx, still));
                 again.TargetCell = still.Cell;
                 again.DestCell = toTheDeath;
                 again.Mode = mode;

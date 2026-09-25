@@ -81,6 +81,9 @@ namespace Odyssey.Presentation.Ui
         /// <summary>What the strip was last painted for: one bit per view, and -1 so the first paint runs.</summary>
         int _viewsPaintedFor = -1;
 
+        /// <summary>The views drawn as paths rather than glyphs, re-tinted when they go on and off.</summary>
+        readonly Dictionary<string, PathGlyph> _viewPaths = new Dictionary<string, PathGlyph>();
+
         /// <summary>
         /// The views strip: under the orders, the same buttons, but each a switch that stays where
         /// it is put rather than a tool that is held (owner, 2026-09-23). Which views exist is
@@ -97,14 +100,25 @@ namespace Odyssey.Presentation.Ui
         {
             var button = new VisualElement { name = "view-" + key };
             button.AddToClassList("ord__btn");
-            button.Add(new HudGlyph(key == HudViews.Power ? HudGlyphKind.CategoryPower : HudGlyphKind.Placeholder,
-                17f, HudTokens.Convert(HudTheme.Accent)));
+            // Home is drawn from Claude Design's path (design 43 §5a), in the accent at 80% while
+            // off and in the text colour while on; power keeps the palette category's bolt.
+            string? path = HudViews.PathOf(key);
+            if (path != null)
+            {
+                var glyph = new PathGlyph(path, 17f, HudTokens.Convert(HudTheme.Accent.WithAlpha(0.80f)), fill: true);
+                _viewPaths[key] = glyph;
+                button.Add(glyph);
+            }
+            else
+            {
+                button.Add(new HudGlyph(key == HudViews.Power ? HudGlyphKind.CategoryPower : HudGlyphKind.Placeholder,
+                    17f, HudTokens.Convert(HudTheme.Accent)));
+            }
             button.tooltip = Registry.Label(key) + " — show it whatever is armed; press again to hide it";
             button.RegisterCallback<ClickEvent>(_ =>
             {
                 if (_directors == null) return;
                 HudViews.Toggle(_directors.Overlays, key);
-                _powerOverlayRow?.EnableInClassList("menu__row--on", _directors.Overlays.PowerVisible);
                 MarkViews();
             });
             _viewButtons[key] = button;
@@ -131,7 +145,13 @@ namespace Odyssey.Presentation.Ui
                 button.style.borderTopColor = button.style.borderRightColor =
                     button.style.borderBottomColor = button.style.borderLeftColor =
                         HudTokens.Convert(hue.WithAlpha(on ? 1f : 0.30f));
+                if (_viewPaths.TryGetValue(HudViews.Keys[i], out PathGlyph? glyph))
+                    glyph.Tint = HudTokens.Convert(on ? HudTheme.TextPrimary : hue.WithAlpha(0.80f));
             }
+
+            // The Menu's rows for the same views are the same switches (design 43 §5a).
+            foreach (KeyValuePair<string, VisualElement> row in _overlayRows)
+                row.Value.EnableInClassList("menu__row--on", HudViews.IsOn(_directors.Overlays, row.Key));
         }
 
         // ============================================================ the orders strip

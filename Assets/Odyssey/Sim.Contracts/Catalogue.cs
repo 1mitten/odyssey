@@ -87,7 +87,31 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A hurt colonist lying in a bed until she is well enough to get up (design 37).</summary>
         public const int Patient = 24;
 
-        public const int Count = 25;
+
+        /// <summary>Pick a ripe berry bush (design 45 §6): the Harvest order, worked as growing.
+        /// 25, after medical supplies' Treat and Patient: they reached main first, and a shipped
+        /// handle is a save contract. It was 23 on its branch; no save with it had left.</summary>
+        public const int Forage = 25;
+
+        /// <summary>
+        /// Work at an electric cooker or a campfire (design 48 §5). 26, after the forager's 25:
+        /// nature reached main first, and a shipped handle is a save contract.
+        /// Formerly: work at a galley or a campfire: either fetch one load of raw food into
+        /// the station's pan, or cook what the pan holds into a meal. One job and one driver for
+        /// both, because they are one bill being worked.
+        /// </summary>
+        public const int Cook = 26;
+
+
+        /// <summary>
+        /// Stand where the line to a target is open and shoot at it (design 47 §2d): the ranged
+        /// attack, claimed by the ranged line's contracts step (R0); 27, after medical supplies' Treat and Patient, the forager's Forage and the kitchen's Cook, which reached main first. Above
+        /// <c>JobSystem.HashedAlways</c>, so its counters reach the hash only once one has run and
+        /// its registration moved no golden.
+        /// </summary>
+        public const int AttackRanged = 27;
+
+        public const int Count = 28;
     }
 
     /// <summary>
@@ -143,7 +167,10 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Treating the hurt (design 37): the ui.work.doctor column. An emergency giver.</summary>
         public const int Doctor = 6;
 
-        public const int Count = 7;
+        /// <summary>Working the bills at a galley or a campfire (design 48 §5): the ui.work.cooking column.</summary>
+        public const int Cooking = 7;
+
+        public const int Count = 8;
 
         /// <summary>What a work type the simulation does not run answers to. Never sent.</summary>
         public const int None = -1;
@@ -224,7 +251,62 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int MedicalSupplies = 11;
 
-        public const int Count = 12;
+
+        /// <summary>Wild berries, picked from a berry bush (design 45 §6). Raw food. 12, after
+        /// medical supplies at the merge with main (it was 11 on its branch).</summary>
+        public const int Berries = 12;
+
+        /// <summary>Mushrooms, found under trees (design 45 §6). Raw food.</summary>
+        public const int Mushrooms = 13;
+
+
+        // The kitchen (design 48 §4), 14 to 16 after the wild foods, which reached main
+        // first. Handle 0 stays the ration pack it always was; the cooked
+        // meal is new, and takes back the ui.res.meal name the ration pack had borrowed.
+
+        /// <summary>A cooked meal with meat in it. The best food there is.</summary>
+        public const int CookedMeal = 14;
+
+        /// <summary>A cooked meal with no meat in it: carrots and whatever else grows. As good.</summary>
+        public const int VegetableMeal = 15;
+
+        /// <summary>A meal the cook let catch: edible, less filling, and nobody enjoys it.</summary>
+        public const int BurntMeal = 16;
+
+
+        /// The pistol (design 47): the first ranged weapon, appended by the ranged line's contracts
+        /// step; 17, after medical supplies, the wild foods and the kitchen's meals, which reached main first. Code says <c>Pistol</c>; every screen says what <c>ui.item.pistol</c> says.
+        /// </summary>
+        public const int Pistol = 17;
+
+        public const int Count = 18;
+    }
+
+    /// <summary>
+    /// See <see cref="JobHandle"/>: recipes, as a bill carries one and the bill intent names one
+    /// (design 48 §5). The order is <c>PawnContent.Recipes</c>'s.
+    /// </summary>
+    public static class RecipeHandle
+    {
+        /// <summary>Any raw food, 500 of it by nutrition, into one meal.</summary>
+        public const int Meal = 0;
+
+        public const int Count = 1;
+    }
+
+    /// <summary>How a bill decides it is finished (design 48 §5, a-14's three modes).</summary>
+    public static class BillModeHandle
+    {
+        /// <summary>Stop while the colony holds the target number of meals; start again below it. The default.</summary>
+        public const int UntilYouHave = 0;
+
+        /// <summary>Make the target number, then stop.</summary>
+        public const int Times = 1;
+
+        /// <summary>Never stop.</summary>
+        public const int Forever = 2;
+
+        public const int Count = 3;
     }
 
     /// <summary>
@@ -361,8 +443,13 @@ namespace Odyssey.Sim.Contracts
         public const int VaultWall = 8;
         public const int UtilityTap = 9;
 
-        public const int TreeConifer = 10;
-        public const int TreeBroadleaf = 11;
+        /// <summary>The birch: small, quick to fell, little wood (design 45 §2). It was the
+        /// conifer until the species became the simulation's; an old save's conifers load as
+        /// birches, which is what the art had drawn them as since the Meadow look pass.</summary>
+        public const int TreeBirch = 10;
+
+        /// <summary>The meadow tree, the medium broadleaf. Was the broadleaf (design 45 §2).</summary>
+        public const int TreeMeadow = 11;
 
         /// <summary>
         /// The bed, and the first edifice id the interface names that no generator stamps: 12,
@@ -390,7 +477,30 @@ namespace Odyssey.Sim.Contracts
         /// power. See <c>CoreContent.EdificeHeater</c>.</summary>
         public const int Heater = 16;
 
-        public const int Count = 17;
+        // The wild things (design 45 §2), after the heater because edifice ids are one space
+        // shared with the buildings: the trees' ten and eleven were never a range to extend.
+
+        /// <summary>A fruit tree: medium, its fruit deferred.</summary>
+        public const int TreeFruit = 17;
+
+        /// <summary>The giant meadow tree: rare, slow to fell, a great deal of wood.</summary>
+        public const int TreeGiant = 18;
+
+        /// <summary>A bush: walked through slowly, cleared before anything is built on it.</summary>
+        public const int Bush = 19;
+
+        /// <summary>A berry bush with its berries on.</summary>
+        public const int BerryBush = 20;
+
+        /// <summary>A berry bush that has been picked and is growing its berries back.</summary>
+        public const int BerryBushPicked = 21;
+
+
+        /// <summary>The galley (design 48 §5), the Electric Cooker: 22, after the wild things of
+        /// design 45, which reached main first. See <c>CoreContent.EdificeGalley</c>.</summary>
+        public const int Galley = 22;
+
+        public const int Count = 23;
     }
 
     /// <summary>
@@ -477,7 +587,10 @@ namespace Odyssey.Sim.Contracts
         /// <summary>The electric heater (design 32 §7).</summary>
         public const int Heater = 11;
 
-        public const int Count = 12;
+        /// <summary>The galley (design 48 §5): one cell, powered, where meals are cooked from bills.</summary>
+        public const int Galley = 12;
+
+        public const int Count = 13;
     }
 
     /// <summary>

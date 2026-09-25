@@ -29,6 +29,7 @@ namespace Odyssey.EditorTools
         public static readonly string[] Rows =
         {
             ModuleIds.ItemBat, ModuleIds.ItemCrowbar, ModuleIds.ItemMachete, ModuleIds.ItemArcBlade,
+            ModuleIds.ItemPistol,
         };
 
         [MenuItem("Odyssey/Presentation/Bake weapon profiles")]

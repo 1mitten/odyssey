@@ -693,6 +693,13 @@ namespace Odyssey.Presentation.Rendering
         public const string Heater = Prefix + "heater";
 
         /// <summary>
+        /// The galley (design 48 §5), the electric cooker: the POLYGON Shops stove, drawn once from
+        /// the head and turned to the player's facing like the generator. A clone without that pack
+        /// resolves it to nothing and draws the tinted block, as every machine does.
+        /// </summary>
+        public const string Galley = Prefix + "galley";
+
+        /// <summary>
         /// The bed's pillow, which is a module of its own so it can be a different shape and a
         /// different colour from the rest of the bed. Bedding is linen whatever the frame is made
         /// of: a stone bed has a white pillow, exactly as a wooden one does.
@@ -879,6 +886,20 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Medical supplies (design 37): a small box, the same art on the ground, on a shelf and in an armful.</summary>
         public const string ItemMedicalSupplies = Prefix + "item.medicalsupplies";
 
+        /// <summary>Wild berries (design 45 §6): one berry cluster, heaped by the stack, and worn
+        /// by a ripe berry bush.</summary>
+        public const string ItemBerries = Prefix + "item.berries";
+
+        /// <summary>Mushrooms (design 45 §6): one mushroom, heaped by the stack.</summary>
+        public const string ItemMushrooms = Prefix + "item.mushrooms";
+        /// <summary>The kitchen's three meals (design 48 §4): a tray of food on the ground, on a shelf and in an armful.</summary>
+        public const string ItemCookedMeal = Prefix + "item.meal.cooked";
+        public const string ItemVegetableMeal = Prefix + "item.meal.vegetable";
+        public const string ItemBurntMeal = Prefix + "item.meal.burnt";
+        // The pistol (design 47 §4a), claimed by the ranged line's contracts step: POLYGON Battle
+        // Royale's SM_Wep_Pistol_Heavy_01, the ground item and the held prop alike.
+        public const string ItemPistol = Prefix + "item.pistol";
+
 
         /// <summary>
         /// Module ids for item def indices, in <c>ItemIndex</c> order.
@@ -894,6 +915,10 @@ namespace Odyssey.Presentation.Rendering
             ItemMeal, ItemSalvage, ItemWood, ItemStone, ItemIronOre, ItemCoal, ItemCarrots,
             ItemBat, ItemCrowbar, ItemMachete, ItemArcBlade,
             ItemMedicalSupplies,
+            ItemBerries, ItemMushrooms,
+            // The kitchen (design 48 §4), handles 14 to 16.
+            ItemCookedMeal, ItemVegetableMeal, ItemBurntMeal,
+            ItemPistol,
         };
 
         /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>
@@ -928,6 +953,13 @@ namespace Odyssey.Presentation.Rendering
         /// for what that costs and why it is accepted.
         /// </summary>
         public const string ToolHammer = Prefix + "tool.hammer";
+
+        /// <summary>
+        /// The cook's frying pan (design 48 §10). Battle Royale's <c>SM_Wep_Pan_01</c>, the one pan in
+        /// the imported packs: a handle and a head, so the fitting path treats it as a short haft
+        /// with the pan where a blade would be, and the stir is the stroke that moves it.
+        /// </summary>
+        public const string ToolPan = Prefix + "tool.pan";
 
         // Tufts of grass strewn over the ground. Decoration and nothing else: they block nothing,
         // are not in the save, and the simulation has never heard of them. What they are for is

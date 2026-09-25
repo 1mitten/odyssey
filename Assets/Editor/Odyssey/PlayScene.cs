@@ -1448,6 +1448,15 @@ namespace Odyssey.EditorTools
                 centreXZ = true, baseAtY = true, fitFootprint = new Vector2(2.4f, 2.4f), fitHeight = 2.2f,
                 fitAgainstBack = true,
             });
+            // The galley (design 48 §5): POLYGON Shops' stove and oven, 1.74 x 1.18 x 1.22 m at
+            // source (e-10). Fitted to the cell like the heater, the hob at about the height of a
+            // 2.5 m colonist's hands. Until the pack is imported (only its PolygonShops folder;
+            // e-10) this resolves to nothing and the galley draws as the tinted block.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.Galley, shape = ModuleShape.Pillar, prefabName = "SM_Prop_Kitchen_Stove_Oven_01",
+                centreXZ = true, baseAtY = true, fitFootprint = new Vector2(2.3f, 1.6f), fitHeight = 1.6f,
+            });
 
             // The campfire (design 31 §3). The owner's report was that it drew as a wooden block,
             // on the ghost and on the board alike, which it did: ModuleIds.Campfire had no row, so
@@ -1725,6 +1734,13 @@ namespace Odyssey.EditorTools
                 moduleId = ModuleIds.ToolHammer, shape = ModuleShape.Pillar,
                 prefabName = "SM_Wep_Hammer_01",
             });
+            // The cook's pan (design 48 §10): Battle Royale's, the only frying pan in the imported
+            // packs. Held by its handle like a haft, the pan where a blade would be.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ToolPan, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Pan_01",
+            });
 
             // Colonists. A Synty character is a rigged humanoid with no MeshFilter anywhere on it,
             // so the ordinary prefab path finds no geometry at all and quietly falls back to a
@@ -1974,6 +1990,23 @@ namespace Odyssey.EditorTools
             // own art at 0.6 is about 0.38 m across, in the band the ore lumps sit in. Pillow for
             // the reason the crop stages give — a mound is the honest fallback for a vegetable,
             // where the pillar's stake is the shape of a signpost.
+            // The wild foods (design 45 §6). A cluster of berries is the Farm pack's strawberry, the
+            // one small red fruit in the packs, and it is also what a ripe berry bush wears; a
+            // mushroom is the Meadow pack's own. Sized as one lump you could carry, like the rest.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemBerries, shape = ModuleShape.Pillow,
+                prefabName = "SM_Prop_Strawberry_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(2.5f, 2.5f, 2.5f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemMushrooms, shape = ModuleShape.Pillow,
+                prefabName = "SM_Prop_Mushroom_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.0f, 1.0f, 1.0f),
+            });
             rows.Add(new ModuleEntry
             {
                 moduleId = ModuleIds.ItemCarrots, shape = ModuleShape.Pillow,
@@ -2019,6 +2052,19 @@ namespace Odyssey.EditorTools
                 centreXZ = true, baseAtY = true, lieFlat = true,
                 scale = new Vector3(1.5f, 1.5f, 1.5f),
             });
+            // The pistol (design 47 §4a; owner, 2026-09-25: Battle Royale's pistol). The heavy
+            // semi-automatic, the one self-loader among the pack's four; its name is unique in every
+            // pack, pinned to Battle Royale anyway so a future pack cannot move it. Five parts on one
+            // material, the slide among them (the director cycles it on a shot). Ground scale as the
+            // four weapons.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemPistol, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Pistol_Heavy_01",
+                centreXZ = true, baseAtY = true, lieFlat = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+            rows[rows.Count - 1].prefabUnder = BattleRoyaleFolder;
 
             // Medical supplies (design 37 §5): the Battle Royale first-aid case, 0.48 x 0.13 x 0.39
             // at source and drawn as authored — one small box, the ore lumps' size band, so the heap
@@ -2031,6 +2077,32 @@ namespace Odyssey.EditorTools
                 prefabName = "SM_Prop_MedicalBox_01",
                 centreXZ = true, baseAtY = true,
                 scale = new Vector3(1f, 1f, 1f),
+            });
+
+            // The kitchen's three meals (design 48 §4): Sci-Fi City's food trays, which are
+            // installed where the Shops plates are not yet. Three different trays so a meal, a
+            // vegetable meal and a burnt one can be told apart on the ground. PROPOSED: judge them
+            // on the board, and swap to the Shops plates once that pack is in.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemCookedMeal, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_FoodTray_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemVegetableMeal, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_FoodTray_02",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemBurntMeal, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_FoodTray_04",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
             });
 
             AddCombatRows(rows);
@@ -2463,6 +2535,11 @@ namespace Odyssey.EditorTools
         /// <summary>Where the Meadow Forest pack's own prefabs live.</summary>
         const string MeadowFolder = "Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest";
 
+        /// <summary>Packs imported after the catalogue's rows were chosen, which lose a name tie to any older pack.</summary>
+        static readonly string[] LaterPacks = { "Assets/Synty/PolygonShops" };
+        /// <summary>POLYGON Battle Royale, which the pistol is pinned to (design 47 §4a).</summary>
+        const string BattleRoyaleFolder = "Assets/Synty/PolygonBattleRoyale";
+
         /// <summary>
         /// Exact-name prefab lookup under Assets/Synty, looking in <paramref name="under"/> first
         /// when it is given. The packs share names — three have an <c>SM_Env_Bush_01</c> — and by
@@ -2473,11 +2550,16 @@ namespace Odyssey.EditorTools
         {
             if (!Directory.Exists(Path.GetFullPath("Assets/Synty"))) return null;
             string[] guids = AssetDatabase.FindAssets($"{exactName} t:Prefab", new[] { "Assets/Synty" });
+            // **A pack added later loses every tie** (design 48 §14). POLYGON Shops arrived with the
+            // kitchen and sorts before Western Frontier, so by path alone it took colonist 44's
+            // SM_Chr_Hunter_Male_01 and changed a colonist's body. A later pack is reached by a
+            // name nothing else has, or by asking for its folder.
             string[] paths = guids
                 .Select(AssetDatabase.GUIDToAssetPath)
                 .Where(p => string.Equals(Path.GetFileNameWithoutExtension(p), exactName,
                     StringComparison.OrdinalIgnoreCase))
-                .OrderBy(p => p, StringComparer.Ordinal)
+                .OrderBy(p => LaterPacks.Any(pack => p.StartsWith(pack + "/", StringComparison.OrdinalIgnoreCase)) ? 1 : 0)
+                .ThenBy(p => p, StringComparer.Ordinal)
                 .ToArray();
             string? path = null;
             if (!string.IsNullOrEmpty(under))

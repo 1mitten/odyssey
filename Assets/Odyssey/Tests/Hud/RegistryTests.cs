@@ -16,6 +16,22 @@ namespace Odyssey.Tests.Hud
     /// </summary>
     public class RegistryTests
     {
+        /// <summary>
+        /// A weapon is named with how well it was made (design 47 §11), both words the registry's; a
+        /// thing with no tier is its bare name. And the pistol is "Pistol" (owner, 2026-09-25: rename
+        /// "sidearm" to "Pistol").
+        /// </summary>
+        [Test]
+        public void AWeaponIsNamedWithItsQuality()
+        {
+            Assert.That(ItemLabels.Label(ItemHandle.Pistol), Is.EqualTo("Pistol"));
+            Assert.That(ItemLabels.Label(ItemHandle.Pistol, QualityHandle.Decent),
+                Is.EqualTo("Pistol (" + Registry.Label("ui.quality.decent") + ")"));
+            Assert.That(ItemLabels.Label(ItemHandle.Machete, QualityHandle.Epic),
+                Is.EqualTo(Registry.Label("ui.item.machete") + " (" + Registry.Label("ui.quality.epic") + ")"));
+            Assert.That(ItemLabels.Label(ItemHandle.Wood, 0), Is.EqualTo(ItemLabels.Label(ItemHandle.Wood)), "no tier, no brackets");
+        }
+
         [Test]
         public void EveryJobKeyIsARegisteredName()
         {
@@ -332,7 +348,9 @@ namespace Odyssey.Tests.Hud
             Assert.That(TerrainLabels.Label(TerrainHandle.Rock), Is.EqualTo("Rock"));
             Assert.That(TerrainLabels.Label(TerrainHandle.ShallowWater), Is.EqualTo("Shallow Water"));
             Assert.That(TerrainLabels.Label(TerrainHandle.IronOre), Is.EqualTo("Iron ore"));
-            Assert.That(EdificeLabels.Title(EdificeHandle.TreeConifer), Is.EqualTo("Conifer"));
+            Assert.That(EdificeLabels.Title(EdificeHandle.TreeBirch), Is.EqualTo("Birch"));
+            Assert.That(EdificeLabels.Title(EdificeHandle.TreeGiant), Is.EqualTo("Giant tree"));
+            Assert.That(EdificeLabels.Title(EdificeHandle.BerryBush), Is.EqualTo("Berry bush"));
         }
 
         [Test]

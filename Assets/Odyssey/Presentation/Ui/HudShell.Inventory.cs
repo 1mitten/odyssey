@@ -530,6 +530,7 @@ namespace Odyssey.Presentation.Ui
             ToggleMenu(false);
             _directors?.Work.SetOpen(false);
             _directors?.Research.SetOpen(false);
+            _directors?.Assign.SetOpen(false);
             _directors?.Animals.SetOpen(false);
             _directors?.Selection.Clear();
 

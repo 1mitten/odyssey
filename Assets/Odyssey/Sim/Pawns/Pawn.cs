@@ -194,6 +194,15 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public HostilityResponse Response { get; internal set; }
 
+        /// <summary>
+        /// Where she may work (design 43 §4): anywhere — the default — or only inside the colony's
+        /// home. A standing setting from the Assign tab. Set through <c>SetPawnArea</c>. Saved in
+        /// <c>AssignSection</c> and folded into the hash beside the kind, <b>both only while it
+        /// is not the default</b>, so a colony nobody restricts saves and hashes as it did before.
+        /// Read by <c>PawnContext.MayWork</c> and the walk home, and by nothing else.
+        /// </summary>
+        public PawnArea Area { get; internal set; }
+
         /// <summary>The species this pawn's kind spawns as: what walks. See <see cref="SpeciesDef"/>.</summary>
         public SpeciesDef Species => Content.SpeciesOf(Kind);
 
@@ -749,7 +758,7 @@ namespace Odyssey.Sim.Pawns
         /// golden window fights, so no golden moved.</para>
         /// </summary>
         public virtual int UrgencyPerMille() =>
-            Drafted || (CurrentJob != null && (CurrentJob.DefIndex == JobIndex.AttackMelee || CurrentJob.DefIndex == JobIndex.Flee))
+            Drafted || (CurrentJob != null && (CombatJobs.IsAttack(CurrentJob.DefIndex) || CurrentJob.DefIndex == JobIndex.Flee))
                 ? Content.Movement.draftedPacePerMille
                 : 1_000;
 
@@ -1146,6 +1155,7 @@ namespace Odyssey.Sim.Pawns
             // The treatment cooldown (design 37) took bit 22, and the body's ledger (design 43 §9)
             // is bit 23, the second of the two left free: walked only while it has anything on it,
             // so a colony nobody has hurt hashes as before health.
+            // The area (design 43 §4a) is bit 27, nought at the default, for the same reason.
             bool combat = HasCombatState;
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
             bool health = HasHealthState;
@@ -1153,7 +1163,7 @@ namespace Odyssey.Sim.Pawns
                 | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0)
                 | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
                 | (TreatedUntilTick != 0 ? 1 << 22 : 0) | (health ? 1 << 23 : 0)
-                | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0));
+                | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0) | ((int)Area << 27));
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             if (JumpLanding >= 0) hash.Add(JumpLanding);

@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-127 entries, 101 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+134 entries, 108 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -19,8 +19,13 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Subsoil** | `ui.terrain.subsoil` | The band between soil and rock. Cheap to dig <br>**Needs:** a tile of dug earth | no art | M1 |
 | **Bedrock** | `ui.terrain.bedrock` | The floor of the world. Deliberately punitive to mine <br>**Needs:** a tile of dark, banded stone | no art | M1 |
 | **Packed Gravel** | `ui.terrain.packedgravel` | Stony ground, packed hard. Firm footing, poor soil | no art | M3 |
-| **Conifer** | `ui.terrain.tree.conifer` | An evergreen of the meadow. Chopped for wood | no art | M3 |
-| **Broadleaf** | `ui.terrain.tree.broadleaf` | A broad-crowned tree of the meadow. Chopped for wood | no art | M3 |
+| **Birch** | `ui.terrain.tree.birch` | A slim white-barked tree. Quick to chop, not much wood in it <br>**Needs:** a slim pale-trunked tree | no art | M3 |
+| **Meadow tree** | `ui.terrain.tree.meadow` | A broad round-crowned tree of the open meadow. Chopped for wood <br>**Needs:** a round-crowned tree | no art | M3 |
+| **Fruit tree** | `ui.terrain.tree.fruit` | A low spreading tree. It will bear fruit one day; for now it is wood <br>**Needs:** a low tree with a spreading crown | no art | M3 |
+| **Giant tree** | `ui.terrain.tree.giant` | A rare old giant. Slow to bring down, and a great deal of wood <br>**Needs:** a towering tree dwarfing a figure | no art | M3 |
+| **Bush** | `ui.terrain.bush` | Dense undergrowth. Slow to push through; cleared before anything is built here <br>**Needs:** a round green bush | no art | M3 |
+| **Berry bush** | `ui.terrain.bush.berry` | A bush that bears berries <br>**Needs:** a bush dotted with red berries | no art | M3 |
+| **Picked berry bush** | `ui.terrain.bush.picked` | A berry bush picked bare, growing its berries back <br>**Needs:** a bare bush with no berries | no art | M3 |
 | **Carrot** | `ui.terrain.carrot` | A root vegetable of the meadow. Grown in zones, cut at full growth | no art | M3 |
 
 ## Weather
@@ -50,6 +55,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Roofs** | `ui.overlay.roofs` | What is roofed, and by what <br>**Needs:** a roofed-area mark. Pairs with the missing roof tool icon | no art | M1 |
 | **Zones** | `ui.overlay.zones` | Stockpiles, growing and allowed areas | sheet 08 (salvage gear), med | M1 |
 | **Power** | `ui.overlay.power` | Nets, and which of them are short | sheet 08 (salvage gear), high | M1 |
+| **Home** | `ui.overlay.home` | The colony's home: the base joined to the hearth, and five cells round it <br>**Needs:** a house, drawn as a path (docs/reference/mockups/home-glyph.svg) | no art | M3 |
 | **Salvage density** | `ui.overlay.salvage` | Where the worthwhile scrap is | sheet 05 (tools and weapons), med | M1 |
 | **Structural support** | `ui.overlay.support` | What is holding this layer up | sheet 04 (manufactured), med | M1 |
 | **Traffic** | `ui.overlay.traffic` | Where colonists actually walk <br>**Needs:** footfall. An abstract with no obvious source | no art | M1 |
@@ -88,6 +94,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Storage** | `ui.tab.storage` | What a store takes, and how much it matters <br>**Needs:** an open crate seen from above | no art | M3 |
 | **Tile** | `ui.tab.tile` | The ground itself, under whatever is standing on it <br>**Needs:** a single square of ground, in plan | no art | M3 |
 | **Inventory** | `ui.tab.inventory` | Everything in the colony's stores, and which store holds it | no art | INV |
+| **Assign** | `ui.tab.assign` | Where each colonist may work, and what she does about danger <br>**Needs:** drawn with ui.tab.colonists' art (HudCommands.IconOf) | no art | HA |
 
 ## Game speed
 

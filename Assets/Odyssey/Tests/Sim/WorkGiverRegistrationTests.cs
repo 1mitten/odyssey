@@ -122,6 +122,10 @@ namespace Odyssey.Tests.Sim
             // up sits with deconstructing, for deconstruct's reason. Refuelling leads hauling,
             // because a generator run dry darkens a net and a log in the wrong place darkens
             // nothing (a-07 §3 records the reference's generators running dry while pawns tidied).
+            // Forage (design 45 §6) is growing work and sorts by name inside it, first: a ripe
+            // berry bush keeps for three days where a field's window will not, but the name
+            // tiebreak is the rule here and nothing argues against it.
+            //
             // Rescue leads everything (design 33 §5, C4): it is the one emergency giver, and an
             // emergency is scanned ahead of every ordinary giver at the same priority, whatever the
             // work types' order says. A colonist bleeding out on the grass outranks the wall.
@@ -131,8 +135,10 @@ namespace Odyssey.Tests.Sim
             Assert.That(names, Is.EqualTo(new[]
             {
                 // Doctor is the second emergency (design 37), behind rescue by the work types' order.
+                // Cook sits after growing and before cutting (design 48 §5): a hungry colony cooks
+                // before it fells.
                 "Rescue", "Doctor", "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
-                "Harvest", "Sow", "Fell", "Mine", "Refuel", "Haul",
+                "Forage", "Harvest", "Sow", "Cook", "Fell", "Mine", "Refuel", "Haul",
             }));
         }
 

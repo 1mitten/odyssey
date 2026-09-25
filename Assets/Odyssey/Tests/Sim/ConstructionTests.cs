@@ -110,7 +110,9 @@ namespace Odyssey.Tests.Sim
                     || kind == IntentKind.SetSliceLayer
                     || kind == IntentKind.QueryCell
                     // The fifth, and a question too: whether the power lines are being shown.
-                    || kind == IntentKind.WatchPower) continue;
+                    || kind == IntentKind.WatchPower
+                    // The sixth, the same question about the home (design 43 §5c).
+                    || kind == IntentKind.WatchHome) continue;
 
                 Assert.That(colony.World.HandlesIntent(kind), Is.True,
                     $"nothing in the colony handles {kind}, so a player sending it gets silence");

@@ -48,15 +48,20 @@ namespace Odyssey.Sim.Pawns
         public virtual int HitChancePerMille(Pawn attacker, PawnContext ctx) =>
             ctx.Content.Combat.HitChancePerMille(MeleeLevel(attacker));
 
+        /// <summary>
+        /// Nought for a pawn lying down, and for one <b>mid-aim</b> (design 47 §2a, the reference's
+        /// rule): a shooter with her eye down the barrel does not step out of a blow.
+        /// </summary>
         public virtual int DodgeChancePerMille(Pawn defender, PawnContext ctx) =>
-            defender.Downed ? 0 : ctx.Content.Combat.DodgeChancePerMille(MeleeLevel(defender));
+            defender.Downed || Ranged.IsAiming(defender) ? 0 : ctx.Content.Combat.DodgeChancePerMille(MeleeLevel(defender));
 
         public virtual SwingOutcome Resolve(Pawn attacker, Pawn defender, in Armament armament, PawnContext ctx, int tick)
         {
             uint who = (uint)attacker.Id.Value;
 
+            // The weapon's quality moves the hit chance and the damage (design 47 §11).
             var hit = DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.MeleeHit ^ who);
-            if (hit.NextInt(1_000) >= HitChancePerMille(attacker, ctx))
+            if (hit.NextInt(1_000) >= WeaponQuality.Accuracy(HitChancePerMille(attacker, ctx), armament))
                 return new SwingOutcome(CombatEventKind.Miss);
 
             int dodge = DodgeChancePerMille(defender, ctx);
@@ -65,7 +70,8 @@ namespace Odyssey.Sim.Pawns
                 return new SwingOutcome(CombatEventKind.Dodge);
 
             AttackDef attack = armament.Attack;
-            int damage = DamageMilli(attack, ctx, DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.MeleeDamage ^ who));
+            int damage = WeaponQuality.Damage(
+                DamageMilli(attack, ctx, DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.MeleeDamage ^ who)), armament);
 
             int stun = 0;
             if (attack.damageKind == DamageKind.Blunt && attack.stunPerMille > 0 && attack.stunTicks > 0)

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  What a cooking station can make (design 48 section 5). One recipe in the kitchen unit.
+
+  Any raw food, 500 of it by nutrition, into one meal of 900: a-18's simple meal exactly. That is
+  three carrots (540) or ten pieces of meat; what is over stays in the pan for the next meal. A
+  pan with any meat in it makes Item_CookedMeal, one with none Item_VegetableMeal, and a burnt
+  one Item_BurntMeal whatever went in.
+
+  300 ticks at the galley, divided by the cook's speed (Work_Cooking): five seconds at level 10,
+  twelve and a half for a novice. The campfire takes twice as long, burns half as often again,
+  and swallows one wood a meal - it has no hopper, so the wood is fetched like an ingredient.
+
+  burnPerMilleByLevel is the owner's shape (interview #4: about 30 per cent at 0, 5 at 8, none
+  from 14), one entry a level; a level past the end reads the last, which is 0.
+-->
+<Defs>
+
+  <RecipeDef>
+    <defName>Recipe_Meal</defName>
+    <label>cook a meal</label>
+    <workTicks>300</workTicks>
+    <ingredientNutrition>500</ingredientNutrition>
+    <product>Item_CookedMeal</product>
+    <productNoMeat>Item_VegetableMeal</productNoMeat>
+    <burntProduct>Item_BurntMeal</burntProduct>
+    <burnPerMilleByLevel>
+      <li>300</li><li>250</li><li>200</li><li>160</li><li>130</li>
+      <li>100</li><li>80</li><li>65</li><li>50</li><li>40</li>
+      <li>30</li><li>20</li><li>10</li><li>5</li><li>0</li>
+    </burnPerMilleByLevel>
+    <stations>
+      <!-- The galley, BuildingHandle 12. -->
+      <li>
+        <building>12</building>
+      </li>
+      <!-- The campfire, BuildingHandle 8: twice the time, half as many burns again, one wood (item 2). -->
+      <li>
+        <building>8</building>
+        <workFactorPerMille>2000</workFactorPerMille>
+        <burnFactorPerMille>1500</burnFactorPerMille>
+        <fuelItem>2</fuelItem>
+        <fuelCount>1</fuelCount>
+      </li>
+    </stations>
+  </RecipeDef>
+
+</Defs>

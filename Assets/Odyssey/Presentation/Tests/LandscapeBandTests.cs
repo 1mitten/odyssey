@@ -177,13 +177,24 @@ namespace Odyssey.Tests.Presentation
 
             for (int layer = board.Model.LowestOutdoorLayer + 1; layer < board.StartLayer; layer++)
             {
+                slice.landscapeGround = false;
                 slice.wallsLowered = false;
-                Assert.That(slice.BelowSurface(layer), Is.True, $"walls up, L{layer}: the rule as it was");
+                Assert.That(slice.BelowSurface(layer), Is.True, $"Walls down off, L{layer}: the rule as it was");
+                slice.landscapeGround = true;
                 slice.wallsLowered = true;
                 Assert.That(slice.BelowSurface(layer), Is.False, $"walls down, L{layer}: a terrace is ground");
                 Assert.That(slice.GhostsAbove(layer), Is.False, $"walls down, L{layer}: nothing above is see-through");
+
+                // Building raises the walls; it does not turn the terrace back into a tunnel
+                // (owner, 2026-09-25: a campfire a terrace up "did nothing" when clicked while
+                // building, because the terrace above had become an unclickable x-ray).
+                slice.wallsLowered = false;
+                Assert.That(slice.BelowSurface(layer), Is.False, $"walls raised to build, L{layer}: still ground");
+                Assert.That(slice.HighestSelectableLayer(layer, board.Model.Size.SizeY), Is.GreaterThan(layer),
+                    $"walls raised to build, L{layer}: the terrace above cannot be clicked");
             }
 
+            slice.landscapeGround = true;
             slice.wallsLowered = true;
             Assert.That(slice.BelowSurface(board.Model.LowestOutdoorLayer), Is.True,
                 "beneath the lowest ground is still underground");

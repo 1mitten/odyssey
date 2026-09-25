@@ -63,7 +63,7 @@ namespace Odyssey.Tests.Sim
         static int Tree(ColonyWorld colony, int cell)
         {
             var records = colony.Pawns.Construction!.Edifices.Records;
-            records.Add(new PlacedEdifice { CellIndex = cell, Def = NaturalContent.EdificeTreeConifer, Stuff = NaturalContent.StuffWood });
+            records.Add(new PlacedEdifice { CellIndex = cell, Def = NaturalContent.EdificeTreeBirch, Stuff = NaturalContent.StuffWood });
             colony.Grid.Edifice[cell] = records.Count - 1;
             colony.Pawns.Chunks!.MarkDirty(Size.FromIndex(cell));
             return cell;
