@@ -57,6 +57,14 @@ the next session learns to ignore.
   game days, skipping days with the debug menu: the sky should change by itself, mostly clear in
   Glare, showery in Wash, grey in Rime, with the clock's glyph following. A wrong answer is a sky
   that never changes, one that flips at midnight, or a storm every other day.
+- **Can you see who the rain is slowing?** (`claude/pace-readout`, design 17 §5a, 43 §6a.) New
+  game, backtick > Weather > Downpour. Click a colonist out in the open: under what she is doing the
+  pane should say about *Pace 90% · in the rain*, and hovering it should say *rain −10%* among the
+  rest. Walk her under a roof and it should go back to about 100% with the rain gone from both.
+  Draft her and the pace should roughly double (*drafted ×2*). Click a hog making for a tree, and
+  the same hog under it: both should read *Sheltering*, as should its row on the Animals tab (F5).
+  A wrong answer is: a line you do not notice without looking for it; a pace that is not what you
+  see her walk at; *in the rain* under a roof; a hog reading *Resting* under a tree in a downpour.
 - **Does the rain touch the world?** (`claude/weather-world`, design 43 §6a.) New game, backtick
   > Weather > Downpour, and watch at normal speed:
   - Colonists crossing open ground should walk visibly slower in the rain and at their usual pace
@@ -497,6 +505,17 @@ the next session learns to ignore.
   column is **271 px, down from 296**, so check the outdoor temperature on the clock still clears the
   speed buttons beside it — a wrong answer is the reading touching or running under them again; and
   spawn a bandit with nobody to fight near a campfire — a wrong answer is it settling at the fire.
+
+- **Medical supplies: the box, the doctor and the patient** (`claude/medical-supplies`, design 37
+  §9). Start a new game: there should be a red first-aid case among the starting piles, and it
+  should go to a stockpile or a shelf like anything else. Is it readable at play distance, or
+  too small? (The picture offered two olive boxes instead.) Then spawn a marauder and let it put
+  a colonist down. A colonist with Doctor on should walk to the case, carry **one** box to the
+  downed colonist, kneel, and the downed colonist should stand up at about 40. Once standing, they
+  should go and lie in a bed, and get up at about 80. Test the same with Doctor off for everybody
+  but the hurt colonist, supplies to hand, and health below 60: they should treat themselves,
+  slowly. Wrong looks like: a doctor carrying the whole pile, a patient walking about with 30
+  health, a colonist lying down and getting up on the spot, or nobody fetching the case at all.
 
 - **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
   Spawn a bandit, draft two colonists, select both and right-click it: a translucent red ring

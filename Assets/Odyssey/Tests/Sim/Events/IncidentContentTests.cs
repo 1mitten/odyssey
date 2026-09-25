@@ -34,7 +34,11 @@ namespace Odyssey.Tests.Sim.Events
         //
         // 2026-09-24, the bandit (design 42): Incident_BanditLeft renamed Incident_BanditLeft,
         // its label and bulletin key with it. Index 3 unchanged; the ledger keeps indices.
-        const ulong ContentFingerprint = 10166985357465790265UL;
+        //
+        // 2026-09-25, medical supplies (design 37 §5), at the merge with main: Incident_MedicalDrop
+        // appended at index 4, after the bandit's two — the supply drop's worker again, four to
+        // eight medical supplies, weight 40 (invented).
+        const ulong ContentFingerprint = 1850533508298769451UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

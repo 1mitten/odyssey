@@ -132,7 +132,8 @@ namespace Odyssey.Tests.Sim
             var names = Shipped().Givers.Select(g => g.Name).ToArray();
             Assert.That(names, Is.EqualTo(new[]
             {
-                "Rescue", "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
+                // Doctor is the second emergency (design 37), behind rescue by the work types' order.
+                "Rescue", "Doctor", "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
                 "Forage", "Harvest", "Sow", "Fell", "Mine", "Refuel", "Haul",
             }));
         }

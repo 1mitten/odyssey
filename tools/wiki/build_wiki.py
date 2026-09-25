@@ -51,7 +51,7 @@ SECTIONS = [
      "sits beside mining because taking a ruin apart without wrecking what is inside it is a "
      "different craft from digging. Work and schedule share one tab and one table, so they share "
      "a page here."),
-    ("colonists", "Colonists", ["ui.pawn", "ui.need", "ui.mood", "ui.status"],
+    ("colonists", "Colonists", ["ui.pawn", "ui.need", "ui.mood", "ui.status", "ui.stat"],
      "Who is on the map, what they need, how they feel and what they are doing right now. This is "
      "the section with the least art: no sheet contains a human figure."),
     ("health", "Health and anatomy", ["ui.health"],
@@ -82,7 +82,8 @@ NS_TITLES = {
     "ui.command": "Commands", "ui.menu": "The context menu", "ui.work": "Work types", "ui.skill": "Skills",
     "ui.schedule": "Schedule blocks",
     "ui.pawn": "Kinds of pawn", "ui.need": "Needs", "ui.mood": "Mood states",
-    "ui.status": "Current activity", "ui.health": "Body parts and conditions",
+    "ui.status": "Current activity", "ui.stat": "Pace and what it is made of",
+    "ui.health": "Body parts and conditions",
     "ui.alert": "Alerts", "ui.bulletin": "Bulletins", "ui.toast": "Toasts",
     "ui.weather": "Weather",
     "ui.overlay": "Overlays", "ui.layer": "Layer controls", "ui.tab": "Tabs",

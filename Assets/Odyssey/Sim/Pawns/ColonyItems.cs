@@ -327,6 +327,31 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// Take <paramref name="count"/> off a stack into a pair of hands, leaving the rest where it
+        /// lies (design 37: a doctor carries one box of supplies to a patient, not the whole
+        /// pile). Taking the whole stack or more is <see cref="PickUp"/> and returns the same thing;
+        /// otherwise the source shrinks in place — on its cell or in its container, neither of which
+        /// changes — and a new thing is made already carried, so it occupies no cell and no slot.
+        /// </summary>
+        public ColonyItem SplitOff(ColonyItem item, int count, PawnId carrier)
+        {
+            if (count >= item.Stack)
+            {
+                PickUp(item, carrier);
+                return item;
+            }
+
+            item.Stack -= count;
+            var taken = new ColonyItem
+            {
+                Id = new ThingId(_nextId++), DefIndex = item.DefIndex, Cell = -1, Stack = count,
+                CarriedBy = carrier.Value,
+            };
+            _items.Add(taken);
+            return taken;
+        }
+
+        /// <summary>
         /// Put a carried thing into a container. <see cref="Drop"/>'s twin, and it carries
         /// <see cref="Drop"/>'s contract and its trap: onto a stack of the same def with room it
         /// merges, the resident grows, and <b>the carried thing is despawned</b> — so the thing

@@ -11692,6 +11692,48 @@ against both parents, per combat's lesson of the same morning, and the campfire 
 main added to every row. `Seated` stayed a bool beside `Asleep` because `PawnFlags` is full and is
 the fight's. Design 31 §19.
 
+## 2026-09-24 — Medical supplies: the item, the doctor and the patient
+
+The owner asked for **Medical supplies**, taken from the Battle Royale pack and made uniformly small
+so they stack in stores and on shelves, as the thing the old *Medkit* key becomes. One unit restores
+a lot of health but not all of it, so that rest still has a purpose, and they asked what a weaker
+healing seam should be. The interview is `docs/research/medical-supplies-interview.md` and the plan
+is design 37. The owner approved option A and every recommended number.
+
+**The ground changed the plan.** Combat had merged that morning with health in it, but rescue (C4)
+is still a stub. A downed colonist therefore cannot reach a bed, and nothing sends a colonist who is
+hurt but standing to one, so "treated in bed" would have reached almost nobody. Option A treats the
+downed where they lie and sends the badly hurt to bed as patients.
+
+**Storage, shelves and carrying took no code**, which is the evidence that the S1/S2
+generalisations hold: `MedicalSuppliesTests` stores a stack in a Medicine-only stockpile, which
+refuses wood, and puts a full stack in one shelf bay. **Treatment needed three things the plan did
+not name.**
+- `ColonyItems.SplitOff`, because a lift takes the whole stack.
+- A patient who gets up when hungry, because nothing in the job system interrupts a running job for
+  a need.
+- A ground-lying patient who stays down only while a doctor could still come. Without it the
+  colonist lies down and stands up on the spot, once a tick.
+
+**The one existing test that moved was right to move.** `AColonistHealsInABedAndNowhereElse` failed
+because its third colonist, now a doctor by default, gave the downed colonist on the ground a bare
+dressing (−5 to +5). The test is about the bed, so its colonists have Doctor switched off. The
+dressing is covered by `MedicalTreatmentTests`.
+
+**The goldens moved and were measured.** The hash sees a seventh skill, a seventh priority and two
+job counters. `GoldenColonyProbe` gives identical output on `main` 52f53112 and on the branch for
+all three boards.
+
+**One instrument lesson.** `PlayScene.RebuildCatalogue`, run in a freshly imported worktree, wrote
+the catalogue with every colonist's appearance swatches missing, a 3,678-line diff for a 41-line
+change. The row was added by hand. The cause is not established. Read a catalogue rebuild's diff
+before committing it.
+
+Tiers: fast 1,338 Sim + 977 Hud, Long 41, all three content gates clean. EditMode 3,238 total, 3,207
+passed, 0 failed. PlayMode 115 total, 110 passed, 0 failed. It read 1 failed on the first run:
+`WorkTabCostTests` at 0.820 ms, with its baseline at 0.747 ms while the CI runner's Unity was busy,
+which is contention. It passed on the re-run.
+
 ## 2026-09-24 — The orange suits were the uniform past the figure cap
 
 The 2026-09-23 entry above ruled out three causes and left the report unreproduced. The cause was
@@ -12806,6 +12848,40 @@ resolved the jump clips and, in the same write, emptied every colonist row's hai
 swatch rectangles (3,026 lines), which `CharacterSwatches.Classify` fills and the recolouring
 reads — `docs/lessons.md` already says to run it after. Only the four jump links were wanted, so
 they were grafted into the committed asset by hand and the rebuild thrown away.
+
+## 2026-09-25 — The pace on the pane, and what the rain is doing to people and animals
+
+The owner, after the rain landed: *"I notice the move speed is not shown anywhere so I couldn't
+tell whether people were moving slower."* The move rate had been published every tick since `WS3`,
+and nothing read it.
+
+**What was built** (`claude/pace-readout`, design 17 §5a, 43 §6a):
+- The colonist pane has a third header line, `Pace 90% · in the rain`. Its tooltip names each
+  factor that is not 1,000.
+- An animal making for cover, or waiting under it, reads *Sheltering*.
+- The owner placed "in the rain" on the Pace line, beside the number it explains, rather than in
+  the tooltip or on the activity line.
+
+**Four choices worth keeping.**
+- **The headline is the product of the published factors, not the published rate.** The pane cannot
+  read content, so it cannot know the base walk. Composing from the factors means the number and
+  its tooltip cannot disagree. A test pins the base at one cost unit a tick, which is when the two
+  are equal.
+- **The factors are the rate's own methods, asked again.** They are not a second formula.
+  `PaceAspectTests` multiplies the published factors back to the published rate exactly, across all
+  eight combinations of starving, raining and drafted.
+- **Sparse.** A dry, fed, undrafted colonist pays one row: 64 → 65 a colonist, measured by
+  `AspectScaleTests`. Design 31's "57" was already stale; the work priorities and the schedule had
+  added seven since.
+- **Sheltering is derived, not recorded.** A job def of its own would have moved every golden, and
+  a flag would have had to be saved. The shelter node's rain gate became `Minds`, which the node and
+  the readout both ask. So the readout cannot say *Sheltering* in a drizzle that the node ignores.
+
+**The room was measured, not assumed.** The pane's header is fixed at the portrait's 60 px and its
+text was 38. The third line makes 54. That sum is now a constant with a test, as are the three line
+heights against the stylesheet, so a fourth line fails rather than drawing over the tabs.
+
+No golden moved. The colony probe matches `origin/main` on all three boards. Not yet played.
 
 ## 2026-09-25 — M5 and M13: the scenery becomes real things (design 45)
 

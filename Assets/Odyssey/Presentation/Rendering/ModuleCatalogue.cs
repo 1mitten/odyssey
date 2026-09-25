@@ -876,6 +876,9 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemMachete = Prefix + "item.machete";
         public const string ItemArcBlade = Prefix + "item.arcblade";
 
+        /// <summary>Medical supplies (design 37): a small box, the same art on the ground, on a shelf and in an armful.</summary>
+        public const string ItemMedicalSupplies = Prefix + "item.medicalsupplies";
+
         /// <summary>Wild berries (design 45 §6): one berry cluster, heaped by the stack, and worn
         /// by a ripe berry bush.</summary>
         public const string ItemBerries = Prefix + "item.berries";
@@ -897,6 +900,7 @@ namespace Odyssey.Presentation.Rendering
         {
             ItemMeal, ItemSalvage, ItemWood, ItemStone, ItemIronOre, ItemCoal, ItemCarrots,
             ItemBat, ItemCrowbar, ItemMachete, ItemArcBlade,
+            ItemMedicalSupplies,
             ItemBerries, ItemMushrooms,
         };
 

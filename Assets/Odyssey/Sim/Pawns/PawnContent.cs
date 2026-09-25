@@ -172,6 +172,8 @@ namespace Odyssey.Sim.Pawns
         public const int Equip = JobHandle.Equip;
         public const int Rescue = JobHandle.Rescue;
         public const int Steal = JobHandle.Steal;
+        public const int Treat = JobHandle.Treat;
+        public const int Patient = JobHandle.Patient;
         public const int Forage = JobHandle.Forage;
         public const int Count = JobHandle.Count;
     }
@@ -322,6 +324,9 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int Rescue = WorkHandle.Rescue;
 
+        /// <summary>Treating the hurt (design 37). An emergency giver, like rescue's.</summary>
+        public const int Doctor = WorkHandle.Doctor;
+
         public const int Count = WorkHandle.Count;
 
         /// <summary>
@@ -335,7 +340,7 @@ namespace Odyssey.Sim.Pawns
         /// than a missing aspect — which is why growing is in both or in neither.</para>
         /// </summary>
         public static readonly string[] Names =
-            { "haul", "cutting", "mining", "construction", "growing", "rescue" };
+            { "haul", "cutting", "mining", "construction", "growing", "rescue", "doctor" };
     }
 
     /// <summary>
@@ -360,7 +365,10 @@ namespace Odyssey.Sim.Pawns
         /// Claimed by the combat contracts step.
         /// </summary>
         public const int Melee = 5;
-        public const int Count = 6;
+
+        /// <summary>Treating the hurt (design 37): buys speed at it and nothing else.</summary>
+        public const int Medicine = 6;
+        public const int Count = 7;
 
         /// <summary>
         /// The names skills are published under, parallel to the indices above.
@@ -370,7 +378,7 @@ namespace Odyssey.Sim.Pawns
         /// assembly or sharing an enum with it. The prefix is the project's, the middle is this
         /// feature's, and the leaf is the value — the same shape as an icon key.</para>
         /// </summary>
-        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee" };
+        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee", "medicine" };
     }
 
     /// <summary>
@@ -604,6 +612,7 @@ namespace Odyssey.Sim.Pawns
         public const int Crowbar = ItemHandle.Crowbar;
         public const int Machete = ItemHandle.Machete;
         public const int ArcBlade = ItemHandle.ArcBlade;
+        public const int MedicalSupplies = ItemHandle.MedicalSupplies;
         public const int Berries = ItemHandle.Berries;
         public const int Mushrooms = ItemHandle.Mushrooms;
         public const int Count = ItemHandle.Count;
@@ -638,6 +647,14 @@ namespace Odyssey.Sim.Pawns
         /// Read through <c>IWeaponRules</c>, never directly, so the lookup has one owner.
         /// </summary>
         public AttackDef? weapon;
+
+        /// <summary>
+        /// Hit points one unit restores when a doctor treats with it (design 37 §4), in whole
+        /// points. Zero means it is not medicine. Self-treatment and the treatment cap scale and
+        /// clamp it (<c>MedicalDef</c>); the amount itself is the item's, so a weaker item is one
+        /// Def row.
+        /// </summary>
+        public int healPerUnit;
     }
 
     /// <summary>Movement tuning. One unit of cost is 1/100 of a flat orthogonal cell crossing.</summary>
@@ -1333,19 +1350,25 @@ namespace Odyssey.Sim.Pawns
                 "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue",
                 // A bandit carrying something off the board (design 33 §17).
                 "Job_Steal",
-                // Picking a berry bush (design 45 §6), appended.
+                // Medical supplies (design 37).
+                "Job_Treat", "Job_Patient",
+                // Picking a berry bush (design 45 §6), appended after medical supplies.
                 "Job_Forage");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",
                 // Appended with the combat line (design 33 §5): a pawn's priority array is indexed
                 // by this order, so it is a save contract like the rest.
-                "Work_Rescue");
+                "Work_Rescue",
+                // Medical supplies (design 37).
+                "Work_Doctor");
             content.Skills = ByName<SkillDef>(defs,
                 "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction",
                 "Skill_Growing",
                 // Appended with the combat line (design 33 §5).
-                "Skill_Melee");
+                "Skill_Melee",
+                // Medical supplies (design 37).
+                "Skill_Medicine");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal",
                 // Appended, never inserted: an item handle is stored in every stack, every haul
@@ -1354,7 +1377,9 @@ namespace Odyssey.Sim.Pawns
                 "Item_Carrots",
                 // The four melee weapons (design 33 §1, C3), appended together.
                 "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade",
-                // The wild foods (design 45 §6), appended together.
+                // What a doctor treats with (design 37), appended.
+                "Item_MedicalSupplies",
+                // The wild foods (design 45 §6), appended together after medical supplies.
                 "Item_Berries", "Item_Mushrooms");
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");

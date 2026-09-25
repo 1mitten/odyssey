@@ -188,6 +188,7 @@ namespace Odyssey.Presentation.Ui
         Label _inspectTitle = null!;
         Label _inspectMeta = null!;
         Label _inspectState = null!;
+        Label _inspectPace = null!;
         IconBadge _inspectAvatar = null!;
 
         // The colonist half of that slot: a drawn face rather than a keyed badge, because no icon
@@ -206,6 +207,7 @@ namespace Odyssey.Presentation.Ui
         int _metaLayer = int.MinValue;
         string? _metaPosition;
         string? _stateJob;
+        string? _statePace;
         string? _stateBand;
         int _stateSelected = int.MinValue;
         string? _stateSite;

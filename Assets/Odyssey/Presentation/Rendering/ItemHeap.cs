@@ -141,6 +141,7 @@ namespace Odyssey.Presentation.Rendering
             // Carried as the rubble armful, which three cradled carrots read as naturally.
             new Recipe(1, Most, 12, 0.45f, 0.18f, lyingDown: true),   // carrots
             null, null, null, null,                      // the four weapons
+            null,                                        // medical supplies (design 37): one box
             // The wild foods (design 45 §6), heaped like carrots: a picking of eight draws as
             // eight clusters, and a store square holds at twelve.
             new Recipe(1, Most, 12, 0.45f, 0.20f),       // berries
