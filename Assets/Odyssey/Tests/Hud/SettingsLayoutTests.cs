@@ -104,6 +104,8 @@ namespace Odyssey.Tests.Hud
             yield return SettingsLayout.GearIcon;
             yield return SettingsLayout.CloseIcon;
             yield return SettingsLayout.ResetIcon;
+            yield return HudIcons.Home;
+            yield return HudIcons.Cycle;
         }
 
         [Test]

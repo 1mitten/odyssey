@@ -219,6 +219,11 @@ namespace Odyssey.Sim
                     Views.WatchPower = intent.A != 0;
                     return IntentRejection.None;
 
+                case IntentKind.WatchHome:
+                    // The same question about the home's border (design 43 §5c).
+                    Views.WatchHome = intent.A != 0;
+                    return IntentRejection.None;
+
                 case IntentKind.QueryCell:
                     // A question, not a command: it touches nothing but the view, so it has no
                     // state worth rejecting against. Re-asking the cell already asked, and asking

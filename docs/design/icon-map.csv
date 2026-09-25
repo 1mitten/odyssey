@@ -315,6 +315,7 @@ ui.overlay.cleanliness,08,,,bucket,low,shared
 ui.overlay.roofs,-,,,a roofed-area mark. Pairs with the missing roof tool icon,-,gap
 ui.overlay.zones,08,,,folded map,med,shared
 ui.overlay.power,08,,,battery,high,shared
+ui.overlay.home,-,,,"a house, drawn as a path (docs/reference/mockups/home-glyph.svg)",-,gap
 ui.overlay.salvage,05,,,powered drill,med,shared
 ui.overlay.support,04,,,"metal beam, I-section",med,shared
 ui.overlay.traffic,-,,,footfall. An abstract with no obvious source,-,gap

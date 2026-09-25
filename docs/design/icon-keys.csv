@@ -298,6 +298,7 @@ ui.overlay.cleanliness,Cleanliness,ui.overlay,M1,"Filth, and where it matters"
 ui.overlay.roofs,Roofs,ui.overlay,M1,"What is roofed, and by what"
 ui.overlay.zones,Zones,ui.overlay,M1,"Stockpiles, growing and allowed areas"
 ui.overlay.power,Power,ui.overlay,M1,"Nets, and which of them are short"
+ui.overlay.home,Home,ui.overlay,M3,"The colony's home: the base joined to the hearth, and five cells round it"
 ui.overlay.salvage,Salvage density,ui.overlay,M1,Where the worthwhile scrap is
 ui.overlay.support,Structural support,ui.overlay,M1,What is holding this layer up
 ui.overlay.traffic,Traffic,ui.overlay,M1,Where colonists actually walk

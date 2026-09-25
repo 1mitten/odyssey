@@ -86,6 +86,12 @@ namespace Odyssey.Sim
         /// <summary>Say where the hearth is. See <see cref="WorldSnapshot.HearthCell"/>.</summary>
         public void SetHearthCell(int cell) => _target.SetHearthCell(cell);
 
+        /// <summary>Say which working-out of the home this frame's rows are. See <see cref="WorldSnapshot.HomeVersion"/>.</summary>
+        public void SetHomeVersion(int version) => _target.SetHomeVersion(version);
+
+        /// <summary>Publish one border cell of the home. See <see cref="HomeCellView"/>.</summary>
+        public void AddHomeCell(in HomeCellView view) => _target.AddHomeCell(view);
+
         /// <summary>Publish one moment of a fight. See <see cref="CombatEventView"/>.</summary>
         public void AddCombatEvent(in CombatEventView view) => _target.AddCombatEvent(view);
 
@@ -142,6 +148,12 @@ namespace Odyssey.Sim
         /// hashed, and changing nothing the simulation owns.
         /// </summary>
         public bool WatchPower { get; internal set; }
+
+        /// <summary>
+        /// Is presentation showing the home (design 43 §5c)? While it is, the home's border cells are
+        /// published. Set through a <c>WatchHome</c> intent; view state like <see cref="WatchPower"/>.
+        /// </summary>
+        public bool WatchHome { get; internal set; }
 
         public int PublishCount { get; private set; }
 

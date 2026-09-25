@@ -657,9 +657,8 @@ namespace Odyssey.Presentation.Ui
         void Attach(HudDirectors directors)
         {
             _directors = directors;
-            // A new session's overlay starts off; the menu row and the views strip must not go on
-            // saying otherwise.
-            _powerOverlayRow?.EnableInClassList("menu__row--on", directors.Overlays.PowerVisible);
+            // A new session's overlays start off; the menu rows and the views strip must not go on
+            // saying otherwise, and MarkViews repaints both on the next frame.
             _viewsPaintedFor = -1;
             _directors.Selection.Changed += OnSelectionChanged;
             _directors.Slice.LayerChanged += OnLayerChanged;

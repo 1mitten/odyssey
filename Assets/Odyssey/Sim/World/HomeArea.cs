@@ -37,7 +37,7 @@ namespace Odyssey.Sim.World
     /// §3a is the list and the reasons. Shelves are edifices and are counted as edifices; the
     /// ruined city's walls are edifices with <c>Built</c> false and never count.</para>
     /// </summary>
-    public sealed class HomeArea
+    public sealed class HomeArea : ISnapshotContributor
     {
         /// <summary>How far home reaches from anything placed, in cells, as a square (owner, 2026-09-24).</summary>
         public const int Perimeter = 5;
@@ -205,6 +205,74 @@ namespace Odyssey.Sim.World
             if (!_home[c] || _joined[c]) return;
             _joined[c] = true;
             _joinedCells.Add(c);
+        }
+
+        /// <summary>The border rows last published, and the next set being worked out.</summary>
+        List<HomeCellView> _views = new List<HomeCellView>(), _scratch = new List<HomeCellView>();
+
+        /// <summary>The home and the terrain the rows were worked out against; -1 until they first are.</summary>
+        int _viewsHome = -1, _viewsGround = -1;
+
+        /// <summary>Moves when the published rows change. What <see cref="WorldSnapshot.HomeVersion"/> carries.</summary>
+        int _rowsVersion;
+
+        /// <summary>
+        /// Publish the home (design 43 §5c): its border cells, only while the Home view is on, and
+        /// a version that moves exactly when they change. Only cells a colonist could stand in are
+        /// published — open air over the ground or a floor — so the layer of margin above and below
+        /// a base, which is earth and empty air, draws no outline of its own.
+        ///
+        /// <para>The rows depend on the home and on the terrain (a dug cell stops being standable
+        /// without the home moving), so they are worked out again when either version moves, and
+        /// the published version moves only if the rows came out different. A still colony
+        /// republishes the list it has; a mine dug outside home costs one pass over the border and
+        /// moves nothing a reader caches against.</para>
+        /// </summary>
+        public void Contribute(SimWorld world, SnapshotWriter writer)
+        {
+            if (world.Views.WatchHome)
+            {
+                Refresh();
+                int ground = _ctx.Nav.GraphVersion;
+                if (_viewsHome != Version || _viewsGround != ground)
+                {
+                    _viewsHome = Version;
+                    _viewsGround = ground;
+                    BorderRows(_scratch);
+                    if (!SameRows(_scratch, _views))
+                    {
+                        (_views, _scratch) = (_scratch, _views);
+                        _rowsVersion++;
+                    }
+                }
+                for (int i = 0; i < _views.Count; i++) writer.AddHomeCell(_views[i]);
+            }
+            writer.SetHomeVersion(_rowsVersion);
+        }
+
+        /// <summary>The standable border cells of home with their edges, in cell order.</summary>
+        void BorderRows(List<HomeCellView> into)
+        {
+            into.Clear();
+            CellGrid cells = _ctx.Cells;
+            int stride = _size.LayerStride;
+            for (int i = 0; i < _joinedCells.Count; i++)
+            {
+                int c = _joinedCells[i];
+                if (cells.IsSolidTerrain(c)) continue;
+                if (!(cells.HasFloor(c) || (c >= stride && cells.IsSolidTerrain(c - stride)))) continue;
+                byte edges = EdgesOf(c);
+                if (edges != 0) into.Add(new HomeCellView(c, edges));
+            }
+            into.Sort((a, b) => a.CellIndex.CompareTo(b.CellIndex));
+        }
+
+        static bool SameRows(List<HomeCellView> a, List<HomeCellView> b)
+        {
+            if (a.Count != b.Count) return false;
+            for (int i = 0; i < a.Count; i++)
+                if (a[i].CellIndex != b[i].CellIndex || a[i].Edges != b[i].Edges) return false;
+            return true;
         }
 
         void Refresh()

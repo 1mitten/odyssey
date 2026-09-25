@@ -1336,6 +1336,7 @@ namespace Odyssey.Sim.Contracts
         BulletinView[] _bulletins = Array.Empty<BulletinView>();
         FallingView[] _falling = Array.Empty<FallingView>();
         ConduitView[] _conduits = Array.Empty<ConduitView>();
+        HomeCellView[] _homeCells = Array.Empty<HomeCellView>();
         PowerDeviceView[] _powerDevices = Array.Empty<PowerDeviceView>();
         PowerNetView[] _powerNets = Array.Empty<PowerNetView>();
         CombatEventView[] _combatEvents = Array.Empty<CombatEventView>();
@@ -1439,6 +1440,20 @@ namespace Odyssey.Sim.Contracts
         /// centred on. Always published; it is one number.
         /// </summary>
         public int HearthCell { get; private set; } = -1;
+
+        /// <summary>How many home border cells are published. See <see cref="HomeCellView"/>.</summary>
+        public int HomeCellCount { get; private set; }
+
+        /// <summary>
+        /// Moves exactly when the published <see cref="HomeCells"/> change (design 43 §5c). A reader
+        /// that caches what it built from them rebuilds only when this differs from what it built
+        /// against — and rebuilds on showing the view again, since the rows are not published while
+        /// it is off and the version need not move meanwhile.
+        /// </summary>
+        public int HomeVersion { get; private set; }
+
+        /// <summary>The home's border cells in cell-index order, published only while the Home view is on.</summary>
+        public ReadOnlySpan<HomeCellView> HomeCells => new ReadOnlySpan<HomeCellView>(_homeCells, 0, HomeCellCount);
 
         /// <summary>Line cells, in cell-index order within each kind. See <see cref="ConduitView"/>.</summary>
         public ReadOnlySpan<ConduitView> Conduits => new ReadOnlySpan<ConduitView>(_conduits, 0, ConduitCount);
@@ -1786,6 +1801,8 @@ namespace Odyssey.Sim.Contracts
             PowerNetCount = 0;
             PowerVersion = 0;
             HearthCell = -1;
+            HomeCellCount = 0;
+            HomeVersion = 0;
             CombatEventCount = 0;
             CorpseCount = 0;
             EdificeDamageCount = 0;
@@ -1844,6 +1861,14 @@ namespace Odyssey.Sim.Contracts
         internal void SetPowerVersion(int version) => PowerVersion = version;
 
         internal void SetHearthCell(int cell) => HearthCell = cell;
+
+        internal void SetHomeVersion(int version) => HomeVersion = version;
+
+        internal void AddHomeCell(in HomeCellView view)
+        {
+            Grow(ref _homeCells, HomeCellCount + 1);
+            _homeCells[HomeCellCount++] = view;
+        }
 
         internal void AddBulletin(in BulletinView view)
         {

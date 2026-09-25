@@ -559,6 +559,7 @@ namespace Odyssey.Hud
             { "ui.occupation.yard-labourer", "Yard labourer" },
             { "ui.overlay.beauty", "Beauty" },
             { "ui.overlay.cleanliness", "Cleanliness" },
+            { "ui.overlay.home", "Home" },
             { "ui.overlay.light", "Light" },
             { "ui.overlay.power", "Power" },
             { "ui.overlay.roofs", "Roofs" },

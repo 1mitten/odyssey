@@ -207,6 +207,8 @@ namespace Odyssey.Sim.Pawns
                 // moves no golden.
                 .AddHashable(hearth)
                 .AddSnapshotContributor(hearth)
+                // The home's border, published only while the Home view watches it (design 43 §5c).
+                .AddSnapshotContributor(pawns.Home!)
                 .AddIntentHandler(IntentKind.SetHearth, hearth.HandleSetHearth)
                 .AddSnapshotContributor(pawns.Pawns)
                 .AddSnapshotContributor(pawns.Corpses)

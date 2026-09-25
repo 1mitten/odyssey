@@ -306,6 +306,13 @@ namespace Odyssey.Sim.Contracts
         /// <c>Hearth.HandleSetHearth</c>.
         /// </summary>
         SetHearth,
+
+        /// <summary>
+        /// Whether presentation is showing the home (design 43 §5c): <c>A</c> 1 while the Home view
+        /// is on, 0 when it goes off. While watched, the home's border cells are published. A
+        /// question, handled by the world itself as <c>WatchPower</c> is.
+        /// </summary>
+        WatchHome,
     }
 
     /// <summary>
@@ -382,6 +389,7 @@ namespace Odyssey.Sim.Contracts
             // A view question, like QueryCell: the lines appear the moment the tool is armed,
             // paused or not.
             IntentKind.WatchPower => true,
+            IntentKind.WatchHome => true,
             IntentKind.CancelConduit => true,
 
             // The fight's orders, on the same test (design 33 §5): a player's order over a
