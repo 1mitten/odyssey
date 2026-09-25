@@ -193,6 +193,12 @@ namespace Odyssey.Sim.Pawns
                 // The sky (design 43 §3): appended, no format bump. A save from before weather has
                 // no section and rolls a sky on its first pass, which is what a new world does.
                 pawns.Weather!,
+                // Where each colonist may work (design 43 §4a). Appended; absent from an older
+                // save, which loads with everybody at Anywhere, as everybody then was.
+                new Saving.AssignSection(pawns.Pawns),
+                // Which campfire is the hearth (design 43 §3f). Appended; absent from an older
+                // save, which loads with none, as there then was.
+                pawns.Hearth!,
             };
         }
 
@@ -260,6 +266,10 @@ namespace Odyssey.Sim.Pawns
         public void RebuildDerived()
         {
             _solver.SolveFull();
+
+            // The home (design 43 §3c) is derived from everything that just came back, and nothing
+            // it read before the load is still true.
+            Pawns.Cells.Footprint.TouchAll();
 
             // A built ladder's connector is derived, not saved — the same argument as support, one
             // level along (U43). The edifice comes back with the save; the portal it opens between

@@ -183,6 +183,9 @@ namespace Odyssey.Hud
         /// <summary>Close the Research tab, likewise.</summary>
         CloseResearch,
 
+        /// <summary>Close the Assign tab (design 43 §6), likewise.</summary>
+        CloseAssign,
+
         /// <summary>Close the Menu popover.</summary>
         CloseMenu,
 
@@ -1753,10 +1756,25 @@ namespace Odyssey.Hud
         public EscapeAction Escape(bool contextMenuOpen, bool toolArmed, bool paletteOpen, bool menuOpen,
             bool workOpen, bool almanacOpen, bool animalsOpen, bool inventoryOpen, bool researchOpen,
             MenuScreen? startScreen) =>
-            contextMenuOpen
-                ? EscapeAction.CloseContextMenu
-                : Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
-                    inventoryOpen, researchOpen, startScreen);
+            Escape(contextMenuOpen, toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
+                inventoryOpen, researchOpen, assignOpen: false, startScreen);
+
+        /// <summary>
+        /// The same rule with the Assign tab in it (design 43 §6), which docks in the Work tab's
+        /// corner beside the others and unwinds at their rung. The one the presenter calls.
+        /// </summary>
+        public EscapeAction Escape(bool contextMenuOpen, bool toolArmed, bool paletteOpen, bool menuOpen,
+            bool workOpen, bool almanacOpen, bool animalsOpen, bool inventoryOpen, bool researchOpen,
+            bool assignOpen, MenuScreen? startScreen)
+        {
+            if (contextMenuOpen) return EscapeAction.CloseContextMenu;
+            // Below the tool, the menu, the palette and the Work tab, which a player raised over it
+            // or which the shell would have closed on opening it; beside the other docked tabs.
+            if (assignOpen && !toolArmed && !menuOpen && !paletteOpen && !workOpen)
+                return EscapeAction.CloseAssign;
+            return Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, animalsOpen,
+                inventoryOpen, researchOpen, startScreen);
+        }
 
         public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen,
             bool almanacOpen, bool animalsOpen, MenuScreen? startScreen) =>

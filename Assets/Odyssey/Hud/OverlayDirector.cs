@@ -42,5 +42,21 @@ namespace Odyssey.Hud
             PowerVisible = visible;
             Changed?.Invoke();
         }
+
+        /// <summary>
+        /// The home view (<c>ui.overlay.home</c>, design 43 §5): the edge of the colony's home on
+        /// the board and the mark over the hearth. Off by default, like power, and not remembered
+        /// between sessions.
+        /// </summary>
+        public bool HomeVisible { get; private set; }
+
+        public void ToggleHome() => SetHome(!HomeVisible);
+
+        public void SetHome(bool visible)
+        {
+            if (HomeVisible == visible) return;
+            HomeVisible = visible;
+            Changed?.Invoke();
+        }
     }
 }

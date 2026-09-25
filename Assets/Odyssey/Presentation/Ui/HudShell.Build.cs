@@ -893,6 +893,7 @@ namespace Odyssey.Presentation.Ui
             if (open) _directors?.Animals.SetOpen(false);
             if (open) _directors?.Inventory.SetOpen(false);
             if (open) _directors?.Research.SetOpen(false);
+            if (open) _directors?.Assign.SetOpen(false);
 
             _buildPanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
 

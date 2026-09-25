@@ -309,6 +309,7 @@ ui.command.strip,-,,,taking everything a pawn carries,-,gap
 ui.command.fightback,-,,,raised fists,-,gap
 ui.command.defend,-,,,a shield over a figure,-,gap
 ui.command.flee,-,,,a figure running away,-,gap
+ui.command.sethearth,-,,,a house over a campfire,-,gap
 ui.overlay.temperature,06,,,flame tile,med,shared
 ui.overlay.light,06,,,torch tile,med,mapped
 ui.overlay.beauty,06,,,paint brush tile,low,shared
@@ -316,6 +317,16 @@ ui.overlay.cleanliness,08,,,bucket,low,shared
 ui.overlay.roofs,-,,,a roofed-area mark. Pairs with the missing roof tool icon,-,gap
 ui.overlay.zones,08,,,folded map,med,shared
 ui.overlay.power,08,,,battery,high,shared
+ui.overlay.home,-,,,"a house, drawn as a path (docs/reference/mockups/home-glyph.svg)",-,gap
+ui.home.hearth,-,,,"the home glyph, drawn as a path (docs/reference/mockups/home-glyph.svg)",-,gap
+ui.tab.assign,-,,,"drawn with ui.tab.colonists' art (HudCommands.IconOf)",-,gap
+ui.keys.assign,-,,,"a key binding; no icon",-,gap
+ui.assign.colonist,-,,,"a column heading; no icon",-,gap
+ui.assign.area,-,,,"a column heading; no icon",-,gap
+ui.assign.response,-,,,"a column heading; no icon",-,gap
+ui.assign.anywhere,-,,,"a setting value; no icon",-,gap
+ui.assign.home,-,,,"a setting value; no icon",-,gap
+ui.assign.nohearth,-,,,"a note; no icon",-,gap
 ui.overlay.salvage,05,,,powered drill,med,shared
 ui.overlay.support,04,,,"metal beam, I-section",med,shared
 ui.overlay.traffic,-,,,footfall. An abstract with no obvious source,-,gap
@@ -355,6 +366,8 @@ ui.alert.nofuel,08,,,jerrycan,med,shared
 ui.alert.spoilage,02,,,mouldy or spoiled food,low,mapped
 ui.alert.darkness,06,,,"torch tile, unlit",low,shared
 ui.alert.trapped,-,,,a colonist cut off from the colony,-,gap
+ui.alert.nohearth,-,,,a campfire ring with no fire,-,gap
+ui.alert.hearthdown,-,,,a campfire under a deconstruct mark,-,gap
 ui.bulletin.salvage,04,,,pile of mixed metal offcuts,med,shared
 ui.bulletin.arrival,-,,,someone arriving. Blocked on the missing human figure,-,gap
 ui.bulletin.trader,08,,,briefcase,med,shared

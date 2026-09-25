@@ -168,6 +168,7 @@ namespace Odyssey.Sim.Power
             int at = _sites.BinarySearch(index);
             _sites.Insert(~at, index);
             _siteWork.Insert(~at, 0);
+            _grid.Footprint.Touch(index);
             Version++;
             return IntentRejection.None;
         }
@@ -198,6 +199,7 @@ namespace Odyssey.Sim.Power
             {
                 _sites.RemoveAt(site);
                 _siteWork.RemoveAt(site);
+                _grid.Footprint.Touch(index);
                 Version++;
                 return true;
             }
@@ -275,6 +277,7 @@ namespace Odyssey.Sim.Power
             if (at < 0) return false;
             _sites.RemoveAt(at);
             _siteWork.RemoveAt(at);
+            _grid.Footprint.Touch(index);
             Version++;
             if (!AllowsLine(index)) return false;
             AddLine(index);
@@ -304,6 +307,7 @@ namespace Odyssey.Sim.Power
             _bits[index >> 6] |= 1UL << (index & 63);
             int at = _lines.BinarySearch(index);
             _lines.Insert(~at, index);
+            _grid.Footprint.Touch(index);
             MarkDirty();
         }
 
@@ -312,6 +316,7 @@ namespace Odyssey.Sim.Power
             if (!IsLine(index)) return;
             _bits[index >> 6] &= ~(1UL << (index & 63));
             _lines.RemoveAt(_lines.BinarySearch(index));
+            _grid.Footprint.Touch(index);
             MarkDirty();
         }
 
@@ -1050,6 +1055,7 @@ namespace Odyssey.Sim.Power
             _marks.Clear();
             _markWork.Clear();
             _devices.Clear();
+            _grid.Footprint.TouchAll();
 
             int version = reader.ReadInt();
             if (version < 1 || version > SectionVersion)

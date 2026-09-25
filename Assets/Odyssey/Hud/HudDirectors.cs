@@ -33,6 +33,9 @@ namespace Odyssey.Hud
         /// <summary>Whether the Research tab is open, and the research until the mechanism exists (design 34).</summary>
         public ResearchDirector Research { get; } = new ResearchDirector();
 
+        /// <summary>Whether the Assign tab is open (design 43 §6). Session state, likewise.</summary>
+        public AssignDirector Assign { get; } = new AssignDirector();
+
         /// <summary>Whether the Almanac reference browser is open, and what entry it shows.</summary>
         public AlmanacDirector Almanac { get; } = new AlmanacDirector();
 

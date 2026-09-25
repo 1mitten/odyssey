@@ -97,7 +97,7 @@ namespace Odyssey.Sim.Pawns
             if (pawn.RetaliateAgainst != 0 && ctx.CurrentTick < pawn.RetaliateUntilTick)
             {
                 Pawn? foe = ctx.Pawns.Get(new PawnId(pawn.RetaliateAgainst));
-                if (foe != null && Melee.IsStanding(foe) && ctx.Reachable(pawn, foe.Cell, TraverseMode.Colonist))
+                if (foe != null && Melee.IsStanding(foe) && ctx.CanTravel(pawn, foe.Cell, TraverseMode.Colonist))
                     return AttackJob.Fill(pawn, foe, job, TraverseMode.Colonist);
             }
 
@@ -169,7 +169,7 @@ namespace Odyssey.Sim.Pawns
             if (pawn.RetaliateAgainst != 0 && ctx.CurrentTick < pawn.RetaliateUntilTick)
             {
                 Pawn? foe = ctx.Pawns.Get(new PawnId(pawn.RetaliateAgainst));
-                if (foe != null && foe.IsColonist && Melee.IsStanding(foe) && ctx.Reachable(pawn, foe.Cell, mode))
+                if (foe != null && foe.IsColonist && Melee.IsStanding(foe) && ctx.CanTravel(pawn, foe.Cell, mode))
                     return foe;
             }
 
@@ -182,7 +182,7 @@ namespace Odyssey.Sim.Pawns
                 if (!other.IsColonist || !Melee.IsStanding(other)) continue;
                 int distance = ctx.Distance(pawn.Cell, other.Cell);
                 if (distance >= bestDistance) continue;
-                if (!ctx.Reachable(pawn, other.Cell, mode)) continue;
+                if (!ctx.CanTravel(pawn, other.Cell, mode)) continue;
                 best = other;
                 bestDistance = distance;
             }
@@ -210,7 +210,7 @@ namespace Odyssey.Sim.Pawns
             if (foe == null || !Melee.IsStanding(foe)) return false;
 
             TraverseMode mode = pawn.OwnMode;
-            if (!ctx.Reachable(pawn, foe.Cell, mode)) return false;
+            if (!ctx.CanTravel(pawn, foe.Cell, mode)) return false;
             return AttackJob.Fill(pawn, foe, job, mode);
         }
     }

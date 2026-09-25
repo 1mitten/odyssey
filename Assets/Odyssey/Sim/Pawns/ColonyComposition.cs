@@ -147,6 +147,15 @@ namespace Odyssey.Sim.Pawns
             var nature = new NatureSystem(pawns, edifices);
             pawns.Nature = nature;
             construction.Power = power;
+
+            // The home (design 43): derived from everything above, so it is built last and is
+            // neither a system, a hashable nor a save section. It rebuilds itself when asked.
+            // The hearth first: it is state the home reads, and the construction grid tells it when
+            // a campfire goes up or comes down.
+            var hearth = new World.Hearth(pawns.Cells, edifices);
+            pawns.Hearth = hearth;
+            construction.Hearth = hearth;
+            pawns.Home = new World.HomeArea(pawns);
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
             builder
                 // The world itself, first: it is what everything below reads, and it ticks
@@ -213,6 +222,13 @@ namespace Odyssey.Sim.Pawns
                 // corpses are what the pawns become.
                 .AddHashable(pawns.Corpses)
                 .AddHashable(pawns.EdificeDamage)
+                // The hearth (design 43 §3f): hashed only while there is one, so its registration
+                // moves no golden.
+                .AddHashable(hearth)
+                .AddSnapshotContributor(hearth)
+                // The home's border, published only while the Home view watches it (design 43 §5c).
+                .AddSnapshotContributor(pawns.Home!)
+                .AddIntentHandler(IntentKind.SetHearth, hearth.HandleSetHearth)
                 .AddSnapshotContributor(pawns.Pawns)
                 .AddSnapshotContributor(pawns.Corpses)
                 // The telling of every fight, for presentation: never saved, never hashed.
@@ -244,6 +260,7 @@ namespace Odyssey.Sim.Pawns
                 // A colonist's response to danger (design 33 §18c), on the pipeline because a new
                 // setting may end a fight or a flight she started under the old one.
                 .AddIntentHandler(IntentKind.SetHostilityResponse, pipeline.HandleSetHostilityResponse)
+                .AddIntentHandler(IntentKind.SetPawnArea, pipeline.HandleSetPawnArea)
                 // The Work tab's one command (design 27). It belongs to the registry because a
                 // priority is a field on a pawn and the registry is the one owner of those; the
                 // job pipeline only ever reads it.

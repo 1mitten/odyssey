@@ -205,6 +205,20 @@ namespace Odyssey.Presentation.Ui
             _worldUi.Add(_inspectPanel);
         }
 
+        /// <summary>
+        /// Show the pane if something is selected and the corner is free. The Assign tab keeps the
+        /// corner while a name pressed in it selects a colonist (design 43 §6a), so the pane stays
+        /// away while the tab is open and comes up for whoever was chosen when it closes. Without
+        /// this the two drew over each other: both dock bottom-left, just above the bar.
+        /// </summary>
+        void SyncInspectShown()
+        {
+            bool assignHoldsTheCorner = _directors != null && _directors.Assign.Open;
+            _inspectPanel.style.display = _inspect.Subject != InspectSubject.None && !assignHoldsTheCorner
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
+        }
+
         void RefreshInspect()
         {
             var world = _boot!.World;
@@ -226,7 +240,10 @@ namespace Odyssey.Presentation.Ui
                         + (_inspect.ShowsTabBox ? ":tabs" : string.Empty)
                  : _inspect.Subject == InspectSubject.Item ? _inspect.Thing.ToString()
                  : _inspect.Subject == InspectSubject.Corpse ? _inspect.Corpse.ToString()
-                 : _inspect.Position + ":" + _inspect.Layer);
+                 : _inspect.Position + ":" + _inspect.Layer
+                    // A campfire's header says whether it is the hearth or offers to be (design 43
+                    // §6), so the hearth moving is a change of structure.
+                    + (_inspect.IsHearth ? ":hearth" : _inspect.OffersHearth ? ":fire" : string.Empty));
             if (signature != _inspectBuiltFor)
             {
                 BuildInspectBody();
@@ -649,7 +666,7 @@ namespace Odyssey.Presentation.Ui
                 return;
             }
 
-            _inspectPanel.style.display = DisplayStyle.Flex;
+            SyncInspectShown();
 
             // The tile readout and a selected pile take a column; a colonist takes a band. The
             // pane is the same panel either way — one class says which shape it is standing in
@@ -657,8 +674,9 @@ namespace Odyssey.Presentation.Ui
             // A store is never narrow. 280 px is the bare-tile variant and the accepts list does not
             // fit in it; the settings belong to the zone, and a pane that shrank with the zone would
             // imply otherwise (design brief, 2026-09-21, state 8).
+            // A campfire is never narrow either (owner, 2026-09-25): the hearth's button does not fit.
             _inspectPanel.EnableInClassList("inspect--narrow",
-                !_inspect.IsStore
+                !_inspect.IsWide
                 && (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item));
 
             // ---- header: avatar, name and its two lines, then the actions on the right
@@ -710,6 +728,9 @@ namespace Odyssey.Presentation.Ui
             _inspectPace = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__pace");
             _statePace = null;
             titles.Add(nameLine);
+            // The hearth says so under its name (design 43 §6): the house in the accent, 12 px,
+            // and "Hearth" in the meta ink, six below the name.
+            if (_inspect.IsHearth) titles.Add(HearthLine());
             titles.Add(_inspectState);
             titles.Add(_inspectPace);
             header.Add(titles);
@@ -752,6 +773,9 @@ namespace Odyssey.Presentation.Ui
             actions.Add(close);
             header.Add(actions);
             _inspectBody.Add(header);
+
+            // Any other campfire offers to be the hearth: one button, nine under the header.
+            if (_inspect.OffersHearth) _inspectBody.Add(MakeHearthButton());
 
             if (_inspect.ShowsTabBox)
             {
@@ -1041,6 +1065,58 @@ namespace Odyssey.Presentation.Ui
         void ActOnOrder()
         {
             _boot?.World?.Intents.Submit(new Intent(_inspect.OrderAction, _inspect.Cell, _inspect.OrderActionA));
+        }
+
+        /// <summary>
+        /// Make the campfire under the pane the hearth (design 43 §3f): an intent, applied while
+        /// paused, refused by the simulation unless a campfire of ours stands there.
+        /// </summary>
+        void MakeHearth()
+        {
+            _boot?.World?.Intents.Submit(new Intent(IntentKind.SetHearth, _inspect.Cell));
+        }
+
+        /// <summary>The hearth's line under its name (design 43 §6).</summary>
+        static VisualElement HearthLine()
+        {
+            var line = new VisualElement();
+            line.AddToClassList("inspect__hearth");
+            line.style.flexDirection = FlexDirection.Row;
+            line.style.alignItems = Align.Center;
+            line.style.marginTop = 6;
+            line.Add(new PathGlyph(HudIcons.Home, 12f, HudTokens.Accent, fill: true));
+            Label word = HudText.Make(Registry.Label(InspectModel.HearthKey), HudTextRole.Meta);
+            word.style.color = HudTokens.TextMeta;
+            word.style.marginLeft = 6;
+            line.Add(word);
+            line.tooltip = "Home is the base joined to this fire";
+            return line;
+        }
+
+        /// <summary>
+        /// "Make this the hearth" (design 43 §6): the colonist pane's own <c>.action</c> button, 26
+        /// high as it ships, with the house at 14 px in the text colour and the words at 14 / 500.
+        /// </summary>
+        VisualElement MakeHearthButton()
+        {
+            var button = new VisualElement();
+            button.AddToClassList("action");
+            button.AddToClassList("inspect__makehearth");
+            button.style.alignSelf = Align.FlexStart;
+            button.style.marginTop = 9;
+            button.style.marginLeft = 0;
+            button.Add(new PathGlyph(HudIcons.Home, 14f, HudTokens.TextPrimary, fill: true));
+            Label label = HudText.Make(Registry.Label(InspectModel.MakeHearthKey), HudTextRole.Row);
+            label.style.color = HudTokens.TextPrimary;
+            label.style.marginLeft = 6;
+            button.Add(label);
+            button.tooltip = Registry.Label(InspectModel.MakeHearthKey) + " — home becomes the base joined to this fire";
+            button.RegisterCallback<ClickEvent>(evt =>
+            {
+                MakeHearth();
+                evt.StopPropagation();
+            });
+            return button;
         }
 
         /// <summary>

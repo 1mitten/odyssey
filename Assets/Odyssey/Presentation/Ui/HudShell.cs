@@ -608,6 +608,7 @@ namespace Odyssey.Presentation.Ui
             BuildAnimals();
             BuildInventory();
             BuildResearch();
+            BuildAssign();
             BuildAlmanac();
 
             // B18, last, so it is the top-most element in the tree and its scrim covers everything
@@ -660,9 +661,8 @@ namespace Odyssey.Presentation.Ui
         void Attach(HudDirectors directors)
         {
             _directors = directors;
-            // A new session's overlay starts off; the menu row and the views strip must not go on
-            // saying otherwise.
-            _powerOverlayRow?.EnableInClassList("menu__row--on", directors.Overlays.PowerVisible);
+            // A new session's overlays start off; the menu rows and the views strip must not go on
+            // saying otherwise, and MarkViews repaints both on the next frame.
             _viewsPaintedFor = -1;
             _directors.Selection.Changed += OnSelectionChanged;
             _directors.Slice.LayerChanged += OnLayerChanged;
@@ -689,6 +689,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Inventory.Changed += OnInventoryChanged;
             _directors.Research.Changed += OnResearchChanged;
             _directors.Research.StateChanged += OnResearchStateChanged;
+            _directors.Assign.Changed += OnAssignChanged;
             _directors.Almanac.Changed += OnAlmanacChanged;
             _directors.Almanac.Navigated += OnAlmanacNavigated;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
@@ -729,6 +730,7 @@ namespace Odyssey.Presentation.Ui
             OnWorkChanged();
             OnInventoryChanged();
             OnResearchChanged();
+            OnAssignChanged();
         }
 
         void Detach()
@@ -758,6 +760,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Inventory.Changed -= OnInventoryChanged;
             _directors.Research.Changed -= OnResearchChanged;
             _directors.Research.StateChanged -= OnResearchStateChanged;
+            _directors.Assign.Changed -= OnAssignChanged;
             _directors.Almanac.Changed -= OnAlmanacChanged;
             _directors.Almanac.Navigated -= OnAlmanacNavigated;
             _directors.Hotkeys.BindingChanged -= OnBindingChanged;
@@ -879,6 +882,7 @@ namespace Odyssey.Presentation.Ui
                 RefreshWork();
                 RefreshAnimals();
                 RefreshInventory();
+                RefreshAssign();
             }
             if (_slow >= SlowBucketSeconds)
             {
@@ -1146,6 +1150,11 @@ namespace Odyssey.Presentation.Ui
                 _directors.Inventory.SetOpen(false);
                 _directors.Research.SetOpen(false);
             }
+
+            // The Assign tab is the exception, as the Work tab is: pressing a name there selects
+            // that colonist, and the tab stays open to set the next one (design 43 §6). Its rows
+            // follow the selection at once rather than on the next cadence pass.
+            RefreshAssign();
 
             // The pane and the palette dock into the same bottom-left corner, so the corner holds
             // one of them. Opening the palette has cleared the selection since 2026-09-17; this is
