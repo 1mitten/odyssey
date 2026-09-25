@@ -581,6 +581,9 @@ namespace Odyssey.Presentation.Bootstrap
             // thing it will see is a world.
             _menuBed = new MenuAmbience(audioCatalogue, transform, gameObject.layer);
 
+            // The hitch tour (design 38 §25) wants the driver's shader log from the load onward, so
+            // the switch goes on before the session is built rather than when the tour starts.
+            if (PlayerBench.HitchRequested()) UnityEngine.Rendering.GraphicsSettings.logWhenShaderIsCompiled = true;
             if (buildOnPlay || StartedFromTheCommandLine()) BuildSession();
             // The player benchmark (design 38 §18e): a development player told -odyssey-bench
             // times its arms on the colony it just built, writes the table to the log and quits.
@@ -786,6 +789,10 @@ namespace Odyssey.Presentation.Bootstrap
             // density beside them: the field has to be reachable from the mesher, the picker and
             // the figures alike, and it is a property of how the world is drawn rather than of any
             // one of them.
+            // Where a new session's wait goes (design 38 §25): lap times logged at the end.
+            var buildClock = Stopwatch.StartNew();
+            var laps = new System.Text.StringBuilder();
+            void Lap(string name) { laps.Append(name).Append(' ').Append(buildClock.ElapsedMilliseconds).Append(" ms, "); }
             GroundRelief.Amplitude = groundRelief;
             GroundRelief.Period = groundReliefPeriod;
 
@@ -886,6 +893,7 @@ namespace Odyssey.Presentation.Bootstrap
                 Mirror = (grid, outcome) => new GridMirrorContributor(grid, outcome.Edifices, model),
             });
             generation.Stop();
+            Lap("generated");
 
             _colony = colony;
             _grid = colony.Grid;
@@ -984,6 +992,7 @@ namespace Odyssey.Presentation.Bootstrap
                        randomCastEachSession ? "rolled for this session, overruling every pawn's own seed — copy it into colonistLookSeed to keep this cast" :
                        "the fallback only; every colonist is dealt from their own roll seed"));
 
+            Lap("colony ready");
             _renderer = new ChunkRenderer(_model)
             {
                 CastShadows = castShadows,
@@ -1025,6 +1034,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Live figures for the pawns on screen. Everything else keeps the baked instanced
             // form, and so does everybody if the packs are absent or the catalogue has no gaits.
+            Lap("renderer and surround");
             _figures = new PawnFigureDirector(moduleCatalogue, transform, gameObject.layer)
             {
                 Appearances = appearances,
@@ -1042,6 +1052,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Over the preferences this component has held since it woke, not over fresh ones:
             // the same settings panel and the same key bindings serve every session.
+            Lap("figures");
             FindTheSiblingPresenters();
             Directors = new HudDirectors(size.SizeY, outcome.StartCell.Y, Preferences, Keys);
             Directors.Slice.LayerChanged += OnActiveLayerChanged;
@@ -1086,6 +1097,7 @@ namespace Odyssey.Presentation.Bootstrap
             // The light through the day. It finds the scene's own sun rather than making one,
             // because the scene builder already places it and two directional lights is a
             // doubled key nobody would think to look for.
+            Lap("directors, audio, props");
             Light? key = sun != null ? sun : FindKeyLight();
             _keyLight = key;
             if (daylightCycle && key != null)
@@ -1146,9 +1158,15 @@ namespace Odyssey.Presentation.Bootstrap
             // tell apart from the wait they are already in, and it buys a first frame that is
             // whole. Everything after this frame is budgeted (6c.7).
             if (_renderer != null && cameraRig != null)
+            {
+                Lap("light and look");
                 _renderer.PrimeAll(cameraRig.ActiveLayer, cameraRig.slice);
+                Lap("meshed (PrimeAll)");
+            }
 
             SessionChanged?.Invoke();
+            Lap("listeners");
+            Debug.Log($"[Session] built in {buildClock.ElapsedMilliseconds} ms: {laps}");
 
             Debug.Log(
                 $"[Odyssey] world {size} seed {sessionSeed} generated in {generation.ElapsedMilliseconds} ms. " +

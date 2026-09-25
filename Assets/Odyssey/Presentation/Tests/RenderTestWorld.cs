@@ -21,12 +21,19 @@ namespace Odyssey.Tests.Presentation
         readonly List<PlacedEdifice> _edifices = new List<PlacedEdifice>();
         readonly List<SiteView> _sites = new List<SiteView>();
 
-        public RenderTestWorld(int sizeX, int sizeZ, int layers)
+        public RenderTestWorld(int sizeX, int sizeZ, int layers) : this(sizeX, sizeZ, layers, new ModuleLibrary(null))
+        {
+        }
+
+        /// <summary>A test world whose modules resolve through <paramref name="library"/> — the
+        /// real catalogue's, for a test that needs the art and ignores itself where it did not
+        /// resolve.</summary>
+        public RenderTestWorld(int sizeX, int sizeZ, int layers, ModuleLibrary library)
         {
             Size = new GridSize(sizeX, sizeZ, layers);
             Grid = new CellGrid(Size);
             Chunks = new ChunkGrid(Size);
-            Library = new ModuleLibrary(null);
+            Library = library;
             Model = new WorldRenderModel(Size, Chunks, Library);
         }
 
