@@ -135,18 +135,21 @@ namespace Odyssey.Presentation.Rendering
             // <para><c>movePerTick</c> is the fallback for a hand-built fixture that publishes no
             // rate, and it keeps the old meaning — a cost unit as a hundredth of a step — because
             // that is what those fixtures were written against.</para>
-            float carried = pawn.MoveDeltaPerMille > 0
-                ? pawn.MoveDeltaPerMille * 0.1f * tickAlpha
-                : movePerTick * tickAlpha;
-            float percent = pawn.MovePerMille > 0
-                ? pawn.MovePerMille * 0.1f + carried
-                : pawn.MovePercent + carried;
-
+            //
+            // Both halves are StepProgress's now, shared with the jump's clips (design 46 §7).
+            //
             // Along `travel` and not along `heading`: the bearing has had its vertical part taken
             // out on purpose, and a pawn that moved along it would climb a shaft without going
             // down. The lift is taken at the interpolated position, not at either end, so a pawn
             // walks along the drawn ground instead of cutting the chord between two cell centres.
-            float t = Mathf.Clamp(percent, 0f, 100f) * 0.01f;
+            float t = StepProgress(in pawn, tickAlpha, movePerTick);
+
+            // **A jump over a stream is drawn from its own curve** (design 46 §7), and before
+            // anything below touches it: the wading branch would take a short jump for a step into
+            // the water, the ground clamp would sample the bank under whichever cell the figure is
+            // "over" when it is 2.5 m from both, and the sidestep would push a body in mid-air.
+            // A jump is not ground locomotion, the same reason the gait is held through a hop.
+            if (JumpArc.IsJump(in pawn)) return JumpArc.Position(world, in pawn, t);
 
             // **Time is not distance: the step's duration is spread over its drawn path.**
             //
@@ -302,6 +305,22 @@ namespace Odyssey.Presentation.Rendering
                     WaterLine.CrossingHeight(world, pawn.Cell, pawn.NextCell, s), along.z);
 
             return OnTheDrawnGround(along, pawn, s, world, pace);
+        }
+
+        /// <summary>
+        /// How far through its step a pawn is, 0 to 1, at this frame: the published progress and
+        /// the sub-tick carry, exactly as <see cref="Of"/> reads it — one copy, so anything else
+        /// timed to a step (the jump's clips, design 46 §7) cannot drift from where the figure is.
+        /// </summary>
+        public static float StepProgress(in PawnView pawn, float tickAlpha, int movePerTick)
+        {
+            float carried = pawn.MoveDeltaPerMille > 0
+                ? pawn.MoveDeltaPerMille * 0.1f * tickAlpha
+                : movePerTick * tickAlpha;
+            float percent = pawn.MovePerMille > 0
+                ? pawn.MovePerMille * 0.1f + carried
+                : pawn.MovePercent + carried;
+            return Mathf.Clamp(percent, 0f, 100f) * 0.01f;
         }
 
         /// <summary>

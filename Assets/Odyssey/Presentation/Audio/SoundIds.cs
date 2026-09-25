@@ -141,6 +141,22 @@ namespace Odyssey.Presentation.Audio
         public const string DropLand = SoundPrefix + "drop.land";
 
         /// <summary>
+        /// A jump over a stream falling short: a body landing in the water (design 46 §7).
+        /// <b>Named, and in no catalogue yet</b>, like <see cref="DropLand"/> — the director
+        /// declines a sound it has no clip for, so this plays the day a splash is sourced under
+        /// ADR 0010 and added, and not before. Raised by <see cref="AudioDirector"/> from the
+        /// published frame, on the first frame a pawn that was falling short stands in the water.
+        /// </summary>
+        public const string Splash = SoundPrefix + "splash";
+
+        /// <summary>
+        /// One arm of a swimmer's stroke going into the water (design 20 §9): twice a stroke cycle,
+        /// once per arm, at the swimmer, and short-ranged so it is heard only with the camera
+        /// close. Raised by <c>PawnFigureDirector.SwimStroked</c>, timed off the drawn stroke.
+        /// </summary>
+        public const string SwimStroke = SoundPrefix + "swim.stroke";
+
+        /// <summary>
         /// The neutral chime: something has happened that is worth a glance and is nobody's
         /// emergency. What an <see cref="Hud.AlertSeverity.Notice"/> row sounds like.
         /// </summary>
@@ -192,6 +208,20 @@ namespace Odyssey.Presentation.Audio
 
         /// <summary>Looping water: ponds, streams and the river, scaled by how much of it is near.</summary>
         public const string AmbienceWater = AmbiencePrefix + "water";
+
+        /// <summary>
+        /// Light rain: drips and patter over a soft hiss, the owner's gentle-rain recording
+        /// (<c>tools/audio/bake_rain.sh</c>). The drizzle end of rain, and kept faintly under a
+        /// downpour for its close detail. How loud it is is <see cref="RainMix"/>'s, read off the
+        /// published sky, never the clip's (design 43 §7).
+        /// </summary>
+        public const string AmbienceRainLight = AmbiencePrefix + "rain.light";
+
+        /// <summary>
+        /// Heavy rain: a steady roar with no individual drops, the owner's heavier recording. Rises
+        /// under the light bed as rain passes about half intensity, and carries a storm.
+        /// </summary>
+        public const string AmbienceRainHeavy = AmbiencePrefix + "rain.heavy";
 
         /// <summary>
         /// The sound of the world outdoors by day — the bed under everything else, birds and air

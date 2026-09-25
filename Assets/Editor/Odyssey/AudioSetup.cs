@@ -167,6 +167,10 @@ namespace Odyssey.EditorTools
                 mono: true, loadInBackground: false, placeholder: null),
             new("carry-drop", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: true, loadInBackground: false, placeholder: null),
+            // The swim stroke (design 20 §9), three takes of three quarters of a second: the carry
+            // sounds' class, for the same reason — short, constant while anyone swims.
+            new("swim-stroke", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
             // The draft's blade (design 33 §2i): two thirds of a second, mono in the file already,
             // and it has to sound on the frame the order lands — so PCM, decompressed on load, the
             // chimes' class. 58 KB.
@@ -200,6 +204,14 @@ namespace Odyssey.EditorTools
                 mono: false, loadInBackground: true, () => Outdoor(12f, day: true)),
             new("ambience-night", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
                 mono: false, loadInBackground: true, () => Outdoor(12f, day: false)),
+            // The rain beds (design 43 §7), baked by tools/audio/bake_rain.sh: stereo because rain
+            // is the air all round, and streamed like the outdoor beds because they are long loops
+            // that play together for hours. No placeholder — synthesised rain is white noise, and
+            // a clone without the clips hears a dry sky, which is honest.
+            new("rain-light", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
+                mono: false, loadInBackground: true, placeholder: null),
+            new("rain-heavy", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
+                mono: false, loadInBackground: true, placeholder: null),
 
             // A fire is a place you stand near, so it is mono. Compressed in memory rather than
             // decompressed, because it is a long loop that plays continuously: ADPCM decodes for
@@ -624,6 +636,21 @@ namespace Odyssey.EditorTools
                 // together are what stop a stockpile run sounding like one file on repeat.
                 CarrySound(SoundIds.CarryLift, "carry-lift"),
                 CarrySound(SoundIds.CarryDrop, "carry-drop"),
+                // A hand going into the water (design 20 §9), once per arm. **Heard only close**
+                // (owner, 2026-09-25): the listener is the camera, which zooms 10 to 160 m and
+                // starts at 48, so full volume inside 8 m and nothing past 40 — a swimmer is heard
+                // when the player has zoomed in on them and not across the board. The cooldown is
+                // under the 0.77 s between one swimmer's strokes and over a frame, so two swimmers
+                // in step are one splash rather than a doubled one.
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.SwimStroke,
+                    Clips = Variants("swim-stroke"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.55f, VolumeVariance = 0.12f, PitchVariance = 0.05f,
+                    SpatialBlend = 1f, MinDistance = 8f, MaxDistance = 40f,
+                    Priority = 170, Cooldown = 0.08f,
+                },
                 // The draft (design 33 §2i): a blade drawn when a colonist is drafted. An
                 // indicator, so 2D like a chime and with no variance — a signal that wobbles reads
                 // as a fault — but on the Effects bus rather than Alerts: it answers the player's
@@ -743,6 +770,25 @@ namespace Odyssey.EditorTools
                 Clip = Require("water"),
                 Volume = 0.32f, FadeSeconds = 2.5f, MinDistance = 60f, MaxDistance = 300f,
             });
+
+            // The rain (design 43 §7). Both clips are baked to -23 LUFS, so one volume serves
+            // both and RainMix's weights are loudness. 0.6 puts a downpour about 4 dB over the
+            // day bed as it plays (the day bed is -20.4 LUFS at 0.28, so -31.5 in the mix; a
+            // downpour is -23 at 0.6, -27.4) and a drizzle a little under it, while RainMix hushes
+            // the birds. FadeSeconds is how long a change of sky takes to be heard: three, so a
+            // forced storm swells in rather than switches on. INVENTED; tuned by ear.
+            AddRain(SoundIds.AmbienceRainLight, "rain-light");
+            AddRain(SoundIds.AmbienceRainHeavy, "rain-heavy");
+
+            void AddRain(string id, string name)
+            {
+                AudioClip? clip = Clip(name);
+                if (clip == null) return;
+                catalogue.Ambience.Add(new AudioCatalogue.AmbienceDef
+                {
+                    Id = id, Clip = clip, Volume = 0.6f, FadeSeconds = 3f,
+                });
+            }
 
             // The outdoor bed: the floor of the mix, under the work rather than beside it —
             // night lower than day, because the world is quieter after dark and the bed

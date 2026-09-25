@@ -13,6 +13,13 @@
                        "that share of the time": spells have different lengths.
     minHours/maxHours  a spell's length in game hours
     minIntensity/max   a spell's intensity in per-mille: for rain, drizzle to downpour
+    moveFloorPerMille  the pace of anybody out under the sky at full intensity (design 43 §5),
+                       1000 when omitted. Scaled by intensity: a drizzle costs a fraction of it.
+                       900 is the pace the design implies for rain, RimWorld's calibration
+                       anchor (x0.90) and not a contract.
+    growBonusPerMilleAtFull  what rain adds to a sky-exposed crop's growth at full intensity,
+                       0 when omitted: 250 is a quarter faster in a downpour. The stand-in for a
+                       moisture model (design 43 §9), so a storm's is the same as rain's.
 
   What the table gives the seasons (the chance a new spell is each kind):
     Wash   45 % clear, 30 % cloudy, 19 % rain, 6 % storm    — the showery spring
@@ -65,6 +72,10 @@
     <gloomPerMille>0</gloomPerMille>
     <rainPerMille>1000</rainPerMille>
     <windPerMille>1000</windPerMille>
+    <!-- INVENTED, for the owner to tune (design 43 §5): the pace out in a downpour, and what
+         a downpour adds to an exposed crop's growth. Both scale with the spell's intensity. -->
+    <moveFloorPerMille>900</moveFloorPerMille>
+    <growBonusPerMilleAtFull>250</growBonusPerMilleAtFull>
     <seasonWeights><li>1900</li><li>1100</li><li>400</li></seasonWeights>
     <minHours>6</minHours>
     <maxHours>24</maxHours>
@@ -81,6 +92,9 @@
     <gloomPerMille>1000</gloomPerMille>
     <rainPerMille>1000</rainPerMille>
     <windPerMille>1300</windPerMille>
+    <!-- INVENTED, for the owner to tune: a storm is heavy rain, so rain's two numbers. -->
+    <moveFloorPerMille>900</moveFloorPerMille>
+    <growBonusPerMilleAtFull>250</growBonusPerMilleAtFull>
     <seasonWeights><li>600</li><li>400</li><li>100</li></seasonWeights>
     <minHours>4</minHours>
     <maxHours>12</maxHours>

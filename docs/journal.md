@@ -12570,6 +12570,94 @@ with rain, cloud with a bolt) with the word in its tooltip, from the registry.
 **Flakes seen, not fixed:** one unnamed Sim test and one unnamed Long-tier test each failed once
 and passed on the re-run, on a machine with a CI job running beside it.
 
+## 2026-09-25 — Rain touches the world: one shelter rule, pace, crops and animals
+
+Design 43 §8's second step, `weather-world`, on `claude/weather-world` off `main` after #203. The
+details are in design 43 §6a. This entry records the reasoning.
+
+**The column rule is one pure function with two readers.** `SkyColumnRule.Compute` reads four
+facts: solid, water, slab and tree. The simulation reads them from the cell grid and the drawing
+from the render mirror. The rain texture used to keep its own copy of the rule. Now it calls the
+simulation's, so the drawing and the pace penalty cannot disagree about where a roof is. The rule
+answers in layers because the simulation has no metres, and the drawing converts to metres. That
+moves one rare case in the picture, a pond on the terrace above a tree, and the picture now follows
+the simulation.
+
+**It is not built on `SkyLanding`, against the design's pointer.** `SkyLanding` stops at the first
+edifice, and a tree is one. It also refuses any column it cannot land in, and a pond is one. Rain
+has to walk past a trunk to record it and has to land on water. Building one on the other needed a
+flag that changes what `SkyLanding` means, and a flag like that is how P1 starts. This is recorded
+as a departure for the owner. I did not stop and ask before building it, and I should have.
+
+**The map hears about edits the way the drawing does.** Every edit path already tells the chunk
+grid which cell changed, so it will re-mesh. The chunk grid now also records the columns, and the
+sky map takes them on its next question. So the map and the mirror are fresh about the same edits,
+and the two tree-removal paths needed no hook: both mark the chunk, and neither marks the record
+removed. The catch was that a headless world had no chunk grid at all. Every colony gets one now.
+
+**The first board build walked the board nine times.** It took 13.8 ms on Standard and 53 ms on
+Huge, which the benchmark row caught as soon as it existed. `ComputeBoard` walks each column once
+and lifts from the trunks it found: 1.33 ms and 5.59 ms. An edit costs 7–9 µs and 9 columns on
+every board, which is what the row asserts. The build now runs during loading.
+
+**The goldens: one moved, and it was measured.** Only the ruined city rains inside its window,
+at intensity 459 from tick 0 to 10,000. The meadow and the played board are cloudy for their whole
+runs. `GoldenColonyProbe` was run on `origin/main`, on the branch, and on the branch twice more
+with one half switched off each time:
+- **pace alone** moved positions and move progress (519,595 → 341,744) and left the jobs where
+  they were;
+- **shelter alone** moved the jobs: waits went from 30 to 220, which is the four animals standing
+  under cover;
+- food, rest, mood and experience were identical in all four runs.
+
+**No golden rains on the played board.** That coverage gap is recorded rather than fixed. A
+golden that rains would need a seed picked to make it rain.
+
+**Two clock tests were measuring the sky.** `PlantGrowthTests` checks the growth window and the
+cadence, and seed 5 rolled rain over its field. The sky is now held clear with the debug command,
+re-held on each pass of the long loop, because a forced spell ends and the season takes over.
+Same fix as `BedTests`.
+
+**A negative control earned its place on its first run.** "The hog under a roof stays put in the
+rain" passed. Its control, "the same hog wanders on a dry day", failed: the board started at
+midnight, when a hog rests three times as long. So the first test would have passed on a sleeping
+hog. The animal boards now start at 08:00.
+
+**Owed:** a colonist's "In the rain" and an animal's "Sheltering" on the inspect pane (neither has
+a registry key, so no UI was invented), and rain audio.
+
+## 2026-09-25 — The rain is heard
+
+The owner supplied two recordings, a gentle rain and a heavier one, with the brief to use the
+lighter for light rain and the heavier for heavy, to vary it by weather type, and to make it
+seamless. Design 43 §7a has what was built, and `docs/reference/audio-sourcing.md` has the
+measurements.
+
+**The recordings were measured before they were cut.** Second by second, the gentle rain is
+steady for 46 s and then fades by about 7 dB over its second half. Looping the whole file would
+have swelled every forty seconds, so only the first half loops. The heavy rain is steady end to
+end, and its ends match to 0.2 LU.
+
+**Levelled by loudness, not by peak.** Every other bed is peak-normalised. The gentle rain's drips
+give it a crest about 8 dB higher than the roar's, so at a shared peak it would have been 7–8 LU
+quieter, and moving between them would have been a jump. Both are now −23 LUFS, and the limiter
+that keeps the drips under −3 dBFS touched 101 samples in 4.46 million.
+
+**Seamless, and checked by measurement rather than by ear.** Both loops fold their own tails over
+their heads with equal-power fades, because a linear fade between two uncorrelated noises dips 3 dB
+in the middle. `tools/audio/loop_seam.py` compares the step at the wrap with the file's own
+ordinary steps, and the level across the wrap with the file's own wander. Both files pass by a wide
+margin. The two beds also never restart against each other: both run for as long as it rains and
+only their weights move.
+
+**By weather type.** A drizzle is the light bed alone, rain crossfades into the roar, a downpour
+keeps a little of the drips on top, and a storm is a louder downpour recognised by its wind. The
+birds step back under all of it, most in a storm. Every number is invented and set out in
+`RainMix` for tuning by ear.
+
+**Not built:** the rain drumming on a roof. The listener is the camera, which is always outside,
+so it isn't obvious what "indoors" should mean to the ear. A playtest should decide that.
+
 ## 2026-09-25 — M11: first use, measured, and the frame the world appears
 
 d-16 said measure before building any warm-up, so a scripted tour went into the development player:
@@ -12588,6 +12676,136 @@ when the world is built. The player now sees 5.6, 3.8, 5.3 ms.
 
 The one hitch in play was a grass rung: 58 and 38 ms, because it rebuilt the whole surround to change
 its tufts. It re-strews the tufts alone now. Design 38 §25.
+
+## 2026-09-25 — The selection highlight: the selected thing lit at its own edges
+
+The owner asked for a default selection that marks the thing itself rather than a white box
+round it, with the brackets kept as an option. It should also light a tile and be cheap. They were
+interviewed on the look before anything was built (design 44 §1). Their answers: a white line round
+the silhouette with a faint lift, a soft wash and line on a tile, a dimmed line through walls, the
+primary brighter in a box selection, about 2.5 px at 1080 lines, no hover yet, and the choice in
+Settings → Interface.
+
+**Why screen-space.** The ink hull only exists on `Odyssey/Character`. A rim term would mean editing
+every pack shader and would split the instanced buckets. So the highlight is one URP feature. It
+draws a mask of only the selected thing against the camera's depth (R where the thing is seen, G for
+the whole silhouette), then two blits scissored to the thing's rectangle. With nothing selected it
+enqueues nothing.
+
+**What is masked is what is drawn, never a second rule.**
+- A figure contributes its own renderers.
+- An item, and a colonist past the figure cap, are captured as `RenderActors` appends them.
+- A building is `ChunkMesher.MeshCell`, the chunk mesher run over the one cell.
+- A tile is the quad the flush bracket already stands on.
+
+`AWallIsCollectedAsExactlyThePanelsAndCoreTheChunkDraws` holds the building case to the chunk's own
+matrices. Anything that yields nothing falls back to the brackets, so a selection is never
+invisible.
+
+**Measured, and one decision reversed by a photograph.** The lift was first an 8 % alpha blend
+towards white. Photographed against a control (the same colonist and camera, nothing selected), it
+washed the orange jumpsuit to cream. At 3.5 % it still did. A white blend in linear light raises
+orange's near-zero blue channel furthest. The lift is now a second pass that multiplies by 1.12
+(`Blend DstColor One`), and the colour holds (§6a).
+
+**Three things only a run could say.**
+- In a batch PlayMode run no camera renders by itself (there is no Game view). The rig's camera
+  rendered zero times in three frames, so the first version of the PlayMode test asserted against a
+  feature that was never asked for its passes. The tests now drive `Camera.Render` into a texture,
+  as the picture arms in `FrameTimeTests` do.
+- The instancing keep-alive test and the player build's shader guard each caught the two new
+  shaders missing from their lists. Both were fixed by the commands those guards name.
+- In the probe, a board that is not primed has no chunks meshed, and the budget meshes eleven a
+  frame. A shot must call `PrimeAll` or it photographs the actors over a void.
+
+**Cost, CPU side, one run** (1280 × 720, primitives, `TheSelectionHighlightAgainstTheFrame`): a
+render is 0.331 ms p50 with nothing selected and 0.350 ms with a tile. The GPU side is the owner's
+overlay reading at 4K. Not yet played.
+
+## 2026-09-25 — The selection highlight's first look: a group alike, and a channel that meant two things
+
+Played once. The owner: *"it worked well but when I select multiple colonists all of them bar one is
+faded out."* Asked, they chose the same full outline on every member of a group, and no brightening
+in a group at all.
+
+**The fade was a bug.** The mask's G channel carried both "how strongly selected" and "which pixels
+are the thing", and the composite read it as the second. At 0.45 strength the rest of a box
+selection were each 55 % "outside themselves", so their own line washed over their bodies. The fix
+separates the two: G is coverage, A is strength. The group rule is then two lines in the composition
+root and a `Lifted` flag the composite honours.
+
+This is `docs/bug-patterns.md`'s "one rule with two owners" in a pixel format: one channel, two
+meanings, and the bug was invisible while every strength was 1.
+
+## 2026-09-25 — Jumping a one-cell stream (JP)
+
+The owner: *"A colonist/bandit assumes to swim across a stream. If the stream is 1 tile … the colonist
+will jump across and there is already synty animation."* An interview settled the rest: one cell only,
+people with their load, water only, wading kept, walking pace, and a jump that can fail into the
+water with the harm left for the health model (design 46 §2).
+
+Two things in the code decided more than the interview did. **A stream is not level with its banks**
+— it is cut a layer down — so crossing one was never a wade at all but a drop in and a hop out, 290
+against 200 for two cells of grass. And **the cell search's heuristic counts one `Orthogonal` a
+cell**, so a two-cell step priced under 200 would have made A* inadmissible everywhere for a rare
+edge. That fixed the price at exactly 200, which is also the owner's "walking pace".
+
+The first two-cell step the simulation has ever had arrived through three doors that each had to be
+opened. The mover charged any same-layer step at the entered cell's price, so a jump would have been
+billed as one cell of grass: `HopPriceHasOneOwnerTests` guards `MoveCost.Jump` now. The region graph
+needed a link kind of its own, because `Portal` links are counted as ways between layers. And the
+per-tick legality check would have dropped every path through a jump. The dirty radius did **not**
+need to grow, which was the plan's worst guess: the link is owned by the block holding its near end,
+every cell the rule reads is within one cell of the gap, and a sibling of the randomised-edit rebuild
+test with water in it proves it. It fails if the jump's dedupe table is never cleared, which is how it
+was checked for teeth.
+
+**The roll is made at take-off and saved on success too**, so neither a load nor an order given in
+mid-air rolls it twice. The order case was found by reading `JobSystem.Interrupt`, which clears the
+path and re-adopts the step: the landing had to be carried across it. **The played board has 73 to 89
+one-cell crossings a seed**, so colonists meet them. Only the played board's simulated golden moved;
+the colony probe against `main` differs only in where colonists stand, their step progress and seven
+fewer wander legs, with needs, items and experience identical.
+
+**The Unity tier was not run.** This session had no Unity, so the drawing — `JumpArc`, the clips in
+the combat slot, the splash — is unproven beyond reading, and the catalogue rows were added to the
+asset by hand with empty clip references until the owner's rebuild fills them.
+
+**Renumbered 43 → 44 → 46 on merging `main`**, which took 43 for the weather (#208) while this was in
+review. Left as 43, `Intents.cs` would have cited "design 43 §6" for the jump and "design 43 §8" for
+the sky three lines apart. Only the lines this branch added were rewritten; the weather's own
+references are untouched.
+
+**First play, same day: the jump took off in the water, the legs did not move, and the women's jump
+was the men's.** The last two were one cause: the catalogue had never been rebuilt, so all four
+clip references were still empty and every figure glided the arc in its walk. The first was the
+merge: the shoreline (design 38 §24) reached `main` while this was in review and slopes each bank
+into the stream, so the cell's edge the arc took off from is 0.66 m under the drawn water. The lip
+is found on the drawn ground now, the last point at least 20 cm above the water (design 46 §7).
+Every jump test had run on a board with no world under it, which is why none could see it; the
+new ones build a stream with the shoreline on, and their control is that the old edge is wet.
+
+## 2026-09-25 — Marks you can always see, and a swimmer you can hear
+
+Two owner asks on the stream-jump branch. **The draft's marks were hidden by the meadow**: the
+diamond, the order line and both rings used the selection bracket's material, depth-tested like a
+solid, so lush grass, a bank or a tree in front of one took it away. They are drawn twice now by a
+shader of our own (`Odyssey/SeeThroughMark`): as before where nothing is in front, and at half
+strength through whatever is — chosen over the power lines' draw-over-everything because a ring
+drawn across the colonist standing in it loses which is in front. A selected colonist's or animal's
+bracket opts in; a cell's or an order's outline does not (design 33 §23).
+
+**The swim stroke**, from a recording the owner supplied: one sound per arm rather than per cell,
+because the file is one arm's stroke and the figure's arms alternate every 0.77 s, while a cell's
+time is the simulation's and does not know where the arms are. Timed so the file's loudest moment
+(0.18 s, measured after the bake) lands as a hand reaches forward, heard only inside 40 m of the
+camera, three takes (design 20 §9).
+
+**A catalogue rebuild is two steps, and the second is easy to forget.** `PlayScene.RebuildCatalogue`
+resolved the jump clips and, in the same write, emptied every colonist row's hair, skin and cloth
+swatch rectangles (3,026 lines), which `CharacterSwatches.Classify` fills and the recolouring
+reads — `docs/lessons.md` already says to run it after. Only the four jump links were wanted, so
+they were grafted into the committed asset by hand and the rebuild thrown away.
 
 ## 2026-09-25 — Ranged combat: ground, interview, research and design 44
 
