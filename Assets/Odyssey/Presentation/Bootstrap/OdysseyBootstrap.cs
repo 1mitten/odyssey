@@ -3278,7 +3278,7 @@ namespace Odyssey.Presentation.Bootstrap
                     if (pawn.IsAnimal && _figures != null
                         && _figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 place, out Vector3 box))
                     {
-                        _renderer.DrawSelectionBracket(place, box + Vector3.one * ItemCursorMargin, strength);
+                        _renderer.DrawSelectionBracket(place, box + Vector3.one * ItemCursorMargin, strength, seeThrough: true);
                         continue;
                     }
 
@@ -3288,7 +3288,7 @@ namespace Odyssey.Presentation.Bootstrap
                     if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
                         feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
                     _renderer.DrawSelectionBracket(
-                        feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, strength);
+                        feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, strength, seeThrough: true);
                 }
                 return;
             }
