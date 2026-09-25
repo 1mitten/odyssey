@@ -13380,3 +13380,38 @@ therefore peak-normalised on import, undoing the loudness their bakes set. The g
 committed with it off. The fix for the rest changes how loud every blow is, so it is its own PR, and
 it is unverified in Unity until somebody reads `GetData` on `combat-hit`.
 
+
+## 2026-09-25 — Cover: ground, interview, research and design 50
+
+The owner asked for cover in the reference's mould, with sandbags and barricades, built on the ranged
+line. **Grounding came first, and found three things.**
+- **The slot was already there.** The ranged hit formula has `CombatDef.coverPerMille` fixed at 1000,
+  so cover is a replacement of one global number with a per-shot value, not a new term.
+- **`LineOfSight.Walk` already lists every cell a shot crosses, in order.** A low, passable thing was
+  never struck because `LandBullet` only reaches a building through the *blocking* branch.
+- **No shooter chooses where to stand.** A shooter stops at the first step from which the line opens.
+
+The research (`a-10-cover.md`) recovered the reference's rule almost whole, despite every wiki page
+being refused: only the eight neighbours count; the angle bands run 15/27/40/52/65° with diagonals
+counted ×1.75; a shooter within 1.9 or 2.9 cells of the cover gets it at a third or two thirds; pieces
+combine by noisy-OR; a full-fill thing is worth 75 %, not 100 %; and a shot the cover wins is fired
+*into* the cover. That last rule is why a sandbag line wears down, and it is the part worth copying
+most.
+
+**The interview's one real design choice was height** (`cover-interview.md` Q9 and Q13). The first
+option offered graded low cover by layer count, and it was wrong once the code was read: a wall is
+one full layer, so from one layer up a shooter genuinely sees over it, and "tall cover keeps its full
+value" would make every wall a bunker against a rooftop. The owner took grading by the **shot's angle
+of descent** instead. It is linear in the tangent so that no `atan` enters the simulation. A shooter
+one layer up and ten cells away still faces the sandbags in full; at two cells they are nearly gone.
+
+**The expensive answer the owner chose knowingly is pass-through-only.** Cover is then always beside a
+pawn and never under her, and no line seals anyone in. The price is one owner for "may a pawn end up
+here" (`Standing.CanStandAt`), asked by every picker, plus an audit of thirty-one walkability callers
+and a sweep as the safety net. It is designed as a unit of its own (CV4) with a Long-tier property
+test, because a missed caller fails silently.
+
+**Numbering and branching.** Design 50: `main` holds 47 (ranged), 48 (cooking) and 49 (the bill
+list), and no open branch claims 50. The code will stack on `claude/ranged-combat`. The owner asked
+whether ranged was merged, and it is not: only its design merged (PR #220). The merge order is
+therefore ranged, then cover. **Next:** the owner's approval of design 50 (§10 lists five points).
