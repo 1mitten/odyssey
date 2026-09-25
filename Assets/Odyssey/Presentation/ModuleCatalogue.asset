@@ -1611,7 +1611,7 @@ MonoBehaviour:
       quality: 0
   - moduleId: odyssey.module.galley
     shape: 4
-    prefab: {fileID: 0}
+    prefab: {fileID: 1318730670100516, guid: 85e0f933beabb974a9c4889242a2ac58, type: 3}
     prefabName: SM_Prop_Kitchen_Stove_Oven_01
     prefabUnder: 
     centreXZ: 1

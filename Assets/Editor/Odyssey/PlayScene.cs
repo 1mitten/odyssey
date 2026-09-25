@@ -2505,6 +2505,9 @@ namespace Odyssey.EditorTools
         /// <summary>Where the Meadow Forest pack's own prefabs live.</summary>
         const string MeadowFolder = "Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest";
 
+        /// <summary>Packs imported after the catalogue's rows were chosen, which lose a name tie to any older pack.</summary>
+        static readonly string[] LaterPacks = { "Assets/Synty/PolygonShops" };
+
         /// <summary>
         /// Exact-name prefab lookup under Assets/Synty, looking in <paramref name="under"/> first
         /// when it is given. The packs share names — three have an <c>SM_Env_Bush_01</c> — and by
@@ -2515,11 +2518,16 @@ namespace Odyssey.EditorTools
         {
             if (!Directory.Exists(Path.GetFullPath("Assets/Synty"))) return null;
             string[] guids = AssetDatabase.FindAssets($"{exactName} t:Prefab", new[] { "Assets/Synty" });
+            // **A pack added later loses every tie** (design 48 §14). POLYGON Shops arrived with the
+            // kitchen and sorts before Western Frontier, so by path alone it took colonist 44's
+            // SM_Chr_Hunter_Male_01 and changed a colonist's body. A later pack is reached by a
+            // name nothing else has, or by asking for its folder.
             string[] paths = guids
                 .Select(AssetDatabase.GUIDToAssetPath)
                 .Where(p => string.Equals(Path.GetFileNameWithoutExtension(p), exactName,
                     StringComparison.OrdinalIgnoreCase))
-                .OrderBy(p => p, StringComparer.Ordinal)
+                .OrderBy(p => LaterPacks.Any(pack => p.StartsWith(pack + "/", StringComparison.OrdinalIgnoreCase)) ? 1 : 0)
+                .ThenBy(p => p, StringComparer.Ordinal)
                 .ToArray();
             string? path = null;
             if (!string.IsNullOrEmpty(under))
