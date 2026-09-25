@@ -4211,6 +4211,36 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
+        /// Instances of one mesh in a material the caller owns — the tracers and the muzzle flashes
+        /// (design 47 §4c), whose shader reads each instance's shape out of its matrix. One instanced
+        /// call per <see cref="MaxInstancesPerCall"/>, counted in <see cref="DrawCalls"/> like every
+        /// other overlay, and gated on <see cref="SubmitToGpu"/> so a headless test counts the calls
+        /// without a device. <paramref name="bounds"/> is the world box the instances fill: a shader
+        /// that places its vertices itself cannot be culled from the mesh's own bounds.
+        /// </summary>
+        public void DrawOverlayInstances(Material material, Mesh mesh, Matrix4x4[] matrices, int count, Bounds bounds)
+        {
+            if (count <= 0) return;
+            var rp = new RenderParams(material)
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+                worldBounds = bounds,
+            };
+
+            int sent = 0;
+            while (sent < count)
+            {
+                int n = Mathf.Min(MaxInstancesPerCall, count - sent);
+                if (SubmitToGpu) Graphics.RenderMeshInstanced(rp, mesh, 0, matrices, n, sent);
+                DrawCalls++;
+                InstancesDrawn += n;
+                sent += n;
+            }
+        }
+
+        /// <summary>
         /// A flat ring lying on the ground in the bracket's lit, translucent material — the
         /// lock-on ring under an attack order's target (design 33 §7b). <paramref name="placement"/>
         /// carries the drape, the lift and the radius in x and z; the mesh is

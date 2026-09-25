@@ -192,6 +192,33 @@ namespace Odyssey.Presentation.World
         }
 
         /// <summary>
+        /// Where a pawn's figure's chest is drawn this frame, if it has a figure (design 47 §4c): the
+        /// rig's chest bone for a person, the middle of the drawn box for an animal, else
+        /// <see cref="ProjectileDirector.ChestHeight"/> over the drawn feet. What a bullet's streak
+        /// ends on, so a hit visibly connects with the body wherever the figure has walked to.
+        /// </summary>
+        public bool TryGetChest(PawnId pawn, out Vector3 chest)
+        {
+            if (_byPawn.TryGetValue(pawn.Value, out Figure? figure) && figure.Transform != null)
+            {
+                if (figure.Chest != null)
+                {
+                    chest = figure.Chest.position;
+                    return true;
+                }
+                if (TryGetAnimalBox(pawn, out Matrix4x4 place, out _))
+                {
+                    chest = place.GetColumn(3);
+                    return true;
+                }
+                chest = figure.Transform.position + Vector3.up * ProjectileDirector.ChestHeight;
+                return true;
+            }
+            chest = default;
+            return false;
+        }
+
+        /// <summary>
         /// A combat role's clip only if it has exactly this variant. For the phases of a held state
         /// (begin, loop, end), where the first clip of the row would be the wrong half of it.
         /// </summary>

@@ -203,6 +203,9 @@ namespace Odyssey.Presentation.Bootstrap
         CorpseDirector? _corpses;
         BloodDirector? _blood;
 
+        /// <summary>Bullets in the air, their afterimages and the muzzle flashes (design 47 §4c).</summary>
+        ProjectileDirector? _projectiles;
+
         /// <summary>The one reader of the fight's events (design 33 §5).</summary>
         readonly CombatFeedback _combatFeedback = new CombatFeedback();
 
@@ -566,6 +569,12 @@ namespace Odyssey.Presentation.Bootstrap
 
         /// <summary>Blood on the ground and in the air (design 33 §10). For the frame tests that price it.</summary>
         public BloodDirector? Blood => _blood;
+
+        /// <summary>
+        /// Bullets, drawn (design 47 §4c). For the frame tests that price it: the gunfight arm times
+        /// the same fight with <see cref="ProjectileDirector.Enabled"/> off as its control.
+        /// </summary>
+        public ProjectileDirector? Projectiles => _projectiles;
 
         /// <summary>The colony's one audio director, for the presenter that applies the
         /// settings panel's faders to it live.</summary>
@@ -1077,6 +1086,10 @@ namespace Odyssey.Presentation.Bootstrap
                 // the figures where a fallen body lies, for the pool under it.
                 _blood = new BloodDirector(_model, FindBody);
                 _combatFeedback.Blood = _blood;
+                // Bullets (design 47 §4c): the seam hands every shot and every gun's landing on
+                // before the director draws, so a flight that fell between two frames is still seen.
+                _projectiles = new ProjectileDirector(_model);
+                _combatFeedback.Projectiles = _projectiles;
                 // The weather as drawn (design 43 §7): the simulation's sky, read from the snapshot.
                 _weather = new WeatherLook(_model, transform);
             }
@@ -1088,6 +1101,10 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Which blows cut (design 33 §7d), read once off the same content, for the blood seam.
             _combatFeedback.BloodSides = CombatFeedback.BloodSidesOf(_pawns?.Content);
+
+            // Which weapons are guns (design 47 §4c), off the same content, so a bullet's miss throws
+            // dust and its streak is told where it landed.
+            _combatFeedback.WeaponStyles = CombatPose.StylesOf(_pawns?.Content.Items);
 
             // The fight's floating words, beneath the HUD's own tree (design 33 §1).
             UnityEngine.UIElements.VisualElement? hudRoot =
@@ -1629,6 +1646,12 @@ namespace Odyssey.Presentation.Bootstrap
             _combatFeedback.Consume(_world.Views.Current, _world, _figures, _audio,
                 bloodLowest, bloodHighest, _tickAlpha, ticksPerSecond);
             if (_renderer != null) _blood?.Draw(_renderer, bloodLowest, bloodHighest, slice, activeLayer);
+            // Bullets (design 47 §4c), after the frame's shots and landings were handed on, in the
+            // same band as the blood: a streak from a hidden storey is cut at the band's edge. The
+            // afterimage fades on unscaled time, so it finishes on a pause while the bullets hang.
+            if (_renderer != null)
+                _projectiles?.Draw(_renderer, _world.Views.Current, _tickAlpha, Time.unscaledDeltaTime,
+                    bloodLowest, bloodHighest, _figures, slice, activeLayer);
             // The weather (design 43 §7): the published sky, the ground wetting behind it on game
             // time, drawn in two or three calls; counted in Overlays with what is laid over the world.
             if (_weather != null && Directors != null)
@@ -4095,6 +4118,9 @@ namespace Odyssey.Presentation.Bootstrap
             _corpses?.Dispose();
             _figures?.Dispose();
             _blood = null;
+            _projectiles?.Dispose();
+            _projectiles = null;
+            _combatFeedback.Projectiles = null;
             _doors?.Dispose();
             _fires?.Dispose();
             _weather?.Dispose();
