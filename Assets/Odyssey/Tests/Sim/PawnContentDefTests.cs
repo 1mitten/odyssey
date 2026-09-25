@@ -220,6 +220,14 @@ namespace Odyssey.Tests.Sim
         // had saved them). Neither side's number covers the merged pack, so it is re-taken from a
         // freshly loaded pack rather than adopted from either.
         //
+        // Moved again, 2026-09-24, by medical supplies (design 37, MD1): Item_MedicalSupplies appended
+        // at item 11 (Medicine, stackLimit 10, healPerUnit 40), and ItemDef gained healPerUnit, zero
+        // on every other item. Taken from a freshly loaded pack.
+        //
+        // And again the same day by MD2 (design 37): Skill_Medicine, Work_Doctor (rateSkill 6 on
+        // growing's curve), Job_Treat and Job_Patient, and CombatDef's eight treatment integers.
+        // Taken from a freshly loaded pack.
+        //
         // Moved a twenty-first time, 2026-09-24, by C5, friendly fire (design 33 §12): two thoughts
         // appended at indices 6 and 7 — Thought_AttackedByColonist (-80, one day, once) and
         // Thought_ColonistDied (-60, three days, three deep), the owner's -8 and -6 on our scale of
@@ -251,9 +259,18 @@ namespace Odyssey.Tests.Sim
         // renamed PawnKind_Bandit -> PawnKind_Bandit (index 3 unchanged, so no save moves), its
         // traverse mode likewise, and PawnKindDef.weapon became weapons, the bandit's being a
         // crowbar or a bat where it was a machete. No golden moved: no golden has a bandit.
+        //
+        // Moved a twenty-seventh time, 2026-09-25, at the merge of medical supplies (design 37)
+        // with main: Job_Treat and Job_Patient renumbered 22-23 -> 23-24, after Job_Steal, since
+        // bandits shipped first. Neither side's number covers the merged pack, so it is re-taken
+        // from a freshly loaded pack rather than adopted from either.
+        //
         // 2026-09-25, design 46 §6: MovementDef gained jumpFailPerMille (30) and
         // jumpFailCarryingPerMille (2,000) — the jump over a one-cell stream falling short.
-        const ulong ContentFingerprint = 17786154627329906510UL;
+        //
+        // Moved a twenty-eighth time, 2026-09-25, at the merge with main (weather, the stream
+        // jump): neither side's number covers the merged pack, re-taken fresh.
+        const ulong ContentFingerprint = 16924157478448908115UL;
 
 
         [Test]

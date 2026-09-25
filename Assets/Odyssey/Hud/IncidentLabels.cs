@@ -26,6 +26,7 @@ namespace Odyssey.Hud
             // Written down by the world when a bandit leaves the board (design 33 §17).
             "ui.bulletin.theft",
             "ui.bulletin.banditleft",
+            "ui.bulletin.medicaldrop",
         };
 
         /// <summary>The key for an incident the table does not know, so the fault is visible on screen.</summary>

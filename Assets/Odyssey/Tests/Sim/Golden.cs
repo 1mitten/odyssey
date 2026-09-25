@@ -422,6 +422,17 @@ namespace Odyssey.Tests.Sim
         /// seventeen job defs so it runs unchanged on both sides, was run on <c>main</c> (54df119a)
         /// and on the merge; the outputs are identical on all three boards.</para>
         ///
+        /// <para><b>All six moved again on 2026-09-24, with medical supplies (design 37).</b>
+        /// Every colonist carries a seventh work priority (<c>Work_Doctor</c>) and a seventh skill
+        /// (<c>Skill_Medicine</c>), and the job system two more counter pairs (<c>Job_Treat</c>,
+        /// <c>Job_Patient</c>); all are hashed. The twelfth item moved nothing: none of these
+        /// colonies has a storage zone, so no allow list grew. The
+        /// treatment cooldown is hashed only while set and nobody in these windows is hurt, so it
+        /// moved nothing, and neither did the starting kit, which Bare does not carry.
+        /// <b>Measured</b>: <c>GoldenColonyProbe</c> run on <c>main</c> (52f53112) and on this
+        /// branch; the outputs are identical on all three boards, experience and passions
+        /// included. The hash sees more; no colony does anything different.</para>
+        ///
         /// <para><b>All six moved on 2026-09-25, by the weather (design 43, <c>weather-core</c>):
         /// the first change here that is a colony doing something different, and meant to be.</b>
         /// A new system is hashed (the sky: kind, intensity, the hand-over and the spell's end),
@@ -460,8 +471,11 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 7623512122801076561UL,
-            Simulated = 1235041211937114867UL,
+            // Re-baked 2026-09-25 at the merge of medical supplies (design 37) with main
+            // (ODYSSEY_REGOLDEN=1), on top of the weather's own re-bake: the combined job, item,
+            // skill and incident tables moved the hash the same way any content append does.
+            Generated = 9731137379822364786UL,
+            Simulated = 4414416609844227350UL,
         };
 
         /// <summary>
@@ -494,8 +508,10 @@ namespace Odyssey.Tests.Sim
             // the wander legs started (105 -> 98 in the window) differ. Re-baked again on merging
             // the weather from main: Generated is main's, and the probe against main (0dff2b36)
             // differs in exactly the same three numbers and nothing else.
-            Generated = 13501204456710631653UL,
-            Simulated = 11502160785219034506UL,
+            // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
+            // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
+            Generated = 13020442238468853983UL,
+            Simulated = 937054880534657713UL,
         };
 
         /// <summary>
@@ -535,8 +551,10 @@ namespace Odyssey.Tests.Sim
             // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
             // 2026-09-23, the combat contracts step; the widened probe diffs clean.
             // 2026-09-25, weather-world: it rains here all run — pace and animal shelter (remarks).
-            Generated = 15627359971669991438UL,
-            Simulated = 7586243452283492469UL,
+            // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
+            // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
+            Generated = 6499961642199718646UL,
+            Simulated = 17342170182267167369UL,
         };
     }
 }

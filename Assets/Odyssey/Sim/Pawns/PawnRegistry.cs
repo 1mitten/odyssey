@@ -350,6 +350,9 @@ namespace Odyssey.Sim.Pawns
             new RescueJobDriver(),
             // A bandit carrying something off the board (design 33 §17), JobHandle 22.
             new StealJobDriver(),
+            // Medical supplies (design 37): 23 and 24, after Steal.
+            new TreatJobDriver(),
+            new PatientJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------

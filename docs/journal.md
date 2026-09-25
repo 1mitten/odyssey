@@ -11692,6 +11692,48 @@ against both parents, per combat's lesson of the same morning, and the campfire 
 main added to every row. `Seated` stayed a bool beside `Asleep` because `PawnFlags` is full and is
 the fight's. Design 31 §19.
 
+## 2026-09-24 — Medical supplies: the item, the doctor and the patient
+
+The owner asked for **Medical supplies**, taken from the Battle Royale pack and made uniformly small
+so they stack in stores and on shelves, as the thing the old *Medkit* key becomes. One unit restores
+a lot of health but not all of it, so that rest still has a purpose, and they asked what a weaker
+healing seam should be. The interview is `docs/research/medical-supplies-interview.md` and the plan
+is design 37. The owner approved option A and every recommended number.
+
+**The ground changed the plan.** Combat had merged that morning with health in it, but rescue (C4)
+is still a stub. A downed colonist therefore cannot reach a bed, and nothing sends a colonist who is
+hurt but standing to one, so "treated in bed" would have reached almost nobody. Option A treats the
+downed where they lie and sends the badly hurt to bed as patients.
+
+**Storage, shelves and carrying took no code**, which is the evidence that the S1/S2
+generalisations hold: `MedicalSuppliesTests` stores a stack in a Medicine-only stockpile, which
+refuses wood, and puts a full stack in one shelf bay. **Treatment needed three things the plan did
+not name.**
+- `ColonyItems.SplitOff`, because a lift takes the whole stack.
+- A patient who gets up when hungry, because nothing in the job system interrupts a running job for
+  a need.
+- A ground-lying patient who stays down only while a doctor could still come. Without it the
+  colonist lies down and stands up on the spot, once a tick.
+
+**The one existing test that moved was right to move.** `AColonistHealsInABedAndNowhereElse` failed
+because its third colonist, now a doctor by default, gave the downed colonist on the ground a bare
+dressing (−5 to +5). The test is about the bed, so its colonists have Doctor switched off. The
+dressing is covered by `MedicalTreatmentTests`.
+
+**The goldens moved and were measured.** The hash sees a seventh skill, a seventh priority and two
+job counters. `GoldenColonyProbe` gives identical output on `main` 52f53112 and on the branch for
+all three boards.
+
+**One instrument lesson.** `PlayScene.RebuildCatalogue`, run in a freshly imported worktree, wrote
+the catalogue with every colonist's appearance swatches missing, a 3,678-line diff for a 41-line
+change. The row was added by hand. The cause is not established. Read a catalogue rebuild's diff
+before committing it.
+
+Tiers: fast 1,338 Sim + 977 Hud, Long 41, all three content gates clean. EditMode 3,238 total, 3,207
+passed, 0 failed. PlayMode 115 total, 110 passed, 0 failed. It read 1 failed on the first run:
+`WorkTabCostTests` at 0.820 ms, with its baseline at 0.747 ms while the CI runner's Unity was busy,
+which is contention. It passed on the re-run.
+
 ## 2026-09-24 — The orange suits were the uniform past the figure cap
 
 The 2026-09-23 entry above ruled out three causes and left the report unreproduced. The cause was

@@ -1,4 +1,5 @@
 #nullable enable
+using Odyssey.Sim.Contracts;
 using UnityEngine;
 
 namespace Odyssey.Presentation.World
@@ -74,6 +75,24 @@ namespace Odyssey.Presentation.World
         /// projection, not the amount a physiotherapist would draw.</para>
         /// </summary>
         public static float SpineLean { get; set; } = 6f;
+
+        /// <summary>
+        /// How far each upper arm swings outward from the midline, in degrees, for a load gripped
+        /// by its two sides rather than scooped underneath — a box, not a bundle.
+        ///
+        /// <para><b>A second stance, not a replacement.</b> The scoop is right for an armful with
+        /// no shape of its own — wood, stone, a meal — where both forearms cradle the same mass
+        /// together. A box has two sides a hand can actually take hold of, and scooping it drew the
+        /// two forearms crossed in on the centre line as if it were the same kind of load (owner,
+        /// 2026-09-25, the medical kit: "hands should be gripped either side"). Zero on every other
+        /// carried thing, so the scoop is exactly what it was.</para>
+        ///
+        /// <para>Taken about the figure's own forward axis, the same axis <c>SleepPose.RightArmOut</c>
+        /// swings a sleeper's arm out across the mattress — the plane an upper arm's ordinary pitch
+        /// cannot reach on its own, because that pitch runs fore-and-aft and not side-to-side.
+        /// Mirrored by sign between the two arms, for the same reason.</para>
+        /// </summary>
+        public static float BoxGripOut { get; set; } = 20f;
 
         /// <summary>
         /// How long the figure takes to ease into the stance, and out of it again, in seconds.
@@ -173,5 +192,12 @@ namespace Odyssey.Presentation.World
         /// caller.</para>
         /// </summary>
         public static bool Drawn(float swimWeight) => swimWeight <= HideAfloatAbove;
+
+        /// <summary>
+        /// Whether <paramref name="itemDef"/> is carried by its two sides rather than scooped —
+        /// the one comparison <see cref="BoxGripOut"/>'s remarks argue for, named so the next box
+        /// is one line here and not a second special case wherever a figure is posed.
+        /// </summary>
+        public static bool GrippedBySides(int itemDef) => itemDef == ItemHandle.MedicalSupplies;
     }
 }

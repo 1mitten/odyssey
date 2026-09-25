@@ -106,6 +106,7 @@ namespace Odyssey.Sim.Events
             // Written down by the world, never fired (design 33 §17): a bandit leaving the board.
             "Incident_Theft",
             "Incident_BanditLeft",
+            "Incident_MedicalDrop",
         };
 
         public IncidentDef[] Defs = System.Array.Empty<IncidentDef>();

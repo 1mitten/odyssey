@@ -187,6 +187,9 @@ namespace Odyssey.Sim.Pawns
             // needs, because being struck outranks being hungry (design 33 §5).
             new SelfDefenceThinkNode(),
             new CriticalNeedsThinkNode(),
+            // After eating and sleeping, before work (design 37): the hurt treat themselves when
+            // nobody else can, and the badly hurt go to bed.
+            new PatientThinkNode(),
             new WorkThinkNode(),
             new IdleThinkNode(),
         };
