@@ -23,6 +23,8 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do the butterflies read as butterflies, and is the night spectacular or noise?** (`claude/ambient-butterflies`, design 52.) New game on a meadow in Larkspur or Tansy; watch the grass near the camera at the default zoom, then walk a colonist through them, then press the debug menu's new **Skip to night** (22:00, fully dark), then zoom right out. Wrong answers: the motion reads as a moth or a bee (too smooth, or a blur) rather than a jinking flutter; Many is cluttered or too sparse; the glow pool looks like a sticker on the grass rather than light; the halos shimmer as they move; the night is a mess of colour rather than a meadow of lights; a colonist walking through does not scatter them.
+
 - **Does changing a graphics setting still hitch, and is the board seen catching up?**
   (`claude/mesh-cost`, design 38 §26.) Open Settings → Graphics and flick the Grass ladder, then Ground
   relief, with the camera over thick meadow; then dig out a row of cells. A board-wide re-mesh now
