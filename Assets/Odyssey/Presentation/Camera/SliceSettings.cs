@@ -149,6 +149,25 @@ namespace Odyssey.Presentation.CameraRig
         [NonSerialized] public bool wallsLowered;
 
         /// <summary>
+        /// The player's <b>Walls down</b> choice, before build mode takes it out — what decides
+        /// where the ground is (<see cref="BelowSurface"/>), where <see cref="wallsLowered"/>
+        /// decides only what is drawn.
+        ///
+        /// <para><b>Two fields because they are two questions</b> (owner, 2026-09-25). Building
+        /// raises the walls so a player can see what they are building; it was never meant to
+        /// turn a lower terrace back into a tunnel. While the surface followed
+        /// <see cref="wallsLowered"/>, opening the palette on a lower terrace x-rayed the
+        /// terrace above and made everything on it unclickable — reported as a campfire one
+        /// terrace up that "did nothing" when clicked, and measured by
+        /// <c>CampfirePickTests</c>. A player who turns Walls down off keeps the tunnel view the
+        /// owner chose for walls up (design 42 §3a).</para>
+        ///
+        /// <para>Written once a frame by the composition root beside the other two, and not
+        /// serialised, for the same reasons.</para>
+        /// </summary>
+        [NonSerialized] public bool landscapeGround;
+
+        /// <summary>
         /// The layer of the topmost rock in the lowest column of the generated landscape —
         /// <c>WorldRenderModel.LowestOutdoorLayer</c>, handed over once a frame by the composition
         /// root with <see cref="wallsLowered"/>, or -1 before there is a world.
@@ -201,17 +220,17 @@ namespace Odyssey.Presentation.CameraRig
         public const float MinVisibleAlpha = 0.012f;
 
         /// <summary>
-        /// Is the slice underground — below the layer the game opens at? While the walls are down,
-        /// below every piece of ground instead: a lower terrace is ground, not a tunnel, and with
-        /// the walls down the x-ray is no longer what shows a player the inside of anything
-        /// (design 42 §3a). Only a slice beneath the whole landscape keeps it, because there solid
+        /// Is the slice underground — below the layer the game opens at? With Walls down chosen
+        /// (<see cref="landscapeGround"/>), below every piece of ground instead, whether or not
+        /// build mode has raised the walls: a lower terrace is ground, not a tunnel (design 42
+        /// §3a). Only a slice beneath the whole landscape keeps the x-ray, because there solid
         /// rock drawn overhead would bury the working the player went down to see.
         /// </summary>
         public bool BelowSurface(int activeLayer) => followDepth && activeLayer < SurfaceFor();
 
         /// <summary>The layer at and above which the slice counts as above ground.</summary>
         int SurfaceFor() =>
-            wallsLowered && landscapeFloor >= 0 ? Math.Min(surfaceLayer, landscapeFloor + 1) : surfaceLayer;
+            landscapeGround && landscapeFloor >= 0 ? Math.Min(surfaceLayer, landscapeFloor + 1) : surfaceLayer;
 
         /// <summary>
         /// The treatment above the slice, after <see cref="followDepth"/> has had its say.
