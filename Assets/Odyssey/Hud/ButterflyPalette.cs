@@ -152,25 +152,12 @@ namespace Odyssey.Hud
         public const float PulseFloor = 0.55f;
 
         /// <summary>
-        /// The brightest the wing itself is drawn at night, in linear HDR. At or under one on
-        /// purpose: the wing is a few pixels across, and anything thinner than bloom's
+        /// The brightest the wing is drawn at night, in linear HDR. At night the whole wing is lit in
+        /// its hue — the butterfly itself is the light (owner, 2026-09-26, design 52 §5a) — but at or
+        /// under one on purpose: the wing is a few pixels across, and anything thinner than bloom's
         /// half-resolution prefilter that crosses the 1.1 threshold shimmers as it moves (d-24 §7).
-        /// The spectacle is the halo, which the pass draws itself.
         /// </summary>
         public const float WingGlowCeiling = 1.0f;
-
-        /// <summary>The brightest point of a halo, in linear HDR — over the bloom threshold, on a
-        /// disc wide enough that the prefilter sees it whole.</summary>
-        public const float HaloPeak = 1.6f;
-
-        /// <summary>
-        /// How far a butterfly's light reaches over the ground, colonists and walls around it, in
-        /// metres (owner: "bloom plus a glow pool"). Drawn by the pass, never a URP light (d-24 §6).
-        /// </summary>
-        public const float LightRadius = 2.2f;
-
-        /// <summary>How strong that light is where it is strongest, added to the lit scene.</summary>
-        public const float LightGain = 0.45f;
 
         /// <summary>
         /// How lit-up the night is for a butterfly, 0 by day to 1 in full dark, from the sun's

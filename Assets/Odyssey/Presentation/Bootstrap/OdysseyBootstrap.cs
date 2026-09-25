@@ -1749,6 +1749,7 @@ namespace Odyssey.Presentation.Bootstrap
                     _crowd,
                     cameraRig != null ? cameraRig.Focus : transform.position,
                     cameraRig != null ? cameraRig.TargetDistance : 48f,
+                    cameraRig != null ? cameraRig.transform.position : transform.position,
                     bloodLowest, bloodHighest, slice.BelowSurface(activeLayer));
             }
             MarkSection(FrameSection.Butterflies);

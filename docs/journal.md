@@ -13678,3 +13678,11 @@ downpour would have left two out in it for ever.
 **A debug row, Skip to night**, because Skip to morning lands at four with a minute of dark left —
 too little to judge the one thing the owner asked to be spectacular.
 
+**Then the owner looked (2026-09-26)**: *"the day effect superb, the night effect is odd, it just
+needs to colour the butterflies a illuminating colour and they move around - not those big glowing
+saucers. Also make sure it's performant."* The halo and the pool of light went, and with them the
+second call and every depth-texture read; the whole wing is now lit in its hue, the pattern
+brightest, and the wings are drawn to the full zoom at night, a little larger, where the halos had
+carried a far night. The research had argued the spectacle into a separate light because the wing
+could not safely cross bloom's threshold; the owner's answer was that the wing was the spectacle all
+along, and the ceiling that argument was about still holds (design 52 §5a).

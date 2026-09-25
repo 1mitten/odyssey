@@ -22,7 +22,7 @@ Decided in `docs/research/butterflies-interview.md`; researched in `e-13-butterf
 |---|---|
 | **By day, over grass** | Butterflies near wherever the camera looks — about 200 on the default rung over open meadow — in six kinds of colouring, every one patterned differently. They flutter in short, jinking legs, alternate bursts of beats with sinking glides, and come down on the grass (a flower where one is near) to rest with their wings closed upright; a third of them bask, opening and closing slowly. |
 | **A colonist walks through** | Any butterfly within 2.5 m of a colonist or an animal goes up at once and flies off, climbing, for a second or three. |
-| **Dusk into night** | As the sun goes down the pattern on each wing — its eyespots, band and marginal spots — begins to glow, each butterfly in its own hue (cyan, magenta, amber or violet, wandering slowly), breathing brighter and dimmer about every five seconds. A soft halo hangs round each one, and it throws a pool of its colour on the grass beneath it, and on a colonist or a wall that stands in it. Zoomed right out, the wings are too small to draw and the halos go on: a meadow of coloured lights. |
+| **Dusk into night** | As the sun goes down each butterfly lights up in its own hue (cyan, magenta, amber or violet, wandering slowly) — the whole wing, the pattern brightest and the veins dimmest — breathing brighter and dimmer about every five seconds, and goes on flying. Zoomed right out they are still drawn, a little larger: coloured specks moving over the meadow. (§5a: the first build also drew a halo and a pool of light round each one; the owner took them out.) |
 | **The year** | Fullest in Tansy, thinning through Glare, **none in Rime**. |
 | **The weather** | Cloud thins them to six in ten. Rain sends them away — none at all once it rains at three-tenths — and they come back when it clears. |
 | **Anywhere else** | None indoors, over a floor or roof, over water or rock, or in a growing zone. Looking down into a mine shows none of the surface's. |
@@ -121,6 +121,8 @@ apart and every glow 25 from the night sky, in normal vision and under all three
 **The breath**: 0.15–0.25 Hz, a quick rise and a slow fall, **never below 55%** — a glow that goes dark
 reads as blinking, a signal; one that only dims reads as alive (e-14 §7).
 
+**Superseded by §5a** — kept because the reasoning about the ceiling still holds.
+
 **Three tiers of light, and why the bright one is not on the wing.** e-14 wanted the pattern elements
 at 2.5–4 × the colour, over bloom's 1.1 threshold. d-24 §7 found that a region a few pixels across,
 halved again by bloom's half-resolution prefilter, crosses the threshold on some frames and not
@@ -137,6 +139,30 @@ bloom was adopted for. So:
    butterfly's colour by its distance — so it falls on the grass, and on a colonist or a wall that
    stands in it. **Never a URP light**: Forward+ caps a camera at 256 and every light costs per
    pixel at a GPU-bound 4K (d-24 §6). It survives bloom being off.
+
+### 5a. The owner's first look: the butterfly is the light (2026-09-26)
+
+*"The day effect superb, the night effect is odd, it just needs to colour the butterflies a
+illuminating colour and they move around - not those big glowing saucers. Also make sure it's
+performant."*
+
+- **The halo and the pool of light are gone**, and with them the second draw call and every read of
+  the depth texture (`ButterflyDirectorTests` fails if `SampleSceneDepth` comes back into the shader).
+  There is one call, day or night.
+- **The whole wing is lit in its hue at night**: its emission is the glow colour × `lerp(0.35, 1, mask)`
+  — the pattern elements 1, the ground 0.48, the margin 0.38, the veins 0.35 — so it reads as a
+  lit butterfly rather than a coloured blob. The day's colour fades to a quarter under it, or the
+  moonlit albedo muddies the hue.
+- **Still under the ceiling of 1.0.** The owner asked for an illuminating colour, not bloom, and a
+  few-pixel wing over the threshold shimmers (d-24 §7). If a haze round each is wanted after the
+  next look, `ButterflyPalette.WingGlowCeiling` is the one lever, and its test says why it is 1.0.
+- **Drawn to the full zoom at night.** The halos used to carry a far night; now the wings do. The
+  wing fade moves from 80–110 m by day to 170–200 m at night as the dark comes on, and the growth
+  with distance rises from ×1.6 to ×2.4 at night between 30 and 120 m, so a butterfly at the 160 m
+  zoom is about five pixels at 1080p rather than three.
+- **Nothing is submitted that nobody can see**: when the camera's height over the focus, less the
+  highest a butterfly flies, is past the wing fade — every day view at the full zoom — the director
+  packs, uploads and submits nothing.
 
 ## 6. The wings
 
@@ -197,12 +223,39 @@ regenerated with it.
 
 ## 9. Cost
 
-Two calls whatever the count, one by day (P10): the buffer is written once a frame from the model's
-own arrays and every vertex is built from it. CPU is the step — O(live × walkers / 4) — and the
-upload of 64 bytes a butterfly.
+One call whatever the count, day or night (P10, §5a): the buffer is written once a frame from the
+model's own arrays and every vertex is built from it. CPU is the step — O(live × walkers / 4) — and
+the upload of 64 bytes a butterfly. Nothing reads the depth texture, and nothing is drawn with
+blending, so there is no fill cost beyond the wings' own few pixels.
 
-**Measured:** *(the numbers from `FrameTimeTests.TheButterfliesAgainstTheFrame`, and the preset rungs
-they set, go here.)*
+**Measured 2026-09-26** (`FrameTimeTests.TheButterfliesAgainstTheFrame`, one run, RTX 5070 Ti, after
+§5a, on a machine running six other Unity batch runs — read the differences inside the run, not the
+absolutes):
+
+| Arm | 640 × 480 frame | Butterflies section | Drawn |
+|---|---|---|---|
+| noon, Off | 2.74 ms | 0.001 ms | 0 |
+| noon, Few | 2.84 | 0.023 | 33 |
+| noon, Many | 2.88 | 0.032 | 82 |
+| noon, Swarm | 2.76 | 0.057 | 205 |
+| midnight, Off | 3.17 | 0.001 | 0 |
+| midnight, Few | 3.17 | 0.029 | 33 |
+| midnight, Many | 3.21 | 0.039 | 82 |
+| midnight, Swarm | 3.30 | 0.065 | 207 |
+
+- **The CPU cost is the section: under a tenth of a millisecond at every rung**, the step, the pack,
+  the upload and the one call together, linear in the count. The frame moves within its noise.
+- **One call at every rung, day and night**, asserted by the arm.
+- **4K could not be read on this run**: the frames at 3840 × 2160 swung between 31 and 53 ms *with no
+  butterflies drawn*, which is the other batch runs sharing the GPU, and the GPU figure is not
+  available in batch. By construction there is little to find — no blending, no depth read, 96
+  vertices a butterfly, a few pixels each — and the developer overlay's `Butterflies` line and `gpu`
+  figure in a Play session at the owner's resolution are the reading that settles it.
+- **The counts are the arm's board, not the rung**: the test board's window is part grass, so Many
+  drew 82 there; Swarm's 205 is the price of about what Many draws over open meadow.
+- **The presets stand as provisional**: nothing here argues for moving a rung down. Ultra keeps Swarm.
+- The contact sheet (`ButterflyCheck`) confirms the early out: the day view at the full 160 m zoom
+  submits nothing at all.
 
 ## 10. The build
 
@@ -215,8 +268,8 @@ nothing (the 2026-09-19 lesson). It reads a `StructuredBuffer`, so it is `#pragm
 
 - **The palette's one owner.** A colour written into the shader is a second copy the colour-blind
   test does not see.
-- **The wing's ceiling at 1.0.** Raising it for "more glow" brings back the shimmer d-24 §7 found;
-  the halo is where more glow goes.
+- **The wing's ceiling at 1.0.** Raising it for "more glow" brings back the shimmer d-24 §7 found.
+- **No halo, no pool** (§5a). The owner took them out after looking; the butterfly is the light.
 - **Real seconds.** Moving the butterflies to game time makes speed 3 strobe.
 - **The zero-target margin.** The surplus margin is nought when the target is nought — without that,
   two butterflies stayed out in every downpour for ever (found by `RainSendsThemAway`).

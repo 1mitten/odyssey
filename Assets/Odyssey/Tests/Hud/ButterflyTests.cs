@@ -431,11 +431,10 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void TheWingStaysUnderTheBloomThresholdAndTheHaloCrossesIt()
+        public void TheLitWingStaysUnderTheBloomThreshold()
         {
-            // d-24 §7: a few-pixel wing over 1.1 shimmers; the halo is wide enough to bloom.
+            // d-24 §7: a few-pixel wing over 1.1 shimmers as it moves.
             Assert.That(ButterflyPalette.WingGlowCeiling, Is.LessThanOrEqualTo(1.0f));
-            Assert.That(ButterflyPalette.HaloPeak, Is.GreaterThan(1.1f));
             Assert.That(ButterflyPalette.PulseFloor, Is.GreaterThanOrEqualTo(0.55f));
         }
 

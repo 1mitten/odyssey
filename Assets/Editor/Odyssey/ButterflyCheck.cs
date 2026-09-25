@@ -20,9 +20,9 @@ namespace Odyssey.EditorTools
     /// and the real day, with the butterfly director drawing into it — by day, at dusk and at night,
     /// from a few metres to the camera's full reach.
     ///
-    /// <para><b>Why a sheet.</b> The tests prove the draw is two calls, the habitat is grass and the
+    /// <para><b>Why a sheet.</b> The tests prove the draw is one call, the habitat is grass and the
     /// palette survives colour blindness; none of them has seen a wing. Whether the pattern reads,
-    /// whether the halo is a light or a sticker, and whether a far night is a meadow of lights or
+    /// whether a lit wing reads as a lit butterfly, and whether a far night is coloured specks or
     /// noise are questions about pictures, and the owner looks.</para>
     ///
     /// <para>Headless: <c>scripts/unity.sh shot Odyssey.EditorTools.ButterflyCheck.Run</c>. Writes
@@ -153,7 +153,8 @@ namespace Odyssey.EditorTools
                     active.ViewerPosition = rendering.transform.position;
                     active.Render(activeLayer, slice);
                     // Nought seconds: the meadow holds still for the picture and is only drawn.
-                    drawer.Sync(0f, tick, current.Hour, 0f, 0f, null, focus, shotDistance, lowest, highest, false);
+                    drawer.Sync(0f, tick, current.Hour, 0f, 0f, null, focus, shotDistance, rendering.transform.position,
+                        lowest, highest, false);
                 };
                 RenderPipelineManager.beginCameraRendering += hook;
 

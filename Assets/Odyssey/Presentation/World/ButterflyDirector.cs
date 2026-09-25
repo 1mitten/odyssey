@@ -11,14 +11,16 @@ namespace Odyssey.Presentation.World
 {
     /// <summary>
     /// The butterflies, drawn (design 52): the <see cref="ButterflyMeadow"/> stepped each frame, its
-    /// butterflies packed into one structured buffer, and two <c>Graphics.RenderPrimitives</c> calls —
-    /// every wing on screen in one, and at night every halo and pool of light in the other.
+    /// butterflies packed into one structured buffer, and one <c>Graphics.RenderPrimitives</c> call for
+    /// every butterfly on screen. At night the same call draws them lit in their own hues; the halo and
+    /// pool pass the first build had is gone (owner, 2026-09-26: "not those big glowing saucers",
+    /// design 52 §5a).
     ///
     /// <para><b>Drawn, never simulated.</b> The meadow is seeded from the world's own seed so a board
     /// shows the same butterflies twice, but nothing here reaches a cell, a save, the state hash or
     /// the pawn registry, and nothing reads it back.</para>
     ///
-    /// <para><b>The cost is two calls whatever the count</b> (P10): the buffer is written once a frame
+    /// <para><b>The cost is one call whatever the count</b> (P10): the buffer is written once a frame
     /// from the model's own arrays, and the shader builds every vertex from it by id. There is no
     /// mesh, no matrix and no per-butterfly submission. The ladder's Off rung steps and draws
     /// nothing at all.</para>
@@ -37,14 +39,12 @@ namespace Odyssey.Presentation.World
         public static float Span { get; set; } = 0.36f;
 
         /// <summary>
-        /// The camera distances over which the wings shrink out, metres. Past the far one no wing is
-        /// drawn — but at night the halos go on to the full zoom, so a far night is a meadow of
-        /// coloured lights (design 52 §5).
+        /// The camera distances over which the wings shrink out, metres: by day (x to y), and at
+        /// night (z to w), when a lit wing is worth drawing to the camera's full 160 m reach so a far
+        /// night is coloured specks moving over the meadow (design 52 §5a). Past the far end nothing
+        /// is submitted at all.
         /// </summary>
-        public static Vector2 WingFade { get; set; } = new Vector2(80f, 110f);
-
-        /// <summary>The halo's radius in metres, before its floor in pixels.</summary>
-        public const float HaloRadius = 0.32f;
+        public static Vector4 WingFade { get; set; } = new Vector4(80f, 110f, 170f, 200f);
 
         /// <summary>How far the wind global's push drifts a butterfly, metres a second per unit.</summary>
         public const float WindDrift = 0.25f;
@@ -54,7 +54,6 @@ namespace Odyssey.Presentation.World
 
         static readonly int DataId = Shader.PropertyToID("_ButterflyData");
         static readonly int ClockId = Shader.PropertyToID("_ButterflyClock");
-        static readonly int LightId = Shader.PropertyToID("_ButterflyLight");
         static readonly int SpeciesId = Shader.PropertyToID("_ButterflySpecies");
         static readonly int ShapeId = Shader.PropertyToID("_ButterflyShape");
         static readonly int Shape2Id = Shader.PropertyToID("_ButterflyShape2");
@@ -68,7 +67,6 @@ namespace Odyssey.Presentation.World
         readonly ButterflyHabitat _habitat;
         readonly ButterflyMeadow _meadow;
         readonly Material? _wings;
-        readonly Material? _glow;
         readonly float[] _walkers = new float[MaxWalkers * 3];
         Vector4[] _packed = Array.Empty<Vector4>();
         GraphicsBuffer? _buffer;
@@ -86,27 +84,10 @@ namespace Odyssey.Presentation.World
                 return;
             }
 
-            _wings = new Material(shader) { name = "Odyssey/Butterfly/Wings", hideFlags = HideFlags.DontSave };
-            _wings.SetFloat("_Mode", 0f);
-            _wings.SetFloat("_SrcBlend", (float)BlendMode.One);
-            _wings.SetFloat("_DstBlend", (float)BlendMode.Zero);
-            _wings.SetFloat("_ZWrite", 1f);
-            _wings.SetFloat("_ZTest", (float)CompareFunction.LessEqual);
+            _wings = new Material(shader) { name = "Odyssey/Butterfly", hideFlags = HideFlags.DontSave };
             // After the opaque world and the depth copy, where the grass is drawn (design 38 §13).
             _wings.renderQueue = (int)RenderQueue.GeometryLast + 1;
-
-            _glow = new Material(shader) { name = "Odyssey/Butterfly/Glow", hideFlags = HideFlags.DontSave };
-            _glow.SetFloat("_Mode", 1f);
-            _glow.SetFloat("_SrcBlend", (float)BlendMode.One);
-            _glow.SetFloat("_DstBlend", (float)BlendMode.One);
-            _glow.SetFloat("_ZWrite", 0f);
-            // The glow asks the depth texture itself where the surface behind a pixel is, so it is
-            // drawn whatever stands in front and lights a colonist as readily as the grass.
-            _glow.SetFloat("_ZTest", (float)CompareFunction.Always);
-            _glow.renderQueue = (int)RenderQueue.Transparent + 60;
-
             SetPalette(_wings);
-            SetPalette(_glow);
         }
 
         /// <summary>Whether the shader was found. Without it the meadow still steps and nothing draws.</summary>
@@ -134,7 +115,7 @@ namespace Odyssey.Presentation.World
         /// <summary>Butterflies drawn last frame.</summary>
         public int LastDrawn { get; private set; }
 
-        /// <summary>Calls submitted last frame: nought, one by day, two at night.</summary>
+        /// <summary>Calls submitted last frame: nought or one.</summary>
         public int LastDrawCalls { get; private set; }
 
         /// <summary>How far into the night last frame was, 0 to 1.</summary>
@@ -146,9 +127,11 @@ namespace Odyssey.Presentation.World
         /// game's own clock. <paramref name="lowestLayer"/> to <paramref name="highestLayer"/> is the
         /// band the slice draws; <paramref name="underground"/> is the slice's own answer and hides
         /// them all, though the meadow keeps stepping so they are where they should be on the way back.
+        /// <paramref name="viewer"/> is the camera's position: its height over the focus is the nearest
+        /// any butterfly can be, which decides whether any wing is near enough to be worth submitting.
         /// </summary>
         public void Sync(float seconds, long tick, float hour, float cloud, float rain,
-            PawnCrowdIndex? crowd, Vector3 focus, float cameraDistance,
+            PawnCrowdIndex? crowd, Vector3 focus, float cameraDistance, Vector3 viewer,
             int lowestLayer, int highestLayer, bool underground)
         {
             LastDrawn = LastDrawCalls = 0;
@@ -180,7 +163,14 @@ namespace Odyssey.Presentation.World
             _clock = (_clock + seconds) % 1800f;
             LastNight = ButterflyPalette.NightFor(Daylight.Sample(hour).SunElevation);
 
-            if (_wings == null || _glow == null || underground) return;
+            if (_wings == null || underground) return;
+
+            // Zoomed out past where any wing is drawn, nothing is packed, uploaded or submitted. The
+            // camera's height over the focus, less the highest a butterfly flies, is the nearest any
+            // of them can be; by day at the full zoom that is past every wing's fade.
+            float reach = Mathf.Lerp(WingFade.y, WingFade.w, LastNight);
+            float nearest = viewer.y - focus.y - (ButterflyMeadow.FleeAltitude + CellMetrics.SizeY);
+            if (nearest > reach) return;
 
             Draw(lowestLayer, highestLayer, focus, radius);
         }
@@ -194,7 +184,6 @@ namespace Odyssey.Presentation.World
                 _buffer?.Release();
                 _buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, capacity * 4, 16) { name = "Odyssey/Butterflies" };
                 _wings!.SetBuffer(DataId, _buffer);
-                _glow!.SetBuffer(DataId, _buffer);
             }
 
             Span<float> floats = MemoryMarshal.Cast<Vector4, float>(_packed.AsSpan());
@@ -203,7 +192,6 @@ namespace Odyssey.Presentation.World
             _buffer!.SetData(_packed, 0, 0, count * 4);
 
             SetFrame(_wings!);
-            SetFrame(_glow!);
 
             // Everything drawn is inside the window, and the window is always round the focus.
             var bounds = new Bounds(focus, new Vector3(radius * 2.4f, 200f, radius * 2.4f));
@@ -215,25 +203,15 @@ namespace Odyssey.Presentation.World
             };
             Graphics.RenderPrimitives(wings, MeshTopology.Triangles, VertsPerButterfly, count);
             LastDrawCalls++;
-
-            if (LastNight > 0.001f)
-            {
-                var glow = wings;
-                glow.material = _glow;
-                Graphics.RenderPrimitives(glow, MeshTopology.Triangles, 6, count);
-                LastDrawCalls++;
-            }
             LastDrawn = count;
         }
 
-        /// <summary>This frame's clock, night and sizes. Called once per material rather than over an
-        /// array of the two, which would allocate every frame.</summary>
+        /// <summary>This frame's clock, night and sizes.</summary>
         void SetFrame(Material material)
         {
-            material.SetVector(ClockId, new Vector4(_clock, LastNight, ButterflyPalette.WingGlowCeiling, ButterflyPalette.HaloPeak));
-            material.SetVector(LightId, new Vector4(ButterflyPalette.LightRadius, ButterflyPalette.LightGain, HaloRadius, 0f));
+            material.SetVector(ClockId, new Vector4(_clock, LastNight, ButterflyPalette.WingGlowCeiling, 0f));
             material.SetFloat(SpanId, Span);
-            material.SetVector(WingFadeId, new Vector4(WingFade.x, WingFade.y, 0f, 0f));
+            material.SetVector(WingFadeId, WingFade);
         }
 
         /// <summary>The palette, once: every colour the shader draws with comes from here.</summary>
@@ -280,7 +258,6 @@ namespace Odyssey.Presentation.World
             _buffer?.Release();
             _buffer = null;
             Destroy(_wings);
-            Destroy(_glow);
         }
 
         static void Destroy(UnityEngine.Object? o)

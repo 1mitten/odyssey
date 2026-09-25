@@ -51,6 +51,10 @@ namespace Odyssey.Tests.Presentation
             return world.Publish();
         }
 
+        /// <summary>Where the play camera stands for a focus at this distance: pitched 48 degrees.</summary>
+        static Vector3 View(Vector3 focus, float distance) =>
+            focus + new Vector3(0f, distance * Mathf.Sin(48f * Mathf.Deg2Rad), -distance * Mathf.Cos(48f * Mathf.Deg2Rad));
+
         static Vector2 Centre(int x, int z) =>
             new Vector2((x + 0.5f) * CellMetrics.SizeXZ, (z + 0.5f) * CellMetrics.SizeXZ);
 
@@ -115,6 +119,8 @@ namespace Odyssey.Tests.Presentation
 
             // Four wings of six fan triangles, and a body of eight faces.
             Assert.That(ButterflyDirector.VertsPerButterfly, Is.EqualTo((4 * 6 + 8) * 3));
+            Assert.That(source, Does.Not.Contain("SampleSceneDepth"),
+                "the night reads the depth texture again: the halo-and-pool pass is back (design 52 §5a)");
             Assert.That(Regex.Match(source, @"float4 _ButterflyGlow\[(\d+)\]").Groups[1].Value,
                 Is.EqualTo(ButterflyPalette.Glows.Length.ToString()), "the glow array is sized for another palette");
             Assert.That(Regex.Match(source, @"float4 _ButterflyShape\[(\d+)\]").Groups[1].Value,
@@ -122,11 +128,12 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
-        /// Two calls at night and one by day, whatever the count — draws in butterflies, never per
-        /// butterfly (P10) — and nothing at all on the Off rung or looking down a mine.
+        /// One call by day and by night, whatever the count — draws in butterflies, never per
+        /// butterfly (P10) — and nothing at all on the Off rung, looking down a mine, or zoomed out
+        /// past every wing by day. The night's second pass is gone (design 52 §5a).
         /// </summary>
         [Test]
-        public void TheDrawIsOneCallByDayAndTwoAtNightWhateverTheCount()
+        public void TheDrawIsOneCallDayOrNightWhateverTheCount()
         {
             RenderTestWorld world = Meadow();
             var focus = new Vector3(15f * CellMetrics.SizeXZ, 2f * CellMetrics.SizeY, 15f * CellMetrics.SizeXZ);
@@ -138,22 +145,29 @@ namespace Odyssey.Tests.Presentation
                 try
                 {
                     if (!director.Available) Assert.Ignore("the Odyssey/Butterfly shader did not compile here");
-                    director.Sync(1f / 60f, spring, 12f, 0f, 0f, null, focus, 48f, 0, 3, false);
+                    director.Sync(1f / 60f, spring, 12f, 0f, 0f, null, focus, 48f, View(focus, 48f), 0, 3, false);
                     Assert.That(director.LastDrawn, Is.GreaterThan(0), $"nothing drawn at rung {rung}");
                     Assert.That(director.LastDrawCalls, Is.EqualTo(1), $"noon at rung {rung}");
 
-                    director.Sync(1f / 60f, spring, 0f, 0f, 0f, null, focus, 48f, 0, 3, false);
+                    director.Sync(1f / 60f, spring, 0f, 0f, 0f, null, focus, 48f, View(focus, 48f), 0, 3, false);
                     Assert.That(director.LastNight, Is.EqualTo(1f));
-                    Assert.That(director.LastDrawCalls, Is.EqualTo(2), $"midnight at rung {rung}");
+                    Assert.That(director.LastDrawCalls, Is.EqualTo(1), $"midnight at rung {rung}");
 
-                    director.Sync(1f / 60f, spring, 0f, 0f, 0f, null, focus, 48f, 0, 3, underground: true);
+                    // Past every wing's reach by day nothing is packed or submitted; at night the lit
+                    // wings go on to the full zoom.
+                    director.Sync(1f / 60f, spring, 12f, 0f, 0f, null, focus, 160f, View(focus, 160f), 0, 3, false);
+                    Assert.That(director.LastDrawCalls, Is.EqualTo(0), "a 160 m day view submitted wings nobody can see");
+                    director.Sync(1f / 60f, spring, 0f, 0f, 0f, null, focus, 160f, View(focus, 160f), 0, 3, false);
+                    Assert.That(director.LastDrawCalls, Is.EqualTo(1), "a 160 m night view drew no lit wings");
+
+                    director.Sync(1f / 60f, spring, 0f, 0f, 0f, null, focus, 48f, View(focus, 48f), 0, 3, underground: true);
                     Assert.That(director.LastDrawCalls, Is.EqualTo(0), "looking down a mine drew the meadow");
 
-                    director.Sync(1f / 60f, spring, 0f, 0f, 0f, null, focus, 48f, 3, 3, false);
+                    director.Sync(1f / 60f, spring, 0f, 0f, 0f, null, focus, 48f, View(focus, 48f), 3, 3, false);
                     Assert.That(director.LastDrawn, Is.EqualTo(0), "a slice above the meadow drew its butterflies");
 
                     director.Capacity = 0;
-                    director.Sync(1f / 60f, spring, 0f, 0f, 0f, null, focus, 48f, 0, 3, false);
+                    director.Sync(1f / 60f, spring, 0f, 0f, 0f, null, focus, 48f, View(focus, 48f), 0, 3, false);
                     Assert.That(director.LastDrawCalls, Is.EqualTo(0), "the Off rung drew something");
                     Assert.That(director.Meadow.Live, Is.EqualTo(0), "the Off rung kept butterflies alive");
                 }
@@ -194,11 +208,11 @@ namespace Odyssey.Tests.Presentation
             try
             {
                 for (int f = 0; f < 60; f++)
-                    director.Sync(1f / 60f, 0, 12f, 0f, 0f, null, focus, 48f, 0, 3, false);
+                    director.Sync(1f / 60f, 0, 12f, 0f, 0f, null, focus, 48f, View(focus, 48f), 0, 3, false);
                 var before = new float[director.Meadow.Capacity];
                 for (int i = 0; i < before.Length; i++) before[i] = director.Meadow.XAt(i);
                 for (int f = 0; f < 30; f++)
-                    director.Sync(0f, 0, 12f, 0f, 0f, null, focus, 48f, 0, 3, false);
+                    director.Sync(0f, 0, 12f, 0f, 0f, null, focus, 48f, View(focus, 48f), 0, 3, false);
                 for (int i = 0; i < before.Length; i++)
                     Assert.That(director.Meadow.XAt(i), Is.EqualTo(before[i]), $"butterfly {i} moved on a pause");
             }

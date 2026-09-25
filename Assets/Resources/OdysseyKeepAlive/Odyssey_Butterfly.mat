@@ -25,13 +25,8 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _DstBlend: 0
-    - _Mode: 0
     - _Span: 0.36
-    - _SrcBlend: 1
-    - _ZTest: 4
-    - _ZWrite: 1
     m_Colors:
-    - _WingFade: {r: 80, g: 110, b: 0, a: 0}
+    - _WingFade: {r: 80, g: 110, b: 170, a: 200}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -23,7 +23,7 @@ the next session learns to ignore.
 
 ## Open
 
-- **Do the butterflies read as butterflies, and is the night spectacular or noise?** (`claude/ambient-butterflies`, design 52.) New game on a meadow in Larkspur or Tansy; watch the grass near the camera at the default zoom, then walk a colonist through them, then press the debug menu's new **Skip to night** (22:00, fully dark), then zoom right out. Wrong answers: the motion reads as a moth or a bee (too smooth, or a blur) rather than a jinking flutter; Many is cluttered or too sparse; the glow pool looks like a sticker on the grass rather than light; the halos shimmer as they move; the night is a mess of colour rather than a meadow of lights; a colonist walking through does not scatter them.
+- **Is the lit-butterfly night right now?** The first look said the day was *"superb"* and the night's halos were *"big glowing saucers"*; they are gone and each butterfly is lit in its own colour instead (design 52 §5a). (`claude/ambient-butterflies`, design 52.) New game on a meadow in Larkspur or Tansy; watch the grass near the camera at the default zoom, then walk a colonist through them, then press the debug menu's new **Skip to night** (22:00, fully dark), then zoom right out. Wrong answers: a lit butterfly reads as a coloured blob rather than a wing; the colours look flat rather than glowing (the lever is `ButterflyPalette.WingGlowCeiling`, held at 1.0 against shimmer); they shimmer or vanish as they move; zoomed out, they are too small to see or too many; a colonist walking through does not scatter them.
 
 - **Does changing a graphics setting still hitch, and is the board seen catching up?**
   (`claude/mesh-cost`, design 38 §26.) Open Settings → Graphics and flick the Grass ladder, then Ground

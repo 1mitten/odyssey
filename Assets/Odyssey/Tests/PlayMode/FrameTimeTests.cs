@@ -2262,13 +2262,12 @@ namespace Odyssey.Tests.PlayMode
         /// presets' rungs, taken on one board in one run because that is the only comparison this
         /// machine supports (§6c).
         ///
-        /// <para><b>Night is its own arm</b> because it is a second call and a different cost: the
-        /// halo and the light are an additive quad a butterfly, several metres across, reading the
-        /// depth texture — fill, not submission — so it is priced where fill is honest, at 4K.</para>
+        /// <para><b>Night is its own arm</b> because the lit wings are drawn to the full zoom (design 52
+        /// §5a), so the camera sees more of them than by day; priced where fill is honest, at 4K.</para>
         ///
         /// <para>It asserts no times. It asserts the controls: Off drew nothing and stepped
-        /// nothing; each rung drew more than the one below it; night submitted the second call and
-        /// day did not; the 4K arm drew at 4K. The season is held full (<see cref="Odyssey.Hud.ButterflyMeadow.FullSeason"/>)
+        /// nothing; each rung drew more than the one below it; day and night alike were one call; the
+        /// 4K arm drew at 4K. The season is held full (<see cref="Odyssey.Hud.ButterflyMeadow.FullSeason"/>)
         /// so the rung, not the first morning of Larkspur, decides the count.</para>
         /// </summary>
         [UnityTest, Category("Measurement")]
@@ -2321,7 +2320,7 @@ namespace Odyssey.Tests.PlayMode
                             if (rung == 0)
                                 Assert.That(butterflies.LastDrawCalls, Is.Zero, "the Off rung submitted a call");
                             else
-                                Assert.That(butterflies.LastDrawCalls, Is.EqualTo(night ? 2 : 1),
+                                Assert.That(butterflies.LastDrawCalls, Is.EqualTo(1),
                                     $"{label} submitted {butterflies.LastDrawCalls} calls");
 
                             drawn[label] = butterflies.LastDrawn;

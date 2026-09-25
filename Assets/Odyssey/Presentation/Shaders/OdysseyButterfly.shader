@@ -1,5 +1,5 @@
 // Butterflies (design 52), drawn entirely from a structured buffer: one Graphics.RenderPrimitives
-// call for every wing on screen, and at night one more for every halo and pool of light.
+// call for every butterfly on screen, by day and by night.
 //
 // **No mesh.** The body and the four wing panels are tables in this file, and a vertex is chosen
 // by its id: BUTTERFLY_VERTS corners an instance, ButterflyDirector.VertsPerButterfly says the same
@@ -15,22 +15,20 @@
 // switches, and the four night glows. This file writes none of its own, so the colour-blind test in
 // the fast tier is a test of what is drawn.
 //
-// _Mode 0 draws wings, 1 draws the glow: a halo in the air round each butterfly and the light it
-// throws on whatever is under and beside it, read from the depth texture — a pool on the grass, and
-// on a colonist or a wall that stands in it. Never a URP light (d-24 §6).
+// **At night the butterfly itself is the light** (owner, 2026-09-26, after the first look: "it just
+// needs to colour the butterflies a illuminating colour and they move around - not those big glowing
+// saucers"). The whole wing takes its glow hue, the pattern brightest and the veins dimmest, and the
+// wings are drawn out to the camera's full reach, so a far night is coloured specks moving over the
+// meadow. The halo and the pool of light that were a second pass are gone (design 52 §5a).
 Shader "Odyssey/Butterfly"
 {
     Properties
     {
-        _Mode("Mode (0 wings, 1 glow)", Float) = 0
-        [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend("Source blend", Float) = 1
-        [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend("Destination blend", Float) = 0
-        [Enum(Off, 0, On, 1)] _ZWrite("Depth write", Float) = 1
-        [Enum(UnityEngine.Rendering.CompareFunction)] _ZTest("Depth test", Float) = 4
         // Metres across the wings of an ordinary butterfly: four to six times life (e-13 §12).
         _Span("Span", Float) = 0.36
-        // x where the wings start to shrink out with distance, y where they are gone (metres).
-        _WingFade("Wing fade", Vector) = (80, 110, 0, 0)
+        // By day, x where the wings start to shrink out with distance and y where they are gone
+        // (metres); z and w the same at night, when a lit wing is drawn to the full zoom.
+        _WingFade("Wing fade", Vector) = (80, 110, 170, 200)
     }
 
     SubShader
@@ -48,9 +46,8 @@ Shader "Odyssey/Butterfly"
             Name "ButterflyForward"
             Tags { "LightMode" = "UniversalForward" }
 
-            Blend [_SrcBlend] [_DstBlend]
-            ZWrite [_ZWrite]
-            ZTest [_ZTest]
+            ZWrite On
+            ZTest LEqual
             Cull Off
 
             HLSLPROGRAM
@@ -61,16 +58,10 @@ Shader "Odyssey/Butterfly"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
             #define BUTTERFLY_VERTS 96
 
             CBUFFER_START(UnityPerMaterial)
-                float _Mode;
-                float _SrcBlend;
-                float _DstBlend;
-                float _ZWrite;
-                float _ZTest;
                 float _Span;
                 float4 _WingFade;
             CBUFFER_END
@@ -80,10 +71,8 @@ Shader "Odyssey/Butterfly"
 
             // Set by ButterflyDirector: x the ambient clock (real seconds while the world runs),
             // y how far into the night it is (0 day, 1 full dark), z the wing's glow ceiling,
-            // w the halo's peak.
+            // w unused.
             float4 _ButterflyClock;
-            // x the light's reach (m), y its gain, z the halo's radius (m), w unused.
-            float4 _ButterflyLight;
 
             // ButterflyPalette.All, four colours each (linear): ground, dark, accent, eye.
             float4 _ButterflySpecies[24];
@@ -102,9 +91,9 @@ Shader "Odyssey/Butterfly"
             {
                 float4 positionCS : SV_POSITION;
                 float3 positionWS : TEXCOORD0;
-                float2 polar      : TEXCOORD1;   // wings: (r * theta, r). Glow: the quad's corner.
-                nointerpolation float4 info : TEXCOORD2;   // wings: seed, hind, body, 0. Glow: centre xyz, eye depth.
-                nointerpolation float4 glow : TEXCOORD3;   // the night colour, pulsed, times the fade
+                float2 polar      : TEXCOORD1;   // (r * theta, r), exact across a fan triangle
+                nointerpolation float4 info : TEXCOORD2;   // seed, hind, body, 0
+                nointerpolation float4 glow : TEXCOORD3;   // the night colour, pulsed, times the night
                 half fogFactor    : TEXCOORD4;
             };
 
@@ -187,11 +176,6 @@ Shader "Odyssey/Butterfly"
                 return c * Breath(frac(t * hz + Rand(seed * 31u))) * brightness;
             }
 
-            float PixelMetres(float distance)
-            {
-                return distance * 2.0 / (_ScreenParams.y * abs(UNITY_MATRIX_P._m11));
-            }
-
             // ------------------------------------------------------------ wings
 
             Varyings Wing(uint vid, uint iid)
@@ -206,8 +190,12 @@ Shader "Odyssey/Butterfly"
                 float t = _ButterflyClock.x;
                 float flap = d1.y, rest = d1.z;
 
+                // By day the wings shrink out past _WingFade.xy; at night a lit wing is worth drawing
+                // to the full zoom, so the fade moves out to _WingFade.zw as the dark comes on.
+                float night = _ButterflyClock.y;
                 float distance = length(_WorldSpaceCameraPos.xyz - d0.xyz);
-                float wingFade = 1.0 - smoothstep(_WingFade.x, _WingFade.y, distance);
+                float2 fade = lerp(_WingFade.xy, _WingFade.zw, night);
+                float wingFade = 1.0 - smoothstep(fade.x, fade.y, distance);
                 if (wingFade <= 0.0) return Culled();
 
                 // The beat, each butterfly its own phase; the hindwing a little behind the fore.
@@ -252,8 +240,8 @@ Shader "Odyssey/Butterfly"
                 }
 
                 // Close in, life-ish; zoomed out, a little larger so a wing still reads (the birds'
-                // rule, design 50 §4).
-                float grow = lerp(1.0, 1.6, smoothstep(30.0, 90.0, distance));
+                // rule, design 50 §4) - and larger again at night, when a lit speck is the whole picture.
+                float grow = lerp(1.0, lerp(1.6, 2.4, night), smoothstep(30.0, 120.0, distance));
                 float size = _Span * lerp(0.85, 1.15, Rand(seed * 13u + 2u)) * d1.w * grow * wingFade;
                 p *= size;
 
@@ -363,88 +351,20 @@ Shader "Odyssey/Butterfly"
                 float3 ambient = lerp(unity_AmbientGround.rgb, unity_AmbientSky.rgb, 0.5 + 0.5 * abs(normal.y));
                 float3 lit = albedo * (ambient + sun.color * (0.35 + 0.65 * facing));
 
-                // At night the pattern glows; the wing itself never crosses the bloom threshold.
-                float3 emit = min(input.glow.rgb * glowMask, _ButterflyClock.z);
-                return half4(MixFog(lit + emit, input.fogFactor), 1);
-            }
-
-            // ------------------------------------------------------------ the glow
-
-            Varyings Glow(uint vid, uint iid)
-            {
-                float4 d0 = _ButterflyData[iid * 4u];
-                float4 d1 = _ButterflyData[iid * 4u + 1u];
-                float4 d2 = _ButterflyData[iid * 4u + 2u];
-                if (d1.w <= 0.0 || _ButterflyClock.y <= 0.001) return Culled();
-
-                uint seed = (uint)d2.x;
-                static const float2 Corners[6] =
-                {
-                    float2(-1, -1), float2(1, -1), float2(1, 1), float2(-1, -1), float2(1, 1), float2(-1, 1),
-                };
-                float2 c = Corners[vid % 6u];
-
-                float3 right = UNITY_MATRIX_V[0].xyz, up = UNITY_MATRIX_V[1].xyz;
-                float reach = _ButterflyLight.x;
-
-                Varyings o = (Varyings)0;
-                o.positionWS = d0.xyz + (right * c.x + up * c.y) * reach;
-                o.positionCS = TransformWorldToHClip(o.positionWS);
-                o.polar = c;
-                o.info = float4(d0.xyz, -TransformWorldToView(d0.xyz).z);
-                o.glow = float4(NightColour(seed, _ButterflyClock.x) * _ButterflyClock.y * d1.w, 0);
-                o.fogFactor = ComputeFogFactor(o.positionCS.z);
-                return o;
-            }
-
-            half4 GlowFragment(Varyings input)
-            {
-                float3 centre = input.info.xyz;
-                float reach = _ButterflyLight.x;
-
-                float2 uv = GetNormalizedScreenSpaceUV(input.positionCS);
-                float raw = SampleSceneDepth(uv);
-                float sceneEye = LinearEyeDepth(raw, _ZBufferParams);
-
-                // The halo: a soft disc in the air, never smaller than a few pixels across so bloom's
-                // half-resolution prefilter sees it whole rather than as a flicker (d-24 §7). Hidden
-                // where the scene stands in front of the butterfly.
-                float core = max(_ButterflyLight.z, 2.5 * PixelMetres(input.info.w)) / reach;
-                float rr = dot(input.polar, input.polar);
-                float halo = _ButterflyClock.w * exp(-rr / (core * core));
-                halo *= saturate((sceneEye - input.info.w) / 0.4 + 1.0);
-
-                // The light: what the scene surface behind this pixel receives from the butterfly.
-                float light = 0.0;
-                #if UNITY_REVERSED_Z
-                    bool sky = raw <= 0.000001;
-                #else
-                    bool sky = raw >= 0.999999;
-                #endif
-                if (!sky)
-                {
-                    float3 surface = ComputeWorldSpacePosition(uv, raw, UNITY_MATRIX_I_VP);
-                    float falloff = saturate(1.0 - distance(surface, centre) / reach);
-                    light = _ButterflyLight.y * falloff * falloff;
-                }
-
-                float fog = ComputeFogIntensity(input.fogFactor);
-                return half4(input.glow.rgb * (halo + light) * fog, 0);
+                // At night the whole wing is lit in its hue (design 52 §5a): the pattern brightest, the
+                // ground a little under, the veins and the margin dimmest so it still reads as a wing.
+                // The day's colour fades out under it, or moonlit albedo muddies the hue. Never over
+                // the ceiling: a wing a few pixels across that crosses bloom's threshold shimmers.
+                float night = _ButterflyClock.y;
+                float3 emit = min(input.glow.rgb * lerp(0.35, 1.0, saturate(glowMask)), _ButterflyClock.z);
+                return half4(MixFog(lit * (1.0 - 0.75 * night) + emit, input.fogFactor), 1);
             }
 
             // ------------------------------------------------------------ entry points
 
-            Varyings Vertex(uint vid : SV_VertexID, uint iid : SV_InstanceID)
-            {
-                if (_Mode < 0.5) return Wing(vid, iid);
-                return Glow(vid, iid);
-            }
+            Varyings Vertex(uint vid : SV_VertexID, uint iid : SV_InstanceID) { return Wing(vid, iid); }
 
-            half4 Fragment(Varyings input) : SV_Target
-            {
-                if (_Mode < 0.5) return WingFragment(input);
-                return GlowFragment(input);
-            }
+            half4 Fragment(Varyings input) : SV_Target { return WingFragment(input); }
             ENDHLSL
         }
     }
