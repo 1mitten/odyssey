@@ -133,5 +133,25 @@ namespace Odyssey.Presentation.World
                 new Color(0.66f, 0.54f, 0.35f),
                 new Color(0.86f, 0.78f, 0.62f),
             });
+
+        /// <summary>
+        /// Earth kicked up where a bullet goes into the ground (design 47 §4c): the near miss's
+        /// "it landed there, not on the body". Many, tiny, short and quick, in a wide cone, so it
+        /// reads as a puff off the ground rather than as anything knocked loose — the opposite
+        /// trade to <see cref="Stone"/>, whose lumps were first too small and read as dust, which
+        /// is exactly what this one is for. Browns rather than greys, because it is soil. INVENTED.
+        /// </summary>
+        public static readonly ChipRecipe Dust = new ChipRecipe(
+            count: 14,
+            speed: new Vector2(0.8f, 2.2f),
+            size: new Vector2(0.015f, 0.04f),
+            life: new Vector2(0.18f, 0.4f),
+            spread: 55f,
+            colours: new[]
+            {
+                new Color(0.55f, 0.46f, 0.34f),
+                new Color(0.44f, 0.36f, 0.26f),
+                new Color(0.66f, 0.58f, 0.45f),
+            });
     }
 }
