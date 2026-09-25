@@ -765,6 +765,70 @@ namespace Odyssey.Sim.Contracts
     /// <para>What the bullet hits is not here: it is decided on <see cref="ImpactTick"/>, against
     /// whoever is on the line then, and published as a <see cref="CombatEventView"/>.</para>
     /// </summary>
+    /// <summary>
+    /// What a raid is doing (design 50 §3), in order. The phase is the simulation's; the words and
+    /// the horn are presentation's.
+    /// </summary>
+    public enum RaidPhase : byte
+    {
+        /// <summary>Members are still walking on at the edge.</summary>
+        Arriving = 0,
+
+        /// <summary>Milling at the gather point near the edge.</summary>
+        Gathering = 1,
+
+        /// <summary>Milling at the probe point, part-way in.</summary>
+        Probing = 2,
+
+        /// <summary>Making for the target, and fighting.</summary>
+        Assaulting = 3,
+
+        /// <summary>Half the band is down: the rest are leaving by the nearest edge.</summary>
+        Withdrawing = 4,
+    }
+
+    /// <summary>
+    /// One raid on the board (design 50 §3): its phase, where its standing members are, and where
+    /// it is going. Published every frame a raid exists; neither saved nor hashed — the group is.
+    /// What the alert and the Events row jump the camera to, and what the alert is raised for.
+    /// </summary>
+    public readonly struct RaidView
+    {
+        /// <summary>The group's id, stable for its life and across a save.</summary>
+        public readonly int Id;
+
+        public readonly RaidPhase Phase;
+
+        /// <summary>The mix it was made from, as an index into the content's mix order.</summary>
+        public readonly int Mix;
+
+        /// <summary>How many it set out with.</summary>
+        public readonly int Size;
+
+        /// <summary>How many of its members are standing on the board now.</summary>
+        public readonly int Standing;
+
+        /// <summary>
+        /// The middle of its standing members — the average of their cells — or the gather point
+        /// while none has arrived.
+        /// </summary>
+        public readonly CellRef Centre;
+
+        /// <summary>Where the assault makes for: the hearth, else the colony's start.</summary>
+        public readonly CellRef Target;
+
+        public RaidView(int id, RaidPhase phase, int mix, int size, int standing, CellRef centre, CellRef target)
+        {
+            Id = id;
+            Phase = phase;
+            Mix = mix;
+            Size = size;
+            Standing = standing;
+            Centre = centre;
+            Target = target;
+        }
+    }
+
     public readonly struct ProjectileView
     {
         public readonly PawnId Shooter;
@@ -1523,6 +1587,7 @@ namespace Odyssey.Sim.Contracts
         BulletinView[] _bulletins = Array.Empty<BulletinView>();
         FallingView[] _falling = Array.Empty<FallingView>();
         ProjectileView[] _projectiles = Array.Empty<ProjectileView>();
+        RaidView[] _raids = Array.Empty<RaidView>();
         ConduitView[] _conduits = Array.Empty<ConduitView>();
         HomeCellView[] _homeCells = Array.Empty<HomeCellView>();
         PowerDeviceView[] _powerDevices = Array.Empty<PowerDeviceView>();
@@ -1614,6 +1679,9 @@ namespace Odyssey.Sim.Contracts
         public int FallingCount { get; private set; }
 
         public int ProjectileCount { get; private set; }
+
+        /// <summary>How many raids are on the board. Nearly always zero.</summary>
+        public int RaidCount { get; private set; }
 
         /// <summary>How many line cells this frame carries — see <see cref="ConduitView"/> for which.</summary>
         public int ConduitCount { get; private set; }
@@ -1745,6 +1813,9 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>Every bullet in flight, in the order it was fired. See <see cref="ProjectileView"/>.</summary>
         public ReadOnlySpan<ProjectileView> Projectiles => new ReadOnlySpan<ProjectileView>(_projectiles, 0, ProjectileCount);
+
+        /// <summary>Every raid on the board, oldest first. See <see cref="RaidView"/>.</summary>
+        public ReadOnlySpan<RaidView> Raids => new ReadOnlySpan<RaidView>(_raids, 0, RaidCount);
 
         public ReadOnlySpan<PawnView> Pawns => new ReadOnlySpan<PawnView>(_pawns, 0, PawnCount);
         public ReadOnlySpan<ThingView> Things => new ReadOnlySpan<ThingView>(_things, 0, ThingCount);
@@ -2007,6 +2078,7 @@ namespace Odyssey.Sim.Contracts
             BulletinCount = 0;
             FallingCount = 0;
             ProjectileCount = 0;
+            RaidCount = 0;
             ConduitCount = 0;
             PowerDeviceCount = 0;
             PowerNetCount = 0;
@@ -2100,6 +2172,12 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _projectiles, ProjectileCount + 1);
             _projectiles[ProjectileCount++] = view;
+        }
+
+        internal void AddRaid(in RaidView view)
+        {
+            Grow(ref _raids, RaidCount + 1);
+            _raids[RaidCount++] = view;
         }
 
         internal void AddPawn(in PawnView view)

@@ -285,7 +285,7 @@ namespace Odyssey.Sim.Pawns
         /// shared tile is the same fault whoever stands on it. A debug command, so it costs a scan
         /// of the pawns per candidate and nothing per tick.
         /// </summary>
-        int FreeSpawnCell(int anchor)
+        internal int FreeSpawnCell(int anchor)
         {
             if (!Occupied(anchor)) return anchor;
 

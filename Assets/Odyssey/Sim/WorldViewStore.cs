@@ -83,6 +83,9 @@ namespace Odyssey.Sim
 
         public void AddProjectile(in ProjectileView view) => _target.AddProjectile(view);
 
+        /// <summary>Publish one raid. See <see cref="RaidView"/>.</summary>
+        public void AddRaid(in RaidView view) => _target.AddRaid(view);
+
         /// <summary>Publish one line cell. See <see cref="ConduitView"/> for which are published when.</summary>
         public void AddConduit(in ConduitView view) => _target.AddConduit(view);
 

@@ -75,6 +75,25 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// Fill <paramref name="job"/> with a walk off the board and nothing taken: a raid member
+        /// withdrawing (design 50 §6). The thief's own job with no loot, so the leaving, the ledger
+        /// and the weapon going with it are the thief's; a member already carrying loot is in its own
+        /// theft and keeps it. False, touching nothing, with no edge to reach.
+        /// </summary>
+        public static bool FillLeave(PawnContext ctx, Pawn pawn, TraverseMode mode, Job job)
+        {
+            int edge = EdgeFrom(ctx, pawn.Cell, mode);
+            if (edge < 0) return false;
+            job.Reset(JobIndex.Steal);
+            job.TargetItem = ThingId.None;
+            job.TargetCell = -1;
+            job.DestCell = edge;
+            job.Mode = mode;
+            pawn.CombatTarget = 0;
+            return true;
+        }
+
+        /// <summary>
         /// The nearest cell on the board's edge that can be reached from <paramref name="origin"/>
         /// in <paramref name="mode"/> — <paramref name="origin"/> itself when it is on the edge.
         /// </summary>
@@ -173,8 +192,13 @@ namespace Odyssey.Sim.Pawns
             pawn.EquippedItem = 0;
             if (weapon != null) ctx.Items.Despawn(weapon);
 
-            ctx.Incidents?.Ledger.Record(
-                subject >= 0 ? IncidentHandle.Theft : IncidentHandle.BanditLeft, pawn.Cell, tick, subject, amount);
+            // A raid member leaving empty-handed writes nothing (design 50 §6): a band of a hundred
+            // would post a hundred rows. A theft is still written: that stack is a real loss.
+            bool raider = ctx.Raids?.GroupOf(pawn.Id.Value) != null;
+            if (subject >= 0 || !raider)
+                ctx.Incidents?.Ledger.Record(
+                    subject >= 0 ? IncidentHandle.Theft : IncidentHandle.BanditLeft, pawn.Cell, tick, subject, amount);
+            ctx.Raids?.NoteLeft(pawn);
 
             ctx.Combat?.Jobs.EndJob(pawn, JobStatus.Succeeded);
             ctx.Pawns.Despawn(pawn);

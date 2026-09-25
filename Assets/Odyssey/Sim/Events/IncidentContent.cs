@@ -85,6 +85,12 @@ namespace Odyssey.Sim.Events
 
         /// <summary>How long a thing is in the air before it lands. 0 lands it on the same tick.</summary>
         public int fallTicks;
+
+        /// <summary>
+        /// A raid's own parameters (design 50 §8), or null for any incident that is not one: the first
+        /// per-worker block, the shape design 23 §8 asked for rather than widening the flat set.
+        /// </summary>
+        public RaidParams? raid;
     }
 
     /// <summary>
@@ -107,6 +113,8 @@ namespace Odyssey.Sim.Events
             "Incident_Theft",
             "Incident_BanditLeft",
             "Incident_MedicalDrop",
+            // A band of hostiles from one edge (design 50), appended.
+            "Incident_Raid",
         };
 
         /// <summary>
@@ -180,6 +188,15 @@ namespace Odyssey.Sim.Events
             // What each worker's own fields must satisfy is the worker's to say.
             for (int i = 0; i < Order.Length; i++)
                 content.Workers[i].Validate(content.Defs[i], pawns);
+
+            // A raid's mix is a name the worker cannot resolve alone (it sees the pawns, not the mixes).
+            for (int i = 0; i < Order.Length; i++)
+            {
+                IncidentDef def = content.Defs[i];
+                if (def.raid != null && content.MixIndex(def.raid.mix) < 0)
+                    throw new DefLoadException(
+                        $"{def.Origin}: incident '{def.defName}' names raid mix '{def.raid.mix}', which the content does not have.");
+            }
 
             return content;
         }

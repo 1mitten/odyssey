@@ -18,20 +18,23 @@ namespace Odyssey.Sim.Events
         public readonly int Def;
 
         /// <summary>
-        /// The severity budget. Zero today and read by nothing: the points curve is the
-        /// storyteller's, and there is no storyteller. Declared so a worker that scales does not
-        /// have to widen this struct on the day one exists.
+        /// The severity budget, or 0 to let the incident choose. Read first by the raid (design 50
+        /// §9), as the band's size; the points curve a storyteller will draw it from is still to come.
         /// </summary>
         public readonly int Points;
 
         /// <summary>A landing cell the caller insists on, or null to let the worker choose.</summary>
         public readonly CellRef? Cell;
 
-        public IncidentParms(int def, int points = 0, CellRef? cell = null)
+        /// <summary>A raid mix the caller insists on, as an index into the content's mix order, or -1 for the incident's own.</summary>
+        public readonly int Mix;
+
+        public IncidentParms(int def, int points = 0, CellRef? cell = null, int mix = -1)
         {
             Def = def;
             Points = points;
             Cell = cell;
+            Mix = mix;
         }
     }
 

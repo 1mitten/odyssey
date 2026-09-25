@@ -230,7 +230,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(JobSystem.AnimalMind.Select(n => n.Name),
                 Is.EqualTo(new[] { "Downed", "AnimalCombat", "AnimalShelter", "AnimalIdle" }));
             Assert.That(JobSystem.HostileMind.Select(n => n.Name),
-                Is.EqualTo(new[] { "Downed", "Hostile", "Idle" }));
+                Is.EqualTo(new[] { "Downed", "Raid", "Hostile", "Idle" }), "the raid asks its band first (design 50 §3)");
         }
 
         [Test]
