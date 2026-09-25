@@ -221,6 +221,9 @@ namespace Odyssey.Tests.Sim
             var colony = Board(colonists: 1);
             Pawn pawn = colony.Pawns.Pawns.All[0];
             colony.World.Tick();
+            // About where she may work, not what: a seed that dealt her Ham-fisted would refuse
+            // both orders for a reason this test is not about (design 44 §4e).
+            pawn.Traits.RemoveAll(t => (colony.Pawns.Content.TraitDisabledWork[t] & (1 << WorkTypeIndex.Construction)) != 0);
             WithHearth(colony);
             SetArea(colony, pawn, PawnArea.Home);
 

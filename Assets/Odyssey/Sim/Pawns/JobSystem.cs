@@ -635,7 +635,10 @@ namespace Odyssey.Sim.Pawns
 
             switch (jobDefIndex)
             {
-                case JobIndex.Build: return BuildWorkGiver.CanBuild(pawn, ctx, target, out stand);
+                // Work her traits forbid is forbidden to an order too (design 44 §4e): the scan
+                // never offers it, and a player's order is the scan bypassed, not the person.
+                case JobIndex.Build:
+                    return pawn.CanDo(WorkTypeIndex.Construction) && BuildWorkGiver.CanBuild(pawn, ctx, target, out stand);
                 default: return false;
             }
         }

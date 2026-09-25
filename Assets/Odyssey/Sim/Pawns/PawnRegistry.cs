@@ -775,14 +775,6 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// The pawn the player ordered this one to attack, or 0 (design 33 §18b): a forced
-        /// <c>Job_AttackMelee</c> on a pawn — <c>OrderAttack</c>, and the knockback's re-issue of
-        /// it, which stays forced (§9b). <b>The one owner of "is this fight an order"</b>, which is
-        /// what the lock-on ring means. The hold's blow, fighting back, a drafted join (§15) and a
-        /// Defend join (§18) are unforced, and answer 0; so does a building, which has no pawn id
-        /// and rides the order cell (<see cref="OrderCellOf"/>).
-        /// </summary>
-        /// <summary>
         /// What is on her mind (design 44 §5b): the situational offsets that are not nought, and every memory she holds with its stack and the time until it thins. Sparse
         /// and bounded by the need and thought counts — four to eight rows for a colonist on an
         /// ordinary day — and read by the Thoughts tab by name. Published for every colonist
@@ -831,6 +823,14 @@ namespace Odyssey.Sim.Pawns
             }
         }
 
+        /// <summary>
+        /// The pawn the player ordered this one to attack, or 0 (design 33 §18b): a forced
+        /// <c>Job_AttackMelee</c> on a pawn — <c>OrderAttack</c>, and the knockback's re-issue of
+        /// it, which stays forced (§9b). <b>The one owner of "is this fight an order"</b>, which is
+        /// what the lock-on ring means. The hold's blow, fighting back, a drafted join (§15) and a
+        /// Defend join (§18) are unforced, and answer 0; so does a building, which has no pawn id
+        /// and rides the order cell (<see cref="OrderCellOf"/>).
+        /// </summary>
         public static int OrderTargetOf(Pawn pawn)
         {
             Job? job = pawn.CurrentJob;

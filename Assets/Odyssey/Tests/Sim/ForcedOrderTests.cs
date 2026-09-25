@@ -239,6 +239,30 @@ namespace Odyssey.Tests.Sim
             Assert.That(nearAt, Is.LessThan(0), "and the nearer one was still standing when it was");
         }
 
+        /// <summary>
+        /// A colonist whose trait forbids construction cannot be ordered to build either (design 44
+        /// §4e; review, 2026-09-25): <c>CanForce</c> asked only whether the site could be built, so
+        /// a Ham-fisted colonist built the wall the moment the context menu offered it. The same
+        /// order to the same colonist without the trait is the control.
+        /// </summary>
+        [Test]
+        public void WorkATraitForbidsCannotBeOrdered()
+        {
+            ColonyWorld colony = Board();
+            Pawn pawn = TheColonist(colony);
+            int site = SiteAtRange(colony, pawn, 3);
+            Assume.That(site, Is.GreaterThanOrEqualTo(0));
+            Frame(colony, site);
+
+            Assert.That(JobSystem.CanForce(pawn, colony.Pawns, JobIndex.Build, site), Is.True, "the control");
+
+            pawn.Traits.Add(TraitHandle.HamFisted);
+            Assert.That(pawn.CanDo(WorkTypeIndex.Construction), Is.False);
+            Assert.That(JobSystem.CanForce(pawn, colony.Pawns, JobIndex.Build, site), Is.False);
+            Assert.That(Force(colony, pawn, site), Is.EqualTo(IntentRejection.NotPermitted));
+            Assert.That(pawn.CurrentJob == null || !pawn.CurrentJob.PlayerForced, Is.True, "and she was given nothing");
+        }
+
         // ---- a forced job is an ordinary job, and fails like one --------------------------------
 
         /// <summary>
