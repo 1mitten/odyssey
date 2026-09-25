@@ -12883,6 +12883,139 @@ heights against the stylesheet, so a fourth line fails rather than drawing over 
 
 No golden moved. The colony probe matches `origin/main` on all three boards. Not yet played.
 
+## 2026-09-25 — The home area: interviewed, designed, briefed, nothing built
+
+The owner asked for a home zone: a switch beside Power that shows the colony's home, which is its
+outermost buildings and zones plus a perimeter of five, and a new tab to keep a colonist *Home* or let
+her go *Anywhere*, for safety. Nothing of it existed. The registry had reserved *Allowed area* and
+*Set area*, the panel catalogue had reserved an *Assign* tab, and combat §18h had deferred a
+colony-wide rules panel until there was a second rule. This is the second rule.
+
+Eight questions in two rounds, and every recommendation was taken. Home is **derived**, not painted:
+everything placed, grown by five cells as a square, per layer with one layer of margin. Felling and
+mining marks do not count, because the danger is the work outside and counting it would bring the
+danger in. The setting goes on an **Assign** tab on F4, beside the Response it mirrors, and the
+draft overrides it.
+
+Three things the exploration settled that the interview could not:
+
+- **A new colony has no home.** The played scenario gives no beds and no stockpile, and the loose
+  piles are items. So an empty home must restrict nobody, or a colonist set to Home on the first
+  morning has nothing she may do.
+- **The rebuild is lazy, not on a cadence.** A cadence has a phase. A save between a placement and
+  the next rebuild would load a world whose mask differs from its twin's until the cadence caught up.
+  A rebuild on the first question about a dirty layer is always the pure function of the hashed world.
+- **`Reachable` splits in two.** It is the question every giver asks, which makes it the right gate
+  for work. But the fight asks it too, and a gated fight would stop a Home colonist defending herself
+  at the edge of home. `CanTravel` is the physical question, and the combat files move to it.
+
+The research subagent could read no page: the proxy refuses the wikis. Its file is built from search
+extracts and recollection, marked, and it still earned its place. The reference gates eating as well
+as work and opens the gate at starvation, and gating food outright is the genre's known trap. So
+design 43 takes the escape hatch. It also found that forbidding things dropped outside home is a
+per-item flag in the reference, not a home rule, which corrects a line in a-03.
+
+The Claude Design brief asks for the tab, a house glyph as an SVG path, and the look on the board.
+The look is an overlay rather than a baked tint, because home's edge moves five cells with every wall
+and baking it would re-mesh chunks on every placement.
+
+## 2026-09-25 — The home area built on the simulation side, and the hearth
+
+Design 43 was approved and the two simulation units went in. The home mask is derived from everything
+the colony placed, grown by five cells as a square, and rebuilt lazily on the first question after a
+placement. Colonists can be kept at *Home* through one gate, `PawnContext.MayWork`. It sits inside the
+`Reachable` every work giver already asks, so a giver written next month is gated without knowing it.
+The fight, the flight and the walk of a job already begun ask `CanTravel` instead.
+
+Two things the tests taught:
+
+- **The fight needed a test that could fail.** The first "she still fights back outside home" test
+  passed with the self-defence node gated. An adjacent attacker is fought through a path that asks no
+  reach at all. The test now has the bandit strike and step back out of reach, so she has to chase.
+  That runs the node and the attack driver, and gating either now fails it.
+- **A build site is home by itself**, so a far site made an island of home and a colonist kept home
+  walked out to it.
+
+The owner then proposed that one campfire should be the centre of home, and was interviewed in two
+rounds. Capping campfires at one would cap heating, since Rime needs one per sealed room. So any
+campfire can be marked the **hearth**, the first raised takes the title, and home is only the piece
+of the footprint joined to it. That closed the island gap as a side effect: a far site is an outpost,
+and a forced build there is refused.
+
+The flood from the hearth has a cost that follows how much is home. On the benchmark's worst case,
+where the whole standard board is one base of 37,551 cells, a placement went from 0.23 to 0.67 ms.
+That is recorded with an incremental join named as the lever, not built.
+
+None of the three units moved a golden. The setting is hashed only when set, the hearth only while it
+exists, and the mask never.
+
+## 2026-09-25 — The Home view, the Assign tab and the hearth's header, to Claude Design's specification
+
+Claude Design answered the brief with a written specification rather than HTML. The owner pasted it
+in and it was built the same day as four commits on the same branch. Five places where it disagreed
+with the shipped HUD went to the owner first, and the answers are a table in design 43 §5. The
+pattern in them: **the spec's numbers came from the old mockup, and "match what ships" won every
+time.** The one rule the spec itself stated, "matching Power exactly", was the tie-break.
+
+Three things the work taught:
+
+- **Publishing every home cell's border would have drawn three outlines.** Home has a layer of
+  margin above and below, so on flat ground one base is home on three layers. Only cells a colonist
+  can stand in are published, and `WatchHomeTests` counts forty rows for an eleven-cell square as the
+  control.
+- **The version has to follow the rows, not the home.** Keyed on the home alone, a dig under the
+  border leaves the line drawn over a hole. Bumped on every dig, it rebuilds the edge for mining
+  anywhere on the board. It is keyed on both the home and the terrain, and it moves only when the rows actually
+  come out different. A dig outside home and a dig under the middle are the controls.
+- **A mid-frame republish is not free.** The first draft republished the views the moment the switch
+  moved, so the edge would appear on the same frame. That swaps the snapshot the rest of the frame is
+  drawing from. The switch now waits one frame, as power's does.
+
+None of the Presentation code has been compiled. This container has no Unity, and the fast tier builds
+only Sim and Hud. The edge pass, the hearth mark, the tab's shell, the pane's header and the Menu
+generalisation are all owed a Unity tier run on the owner's machine before the PR is judged.
+
+## 2026-09-25 — The home area reviewed, merged with main, five faults fixed
+
+A review of PR #214 on its own worktree, then a merge of the 70 commits `main` had taken meanwhile.
+
+**The merge was not a formality.** `main` had given bit 26 of the pawn's kind word to a jump in the air
+(design 46 §6), the bit this branch gave the area. The textual conflict invited keeping both lines,
+which compiles and OR-s two states into one bit, so the hash could not tell a colonist kept home from
+one mid-jump. The area is bit 27. `main`'s weather is also "design 43"; recorded, not renamed.
+
+Five faults, each with a test that failed first and a control:
+
+- **The walk home searched three layers.** Home reaches one layer past what was built, so a colonist two
+  layers down a quarry had no home cell within reach of the search, and everything else she might do
+  was gated too: she stood at the bottom for good. A probe dug quarries one, two and three deep; two
+  and three failed. The search is over every home cell now.
+- **Switching the Home view on a second time drew nothing.** The frame the switch is pressed on carries
+  no rows, the edge pass rebuilt against it, and the next frame's rows came under the same version
+  because the home had not moved. The first switch-on worked only because the rows were new. The
+  version now moves whenever watching starts.
+- **A name pressed in Assign opened the inspect pane over the tab**: both dock bottom-left. The Work
+  tab's "stay open" rule was copied without its reason, which is that the Work tab lives elsewhere.
+  The pane waits while Assign is open and shows the chosen colonist when it closes.
+- **The two hearth alerts watched yes/no**, so the No-hearth count and the hearth-down cell went stale
+  while the row stayed up.
+- **"A store is home by construction" stopped being true with the hearth.** A store at an outpost is
+  not home, and the store search never asked, so a colonist kept home dropped the haul whenever the
+  colony's best store was one she may not use. The search asks `MayWork` now. The first version of the
+  test failed for the wrong reason: two one-cell stores filled with the starting piles before the item
+  under test had a turn. The control caught that; the gate taken out is the check that it tests the fix.
+
+The lesson worth keeping is the first one: **a conflict in a bit-packed hash word is a semantic
+conflict**, and "keep both sides" is the wrong default there.
+
+Then the first Unity run this branch had ever had. **The Presentation half did not compile**, twice over:
+`HomeEdgePass` used `HudTokens` without its namespace, and the Assign geometry test enumerated a span
+inside an iterator. Both were written in a container with no Unity and both were green on the fast
+tier, which compiles neither assembly — the warning in CLAUDE.md's test section, met again. Fixed,
+EditMode is 3,848 / 3,814 / 0 failed and PlayMode 150 / 138 / 0, and the Home view's frame arm
+measured +0.07 ms and two draw calls. That arm logs the hearth mark as not shown and asserts nothing
+about it, so whether the house appears is still a question for Play.
+
 ## 2026-09-25 — Cooking, interviewed and designed (CK)
 
 The owner asked how the colony cooks, with the POLYGON Shops pack in hand: a cooker, fridges,

@@ -109,6 +109,12 @@ namespace Odyssey.Sim.Construction
         /// </summary>
         public Power.PowerGrid? Power { get; set; }
 
+        /// <summary>
+        /// The hearth (design 43 §3f), told when a campfire is raised or anything is demolished.
+        /// Null in a bare fixture with no colony.
+        /// </summary>
+        public World.Hearth? Hearth { get; set; }
+
         public GridSize Size => _grid.Size;
 
         /// <summary>
@@ -972,6 +978,8 @@ namespace Odyssey.Sim.Construction
             int at = _sites.BinarySearch(index);
             if (now) _sites.Insert(~at, index);
             else _sites.RemoveAt(at);
+            // A site is part of home (design 43 §3a), and so is whatever it is raised into.
+            _grid.Footprint.Touch(index);
         }
 
         /// <summary>
@@ -1364,6 +1372,7 @@ namespace Odyssey.Sim.Construction
         {
             _grid.Floor[cell] = covering ? CoreContent.SlabPaved : CoreContent.SlabBuilt;
             _grid.FloorStuff[cell] = stuff;
+            _grid.Footprint.Touch(cell);
         }
 
         /// <summary>
@@ -1395,6 +1404,10 @@ namespace Odyssey.Sim.Construction
             });
             _grid.Edifice[cell] = _edifices.Count - 1;
             if (second >= 0) _grid.Edifice[second] = _edifices.Count - 1;
+            _grid.Footprint.Touch(cell);
+            if (second >= 0) _grid.Footprint.Touch(second);
+            // The first campfire of a colony with no hearth becomes it (design 43 §3f).
+            if (def.edifice == CoreContent.EdificeCampfire) Hearth?.OfferRaised(cell);
             if (def.blocking)
             {
                 _grid.Flags[cell] |= CellFlags.BlockingEdifice;
@@ -1466,6 +1479,7 @@ namespace Odyssey.Sim.Construction
             stuff = _grid.FloorStuff[cell];
             _grid.Floor[cell] = CoreContent.SlabNone;
             _grid.FloorStuff[cell] = CoreContent.StuffNone;
+            _grid.Footprint.Touch(cell);
 
             MarkChunksAround(ctx, cell);
             ctx.Nav.MarkDirty(cell);
@@ -1530,6 +1544,10 @@ namespace Odyssey.Sim.Construction
             // 1. The thing itself.
             _grid.RemoveEdifice(was.CellIndex);
             if (second >= 0) _grid.RemoveEdifice(second);
+            _grid.Footprint.Touch(was.CellIndex);
+            if (second >= 0) _grid.Footprint.Touch(second);
+            // The hearth coming down leaves the colony without one; nothing takes its place.
+            Hearth?.Lost(was.CellIndex);
             PlacedEdifice gone = was;
             gone.Removed = true;
             _edifices[handle] = gone;

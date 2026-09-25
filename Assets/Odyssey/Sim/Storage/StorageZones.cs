@@ -71,7 +71,7 @@ namespace Odyssey.Sim.Storage
             _settings = settings ?? throw new System.ArgumentNullException(nameof(settings));
             _items = items ?? throw new System.ArgumentNullException(nameof(items));
             _chunks = chunks;
-            _zones = new ZoneGrid(grid.Size.CellCount);
+            _zones = new ZoneGrid(grid.Size.CellCount, grid.Footprint);
         }
 
         /// <summary>Every storage cell, ascending. Stable order is what makes a scan deterministic.</summary>

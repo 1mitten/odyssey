@@ -718,6 +718,7 @@ namespace Odyssey.Sim.Pawns
         static bool TryEat(Pawn pawn, PawnContext ctx, Job job)
         {
             var items = ctx.Items.Items;
+            bool starving = pawn.StarvationSeverity > 0;
             int best = -1;
             int bestDistance = int.MaxValue;
             int bestTier = int.MaxValue;
@@ -749,7 +750,11 @@ namespace Odyssey.Sim.Pawns
 
                 long key = ReservationManager.Key(ReservationTargetKind.Item, item.Id.Value);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
-                if (!ctx.Reachable(pawn, at)) continue;
+                // Kept home, she eats only what is inside it — until she is starving, when any
+                // meal she can reach will do (design 43 §4c). Gating food outright is the genre's
+                // known trap, and the reference and Dwarf Fortress both open the gate here. The
+                // one caller that chooses between the two questions by the pawn's state.
+                if (starving ? !ctx.CanTravel(pawn, at) : !ctx.Reachable(pawn, at)) continue;
 
                 bestTier = food.foodTier;
                 bestDistance = distance;
@@ -931,6 +936,12 @@ namespace Odyssey.Sim.Pawns
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
             if (pawn.Asleep) return false;
+
+            // Kept home and standing outside it, she walks back in before anything else (design
+            // 43 §4e). The fireside and the wander below need no such check: both ask the gated
+            // Reachable, so what they offer her is inside home already.
+            if (HomeTarget.Fill(pawn, ctx, job)) return true;
+
             // The hearth first, most of the time: an idle colony gathers round the fire, which
             // is both the thing the owner asked for and the clearest signal on the board that
             // nobody has anything to do (owner, 2026-09-23).
@@ -1630,7 +1641,9 @@ namespace Odyssey.Sim.Pawns
                     dest = ctx.Items.NearestCellWithSpace(
                         ctx.Cells, at, item.DefIndex, item.Stack, maxRadius: ClearanceRadius,
                         accept: ctx.OpenGroundFor(item.DefIndex));
-                if (dest < 0) continue;
+                // Kept home, she does not carry a load out of it (design 43 §4c). The store search
+                // already passed over stores outside home, so this refuses the open-ground drop above.
+                if (dest < 0 || !ctx.MayWork(pawn, dest)) continue;
 
                 bestDistance = distance;
                 bestItem = index;
@@ -1792,6 +1805,9 @@ namespace Odyssey.Sim.Pawns
                         if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
                         if (!ctx.Nav.Grid.CanEnter(cell, Mode)) continue;
                         if (!ctx.Nav.Reachable(from, cell, Mode)) continue;
+                        // A store at an outpost is outside home (design 43 §3f): kept home, she
+                        // passes it over for the best store inside rather than for none.
+                        if (!ctx.MayWork(pawn, cell)) continue;
 
                         bestDistance = distance;
                         best = new StorageSlot(cell, 0, cell);
@@ -1828,6 +1844,7 @@ namespace Odyssey.Sim.Pawns
                     if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
                     if (!ctx.Nav.Grid.CanEnter(cell, Mode)) continue;
                     if (!ctx.Nav.Reachable(from, cell, Mode)) continue;
+                    if (!ctx.MayWork(pawn, cell)) continue;
 
                     bestDistance = distance;
                     best = new StorageSlot(-1, Storage.StorageUnits.ContainerIdOf(unit.Edifice), cell);

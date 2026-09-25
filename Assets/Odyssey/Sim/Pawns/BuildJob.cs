@@ -269,6 +269,9 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public static int StandToBuild(PawnContext ctx, Pawn pawn, int site, bool slab)
         {
+            // The site itself first (design 43 §4c): the stances below and beneath it may be home
+            // through the vertical margin when the site is not.
+            if (!ctx.MayWork(pawn, site)) return -1;
             int beside = FellJobDriver.StandBeside(ctx, pawn, site);
             if (beside >= 0 || !slab) return beside;
 

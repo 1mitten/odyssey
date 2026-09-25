@@ -13,7 +13,8 @@ using UnityEngine.UIElements;
 namespace Odyssey.Tests.PlayMode
 {
     /// <summary>
-    /// The Research and Inventory windows as UI Toolkit actually lays them out (designs 34, 35):
+    /// The Research, Inventory and Assign windows as UI Toolkit actually lays them out (designs 34,
+    /// 35, 43):
     /// the exact size the specs give, the same size whatever is showing, and nothing drawn outside
     /// the frame. The fast tier holds the arithmetic; only a laid-out tree can say a row really is
     /// 30 px with its rule inside it, and that a pane's content did not push past the 420 px body.
@@ -67,11 +68,65 @@ namespace Odyssey.Tests.PlayMode
                     if (row.resolvedStyle.display == DisplayStyle.Flex)
                         Assert.That(row.layout.height, Is.EqualTo(InventoryLayout.RowHeight).Within(PixelGrid),
                             "a row is 30 px with its rule inside it, or fourteen of them overflow the body");
+
+                // The Assign tab (design 43 §6): 536 wide, its height the page's, and it takes the
+                // corner from Inventory. Choosing a colonist — what a press on a name does — leaves
+                // it open, where every other docked tab gives the corner to the inspect pane.
+                directors.Assign.SetOpen(true);
+                for (int i = 0; i < 5; i++) yield return null;
+                Assert.That(directors.Inventory.Open, Is.False, "Assign shares the corner, so it closes Inventory");
+                int colonists = Colonists(boot.World!.Views.Current, out Odyssey.Sim.Contracts.PawnId first);
+                int rows = Mathf.Min(colonists, AssignLayout.RowsPerPage);
+                VisualElement assign = doc.rootVisualElement.Q("assign");
+                AssertWindow(assign, AssignLayout.TabWidth,
+                    AssignLayout.PanelHeight(rows, colonists > AssignLayout.RowsPerPage), "Assign");
+                int shown = 0;
+                foreach (VisualElement row in assign.Query(className: "assign__row").ToList())
+                {
+                    if (row.resolvedStyle.display != DisplayStyle.Flex) continue;
+                    shown++;
+                    Assert.That(row.layout.height, Is.EqualTo(AssignLayout.RowHeight).Within(PixelGrid));
+                }
+                Assert.That(shown, Is.EqualTo(rows), "a row per colonist on the page");
+
+                if (first.IsValid)
+                {
+                    directors.ChooseColonist(first, boot.World!.Views.Current);
+                    for (int i = 0; i < 3; i++) yield return null;
+                    Assert.That(directors.Assign.Open, Is.True, "choosing a colonist closed the Assign tab");
+                    // Both dock bottom-left, so the pane waits for the tab to close rather than
+                    // drawing over it — and then shows whoever was chosen.
+                    VisualElement? inspect = doc.rootVisualElement.Q("inspect");
+                    Assert.That(inspect, Is.Not.Null, "the inspect pane is not in the tree");
+                    Assert.That(inspect!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                        "the inspect pane opened over the Assign tab");
+                    directors.Assign.SetOpen(false);
+                    for (int i = 0; i < 3; i++) yield return null;
+                    Assert.That(inspect.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex),
+                        "closing the Assign tab did not bring back the chosen colonist's pane");
+                }
             }
             finally
             {
                 Object.DestroyImmediate(root);
             }
+        }
+
+        /// <summary>
+        /// How many colonists the frame holds, and the first of them. Out here because a span's
+        /// enumerator is a ref struct, which an iterator method may not hold across a yield.
+        /// </summary>
+        static int Colonists(Odyssey.Sim.Contracts.WorldSnapshot frame, out Odyssey.Sim.Contracts.PawnId first)
+        {
+            int colonists = 0;
+            first = default;
+            foreach (Odyssey.Sim.Contracts.PawnView pawn in frame.Pawns)
+            {
+                if (!pawn.IsColonist) continue;
+                if (colonists == 0) first = pawn.Id;
+                colonists++;
+            }
+            return colonists;
         }
 
         static void AssertWindow(VisualElement? window, int width, int height, string what)

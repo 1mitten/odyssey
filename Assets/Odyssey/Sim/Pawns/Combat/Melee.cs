@@ -141,7 +141,7 @@ namespace Odyssey.Sim.Pawns
                 if (distance > bestDistance) continue;
                 if (distance == bestDistance
                     && (victim.Id.Value > bestVictim || (victim.Id.Value == bestVictim && other.Id.Value > best!.Id.Value))) continue;
-                if (!ctx.Reachable(me, other.Cell, TraverseMode.Colonist)) continue;
+                if (!ctx.CanTravel(me, other.Cell, TraverseMode.Colonist)) continue;
 
                 best = other;
                 bestDistance = distance;
@@ -184,7 +184,7 @@ namespace Odyssey.Sim.Pawns
                 int dx = o.X - m.X, dz = o.Z - m.Z, dy = o.Y - m.Y;
                 int distance = dx * dx + dz * dz + dy * dy;
                 if (distance >= bestDistance) continue;
-                if (!ctx.Reachable(other, me.Cell, other.OwnMode)) continue;
+                if (!ctx.CanTravel(other, me.Cell, other.OwnMode)) continue;
                 best = other;
                 bestDistance = distance;
             }
@@ -337,7 +337,7 @@ namespace Odyssey.Sim.Pawns
                     // Beside it: a cell she could strike it from, which is Melee.InReach's own test.
                     // A ring back: anywhere she can stand.
                     if (ring == 1 ? !ctx.Nav.IsLegalStep(cell, centre, mode) : !ctx.Nav.Grid.CanEnter(cell, mode)) continue;
-                    if (!ctx.Reachable(me, cell, mode)) continue;
+                    if (!ctx.CanTravel(me, cell, mode)) continue;
 
                     int ex = x - m.X, ez = z - m.Z, ey = t.Y - m.Y;
                     int distance = ex * ex + ez * ez + ey * ey;

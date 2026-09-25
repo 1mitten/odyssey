@@ -313,6 +313,7 @@ ui.command.strip,Strip,ui.command,M3,Take everything they carry
 ui.command.fightback,Fight back,ui.command,CB,"Fights only whoever strikes her. Press to change"
 ui.command.defend,Defend,ui.command,CB,"Joins a fight near her, then goes back to work. Press to change"
 ui.command.flee,Flee,ui.command,CB,"Runs from danger near her, and fights only when cornered. Press to change"
+ui.command.sethearth,Make this the hearth,ui.command,M3,"Centre the colony's home on this campfire"
 ui.menu.cancel,Cancel,ui.menu,CB,"Close the menu a right-click opened, and order nothing"
 ui.overlay.temperature,Temperature,ui.overlay,M1,Warm to cold across the slice
 ui.overlay.light,Light,ui.overlay,M1,How lit each cell is
@@ -321,6 +322,7 @@ ui.overlay.cleanliness,Cleanliness,ui.overlay,M1,"Filth, and where it matters"
 ui.overlay.roofs,Roofs,ui.overlay,M1,"What is roofed, and by what"
 ui.overlay.zones,Zones,ui.overlay,M1,"Stockpiles, growing and allowed areas"
 ui.overlay.power,Power,ui.overlay,M1,"Nets, and which of them are short"
+ui.overlay.home,Home,ui.overlay,M3,"The colony's home: the base joined to the hearth, and five cells round it"
 ui.overlay.salvage,Salvage density,ui.overlay,M1,Where the worthwhile scrap is
 ui.overlay.support,Structural support,ui.overlay,M1,What is holding this layer up
 ui.overlay.traffic,Traffic,ui.overlay,M1,Where colonists actually walk
@@ -362,6 +364,8 @@ ui.alert.darkness,No light,ui.alert,M2,Work is slowed for want of a lamp
 ui.alert.trapped,Trapped,ui.alert,M2,Someone cannot reach the colony
 ui.alert.storagestuck,Store cannot be emptied,ui.alert,M3,"A shelf is marked for removal and there is nowhere to put what is in it"
 ui.alert.norescuebed,No bed for the wounded,ui.alert,M3,"A downed colonist has no free bed to be carried to, so nobody can rescue her"
+ui.alert.nohearth,No hearth,ui.alert,M3,"Somebody is kept home, and there is no hearth: build or mark a campfire"
+ui.alert.hearthdown,Hearth marked to come down,ui.alert,M3,"When it comes down the colony has no home"
 ui.toast.skillup,{name} has reached {skill} {level},ui.toast,M2,A colonist's skill has gone up a level
 ui.bulletin.salvage,Salvage found,ui.bulletin,M2,Something worthwhile in the rubble
 ui.bulletin.scrapdrop,Scrap drop,ui.bulletin,M3,Scrap metal fell from the sky
@@ -863,3 +867,12 @@ ui.inventory.hud.inplace,"{category}, in 1 place",ui.inventory.hud,INV,The line 
 ui.inventory.hud.hint,Go moves the camera to that place and selects it. Clicking the item row itself goes to the place holding the most.,ui.inventory.hud,INV,The hint under the list of places
 ui.inventory.hud.empty,Nothing is in a store yet.,ui.inventory.hud,INV,The table when the colony's stores are empty
 ui.inventory.hud.nomatch,No item matches.,ui.inventory.hud,INV,The table when a search finds nothing
+ui.home.hearth,Hearth,ui.home,HA,"This campfire is the colony's hearth: home is the base joined to it"
+ui.tab.assign,Assign,ui.tab,HA,"Where each colonist may work, and what she does about danger"
+ui.keys.assign,Assign tab,ui.keys,HA,"Open and close the Assign tab"
+ui.assign.colonist,Colonist,ui.assign,HA,"The colonist, in the roster's order. Click to select her"
+ui.assign.area,Area,ui.assign,HA,"Where she may work. Press a cell to change it"
+ui.assign.response,Response,ui.assign,HA,"What she does about danger. Press a cell to change it"
+ui.assign.anywhere,Anywhere,ui.assign,HA,"She takes work wherever it is"
+ui.assign.home,Home,ui.assign,HA,"She takes no work outside home, and walks home when idle. A draft overrides it"
+ui.assign.nohearth,No hearth yet,ui.assign,HA,"There is no hearth, so there is no home and Home keeps nobody in. Mark a campfire as the hearth"

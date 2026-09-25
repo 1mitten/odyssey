@@ -301,11 +301,34 @@ namespace Odyssey.Sim.Contracts
         /// Handler: <c>WeatherSystem.HandleForce</c>.
         /// </summary>
         DebugSetWeather,
+
+        /// <summary>
         /// Debug-menu-only (design 46 §6): every jump over a stream falls short while
         /// <c>A</c> is non-zero, and none is forced to while it is nought. A switch on the pawn
         /// context, unsaved and unhashed. Appended last, so no recorded intent renumbers.
         /// </summary>
         DebugJumpsFail,
+
+        /// <summary>
+        /// Set where one colonist may work (design 43 §4a): <c>A</c> is her <c>PawnId</c> value and
+        /// <c>B</c> the area — 0 anywhere, 1 home. A standing setting, not an order: it may be set
+        /// on any colonist, drafted, downed or not. Handler: <c>JobSystem.HandleSetPawnArea</c>.
+        /// </summary>
+        SetPawnArea,
+
+        /// <summary>
+        /// Make the campfire in <c>Cell</c> the colony's hearth (design 43 §3f), the centre home is
+        /// grown from. Refused unless a campfire the colony built stands there. Handler:
+        /// <c>Hearth.HandleSetHearth</c>.
+        /// </summary>
+        SetHearth,
+
+        /// <summary>
+        /// Whether presentation is showing the home (design 43 §5c): <c>A</c> 1 while the Home view
+        /// is on, 0 when it goes off. While watched, the home's border cells are published. A
+        /// question, handled by the world itself as <c>WatchPower</c> is.
+        /// </summary>
+        WatchHome,
 
         /// <summary>
         /// Edit the bill list of the cooking station in <see cref="Intent.Cell"/> (design 48 §5).
@@ -417,6 +440,7 @@ namespace Odyssey.Sim.Contracts
             // A view question, like QueryCell: the lines appear the moment the tool is armed,
             // paused or not.
             IntentKind.WatchPower => true,
+            IntentKind.WatchHome => true,
             IntentKind.CancelConduit => true,
 
             // The fight's orders, on the same test (design 33 §5): a player's order over a
@@ -433,6 +457,11 @@ namespace Odyssey.Sim.Contracts
             // thing opened while paused; a row that read "on" while no jump had heard would be
             // the slab fault again. Nothing needs to run to make it true.
             IntentKind.DebugJumpsFail => true,
+            // Where a colonist may work (design 43 §4a): the same kind of setting, on a tab you
+            // open while paused.
+            IntentKind.SetPawnArea => true,
+            // The hearth (design 43 §3f): a choice made on a campfire's pane, paused or not.
+            IntentKind.SetHearth => true,
             // A cooking station's bills (design 48 §5): settings over a building, on a pane you
             // open while paused. The storage filter's argument exactly.
             IntentKind.EditBill => true,

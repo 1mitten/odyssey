@@ -2788,3 +2788,33 @@ and its own line (≈ 0.25 alpha) was laid over its whole body. The owner report
 - **The check:** coverage and strength are separate channels (G = 1, A = strength), so a weaker
   strength can only make a fainter line. `SelectionHighlightPlayTests` holds a group to one
   strength. Design 44 §7.
+
+## Two branches take the same bit of a packed hash word (2026-09-25)
+
+**P12, in the hash.** The home area gave `Pawn.Area` bit 26 of the kind word in `Pawn.ContributeTo`;
+while it was in review, `main` gave the same bit to a jump in the air. The merge conflict was one line
+each side, and "keep both" compiles: `((int)Area << 26) | (JumpLanding >= 0 ? 1 << 26 : 0)`. Nothing
+fails. The hash simply stops telling a colonist kept home from one mid-jump, which a desync hunt would
+meet months later as two worlds that hash alike and are not.
+
+- **The pattern:** two branches name the same *free slot* — a bit, an enum value, a save-section key, a
+  handle number — each correctly on its own branch. The shelf and the campfire met the same way over
+  edifice 13 (design 28 §13).
+- **Where to look for the next one:** any conflict inside `ContributeTo`'s kind word, `IntentKind`,
+  `JobHandle`, `EdificeHandle` or a save section list. Read both sides' numbers before resolving.
+- **The fix:** the later branch moves (the area is bit 27), and recorded values stay where `main`
+  recorded them (`main`'s intents first, the branch's after).
+
+## A reader that caches against a version, shown a frame with nothing in it (2026-09-25)
+
+**The Home view drew nothing on its second switch-on.** The border is published only while watched, so
+the frame the switch is pressed on carries no rows. The edge pass rebuilds on showing and recorded that
+empty frame's `HomeVersion`; the next frame's rows arrived under the **same** version, because the home
+had not moved, so the pass never rebuilt. The first switch-on worked only because the rows were new.
+
+- **The pattern:** a version that moves when the *content* changes, read by a cache that also resets on
+  *visibility*. The two notions of "new" disagree for exactly one frame, and one frame is enough.
+- **The check:** `WatchHomeTests.WatchingAgainMovesTheVersionSoAReaderBuildsTheRows`, failed before
+  the fix. The version now moves whenever watching starts (design 43 §5c). Anything else published
+  only while watched — power's lines are the other one — owes the same question.
+
