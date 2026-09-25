@@ -75,6 +75,38 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// Switching the view on again moves the version, though the home has not moved. The frame
+        /// the switch is pressed on still carries no rows (the watch is answered on the next
+        /// publish), so a reader that rebuilds on showing builds nothing against that frame's
+        /// version — and if the next frame, rows and all, came with the same version, it would
+        /// never build again. The first switch-on worked only because the rows were new then.
+        /// </summary>
+        [Test]
+        public void WatchingAgainMovesTheVersionSoAReaderBuildsTheRows()
+        {
+            var colony = Board();
+            HearthAt(colony);
+            colony.World.Tick();
+
+            Watch(colony, true);
+            Assert.That(Frame(colony).HomeCellCount, Is.GreaterThan(0), "the watched border is empty");
+
+            Watch(colony, false);
+            int hidden = Frame(colony).HomeVersion;
+            Assert.That(Frame(colony).HomeCellCount, Is.Zero);
+
+            Watch(colony, true);
+            Assert.That(Frame(colony).HomeCellCount, Is.GreaterThan(0), "watched again, the border is empty");
+            Assert.That(Frame(colony).HomeVersion, Is.Not.EqualTo(hidden),
+                "watched again, the rows came with the version of the frame that had none");
+
+            // Control: a still colony, still watched, keeps its version.
+            int shown = Frame(colony).HomeVersion;
+            colony.World.Tick();
+            Assert.That(Frame(colony).HomeVersion, Is.EqualTo(shown), "a still, watched colony moved its version");
+        }
+
+        /// <summary>
         /// The hearth's eleven-cell square has forty border cells on its own layer. The layers
         /// above and below are home too, but one is air over air and the other earth, so neither is
         /// published — the control for three outlines stacked a storey apart.

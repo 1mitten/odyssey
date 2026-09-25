@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pathing;
 
@@ -49,13 +50,11 @@ namespace Odyssey.Sim.Pawns
 
     /// <summary>
     /// The walk home (design 43 §4e): for a colonist kept home, undrafted, standing outside a home
-    /// that exists, a walk to the nearest home cell she can get to — on her own layer or the one
-    /// above or below, which is as far as a home cell can be from any layer that has one nearby.
+    /// that exists, a walk to the nearest home cell she can get to, on whatever layer it is.
     ///
-    /// <para><b>What it scales with.</b> Three layers of cells, and only for a colonist standing
+    /// <para><b>What it scales with.</b> The home's cells, and only for a colonist standing
     /// outside home with nothing to do, which is rare; everybody else pays the first comparison.
-    /// Cells are visited in index order and a tie keeps the first, so the choice is the same in a
-    /// twin.</para>
+    /// A tie keeps the lower cell index, so the choice is the same in a twin.</para>
     /// </summary>
     static class HomeTarget
     {
@@ -76,23 +75,21 @@ namespace Odyssey.Sim.Pawns
 
         static int Nearest(Pawn pawn, PawnContext ctx, World.HomeArea home)
         {
-            GridSize size = ctx.Size;
-            int stride = size.LayerStride;
-            int layer = pawn.Cell / stride;
+            // Every home cell, not the layers beside hers: home reaches one layer past what was
+            // built, so a colonist two layers down a quarry or two terraces up has no home cell on
+            // her own layer or either neighbour, and a search of those three left her there for
+            // good. A tie keeps the lower cell index, so the choice does not depend on the order
+            // the flood happened to list the cells in.
+            IReadOnlyList<int> cells = home.Cells;
             int best = -1, bestDistance = int.MaxValue;
-            for (int y = layer - 1; y <= layer + 1; y++)
+            for (int i = 0; i < cells.Count; i++)
             {
-                if ((uint)y >= (uint)size.SizeY) continue;
-                int from = y * stride, to = from + stride;
-                for (int c = from; c < to; c++)
-                {
-                    if (!home.Contains(c)) continue;
-                    int distance = ctx.Distance(pawn.Cell, c);
-                    if (distance >= bestDistance) continue;
-                    if (!ctx.CanTravel(pawn, c, TraverseMode.Colonist)) continue;
-                    bestDistance = distance;
-                    best = c;
-                }
+                int c = cells[i];
+                int distance = ctx.Distance(pawn.Cell, c);
+                if (distance > bestDistance || (distance == bestDistance && c > best)) continue;
+                if (!ctx.CanTravel(pawn, c, TraverseMode.Colonist)) continue;
+                bestDistance = distance;
+                best = c;
             }
             return best;
         }

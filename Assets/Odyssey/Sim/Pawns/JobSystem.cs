@@ -1628,8 +1628,8 @@ namespace Odyssey.Sim.Pawns
                     dest = ctx.Items.NearestCellWithSpace(
                         ctx.Cells, at, item.DefIndex, item.Stack, maxRadius: ClearanceRadius,
                         accept: ctx.OpenGroundFor(item.DefIndex));
-                // Kept home, she does not carry a load out of it (design 43 §4c). A store is home
-                // by construction, so this only ever refuses the open-ground drop above.
+                // Kept home, she does not carry a load out of it (design 43 §4c). The store search
+                // already passed over stores outside home, so this refuses the open-ground drop above.
                 if (dest < 0 || !ctx.MayWork(pawn, dest)) continue;
 
                 bestDistance = distance;
@@ -1792,6 +1792,9 @@ namespace Odyssey.Sim.Pawns
                         if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
                         if (!ctx.Nav.Grid.CanEnter(cell, Mode)) continue;
                         if (!ctx.Nav.Reachable(from, cell, Mode)) continue;
+                        // A store at an outpost is outside home (design 43 §3f): kept home, she
+                        // passes it over for the best store inside rather than for none.
+                        if (!ctx.MayWork(pawn, cell)) continue;
 
                         bestDistance = distance;
                         best = new StorageSlot(cell, 0, cell);
@@ -1828,6 +1831,7 @@ namespace Odyssey.Sim.Pawns
                     if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
                     if (!ctx.Nav.Grid.CanEnter(cell, Mode)) continue;
                     if (!ctx.Nav.Reachable(from, cell, Mode)) continue;
+                    if (!ctx.MayWork(pawn, cell)) continue;
 
                     bestDistance = distance;
                     best = new StorageSlot(-1, Storage.StorageUnits.ContainerIdOf(unit.Edifice), cell);

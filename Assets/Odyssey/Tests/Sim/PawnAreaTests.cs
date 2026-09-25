@@ -5,6 +5,7 @@ using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pawns;
+using Odyssey.Sim.Storage;
 using Odyssey.Sim.World;
 using static Odyssey.Tests.Sim.CombatFixture;
 using static Odyssey.Tests.Sim.HomeFixture;
@@ -391,6 +392,58 @@ namespace Odyssey.Tests.Sim
             Assert.That(ctx.CanTravel(pawn, outside), Is.True, "CanTravel asks the gate");
             Assert.That(Draft(colony, pawn), Is.EqualTo(IntentRejection.None));
             Assert.That(ctx.MayWork(pawn, outside), Is.True, "the draft does not open the gate");
+        }
+
+        /// <summary>
+        /// A store at an outpost is outside home (§3f), so a colonist kept home passes over it for
+        /// the best store inside — rather than dropping the haul because the best store in the
+        /// colony was one she may not use. Before the hearth every store was home by construction,
+        /// and the destination search never asked.
+        /// </summary>
+        [Test]
+        public void KeptHomeSheStoresInsideWhenTheBestStoreIsAtAnOutpost()
+        {
+            CellRef Stored(bool keptHome)
+            {
+                var colony = Board(colonists: 1);
+                colony.World.Tick();
+                WithHearth(colony);
+                Pawn pawn = colony.Pawns.Pawns.All[0];
+                if (keptHome) SetArea(colony, pawn, PawnArea.Home);
+
+                CellRef inside = Size.FromIndex(Near(colony, 0, -3)), outpost = Size.FromIndex(Near(colony, 24, 0));
+                var storage = colony.Pawns.Storage!;
+                Assume.That(storage.Designate(inside, Size.Index(inside), StoragePreset.Everything), Is.EqualTo(IntentRejection.None));
+                Assume.That(storage.Designate(outpost, Size.Index(outpost), StoragePreset.Everything), Is.EqualTo(IntentRejection.None));
+                Assume.That(Send(colony, new Intent(IntentKind.SetStoragePriority, outpost, StoragePriority.Urgent)),
+                    Is.EqualTo(IntentRejection.None), "the outpost store would not take a priority");
+                Assume.That(Home(colony).Contains(Size.Index(inside)), Is.True, "the inside store is not home");
+                Assume.That(Home(colony).Contains(Size.Index(outpost)), Is.False, "the outpost store is home");
+
+                // The starting piles would fill two one-cell stores before the bat's turn came.
+                var piles = colony.Pawns.Items.Items;
+                for (int i = 0, n = piles.Count; i < n; i++)
+                    if (!piles[i].Despawned) colony.Pawns.Items.Despawn(piles[i]);
+                ThingId bat = colony.Pawns.Items.Spawn(ItemIndex.Bat, Near(colony, 2, 0));
+                int At()
+                {
+                    foreach (var item in colony.Pawns.Items.Items)
+                        if (item.Id.Value == bat.Value) return item.Cell;
+                    return -1;
+                }
+                RunUntil(colony, () => At() >= 0 && storage.IsStorage(At()), 8_000);
+                int cell = At();
+                return cell >= 0 && storage.IsStorage(cell) ? Size.FromIndex(cell) : new CellRef(-1, -1, -1);
+            }
+
+            CellRef kept = Stored(keptHome: true);
+            Assert.That(kept.X, Is.Not.EqualTo(-1), "kept home, she never stored it: the outpost store stopped the haul");
+            Assert.That(kept.X, Is.LessThan(Size.FromIndex(Near(Board(colonists: 1), 12, 0)).X),
+                "kept home, she carried it to the outpost");
+
+            // Control: at Anywhere the outpost is the best store and she takes it there.
+            CellRef free = Stored(keptHome: false);
+            Assert.That(free.X, Is.GreaterThan(kept.X + 12), "at Anywhere she did not use the urgent outpost store: the test proves nothing");
         }
     }
 }

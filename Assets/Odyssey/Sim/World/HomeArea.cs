@@ -120,6 +120,19 @@ namespace Odyssey.Sim.World
         }
 
         /// <summary>
+        /// Every home cell, on every layer, in the order the flood from the hearth reached them.
+        /// For the walk home, which must be able to find home from any layer (design 43 §4e).
+        /// </summary>
+        public IReadOnlyList<int> Cells
+        {
+            get
+            {
+                Refresh();
+                return _joinedCells;
+            }
+        }
+
+        /// <summary>
         /// Which of this cell's four sides border a cell on the same layer that is not home, as
         /// bits: 1 west (-x), 2 east (+x), 4 south (-z), 8 north (+z). Nought for a cell that is
         /// not home or has home on every side. The board's own edge counts as not home.
@@ -216,6 +229,9 @@ namespace Odyssey.Sim.World
         /// <summary>Moves when the published rows change. What <see cref="WorldSnapshot.HomeVersion"/> carries.</summary>
         int _rowsVersion;
 
+        /// <summary>Was the view watching at the last publish?</summary>
+        bool _watched;
+
         /// <summary>
         /// Publish the home (design 43 §5c): its border cells, only while the Home view is on, and
         /// a version that moves exactly when they change. Only cells a colonist could stand in are
@@ -230,7 +246,15 @@ namespace Odyssey.Sim.World
         /// </summary>
         public void Contribute(SimWorld world, SnapshotWriter writer)
         {
-            if (world.Views.WatchHome)
+            bool watching = world.Views.WatchHome;
+            // Watching starts: the version moves whether or not the rows did. The frame the switch
+            // was pressed on carried no rows, and a reader that built against it holds that
+            // frame's version — so rows arriving under the same version would never be drawn, and
+            // every switch-on after the first would show nothing.
+            if (watching && !_watched) _rowsVersion++;
+            _watched = watching;
+
+            if (watching)
             {
                 Refresh();
                 int ground = _ctx.Nav.GraphVersion;
