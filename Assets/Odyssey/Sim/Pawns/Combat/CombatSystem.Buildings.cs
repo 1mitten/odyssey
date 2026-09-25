@@ -47,7 +47,7 @@ namespace Odyssey.Sim.Pawns
             _ctx.CombatLog.Report(CombatEventKind.Demolished, by, default, _ctx.Size.FromIndex(building.Anchor), tick,
                 building.Edifice, weapon);
             int handle = building.Handle;
-            _ctx.Defer(_ => Demolish(handle));
+            _ctx.Defer(_ => Demolish(handle, tick));
         }
 
         /// <summary>
@@ -60,11 +60,44 @@ namespace Odyssey.Sim.Pawns
         /// <c>DeconstructJobDriver.TakeApart</c>'s, which is not called. Nothing if it has already
         /// gone by another route in the same tick.
         /// </summary>
-        void Demolish(int handle)
+        void Demolish(int handle, int tick)
         {
             if (_ctx.Construction == null) return;
             if (!BuildingTargets.TryStanding(_ctx, handle, out BuildingTarget building)) return;
-            _ctx.Construction.Demolish(_ctx, building.Anchor, out _);
+            if (!_ctx.Construction.Demolish(_ctx, building.Anchor, out _)) return;
+            LeaveWreck(building, tick);
+        }
+
+        /// <summary>
+        /// What a building destroyed in a fight leaves (design 50 §2e, the owner: a quarter of its
+        /// cost for cover): its row's <see cref="Construction.BuildingDef.wreckRefundPerMille"/> of
+        /// the material it was built of, the fraction settled by a seeded draw so it is neither
+        /// always lost nor always kept. Nought for every building older than cover, which keeps
+        /// design 33's "no refund" for them.
+        /// </summary>
+        void LeaveWreck(in BuildingTarget building, int tick)
+        {
+            int row = Construction.ConstructionContent.BuildingForEdifice(building.Edifice);
+            if (row == Contracts.BuildingHandle.None) return;
+            Construction.BuildingDef def = Construction.ConstructionContent.BuildingAt(row);
+            if (def.wreckRefundPerMille <= 0 || def.costCount <= 0) return;
+            int stuff = Construction.ConstructionContent.StuffForValue(building.Stuff);
+            if (stuff == Contracts.StuffHandle.None) return;
+            int item = Construction.ConstructionContent.StuffAt(stuff).item;
+            if (item < 0) return;
+
+            long share = (long)def.costCount * def.wreckRefundPerMille;
+            int count = (int)(share / 1_000);
+            int fraction = (int)(share % 1_000);
+            if (fraction > 0)
+            {
+                var rng = DeterministicRandom.ForTick(_ctx.Seed, (building.Anchor ^ tick) + 104_729, PawnPurpose.DeconstructRefund);
+                if (rng.NextInt(1_000) < fraction) count++;
+            }
+            if (count <= 0) return;
+            int landing = _ctx.Cells.FirstFloorAtOrBelow(building.Anchor);
+            int at = _ctx.Items.NearestCellWithSpace(_ctx.Cells, landing, item, count, maxRadius: 3);
+            if (at >= 0) _ctx.Items.Spawn(item, at, count);
         }
     }
 }

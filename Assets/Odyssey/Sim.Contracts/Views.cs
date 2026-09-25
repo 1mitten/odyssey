@@ -578,6 +578,16 @@ namespace Odyssey.Sim.Contracts
         /// <see cref="Miss"/>.
         /// </summary>
         Shot = 13,
+
+        /// <summary>
+        /// Cover took a bullet (design 50 §2e): a shot the cover roll defeated, fired into the piece
+        /// it picked, or a stray caught by cover it crossed. <see cref="CombatEventView.Cell"/> is the
+        /// cover's cell, <see cref="CombatEventView.Target"/> whom the shot was at (or <c>default</c>)
+        /// and <see cref="CombatEventView.Amount"/> the damage the cover took, nought for a thing with
+        /// no hit points (a tree, a rock face). Presentation raises the <i>Cover</i> floater and the
+        /// dust there. A building struck also reports its <see cref="Hit"/> as any blow does.
+        /// </summary>
+        Covered = 14,
     }
 
     /// <summary>

@@ -1872,5 +1872,17 @@ namespace Odyssey.Sim.Pawns
         /// nineteenth round constant.
         /// </summary>
         public const uint WeaponQuality = 0x0FC1_9DC6;
+
+        // Cover's three (design 50 §2d, §2e). SHA-256's twentieth, twenty-first and twenty-second
+        // round constants, the next after the weapon's quality.
+
+        /// <summary>Whether cover defeats a shot whose aim roll hit (design 50 §2d).</summary>
+        public const uint RangedCover = 0x240C_A1CC;
+
+        /// <summary>Which piece of cover a defeated shot is fired into, weighted by what each gave.</summary>
+        public const uint RangedCoverPick = 0x2DE9_2C6F;
+
+        /// <summary>Whether a stray crossing a cover cell is caught by it, salted by the cell as well as the shooter.</summary>
+        public const uint RangedCoverIntercept = 0x4A74_84AA;
     }
 }

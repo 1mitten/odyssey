@@ -136,7 +136,7 @@ namespace Odyssey.Sim.Pawns
             bool toTheDeath = target.Downed && shooter.CurrentJob != null
                 && shooter.CurrentJob.DestCell == AttackMeleeJobDriver.ToTheDeath;
             return _ctx.Projectiles.Launch(shooter.Id.Value, target.Id.Value, armament.ItemDef, shooter.Cell, shot.EndCell,
-                tick, tick + shot.FlightTicks, shot.Aimed, toTheDeath, shot.DamageMilli);
+                tick, tick + shot.FlightTicks, shot.Aimed, toTheDeath, shot.DamageMilli, shot.CoverCell);
         }
 
         /// <summary>
@@ -193,6 +193,14 @@ namespace Odyssey.Sim.Pawns
                     return;
                 }
 
+                // The piece of cover the cover roll fired it into (design 50 §2d): it takes the bullet,
+                // wall or sandbag alike, and reports it as cover.
+                if (cell == bullet.CoverCell)
+                {
+                    StrikeCover(shooter, target, armament, attack, bullet.DamageMilli, cell, tick);
+                    return;
+                }
+
                 // Something solid in it. The end cell of a shot aimed true is the target's own, and
                 // a pawn stands only where it can — a doorway included — so it is never tested.
                 bool aimedEnd = homing && cell == end;
@@ -224,11 +232,70 @@ namespace Odyssey.Sim.Pawns
                     return;
                 }
 
+                // Cover it crosses (design 50 §2e): a stray is caught at half the thing's cover, past
+                // the dead zone. Not a shot whose cover roll has already spoken — one aimed true
+                // crossing its target's own neighbours, or one already fired into a piece.
+                if (CatchesStray(bullet, homing ? end : -1, cell, tick))
+                {
+                    StrikeCover(shooter, target, armament, attack, bullet.DamageMilli, cell, tick);
+                    return;
+                }
+
                 previous = cell;
             }
 
             // Nothing took it: into the ground where it was going.
             MissAt(shooter, target, bullet.Weapon, end, tick);
+        }
+
+        /// <summary>
+        /// Does the cover in <paramref name="cell"/> catch this bullet (design 50 §2e)? Rolled on
+        /// <see cref="PawnPurpose.RangedCoverIntercept"/> salted by the shooter and the cell, against
+        /// <see cref="IRangedRules.CoverInterceptPerMille"/>. Never for a bullet already fired into
+        /// cover, and never in the eight neighbours of <paramref name="aimedAt"/> (a shot aimed true:
+        /// its cover roll covered them).
+        /// </summary>
+        bool CatchesStray(Projectiles.Entry bullet, int aimedAt, int cell, int tick)
+        {
+            if (bullet.CoverCell >= 0) return false;
+            if (aimedAt >= 0 && Adjacent(aimedAt, cell)) return false;
+            int basePerMille = Cover.BaseAt(_ctx, cell, out _);
+            if (basePerMille <= 0) return false;
+            int distance = RangedGeometry.DistanceMm(_ctx.Size, bullet.StartCell, cell);
+            int chance = _ctx.RangedRules.CoverInterceptPerMille(basePerMille, distance, _ctx);
+            if (chance <= 0) return false;
+            var roll = DeterministicRandom.ForTick(_ctx.Seed, tick,
+                PawnPurpose.RangedCoverIntercept ^ (uint)bullet.Shooter ^ (uint)cell);
+            return roll.NextInt(1_000) < chance;
+        }
+
+        /// <summary>Are two cells neighbours on one layer (the eight round each other)?</summary>
+        bool Adjacent(int a, int b)
+        {
+            CellRef p = _ctx.Size.FromIndex(a), q = _ctx.Size.FromIndex(b);
+            return p.Y == q.Y && System.Math.Abs(p.X - q.X) <= 1 && System.Math.Abs(p.Z - q.Z) <= 1 && a != b;
+        }
+
+        /// <summary>
+        /// Cover took the bullet (design 50 §2e): <see cref="CombatEventKind.Covered"/> reported at
+        /// the cover's cell with the damage it took, the thing there struck through
+        /// <see cref="StrikeBuilding"/> when it has hit points (a sandbag, a wall, a shelf; not a tree
+        /// or a rock face), and the shot heard as an attack by whom it was at, as a miss is.
+        /// </summary>
+        void StrikeCover(Pawn? shooter, Pawn? target, in Armament armament, AttackDef attack, int damageMilli, int cell,
+            int tick)
+        {
+            int taken = 0;
+            if (BuildingTargets.TryFind(_ctx, cell, out BuildingTarget building))
+            {
+                long scaled = (long)damageMilli * BuildingTargets.DamageFactorPerMille(attack.damageKind, building.Stuff) / 1_000;
+                taken = (int)scaled;
+                StrikeBuilding(shooter, building, cell, armament, new SwingOutcome(CombatEventKind.Hit, taken), tick);
+            }
+            if (target != null && !Melee.IsDead(target))
+                _ctx.CombatHooks.RaiseSwingResolved(new SwingReport(target, shooter, CombatEventKind.Miss, armament.ItemDef, tick));
+            _ctx.CombatLog.Report(CombatEventKind.Covered, shooter?.Id ?? default, target?.Id ?? default,
+                _ctx.Size.FromIndex(cell), tick, taken, armament.ItemDef);
         }
 
         /// <summary>
