@@ -102,8 +102,8 @@ namespace Odyssey.Tests.Hud
                 Assert.That(keys, Does.Contain(row.Key), $"{row.Key} is not in DebugDirector.IconKeys");
                 Assert.That(row.Tooltip, Is.Not.Empty, row.Key);
             }
-            Assert.That(DebugDirector.SpawnRows.Length, Is.EqualTo(13),
-                "colonist, arm-all, bandit, three bandits, two animals, four weapons, three resources");
+            Assert.That(DebugDirector.SpawnRows.Length, Is.EqualTo(15),
+                "colonist, arm-all, bandit, three bandits, pistol bandit, two animals, five weapons, three resources");
             Assert.That(DebugDirector.SpawnRows[0].Key, Is.EqualTo(DebugDirector.SpawnPawnKey), "the colonist first");
         }
 
@@ -152,6 +152,29 @@ namespace Odyssey.Tests.Hud
             Assert.That(wood.B, Is.EqualTo(DebugDirector.GiveAmount));
             Assert.That(wood.Group, Is.EqualTo(DebugDirector.GroupItemsKey));
             Assert.That(RowFor(DebugDirector.SpawnBatKey).Repeat, Is.EqualTo(1));
+        }
+
+        /// <summary>
+        /// The ranged line's two rows (design 47 §4d). The pistol bandit is the bandit's own kind with
+        /// the weapon in <c>B</c>, plus one — 0 being "the kind's own table", which every other pawn
+        /// row sends, so the plain bandit row is the control. The sidearm is one item, granted as the
+        /// other weapons are.
+        /// </summary>
+        [Test]
+        public void TheRangedRowsSendWhatTheySay()
+        {
+            DebugDirector.SpawnRow gunman = RowFor(DebugDirector.SpawnGunmanKey);
+            Assert.That(gunman.Kind, Is.EqualTo(IntentKind.SpawnPawn));
+            Assert.That(gunman.A, Is.EqualTo(PawnKindLabels.Bandit));
+            Assert.That(gunman.B, Is.EqualTo(ItemHandle.Pistol + 1));
+            Assert.That(gunman.Group, Is.EqualTo(DebugDirector.GroupHostilesKey));
+            Assert.That(RowFor(DebugDirector.SpawnBanditKey).B, Is.EqualTo(0), "the plain bandit deals from its own table");
+
+            DebugDirector.SpawnRow pistol = RowFor(DebugDirector.SpawnPistolKey);
+            Assert.That(pistol.Kind, Is.EqualTo(IntentKind.GiveResource));
+            Assert.That(pistol.A, Is.EqualTo(ItemHandle.Pistol));
+            Assert.That(pistol.B, Is.EqualTo(1));
+            Assert.That(pistol.Group, Is.EqualTo(DebugDirector.GroupWeaponsKey));
         }
 
         // ---- alerts, the Work tab, the Almanac ------------------------------------------------------

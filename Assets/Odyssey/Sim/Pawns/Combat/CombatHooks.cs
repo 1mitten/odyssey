@@ -41,8 +41,11 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Who was swung at.</summary>
         public readonly Pawn Target;
 
-        /// <summary>Who swung.</summary>
-        public readonly Pawn Attacker;
+        /// <summary>
+        /// Who swung, or fired. <b>Null for a bullet whose shooter has gone</b> — dead and removed
+        /// while it flew (design 47 §2c): a bullet outlives its shooter.
+        /// </summary>
+        public readonly Pawn? Attacker;
 
         /// <summary><see cref="CombatEventKind.Hit"/>, <see cref="CombatEventKind.Miss"/> or <see cref="CombatEventKind.Dodge"/>.</summary>
         public readonly CombatEventKind Result;
@@ -52,7 +55,7 @@ namespace Odyssey.Sim.Pawns
 
         public readonly int Tick;
 
-        public SwingReport(Pawn target, Pawn attacker, CombatEventKind result, int weapon, int tick)
+        public SwingReport(Pawn target, Pawn? attacker, CombatEventKind result, int weapon, int tick)
         {
             Target = target;
             Attacker = attacker;

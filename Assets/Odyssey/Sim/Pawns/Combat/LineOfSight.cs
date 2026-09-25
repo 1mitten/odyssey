@@ -83,6 +83,25 @@ namespace Odyssey.Sim.Pawns
         public static bool Clear(PawnContext ctx, int from, int to) => Clear(ctx.Cells, ctx.Nav.Grid, from, to);
 
         /// <summary>
+        /// Can a bullet cross from <paramref name="from"/> into the adjacent <paramref name="to"/> —
+        /// the step between two consecutive cells of a <see cref="Walk"/>, one axis or a tie of two
+        /// or three — by <see cref="Clear"/>'s own rules: the slab between layers, and at a corner
+        /// either way round open? What the bullet's landing asks cell by cell, so it stops where
+        /// <see cref="Clear"/> would have said the line shut. The two cells themselves are not
+        /// tested. Not counted in <see cref="Walks"/>: it is part of a walk, not one of its own.
+        /// </summary>
+        public static bool Passes(PawnContext ctx, int from, int to) => Passes(ctx.Cells, ctx.Nav.Grid, from, to);
+
+        /// <inheritdoc cref="Passes(PawnContext, int, int)"/>
+        public static bool Passes(CellGrid cells, NavGrid? nav, int from, int to)
+        {
+            if (from == to) return true;
+            var walk = new Stepper(cells.Size, from, to);
+            int axes = walk.Next();
+            return Round(cells, nav, ref walk, from, axes);
+        }
+
+        /// <summary>
         /// Can a shot pass from the centre of <paramref name="from"/> to the centre of
         /// <paramref name="to"/>? The walk of <see cref="Walk(GridSize, int, int, SightLine)"/>
         /// with the blocking tests and an early out, so it allocates nothing and stops at the

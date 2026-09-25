@@ -39,8 +39,9 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public void SwingResolved(in SwingReport report)
         {
-            Pawn by = report.Attacker, target = report.Target;
-            if (by == target || !by.IsColonist || !target.IsColonist || Melee.IsDead(target)) return;
+            Pawn? by = report.Attacker;
+            Pawn target = report.Target;
+            if (by == null || by == target || !by.IsColonist || !target.IsColonist || Melee.IsDead(target)) return;
             target.AddMemory(ThoughtIndex.AttackedByColonist, report.Tick);
         }
 

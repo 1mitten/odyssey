@@ -48,8 +48,12 @@ namespace Odyssey.Sim.Pawns
         public virtual int HitChancePerMille(Pawn attacker, PawnContext ctx) =>
             ctx.Content.Combat.HitChancePerMille(MeleeLevel(attacker));
 
+        /// <summary>
+        /// Nought for a pawn lying down, and for one <b>mid-aim</b> (design 47 §2a, the reference's
+        /// rule): a shooter with her eye down the barrel does not step out of a blow.
+        /// </summary>
         public virtual int DodgeChancePerMille(Pawn defender, PawnContext ctx) =>
-            defender.Downed ? 0 : ctx.Content.Combat.DodgeChancePerMille(MeleeLevel(defender));
+            defender.Downed || Ranged.IsAiming(defender) ? 0 : ctx.Content.Combat.DodgeChancePerMille(MeleeLevel(defender));
 
         public virtual SwingOutcome Resolve(Pawn attacker, Pawn defender, in Armament armament, PawnContext ctx, int tick)
         {

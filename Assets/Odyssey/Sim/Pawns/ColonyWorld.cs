@@ -183,6 +183,9 @@ namespace Odyssey.Sim.Pawns
                 // The sky (design 43 §3): appended, no format bump. A save from before weather has
                 // no section and rolls a sky on its first pass, which is what a new world does.
                 pawns.Weather!,
+                // The bullets in the air (design 47 §2c): appended, no format bump. A save from
+                // before guns has no section and loads with nothing in flight.
+                pawns.Projectiles,
             };
         }
 

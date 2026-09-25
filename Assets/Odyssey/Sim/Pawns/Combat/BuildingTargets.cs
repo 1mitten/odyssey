@@ -138,7 +138,9 @@ namespace Odyssey.Sim.Pawns
         public static int DamageFactorPerMille(DamageKind kind, ushort stuff)
         {
             int handle = ConstructionContent.StuffForValue(stuff);
-            if (handle == StuffHandle.None) return 1_000;
+            // A bullet strikes every material as it comes (design 47 §2c): the material table is
+            // written for an edge and a head, and a bullet is neither.
+            if (kind == DamageKind.Bullet || handle == StuffHandle.None) return 1_000;
             StuffDef def = ConstructionContent.StuffAt(handle);
             return kind == DamageKind.Sharp ? def.sharpDamagePerMille : def.bluntDamagePerMille;
         }

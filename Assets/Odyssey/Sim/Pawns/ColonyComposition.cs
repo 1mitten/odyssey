@@ -208,8 +208,12 @@ namespace Odyssey.Sim.Pawns
                 // corpses are what the pawns become.
                 .AddHashable(pawns.Corpses)
                 .AddHashable(pawns.EdificeDamage)
+                // The bullets in the air (design 47 §2c): hashed only while one flies, so this line
+                // moved no golden either, and published for the tracer.
+                .AddHashable(pawns.Projectiles)
                 .AddSnapshotContributor(pawns.Pawns)
                 .AddSnapshotContributor(pawns.Corpses)
+                .AddSnapshotContributor(pawns.Projectiles)
                 // The telling of every fight, for presentation: never saved, never hashed.
                 .AddSnapshotContributor(pawns.CombatLog)
                 // The struck buildings and which edifices are targets (design 33 §13i): neither

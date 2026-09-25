@@ -43,7 +43,7 @@ namespace Odyssey.Sim.Pawns
             if (foe != null)
             {
                 pawn.DraftQuietSinceTick = ctx.CurrentTick;
-                job.Reset(JobIndex.AttackMelee);
+                job.Reset(CombatJobs.AttackJobFor(pawn, ctx));
                 job.TargetCell = foe.Cell;
                 if (joining) job.DestCell = AttackMeleeJobDriver.Joining;
                 pawn.CombatTarget = foe.Id.Value;
@@ -78,7 +78,8 @@ namespace Odyssey.Sim.Pawns
             // lookup for the few in an attack (Melee.HoldTarget). A drafted colonist is exempt
             // from the think-loop breaker, so the hold, the blow and the hold again cost nothing
             // but the job counters.
-            if (Melee.HoldTarget(ctx, Pawn, out _) != null) return JobStatus.Succeeded;
+            // With a gun the sight scan runs on its cadence (design 47 §2d): it walks lines.
+            if (Melee.HoldTarget(ctx, Pawn, out _, Ranged.ScanDue(ctx, Pawn)) != null) return JobStatus.Succeeded;
 
             // Exhaustion, asked here as well as in the node: a colonist already holding never
             // thinks again, so the node alone would never see her rest reach nought.
