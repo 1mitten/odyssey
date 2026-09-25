@@ -87,20 +87,6 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void ATraitsMoodIsOnTheThoughtsTabUnderNow()
-        {
-            WorldSnapshot snapshot = Frame();
-            Slot(snapshot, 0, TraitHandle.Gloomy, mood: -60);
-
-            InspectModel pane = Pane(snapshot);
-
-            InspectRow row = pane.ThoughtRows.Single(r => r.Name == Registry.Label("ui.trait.gloomy"));
-            Assert.That(row.Value, Is.EqualTo("-6"));
-            Assert.That(pane.ThoughtRows[0].Name, Is.EqualTo(Registry.Label("ui.mind.now")),
-                "who she is weighs on her now, not as a memory");
-        }
-
-        [Test]
         public void TheSelectCardWritesATraitALine()
         {
             var traits = new[]

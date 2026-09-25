@@ -379,10 +379,78 @@ three `Simulated` re-baked from the merged code, every `Generated` equal to `mai
 `GoldenColonyProbe` on `origin/main` against the merge differs in total mood alone (+60, −120, −120).
 The Unity tiers are in the PR's status, not here, because they ran after this was written.
 
+## 10. The Thoughts tab rebuilt to mockup 23b, 2026-09-26
+
+The owner supplied a Claude Design brief (mockup 23b) and asked for it to be built *"but make
+judgement call to how it styles into the game (IE reuse the bars from other components but in this
+design here)"*. The tab is now three parts, with every size the mockup's (`ThoughtsLayout`):
+
+- **The mood column** (168 wide): the figure at 19 mono; a meter; "Steady at / Rising to / Falling
+  to N"; and a breakdown of four rows: Base, Thoughts, Traits, Needs.
+- **The thoughts table**: THOUGHT / LASTS / MOOD. Each row has a 3 px rail and the source word
+  (Need, Condition or Memory). Needs and conditions come first, then memories, each group largest
+  first by absolute value. Five rows fit; beyond that, four rows and the pager.
+- **The traits strip**: a chip per trait, with its mood effect or "--". The tooltip gives the
+  description and everything the trait does. A chip that does not fit becomes "+N more", whose
+  tooltip lists the rest.
+
+The model is `Odyssey.Hud.ThoughtsTab`, owned by `InspectModel` as `HealthTab` is, and every
+word, number and colour is decided there and tested in the fast tier. `HudShell.Mind` draws it,
+and only when `ThoughtsTab.Version` moved.
+
+**The judgement calls, each the owner's to overrule.**
+
+| Call | Why |
+|---|---|
+| The tab body is **244 px for every tab** | The mockup's `TAB_BODY_H`; the pane's rule since 2026-09-18 is one height set by the tallest live tab, and this is the tallest. The Needs and Skills tabs gain slack below their rows; the pane grows 87 px upward. |
+| The meter's fill is **the Needs tab's own bar fill** (`.bar__fill`), 4 px, in a framed 10 px track | "Reuse the bars from other components". It keeps the need bar's 2 px corner radius, which the mockup's "no radius" would drop. |
+| The pager is **the Animals tab's** (`PagerButton`, 22 x 22, "1 / 2" in 12 mono) | The mockup's "standard pager". |
+| **Every colour is a `HudTheme` token and every size a type role**: 19 mono is `Name` numeric, 14/500 `Row`, 13 `Body`, 12 `Meta`, 11/600 upper `PanelLabel` | The mockup's lists are the game's own. `RowRule` is its `--rule` and `ControlBorder` its `--ctl`; nothing new was needed. |
+| **The breakdown sums to the target, not the mood** | The target is what her needs, thoughts and traits add up to; the mood drifts to it. At rest the two are equal (the mockup's case). Rounding to points is absorbed by the Thoughts row, so the drawn four always add to the drawn target, except for a clamped target at 0 or 100, where the parts are drawn as they are. |
+| **Thoughts = conditions + memories; Needs = the need rows** | The mockup's sample data does not add up (Recreation +10 under Needs +4). This split makes the four rows exact and keeps each table row in one bucket. |
+| **The mood is coloured by her own lines**: good at or above the minor, warn between, bad below the major | The mockup's 35 and 20 are the untraited lines. A Jumpy colonist's are 43 and 24.5, so the bands are drawn where they are for her. **The Needs tab's mood bar asks the same** (`InspectModel.MoodInk`), replacing the band colouring of §8a, so the two tabs never disagree. |
+| A chip's value and tone are **its mood effect** | This is the mood tab: "--" means no mood effect, and the tooltip carries the rest ("Work +20%", "Cannot: Mining"). |
+| Durations are "5 hours", "1 day", "2 days" | The mockup shows days only. Hours are rounded up, so a memory never reads as gone early. |
+
+**Published for it.** The simulation publishes her base and her own minor and major lines again
+(`odyssey.pawn.mood.base`, `.line.minor`, `.line.major`); TM6 had dropped the lines for having no
+reader. They are asked of `Pawn.MinorBreakLine`/`MajorBreakLine`, so the 4/7 has one owner.
+
+**The registry.** `ui.mind.*` gains mood, thought, lasts, steady, rising, falling, base, thoughts,
+needs, the three source words and hour/hours/day/days. `ui.mind.nothing` reads "No thoughts right
+now". `ui.mind.now`, `ui.mind.memories`, `ui.mind.left` and `ui.mind.target` are gone with the old
+layout.
+
+**What the picture found.** `HudGeometryTests.TheThoughtsTabFitsItsBodyAndMovesNothing` lays the
+real HUD out at 1920 x 1080. It asserts the body is 244 and the column 168, that the pane neither
+moves nor resizes on switching tabs, and that nothing spills. It also writes
+`Logs/thoughts-tab.png`. The first picture showed a colonist with no traits and a breakdown that
+did not add up. That was the bug below, not the tab.
+
+### 10a. Nobody in the game was dealt a starting skill or a trait
+
+`StartingSkillsSystem` deals starting skills and traits on the first tick, and it asked for
+`CurrentTick == 0`. The scene has woken at noon since 2026-09-16 (`OdysseyBootstrap.startHour`,
+`SimWorld.StartAtTick(30_000)`), so in the game that tick never came. **No colonist in the real
+game was ever dealt starting skills or traits**, and every test passed, because every test world
+starts at midnight. `SimWorld.StartTick` now records the start, and the system acts when
+`CurrentTick == StartTick`. The rolls are keyed on the seed and the id, so the colonists dealt at
+noon are the ones dealt at midnight. `StartingSkillsTests.AColonyThatWakesAtNoonIsDealtOnItsFirstTick`
+failed before the fix (*"pawn 1's skills depend on the hour"*). No golden moved: goldens start at
+nought.
+
+**This changes what a new game plays like beyond traits.** A new colony's people now arrive with
+their starting skill levels, which the select card has always promised and the game has never
+delivered. Every playtest since 2026-09-16 ran on colonists at level nought in everything. The
+select screen was never affected, because its preview rolls through `ColonistDraw`.
+
+
 ## 9. Do not undo by tidying
 
-- **The mood bar reads the band, not its own cut.** `NeedBand` is right for food and rest and wrong for
-  mood, whose lines are hers.
+- **The mood bar reads her lines, not its own cut.** `NeedBand` is right for food and rest and wrong
+  for mood, whose lines are hers; the meter and the Needs tab's bar ask `ThoughtsTab.InkFor` (§10).
+- **"The first tick" is `SimWorld.StartTick`, not nought.** The scene wakes at noon, and a system that
+  asks for tick nought never runs in the game while every midnight test passes (§10a).
 - **The break and the warning before it are dismissed apart.** One key hid a berserker from a player
   who had put away the warning.
 - **The band is the simulation's.** Putting a threshold back in `RosterModel` is two owners of one

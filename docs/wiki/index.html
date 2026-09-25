@@ -149,7 +149,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
 <li><a href="#commands">Commands<b>53</b></a></li>
 <li><a href="#work">Work and skills<b>57</b></a></li>
-<li><a href="#colonists">Colonists<b>106</b></a></li>
+<li><a href="#colonists">Colonists<b>118</b></a></li>
 <li><a href="#health">Health and anatomy<b>39</b></a></li>
 <li><a href="#events">Events<b>49</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
@@ -162,9 +162,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>955</b><i>named entries</i></div>
+<div class="stat"><b>967</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>683</b><i>no art yet</i></div>
+<div class="stat m"><b>695</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1923,7 +1923,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">106 entries</em></h2>
+<h2>Colonists <em class="count">118 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure. Traits, thoughts and mental breaks are design 51: a thought's description here is its tooltip on the Thoughts tab, and a trait's is its tooltip on the colonist's pane and the select screen.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -2324,32 +2324,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">TM</div>
 </div>
-<div class="row gap" id="ui.mind.now" data-hay="now ui.mind.now what is weighing on her at this moment, gone when its cause is " data-gap="1">
-<div class="nm">Now<span class="k">ui.mind.now</span></div>
-<div class="dsc">What is weighing on her at this moment, gone when its cause is</div>
-<div class="art"><span class="pill no">no art</span></div>
-<div class="ms">TM</div>
-</div>
-<div class="row gap" id="ui.mind.memories" data-hay="memories ui.mind.memories things that happened to her, each fading after its own time " data-gap="1">
-<div class="nm">Memories<span class="k">ui.mind.memories</span></div>
-<div class="dsc">Things that happened to her, each fading after its own time</div>
-<div class="art"><span class="pill no">no art</span></div>
-<div class="ms">TM</div>
-</div>
-<div class="row gap" id="ui.mind.target" data-hay="heading for ui.mind.target the mood everything listed pulls her toward; she drifts there, faster up than down " data-gap="1">
-<div class="nm">Heading for<span class="k">ui.mind.target</span></div>
-<div class="dsc">The mood everything listed pulls her toward; she drifts there, faster up than down</div>
-<div class="art"><span class="pill no">no art</span></div>
-<div class="ms">TM</div>
-</div>
-<div class="row gap" id="ui.mind.left" data-hay="left ui.mind.left how long until a memory's oldest copy fades " data-gap="1">
-<div class="nm">left<span class="k">ui.mind.left</span></div>
-<div class="dsc">How long until a memory's oldest copy fades</div>
-<div class="art"><span class="pill no">no art</span></div>
-<div class="ms">TM</div>
-</div>
-<div class="row gap" id="ui.mind.nothing" data-hay="nothing on her mind ui.mind.nothing no need is short and no memory is held: she sits at the base " data-gap="1">
-<div class="nm">Nothing on her mind<span class="k">ui.mind.nothing</span></div>
+<div class="row gap" id="ui.mind.nothing" data-hay="no thoughts right now ui.mind.nothing no need is short and no memory is held: she sits at the base " data-gap="1">
+<div class="nm">No thoughts right now<span class="k">ui.mind.nothing</span></div>
 <div class="dsc">No need is short and no memory is held: she sits at the base</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">TM</div>
@@ -2357,6 +2333,102 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.mind.more" data-hay="more ui.mind.more the rows past what the tab has room for, counted " data-gap="1">
 <div class="nm">more<span class="k">ui.mind.more</span></div>
 <div class="dsc">The rows past what the tab has room for, counted</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.mood" data-hay="mood ui.mind.mood where her mood is, out of a hundred, and the column of what each thought is worth to it " data-gap="1">
+<div class="nm">Mood<span class="k">ui.mind.mood</span></div>
+<div class="dsc">Where her mood is, out of a hundred, and the column of what each thought is worth to it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.thought" data-hay="thought ui.mind.thought what is weighing on her, or lifting her, and where it comes from " data-gap="1">
+<div class="nm">Thought<span class="k">ui.mind.thought</span></div>
+<div class="dsc">What is weighing on her, or lifting her, and where it comes from</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.lasts" data-hay="lasts ui.mind.lasts how long until a memory fades. a need or a condition lasts as long as its cause " data-gap="1">
+<div class="nm">Lasts<span class="k">ui.mind.lasts</span></div>
+<div class="dsc">How long until a memory fades. A need or a condition lasts as long as its cause</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.steady" data-hay="steady at ui.mind.steady her mood is where everything on her mind puts it " data-gap="1">
+<div class="nm">Steady at<span class="k">ui.mind.steady</span></div>
+<div class="dsc">Her mood is where everything on her mind puts it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.rising" data-hay="rising to ui.mind.rising her mood is climbing toward where everything on her mind puts it " data-gap="1">
+<div class="nm">Rising to<span class="k">ui.mind.rising</span></div>
+<div class="dsc">Her mood is climbing toward where everything on her mind puts it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.falling" data-hay="falling to ui.mind.falling her mood is sinking toward where everything on her mind puts it " data-gap="1">
+<div class="nm">Falling to<span class="k">ui.mind.falling</span></div>
+<div class="dsc">Her mood is sinking toward where everything on her mind puts it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.base" data-hay="base ui.mind.base where a colonist's mood rests with nothing on her mind " data-gap="1">
+<div class="nm">Base<span class="k">ui.mind.base</span></div>
+<div class="dsc">Where a colonist's mood rests with nothing on her mind</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.thoughts" data-hay="thoughts ui.mind.thoughts conditions and memories together " data-gap="1">
+<div class="nm">Thoughts<span class="k">ui.mind.thoughts</span></div>
+<div class="dsc">Conditions and memories together</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.needs" data-hay="needs ui.mind.needs hunger, tiredness and recreation together " data-gap="1">
+<div class="nm">Needs<span class="k">ui.mind.needs</span></div>
+<div class="dsc">Hunger, tiredness and recreation together</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.source.need" data-hay="need ui.mind.source.need a need that is short, gone when it is met " data-gap="1">
+<div class="nm">Need<span class="k">ui.mind.source.need</span></div>
+<div class="dsc">A need that is short, gone when it is met</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.source.condition" data-hay="condition ui.mind.source.condition something about where she is, gone when it changes " data-gap="1">
+<div class="nm">Condition<span class="k">ui.mind.source.condition</span></div>
+<div class="dsc">Something about where she is, gone when it changes</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.source.memory" data-hay="memory ui.mind.source.memory something that happened to her, fading after its own time " data-gap="1">
+<div class="nm">Memory<span class="k">ui.mind.source.memory</span></div>
+<div class="dsc">Something that happened to her, fading after its own time</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.hour" data-hay="hour ui.mind.hour one hour, as the thoughts tab writes a memory's time left " data-gap="1">
+<div class="nm">hour<span class="k">ui.mind.hour</span></div>
+<div class="dsc">One hour, as the Thoughts tab writes a memory's time left</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.hours" data-hay="hours ui.mind.hours hours, as the thoughts tab writes a memory's time left " data-gap="1">
+<div class="nm">hours<span class="k">ui.mind.hours</span></div>
+<div class="dsc">Hours, as the Thoughts tab writes a memory's time left</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.day" data-hay="day ui.mind.day one day, as the thoughts tab writes a memory's time left " data-gap="1">
+<div class="nm">day<span class="k">ui.mind.day</span></div>
+<div class="dsc">One day, as the Thoughts tab writes a memory's time left</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">TM</div>
+</div>
+<div class="row gap" id="ui.mind.days" data-hay="days ui.mind.days days, as the thoughts tab writes a memory's time left " data-gap="1">
+<div class="nm">days<span class="k">ui.mind.days</span></div>
+<div class="dsc">Days, as the Thoughts tab writes a memory's time left</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">TM</div>
 </div>
@@ -4362,7 +4434,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 955, "gaps": 683};</script>
+<script>window.WIKI={"total": 967, "gaps": 695};</script>
 <script>
 (function(){
   var D = window.WIKI;

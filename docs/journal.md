@@ -13681,3 +13681,21 @@ wake up"*. The sleep driver now ends a sleep at zero food when `TryEat` would fi
 asked on the needs cadence so it costs nothing until somebody is starving. The guard is the other
 half: with no food, waking her would put her back to bed and wake her on the next pass all night,
 so she sleeps on. The soak's zero-streak bound was restored to what it was, and holds.
+
+## 2026-09-26 — The Thoughts tab to mockup 23b, and a colony that was never dealt anything
+
+The owner sent a Claude Design brief for the Thoughts tab and asked for it built in the game's own
+parts. Every token and type size in it turned out to be the game's already, so what was new was
+layout. The calls are tabled in design 51 §10. The largest is that every tab's body is now 244 px,
+because the pane has one height and this tab is the tallest. The one that changes a rule is that
+the mood is coloured by her own break lines on both tabs, which the mockup asked for and which is
+more honest than the band colouring §8a had put in the night before.
+
+A PlayMode test lays the real pane out and saves a picture of it. **The picture found a bug no
+test could:** the colonist had no traits, and her breakdown did not add up. The second was only
+tick nought (no needs pass yet). The first was that the scene wakes at noon, and the pass that
+deals starting skills and traits asked for tick nought. So since 2026-09-16 no colonist in the
+game has had starting skills, and the traits built this week would never have appeared. Every
+tier was green, because every test world starts at midnight. Fixed with `SimWorld.StartTick` and
+a test that builds at noon. It is recorded as a bug pattern, because the shape (a test world that
+starts where the game never does) will come back.

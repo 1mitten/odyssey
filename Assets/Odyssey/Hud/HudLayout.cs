@@ -1086,9 +1086,9 @@ namespace Odyssey.Hud
         /// between tabs is which rows are drawn.</para>
         ///
         /// <para>Derived rather than written down, so that a fourteenth skill or a fourth need
-        /// moves it. It is deliberately <i>not</i> a maximum over the seven disabled tabs — Gear,
-        /// Thoughts, Social, Health and Log have no content to measure, and a guess at them would
-        /// be empty space today bought against a design nobody has written.</para>
+        /// moves it. The live tabs are measured and the disabled ones are not: Gear, Social and Log
+        /// have no content to measure, and a guess at them would be empty space bought against a
+        /// design nobody has written. Since 2026-09-25 the Thoughts tab is the tallest.</para>
         /// </summary>
         public static int InspectTabBody
         {
@@ -1096,16 +1096,12 @@ namespace Odyssey.Hud
             {
                 int needs = InspectNeedRows * NeedRow + (InspectNeedRows - 1) * NeedRowGap;
                 int skills = SkillCatalogue.Rows * SkillRow + (SkillCatalogue.Rows - 1) * SkillRowGap;
-                return Math.Max(needs, skills);
+                // The Thoughts tab (design 51 §10, mockup 23b) is the tallest now: its meter,
+                // breakdown, table and traits strip are drawn at the mockup's sizes, and every
+                // tab takes its height so switching tabs moves nothing.
+                return Math.Max(Math.Max(needs, skills), ThoughtsLayout.TabBody);
             }
         }
-
-        /// <summary>
-        /// How many rows the Thoughts tab has room for under its heading line (design 51 §5b): the
-        /// tab body, less the heading, in cell rows. Derived, so it follows the body when a skill
-        /// or a need moves it, and the model caps its list at it so the pane never grows.
-        /// </summary>
-        public static int ThoughtRows => (InspectTabBody - CellRow) / CellRow;
 
         /// <summary>
         /// The needs grid's height: <see cref="InspectNeedRows"/> rows of <see cref="NeedRow"/> with

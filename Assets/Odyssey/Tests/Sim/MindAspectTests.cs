@@ -105,6 +105,35 @@ namespace Odyssey.Tests.Sim
                 "an animal's mood never moves (design 29 §2), so it has no band to report");
         }
 
+        /// <summary>
+        /// The Thoughts tab's meter and breakdown (design 51 §10): the base she drifts from and her
+        /// own minor and major lines, which a trait moves, so the interface draws the bands where
+        /// they are for her and keeps no copy of the threshold. The Jumpy colonist is the case that
+        /// needs it; the traitless one is the control.
+        /// </summary>
+        [Test]
+        public void TheBaseAndHerOwnLinesArePublished()
+        {
+            var colony = Colony.Build();
+            Pawn plain = colony.Ctx.Pawns.Spawn(colony.Cell(4, 4, 0));
+            Pawn jumpy = colony.Ctx.Pawns.Spawn(colony.Cell(8, 4, 0));
+            jumpy.Traits.Add(TraitHandle.Jumpy);
+            colony.World.Tick();
+            WorldSnapshot frame = colony.World.Views.Current;
+
+            Assert.That(frame.TryGetPawnAspect(plain.Id, MindAspects.Base, out int b), Is.True);
+            Assert.That(b, Is.EqualTo(colony.Ctx.Content.Mood.baseMood));
+            Assert.That(frame.TryGetPawnAspect(plain.Id, MindAspects.MinorLine, out int minor), Is.True);
+            Assert.That(frame.TryGetPawnAspect(plain.Id, MindAspects.MajorLine, out int major), Is.True);
+            Assert.That(minor, Is.EqualTo(plain.MinorBreakLine()));
+            Assert.That(major, Is.EqualTo(plain.MajorBreakLine()));
+
+            frame.TryGetPawnAspect(jumpy.Id, MindAspects.MinorLine, out int jumpyMinor);
+            frame.TryGetPawnAspect(jumpy.Id, MindAspects.MajorLine, out int jumpyMajor);
+            Assert.That(jumpyMinor, Is.EqualTo(jumpy.MinorBreakLine()).And.GreaterThan(minor), "a Jumpy colonist breaks sooner");
+            Assert.That(jumpyMajor, Is.EqualTo(jumpy.MajorBreakLine()));
+        }
+
         // ---- TM2: the Thoughts tab ---------------------------------------------------------
 
         [Test]
@@ -184,6 +213,9 @@ namespace Odyssey.Tests.Sim
             Assert.That(MindAspects.Band, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.band")));
             Assert.That(MindAspects.Target, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.target")));
             Assert.That(MindAspects.Break, Is.EqualTo(AspectKey.Of("odyssey.pawn.break")));
+            Assert.That(MindAspects.Base, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.base")));
+            Assert.That(MindAspects.MinorLine, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.line.minor")));
+            Assert.That(MindAspects.MajorLine, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.line.major")));
         }
     }
 }

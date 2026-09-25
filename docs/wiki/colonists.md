@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure. Traits, thoughts and mental breaks are design 51: a thought's description here is its tooltip on the Thoughts tab, and a trait's is its tooltip on the colonist's pane and the select screen.
 
-106 entries, 88 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+118 entries, 100 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -100,12 +100,24 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Breaks sooner** | `ui.mind.breakssooner` | Her mood need not fall as far before she can break | no art | TM |
 | **Breaks later** | `ui.mind.breakslater` | Her mood must fall further than most before she can break | no art | TM |
 | **Cannot** | `ui.mind.cannot` | Work she will never do. The Work tab greys it | no art | TM |
-| **Now** | `ui.mind.now` | What is weighing on her at this moment, gone when its cause is | no art | TM |
-| **Memories** | `ui.mind.memories` | Things that happened to her, each fading after its own time | no art | TM |
-| **Heading for** | `ui.mind.target` | The mood everything listed pulls her toward; she drifts there, faster up than down | no art | TM |
-| **left** | `ui.mind.left` | How long until a memory's oldest copy fades | no art | TM |
-| **Nothing on her mind** | `ui.mind.nothing` | No need is short and no memory is held: she sits at the base | no art | TM |
+| **No thoughts right now** | `ui.mind.nothing` | No need is short and no memory is held: she sits at the base | no art | TM |
 | **more** | `ui.mind.more` | The rows past what the tab has room for, counted | no art | TM |
+| **Mood** | `ui.mind.mood` | Where her mood is, out of a hundred, and the column of what each thought is worth to it | no art | TM |
+| **Thought** | `ui.mind.thought` | What is weighing on her, or lifting her, and where it comes from | no art | TM |
+| **Lasts** | `ui.mind.lasts` | How long until a memory fades. A need or a condition lasts as long as its cause | no art | TM |
+| **Steady at** | `ui.mind.steady` | Her mood is where everything on her mind puts it | no art | TM |
+| **Rising to** | `ui.mind.rising` | Her mood is climbing toward where everything on her mind puts it | no art | TM |
+| **Falling to** | `ui.mind.falling` | Her mood is sinking toward where everything on her mind puts it | no art | TM |
+| **Base** | `ui.mind.base` | Where a colonist's mood rests with nothing on her mind | no art | TM |
+| **Thoughts** | `ui.mind.thoughts` | Conditions and memories together | no art | TM |
+| **Needs** | `ui.mind.needs` | Hunger, tiredness and recreation together | no art | TM |
+| **Need** | `ui.mind.source.need` | A need that is short, gone when it is met | no art | TM |
+| **Condition** | `ui.mind.source.condition` | Something about where she is, gone when it changes | no art | TM |
+| **Memory** | `ui.mind.source.memory` | Something that happened to her, fading after its own time | no art | TM |
+| **hour** | `ui.mind.hour` | One hour, as the Thoughts tab writes a memory's time left | no art | TM |
+| **hours** | `ui.mind.hours` | Hours, as the Thoughts tab writes a memory's time left | no art | TM |
+| **day** | `ui.mind.day` | One day, as the Thoughts tab writes a memory's time left | no art | TM |
+| **days** | `ui.mind.days` | Days, as the Thoughts tab writes a memory's time left | no art | TM |
 
 ## Current activity
 

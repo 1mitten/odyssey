@@ -839,8 +839,10 @@ namespace Odyssey.Tests.Hud
                 "the needs grid would clip");
             Assert.That(HudLayout.InspectTabBody, Is.GreaterThanOrEqualTo(skills),
                 "the skills grid would clip");
-            Assert.That(HudLayout.InspectTabBody, Is.EqualTo(System.Math.Max(needs, skills)),
-                "no more slack than the tallest tab needs");
+            Assert.That(HudLayout.InspectTabBody, Is.GreaterThanOrEqualTo(ThoughtsLayout.TabBody),
+                "the Thoughts tab would clip");
+            Assert.That(HudLayout.InspectTabBody, Is.EqualTo(System.Math.Max(System.Math.Max(needs, skills), ThoughtsLayout.TabBody)),
+                "no more slack than the tallest tab needs, which is Thoughts since design 51 §10");
         }
 
         /// <summary>

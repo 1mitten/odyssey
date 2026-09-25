@@ -20,6 +20,17 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The target the mood drifts toward, 0..1000.</summary>
         public static readonly AspectKey Target = AspectKey.Of("odyssey.pawn.mood.target");
 
+        /// <summary>The base her target starts from (design 51 §10): the Thoughts tab's breakdown's first row.</summary>
+        public static readonly AspectKey Base = AspectKey.Of("odyssey.pawn.mood.base");
+
+        /// <summary>
+        /// Her own minor and major lines (design 51 §10), which traits move: the Thoughts tab's meter
+        /// draws its two bands at them and colours her mood by them. Published again now that
+        /// something draws them (TM6 had dropped them for having no reader).
+        /// </summary>
+        public static readonly AspectKey MinorLine = AspectKey.Of("odyssey.pawn.mood.line.minor");
+        public static readonly AspectKey MajorLine = AspectKey.Of("odyssey.pawn.mood.line.major");
+
 
         /// <summary>The <see cref="BreakHandle"/> she is in, while she is in one (design 51 §5c).</summary>
         public static readonly AspectKey Break = AspectKey.Of("odyssey.pawn.break");

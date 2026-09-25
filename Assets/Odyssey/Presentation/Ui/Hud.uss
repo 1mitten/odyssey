@@ -1080,9 +1080,10 @@
    (owner, 2026-09-18: "it resizes every time … it needs to be at least a fixed size"). The
    tallest live tab sets the height here; a shorter one sits at the top of it with the slack
    below, so between tabs only the rows change. HudLayout.InspectTabBody is the same number and
-   HudStyleSheetTests holds the two together. */
+   HudStyleSheetTests holds the two together. 244 since the Thoughts tab's rebuild (design 51 §10,
+   mockup 23b), which is the tallest now. */
 .inspect__tabbody {
-    height: 157px;
+    height: 244px;
     margin-top: 9px;
 }
 

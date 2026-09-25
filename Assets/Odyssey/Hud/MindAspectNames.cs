@@ -38,5 +38,10 @@ namespace Odyssey.Hud
 
         public static readonly AspectKey BandKey = AspectKey.Of(Band);
         public static readonly AspectKey TargetKey = AspectKey.Of(Target);
+
+        /// <summary>The base, and her own minor and major lines (design 51 §10).</summary>
+        public static readonly AspectKey BaseKey = AspectKey.Of("odyssey.pawn.mood.base");
+        public static readonly AspectKey MinorLineKey = AspectKey.Of("odyssey.pawn.mood.line.minor");
+        public static readonly AspectKey MajorLineKey = AspectKey.Of("odyssey.pawn.mood.line.major");
     }
 }

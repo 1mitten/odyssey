@@ -233,6 +233,21 @@ the next session learns to ignore.
   must still appear. Give one colonist a pistol (debug) and let her go berserk: she shoots or clubs,
   and nobody dies. A wrong answer is an amber bar beside *content*, a break with no alert after the
   warning was dismissed, or a berserker frozen with a gun in her hand.
+- **Does the rebuilt Thoughts tab read at a glance?** (design 51 §10, mockup 23b.) Open a colonist,
+  Thoughts. Left: MOOD and its number, a bar with a white tick where she is heading and two faint bands
+  where she breaks, *Steady at / Rising to*, and four rows (Base, Thoughts, Traits, Needs) that add up
+  to the number after *to*. Right: each thought with where it comes from, how long a memory lasts,
+  and its points; past five, a pager. Foot: a chip per trait; hover one. Every tab is taller now
+  (244 px). A wrong answer is a breakdown that does not add up, a pane that jumps when you change
+  tab, text clipped in a row, or the extra height on Needs and Skills feeling wasted.
+- **Do new colonists arrive with skills and traits?** (design 51 §10a.) New game: the Skills tab
+  shows levels above nought from the first moment, and the traits the select card showed are on the
+  pane. **Until now nobody in the game had either.** A wrong answer is everyone at level 0, or
+  traits on the card that are not on the colonist.
+- **Does a starving colonist wake to eat?** Let a colony run short of food overnight with a meal
+  somewhere: a sleeper at empty food gets up, eats, and goes back to bed. With no food anywhere she
+  sleeps on. A wrong answer is a colonist starving in bed beside food, or one bouncing in and out of
+  bed all night.
 - **Does a Jumpy or Gloomy colonist read strained all the time, and is that right?** (design 51
   §8a.) With the placeholder numbers, both read *strained* while fed and rested, and together they can
   break on ordinary needs. Say whether that is the trait doing its job or a number to change in the

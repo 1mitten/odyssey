@@ -696,12 +696,15 @@ namespace Odyssey.Sim.Pawns
                 // Thoughts tab heads with. The interface kept a copy of the threshold until this and
                 // called the resting target strained for it; the lines move with traits, so only this
                 // side can say. A colonist's, because nobody else's mood moves (Pawn.NeedsTick).
-                // Her three lines themselves are not published: nothing draws them yet, and a channel
-                // is published only when something reads it (process §3; measured, design 51 §6).
+                // Her base and her minor and major lines are published for the Thoughts tab's meter
+                // and breakdown (design 51 §10); the extreme line has no reader and is not.
                 if (pawn.IsColonist)
                 {
                     writer.AddPawnAspect(pawn.Id, MindAspects.Band, pawn.Band());
                     writer.AddPawnAspect(pawn.Id, MindAspects.Target, pawn.MoodTarget);
+                    writer.AddPawnAspect(pawn.Id, MindAspects.Base, _ctx.Content.Mood.baseMood);
+                    writer.AddPawnAspect(pawn.Id, MindAspects.MinorLine, pawn.MinorBreakLine());
+                    writer.AddPawnAspect(pawn.Id, MindAspects.MajorLine, pawn.MajorBreakLine());
                     if (pawn.IsBroken) writer.AddPawnAspect(pawn.Id, MindAspects.Break, pawn.BreakKind);
                     PublishThoughts(writer, pawn, world.CurrentTick);
                 }

@@ -341,7 +341,7 @@ namespace Odyssey.Presentation.Ui
 
             SetNeed(0, _inspect.Food);
             SetNeed(1, _inspect.Rest);
-            SetNeed(2, _inspect.Mood, HudTokens.MoodBand(_inspect.Band));
+            SetNeed(2, _inspect.Mood, HudTokens.Convert(_inspect.MoodInk));
 
             for (int i = 0; i < _inspect.Skills.Count; i++)
             {
