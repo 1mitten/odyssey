@@ -303,7 +303,14 @@ namespace Odyssey.Tests.Sim
         // the fists' cadence) — an enemy within reach is clubbed, never shot.
         // The ranged line merged with main (medical supplies, the scenery), 2026-09-25: re-taken from the merged pack.
         // And merged with the kitchen (design 48), 2026-09-25: the ranged handles to 27 / 17 / 8; re-taken.
-        const ulong ContentFingerprint = 2941432541773940875UL;
+        //
+        // Health (design 43), merged onto all of that, 2026-09-25: a new HealthDef, Health_Person,
+        // carrying the six regions and the pain, blood, tend and fall numbers, named by
+        // Species_Person's new `health` field. Its own Job_Tend, Item_Medkit and Doctor and
+        // Medicine rows were dropped for design 37's (design 43 §15), so no handle moved. No golden
+        // moved: the ledger is hashed only while a pawn has anything on it. Re-taken from the
+        // merged pack.
+        const ulong ContentFingerprint = 5726159748193892954UL;
 
 
         [Test]

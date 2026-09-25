@@ -190,6 +190,10 @@ namespace Odyssey.Sim.Pawns
                 // Appended, after the ledger whose load clears it; absent from an older save, which
                 // loads with no entry about anything, as none then was.
                 pawns.Incidents!.Ledger.DetailSection,
+                // The body's ledger (design 43 §9): who is injured where, and how much blood each
+                // has lost. Appended, after the combat section that restores the pool it sits over;
+                // absent from an older save, which loads with nobody injured.
+                new HealthSection(pawns.Pawns),
                 // The sky (design 43 §3): appended, no format bump. A save from before weather has
                 // no section and rolls a sky on its first pass, which is what a new world does.
                 pawns.Weather!,

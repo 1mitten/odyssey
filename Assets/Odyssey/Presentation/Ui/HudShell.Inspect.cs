@@ -624,7 +624,11 @@ namespace Odyssey.Presentation.Ui
                         string count = _directors != null && _directors.Selection.HasMultiple
                             ? $"{_directors.Selection.Pawns.Count} selected · "
                             : string.Empty;
-                        return count + $"{_inspect.Job} · mood {MoodBands.Band(_inspect.Mood)}";
+                        // The condition and what is in her hand left the Health tab for this
+                        // line (design 43 §10): "Building · content · Hurt · Machete".
+                        string condition = _inspect.HealthCondition.Length > 0 ? " · " + _inspect.HealthCondition : string.Empty;
+                        string weapon = _inspect.HealthWeapon.Length > 0 ? " · " + _inspect.HealthWeapon : string.Empty;
+                        return count + $"{_inspect.Job} · mood {MoodBands.Band(_inspect.Mood)}" + condition + weapon;
                     }
                 case InspectSubject.Item:
                     // The count used to be said here — "27 in the pile" — and it was missed

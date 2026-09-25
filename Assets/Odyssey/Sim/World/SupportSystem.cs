@@ -138,7 +138,7 @@ namespace Odyssey.Sim.World
                 // 1. Everything that was in the cell has lost what it was standing on. The same
                 //    answer a dig gives, from the same place, to the first real floor below rather
                 //    than one layer down — see Falling, which is where mining's version went.
-                Pawns.Falling.OutOf(_pawns, cell, Pawns.ThoughtIndex.Fell, world.CurrentTick);
+                Pawns.Falling.OutOf(_pawns, cell, Pawns.ThoughtIndex.Fell, world.CurrentTick, collapse: true);
 
                 // 2. The mess. Where the debris lands, not where the slab was: a floor that falls
                 //    into a stairwell ends up at the bottom of it, which is the rule the spoil from

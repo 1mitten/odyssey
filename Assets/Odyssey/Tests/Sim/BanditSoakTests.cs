@@ -578,10 +578,21 @@ namespace Odyssey.Tests.Sim
                 if (pawn.HpMilli <= 0) Assert.That(pawn.Downed, Is.True, $"{who}: at {pawn.HpMilli} and standing");
                 // The line a pawn gets up at: whole for a colonist, who heals only in a bed and stays
                 // there until she is (design 33 §11c); the content's threshold for an animal.
+                // Past that line only while the body still holds her down (design 43 §3): blood past
+                // its worst stage keeps a colonist down at a full pool.
                 int upAt = pawn.IsColonist ? 1_000 : pawn.Content.Combat.downedRecoverAtPerMille;
-                if (pawn.Downed)
+                if (pawn.Downed && !pawn.CurrentVitals().Incapacitated)
                     Assert.That((long)pawn.HpMilli * 1_000, Is.LessThan((long)pawn.HpMaxMilli * upAt),
                         $"{who}: down past the line it gets up at");
+                // The pool and the ledger never disagree (design 43 §2): every point a person with a
+                // body has lost is on it somewhere, and a pawn with no body carries no ledger.
+                if (pawn.Body != null)
+                    Assert.That(pawn.Health?.TotalSeverityMilli ?? 0, Is.EqualTo(pawn.HpMaxMilli - pawn.HpMilli),
+                        $"{who}: the pool and the ledger disagree");
+                else
+                    Assert.That(pawn.Health, Is.Null, $"{who}: a pawn with no body carries a ledger");
+                // And whoever the body says is down is down.
+                if (pawn.CurrentVitals().Incapacitated) Assert.That(pawn.Downed, Is.True, $"{who}: incapacitated and standing");
                 if (pawn.Downed && pawn.FinishingStepTo < 0)
                     Assert.That(pawn.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.Downed), $"{who}: down and doing something else");
                 Assert.That(pawn.Downed && pawn.Drafted, Is.False, $"{who}: down and drafted");

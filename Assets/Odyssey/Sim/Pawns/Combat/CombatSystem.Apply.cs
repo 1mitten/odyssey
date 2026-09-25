@@ -59,29 +59,15 @@ namespace Odyssey.Sim.Pawns
                 return;
             }
 
-            int before = target.HpMilli;
-            target.HpMilli = before - outcome.DamageMilli;
             _ctx.CombatLog.Report(CombatEventKind.Hit, by, target.Id, at, tick, outcome.DamageMilli, weapon);
             // Straight after the Hit it qualifies (design 33 §9b): same tick, same pair, no amount.
             if (outcome.Critical)
                 _ctx.CombatLog.Report(CombatEventKind.Critical, by, target.Id, at, tick, 0, weapon);
-            _ctx.CombatHooks.RaiseDamageApplied(new DamageReport(target, attacker, outcome.DamageMilli, weapon, tick));
 
-            // Past the death line with this blow: dead now, gone at the end of the tick. Only the
-            // blow that crosses it, so two blows on one tick cannot kill a pawn twice.
-            if (target.HpMilli <= target.DeathAtMilli)
-            {
-                if (before > target.DeathAtMilli) Kill(target, attacker, weapon, tick);
-                return;
-            }
-
-            if (target.HpMilli <= 0)
-            {
-                if (!target.Downed) Down(target, attacker, weapon, tick);
-                return;
-            }
-
-            if (target.Downed) return;
+            // The loss itself, the body, the hook, and death or going down: through the one owner
+            // (design 43 §7). A sharp blow cuts and a blunt one bruises.
+            AfflictionKind injury = armament.Attack.damageKind == DamageKind.Sharp ? AfflictionKind.Wound : AfflictionKind.Bruise;
+            if (!Hurt(target, attacker, outcome.DamageMilli, injury, HitSet.Melee, weapon, tick)) return;
 
             if (outcome.StunTicks > 0)
             {
@@ -131,6 +117,7 @@ namespace Odyssey.Sim.Pawns
             _ctx.CombatLog.Report(CombatEventKind.Downed, by?.Id ?? default, pawn.Id,
                 _ctx.Size.FromIndex(pawn.Cell), tick, 0, weapon);
             _ctx.CombatHooks.RaiseDowned(pawn, by, tick);
+            EndAttacksOnTheDowned(pawn);
         }
 
         /// <summary>
@@ -158,7 +145,8 @@ namespace Odyssey.Sim.Pawns
             _ctx.CombatLog.Report(CombatEventKind.Died, by?.Id ?? default, pawn.Id,
                 _ctx.Size.FromIndex(pawn.Cell), tick, 0, weapon);
             int from = by?.Cell ?? -1;
-            _ctx.Defer(_ => Remove(pawn, by, from, tick));
+            // This tick, whichever phase it is: a fall kills inside the deferred phase (design 43 §15e).
+            _ctx.DeferThisTick(_ => Remove(pawn, by, from, tick));
         }
 
         void Remove(Pawn pawn, Pawn? by, int from, int tick)
@@ -168,8 +156,33 @@ namespace Odyssey.Sim.Pawns
             byte facing = Melee.FallFacing(_ctx.Size, from, pawn.Cell);
             int corpse = _ctx.Corpses.Add(pawn, tick, facing);
             _ctx.CombatHooks.RaiseDied(pawn, by, corpse, tick);
-            _jobs.EndJob(pawn, JobStatus.Failed);
+            // Job_Downed lasts "until healed, rescued or dead" (JobHandle.Downed): a downed pawn
+            // that dies — a bandit bleeding out where it fell (design 43 §4) — has left it by one
+            // of its own doors, so it ends as a success. Before the body nobody died lying down,
+            // and the gate's "Job_Downed failed" sentinel never met the case.
+            _jobs.EndJob(pawn, pawn.CurrentJob?.DefIndex == JobIndex.Downed ? JobStatus.Succeeded : JobStatus.Failed);
             _ctx.Pawns.Despawn(pawn);
+        }
+
+        /// <summary>
+        /// Every attack on <paramref name="downed"/> that stops at down ends now — the rule
+        /// <see cref="EndAttacksOn"/> keeps for the dead, kept for the downed (design 43 §4). An
+        /// attacker's own driver already ends such an attack on its next tick, but a stunned or
+        /// knocked-down attacker has no next tick until it stands, and once the body could down a
+        /// pawn between blows — a bandit bleeding out — the combat gate caught one standing on a
+        /// target already down for a whole stun. An attack ordered to the death goes on. <b>Scales
+        /// with the pawns on the board</b>, once per pawn that goes down.
+        /// </summary>
+        void EndAttacksOnTheDowned(Pawn downed)
+        {
+            var pawns = _ctx.Pawns.All;
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                Pawn other = pawns[i];
+                if (other == downed || !Melee.IsAttacking(other, downed)) continue;
+                if (other.CurrentJob!.DestCell == AttackMeleeJobDriver.ToTheDeath) continue;
+                _jobs.Interrupt(other, JobStatus.Succeeded);
+            }
         }
 
         /// <summary>
