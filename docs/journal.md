@@ -12737,6 +12737,76 @@ root and a `Lifted` flag the composite honours.
 This is `docs/bug-patterns.md`'s "one rule with two owners" in a pixel format: one channel, two
 meanings, and the bug was invisible while every strength was 1.
 
+## 2026-09-25 — Jumping a one-cell stream (JP)
+
+The owner: *"A colonist/bandit assumes to swim across a stream. If the stream is 1 tile … the colonist
+will jump across and there is already synty animation."* An interview settled the rest: one cell only,
+people with their load, water only, wading kept, walking pace, and a jump that can fail into the
+water with the harm left for the health model (design 46 §2).
+
+Two things in the code decided more than the interview did. **A stream is not level with its banks**
+— it is cut a layer down — so crossing one was never a wade at all but a drop in and a hop out, 290
+against 200 for two cells of grass. And **the cell search's heuristic counts one `Orthogonal` a
+cell**, so a two-cell step priced under 200 would have made A* inadmissible everywhere for a rare
+edge. That fixed the price at exactly 200, which is also the owner's "walking pace".
+
+The first two-cell step the simulation has ever had arrived through three doors that each had to be
+opened. The mover charged any same-layer step at the entered cell's price, so a jump would have been
+billed as one cell of grass: `HopPriceHasOneOwnerTests` guards `MoveCost.Jump` now. The region graph
+needed a link kind of its own, because `Portal` links are counted as ways between layers. And the
+per-tick legality check would have dropped every path through a jump. The dirty radius did **not**
+need to grow, which was the plan's worst guess: the link is owned by the block holding its near end,
+every cell the rule reads is within one cell of the gap, and a sibling of the randomised-edit rebuild
+test with water in it proves it. It fails if the jump's dedupe table is never cleared, which is how it
+was checked for teeth.
+
+**The roll is made at take-off and saved on success too**, so neither a load nor an order given in
+mid-air rolls it twice. The order case was found by reading `JobSystem.Interrupt`, which clears the
+path and re-adopts the step: the landing had to be carried across it. **The played board has 73 to 89
+one-cell crossings a seed**, so colonists meet them. Only the played board's simulated golden moved;
+the colony probe against `main` differs only in where colonists stand, their step progress and seven
+fewer wander legs, with needs, items and experience identical.
+
+**The Unity tier was not run.** This session had no Unity, so the drawing — `JumpArc`, the clips in
+the combat slot, the splash — is unproven beyond reading, and the catalogue rows were added to the
+asset by hand with empty clip references until the owner's rebuild fills them.
+
+**Renumbered 43 → 44 → 46 on merging `main`**, which took 43 for the weather (#208) while this was in
+review. Left as 43, `Intents.cs` would have cited "design 43 §6" for the jump and "design 43 §8" for
+the sky three lines apart. Only the lines this branch added were rewritten; the weather's own
+references are untouched.
+
+**First play, same day: the jump took off in the water, the legs did not move, and the women's jump
+was the men's.** The last two were one cause: the catalogue had never been rebuilt, so all four
+clip references were still empty and every figure glided the arc in its walk. The first was the
+merge: the shoreline (design 38 §24) reached `main` while this was in review and slopes each bank
+into the stream, so the cell's edge the arc took off from is 0.66 m under the drawn water. The lip
+is found on the drawn ground now, the last point at least 20 cm above the water (design 46 §7).
+Every jump test had run on a board with no world under it, which is why none could see it; the
+new ones build a stream with the shoreline on, and their control is that the old edge is wet.
+
+## 2026-09-25 — Marks you can always see, and a swimmer you can hear
+
+Two owner asks on the stream-jump branch. **The draft's marks were hidden by the meadow**: the
+diamond, the order line and both rings used the selection bracket's material, depth-tested like a
+solid, so lush grass, a bank or a tree in front of one took it away. They are drawn twice now by a
+shader of our own (`Odyssey/SeeThroughMark`): as before where nothing is in front, and at half
+strength through whatever is — chosen over the power lines' draw-over-everything because a ring
+drawn across the colonist standing in it loses which is in front. A selected colonist's or animal's
+bracket opts in; a cell's or an order's outline does not (design 33 §23).
+
+**The swim stroke**, from a recording the owner supplied: one sound per arm rather than per cell,
+because the file is one arm's stroke and the figure's arms alternate every 0.77 s, while a cell's
+time is the simulation's and does not know where the arms are. Timed so the file's loudest moment
+(0.18 s, measured after the bake) lands as a hand reaches forward, heard only inside 40 m of the
+camera, three takes (design 20 §9).
+
+**A catalogue rebuild is two steps, and the second is easy to forget.** `PlayScene.RebuildCatalogue`
+resolved the jump clips and, in the same write, emptied every colonist row's hair, skin and cloth
+swatch rectangles (3,026 lines), which `CharacterSwatches.Classify` fills and the recolouring
+reads — `docs/lessons.md` already says to run it after. Only the four jump links were wanted, so
+they were grafted into the committed asset by hand and the rebuild thrown away.
+
 ## 2026-09-25 — The pace on the pane, and what the rain is doing to people and animals
 
 The owner, after the rain landed: *"I notice the move speed is not shown anywhere so I couldn't

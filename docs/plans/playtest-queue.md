@@ -102,6 +102,34 @@ the next session learns to ignore.
 - **Does changing Grass in Settings stay smooth?** (same branch.) Settings -> Graphics -> Grass: step
   through the rungs to Full and back during play. **A wrong answer looks like:** a visible hitch on
   each press, or the grass just beyond the board's edge not matching the new density.
+- **Does a colonist jump a one-cell stream, and does it read as a jump?** (`claude/funny-allen-2qipcn`,
+  design 46.) The jump clips are linked in the committed catalogue since 2026-09-25; no rebuild is
+  needed. New game, find a stream one cell wide, right-click a drafted colonist to
+  the far bank. They walk to the lip, gather, leap and land on the far lip without touching the
+  water. A wrong answer is a figure that slides across level with the bank (the clips did not
+  resolve), a pause at the lip long enough to read as stuck, feet sliding on landing, or a colonist
+  who still swims a one-cell stream. **First play (2026-09-25):** took off in the water, legs still,
+  women the same as men — the catalogue had not been rebuilt, and the take-off was at the cell's
+  edge, which the shoreline draws under water. The lip is now the last dry ground; play again after
+  the rebuild. A wrong answer now is feet at or in the water at the gather, or a leap so long it
+  reads as a launch.
+- **Does a failed jump read as a slip and not a bug?** (same.) Debug menu > Cheats > *Jumps always
+  fail*, then the same order. They leap, come down in the water with a splash (silent until a splash
+  is sourced), float and climb out on the far side. A wrong answer is a figure that lies down in
+  mid-air, a snap as it reaches the water, or a colonist stuck in the stream.
+- **Does a hauler keep the load in its hands over the jump?** (same.) A wrong answer is the load
+  left behind at the lip or drawn in the air beside the colonist.
+- **Is one in thirty-three the right rate?** (same.) With the switch off, watch colonists cross for a
+  day. A wrong answer is never seeing one fall in, or seeing it so often it reads as clumsy.
+- **Can you always see where you sent a drafted colonist?** (same branch, design 33 §23.) Draft,
+  select, and right-click a spot behind trees or in long grass, then one behind a rise. The line,
+  the diamond, the landing ring and the colonist's bracket show through what is in front of them,
+  fainter. A wrong answer is a mark still lost behind a tree or a bank, a hidden part so faint it
+  might as well not be there, or so strong you cannot tell it is behind something.
+- **Does swimming sound like swimming?** (same branch, design 20 §9.) Zoom right in on a colonist
+  crossing water. One stroke sound per arm, on the hand going in; from the default zoom, silence.
+  A wrong answer is splashes out of step with the arms, a sound heard across the board, a machine-gun
+  run of splashes from several swimmers, or silence up close.
 
 - **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
   Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest

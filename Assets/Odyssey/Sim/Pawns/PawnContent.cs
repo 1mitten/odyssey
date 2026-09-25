@@ -678,6 +678,20 @@ namespace Odyssey.Sim.Pawns
         /// first reason to run the game has, which is what §4f held the run for.
         /// </summary>
         public int draftedPacePerMille = 2_000;
+
+        /// <summary>
+        /// How often a well, unladen person's jump over a one-cell stream falls short, per mille
+        /// (design 46 §6): 30, one in thirty-three. INVENTED. A failed jump lands in the water
+        /// and costs a soaking and a few seconds; nothing is hurt until the health model can
+        /// carry an injury.
+        /// </summary>
+        public int jumpFailPerMille = 30;
+
+        /// <summary>
+        /// What carrying does to that chance, per mille of it: 2,000 doubles it. A load in the
+        /// arms, or a person being carried to a bed. INVENTED.
+        /// </summary>
+        public int jumpFailCarryingPerMille = 2_000;
     }
 
     /// <summary>
@@ -1602,5 +1616,11 @@ namespace Odyssey.Sim.Pawns
         /// SHA-256's tenth round constant.
         /// </summary>
         public const uint Knockback = 0x1283_5B01;
+
+        /// <summary>
+        /// Whether a jump over a stream falls short (design 46 §6). SHA-256's eleventh round
+        /// constant.
+        /// </summary>
+        public const uint Jump = 0x2431_85BE;
     }
 }
