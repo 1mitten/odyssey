@@ -23,6 +23,114 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the selection highlight make it obvious who is selected?** (`claude/selection-highlight`, design 44.)
+  Click a colonist, an item, a wall, a tree and a patch of ground. Each should gain a thin white line round its own
+  shape and look a touch brighter; the ground gets a pale wash. Then walk a selected colonist behind a wall: a
+  fainter line should show through. Settings →
+  Interface → *Selection style* → Brackets brings the old cursor back. **Second look (2026-09-25):**
+  box-select a group — every colonist should have the same full white outline, none faded or washed,
+  and none brightened; click one of them and that one alone brightens. Read the overlay's `gpu` line at 4K with
+  and without a selection. A wrong answer is a line you have to hunt for, a colonist who looks bleached, a
+  selection you lose indoors, or `gpu` moving by more than a few tenths of a millisecond.
+- **Which rain reads as a rainy day: §7's particles, or GPU rain with wet ground?** (`claude/rain-look`,
+  #203; design 43 §7, #202.) No Play needed. Open https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3, pick
+  the Play framing, and wipe between “§7 as written” and “+ wet ground”; then try the Far framing
+  with the downpour, and the Close framing for splashes on grass. A wrong answer is preferring the
+  particles (then §7 keeps the emitters and only the wet ground carries over), rain that reads as fog
+  at the far zoom, or a meadow that looks hailed on. **Now in Play too** (2026-09-24): backtick,
+  Weather, pick Rain or Downpour, and toggle *Draw as particles* to compare them moving. Read the
+  overlay's `gpu` line at your own resolution with Clear and then Downpour; the budget is 0.5 ms at
+  4K. A wrong answer is a sky that snaps rather than arrives, rain that keeps falling while paused,
+  or rain drawn inside the hut. **Second round (2026-09-25):** Rain, Drizzle and Downpour should
+  keep the colour of Clear; Storm is the grey one; zoom right out on Downpour and the rain should
+  still read. Toggle *Wet ground: gloss only* and say which of the two wet looks to keep.
+  **Third round (2026-09-25): the weather is real now.** Start a colony and leave it running a few
+  game days, skipping days with the debug menu: the sky should change by itself, mostly clear in
+  Glare, showery in Wash, grey in Rime, with the clock's glyph following. A wrong answer is a sky
+  that never changes, one that flips at midnight, or a storm every other day.
+- **Can you see who the rain is slowing?** (`claude/pace-readout`, design 17 §5a, 43 §6a.) New
+  game, backtick > Weather > Downpour. Click a colonist out in the open: under what she is doing the
+  pane should say about *Pace 90% · in the rain*, and hovering it should say *rain −10%* among the
+  rest. Walk her under a roof and it should go back to about 100% with the rain gone from both.
+  Draft her and the pace should roughly double (*drafted ×2*). Click a hog making for a tree, and
+  the same hog under it: both should read *Sheltering*, as should its row on the Animals tab (F5).
+  A wrong answer is: a line you do not notice without looking for it; a pace that is not what you
+  see her walk at; *in the rain* under a roof; a hog reading *Resting* under a tree in a downpour.
+- **Does the rain touch the world?** (`claude/weather-world`, design 43 §6a.) New game, backtick
+  > Weather > Downpour, and watch at normal speed:
+  - Colonists crossing open ground should walk visibly slower in the rain and at their usual pace
+    under a roof or under a tree.
+  - A field in the open should ripen faster than one under a roof. *Ripen crops* is no help here;
+    let the days run.
+  - Animals in the open should head for the nearest trees within a few seconds. Fell the tree one
+    stands under and it should get up and go to another.
+
+  A wrong answer is:
+  - a colonist slowed under a roof, or one who is not slowed at all in the open;
+  - an animal sheltering from a drizzle (the gate is 400 per mille), or one that stands in the rain
+    beside a tree it could reach;
+  - an animal still standing where its tree was, a minute after the tree is gone.
+
+  Also say whether a tenth off the walking pace is too little to notice.
+
+  **And listen** (the rain's sound, design 43 §7a). Weather tab, from Clear through Drizzle,
+  Rain, Downpour and Storm, a few seconds apart:
+  - Drizzle should be a light patter.
+  - Rain should thicken into a roar with no seam you can hear.
+  - A storm should be the loudest.
+  - The birds should fall back as the rain grows.
+  - Leave Downpour running for two minutes: neither loop should be heard to repeat or click.
+
+  A wrong answer is:
+  - a jump in level between two presses;
+  - a click, a breath or a recognisable moment every 40 or 80 seconds;
+  - rain still audible after the slice has gone underground;
+  - birds as loud in a storm as on a clear day.
+- **Do the bat and the crowbar only swing?** (`claude/blunt-swings`, design 33 §22.) Debug menu >
+  Spawn 3 bandits, arm a colonist with a bat and another with a crowbar (*Arm every colonist*, or
+  right-click > Equip), draft them and order attacks. Watch several blows in a row: each should be
+  a big two-handed swing or overhead chop, cycling through three different ones. A wrong answer is
+  any blow that thrusts the weapon straight forward, a blow that lands before the swing reaches the
+  target (the third one especially, whose timing was broken until now), or the machete and blade
+  swinging differently from before.
+
+- **Does a new game arrive cleanly?** (`claude/meadow-hitch-check`, design 38 §25.) From the title
+  screen, set up a colony and press Start. **Look for** the setup page freezing for about half a
+  second, then the starfield for a blink, then the colony — already smooth, no stutter as it appears.
+  **A wrong answer looks like:** a jolt or stall in the first moment the colony is on screen; the
+  starfield hanging on for a noticeable time; or the interface appearing before the world does.
+- **Does changing Grass in Settings stay smooth?** (same branch.) Settings -> Graphics -> Grass: step
+  through the rungs to Full and back during play. **A wrong answer looks like:** a visible hitch on
+  each press, or the grass just beyond the board's edge not matching the new density.
+- **Does a colonist jump a one-cell stream, and does it read as a jump?** (`claude/funny-allen-2qipcn`,
+  design 46.) The jump clips are linked in the committed catalogue since 2026-09-25; no rebuild is
+  needed. New game, find a stream one cell wide, right-click a drafted colonist to
+  the far bank. They walk to the lip, gather, leap and land on the far lip without touching the
+  water. A wrong answer is a figure that slides across level with the bank (the clips did not
+  resolve), a pause at the lip long enough to read as stuck, feet sliding on landing, or a colonist
+  who still swims a one-cell stream. **First play (2026-09-25):** took off in the water, legs still,
+  women the same as men — the catalogue had not been rebuilt, and the take-off was at the cell's
+  edge, which the shoreline draws under water. The lip is now the last dry ground; play again after
+  the rebuild. A wrong answer now is feet at or in the water at the gather, or a leap so long it
+  reads as a launch.
+- **Does a failed jump read as a slip and not a bug?** (same.) Debug menu > Cheats > *Jumps always
+  fail*, then the same order. They leap, come down in the water with a splash (silent until a splash
+  is sourced), float and climb out on the far side. A wrong answer is a figure that lies down in
+  mid-air, a snap as it reaches the water, or a colonist stuck in the stream.
+- **Does a hauler keep the load in its hands over the jump?** (same.) A wrong answer is the load
+  left behind at the lip or drawn in the air beside the colonist.
+- **Is one in thirty-three the right rate?** (same.) With the switch off, watch colonists cross for a
+  day. A wrong answer is never seeing one fall in, or seeing it so often it reads as clumsy.
+- **Can you always see where you sent a drafted colonist?** (same branch, design 33 §23.) Draft,
+  select, and right-click a spot behind trees or in long grass, then one behind a rise. The line,
+  the diamond, the landing ring and the colonist's bracket show through what is in front of them,
+  fainter. A wrong answer is a mark still lost behind a tree or a bank, a hidden part so faint it
+  might as well not be there, or so strong you cannot tell it is behind something.
+- **Does swimming sound like swimming?** (same branch, design 20 §9.) Zoom right in on a colonist
+  crossing water. One stroke sound per arm, on the hand going in; from the default zoom, silence.
+  A wrong answer is splashes out of step with the arms, a sound heard across the board, a machine-gun
+  run of splashes from several swimmers, or silence up close.
+
 - **Does home read, and can a colonist be kept in it?** (`claude/sleepy-cannon-9d0evw`, PR #214,
   design 43 §5–§6.) Build a campfire and a hut round it. Press the **house** under Power in the views
   strip: a thin cyan line should run round the base about five cells out, the grass parting along it,
@@ -41,6 +149,23 @@ the next session learns to ignore.
   a far bandit keeps the helmet and the red. A wrong answer is hair or a beard poking through the
   helmet, a vest that is still camo, trousers that are red, a far bandit in camo or the white
   jumpsuit, or three bandits you cannot tell from colonists at play distance.
+
+- **Do the streams and ponds read as water with a natural edge?** (`claude/meadow-shorelines`,
+  design 38 §24.) New game; pan to the nearest stream and a pond, close in and pulled back.
+  **Look for** a shoreline that curves and cuts corners instead of following the cells, marsh as a
+  soft dark band rather than pale tiles, a pond's deep middle as a darker blob, and murky green-teal
+  water like the reference. Walk a colonist along a bank. **A wrong answer looks like:** a staircase
+  still visible along a diagonal stream; pale slivers or wedges at the water's edge; a colonist
+  standing in the water or floating over a bank; a waterfall missing or cut short; or the water too
+  dark to read as water at dusk.
+- **Can you click any water tile now, and does the water move?** (`claude/meadow-shorelines`,
+  design 38 §24f.) Click shallow water, deep water, a one-cell pool and the edge of a stream: each
+  should select the water tile. Click the grass beside it: that should still select the bank. Watch
+  a stream for a few seconds, then a pond, then pause. **Look for** light streaks drifting downstream,
+  gentle swells on ponds, a soft rim at the edge that slowly brightens and fades, and everything
+  holding still on pause. **A wrong answer looks like:** a click on water selecting the bank or the
+  tile beyond it; streaks flowing uphill or away from a fall; motion that reads as clouds or noise
+  rather than water; or water still moving while the game is paused.
 - **Does the title screen's dock read well, and does Exit ask?** (`claude/settings-frame`, design
   40.) Press Play. A dark panel down the left edge with the layered mark and ODYSSEY, four
   coloured buttons and the build line at the foot, the starfield clear to the right. New game should

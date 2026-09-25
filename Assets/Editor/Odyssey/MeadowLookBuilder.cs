@@ -49,6 +49,8 @@ namespace Odyssey.EditorTools
             look.flowers = Texture("Grass_Flowers_Texture_01");
             look.leaves = Texture("Grass_Leaves_Texture_01");
             look.earth = Texture("Dirt_Texture_01");
+            // The marsh round water, blended in by the ground field (design 38 §24).
+            look.wet = Texture("Moss_Texture_01");
             look.grade = Asset<VolumeProfile>("Global Volume Profile", "Assets/Synty/PolygonNatureBiomes");
 
             if (created) AssetDatabase.CreateAsset(look, AssetPath);

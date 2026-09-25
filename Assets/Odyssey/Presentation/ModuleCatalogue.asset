@@ -15579,10 +15579,14 @@ MonoBehaviour:
       clip: {fileID: -8709411803423658444, guid: f3800f1bd189abc469fcc7c374371a91, type: 3}
       variant: A
       impactSeconds: 0.96666664
-    - clipName: A_Attack_HeavyStab01_Sword
-      clip: {fileID: 8332939666779294377, guid: b963d0c4e093a9c4ea792b8095e51ba2, type: 3}
+    - clipName: A_Attack_HeavyCombo01B_Sword
+      clip: {fileID: 7713716175428577925, guid: 94770028b07a9ce44b555d283c113a86, type: 3}
       variant: B
-      impactSeconds: 0.8666667
+      impactSeconds: 0.8
+    - clipName: A_Attack_HeavyCombo01C_Sword
+      clip: {fileID: -2621343224683262629, guid: 2511e6dc0955bde4395e6b369d7d8707, type: 3}
+      variant: C
+      impactSeconds: 0.93333334
     sitClip: {fileID: 0}
     sitClipName: 
     quadrupedGait: 0
@@ -16212,6 +16216,140 @@ MonoBehaviour:
       clip: {fileID: 4741049883773862030, guid: 8d7a574352a5f294fa488a9148bc9ceb, type: 3}
       variant: Femn
       impactSeconds: 0
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.anim.jump.takeoff
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    prefabUnder: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_Jump_Walking_Masc
+      clip: {fileID: -998496362607748373, guid: 27d9e2694d711be42a8631acbc94a6d4, type: 3}
+      variant: Masc
+      impactSeconds: 0
+      fileName: A_Jump_Walking_Masc
+    - clipName: A_Jump_Walking_Femn
+      clip: {fileID: -998496362607748373, guid: 06d87a4f7f6987e45aeafc7e2de0ed8f, type: 3}
+      variant: Femn
+      impactSeconds: 0
+      fileName: A_Jump_Walking_Femn
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.anim.jump.land
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    prefabUnder: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_Land_Walking_Masc
+      clip: {fileID: -7955037871088759745, guid: 27d9e2694d711be42a8631acbc94a6d4, type: 3}
+      variant: Masc
+      impactSeconds: 0
+      fileName: A_Jump_Walking_Masc
+    - clipName: A_Land_Walking_Femn
+      clip: {fileID: -7955037871088759745, guid: 06d87a4f7f6987e45aeafc7e2de0ed8f, type: 3}
+      variant: Femn
+      impactSeconds: 0
+      fileName: A_Jump_Walking_Femn
     sitClip: {fileID: 0}
     sitClipName: 
     quadrupedGait: 0

@@ -1553,7 +1553,11 @@ namespace Odyssey.Sim.Construction
             _edifices[handle] = gone;
 
             if (was.Def == CoreContent.EdificeDoor) ctx.Nav.SetDoor(was.CellIndex, isDoor: false, open: false);
-            if (was.Def == CoreContent.EdificeBed) _items.RemoveBed(was.CellIndex);
+            if (was.Def == CoreContent.EdificeBed)
+            {
+                _items.RemoveBed(was.CellIndex);
+                ReleasePatientsBed(ctx, was.CellIndex);
+            }
 
             // A store coming down spills what the board will take and loses the rest. That this
             // destroys is right here and refused one level up: the deconstruct job will not finish
@@ -1588,6 +1592,26 @@ namespace Odyssey.Sim.Construction
             MarkNavAround(ctx, was.CellIndex);
             if (second >= 0) MarkNavAround(ctx, second);
             return true;
+        }
+
+        /// <summary>
+        /// A bed coming down lets go of the patient lying in it (design 33 §11h). The bed's head-cell
+        /// reservation passed to her on the lay and her <c>Job_Downed</c> holds it until she gets up,
+        /// so without this she kept a claim on bare ground for days and a bed raised on that cell read
+        /// as taken. Only a downed pawn: a sleeper's and a rescuer's jobs ask about their bed and let
+        /// go themselves. Taken off her own list as well as the table, so the two keep agreeing and
+        /// her job's end has nothing left to release. Scales with the pawns, once per bed demolished.
+        /// </summary>
+        static void ReleasePatientsBed(PawnContext ctx, int head)
+        {
+            long key = ReservationManager.Key(ReservationTargetKind.Cell, head);
+            var pawns = ctx.Pawns.All;
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                Pawn pawn = pawns[i];
+                if (!pawn.Downed || !pawn.HeldReservations.Remove(key)) continue;
+                ctx.Reservations.Release(pawn.Id, key);
+            }
         }
 
         /// <summary>

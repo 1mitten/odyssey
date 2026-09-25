@@ -5,6 +5,20 @@ using System.Collections.Generic;
 namespace Odyssey.Hud
 {
     /// <summary>
+    /// How the selected thing is marked in the world (<c>docs/design/44-selection-highlight.md</c>):
+    /// lit at its own edges, or the corner brackets it had before. Stored as its number, so the
+    /// order is the storage format — add at the end.
+    /// </summary>
+    public enum SelectionStyle
+    {
+        /// <summary>A line round the thing's own silhouette, a lift over it, a wash over a tile.</summary>
+        Highlight = 0,
+
+        /// <summary>The corner-bracket cursor, as it was before 2026-09-25.</summary>
+        Brackets = 1,
+    }
+
+    /// <summary>
     /// The graphics levers the panel can throw. The order is the order they are drawn in.
     ///
     /// <para>Every one of these is <b>decoration</b>: none is a cell, none is in the save and none
@@ -338,6 +352,9 @@ namespace Odyssey.Hud
         /// <summary>The registry key naming the Build-palette layout row.</summary>
         public const string BuildLayoutKey = "ui.settings.buildlayout";
 
+        /// <summary>The registry key naming the selection-style row, and the key it is stored under.</summary>
+        public const string SelectionStyleKey = "ui.settings.selectionstyle";
+
         /// <summary>The registry key naming the exit row.</summary>
         /// <summary>The heading over the levers that decide how the frame is paced and drawn.</summary>
         public const string DisplayGroupKey = "ui.settings.display";
@@ -404,6 +421,7 @@ namespace Odyssey.Hud
             CamSpeedKey,
             DeveloperKey,
             BuildLayoutKey,
+            SelectionStyleKey,
             ExitKey,
             "ui.settings.shadows",
             "ui.settings.surround",
@@ -983,6 +1001,17 @@ namespace Odyssey.Hud
         /// </summary>
         public BuildPaletteLayout BuildPaletteLayout { get; private set; } = BuildPaletteModel.Default;
 
+        /// <summary>How a selection is marked in the world. The highlight unless the player chose the brackets.</summary>
+        public SelectionStyle SelectionStyle { get; private set; } = DefaultSelectionStyle;
+
+        public const SelectionStyle DefaultSelectionStyle = SelectionStyle.Highlight;
+
+        /// <summary>The two rungs, in the order they are drawn.</summary>
+        public static readonly SelectionStyle[] SelectionStyles = { SelectionStyle.Highlight, SelectionStyle.Brackets };
+
+        public static bool IsSelectionStyle(int value) =>
+            value >= (int)SelectionStyle.Highlight && value <= (int)SelectionStyle.Brackets;
+
         /// <summary>
         /// The session row that has been clicked once and is asking to be sure, or null.
         ///
@@ -1027,6 +1056,9 @@ namespace Odyssey.Hud
 
         /// <summary>Raised when the Build-palette layout changes, whichever control changed it.</summary>
         public event Action<BuildPaletteLayout>? BuildPaletteLayoutChanged;
+
+        /// <summary>Raised when the selection style changes.</summary>
+        public event Action<SelectionStyle>? SelectionStyleChanged;
 
         /// <summary>Raised when one bus's volume changes, with the bus that changed.</summary>
         public event Action<SettingsBus>? BusDbChanged;
@@ -1160,6 +1192,7 @@ namespace Odyssey.Hud
                     SetUiScale(DefaultUiScale);
                     SetCameraSpeed(100);
                     SetBuildPaletteLayout(BuildPaletteModel.Default);
+                    SetSelectionStyle(DefaultSelectionStyle);
                     break;
                 case SettingsTab.Graphics:
                     foreach (GraphicsLadder ladder in LadderOrder) SetValue(ladder, DefaultOf(ladder));
@@ -1438,6 +1471,14 @@ namespace Odyssey.Hud
         /// a switcher of three, and <see cref="BuildPaletteModel"/> rejects an ordinal outside the
         /// set rather than trusting the file.
         /// </summary>
+        public void SetSelectionStyle(SelectionStyle style)
+        {
+            if (SelectionStyle == style) return;
+            SelectionStyle = style;
+            _store?.WriteInt(SelectionStyleKey, (int)style);
+            SelectionStyleChanged?.Invoke(style);
+        }
+
         public void SetBuildPaletteLayout(BuildPaletteLayout layout)
         {
             if (BuildPaletteLayout == layout) return;
@@ -1596,6 +1637,10 @@ namespace Odyssey.Hud
 
             int? autosave = store.ReadInt(AutosaveKey);
             if (autosave.HasValue) SetAutosaveDays(autosave.Value);
+
+            int? style = store.ReadInt(SelectionStyleKey);
+            if (style.HasValue && IsSelectionStyle(style.Value))
+                SetSelectionStyle((SelectionStyle)style.Value);
 
             int? layout = store.ReadInt(BuildLayoutKey);
             if (layout.HasValue && BuildPaletteModel.IsLayout(layout.Value))

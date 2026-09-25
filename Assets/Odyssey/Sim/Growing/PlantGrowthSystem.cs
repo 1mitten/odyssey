@@ -72,6 +72,13 @@ namespace Odyssey.Sim.Growing
                     if (rate < 1_000) gain = IntervalTicks * rate / 1_000;
                 }
 
+                // And the rain on a crop the sky reaches (design 43 §5): one multiply, the hook
+                // 22 §8 recorded, kept apart from the temperature's and from any fertility. A crop
+                // under a roof or a canopy grows at its ordinary rate — the honest first version
+                // of "trees shelter crops" until a moisture model replaces this stand-in (§9).
+                if (_pawns.Weather != null)
+                    gain = gain * _pawns.Weather.GrowthPerMilleAt(index, world.CurrentTick) / 1_000;
+
                 int before = def.StageOfTicks(_zones.GrowthTicks(index));
                 int after = _zones.Advance(index, gain);
                 if (after != before) _pawns.Chunks?.MarkDirty(_zones.Size.FromIndex(index));

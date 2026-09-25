@@ -83,6 +83,9 @@ namespace Odyssey.Sim
         /// <summary>Say which drawing of the lines this frame's rows are. See <see cref="WorldSnapshot.PowerVersion"/>.</summary>
         public void SetPowerVersion(int version) => _target.SetPowerVersion(version);
 
+        /// <summary>Publish the sky. See <see cref="WorldSnapshot.Weather"/>.</summary>
+        public void SetWeather(in WeatherView view) => _target.SetWeather(view);
+
         /// <summary>Say where the hearth is. See <see cref="WorldSnapshot.HearthCell"/>.</summary>
         public void SetHearthCell(int cell) => _target.SetHearthCell(cell);
 

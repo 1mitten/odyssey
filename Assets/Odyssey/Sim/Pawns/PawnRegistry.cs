@@ -315,6 +315,7 @@ namespace Odyssey.Sim.Pawns
         public Pawn Adopt(Pawn pawn)
         {
             pawn.DriverPool = BuildDrivers();
+            pawn.Context = _ctx;
             _byId[pawn.Id.Value] = _pawns.Count;
             _pawns.Add(pawn);
             if (pawn.Id.Value >= _nextId) _nextId = pawn.Id.Value + 1;
@@ -462,7 +463,9 @@ namespace Odyssey.Sim.Pawns
                     moveDeltaPerMille,
                     pawn.Kind,
                     flags,
-                    seated));
+                    seated,
+                    // A jump falling short lands a layer below the bank it left (design 46 §6).
+                    pawn.JumpLanding >= 0 && pawn.JumpLanding / size.LayerStride != pawn.Cell / size.LayerStride));
 
                 // The fight (design 33 §5), sparse, and for animals as much as people: the health
                 // bar is drawn over the hurt, the downed and the drafted, and a hog can be all
@@ -506,6 +509,10 @@ namespace Odyssey.Sim.Pawns
                 if (!pawn.IsPerson)
                 {
                     writer.AddPawnAspect(pawn.Id, RateAspects.Move, pawn.MoveRatePerMille());
+                    // Sheltering from the rain (design 43 §6a), sparse: read off the job it is
+                    // running and the sky, so the activity line can say so without a job def.
+                    if (AnimalShelterThinkNode.IsSheltering(pawn, _ctx))
+                        writer.AddPawnAspect(pawn.Id, AnimalShelterThinkNode.Sheltering, 1);
                     continue;
                 }
 
@@ -571,6 +578,18 @@ namespace Odyssey.Sim.Pawns
                 // publishes for every colonist and not only a working one: whatever draws a
                 // colonist's pace wants to be able to ask it of an idle one.
                 writer.AddPawnAspect(pawn.Id, RateAspects.Move, pawn.MoveRatePerMille());
+
+                // And what that pace is a product of (design 17 §5a), so the pane can say why:
+                // the very methods MoveRatePerMille multiplies, asked again rather than derived a
+                // second way. The rolled pace always; the rest only while they cost her something,
+                // so a dry, fed, undrafted colonist pays one row for all of it.
+                writer.AddPawnAspect(pawn.Id, RateAspects.PaceRolled, pawn.InnatePacePerMille());
+                int condition = pawn.ConditionPerMille();
+                if (condition != Rates.Scale) writer.AddPawnAspect(pawn.Id, RateAspects.PaceCondition, condition);
+                int weather = pawn.WeatherPerMille();
+                if (weather != Rates.Scale) writer.AddPawnAspect(pawn.Id, RateAspects.PaceWeather, weather);
+                int urgency = pawn.UrgencyPerMille();
+                if (urgency != Rates.Scale) writer.AddPawnAspect(pawn.Id, RateAspects.PaceUrgency, urgency);
 
                 // The draft (design 33 §2e), sparse: a colony nobody drafts publishes nothing
                 // new. The order cell only while an order is being walked: a drafted move, or a
@@ -799,6 +818,7 @@ namespace Odyssey.Sim.Pawns
             {
                 var pawn = new Pawn(new PawnId(reader.ReadInt()), reader.ReadInt(), _ctx.Content);
                 pawn.DriverPool = BuildDrivers();
+                pawn.Context = _ctx;
 
                 int needCount = reader.ReadInt();
                 for (int n = 0; n < needCount; n++)

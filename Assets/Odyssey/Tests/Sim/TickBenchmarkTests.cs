@@ -574,6 +574,76 @@ namespace Odyssey.Tests.Sim
             return watch.Elapsed.TotalMilliseconds / done;
         }
 
+        /// <summary>
+        /// What the sky map (design 43 §6) costs an edit, on the played map at every offered size.
+        ///
+        /// <para><b>It scales with the columns an edit touched and never with the board.</b> An
+        /// edit tells the chunk grid which cell changed; the map recomputes that column and the
+        /// ones a trunk there could shade — nine for a single cell, twenty-five for the 3 × 3 × 3
+        /// an order's chunk marking touches — and nothing else. The assertion is that count, which
+        /// must be the same on Standard and Huge; the milliseconds are printed, not asserted,
+        /// because a timing is only comparable with one taken in the same run. The board-wide
+        /// build is printed beside them: it is paid once, on the first question after a load, and
+        /// is the number that does grow with the board.</para>
+        /// </summary>
+        [Test, Category("Long")]
+        public void TheSkyColumnsCostWhatAnEditTouches()
+        {
+            var report = new StringBuilder();
+            var perEdit = new List<int>();
+            var perOrder = new List<int>();
+            foreach (GridSize size in new[] { BoardSizes.Standard, BoardSizes.Large, BoardSizes.Huge })
+            {
+                CellGrid grid = PlayedMap.Generate(size, 7u, out var result);
+                var chunks = new ChunkGrid(size);
+                var sky = new SkyColumns(grid, result.Context.Edifices, chunks);
+
+                var watch = Stopwatch.StartNew();
+                sky.Sync();
+                watch.Stop();
+                double build = watch.Elapsed.TotalMilliseconds;
+
+                // One slab at a time, over the top of a column, laid and then taken away: the
+                // cheapest edit there is and the commonest (a roof going up).
+                uint s = 43u;
+                const int Edits = 2_000;
+                int single = 0;
+                watch.Reset();
+                for (int i = 0; i < Edits; i++)
+                {
+                    int x = (int)(Next(ref s) % (uint)size.SizeX), z = (int)(Next(ref s) % (uint)size.SizeZ);
+                    int y = size.SizeY - 1;
+                    int cell = size.Index(x, z, y);
+                    grid.Floor[cell] = grid.Floor[cell] == 0 ? CoreContent.SlabBuilt : CoreContent.SlabNone;
+                    chunks.MarkDirty(x, z, y);
+                    watch.Start();
+                    sky.Sync();
+                    watch.Stop();
+                    single = Math.Max(single, sky.LastRecomputed);
+                }
+                double edit = watch.Elapsed.TotalMilliseconds / Edits;
+
+                // An order's marking: the 3 × 3 × 3 cells around the changed one, as
+                // ConstructionGrid.MarkChunksAround and MineJob do.
+                int cx = size.SizeX / 2, cz = size.SizeZ / 2, cy = size.SizeY / 2;
+                for (int dy = -1; dy <= 1; dy++)
+                for (int dz = -1; dz <= 1; dz++)
+                for (int dx = -1; dx <= 1; dx++)
+                    chunks.MarkDirty(cx + dx, cz + dz, cy + dy);
+                sky.Sync();
+                int order = sky.LastRecomputed;
+
+                perEdit.Add(single);
+                perOrder.Add(order);
+                report.AppendLine($"[Sky] {size}: board-wide build {build:F2} ms ({size.LayerStride:N0} columns); " +
+                                  $"one slab {edit * 1000:F2} us, {single} columns; an order's 3 x 3 x 3 marking {order} columns");
+            }
+            TestContext.WriteLine(report.ToString());
+
+            Assert.That(perEdit, Is.All.EqualTo(9), "one cell recomputes its column and the eight a trunk there could shade, on any board");
+            Assert.That(perOrder, Is.All.EqualTo(25), "an order's marking touches a 3 x 3 of columns, widened by the canopy's reach");
+        }
+
         // ---------------------------------------------------------------- the workload
 
         readonly struct Colony

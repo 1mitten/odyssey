@@ -421,6 +421,35 @@ namespace Odyssey.Tests.Sim
         /// the reason given above. <b>Measured</b>: <c>GoldenColonyProbe</c>, reading the first
         /// seventeen job defs so it runs unchanged on both sides, was run on <c>main</c> (54df119a)
         /// and on the merge; the outputs are identical on all three boards.</para>
+        ///
+        /// <para><b>All six moved on 2026-09-25, by the weather (design 43, <c>weather-core</c>):
+        /// the first change here that is a colony doing something different, and meant to be.</b>
+        /// A new system is hashed (the sky: kind, intensity, the hand-over and the spell's end),
+        /// which moves the generated numbers before a tick runs. It writes the outdoor curve's
+        /// weather term, which moves the simulated numbers. <b>Measured</b>: <c>GoldenColonyProbe</c>
+        /// run on <c>origin/main</c> and on the branch differs in <b>mood alone</b>, 200 lower on each
+        /// board, as the rolled sky's cooler air crosses a comfort band. Food, rest, work
+        /// progress, experience, passions, jobs started and finished, and where every colonist
+        /// stands are identical on all three boards. The weather changed how the colonies feel,
+        /// and nothing they did.</para>
+        ///
+        /// <para><b>One moved on 2026-09-25, the ruined city's <see cref="Case.Simulated"/>, by the
+        /// rain touching the world (design 43, <c>weather-world</c>): pace and animals, and
+        /// nothing else, as intended.</b> The sky map is derived and unhashed, so no
+        /// <c>Generated</c> number moved, and neither did the meadow or the played board, because
+        /// neither sees a drop inside its window: seed 4242 and seed 1 both roll a cloudy spell
+        /// that lasts the whole run. Seed 9 rolls rain at intensity 459 from the first tick to the
+        /// last — past the animals' gate of 400, and a pace of 955 for anyone out in it (30,129 of
+        /// the 50,000 colonist-ticks were). <b>Measured</b> with <c>GoldenColonyProbe</c> on
+        /// <c>origin/main</c> (fccdebcd) and on the branch, and on the branch twice more with one
+        /// half switched off at a time. Food, rest, mood, experience and passions are identical in
+        /// all four: nobody ate, slept, felt or worked differently. <b>Pace alone</b> leaves the
+        /// jobs where they were (119 started against 118; 81 wanders and 29 waits against 79 and
+        /// 30) and takes the summed move progress from 519,595 to 341,744 and every pawn to a
+        /// different cell. <b>Shelter alone</b> is the jobs: 303 started, and waits from 30 to 220,
+        /// which are the four animals standing under cover in the 120-tick waits
+        /// <c>AnimalShelterThinkNode</c> gives them. Both together: 300 started, 74 wanders, 217
+        /// waits, 341,744 progress.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -431,8 +460,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 10212350739386668344UL,
-            Simulated = 8860197422024298715UL,
+            Generated = 7623512122801076561UL,
+            Simulated = 1235041211937114867UL,
         };
 
         /// <summary>
@@ -457,8 +486,16 @@ namespace Odyssey.Tests.Sim
             // zeros in the job counters; the probe diffs clean.
             // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
             // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
-            Generated = 16337376216538696172UL,
-            Simulated = 16703233559271607928UL,
+            // 2026-09-25, jumping a one-cell stream (design 46): Simulated only, and this board
+            // only — the bare meadow and the city have no stream and did not move, nor did
+            // Generated. The colonists behaved differently, and in one way: they take different
+            // routes. The probe against main is identical in items, needs, mood, experience,
+            // passions and failed jobs; only where they stand, the progress into their steps and
+            // the wander legs started (105 -> 98 in the window) differ. Re-baked again on merging
+            // the weather from main: Generated is main's, and the probe against main (0dff2b36)
+            // differs in exactly the same three numbers and nothing else.
+            Generated = 13501204456710631653UL,
+            Simulated = 11502160785219034506UL,
         };
 
         /// <summary>
@@ -497,8 +534,9 @@ namespace Odyssey.Tests.Sim
             // 2026-09-23, wildlife (design 30): the ruin is seeded with its rats and hogs.
             // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
             // 2026-09-23, the combat contracts step; the widened probe diffs clean.
-            Generated = 16106640289945334159UL,
-            Simulated = 9493899456924685757UL,
+            // 2026-09-25, weather-world: it rains here all run — pace and animal shelter (remarks).
+            Generated = 15627359971669991438UL,
+            Simulated = 7586243452283492469UL,
         };
     }
 }

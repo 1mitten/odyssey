@@ -243,8 +243,29 @@ namespace Odyssey.Presentation.CameraRig
                 bool hidden = builtHidden && model.IsStackedAt(index);
                 bool stump = !hidden && lowered && model.Lowers(index);
 
-                if (!stump && !hidden
-                    && (model.OccludesFace(index) || model.EdificeDef(index) == CoreContent.EdificeDoor))
+                bool occludes = !stump && !hidden
+                    && (model.OccludesFace(index) || model.EdificeDef(index) == CoreContent.EdificeDoor);
+
+                // **A shore bank is its drawn slope, not its block** (design 38 §24). With the
+                // shoreline on, a bank beside water is drawn as a fan that slopes down through the
+                // water line, and the water is seen over the part of the cell that has gone under
+                // it. Claimed as a whole block, it stood in front of that water and took every
+                // click aimed at the near edge of a stream. So the ray meets the fan itself, and a
+                // ray that passes over it goes on to the water beyond.
+                BankLayout.Ramp shore = default;
+                bool fanBank = occludes && model.EdificeDef(index) == 0
+                    && BankLayout.BankDips(model, x, z, layer, out shore) && shore.Fan;
+                if (fanBank)
+                {
+                    if (CrossFan(ray, shore, x, z, slabMax + FloorHeightAt(x, z), t, tCellEnd, out float tFan))
+                    {
+                        cell = new CellRef(x, z, layer);
+                        thing = false;
+                        hitAt = tFan;
+                        return true;
+                    }
+                }
+                else if (occludes)
                 {
                     cell = new CellRef(x, z, layer);
                     thing = model.EdificeDef(index) != 0;
@@ -271,6 +292,12 @@ namespace Odyssey.Presentation.CameraRig
                 // it meant hitting a floor under the slope (design 38 §20). Taken at the centre, a
                 // plane through the ramp's middle, which is where a click on a slope means.
                 Vector3 middle = CellMetrics.FloorCentre(x, z, layer);
+                // A shore fan is not a ramp: its centre is the top and the slope is all at the
+                // water's edge, so the plane through the middle misses it. It is met as drawn.
+                BankLayout.Ramp floorFan = default;
+                bool fanFloor = !fanBank && layer > 0 && BankLayout.LiftFigures
+                    && BankLayout.GroundCorners(model, x, z, layer, out floorFan) && floorFan.Fan;
+                float flatFloorY = floorY;
                 floorY += BankLayout.RiseAt(model, new CellRef(x, z, layer), middle.x, middle.z);
 
                 // **A thing you walk over is still a thing you can see the top of.** A bed does
@@ -302,11 +329,35 @@ namespace Odyssey.Presentation.CameraRig
                     }
                 }
 
+                // **Water is clicked on its surface, not on its bed** (owner, 2026-09-25: "I
+                // couldn't click on a lot of the water tiles"). The water claimed the click only
+                // where the ray crossed the bed, 2.16 m under the surface the player is looking
+                // at — and at the play camera's 48 degrees that crossing is about two metres on
+                // past the point aimed at, so it landed in the next cell: the far bank, the next
+                // water, or the bed below through the layer under this one. Measured through the
+                // rig's own pick path, 280 of 307 aimed points on the played board missed their
+                // water, the same with the old square shore as with the new one
+                // (WaterPickTests). So the water offers its drawn surface, inside its own
+                // footprint, the way a bed offers its top. A bridge slab still wins below.
+                if (!hidden && model.Floor(index) == 0 && NaturalContent.IsWater(model.Terrain(index)))
+                {
+                    float tSurface = FloorCrossing(ray, floorY + ChunkMesher.WaterSurface * CellMetrics.SizeY);
+                    if (tSurface >= t - 1e-4f && tSurface <= tCellEnd)
+                    {
+                        cell = new CellRef(x, z, layer);
+                        thing = false;
+                        hitAt = tSurface;
+                        return true;
+                    }
+                }
+
                 // Per cell, against that cell's own drawn floor rather than once against the
                 // layer's flat plane. This is the whole of the relief's effect on picking: the
                 // ground the player is aiming at is the tilted one, so that is the surface the ray
                 // has to meet.
-                float tFloor = floors ? FloorCrossing(ray, floorY) : float.MaxValue;
+                float tFloor = !floors || fanBank ? float.MaxValue
+                    : fanFloor ? (CrossFan(ray, floorFan, x, z, flatFloorY, t, tCellEnd, out float tf) ? tf : float.MaxValue)
+                    : FloorCrossing(ray, floorY);
 
                 if (tFloor >= t - 1e-4f && tFloor <= tCellEnd
                     && Owner(model, index, layer, out CellRef owner, out thing, builtHidden))
@@ -449,6 +500,43 @@ namespace Odyssey.Presentation.CameraRig
         }
 
         /// <summary>Where the ray crosses the layer's floor plane, or "never".</summary>
+        /// <summary>
+        /// Where the ray first goes under a shore fan inside cell (x, z) between t0 and t1: the
+        /// fan's own triangles (<see cref="BankLayout.Ramp.HeightAt"/>) over <paramref name="baseY"/>,
+        /// marched and then halved down to a centimetre. A ray already under it at t0 meets it
+        /// there, as a block's face would be met.
+        /// </summary>
+        static bool CrossFan(Ray ray, in BankLayout.Ramp fan, int x, int z, float baseY, float t0, float t1, out float tHit)
+        {
+            tHit = float.MaxValue;
+            if (!(t1 > t0)) return false;
+            BankLayout.Ramp shape = fan;
+            float Above(float tt)
+            {
+                Vector3 p = ray.GetPoint(tt);
+                float u = Mathf.Clamp01(p.x / CellMetrics.SizeXZ - x);
+                float v = Mathf.Clamp01(p.z / CellMetrics.SizeXZ - z);
+                return p.y - (baseY + shape.HeightAt(u, v) * CellMetrics.SizeY);
+            }
+            if (Above(t0) <= 0f) { tHit = t0; return true; }
+            const int Steps = 12;
+            float previous = t0;
+            for (int i = 1; i <= Steps; i++)
+            {
+                float next = t0 + (t1 - t0) * i / Steps;
+                if (Above(next) > 0f) { previous = next; continue; }
+                float lo = previous, hi = next;
+                for (int k = 0; k < 10; k++)
+                {
+                    float mid = 0.5f * (lo + hi);
+                    if (Above(mid) > 0f) lo = mid; else hi = mid;
+                }
+                tHit = hi;
+                return true;
+            }
+            return false;
+        }
+
         static float FloorCrossing(Ray ray, float floorY)
         {
             if (Mathf.Abs(ray.direction.y) < 1e-6f) return float.MaxValue;

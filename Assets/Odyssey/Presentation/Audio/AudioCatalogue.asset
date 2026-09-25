@@ -94,6 +94,20 @@ MonoBehaviour:
     MaxDistance: 120
     Priority: 150
     Cooldown: 0.1
+  - Id: odyssey.sound.swim.stroke
+    Clips:
+    - {fileID: 8300000, guid: 0ecdbe98ae7d0f644bb713b47c1ce4c1, type: 3}
+    - {fileID: 8300000, guid: d7a4eb756829a9a4297b754dfcf22ccf, type: 3}
+    - {fileID: 8300000, guid: e5835747a3aa8af47b9a65d9f535598b, type: 3}
+    Bus: 3
+    Volume: 0.55
+    VolumeVariance: 0.12
+    PitchVariance: 0.05
+    SpatialBlend: 1
+    MinDistance: 8
+    MaxDistance: 40
+    Priority: 170
+    Cooldown: 0.08
   - Id: odyssey.sound.draft
     Clips:
     - {fileID: 8300000, guid: 5e6c1491ffcfc234eae67a16d50ec33c, type: 3}
@@ -222,6 +236,18 @@ MonoBehaviour:
     FadeSeconds: 2.5
     MinDistance: 60
     MaxDistance: 300
+  - Id: odyssey.ambience.rain.light
+    Clip: {fileID: 8300000, guid: 0e46c3dbbcb04c147a06286a31020902, type: 3}
+    Volume: 0.6
+    FadeSeconds: 3
+    MinDistance: 30
+    MaxDistance: 110
+  - Id: odyssey.ambience.rain.heavy
+    Clip: {fileID: 8300000, guid: 830d27237cd6f4249b4b1cfc796bd684, type: 3}
+    Volume: 0.6
+    FadeSeconds: 3
+    MinDistance: 30
+    MaxDistance: 110
   Music: []
   Outdoor:
   - Phase: 1

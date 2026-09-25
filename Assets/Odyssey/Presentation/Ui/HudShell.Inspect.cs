@@ -301,6 +301,18 @@ namespace Odyssey.Presentation.Ui
                 HudText.Set(_inspectState, StateLine(), HudTextRole.Meta);
             }
 
+            // The pace (design 17 §5a): a colonist's only, the third line of the header, which
+            // the 60 px portrait already made room for — the pane does not grow. Rebuilt only when
+            // the model composed a new string, which it does only when a factor moved.
+            if (!ReferenceEquals(_statePace, _inspect.Pace))
+            {
+                _statePace = _inspect.Pace;
+                HudText.Set(_inspectPace, _inspect.Pace, HudTextRole.Meta);
+                _inspectPace.tooltip = _inspect.PaceTip;
+            }
+            _inspectPace.style.display = _inspect.ShowsColonistBody && _inspect.Pace.Length > 0
+                ? DisplayStyle.Flex : DisplayStyle.None;
+
             if (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item)
                 SyncCellRows();
 
@@ -699,11 +711,14 @@ namespace Odyssey.Presentation.Ui
             nameLine.Add(_inspectMeta);
 
             _inspectState = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__state");
+            _inspectPace = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__pace");
+            _statePace = null;
             titles.Add(nameLine);
             // The hearth says so under its name (design 43 §6): the house in the accent, 12 px,
             // and "Hearth" in the meta ink, six below the name.
             if (_inspect.IsHearth) titles.Add(HearthLine());
             titles.Add(_inspectState);
+            titles.Add(_inspectPace);
             header.Add(titles);
 
             var actions = new VisualElement();

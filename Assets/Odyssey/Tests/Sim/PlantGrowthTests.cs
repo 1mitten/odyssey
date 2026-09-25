@@ -39,10 +39,24 @@ namespace Odyssey.Tests.Sim
             return scenario;
         }
 
+        /// <summary>
+        /// How long before the named tick the world is built, so the sky can be settled first.
+        ///
+        /// <para><b>The sky is held clear</b> (design 43 §5). This file is about the clock — the
+        /// window, the cadence, the stage thresholds — and since the weather-world step a crop the
+        /// rain reaches gains more than one interval a pass. Seed 5's first roll put rain on the
+        /// field, so without this the clock tests measured the sky. The debug menu's command,
+        /// given early enough that its quick hand-over has landed before anything is sown.</para>
+        /// </summary>
+        const int SkyLead = 600;
+
         /// <summary>One sown cell: the air above the turf in one column, where the crop stands.</summary>
         static (int index, GrowingZones zones, ColonyWorld colony) OneCell(int startTick, ChunkGrid? chunks = null)
         {
-            ColonyWorld colony = FieldAt(startTick, chunks);
+            int lead = startTick >= SkyLead ? SkyLead : 0;
+            ColonyWorld colony = FieldAt(startTick - lead, chunks);
+            HoldClear(colony);
+            colony.World.Tick(lead);
             var zones = colony.Pawns.Growing!;
             CellRef at = new CellRef(8, 8, TopAir(colony.Grid, 8, 8));
             Assert.That(zones.Designate(at, PlantHandle.Carrot), Is.EqualTo(IntentRejection.None),
@@ -51,6 +65,15 @@ namespace Odyssey.Tests.Sim
             zones.Sow(index);
             return (index, zones, colony);
         }
+
+        /// <summary>
+        /// Set the sky clear, as the debug menu does. A forced spell lasts its rolled length and the
+        /// season takes over after it, so a test that runs for days sets it again as it goes;
+        /// clear handing over to clear is clear throughout.
+        /// </summary>
+        static void HoldClear(ColonyWorld colony) =>
+            Assert.That(colony.Pawns.Weather!.HandleForce(new Intent(IntentKind.DebugSetWeather, default,
+                (int)WeatherKind.Clear, 1000, 1)), Is.EqualTo(IntentRejection.None));
 
         static int TopAir(CellGrid grid, int x, int z)
         {
@@ -143,7 +166,11 @@ namespace Odyssey.Tests.Sim
             // Run the crop to just past the first boundary — 45 per cent of 130,000 is 58,500,
             // a whole number of 250-tick runs, so the loop lands on it exactly without deriving
             // the window cadence by hand: it crosses the boundary on the run that reaches it.
-            while (zones.GrowthTicks(index) < 58_500) colony.World.Tick(250);
+            while (zones.GrowthTicks(index) < 58_500)
+            {
+                HoldClear(colony);
+                colony.World.Tick(250);
+            }
             Assert.That(zones.GrowthTicks(index), Is.EqualTo(58_500));
             Assert.That(chunks.IsDirty(chunk), Is.True,
                 "the stage bucket changed, and a bucket change is the only thing that re-meshes");

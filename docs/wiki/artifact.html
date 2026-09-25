@@ -143,11 +143,11 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
 <li><a href="#commands">Commands<b>53</b></a></li>
 <li><a href="#work">Work and skills<b>42</b></a></li>
-<li><a href="#colonists">Colonists<b>47</b></a></li>
+<li><a href="#colonists">Colonists<b>56</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>47</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
-<li><a href="#world">World and interface<b>127</b></a></li>
+<li><a href="#world">World and interface<b>129</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
 </ul></nav>
 <main>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>840</b><i>named entries</i></div>
+<div class="stat"><b>861</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>568</b><i>no art yet</i></div>
+<div class="stat m"><b>589</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1795,7 +1795,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">47 entries</em></h2>
+<h2>Colonists <em class="count">56 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -2093,6 +2093,64 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">A bandit carrying something off the board</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.status.sheltering" data-hay="sheltering ui.status.sheltering an animal waiting out the rain under a roof or a tree, or walking to one " data-gap="1">
+<div class="nm">Sheltering<span class="k">ui.status.sheltering</span></div>
+<div class="dsc">An animal waiting out the rain under a roof or a tree, or walking to one</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.status.inrain" data-hay="in the rain ui.status.inrain a colonist under open sky while it rains, and walking slower for it. said beside her pace " data-gap="1">
+<div class="nm">In the rain<span class="k">ui.status.inrain</span></div>
+<div class="dsc">A colonist under open sky while it rains, and walking slower for it. Said beside her pace</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+</div>
+<h3 class="nsh">Pace and what it is made of</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.stat.pace" data-hay="pace ui.stat.pace how fast a colonist walks, as a share of the standard walk. not the tile's walk speed, which is the ground " data-gap="1">
+<div class="nm">Pace<span class="k">ui.stat.pace</span></div>
+<div class="dsc">How fast a colonist walks, as a share of the standard walk. Not the tile's walk speed, which is the ground</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.stat.pace.rolled" data-hay="rolled ui.stat.pace.rolled the pace a colonist was born with, between 85% and 115% of the standard walk " data-gap="1">
+<div class="nm">Rolled<span class="k">ui.stat.pace.rolled</span></div>
+<div class="dsc">The pace a colonist was born with, between 85% and 115% of the standard walk</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.stat.pace.condition" data-hay="condition ui.stat.pace.condition what hunger, cold or heat is taking off her pace. never above 100%, never below 70% " data-gap="1">
+<div class="nm">Condition<span class="k">ui.stat.pace.condition</span></div>
+<div class="dsc">What hunger, cold or heat is taking off her pace. Never above 100%, never below 70%</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.stat.pace.rain" data-hay="rain ui.stat.pace.rain what walking in the rain under open sky takes off her pace. a roof or a tree gives it back " data-gap="1">
+<div class="nm">Rain<span class="k">ui.stat.pace.rain</span></div>
+<div class="dsc">What walking in the rain under open sky takes off her pace. A roof or a tree gives it back</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.stat.pace.drafted" data-hay="drafted ui.stat.pace.drafted a drafted colonist runs " data-gap="1">
+<div class="nm">Drafted<span class="k">ui.stat.pace.drafted</span></div>
+<div class="dsc">A drafted colonist runs</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.stat.pace.running" data-hay="running ui.stat.pace.running running to a fight or away from one " data-gap="1">
+<div class="nm">Running<span class="k">ui.stat.pace.running</span></div>
+<div class="dsc">Running to a fight or away from one</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
+</div>
+<div class="row gap" id="ui.stat.pace.standard" data-hay="the standard walk ui.stat.pace.standard the pace tooltip when nothing is making her faster or slower " data-gap="1">
+<div class="nm">The standard walk<span class="k">ui.stat.pace.standard</span></div>
+<div class="dsc">The pace tooltip when nothing is making her faster or slower</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">WE</div>
 </div>
 </div>
 <p class="empty" hidden>No entries in this section match.</p>
@@ -2750,7 +2808,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">127 entries</em></h2>
+<h2>World and interface <em class="count">129 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -3265,6 +3323,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.settings.selectionstyle" data-hay="selection style ui.settings.selectionstyle how the selected thing is marked: a line round the thing itself, or corner brackets " data-gap="1">
+<div class="nm">Selection style<span class="k">ui.settings.selectionstyle</span></div>
+<div class="dsc">How the selected thing is marked: a line round the thing itself, or corner brackets</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 <div class="row gap" id="ui.settings.developer" data-hay="developer overlay ui.settings.developer the frame-time and draw-call readout, kept on the machine between sessions " data-gap="1">
 <div class="nm">Developer overlay<span class="k">ui.settings.developer</span></div>
 <div class="dsc">The frame-time and draw-call readout, kept on the machine between sessions</div>
@@ -3412,6 +3476,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.settings.group.palette" data-hay="build palette ui.settings.group.palette the shape of the build palette " data-gap="1">
 <div class="nm">Build palette<span class="k">ui.settings.group.palette</span></div>
 <div class="dsc">The shape of the Build palette</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.group.selection" data-hay="selection ui.settings.group.selection how a selected colonist, item, building or tile is marked in the world " data-gap="1">
+<div class="nm">Selection<span class="k">ui.settings.group.selection</span></div>
+<div class="dsc">How a selected colonist, item, building or tile is marked in the world</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -3740,7 +3810,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 840, "gaps": 568};</script>
+<script>window.WIKI={"total": 861, "gaps": 589};</script>
 <script>
 (function(){
   var D = window.WIKI;

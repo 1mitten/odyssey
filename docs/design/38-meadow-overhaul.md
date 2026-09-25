@@ -260,7 +260,7 @@ measurements here.
 | **M8** | Hills worldgen and the per-column slice. | Goldens measured. |
 | **M9** | **Built 2026-09-24** (§20): the ground skin — ramps, flat tops, stream banks and an apron to the surround — on `claude/meadow-skin`. The ground keeps the `MeadowGround` shader. | **Third Play.** |
 | **M10** | The surround continues the skin (§7). | Seam-free at the rim. |
-| **M11** | Loading and warm-up (§8). | No compile after hand-over. |
+| **M11** | **Measured and built 2026-09-25** (§25): no first-use hitch in play; no warm-up built; three curtain frames behind a cover on New game; a grass rung re-strews only the surround's tufts. | Owner's look at the hand-over. |
 | **M12** | Atmosphere (§10). | Play. |
 | **M13** | Loose rocks, mushrooms, berry bushes. Fruit later. | Goldens; wiki. |
 
@@ -1243,3 +1243,230 @@ was live):
 Tree calls fall 80–96%; the most is won where the owner asked about it, big boards zoomed out. The
 real GPU figure comes from the player: `-odyssey-bench -odyssey-bench-trees`
 (`PlayerBench.TreeArms`: as shipped, chunk by chunk, grouped only, no trees, at 32 / 70 / 140 m).
+
+## 24. Shorelines and water (2026-09-24)
+
+**The target** is the reference screenshot #13 at the play camera: a stream whose edge is a soft,
+natural line in a murky green-teal, with no grid in it. What the board drew was the grid three times
+over: the water's edge was every cell's square edge (a diagonal stream a staircase), the marsh round
+it a ring of pale square tiles, and a pond's deep middle a cross of darker squares.
+
+### 24a. Why the first three attempts failed, and what finally worked
+
+1. **Sinking the bank's wet corners under the water line and laying water over the bank.** The
+   shader's depth fade then made that thin water transparent, so the visible edge stayed where the
+   water got deep — at the underwater wall on the grid line.
+2. **Driving the water's edge from a soft field instead of depth.** The blob was soft, but a soft
+   blob over square geometry is still square wherever the two disagree: where the blob fell short
+   of a water cell's corner it opened a pit onto the pale sand bed, and where it overran, the bank's
+   own sawtooth crossing line showed.
+3. **The deep cross stayed sharp after its colour was blended.** Diagnosed by drawing the shader's
+   own terms as colour: the field was right, the blend was right, and each depth's material still
+   landed on a different colour, because the two palette colours went in as `Shader.SetGlobalColor`
+   and `_BaseColor` does not travel the same colour-space path. They are now properties on the one
+   base material every water tile is cloned from (`MaterialCache.WaterBase`), and the cross became
+   a soft blob.
+
+**What worked is geometry, not shading.** `BankLayout.ShoreFan` makes the bank and the bed one height
+field: nine points a cell (corners, edge midpoints, centre), each at `(1 − w)` of a layer above the
+bed, where `w` is the share of the water layer round that point that is water — bilinear over the
+cells whose centres surround it. Drawn as eight triangles fanned from the centre, read back by
+`Ramp.HeightAt` through the same eight, so `RiseAt` (the one surface owner) stands a figure on what
+is drawn. The water line is where that surface crosses the water, `w ≈ 0.28`: inside the bank, a
+straight line along a straight bank, and with the corners of a staircase cut. The shader's depth fade
+then traces that line and can be short (`_FieldShoreFade` 0.7 m).
+
+### 24b. What did not change, deliberately
+
+**Every cell's centre stands where it did** — a bank's at its top (`w = 0`), a water cell's at its
+bed (`w = 1`) — and so does the line between two dry centres. The places a colonist stands and walks
+keep their heights; the simulation hears nothing; no golden moved. `ShorelineTests.EveryCentreStaysWhereItWas`.
+
+**The façade rule, asked:** *can the simulation put something where this is drawn?* The one place
+drawn ground enters a water cell is the tip of a convex corner, where a quarter-water point stands
+9 cm above the water; nothing is placed in a water cell and a swimmer's path runs centre to centre,
+so it cannot be reached. A bank's centre is never under water, an islet included
+(`AnIsletKeepsItsCentreAboveTheWater`).
+
+**Falls are untouched.** A bed counts air and the board's edge as water, so it stays flat at a
+fall's lip under the sheet; cascades are box cells and never skinned.
+
+### 24c. The rest of it
+
+- **`GroundField`**: one texel a column — R marsh, G sand or gravel, B water, A deep — bilinear,
+  rebuilt a chunk at a time when that chunk re-meshes and uploaded at most once a frame. Globals, so
+  every ground and water material reads the same field.
+- **Marsh is painted, not tiled**: it wears the meadow ground's material and the field blends a moss
+  texture in over metres (`_WetAmount` 0.85), with ground bordering water a little darker and cooler.
+- **Shallow into deep by the field**, not per cell. Level water is at least 0.96 opaque with the
+  shoreline on: the reference's water is murky, and the bed's grid read through anything less.
+- **Water retuned towards #13**: shallow `(0.21, 0.41, 0.39)`, deep `(0.08, 0.21, 0.24)`, from the
+  old sky-cyan that read as a swimming pool at noon. `StuffPalette` is still the one owner.
+- **A bed that rises wears the bank's grass**, so the rounded tip of a corner is not pale sand
+  above the water; a bed ringed by water keeps its sand.
+- **Water is laid over every bank**, one instance a bank in the bucket the water is already in.
+- **`WaterShore.Enabled`** off gives the square shore back exactly (the measurement's control).
+  Marsh keeps whichever material it resolved with, so a runtime toggle leaves it painted.
+
+### 24d. Measured
+
+`FrameTimeTests.TheShorelineAgainstTheFrame`, one run, each board built square then with the
+shoreline (the switch decides the marsh's material, so each arm is its own world from one seed).
+RTX 5070 Ti, editor batch; **the CI runner's EditMode run was live beside it**, so frame times are
+within noise of each other and only the counts are exact:
+
+| Board | Frame @640×480 | Frame @4K | Draw calls | Instances | Skin triangles | Re-mesh a chunk |
+|---|---|---|---|---|---|---|
+| Standard | 2.23 → 2.17 | 8.54 → 8.79 | **738 → 738** | 29,002 → 29,339 | 10,806 → 15,098 | 0.399 → 0.434 ms |
+| Huge | 2.94 → 3.11 | 8.58 → 8.26 | **641 → 634** (4K 732 → 723) | 28,213 → 28,815 | 17,327 → 24,895 | 0.480 → 0.513 ms |
+
+**Draw calls do not move** (P10 holds: the water over the banks joins the water's bucket, and the
+fans are more triangles in the skin mesh a chunk already draws). Instances grow by the banks, ~340 on
+Standard. Meshing is **7–9% dearer a chunk**, about 0.4 ms across the eleven-chunk budget of a
+frame (§6c.7), which stays inside it. The field's upload happens only when a chunk re-meshes.
+
+The player's GPU figure is owed — prepared, not run:
+`Build/Win64/Odyssey.exe -odyssey-bench -odyssey-bench-shore -logFile Logs/bench-shore.log`
+(`PlayerBench.ShoreArms`: as shipped against the square shore at 32 / 70 / 140 m, framed on the
+water nearest the colony; ~40 s, takes the screen).
+
+### 24e. What is owed
+
+- **The owner's eye** on the photographs and in Play (playtest queue).
+- **The player's GPU figure**, from the bench below, not run.
+- **A few pale slivers where a bank meets a box cell** — a bank beside a dry drop (a terrace riser)
+  is still a box, and where it shares a corner with a fan the two do not meet. Visible on the wide
+  shot, top left; pre-existing in kind (the square rule had the same crack) and not chased here.
+- **A faint diamond in open water**, the fans of the bed seen through 4% transparency.
+
+Before / after: `docs/reference/screenshots/look/2026-09-24-shore-{before,after}-{near,wide,pond}.png`
+and `-after-start.png` (the start has no water; it is the regression shot).
+
+### 24f. After the first play: water that can be clicked, and water that moves (2026-09-25)
+
+The owner played #205 and reported two things.
+
+**"I couldn't click on a lot of the water tiles anymore."** Measured before diagnosing, through the
+rig's own pick path (`WaterPickTests`: the rig's private `CellAt`, so the camera's ray at a screen
+point into `SlicePicker` with the rig's slice), at the drawn water surface of every water cell on
+screen — its centre and four points a third of a cell out — from the play camera, framed on the
+nearest water and the widest. **280 of 307 points missed their water, and the square shore (the
+control) was exactly the same**, so the fan did not cause it; it made the water easier to aim at,
+and the owner noticed. The water claimed a click only where the ray crossed its **bed**, 2.16 m under
+the surface, which at 48 degrees is about two metres past the point aimed at: the next cell, the far
+bank, or the bed a layer down through the layer below. Two changes:
+
+- **Water is met on its surface**, inside its own footprint, the way a bed is met on its top. A
+  bridge slab over water still wins.
+- **A shore bank is met as its fan, not its block** — and so is the ground over one: the picker asks
+  `BankLayout`'s own `Ramp.HeightAt` along the ray (marched, then halved to a centimetre), so the
+  block no longer stands in front of the water seen over the sunk half of the cell, and one surface
+  owner answers both the figure and the click.
+
+After: **water 0 of 307 wrong; banks 6 of 61**, down from 20 (the rest are per-cell relief planes
+against the continuous draped ground, as old as the relief and not chased here).
+
+**"The water now looks like it isn't moving at all."** The ripples were in the normal, where the play
+camera's Fresnel is two per cent — the reason the falls' streaks were already carried by colour.
+Three things now move, by colour, in the one water pass:
+
+- **Flow along the streams.** `GroundField` builds a second board texture, the flow: an outlet is
+  water beside water a layer lower (a cascade), beside open air at its own layer (a fall), or at the
+  board's edge; a walk out from the outlets along water at the same layer gives each column its way
+  downhill, and a stretch no walk reaches is **still** — a pond. Speed falls with how open the water
+  is (the share of its 3 × 3 that is water), so a channel runs and a pool drifts. Rebuilt only when a
+  column's water changes. The shader carries a noise field along it in two phases half a cycle apart,
+  crossfaded, so the pattern travels without stretching; light streaks drift downstream.
+- **Swells on still water**: three slow crossed waves, lighter where they crest.
+- **The shore breathes**: a thin light rim at the water's edge that swells and ebbs.
+
+**On the game clock** (`WaterDirector`, like `WindDirector`): a paused world holds still, and at
+speed 3 the water runs three times as fast. `WaterDirector.MovesOnPause` is the one switch if the
+owner wants water moving through a pause; `WaterDirector.Motion` (0–2) is its strength. The ripples
+and the falls' streaks moved onto the same clock, so the falls now hold still on pause too.
+
+Seen: three frames of the nearest stream a second apart (`2026-09-25-water-flow-{0,1,2}.png`) change
+**12.3% of the picture each second**; the fall (`2026-09-25-shore-after-fall.png`, before with the
+square shore beside it) is drawn as before.
+
+**Cost** (`FrameTimeTests.TheWaterMotionAgainstTheFrame`, one run, Standard, world paused and the
+water let run, framed on the nearest stream at 36 m so water fills the frame, still / moving
+alternated twice): **draw calls identical** (803 at 640 × 480, 878 at 4K — it is a global and a few
+more instructions in a pass that already runs); 640 × 480 **2.26 / 2.03 / 2.09 / 1.97 ms**; 4K
+**8.35 / 9.08 / 8.65 / 8.63 ms**. The two stills disagree by 0.3 ms, and the motion sits inside that
+spread, so its cost is below what this machine can separate. The flow texture is built once and
+again only when water changes. The player bench (`-odyssey-bench-shore`) is still the real GPU figure.
+
+## 25. M11: first use, measured (2026-09-25)
+
+d-16's rule was *measure first*: build no warm-up machinery unless something compiles after the
+loading screen. The measurement is a scripted tour in the development player
+(`-odyssey-bench -odyssey-bench-hitch`, `PlayerBench.HitchTour`): from the title screen it presses
+New game the way the menu does, then does, a few seconds apart, the first of everything a new colony
+meets — build orders, zones, a dropped item, trees felled, the Work, Research and Inventory tabs,
+Settings with shadows toggled and grass to Full and back, a supply drop, the see-through fade, dusk,
+night, water in view, 140 m out and back. Every frame over 33 ms is logged with its step, its submit
+split and the shader variants the driver was handed (`GraphicsSettings.logWhenShaderIsCompiled`).
+It quits on its own (a 360 s watchdog, a guarded coroutine, and a process kill after that).
+`BuildSession` now logs its own laps (`[Session] built in …`).
+
+### 25a. What it found
+
+**No first-use hitch in play.** After the world is up, every step's worst frame is under 33 ms and
+no shader variant reaches the driver. Two things were not, and both are fixed:
+
+| Moment | Before | After |
+|---|---|---|
+| New game: the build frame | 793 ms, visible | 575 ms, **behind the cover** |
+| the next frame (the GPU meeting the world) | **102.5 ms, visible** | 69.5 ms, behind the cover |
+| the one after | 18.7 ms, visible | 8.2 ms, behind the cover |
+| **the first frames the player sees** | 102.5, 18.7, 9.5, 4.7 ms | **5.6, 3.8, 5.3, 3.8 ms** |
+| a grass rung pressed (to Full) | 57.9 + 38.4 ms | worst 24–31 ms |
+| a grass rung pressed (back) | 47.7 ms | worst 14–29 ms |
+
+(Timings from separate tour runs in one development player on the RTX 5070 Ti, 1920 × 1080 windowed;
+the CI runner and other sessions shared the machine for some of them, so read the shape rather than
+the digits. The build frame is the session build — 380–540 ms across runs, a third of it `PrimeAll`
+— plus the first world submit, whose largest part is the colonist figures at about 100–160 ms.)
+
+**The final run, complete** (`Logs/hitch-final.log`, the tour from the title screen with both fixes
+in): the build frame 1,473 ms and the next 108 ms, **both drawn behind the cover**, then 7.9 ms
+behind it and **4.4, 4.2, 3.4, 7.9 ms visible**. Every one of the tour's 24 steps after that has its
+worst frame under 33 ms — the grass rung to Full at 28.9, the Work tab at 21.0, everything else
+under 23 — and no shader variant reaches the driver. (Another Unity batch run was on the machine,
+which is why the build took 923 ms here against 380–540 ms elsewhere.)
+
+**The first reading was misread, and how.** The first tour ran with `-odyssey-newgame`, which builds
+the world inside the same `Start` the tour begins in, so its "1,573 ms frame 2" was the player's own
+start-up — every scene object's `Start`, the session build and the first render — landing in the
+first frame's delta. Nothing about it was a post-load stall. Starting the tour on the title screen and
+pressing New game from inside it is what showed the real shape: a frozen screen while the world is
+built (expected), then a **102.5 ms frame the moment the world appears**, with only 6 ms of it
+submission — the driver and the GPU meeting the world's pipelines and textures for the first time.
+
+### 25b. What was built
+
+- **Curtain frames** (`HudShell.CurtainFrames` = 3). A world arriving from the start screen is covered
+  by the start screen's own starfield — a new element, the top-most in the tree — for three frames
+  and then shown. **A cover, not a delayed hand-over**: the first version kept the start screen up and
+  handed over three frames late, and the tour found the reveal frame at 43 ms, because the in-game
+  interface's first layout had moved with the delay onto the frame the player saw. The hand-over
+  happens when the world is built, as it always did, under the cover. A second press of Start while
+  the cover is up builds nothing. The cost does not vanish — it is paid while the player is still
+  looking at the picture they were already looking at — which is all d-16 promised of it.
+- **A grass rung re-strews only the surround's tufts** (`TerrainSkirt.RebuildTufts`). The rung called
+  `TerrainSkirt.Build`, which surveys the whole board and lays every tile and tree out to 1,220 m
+  again — about 50 ms in the frame the rung was pressed. The tufts' batches carry the foliage tint
+  and nothing else in the surround does, so dropping exactly those from the index and strewing again
+  gives the same lists a full build would.
+
+**Not built, on the evidence:** a `GraphicsStateCollection`, a `ShaderVariantCollection` warm-up, and a
+loading screen with stages. Nothing compiles after the hand-over, so there is nothing for them to warm.
+
+### 25c. Owed
+
+- The menu path's wait itself (the frozen setup page for about half a second while the world is
+  built) has no feedback. It is short today; a board four times the size may want a word on screen.
+- The colonist figures are the largest part of the first world submit (100–160 ms). Behind the cover
+  now, but the obvious place to look if the wait grows.
+- `-odyssey-newgame` (the test path) has no start screen to hold, so it still shows its first frames.
