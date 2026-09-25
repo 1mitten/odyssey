@@ -57,14 +57,22 @@ tests them. The bootstrap reads `DebugDirector.CurrentWeather` each frame and ha
 wets over about eight game seconds and dries three times slower. The whole tab runs on game time, so
 pausing holds the sky and speed 3 moves it three times as fast.
 
-| Row | Cloud · rain · wet · puddles | Backed by |
+| Row | Cloud · rain · wet · puddles · gloom · wind | Backed by |
 |---|---|---|
-| Clear | 0 · 0 · 0 · 0: the game as drawn without weather, and the default | `WeatherLook` → `DaylightDirector.Cloud`, `OvercastVolume`, `RainDirector` |
-| Overcast | 0.8 · 0 · 0 · 0 | the same |
-| Drizzle | 0.6 · 0.25 · 0.45 · 0 | the same |
-| Rain | 0.85 · 0.7 · 0.85 · 0.4 | the same |
-| Downpour | 1 · 1 · 1 · 1 | the same |
+| Clear | 0 · 0 · 0 · 0 · 0 · 1: the game as drawn without weather, and the default | `WeatherLook` → `DaylightDirector.Cloud`/`Gloom`, `OvercastVolume`, `RainDirector` |
+| Overcast | 0.8 · 0 · 0 · 0 · 0.6 · 1: the grey day with no rain | the same |
+| Drizzle | 0.4 · 0.25 · 0.45 · 0 · 0 · 1 | the same |
+| Rain | 0.6 · 0.7 · 0.85 · 0.4 · 0 · 1 | the same |
+| Downpour | 0.8 · 1 · 1 · 1 · 0 · 1 | the same |
+| Storm | 1 · 1 · 1 · 1 · 1 · 1.3: the rarer dim day | the same, plus `WindDirector.Strength` |
 | Draw as particles (toggle) | draws the same rain with the weather design's first-draft CPU particles, so the two can be compared moving; the wet ground stays either way | `RainParticles` |
+| Wet ground: gloss only (toggle) | draws wet ground as shine and puddles only, rather than richer and a little darker, to compare the two | `_OdysseyRainLook.x` |
+
+**Rain keeps its colour; only the dim days drain it** (owner, 2026-09-25,
+`docs/research/rain-look-interview.md`). *Cloud* dims the light and softens the shadows and
+leaves the colour. *Gloom* drains the colour to grey and weights the grey volume, and only
+Overcast and Storm carry it. Zoomed out, a screen-space streak layer fades in between 55 m and
+95 m of camera distance. At that range the 3D drops shrink to a couple of pixels.
 
 When the weather system lands, `weather-core`'s force-weather rows (design 43 §8) replace these
 presets. `WeatherLook.Sync` then takes its numbers from the simulation instead of from a preset.

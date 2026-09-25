@@ -1611,7 +1611,7 @@ namespace Odyssey.Presentation.Bootstrap
                     cameraRig != null ? cameraRig.Focus : transform.position,
                     cameraRig != null ? cameraRig.TargetDistance : 48f,
                     slice.BelowSurface(activeLayer), _world.CurrentTick, ticksPerSecond,
-                    _figures?.Running ?? true, Time.deltaTime);
+                    _figures?.Running ?? true, Time.deltaTime, Directors.Debug.WetGlossOnly, _wind);
             _floaterView?.Draw(_combatFeedback.Floaters,
                 cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);

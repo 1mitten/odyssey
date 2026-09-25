@@ -1947,7 +1947,10 @@ namespace Odyssey.Tests.PlayMode
                 particles = new RainParticles(root.transform, sky);
 
                 string arm = "off";
+                // The zoomed-out arm is priced at 120 m, where the screen layer is drawn at full
+                // strength; the camera stays put, since the layer costs per pixel, not per metre.
                 SliceCameraRig rig = boot.cameraRig!;
+                float Distance() => arm.EndsWith("zoomed out") ? 120f : rig.TargetDistance;
                 RainDirector drawer = rain;
                 RainParticles emitter = particles;
                 UnityEngine.Camera shooting = cam;
@@ -1955,7 +1958,7 @@ namespace Odyssey.Tests.PlayMode
                 {
                     drawer.Clock = Time.time;
                     if (arm.StartsWith("gpu") || arm == "zero")
-                        drawer.Draw(shooting, rig.Focus, rig.TargetDistance, underground: false);
+                        drawer.Draw(shooting, rig.Focus, Distance(), underground: false);
                     else
                         // Publishes the globals and zeroes the counters, draws nothing: an arm
                         // that follows a drawing one must not read its predecessor's count.
@@ -1975,6 +1978,7 @@ namespace Odyssey.Tests.PlayMode
                     ("particles", 0.7f, 0f, 0f),
                     ("gpu", 0.7f, 0.85f, 0.4f),
                     ("gpu downpour", 1f, 1f, 1f),
+                    ("gpu downpour zoomed out", 1f, 1f, 1f),
                 };
                 var lines = new List<string>();
 
@@ -1999,7 +2003,8 @@ namespace Odyssey.Tests.PlayMode
                         if (a.Name == "zero" || a.Name == "off" || a.Name == "wet")
                             Assert.That(rain.LastDrawCalls, Is.Zero, $"{a.Name} submitted rain");
                         if (a.Name.StartsWith("gpu"))
-                            Assert.That(rain.LastDrawCalls, Is.EqualTo(2), $"{a.Name} drew no rain, so it measured nothing");
+                            Assert.That(rain.LastDrawCalls, Is.EqualTo(a.Name.EndsWith("zoomed out") ? 3 : 2),
+                                $"{a.Name} did not draw what it was meant to, so it measured something else");
                         if (a.Name == "particles")
                             Assert.That(particles.LiveStreaks, Is.GreaterThan(0), "the particle arm had no drops alive");
 

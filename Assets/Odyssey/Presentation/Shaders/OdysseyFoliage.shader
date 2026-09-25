@@ -534,7 +534,7 @@ Shader "Odyssey/Foliage"
                 surface.metallic = 0;
                 // Wet leaves: darker and a little glossier, where the sky reaches (no puddles).
                 float wet = OdysseyWetAt(input.positionWS, float3(0, 1, 0)) * 0.8;
-                surface.albedo *= lerp(1.0, 0.72, wet);
+                surface.albedo = OdysseyWetColour(surface.albedo, wet);
                 surface.smoothness = lerp(_Smoothness, 0.45, wet);
                 surface.normalTS = half3(0, 0, 1);
                 surface.occlusion = 1;

@@ -39,6 +39,7 @@ namespace Odyssey.Presentation.Ui
         VisualElement _debugWeather = null!;
         readonly List<VisualElement> _debugWeatherRows = new();
         VisualElement? _debugParticlesRow;
+        VisualElement? _debugGlossRow;
         readonly Dictionary<DebugTab, Label> _debugTabs = new();
 
         /// <summary>The content the event rows were last built from, so a new colony rebuilds them and a reopen does not.</summary>
@@ -161,6 +162,11 @@ namespace Odyssey.Presentation.Ui
                     + "can be compared moving. Wet ground stays on either way",
                 () => _directors?.Debug.SetRainAsParticles(!_directors.Debug.RainAsParticles));
             _debugWeather.Add(_debugParticlesRow);
+            _debugGlossRow = DebugToggleRow(DebugDirector.WetGlossKey,
+                "Draws wet ground as shine and puddles only, rather than richer and a little darker - "
+                    + "the two looks being chosen between by eye",
+                () => _directors?.Debug.SetWetGlossOnly(!_directors.Debug.WetGlossOnly));
+            _debugWeather.Add(_debugGlossRow);
             _debugPanel.Add(_debugWeather);
 
             OnDebugTabChanged(DebugTab.Cheats);
@@ -283,6 +289,7 @@ namespace Odyssey.Presentation.Ui
             for (int i = 0; i < _debugWeatherRows.Count; i++)
                 _debugWeatherRows[i].EnableInClassList("settings__row--on", i == set);
             _debugParticlesRow?.EnableInClassList("settings__row--on", _directors?.Debug.RainAsParticles ?? false);
+            _debugGlossRow?.EnableInClassList("settings__row--on", _directors?.Debug.WetGlossOnly ?? false);
         }
 
         void OnDeveloperOverlayChanged()

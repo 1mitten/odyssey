@@ -18,6 +18,8 @@
 float4 _OdysseyRain;
 // x = 1 / (board width in metres), y = 1 / (board depth in metres), z = 1 when the map is valid
 float4 _OdysseySkyParams;
+// x how wet ground is drawn: 0 richer and a little darker, 1 gloss only (owner's choice by eye, 2026-09-25)
+float4 _OdysseyRainLook;
 TEXTURE2D(_OdysseySkyTex);
 SAMPLER(sampler_OdysseySkyPointClamp);
 
@@ -53,13 +55,27 @@ float OdysseyWetAt(float3 positionWS, float3 normalWS)
     return wet * exposed * facing;
 }
 
-// Rain on a porous surface: darker (water fills the pores and scatters less) and glossier. The
-// puddle term floods the flattest, lowest-noise patches once the ground is soaked.
+// Wet colour, the owner's way (2026-09-25: "we want to be colourful when it rains"): a wet
+// surface keeps its colour. The two candidates are photographed against each other, and
+// _OdysseyRainLook.x picks one:
+//   0, richer: deeper and more saturated, darkened only to 0.8 - water fills the pores, so a
+//      wet surface scatters less white and its own colour shows through;
+//   1, gloss only: the colour untouched, the wet read from the shine and the puddles alone.
+float3 OdysseyWetColour(float3 albedo, float wet)
+{
+    float glossOnly = _OdysseyRainLook.x;
+    float luma = dot(albedo, float3(0.2126, 0.7152, 0.0722));
+    float3 richer = max(0.0, luma + (albedo - luma) * 1.3) * 0.8;
+    return lerp(albedo, lerp(richer, albedo, glossOnly), wet);
+}
+
+// Rain on a porous surface: its colour deepened (above) and glossier. The puddle term floods the
+// flattest, lowest-noise patches once the ground is soaked.
 void OdysseyWetten(inout float3 albedo, inout float smoothness, float wet, float3 positionWS, float3 normalWS)
 {
     if (wet <= 0.001) return;
-    albedo *= lerp(1.0, 0.58, wet);
-    smoothness = lerp(smoothness, 0.62, wet * saturate(normalWS.y));
+    albedo = OdysseyWetColour(albedo, wet);
+    smoothness = lerp(smoothness, lerp(0.62, 0.72, _OdysseyRainLook.x), wet * saturate(normalWS.y));
 
     float puddles = _OdysseyRain.w;
     [branch] if (puddles > 0.001 && normalWS.y > 0.92)

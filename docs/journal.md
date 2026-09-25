@@ -12330,3 +12330,53 @@ design 43 §6's rain-stop height. Build that on it rather than beside it (P1).
   time and checks two rain calls at full count. Then it checks that the particle toggle stops them
   and the particles live, and that Clear stops the rain while the ground stays wet.
 - It cannot press the row itself, for the standing reason that no test here can click.
+
+## 2026-09-25 — Rain in colour, the storm, and rain you can see zoomed out
+
+The owner played the Weather tab and made two points. The rain drained the meadow to grey (*"we
+want to be colourful when it rains … then have dim days"*), and zoomed out *"I couldn't really see
+any rain"*. Two rounds of interview settled the answers (`docs/research/rain-look-interview.md`).
+
+**Two light terms where there was one.** `Overcast.Grade(state, cover, gloom)`:
+- *Cover* dims the sun (to 70 % at full), softens the shadows (to 55 %), nudges the sky towards a
+  cool blue-grey at its own brightness, and adds a little haze. It never drains colour.
+- *Gloom* does the draining: sun and ambient towards grey, sky towards cloud, thick haze, and the
+  grey volume's weight.
+- Only Overcast and Storm carry gloom. Rain, Drizzle and Downpour keep a clear day's colour.
+- The fast tier holds the split (`RainKeepsItsColourAndOnlyTheDimDaysDrainIt`), because it is the
+  owner's rule and the easiest thing to undo by retuning a preset.
+
+**The storm** is its own preset and, in design 43 (PR #208), its own kind with about one wet spell
+in four. Heavy rain, gloom 1, wind ×1.3.
+- The wind multiplies `WindDirector.Strength` only, never the gust period. The gust phase is the
+  tick divided by the period, so easing the period at tick 100,000 would spin the phase and every
+  blade in the meadow would thrash while the storm arrived. The fast tier caps the multiplier at
+  1.4, where the grass shader's own bend cap begins.
+
+**Wet ground keeps its colour, two ways, for the owner to choose between by eye:**
+- *Richer*, the default: saturation ×1.3, darkened to ×0.8.
+- *Gloss only*: the colour untouched; shine and puddles carry the wet.
+
+The owner asked why gloss alone was not recommended. At the 48° camera the Fresnel reflectance is
+about 2 % (the water measurement), so gloss shows only where it catches the sun. Rather than argue
+it, both are photographed, and the Weather tab can switch between them.
+
+**Zoomed out, a screen-space layer.** It is the third draw of `Odyssey/Rain`, so no new shader had
+to be registered.
+- One full-screen triangle, drawn with depth test Always.
+- Two layers of streak columns in screen pixels, each column offset at random so it never reads
+  as a comb (d-20).
+- It slants with the wind across the screen, and falls down the image whichever way URP flips the
+  target (`_ProjectionParams.x`).
+- It is masked by the cover map at the depth behind each pixel: over a roof it draws (the rain
+  lands on the roof), and into a cut-away room it does not.
+- It fades in between 55 m and 95 m, where the 3D drops shrink to a couple of pixels.
+- At 160 m it reads as heavy rain; the sheet's `max` framing is the picture.
+
+**Cost, from the full PlayMode tier (a CI runner job was on the same machine).** At 4K the
+controls read 8.77 ms (off) and 9.57 ms (zero), so the floor is about 0.8 ms. The GPU arm at 0.7
+is 8.29 ms. The downpour is 9.13 ms. The downpour **zoomed out, screen layer included**, is 8.41 ms.
+All three are inside the floor, so the layer adds nothing this machine can separate from noise. The
+particle arm is 12.23 ms with 11,850 drops alive: about 2.7 ms above the higher control, and the
+only arm that clears the floor. The batch run cannot read GPU time, so the Play session's `gpu`
+line is still what settles the 0.5 ms budget.

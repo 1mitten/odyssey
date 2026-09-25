@@ -20,7 +20,10 @@ Shader "Odyssey/Rain"
 {
     Properties
     {
-        _Mode("Mode (0 streaks, 1 splashes)", Float) = 0
+        _Mode("Mode (0 streaks, 1 splashes, 2 screen layer)", Float) = 0
+        [Enum(UnityEngine.Rendering.CompareFunction)] _ZTest("Depth test", Float) = 4
+        // The screen layer: x strength (zoom fade x intensity), y density, z slant (radians)
+        _Screen("Screen layer", Vector) = (0, 0.5, 0, 0)
         _Tint("Tint", Color) = (0.78, 0.84, 0.92, 1)
         // xyz the focus the box is centred on, w its half-width in metres. Written every frame.
         _Box("Box", Vector) = (0, 0, 0, 40)
@@ -49,7 +52,7 @@ Shader "Odyssey/Rain"
 
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
-            ZTest LEqual
+            ZTest [_ZTest]
             Cull Off
 
             HLSLPROGRAM
@@ -60,10 +63,13 @@ Shader "Odyssey/Rain"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
             #include "OdysseyWeather.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 float _Mode;
+                float _ZTest;
+                float4 _Screen;
                 float4 _Tint;
                 float4 _Box;
                 float4 _Look;
@@ -216,15 +222,78 @@ Shader "Odyssey/Rain"
                 return o;
             }
 
+            // The screen layer (owner, 2026-09-25: zoomed out "I couldn't really see any rain"): one
+            // triangle over the whole view, the streaks drawn per pixel in the fragment stage.
+            Varyings ScreenLayer(uint vid, uint iid)
+            {
+                if (iid != 0u || _Screen.x <= 0.001) return Culled();
+                Varyings o = (Varyings)0;
+                o.positionCS = float4(vid == 1u ? 3.0 : -1.0, vid == 2u ? 3.0 : -1.0, UNITY_NEAR_CLIP_VALUE, 1.0);
+                o.shape = float4(_Screen.x, 0, 0, 0);
+                return o;
+            }
+
+            float Hash11(float x) { return frac(sin(x * 12.9898) * 43758.5453); }
+
+            // One layer of falling streaks in screen pixels: a column every `cell` pixels, each with
+            // its own horizontal offset (a regular column reads as a comb - d-20 A.6) and, per
+            // period, a drop that is either there or not by `density`. Brightest at its leading end.
+            float StreakLayer(float2 p, float cell, float period, float len, float speed, float density, float seed)
+            {
+                float col = floor(p.x / cell);
+                float h = Hash11(col * 0.1031 + seed);
+                float x = p.x - (col + 0.25 + 0.5 * h) * cell;
+                // Falls down the image whichever way the target is flipped: _ProjectionParams.x is
+                // -1 when URP draws into a texture that is flipped afterwards.
+                float y = p.y - _OdysseyRain.z * speed * _ProjectionParams.x + h * period * 7.0;
+                float seg = floor(y / period);
+                if (Hash11(col * 1.37 + seg * 0.713 + seed * 3.1) > density) return 0.0;
+                float along = frac(y / period) * period / len;
+                if (along > 1.0) return 0.0;
+                return saturate(1.0 - abs(x) / 0.9) * along;
+            }
+
+            half4 ScreenFragment(Varyings input)
+            {
+                float2 uv = GetNormalizedScreenSpaceUV(input.positionCS);
+                float depth = SampleSceneDepth(uv);
+                #if UNITY_REVERSED_Z
+                    bool open = depth <= 0.000001;
+                #else
+                    bool open = depth >= 0.999999;
+                #endif
+                // Masked by the cover map at the surface behind the pixel: over a roof the rain is
+                // falling on the roof and is drawn; into a cut-away room it is not.
+                if (!open)
+                {
+                    float3 ws = ComputeWorldSpacePosition(uv, depth, UNITY_MATRIX_I_VP);
+                    if (ws.y < OdysseySkyAt(ws.xz).x - 0.25) return 0;
+                }
+
+                float s = sin(_Screen.z), c = cos(_Screen.z);
+                float2 p = input.positionCS.xy;
+                p = float2(c * p.x - s * p.y, s * p.x + c * p.y);
+                float h = _ScreenParams.y;
+                float density = _Screen.y;
+                float a = StreakLayer(p, 7.0, h * 0.16, h * 0.045, h * 1.25, density, 1.0)
+                        + StreakLayer(p + 3.5, 11.0, h * 0.22, h * 0.07, h * 1.7, density * 0.7, 2.0) * 0.75;
+
+                Light sun = GetMainLight();
+                half3 lit = _Tint.rgb * (unity_AmbientSky.rgb * 1.1 + sun.color * 0.22);
+                return half4(lit, saturate(a * input.shape.x * 0.3));
+            }
+
             Varyings Vertex(uint vid : SV_VertexID, uint iid : SV_InstanceID)
             {
                 if (_OdysseyRain.x <= 0.001) return Culled();
+                if (_Mode > 1.5) return ScreenLayer(vid, iid);
                 if (_Mode < 0.5) return Streak(vid, iid);
                 return Splash(vid, iid);
             }
 
             half4 Fragment(Varyings input) : SV_Target
             {
+                if (_Mode > 1.5) return ScreenFragment(input);
                 Light sun = GetMainLight();
                 // Rain has no colour of its own: it is the sky and the sun caught in water, so it
                 // darkens at dusk and all but vanishes at night, as it should.

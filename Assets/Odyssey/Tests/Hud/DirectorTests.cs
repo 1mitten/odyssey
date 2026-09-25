@@ -489,6 +489,27 @@ namespace Odyssey.Tests.Hud
             debug.SetRainAsParticles(true);
             debug.SetRainAsParticles(true);
             Assert.That(raised, Is.EqualTo(2));
+
+            Assert.That(debug.WetGlossOnly, Is.False, "richer is the default wet look");
+            debug.SetWetGlossOnly(true);
+            debug.SetWetGlossOnly(true);
+            Assert.That(raised, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void RainKeepsItsColourAndOnlyTheDimDaysDrainIt()
+        {
+            // Owner, 2026-09-25: "we want to be colourful when it rains ... then have dim days".
+            foreach (DebugDirector.WeatherPreset p in DebugDirector.WeatherPresets)
+            {
+                bool dim = p.Key == DebugDirector.WeatherStormKey || p.Key == DebugDirector.WeatherOvercastKey;
+                if (dim) Assert.That(p.Gloom, Is.GreaterThan(0f), $"{p.Key} is a dim day and drains nothing");
+                else Assert.That(p.Gloom, Is.Zero, $"{p.Key} is ordinary weather and drains the colour");
+            }
+            DebugDirector.WeatherPreset storm = System.Array.Find(DebugDirector.WeatherPresets,
+                p => p.Key == DebugDirector.WeatherStormKey);
+            Assert.That(storm.Rain, Is.EqualTo(1f));
+            Assert.That(storm.Wind, Is.GreaterThan(1f), "a storm with ordinary wind is a downpour");
         }
 
         [Test]
@@ -499,8 +520,9 @@ namespace Odyssey.Tests.Hud
             for (int i = 0; i < presets.Length; i++)
             {
                 DebugDirector.WeatherPreset p = presets[i];
-                foreach (float v in new[] { p.Cloud, p.Rain, p.Wet, p.Puddles })
+                foreach (float v in new[] { p.Cloud, p.Rain, p.Wet, p.Puddles, p.Gloom })
                     Assert.That(v, Is.InRange(0f, 1f), p.Key);
+                Assert.That(p.Wind, Is.InRange(1f, 1.4f), $"{p.Key}: past about 0.6 rad the grass shader's cap takes over");
                 if (i > 0) Assert.That(p.IsClear, Is.False, $"{p.Key} would draw nothing different from Clear");
                 if (p.Rain > 0f) Assert.That(p.Cloud, Is.GreaterThan(0f), $"{p.Key} rains out of a clear sky");
                 Assert.That(DebugDirector.IconKeys, Does.Contain(p.Key), $"{p.Key} is not held to the naming CSV");

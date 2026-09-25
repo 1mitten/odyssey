@@ -248,6 +248,8 @@ namespace Odyssey.Hud
             { "ui.debug.weather.drizzle", "Drizzle" },
             { "ui.debug.weather.overcast", "Overcast" },
             { "ui.debug.weather.rain", "Rain" },
+            { "ui.debug.weather.storm", "Storm" },
+            { "ui.debug.wetgloss", "Wet ground: gloss only" },
             { "ui.health.anaesthetic", "Anaesthetic" },
             { "ui.health.arm", "Arm" },
             { "ui.health.blood", "Blood loss" },

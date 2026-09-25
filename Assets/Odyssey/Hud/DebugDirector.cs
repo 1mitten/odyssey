@@ -123,32 +123,44 @@ namespace Odyssey.Hud
             GiveWoodKey, GiveStoneKey, GiveFoodKey,
             SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
             WeatherTabKey, WeatherClearKey, WeatherOvercastKey, WeatherDrizzleKey, WeatherRainKey,
-            WeatherDownpourKey, RainParticlesKey,
+            WeatherDownpourKey, WeatherStormKey, RainParticlesKey, WetGlossKey,
         };
 
         public const string WeatherClearKey = "ui.debug.weather.clear",
             WeatherOvercastKey = "ui.debug.weather.overcast",
             WeatherDrizzleKey = "ui.debug.weather.drizzle",
             WeatherRainKey = "ui.debug.weather.rain",
-            WeatherDownpourKey = "ui.debug.weather.downpour";
+            WeatherDownpourKey = "ui.debug.weather.downpour",
+            WeatherStormKey = "ui.debug.weather.storm";
+
+        /// <summary>
+        /// Draw wet ground as gloss only rather than richer and a little darker — the two
+        /// candidates the owner is choosing between by eye (2026-09-25).
+        /// </summary>
+        public const string WetGlossKey = "ui.debug.wetgloss";
 
         /// <summary>Draw the rain as the weather design's §7 first wrote it (CPU particles), to compare.</summary>
         public const string RainParticlesKey = "ui.debug.rainparticles";
 
         /// <summary>
-        /// One sky the Weather tab can set: how much cloud, how hard it rains, and how wet and
-        /// puddled the ground ends up, each 0 to 1. <b>These are the rain-look prototype's
-        /// numbers, not the weather design's</b> (design 43 §4 owns intensity in per-mille and
-        /// rolls it); they are the five skies <c>RainCheck</c> photographed, so what the tab shows
-        /// in Play is what the contact sheet showed.
+        /// One sky the Weather tab can set, each term 0 to 1: how much cloud dims the day, how
+        /// hard it rains, how wet and puddled the ground ends up, how far the day is drained to
+        /// grey (<see cref="Gloom"/>), and how much harder the wind blows (a multiplier, 1 is
+        /// ordinary). <b>These are the rain-look prototype's numbers, not the weather design's</b>
+        /// (design 43 §4 owns intensity in per-mille and rolls it); they are the skies
+        /// <c>RainCheck</c> photographs, so what the tab shows in Play is what the sheet showed.
+        ///
+        /// <para><b>Rain keeps its colour; the storm does not</b> (owner, 2026-09-25: "we want to
+        /// be colourful when it rains … then have dim days"). Only Overcast and Storm carry gloom.</para>
         /// </summary>
         public readonly struct WeatherPreset
         {
             public readonly string Key;
             public readonly string Tooltip;
-            public readonly float Cloud, Rain, Wet, Puddles;
+            public readonly float Cloud, Rain, Wet, Puddles, Gloom, Wind;
 
-            public WeatherPreset(string key, string tooltip, float cloud, float rain, float wet, float puddles)
+            public WeatherPreset(string key, string tooltip, float cloud, float rain, float wet, float puddles,
+                float gloom = 0f, float wind = 1f)
             {
                 Key = key;
                 Tooltip = tooltip;
@@ -156,10 +168,12 @@ namespace Odyssey.Hud
                 Rain = rain;
                 Wet = wet;
                 Puddles = puddles;
+                Gloom = gloom;
+                Wind = wind;
             }
 
-            /// <summary>No cloud and no rain: the day exactly as it is drawn without any weather.</summary>
-            public bool IsClear => Cloud <= 0f && Rain <= 0f && Wet <= 0f;
+            /// <summary>No cloud, no gloom and no rain: the day exactly as it is drawn without any weather.</summary>
+            public bool IsClear => Cloud <= 0f && Rain <= 0f && Wet <= 0f && Gloom <= 0f;
         }
 
         /// <summary>The Weather tab, top to bottom. The first is the game as it draws without weather.</summary>
@@ -167,13 +181,20 @@ namespace Odyssey.Hud
         {
             new WeatherPreset(WeatherClearKey, "No cloud and no rain: the day as the clock has it", 0f, 0f, 0f, 0f),
             new WeatherPreset(WeatherOvercastKey,
-                "A grey day with no rain: the sun and its shadows faded, the sky and the colour drained", 0.8f, 0f, 0f, 0f),
-            new WeatherPreset(WeatherDrizzleKey, "Light rain under a thin cloud; the ground turns half wet over a few seconds",
-                0.6f, 0.25f, 0.45f, 0f),
-            new WeatherPreset(WeatherRainKey, "Steady rain under full cloud; the ground wets and puddles start to gather",
-                0.85f, 0.7f, 0.85f, 0.4f),
-            new WeatherPreset(WeatherDownpourKey, "The heaviest rain there is: 24,000 streaks, the ground soaked and puddled",
-                1f, 1f, 1f, 1f),
+                "A grey day with no rain: the sun and its shadows faded, the sky and the colour drained",
+                0.8f, 0f, 0f, 0f, gloom: 0.6f),
+            new WeatherPreset(WeatherDrizzleKey,
+                "Light rain in full colour; the light dims a little and the ground turns half wet",
+                0.4f, 0.25f, 0.45f, 0f),
+            new WeatherPreset(WeatherRainKey,
+                "Steady rain in full colour: softer light, the ground wet and puddles starting",
+                0.6f, 0.7f, 0.85f, 0.4f),
+            new WeatherPreset(WeatherDownpourKey,
+                "The heaviest ordinary rain, still in colour: the ground soaked and puddled",
+                0.8f, 1f, 1f, 1f),
+            new WeatherPreset(WeatherStormKey,
+                "The rarer dim day: heavy rain, the colour drained to grey, and the wind bending grass and rain",
+                1f, 1f, 1f, 1f, gloom: 1f, wind: 1.3f),
         };
 
         /// <summary>The marauder (design 33 §1): a hostile person, the same intent as the colonist's with a kind.</summary>
@@ -321,6 +342,9 @@ namespace Odyssey.Hud
         /// <summary>Whether the rain is drawn by the particle control arm rather than the GPU.</summary>
         public bool RainAsParticles { get; private set; }
 
+        /// <summary>Whether wet ground is drawn as gloss only, rather than richer and a little darker.</summary>
+        public bool WetGlossOnly { get; private set; }
+
         /// <summary>Raised when the preset or the drawing changes, and only then.</summary>
         public event Action? WeatherChanged;
 
@@ -336,6 +360,13 @@ namespace Odyssey.Hud
         {
             if (RainAsParticles == on) return;
             RainAsParticles = on;
+            WeatherChanged?.Invoke();
+        }
+
+        public void SetWetGlossOnly(bool on)
+        {
+            if (WetGlossOnly == on) return;
+            WetGlossOnly = on;
             WeatherChanged?.Invoke();
         }
     }

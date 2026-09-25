@@ -40,12 +40,15 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(weather.Rain, Is.Zero, "a session starts clear");
                 Assert.That(weather.Drawer.LastDrawCalls, Is.Zero, "clear submits no rain");
 
-                debug.SetWeather(System.Array.FindIndex(DebugDirector.WeatherPresets,
-                    p => p.Key == DebugDirector.WeatherDownpourKey));
+                int downpour = System.Array.FindIndex(DebugDirector.WeatherPresets,
+                    p => p.Key == DebugDirector.WeatherDownpourKey);
+                DebugDirector.WeatherPreset target = DebugDirector.WeatherPresets[downpour];
+                debug.SetWeather(downpour);
                 // Enough game time for the sky to close on the preset: two seconds at SkyRate.
                 yield return Frames(boot, seconds: 3f);
-                Assert.That(weather.Rain, Is.EqualTo(1f).Within(0.01f), "the downpour never arrived");
-                Assert.That(weather.Cloud, Is.EqualTo(1f).Within(0.01f));
+                Assert.That(weather.Rain, Is.EqualTo(target.Rain).Within(0.01f), "the downpour never arrived");
+                Assert.That(weather.Cloud, Is.EqualTo(target.Cloud).Within(0.01f));
+                Assert.That(weather.Gloom, Is.Zero, "ordinary rain drained the colour (owner, 2026-09-25)");
                 Assert.That(weather.Drawer.LastDrawCalls, Is.EqualTo(2), "the GPU rain did not submit");
                 Assert.That(weather.Drawer.LastStreaks, Is.EqualTo(weather.Drawer.MaxStreaks));
                 float wetAtDownpour = weather.Wet;

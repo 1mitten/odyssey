@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
@@ -29,36 +30,37 @@ namespace Odyssey.EditorTools
     /// </summary>
     public static class RainCheck
     {
-        enum Technique { None, Particles, Gpu }
-
         readonly struct Variant
         {
             public readonly string Name;
-            public readonly float Hour, Cloud, Rain, Wet, Puddles;
-            public readonly Technique How;
+            public readonly string Preset;
+            public readonly float Hour;
+            public readonly bool GlossOnly;
 
-            public Variant(string name, float hour, float cloud, Technique how, float rain, float wet, float puddles)
+            public Variant(string name, string preset, float hour = 10.5f, bool glossOnly = false)
             {
                 Name = name;
+                Preset = preset;
                 Hour = hour;
-                Cloud = cloud;
-                How = how;
-                Rain = rain;
-                Wet = wet;
-                Puddles = puddles;
+                GlossOnly = glossOnly;
             }
         }
 
+        /// <summary>
+        /// The skies, each one of the Weather tab's own presets (<see cref="DebugDirector.WeatherPresets"/>),
+        /// so the sheet and Play cannot disagree about what "Rain" looks like. Rain is drawn twice,
+        /// once each way the owner is choosing between for wet ground (2026-09-25).
+        /// </summary>
         static readonly Variant[] Variants =
         {
-            new Variant("0-clear", 10.5f, 0f, Technique.None, 0f, 0f, 0f),
-            new Variant("1-overcast", 10.5f, 0.8f, Technique.None, 0f, 0f, 0f),
-            new Variant("2-as-written", 10.5f, 0.85f, Technique.Particles, 0.7f, 0f, 0f),
-            new Variant("3-gpu-air", 10.5f, 0.85f, Technique.Gpu, 0.7f, 0f, 0f),
-            new Variant("4-gpu-wet", 10.5f, 0.85f, Technique.Gpu, 0.7f, 0.85f, 0.4f),
-            new Variant("5-drizzle", 10.5f, 0.6f, Technique.Gpu, 0.25f, 0.45f, 0f),
-            new Variant("6-downpour", 10.5f, 1f, Technique.Gpu, 1f, 1f, 1f),
-            new Variant("7-dusk", 19f, 0.85f, Technique.Gpu, 0.7f, 0.85f, 0.4f),
+            new Variant("0-clear", DebugDirector.WeatherClearKey),
+            new Variant("1-rain-richer", DebugDirector.WeatherRainKey),
+            new Variant("2-rain-gloss", DebugDirector.WeatherRainKey, glossOnly: true),
+            new Variant("3-drizzle", DebugDirector.WeatherDrizzleKey),
+            new Variant("4-downpour", DebugDirector.WeatherDownpourKey),
+            new Variant("5-storm", DebugDirector.WeatherStormKey),
+            new Variant("6-overcast", DebugDirector.WeatherOvercastKey),
+            new Variant("7-dusk-rain", DebugDirector.WeatherRainKey, hour: 19f),
         };
 
         readonly struct Framing
@@ -76,11 +78,13 @@ namespace Odyssey.EditorTools
             }
         }
 
+        /// <summary>The play camera's reach runs to 160 m; "max" is that, where the screen layer is all there is.</summary>
         static readonly Framing[] Framings =
         {
             new Framing("play", 48f, 48f),
             new Framing("close", 42f, 18f),
             new Framing("far", 48f, 120f),
+            new Framing("max", 48f, 160f),
             new Framing("pond", 45f, 22f, atPond: true),
         };
 
@@ -89,6 +93,8 @@ namespace Odyssey.EditorTools
 
         public static void Run() => Execute(Application.isBatchMode);
 
+        static DebugDirector.WeatherPreset PresetOf(string key) =>
+            Array.Find(DebugDirector.WeatherPresets, p => p.Key == key);
 
         static void Execute(bool exitWhenDone)
         {
@@ -98,11 +104,8 @@ namespace Odyssey.EditorTools
             ChunkRenderer? renderer = null;
             ModuleLibrary? library = null;
             DaylightDirector? daylight = null;
-            SkyHeightMap? sky = null;
-            RainDirector? rain = null;
-            RainParticles? particles = null;
+            WeatherLook? look = null;
             WindDirector? wind = null;
-            OvercastVolume? grey = null;
             Action<ScriptableRenderContext, Camera>? hook = null;
 
             try
@@ -136,25 +139,11 @@ namespace Odyssey.EditorTools
                 // opening pictures were of an empty sky.
                 renderer.PrimeAll(activeLayer, slice);
 
-                sky = new SkyHeightMap(model);
-                sky.Rebuild();
-                int covered = 0, canopied = 0;
-                for (int z = 0; z < size.SizeZ; z++)
-                for (int x = 0; x < size.SizeX; x++)
-                {
-                    float k = sky.KindAt(x, z);
-                    if (k == SkyHeightMap.KindCanopy) canopied++;
-                    else if (k == SkyHeightMap.KindBuilt && sky.StopAt(x, z) > (activeLayer + 0.5f) * CellMetrics.SizeY) covered++;
-                }
-                Debug.Log($"[Rain] cover map: {canopied} columns under canopy, {covered} under a roof; " +
-                          $"hut at {hutAt}, pond at {pond}");
-
-                rain = new RainDirector { Clock = 3.71f };
-                if (!rain.Available) throw new InvalidOperationException("Odyssey/Rain did not load");
-                particles = new RainParticles(lightingRoot.transform, sky);
+                // The game's own weather object, driven the way the Weather tab drives it: one
+                // preset snapped to rather than eased into, since a sheet has no game time.
+                look = new WeatherLook(model, lightingRoot.transform);
+                if (!look.Drawer.Available) throw new InvalidOperationException("Odyssey/Rain did not load");
                 wind = new WindDirector();
-                wind.Apply(5_000);
-                grey = new OvercastVolume(lightingRoot.transform);
 
                 cameraObject = new GameObject("RainCamera");
                 var camera = cameraObject.AddComponent<Camera>();
@@ -163,19 +152,23 @@ namespace Odyssey.EditorTools
                 camera.farClipPlane = 2000f;
                 camera.clearFlags = CameraClearFlags.Skybox;
 
+                // A fixed tick, so the drops are in the same places in every picture.
+                const long Tick = 223;
                 Variant current = Variants[0];
                 Vector3 shotFocus = Vector3.zero;
                 float shotDistance = 48f;
 
                 ChunkRenderer active = renderer;
-                RainDirector drawer = rain;
+                WeatherLook weather = look;
+                DaylightDirector light = daylight;
+                WindDirector air = wind;
                 hook = (context, rendering) =>
                 {
                     if (rendering != camera) return;
                     active.ViewerPosition = rendering.transform.position;
                     active.Render(activeLayer, slice);
-                    if (current.How == Technique.Gpu) drawer.Draw(rendering, shotFocus, shotDistance, underground: false);
-                    else drawer.Publish();
+                    weather.Sync(PresetOf(current.Preset), false, light, rendering, shotFocus, shotDistance,
+                        underground: false, Tick, 60, running: false, 0f, current.GlossOnly, air);
                 };
                 RenderPipelineManager.beginCameraRendering += hook;
 
@@ -185,33 +178,24 @@ namespace Odyssey.EditorTools
                 foreach (Variant variant in Variants)
                 {
                     current = variant;
-                    daylight.Cloud = variant.Cloud;
-                    grey.Cover = variant.Cloud;
+                    DebugDirector.WeatherPreset preset = PresetOf(variant.Preset);
+                    look.Snap(preset);
+                    // Once without a camera, so the light, the volume and the wind are set before
+                    // the day is applied and the shutter opens.
+                    look.Sync(preset, false, daylight, null, hutFocus, 48f, false, Tick, 60, false, 0f,
+                        variant.GlossOnly, wind);
+                    wind.Apply(5_000);
                     daylight.ApplyHour(variant.Hour);
-                    rain.Intensity = variant.How == Technique.Gpu ? variant.Rain : 0f;
-                    rain.Wetness = variant.Wet;
-                    rain.Puddles = variant.Puddles;
-                    particles.Intensity = variant.How == Technique.Particles ? variant.Rain : 0f;
 
                     foreach (Framing framing in Framings)
                     {
                         shotFocus = framing.AtPond ? pondFocus : hutFocus;
                         shotDistance = framing.Distance;
-
-                        // The particle arm has to be run up to a steady state for each framing: its
-                        // drops live where it emitted them, so a new focus needs new rain.
-                        particles.Sync(shotFocus, shotDistance, 0f, underground: true);
-                        for (int step = 0; step < 150 && particles.Intensity > 0f; step++)
-                        {
-                            particles.Sync(shotFocus, shotDistance, 1f / 60f, underground: false);
-                            particles.Evaluate(1f / 60f);
-                        }
-
                         string path = $"Logs/rain-{variant.Name}-{framing.Name}.png";
                         PlayScene.Shoot(camera, shotFocus, framing.Pitch, 38f, framing.Distance, path);
-                        Debug.Log($"[Rain] {path}: gpu streaks {rain.LastStreaks} splashes {rain.LastSplashes} " +
-                                  $"draws {rain.LastDrawCalls}; particles live {particles.LiveStreaks}/{particles.LiveSplashes}; " +
-                                  $"world draws {renderer.DrawCalls}");
+                        Debug.Log($"[Rain] {path}: streaks {look.Drawer.LastStreaks} splashes {look.Drawer.LastSplashes} " +
+                                  $"screen layer {look.Drawer.LastScreenLayer:0.00}, {look.Drawer.LastDrawCalls} rain calls; " +
+                                  $"cloud {look.Cloud:0.00} gloom {look.Gloom:0.00}");
                     }
                 }
 
@@ -225,10 +209,7 @@ namespace Odyssey.EditorTools
             finally
             {
                 if (hook != null) RenderPipelineManager.beginCameraRendering -= hook;
-                particles?.Dispose();
-                grey?.Dispose();
-                rain?.Dispose();
-                sky?.Dispose();
+                look?.Dispose();
                 wind?.Dispose();
                 daylight?.Dispose();
                 renderer?.Dispose();

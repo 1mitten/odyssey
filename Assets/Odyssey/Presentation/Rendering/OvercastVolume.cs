@@ -8,7 +8,8 @@ namespace Odyssey.Presentation.Rendering
 {
     /// <summary>
     /// The grey day's second lever: a global post-processing volume that drains colour and
-    /// contrast, weighted by cloud cover, laid over whatever grade the scene already has.
+    /// contrast, weighted by <b>gloom</b> — the storm's term — laid over whatever grade the scene
+    /// already has. Ordinary rain keeps its colour and leaves it at weight 0 (owner, 2026-09-25).
     ///
     /// <para><b>Prototype (claude/rain-look).</b> <see cref="Overcast"/> moves the light; this moves
     /// the picture. The light alone could not do it: the Meadow ambient is so heavy that dimming the
@@ -53,7 +54,7 @@ namespace Odyssey.Presentation.Rendering
             _volume.weight = 0f;
         }
 
-        /// <summary>Cloud cover, 0 to 1, as the volume's weight.</summary>
+        /// <summary>Gloom, 0 to 1, as the volume's weight.</summary>
         public float Cover
         {
             get => _volume.weight;

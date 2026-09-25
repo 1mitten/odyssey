@@ -69,7 +69,9 @@ namespace Odyssey.Presentation.Rendering
         public int ProbeUpdates { get; private set; }
 
         float _cloud;
+        float _gloom;
         float _probedCloud;
+        float _probedGloom;
 
         /// <summary>How far the cover must move before the ambient probe is re-integrated for it.</summary>
         public const float ProbeUpdateCloud = 0.1f;
@@ -88,6 +90,23 @@ namespace Odyssey.Presentation.Rendering
                 float v = Mathf.Clamp01(value);
                 if (Mathf.Approximately(v, _cloud)) return;
                 _cloud = v;
+                Hour = -1f;
+            }
+        }
+
+        /// <summary>
+        /// How far the day is drained towards grey, 0 to 1: the storm's term, beside
+        /// <see cref="Cloud"/>'s dimming (<see cref="Overcast"/>). Ordinary rain keeps its colour
+        /// and leaves this at 0 (owner, 2026-09-25).
+        /// </summary>
+        public float Gloom
+        {
+            get => _gloom;
+            set
+            {
+                float v = Mathf.Clamp01(value);
+                if (Mathf.Approximately(v, _gloom)) return;
+                _gloom = v;
                 Hour = -1f;
             }
         }
@@ -111,7 +130,7 @@ namespace Odyssey.Presentation.Rendering
 
             DaylightState state = Daylight.Sample(hour);
             if (Daylight.MeadowLight) state = Daylight.Meadow(state);
-            if (_cloud > 0f) state = Overcast.Grade(state, _cloud);
+            if (_cloud > 0f || _gloom > 0f) state = Overcast.Grade(state, _cloud, _gloom);
             Hour = hour;
 
             _sun.color = state.SunColour;
@@ -142,10 +161,13 @@ namespace Odyssey.Presentation.Rendering
             }
 
             bool coverMoved = Mathf.Abs(_cloud - _probedCloud) >= ProbeUpdateCloud
-                              || (_cloud == 0f && _probedCloud != 0f);
+                              || Mathf.Abs(_gloom - _probedGloom) >= ProbeUpdateCloud
+                              || (_cloud == 0f && _probedCloud != 0f)
+                              || (_gloom == 0f && _probedGloom != 0f);
             if (Mathf.Abs(hour - _lastProbeHour) < ProbeUpdateHours && !coverMoved) return;
             _lastProbeHour = hour;
             _probedCloud = _cloud;
+            _probedGloom = _gloom;
             ProbeUpdates++;
             DynamicGI.UpdateEnvironment();
         }

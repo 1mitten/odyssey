@@ -27,9 +27,14 @@ namespace Odyssey.Presentation.Rendering
         static readonly int RainId = Shader.PropertyToID("_OdysseyRain");
         static readonly int BoxId = Shader.PropertyToID("_Box");
         static readonly int ModeId = Shader.PropertyToID("_Mode");
+        static readonly int ZTestId = Shader.PropertyToID("_ZTest");
+        static readonly int ScreenId = Shader.PropertyToID("_Screen");
+        static readonly int LookId = Shader.PropertyToID("_OdysseyRainLook");
+        static readonly int WindId = Shader.PropertyToID("_OdysseyWind");
 
         readonly Material? _streaks;
         readonly Material? _splashes;
+        readonly Material? _screen;
 
         public RainDirector()
         {
@@ -44,6 +49,9 @@ namespace Odyssey.Presentation.Rendering
             _streaks.SetFloat(ModeId, 0f);
             _splashes = new Material(shader) { name = "Odyssey/Rain/Splashes", hideFlags = HideFlags.DontSave };
             _splashes.SetFloat(ModeId, 1f);
+            _screen = new Material(shader) { name = "Odyssey/Rain/Screen", hideFlags = HideFlags.DontSave };
+            _screen.SetFloat(ModeId, 2f);
+            _screen.SetFloat(ZTestId, (float)CompareFunction.Always);
         }
 
         public bool Available => _streaks != null;
@@ -74,14 +82,41 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static float HalfWidthFor(float cameraDistance) => Mathf.Clamp(cameraDistance * 0.85f, 18f, 110f);
 
+        /// <summary>Draw wet ground as gloss only, rather than richer and a little darker (owner, choosing by eye).</summary>
+        public bool WetGlossOnly { get; set; }
+
+        /// <summary>
+        /// The screen layer's zoom: nothing closer than <see cref="ScreenFadeFrom"/> metres from the
+        /// focus, all of it from <see cref="ScreenFadeTo"/>. Close up the 3D drops carry the rain; as
+        /// the camera pulls back they shrink to a couple of pixels a frame and this takes over
+        /// (owner, 2026-09-25: zoomed out "I couldn't really see any rain").
+        /// </summary>
+        public static float ScreenFadeFrom { get; set; } = 55f;
+
+        public static float ScreenFadeTo { get; set; } = 95f;
+
+        /// <summary>How strong the screen layer is at full zoom and full rain. The owner's dial.</summary>
+        public static float ScreenStrength { get; set; } = 1f;
+
+        /// <summary>The screen layer's strength for this rain at this zoom: 0 means it is not drawn.</summary>
+        public static float ScreenLayerFor(float intensity, float cameraDistance) =>
+            Mathf.Clamp01(intensity) * ScreenStrength *
+            Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(ScreenFadeFrom, ScreenFadeTo, cameraDistance));
+
         public int LastStreaks { get; private set; }
+
+        /// <summary>The screen layer's strength last frame, 0 when it was not drawn.</summary>
+        public float LastScreenLayer { get; private set; }
         public int LastSplashes { get; private set; }
         public int LastDrawCalls { get; private set; }
 
         /// <summary>Publish the weather globals. Cheap; call once a frame before anything draws.</summary>
-        public void Publish() =>
+        public void Publish()
+        {
             Shader.SetGlobalVector(RainId, new Vector4(Mathf.Clamp01(Intensity), Mathf.Clamp01(Wetness),
                 Clock, Mathf.Clamp01(Puddles)));
+            Shader.SetGlobalVector(LookId, new Vector4(WetGlossOnly ? 1f : 0f, 0f, 0f, 0f));
+        }
 
         /// <summary>
         /// Submit the rain for one camera. <paramref name="underground"/> is the slice's own answer
@@ -90,6 +125,7 @@ namespace Odyssey.Presentation.Rendering
         public void Draw(Camera camera, Vector3 focus, float cameraDistance, bool underground)
         {
             LastStreaks = LastSplashes = LastDrawCalls = 0;
+            LastScreenLayer = 0f;
             Publish();
             if (_streaks == null || _splashes == null || underground) return;
 
@@ -127,6 +163,22 @@ namespace Odyssey.Presentation.Rendering
                 Graphics.RenderPrimitives(splashes, MeshTopology.Triangles, 6, LastSplashes);
                 LastDrawCalls++;
             }
+
+            // The screen layer: one triangle over the view, drawn once the camera is far enough
+            // out that the 3D drops no longer read. Its slant is the wind across the screen.
+            float layer = ScreenLayerFor(intensity, cameraDistance);
+            if (_screen != null && layer > 0.001f)
+            {
+                Vector4 wind = Shader.GetGlobalVector(WindId);
+                float across = Vector3.Dot(new Vector3(wind.x, 0f, wind.z), camera.transform.right);
+                float slant = Mathf.Clamp(-across * 0.6f, -0.45f, 0.45f);
+                _screen.SetVector(ScreenId, new Vector4(layer, Mathf.Lerp(0.3f, 0.85f, intensity), slant, 0f));
+                var screen = streaks;
+                screen.material = _screen;
+                Graphics.RenderPrimitives(screen, MeshTopology.Triangles, 3, 1);
+                LastDrawCalls++;
+                LastScreenLayer = layer;
+            }
         }
 
         /// <summary>A dry world, and the materials gone.</summary>
@@ -135,6 +187,8 @@ namespace Odyssey.Presentation.Rendering
             Shader.SetGlobalVector(RainId, Vector4.zero);
             Destroy(_streaks);
             Destroy(_splashes);
+            Destroy(_screen);
+            Shader.SetGlobalVector(LookId, Vector4.zero);
         }
 
         static void Destroy(UnityEngine.Object? o)

@@ -32,7 +32,9 @@ the next session learns to ignore.
   Weather, pick Rain or Downpour, and toggle *Draw as particles* to compare them moving. Read the
   overlay's `gpu` line at your own resolution with Clear and then Downpour; the budget is 0.5 ms at
   4K. A wrong answer is a sky that snaps rather than arrives, rain that keeps falling while paused,
-  or rain drawn inside the hut.
+  or rain drawn inside the hut. **Second round (2026-09-25):** Rain, Drizzle and Downpour should
+  keep the colour of Clear; Storm is the grey one; zoom right out on Downpour and the rain should
+  still read. Toggle *Wet ground: gloss only* and say which of the two wet looks to keep.
 - **Does the title screen's dock read well, and does Exit ask?** (`claude/settings-frame`, design
   40.) Press Play. A dark panel down the left edge with the layered mark and ODYSSEY, four
   coloured buttons and the build line at the foot, the starfield clear to the right. New game should
