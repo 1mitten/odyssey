@@ -81,11 +81,18 @@ namespace Odyssey.Hud
         /// <summary>What <see cref="BillsModel.PressAdd"/> adds, a <see cref="RecipeHandle"/> value.</summary>
         public readonly int DefaultRecipe;
 
-        public BillStation(int edifice, bool needsPower, int defaultRecipe)
+        /// <summary>
+        /// The registry key of the line saying what one of its products takes here (design 48 §14):
+        /// a campfire's says wood as well as food, because it burns one a meal.
+        /// </summary>
+        public readonly string NeedsKey;
+
+        public BillStation(int edifice, bool needsPower, int defaultRecipe, string needsKey)
         {
             Edifice = edifice;
             NeedsPower = needsPower;
             DefaultRecipe = defaultRecipe;
+            NeedsKey = needsKey;
         }
     }
 
@@ -113,8 +120,8 @@ namespace Odyssey.Hud
         /// <summary>Every kind of station, and what it needs.</summary>
         public static readonly BillStation[] Stations =
         {
-            new BillStation(EdificeHandle.Galley, needsPower: true, RecipeHandle.Meal),
-            new BillStation(EdificeHandle.Campfire, needsPower: false, RecipeHandle.Meal),
+            new BillStation(EdificeHandle.Galley, needsPower: true, RecipeHandle.Meal, "ui.bill.needs"),
+            new BillStation(EdificeHandle.Campfire, needsPower: false, RecipeHandle.Meal, "ui.bill.needs.fire"),
         };
 
         /// <summary>The recipes' names, in <see cref="RecipeHandle"/> order.</summary>
@@ -151,6 +158,18 @@ namespace Odyssey.Hud
         public CellRef Cell { get; private set; }
 
         int _defaultRecipe;
+
+        /// <summary>What one product takes here (design 48 §14): raw food, and a campfire's wood.</summary>
+        public string Needs { get; private set; } = string.Empty;
+
+        /// <summary>
+        /// How many meals the raw food on the map would make, or that there is none. Empty until the
+        /// station has been published, which it is from its first bill.
+        /// </summary>
+        public string Supply { get; private set; } = string.Empty;
+
+        /// <summary>There is no raw food at all: the supply line is a warning.</summary>
+        public bool NoSupply { get; private set; }
 
         /// <summary>One more bill would be refused: the list is full.</summary>
         public bool Full => Rows.Count >= MaxRows;
@@ -199,6 +218,9 @@ namespace Odyssey.Hud
             Ready = true;
             HasSwitch = false;
             SwitchOn = false;
+            Supply = string.Empty;
+            NoSupply = false;
+            Needs = Showing ? Registry.Label(kind.NeedsKey) : string.Empty;
             if (!Showing) return;
 
             if (snapshot.TryGetPowerDevice(cellIndex, out PowerDeviceView device))
@@ -213,6 +235,9 @@ namespace Odyssey.Hud
                 if (stations[s].CellIndex != cellIndex) continue;
                 StationView station = stations[s];
                 Ready = station.Ready;
+                NoSupply = station.RawMeals <= 0;
+                Supply = NoSupply ? Registry.Label("ui.bill.nosupply")
+                    : Registry.Label("ui.bill.supply").Replace("{n}", station.RawMeals.ToString(CultureInfo.InvariantCulture));
 
                 ReadOnlySpan<BillView> bills = snapshot.Bills;
                 for (int b = 0; b < station.BillCount; b++)
@@ -350,6 +375,8 @@ namespace Odyssey.Hud
                 int hash = Showing ? 3 : 5;
                 hash = hash * 31 + (Ready ? 17 : 19);
                 hash = hash * 31 + (HasSwitch ? (SwitchOn ? 7 : 11) : 13);
+                hash = hash * 31 + Needs.GetHashCode();
+                hash = hash * 31 + Supply.GetHashCode();
                 hash = hash * 31 + Rows.Count;
                 for (int i = 0; i < Rows.Count; i++)
                 {

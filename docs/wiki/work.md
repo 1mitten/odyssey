@@ -2,7 +2,7 @@
 
 The work types a colonist can be assigned, in priority order of urgency, the skills that govern how well they do them, and the schedule blocks that say when. Salvaging is ours: it sits beside mining because taking a ruin apart without wrecking what is inside it is a different craft from digging. Work and schedule share one tab and one table, so they share a page here.
 
-53 entries, 18 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+57 entries, 22 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Work types
 
@@ -81,6 +81,10 @@ The work types a colonist can be assigned, in priority order of urgency, the ski
 | **Done** | `ui.bill.done` | This bill's count is met. It starts again by itself when it needs to <br>**Needs:** a tick. Interface furniture drawn as a HudGlyph | no art | M3 |
 | **No power** | `ui.bill.unpowered` | The electric cooker needs power to cook. Nothing on the hob will spoil in the meantime <br>**Needs:** a broken plug. Our own concept | no art | M3 |
 | **Waiting for power** | `ui.bill.waiting` | This bill will be worked once the station has power again <br>**Needs:** Interface words, no icon wanted | no art | M3 |
+| **Each meal: raw food, about 3 carrots** | `ui.bill.needs` | A meal takes 500 of any raw food by nutrition: three carrots, or meat once there is any <br>**Needs:** Interface words, no icon wanted | no art | M3 |
+| **Each meal: raw food, about 3 carrots, and 1 wood** | `ui.bill.needs.fire` | A campfire burns one wood for every meal it cooks <br>**Needs:** Interface words, no icon wanted | no art | M3 |
+| **Raw food for {n} meals** | `ui.bill.supply` | What the raw food on the map, in stores and on the ground, would cook into <br>**Needs:** Interface words, no icon wanted | no art | M3 |
+| **No raw food on the map** | `ui.bill.nosupply` | Nothing to cook. Grow carrots, or use the debug menu's Give carrots <br>**Needs:** an empty basket. Our own concept | no art | M3 |
 
 ---
 

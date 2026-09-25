@@ -12,12 +12,15 @@ namespace Odyssey.Tests.Hud
         static readonly CellRef At = new CellRef(3, 4, 1);
         static readonly int AtIndex = new GridSize(10, 10, 4).Index(At);
 
-        static WorldSnapshot WithStation(bool ready, params BillView[] bills)
+        static WorldSnapshot WithStation(bool ready, params BillView[] bills) => WithStation(ready, 12, bills);
+
+        static WorldSnapshot WithStation(bool ready, short rawMeals, params BillView[] bills)
         {
             WorldSnapshot snapshot = Frame.Write();
             int first = snapshot.BillCount;
             foreach (BillView bill in bills) snapshot.AddBill(bill);
-            snapshot.AddStation(new StationView(AtIndex, EdificeHandle.Galley, ready, 0, 0, false, false, first, bills.Length));
+            snapshot.AddStation(new StationView(AtIndex, EdificeHandle.Galley, ready, 0, 0, false, false, first,
+                bills.Length, rawMeals));
             return snapshot;
         }
 
@@ -31,6 +34,29 @@ namespace Odyssey.Tests.Hud
 
         static BillView Paused(int target, int count) =>
             new BillView(RecipeHandle.Meal, BillModeHandle.UntilYouHave, target, 0, count, true, false);
+
+        /// <summary>
+        /// The pane says what a meal takes and whether there is any (owner, 2026-09-25: "I didn't
+        /// know what ingredients I needed").
+        /// </summary>
+        [Test]
+        public void ThePaneSaysWhatAMealTakesAndWhetherThereIsAny()
+        {
+            var model = new BillsModel();
+            model.Refresh(WithStation(true, 12, Until(10, 0)), At, AtIndex, EdificeHandle.Galley);
+            Assert.That(model.Needs, Is.EqualTo(Registry.Label("ui.bill.needs")));
+            Assert.That(model.Needs, Does.Contain("carrots"));
+            Assert.That(model.Supply, Does.Contain("12"));
+            Assert.That(model.NoSupply, Is.False);
+
+            model.Refresh(WithStation(true, 0, Until(10, 0)), At, AtIndex, EdificeHandle.Galley);
+            Assert.That(model.Supply, Is.EqualTo(Registry.Label("ui.bill.nosupply")));
+            Assert.That(model.NoSupply, Is.True);
+
+            model.Refresh(Frame.Write(), At, AtIndex, EdificeHandle.Campfire);
+            Assert.That(model.Needs, Does.Contain("wood"), "a campfire also burns a wood a meal");
+            Assert.That(model.Supply, Is.Empty, "nothing is said about supply before the station is published");
+        }
 
         static BillView Until(int target, int count, bool satisfied = false) =>
             new BillView(RecipeHandle.Meal, BillModeHandle.UntilYouHave, target, 0, count, false, satisfied);

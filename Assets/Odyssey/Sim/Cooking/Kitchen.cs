@@ -248,6 +248,31 @@ namespace Odyssey.Sim.Cooking
         public void Invalidate() => _countedTick = -1;
 
         /// <summary>
+        /// How many meals the raw food on the map would make (design 48 §14): every spawned,
+        /// unforbidden raw ingredient on the ground or in a store, by nutrition, over what one meal
+        /// takes. Asked only by the snapshot, once a published frame, so it costs one walk of the
+        /// items per frame a station is published — the same walk <see cref="MealsHeld"/> makes.
+        /// </summary>
+        public int RawMeals(RecipeDef recipe)
+        {
+            if (recipe.ingredientNutrition <= 0) return 0;
+            long total = 0;
+            var items = _ctx.Items.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                ColonyItem item = items[i];
+                if (item.Despawned || item.Forbidden) continue;
+                ItemDef def = _ctx.Content.Items[item.DefIndex];
+                if (!def.rawIngredient || def.nutrition <= 0) continue;
+                if (_ctx.WhereIs(item) < 0) continue;
+                total += (long)def.nutrition * item.Stack;
+            }
+
+            long meals = total / recipe.ingredientNutrition;
+            return meals > 999 ? 999 : (int)meals;
+        }
+
+        /// <summary>
         /// The pane's one command (design 48 §5). The station is the building standing in the cell;
         /// a station nobody has used yet is created by its first bill.
         /// </summary>
@@ -435,11 +460,14 @@ namespace Odyssey.Sim.Cooking
         public void Contribute(SimWorld world, SnapshotWriter writer)
         {
             RecipeDef[] recipes = _ctx.Content.Recipes;
+            int rawMeals = -1;
             for (int s = 0; s < _stations.Count; s++)
             {
                 CookStation station = _stations[s];
                 if (station.Removed) continue;
                 if (station.Bills.Count == 0 && !station.PanInUse) continue;
+                // Once a frame, whatever the number of stations: the supply is the colony's.
+                if (rawMeals < 0) rawMeals = recipes.Length > 0 ? RawMeals(recipes[0]) : 0;
 
                 int first = writer.BillCursor;
                 for (int b = 0; b < station.Bills.Count; b++)
@@ -459,7 +487,8 @@ namespace Odyssey.Sim.Cooking
                 int cook = work > 0 ? (int)System.Math.Min(1_000L, station.CookMilliwork * 1_000L / work) : 0;
 
                 writer.AddStation(new StationView(CellOf(station), _edifices[station.Edifice].Def, Ready(station),
-                    (short)pan, (short)cook, station.Burn == 1, station.PanMeat, first, station.Bills.Count));
+                    (short)pan, (short)cook, station.Burn == 1, station.PanMeat, first, station.Bills.Count,
+                    (short)rawMeals));
             }
         }
 

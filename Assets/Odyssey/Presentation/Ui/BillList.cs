@@ -42,6 +42,9 @@ namespace Odyssey.Presentation.Ui
         readonly VisualElement _switch;
         readonly Label _switchLabel;
         readonly Label _count;
+        readonly VisualElement _recipeLine;
+        readonly Label _needs;
+        readonly Label _supply;
         readonly VisualElement _empty;
         readonly VisualElement _add;
         readonly List<RowView> _rows = new List<RowView>();
@@ -124,6 +127,29 @@ namespace Odyssey.Presentation.Ui
             _count.style.marginLeft = 6;
             head.Add(_count);
             Add(head);
+
+            // ---- what one product takes, and what the map holds of it (design 48 §14; owner,
+            // 2026-09-25: "I didn't know what ingredients I needed"). One line under the strip:
+            // the recipe's needs on the left, the supply on the right, in warn when there is none.
+            _recipeLine = new VisualElement();
+            _recipeLine.style.flexDirection = FlexDirection.Row;
+            _recipeLine.style.alignItems = Align.Center;
+            _recipeLine.style.flexShrink = 0;
+            _recipeLine.style.height = BillsLayout.RecipeLineHeight;
+            _recipeLine.style.paddingLeft = BillsLayout.StripPadLeft;
+            _recipeLine.style.paddingRight = BillsLayout.SidePad;
+            _recipeLine.style.borderBottomWidth = HudTheme.BorderWidth;
+            _recipeLine.style.borderBottomColor = HudTokens.Convert(HudTheme.RowRule);
+            _needs = HudText.Make(string.Empty, HudTextRole.Meta);
+            _needs.style.color = HudTokens.TextMeta;
+            _needs.style.flexGrow = 1;
+            _needs.style.whiteSpace = WhiteSpace.NoWrap;
+            _recipeLine.Add(_needs);
+            _supply = HudText.Make(string.Empty, HudTextRole.Meta);
+            _supply.style.whiteSpace = WhiteSpace.NoWrap;
+            _supply.style.marginLeft = BillsLayout.ColumnGap;
+            _recipeLine.Add(_supply);
+            Add(_recipeLine);
 
             // ---- the rows, and the one line an empty list shows
             _empty = new VisualElement();
@@ -376,6 +402,11 @@ namespace Odyssey.Presentation.Ui
             HudText.Set(_switchLabel, _model.SwitchLabel, HudTextRole.Row);
 
             HudText.Set(_count, _model.CountLabel, HudTextRole.Hotkey);
+            _recipeLine.style.display = _model.Needs.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            HudText.Set(_needs, _model.Needs, HudTextRole.Meta);
+            HudText.Set(_supply, _model.Supply, HudTextRole.Meta);
+            _supply.style.color = _model.NoSupply ? HudTokens.Warn : HudTokens.TextMeta;
+            _supply.tooltip = _model.NoSupply ? "Grow carrots, or use the debug menu's Give carrots" : null;
             _empty.style.display = _model.Rows.Count == 0 ? DisplayStyle.Flex : DisplayStyle.None;
             _add.style.opacity = _model.Full ? BillsLayout.DisabledOpacity : 1f;
             _add.tooltip = _model.Full ? "This station holds " + BillsModel.MaxRows + " bills" : Registry.Label("ui.bill.add");

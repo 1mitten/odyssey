@@ -30,6 +30,9 @@ namespace Odyssey.Hud
 
         public const int SidePad = 12;
 
+        /// <summary>The line under the Bills strip: what one product takes, and how much the map holds.</summary>
+        public const int RecipeLineHeight = 30;
+
         public const int RowHeight = 48;
 
         /// <summary>The gap between two columns of a row.</summary>

@@ -39,6 +39,10 @@ gets the whole pane — strip, rows, stepper, reorder, Add — with no view code
   or "Switch on" by what pressing it will do. It is up only while a station that needs power has
   none (`BillsModel.HasProblem`). **While it is up the tile's own Switch row is hidden**, because
   it is the same button; it comes back when the strip goes.
+- **What a product takes, and how much there is** (merged from #227, owner: *"I didn't know what
+  ingredients I needed"*): one 30 px line under the Bills strip, the station's needs on the left
+  (`BillStation.NeedsKey`, so a campfire says its wood) and the supply on the right, in warn when
+  the map holds no raw food.
 - **No gaps between sections.** The list runs to the pane's edges (negative margin of the pane's
   padding), and each section opens on a strip and closes on a 1 px rule.
 
