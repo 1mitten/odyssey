@@ -12588,3 +12588,48 @@ when the world is built. The player now sees 5.6, 3.8, 5.3 ms.
 
 The one hitch in play was a grass rung: 58 and 38 ms, because it rebuilt the whole surround to change
 its tufts. It re-strews the tufts alone now. Design 38 §25.
+
+## 2026-09-25 — Ranged combat: ground, interview, research and design 44
+
+The owner asked for the step after melee: guns, starting with a basic pistol — holstered like a
+melee weapon, two hands on the grip when ready, a visible aim time, a bullet that lands on the body
+when it hits and passes close when it misses, injuries through the current seam, and draw, aim,
+recoil and holster animation. Mid-turn: *"take into account height because projectile weapons can
+fire from many heights - but obviously get inaccurate with distance depending on the gun."*
+
+**Ground.** Three read-only surveys. Nothing ranged exists — no range on a weapon, no line of sight,
+no Shooting index, no projectile, no gun clip in any pack, no gunshot sound — but the melee line was
+built so a second kind of attack slots in (decide at the wind-up's start, apply at the impact, one
+damage method), the registry already named the sidearm, the skill, ammo and Hold position, and
+design 13's G8 had named the gun pose two months ago and never started it. The supply drop is the
+precedent for a flight the simulation owns and presentation lerps.
+
+**Interview**, ten questions in three rounds, `docs/research/ranged-interview.md`. Every recommended
+answer was taken, with one reversal: *own layer only* became *shoot between layers now* when the
+owner raised height, and no height bonus. The tensions chosen into are its §4 — real flight against
+the reference's trigger-decided hit, three-dimensional sight from the first commit, procedural
+against a pack, a 5 m dead zone against friendly fire.
+
+**Research**, six capped subagents, one question each. The container's proxy refused nearly every
+content host, so five of the six rest on search excerpts and say so in their cap lines; the sixth
+(`c-3d-shot-line`) read Cataclysm-DDA's z-level line-of-sight source directly and is the strongest.
+What they settled: the reference decides a hit at the trigger and only draws the flight, so ours is
+deliberately narrower (a target that stepped off the line is missed; one that walked into it is
+hit); the hit formula is the reference's exponent — per-cell accuracy raised to the distance, so
+skill buys reach — scaled by metres rather than cells; interception is probabilistic (40 % × body
+size, a dead zone in front of the shooter); the line is an integer supercover between cell centres
+at mid-height with Cataclysm's lenient corner rule, because the strict rule blocks a colonist firing
+down off the lip of her own terrace; tracers are one instanced bucket or the rain pass's own
+pattern, with fixed render-queue values so they never tie with rain or water; the stance is a
+hand-rolled distributed aim in the existing post-graph pass, isosceles because it reads from above,
+recoil a critically damped spring from one duration; and Synty sells no gun animation pack, so
+procedural first, with a three-rig retarget experiment before any purchase.
+
+**Design 44 and `docs/plans/ranged-combat.md`.** What it costs: save format 9 → 10 — the guard
+behind a one-time deal of Shooting to older colonists, since the skill arrays are length-prefixed
+and nothing else needs the bump — and one golden re-bake in R0 for the seventh skill. The projectile
+registry hashes nothing while empty and the new job sits above `HashedAlways`, so no unit after R0
+moves a golden. A downed pawn never takes a stray bullet, which is the one rule that keeps the
+combat gate's invariant (an unordered fight ends in downs, never deaths) true under gunfire. The
+flags byte is full, so the aim stance derives from the published job rather than a new bit. Seven
+recommendations wait on the owner (design 44 §8). **Nothing built.**
