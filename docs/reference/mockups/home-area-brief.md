@@ -51,7 +51,7 @@ drawn lightning-bolt-in-a-tile. **Home** goes directly under it, the same size a
 ### 2. The home area on the board
 
 Draw the board look over a **screenshot of the running game** (attached: a small colony on the
-meadow, seen from the play camera at 48 degrees). The home area is a set of whole cells on the
+meadow with a campfire, seen from the play camera at 48 degrees). The home area is a set of whole cells on the
 ground, 2.5 m square each, and it can be several separate pieces. It must:
 
 - read at a glance as "this is the base" at play zoom, **without hiding** grass, items, colonists or
@@ -140,7 +140,7 @@ caps) in **IBM Plex Mono 500** with tabular figures.
 | Step | Use |
 |---|---|
 | 11 / 600, tracked 0.14em, upper case | panel labels and column headers: "COLONIST", "AREA", "RESPONSE" |
-| 12 / 400 | meta lines, "No home yet" |
+| 12 / 400 | meta lines, "No hearth yet" |
 | 13 / 400 | body text |
 | 14 / 500 | list rows, command-bar labels |
 | 19 / 600 | the name of the selected thing |
@@ -206,11 +206,11 @@ layout: the table's shape is this game's Work tab, and the attachments show it.
 | `docs/reference/mockups/hud-v2.html` (and `icon-map.js` beside it) | the HUD's own mockup: the base plate, the bar, the tokens |
 | `docs/reference/mockups/work-v1.html` | the Work tab: the table precedent |
 | a screenshot of the right-hand gutter with **Power on** in the views strip | the strip and the button the Home switch sits under; it postdates `hud-v2.html` |
-| a screenshot of **a small colony on the meadow** at play zoom: a hut, a stockpile, a field, a marked tree | the board the look is drawn over, with the marks and the stockpile wash it must not be confused with |
+| a screenshot of **a small colony on the meadow** at play zoom: a hut, a campfire, a stockpile, a field, a marked tree | the board the look is drawn over, with the marks and the stockpile wash it must not be confused with, and the fire the hearth mark sits over |
 | a screenshot with the **Work tab** open (F1) | the docking and the table in the real HUD |
 | a screenshot of a **colonist's pane with the Response button** | the setting the Response column mirrors |
 
-The three screenshots of the running game are the owner's to take; nothing in the repository holds
+The four screenshots of the running game are the owner's to take; nothing in the repository holds
 them yet.
 
 ## Answers recorded
