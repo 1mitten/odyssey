@@ -505,9 +505,6 @@ namespace Odyssey.Presentation.Ui
             /// <summary>Whether the pickable row is an order's action — cancel, take up, keep (design 32 §14).</summary>
             public bool IsOrderAction;
 
-            /// <summary>Whether the pickable row makes this campfire the hearth (design 43 §3f).</summary>
-            public bool IsHearth;
-
             /// <summary>The tint last applied to the value, so a redraw does not restyle on every frame.</summary>
             public HudColour? LastTint;
 

@@ -278,7 +278,6 @@ namespace Odyssey.Hud
             { "ui.health.stomach", "Stomach" },
             { "ui.health.torso", "Torso" },
             { "ui.health.wound", "Wound" },
-            { "ui.home.centred", "Home is centred here" },
             { "ui.home.hearth", "Hearth" },
             { "ui.inventory.hud.empty", "Nothing is in a store yet." },
             { "ui.inventory.hud.go", "Go" },

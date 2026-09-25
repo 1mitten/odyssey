@@ -586,7 +586,8 @@ namespace Odyssey.Hud
             _bedUnderPane = false;
             _powerSwitchUnderPane = false;
             _orderActionUnderPane = false;
-            _hearthActionUnderPane = false;
+            IsCampfire = false;
+            IsHearth = false;
             IsStore = false;
             IsBuiltStore = false;
             StoreSummary = string.Empty;
@@ -1129,23 +1130,25 @@ namespace Odyssey.Hud
         int _cellRowsPower;
 
         /// <summary>
-        /// Whether the pane holds a campfire that is not the hearth, whose hearth row a press makes
-        /// the hearth (design 43 §3f). Kept as the bed's and the switch's flags are: cleared every
-        /// refresh, set before the early return.
+        /// The pane holds a campfire (design 43 §6). A campfire's pane is wide, as a store's is: the
+        /// hearth's button does not fit the 280 px tile column (owner, 2026-09-25). Cleared every
+        /// refresh and set before the cell rows' early return, as the bed's and the switch's flags
+        /// are, so neither answer can outlive the fire.
         /// </summary>
-        public bool HearthActionUnderPane => _hearthActionUnderPane;
+        public bool IsCampfire { get; private set; }
 
-        bool _hearthActionUnderPane;
+        /// <summary>The pane's campfire is the hearth: the header says so, on a line under the name.</summary>
+        public bool IsHearth { get; private set; }
 
-        /// <summary>The hearth row's key, which the shell compares against rather than against a word.</summary>
-        public const string HearthRow = "hearth";
+        /// <summary>The pane's campfire is not the hearth, and one button under the header makes it so.</summary>
+        public bool OffersHearth => IsCampfire && !IsHearth;
 
-        /// <summary>The words on the hearth row: the hearth's, and the button's on any other campfire.</summary>
-        public const string HearthHereKey = "ui.home.centred";
+        /// <summary>A store's pane and a campfire's are the full 560; every other tile's is the narrow column.</summary>
+        public bool IsWide => IsStore || IsCampfire;
+
+        /// <summary>The header line on the hearth, and the button on any other campfire.</summary>
+        public const string HearthKey = "ui.home.hearth";
         public const string MakeHearthKey = "ui.command.sethearth";
-
-        /// <summary>0 no campfire, 1 the hearth, 2 another campfire: what the hearth row says, for the guard.</summary>
-        int _cellRowsHearth;
 
         /// <summary>The switch row's key, which the shell compares against rather than against a word.</summary>
         public const string PowerSwitchRow = "switch";
@@ -1254,12 +1257,10 @@ namespace Odyssey.Hud
             // Set beside the bed's flag and **above** the early return below, for the reason that
             // whole paragraph exists: a flag cleared every refresh and set only after the return
             // is a control that dies on the second refresh and goes on looking alive.
-            // The hearth (design 43 §3f) the same way: any campfire but the hearth offers the press.
-            bool campfire = detail.Edifice == EdificeHandle.Campfire;
-            bool isHearth = campfire && snapshot.HearthCell == detail.CellIndex;
-            _hearthActionUnderPane = campfire && !isHearth;
-            int hearthState = !campfire ? 0 : isHearth ? 1 : 2;
-
+            // The hearth (design 43 §3f, §6) the same way: header facts, not rows, so they are not
+            // in the rows' guard; the shell's rebuild signature carries them instead.
+            IsCampfire = detail.Edifice == EdificeHandle.Campfire;
+            IsHearth = IsCampfire && snapshot.HearthCell == detail.CellIndex;
 
             if (_cellRowsFor == detail.CellIndex
                 && _cellRowsCost == detail.MoveCostPerMille
@@ -1281,8 +1282,7 @@ namespace Odyssey.Hud
                 && _cellRowsStoredDef == detail.StoredDef
                 && _cellRowsIndoors == detail.IsIndoors
                 && _cellRowsTemp == detail.AmbientTempC
-                && _cellRowsPower == powerSignature
-                && _cellRowsHearth == hearthState) return;
+                && _cellRowsPower == powerSignature) return;
 
             _cellRowsFor = detail.CellIndex;
             _cellRowsCost = detail.MoveCostPerMille;
@@ -1305,7 +1305,6 @@ namespace Odyssey.Hud
             _cellRowsIndoors = detail.IsIndoors;
             _cellRowsTemp = detail.AmbientTempC;
             _cellRowsPower = powerSignature;
-            _cellRowsHearth = hearthState;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
             // so the list never churns while a tile is held.
@@ -1353,12 +1352,6 @@ namespace Odyssey.Hud
                         PowerLabels.Colour(net.State));
                 Row(n++, PowerSwitchRow, Registry.Label(device.On ? "ui.command.switchoff" : "ui.command.switchon"));
             }
-
-            // A campfire says whether home is centred on it, and any other offers to be (design 43
-            // §3f); the shell turns a press on the offer into SetHearth, as it does the switch.
-            if (campfire)
-                Row(n++, HearthRow, Registry.Label(isHearth ? HearthHereKey : MakeHearthKey),
-                    isHearth ? HudTheme.Accent : (HudColour?)null);
 
             // A line in the cell, when it is drawn: laid (and on what), ordered, or marked to come
             // up. Silent while the lines are hidden — a hidden thing the pane announced would be

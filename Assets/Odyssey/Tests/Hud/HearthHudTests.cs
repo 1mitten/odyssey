@@ -35,45 +35,63 @@ namespace Odyssey.Tests.Hud
             return model;
         }
 
-        static InspectRow? HearthRow(InspectModel model) =>
-            model.CellRows.Where(r => r.Name == InspectModel.HearthRow).Cast<InspectRow?>().FirstOrDefault();
+        static bool AnyRowSays(InspectModel model, string key) =>
+            model.CellRows.Any(r => r.Value == Registry.Label(key));
 
         [Test]
         public void ACampfireThatIsNotTheHearthOffersToBeAndStaysPressable()
         {
             var model = Looking(Tile((byte)EdificeHandle.Campfire, hearth: -1));
-            Assert.That(HearthRow(model)?.Value, Is.EqualTo(Registry.Label(InspectModel.MakeHearthKey)));
-            Assert.That(model.HearthActionUnderPane, Is.True);
+            Assert.That(model.IsCampfire, Is.True);
+            Assert.That(model.OffersHearth, Is.True);
+            Assert.That(model.IsHearth, Is.False);
 
-            // The second refresh takes the rows' early return; the press must survive it.
+            // The second refresh takes the rows' early return; the offer must survive it.
             model.Refresh(Tile((byte)EdificeHandle.Campfire, hearth: -1));
-            Assert.That(model.HearthActionUnderPane, Is.True, "the press died on the second refresh");
+            Assert.That(model.OffersHearth, Is.True, "the offer died on the second refresh");
         }
 
         [Test]
         public void TheHearthSaysSoAndOffersNothing()
         {
             var model = Looking(Tile((byte)EdificeHandle.Campfire, hearth: Size.Index(At)));
-            Assert.That(HearthRow(model)?.Value, Is.EqualTo(Registry.Label(InspectModel.HearthHereKey)));
-            Assert.That(model.HearthActionUnderPane, Is.False, "the hearth offered to become the hearth");
+            Assert.That(model.IsHearth, Is.True);
+            Assert.That(model.OffersHearth, Is.False, "the hearth offered to become the hearth");
+        }
+
+        /// <summary>The two are header facts now (design 43 §6), not a row of the tile's readout.</summary>
+        [Test]
+        public void NeitherIsARowAnyMore()
+        {
+            var offered = Looking(Tile((byte)EdificeHandle.Campfire, hearth: -1));
+            var hearth = Looking(Tile((byte)EdificeHandle.Campfire, hearth: Size.Index(At)));
+            Assert.That(AnyRowSays(offered, InspectModel.MakeHearthKey), Is.False, "the offer is still a row");
+            Assert.That(AnyRowSays(hearth, InspectModel.HearthKey), Is.False, "the hearth is still a row");
+            Assert.That(Registry.Label(InspectModel.HearthKey), Is.EqualTo("Hearth"));
         }
 
         [Test]
-        public void TheRowFollowsTheHearthWhileThePaneIsHeld()
+        public void TheHeaderFollowsTheHearthWhileThePaneIsHeld()
         {
             var model = Looking(Tile((byte)EdificeHandle.Campfire, hearth: -1));
             model.Refresh(Tile((byte)EdificeHandle.Campfire, hearth: Size.Index(At)));
-            Assert.That(HearthRow(model)?.Value, Is.EqualTo(Registry.Label(InspectModel.HearthHereKey)),
-                "the row kept offering after this campfire became the hearth");
-            Assert.That(model.HearthActionUnderPane, Is.False);
+            Assert.That(model.IsHearth, Is.True, "the pane kept offering after this campfire became the hearth");
+            Assert.That(model.OffersHearth, Is.False);
+
+            // And back: the hearth moved to another fire.
+            model.Refresh(Tile((byte)EdificeHandle.Campfire, hearth: Size.Index(new CellRef(7, 7, 1))));
+            Assert.That(model.OffersHearth, Is.True);
         }
 
+        /// <summary>A campfire's pane is wide, as a store's is; a wall's is the narrow column.</summary>
         [Test]
-        public void AWallHasNoHearthRow()
+        public void ACampfiresPaneIsWideAndAWallsIsNot()
         {
-            var model = Looking(Tile((byte)EdificeHandle.Wall, hearth: -1));
-            Assert.That(HearthRow(model), Is.Null);
-            Assert.That(model.HearthActionUnderPane, Is.False);
+            Assert.That(Looking(Tile((byte)EdificeHandle.Campfire, hearth: -1)).IsWide, Is.True);
+            Assert.That(Looking(Tile((byte)EdificeHandle.Campfire, hearth: Size.Index(At))).IsWide, Is.True);
+            var wall = Looking(Tile((byte)EdificeHandle.Wall, hearth: -1));
+            Assert.That(wall.IsWide, Is.False);
+            Assert.That(wall.IsCampfire || wall.OffersHearth || wall.IsHearth, Is.False);
         }
 
         // ---- the alerts ----------------------------------------------------------------------
@@ -140,7 +158,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(AlertModel.IconKeys, Has.Member(AlertModel.HearthDownKey));
             Assert.That(Registry.Label(AlertModel.NoHearthKey), Is.EqualTo("No hearth"));
             Assert.That(Registry.Label(InspectModel.MakeHearthKey), Is.EqualTo("Make this the hearth"));
-            Assert.That(Registry.Label(InspectModel.HearthHereKey), Is.EqualTo("Home is centred here"));
+            Assert.That(Registry.Label(InspectModel.HearthKey), Is.EqualTo("Hearth"));
         }
 
         [Test]

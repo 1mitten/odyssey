@@ -226,7 +226,10 @@ namespace Odyssey.Presentation.Ui
                         + (_inspect.ShowsTabBox ? ":tabs" : string.Empty)
                  : _inspect.Subject == InspectSubject.Item ? _inspect.Thing.ToString()
                  : _inspect.Subject == InspectSubject.Corpse ? _inspect.Corpse.ToString()
-                 : _inspect.Position + ":" + _inspect.Layer);
+                 : _inspect.Position + ":" + _inspect.Layer
+                    // A campfire's header says whether it is the hearth or offers to be (design 43
+                    // §6), so the hearth moving is a change of structure.
+                    + (_inspect.IsHearth ? ":hearth" : _inspect.OffersHearth ? ":fire" : string.Empty));
             if (signature != _inspectBuiltFor)
             {
                 BuildInspectBody();
@@ -645,8 +648,9 @@ namespace Odyssey.Presentation.Ui
             // A store is never narrow. 280 px is the bare-tile variant and the accepts list does not
             // fit in it; the settings belong to the zone, and a pane that shrank with the zone would
             // imply otherwise (design brief, 2026-09-21, state 8).
+            // A campfire is never narrow either (owner, 2026-09-25): the hearth's button does not fit.
             _inspectPanel.EnableInClassList("inspect--narrow",
-                !_inspect.IsStore
+                !_inspect.IsWide
                 && (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item));
 
             // ---- header: avatar, name and its two lines, then the actions on the right
@@ -696,6 +700,9 @@ namespace Odyssey.Presentation.Ui
 
             _inspectState = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__state");
             titles.Add(nameLine);
+            // The hearth says so under its name (design 43 §6): the house in the accent, 12 px,
+            // and "Hearth" in the meta ink, six below the name.
+            if (_inspect.IsHearth) titles.Add(HearthLine());
             titles.Add(_inspectState);
             header.Add(titles);
 
@@ -737,6 +744,9 @@ namespace Odyssey.Presentation.Ui
             actions.Add(close);
             header.Add(actions);
             _inspectBody.Add(header);
+
+            // Any other campfire offers to be the hearth: one button, nine under the header.
+            if (_inspect.OffersHearth) _inspectBody.Add(MakeHearthButton());
 
             if (_inspect.ShowsTabBox)
             {
@@ -937,7 +947,6 @@ namespace Odyssey.Presentation.Ui
                     if (!captured.IsPick) return;
                     if (captured.IsSwitch) ThrowPowerSwitch();
                     else if (captured.IsOrderAction) ActOnOrder();
-                    else if (captured.IsHearth) MakeHearth();
                     else ToggleBedPicker(captured.Root);
                 });
 
@@ -967,8 +976,7 @@ namespace Odyssey.Presentation.Ui
                 // thing and the one a player found by accident.
                 bool switchPick = row.Name == InspectModel.PowerSwitchRow && _inspect.PowerSwitchUnderPane;
                 bool linePick = row.Name == InspectModel.OrderActionRow && _inspect.OrderActionUnderPane;
-                bool hearthPick = row.Name == InspectModel.HearthRow && _inspect.HearthActionUnderPane;
-                bool pick = (row.Name == "owner" && _inspect.BedUnderPane) || switchPick || linePick || hearthPick;
+                bool pick = (row.Name == "owner" && _inspect.BedUnderPane) || switchPick || linePick;
                 // The pickable row's value is set in the heavier Row role, which is where weight
                 // lives: the stylesheet may not set type (TheSheetSetsNoTypeAtAll), so "make the
                 // assign button bolder" is a role here rather than a font-style there.
@@ -1004,20 +1012,17 @@ namespace Odyssey.Presentation.Ui
                 view.Root.EnableInClassList("inspect__row--danger", danger);
                 view.Root.EnableInClassList("inspect__row--warn", warn);
 
-                if (view.IsPick != pick || view.IsSwitch != switchPick || view.IsOrderAction != linePick
-                    || view.IsHearth != hearthPick)
+                if (view.IsPick != pick || view.IsSwitch != switchPick || view.IsOrderAction != linePick)
                 {
                     view.IsPick = pick;
                     view.IsSwitch = switchPick;
                     view.IsOrderAction = linePick;
-                    view.IsHearth = hearthPick;
                     view.Root.EnableInClassList("inspect__row--pick", pick);
                     view.Chevron.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
                     // The bed's glyph is a bed: the switch and line rows wear the chevron alone.
-                    view.Glyph.style.display = pick && !switchPick && !linePick && !hearthPick ? DisplayStyle.Flex : DisplayStyle.None;
+                    view.Glyph.style.display = pick && !switchPick && !linePick ? DisplayStyle.Flex : DisplayStyle.None;
                     view.Root.tooltip = switchPick ? "Switch it on or off — at once, nobody is sent"
                         : linePick ? row.Value + " — at once, nobody is sent"
-                        : hearthPick ? row.Value + " — home becomes the base joined to this fire"
                         : pick ? "Choose whose bed this is" : null;
                 }
             }
@@ -1044,6 +1049,49 @@ namespace Odyssey.Presentation.Ui
         void MakeHearth()
         {
             _boot?.World?.Intents.Submit(new Intent(IntentKind.SetHearth, _inspect.Cell));
+        }
+
+        /// <summary>The hearth's line under its name (design 43 §6).</summary>
+        static VisualElement HearthLine()
+        {
+            var line = new VisualElement();
+            line.AddToClassList("inspect__hearth");
+            line.style.flexDirection = FlexDirection.Row;
+            line.style.alignItems = Align.Center;
+            line.style.marginTop = 6;
+            line.Add(new PathGlyph(HudIcons.Home, 12f, HudTokens.Accent, fill: true));
+            Label word = HudText.Make(Registry.Label(InspectModel.HearthKey), HudTextRole.Meta);
+            word.style.color = HudTokens.TextMeta;
+            word.style.marginLeft = 6;
+            line.Add(word);
+            line.tooltip = "Home is the base joined to this fire";
+            return line;
+        }
+
+        /// <summary>
+        /// "Make this the hearth" (design 43 §6): the colonist pane's own <c>.action</c> button, 26
+        /// high as it ships, with the house at 14 px in the text colour and the words at 14 / 500.
+        /// </summary>
+        VisualElement MakeHearthButton()
+        {
+            var button = new VisualElement();
+            button.AddToClassList("action");
+            button.AddToClassList("inspect__makehearth");
+            button.style.alignSelf = Align.FlexStart;
+            button.style.marginTop = 9;
+            button.style.marginLeft = 0;
+            button.Add(new PathGlyph(HudIcons.Home, 14f, HudTokens.TextPrimary, fill: true));
+            Label label = HudText.Make(Registry.Label(InspectModel.MakeHearthKey), HudTextRole.Row);
+            label.style.color = HudTokens.TextPrimary;
+            label.style.marginLeft = 6;
+            button.Add(label);
+            button.tooltip = Registry.Label(InspectModel.MakeHearthKey) + " — home becomes the base joined to this fire";
+            button.RegisterCallback<ClickEvent>(evt =>
+            {
+                MakeHearth();
+                evt.StopPropagation();
+            });
+            return button;
         }
 
         void ThrowPowerSwitch()

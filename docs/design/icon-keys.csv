@@ -830,7 +830,6 @@ ui.inventory.hud.inplace,"{category}, in 1 place",ui.inventory.hud,INV,The line 
 ui.inventory.hud.hint,Go moves the camera to that place and selects it. Clicking the item row itself goes to the place holding the most.,ui.inventory.hud,INV,The hint under the list of places
 ui.inventory.hud.empty,Nothing is in a store yet.,ui.inventory.hud,INV,The table when the colony's stores are empty
 ui.inventory.hud.nomatch,No item matches.,ui.inventory.hud,INV,The table when a search finds nothing
-ui.home.centred,Home is centred here,ui.home,M3,"This campfire is the hearth: home is the base joined to it"
 ui.home.hearth,Hearth,ui.home,HA,"This campfire is the colony's hearth: home is the base joined to it"
 ui.tab.assign,Assign,ui.tab,HA,"Where each colonist may work, and what she does about danger"
 ui.keys.assign,Assign tab,ui.keys,HA,"Open and close the Assign tab"
