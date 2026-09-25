@@ -23,6 +23,29 @@ the next session learns to ignore.
 
 ## Open
 
+- **Which rain reads as a rainy day: §7's particles, or GPU rain with wet ground?** (`claude/rain-look`,
+  #203; design 43 §7, #202.) No Play needed. Open https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3, pick
+  the Play framing, and wipe between “§7 as written” and “+ wet ground”; then try the Far framing
+  with the downpour, and the Close framing for splashes on grass. A wrong answer is preferring the
+  particles (then §7 keeps the emitters and only the wet ground carries over), rain that reads as fog
+  at the far zoom, or a meadow that looks hailed on. **Now in Play too** (2026-09-24): backtick,
+  Weather, pick Rain or Downpour, and toggle *Draw as particles* to compare them moving. Read the
+  overlay's `gpu` line at your own resolution with Clear and then Downpour; the budget is 0.5 ms at
+  4K. A wrong answer is a sky that snaps rather than arrives, rain that keeps falling while paused,
+  or rain drawn inside the hut. **Second round (2026-09-25):** Rain, Drizzle and Downpour should
+  keep the colour of Clear; Storm is the grey one; zoom right out on Downpour and the rain should
+  still read. Toggle *Wet ground: gloss only* and say which of the two wet looks to keep.
+  **Third round (2026-09-25): the weather is real now.** Start a colony and leave it running a few
+  game days, skipping days with the debug menu: the sky should change by itself, mostly clear in
+  Glare, showery in Wash, grey in Rime, with the clock's glyph following. A wrong answer is a sky
+  that never changes, one that flips at midnight, or a storm every other day.
+- **Do the bat and the crowbar only swing?** (`claude/blunt-swings`, design 33 §22.) Debug menu >
+  Spawn 3 bandits, arm a colonist with a bat and another with a crowbar (*Arm every colonist*, or
+  right-click > Equip), draft them and order attacks. Watch several blows in a row: each should be
+  a big two-handed swing or overhead chop, cycling through three different ones. A wrong answer is
+  any blow that thrusts the weapon straight forward, a blow that lands before the swing reaches the
+  target (the third one especially, whose timing was broken until now), or the machete and blade
+  swinging differently from before.
 - **Does a colonist jump a one-cell stream, and does it read as a jump?** (`claude/funny-allen-2qipcn`,
   design 43.) **Rebuild the module catalogue first** (the jump rows are in the asset with empty clip
   references until then). New game, find a stream one cell wide, right-click a drafted colonist to
@@ -46,6 +69,23 @@ the next session learns to ignore.
   a far bandit keeps the helmet and the red. A wrong answer is hair or a beard poking through the
   helmet, a vest that is still camo, trousers that are red, a far bandit in camo or the white
   jumpsuit, or three bandits you cannot tell from colonists at play distance.
+
+- **Do the streams and ponds read as water with a natural edge?** (`claude/meadow-shorelines`,
+  design 38 §24.) New game; pan to the nearest stream and a pond, close in and pulled back.
+  **Look for** a shoreline that curves and cuts corners instead of following the cells, marsh as a
+  soft dark band rather than pale tiles, a pond's deep middle as a darker blob, and murky green-teal
+  water like the reference. Walk a colonist along a bank. **A wrong answer looks like:** a staircase
+  still visible along a diagonal stream; pale slivers or wedges at the water's edge; a colonist
+  standing in the water or floating over a bank; a waterfall missing or cut short; or the water too
+  dark to read as water at dusk.
+- **Can you click any water tile now, and does the water move?** (`claude/meadow-shorelines`,
+  design 38 §24f.) Click shallow water, deep water, a one-cell pool and the edge of a stream: each
+  should select the water tile. Click the grass beside it: that should still select the bank. Watch
+  a stream for a few seconds, then a pond, then pause. **Look for** light streaks drifting downstream,
+  gentle swells on ponds, a soft rim at the edge that slowly brightens and fades, and everything
+  holding still on pause. **A wrong answer looks like:** a click on water selecting the bank or the
+  tile beyond it; streaks flowing uphill or away from a fall; motion that reads as clouds or noise
+  rather than water; or water still moving while the game is paused.
 - **Does the title screen's dock read well, and does Exit ask?** (`claude/settings-frame`, design
   40.) Press Play. A dark panel down the left edge with the layered mark and ODYSSEY, four
   coloured buttons and the build line at the foot, the starfield clear to the right. New game should

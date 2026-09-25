@@ -2127,8 +2127,11 @@ namespace Odyssey.EditorTools
             Row(ModuleIds.CombatSwingLight,
                 ("A_Attack_LightCombo01A_Sword", "A"), ("A_Attack_LightCombo01B_Sword", "B"),
                 ("A_Attack_LightCombo01C_Sword", "C"));
+            // Swings only: the heavy row is the bat's and the crowbar's, and a blunt weapon does
+            // not stab (owner, 2026-09-25). HeavyStab01 was B until then (design 33 §22).
             Row(ModuleIds.CombatSwingHeavy,
-                ("A_Attack_HeavyCombo01A_Sword", "A"), ("A_Attack_HeavyStab01_Sword", "B"));
+                ("A_Attack_HeavyCombo01A_Sword", "A"), ("A_Attack_HeavyCombo01B_Sword", "B"),
+                ("A_Attack_HeavyCombo01C_Sword", "C"));
             Row(ModuleIds.CombatHitReact,
                 ("A_Hit_F_React_Sword", F), ("A_Hit_B_React_Sword", B),
                 ("A_Hit_L_React_Sword", L), ("A_Hit_R_React_Sword", R));
@@ -2213,7 +2216,7 @@ namespace Odyssey.EditorTools
         /// Seconds from a clip's start to the end of its WindUp sub-clip, or 0 when the file has no
         /// WindUp — a reaction, a death, anything that is not a blow.
         /// </summary>
-        static float MeasureImpact(string path, string clipName, AnimationClip clip)
+        internal static float MeasureImpact(string path, string clipName, AnimationClip clip)
         {
             if (!(AssetImporter.GetAtPath(path) is ModelImporter importer)) return 0f;
             ModelImporterClipAnimation[] cuts = importer.clipAnimations;
@@ -2222,11 +2225,15 @@ namespace Odyssey.EditorTools
             string windUpName = clipName.EndsWith("_Sword", StringComparison.Ordinal)
                 ? clipName.Substring(0, clipName.Length - "_Sword".Length) + "_WindUp_Sword"
                 : clipName + "_WindUp";
+            // The pack drops the underscore once: HeavyCombo01C's cut is "..._HeavyCombo01CWindUp_Sword".
+            // Asking only for the spelling every other file uses measured its blow at 0 s — drawn
+            // at the very start of its own wind-up — and nothing said so (design 33 §22).
+            string unscored = windUpName.Replace("_WindUp", "WindUp");
             ModelImporterClipAnimation? whole = null, windUp = null;
             foreach (ModelImporterClipAnimation cut in cuts)
             {
                 if (cut.name == clipName) whole = cut;
-                else if (cut.name == windUpName) windUp = cut;
+                else if (cut.name == windUpName || cut.name == unscored) windUp = cut;
             }
             if (whole == null || windUp == null) return 0f;
 
@@ -2245,7 +2252,7 @@ namespace Odyssey.EditorTools
         /// that insisted on the two agreeing silently lost the stun's loop and one death pose. The search
         /// has no type filter for the same reason: a clip search matches the clip's name, not the file's.</para>
         /// </summary>
-        static AnimationClip? FindSwordCombatClip(string exactName, out string? path)
+        internal static AnimationClip? FindSwordCombatClip(string exactName, out string? path)
         {
             path = null;
             if (!Directory.Exists(Path.GetFullPath(SwordCombatPolygon))) return null;

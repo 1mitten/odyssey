@@ -1908,6 +1908,144 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What rain costs, drawn the two ways the weather design weighs (design 43 §7, the
+        /// rain-look prototype), on the played board in one run.
+        ///
+        /// <para>Arms, at the batch view and at 3840 x 2160: <b>off</b>; <b>zero</b>, the rain
+        /// director asked to draw at intensity 0 — the negative control, which must submit nothing
+        /// and cost nothing (P18); <b>wet</b>, the ground's wetness term alone with no drops, which
+        /// prices the shader change every frame of rain pays; <b>particles</b>, the design as first
+        /// written (CPU <c>ParticleSystem</c>s, emitted and sampled every frame); <b>gpu</b> and
+        /// <b>gpu downpour</b>, the procedural streaks and splashes at 0.7 and 1.0.</para>
+        ///
+        /// <para>Both rain arms are fed from an <c>Update</c> every frame, as the game would, so
+        /// their CPU cost lands in the wall-clock frame this reads. (Fed from the camera's render
+        /// callback instead, the particle arm emitted nothing in PlayMode.) The procedural arm is
+        /// asserted to have drawn and the particle arm to have particles alive, or the arm measured
+        /// nothing.</para>
+        /// </summary>
+        [UnityTest, Category("Measurement")]
+        public IEnumerator TheRainAgainstTheFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot);
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            SkyHeightMap? sky = null;
+            RainDirector? rain = null;
+            RainParticles? particles = null;
+            try
+            {
+                yield return TimeFrames("rain/warm", boot, WarmupFrames, _ => { });
+
+                cam = boot.cameraRig!.Camera;
+                sky = new SkyHeightMap(boot.Model!);
+                sky.Rebuild();
+                rain = new RainDirector();
+                if (!rain.Available) Assert.Ignore("Odyssey/Rain did not load, so there is no rain to price");
+                particles = new RainParticles(root.transform, sky);
+
+                string arm = "off";
+                // The zoomed-out arm is priced at 120 m, where the screen layer is drawn at full
+                // strength; the camera stays put, since the layer costs per pixel, not per metre.
+                SliceCameraRig rig = boot.cameraRig!;
+                float Distance() => arm.EndsWith("zoomed out") ? 120f : rig.TargetDistance;
+                RainDirector drawer = rain;
+                RainParticles emitter = particles;
+                UnityEngine.Camera shooting = cam;
+                root.AddComponent<RainFeed>().Frame = () =>
+                {
+                    drawer.Clock = Time.time;
+                    if (arm.StartsWith("gpu") || arm == "zero")
+                        drawer.Draw(shooting, rig.Focus, Distance(), underground: false);
+                    else
+                        // Publishes the globals and zeroes the counters, draws nothing: an arm
+                        // that follows a drawing one must not read its predecessor's count.
+                        drawer.Draw(shooting, rig.Focus, rig.TargetDistance, underground: true);
+                    if (arm == "particles")
+                        emitter.Sync(rig.Focus, rig.TargetDistance, Time.deltaTime, underground: false);
+                };
+
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "rain-4k" };
+
+                var arms = new (string Name, float Rain, float Wet, float Puddles)[]
+                {
+                    ("off", 0f, 0f, 0f),
+                    ("zero", 0f, 0f, 0f),
+                    ("wet", 0f, 0.85f, 0.4f),
+                    ("particles", 0.7f, 0f, 0f),
+                    ("gpu", 0.7f, 0.85f, 0.4f),
+                    ("gpu downpour", 1f, 1f, 1f),
+                    ("gpu downpour zoomed out", 1f, 1f, 1f),
+                };
+                var lines = new List<string>();
+
+                foreach (bool big in new[] { false, true })
+                {
+                    cam.targetTexture = big ? fourK : previousTarget;
+                    string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                    foreach (var a in arms)
+                    {
+                        arm = a.Name;
+                        rain.Intensity = a.Name.StartsWith("gpu") ? a.Rain : 0f;
+                        rain.Wetness = a.Wet;
+                        rain.Puddles = a.Puddles;
+                        particles.Intensity = a.Name == "particles" ? a.Rain : 0f;
+                        if (a.Name != "particles") particles.Sync(rig.Focus, rig.TargetDistance, 0f, underground: true);
+
+                        float ms = 0f, gpu = 0f;
+                        var split = System.Array.Empty<double>();
+                        yield return TimeFrames($"rain/{resolution}/{a.Name}", boot, WarmupFrames,
+                            m => ms = m, s => split = s, g => gpu = g);
+
+                        if (a.Name == "zero" || a.Name == "off" || a.Name == "wet")
+                            Assert.That(rain.LastDrawCalls, Is.Zero, $"{a.Name} submitted rain");
+                        if (a.Name.StartsWith("gpu"))
+                            Assert.That(rain.LastDrawCalls, Is.EqualTo(a.Name.EndsWith("zoomed out") ? 3 : 2),
+                                $"{a.Name} did not draw what it was meant to, so it measured something else");
+                        if (a.Name == "particles")
+                            Assert.That(particles.LiveStreaks, Is.GreaterThan(0), "the particle arm had no drops alive");
+
+                        lines.Add($"{resolution} {a.Name}: frame {ms:0.00} ms, gpu " +
+                                  (gpu > 0f ? $"{gpu:0.00} ms" : "unavailable") +
+                                  $", submit {Sum(split):0.000} ms, {boot.Renderer?.DrawCalls ?? 0} world calls + " +
+                                  $"{rain.LastDrawCalls} rain calls ({rain.LastStreaks} streaks, {rain.LastSplashes} splashes), " +
+                                  $"{particles.LiveStreaks}+{particles.LiveSplashes} particles");
+                    }
+                }
+
+                Debug.Log($"[FrameTime] rain (camera {rig.TargetDistance:0} m from focus, " +
+                          $"{SystemInfo.graphicsDeviceName}, {SystemInfo.graphicsDeviceType}): " +
+                          string.Join("; ", lines));
+            }
+            finally
+            {
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                particles?.Dispose();
+                rain?.Dispose();
+                sky?.Dispose();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>Calls one action every frame: how the rain arm feeds itself, as the game would.</summary>
+        sealed class RainFeed : MonoBehaviour
+        {
+            public Action? Frame;
+            void Update() => Frame?.Invoke();
+        }
+
+        static double Sum(double[] split)
+        {
+            double total = 0d;
+            foreach (double d in split) total += d;
+            return total;
+        }
+
+        /// <summary>
         /// What grass costs at the play resolution as well as the batch one: the first unit of the
         /// Meadow overhaul (<c>docs/design/38-meadow-overhaul.md</c> §11, M1), taken before any
         /// art moves.
@@ -3147,6 +3285,314 @@ namespace Odyssey.Tests.PlayMode
                 MeadowLook.GroundEnabled = groundWas;
                 if (cam != null) cam.targetTexture = previousTarget;
                 if (target != null) target.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Photographs the water's edge from the play camera (design 38 §24): the colony's start, the
+        /// stream nearest the colony close in and pulled back, and the widest water on the board.
+        /// Explicit: run by name.
+        ///
+        /// <para>The world is paused and the hour held at noon, so two runs differ by what was
+        /// changed and nothing else. <c>ODYSSEY_SHORE_BEFORE=1</c> photographs with
+        /// <see cref="WaterShore.Enabled"/> off — the square shoreline — under identical conditions,
+        /// prefixed <c>before-</c>. Written to <c>Logs/look/shore-*.png</c>.</para>
+        /// </summary>
+        [UnityTest, Explicit("photographs of the shoreline, not a test")]
+        public IEnumerator TheShorelineAtThePlayCamera()
+        {
+            bool before = Environment.GetEnvironmentVariable("ODYSSEY_SHORE_BEFORE") == "1";
+            bool shoreWas = WaterShore.Enabled;
+            WaterShore.Enabled = !before;
+            string prefix = before ? "shore-before-" : "shore-";
+
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            RenderTexture? target = null;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            try
+            {
+                for (int i = 0; i < 120; i++) yield return null;
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+                boot.DaylightHourOverride = 12f;
+
+                var grid = boot.Colony!.Grid;
+                var size = grid.Size;
+                CellRef start = boot.Colony!.Start;
+
+                // The nearest water to the colony, the water cell with the most water round it, and
+                // the fall nearest the colony: water beside water a layer down.
+                CellRef nearest = default, widest = default, fall = default;
+                int bestDistance = int.MaxValue, bestCount = -1, fallDistance = int.MaxValue;
+                for (int y = 0; y < size.SizeY; y++)
+                for (int z = 2; z < size.SizeZ - 2; z++)
+                for (int x = 2; x < size.SizeX - 2; x++)
+                {
+                    if (!Odyssey.Sim.Worldgen.Natural.NaturalContent.IsWater(grid.Terrain[size.Index(x, z, y)])) continue;
+                    int d = Math.Abs(x - start.X) + Math.Abs(z - start.Z);
+                    if (d < bestDistance) { bestDistance = d; nearest = new CellRef(x, z, y); }
+                    int count = 0;
+                    for (int dz = -2; dz <= 2; dz++)
+                    for (int dx = -2; dx <= 2; dx++)
+                        if (Odyssey.Sim.Worldgen.Natural.NaturalContent.IsWater(grid.Terrain[size.Index(x + dx, z + dz, y)])) count++;
+                    if (count > bestCount) { bestCount = count; widest = new CellRef(x, z, y); }
+                    if (y > 0 && d < fallDistance)
+                        for (int dir = 0; dir < 4; dir++)
+                        {
+                            int nx = x + (dir == 0 ? 1 : dir == 1 ? -1 : 0), nz = z + (dir == 2 ? 1 : dir == 3 ? -1 : 0);
+                            if (!Odyssey.Sim.Worldgen.Natural.NaturalContent.IsWater(grid.Terrain[size.Index(nx, nz, y - 1)])) continue;
+                            if (Odyssey.Sim.Worldgen.Natural.NaturalContent.IsWater(grid.Terrain[size.Index(nx, nz, y)])) continue;
+                            fallDistance = d; fall = new CellRef(x, z, y);
+                        }
+                }
+                if (bestCount < 0) Assert.Ignore("this board grew no water to photograph");
+                if (fallDistance == int.MaxValue) fall = nearest;
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                target = new RenderTexture(1920, 1080, 24) { name = "shore" };
+                cam.targetTexture = target;
+                Directory.CreateDirectory(Path.GetFullPath("Logs/look"));
+
+                foreach ((string name, CellRef at, float distance) in new[]
+                         {
+                             ("start", start, 36f), ("near", nearest, 24f), ("wide", nearest, 60f),
+                             ("pond", widest, 36f), ("fall", fall, 28f),
+                         })
+                {
+                    boot.cameraRig!.FocusOn(at, distance);
+                    for (int i = 0; i < 180; i++) yield return null;
+                    yield return Photograph(prefix + name, boot, target);
+                }
+                // The water moving (§24f): three frames of the nearest stream a second apart, the world
+                // still paused and the water let run through the pause for the photograph, and how
+                // much of the picture changed between each pair.
+                if (!before)
+                {
+                    bool movedWas = WaterDirector.MovesOnPause;
+                    WaterDirector.MovesOnPause = true;
+                    try
+                    {
+                        boot.cameraRig!.FocusOn(nearest, 20f);
+                        for (int i = 0; i < 180; i++) yield return null;
+                        Color32[]? previous = null;
+                        var moved = new List<string>();
+                        for (int shot = 0; shot < 3; shot++)
+                        {
+                            if (shot > 0) yield return new WaitForSecondsRealtime(1f);
+                            yield return Photograph($"{prefix}flow-{shot}", boot, target);
+                            var image = new Texture2D(2, 2);
+                            image.LoadImage(File.ReadAllBytes(Path.GetFullPath($"Logs/look/{prefix}flow-{shot}.png")));
+                            Color32[] pixels = image.GetPixels32();
+                            UnityEngine.Object.Destroy(image);
+                            if (previous != null)
+                            {
+                                int changed = 0;
+                                for (int i = 0; i < pixels.Length; i++)
+                                    if (Math.Abs(pixels[i].r - previous[i].r) + Math.Abs(pixels[i].g - previous[i].g)
+                                        + Math.Abs(pixels[i].b - previous[i].b) > 6) changed++;
+                                moved.Add($"{100f * changed / pixels.Length:0.00}%");
+                            }
+                            previous = pixels;
+                        }
+                        Debug.Log($"[Look] water moving at {nearest}: pixels changed a second apart {string.Join(", ", moved)}");
+                    }
+                    finally
+                    {
+                        WaterDirector.MovesOnPause = movedWas;
+                    }
+                }
+
+                Debug.Log($"[Look] shore: nearest water {nearest} ({bestDistance} cells from the start), " +
+                          $"widest {widest} ({bestCount} of 25 water); shoreline {(WaterShore.Enabled ? "smooth" : "square")}");
+            }
+            finally
+            {
+                WaterShore.Enabled = shoreWas;
+                boot.DaylightHourOverride = null;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (target != null) target.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// The shoreline against the square one it replaces (design 38 §24): the played meadow on
+        /// Standard and Huge, each built once with <see cref="WaterShore.Enabled"/> off and once on
+        /// — the switch decides how marsh is dressed when the library resolves, so each arm is its
+        /// own world from the same seed — timed at 640 x 480 and into a 3840 x 2160 target, with a
+        /// whole-board re-mesh (budget off) timed in each to show what the fans cost the mesher.
+        ///
+        /// <para>Asserts only that the controls applied and the rule P10 holds: the skin drew more
+        /// triangles with the shoreline (the fans), the camera drew at 4K, nothing was timed
+        /// mid-re-mesh, and the draw calls did not grow by more than one per drawn chunk — the
+        /// water laid over a bank joins the bucket the water is already in.</para>
+        /// </summary>
+        [UnityTest, Category("Measurement")]
+        public IEnumerator TheShorelineAgainstTheFrame()
+        {
+            bool shoreWas = WaterShore.Enabled;
+            var lines = new List<string>();
+            try
+            {
+                foreach ((string board, int side) in new[] { ("standard", 120), ("huge", 240) })
+                {
+                    var calls = new Dictionary<string, int>();
+                    var triangles = new Dictionary<bool, int>();
+                    int chunks = 0;
+                    foreach (bool on in new[] { false, true })
+                    {
+                        WaterShore.Enabled = on;
+                        GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                            out OdysseyBootstrap boot, side, side, 16);
+                        UnityEngine.Camera? cam = null;
+                        RenderTexture? previousTarget = null;
+                        RenderTexture? fourK = null;
+                        string arm = on ? "shoreline" : "square";
+                        try
+                        {
+                            yield return TimeFrames($"shore/{board}/{arm}/warm", boot, WarmupFrames, _ => { });
+                            ChunkRenderer renderer = boot.Renderer!;
+                            cam = boot.cameraRig!.Camera;
+                            previousTarget = cam.targetTexture;
+                            fourK = new RenderTexture(3840, 2160, 24) { name = "shore-4k" };
+
+                            // A whole-board re-mesh in one frame, budget off — twice, timing the
+                            // second, as TheSkinAgainstTheBoxes does and for its reason.
+                            int budget = renderer.MeshBudgetPerFrame;
+                            renderer.MeshBudgetPerFrame = 0;
+                            boot.Model!.Remesh();
+                            yield return null;
+                            for (int settle = 0; settle < 10; settle++) yield return null;
+                            boot.Model!.Remesh();
+                            yield return null;
+                            float meshFrame = Time.unscaledDeltaTime * 1000f;
+                            int meshed = renderer.ChunksMeshedThisFrame;
+                            renderer.MeshBudgetPerFrame = budget;
+                            for (int settle = 0; settle < 10; settle++) yield return null;
+
+                            foreach (bool big in new[] { false, true })
+                            {
+                                cam.targetTexture = big ? fourK : previousTarget;
+                                string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                                float ms = 0f;
+                                yield return TimeFrames($"shore/{board}/{resolution}/{arm}", boot, WarmupFrames, m => ms = m);
+                                Assert.That(renderer.ChunksMeshDeferred, Is.Zero, $"{board} timed mid-re-mesh");
+                                if (big) Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
+                                calls[$"{resolution}/{on}"] = renderer.DrawCalls;
+                                triangles[on] = renderer.SkinTrianglesDrawn;
+                                chunks = Math.Max(chunks, renderer.ChunksDrawn);
+                                lines.Add($"{board} {resolution} {arm}: frame {ms:0.00} ms, " +
+                                          $"{renderer.DrawCalls} calls, {renderer.InstancesDrawn} instances, " +
+                                          $"{renderer.SkinTrianglesDrawn} skin triangles, {renderer.ChunksDrawn} chunks");
+                            }
+                            lines.Add($"{board} {arm} whole-board re-mesh: {meshed} chunks in {meshFrame:0.0} ms " +
+                                      $"({(meshed > 0 ? meshFrame / meshed : 0f):0.000} ms a chunk)");
+                        }
+                        finally
+                        {
+                            if (cam != null) cam.targetTexture = previousTarget;
+                            if (fourK != null) fourK.Release();
+                            UnityEngine.Object.Destroy(root);
+                        }
+                        yield return null;
+                    }
+
+                    Assert.That(triangles[true], Is.GreaterThan(triangles[false]),
+                        $"{board}: the shoreline should draw its banks and beds as fans");
+                    foreach (string resolution in new[] { $"{Screen.width}x{Screen.height}", "3840x2160" })
+                        Assert.That(calls[$"{resolution}/True"], Is.LessThanOrEqualTo(calls[$"{resolution}/False"] + chunks),
+                            $"{board} {resolution}: the shoreline's draw calls grew by more than one a chunk (P10)");
+                }
+                Debug.Log($"[FrameTime] shoreline ({SystemInfo.graphicsDeviceName}): " + string.Join("; ", lines));
+            }
+            finally
+            {
+                WaterShore.Enabled = shoreWas;
+            }
+        }
+
+        /// <summary>
+        /// What the water's motion costs (design 38 §24f): the played meadow on Standard, framed on
+        /// the water nearest the colony at 36 m so the water fills the frame, timed at 640 x 480 and
+        /// into a 3840 x 2160 target with <see cref="WaterDirector.Motion"/> off and on, twice each
+        /// in alternation so drift shows as the two offs disagreeing. The world is paused and the
+        /// water let run through the pause, so the motion is the only difference. Asserts only that
+        /// the controls applied and that the motion added no draw calls.
+        /// </summary>
+        [UnityTest, Category("Measurement")]
+        public IEnumerator TheWaterMotionAgainstTheFrame()
+        {
+            float motionWas = WaterDirector.Motion;
+            bool pausedWas = WaterDirector.MovesOnPause;
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true, out OdysseyBootstrap boot);
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            var lines = new List<string>();
+            try
+            {
+                yield return TimeFrames("motion/warm", boot, WarmupFrames, _ => { });
+                // Paused, so the only thing that differs between two arms is the motion: the first
+                // run left the colony working and a felled tree moved the calls by one.
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+                boot.DaylightHourOverride = 12f;
+                var grid = boot.Colony!.Grid;
+                var size = grid.Size;
+                CellRef start = boot.Colony!.Start, nearest = start;
+                int best = int.MaxValue;
+                for (int y = 0; y < size.SizeY; y++)
+                for (int z = 0; z < size.SizeZ; z++)
+                for (int x = 0; x < size.SizeX; x++)
+                {
+                    if (!Odyssey.Sim.Worldgen.Natural.NaturalContent.IsWater(grid.Terrain[size.Index(x, z, y)])) continue;
+                    int d = Math.Abs(x - start.X) + Math.Abs(z - start.Z);
+                    if (d < best) { best = d; nearest = new CellRef(x, z, y); }
+                }
+                boot.cameraRig!.FocusOn(nearest, 36f);
+                for (int i = 0; i < 180; i++) yield return null;
+
+                ChunkRenderer renderer = boot.Renderer!;
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "motion-4k" };
+                WaterDirector.MovesOnPause = true;
+
+                foreach (bool big in new[] { false, true })
+                {
+                    cam.targetTexture = big ? fourK : previousTarget;
+                    string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                    var calls = new Dictionary<bool, int>();
+                    foreach (bool on in new[] { false, true, false, true })
+                    {
+                        WaterDirector.Motion = on ? 1f : 0f;
+                        float ms = 0f;
+                        yield return TimeFrames($"motion/{resolution}/{(on ? "moving" : "still")}", boot, WarmupFrames, m => ms = m);
+                        if (big) Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
+                        calls[on] = renderer.DrawCalls;
+                        lines.Add($"{resolution} {(on ? "moving" : "still")}: frame {ms:0.00} ms, {renderer.DrawCalls} calls");
+                    }
+                    Assert.That(calls[true], Is.EqualTo(calls[false]), $"{resolution}: the motion added draw calls");
+                }
+                Debug.Log($"[FrameTime] water motion ({SystemInfo.graphicsDeviceName}), framed on {nearest}: " + string.Join("; ", lines));
+            }
+            finally
+            {
+                WaterDirector.Motion = motionWas;
+                WaterDirector.MovesOnPause = pausedWas;
+                boot.DaylightHourOverride = null;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
                 UnityEngine.Object.Destroy(root);
             }
         }

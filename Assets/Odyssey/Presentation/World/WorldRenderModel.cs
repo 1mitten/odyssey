@@ -1077,6 +1077,11 @@ namespace Odyssey.Presentation.World
         /// <summary>The module index for the natural material in this cell, or 0 for open air.</summary>
         public int TerrainModule(int index) => _terrainModule[_terrain[index]];
 
+        /// <summary>The module a terrain is drawn with, wherever it is — for drawing one terrain's
+        /// surface in another's cell, as the shoreline lays water over a bank (design 38 §24).</summary>
+        public int ModuleForTerrain(ushort terrain) =>
+            terrain < _terrainModule.Length ? _terrainModule[terrain] : 0;
+
         /// <summary>Is the cell drawn as a chipped lump rather than as a cube?</summary>
         public bool IsStone(int index) => RockLook.IsStone(_terrain[index]);
 

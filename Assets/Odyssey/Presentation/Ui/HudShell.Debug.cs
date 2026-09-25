@@ -21,7 +21,7 @@ namespace Odyssey.Presentation.Ui
     /// is open, because a debug menu that froze the game to use it would defeat most of what it is
     /// for.</para>
     ///
-    /// <para><b>Three tabs</b> (owner, 2026-09-20 and 2026-09-22). <b>Cheats</b>: the developer-overlay toggle,
+    /// <para><b>Four tabs</b> (owner, 2026-09-20, 2026-09-22 and, for Weather, 2026-09-24). <b>Cheats</b>: the developer-overlay toggle,
     /// moved here wholesale from Settings' Interface tab rather than duplicated
     /// (<c>EveryLiveToolIsDrawnSomewhere</c>), and the grants that wrap sim APIs that already exist.
     /// <b>Events</b>: one row per incident the content declares, each fired through the same door
@@ -36,6 +36,10 @@ namespace Odyssey.Presentation.Ui
         VisualElement _debugCheats = null!;
         VisualElement _debugEvents = null!;
         VisualElement _debugSpawn = null!;
+        VisualElement _debugWeather = null!;
+        readonly List<VisualElement> _debugWeatherRows = new();
+        VisualElement? _debugParticlesRow;
+        VisualElement? _debugGlossRow;
         readonly Dictionary<DebugTab, Label> _debugTabs = new();
 
         /// <summary>The content the event rows were last built from, so a new colony rebuilds them and a reopen does not.</summary>
@@ -49,7 +53,7 @@ namespace Odyssey.Presentation.Ui
             // The tab strip, in Settings' idiom: nothing new is invented for a third use of it.
             var tabs = new VisualElement();
             tabs.AddToClassList("settings__tabs");
-            foreach (DebugTab tab in new[] { DebugTab.Cheats, DebugTab.Spawn, DebugTab.Events })
+            foreach (DebugTab tab in new[] { DebugTab.Cheats, DebugTab.Spawn, DebugTab.Events, DebugTab.Weather })
             {
                 Label chip = HudText.Make(Registry.Label(DebugDirector.TabKey(tab)), HudTextRole.Body, ussClass: "tab");
                 DebugTab captured = tab;
@@ -142,6 +146,34 @@ namespace Odyssey.Presentation.Ui
             _debugEvents = new VisualElement();
             _debugEvents.AddToClassList("settings__body");
             _debugPanel.Add(_debugEvents);
+
+            // The sky set by hand (owner, 2026-09-24): one row per preset, the set one lit with
+            // Settings' pip, and the particle control as a toggle beneath them. Drawing only — the
+            // bootstrap reads DebugDirector.CurrentWeather each frame and nothing reaches the
+            // simulation, which has no weather yet (design 43 §8).
+            _debugWeather = new VisualElement();
+            _debugWeather.AddToClassList("settings__body");
+            // Each row commands the weather system (design 43 §8): the sky blends in over a few
+            // seconds, runs its rolled spell, and the season takes over again. The row lit is the
+            // kind the published sky holds, so a row never claims a sky the game has moved on from.
+            for (int i = 0; i < DebugDirector.WeatherPresets.Length; i++)
+            {
+                DebugDirector.WeatherPreset preset = DebugDirector.WeatherPresets[i];
+                VisualElement row = DebugToggleRow(preset.Key, preset.Tooltip, () => SetWeather(preset));
+                _debugWeatherRows.Add(row);
+                _debugWeather.Add(row);
+            }
+            _debugParticlesRow = DebugToggleRow(DebugDirector.RainParticlesKey,
+                "Draws the rain with CPU particles, as the weather design first wrote it, so the two "
+                    + "can be compared moving. Wet ground stays on either way",
+                () => _directors?.Debug.SetRainAsParticles(!_directors.Debug.RainAsParticles));
+            _debugWeather.Add(_debugParticlesRow);
+            _debugGlossRow = DebugToggleRow(DebugDirector.WetGlossKey,
+                "Draws wet ground as shine and puddles only, rather than richer and a little darker - "
+                    + "the two looks being chosen between by eye",
+                () => _directors?.Debug.SetWetGlossOnly(!_directors.Debug.WetGlossOnly));
+            _debugWeather.Add(_debugGlossRow);
+            _debugPanel.Add(_debugWeather);
 
             OnDebugTabChanged(DebugTab.Cheats);
             _hud.Add(_debugPanel);
@@ -277,6 +309,37 @@ namespace Odyssey.Presentation.Ui
             _debugCheats.style.display = tab == DebugTab.Cheats ? DisplayStyle.Flex : DisplayStyle.None;
             _debugEvents.style.display = tab == DebugTab.Events ? DisplayStyle.Flex : DisplayStyle.None;
             _debugSpawn.style.display = tab == DebugTab.Spawn ? DisplayStyle.Flex : DisplayStyle.None;
+            _debugWeather.style.display = tab == DebugTab.Weather ? DisplayStyle.Flex : DisplayStyle.None;
+            RefreshDebugWeather();
+        }
+
+        /// <summary>Light the preset that is set, and the particle row if it is on.</summary>
+        void RefreshDebugWeather()
+        {
+            // The last row sent, until the sky it asked for has arrived; then the kind the sky holds.
+            WeatherKind kind = _boot?.World?.Views.Current.Weather.Kind ?? WeatherKind.Clear;
+            for (int i = 0; i < _debugWeatherRows.Count; i++)
+                _debugWeatherRows[i].EnableInClassList("settings__row--on",
+                    i == _debugWeatherSent || (_debugWeatherSent < 0 && DebugDirector.WeatherPresets[i].Kind == kind
+                        && FirstRowOf(kind) == i));
+            _debugParticlesRow?.EnableInClassList("settings__row--on", _directors?.Debug.RainAsParticles ?? false);
+            _debugGlossRow?.EnableInClassList("settings__row--on", _directors?.Debug.WetGlossOnly ?? false);
+        }
+
+        /// <summary>The row sent last, or -1: lit until the sky moves on.</summary>
+        int _debugWeatherSent = -1;
+
+        static int FirstRowOf(WeatherKind kind) =>
+            System.Array.FindIndex(DebugDirector.WeatherPresets, p => p.Kind == kind);
+
+        /// <summary>One Weather row: the command to the simulation, landing on the next tick.</summary>
+        void SetWeather(DebugDirector.WeatherPreset preset)
+        {
+            var world = _boot?.World;
+            if (world == null) return;
+            world.Intents.Submit(preset.ToIntent());
+            _debugWeatherSent = System.Array.IndexOf(DebugDirector.WeatherPresets, preset);
+            RefreshDebugWeather();
         }
 
         void OnDeveloperOverlayChanged()

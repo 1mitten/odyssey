@@ -421,6 +421,17 @@ namespace Odyssey.Tests.Sim
         /// the reason given above. <b>Measured</b>: <c>GoldenColonyProbe</c>, reading the first
         /// seventeen job defs so it runs unchanged on both sides, was run on <c>main</c> (54df119a)
         /// and on the merge; the outputs are identical on all three boards.</para>
+        ///
+        /// <para><b>All six moved on 2026-09-25, by the weather (design 43, <c>weather-core</c>):
+        /// the first change here that is a colony doing something different, and meant to be.</b>
+        /// A new system is hashed (the sky: kind, intensity, the hand-over and the spell's end),
+        /// which moves the generated numbers before a tick runs. It writes the outdoor curve's
+        /// weather term, which moves the simulated numbers. <b>Measured</b>: <c>GoldenColonyProbe</c>
+        /// run on <c>origin/main</c> and on the branch differs in <b>mood alone</b>, 200 lower on each
+        /// board, as the rolled sky's cooler air crosses a comfort band. Food, rest, work
+        /// progress, experience, passions, jobs started and finished, and where every colonist
+        /// stands are identical on all three boards. The weather changed how the colonies feel,
+        /// and nothing they did.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -431,8 +442,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 10212350739386668344UL,
-            Simulated = 8860197422024298715UL,
+            Generated = 7623512122801076561UL,
+            Simulated = 1235041211937114867UL,
         };
 
         /// <summary>
@@ -462,9 +473,11 @@ namespace Odyssey.Tests.Sim
             // Generated. The colonists behaved differently, and in one way: they take different
             // routes. The probe against main is identical in items, needs, mood, experience,
             // passions and failed jobs; only where they stand, the progress into their steps and
-            // the wander legs started (105 -> 98 in the window) differ.
-            Generated = 16337376216538696172UL,
-            Simulated = 13729021459660638680UL,
+            // the wander legs started (105 -> 98 in the window) differ. Re-baked again on merging
+            // the weather from main: Generated is main's, and the probe against main (0dff2b36)
+            // differs in exactly the same three numbers and nothing else.
+            Generated = 13501204456710631653UL,
+            Simulated = 11502160785219034506UL,
         };
 
         /// <summary>
@@ -503,8 +516,8 @@ namespace Odyssey.Tests.Sim
             // 2026-09-23, wildlife (design 30): the ruin is seeded with its rats and hogs.
             // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
             // 2026-09-23, the combat contracts step; the widened probe diffs clean.
-            Generated = 16106640289945334159UL,
-            Simulated = 9493899456924685757UL,
+            Generated = 15627359971669991438UL,
+            Simulated = 8799925542896714396UL,
         };
     }
 }

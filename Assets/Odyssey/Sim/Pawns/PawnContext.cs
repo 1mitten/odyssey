@@ -121,6 +121,9 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public Temperature.TemperatureSystem? Temperature { get; set; }
 
+        /// <summary>The sky (design 43). Null in a bare pawn fixture, which is a world without weather.</summary>
+        public Weather.WeatherSystem? Weather { get; set; }
+
         /// <summary>
         /// The power grid (design 32): lines, the orders for them, the buildings that make and
         /// spend power, and the nets between. Null in a bare pawn fixture, exactly as

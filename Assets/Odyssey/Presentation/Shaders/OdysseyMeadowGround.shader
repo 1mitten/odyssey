@@ -44,6 +44,8 @@ Shader "Odyssey/MeadowGround"
         _Flowers("Flowers", 2D) = "white" {}
         _Leaves("Leaf litter", 2D) = "white" {}
         _Earth("Earth", 2D) = "white" {}
+        _Wet("Wet ground (marsh)", 2D) = "white" {}
+        _WetAmount("Wet ground", Range(0, 1)) = 0.85
 
         // Metres one repeat of a grass texture covers. The pack's own terrain layers use 4.
         _TileMetres("Tile (m)", Float) = 4
@@ -88,7 +90,15 @@ Shader "Odyssey/MeadowGround"
             float _Warmth;
             float _Smoothness;
             float _Single;
+            float _WetAmount;
         CBUFFER_END
+
+        // The ground field (design 38 §24, GroundField.cs): one texel per column of the board —
+        // R marsh, G sand or gravel, B water, A deep water. Globals, so every ground material reads
+        // the same field and a marsh fades into the meadow over metres instead of at a cell's edge.
+        TEXTURE2D(_OdysseyGroundField); SAMPLER(sampler_OdysseyGroundField);
+        float4 _OdysseyGroundFieldST;
+        float _OdysseyGroundFieldOn;
 
         // What the DepthNormals pass writes into the normals texture's alpha: this pixel's visible
         // surface is terrain, so the ink line leaves it alone. Everything else writes 0 there — the
@@ -101,6 +111,7 @@ Shader "Odyssey/MeadowGround"
         TEXTURE2D(_Flowers);
         TEXTURE2D(_Leaves);
         TEXTURE2D(_Earth);
+        TEXTURE2D(_Wet);
 
         float MeadowHash(float2 p)
         {
@@ -156,8 +167,24 @@ Shader "Odyssey/MeadowGround"
             float2 dxC = ddx(uvC), dyC = ddy(uvC);
             float2 dxF = ddx(uvF), dyF = ddy(uvF);
             float2 dxL = ddx(uvL), dyL = ddy(uvL);
+            float2 uvW = Turn(xz, 5.17) / (tile * 0.93);
+            float2 dxW = ddx(uvW), dyW = ddy(uvW);
 
             float3 grass = Sample(TEXTURE2D_ARGS(_GrassA, sampler_GrassA), uvA, dxA, dyA);
+
+            // The ground field, sampled once for both kinds of ground (design 38 §24). The warp
+            // pushes every boundary in it in and out by a metre or two so a fade does not trace
+            // the grid it was sampled on; the board's edge fades it to nothing, so the surround
+            // never inherits a marsh at the rim.
+            float4 field = 0;
+            bool fieldOn = _OdysseyGroundFieldOn > 0.5;
+            [branch] if (fieldOn)
+            {
+                float2 warp = (float2(MeadowField(xz / 7.0 + 3.1), MeadowField(xz / 7.0 + 9.7)) - 0.5) * 2.4;
+                float2 fuv = (xz + warp) * _OdysseyGroundFieldST.xy;
+                float inside = step(0.0, fuv.x) * step(fuv.x, 1.0) * step(0.0, fuv.y) * step(fuv.y, 1.0);
+                field = SAMPLE_TEXTURE2D_LOD(_OdysseyGroundField, sampler_OdysseyGroundField, fuv, 0) * inside;
+            }
 
             // One texture, with only the slow drift over it: earth, gravel, sand, rock.
             [branch] if (_Single > 0.5)
@@ -189,6 +216,21 @@ Shader "Odyssey/MeadowGround"
             grass *= lerp(1.0 - 0.5 * _MacroStrength, 1.0 + _MacroStrength, macro);
             float warm = smoothstep(0.55, 0.80, MeadowField(xz / 45.0 + 2.2)) * _Warmth;
             grass = lerp(grass, grass * float3(1.08, 1.03, 0.82), warm);
+
+            // **Marsh and the water's edge, from the field rather than from the cell** (design 38
+            // §24). The field is bilinear, so a marsh fades over a cell's width and more instead of
+            // stopping at its edge.
+            [branch] if (fieldOn)
+            {
+                float wet = smoothstep(0.15, 0.70, field.r) * _WetAmount;
+                [branch] if (wet > 0.001)
+                {
+                    grass = lerp(grass, Sample(TEXTURE2D_ARGS(_Wet, sampler_GrassA), uvW, dxW, dyW), wet);
+                }
+                // Ground that borders water is a little darker and cooler: damp, not a new material.
+                float damp = smoothstep(0.05, 0.55, field.b) * 0.22;
+                grass *= lerp(float3(1, 1, 1), float3(0.86, 0.90, 0.92), damp);
+            }
             }
 
             // Faces that stand up take the earth texture on their own plane. The gradients are
@@ -201,6 +243,16 @@ Shader "Odyssey/MeadowGround"
             {
                 float3 side = Sample(TEXTURE2D_ARGS(_Earth, sampler_GrassA), sideUV, dxS, dyS);
                 grass = lerp(side, grass, top);
+            }
+
+            // **Under the shore, nothing pale** (design 38 §24). The bank's grass meets the sand
+            // bed at the cell's edge, under the water; where the water thins towards the shore,
+            // pale sand reading through it would draw that edge — the grid — again. Ground the
+            // field calls water is taken down to a dark, olive, waterlogged colour instead.
+            [branch] if (fieldOn)
+            {
+                float sub = smoothstep(0.35, 0.70, field.b);
+                grass *= lerp(float3(1, 1, 1), float3(0.46, 0.56, 0.44), sub);
             }
             return grass;
         }
@@ -227,6 +279,7 @@ Shader "Odyssey/MeadowGround"
             #pragma target 3.5
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "OdysseyWeather.hlsl"
 
             struct Attributes
             {
@@ -270,10 +323,15 @@ Shader "Odyssey/MeadowGround"
                 float3 normalWS = NormalizeNormalPerPixel(input.normalWS);
 
                 SurfaceData surface = (SurfaceData)0;
-                surface.albedo = MeadowAlbedo(input.positionWS, normalWS) * _BaseColor.rgb;
+                // Rain darkens and glosses the ground wherever the sky reaches it (OdysseyWeather).
+                float3 albedo = MeadowAlbedo(input.positionWS, normalWS) * _BaseColor.rgb;
+                float smoothness = _Smoothness;
+                OdysseyWetten(albedo, smoothness, OdysseyWetAt(input.positionWS, normalWS),
+                              input.positionWS, normalWS);
+                surface.albedo = albedo;
                 surface.alpha = 1;
                 surface.metallic = 0;
-                surface.smoothness = _Smoothness;
+                surface.smoothness = smoothness;
                 surface.normalTS = half3(0, 0, 1);
                 surface.occlusion = 1;
 

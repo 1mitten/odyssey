@@ -294,6 +294,13 @@ namespace Odyssey.Sim.Contracts
         SetHostilityResponse,
 
         /// <summary>
+        /// Debug only: set the sky now (design 43 §8, the debug menu's Weather tab). <c>A</c> is the
+        /// <see cref="WeatherKind"/>, <c>B</c> the intensity in per-mille (0 keeps the kind's own
+        /// roll), and <c>C</c> 1 to blend in over seconds rather than the two game hours a spell
+        /// takes. The spell then runs its rolled length and the season takes over again.
+        /// Handler: <c>WeatherSystem.HandleForce</c>.
+        /// </summary>
+        DebugSetWeather,
         /// Debug-menu-only (design 43 §6): every jump over a stream falls short while
         /// <c>A</c> is non-zero, and none is forced to while it is nought. A switch on the pawn
         /// context, unsaved and unhashed. Appended last, so no recorded intent renumbers.
