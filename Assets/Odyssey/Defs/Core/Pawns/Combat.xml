@@ -147,8 +147,21 @@
       <li><level>20</level><perMille>983</perMille></li>
     </shootingPerCell>
     <hitFloorPerMille>20</hitFloorPerMille>
-    <!-- No partial cover (owner): a wall blocks the line or it does not. The slot a cover value reads. -->
-    <coverPerMille>1000</coverPerMille>
+    <!--
+      Cover (design 50 sections 2 and 3). A thing that fills its cell is worth 75 per cent, the
+      reference's number. Low cover keeps all its value against a shot coming down at under about
+      10 degrees and none past about 35; tall cover the same between about 30 and 60 - tangents in
+      per mille, linear between. A stray crossing a cover cell is caught at half that thing's cover,
+      before the dead zone's ramp. A fighter crouches behind low cover at 20 per cent or more from
+      its target. All but the 75 are INVENTED and ours to tune.
+    -->
+    <fullFillCoverPerMille>750</fullFillCoverPerMille>
+    <coverLowFullTanPerMille>176</coverLowFullTanPerMille>
+    <coverLowGoneTanPerMille>700</coverLowGoneTanPerMille>
+    <coverTallFullTanPerMille>577</coverTallFullTanPerMille>
+    <coverTallGoneTanPerMille>1732</coverTallGoneTanPerMille>
+    <coverInterceptPerMille>500</coverInterceptPerMille>
+    <coverCrouchPerMille>200</coverCrouchPerMille>
     <!--
       A bystander on the bullet's line: never hit within 5 m of the shooter, the full species
       chance from 12 m, linear between - the reference's 5 and 12 tiles, kept in metres.

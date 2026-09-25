@@ -303,7 +303,11 @@ namespace Odyssey.Tests.Sim
         // the fists' cadence) — an enemy within reach is clubbed, never shot.
         // The ranged line merged with main (medical supplies, the scenery), 2026-09-25: re-taken from the merged pack.
         // And merged with the kitchen (design 48), 2026-09-25: the ranged handles to 27 / 17 / 8; re-taken.
-        const ulong ContentFingerprint = 2941432541773940875UL;
+        // 2026-09-25, design 50 §2-§3 (cover, CV1): CombatDef's coverPerMille slot deleted, and the cover
+        // numbers added — fullFillCoverPerMille 750, the low and tall descent tangents 176/700 and 577/1732,
+        // coverInterceptPerMille 500, coverCrouchPerMille 200; WildPlantDef coverPerMille and coverTall
+        // (trees 250 tall, bushes 150 low).
+        const ulong ContentFingerprint = 1825573297272960216UL;
 
 
         [Test]

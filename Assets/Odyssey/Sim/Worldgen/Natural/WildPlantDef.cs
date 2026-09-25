@@ -41,6 +41,16 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// <summary>Ticks from a picking until the fruit is back.</summary>
         public int fruitRegrowTicks;
 
+        /// <summary>
+        /// What it is worth as cover to a pawn standing beside it, per mille (design 50 §3): a
+        /// tree 250, the reference's number; a bush 150, ours. Read only through
+        /// <c>Cover.BaseAt</c>.
+        /// </summary>
+        public int coverPerMille;
+
+        /// <summary>Tall cover (a tree) rather than low (a bush): design 50 §2b's two classes.</summary>
+        public bool coverTall;
+
         /// <summary>Does this kind bear anything to pick?</summary>
         public bool BearsFruit => fruitCount > 0 && fruitYields.Length > 0;
     }

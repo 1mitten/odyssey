@@ -75,7 +75,8 @@ namespace Odyssey.Sim.Pawns
     /// and hashes exactly; public, unsealed and virtual, per the code conventions.
     ///
     /// <para><b>The hit</b> is <c>pow(perCell(level), distance in cells) × the gun's accuracy at the
-    /// distance × cover</c>, floored. The power is a loop over whole 2.5 m cells with the fraction
+    /// distance</c>, floored. Cover is a second roll after this one (design 50 §2d), so this is
+    /// the aim alone. The power is a loop over whole 2.5 m cells with the fraction
     /// of a cell interpolated linearly, so a shot up a layer — longer, because a layer is 3 m —
     /// is harder than one along it by exactly its extra length, and by nothing else.</para>
     ///
@@ -98,7 +99,6 @@ namespace Odyssey.Sim.Pawns
             long chance = PowPerMille(perCell, distanceMm);
             RangedDef? ranged = armament.Attack.ranged;
             if (ranged != null) chance = chance * ranged.AccuracyPerMille(distanceMm) / 1_000;
-            chance = chance * combat.coverPerMille / 1_000;
             // The gun's quality (design 47 §11).
             chance = WeaponQuality.Accuracy((int)chance, armament);
             int floor = combat.hitFloorPerMille;

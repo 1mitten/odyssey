@@ -210,6 +210,42 @@ namespace Odyssey.Sim.Construction
         /// is not read yet.
         /// </summary>
         public int maxHitPoints;
+
+        /// <summary>
+        /// What the finished thing is worth as cover to a pawn standing beside it, per mille
+        /// (design 50 §3): the base the angle, the shooter's distance and the descent then scale.
+        /// Nought for a thing that is not cover, or whose cover is the full-fill rule's (a wall is
+        /// worth <c>CombatDef.fullFillCoverPerMille</c> because it fills its cell, and says nothing
+        /// here). Read only through <c>Cover.BaseAt</c>, the one owner. INVENTED per thing.
+        /// </summary>
+        public int coverPerMille;
+
+        /// <summary>
+        /// Is it <b>tall</b> cover — a shot has to come down steeply to get over it — rather than
+        /// low? Design 50 §2b's two classes. False for every piece of furniture so far.
+        /// </summary>
+        public bool coverTall;
+
+        /// <summary>
+        /// Crossed but never stood on (design 50 §5, the owner): a pawn may walk over it at
+        /// <see cref="crossCost"/> and may never stop in its cell — rest, work, wait and aim all
+        /// happen beside it. The sandbag's and the barricade's rule, so cover is always beside a
+        /// pawn and never under her, and a line of it seals nobody in.
+        /// </summary>
+        public bool passThrough;
+
+        /// <summary>
+        /// What crossing the cell costs on top of the step, in the path's units (a step is 100, a
+        /// bush adds 50). Read by navigation through the cell's cost class, never directly.
+        /// </summary>
+        public int crossCost;
+
+        /// <summary>
+        /// The share of its cost left on the cell when fighting destroys it, per mille (design 50
+        /// §2e, the owner: a quarter). Nought for everything built before cover, which keeps
+        /// design 33's "a building destroyed in combat leaves nothing" for them.
+        /// </summary>
+        public int wreckRefundPerMille;
     }
 
     /// <summary>
@@ -559,7 +595,7 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Bed", label = "bed", edifice = CoreContent.EdificeBed,
                     blocking = false, footprint = 2, rotates = true, takesQuality = true,
                     needsClearCell = true, costCount = 5, workToBuild = 180, minSkill = 0,
-                    iconKey = "ui.arch.tool.bed", maxHitPoints = 120,
+                    iconKey = "ui.arch.tool.bed", maxHitPoints = 120, coverPerMille = 300,
                 },
 
                 // The door. Edifice 2 is CoreContent.EdificeDoor. Passable, takes no quality,
@@ -584,7 +620,7 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Shelf", label = "shelf", edifice = CoreContent.EdificeShelf,
                     blocking = false, rotates = true, needsClearCell = true, storageSlots = 8,
                     costCount = 5, workToBuild = 180, minSkill = 0, iconKey = "ui.arch.tool.shelf",
-                    maxHitPoints = 100,
+                    maxHitPoints = 100, coverPerMille = 500,
                 },
 
                 // The first heat source (design 28 §7). Edifice 13, the next free id after the
@@ -598,7 +634,7 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Campfire", label = "campfire", edifice = CoreContent.EdificeCampfire,
                     blocking = true, needsClearCell = true, heatPerPass = 1_200, radiantC = 2_600,
                     costCount = 3, workToBuild = 60, minSkill = 0,
-                    iconKey = "ui.arch.tool.campfire", maxHitPoints = 60,
+                    iconKey = "ui.arch.tool.campfire", maxHitPoints = 60, coverPerMille = 250,
                 },
 
                 // A power line (design 32 §3, §14). Not an edifice — `conduit` sends the order to
@@ -627,7 +663,7 @@ namespace Odyssey.Sim.Construction
                     powerOutputW = 1_000, fuelItem = ItemHandle.Wood, fuelCapacity = 75, fuelPerDay = 22,
                     heatPerPass = 400, costCount = 30, partItem = ItemHandle.Salvage, partCount = 20,
                     workToBuild = 600, minSkill = 0,
-                    iconKey = "ui.arch.tool.generator", maxHitPoints = 300,
+                    iconKey = "ui.arch.tool.generator", maxHitPoints = 300, coverPerMille = 500,
                 },
 
                 // The electric heater (design 32 §7): a-07's 175 W, and 1,000 heat a pass into its
@@ -640,7 +676,7 @@ namespace Odyssey.Sim.Construction
                     blocking = true, rotates = true, needsClearCell = true, powerDrawW = 175, heatPerPass = 1_000,
                     costCount = 10, partItem = ItemHandle.Salvage, partCount = 5,
                     workToBuild = 240, minSkill = 0,
-                    iconKey = "ui.arch.tool.heater", maxHitPoints = 100,
+                    iconKey = "ui.arch.tool.heater", maxHitPoints = 100, coverPerMille = 400,
                 },
 
                 // The galley (design 48 §5): the electric cooker. a-18's 350 W, drawn whenever it is
@@ -652,7 +688,7 @@ namespace Odyssey.Sim.Construction
                     blocking = true, rotates = true, needsClearCell = true, powerDrawW = 350,
                     costCount = 15, partItem = ItemHandle.Salvage, partCount = 10,
                     workToBuild = 300, minSkill = 0,
-                    iconKey = "ui.arch.tool.galley", maxHitPoints = 100,
+                    iconKey = "ui.arch.tool.galley", maxHitPoints = 100, coverPerMille = 500,
                 },
             };
         }

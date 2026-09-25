@@ -116,7 +116,10 @@ namespace Odyssey.Tests.Sim
         // XML and the code oracle together. Nothing else in the table moved.
         // Moved on merging main (design 45): the galley's edifice renumbered 17 -> 22, after the
         // wild things, which reached main first. Re-taken from the merged table.
-        const ulong BuildingFingerprint = 12620201722140175747UL;
+        // Moved once, deliberately, 2026-09-25, cover (design 50 §3): BuildingDef gained coverPerMille,
+        // coverTall, passThrough, crossCost and wreckRefundPerMille; the bed 300, shelf 500, campfire 250,
+        // generator 500, heater 400 and galley 500 cover, all INVENTED, in the XML and the code oracle together.
+        const ulong BuildingFingerprint = 11043417246696147858UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone
