@@ -85,6 +85,9 @@ namespace Odyssey.EditorTools
             // Rain (the rain-look prototype): streaks and splashes drawn procedurally.
             "Odyssey/Rain",
 
+            // The ambient birds (design 50): one instanced call a species, flapped in the shader.
+            "Odyssey/Bird",
+
             // A bullet's streak and a muzzle's flash (design 47 §4c), drawn instanced by
             // ProjectileDirector. The shader reads its shape out of the instance matrix, so there
             // is no fallback that draws it: without this row a player fires invisible bullets.
