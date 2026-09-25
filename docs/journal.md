@@ -13574,3 +13574,34 @@ eleventh round constant for a random stream, so where a blow landed would have b
 the stream jump's roll. Neither is a textual conflict; both were found by reading what each side
 had claimed from the shared tables. A test that had passed by luck on the old stream said so the
 moment the stream moved. No golden moved.
+
+## 2026-09-25 — The culvert frog: an animal placed by the water
+
+The owner handed over a third Quaternius model, a frog, and asked for it animated, frog-like, and
+living by the streams, ponds and lakes. Design 30 §8 holds the decisions; this is the why.
+
+**The habitat is the new thing, not the frog.** Everything a frog shares with the hog — the mind,
+the save, the hash, the ramp-only hop — was already there. What was not was an animal placed by
+something other than trees or rock, so the bank became a habitat (`WaterBank.Near`, its one owner)
+and, unlike the other two, a tether: a species can say it keeps within so many cells of water, and
+the animal mind holds every leg to it and walks a stray back. It is the first rule in the mind that
+reads the terrain, and it is paid only by frogs that are off their bank.
+
+**Adding a kind moved every other kind's numbers.** A wildlife table divides one target by weight,
+so a third entry would have made the hogs and rats rarer without anyone asking. The density went up
+by exactly the frogs' share (15 → 21) so the old two stay as common as they were.
+
+**It does not swim, on purpose.** A swimming animal is a sixth traverse mode, and every mode is a
+flood on every nav rebuild; the frog sits at the water's edge instead, and that is the owner's call
+to reverse with its cost stated.
+
+**The hop took two measurements.** The first probe of the clip found lift-off and landing at 0.35
+and 0.78 of the Jump and no travel in it, which is what the hop pacing is built from: the drawn
+position holds still on the ground and covers the whole hop in the air, because a looping jump on
+an even pace is a frog on a travelator. The second probe, under the real director, found the jump
+**not looping** — the importer loops clips named Idle, Walk and Run, and the frog's gait is called
+Jump — so the frog took one hop and slid on its last frame. `AnimalImport.Hops` is the fix, and the
+same probe then read a hop every 52 frames: 23 moving, 29 still.
+
+**The catalogue rebuild stripped the colonists' swatches again**, exactly as `docs/lessons.md`
+warns; the frog row was spliced into the committed asset instead, and the diff is the row alone.

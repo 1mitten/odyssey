@@ -23,6 +23,16 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do the frogs read as frogs, and are they where the water is?** (`claude/frog`, design 30 §8.)
+  New game on the meadow and look along a stream or a pond: there should be small groups of green,
+  red-eyed frogs on the banks, and none in dry fields. Watch one move: it should crouch, leap about
+  a metre, land and sit, rather than glide. Open Debug → Spawn → **Spawn culvert frog** away from
+  water and watch it hop back to the nearest bank. Make it rain (Debug) and see the frogs stay out
+  while the hogs go under the trees. Wrong answers: a frog that slides along the ground between
+  hops or lurches backwards at the start of one; frogs far from water; a frog too small to find from
+  your normal camera height (the size is one number); or frogs you would rather see swimming, which
+  is a cost stated in §8b.
+
 - **Does changing a graphics setting still hitch, and is the board seen catching up?**
   (`claude/mesh-cost`, design 38 §26.) Open Settings → Graphics and flick the Grass ladder, then Ground
   relief, with the camera over thick meadow; then dig out a row of cells. A board-wide re-mesh now
