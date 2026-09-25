@@ -291,7 +291,46 @@ Two steps:
    Synty inventory over Battle Royale and the Meadow pack, which were never inventoried, in case a
    joinable sandbag already exists.
 
+### 7a-bis. Sandbags as drawn (2026-09-25, replaces the placeholder boxes)
+
+The owner's first look at the boxes: *"the sandbags need to look like sandbags. Please search the
+internet to understand how a sandbag looks."* Research `e-12` is that search. The pieces are now
+drawn **bag by bag in code**, not by the Blender set step 2 above planned. No sandbag asset exists in
+the local packs (`e-12` finding 13), and a mesh of our own draws the same on the runner and in a
+clone without the packs.
+
+- **One bag, `SandbagMesh`,** beside `PillowMesh`: a tamped, flattened pillow about 2 : 3 : 1, squarer
+  below than above, with a rounded sewn end and a **pinched, tied end** with a small ear of cloth
+  (findings 3–4). 216 triangles, smooth-shaded for the pillow's reason, in `ModuleShape.Sandbag`.
+- **Laid as a revetment is** (`CoverShape`, findings 8–10):
+  - four courses of **stretchers, two rows deep, in running bond** (each course half a bag along);
+  - a top course of **headers** across the wall;
+  - a **batter** of 3.5 cm a course on each face;
+  - each bag pressed a little into the one below and its neighbours, so the grooves between them
+    show and no gap does.
+- **Twice life size**: 0.83 × 0.56 × 0.26 m, five courses making the 1.3 m. At the play camera a
+  life-size 38 cm bag is a few pixels, and the wall would read as a striped block.
+- **The bond repeats per cell.** 2.5 m is exactly three stretchers or five headers, so every cell's
+  joints fall in the same places and a dragged line is one wall without any piece knowing where it
+  is in the line. A bag straddling a join is drawn by the cell it starts in and no other.
+  `SandbagShapeTests.ARunIsOneWallWithEveryBagDrawnOnce` holds that.
+- **Corners interlock plainly.** Where both axes are joined, the east–west wall runs through and the
+  north–south arms stop against its face. A lone piece runs east–west.
+- **Cloth, not stone.** Each bag wears one of three shades between desert tan and hessian
+  (`StuffPalette.Hessian`, `TintCode.Hessian`, on the linen bit), dealt by the bag's own hash, with a
+  few per cent of wobble in size and turn. Identical bags read as tiles (finding 13).
+- **Cost.** A straight cell is 38 bags, one instanced bucket per shade in use, so a chunk's sandbags
+  are at most three buckets whatever the length of the line. 38 × 216 is 8,200 triangles a cell.
+  That is nothing for a skirmish line and is **the number to measure** if somebody rings a colony in
+  them.
+- **Photographed, not reasoned about.** `scripts/unity.sh shot Odyssey.EditorTools.SandbagCheck.Shoot`
+  lays a run, an L, a T and a lone piece beside a 2.5 m post and writes
+  `Logs/sandbags-{close,wide,corner}.png`. The first pictures (2026-09-26) show the scalloped top,
+  the stagger, the header course and the ties, and the corner and the T join without a gap.
+
 ### 7b. The barricade
+
+**Removed for now (§13).** What follows is the design it was built to.
 
 The art follows the material:
 - **wood → Western Frontier `SM_Prop_Barricade_Wood_01/02`** (timber rails);
@@ -436,3 +475,22 @@ written against the code it sits beside and **has not been compiled** (no Unity 
 - **Art (§7a, §7b)** is the placeholder boxes for both pieces. The Western Frontier and Meadow rows
   and the Blender sandbag set are the owner's machine's work (`PlayScene.cs`, the catalogue asset,
   `Assets/Art/Custom/Cover/`); `CoverShape` says so where it would be replaced.
+
+## 13. The owner's first look (2026-09-25)
+
+*"Barricades are odd and buggy so remove them for now, and the sandbags need to look like
+sandbags."*
+
+**The barricade is out.** It is back to exactly what `main` had before this line: a **dim chip** in
+Build → Security beside the turret and the trap, its glyph and its wiki row kept, and nothing behind
+it.
+
+- `Building_Barricade`, `BuildingHandle.Barricade` (14), `EdificeHandle.Barricade` and
+  `CoreContent.EdificeBarricade` (24) are deleted. Both were the last of their tables, so **nothing
+  renumbers**.
+- Nothing was merged or saved with them, so there is no save to migrate. No golden moved; the
+  building fingerprint was re-taken.
+- If it comes back, it takes the next free numbers then, not these (§4's rule), and it wants its own
+  look. §7b is the design it was built to.
+
+**The sandbags look like sandbags:** §7a-bis.

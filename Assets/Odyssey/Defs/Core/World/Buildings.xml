@@ -518,26 +518,4 @@
     <fixedStuff>5</fixedStuff>
   </BuildingDef>
 
-  <!--
-    THE BARRICADE (design 50 section 4). edifice 24 is CoreContent.EdificeBarricade. The same cover
-    built of the player's wood or stone, its hit points following the material; slower to cross
-    (+250) and to build (the reference's 320 against 180).
-  -->
-  <BuildingDef>
-    <defName>Building_Barricade</defName>
-    <label>barricade</label>
-    <edifice>24</edifice>
-    <blocking>false</blocking>
-    <needsClearCell>true</needsClearCell>
-    <costCount>5</costCount>
-    <workToBuild>320</workToBuild>
-    <minSkill>0</minSkill>
-    <iconKey>ui.arch.tool.barricade</iconKey>
-    <maxHitPoints>300</maxHitPoints>
-    <coverPerMille>550</coverPerMille>
-    <passThrough>true</passThrough>
-    <crossCost>250</crossCost>
-    <wreckRefundPerMille>250</wreckRefundPerMille>
-  </BuildingDef>
-
 </Defs>

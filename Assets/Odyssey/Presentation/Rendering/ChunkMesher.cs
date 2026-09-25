@@ -1673,7 +1673,6 @@ namespace Odyssey.Presentation.Rendering
                     EmitShelf(batch, module, tint, index, x, z, y);
                     return;
                 case CoreContent.EdificeSandbags:
-                case CoreContent.EdificeBarricade:
                     EmitCover(batch, module, tint, def, x, z, y);
                     return;
                 // Power's machines, drawn from pack art once from the head at the middle of their
@@ -1975,12 +1974,13 @@ namespace Odyssey.Presentation.Rendering
         }
 
         readonly Matrix4x4[] _coverParts = new Matrix4x4[CoverShape.MaxParts];
+        readonly int[] _coverShades = new int[CoverShape.MaxParts];
 
         /// <summary>
-        /// Sandbags or a barricade (design 50 §7): a core and an arm towards each neighbour that
-        /// holds the same thing, so a dragged line is drawn joined. Sandbags wear the colour of sand
-        /// whatever stone filled them; a barricade wears what it was built of. A neighbour raised or
-        /// taken down re-meshes this chunk too (<c>MarkChunksAround</c>), so the join follows.
+        /// Sandbags (design 50 §7a-bis): a wall of bags laid along each axis the piece is joined on,
+        /// so a dragged line is drawn joined. Each bag wears one of the cloths whatever stone filled
+        /// it, so a chunk's sandbags are one bucket per cloth. A neighbour raised or taken down
+        /// re-meshes this chunk too (<c>MarkChunksAround</c>), so the join follows.
         /// </summary>
         void EmitCover(ChunkBatch batch, int module, int tint, ushort def, int x, int z, int y)
         {
@@ -1991,9 +1991,8 @@ namespace Odyssey.Presentation.Rendering
                 int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
                 if (size.Contains(nx, nz, y) && _model.EdificeDef(size.Index(nx, nz, y)) == def) joins |= 1 << dir;
             }
-            if (def == CoreContent.EdificeSandbags) tint = TintCode.Terrain(NaturalContent.TerrainSand);
-            int count = CoverShape.Parts(def, x, z, y, joins, _coverParts);
-            for (int i = 0; i < count; i++) AddBody(batch, module, tint, _coverParts[i]);
+            int count = CoverShape.Parts(def, x, z, y, joins, _coverParts, _coverShades);
+            for (int i = 0; i < count; i++) AddBody(batch, module, TintCode.Hessian(_coverShades[i]), _coverParts[i]);
         }
 
         int FirstOpenDirection(int x, int z, int y) => _model.DoorFacing(x, z, y);

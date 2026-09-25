@@ -511,8 +511,9 @@ namespace Odyssey.Sim.Construction
             "Building_Bed", "Building_Door", "Building_Shelf", "Building_Campfire",
             "Building_Conduit", "Building_Generator", "Building_Heater",
             "Building_Galley",
-            // Cover (design 50 §4), BuildingHandle 13 and 14.
-            "Building_Sandbags", "Building_Barricade",
+            // Cover (design 50 §4), BuildingHandle 13. The barricade that followed it was taken
+            // out on the owner's first look (design 50 §13) and may come back as 14.
+            "Building_Sandbags",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -713,18 +714,6 @@ namespace Odyssey.Sim.Construction
                     blocking = false, needsClearCell = true, passThrough = true, crossCost = 150,
                     costCount = 5, fixedStuff = StuffHandle.Stone, workToBuild = 180, minSkill = 0,
                     iconKey = "ui.arch.tool.sandbag", maxHitPoints = 300, coverPerMille = 550,
-                    wreckRefundPerMille = 250,
-                },
-
-                // The barricade (design 50 §4): the same cover built of the player's wood or stone,
-                // its hit points following the material, slower to cross (+250) and to build (the
-                // reference's 320 against 180). Timber rails in wood, a dry-stone wall in stone.
-                new BuildingDef
-                {
-                    defName = "Building_Barricade", label = "barricade", edifice = CoreContent.EdificeBarricade,
-                    blocking = false, needsClearCell = true, passThrough = true, crossCost = 250,
-                    costCount = 5, workToBuild = 320, minSkill = 0,
-                    iconKey = "ui.arch.tool.barricade", maxHitPoints = 300, coverPerMille = 550,
                     wreckRefundPerMille = 250,
                 },
             };

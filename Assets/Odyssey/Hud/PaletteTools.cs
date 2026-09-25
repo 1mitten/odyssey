@@ -142,9 +142,6 @@ namespace Odyssey.Hud
         /// <summary>Sandbags (design 50 §4): cheap low cover, always stone, dragged as a line.</summary>
         public const string Sandbag = "ui.arch.tool.sandbag";
 
-        /// <summary>The barricade (design 50 §4): low cover of wood or stone, dragged as a line.</summary>
-        public const string Barricade = "ui.arch.tool.barricade";
-
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
 
@@ -206,7 +203,7 @@ namespace Odyssey.Hud
             ("ui.arch.category.power", new[] { Conduit, Unwire, Generator, Heater, "ui.arch.tool.battery", "ui.arch.tool.reactor" }),
             // Security (design 50): cover first, because it is what exists; the turret and the trap
             // stay drawn and disabled.
-            ("ui.arch.category.security", new[] { Sandbag, Barricade, "ui.arch.tool.turret", "ui.arch.tool.trap" }),
+            ("ui.arch.category.security", new[] { Sandbag, "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
             ("ui.arch.category.floors", new[] { Paving, "ui.arch.tool.grating", "ui.arch.tool.tile" }),
             // The dumping-zone chip left on 2026-09-20: a new stockpile accepts everything, so a
             // second tool here would make exactly what the first one makes. Its registry key
@@ -377,15 +374,11 @@ namespace Odyssey.Hud
                 d => d.ArmBuild(BuildingHandle.Galley),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Galley,
                 wantsMaterial: true),
-            // Cover (design 50 §4). Sandbags are always stone, so they offer no material; the
-            // barricade is wood or stone like a wall.
+            // Cover (design 50 §4). Sandbags are always stone, so they offer no material. The
+            // barricade is dim again, beside the turret and the trap (design 50 §13).
             new PaletteTool(Sandbag,
                 d => d.ArmBuild(BuildingHandle.Sandbags),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Sandbags),
-            new PaletteTool(Barricade,
-                d => d.ArmBuild(BuildingHandle.Barricade),
-                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Barricade,
-                wantsMaterial: true),
             new PaletteTool(Mine, Toggle(DesignateTool.Mine), Holding(DesignateTool.Mine)),
             new PaletteTool(Fell, Toggle(DesignateTool.Fell), Holding(DesignateTool.Fell)),
             new PaletteTool(Harvest, Toggle(DesignateTool.Harvest), Holding(DesignateTool.Harvest)),

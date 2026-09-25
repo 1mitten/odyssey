@@ -195,6 +195,7 @@ namespace Odyssey.Presentation.Bootstrap
 
         /// <summary>Scratch for a cover piece's ghost boxes (design 50 §7); drawn and forgotten each frame.</summary>
         readonly Matrix4x4[] _coverGhost = new Matrix4x4[CoverShape.MaxParts];
+        readonly int[] _coverGhostShades = new int[CoverShape.MaxParts];
         PawnContext? _pawns;
         PawnFigureDirector? _figures;
         DesignatePresenter? _designate;
@@ -2299,11 +2300,12 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
-            // Cover's ghost (design 50 §7), from the same boxes the mesher draws: a lone piece, the
-            // way a line of them looks before its neighbours stand.
+            // Cover's ghost (design 50 §7a-bis), from the same bags the mesher draws: a lone piece,
+            // the way a line of them looks before its neighbours stand. A ghost has one colour, so
+            // the cloths are ignored.
             if (CoverShape.Draws(what.edifice))
             {
-                int count = CoverShape.Parts(what.edifice, cell.X, cell.Z, cell.Y, 0, _coverGhost);
+                int count = CoverShape.Parts(what.edifice, cell.X, cell.Z, cell.Y, 0, _coverGhost, _coverGhostShades);
                 for (int part = 0; part < count; part++) _renderer.DrawGhost(module, tint, _coverGhost[part]);
                 return;
             }

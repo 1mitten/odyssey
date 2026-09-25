@@ -49,27 +49,13 @@ namespace Odyssey.Tests.Sim
             Assert.That(At(colony, cell).Stuff, Is.EqualTo(ConstructionContent.StuffAt(StuffHandle.Stone).stuff));
         }
 
-        [TestCase(StuffHandle.Wood)]
-        [TestCase(StuffHandle.Stone)]
-        public void ABarricadeIsWhatTheOrderNamedAndItsHitPointsFollow(int stuff)
-        {
-            var colony = Board();
-            int cell = Near(colony, -15, 12);
-            Raise(colony, cell, BuildingHandle.Barricade, stuff);
-            Assert.That(At(colony, cell).Stuff, Is.EqualTo(ConstructionContent.StuffAt(stuff).stuff));
-            Assert.That(BuildingTargets.TryFind(colony.Pawns, cell, out BuildingTarget target), Is.True);
-            Assert.That(target.MaxMilli, Is.EqualTo(300 * ConstructionContent.StuffAt(stuff).hitPointsFactorPerMille));
-        }
-
         [Test]
-        public void NeitherBlocksAWalkOrAShotAndBothAreLowCover()
+        public void SandbagsBlockNeitherAWalkNorAShotAndAreLowCover()
         {
             var colony = Board();
             int sandbags = Near(colony, -15, 12);
-            int barricade = Offset(sandbags, 0, 2);
             Raise(colony, sandbags, BuildingHandle.Sandbags, StuffHandle.Stone);
-            Raise(colony, barricade, BuildingHandle.Barricade, StuffHandle.Wood);
-            foreach (int cell in new[] { sandbags, barricade })
+            foreach (int cell in new[] { sandbags })
             {
                 Assert.That(colony.Pawns.Cells.IsWalkable(cell), Is.True);
                 Assert.That(LineOfSight.Blocks(colony.Pawns.Cells, colony.Pawns.Nav.Grid, cell), Is.False);
@@ -80,7 +66,7 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// Crossing costs +150 for sandbags and +250 for a barricade, the same to the mover and to
+        /// Crossing costs +150 for sandbags, the same to the mover and to
         /// the region graph, straight or diagonal — the two must agree or a route is priced at one
         /// cost and walked at another (<c>HopPriceHasOneOwnerTests</c>'s fault).
         /// </summary>
@@ -89,19 +75,15 @@ namespace Odyssey.Tests.Sim
         {
             var colony = Board();
             int sandbags = Near(colony, -15, 12);
-            int barricade = Offset(sandbags, 0, 2);
             int open = Offset(sandbags, 0, 4);
             Raise(colony, sandbags, BuildingHandle.Sandbags, StuffHandle.Stone);
-            Raise(colony, barricade, BuildingHandle.Barricade, StuffHandle.Wood);
             NavGraph nav = colony.Pawns.Nav;
             foreach (bool diagonal in new[] { false, true })
             {
                 int step = nav.Grid.EnterCost(open, TraverseMode.Colonist, diagonal);
                 Assert.That(nav.Grid.EnterCost(sandbags, TraverseMode.Colonist, diagonal) - step,
                     Is.EqualTo(diagonal ? (150 * MoveCost.Diagonal + 50) / MoveCost.Orthogonal : 150));
-                Assert.That(nav.Grid.EnterCost(barricade, TraverseMode.Colonist, diagonal) - step,
-                    Is.EqualTo(diagonal ? (250 * MoveCost.Diagonal + 50) / MoveCost.Orthogonal : 250));
-                foreach (int cell in new[] { sandbags, barricade, open })
+                foreach (int cell in new[] { sandbags, open })
                     Assert.That(nav.StepCost(cell, diagonal), Is.EqualTo(nav.Grid.EnterCost(cell, TraverseMode.Colonist, diagonal)));
             }
         }

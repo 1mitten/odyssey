@@ -29,18 +29,19 @@ the next session learns to ignore.
   spends at most about 2 ms a frame and takes about a third of a second to finish. Wrong answers: a
   visible hitch when a setting changes, or chunks of old grass visibly swapping to new a few at a time.
 
-- **Do sandbags and a barricade read as cover, and does cover change a fight?** (`claude/cool-darwin-akh02q`,
-  design 50; stacked on ranged combat, **not yet compiled in Unity**.) Build → Security: drag a line of
-  **Sandbags** (always stone, no material to pick) and a **Barricade** (wood or stone). Walk a colonist
-  across: she climbs over slowly and never stops on top. Draft two colonists with pistols behind the
-  bags and use the debug menu's *Spawn pistol bandit* ten cells away: they crouch behind the bags; the
-  bandits step behind anything nearby before firing; *Cover* floats over bags that take a bullet and a
-  bar appears over each one hit. Select a drafted gun colonist and hover a bandit: the readout beside
-  the pointer gives the chance and what moved it. A wrong answer is a line that draws as separate
-  heaps (the joins), bags so tall the crouched colonist is hidden or so low she towers over them, a
-  colonist found standing on top of the bags, bandits that shuffle about without shooting, or a
-  readout that sits under the pointer or flickers. The pieces are placeholder boxes until the
-  Western Frontier timber, the Meadow stone wall and a Blender sandbag set are wired on your machine.
+- **Do the sandbags look like sandbags, and does cover change a fight?** (`claude/cool-darwin-akh02q`,
+  PR #232, design 50 §7a-bis and §13; worktree `D:\code\odyssey-cover`.) Build → Security: drag a line
+  of **Sandbags**, then an L and a T. The barricade chip is dim again, beside the turret and the trap.
+  Walk a colonist across: she climbs over slowly and never stops on top. Draft two colonists with
+  pistols behind the bags and use the debug menu's *Spawn pistol bandit* ten cells away: they crouch
+  behind the bags, the bandits step behind anything nearby before firing, *Cover* floats over a bag
+  that takes a bullet, and a bar appears over each one hit. Select a drafted gun colonist and hover a
+  bandit: the readout beside the pointer gives the chance and what moved it. **Wrong answers:** the
+  wall reads as a striped block rather than bags (the bags too small, or the grooves between them
+  lost); the line visibly restarts at every cell; a corner with a gap or a bag poking through; the
+  colour reads as stone or as plastic; bags so tall the crouched colonist is hidden or so low she
+  towers over them; a colonist standing on top of the bags; bandits that shuffle about without
+  shooting; or a readout that sits under the pointer or flickers.
 - **Does the new bill list read at a glance, and is anything on it in the way?** (`claude/bills-pane`,
   design 49, stacked on `claude/cooking`.) Click an **Electric Cooker** with no power: the pane is
   wider (680), a warn strip reads **No power** with a green **Switch off** beside it, and the tile's

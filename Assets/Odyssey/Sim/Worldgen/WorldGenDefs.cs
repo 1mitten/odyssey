@@ -430,9 +430,6 @@ namespace Odyssey.Sim.Worldgen
         /// <summary>Sandbags (design 50 §4): low cover, crossed but never stood on. 23, after the galley.</summary>
         public const ushort EdificeSandbags = 23;
 
-        /// <summary>The barricade (design 50 §4): the same cover built of wood or stone. 24.</summary>
-        public const ushort EdificeBarricade = 24;
-
         /// <summary>
         /// The city's ten, which are the first ten of the one table. Loaded from
         /// <c>Defs/Core/World/Terrain.xml</c> like everything else: this class used to build them

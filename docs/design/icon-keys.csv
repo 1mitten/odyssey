@@ -262,7 +262,7 @@ ui.arch.tool.heater,Heater,ui.arch.tool,M3,Moves heat into a room
 ui.arch.tool.vent,Vent,ui.arch.tool,M3,Lets two rooms share air
 ui.arch.tool.turret,Turret,ui.arch.tool,M3,Shoots hostiles. Needs power and ammunition
 ui.arch.tool.trap,Trap,ui.arch.tool,M3,"One-shot, cheap, forgettable by your own colonists"
-ui.arch.tool.barricade,Barricade,ui.arch.tool,M3,"Low cover of wood or stone. Climbed over, never stood on"
+ui.arch.tool.barricade,Barricade,ui.arch.tool,M3,Cover without blocking sight
 ui.arch.tool.blastdoor,Blast door,ui.arch.tool,M3,"Slow, strong, holds a breach"
 ui.arch.tool.sandbag,Sandbags,ui.arch.tool,M3,"Cheap, quick low cover. Climbed over, never stood on"
 ui.arch.tool.searchlight,Searchlight,ui.arch.tool,M3,Light where you need to shoot

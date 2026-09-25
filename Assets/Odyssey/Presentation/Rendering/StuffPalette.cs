@@ -307,6 +307,22 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static readonly Color Linen = new Color(0.93f, 0.92f, 0.88f, 1f);
 
+        /// <summary>How many sandbag cloths there are (<see cref="Hessian"/>).</summary>
+        public const int HessianShades = 3;
+
+        /// <summary>
+        /// A sandbag's cloth, by shade (design 50 §7a-bis): desert tan, a middle, and hessian —
+        /// research <c>e-12</c> finding 6, whose hex values are estimates, so these are the numbers to
+        /// turn if the wall reads wrong. Three rather than one because identical bags read as tiles
+        /// (finding 13); each bag is dealt one by its own hash.
+        /// </summary>
+        public static Color Hessian(int shade) => shade switch
+        {
+            0 => new Color(0.76f, 0.65f, 0.48f, 1f),  // #C2A67A, desert tan
+            1 => new Color(0.70f, 0.60f, 0.43f, 1f),  // #B39A6E
+            _ => new Color(0.64f, 0.53f, 0.37f, 1f),  // #A3875E, hessian
+        };
+
         /// <summary>The terrain def name for a terrain index, for the module id.</summary>
         public static string TerrainName(int terrain) =>
             terrain >= 0 && terrain < NaturalContent.TerrainCount

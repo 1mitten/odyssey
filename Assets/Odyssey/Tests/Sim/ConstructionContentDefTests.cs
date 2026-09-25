@@ -123,7 +123,9 @@ namespace Odyssey.Tests.Sim
         // 5 stone fixed, 180 work, 300 hp, 550 low cover, pass-through at +150, a quarter left as wreck) and
         // Building_Barricade (14, 24: 5 wood or stone, 320 work, 300 hp, 550, +250) appended, and BuildingDef
         // gained fixedStuff. In the XML and the code oracle together.
-        const ulong BuildingFingerprint = 2373941603376943188UL;
+        // Moved once, deliberately, 2026-09-25, design 50 §13: Building_Barricade taken out again on the
+        // owner's first look; the table is the sandbags' alone. Re-taken.
+        const ulong BuildingFingerprint = 12857519967509301005UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

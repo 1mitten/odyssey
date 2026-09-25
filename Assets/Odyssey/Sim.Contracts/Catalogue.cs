@@ -503,10 +503,7 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Sandbags (design 50 §4): low cover, crossed but never stood on. See <c>CoreContent.EdificeSandbags</c>.</summary>
         public const int Sandbags = 23;
 
-        /// <summary>The barricade (design 50 §4): the same cover built of wood or stone.</summary>
-        public const int Barricade = 24;
-
-        public const int Count = 25;
+        public const int Count = 24;
     }
 
     /// <summary>
@@ -599,10 +596,7 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Sandbags (design 50 §4): cheap low cover, always stone, dragged as a line.</summary>
         public const int Sandbags = 13;
 
-        /// <summary>The barricade (design 50 §4): low cover of the player's wood or stone.</summary>
-        public const int Barricade = 14;
-
-        public const int Count = 15;
+        public const int Count = 14;
     }
 
     /// <summary>

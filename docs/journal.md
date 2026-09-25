@@ -13642,3 +13642,29 @@ day inside a ring of 48 sandbags: 4,351 pawn-ticks crossing it and the sweep nev
 **Not proven here:** the Presentation half — the joined boxes, the crouch, the building bars, the
 floater and the readout — has no compiler in a container without Unity. It follows the shelf's and
 the pawn bars' code line for line, and the owner's first Unity run is its test.
+
+## 2026-09-25 — Cover merged with main, the barricade out, and the sandbags drawn as bags
+
+**The merge found a real collision, not a textual one.** Health (design 43) reached `main` first on
+SHA-256's twentieth and twenty-first round constants — the same two cover had taken for
+`RangedCover` and `RangedCoverPick`. Two purposes on one stream would let a shot's cover roll and
+where a blow lands decide each other. Health shipped, so cover moved to the twenty-second to
+twenty-fourth; `QueryShot` appended after health's two intents so `main`'s intent values are
+unchanged. No golden moved. The first Unity compile of the Presentation half passed; the one
+EditMode failure, `WeaponSheathGapTests` (a bat 3.2 cm off the hip against 3.0), is on `main` too —
+three other worktrees fail it with the same number.
+
+**The owner's first look:** *"barricades are odd and buggy so remove them for now and the sandbags
+need to look like sandbags. Please search the internet to understand how a sandbag looks."* The
+barricade went back to what `main` had, a dim chip; it was the last building handle and the last
+edifice, so nothing renumbered. The search is research `e-12`, and the finding that shaped the
+drawing is what reads as sandbags from a distance: the scalloped top, the groove where two rounded
+bags meet, and the half-bag stagger. A scaled box has none of the three, which is why no tuning of
+the placeholder would have answered the report.
+
+**So the bags are drawn one at a time**, `SandbagMesh` beside the pillow, laid by `CoverShape` as a
+revetment is laid — stretchers in running bond, two rows deep, under a header course, battered. The
+thing that made it cheap to get right is that 2.5 m is exactly three stretchers: the bond repeats per
+cell, so a dragged line is continuous without any piece knowing its place in the line, and "the
+cell a bag starts in draws it" gives every straddling bag exactly one owner. The Blender set the
+design planned is not needed unless the owner's eye says otherwise. Design 50 §7a-bis and §13.
