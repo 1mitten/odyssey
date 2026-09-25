@@ -328,6 +328,8 @@ namespace Odyssey.Tests.Sim
                 }
 
                 nav.Rebuild();
+                Assert.That(nav.DerivedTablesDisagree(), Is.Null,
+                    $"round {round}: a derived table disagrees with the same table computed from scratch");
 
                 var fresh = new NavGraph(cells);
                 foreach ((ConnectorKind kind, int[] lower, int[] upper) in connectors)
@@ -346,6 +348,56 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(connectors.Count, Is.GreaterThan(0), "the fixture stopped exercising connectors");
         }
+
+        /// <summary>
+        /// The same oracle on the board the game generates (HT1, design 05 §7c). The fixture above
+        /// is a random maze; a real board is one giant surface district with caverns and ponds cut
+        /// out of it, which is the shape a local district repair has to get right — splits, merges
+        /// and the ordinary edit that changes nothing. Three hundred edits, one rebuild each: mining
+        /// rock, raising it back, and taking a floor away, all near the start so they touch the
+        /// district everybody lives in. Every rebuild is checked against the same graph's tables
+        /// recomputed from scratch, and every fiftieth against a graph built from scratch.
+        /// </summary>
+        [Test]
+        public void ThePlayedMapKeepsItsDerivedTablesExactUnderEdits()
+        {
+            GridSize size = BoardSizes.Standard;
+            var cells = PlayedMap.Generate(size, 4242u, out var generated);
+            var nav = new NavGraph(cells);
+            nav.Rebuild();
+            Assert.That(nav.DerivedTablesDisagree(), Is.Null, "the first build");
+
+            var rng = new DeterministicRandom(20260925u);
+            CellRef start = generated.StartCell;
+            int splitsOrMerges = 0;
+            for (int edit = 0; edit < 300; edit++)
+            {
+                int x = Math.Clamp(start.X + rng.NextInt(41) - 20, 0, size.SizeX - 1);
+                int z = Math.Clamp(start.Z + rng.NextInt(41) - 20, 0, size.SizeZ - 1);
+                int y = Math.Clamp(start.Y + rng.NextInt(5) - 3, 0, size.SizeY - 1);
+                int c = cells.Size.Index(x, z, y);
+                int choice = rng.NextInt(10);
+                if (choice < 5) NavWorld.SetSolid(cells, nav, c, false);
+                else if (choice < 8) NavWorld.SetSolid(cells, nav, c, true);
+                else NavWorld.SetFloor(cells, nav, c, false);
+
+                int before = nav.DistrictCount(TraverseMode.Colonist);
+                nav.Rebuild();
+                if (nav.DistrictCount(TraverseMode.Colonist) != before) splitsOrMerges++;
+                Assert.That(nav.DerivedTablesDisagree(), Is.Null, $"edit {edit} at {Size(cells).FromIndex(c)}");
+
+                if (edit % 50 != 49) continue;
+                var fresh = new NavGraph(cells);
+                fresh.MarkAllDirty();
+                fresh.Rebuild();
+                Assert.That(nav.StructureFingerprint(), Is.EqualTo(fresh.StructureFingerprint()),
+                    $"edit {edit}: the incremental graph describes a different world from one built from scratch");
+            }
+
+            Assert.That(splitsOrMerges, Is.GreaterThan(0), "the control: no edit ever split or merged a district");
+        }
+
+        static GridSize Size(CellGrid cells) => cells.Size;
 
         /// <summary>
         /// A hole mined in one block is fallen into from the block next door. The edit dirties
