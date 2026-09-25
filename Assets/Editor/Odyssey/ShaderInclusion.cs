@@ -70,6 +70,10 @@ namespace Odyssey.EditorTools
             "Odyssey/SelectionMask",
             "Odyssey/SelectionComposite",
 
+            // The draft's marks and the selection brackets (design 33 §23), seen through what
+            // stands in front of them.
+            "Odyssey/SeeThroughMark",
+
             // Meadow foliage (design 38 §4). Without it a player strips the shader and the cache
             // falls back to the pack's own, so the meadow draws but its wind runs on wall time.
             "Odyssey/Foliage",

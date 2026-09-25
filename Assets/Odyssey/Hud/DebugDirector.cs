@@ -122,6 +122,7 @@ namespace Odyssey.Hud
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey,
             SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
+            JumpsFailKey,
             WeatherTabKey, WeatherClearKey, WeatherOvercastKey, WeatherDrizzleKey, WeatherRainKey,
             WeatherDownpourKey, WeatherStormKey, RainParticlesKey, WetGlossKey,
         };
@@ -188,6 +189,13 @@ namespace Odyssey.Hud
                 "The rarer dim day: heavy rain, the colour drained to grey, the wind bending grass and rain",
                 WeatherKind.Storm, 1000),
         };
+
+        /// <summary>
+        /// Every jump over a stream falls short while this is on (design 46 §6), so a failed jump
+        /// can be watched: at one in thirty-three it is not something a playtest can wait for.
+        /// Sends <see cref="IntentKind.DebugJumpsFail"/> with <c>A</c> 1 or 0.
+        /// </summary>
+        public const string JumpsFailKey = "ui.debug.jumpsfail";
 
         /// <summary>The bandit (design 33 §1): a hostile person, the same intent as the colonist's with a kind.</summary>
         public const string SpawnBanditKey = "ui.debug.spawnbandit";

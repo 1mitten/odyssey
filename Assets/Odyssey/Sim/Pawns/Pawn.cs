@@ -173,6 +173,19 @@ namespace Odyssey.Sim.Pawns
         public int FinishingStepTo { get; internal set; } = -1;
 
         /// <summary>
+        /// Where the jump in hand will land, or -1 (design 46 §6): the far bank, or the water short
+        /// of it.
+        ///
+        /// <para>Set the tick a jump becomes the step in hand, by the one roll that decides it, and
+        /// <b>set on success as well as failure</b> — a save taken mid-jump resumes the same jump
+        /// and never rolls again. Cleared when the step lands and by <see cref="ClearPath"/>, so
+        /// whatever drops the step drops the landing with it. Saved in <c>CombatSection</c> and
+        /// hashed while set, for <see cref="FinishingStepTo"/>'s reason: it is a step the world
+        /// cannot re-derive.</para>
+        /// </summary>
+        public int JumpLanding { get; internal set; } = -1;
+
+        /// <summary>
         /// What she does about danger near her while undrafted (design 33 §18): fight back — the
         /// default — defend, or flee. A standing setting the player chooses on her pane, not an
         /// order. Set through <c>SetHostilityResponse</c>. Saved in <c>CombatSection</c>'s flags
@@ -1030,6 +1043,22 @@ namespace Odyssey.Sim.Pawns
             // exists. JobSystem.Interrupt sets it after its own clear, which is the one place it
             // is ever set.
             FinishingStepTo = -1;
+
+            // And a jump's landing, for the same reason: it is the step, and a dropped step takes
+            // its landing with it.
+            JumpLanding = -1;
+        }
+
+        /// <summary>
+        /// A jump fell short (design 46 §6): the step in hand now ends in the water under the gap,
+        /// and the path ends there too. The job's walk asks for a new one from the water on the
+        /// tick it lands, so the hop out is planned like any other.
+        /// </summary>
+        internal void LandShort(int water)
+        {
+            Path[PathIndex] = water;
+            PathLength = PathIndex + 1;
+            JumpLanding = water;
         }
 
         internal void AdoptPath(int[] cells, int length)
@@ -1073,14 +1102,17 @@ namespace Odyssey.Sim.Pawns
             // The response (design 33 §18c) is two bits of the same word, nought at the default, so
             // a colony that never set one hashes as it did before. Bits 24 and 25: 22 and 23 are
             // left free for the line building beside this one.
+            // A jump in the air (design 46 §6) is bit 26, and its landing is walked only while
+            // there is one, so a colony that never jumps hashes as it did before jumping.
             bool combat = HasCombatState;
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
             hash.Add(Kind | (Leaving ? 1 << 16 : 0) | (Drafted ? 1 << 17 : 0)
                 | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0)
                 | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
-                | ((int)Response << 24));
+                | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0));
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
+            if (JumpLanding >= 0) hash.Add(JumpLanding);
             if (combat)
             {
                 hash.Add(HpMilli);

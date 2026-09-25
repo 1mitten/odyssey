@@ -388,6 +388,7 @@ namespace Odyssey.Sim.Pathing
             // agree only by coincidence.
             int hopUp = NavGraph.HopCost(up: true);
             int hopDown = NavGraph.HopCost(up: false);
+            int jump = NavGraph.JumpCost();
 
             while (_cellHeap.Count > 0)
             {
@@ -448,6 +449,17 @@ namespace Odyssey.Sim.Pathing
                     if (x + 1 < _sizeX) RelaxHop(c, down + 1, gDown, goal, mode, stamp, rstamp, constrained, occupancy);
                     if (z > 0) RelaxHop(c, down - _sizeX, gDown, goal, mode, stamp, rstamp, constrained, occupancy);
                     if (z + 1 < _size.SizeZ) RelaxHop(c, down + _sizeX, gDown, goal, mode, stamp, rstamp, constrained, occupancy);
+                }
+
+                // A jump over a one-cell stream, two cells straight across on this layer (design
+                // 46). Priced by NavGraph.JumpCost and ruled by NavGraph.IsJumpAcross, never
+                // restated here, for the hop's reason: three places that must agree.
+                {
+                    int gJump = g + jump;
+                    if (x > 1) RelaxJump(c, c - 2, gJump, goal, mode, stamp, rstamp, constrained, occupancy);
+                    if (x + 2 < _sizeX) RelaxJump(c, c + 2, gJump, goal, mode, stamp, rstamp, constrained, occupancy);
+                    if (z > 1) RelaxJump(c, c - 2 * _sizeX, gJump, goal, mode, stamp, rstamp, constrained, occupancy);
+                    if (z + 2 < _size.SizeZ) RelaxJump(c, c + 2 * _sizeX, gJump, goal, mode, stamp, rstamp, constrained, occupancy);
                 }
 
                 if ((_grid.Flags[c] & NavFlags.Connector) != 0)
@@ -514,6 +526,18 @@ namespace Odyssey.Sim.Pathing
             // And an animal only where the lower end is a drawn ramp. See NavGraph.HopMask.
             if (!_graph.HopAllowed(n > from ? from : n, mode)) return;
 
+            if (occupancy != null && occupancy(n)) ng += MoveCost.OccupiedBias;
+            RelaxExplicit(from, n, ng, goal, mode, stamp, rstamp, constrained);
+        }
+
+        /// <summary>
+        /// A jump costs its own price, like a hop, and is legal exactly when
+        /// <see cref="NavGraph.IsJumpAcross"/> says so.
+        /// </summary>
+        void RelaxJump(int from, int n, int ng, int goal, TraverseMode mode, int stamp, int rstamp,
+            bool constrained, Func<int, bool>? occupancy)
+        {
+            if (!_graph.IsJumpAcross(from, n, mode)) return;
             if (occupancy != null && occupancy(n)) ng += MoveCost.OccupiedBias;
             RelaxExplicit(from, n, ng, goal, mode, stamp, rstamp, constrained);
         }

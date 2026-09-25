@@ -255,7 +255,10 @@ namespace Odyssey.Tests.Sim
         // Moved again, 2026-09-25, by design 45 (the scenery made real): the tuning's woodPerTree
         // is gone, because what a felled tree yields is its species' own now, in
         // World/WildPlants.xml. Taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 14288726203637930146UL;
+        // 2026-09-25, design 46 §6: MovementDef gained jumpFailPerMille (30) and
+        // jumpFailCarryingPerMille (2,000) — the jump over a one-cell stream falling short.
+        // Both, 2026-09-25, on merging main into the scenery line: re-taken from the merged pack.
+        const ulong ContentFingerprint = 3780333116451760886UL;
 
 
         [Test]

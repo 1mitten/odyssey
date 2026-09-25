@@ -4,6 +4,14 @@
 simulation half — deep water becoming passable, the helpless-swimmer rules — is **not**. The
 owner's decisions in §2 and §2a are settled; nobody has pressed Play on the float.
 
+> **Since 2026-09-25 a one-cell stream is jumped, not swum** (design 46, owner: *"swimming isn't
+> necessary most of the time"*). A person on one bank of a stream one cell wide jumps to the other
+> at walking pace; wider water is still waded and floated exactly as below, and a jump that falls
+> short lands in the water and is floated out. Deep water stays impassable — decision 2 below is
+> still unbuilt. Two lines here are stale and corrected in place rather than rewritten: §3 lists two
+> traverse modes where there are five (`NavGrid.TraverseMode`), and §6's "no animals swimming …
+> until there is an animal" is now `TraverseModes.Swims`, which keeps both animals out of water.
+
 ## 2a. The float came back for a second round (owner, 2026-09-17)
 
 After the depth experiment, the owner played again: *"I saw someone walk under water again when it
@@ -329,3 +337,29 @@ Nobody can judge a swim from a contact sheet. When this is built:
 4. `PawnPose` rise (§5.1). Unity tier.
 5. The pose (§5.2). Unity tier, and a PlayMode shot in `Logs/` like the palette work, because it is
    the only thing anybody will actually look at.
+
+## 9. The sound of a stroke (2026-09-25)
+
+The owner supplied a recording (`freesound_community-swim-44183.mp3`) and asked whether it should
+play once per cell swum or twice, one per arm. **One per arm, off the drawn stroke, not off the
+cells.** The recording is one arm's catch and pull (loudest at 0.22 s, a wash to 0.75 s), the
+figure swims a front crawl at 0.65 cycles a second with its arms opposite (§5.2), so one arm goes
+in every 0.77 s — close to the recording's own length. A sound per cell would be timed by the
+simulation's step, which does not know where the arms are, and would drift across them.
+
+- **When**: `SwimPose.StrokeSoundsBetween` counts the moments a hand reaches fully forward (the
+  stroke's sine at ±1) less `StrokeSoundPeakSeconds` (0.18 s, measured off the baked files), so
+  the sound is loudest on the splash. Counted rather than tested for one crossing, so a long frame
+  owes both arms. Only once the figure is at least half a swimmer (`StrokeSoundWeight`), so wading
+  in off a bank is silent; only on the swim clock, which is game time, so a paused swimmer is
+  silent. Raised as `PawnFigureDirector.SwimStroked`, played by the bootstrap as the lift is.
+- **Heard only close** (owner: *"only can hear it when close to colonist"*): the listener is the
+  camera, which zooms 10–160 m and starts at 48. Full volume inside 8 m, nothing past 40, so a
+  swimmer is heard when the player has zoomed in on them. Live figures only, which covers every
+  swimmer that near.
+- **The file**: `tools/audio/bake_swim.sh` — head cut at a fixed 0.045 s, tail cut at 0.80 s with
+  a fade, mono, three takes at 0.94/1.00/1.06 speed plus the director's own ±5% pitch, levelled to
+  -24 LUFS max momentary, 3 dB under a carry because it repeats for as long as somebody swims.
+- **Tests**: `SwimSoundTests` — both arms once a cycle, frame by frame adding up, the peak on a
+  reach, silence on a stopped clock, and the catalogue row (three takes, 3D, 40 m, a cooldown that
+  cannot swallow an arm).

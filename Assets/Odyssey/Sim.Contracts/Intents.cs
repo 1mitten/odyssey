@@ -301,6 +301,11 @@ namespace Odyssey.Sim.Contracts
         /// Handler: <c>WeatherSystem.HandleForce</c>.
         /// </summary>
         DebugSetWeather,
+        /// Debug-menu-only (design 46 §6): every jump over a stream falls short while
+        /// <c>A</c> is non-zero, and none is forced to while it is nought. A switch on the pawn
+        /// context, unsaved and unhashed. Appended last, so no recorded intent renumbers.
+        /// </summary>
+        DebugJumpsFail,
     }
 
     /// <summary>
@@ -389,6 +394,10 @@ namespace Odyssey.Sim.Contracts
             // while paused, and a button that read one thing while the world did another until you
             // pressed play would be the slab fault again.
             IntentKind.SetHostilityResponse => true,
+            // Jumps always fail (design 46 §6): a switch the player flips in a menu, which is a
+            // thing opened while paused; a row that read "on" while no jump had heard would be
+            // the slab fault again. Nothing needs to run to make it true.
+            IntentKind.DebugJumpsFail => true,
             _ => false,
         };
     }

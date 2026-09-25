@@ -494,8 +494,19 @@ namespace Odyssey.Tests.Sim
             // price, so they made 95 wanders in the ten thousand ticks where they made 105, and
             // ended on different cells. Food, rest, mood and experience are unchanged. The bare
             // meadow and the city did not move: neither grows a bush.
+            // 2026-09-25, jumping a one-cell stream (design 46): Simulated only, and this board
+            // only — the bare meadow and the city have no stream and did not move, nor did
+            // Generated. The colonists behaved differently, and in one way: they take different
+            // routes. The probe against main is identical in items, needs, mood, experience,
+            // passions and failed jobs; only where they stand, the progress into their steps and
+            // the wander legs started (105 -> 98 in the window) differ. Re-baked again on merging
+            // the weather from main: Generated is main's, and the probe against main (0dff2b36)
+            // differs in exactly the same three numbers and nothing else.
+            // 2026-09-25, both at once on merging main into the scenery line: the bushes' wander
+            // price and the stream jump together. Re-taken from the merged code, not adopted from
+            // either side; the probe against main is in the merge commit's message.
             Generated = 15825491946805197463UL,
-            Simulated = 14309432275701294178UL,
+            Simulated = 14569220115774448341UL,
         };
 
         /// <summary>
