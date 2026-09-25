@@ -218,8 +218,43 @@ To be measured (R8) before the ceiling moves, on the scale-target board with 20 
 **The known risk.** While any hostile stands anywhere on the board, every colonist that is not
 already fighting runs the response scan (`HostilityResponses.Notices` → `Melee.HoldTarget`), which
 walks every pawn every tick. With 200 raiders loitering at the edge for four hours, that is
-colonists × ~220 checks a tick. The measurement decides whether it needs an index. §11a will hold
-the numbers.
+colonists × ~220 checks a tick. The measurement decides whether it needs an index.
+
+### 11a. Measured, 2026-09-25
+
+**The setup.** `RaidBenchmarkTests.TwoHundredRaidersThroughEveryPhase`, on the fast tier in the
+cloud container (Intel Xeon at 2.8 GHz, 4 cores; roughly half the owner's 9800X3D). One colony of
+20 on the scale-target played map (250 × 250 × 40), walked through every phase of one Mixed raid
+of 200. Each arm is 1,500 ticks. All times are mean ms per tick.
+
+| Arm | Pawns | Tick | Pawns phase | Snapshot |
+|---|---|---|---|---|
+| Peace | 43 | 0.229 | 0.064 | 0.126 |
+| 200 loitering at the edge | 243 | 1.058 | 0.230 | 0.789 |
+| 200 loitering, every colonist on **Defend** | 243 | 1.586 | 0.744 | 0.816 |
+| 200 assaulting (4,000 ticks in) | 242 | 1.064 | 0.242 | 0.797 |
+| 200 withdrawing | 240 | 1.198 | 0.360 | 0.814 |
+
+**What it says.**
+- **The raid itself is cheap.** Two hundred raiders cost the Pawns phase about 0.17 ms over peace,
+  in every phase. The staging node and the group clock do not show.
+- **The largest term is the snapshot publish**, 0.79 ms for 243 pawns. It scales with the pawns
+  whatever they are: 243 colonists would cost the same, so it is not the raid's.
+- **The risk named in §11 is real and bounded.** With every colonist on Defend, the response scan
+  adds 0.51 ms. That is a colony-wide setting at the worst case, and on this machine. Not fixed
+  here: a once-a-tick hostile index is the recorded lever, if a playtest at speed finds it.
+
+**The ceiling moved 200 → 400 on these numbers.** The frame side stands on two things. The
+colony-size sweep, which measured 384 colonists healthy on 2026-09-23 (3.90 ms). And
+`FrameTimeTests.TheFrameWithARaidOfTwoHundred`, a Measurement arm that runs only in Unity and is
+**owed on the owner's machine**.
+
+**The Long-tier soak** is `BanditSoakTests.ThreeDaysWithRaidIncidents`, on seeds 1 and 2. Each
+seed fires two Mixed raids of eight through the incident, with a lockstep twin and a save taken
+mid-gathering. Every phase from arriving to assaulting was seen, and the save resumed identically.
+**In both seeds all five colonists ended up downed**: eight raiders beat five armed colonists who
+are not drafted. That is design 33 §21d's balance question again, now with a band. No colonist
+died.
 
 ## 12. Not to undo by tidying
 

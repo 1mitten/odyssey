@@ -13574,3 +13574,38 @@ eleventh round constant for a random stream, so where a blow landed would have b
 the stream jump's roll. Neither is a textual conflict; both were found by reading what each side
 had claimed from the shared tables. A test that had passed by luck on the old stream said so the
 moment the stream moved. No golden moved.
+
+## 2026-09-25 — Raids: a band that stalks, then strikes
+
+The owner asked for a raid: 1 to 200 hostiles from a random edge, a few hours of wandering at the
+edge, then a push inward and an attack. It is fired from a debug slider and dropdown, with its own
+sound. A two-round interview settled the rest: the ceiling to 400 measured first; mixes as data;
+gather → probe → assault; the hearth as the target; withdrawal at half; one edge; no auto-draft;
+and headcount-and-days sizing at 0. Design 50.
+
+**The shape is the reference's** — a group controller the members defer to — **and the names are
+ours.** The single decision that mattered was *where the fight lives*. The raid's node only
+decides where a member walks, and hands over to the bandit's unchanged `HostileThinkNode` whenever
+there is something to fight. So design 33's tuning is the raid's tuning, and a lone bandit thinks
+exactly as it did.
+
+**Everything is drawn once, at the fire, and saved.** The slots, arrival ticks, kinds and loiter
+are all decided then, so the system's tick draws nothing, and a save mid-trickle or mid-loiter
+resumes to the same hash. That is tested, and so is a Long-tier soak with a lockstep twin. The
+group is hashed only while it exists, the pattern `Projectiles` set, and the full fast tier —
+goldens included — passed unchanged.
+
+**The owner's assault horn was already in the game.** Baked through the alert chain, the Pixabay
+`low-horn-185556` is `alert-raid.wav` sample for sample (correlation 1.0000). The owner's
+`notification-raid.mp3` of 2026-09-19 was the same file under another name. Only the war horn was
+added. The siren's source and licence are now known.
+
+**The measurement moved the ceiling, and it pointed somewhere else.** Two hundred raiders cost
+the Pawns phase 0.17 ms. The snapshot publish of 243 pawns costs 0.79, and it would cost the same
+for 243 colonists. The risk the plan named — every non-FightBack colonist scanning every pawn
+while anything hostile stands — is real at +0.51 ms, and only with the whole colony on Defend.
+Recorded, not fixed.
+
+**The soak found a balance question, not a fault.** Eight raiders downed all five armed,
+undrafted colonists in both seeds. That is design 33 §21d's finding again, now with a band.
+The playtest queue has it.

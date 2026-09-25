@@ -155,8 +155,16 @@ namespace Odyssey.Sim.Pawns
         /// silently declining to spawn while reporting success is how a debug menu comes to lie.
         /// Only the <i>intent</i> path is bounded — <see cref="Spawn(int, int)"/> itself is what
         /// worldgen and the scenario call, and a starting colony is never anywhere near this.</para>
+        ///
+        /// <para><b>400 since 2026-09-25</b> (owner: a raid of up to two hundred beside a full
+        /// colony, design 50 §11). Measured before it moved, on the scale-target played map with
+        /// twenty colonists and two hundred raiders (Intel Xeon 2.8 GHz container, fast tier):
+        /// tick 0.23 ms at peace, 1.06 ms with the band loitering, 1.59 with every colonist on
+        /// Defend, 1.06 in the assault — of which the raid's own Pawns phase is 0.23 and the
+        /// snapshot publish of 243 pawns is 0.79. The frame side stands on 384 colonists measured
+        /// healthy on 2026-09-23 and on <c>FrameTimeTests.TheFrameWithARaidOfTwoHundred</c>.</para>
         /// </summary>
-        public const int PawnCeiling = 200;
+        public const int PawnCeiling = 400;
 
         public IntentRejection HandleSpawnPawn(Intent intent)
         {

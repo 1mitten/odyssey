@@ -418,6 +418,95 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>One colony of the gate, with what the gate reads off it.</summary>
+        /// <summary>
+        /// Raids through the incident itself (design 50): the gate's armed colony and its hut, and
+        /// two Mixed raids of eight fired by the debug menu's own intent on day nought and day two.
+        /// Each band walks on at an edge, gathers, probes and assaults on its own clock with nobody
+        /// drafted, and ends. The invariants are asked every in-game hour; a lockstep twin fed the same
+        /// raids must hash the same every hour; and a save taken while the first band gathers must
+        /// resume to the same hash half a day on, after its assault.
+        /// </summary>
+        [Test, Category("Long")]
+        [TestCase(1u)]
+        [TestCase(2u)]
+        public void ThreeDaysWithRaidIncidents(uint seed)
+        {
+            var run = new Gate(seed);
+            var twin = new Gate(seed);
+            ColonyWorld colony = run.Colony;
+            int[] fireAt = { Day / 2, 2 * Day };
+            int fired = 0, phasesSeen = 0, savedAt = -1, raiders = 0;
+            byte[]? midway = null;
+            ulong resumed = 0, original = 0;
+            var watch = Stopwatch.StartNew();
+
+            for (int tick = colony.World.CurrentTick; tick < 3 * Day; tick = colony.World.CurrentTick)
+            {
+                if (fired < fireAt.Length && tick == fireAt[fired])
+                {
+                    foreach (Gate gate in new[] { run, twin })
+                        gate.Colony.World.Intents.Submit(new Intent(IntentKind.InvokeIncident, default, IncidentHandle.Raid, 8, 3));
+                    run.Step();
+                    twin.Step();
+                    Assert.That(colony.World.Intents.Rejected, Is.Empty, $"seed {seed}: raid {fired} was refused");
+                    raiders += 8;
+                    fired++;
+                    continue;
+                }
+
+                run.Step();
+                twin.Step();
+                tick = colony.World.CurrentTick;
+
+                var raids = colony.Pawns.Raids!.Groups;
+                for (int g = 0; g < raids.Count; g++) phasesSeen |= 1 << (int)raids[g].Phase;
+
+                if (midway == null && raids.Count > 0 && raids[0].Phase == RaidPhase.Gathering && tick > fireAt[0] + Hour)
+                {
+                    midway = colony.Save();
+                    savedAt = tick;
+                }
+                if (midway != null && resumed == 0 && tick == savedAt + Day / 2)
+                {
+                    var loaded = ColonyWorld.Build(PlaySize, seed, Gate.Scenario());
+                    loaded.Load(midway);
+                    loaded.World.Tick(tick - loaded.World.CurrentTick);
+                    resumed = loaded.World.ComputeStateHash().Value;
+                    original = colony.World.ComputeStateHash().Value;
+                }
+
+                if (tick % Hour == 0)
+                {
+                    int day = tick / Day;
+                    Invariants(colony, day);
+                    Assert.That(twin.Colony.World.ComputeStateHash().Value, Is.EqualTo(colony.World.ComputeStateHash().Value),
+                        $"seed {seed}, day {day}, tick {tick}: the same seed and the same raids came to two hashes");
+                    foreach (Pawn pawn in colony.Pawns.Pawns.All)
+                        Assert.That(!pawn.IsColonist || !pawn.Drafted, Is.True, $"seed {seed}, tick {tick}: a raid drafted a colonist");
+                }
+            }
+            watch.Stop();
+
+            int hostile = 0, colonistsDead = 0;
+            foreach (Pawn pawn in colony.Pawns.Pawns.All) if (pawn.IsHostile) hostile++;
+            for (int c = 0; c < colony.Pawns.Corpses.Count; c++)
+                if (colony.Pawns.Corpses[c].Kind == PawnKindIndex.Colonist) colonistsDead++;
+            TestContext.WriteLine(
+                $"raid soak seed {seed}: {watch.Elapsed.TotalSeconds:F1} s wall for the run and its twin; {fired} raids of " +
+                $"{raiders} raiders; phases seen {System.Convert.ToString(phasesSeen, 2)}; {run.Rules.Swings.Count} swings; " +
+                $"{run.Hooks.DownedCount} downed ({run.DownedColonists} colonists), {run.Hooks.DiedCount} died " +
+                $"({colonistsDead} colonists); {hostile} hostiles on the board at the end, {colony.Pawns.Raids!.Count} raids live; " +
+                $"save at tick {savedAt}");
+
+            Assert.That(colony.Incidents.Ledger.Fires(IncidentHandle.Raid), Is.EqualTo(2));
+            for (int phase = (int)RaidPhase.Arriving; phase <= (int)RaidPhase.Assaulting; phase++)
+                Assert.That(phasesSeen & (1 << phase), Is.Not.Zero, $"seed {seed}: no raid was ever {(RaidPhase)phase}");
+            Assert.That(run.Rules.Swings.Count, Is.GreaterThan(0), "two raids and not a blow: no band ever reached the colony");
+            Assert.That(midway, Is.Not.Null, "the first band was never seen gathering");
+            Assert.That(resumed, Is.Not.Zero, "the save was never resumed");
+            Assert.That(resumed, Is.EqualTo(original), "a save taken while a band gathered resumed to another world");
+        }
+
         sealed class Gate
         {
             public readonly ColonyWorld Colony;
