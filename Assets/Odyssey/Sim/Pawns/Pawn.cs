@@ -219,6 +219,33 @@ namespace Odyssey.Sim.Pawns
         // field below is written by the combat lanes and by nothing else; the contracts step only
         // declared them.
 
+        // ---- health (design 43 §2) -------------------------------------------------------------
+        //
+        // The ledger over the pool. Saved in HealthSection and hashed only while it has anything
+        // on it (ContributeTo, bit 22 of the kind word), so a colony nobody has hurt saves and
+        // hashes exactly as it did before health.
+
+        /// <summary>The body this pawn has, or null for one that keeps the pool alone (every animal today).</summary>
+        public HealthDef? Body => Content.HealthOf(Kind);
+
+        /// <summary>
+        /// Its injuries and its blood, or null for a pawn nobody has hurt since it spawned. Written by
+        /// <see cref="CombatSystem.Hurt"/>, the heal and the tend, and by the loader.
+        /// </summary>
+        public PawnHealth? Health { get; internal set; }
+
+        /// <summary>Anything on the ledger to save, hash and publish.</summary>
+        public bool HasHealthState => Health != null && !Health.IsEmpty;
+
+        /// <summary>What the body can do right now (design 43 §3). Whole for a pawn with nothing on its ledger.</summary>
+        public Vitals CurrentVitals() => Pawns.Vitals.Of(this);
+
+        /// <summary>The body's share of her walk, per mille: moving, or 1,000 exact for anyone whole.</summary>
+        public virtual int HealthMovingPerMille() => HasHealthState ? CurrentVitals().MovingPerMille : 1_000;
+
+        /// <summary>The body's share of her work, per mille: manipulation, or 1,000 exact for anyone whole.</summary>
+        public virtual int HealthManipulationPerMille() => HasHealthState ? CurrentVitals().ManipulationPerMille : 1_000;
+
         /// <summary>This pawn's full pool, in thousandths of a hit point: the species' <see cref="SpeciesDef.healthPoints"/> × 1,000.</summary>
         public int HpMaxMilli => Species.healthPoints * Rates.Scale;
 
@@ -638,6 +665,9 @@ namespace Odyssey.Sim.Pawns
                 ? Rates.Scale
                 : def.WorkRatePerMille(SkillLevel(def.rateSkill));
             int rate = curve * ConditionPerMille() / 1_000;
+            // Then the body (design 17 §4e, design 43 §3): manipulation, at the slot health was
+            // promised. 1,000 exact for anyone whole, so no whole colonist's rate moved.
+            rate = rate * HealthManipulationPerMille() / 1_000;
             // Then the room: too cold or too hot to work well, as a factor on everything the
             // curve said (design 28 §8). Composed here rather than in the drivers so every job
             // inherits it from the one seam, exactly as condition is.
@@ -662,7 +692,8 @@ namespace Odyssey.Sim.Pawns
                 * InnatePacePerMille() / 1_000
                 * ConditionPerMille() / 1_000
                 * Species.movePerMille / 1_000
-                * UrgencyPerMille() / 1_000;
+                * UrgencyPerMille() / 1_000
+                * HealthMovingPerMille() / 1_000;
 
         /// <summary>
         /// The run (design 17 §4f, design 33 §2h): a drafted colonist moves at
@@ -1051,11 +1082,15 @@ namespace Odyssey.Sim.Pawns
             // The response (design 33 §18c) is two bits of the same word, nought at the default, so
             // a colony that never set one hashes as it did before. Bits 24 and 25: 22 and 23 are
             // left free for the line building beside this one.
+            // And the body's ledger (design 43 §9), bit 22, the first of the two left free: walked
+            // only while it has anything on it, so a colony nobody has hurt hashes as before health.
             bool combat = HasCombatState;
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
+            bool health = HasHealthState;
             hash.Add(Kind | (Leaving ? 1 << 16 : 0) | (Drafted ? 1 << 17 : 0)
                 | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0)
                 | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
+                | (health ? 1 << 22 : 0)
                 | ((int)Response << 24));
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
@@ -1078,6 +1113,7 @@ namespace Odyssey.Sim.Pawns
                     hash.Add(PendingStunTicks);
                 }
             }
+            if (health) Health!.ContributeTo(ref hash);
             for (int i = 0; i < Needs.Length; i++) hash.Add(Needs[i]);
             hash.Add(Mood);
             hash.Add(MoodTarget);

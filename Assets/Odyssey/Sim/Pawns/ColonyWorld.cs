@@ -180,6 +180,10 @@ namespace Odyssey.Sim.Pawns
                 // Appended, after the ledger whose load clears it; absent from an older save, which
                 // loads with no entry about anything, as none then was.
                 pawns.Incidents!.Ledger.DetailSection,
+                // The body's ledger (design 43 §9): who is injured where, and how much blood each
+                // has lost. Appended, after the combat section that restores the pool it sits over;
+                // absent from an older save, which loads with nobody injured.
+                new HealthSection(pawns.Pawns),
             };
         }
 

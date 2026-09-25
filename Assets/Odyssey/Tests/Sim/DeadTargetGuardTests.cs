@@ -27,7 +27,12 @@ namespace Odyssey.Tests.Sim
     /// </summary>
     public class DeadTargetGuardTests
     {
-        /// <summary>The shipped rules with every landed blow multiplied: deaths from standing.</summary>
+        /// <summary>
+        /// The shipped rules with every landed blow multiplied: deaths from standing. ×25, not the
+        /// ×10 it was: a person with a body is down from pain at 64 points (design 43 §3), so a
+        /// death from standing needs one blow past 150, where the pool alone let a standing
+        /// colonist at a point or two be killed by an ordinary blow.
+        /// </summary>
         sealed class Brutal : MeleeRules
         {
             public int Swings;
@@ -35,7 +40,7 @@ namespace Odyssey.Tests.Sim
             {
                 Swings++;
                 SwingOutcome o = base.Resolve(attacker, defender, armament, ctx, tick);
-                return o.Landed ? new SwingOutcome(o.Result, o.DamageMilli * 10, o.StunTicks, o.Critical, o.Knockback) : o;
+                return o.Landed ? new SwingOutcome(o.Result, o.DamageMilli * 25, o.StunTicks, o.Critical, o.Knockback) : o;
             }
         }
 

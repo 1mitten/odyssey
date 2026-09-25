@@ -490,6 +490,9 @@ namespace Odyssey.Sim.Pawns
                 // comes. Asked only of the downed, so a colony nobody has hurt pays one flag.
                 if (pawn.Downed && RescueRules.NeedsRescue(pawn, _ctx) && RescueRules.BedFor(pawn, pawn, _ctx) < 0)
                     writer.AddPawnAspect(pawn.Id, CombatAspects.RescueNoBed, 1);
+                // The body (design 43 §9), sparse: a pawn with nothing on its ledger publishes
+                // nothing new, so a healthy colony's rows did not move.
+                if (pawn.HasHealthState) HealthAspects.Publish(writer, pawn, _ctx.Content.DayTicks);
                 if (pawn.EquippedItem != 0)
                 {
                     var weapon = _ctx.Items.Get(new ThingId(pawn.EquippedItem));

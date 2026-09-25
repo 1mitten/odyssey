@@ -17,9 +17,13 @@ namespace Odyssey.Tests.Sim
     /// </summary>
     public class DownedDeathTests
     {
+        /// <summary>
+        /// The pool's own lines, on a bodiless board (design 43 §8): with a body, pain shock downs
+        /// a person at 64 points, before nought, and <c>HealthRulesTests</c> holds that line.
+        /// </summary>
         static (ColonyWorld colony, Pawn victim, Pawn by) Two()
         {
-            var colony = Board();
+            var colony = Bodiless(Board());
             colony.World.Tick(5);
             return (colony, colony.Pawns.Pawns.All[0], colony.Pawns.Pawns.All[1]);
         }

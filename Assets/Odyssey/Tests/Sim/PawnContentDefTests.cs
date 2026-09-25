@@ -251,7 +251,13 @@ namespace Odyssey.Tests.Sim
         // renamed PawnKind_Bandit -> PawnKind_Bandit (index 3 unchanged, so no save moves), its
         // traverse mode likewise, and PawnKindDef.weapon became weapons, the bandit's being a
         // crowbar or a bat where it was a machete. No golden moved: no golden has a bandit.
-        const ulong ContentFingerprint = 9430633263010007866UL;
+        //
+        // Moved a twenty-seventh time, deliberately, 2026-09-25, by the body (design 43 §2): a new
+        // HealthDef, Health_Person, carrying the six regions and the pain, blood, tend and fall
+        // numbers; SpeciesDef gained `health`, named on Species_Person only; and PawnContent the
+        // resolved SpeciesHealth table. No golden moved: the ledger is hashed only while a pawn has
+        // anything on it, and no golden window hurts anybody.
+        const ulong ContentFingerprint = 1532016128955935994UL;
 
 
         [Test]

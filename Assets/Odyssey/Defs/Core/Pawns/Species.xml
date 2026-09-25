@@ -31,6 +31,11 @@
     -->
     <healthPoints>100</healthPoints>
     <deathAtPerMille>-500</deathAtPerMille>
+    <!--
+      Health (docs/design/43-health.md section 2): a person has a body of six regions over the
+      pool. The animals name none and keep the pool alone (section 8).
+    -->
+    <health>Health_Person</health>
   </SpeciesDef>
 
   <!--

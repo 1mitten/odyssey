@@ -295,10 +295,13 @@ namespace Odyssey.Tests.Sim
         /// The downed and the dead are not knocked back: the fall and the death are resolved first.
         /// The control is the same blow one thousandth short of downing.
         /// </summary>
+        /// <para>On bodiless boards (design 43 §8): the control is one thousandth short of the
+        /// pool's line, and a person with a body is down from pain long before it.</para>
         [Test]
         public void TheDownedAndTheDeadAreNotKnockedBack()
         {
             var (colony, a, t) = Pair(1, 0);
+            Bodiless(colony);
             int from = t.Cell;
             Blow(colony, a, t, Knock(t.HpMilli));
             Assert.That(t.Downed, Is.True);
@@ -306,11 +309,13 @@ namespace Odyssey.Tests.Sim
             Assert.That(t.KnockedDownUntilTick, Is.EqualTo(0));
 
             var (c2, a2, t2) = Pair(1, 0);
+            Bodiless(c2);
             Blow(c2, a2, t2, Knock(t2.HpMilli - t2.DeathAtMilli));
             Assert.That(Melee.IsDead(t2), Is.True);
             Assert.That(t2.Cell, Is.EqualTo(At(c2, 1, 0)), "a dead colonist was knocked back");
 
             var (c3, a3, t3) = Pair(1, 0);
+            Bodiless(c3);
             Blow(c3, a3, t3, Knock(t3.HpMilli - 1));
             Assert.That(t3.Cell, Is.EqualTo(At(c3, 2, 0)), "the control: standing, she is knocked back");
         }

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A person's body and every number that makes it hurt, bleed and heal
+  (docs/design/43-health.md). Every value is cited to a line of
+  docs/research/a-02-health.md or marked INVENTED, which means ours, defensible, and to be tuned
+  from play.
+
+  Region order is a save contract: an injury record saves its region by position in this list.
+  Append; never insert.
+-->
+<Defs>
+
+  <HealthDef>
+    <defName>Health_Person</defName>
+
+    <!--
+      The six regions (design 43 section 2). Hit points are a-02 lines 15-18's top-level parts.
+      The two coverage columns are INVENTED - a-02 line 161 could not find the reference's - and
+      each sums to a thousand. A limb's excess passes to the torso (a-02 line 20); the torso and
+      the head hold everything, so every point of every blow is on the ledger somewhere. A vital
+      region at nought puts consciousness at nought, which downs: death stays the pool's line and
+      blood loss, so an unordered fight still ends in downs (design 33 section 3).
+    -->
+    <regions>
+      <li><name>head</name><hitPoints>25</hitPoints><meleeCoverage>100</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Consciousness</capacity><vital>true</vital></li>
+      <li><name>torso</name><hitPoints>40</hitPoints><meleeCoverage>400</meleeCoverage><fallCoverage>300</fallCoverage><capacity>None</capacity><vital>true</vital></li>
+      <li><name>arm.left</name><hitPoints>30</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Manipulation</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>arm.right</name><hitPoints>30</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>0</fallCoverage><capacity>Manipulation</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>leg.left</name><hitPoints>30</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>350</fallCoverage><capacity>Moving</capacity><overflowTo>torso</overflowTo></li>
+      <li><name>leg.right</name><hitPoints>30</hitPoints><meleeCoverage>125</meleeCoverage><fallCoverage>350</fallCoverage><capacity>Moving</capacity><overflowTo>torso</overflowTo></li>
+    </regions>
+
+    <!--
+      Pain and the downed line (design 43 section 3). 1.25 per cent of pain a point (a-02 line
+      30); pain shock at 80 per cent (a-02 lines 30 and 49), which is 64 points of live injury;
+      consciousness loses (pain - 10 per cent) x 4/9, up to 40 per cent (a-02 line 24); down below
+      30 per cent consciousness or at 15 per cent moving (a-02 lines 48 and 50).
+    -->
+    <painPerPointTenths>125</painPerPointTenths>
+    <painShockPerMille>800</painShockPerMille>
+    <painConsciousnessFromPerMille>100</painConsciousnessFromPerMille>
+    <painConsciousnessMaxPerMille>400</painConsciousnessMaxPerMille>
+    <downedConsciousnessBelowPerMille>300</downedConsciousnessBelowPerMille>
+    <downedMovingAtPerMille>150</downedMovingAtPerMille>
+
+    <!--
+      Blood (design 43 section 4). The bleed is INVENTED - a-02 line 160 could not find the
+      reference's conversion - at 60 per mille of blood a day for every point of an untended
+      wound: a 10-point cut alone kills in 40 hours, 30 points of cuts in 13. Recovery a third a
+      day once nothing bleeds (a-02 line 37). The stages are a-02 line 35's.
+    -->
+    <bleedPerPointPerDay>60</bleedPerPointPerDay>
+    <bloodRecoveryPerDay>333</bloodRecoveryPerDay>
+    <bloodDeathAtPerMille>1000</bloodDeathAtPerMille>
+    <bloodStages>
+      <li><atPerMille>150</atPerMille><consciousnessPerMille>900</consciousnessPerMille></li>
+      <li><atPerMille>300</atPerMille><consciousnessPerMille>800</consciousnessPerMille></li>
+      <li><atPerMille>450</atPerMille><consciousnessPerMille>600</consciousnessPerMille></li>
+      <li><atPerMille>600</atPerMille><consciousnessPerMille>600</consciousnessPerMille><consciousnessCapPerMille>100</consciousnessCapPerMille></li>
+    </bloodStages>
+
+    <!--
+      Tending (design 43 sections 5 and 6). Speed and quality by Medicine level are a-02 line 42's;
+      potency 0.3 bare-handed and 1.0 with a medkit, clamped at 70 and 100 per cent (a-02 line 42).
+      A tended injury heals 4 points a day at nought quality up to 12 at full, anywhere (a-02
+      line 41). The reference's random 0.75-1.25 is not taken: a deterministic tend is the same
+      thing, and the spread bought nothing legible.
+    -->
+    <medkit>Item_Medkit</medkit>
+    <tendSpeedCurve>
+      <li><level>0</level><perMille>400</perMille></li>
+      <li><level>10</level><perMille>1000</perMille></li>
+      <li><level>20</level><perMille>1600</perMille></li>
+    </tendSpeedCurve>
+    <tendQualityCurve>
+      <li><level>0</level><perMille>200</perMille></li>
+      <li><level>5</level><perMille>700</perMille></li>
+      <li><level>10</level><perMille>1100</perMille></li>
+      <li><level>15</level><perMille>1350</perMille></li>
+      <li><level>20</level><perMille>1550</perMille></li>
+    </tendQualityCurve>
+    <bareHandsPotencyPerMille>300</bareHandsPotencyPerMille>
+    <medkitPotencyPerMille>1000</medkitPotencyPerMille>
+    <bareHandsCapPerMille>700</bareHandsCapPerMille>
+    <medkitCapPerMille>1000</medkitCapPerMille>
+    <tendHealMinPerDay>4000</tendHealMinPerDay>
+    <tendHealMaxPerDay>12000</tendHealMaxPerDay>
+
+    <!--
+      Falls (design 43 section 7): 15 x layers^1.5 whole points (a-02 line 91), in two to four hits
+      with a fifth either way (a-02 line 101), the worst a fracture from two layers.
+    -->
+    <fallDamageBase>15</fallDamageBase>
+    <fallHitsMin>2</fallHitsMin>
+    <fallHitsMax>4</fallHitsMax>
+    <fallSpreadPerMille>200</fallSpreadPerMille>
+    <fallFractureFromLayers>2</fallFractureFromLayers>
+  </HealthDef>
+
+</Defs>

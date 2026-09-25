@@ -189,6 +189,38 @@ namespace Odyssey.Tests.Sim
             Assert.That(guard.CloseTicks, Is.GreaterThan(100), $"{name}, the control: nobody fought at close quarters");
         }
 
+        /// <summary>
+        /// An interrupted step is held until it lands (design 33 §7c, §2d): a pawn stunned mid-step
+        /// holds the cell it is stepping into, so no attacker takes it as a side. Found by
+        /// <see cref="MixedBrawlsOnManySeeds"/> seed 11 once the body changed who stood where
+        /// (design 43 §3). The control is the same pawn with no step in hand, which holds only its
+        /// own cell.
+        /// </summary>
+        [Test]
+        public void AStepStillLandingIsHeld()
+        {
+            var colony = CombatFixture.Board(colonists: 2);
+            colony.World.Tick();
+            Pawn a = colony.Pawns.Pawns.All[0], b = colony.Pawns.Pawns.All[1];
+            Stand(colony, a, Near(colony, 0, 0));
+            Stand(colony, b, Near(colony, 3, 0));
+            Assert.That(Draft(colony, b), Is.EqualTo(IntentRejection.None));
+            Assert.That(Attack(colony, b, a), Is.EqualTo(IntentRejection.None));
+            Assume.That(Melee.IsAttacking(b, a), Is.True, "the fixture: nobody is attacking her");
+            int next = Near(colony, -1, 0);
+
+            // Stunned mid-step: no walk in hand, the step still landing.
+            a.ClearPath();
+            a.Destination = -1;
+            a.FinishingStepTo = next;
+            Assert.That(Melee.SideOf(a), Is.EqualTo(next));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 0, 5));
+            Assert.That(Melee.Holds(colony.Pawns, bandit, next), Is.True, "a cell she is stepping into was free to take");
+
+            a.FinishingStepTo = -1;
+            Assert.That(Melee.Holds(colony.Pawns, bandit, next), Is.False, "the control: with no step in hand she holds only her own cell");
+        }
+
         /// <summary>Four bandits from four sides on one colonist going about her day, who fights back.</summary>
         [TestCase(true)]
         [TestCase(false)]

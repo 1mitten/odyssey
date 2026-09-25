@@ -54,7 +54,8 @@ namespace Odyssey.Tests.Sim
             foreach (Pawn pawn in colony.Pawns.Pawns.All) pawn.WorkPriorities[WorkTypeIndex.Rescue] = 0;
             Stand(colony, patient, colony.Pawns.Items.Beds[0]);
             Strike(colony, by, patient, patient.HpMilli);
-            patient.HpMilli = patient.HpMaxMilli * 8 / 10;
+            // Through the ledger, not past it: the pool's loss is the ledger's points (design 43 §2).
+            RaiseHp(patient, patient.HpMaxMilli * 8 / 10);
             int completed = colony.Jobs.CompletedOf(JobIndex.Downed);
             var tape = new Tape();
 

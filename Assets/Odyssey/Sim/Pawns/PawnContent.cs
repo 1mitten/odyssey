@@ -770,6 +770,15 @@ namespace Odyssey.Sim.Pawns
         /// of the species. Unread for a person.
         /// </summary>
         public int meleeSkill;
+
+        // ---- health (design 43 §2) ---------------------------------------------------------
+
+        /// <summary>
+        /// The body this species has, by the <see cref="HealthDef"/>'s defName, or empty for none.
+        /// A species with no body keeps the hit-point pool alone and nothing else: no regions, no
+        /// injuries, no bleeding, no tending — every animal today (design 43 §8).
+        /// </summary>
+        public string health = string.Empty;
     }
 
     /// <summary>What a pawn starts life with.</summary>
@@ -1079,6 +1088,23 @@ namespace Odyssey.Sim.Pawns
         public int[] KindSpecies = System.Array.Empty<int>();
 
         /// <summary>
+        /// The body each species has (<see cref="SpeciesDef.health"/>), by index into
+        /// <see cref="Species"/>, or null for none (design 43 §2). Read through <see cref="HealthOf"/>.
+        /// </summary>
+        public HealthDef?[] SpeciesHealth = System.Array.Empty<HealthDef?>();
+
+        /// <summary>
+        /// The body a pawn of this kind has, or null: its species' <see cref="HealthDef"/>, and
+        /// nothing for a content set built in code, which keeps the pool alone as it always did.
+        /// </summary>
+        public HealthDef? HealthOf(int kind)
+        {
+            if (Species.Length == 0 || (uint)kind >= (uint)KindSpecies.Length) return null;
+            int species = KindSpecies[kind];
+            return (uint)species < (uint)SpeciesHealth.Length ? SpeciesHealth[species] : null;
+        }
+
+        /// <summary>
         /// The item defs each kind may arrive holding (<see cref="PawnKindDef.weapons"/>), empty
         /// for bare hands. Read through <see cref="ArmsOnSpawn"/> and <see cref="WeaponFor"/>.
         /// </summary>
@@ -1267,7 +1293,8 @@ namespace Odyssey.Sim.Pawns
                 .Register<SpeciesDef>()
                 .Register<TemperatureDef>()
                 .Register<PawnTuningDef>()
-                .Register<CombatDef>();
+                .Register<CombatDef>()
+                .Register<HealthDef>();
 
         /// <summary>
         /// The same content, read from a loaded <see cref="DefDatabase"/> rather than built in
@@ -1355,6 +1382,20 @@ namespace Odyssey.Sim.Pawns
                     throw new DefLoadException(
                         $"PawnKindDef '{content.Kinds[k].defName}' names species '{wanted}', which the content does not have.");
                 content.KindSpecies[k] = found;
+            }
+
+            // The body each species has (design 43 §2), by name, once. A body of more regions
+            // than a ledger can hold fails the load rather than a fight.
+            content.SpeciesHealth = new HealthDef?[content.Species.Length];
+            for (int s = 0; s < content.Species.Length; s++)
+            {
+                string wanted = content.Species[s].health;
+                if (string.IsNullOrEmpty(wanted)) continue;
+                HealthDef body = One<HealthDef>(defs, wanted);
+                if (body.regions.Count == 0 || body.regions.Count > PawnHealth.MaxRecords / 3)
+                    throw new DefLoadException(
+                        $"HealthDef '{body.defName}' has {body.regions.Count} regions; a body has one to six.");
+                content.SpeciesHealth[s] = body;
             }
 
             // The weapon a kind arrives holding (design 33 §1), by name, once — after the items,
@@ -1602,5 +1643,17 @@ namespace Odyssey.Sim.Pawns
         /// SHA-256's tenth round constant.
         /// </summary>
         public const uint Knockback = 0x1283_5B01;
+
+        // ---- health (design 43) ----------------------------------------------------------------
+
+        /// <summary>
+        /// Which region a hit lands on, by coverage (design 43 §2). SHA-256's eleventh round
+        /// constant, next after <see cref="Knockback"/>. Its own stream, so the body can move no
+        /// roll a fight made before it existed.
+        /// </summary>
+        public const uint HitRegion = 0x2431_85BE;
+
+        /// <summary>How a fall's damage is split into hits and spread (design 43 §7). The twelfth.</summary>
+        public const uint FallSplit = 0x550C_7DC3;
     }
 }

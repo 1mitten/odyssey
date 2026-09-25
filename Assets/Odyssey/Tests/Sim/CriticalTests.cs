@@ -178,7 +178,7 @@ namespace Odyssey.Tests.Sim
                 tape.Tick(colony, 1_000);
                 // Keep her at it: stand the target up whole whenever it goes down.
                 if (b.Downed) colony.Pawns.Combat!.Recover(b, colony.World.CurrentTick);
-                b.HpMilli = b.HpMaxMilli;
+                MakeWhole(b);
                 if (a.CurrentJob?.DefIndex != JobIndex.AttackMelee) Attack(colony, a, b);
             }
 

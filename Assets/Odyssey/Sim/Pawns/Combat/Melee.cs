@@ -238,11 +238,22 @@ namespace Odyssey.Sim.Pawns
             pawn.CurrentJob != null && pawn.CurrentJob.DefIndex == JobIndex.AttackMelee && IsStanding(pawn);
 
         /// <summary>
-        /// The side an attacker holds (design 33 §7c): the cell she is walking to, else the one she
-        /// stands on. Read off <see cref="Pawn.Destination"/> and <see cref="Pawn.Cell"/>, both
-        /// saved, so a claim needs no state of its own and a load holds every claim it saved.
+        /// The side an attacker holds (design 33 §7c): the cell she is walking to, else the cell an
+        /// interrupted step is still landing her on (§2d), else the one she stands on. Read off
+        /// <see cref="Pawn.Destination"/>, <see cref="Pawn.FinishingStepTo"/> and
+        /// <see cref="Pawn.Cell"/>, all saved, so a claim needs no state of its own and a load
+        /// holds every claim it saved.
+        ///
+        /// <para><b>The finishing step is claimed since 2026-09-25</b> (design 43 §3, found by
+        /// <c>FightGuardTests.MixedBrawlsOnManySeeds</c> seed 11 once the body changed who stood
+        /// where): a colonist stunned mid-step has no destination and still stands on the cell she
+        /// is leaving, so a bandit took the cell she was stepping into as its side and she landed on
+        /// it. The step is hers until it lands.</para>
         /// </summary>
-        public static int SideOf(Pawn pawn) => pawn.Destination >= 0 ? pawn.Destination : pawn.Cell;
+        public static int SideOf(Pawn pawn) =>
+            pawn.Destination >= 0 ? pawn.Destination
+            : pawn.FinishingStepTo >= 0 ? pawn.FinishingStepTo
+            : pawn.Cell;
 
         /// <summary>
         /// Does another pawn in a fight hold <paramref name="cell"/> (design 33 §7c, §8c)? A pawn
