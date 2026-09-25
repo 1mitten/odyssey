@@ -48,6 +48,14 @@ the next session learns to ignore.
   game days, skipping days with the debug menu: the sky should change by itself, mostly clear in
   Glare, showery in Wash, grey in Rime, with the clock's glyph following. A wrong answer is a sky
   that never changes, one that flips at midnight, or a storm every other day.
+- **Can you see who the rain is slowing?** (`claude/pace-readout`, design 17 §5a, 43 §6a.) New
+  game, backtick > Weather > Downpour. Click a colonist out in the open: under what she is doing the
+  pane should say about *Pace 90% · in the rain*, and hovering it should say *rain −10%* among the
+  rest. Walk her under a roof and it should go back to about 100% with the rain gone from both.
+  Draft her and the pace should roughly double (*drafted ×2*). Click a hog making for a tree, and
+  the same hog under it: both should read *Sheltering*, as should its row on the Animals tab (F5).
+  A wrong answer is: a line you do not notice without looking for it; a pace that is not what you
+  see her walk at; *in the rain* under a roof; a hog reading *Resting* under a tree in a downpour.
 - **Does the rain touch the world?** (`claude/weather-world`, design 43 §6a.) New game, backtick
   > Weather > Downpour, and watch at normal speed:
   - Colonists crossing open ground should walk visibly slower in the rain and at their usual pace
