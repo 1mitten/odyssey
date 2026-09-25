@@ -31,7 +31,8 @@ keyboard, and the content fingerprints pin them once tuned.
 
 | Topic | Decision |
 |---|---|
-| Kinds | **Clear, Cloudy, Rain.** Rain varies light → downpour by intensity. Snow, fog and storms stay wiki words until a follow-up (§9). |
+| Kinds | **Clear, Cloudy, Rain, Storm.** Rain varies light → downpour by intensity. **Storm** is the rarer dim day (owner, 2026-09-25): heavy rain, the colour drained, a stronger wind. Snow and fog stay wiki words until a follow-up (§9). |
+| How rain looks | **Rain keeps the colour of a clear day and only dims it** (owner, 2026-09-25: *"we want to be colourful when it rains"*). Cloudy and Storm are the grey days. Zoomed out, rain still reads (§7). `docs/research/rain-look-interview.md`. |
 | Rain and shelter | **A cell the sky cannot reach stays dry** — under a roof slab, and under a tree canopy. Nothing spawns, nothing slows, nothing is watered there. |
 | Rain and pace | Rain slows **walking and running alike** for pawns standing in it; a roof or a canopy gives the pace back. Apparel can buy it back later (§9). |
 | Rain and crops | Rain **aids growth** on sky-exposed crops, scaled by intensity. |
@@ -80,8 +81,10 @@ query nobody restates (P1).
 Content is a `WeatherDef` family in `Defs/Core/World/Weather.xml`, beside `Climate.xml` — numbers
 in XML, curve shape in code (the Climate rule: *"the curve's shape is code, not content"*). Each
 def carries: `tempOffsetC` (at full intensity), `cloudPerMille`, `moveFloorPerMille` (the pace at
-intensity 1000; rain only), `growBonusPerMilleAtFull`, per-season weights (per-10,000, Wash ·
-Glare · Rime), and duration bounds in game hours.
+intensity 1000; rain only), `growBonusPerMilleAtFull`, `gloomPerMille` (how far the kind drains
+the day to grey: 0 for Clear and Rain, most of the way for Cloudy, all of it for Storm),
+`windPerMille` (the wind's strength, 1000 ordinary), per-season weights (per-10,000, Wash · Glare ·
+Rime), and duration bounds in game hours.
 
 The invented first table:
 
@@ -89,7 +92,13 @@ The invented first table:
 |---|---|---|---|
 | Clear | 4,500 | 6,500 | 5,500 |
 | Cloudy | 3,000 | 2,000 | 4,000 |
-| Rain | 2,500 | 1,500 | 500 |
+| Rain | 1,900 | 1,100 | 400 |
+| Storm | 600 | 400 | 100 |
+
+Storm took its weight out of Rain's, roughly one wet spell in four (the owner's *"then have dim
+days"*, 2026-09-25). The chance of a wet spell in each season is unchanged. Storm lasts 4–12 h,
+rolls its intensity between 800 and 1000, and blows at `windPerMille` 1300. Lightning is still a
+seam (§9).
 
 Durations: clear 16–40 h, cloudy 10–30 h, rain 6–24 h. Rain's intensity rolls between 250 and
 1000 per episode. Rime's rain is the known compromise of shipping rain before snow — cold rain
@@ -221,6 +230,18 @@ lags the rain: it wets over tens of game minutes and dries over hours.
   not own those shaders (d-20).
 - **Design 38's ground work keeps the two globals** (`_OdysseyRain`, `_OdysseySkyTex`) through any
   later rework of the ground shader, so that neither track builds half of the wetness.
+
+**Rain keeps its colour** (owner, 2026-09-25). The grade has two terms. *Cover* dims the sun
+and softens the shadows and leaves the colour, and it is the whole of an ordinary rainy day. The
+kind's *gloom* drains to grey and weights the grey volume, and only Cloudy and Storm carry it.
+Wet ground deepens rather than darkens. The owner is choosing by eye between richer-and-slightly-
+darker and gloss only (both on the debug Weather tab).
+
+**Zoomed out, rain still reads** (owner: *"When I zoomed out I couldn't really see any rain"*).
+A screen-space streak layer is the third draw of `Odyssey/Rain`: one full-screen triangle, fading
+in between 55 m and 95 m of camera distance, where the 3D drops shrink to a couple of pixels a
+frame. It slants with the wind across the screen and is masked by the cover map at the depth
+behind each pixel, so it is never drawn into a cut-away room.
 
 **Overcast goes through `DaylightDirector`, as one pure function.** `Overcast.Grade(state, cover)`
 is applied after the hour's own state, so the time of day shows through a grey day. At full cover:
