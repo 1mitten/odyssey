@@ -1,6 +1,8 @@
 #nullable enable
 using System;
 using Odyssey.Presentation.World;
+using Odyssey.Sim.Contracts;
+using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
 
@@ -15,14 +17,26 @@ namespace Odyssey.Presentation.Rendering
     /// lands on (ground, water, canopy, something built), stored as kind / 4. One texel per
     /// column: 115 KB on the Huge board as half floats.</para>
     ///
-    /// <para><b>Prototype (claude/rain-look).</b> Built from the render mirror, which is what the
-    /// picture has to agree with. In the weather design the same column rule is owned once, in
-    /// the simulation, and this becomes its reader — with a test that holds the two to the same
-    /// answer cell by cell, the <c>TerraceFoot</c>/<c>BankLayout</c> pattern.</para>
+    /// <para><b>The rule is the simulation's</b> (design 43 §6, P1). Which layer the rain stops at
+    /// is <see cref="SkyColumnRule.Compute{T}"/>, the same function the simulation's
+    /// <see cref="SkyColumns"/> calls, asked here of the render mirror
+    /// (<see cref="MirrorSkySource"/>) because the mirror is what the picture has to agree with.
+    /// This class owns only the metres — where in that layer a slab, a pond's surface or a
+    /// crown sits — and <c>SkyAgreementTests</c> holds the two readers to the same answer cell
+    /// by cell on the played board, the <c>TerraceFoot</c>/<c>BankLayout</c> pattern. So the
+    /// pace penalty and the drawn rain cannot disagree about where a roof is.</para>
     ///
-    /// <para>Cost: <see cref="Rebuild"/> walks every column from the top down until it meets
-    /// something — at most the board's layers per column, usually two or three. A game would call
-    /// <see cref="RebuildChunkColumns"/> for the chunks <c>RefreshDirty</c> touched instead.</para>
+    /// <para>Cost: <see cref="Rebuild"/> is the rule's board-wide form
+    /// (<see cref="SkyColumnRule.ComputeBoard{T}"/>), one walk per column from the top down until
+    /// it meets something — usually a few cells. <see cref="SyncDirty"/> asks the rule only for the
+    /// columns of the chunks that changed and the canopy's reach around them.</para>
+    ///
+    /// <para><b>One difference in the metres, and it is deliberate.</b> The rule compares a canopy
+    /// with a column's own landing in layers, so a pond one layer above a trunk and within its
+    /// reach counts as under the crown, where comparing metres would have put the pond's surface
+    /// (0.72 of a layer) above a crown 4.5 m up. The simulation must answer in layers, and the
+    /// picture follows it rather than the other way round; the case needs a pond on the terrace
+    /// above a tree, within a column of it.</para>
     /// </summary>
     public sealed class SkyHeightMap : IDisposable
     {
@@ -35,8 +49,8 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static float CanopyHeight { get; set; } = 4.5f;
 
-        /// <summary>How many columns either side of a trunk its canopy covers. 1 is a 3 × 3.</summary>
-        public static int CanopyReach { get; set; } = 1;
+        /// <summary>How many columns either side of a trunk its canopy covers: the simulation's, never a second number.</summary>
+        public static int CanopyReach => SkyColumnRule.CanopyReach;
 
         static readonly int SkyTexId = Shader.PropertyToID("_OdysseySkyTex");
         static readonly int SkyParamsId = Shader.PropertyToID("_OdysseySkyParams");
@@ -46,6 +60,8 @@ namespace Odyssey.Presentation.Rendering
         readonly Color[] _pixels;
         readonly float[] _stop;
         readonly byte[] _kind;
+        readonly SkyColumn[] _columns;
+        readonly int[] _trunks;
 
         public SkyHeightMap(WorldRenderModel model)
         {
@@ -61,6 +77,8 @@ namespace Odyssey.Presentation.Rendering
             _pixels = new Color[w * d];
             _stop = new float[w * d];
             _kind = new byte[w * d];
+            _columns = new SkyColumn[w * d];
+            _trunks = new int[w * d];
         }
 
         public Texture2D Texture => _texture;
@@ -74,18 +92,22 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>What the rain lands on over a column (see the Kind constants).</summary>
         public float KindAt(int x, int z) => _kind[z * _model.Size.SizeX + x];
 
-        /// <summary>Every column, then the canopies, then upload and publish.</summary>
+        /// <summary>Every column, by the rule's board-wide form, then upload and publish.</summary>
         public void Rebuild()
         {
-            int w = _model.Size.SizeX, d = _model.Size.SizeZ;
-            for (int z = 0; z < d; z++)
-            for (int x = 0; x < w; x++)
-                Column(x, z);
-            Canopies(0, 0, w - 1, d - 1);
+            SkyColumnRule.ComputeBoard(new MirrorSkySource(_model), _columns, _trunks);
+            for (int c = 0; c < _columns.Length; c++)
+            {
+                _stop[c] = Metres(_columns[c], out byte kind);
+                _kind[c] = kind;
+            }
             Upload();
         }
 
-        /// <summary>The columns a set of chunks covers, and the canopy reach around them.</summary>
+        /// <summary>
+        /// The columns a set of chunks covers, and the canopy reach around them: a trunk that went
+        /// in the rectangle changes the columns within reach of it, and nothing further.
+        /// </summary>
         public void RebuildChunkColumns(int x0, int z0, int x1, int z1)
         {
             int r = CanopyReach;
@@ -95,7 +117,6 @@ namespace Odyssey.Presentation.Rendering
             for (int z = az; z <= bz; z++)
             for (int x = ax; x <= bx; x++)
                 Column(x, z);
-            Canopies(Math.Max(0, ax - r), Math.Max(0, az - r), Math.Min(w - 1, bx + r), Math.Min(d - 1, bz + r));
             Upload();
         }
 
@@ -141,63 +162,36 @@ namespace Odyssey.Presentation.Rendering
         void Column(int x, int z)
         {
             int columnIndex = z * _model.Size.SizeX + x;
-            float stop = 0f;
-            byte kind = (byte)KindGround;
-
-            for (int y = _model.Size.SizeY - 1; y >= 0; y--)
-            {
-                int index = _model.Index(x, z, y);
-                if (_model.IsSolid(index))
-                {
-                    stop = (y + 1) * CellMetrics.SizeY;
-                    kind = (byte)KindGround;
-                    break;
-                }
-                if (NaturalContent.IsWater(_model.Terrain(index)))
-                {
-                    stop = y * CellMetrics.SizeY + CellMetrics.SizeY * ChunkMesher.WaterSurface;
-                    kind = (byte)KindWater;
-                    break;
-                }
-                if (_model.Floor(index) != 0)
-                {
-                    stop = y * CellMetrics.SizeY + CellMetrics.SlabLift;
-                    kind = (byte)KindBuilt;
-                    break;
-                }
-            }
-
-            _stop[columnIndex] = stop;
+            SkyColumn answer = SkyColumnRule.Compute(new MirrorSkySource(_model), x, z);
+            _stop[columnIndex] = Metres(answer, out byte kind);
             _kind[columnIndex] = kind;
         }
 
         /// <summary>
-        /// Every tree in the rectangle lifts the columns around its trunk to its canopy, where the
-        /// canopy is higher than what is already there. A tree stands in the air cell above its
-        /// ground, so the canopy is measured from that cell's floor.
+        /// Where in its layer the rain lands, in metres, and on what. The layer is the rule's; the
+        /// height within it is the drawing's own: a solid cell's top, a slab's lift, a pond's
+        /// surface, and a crown <see cref="CanopyHeight"/> above the floor its trunk stands on —
+        /// inside the second of the <see cref="SkyColumnRule.CanopyLayers"/> it covers.
         /// </summary>
-        void Canopies(int x0, int z0, int x1, int z1)
+        public static float Metres(SkyColumn answer, out byte kind)
         {
-            int w = _model.Size.SizeX, d = _model.Size.SizeZ, r = CanopyReach;
-            for (int z = z0; z <= z1; z++)
-            for (int x = x0; x <= x1; x++)
-            for (int y = _model.Size.SizeY - 1; y >= 0; y--)
+            switch (answer.Kind)
             {
-                int index = _model.Index(x, z, y);
-                if (!NaturalContent.IsTree(_model.EdificeDef(index))) continue;
-
-                float crown = y * CellMetrics.SizeY + CanopyHeight;
-                for (int dz = -r; dz <= r; dz++)
-                for (int dx = -r; dx <= r; dx++)
-                {
-                    int cx = x + dx, cz = z + dz;
-                    if (cx < 0 || cz < 0 || cx >= w || cz >= d) continue;
-                    int c = cz * w + cx;
-                    if (_stop[c] >= crown) continue;
-                    _stop[c] = crown;
-                    _kind[c] = (byte)KindCanopy;
-                }
-                break;
+                case SkyStop.Water:
+                    kind = (byte)KindWater;
+                    return answer.StopLayer * CellMetrics.SizeY + CellMetrics.SizeY * ChunkMesher.WaterSurface;
+                case SkyStop.Built:
+                    kind = (byte)KindBuilt;
+                    return answer.StopLayer * CellMetrics.SizeY + CellMetrics.SlabLift;
+                case SkyStop.Canopy:
+                    kind = (byte)KindCanopy;
+                    return answer.TrunkLayer * CellMetrics.SizeY + CanopyHeight;
+                case SkyStop.Ground:
+                    kind = (byte)KindGround;
+                    return answer.StopLayer * CellMetrics.SizeY;
+                default:
+                    kind = (byte)KindGround;
+                    return 0f;
             }
         }
 
@@ -222,5 +216,22 @@ namespace Odyssey.Presentation.Rendering
             if (Application.isPlaying) UnityEngine.Object.Destroy(_texture);
             else UnityEngine.Object.DestroyImmediate(_texture);
         }
+    }
+
+    /// <summary>
+    /// The render mirror's answers to the column rule's four questions (design 43 §6). Read off
+    /// the same arrays the chunk mesher draws from, so what the rule is told is what is drawn.
+    /// </summary>
+    public readonly struct MirrorSkySource : ISkyColumnSource
+    {
+        readonly WorldRenderModel _model;
+
+        public MirrorSkySource(WorldRenderModel model) => _model = model;
+
+        public GridSize Size => _model.Size;
+        public bool IsSolid(int index) => _model.IsSolid(index);
+        public bool IsWater(int index) => NaturalContent.IsWater(_model.Terrain(index));
+        public bool HasSlab(int index) => _model.Floor(index) != 0;
+        public bool IsTree(int index) => NaturalContent.IsTree(_model.EdificeDef(index));
     }
 }
