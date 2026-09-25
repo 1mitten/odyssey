@@ -172,13 +172,14 @@ ui.schedule.meditate,Meditate,ui.schedule,M7,"Quiet hours, for whatever comes to
 ui.recipe.meal,Cook a meal,ui.recipe,M3,"Any raw food, three carrots' worth, into one meal"
 ui.bill.heading,Bills,ui.bill,M3,What this station is told to make. The top one is worked first
 ui.bill.add,Add a bill,ui.bill,M3,Put a new order at the bottom of the list
-ui.bill.none,No bills,ui.bill,M3,Nothing will be cooked here until a bill is added
+ui.bill.none,No bills yet,ui.bill,M3,Nothing will be made here until a bill is added
 ui.bill.mode.until,Until you have,ui.bill,M3,"Cook while the colony holds fewer than this many meals, and start again when it drops below"
 ui.bill.mode.times,Make,ui.bill,M3,"Cook this many, then stop"
 ui.bill.mode.forever,Forever,ui.bill,M3,Never stop cooking
-ui.bill.suspended,Suspended,ui.bill,M3,"Stopped by you. The next bill down is worked instead"
+ui.bill.suspended,Paused,ui.bill,M3,"Stopped by you. The next bill down is worked instead"
 ui.bill.done,Done,ui.bill,M3,"This bill's count is met. It starts again by itself when it needs to"
 ui.bill.unpowered,No power,ui.bill,M3,"The electric cooker needs power to cook. Nothing on the hob will spoil in the meantime"
+ui.bill.waiting,Waiting for power,ui.bill,M3,"This bill will be worked once the station has power again"
 ui.bill.needs,"Each meal: raw food, about 3 carrots",ui.bill,M3,"A meal takes 500 of any raw food by nutrition: three carrots, or meat once there is any"
 ui.bill.needs.fire,"Each meal: raw food, about 3 carrots, and 1 wood",ui.bill,M3,"A campfire burns one wood for every meal it cooks"
 ui.bill.supply,Raw food for {n} meals,ui.bill,M3,"What the raw food on the map, in stores and on the ground, would cook into"

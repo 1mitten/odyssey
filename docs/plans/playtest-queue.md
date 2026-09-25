@@ -23,6 +23,16 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the new bill list read at a glance, and is anything on it in the way?** (`claude/bills-pane`,
+  design 49, stacked on `claude/cooking`.) Click an **Electric Cooker** with no power: the pane is
+  wider (680), a warn strip reads **No power** with a green **Switch off** beside it, and the tile's
+  own Switch row is gone. Add three bills with the full-width cyan **Add a bill**; cycle one's mode
+  (the cell with the round arrow), step a target with the red minus and green plus (shift for ten),
+  pause one (it fades, its buttons do not), move one with the stacked arrows, bin one. Then a
+  campfire, which has no strip. A wrong answer is a count or a number that is not centred, a row
+  whose name is cut off at a length you would use, the pane jumping under the pointer while you
+  press Add or the bin, or the reorder pair being too small to hit. Say whether the empty status
+  line on a working bill looks unfinished.
 - **Does a cook turn carrots into meals from a bill, and does it read as cooking?** (`claude/cooking`,
   design 48 K1.) Build an **Electric Cooker** (Build → Production) on a powered line, or use a **campfire**.
   Click it: the pane shows **Bills** with *Add a bill*. Add one, stock carrots, and watch: a cook

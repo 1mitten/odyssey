@@ -1186,7 +1186,13 @@ namespace Odyssey.Hud
         public bool OffersHearth => IsCampfire && !IsHearth;
 
         /// <summary>A store's pane and a campfire's are the full 560; every other tile's is the narrow column.</summary>
-        public bool IsWide => IsStore || IsCampfire;
+        public bool IsWide => IsStore || IsCampfire || IsStation;
+
+        /// <summary>
+        /// Something that takes bills stands in the tile (design 49): the pane is the bench width
+        /// and carries the bill list. A campfire is one, so it is wide on both counts.
+        /// </summary>
+        public bool IsStation => BillsModel.IsStation(TileEdifice);
 
         /// <summary>The header line on the hearth, and the button on any other campfire.</summary>
         public const string HearthKey = "ui.home.hearth";

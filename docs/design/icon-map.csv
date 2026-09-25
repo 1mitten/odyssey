@@ -451,6 +451,7 @@ ui.bill.mode.forever,-,,,"Interface words, no icon wanted",-,gap
 ui.bill.suspended,-,,,"a pause mark. Interface furniture drawn as a HudGlyph",-,gap
 ui.bill.done,-,,,"a tick. Interface furniture drawn as a HudGlyph",-,gap
 ui.bill.unpowered,-,,,"a broken plug. Our own concept",-,gap
+ui.bill.waiting,-,,,"Interface words, no icon wanted",-,gap
 ui.bill.needs,-,,,"Interface words, no icon wanted",-,gap
 ui.bill.needs.fire,-,,,"Interface words, no icon wanted",-,gap
 ui.bill.supply,-,,,"Interface words, no icon wanted",-,gap

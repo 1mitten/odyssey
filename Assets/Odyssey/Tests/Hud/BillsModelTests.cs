@@ -24,6 +24,17 @@ namespace Odyssey.Tests.Hud
             return snapshot;
         }
 
+        static WorldSnapshot WithGalley(bool ready, bool switchOn, params BillView[] bills)
+        {
+            WorldSnapshot snapshot = WithStation(ready, bills);
+            snapshot.AddPowerDevice(new PowerDeviceView(AtIndex, -1, BuildingHandle.Galley, PowerRole.Consumer,
+                switchOn, ready, 7, 350, 0, 0, 0));
+            return snapshot;
+        }
+
+        static BillView Paused(int target, int count) =>
+            new BillView(RecipeHandle.Meal, BillModeHandle.UntilYouHave, target, 0, count, true, false);
+
         /// <summary>
         /// The pane says what a meal takes and whether there is any (owner, 2026-09-25: "I didn't
         /// know what ingredients I needed").
@@ -59,7 +70,7 @@ namespace Odyssey.Tests.Hud
             model.Refresh(Frame.Write(), At, AtIndex, EdificeHandle.Campfire);
             Assert.That(model.Showing, Is.True, "a campfire cooks too");
             Assert.That(model.Rows, Is.Empty, "and one nobody has used has no bills");
-            Assert.That(model.Status, Is.EqualTo(Registry.Label("ui.bill.none")));
+            Assert.That(model.EmptyLabel, Is.EqualTo(Registry.Label("ui.bill.none")));
         }
 
         [Test]
@@ -79,7 +90,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(until.Progress, Is.EqualTo("3 / 10"));
             Assert.That(until.State, Is.Empty);
             Assert.That(times.State, Is.EqualTo(Registry.Label("ui.bill.done")), "its count is met");
-            Assert.That(forever.Target, Is.Empty, "a bill that never stops counts to nothing");
+            Assert.That(forever.Target, Is.EqualTo(BillsModel.NoFigure), "a bill that never stops counts to nothing");
             Assert.That(forever.State, Is.EqualTo(Registry.Label("ui.bill.suspended")));
             Assert.That(until.IsFirst && forever.IsLast, Is.True);
         }
@@ -90,7 +101,7 @@ namespace Odyssey.Tests.Hud
             var model = new BillsModel();
             model.Refresh(WithStation(false, Until(10, 0)), At, AtIndex, EdificeHandle.Galley);
             Assert.That(model.Ready, Is.False);
-            Assert.That(model.Status, Is.EqualTo(Registry.Label("ui.bill.unpowered")));
+            Assert.That(model.ProblemLabel, Is.EqualTo(Registry.Label("ui.bill.unpowered")));
         }
 
         [Test]
@@ -160,6 +171,155 @@ namespace Odyssey.Tests.Hud
             Assert.That(BillsModel.ModeKeys.Length, Is.EqualTo(BillModeHandle.Count));
             foreach (string key in BillsModel.RecipeKeys.Concat(BillsModel.ModeKeys))
                 Assert.That(Registry.Label(key), Is.Not.EqualTo(key), key + " is a name the registry knows");
+        }
+        // ---- design 49: the general bill list ------------------------------------------------------
+
+        [Test]
+        public void TheStatusLineSaysWhyInItsOwnInk()
+        {
+            var model = new BillsModel();
+            model.Refresh(WithStation(true, Until(10, 3), Paused(10, 3), Until(4, 4, satisfied: true)),
+                At, AtIndex, EdificeHandle.Galley);
+            Assert.That((model.Rows[0].State, model.Rows[0].Tone), Is.EqualTo((string.Empty, BillTone.Meta)),
+                "a bill being worked says nothing: there is no worker rule to name");
+            Assert.That((model.Rows[1].State, model.Rows[1].Tone), Is.EqualTo((Registry.Label("ui.bill.suspended"), BillTone.Dim)));
+            Assert.That((model.Rows[2].State, model.Rows[2].Tone), Is.EqualTo((Registry.Label("ui.bill.done"), BillTone.Meta)));
+
+            model.Refresh(WithStation(false, Until(10, 3), Paused(10, 3)), At, AtIndex, EdificeHandle.Galley);
+            foreach (BillRow row in model.Rows)
+                Assert.That((row.State, row.Tone), Is.EqualTo((Registry.Label("ui.bill.waiting"), BillTone.Warn)),
+                    "a dark cooker is waiting for power, and a paused bill there will be too once it is resumed");
+        }
+
+        [Test]
+        public void ACampfireNeverWaitsForPower()
+        {
+            var model = new BillsModel();
+            model.Refresh(WithStation(false, Until(10, 3)), At, AtIndex, EdificeHandle.Campfire);
+            Assert.That(model.HasProblem, Is.False);
+            Assert.That(model.Rows[0].Tone, Is.Not.EqualTo(BillTone.Warn));
+        }
+
+        [Test]
+        public void TheStripIsUpOnlyWhileAStationThatNeedsPowerHasNone()
+        {
+            var model = new BillsModel();
+            model.Refresh(WithGalley(true, true, Until(10, 3)), At, AtIndex, EdificeHandle.Galley);
+            Assert.That(model.HasProblem, Is.False);
+            Assert.That(model.ProblemLabel, Is.Empty);
+
+            model.Refresh(WithGalley(false, true, Until(10, 3)), At, AtIndex, EdificeHandle.Galley);
+            Assert.That(model.HasProblem, Is.True);
+            Assert.That(model.ProblemLabel, Is.EqualTo(Registry.Label("ui.bill.unpowered")));
+            Assert.That(model.SwitchLabel, Is.EqualTo(Registry.Label("ui.command.switchoff")),
+                "switched on but on a dead net: the one thing the player can do here is switch it off");
+            Assert.That(model.PressSwitch(out Intent off), Is.True);
+            Assert.That((off.Kind, off.Cell, off.A), Is.EqualTo((IntentKind.SetPowerSwitch, At, 0)));
+
+            model.Refresh(WithGalley(false, false, Until(10, 3)), At, AtIndex, EdificeHandle.Galley);
+            Assert.That(model.SwitchLabel, Is.EqualTo(Registry.Label("ui.command.switchon")));
+            Assert.That(model.PressSwitch(out Intent on), Is.True);
+            Assert.That(on.A, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TheStepperStopsAtOneAndForeverHasNothingToStep()
+        {
+            var model = new BillsModel();
+            model.Refresh(WithStation(true,
+                    Until(1, 0),
+                    Until(12, 3),
+                    new BillView(RecipeHandle.Meal, BillModeHandle.Forever, 10, 2, 0, false, false)),
+                At, AtIndex, EdificeHandle.Galley);
+            BillRow one = model.Rows[0], twelve = model.Rows[1], forever = model.Rows[2];
+
+            Assert.That((one.CanLess, one.CanMore), Is.EqualTo((false, true)), "the minus is off at one");
+            Assert.That(model.PressNudge(one, -1, out _), Is.False);
+            Assert.That((twelve.CanLess, twelve.CanMore), Is.EqualTo((true, true)));
+            Assert.That(twelve.Target, Is.EqualTo("12"));
+
+            Assert.That((forever.CanLess, forever.CanMore), Is.EqualTo((false, false)));
+            Assert.That((forever.Target, forever.Progress, forever.ProgressPerMille),
+                Is.EqualTo((BillsModel.NoFigure, BillsModel.NoFigure, 0)), "dashes and an empty track");
+        }
+
+        [Test]
+        public void TheTrackFillsToTheCountAndNoFurther()
+        {
+            var model = new BillsModel();
+            model.Refresh(WithStation(true, Until(10, 3), Until(10, 25), Until(4, 0)),
+                At, AtIndex, EdificeHandle.Galley);
+            Assert.That(model.Rows.Select(r => r.ProgressPerMille), Is.EqualTo(new[] { 300, 1000, 0 }),
+                "until-you-have counts the colony's meals, which can pass the target");
+        }
+
+        [Test]
+        public void TheCountFitsItsColumnAtThreeDigits()
+        {
+            Assert.That(BillsModel.ProgressText(3, 10), Is.EqualTo("3 / 10"));
+            Assert.That(BillsModel.ProgressText(10, 10), Is.EqualTo("10 / 10"));
+            Assert.That(BillsModel.ProgressText(100, 120), Is.EqualTo("100/120"), "the spaces go before the column overflows");
+            // 12 px IBM Plex Mono advances 0.6 em a character: seven is 50 px in a 64 px column.
+            Assert.That(BillsModel.SpacedProgressMax * 12 * 0.6, Is.LessThanOrEqualTo(BillsLayout.ProgressColumn));
+            Assert.That(BillsModel.ProgressText(100, 120).Length * 12 * 0.6, Is.LessThanOrEqualTo(BillsLayout.ProgressColumn));
+        }
+
+        [Test]
+        public void TheHeadingCountsTheBillsAndAnEmptyListSaysSoInARow()
+        {
+            var model = new BillsModel();
+            model.Refresh(WithStation(true, Until(10, 3), Until(4, 1)), At, AtIndex, EdificeHandle.Galley);
+            Assert.That(model.CountLabel, Is.EqualTo("(2)"));
+            Assert.That(model.EmptyLabel, Is.Empty);
+            Assert.That(model.Rows.Select(r => r.Number), Is.EqualTo(new[] { "1", "2" }), "counted from one");
+
+            model.Refresh(Frame.Write(), At, AtIndex, EdificeHandle.Galley);
+            Assert.That(model.CountLabel, Is.EqualTo("(0)"));
+            Assert.That(model.EmptyLabel, Is.EqualTo(Registry.Label("ui.bill.none")));
+        }
+
+        [Test]
+        public void TheProductTileTakesItsCategorysHue()
+        {
+            var model = new BillsModel();
+            model.Refresh(WithStation(true, Until(10, 3)), At, AtIndex, EdificeHandle.Campfire);
+            Assert.That(model.Rows[0].ProductCategory, Is.EqualTo(0), "a meal is food");
+            Assert.That(BillsModel.RecipeCategories.Length, Is.EqualTo(RecipeHandle.Count));
+        }
+
+        [Test]
+        public void EveryStationIsOneRowAndAddsItsOwnRecipe()
+        {
+            // The composite's contract: what takes bills is a table, not a condition in the pane.
+            Assert.That(BillsModel.Stations.Select(s => s.Edifice).Distinct().Count(), Is.EqualTo(BillsModel.Stations.Length));
+            foreach (BillStation station in BillsModel.Stations)
+            {
+                Assert.That(BillsModel.IsStation(station.Edifice), Is.True);
+                Assert.That((uint)station.DefaultRecipe, Is.LessThan((uint)RecipeHandle.Count));
+                var model = new BillsModel();
+                model.Refresh(Frame.Write(), At, AtIndex, station.Edifice);
+                Assert.That(model.PressAdd(out Intent add), Is.True);
+                Assert.That((add.A, add.B), Is.EqualTo((BillEdit.Add, station.DefaultRecipe)));
+            }
+            Assert.That(BillsModel.StationNeedsPower(EdificeHandle.Galley), Is.True);
+            Assert.That(BillsModel.StationNeedsPower(EdificeHandle.Campfire), Is.False);
+        }
+
+        [Test]
+        public void TheSignatureMovesWithEverythingTheListDraws()
+        {
+            var model = new BillsModel();
+            model.Refresh(WithGalley(true, true, Until(10, 3)), At, AtIndex, EdificeHandle.Galley);
+            int before = model.Signature();
+            model.Refresh(WithGalley(true, true, Until(10, 3)), At, AtIndex, EdificeHandle.Galley);
+            Assert.That(model.Signature(), Is.EqualTo(before), "the same frame draws nothing new");
+
+            model.Refresh(WithGalley(true, true, Until(10, 4)), At, AtIndex, EdificeHandle.Galley);
+            Assert.That(model.Signature(), Is.Not.EqualTo(before), "the count");
+            model.Refresh(WithGalley(false, true, Until(10, 3)), At, AtIndex, EdificeHandle.Galley);
+            Assert.That(model.Signature(), Is.Not.EqualTo(before), "the power");
+            model.Refresh(WithGalley(true, false, Until(10, 3)), At, AtIndex, EdificeHandle.Galley);
+            Assert.That(model.Signature(), Is.Not.EqualTo(before), "the switch");
         }
     }
 }
