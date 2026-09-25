@@ -271,6 +271,7 @@ ui.command.unequip,Unequip,ui.command,M3,Put it down
 ui.command.wear,Wear,ui.command,M3,Put this on
 ui.command.drop,Drop,ui.command,M3,Leave this here
 ui.command.pickup,Pick up,ui.command,M3,Carry in inventory
+ui.command.remove,Remove,ui.command,GE,"Take this off, and leave it for the haulers"
 ui.command.refuel,Refuel,ui.command,M3,Top this up
 ui.command.switchon,Switch on,ui.command,M3,Power this up
 ui.command.switchoff,Switch off,ui.command,M3,Power this down
@@ -462,6 +463,10 @@ ui.item.compass,Compass,ui.item,M3,Travel without getting lost
 ui.item.binoculars,Binoculars,ui.item,M3,See further than you can shoot
 ui.item.toolkit,Toolkit,ui.item,M3,"Better work, faster"
 ui.item.canteen,Canteen,ui.item,M3,"Water, carried"
+ui.item.woolcap,Wool cap,ui.item,GE,"Warm on the head. A placeholder name: nothing is worn yet, and the Gear tab shows it only in its preview"
+ui.item.gasmask,Gas mask,ui.item,GE,"Filters smoke and worse. A placeholder name: nothing is worn yet, and the Gear tab shows it only in its preview"
+ui.item.fieldcoat,Field coat,ui.item,GE,"A long coat for cold and rain. A placeholder name: nothing is worn yet, and the Gear tab shows it only in its preview"
+ui.item.paddedvest,Padded vest,ui.item,GE,"Worn over the garment; turns a blow aside. A placeholder name: nothing is worn yet, and the Gear tab shows it only in its preview"
 ui.item.bedroll,Bedroll,ui.item,M3,Sleep away from home
 ui.terrain.grass,Grass,ui.terrain,M1,"The living surface. Trees grow here and nothing else"
 ui.terrain.bareearth,Bare Earth,ui.terrain,M1,"Soil with the grass worn off it"
@@ -546,6 +551,7 @@ ui.debug.spawncrowbar,Spawn crowbar,ui.debug,CB,"Adds a crowbar near the camera"
 ui.debug.spawnmachete,Spawn machete,ui.debug,CB,"Adds a machete near the camera"
 ui.debug.spawnarcblade,Spawn arc blade,ui.debug,CB,"Adds an arc blade near the camera"
 ui.debug.spawnrat,Spawn duct rat,ui.debug,AN,"Adds a duct rat near the camera"
+ui.debug.gearpreview,Preview full kit,ui.debug,GE,"Dresses every colonist's Gear tab in a made-up kit, to judge the tab. Interface only: not saved, and nothing is worn"
 ui.debug.spawnbandits,Spawn 3 bandits,ui.debug,CB,"Adds three bandits near the camera, each on its own tile"
 ui.debug.armcolonists,Arm every colonist,ui.debug,CB,"Every colonist standing with nothing in hand takes a random melee weapon"
 ui.debug.jumpsfail,Jumps always fail,ui.debug,JP,"Every jump over a stream falls short into the water, so a failed jump can be watched"
@@ -819,6 +825,16 @@ ui.res.category.items,Items,ui.res.category,M3,"Made things that are carried, wo
 ui.res.category.weapons,Weapons,ui.res.category,M3,What a colonist fights with
 ui.tab.storage,Storage,ui.tab,M3,"What a store takes, and how much it matters"
 ui.tab.tile,Tile,ui.tab,M3,"The ground itself, under whatever is standing on it"
+ui.tab.needs,Needs,ui.tab,M2,"Food, rest and mood"
+ui.tab.skills,Skills,ui.tab,M2,"What she is good at, and how far to the next level"
+ui.tab.gear,Gear,ui.tab,GE,"What she holds, wears and keeps on her"
+ui.tab.thoughts,Thoughts,ui.tab,M2,What is on her mind
+ui.tab.social,Social,ui.tab,M6,Who she gets on with
+ui.tab.health,Health,ui.tab,CB,"Hit points, condition and the weapon in her hand"
+ui.tab.log,Log,ui.tab,M6,What she has done lately
+ui.tab.later.thoughts,arrives with the thought log,ui.tab,M2,Why the Thoughts tab is not live yet
+ui.tab.later.social,arrives with relationships,ui.tab,M6,Why the Social tab is not live yet
+ui.tab.later.log,arrives with the colonist log,ui.tab,M6,Why the Log tab is not live yet
 ui.keys.research,Research tab,ui.keys,RS,"Open and close the research window"
 ui.debug.finishresearch,Finish research,ui.debug,RS,"Completes the project being researched and starts the next in the queue"
 ui.research.category.power,Power,ui.research.category,RS,"Making current, carrying it and storing it"
@@ -871,3 +887,28 @@ ui.assign.response,Response,ui.assign,HA,"What she does about danger. Press a ce
 ui.assign.anywhere,Anywhere,ui.assign,HA,"She takes work wherever it is"
 ui.assign.home,Home,ui.assign,HA,"She takes no work outside home, and walks home when idle. A draft overrides it"
 ui.assign.nohearth,No hearth yet,ui.assign,HA,"There is no hearth, so there is no home and Home keeps nobody in. Mark a campfire as the hearth"
+ui.gear.slot.head,Head,ui.gear,GE,"A cap, a hood or a helmet"
+ui.gear.slot.face,Face,ui.gear,GE,"Glasses, a mask or a gas mask"
+ui.gear.slot.body,Body,ui.gear,GE,"One garment. With nothing here she wears the issued jumpsuit"
+ui.gear.slot.back,Back,ui.gear,GE,A pack: four more kit slots
+ui.gear.slot.armour,Armour,ui.gear,GE,A vest worn over the garment
+ui.gear.nothingworn,Nothing worn,ui.gear,GE,An empty worn slot
+ui.gear.jumpsuit,Issued jumpsuit,ui.gear,GE,"What every colonist wears when the Body slot is empty. Not an item: it cannot be taken off"
+ui.gear.alwaysworn,Always worn,ui.gear,GE,The jumpsuit's meta word
+ui.gear.kit,Kit,ui.gear,GE,"Small things kept on her: two on the belt, four more with a pack"
+ui.gear.packhint,Wear a pack for 4 more,ui.gear,GE,Shown beside the locked kit slots
+ui.gear.effect.armour,Armour,ui.gear,GE,How much of a blow what she wears turns aside
+ui.gear.effect.warmth,Warmth,ui.gear,GE,The temperatures she is comfortable in
+ui.gear.effect.rain,Rain,ui.gear,GE,How much of the rain's slowdown what she wears buys back
+ui.gear.effect.kit,Kit,ui.gear,GE,How many kit slots are used of how many she has
+ui.gear.kitcount,{used} of {capacity},ui.gear,GE,"The kit's count on the effects line, e.g. 4 of 6"
+ui.gear.loadout,Loadout,ui.gear,GE,"The rule she follows about what to wear and carry"
+ui.gear.loadout.none,None,ui.gear,GE,"No loadout: she keeps what she has"
+ui.gear.loadout.doctor,Doctor,ui.gear,GE,"A preview loadout: medical supplies and a ration"
+ui.gear.loadout.winter,Winter,ui.gear,GE,"A preview loadout: a coat and a cap"
+ui.gear.loadout.later,Loadouts arrive with their editor,ui.gear,GE,Shown in the loadout picker until loadouts exist
+ui.gear.pick.title,Pick from stores,ui.gear,GE,"What the stores hold that fits this slot"
+ui.gear.pick.hint,Click a row to fetch it,ui.gear,GE,The foot of the Pick from stores list
+ui.gear.pick.empty,Nothing in the stores fits,ui.gear,GE,The Pick from stores list with nothing in it
+ui.gear.downedreason,Downed. Only the Strip order can take this.,ui.gear,GE,"Why a downed colonist's gear cannot be changed"
+ui.gear.preview,Preview,ui.gear,GE,"Marks a made-up item on the Gear tab while the preview is on"

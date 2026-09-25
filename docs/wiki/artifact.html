@@ -139,15 +139,15 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="wrap">
 <nav aria-label="Sections"><h2>Sections</h2><ul class="navlist">
 <li><a href="#commodities">Commodities<b>52</b></a></li>
-<li><a href="#items">Items and equipment<b>34</b></a></li>
+<li><a href="#items">Items and equipment<b>63</b></a></li>
 <li><a href="#buildings">Buildings and orders<b>83</b></a></li>
-<li><a href="#commands">Commands<b>53</b></a></li>
+<li><a href="#commands">Commands<b>54</b></a></li>
 <li><a href="#work">Work and skills<b>42</b></a></li>
 <li><a href="#colonists">Colonists<b>59</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>48</b></a></li>
 <li><a href="#research">Research<b>26</b></a></li>
-<li><a href="#world">World and interface<b>134</b></a></li>
+<li><a href="#world">World and interface<b>144</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
 </ul></nav>
 <main>
@@ -156,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>872</b><i>named entries</i></div>
+<div class="stat"><b>913</b><i>named entries</i></div>
 <div class="stat"><b>272</b><i>with icon art</i></div>
-<div class="stat m"><b>600</b><i>no art yet</i></div>
+<div class="stat m"><b>641</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -484,8 +484,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="items" data-sec="1">
-<h2>Items and equipment <em class="count">34 entries</em></h2>
+<h2>Items and equipment <em class="count">63 entries</em></h2>
 <p class="blurb">Things a colonist carries, wears or fights with, as distinct from the bulk commodities above. A commodity is counted; an item is an object with a quality and a history.</p>
+<h3 class="nsh">Items and equipment</h3>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
 <div class="row" id="ui.item.knife" data-hay="knife ui.item.knife close work, and butchery " data-gap="0">
@@ -686,11 +687,189 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> salvage gear</div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.item.woolcap" data-hay="wool cap ui.item.woolcap warm on the head. a placeholder name: nothing is worn yet, and the gear tab shows it only in its preview " data-gap="1">
+<div class="nm">Wool cap<span class="k">ui.item.woolcap</span></div>
+<div class="dsc">Warm on the head. A placeholder name: nothing is worn yet, and the Gear tab shows it only in its preview</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.item.gasmask" data-hay="gas mask ui.item.gasmask filters smoke and worse. a placeholder name: nothing is worn yet, and the gear tab shows it only in its preview " data-gap="1">
+<div class="nm">Gas mask<span class="k">ui.item.gasmask</span></div>
+<div class="dsc">Filters smoke and worse. A placeholder name: nothing is worn yet, and the Gear tab shows it only in its preview</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.item.fieldcoat" data-hay="field coat ui.item.fieldcoat a long coat for cold and rain. a placeholder name: nothing is worn yet, and the gear tab shows it only in its preview " data-gap="1">
+<div class="nm">Field coat<span class="k">ui.item.fieldcoat</span></div>
+<div class="dsc">A long coat for cold and rain. A placeholder name: nothing is worn yet, and the Gear tab shows it only in its preview</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.item.paddedvest" data-hay="padded vest ui.item.paddedvest worn over the garment; turns a blow aside. a placeholder name: nothing is worn yet, and the gear tab shows it only in its preview " data-gap="1">
+<div class="nm">Padded vest<span class="k">ui.item.paddedvest</span></div>
+<div class="dsc">Worn over the garment; turns a blow aside. A placeholder name: nothing is worn yet, and the Gear tab shows it only in its preview</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
 <div class="row" id="ui.item.bedroll" data-hay="bedroll ui.item.bedroll sleep away from home " data-gap="0">
 <div class="nm">Bedroll<span class="k">ui.item.bedroll</span></div>
 <div class="dsc">Sleep away from home</div>
 <div class="art"><span class="pill">high</span> camp and crafting</div>
 <div class="ms">M3</div>
+</div>
+</div>
+<h3 class="nsh">The Gear tab's words</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.gear.slot.head" data-hay="head ui.gear.slot.head a cap, a hood or a helmet " data-gap="1">
+<div class="nm">Head<span class="k">ui.gear.slot.head</span></div>
+<div class="dsc">A cap, a hood or a helmet</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.slot.face" data-hay="face ui.gear.slot.face glasses, a mask or a gas mask " data-gap="1">
+<div class="nm">Face<span class="k">ui.gear.slot.face</span></div>
+<div class="dsc">Glasses, a mask or a gas mask</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.slot.body" data-hay="body ui.gear.slot.body one garment. with nothing here she wears the issued jumpsuit " data-gap="1">
+<div class="nm">Body<span class="k">ui.gear.slot.body</span></div>
+<div class="dsc">One garment. With nothing here she wears the issued jumpsuit</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.slot.back" data-hay="back ui.gear.slot.back a pack: four more kit slots " data-gap="1">
+<div class="nm">Back<span class="k">ui.gear.slot.back</span></div>
+<div class="dsc">A pack: four more kit slots</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.slot.armour" data-hay="armour ui.gear.slot.armour a vest worn over the garment " data-gap="1">
+<div class="nm">Armour<span class="k">ui.gear.slot.armour</span></div>
+<div class="dsc">A vest worn over the garment</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.nothingworn" data-hay="nothing worn ui.gear.nothingworn an empty worn slot " data-gap="1">
+<div class="nm">Nothing worn<span class="k">ui.gear.nothingworn</span></div>
+<div class="dsc">An empty worn slot</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.jumpsuit" data-hay="issued jumpsuit ui.gear.jumpsuit what every colonist wears when the body slot is empty. not an item: it cannot be taken off " data-gap="1">
+<div class="nm">Issued jumpsuit<span class="k">ui.gear.jumpsuit</span></div>
+<div class="dsc">What every colonist wears when the Body slot is empty. Not an item: it cannot be taken off</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.alwaysworn" data-hay="always worn ui.gear.alwaysworn the jumpsuit's meta word " data-gap="1">
+<div class="nm">Always worn<span class="k">ui.gear.alwaysworn</span></div>
+<div class="dsc">The jumpsuit's meta word</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.kit" data-hay="kit ui.gear.kit small things kept on her: two on the belt, four more with a pack " data-gap="1">
+<div class="nm">Kit<span class="k">ui.gear.kit</span></div>
+<div class="dsc">Small things kept on her: two on the belt, four more with a pack</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.packhint" data-hay="wear a pack for 4 more ui.gear.packhint shown beside the locked kit slots " data-gap="1">
+<div class="nm">Wear a pack for 4 more<span class="k">ui.gear.packhint</span></div>
+<div class="dsc">Shown beside the locked kit slots</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.effect.armour" data-hay="armour ui.gear.effect.armour how much of a blow what she wears turns aside " data-gap="1">
+<div class="nm">Armour<span class="k">ui.gear.effect.armour</span></div>
+<div class="dsc">How much of a blow what she wears turns aside</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.effect.warmth" data-hay="warmth ui.gear.effect.warmth the temperatures she is comfortable in " data-gap="1">
+<div class="nm">Warmth<span class="k">ui.gear.effect.warmth</span></div>
+<div class="dsc">The temperatures she is comfortable in</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.effect.rain" data-hay="rain ui.gear.effect.rain how much of the rain's slowdown what she wears buys back " data-gap="1">
+<div class="nm">Rain<span class="k">ui.gear.effect.rain</span></div>
+<div class="dsc">How much of the rain's slowdown what she wears buys back</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.effect.kit" data-hay="kit ui.gear.effect.kit how many kit slots are used of how many she has " data-gap="1">
+<div class="nm">Kit<span class="k">ui.gear.effect.kit</span></div>
+<div class="dsc">How many kit slots are used of how many she has</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.kitcount" data-hay="{used} of {capacity} ui.gear.kitcount the kit's count on the effects line, e.g. 4 of 6 " data-gap="1">
+<div class="nm">{used} of {capacity}<span class="k">ui.gear.kitcount</span></div>
+<div class="dsc">The kit's count on the effects line, e.g. 4 of 6</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.loadout" data-hay="loadout ui.gear.loadout the rule she follows about what to wear and carry " data-gap="1">
+<div class="nm">Loadout<span class="k">ui.gear.loadout</span></div>
+<div class="dsc">The rule she follows about what to wear and carry</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.loadout.none" data-hay="none ui.gear.loadout.none no loadout: she keeps what she has " data-gap="1">
+<div class="nm">None<span class="k">ui.gear.loadout.none</span></div>
+<div class="dsc">No loadout: she keeps what she has</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.loadout.doctor" data-hay="doctor ui.gear.loadout.doctor a preview loadout: medical supplies and a ration " data-gap="1">
+<div class="nm">Doctor<span class="k">ui.gear.loadout.doctor</span></div>
+<div class="dsc">A preview loadout: medical supplies and a ration</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.loadout.winter" data-hay="winter ui.gear.loadout.winter a preview loadout: a coat and a cap " data-gap="1">
+<div class="nm">Winter<span class="k">ui.gear.loadout.winter</span></div>
+<div class="dsc">A preview loadout: a coat and a cap</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.loadout.later" data-hay="loadouts arrive with their editor ui.gear.loadout.later shown in the loadout picker until loadouts exist " data-gap="1">
+<div class="nm">Loadouts arrive with their editor<span class="k">ui.gear.loadout.later</span></div>
+<div class="dsc">Shown in the loadout picker until loadouts exist</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.pick.title" data-hay="pick from stores ui.gear.pick.title what the stores hold that fits this slot " data-gap="1">
+<div class="nm">Pick from stores<span class="k">ui.gear.pick.title</span></div>
+<div class="dsc">What the stores hold that fits this slot</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.pick.hint" data-hay="click a row to fetch it ui.gear.pick.hint the foot of the pick from stores list " data-gap="1">
+<div class="nm">Click a row to fetch it<span class="k">ui.gear.pick.hint</span></div>
+<div class="dsc">The foot of the Pick from stores list</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.pick.empty" data-hay="nothing in the stores fits ui.gear.pick.empty the pick from stores list with nothing in it " data-gap="1">
+<div class="nm">Nothing in the stores fits<span class="k">ui.gear.pick.empty</span></div>
+<div class="dsc">The Pick from stores list with nothing in it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.downedreason" data-hay="downed. only the strip order can take this. ui.gear.downedreason why a downed colonist's gear cannot be changed " data-gap="1">
+<div class="nm">Downed. Only the Strip order can take this.<span class="k">ui.gear.downedreason</span></div>
+<div class="dsc">Why a downed colonist's gear cannot be changed</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.gear.preview" data-hay="preview ui.gear.preview marks a made-up item on the gear tab while the preview is on " data-gap="1">
+<div class="nm">Preview<span class="k">ui.gear.preview</span></div>
+<div class="dsc">Marks a made-up item on the Gear tab while the preview is on</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
 </div>
 </div>
 <p class="empty" hidden>No entries in this section match.</p>
@@ -1207,7 +1386,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="commands" data-sec="1">
-<h2>Commands <em class="count">53 entries</em></h2>
+<h2>Commands <em class="count">54 entries</em></h2>
 <p class="blurb">What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein. A right-click on a thing with more than one answer, a weapon today, opens a small menu at the pointer whose rows are these commands; the menu's own words are listed after them.</p>
 <h3 class="nsh">Commands</h3>
 <div class="tbl">
@@ -1325,6 +1504,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Carry in inventory</div>
 <div class="art"><span class="pill">med</span> salvage gear</div>
 <div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.command.remove" data-hay="remove ui.command.remove take this off, and leave it for the haulers " data-gap="1">
+<div class="nm">Remove<span class="k">ui.command.remove</span></div>
+<div class="dsc">Take this off, and leave it for the haulers</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
 </div>
 <div class="row" id="ui.command.refuel" data-hay="refuel ui.command.refuel top this up " data-gap="0">
 <div class="nm">Refuel<span class="k">ui.command.refuel</span></div>
@@ -2844,7 +3029,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">134 entries</em></h2>
+<h2>World and interface <em class="count">144 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -3254,6 +3439,66 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">The ground itself, under whatever is standing on it<span class="need">Needs drawing: a single square of ground, in plan</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.tab.needs" data-hay="needs ui.tab.needs food, rest and mood " data-gap="1">
+<div class="nm">Needs<span class="k">ui.tab.needs</span></div>
+<div class="dsc">Food, rest and mood</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M2</div>
+</div>
+<div class="row gap" id="ui.tab.skills" data-hay="skills ui.tab.skills what she is good at, and how far to the next level " data-gap="1">
+<div class="nm">Skills<span class="k">ui.tab.skills</span></div>
+<div class="dsc">What she is good at, and how far to the next level</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M2</div>
+</div>
+<div class="row gap" id="ui.tab.gear" data-hay="gear ui.tab.gear what she holds, wears and keeps on her " data-gap="1">
+<div class="nm">Gear<span class="k">ui.tab.gear</span></div>
+<div class="dsc">What she holds, wears and keeps on her</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">GE</div>
+</div>
+<div class="row gap" id="ui.tab.thoughts" data-hay="thoughts ui.tab.thoughts what is on her mind " data-gap="1">
+<div class="nm">Thoughts<span class="k">ui.tab.thoughts</span></div>
+<div class="dsc">What is on her mind</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M2</div>
+</div>
+<div class="row gap" id="ui.tab.social" data-hay="social ui.tab.social who she gets on with " data-gap="1">
+<div class="nm">Social<span class="k">ui.tab.social</span></div>
+<div class="dsc">Who she gets on with</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M6</div>
+</div>
+<div class="row gap" id="ui.tab.health" data-hay="health ui.tab.health hit points, condition and the weapon in her hand " data-gap="1">
+<div class="nm">Health<span class="k">ui.tab.health</span></div>
+<div class="dsc">Hit points, condition and the weapon in her hand</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">CB</div>
+</div>
+<div class="row gap" id="ui.tab.log" data-hay="log ui.tab.log what she has done lately " data-gap="1">
+<div class="nm">Log<span class="k">ui.tab.log</span></div>
+<div class="dsc">What she has done lately</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M6</div>
+</div>
+<div class="row gap" id="ui.tab.later.thoughts" data-hay="arrives with the thought log ui.tab.later.thoughts why the thoughts tab is not live yet " data-gap="1">
+<div class="nm">arrives with the thought log<span class="k">ui.tab.later.thoughts</span></div>
+<div class="dsc">Why the Thoughts tab is not live yet</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M2</div>
+</div>
+<div class="row gap" id="ui.tab.later.social" data-hay="arrives with relationships ui.tab.later.social why the social tab is not live yet " data-gap="1">
+<div class="nm">arrives with relationships<span class="k">ui.tab.later.social</span></div>
+<div class="dsc">Why the Social tab is not live yet</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M6</div>
+</div>
+<div class="row gap" id="ui.tab.later.log" data-hay="arrives with the colonist log ui.tab.later.log why the log tab is not live yet " data-gap="1">
+<div class="nm">arrives with the colonist log<span class="k">ui.tab.later.log</span></div>
+<div class="dsc">Why the Log tab is not live yet</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M6</div>
 </div>
 <div class="row gap" id="ui.tab.inventory" data-hay="inventory ui.tab.inventory everything in the colony's stores, and which store holds it " data-gap="1">
 <div class="nm">Inventory<span class="k">ui.tab.inventory</span></div>
@@ -3876,7 +4121,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 872, "gaps": 600};</script>
+<script>window.WIKI={"total": 913, "gaps": 641};</script>
 <script>
 (function(){
   var D = window.WIKI;

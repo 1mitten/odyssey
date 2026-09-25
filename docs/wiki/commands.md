@@ -2,7 +2,7 @@
 
 What the player can tell a selected thing to do. Many are conventional; the ones that are not come from the setting, such as stripping a shell rather than mining a vein. A right-click on a thing with more than one answer, a weapon today, opens a small menu at the pointer whose rows are these commands; the menu's own words are listed after them.
 
-53 entries, 33 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+54 entries, 34 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Commands
 
@@ -27,6 +27,7 @@ What the player can tell a selected thing to do. Many are conventional; the ones
 | **Wear** | `ui.command.wear` | Put this on | sheet 08 (salvage gear), med | M3 |
 | **Drop** | `ui.command.drop` | Leave this here <br>**Needs:** dropping a carried item | no art | M3 |
 | **Pick up** | `ui.command.pickup` | Carry in inventory | sheet 08 (salvage gear), med | M3 |
+| **Remove** | `ui.command.remove` | Take this off, and leave it for the haulers | no art | GE |
 | **Refuel** | `ui.command.refuel` | Top this up | sheet 08 (salvage gear), high | M3 |
 | **Switch on** | `ui.command.switchon` | Power this up <br>**Needs:** a power state, on | no art | M3 |
 | **Switch off** | `ui.command.switchoff` | Power this down <br>**Needs:** a power state, off | no art | M3 |
