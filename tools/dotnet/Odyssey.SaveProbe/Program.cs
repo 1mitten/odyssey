@@ -124,6 +124,56 @@ namespace Odyssey.SaveProbe
             ReportItems(colony, size);
             ReportStorage(colony, size);
             ReportTerrain(grid);
+            ReportHearth(colony, size);
+        }
+
+        /// <summary>
+        /// Every campfire the save holds, which one is the hearth, and what the inspect pane is told
+        /// when each is clicked (design 43 §3f, §3g): the cell the published detail names, the
+        /// edifice it reports, and the hearth cell beside it. The pane calls a campfire the hearth
+        /// only when those two cells agree.
+        /// </summary>
+        static void ReportHearth(ColonyWorld colony, GridSize size)
+        {
+            CellGrid grid = colony.Grid;
+            var records = colony.Construction.Edifices.Records;
+            int hearth = colony.Pawns.Hearth?.Cell ?? -1;
+            Console.WriteLine($"    hearth: {(hearth < 0 ? "none" : size.FromIndex(hearth).ToString())} (cell {hearth})");
+            for (int h = 0; h < records.Count; h++)
+            {
+                PlacedEdifice r = records[h];
+                if (r.Def != CoreContent.EdificeCampfire) continue;
+                int cell = r.CellIndex;
+                bool standing = (uint)cell < (uint)grid.Edifice.Length && grid.Edifice[cell] == h;
+                Console.WriteLine($"    campfire #{h} at {size.FromIndex(cell)} (cell {cell}) built {r.Built} removed {r.Removed} " +
+                                  $"grid points at it {standing}; ours {colony.Pawns.Hearth?.IsOurCampfire(cell)}");
+                if (!standing || r.Removed) continue;
+                // The ground round it, as surface layers: a riser beside a fire hides it from a
+                // camera on that side.
+                CellRef at = size.FromIndex(cell);
+                for (int dz = 1; dz >= -1; dz--)
+                {
+                    var row = new System.Text.StringBuilder("        ground ");
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        int top = -1;
+                        for (int y = size.SizeY - 1; y >= 0; y--)
+                            if ((grid.Flags[size.Index(at.X + dx, at.Z + dz, y)] & CellFlags.SolidTerrain) != 0) { top = y + 1; break; }
+                        row.Append(dx == 0 && dz == 0 ? $"[L{top}]" : $" L{top} ");
+                    }
+                    Console.WriteLine(row.ToString() + (dz == 1 ? "   (north up, east right)" : ""));
+                }
+
+                colony.World.Intents.Submit(new Intent(IntentKind.QueryCell, size.FromIndex(cell)));
+                colony.World.RepublishViews();
+                WorldSnapshot frame = colony.World.Views.Current;
+                bool found = frame.TryGetCellDetail(cell, out CellDetail detail);
+                Console.WriteLine(found
+                    ? $"        pane told: detail cell {detail.CellIndex} edifice {detail.Edifice}; HearthCell {frame.HearthCell}"
+                    : $"        pane told: no detail for cell {cell}; {frame.CellDetailCount} details published; HearthCell {frame.HearthCell}");
+            }
+            foreach (int site in colony.Construction.Sites)
+                Console.WriteLine($"    site at {size.FromIndex(site)} (cell {site})");
         }
 
         /// <summary>

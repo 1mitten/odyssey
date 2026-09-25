@@ -13111,3 +13111,35 @@ should be checked" is answered once rather than per order. The photograph found 
 fault the screenshot had hidden: faded crowns write depth and share the plates' transparent queue,
 so where the instanced batch sorted second, half the harvest box was simply not drawn. Marks now
 draw one queue earlier.
+
+## 2026-09-25 — A campfire a terrace up could not be clicked: the ground followed the walls
+
+The first play of the home area passed (*"it all works"*), then: *"I created another campfire and I
+couldn't select it"*. PR #214 merged first on the owner's word, because the cause turned out to be
+older than it.
+
+**Five wrong answers were ruled out by evidence before the right one**, which is the part worth
+keeping. The simulation was right (the day-2 autosave, loaded headless: two campfires, the first the
+hearth, each publishing the right detail to the pane). The house mark takes no click (`PathGlyph`
+ignores picks). The editor log held no exception. It was a new game, not an old save. The fireside
+crowd gathers at the nearest fire, not the hearth. Then a PlayMode measurement through the rig's own
+pick path, and the measurement had to be fixed three times before it measured anything: it framed
+fires off screen, it did not move the slice (`FocusOn` moves only the camera), and its first misses
+were fires behind terrace risers and at the board's edge — the picker being right.
+
+**The cause.** Walls down is on by default, but build mode raises the walls, and design 42 §3a's
+"a lower terrace is ground" was keyed on the raised-or-not state rather than the choice. So with the
+Build palette open on a lower terrace, the slice was "underground", the terrace above an x-ray, and
+a campfire standing on it could not be clicked. The owner chose the narrow fix: the ground follows
+the Walls down choice, so turning it off keeps the tunnel view they chose on 2026-09-24. A campfire
+also had no pick height, so clicks on its flames crossed its floor beyond it; it offers the flames
+now (`WorldRenderModel.StandHeight`), as a bed and a shelf offer their tops.
+
+Measured, control and fix in one sitting: while building 96/150 clicks missed before and 2/150
+after; walls down 31/150 before and 2/150 after, the two being the rolling ground in front of one
+fire. The test sorts a miss by where it went — in front of the fire is occlusion and allowed at a
+few per cent, under, behind or nothing is the ray passing through and never allowed.
+
+`SaveProbe` gained a hearth report on the way: every campfire in a save, which is the hearth, the
+ground round each, and what the pane is told when each is clicked.
+

@@ -2838,3 +2838,20 @@ Huge.
 frame by `FrameSection` on the largest board in the same run as the base commit
 (`FrameTimeTests.TheNatureAgainstTheFrame` is written to run on both). A section that moves by the
 board's size rather than the colony's is a pass with no cull.
+
+## A rule keyed on the momentary state rather than the choice (2026-09-25)
+
+**P1, one rule with two owners, in time.** Design 42 §3a made a lower terrace count as ground while
+the walls are down, reading `SliceSettings.wallsLowered`. That field is the Walls down *choice with
+build mode taken out*, because walls come up while building so the player can see what they build.
+The two meanings agreed until the player opened the palette: then the terrace became a tunnel again,
+the layer above an x-ray, and a campfire on it could not be clicked (owner: it "did nothing").
+
+- **The pattern:** one flag answering two questions — *what is drawn* and *where the ground is* —
+  where a third input (build mode) is meant to change only the first.
+- **What made it invisible:** every test of the rule set the flag directly; none went through build
+  mode, and the report came from the one moment a player is most likely to click something new.
+- **The check:** `SliceSettings.landscapeGround` is the choice and `wallsLowered` the drawing; the
+  band test asserts a terrace stays ground with the walls raised, and `CampfirePickTests` clicks
+  fires with a build tool armed (96/150 missed before, 2/150 after, both in front of the fire).
+
