@@ -2,7 +2,7 @@
 
 Body parts, injuries and conditions. The anatomy sheet covers this better than any other part of the game, which is either fortunate or ominous.
 
-28 entries, 10 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+39 entries, 21 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
@@ -34,6 +34,17 @@ Body parts, injuries and conditions. The anatomy sheet covers this better than a
 | **Missing part** | `ui.health.missing` | Gone. Replace or adapt <br>**Needs:** an absent limb, shown as a silhouette gap | no art | M6 |
 | **Implant** | `ui.health.implant` | Fitted, and working <br>**Needs:** a fitted mechanical part | no art | M6 |
 | **Anaesthetic** | `ui.health.anaesthetic` | Under, and safe to operate on <br>**Needs:** under anaesthetic. A syringe or a mask would do | no art | M6 |
+| **Left arm** | `ui.health.arm.left` | Half of what her hands can do | no art | HE |
+| **Right arm** | `ui.health.arm.right` | Half of what her hands can do | no art | HE |
+| **Left leg** | `ui.health.leg.left` | Half of her walking | no art | HE |
+| **Right leg** | `ui.health.leg.right` | Half of her walking | no art | HE |
+| **Pain** | `ui.health.pain` | Every point of injury hurts. At 80 per cent she goes down | no art | HE |
+| **Consciousness** | `ui.health.consciousness` | What pain and blood loss take. Under 30 per cent she goes down | no art | HE |
+| **Moving** | `ui.health.moving` | Her legs, and how awake she is. How fast she walks | no art | HE |
+| **Manipulation** | `ui.health.manipulation` | Her arms, and how awake she is. How fast she works | no art | HE |
+| **Bruise** | `ui.health.bruise` | From a blunt blow or a short fall. Hurts, and never bleeds | no art | HE |
+| **Tended** | `ui.health.tended` | Treated. The bleeding has stopped, and it heals out of bed | no art | HE |
+| **to death** | `ui.health.todeath` | How long the bleeding leaves her, untreated | no art | HE |
 
 ---
 

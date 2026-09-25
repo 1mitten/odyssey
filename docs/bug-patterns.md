@@ -2672,6 +2672,32 @@ guard and the other had nothing, and the guard's own prose was the specification
   three mining tests fail and the rest pass, which is what says the tests fail on the reported bug
   and not on something adjacent.
 
+### 2026-09-25 — A new way to go down met three rules that assumed there was only one (health)
+
+**Symptom.** Adding the body (design 43) turned the combat gate red three different ways on the
+same afternoon, none of them in the new code: *Job_Downed failed*, *a bandit stood on Fighting at a
+target already gone* for 60–68 ticks, and two fighters sharing a tile in the mixed brawls.
+
+**Cause: each rule was written when a pawn could only go down, or stop, one way.** Before the body a
+pawn went down only under a blow and never died lying down, so (1) a death always ended its job as
+a failure, and the gate's sentinel on `Job_Downed` failures had never seen a death; (2) an attack
+on a pawn that went down ended on the attacker's own next tick, which a *stunned* attacker does not
+get, and nothing but a blow downed anybody so it never mattered; (3) `Melee.SideOf` counted where a
+pawn stands and where it walks, but not the cell an interrupted step is still landing on. Bleeding
+downs and kills people between blows, and pain shock changes who stands where, so all three were
+reached at once.
+
+- **The pattern:** a rule whose "only one way" was true by accident of what existed. It fails the
+  day a second way arrives, and it fails in a system nobody touched.
+- **Where to look for more:** every sentinel written as "this never happens" (a failure counter that
+  must be nought), every per-tick rule that trusts the actor to get a tick, every claim computed
+  from a pawn's position that ignores a move in flight.
+- **The fixes:** `Remove` ends `Job_Downed` as a success on death, as `JobHandle.Downed` says it
+  may; `CombatSystem.EndAttacksOnTheDowned` ends non-lethal attacks when anybody goes down, as
+  `EndAttacksOn` already did for the dead; `SideOf` counts `FinishingStepTo`.
+- **The check:** the combat gate (`BanditSoakTests.TheGateWithRaids`), `FightGuardTests.MixedBrawlsOnManySeeds`
+  and `FightGuardTests.AStepStillLandingIsHeld`, which fails with the `SideOf` line removed.
+
 ### 2026-09-22 — Every portrait on the setup screen was magenta (P14)
 
 **Symptom.** The owner's screenshot: three candidate cards and a detail pane, every colonist a flat
@@ -2855,6 +2881,40 @@ the layer above an x-ray, and a campfire on it could not be clicked (owner: it "
   band test asserts a terrace stays ground with the walls raised, and `CampfirePickTests` clicks
   fires with a build tool armed (96/150 missed before, 2/150 after, both in front of the fire).
 
+## A precondition asked on every tick of the work it gates (2026-09-25)
+
+Design 37's treatment asked "does she still need treating?" and "is she still lying still?" at the
+top of every tick, including every tick of the treatment itself — and the treatment is what
+answers both. Its heal lands in shares, so a patient at 60 % reached the 80 % cap half-way and
+stopped needing it; a downed patient passed the 15 % line a third of the way through, stood up and
+stopped lying still. Either way the job failed: the unit of supplies went back on the floor
+unused, no cooldown was set, and the next doctor started again from what was left — a free heal
+each time. Found merging health (design 43 §15c).
+
+- **The pattern:** *a rule that asks the built world and misses the order*, turned inward — a
+  guard on a job reading the very state the job is changing.
+- **What made it invisible:** the one test that walked a downed patient through a whole treatment
+  was `[Ignore]`d for an unrelated rescue fault, and the arithmetic tests called the heal directly.
+- **The check:** *split a driver's guards into "may this start" and "may this go on"*, and ask of
+  every guard on a working toil whether the work itself can falsify it. Getting up is asked once,
+  when the treatment ends (`Medical.GetUpIfAble`).
+  `TendTests.ADownedPatientGetsUpWhenHerTreatmentEndsAndTheUnitIsSpent`.
+
+## A death deferred from inside the deferred phase (2026-09-25)
+
+`CombatSystem.Kill` defers the removal to the end of the tick, which is right when a blow lands
+in a loop over pawns. Health made falls hurt, and falls happen inside the deferred phase itself;
+`SimWorld` runs work deferred from there on the *next* tick by design. So a pawn killed by a
+five-layer collapse stood, thought and walked for a tick past the death line, and a save taken in
+between wrote her out alive and lost her queued removal: a pawn no later blow could kill, because
+only the blow that *crosses* the line kills. Found by review, not by a test — `FallTests` called
+`Fall` outside a tick.
+
+- **The pattern:** *a rule with a second way in* — "a death is removed this tick" held only while
+  every death happened before the deferred phase.
+- **The check:** a test of a consequence that is deferred must also run it from inside the
+  deferred phase (`FallTests.AFatalFallInsideTheDeferredPhaseIsGoneTheSameTick`), and a removal
+  that must not outlive its tick uses `DeferThisTick`.
 
 ## A derived value written on an interval, and not on a load (2026-09-25)
 

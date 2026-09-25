@@ -944,6 +944,15 @@ namespace Odyssey.Presentation.Rendering
         public int InstancesDrawn { get; private set; }
         public int ChunksDrawn { get; private set; }
         public int ChunksMeshedThisFrame { get; private set; }
+
+        /// <summary>
+        /// Milliseconds this frame spent meshing stale chunks, and refreshing the ground field after
+        /// them: what a re-mesh burst costs a frame, beside <see cref="ChunksMeshedThisFrame"/>, so a
+        /// per-chunk price is a division rather than the whole frame's delta shared out. The mesher's
+        /// own split is <see cref="Mesher"/>'s phase times.
+        /// </summary>
+        public double MeshingMs { get; private set; }
+        public double FieldRefreshMs { get; private set; }
         public int MaterialCount => _materials.MaterialCount;
 
         /// <summary>See <see cref="MaterialCache.RequeueFoliage"/>. A measurement seam: the game
@@ -1061,6 +1070,30 @@ namespace Odyssey.Presentation.Rendering
         public const int DefaultMeshBudgetPerFrame = 11;
 
         /// <summary>
+        /// The most milliseconds one frame will spend meshing, beside <see cref="MeshBudgetPerFrame"/>'s
+        /// count; whichever is reached first ends the frame's meshing. Zero or less is no time limit,
+        /// and neither limit applies while the count budget is off (a measurement that re-meshes the
+        /// whole board in one frame turns the count off, and means it).
+        ///
+        /// <para><b>Why a time as well as a count</b> (design 38 §20f). The count was sized on
+        /// 0.18 ms a chunk, and the ground skin took a chunk to about 0.3–0.4 ms on the owner's
+        /// RTX 5070 Ti machine, measured by the renderer's own stopwatch
+        /// (<c>FrameTimeTests.TheMeshingByPart</c>) — so eleven chunks had become 3.5–4.4 ms of a
+        /// 5 ms frame. And a count charges a slower machine more: the RTX 3050/3060 laptop the Low
+        /// preset is held to pays the most milliseconds for the same eleven chunks, which is the
+        /// wrong way round. A time costs every machine the same share of its frame and lets a fast
+        /// one mesh more.</para>
+        ///
+        /// <para>At least one chunk is meshed a frame whatever the clock says, so a board always
+        /// finishes arriving. The check comes before a chunk, so a frame can run one chunk past the
+        /// budget: at most about half a millisecond.</para>
+        /// </summary>
+        public double MeshBudgetMs { get; set; } = DefaultMeshBudgetMs;
+
+        /// <summary>What the game ships with: §6c.7's two milliseconds of a five-millisecond frame.</summary>
+        public const double DefaultMeshBudgetMs = 2.0;
+
+        /// <summary>
         /// Chunks the last frame wanted to mesh and would not, because the budget was spent.
         ///
         /// <para>Its own counter because "the budget is working" and "the budget is starving the
@@ -1120,6 +1153,8 @@ namespace Odyssey.Presentation.Rendering
             InstancesDrawn = 0;
             ChunksDrawn = 0;
             ChunksMeshedThisFrame = 0;
+            MeshingMs = 0d;
+            FieldRefreshMs = 0d;
             InstancesFaded = 0;
             ChunksSightTested = 0;
             ChunksOutsideFrustum = 0;
@@ -1459,7 +1494,8 @@ namespace Odyssey.Presentation.Rendering
                 // The whole of §6c.6's fix. Past the budget the chunk keeps the geometry it has
                 // and stays stale, so the next frame's walk picks it up; nothing is dropped and
                 // nothing is queued.
-                if (!_priming && MeshBudgetPerFrame > 0 && _meshedThisFrame >= MeshBudgetPerFrame)
+                if (!_priming && MeshBudgetPerFrame > 0 && (_meshedThisFrame >= MeshBudgetPerFrame
+                    || (MeshBudgetMs > 0d && _meshedThisFrame > 0 && MeshingMs + FieldRefreshMs >= MeshBudgetMs)))
                 {
                     ChunksMeshDeferred++;
                     return batch;
@@ -1467,9 +1503,14 @@ namespace Odyssey.Presentation.Rendering
 
                 // The skin's apron meets the surround at its level, which the skirt settles.
                 _mesher.SurroundLevel = Skirt.Enabled && Skirt.Built ? Skirt.SurfaceLayer : -1;
+                long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                 _mesher.Mesh(batch, chunkIndex);
+                long t1 = System.Diagnostics.Stopwatch.GetTimestamp();
                 // What the ground is at each column changes only when a chunk does (design 38 §24).
                 _field.RefreshChunk(chunkIndex);
+                long t2 = System.Diagnostics.Stopwatch.GetTimestamp();
+                MeshingMs += (t1 - t0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+                FieldRefreshMs += (t2 - t1) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
                 _indirect?.MarkDirty(chunkIndex);
                 _meshedThisFrame++;
                 ChunksMeshedThisFrame++;
