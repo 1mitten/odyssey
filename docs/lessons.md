@@ -1869,6 +1869,19 @@ forbid, and a budget raised to swallow a flake is a budget that swallows the nex
 starts flaking often, the window (5,000 ticks) is what to grow, not the threshold — a longer window
 averages the GC timing out rather than hiding what it is measuring.
 
+**Or judge the quietest of several windows** (2026-09-25, main red on
+`AspectScaleTests.RepeatedFramesStopAllocating` at 5,104 bytes against 4,096, merging a change
+with no simulation code in it). A byte count over whole ticks also counts whatever the *runtime*
+allocates on the thread while they run, and that is timing-dependent: the same commit read 0 on
+every run here but one, which read 1,792 inside the full suite straight after a build,
+never alone. The simulation has no threads, clocks or identity hashing, so the ticks themselves
+cannot differ. The test now measures three windows and asserts on the smallest, because the
+defect it guards — the aspect index rebuilt each frame — reads 328,160 bytes in **every** window
+(checked by breaking the index on purpose), and a one-off lands in one. Same threshold; the
+verdict is what moved. **Check the probe you add while diagnosing does not allocate inside the
+window**: an interpolated `TestContext.WriteLine` there reads as ~90 bytes a tick and sent this
+hunt after the garbage collector for a round.
+
 ## Rebuilding the module catalogue erases the colonists' faces
 
 `Odyssey/Presentation/Rebuild module catalogue` writes every row of
