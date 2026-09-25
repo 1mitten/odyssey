@@ -126,6 +126,10 @@ namespace Odyssey.Sim.Pawns
             // colony that forgot it would be a colony where nothing is ever cold.
             var temperature = new Temperature.TemperatureSystem(pawns, edifices, Worldgen.WorldContent.Climate);
             pawns.Temperature = temperature;
+            // The sky (design 43), which writes the outdoor curve's weather term before the thermal
+            // pass reads it: Order 35 against temperature's 50.
+            var weather = new Weather.WeatherSystem(pawns, Worldgen.WorldContent.Weathers);
+            pawns.Weather = weather;
             // Power (design 32). Built here for the same argument again, and handed to the
             // construction grid because that is where a line order arrives: a colony that forgot
             // it would have a Power category whose every tool silently did nothing.
@@ -183,6 +187,9 @@ namespace Odyssey.Sim.Pawns
                 // The thermal pass, beside the other world systems: Order 50 puts it after the
                 // enclosure solve (30) whatever line of this chain it sits on.
                 .AddSystem(_ => temperature)
+                .AddSystem(_ => weather)
+                .AddSnapshotContributor(weather)
+                .AddIntentHandler(IntentKind.DebugSetWeather, weather.HandleForce)
                 // The burn, and the lazy solve behind it. Order 45 puts it before the thermal pass
                 // (50), which asks it for heat on the same tick.
                 .AddSystem(_ => power)

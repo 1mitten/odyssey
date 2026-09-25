@@ -35,6 +35,10 @@ the next session learns to ignore.
   or rain drawn inside the hut. **Second round (2026-09-25):** Rain, Drizzle and Downpour should
   keep the colour of Clear; Storm is the grey one; zoom right out on Downpour and the rain should
   still read. Toggle *Wet ground: gloss only* and say which of the two wet looks to keep.
+  **Third round (2026-09-25): the weather is real now.** Start a colony and leave it running a few
+  game days, skipping days with the debug menu: the sky should change by itself, mostly clear in
+  Glare, showery in Wash, grey in Rime, with the clock's glyph following. A wrong answer is a sky
+  that never changes, one that flips at midnight, or a storm every other day.
 - **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
   Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest
   over bare arms and black trousers, and carry a crowbar or a bat; click one and the pane shows a

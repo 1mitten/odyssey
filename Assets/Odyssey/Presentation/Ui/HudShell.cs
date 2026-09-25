@@ -157,6 +157,7 @@ namespace Odyssey.Presentation.Ui
         Label _clockTime = null!;
         Label _clockDate = null!;
         Label _clockTemp = null!;
+        HudGlyph? _clockWeather;
         readonly List<VisualElement> _speedButtons = new List<VisualElement>();
 
         // ---- alerts (A5)

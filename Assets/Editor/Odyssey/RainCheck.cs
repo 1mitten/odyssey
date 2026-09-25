@@ -93,8 +93,15 @@ namespace Odyssey.EditorTools
 
         public static void Run() => Execute(Application.isBatchMode);
 
-        static DebugDirector.WeatherPreset PresetOf(string key) =>
-            Array.Find(DebugDirector.WeatherPresets, p => p.Key == key);
+        /// <summary>
+        /// The sky a Weather row sets, as the simulation would publish it once the row's sky has
+        /// blended in: the row's kind and intensity through the content's own terms.
+        /// </summary>
+        static WeatherView SkyOf(string key)
+        {
+            DebugDirector.WeatherPreset preset = Array.Find(DebugDirector.WeatherPresets, p => p.Key == key);
+            return Odyssey.Sim.Weather.WeatherSystem.Terms(WorldContent.Weathers[(int)preset.Kind], preset.IntensityPerMille);
+        }
 
         static void Execute(bool exitWhenDone)
         {
@@ -167,7 +174,7 @@ namespace Odyssey.EditorTools
                     if (rendering != camera) return;
                     active.ViewerPosition = rendering.transform.position;
                     active.Render(activeLayer, slice);
-                    weather.Sync(PresetOf(current.Preset), false, light, rendering, shotFocus, shotDistance,
+                    weather.Sync(SkyOf(current.Preset), false, light, rendering, shotFocus, shotDistance,
                         underground: false, Tick, 60, running: false, 0f, current.GlossOnly, air);
                 };
                 RenderPipelineManager.beginCameraRendering += hook;
@@ -178,7 +185,7 @@ namespace Odyssey.EditorTools
                 foreach (Variant variant in Variants)
                 {
                     current = variant;
-                    DebugDirector.WeatherPreset preset = PresetOf(variant.Preset);
+                    WeatherView preset = SkyOf(variant.Preset);
                     look.Snap(preset);
                     // Once without a camera, so the light, the volume and the wind are set before
                     // the day is applied and the shutter opens.

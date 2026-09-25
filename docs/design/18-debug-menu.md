@@ -49,34 +49,28 @@ worker, ignoring the gates on purpose (design 23 §3). Today that is one row:
 | Skip to morning | Skips the night and hands the clock back at dawn, with a whole watchable day ahead — the harvest happens on screen, not inside the skip | `OdysseyBootstrap.DebugSkipToMorning` — the same batch tick, sized to the next dawn |
 | Ripen crops | Brings every standing crop to ripeness at once, daylight window and all — the harvest half without the four-day wait | `IntentKind.DebugRipen` → `GrowingZones.RipenAll`, refused with AlreadyInThatState when nothing stands |
 
-**Weather** (2026-09-24; owner: *"we need to be able to test it"*). This tab is drawing only. The
-simulation has no weather until design 43's `weather-core`, so these rows set the look and nothing
-else: no cell, no save, no hash. `DebugDirector.WeatherPresets` holds the rows, and the fast tier
-tests them. The bootstrap reads `DebugDirector.CurrentWeather` each frame and hands it to
-`WeatherLook`, which moves cloud and rain towards the preset over about two game seconds. The ground
-wets over about eight game seconds and dries three times slower. The whole tab runs on game time, so
-pausing holds the sky and speed 3 moves it three times as fast.
+**Weather** (2026-09-24, commands since 2026-09-25). Each row commands the weather system
+(design 43 §8) with `IntentKind.DebugSetWeather`: a kind, an intensity, and a quick hand-over of
+300 ticks, a few seconds. The spell then runs its rolled length and the season takes over again.
+`DebugDirector.WeatherPresets` holds the rows, and the fast tier tests them. What each sky looks
+like is the content's (`Weather.xml`), so the tab cannot show a sky the game cannot roll. Pausing
+holds the sky; the command lands on the next tick.
 
-| Row | Cloud · rain · wet · puddles · gloom · wind | Backed by |
+| Row | Kind · intensity | Backed by |
 |---|---|---|
-| Clear | 0 · 0 · 0 · 0 · 0 · 1: the game as drawn without weather, and the default | `WeatherLook` → `DaylightDirector.Cloud`/`Gloom`, `OvercastVolume`, `RainDirector` |
-| Overcast | 0.8 · 0 · 0 · 0 · 0.6 · 1: the grey day with no rain | the same |
-| Drizzle | 0.4 · 0.25 · 0.45 · 0 · 0 · 1 | the same |
-| Rain | 0.6 · 0.7 · 0.85 · 0.4 · 0 · 1 | the same |
-| Downpour | 0.8 · 1 · 1 · 1 · 0 · 1 | the same |
-| Storm | 1 · 1 · 1 · 1 · 1 · 1.3: the rarer dim day | the same, plus `WindDirector.Strength` |
-| Draw as particles (toggle) | draws the same rain with the weather design's first-draft CPU particles, so the two can be compared moving; the wet ground stays either way | `RainParticles` |
-| Wet ground: gloss only (toggle) | draws wet ground as shine and puddles only, rather than richer and a little darker, to compare the two | `_OdysseyRainLook.x` |
+| Clear | Clear · 1000 | `WeatherSystem.HandleForce` |
+| Overcast | Cloudy · 1000: the grey day with no rain | the same |
+| Drizzle | Rain · 250 | the same |
+| Rain | Rain · 700 | the same |
+| Downpour | Rain · 1000 | the same |
+| Storm | Storm · 1000: the rarer dim day, wind ×1.3 | the same |
+| Draw as particles (toggle) | draws the same rain with the weather design's first-draft CPU particles, to compare them moving; drawing only | `RainParticles` |
+| Wet ground: gloss only (toggle) | draws wet ground as shine and puddles only, rather than richer and a little darker; drawing only | `_OdysseyRainLook.x` |
 
-**Rain keeps its colour; only the dim days drain it** (owner, 2026-09-25,
-`docs/research/rain-look-interview.md`). *Cloud* dims the light and softens the shadows and
-leaves the colour. *Gloom* drains the colour to grey and weights the grey volume, and only
-Overcast and Storm carry it. Zoomed out, a screen-space streak layer fades in between 55 m and
-95 m of camera distance. At that range the 3D drops shrink to a couple of pixels.
-
-When the weather system lands, `weather-core`'s force-weather rows (design 43 §8) replace these
-presets. `WeatherLook.Sync` then takes its numbers from the simulation instead of from a preset.
-`WeatherTabTests` (PlayMode) follows a preset through the real bootstrap into the draw calls.
+**Rain keeps its colour; only the grey days drain it** (owner, 2026-09-25,
+`docs/research/rain-look-interview.md`). Zoomed out, a screen-space streak layer fades in between
+55 m and 95 m. `WeatherTabTests` (PlayMode) sends a row's own command through the real bootstrap
+and follows it into the draw calls.
 
 ### "Near the camera" is a column, not a cell (corrected 2026-09-19)
 

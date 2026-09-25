@@ -469,65 +469,48 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void TheWeatherTabStartsClearAndAnnouncesEachChange()
+        public void TheWeatherTabsSwitchesStartOffAndAnnounceEachChange()
         {
             var debug = new DebugDirector();
             int raised = 0;
             debug.WeatherChanged += () => raised++;
 
-            Assert.That(debug.Weather, Is.Zero);
-            Assert.That(debug.CurrentWeather.IsClear, Is.True, "a session starts with the day as the clock has it");
             Assert.That(debug.RainAsParticles, Is.False, "the GPU rain is the proposal, the particles the control");
-
-            debug.SetWeather(3);
-            Assert.That(debug.CurrentWeather.Key, Is.EqualTo(DebugDirector.WeatherRainKey));
-            debug.SetWeather(3);
-            debug.SetWeather(DebugDirector.WeatherPresets.Length);
-            debug.SetWeather(-1);
-            Assert.That(raised, Is.EqualTo(1), "the same preset, and one off either end, say nothing");
-
-            debug.SetRainAsParticles(true);
-            debug.SetRainAsParticles(true);
-            Assert.That(raised, Is.EqualTo(2));
-
             Assert.That(debug.WetGlossOnly, Is.False, "richer is the default wet look");
+            debug.SetRainAsParticles(true);
+            debug.SetRainAsParticles(true);
             debug.SetWetGlossOnly(true);
             debug.SetWetGlossOnly(true);
-            Assert.That(raised, Is.EqualTo(3));
+            Assert.That(raised, Is.EqualTo(2), "setting what is already set says nothing");
         }
 
         [Test]
-        public void RainKeepsItsColourAndOnlyTheDimDaysDrainIt()
+        public void EveryWeatherRowCommandsTheSimulationWithAKindItCanRoll()
         {
-            // Owner, 2026-09-25: "we want to be colourful when it rains ... then have dim days".
+            // Since the weather system (design 43 §8) a row is a command, not a look.
             foreach (DebugDirector.WeatherPreset p in DebugDirector.WeatherPresets)
             {
-                bool dim = p.Key == DebugDirector.WeatherStormKey || p.Key == DebugDirector.WeatherOvercastKey;
-                if (dim) Assert.That(p.Gloom, Is.GreaterThan(0f), $"{p.Key} is a dim day and drains nothing");
-                else Assert.That(p.Gloom, Is.Zero, $"{p.Key} is ordinary weather and drains the colour");
+                Intent intent = p.ToIntent();
+                Assert.That(intent.Kind, Is.EqualTo(IntentKind.DebugSetWeather), p.Key);
+                Assert.That(intent.A, Is.InRange(0, 3), $"{p.Key} names no weather kind");
+                Assert.That(intent.B, Is.InRange(1, 1000), $"{p.Key}'s intensity");
+                Assert.That(intent.C, Is.EqualTo(1), $"{p.Key} should blend in over seconds, not two game hours");
+                Assert.That(DebugDirector.IconKeys, Does.Contain(p.Key), $"{p.Key} is not held to the naming CSV");
             }
-            DebugDirector.WeatherPreset storm = System.Array.Find(DebugDirector.WeatherPresets,
-                p => p.Key == DebugDirector.WeatherStormKey);
-            Assert.That(storm.Rain, Is.EqualTo(1f));
-            Assert.That(storm.Wind, Is.GreaterThan(1f), "a storm with ordinary wind is a downpour");
+            Assert.That(DebugDirector.WeatherPresets[0].Kind, Is.EqualTo(WeatherKind.Clear), "the first row clears the sky");
+            Assert.That(System.Array.Exists(DebugDirector.WeatherPresets, p => p.Kind == WeatherKind.Storm),
+                "the storm cannot be set by hand");
+            Assert.That(DebugDirector.TabKey(DebugTab.Weather), Is.EqualTo(DebugDirector.WeatherTabKey));
         }
 
         [Test]
-        public void EveryWeatherPresetIsInRangeAndOnlyTheFirstIsClear()
+        public void TheClockNamesEverySkyFromTheRegistry()
         {
-            DebugDirector.WeatherPreset[] presets = DebugDirector.WeatherPresets;
-            Assert.That(presets[0].IsClear, Is.True);
-            for (int i = 0; i < presets.Length; i++)
-            {
-                DebugDirector.WeatherPreset p = presets[i];
-                foreach (float v in new[] { p.Cloud, p.Rain, p.Wet, p.Puddles, p.Gloom })
-                    Assert.That(v, Is.InRange(0f, 1f), p.Key);
-                Assert.That(p.Wind, Is.InRange(1f, 1.4f), $"{p.Key}: past about 0.6 rad the grass shader's cap takes over");
-                if (i > 0) Assert.That(p.IsClear, Is.False, $"{p.Key} would draw nothing different from Clear");
-                if (p.Rain > 0f) Assert.That(p.Cloud, Is.GreaterThan(0f), $"{p.Key} rains out of a clear sky");
-                Assert.That(DebugDirector.IconKeys, Does.Contain(p.Key), $"{p.Key} is not held to the naming CSV");
-            }
-            Assert.That(DebugDirector.TabKey(DebugTab.Weather), Is.EqualTo(DebugDirector.WeatherTabKey));
+            foreach (WeatherKind kind in System.Enum.GetValues(typeof(WeatherKind)))
+                Assert.That(WeatherLabels.IconKeys, Does.Contain(WeatherLabels.KeyOf(kind)), kind.ToString());
+            Assert.That(WeatherLabels.Describe(WeatherView.None), Is.Empty, "a world without weather names no sky");
+            var rain = new WeatherView(WeatherKind.Rain, 700, 560, 0, 700, 1000, -210);
+            Assert.That(WeatherLabels.Describe(rain), Is.EqualTo(Registry.Label(WeatherLabels.RainKey)));
         }
     }
 }

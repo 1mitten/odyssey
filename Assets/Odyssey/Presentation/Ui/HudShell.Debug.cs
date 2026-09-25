@@ -148,12 +148,13 @@ namespace Odyssey.Presentation.Ui
             // simulation, which has no weather yet (design 43 §8).
             _debugWeather = new VisualElement();
             _debugWeather.AddToClassList("settings__body");
+            // Each row commands the weather system (design 43 §8): the sky blends in over a few
+            // seconds, runs its rolled spell, and the season takes over again. The row lit is the
+            // kind the published sky holds, so a row never claims a sky the game has moved on from.
             for (int i = 0; i < DebugDirector.WeatherPresets.Length; i++)
             {
                 DebugDirector.WeatherPreset preset = DebugDirector.WeatherPresets[i];
-                int index = i;
-                VisualElement row = DebugToggleRow(preset.Key, preset.Tooltip,
-                    () => _directors?.Debug.SetWeather(index));
+                VisualElement row = DebugToggleRow(preset.Key, preset.Tooltip, () => SetWeather(preset));
                 _debugWeatherRows.Add(row);
                 _debugWeather.Add(row);
             }
@@ -285,11 +286,30 @@ namespace Odyssey.Presentation.Ui
         /// <summary>Light the preset that is set, and the particle row if it is on.</summary>
         void RefreshDebugWeather()
         {
-            int set = _directors?.Debug.Weather ?? 0;
+            // The last row sent, until the sky it asked for has arrived; then the kind the sky holds.
+            WeatherKind kind = _boot?.World?.Views.Current.Weather.Kind ?? WeatherKind.Clear;
             for (int i = 0; i < _debugWeatherRows.Count; i++)
-                _debugWeatherRows[i].EnableInClassList("settings__row--on", i == set);
+                _debugWeatherRows[i].EnableInClassList("settings__row--on",
+                    i == _debugWeatherSent || (_debugWeatherSent < 0 && DebugDirector.WeatherPresets[i].Kind == kind
+                        && FirstRowOf(kind) == i));
             _debugParticlesRow?.EnableInClassList("settings__row--on", _directors?.Debug.RainAsParticles ?? false);
             _debugGlossRow?.EnableInClassList("settings__row--on", _directors?.Debug.WetGlossOnly ?? false);
+        }
+
+        /// <summary>The row sent last, or -1: lit until the sky moves on.</summary>
+        int _debugWeatherSent = -1;
+
+        static int FirstRowOf(WeatherKind kind) =>
+            System.Array.FindIndex(DebugDirector.WeatherPresets, p => p.Kind == kind);
+
+        /// <summary>One Weather row: the command to the simulation, landing on the next tick.</summary>
+        void SetWeather(DebugDirector.WeatherPreset preset)
+        {
+            var world = _boot?.World;
+            if (world == null) return;
+            world.Intents.Submit(preset.ToIntent());
+            _debugWeatherSent = System.Array.IndexOf(DebugDirector.WeatherPresets, preset);
+            RefreshDebugWeather();
         }
 
         void OnDeveloperOverlayChanged()

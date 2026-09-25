@@ -1066,8 +1066,7 @@ namespace Odyssey.Presentation.Bootstrap
                 // the figures where a fallen body lies, for the pool under it.
                 _blood = new BloodDirector(_model, FindBody);
                 _combatFeedback.Blood = _blood;
-                // The weather as drawn (the rain-look prototype, design 43 §7), set from the debug
-                // menu's Weather tab until the simulation has a sky of its own.
+                // The weather as drawn (design 43 §7): the simulation's sky, read from the snapshot.
                 _weather = new WeatherLook(_model, transform);
             }
 
@@ -1608,10 +1607,10 @@ namespace Odyssey.Presentation.Bootstrap
             _combatFeedback.Consume(_world.Views.Current, _world, _figures, _audio,
                 bloodLowest, bloodHighest, _tickAlpha, ticksPerSecond);
             if (_renderer != null) _blood?.Draw(_renderer, bloodLowest, bloodHighest, slice, activeLayer);
-            // The weather (design 43 §7, prototype): the debug menu's preset, eased in on game
-            // time, drawn as two calls; counted in Overlays with the rest of what is laid over the world.
+            // The weather (design 43 §7): the published sky, the ground wetting behind it on game
+            // time, drawn in two or three calls; counted in Overlays with what is laid over the world.
             if (_weather != null && Directors != null)
-                _weather.Sync(Directors.Debug.CurrentWeather, Directors.Debug.RainAsParticles, _daylight,
+                _weather.Sync(_world.Views.Current.Weather, Directors.Debug.RainAsParticles, _daylight,
                     cameraRig != null ? cameraRig.GetComponent<Camera>() : null,
                     cameraRig != null ? cameraRig.Focus : transform.position,
                     cameraRig != null ? cameraRig.TargetDistance : 48f,

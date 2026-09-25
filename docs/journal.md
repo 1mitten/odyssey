@@ -12501,3 +12501,53 @@ All three are inside the floor, so the layer adds nothing this machine can separ
 particle arm is 12.23 ms with 11,850 drops alive: about 2.7 ms above the higher control, and the
 only arm that clears the floor. The batch run cannot read GPU time, so the Play session's `gpu`
 line is still what settles the 0.5 ms budget.
+
+## 2026-09-25 — The weather, built: a sky that rolls by season
+
+The owner asked for weather that *"makes sense — some days rain, storm, sunny and depending on
+season"*, and for the PR to be ready to merge. Until now the rain was a look set by hand. This
+builds the sky itself, design 43's `weather-core`, and drives the look from it, so #203 carries the
+design, the system and the picture together.
+
+**The sky is a handful of integers.**
+- `WeatherSystem` holds the kind and intensity rolling in, the pair blending out, the start and
+  length of the hand-over, and the tick the spell ends.
+- When the spell ends it rolls the next from the season's weights (`Weather.xml`: Wash showery,
+  Glare bright, Rime grey and nearly dry, Storm about one wet spell in four), then a length and an
+  intensity from the kind's own bounds.
+- It hands over integer-linear across two game hours.
+- The whole pass is O(1) at the thermal pass's cadence.
+- It is the one writer of `WeatherOffsetC`, which temperature had carried unwritten since design 28.
+- It publishes a `WeatherView` of blended terms for the drawing: cloud (dims, keeps colour), gloom
+  (drains), rain, wind and the temperature offset.
+- `Kind` is whichever holds the larger share, so the clock's glyph changes once, at the half.
+
+**The debug tab commands it.** The Weather rows used to be looks. They are now
+`DebugSetWeather` commands with a kind and an intensity, blending in over 300 ticks, and the spell
+then runs its rolled length before the season takes over. The tab cannot show a sky the game
+cannot roll.
+
+**Measured before the goldens were written.**
+- All six numbers moved: the generated ones because a system is hashed, the simulated ones because
+  the offset moves the thermometer.
+- `GoldenColonyProbe` on `origin/main` and on the branch differs in **mood alone**, 200 lower on
+  each board, as the rolled sky's cooler air crosses a comfort band.
+- Food, rest, progress, experience, jobs and positions are identical. The weather changed how the
+  colonies feel and nothing they did.
+
+**One test had been measuring the sky without knowing it.**
+`BedTests.AnOwnerClimbsToABedOnHigherGroundAndSleepsThere` puts its Epic bed out of doors. Seed 1's
+first roll was cool enough to cost a tenth of the sleep rate, so the bed restored 63 against the
+70 asserted. The test is about the bed's tier, so it now holds the sky at clear with the debug
+command. That is the right fix, because weather moving an unroofed sleeper's rest is design 43
+working.
+
+**The clock shows a glyph, not a word.** The clock's one row is 271 px and already held time,
+date and temperature. The owner reported an overflow there on 2026-09-23, and a second line was
+rejected at the 20 % coverage ceiling. So the sky is a 16 px drawn `HudGlyph` (sun, cloud, cloud
+with rain, cloud with a bolt) with the word in its tooltip, from the registry.
+
+**Not built:** `weather-world` (§8's second step) and rain audio.
+
+**Flakes seen, not fixed:** one unnamed Sim test and one unnamed Long-tier test each failed once
+and passed on the re-run, on a machine with a CI job running beside it.

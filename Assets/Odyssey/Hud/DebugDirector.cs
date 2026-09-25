@@ -17,8 +17,8 @@ namespace Odyssey.Hud
         Spawn,
 
         /// <summary>
-        /// The sky set by hand (owner, 2026-09-24: "we need to be able to test it"). Drawing only:
-        /// nothing here reaches the simulation, which has no weather yet (design 43 §8).
+        /// The sky set by hand (owner, 2026-09-24: "we need to be able to test it"): each row commands
+        /// the weather system (design 43 §8), and two switches change only how the rain is drawn.
         /// </summary>
         Weather,
     }
@@ -143,58 +143,50 @@ namespace Odyssey.Hud
         public const string RainParticlesKey = "ui.debug.rainparticles";
 
         /// <summary>
-        /// One sky the Weather tab can set, each term 0 to 1: how much cloud dims the day, how
-        /// hard it rains, how wet and puddled the ground ends up, how far the day is drained to
-        /// grey (<see cref="Gloom"/>), and how much harder the wind blows (a multiplier, 1 is
-        /// ordinary). <b>These are the rain-look prototype's numbers, not the weather design's</b>
-        /// (design 43 §4 owns intensity in per-mille and rolls it); they are the skies
-        /// <c>RainCheck</c> photographs, so what the tab shows in Play is what the sheet showed.
-        ///
-        /// <para><b>Rain keeps its colour; the storm does not</b> (owner, 2026-09-25: "we want to
-        /// be colourful when it rains … then have dim days"). Only Overcast and Storm carry gloom.</para>
+        /// One sky the Weather tab sets (design 43 §8). Since the weather system exists these are
+        /// <b>commands to it</b>, not looks: a row sends <see cref="IntentKind.DebugSetWeather"/> with
+        /// a kind and an intensity, the sky blends in over a few seconds, and the spell then runs its
+        /// rolled length before the season takes over. What each kind looks like is the content's
+        /// (<c>Weather.xml</c>), so the tab can never show a sky the game cannot roll.
         /// </summary>
         public readonly struct WeatherPreset
         {
             public readonly string Key;
             public readonly string Tooltip;
-            public readonly float Cloud, Rain, Wet, Puddles, Gloom, Wind;
+            public readonly WeatherKind Kind;
 
-            public WeatherPreset(string key, string tooltip, float cloud, float rain, float wet, float puddles,
-                float gloom = 0f, float wind = 1f)
+            /// <summary>The intensity the sky is set to, in per-mille: for rain, drizzle to downpour.</summary>
+            public readonly int IntensityPerMille;
+
+            public WeatherPreset(string key, string tooltip, WeatherKind kind, int intensityPerMille)
             {
                 Key = key;
                 Tooltip = tooltip;
-                Cloud = cloud;
-                Rain = rain;
-                Wet = wet;
-                Puddles = puddles;
-                Gloom = gloom;
-                Wind = wind;
+                Kind = kind;
+                IntensityPerMille = intensityPerMille;
             }
 
-            /// <summary>No cloud, no gloom and no rain: the day exactly as it is drawn without any weather.</summary>
-            public bool IsClear => Cloud <= 0f && Rain <= 0f && Wet <= 0f && Gloom <= 0f;
+            /// <summary>The command a click on this row sends: blend in quickly (C = 1).</summary>
+            public Intent ToIntent() => new Intent(IntentKind.DebugSetWeather, default, (int)Kind, IntensityPerMille, 1);
         }
 
         /// <summary>The Weather tab, top to bottom. The first is the game as it draws without weather.</summary>
         public static readonly WeatherPreset[] WeatherPresets =
         {
-            new WeatherPreset(WeatherClearKey, "No cloud and no rain: the day as the clock has it", 0f, 0f, 0f, 0f),
+            new WeatherPreset(WeatherClearKey, "Clears the sky now; the season takes over again when the spell ends",
+                WeatherKind.Clear, 1000),
             new WeatherPreset(WeatherOvercastKey,
-                "A grey day with no rain: the sun and its shadows faded, the sky and the colour drained",
-                0.8f, 0f, 0f, 0f, gloom: 0.6f),
-            new WeatherPreset(WeatherDrizzleKey,
-                "Light rain in full colour; the light dims a little and the ground turns half wet",
-                0.4f, 0.25f, 0.45f, 0f),
-            new WeatherPreset(WeatherRainKey,
-                "Steady rain in full colour: softer light, the ground wet and puddles starting",
-                0.6f, 0.7f, 0.85f, 0.4f),
-            new WeatherPreset(WeatherDownpourKey,
-                "The heaviest ordinary rain, still in colour: the ground soaked and puddled",
-                0.8f, 1f, 1f, 1f),
+                "A grey day with no rain: the sun and its shadows faded, the colour drained",
+                WeatherKind.Cloudy, 1000),
+            new WeatherPreset(WeatherDrizzleKey, "Light rain in full colour; the ground turns half wet",
+                WeatherKind.Rain, 250),
+            new WeatherPreset(WeatherRainKey, "Steady rain in full colour: softer light, wet ground, puddles starting",
+                WeatherKind.Rain, 700),
+            new WeatherPreset(WeatherDownpourKey, "The heaviest ordinary rain, still in colour: soaked ground and puddles",
+                WeatherKind.Rain, 1000),
             new WeatherPreset(WeatherStormKey,
-                "The rarer dim day: heavy rain, the colour drained to grey, and the wind bending grass and rain",
-                1f, 1f, 1f, 1f, gloom: 1f, wind: 1.3f),
+                "The rarer dim day: heavy rain, the colour drained to grey, the wind bending grass and rain",
+                WeatherKind.Storm, 1000),
         };
 
         /// <summary>The bandit (design 33 §1): a hostile person, the same intent as the colonist's with a kind.</summary>
@@ -333,28 +325,14 @@ namespace Odyssey.Hud
             TabChanged?.Invoke(tab);
         }
 
-        /// <summary>Which of <see cref="WeatherPresets"/> is set. 0, clear, until somebody picks another.</summary>
-        public int Weather { get; private set; }
-
-        /// <summary>The preset <see cref="Weather"/> names.</summary>
-        public WeatherPreset CurrentWeather => WeatherPresets[Weather];
-
         /// <summary>Whether the rain is drawn by the particle control arm rather than the GPU.</summary>
         public bool RainAsParticles { get; private set; }
 
         /// <summary>Whether wet ground is drawn as gloss only, rather than richer and a little darker.</summary>
         public bool WetGlossOnly { get; private set; }
 
-        /// <summary>Raised when the preset or the drawing changes, and only then.</summary>
+        /// <summary>Raised when one of the two drawing switches changes, and only then.</summary>
         public event Action? WeatherChanged;
-
-        /// <summary>Set the sky. An index off the end of the table is ignored rather than clamped.</summary>
-        public void SetWeather(int preset)
-        {
-            if (preset < 0 || preset >= WeatherPresets.Length || preset == Weather) return;
-            Weather = preset;
-            WeatherChanged?.Invoke();
-        }
 
         public void SetRainAsParticles(bool on)
         {

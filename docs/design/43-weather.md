@@ -10,7 +10,24 @@ rewritten — the owner approved shared particle emitters, and the review propos
 rain and a wet ground instead, **with pictures of both** (`claude/rain-look`, `RainCheck`,
 `docs/research/d-20-rain-rendering.md`). Which one ships is the owner's call.
 
-**Status: designed 2026-09-24; design only, nothing built.** Branch `claude/weather-design`, worktree
+**Built 2026-09-25: `weather-core` and `weather-visuals`, together, on `claude/rain-look` (PR #203).**
+The owner asked for a weather that "makes sense — some days rain, storm, sunny, depending on
+season", and for one PR to merge. So the sky and its look landed together, and §8's first and third
+steps are one PR. What is built:
+- `WeatherSystem` (Order 35, 120-tick cadence) rolls Clear, Cloudy, Rain and Storm from the §4
+  table in `Defs/Core/World/Weather.xml`.
+- Each spell lasts its rolled hours and hands over across two game hours.
+- It writes `WeatherOffsetC`, publishes a `WeatherView` for the drawing, is saved as
+  `odyssey.weather` with no format bump, and is hashed.
+- `DebugSetWeather` is the debug menu's command.
+- The clock shows the sky as a glyph with the word in its tooltip. The row has no room for a word.
+
+**§8's second step, `weather-world`, is not built**: rain slowing colonists, watering crops and
+sending animals for cover, and the sim-side column rule of §6. The render mirror's `SkyHeightMap`
+stands in for the drawing until then. `CellGrid.SkyLanding(x, z)`, the supply drop's column rule,
+is where that rule should be built (P1).
+
+**Status as designed, 2026-09-24:** design only, nothing built. Branch `claude/weather-design`, worktree
 `D:\code\odyssey-weather`. Ground: `main` at `3a39dd8d`. The owner approved the shape — three kinds
 (Clear, Cloudy, Rain), rain drawn with shared emitters, three phased PRs — and asked for the design
 as the PR.

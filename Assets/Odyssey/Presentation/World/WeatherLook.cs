@@ -1,28 +1,25 @@
 #nullable enable
 using System;
 using Odyssey.Hud;
+using Odyssey.Sim.Contracts;
 using Odyssey.Presentation.Rendering;
 using UnityEngine;
 
 namespace Odyssey.Presentation.World
 {
     /// <summary>
-    /// The weather as the player sees it, driven by the debug menu's Weather tab until the
-    /// simulation has a sky of its own (design 43 §8: the tab is how the rain-look prototype is
-    /// tested in Play, owner 2026-09-24).
+    /// The weather as the player sees it: the simulation's sky (<see cref="WeatherView"/>,
+    /// design 43) turned into light, rain and wet ground each frame.
     ///
     /// <para><b>One object so the bootstrap gains four lines, not forty.</b> It owns the cover map,
     /// the GPU rain, the particle control arm and the grey volume, and it moves the daylight's
     /// cloud term; the bootstrap builds it, calls <see cref="Sync"/> once a frame and disposes it
     /// with the session.</para>
     ///
-    /// <para><b>A preset is a target, not a switch.</b> Cloud and rain close on it over a couple
-    /// of game seconds, the ground wets over several and dries more slowly than it wets — so a
-    /// change of sky is something that arrives. All of it runs on game time read from the tick:
-    /// paused, the sky holds; at speed 3 it moves three times as fast.</para>
-    ///
-    /// <para><b>Nothing here is simulation</b>: no cell, no save, no hash. The day the weather
-    /// system exists, <see cref="Sync"/> is handed its numbers instead of a preset's.</para>
+    /// <para><b>The sky is the simulation's; the ground is the drawing's.</b> The weather system
+    /// blends one spell into the next and publishes the terms; the ground here wets over seconds
+    /// and dries more slowly than it wets, which is drawing and not saved. All of it runs on game
+    /// time read from the tick: paused, the sky holds; at speed 3 it moves three times as fast.</para>
     /// </summary>
     public sealed class WeatherLook : IDisposable
     {
@@ -55,17 +52,26 @@ namespace Odyssey.Presentation.World
         public float Wind { get; private set; } = 1f;
 
         /// <summary>
-        /// Jump straight to a preset rather than easing to it: for a contact sheet, which has no
-        /// game time to ease over.
+        /// What the ground ends up as under this much rain: the wet it closes on and the puddles.
+        /// The simulation says how hard it rains; how wet that leaves the ground is drawing, and
+        /// lags the rain here rather than being state anybody saves (design 43 §7).
         /// </summary>
-        public void Snap(DebugDirector.WeatherPreset target)
+        public static float WetFor(float rain) => Mathf.Clamp01(rain * 1.2f);
+
+        public static float PuddlesFor(float rain) => Mathf.Clamp01((rain - 0.35f) / 0.65f);
+
+        /// <summary>
+        /// Jump straight to a sky rather than easing to it: for a contact sheet, which has no game
+        /// time to ease over.
+        /// </summary>
+        public void Snap(in WeatherView view)
         {
-            Cloud = target.Cloud;
-            Rain = target.Rain;
-            Wet = target.Wet;
-            Puddles = target.Puddles;
-            Gloom = target.Gloom;
-            Wind = target.Wind;
+            Cloud = view.CloudPerMille / 1000f;
+            Rain = view.RainPerMille / 1000f;
+            Wet = WetFor(Rain);
+            Puddles = PuddlesFor(Rain);
+            Gloom = view.GloomPerMille / 1000f;
+            Wind = view.WindPerMille / 1000f;
         }
 
         /// <summary>For the frame-time overlay and the tests: what the GPU rain submitted last frame.</summary>
@@ -78,19 +84,24 @@ namespace Odyssey.Presentation.World
         /// <paramref name="underground"/> is the slice's own answer, and a view below the surface
         /// draws no rain (its ground is still wet when the player comes back up).
         /// </summary>
-        public void Sync(DebugDirector.WeatherPreset target, bool asParticles, DaylightDirector? daylight,
+        public void Sync(in WeatherView view, bool asParticles, DaylightDirector? daylight,
             Camera? camera, Vector3 focus, float cameraDistance, bool underground, long tick, int ticksPerSecond,
             bool running, float frameSeconds, bool wetGlossOnly = false, WindDirector? wind = null)
         {
             float seconds = _lastTick < 0 ? 0f : Mathf.Max(0, tick - _lastTick) / (float)Mathf.Max(1, ticksPerSecond);
             _lastTick = tick;
 
-            Cloud = Mathf.MoveTowards(Cloud, target.Cloud, SkyRate * seconds);
-            Rain = Mathf.MoveTowards(Rain, target.Rain, SkyRate * seconds);
-            Wet = Mathf.MoveTowards(Wet, target.Wet, (target.Wet > Wet ? WetRate : DryRate) * seconds);
-            Puddles = Mathf.MoveTowards(Puddles, target.Puddles, (target.Puddles > Puddles ? WetRate : DryRate) * seconds);
-            Gloom = Mathf.MoveTowards(Gloom, target.Gloom, SkyRate * seconds);
-            Wind = Mathf.MoveTowards(Wind, target.Wind, SkyRate * seconds);
+            // The sky's own terms, as the simulation published them: it blends one spell into the
+            // next over two game hours, so these are followed closely rather than eased again.
+            // The ground alone lags, wetting over seconds and drying three times slower.
+            float cloud = view.CloudPerMille / 1000f, rain = view.RainPerMille / 1000f;
+            float wet = WetFor(rain), puddles = PuddlesFor(rain);
+            Cloud = Mathf.MoveTowards(Cloud, cloud, SkyRate * seconds);
+            Rain = Mathf.MoveTowards(Rain, rain, SkyRate * seconds);
+            Wet = Mathf.MoveTowards(Wet, wet, (wet > Wet ? WetRate : DryRate) * seconds);
+            Puddles = Mathf.MoveTowards(Puddles, puddles, (puddles > Puddles ? WetRate : DryRate) * seconds);
+            Gloom = Mathf.MoveTowards(Gloom, view.GloomPerMille / 1000f, SkyRate * seconds);
+            Wind = Mathf.MoveTowards(Wind, view.WindPerMille / 1000f, SkyRate * seconds);
 
             // Cover dims and keeps the colour; gloom drains it (Overcast). Only gloom weights the
             // colour-draining volume, so ordinary rain stays as colourful as a clear day.
