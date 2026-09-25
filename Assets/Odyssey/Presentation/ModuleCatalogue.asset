@@ -14963,6 +14963,72 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+  - moduleId: odyssey.module.pawn.animal.frog
+    shape: 4
+    prefab: {fileID: 919132149155446097, guid: c5434b9bfdaa2864684fe683a19292ce, type: 3}
+    prefabName: Frog
+    prefabUnder: 
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 0, y: 0}
+    fitHeight: 0
+    fitStretch: 0
+    fitAgainstBack: 0
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: -8700369986558377747, guid: c5434b9bfdaa2864684fe683a19292ce, type: 3}
+    poseClipName: FrogArmature|Frog_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: FrogArmature|Frog_Idle
+      clip: {fileID: -8700369986558377747, guid: c5434b9bfdaa2864684fe683a19292ce, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: FrogArmature|Frog_Jump
+      clip: {fileID: -1469770746859098023, guid: c5434b9bfdaa2864684fe683a19292ce, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 1.2
+    combat: []
+    sitClip: {fileID: 0}
+    sitClipName: 
+    quadrupedGait: 0
+    hopGait: 1
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+    bandit: 0
+    overlayName: 
+    overlayAppearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.meal
     shape: 4
     prefab: {fileID: 8752115278972753073, guid: 53e689cdb89924f4eacb5b2f01c0bae0, type: 3}

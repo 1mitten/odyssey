@@ -18,7 +18,11 @@ namespace Odyssey.EditorTools
     /// <para><b>Loops.</b> No clip in either file is flagged to loop, and the figure mixer plays a
     /// clip once and then holds its last frame, so an unlooped walk is an animal that takes one
     /// stride and freezes mid-air. Idle, walk and run loop; the one-shots (jump, attack, death)
-    /// do not.</para>
+    /// do not — except the frog's jump, which is its gait (<see cref="Hops"/>).</para>
+    ///
+    /// <para><b>The frog</b> (design 30 §8) is the same author's export: ×0.11 stands it 0.40 m
+    /// wide, 0.25 m tall and 0.39 m nose to toe, measured by <c>AnimalProbe.ShootFrog</c> —
+    /// larger than life, as the rat is, so it reads from the play camera.</para>
     /// </summary>
     public static class AnimalImport
     {
@@ -28,10 +32,21 @@ namespace Odyssey.EditorTools
         {
             ("Pig.fbx", 0.105f),
             ("Rat.fbx", 0.09f),
+            ("Frog.fbx", 0.11f),
         };
 
-        static bool Loops(string clipName) =>
-            clipName.IndexOf("Idle", StringComparison.OrdinalIgnoreCase) >= 0
+        /// <summary>
+        /// Models whose Jump clip is their locomotion and so loops (design 30 §8). The frog has
+        /// no walk: left a one-shot, its figure took one hop and then slid along the ground on
+        /// the held last frame, which is exactly what <c>AnimalProbe.ShootMovingFrog</c> printed
+        /// the first time — the body sat at 195 mm for the rest of the run while the figure went
+        /// on moving.
+        /// </summary>
+        public static readonly string[] Hops = { "Frog.fbx" };
+
+        static bool Loops(string file, string clipName) =>
+            (Array.IndexOf(Hops, file) >= 0 && clipName.IndexOf("Jump", StringComparison.OrdinalIgnoreCase) >= 0)
+            || clipName.IndexOf("Idle", StringComparison.OrdinalIgnoreCase) >= 0
             || clipName.IndexOf("Walk", StringComparison.OrdinalIgnoreCase) >= 0
             || clipName.IndexOf("Run", StringComparison.OrdinalIgnoreCase) >= 0;
 
@@ -57,7 +72,7 @@ namespace Odyssey.EditorTools
                     : importer.defaultClipAnimations;
                 for (int i = 0; i < clips.Length; i++)
                 {
-                    bool loop = Loops(clips[i].name);
+                    bool loop = Loops(file, clips[i].name);
                     if (clips[i].loopTime == loop && clips[i].loopPose == false) continue;
                     clips[i].loopTime = loop;
                     clips[i].loopPose = false;

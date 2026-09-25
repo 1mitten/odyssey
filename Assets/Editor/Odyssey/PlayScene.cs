@@ -1825,6 +1825,29 @@ namespace Odyssey.EditorTools
                     new LocomotionEntry { clipName = "RatArmature|Rat_Run", metresPerSecond = 2.2f },
                 },
             });
+            // The frog (design 30 §8), kind 4: kind 3 is the bandit, a person, with no row here.
+            // It has no walk; it hops. Its locomotion is the idle and the Jump clip, and the row
+            // asks for the hop pacing (hopGait) so the figure is still while it crouches and
+            // lands and carried forward only while it is in the air. The jump's speed is the
+            // frog's own pace, 800 per mille of a colonist's 1.5 m/s: at 1.2 m/s the mixer plays
+            // the jump alone and at its authored rate, so one 0.875 s clip is one hop of about a
+            // metre -- two and a half body lengths. A frog slowed below it blends its idle in and
+            // hops shorter; one that seems to skate between hops wants this number nearer its
+            // measured speed.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.Animal(4), shape = ModuleShape.Pillar,
+                prefabName = "Frog",
+                poseClipName = "FrogArmature|Frog_Idle",
+                centreXZ = true, baseAtY = true,
+                scale = Vector3.one,
+                hopGait = true,
+                locomotion = new List<LocomotionEntry>
+                {
+                    new LocomotionEntry { clipName = "FrogArmature|Frog_Idle", metresPerSecond = 0f },
+                    new LocomotionEntry { clipName = "FrogArmature|Frog_Jump", metresPerSecond = 1.2f },
+                },
+            });
 
             // One row per hair piece. A rigid prop parented to the head bone with an identity
             // transform, measured in both packs -- no offset to fit and no per-body special case
