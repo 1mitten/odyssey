@@ -465,3 +465,10 @@ will be on record rather than assumed.
 Also unchanged from §12a's lower list: the clock reads `OutdoorTempC` off the simulation object;
 the lazy solve from a snapshot read writes room state outside the tick; a wall met from two sides
 by one room counts twice on that side.
+
+## 14. The fireside's cells — 2026-09-25
+
+Who stands and sleeps where round a fire is recorded with the rest of the fireside, in
+`31-campfire-art-and-fire.md` §20: no two pawns in one cell (a second ring when the first is full),
+and never a tree. Nothing about the heat changed — the second ring is a step further from the fire
+and so a little colder, which is the right order for who arrived last.

@@ -921,7 +921,9 @@ namespace Odyssey.Sim.Pawns
 
                     int cell = grid.SkyLanding(x, z);
                     if (cell < 0 || NaturalContent.IsWater(grid.Terrain[cell])) continue;
-                    if (pawns.Items.ItemAt(cell) != null) continue;
+                    // Empty, and not at a tree's trunk (design 23 §11): the space test says both.
+                    if (pawns.Items.ItemAt(cell) != null
+                        || !pawns.Items.CellHasSpace(cell, ItemIndex.Salvage, stack)) continue;
 
                     pawns.Items.Spawn(ItemIndex.Salvage, cell, stack);
                     break;

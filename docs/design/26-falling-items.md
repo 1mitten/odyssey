@@ -55,3 +55,11 @@ Loose items (felled logs, mined stone, raw rations, deconstruction salvage) can 
      $$t_{\text{fall}} = \text{clamp}(0.25\text{s} + 0.15\text{s} \times \sqrt{h / 3.0}, 0.35\text{s}, 0.85\text{s})$$
    - Use quadratic easing ($t^2$) to reflect gravitational acceleration.
    - Fire `AudioDirector.PlayOneShot(SoundIds.CarryDrop, landingPosition)` on the frame of touchdown.
+
+## 4. Nothing comes to rest in a tree — 2026-09-25
+
+A load that falls through a hole on to the ground at a tree's foot comes to rest beside the trunk
+rather than in it. Nothing in this line changed: `Falling.ItemsOutOf` already goes through
+`ColonyItems.NearestCellWithSpace`, and the space test under it now refuses a cell a tree stands in
+(design 23 §11, which holds the rule and every road it covers).
+`TreeTrunkTests.ALoadFallingOntoATreeComesToRestBesideIt` is the check.
