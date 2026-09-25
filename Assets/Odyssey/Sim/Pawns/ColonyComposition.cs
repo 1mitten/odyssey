@@ -250,6 +250,14 @@ namespace Odyssey.Sim.Pawns
                 // a debug-only wiring path a real colony would not otherwise get.
                 .AddIntentHandler(IntentKind.SpawnPawn, pawns.Pawns.HandleSpawnPawn)
                 .AddIntentHandler(IntentKind.DebugArmColonists, pawns.Pawns.HandleDebugArmColonists)
+                // Jumps always fail (design 46 §6): a switch on the context, read by the one roll.
+                .AddIntentHandler(IntentKind.DebugJumpsFail, intent =>
+                {
+                    bool on = intent.A != 0;
+                    if (pawns.DebugJumpsAlwaysFail == on) return IntentRejection.AlreadyInThatState;
+                    pawns.DebugJumpsAlwaysFail = on;
+                    return IntentRejection.None;
+                })
                 .AddIntentHandler(IntentKind.GiveResource, intent => pawns.Items.HandleGiveResource(intent, pawns.Cells))
                 // The two power commands that are not a build (design 32): taking a line up, and
                 // throwing a building's switch. Both belong to the power grid, the one owner of both.
