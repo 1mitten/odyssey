@@ -12617,3 +12617,25 @@ into the stream, so the cell's edge the arc took off from is 0.66 m under the dr
 is found on the drawn ground now, the last point at least 20 cm above the water (design 44 §7).
 Every jump test had run on a board with no world under it, which is why none could see it; the
 new ones build a stream with the shoreline on, and their control is that the old edge is wet.
+
+## 2026-09-25 — Marks you can always see, and a swimmer you can hear
+
+Two owner asks on the stream-jump branch. **The draft's marks were hidden by the meadow**: the
+diamond, the order line and both rings used the selection bracket's material, depth-tested like a
+solid, so lush grass, a bank or a tree in front of one took it away. They are drawn twice now by a
+shader of our own (`Odyssey/SeeThroughMark`): as before where nothing is in front, and at half
+strength through whatever is — chosen over the power lines' draw-over-everything because a ring
+drawn across the colonist standing in it loses which is in front. A selected colonist's or animal's
+bracket opts in; a cell's or an order's outline does not (design 33 §23).
+
+**The swim stroke**, from a recording the owner supplied: one sound per arm rather than per cell,
+because the file is one arm's stroke and the figure's arms alternate every 0.77 s, while a cell's
+time is the simulation's and does not know where the arms are. Timed so the file's loudest moment
+(0.18 s, measured after the bake) lands as a hand reaches forward, heard only inside 40 m of the
+camera, three takes (design 20 §9).
+
+**A catalogue rebuild is two steps, and the second is easy to forget.** `PlayScene.RebuildCatalogue`
+resolved the jump clips and, in the same write, emptied every colonist row's hair, skin and cloth
+swatch rectangles (3,026 lines), which `CharacterSwatches.Classify` fills and the recolouring
+reads — `docs/lessons.md` already says to run it after. Only the four jump links were wanted, so
+they were grafted into the committed asset by hand and the rebuild thrown away.

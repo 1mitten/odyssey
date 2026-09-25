@@ -688,6 +688,13 @@ namespace Odyssey.Presentation.World
         public event Action<Vector3>? LoadLifted;
 
         /// <summary>
+        /// A swimmer's hand has just gone forward into the water, at the swimmer (design 20 §9).
+        /// Raised <see cref="SwimPose.StrokeSoundPeakSeconds"/> before the hand arrives, so a sound
+        /// started now is loudest on the splash.
+        /// </summary>
+        public event Action<Vector3>? SwimStroked;
+
+        /// <summary>
         /// A load has just finished settling out of the arms onto the ground, at the point it
         /// landed.
         ///
@@ -1772,7 +1779,20 @@ namespace Odyssey.Presentation.World
             figure.SwimWeight = ForceSwim.HasValue
                 ? afloat
                 : SwimPose.Settle(figure.SwimWeight, afloat, deltaTime);
-            if (running && figure.SwimWeight > 0.001f) figure.SwimClock += deltaTime;
+            if (running && figure.SwimWeight > 0.001f)
+            {
+                float strokeWas = figure.SwimClock;
+                figure.SwimClock += deltaTime;
+
+                // A hand going into the water (design 20 §9): one sound per arm, on the stroke the
+                // figure is drawn making. Only a figure plainly afloat, and only live figures —
+                // which is every swimmer near enough to the camera to be heard.
+                if (figure.SwimWeight >= SwimPose.StrokeSoundWeight && SwimStroked != null
+                    && SwimPose.StrokeSoundsBetween(strokeWas, figure.SwimClock) > 0)
+                    SwimStroked(figure.Transform != null
+                        ? figure.Transform.position
+                        : GroundRelief.Lift(CellMetrics.FloorCentre(pawn.Cell)));
+            }
 
             // What is in her arms, and how far into looking like it (design 24 §4).
             //

@@ -150,6 +150,13 @@ namespace Odyssey.Presentation.Audio
         public const string Splash = SoundPrefix + "splash";
 
         /// <summary>
+        /// One arm of a swimmer's stroke going into the water (design 20 §9): twice a stroke cycle,
+        /// once per arm, at the swimmer, and short-ranged so it is heard only with the camera
+        /// close. Raised by <c>PawnFigureDirector.SwimStroked</c>, timed off the drawn stroke.
+        /// </summary>
+        public const string SwimStroke = SoundPrefix + "swim.stroke";
+
+        /// <summary>
         /// The neutral chime: something has happened that is worth a glance and is nobody's
         /// emergency. What an <see cref="Hud.AlertSeverity.Notice"/> row sounds like.
         /// </summary>

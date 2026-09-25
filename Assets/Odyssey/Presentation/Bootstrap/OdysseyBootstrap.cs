@@ -1103,6 +1103,7 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 _figures.BlowLanded += OnBlowLanded;
                 _figures.LoadLifted += OnLoadLifted;
+                _figures.SwimStroked += OnSwimStroked;
                 _figures.LoadSet += OnLoadSet;
             }
             if (_renderer != null)
@@ -1172,6 +1173,7 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>A load came up off the ground: the lighter of the two carry sounds, from the
         /// spot it was lying on.</summary>
         void OnLoadLifted(Vector3 from) => _audio?.PlayOneShot(SoundIds.CarryLift, from);
+        void OnSwimStroked(Vector3 at) => _audio?.PlayOneShot(SoundIds.SwimStroke, at);
 
         /// <summary>And a load touched down: the heavier one, from where it landed.</summary>
         void OnLoadSet(Vector3 at) => _audio?.PlayOneShot(SoundIds.CarryDrop, at);
@@ -3952,6 +3954,7 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 _figures.BlowLanded -= OnBlowLanded;
                 _figures.LoadLifted -= OnLoadLifted;
+                _figures.SwimStroked -= OnSwimStroked;
                 _figures.LoadSet -= OnLoadSet;
             }
             if (_renderer != null)
