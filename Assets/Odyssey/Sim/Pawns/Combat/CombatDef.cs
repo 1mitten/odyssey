@@ -147,6 +147,14 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int rechooseTicks = 300;
 
+        /// <summary>
+        /// How near a fight must be for a drafted colonist on her hold to join it (design 33 §15;
+        /// owner, 2026-09-24: <i>"if there is any fight going on nearby ... they will help"</i>): the
+        /// colonist being attacked and her attacker both within this many cells on the ground
+        /// (Chebyshev, the same layer or one either side). INVENTED: eight cells, 20 m.
+        /// </summary>
+        public int helpRadiusCells = 8;
+
         /// <summary>How long a colonist struck by a colonist fights back for, in ticks.</summary>
         public int retaliationTicks = 1_200;
 

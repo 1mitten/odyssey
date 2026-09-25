@@ -25,6 +25,25 @@ namespace Odyssey.Tests.Hud
                 Assert.That(BloodModel.For(quiet), Is.EqualTo(BloodMark.None), $"a {quiet} bled");
         }
 
+        /// <summary>
+        /// A wall does not bleed (design 33 §13i): a hit on a building — target 0 — leaves nothing,
+        /// and so does its demolition. The control is the same hit on a pawn.
+        /// </summary>
+        [Test]
+        public void ABuildingNeverBleeds()
+        {
+            var onAWall = new CombatEventView(1, 10, CombatEventKind.Hit, new PawnId(1), PawnId.None,
+                new CellRef(2, 2, 1), 4_000, -1);
+            var onAPawn = new CombatEventView(2, 10, CombatEventKind.Hit, new PawnId(1), new PawnId(2),
+                new CellRef(2, 2, 1), 4_000, -1);
+            var down = new CombatEventView(3, 10, CombatEventKind.Demolished, new PawnId(1), PawnId.None,
+                new CellRef(2, 2, 1), EdificeHandle.Wall, -1);
+
+            Assert.That(BloodModel.For(onAWall), Is.EqualTo(BloodMark.None), "a wall bled");
+            Assert.That(BloodModel.For(down), Is.EqualTo(BloodMark.None));
+            Assert.That(BloodModel.For(onAPawn), Is.EqualTo(BloodMark.Spurt), "the control: a pawn");
+        }
+
         [Test]
         public void ADownAndADeathLeaveAPoolAndADeathsIsTheLarger()
         {
@@ -40,8 +59,8 @@ namespace Odyssey.Tests.Hud
         const int Bat = 0, Machete = 1, Plank = 2;
 
         // Pawn kinds: 0 a colonist (a person, no natural attack), 1 a hog (blunt tusks), 2 a rat
-        // (sharp teeth), 3 a marauder (a person).
-        const int Colonist = 0, HogKind = 1, RatKind = 2, Marauder = 3;
+        // (sharp teeth), 3 a bandit (a person).
+        const int Colonist = 0, HogKind = 1, RatKind = 2, Bandit = 3;
 
         static BloodSides Sides() => new BloodSides(
             new bool?[] { false, true, null },
@@ -54,7 +73,7 @@ namespace Odyssey.Tests.Hud
             BloodSides sides = Sides();
             Assert.That(sides.IsSharp(Machete, Colonist), Is.True, "a machete cut blunt");
             Assert.That(sides.IsSharp(Bat, Colonist), Is.False, "a bat cut sharp");
-            Assert.That(sides.IsSharp(Machete, Marauder), Is.True);
+            Assert.That(sides.IsSharp(Machete, Bandit), Is.True);
             // The weapon outranks the species, as it does in the simulation.
             Assert.That(sides.IsSharp(Bat, RatKind), Is.False);
         }
@@ -66,7 +85,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(sides.IsSharp(-1, RatKind), Is.True, "a rat's bite was blunt");
             Assert.That(sides.IsSharp(-1, HogKind), Is.False, "the hog's tusks are blunt in the content");
             Assert.That(sides.IsSharp(-1, Colonist), Is.False, "fists were sharp");
-            Assert.That(sides.IsSharp(-1, Marauder), Is.False);
+            Assert.That(sides.IsSharp(-1, Bandit), Is.False);
         }
 
         /// <summary>

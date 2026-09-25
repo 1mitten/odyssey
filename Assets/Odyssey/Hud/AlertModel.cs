@@ -145,6 +145,13 @@ namespace Odyssey.Hud
         public const string NoFuelKey = "ui.alert.nofuel";
 
         /// <summary>
+        /// A downed colonist lying where she fell with no free bed to be carried to (design 33
+        /// §11d): the owner's "leave her, and say why". Read off the simulation's
+        /// <c>odyssey.pawn.rescue.nobed</c>, one row a colonist, a click on it goes to her.
+        /// </summary>
+        public const string NoRescueBedKey = "ui.alert.norescuebed";
+
+        /// <summary>
         /// Seconds a store must be marked for removal and still full before the panel says so.
         ///
         /// <para>Longer than the idle latch because the ordinary case looks identical for a while:
@@ -156,7 +163,7 @@ namespace Odyssey.Hud
         public const double StoreStuckSustain = 10.0;
 
         /// <summary>Every key this panel can put on screen, for the registry test.</summary>
-        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey, StoreStuckKey, PowerLossKey, NoFuelKey };
+        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey, StoreStuckKey, PowerLossKey, NoFuelKey, NoRescueBedKey };
 
         public readonly List<AlertRow> Rows = new List<AlertRow>();
 
@@ -177,6 +184,8 @@ namespace Odyssey.Hud
         int _wasBreaking = -1;
         bool _wasIdle;
         int _wasColony = -1;
+        int _wasNoBed;
+        long _wasNoBedIds;
         int _latchVersion;
         int _wasLatchVersion = -1;
         int _dismissVersion;
@@ -219,10 +228,12 @@ namespace Odyssey.Hud
             int starving = 0;
             int breaking = 0;
             int idle = 0;
+            int noBed = 0;
+            long noBedIds = 0;
 
-            // Colonists only (design 33 §5d): these are the colony's alerts, and a marauder or an
+            // Colonists only (design 33 §5d): these are the colony's alerts, and a bandit or an
             // animal is neither hungry on the colony's account nor part of whether it is idle. A
-            // marauder's needs never move at all (design 33 §5c). Read from the flags, which a view
+            // bandit's needs never move at all (design 33 §5c). Read from the flags, which a view
             // built without them derives from the kind as it always did.
             int colonists = 0;
             PawnId onlyColonist = default;
@@ -255,6 +266,13 @@ namespace Odyssey.Hud
                 }
 
                 if (pawn.JobDef < 0) idle++;
+
+                if (snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.RescueNoBedKey, out _))
+                {
+                    noBed++;
+                    noBedIds = noBedIds * 31 + id;
+                }
+                else _dismissed.Remove(AlertRow.ComputeDismissKey(NoRescueBedKey, pawn.Id, default));
             }
 
             Forget(_starving, snapshot, ref _latchVersion);
@@ -318,6 +336,7 @@ namespace Odyssey.Hud
             if (starving == _wasStarving && breaking == _wasBreaking &&
                 dark == _wasDark && shortW == _wasShortW && dry == _wasDry &&
                 idleStands == _wasIdle && storeStuck == _wasStoreStuck && colonists == _wasColony &&
+                noBed == _wasNoBed && noBedIds == _wasNoBedIds &&
                 _latchVersion == _wasLatchVersion && _dismissVersion == _wasDismissVersion)
                 return;
 
@@ -329,6 +348,8 @@ namespace Odyssey.Hud
             _wasIdle = idleStands;
             _wasStoreStuck = storeStuck;
             _wasColony = colonists;
+            _wasNoBed = noBed;
+            _wasNoBedIds = noBedIds;
             _wasLatchVersion = _latchVersion;
             _wasDismissVersion = _dismissVersion;
             Rows.Clear();
@@ -372,6 +393,23 @@ namespace Odyssey.Hud
                             pawn: pawn.Id));
                     }
                 }
+            }
+
+            // Down with nowhere to be carried: Danger, because she lies where she fell until a bed
+            // frees, and a click goes to her (design 33 §11d).
+            for (int i = 0; i < pawns.Length && noBed > 0; i++)
+            {
+                PawnView pawn = pawns[i];
+                if (!pawn.IsColonist || !snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.RescueNoBedKey, out _)) continue;
+                int dismissKey = AlertRow.ComputeDismissKey(NoRescueBedKey, pawn.Id, default);
+                if (_dismissed.Contains(dismissKey)) continue;
+                Rows.Add(new AlertRow(
+                    NoRescueBedKey,
+                    ColonistNames.Of(snapshot, pawn.Id),
+                    " is down with no bed to be carried to",
+                    AlertSeverity.Danger,
+                    count: 1,
+                    pawn: pawn.Id));
             }
 
             // A dark net is Danger: whatever it was keeping warm is going cold now. The cell is a

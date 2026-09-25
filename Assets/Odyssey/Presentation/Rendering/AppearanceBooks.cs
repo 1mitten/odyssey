@@ -51,12 +51,24 @@ namespace Odyssey.Presentation.Rendering
 
             var maleBodies = new List<int>();
             var femaleBodies = new List<int>();
+            var banditMale = new List<int>();
+            var banditFemale = new List<int>();
             int uniformMale = ColonistCastPools.NoUniform;
             int uniformFemale = ColonistCastPools.NoUniform;
             List<ModuleEntry> bodies = catalogue.FindFamily(ModuleIds.ColonistBase);
             for (int i = 0; i < bodies.Count; i++)
             {
                 ModuleEntry row = bodies[i];
+
+                // The gang's rows (design 42): a bandit's body, never a colonist's, so they are
+                // read into their own pools and skipped by the lottery below whatever else the
+                // row says.
+                if (row.bandit)
+                {
+                    if (row.sex == BodySex.Female) banditFemale.Add(i);
+                    else banditMale.Add(i);
+                    continue;
+                }
 
                 // The uniform is read whether or not its row is in the lottery: it is what a
                 // colonist wears, not one of the things they might be dealt.
@@ -95,10 +107,19 @@ namespace Odyssey.Presentation.Rendering
                 if (beard[i].recolours)
                     beards.Add(i);
 
+            // The headgear a bandit wears: every row that resolved art, by family index. Without
+            // the packs it is empty and a bandit goes bare-headed with their own hair.
+            var headgear = new List<int>();
+            List<ModuleEntry> heads = catalogue.FindFamily(ModuleIds.HeadgearBase);
+            for (int i = 0; i < heads.Count; i++)
+                if (heads[i].prefab != null)
+                    headgear.Add(i);
+
             return new ColonistCastPools(
                 maleBodies.ToArray(), femaleBodies.ToArray(),
                 maleHair.ToArray(), femaleHair.ToArray(), beards.ToArray(),
-                uniformMale, uniformFemale);
+                uniformMale, uniformFemale,
+                banditMale.ToArray(), banditFemale.ToArray(), headgear.ToArray());
         }
     }
 }

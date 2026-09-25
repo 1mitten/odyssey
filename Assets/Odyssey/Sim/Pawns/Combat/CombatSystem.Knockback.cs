@@ -25,13 +25,16 @@ namespace Odyssey.Sim.Pawns
         /// ground beneath either (<see cref="IsWater"/>);</item>
         /// <item><b>free of other fighters</b> — no cell <see cref="Melee.Holds"/> for anybody else,
         /// the same rule every fighter stops by (§8c), so a knockback never stands two fighters on
-        /// one tile.</item>
+        /// one tile — <b>and never the tile of the one the target is itself fighting</b>
+        /// (<see cref="OnWhoItFights"/>), which Holds leaves to her.</item>
         /// </list>
         /// <para><b>Scales with</b> the pawns on the board, for the one <see cref="Melee.Holds"/>
         /// pass, asked only for a critical that rolled its knockback.</para>
         /// </summary>
         public static int KnockbackCell(PawnContext ctx, Pawn attacker, Pawn target)
         {
+            // A body in somebody's arms is not knocked out of them (design 33 §11a).
+            if (target.CarriedBy != 0) return -1;
             GridSize size = ctx.Size;
             CellRef a = size.FromIndex(attacker.Cell), t = size.FromIndex(target.Cell);
             if (a.Y != t.Y) return -1;
@@ -44,7 +47,7 @@ namespace Odyssey.Sim.Pawns
             int beyond = size.Index(x, z, t.Y);
             if (IsWater(ctx, beyond)) return -1;
 
-            TraverseMode mode = target.Species.traverseMode;
+            TraverseMode mode = target.OwnMode;
             int land;
             if (ctx.Nav.IsLegalStep(target.Cell, beyond, mode))
             {
@@ -66,7 +69,26 @@ namespace Odyssey.Sim.Pawns
                 land = lower;
             }
 
-            return Melee.Holds(ctx, target, land) ? -1 : land;
+            if (Melee.Holds(ctx, target, land)) return -1;
+            return OnWhoItFights(ctx, target, land) ? -1 : land;
+        }
+
+        /// <summary>
+        /// Is <paramref name="cell"/> the side of the pawn <paramref name="pawn"/> is herself
+        /// attacking? <see cref="Melee.Holds"/> does not count her own claims against her — an
+        /// attacker's own side is hers to stand on — but the tile of the one she is fighting is
+        /// held <i>only</i> by her claim when it does not fight back, so Holds let a knockback lay
+        /// her on it, and a knocked-down fighter lies where she lands. A fighter never fights from
+        /// her target's tile (<c>AttackMeleeJobDriver.MayFightFrom</c>), and she is never knocked
+        /// on to it either. Found by <c>FightGuardTests.MixedBrawlsOnManySeeds</c> once the bandit
+        /// carried blunt weapons (design 42): a colonist beating a rat, knocked on to the rat by a
+        /// bandit's critical, lay there 90 ticks.
+        /// </summary>
+        static bool OnWhoItFights(PawnContext ctx, Pawn pawn, int cell)
+        {
+            if (!Melee.IsInAnAttack(pawn) || pawn.CombatTarget == 0) return false;
+            Pawn? fought = ctx.Pawns.Get(new PawnId(pawn.CombatTarget));
+            return fought != null && Melee.SideOf(fought) == cell;
         }
 
         /// <summary>
@@ -118,7 +140,8 @@ namespace Odyssey.Sim.Pawns
             Job? job = target.CurrentJob;
             bool ordered = job != null && job.DefIndex == JobIndex.AttackMelee && job.PlayerForced;
             int foe = target.CombatTarget, toTheDeath = job?.DestCell ?? -1;
-            TraverseMode mode = job?.Mode ?? TraverseMode.Colonist;
+            int struck = job?.TargetCell ?? -1;
+            TraverseMode mode = job?.Mode ?? target.OwnMode;
 
             int from = target.Cell;
             _jobs.EndJob(target, JobStatus.Failed);
@@ -139,6 +162,18 @@ namespace Odyssey.Sim.Pawns
                 again.Mode = mode;
                 again.PlayerForced = true;
                 if (!_jobs.StartJob(target, again, tick)) target.CombatTarget = 0;
+            }
+            // An order on a building outlives the fall the same way (design 33 §13e): target 0, the
+            // building by its record handle, which the job carried in DestCell.
+            else if (ordered && foe == 0 && BuildingTargets.TryStanding(_ctx, toTheDeath, out _))
+            {
+                Job again = target.JobBuffer;
+                again.Reset(JobIndex.AttackMelee);
+                again.TargetCell = struck;
+                again.DestCell = toTheDeath;
+                again.Mode = mode;
+                again.PlayerForced = true;
+                _jobs.StartJob(target, again, tick);
             }
 
             _ctx.CombatLog.Report(CombatEventKind.KnockedBack, attacker.Id, target.Id, _ctx.Size.FromIndex(land), tick,

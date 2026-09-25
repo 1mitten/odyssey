@@ -155,7 +155,7 @@ namespace Odyssey.Tests.Presentation
                 new Vector3(20f, CellMetrics.SizeY, 20f));
 
             Assert.That(Looking().Touches(chunk), Is.False, "the beam is above this layer");
-            Assert.That(Looking().Touches(chunk, ChunkRenderer.TallestModuleMetres), Is.True);
+            Assert.That(Looking().Touches(chunk, ChunkRenderer.MinimumTallestModuleMetres), Is.True);
         }
 
         [Test]

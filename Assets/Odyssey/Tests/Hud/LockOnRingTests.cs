@@ -154,13 +154,13 @@ namespace Odyssey.Tests.Hud
 
         static readonly object World = new object();
 
-        /// <summary>A frame with Ada and Bo drafted unless said otherwise, and the targets they are attacking.</summary>
+        /// <summary>A frame with Ada and Bo drafted, and the targets they were ordered to attack.</summary>
         static WorldSnapshot Frame(int adaTarget = 0, int boTarget = 0, bool raiderDown = false,
-            bool raiderGone = false, bool adaDrafted = true)
+            bool raiderGone = false)
         {
             WorldSnapshot frame = Odyssey.Tests.Hud.Frame.Write();
             frame.AddPawn(new PawnView(Ada, new CellRef(1, 1, 1), 800, 800, 700,
-                flags: PawnFlags.Person | (adaDrafted ? PawnFlags.Drafted : PawnFlags.None)));
+                flags: PawnFlags.Person | PawnFlags.Drafted));
             frame.AddPawn(new PawnView(Bo, new CellRef(2, 1, 1), 800, 800, 700,
                 flags: PawnFlags.Person | PawnFlags.Drafted));
             if (!raiderGone)
@@ -172,6 +172,37 @@ namespace Odyssey.Tests.Hud
             if (adaTarget != 0) frame.AddPawnAspect(new PawnAspect(Ada, CombatAspectNames.OrderTargetKey, adaTarget));
             if (boTarget != 0) frame.AddPawnAspect(new PawnAspect(Bo, CombatAspectNames.OrderTargetKey, boTarget));
             return frame;
+        }
+
+        /// <summary>
+        /// A rescue draws no ring (design 33 §11e), and since §18b that is because of what the
+        /// simulation publishes, not a filter here: a rescuer names her patient under an aspect of
+        /// her own (<c>odyssey.pawn.rescue.patient</c>) and no order target. The control is the
+        /// same rescuer with an order target published, which draws one — the ring asks the aspect
+        /// and nothing about the job.
+        /// </summary>
+        [Test]
+        public void ARescueDrawsNoRing()
+        {
+            static WorldSnapshot Carrying(bool orderTarget)
+            {
+                WorldSnapshot frame = Odyssey.Tests.Hud.Frame.Write();
+                frame.AddPawn(new PawnView(Ada, new CellRef(1, 1, 1), 800, 800, 700, JobHandle.Rescue,
+                    flags: PawnFlags.Person | PawnFlags.Drafted));
+                frame.AddPawn(new PawnView(Bo, new CellRef(1, 1, 1), 800, 800, 700, JobHandle.Downed,
+                    flags: PawnFlags.Person | PawnFlags.Downed | PawnFlags.Carried));
+                frame.AddPawnAspect(new PawnAspect(Ada, AspectKey.Of("odyssey.pawn.rescue.patient"), Bo.Value));
+                if (orderTarget) frame.AddPawnAspect(new PawnAspect(Ada, CombatAspectNames.OrderTargetKey, Bo.Value));
+                return frame;
+            }
+
+            var rings = new LockOnRings();
+            rings.Update(Carrying(orderTarget: false), AdaOnly, 10f, World);
+            Assert.That(rings.Rings.Count, Is.Zero, "a rescue drew the attack's ring");
+
+            var control = new LockOnRings();
+            control.Update(Carrying(orderTarget: true), AdaOnly, 10f, World);
+            Assert.That(control.Rings.Count, Is.EqualTo(1), "the ring asked the job, not the order aspect");
         }
 
         static readonly PawnId[] AdaOnly = { Ada };
@@ -224,17 +255,37 @@ namespace Odyssey.Tests.Hud
             Assert.That(rings.Rings.Count, Is.EqualTo(0));
         }
 
-        /// <summary>An undrafted colonist hitting back has no order; the published target alone does not make one.</summary>
+        /// <summary>
+        /// A fight nobody ordered draws no ring (design 33 §18b; owner, 2026-09-24: <i>"Update the
+        /// depending on the correct action"</i>). A drafted colonist swinging at a bandit of her
+        /// own accord — the hold's blow, or joining a fight nearby — is on the attack job with no
+        /// order target published, as the simulation now publishes her, and wears no ring. The
+        /// control is the same frame with the order's target, which does.
+        /// </summary>
         [Test]
-        public void AnUndraftedColonistsTargetIsNotAnOrder()
+        public void AFightNobodyOrderedDrawsNoRing()
         {
+            static WorldSnapshot Fighting(bool ordered)
+            {
+                WorldSnapshot frame = Odyssey.Tests.Hud.Frame.Write();
+                frame.AddPawn(new PawnView(Ada, new CellRef(1, 1, 1), 800, 800, 700, JobHandle.AttackMelee,
+                    flags: PawnFlags.Person | PawnFlags.Drafted));
+                frame.AddPawn(new PawnView(Raider, new CellRef(2, 1, 1), 800, 800, 700, JobHandle.AttackMelee, kind: 3,
+                    flags: PawnFlags.Person | PawnFlags.Hostile));
+                if (ordered) frame.AddPawnAspect(new PawnAspect(Ada, CombatAspectNames.OrderTargetKey, Raider.Value));
+                return frame;
+            }
+
             var rings = new LockOnRings();
-            rings.Update(Frame(adaDrafted: false), AdaOnly, 0f, World);
-            rings.Update(Frame(adaTarget: Raider.Value, adaDrafted: false), AdaOnly, 0.1f, World);
-            Assert.That(rings.Rings.Count, Is.EqualTo(0));
+            rings.Update(Fighting(ordered: false), AdaOnly, 0f, World);
+            rings.Update(Fighting(ordered: false), AdaOnly, 0.1f, World);
+            Assert.That(rings.Rings.Count, Is.EqualTo(0), "a fight nobody ordered drew the order's ring");
+
+            rings.Update(Fighting(ordered: true), AdaOnly, 0.2f, World);
+            Assert.That(Only(rings).Target, Is.EqualTo(Raider), "the control: the order drew nothing");
         }
 
-        /// <summary>Two colonists on one marauder: one ring. The squad ordered in one click locks on once.</summary>
+        /// <summary>Two colonists on one bandit: one ring. The squad ordered in one click locks on once.</summary>
         [Test]
         public void TwoAttackersShareOneRing()
         {

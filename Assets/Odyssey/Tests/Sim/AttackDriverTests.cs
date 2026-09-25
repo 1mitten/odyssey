@@ -235,14 +235,14 @@ namespace Odyssey.Tests.Sim
             Assert.That(Attack(colony, a, a), Is.EqualTo(IntentRejection.NotPermitted), "she attacked herself");
             Assert.That(Send(colony, new Intent(IntentKind.OrderAttack, default, a.Id.Value, 9_999)),
                 Is.EqualTo(IntentRejection.NotPermitted), "nobody by that id");
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 12, 0));
-            Assert.That(Send(colony, new Intent(IntentKind.OrderAttack, default, marauder.Id.Value, a.Id.Value)),
-                Is.EqualTo(IntentRejection.NotPermitted), "a marauder took an order");
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 12, 0));
+            Assert.That(Send(colony, new Intent(IntentKind.OrderAttack, default, bandit.Id.Value, a.Id.Value)),
+                Is.EqualTo(IntentRejection.NotPermitted), "a bandit took an order");
 
             Assert.That(Attack(colony, a, b), Is.EqualTo(IntentRejection.None), "the control: drafted, at a colonist");
             Assert.That(a.CombatTarget, Is.EqualTo(b.Id.Value));
-            Assert.That(Attack(colony, a, marauder), Is.EqualTo(IntentRejection.None), "at a marauder");
-            Assert.That(a.CombatTarget, Is.EqualTo(marauder.Id.Value), "the second order did not take the target");
+            Assert.That(Attack(colony, a, bandit), Is.EqualTo(IntentRejection.None), "at a bandit");
+            Assert.That(a.CombatTarget, Is.EqualTo(bandit.Id.Value), "the second order did not take the target");
         }
 
         /// <summary>
@@ -256,33 +256,33 @@ namespace Odyssey.Tests.Sim
             var (colony, a, b, rules) = Duel(order: false);
             Stand(colony, b, Near(colony, -20, -20));
             int home = a.Cell;
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 1, 0));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, 1, 0));
 
             // The moment she takes it on, it is carried off — so her blow is a young job, which
             // the hunt's re-choosing would not yet end, and only the hold's own rule keeps her.
-            TickUntil(colony, () => a.CurrentJob?.DefIndex == JobIndex.AttackMelee, 10, "she never took the marauder on");
+            TickUntil(colony, () => a.CurrentJob?.DefIndex == JobIndex.AttackMelee, 10, "she never took the bandit on");
             Assert.That(a.CurrentJob!.PlayerForced, Is.False, "nobody ordered it");
-            Stand(colony, marauder, Near(colony, 10, 10));
-            marauder.StunnedUntilTick = colony.World.CurrentTick + 400;
+            Stand(colony, bandit, Near(colony, 10, 10));
+            bandit.StunnedUntilTick = colony.World.CurrentTick + 400;
             colony.World.Tick(200);
             Assert.That(a.Cell, Is.EqualTo(home), "she chased a threat nobody ordered her at");
             Assert.That(a.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.DraftHold));
 
             // Back beside her: she strikes from where she stands.
-            marauder.StunnedUntilTick = 0;
-            Stand(colony, marauder, Near(colony, 1, 0));
+            bandit.StunnedUntilTick = 0;
+            Stand(colony, bandit, Near(colony, 1, 0));
             for (int t = 0; t < 600; t++)
             {
                 colony.World.Tick();
                 Assert.That(a.Cell, Is.EqualTo(home), $"tick {t}: the hold moved");
             }
-            Assert.That(rules.TicksOf(a).Count, Is.GreaterThan(0), "she never struck the marauder beside her");
+            Assert.That(rules.TicksOf(a).Count, Is.GreaterThan(0), "she never struck the bandit beside her");
             Assert.That(a.Drafted, Is.True);
 
             // The control: ordered, she follows.
-            Stand(colony, marauder, Near(colony, 10, 10));
-            marauder.StunnedUntilTick = colony.World.CurrentTick + 400;
-            Assert.That(Attack(colony, a, marauder), Is.EqualTo(IntentRejection.None));
+            Stand(colony, bandit, Near(colony, 10, 10));
+            bandit.StunnedUntilTick = colony.World.CurrentTick + 400;
+            Assert.That(Attack(colony, a, bandit), Is.EqualTo(IntentRejection.None));
             colony.World.Tick(200);
             Assert.That(a.Cell, Is.Not.EqualTo(home), "the control: ordered, she follows");
         }
@@ -325,6 +325,60 @@ namespace Odyssey.Tests.Sim
             Assert.That(restored.World.ComputeStateHash().Value, Is.EqualTo(colony.World.ComputeStateHash().Value),
                 "the fight resumed differently");
             Assert.That(restored.Pawns.Pawns.Get(b.Id)!.HpMilli, Is.EqualTo(b.HpMilli));
+        }
+
+        /// <summary>
+        /// A save taken while an attacker is <b>in reach and part way through a step</b> resumes on the
+        /// same ticks (found by the combat gate, C7). The driver lets a step under way land before it
+        /// decides, and the mover lands it along the path she holds — but a path is never saved, so the
+        /// loaded attacker held none, nothing asked for one, and she stood frozen part way through the
+        /// step while the world that was saved walked on. Three bandits on two drafted colonists: the
+        /// first tick with an attacker in that state is the save.
+        /// </summary>
+        [Test]
+        public void ASaveTakenMidStepInReachResumesTheSame()
+        {
+            var colony = Board();
+            colony.World.Tick();
+            Pawn a = colony.Pawns.Pawns.All[0], b = colony.Pawns.Pawns.All[1];
+            Stand(colony, a, Near(colony, 0, 0));
+            Stand(colony, b, Near(colony, 1, 0));
+            Assert.That(Draft(colony, a), Is.EqualTo(IntentRejection.None));
+            Assert.That(Draft(colony, b), Is.EqualTo(IntentRejection.None));
+            for (int i = 0; i < 3; i++) Spawn(colony, PawnKindIndex.Bandit, Near(colony, 9, -2 + 2 * i));
+
+            // The moment: an attacker on its target, in reach of it, holding a path with a step well
+            // under way — the branch that waits for the step to land.
+            Pawn? walker = null;
+            for (int t = 0; t < 3_000 && walker == null; t++)
+            {
+                colony.World.Tick();
+                foreach (Pawn pawn in colony.Pawns.Pawns.All)
+                {
+                    if (pawn.CurrentJob?.DefIndex != JobIndex.AttackMelee || pawn.CombatTarget == 0 || !pawn.HasPath) continue;
+                    if (pawn.MoveProgress < pawn.MoveRatePerMille()) continue;
+                    Pawn? target = colony.Pawns.Pawns.Get(new PawnId(pawn.CombatTarget));
+                    if (target != null && Melee.InReach(colony.Pawns, pawn, target, pawn.CurrentJob.Mode)) walker = pawn;
+                }
+            }
+            Assert.That(walker, Is.Not.Null, "the control: no attacker was ever in reach part way through a step");
+
+            byte[] saved = colony.Save();
+            var restored = Board();
+            restored.Load(saved);
+            Pawn back = restored.Pawns.Pawns.Get(walker!.Id)!;
+            Assert.That(back.HasPath, Is.False, "the control: a path is not saved, so the loaded attacker holds none");
+            Assert.That(back.MoveProgress, Is.EqualTo(walker.MoveProgress), "the control: her progress through the step is");
+
+            colony.World.Tick();
+            restored.World.Tick();
+            Assert.That(back.MoveProgress == walker.MoveProgress && back.Cell == walker.Cell, Is.True,
+                $"one tick on, the loaded attacker is at {back.Cell} with {back.MoveProgress} and the saved one at " +
+                $"{walker.Cell} with {walker.MoveProgress}: the step under way did not go on");
+            colony.World.Tick(600);
+            restored.World.Tick(600);
+            Assert.That(restored.World.ComputeStateHash().Value, Is.EqualTo(colony.World.ComputeStateHash().Value),
+                "the fight resumed differently");
         }
     }
 }

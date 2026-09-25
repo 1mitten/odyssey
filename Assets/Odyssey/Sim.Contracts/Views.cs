@@ -55,7 +55,7 @@ namespace Odyssey.Sim.Contracts
     ///
     /// <para><b>Why this replaced "kind ≠ 0 means animal".</b> Until combat every pawn that was
     /// not kind 0 was an animal, and six places in the interface and the renderer read the kind
-    /// that way. A marauder is kind 3 and a person, so the question "is this a person" has to be
+    /// that way. A bandit is kind 3 and a person, so the question "is this a person" has to be
     /// asked of the thing that knows — the species — and published as a fact, not reconstructed
     /// from a table index on the far side of the seam.</para>
     ///
@@ -300,7 +300,7 @@ namespace Odyssey.Sim.Contracts
         /// it, and the roster has to leave the animals out before anyone clicks anything.
         /// Presentation turns the index into a species through its own catalogue.
         ///
-        /// <para><b>Not "an animal" when it is not 0</b> — a marauder is kind 3 and a person. Ask
+        /// <para><b>Not "an animal" when it is not 0</b> — a bandit is kind 3 and a person. Ask
         /// <see cref="Flags"/> (<see cref="IsPerson"/>, <see cref="IsAnimal"/>,
         /// <see cref="IsColonist"/>) what a pawn is; ask the kind only which row of a table to
         /// draw it from.</para>
@@ -469,13 +469,25 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int Favourability;
 
-        public BulletinView(int id, int incidentDef, CellRef cell, int tick, int favourability = 0)
+        /// <summary>
+        /// The item def the entry is about, as an <see cref="ItemHandle"/> value, or -1 when it is
+        /// about none — what a bandit carried off (design 33 §17). Most entries carry none.
+        /// </summary>
+        public readonly int Subject;
+
+        /// <summary>How many of <see cref="Subject"/>: the stack a bandit carried off. 0 with no subject.</summary>
+        public readonly int Amount;
+
+        public BulletinView(int id, int incidentDef, CellRef cell, int tick, int favourability = 0,
+            int subject = -1, int amount = 0)
         {
             Id = id;
             IncidentDef = incidentDef;
             Cell = cell;
             Tick = tick;
             Favourability = favourability;
+            Subject = subject;
+            Amount = amount;
         }
     }
 
@@ -528,6 +540,46 @@ namespace Odyssey.Sim.Contracts
         /// ticks. Presentation plays the critical slice for a sharp weapon, the whoosh otherwise.
         /// </summary>
         SwingCritical = 11,
+
+        /// <summary>
+        /// A building was beaten down to nought and is coming down (design 33 §13g): it is gone
+        /// from the frame after this tick's end. <see cref="CombatEventView.Target"/> is <c>default</c>,
+        /// <see cref="CombatEventView.Cell"/> the building's own cell, and
+        /// <see cref="CombatEventView.Amount"/> the <see cref="EdificeHandle"/> it was, so presentation
+        /// knows what fell. Reported once, by the blow that crossed nought.
+        /// </summary>
+        Demolished = 12,
+    }
+
+    /// <summary>
+    /// A building somebody has struck, and what is left of it (design 33 §13i): one row per struck
+    /// building, whole buildings having none — the published face of the simulation's
+    /// <c>EdificeDamage</c>. What a hit-point bar over a building is drawn from.
+    ///
+    /// <para>Sparse, a report of saved and hashed state and neither itself, like
+    /// <see cref="CorpseView"/>. A row stands until the building is demolished or taken apart.</para>
+    /// </summary>
+    public readonly struct EdificeDamageView
+    {
+        /// <summary>The building's own cell, as a whole-world index: a two-cell thing's head.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>What stands there, as an <see cref="EdificeHandle"/> value.</summary>
+        public readonly int Edifice;
+
+        /// <summary>What is left, in thousandths of a hit point. At or below nought it is coming down this tick.</summary>
+        public readonly int HpMilli;
+
+        /// <summary>Its pool, in thousandths: the building's points times its material's factor.</summary>
+        public readonly int MaxMilli;
+
+        public EdificeDamageView(int cellIndex, int edifice, int hpMilli, int maxMilli)
+        {
+            CellIndex = cellIndex;
+            Edifice = edifice;
+            HpMilli = hpMilli;
+            MaxMilli = maxMilli;
+        }
     }
 
     /// <summary>
@@ -1288,6 +1340,8 @@ namespace Odyssey.Sim.Contracts
         PowerNetView[] _powerNets = Array.Empty<PowerNetView>();
         CombatEventView[] _combatEvents = Array.Empty<CombatEventView>();
         CorpseView[] _corpses = Array.Empty<CorpseView>();
+        EdificeDamageView[] _edificeDamage = Array.Empty<EdificeDamageView>();
+        int[] _edificeHitPoints = Array.Empty<int>();
 
         public int Tick { get; private set; }
         public int SliceLayer { get; private set; }
@@ -1430,6 +1484,35 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>Every corpse on the board, in the order they fell. See <see cref="CorpseView"/>.</summary>
         public ReadOnlySpan<CorpseView> Corpses => new ReadOnlySpan<CorpseView>(_corpses, 0, CorpseCount);
+
+        /// <summary>How many struck buildings this frame carries.</summary>
+        public int EdificeDamageCount { get; private set; }
+
+        /// <summary>Every struck building, by cell ascending. See <see cref="EdificeDamageView"/>.</summary>
+        public ReadOnlySpan<EdificeDamageView> EdificeDamage =>
+            new ReadOnlySpan<EdificeDamageView>(_edificeDamage, 0, EdificeDamageCount);
+
+        /// <summary>The struck building whose own cell is <paramref name="cellIndex"/>, or false for a whole one.</summary>
+        public bool TryGetEdificeDamage(int cellIndex, out EdificeDamageView view)
+        {
+            for (int i = 0; i < EdificeDamageCount; i++)
+            {
+                if (_edificeDamage[i].CellIndex != cellIndex) continue;
+                view = _edificeDamage[i];
+                return true;
+            }
+            view = default;
+            return false;
+        }
+
+        /// <summary>
+        /// The hit points the content gives this edifice, in whole points before its material, or
+        /// nought where it is not something a blow can be aimed at — a tree, a window, nothing
+        /// (design 33 §13b, §13i). The simulation's one rule, published, so the interface can tell
+        /// a wall from a floor under a right-click without a copy of it.
+        /// </summary>
+        public int EdificeHitPoints(int edifice) =>
+            (uint)edifice < (uint)_edificeHitPoints.Length ? _edificeHitPoints[edifice] : 0;
 
         /// <summary>
         /// The newest incidents, oldest first, so a reader walking forward meets ids in ascending
@@ -1698,6 +1781,27 @@ namespace Odyssey.Sim.Contracts
             PowerVersion = 0;
             CombatEventCount = 0;
             CorpseCount = 0;
+            EdificeDamageCount = 0;
+            // The hit-point table is content and rewritten whole every publish, so it is left
+            // standing rather than cleared: a frame whose writer skipped it keeps the last answer.
+        }
+
+        internal void AddEdificeDamage(in EdificeDamageView view)
+        {
+            Grow(ref _edificeDamage, EdificeDamageCount + 1);
+            _edificeDamage[EdificeDamageCount++] = view;
+        }
+
+        internal void SetEdificeHitPoints(int edifice, int points)
+        {
+            if (edifice < 0) return;
+            if (edifice >= _edificeHitPoints.Length)
+            {
+                var grown = new int[edifice + 1];
+                Array.Copy(_edificeHitPoints, grown, _edificeHitPoints.Length);
+                _edificeHitPoints = grown;
+            }
+            _edificeHitPoints[edifice] = points;
         }
 
         internal void AddCombatEvent(in CombatEventView view)

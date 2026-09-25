@@ -23,6 +23,9 @@ namespace Odyssey.Hud
         {
             "ui.bulletin.supplydrop",
             "ui.bulletin.scrapdrop",
+            // Written down by the world when a bandit leaves the board (design 33 §17).
+            "ui.bulletin.theft",
+            "ui.bulletin.banditleft",
             "ui.bulletin.medicaldrop",
         };
 

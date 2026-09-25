@@ -10,18 +10,22 @@ namespace Odyssey.Hud
     /// 33 §7b). Fed once a frame with the snapshot, the selection and a clock; presentation reads
     /// the rings back and draws one flat annulus under each target.
     ///
+    /// <para><b>The ring means an order</b> (design 33 §18b): the simulation publishes the target
+    /// only for an attack the player ordered, so the hold's own blow, fighting back and joining a
+    /// fight nearby draw none, and neither does a rescue.</para>
+    ///
     /// <para><b>A ring starts on the frame a selected colonist's published target changes to that
     /// pawn</b> — <c>odyssey.pawn.order.target</c> — not on the right-click. A refused order
     /// publishes nothing, so it draws nothing; the same order clicked again is quiet in the
     /// simulation (<c>AlreadyInThatState</c>) and so is quiet here. <b>At most one ring per
-    /// target</b>: two colonists sent at one marauder share it, and the second order restarts the
+    /// target</b>: two colonists sent at one bandit share it, and the second order restarts the
     /// snap only once the first has settled, so a squad ordered in one click locks on once.</para>
     ///
     /// <para><b>A ring that was not ordered in front of the player is adopted, not snapped</b>: a
     /// colonist selected while already attacking, or a world just loaded, shows its target's ring
     /// at rest, faint, straight away. Loading a save mid-fight is not an order given.</para>
     ///
-    /// <para><b>It holds</b> while any selected, drafted colonist's target is that pawn, the pawn
+    /// <para><b>It holds</b> while any selected colonist's ordered target is that pawn, the pawn
     /// is still in the frame — a corpse is not a pawn, so a death ends it — and it has not gone
     /// down since the ring started. An order given on a pawn already down (to finish it) holds
     /// until it dies. <b>It fades</b> over <see cref="LockOnRing.FadeSeconds"/> otherwise:
@@ -143,13 +147,15 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// The pawn a selected colonist is attacking, or 0. Only a drafted colonist's counts: an
-        /// attack order needs a draft (design 33 §5j), and an undrafted colonist hitting back is
-        /// not an order the player gave.
+        /// The pawn a selected colonist was <b>ordered</b> to attack, or 0 (design 33 §18b). The
+        /// simulation publishes the target only for an attack the player ordered — never for a
+        /// fight she started herself, and a rescue's patient under an aspect of its own — so this
+        /// asks the aspect and nothing else. A job or a draft check here would be a second owner
+        /// of "was this an order", which is the first pattern in <c>docs/bug-patterns.md</c>.
         /// </summary>
         static int TargetOf(WorldSnapshot snapshot, PawnId pawn)
         {
-            if (!snapshot.TryGetPawn(pawn, out PawnView view) || !view.IsColonist || !view.IsDrafted) return 0;
+            if (!snapshot.TryGetPawn(pawn, out PawnView view) || !view.IsColonist) return 0;
             return snapshot.TryGetPawnAspect(pawn, CombatAspectNames.OrderTargetKey, out int target) ? target : 0;
         }
 

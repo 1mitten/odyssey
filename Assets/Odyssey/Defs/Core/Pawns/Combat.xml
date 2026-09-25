@@ -94,9 +94,16 @@
 
     <!--
       How long an attack nobody ordered (a hunt, a revenge, a self-defence) keeps its first target
-      before it thinks again, so a marauder notices a nearer colonist. INVENTED: five seconds.
+      before it thinks again, so a bandit notices a nearer colonist. INVENTED: five seconds.
     -->
     <rechooseTicks>300</rechooseTicks>
+
+    <!--
+      How near a fight must be for a drafted colonist holding her ground to join it (design 33
+      section 15; owner, 2026-09-24: "if there is any fight going on nearby ... they will help"):
+      the colonist being attacked and her attacker both within this many cells. INVENTED: 20 m.
+    -->
+    <helpRadiusCells>8</helpRadiusCells>
 
     <!--
       How long a colonist struck by a colonist fights back (owner: she does), 20 seconds; and how

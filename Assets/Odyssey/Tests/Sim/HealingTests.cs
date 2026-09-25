@@ -8,7 +8,7 @@ namespace Odyssey.Tests.Sim
 {
     /// <summary>
     /// Healing (design 33 §1, §6A): a colonist heals only lying in a bed, an animal wherever it
-    /// lies, a marauder never; a downed pawn gets up at 15 % of its pool; the rate is the content's
+    /// lies, a bandit never; a downed pawn gets up at 15 % of its pool; the rate is the content's
     /// per day, exactly. Each claim is set beside the pawn that does not heal, over the same day.
     /// </summary>
     public class HealingTests
@@ -31,6 +31,8 @@ namespace Odyssey.Tests.Sim
             // design 37's and MedicalTreatmentTests' (it heals her by bareHeal, which is the point).
             NoDoctors(colony);
             int bed = colony.Pawns.Items.Beds[0];
+            // Nobody carries the one on the ground to a bed: this is the healing, not the rescue.
+            foreach (Pawn pawn in colony.Pawns.Pawns.All) pawn.WorkPriorities[WorkTypeIndex.Rescue] = 0;
             Stand(colony, inBed, bed);
             Stand(colony, onGround, Near(colony, 8, 8));
             Assume.That(bed, Is.Not.EqualTo(onGround.Cell));
@@ -50,17 +52,22 @@ namespace Odyssey.Tests.Sim
         /// Then she goes about her business, and her needs, paused while she lay there, run again.
         /// </summary>
         [Test]
-        public void ADownedColonistInABedGetsUpAtFifteenPerCent()
+        public void ADownedColonistInABedGetsUpWhole()
         {
+            // Design 33 §11c (owner, 2026-09-24): a colonist stays in bed until whole, not up at
+            // 15 %. Started at 80 % so the day it takes is a test and not a wait: the old rule
+            // stood her up on the first heal.
             var colony = Board();
             colony.World.Tick(5);
             Pawn patient = colony.Pawns.Pawns.All[0], by = colony.Pawns.Pawns.All[1];
+            foreach (Pawn pawn in colony.Pawns.Pawns.All) pawn.WorkPriorities[WorkTypeIndex.Rescue] = 0;
             Stand(colony, patient, colony.Pawns.Items.Beds[0]);
             Strike(colony, by, patient, patient.HpMilli);
+            patient.HpMilli = patient.HpMaxMilli * 8 / 10;
             int completed = colony.Jobs.CompletedOf(JobIndex.Downed);
             var tape = new Tape();
 
-            int recoverAt = patient.HpMaxMilli * colony.Pawns.Content.Combat.downedRecoverAtPerMille / 1_000;
+            int recoverAt = patient.HpMaxMilli;
             for (int t = 0; t < 2 * Day(colony) && patient.Downed; t++)
             {
                 colony.World.Tick();
@@ -80,22 +87,22 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void AnAnimalHealsWhereItLiesAndAMarauderNever()
+        public void AnAnimalHealsWhereItLiesAndABanditNever()
         {
             var colony = Board();
             colony.World.Tick(5);
             Pawn by = colony.Pawns.Pawns.All[0];
             Pawn hog = Spawn(colony, PawnKindIndex.MiddenHog, Near(colony, 10, 0));
-            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, -10, 0));
+            Pawn bandit = Spawn(colony, PawnKindIndex.Bandit, Near(colony, -10, 0));
             colony.World.Tick();
 
             Strike(colony, by, hog, hog.HpMilli + 1_000);
-            Strike(colony, by, marauder, marauder.HpMilli + 1_000);
-            Assert.That(hog.Downed && marauder.Downed, Is.True);
+            Strike(colony, by, bandit, bandit.HpMilli + 1_000);
+            Assert.That(hog.Downed && bandit.Downed, Is.True);
 
             colony.World.Tick(Day(colony));
-            Assert.That(marauder.HpMilli, Is.EqualTo(-1_000), "a marauder healed");
-            Assert.That(marauder.Downed, Is.True, "a marauder got up");
+            Assert.That(bandit.HpMilli, Is.EqualTo(-1_000), "a bandit healed");
+            Assert.That(bandit.Downed, Is.True, "a bandit got up");
             Assert.That(hog.Downed, Is.False, "the hog never got up");
             Assert.That(hog.HpMilli, Is.GreaterThan(0));
         }

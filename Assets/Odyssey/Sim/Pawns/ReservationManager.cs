@@ -36,7 +36,11 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         Device = 4,
 
-        /// <summary>A pawn being cared for: a patient one doctor is treating (design 37). Keyed by <c>PawnId</c> value.</summary>
+        /// <summary>
+        /// A pawn, keyed on its <c>PawnId</c>: a downed colonist somebody is already coming to carry
+        /// (design 33 §11b), so two rescuers never set out for one patient, and a patient one doctor
+        /// is already treating (design 37).
+        /// </summary>
         Pawn = 5,
     }
 

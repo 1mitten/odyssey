@@ -28,9 +28,17 @@ namespace Odyssey.Tests.Sim.Events
         // drop's own worker with scrap metal for cargo, fifteen to thirty, weight 60, the supply
         // drop's gates otherwise. The owner's second source of scrap metal beside the wreckage.
         //
-        // 2026-09-24, medical supplies (design 37 §5): Incident_MedicalDrop appended at index 2 — the
-        // supply drop's worker again, four to eight medical supplies, weight 40 (invented).
-        const ulong ContentFingerprint = 1152802879463547546UL;
+        // 2026-09-24, bandits stealing (design 33 §17): Incident_Theft (Bad) and
+        // Incident_BanditLeft (Neutral) appended at 2 and 3, both naming the Recorded worker —
+        // written down by the world when a bandit leaves the board, never fired. Default gates.
+        //
+        // 2026-09-24, the bandit (design 42): Incident_BanditLeft renamed Incident_BanditLeft,
+        // its label and bulletin key with it. Index 3 unchanged; the ledger keeps indices.
+        //
+        // 2026-09-25, medical supplies (design 37 §5), at the merge with main: Incident_MedicalDrop
+        // appended at index 4, after the bandit's two — the supply drop's worker again, four to
+        // eight medical supplies, weight 40 (invented).
+        const ulong ContentFingerprint = 1850533508298769451UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

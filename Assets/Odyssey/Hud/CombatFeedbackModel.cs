@@ -56,6 +56,23 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
+        /// Should a hit-point bar stand over the building whose own cell is
+        /// <paramref name="cellIndex"/>, and how full is it (design 33 §13i, §13k)? <b>Owed exactly
+        /// where the simulation publishes a row</b> — a building somebody has struck and that still
+        /// stands — as a pawn's is owed where it publishes hit points. Clamped to 0 to the pool;
+        /// never without a pool. The drawing is owed (§13k); this is its answer.
+        /// </summary>
+        public static bool BuildingHealthBar(WorldSnapshot snapshot, int cellIndex, out int hpMilli, out int hpMaxMilli)
+        {
+            hpMilli = 0;
+            hpMaxMilli = 0;
+            if (!snapshot.TryGetEdificeDamage(cellIndex, out EdificeDamageView row) || row.MaxMilli <= 0) return false;
+            hpMaxMilli = row.MaxMilli;
+            hpMilli = row.HpMilli < 0 ? 0 : row.HpMilli > row.MaxMilli ? row.MaxMilli : row.HpMilli;
+            return true;
+        }
+
+        /// <summary>
         /// The words that float up from one moment of a fight — "miss", "dodge", the damage in
         /// whole points, "stunned", "downed", "dead" — or empty for a moment that floats nothing
         /// (a swing starting, a pawn getting up).
@@ -73,7 +90,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The ink those words are drawn in. <b>Damage and the two ends of a fight are the bad
-        /// red</b> — whoever took them, because a number over a marauder and over a colonist are
+        /// red</b> — whoever took them, because a number over a bandit and over a colonist are
         /// read the same way, as a blow landing; a miss is dim, since nothing happened; a dodge is
         /// the information blue, since something was avoided; a stun is the warning amber.
         /// Transparent for a moment that floats nothing.

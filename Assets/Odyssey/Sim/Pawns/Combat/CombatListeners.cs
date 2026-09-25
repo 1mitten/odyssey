@@ -19,7 +19,10 @@ namespace Odyssey.Sim.Pawns
             // later listener hearing the same death sees the weapon already on the ground.
             ctx.CombatHooks.Add(new WeaponDropListener(ctx));
 
-            // C4 (rescue), then C5 (friendly fire), append here.
+            // C5 (friendly fire, design 33 §12): a colonist hurt by a colonist remembers it, and
+            // every colonist feels a colonist's death. After the weapon drop, so a death is mourned
+            // with the weapon already on the ground. C4 (rescue) needed no listener.
+            ctx.CombatHooks.Add(new FriendlyFireListener(ctx));
         }
     }
 }

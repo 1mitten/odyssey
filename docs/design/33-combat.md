@@ -1,6 +1,13 @@
 # 33 — Combat: draft, move, melee
 
-**Status: C1 (draft and move) built and played 2026-09-23 — the owner's verdict: drafting, T,
+**The hostile this document calls the bandit was the marauder until 2026-09-24** (design 42). The
+word was renamed everywhere live, this file included; the journal keeps the old word, so an entry
+there that says "marauder" means the bandit. Kind index 3, `TraverseMode` 3 and incident index 3
+are unchanged. A bandit carries a crowbar or a bat (design 42 §3), not the machete §5b gave it.
+
+**Status (2026-09-24): every unit of the plan is built. C1–C6 and the owner's rounds after them are on
+`main` (PRs #176, #180, #182, #194); C7, the gate, is §21 and `docs/milestones/combat-report.md`. What
+follows is the history in the order it happened.** C1 (draft and move) built and played 2026-09-23 — the owner's verdict: drafting, T,
 moving onto surfaces, the diamond and the four hours all work; the run (§2h) and the deeper red
 (§2g) came out of that playtest. C2 (health and melee) and C3 (weapons) built 2026-09-23 by four
 parallel lanes on the contracts of §5 (§6A–§6D) and integrated on `claude/combat-c2` (§6E): every
@@ -24,12 +31,12 @@ Every decision below was the owner's in the interview of 2026-09-23 unless it sa
 |---|---|
 | Targets | animals (hog, rat), colonists, buildings (walls, doors, furniture), a debug-spawned hostile person |
 | Health | one hit-point pool per pawn, by species (person 100, hog 60, rat 15); **downed at 0**, **dead at −50 %** of the pool; no bleeding, no body parts |
-| Downed | a colonist heals **only in a bed** and has to be rescued to one; an animal recovers on its own; a marauder stays down until killed; a downed pawn keeps its weapon |
+| Downed | a colonist heals **only in a bed** and has to be rescued to one; an animal recovers on its own; a bandit stays down until killed; a downed pawn keeps its weapon |
 | Rescue | an automatic emergency job (the `ui.work.rescue` column), **and** a drafted colonist ordered to by a right-click; to the patient's own bed, else the nearest free one |
 | Death | the corpse stays where it fell, drawn lying in the death pose, clickable as "Corpse of X"; not haulable yet; a dead colonist leaves the roster |
 | Retaliation | a hostile always fights; an animal rolls its species' revenge chance on every hit (a hog usually turns, a rat usually runs); a colonist struck by a colonist fights back |
 | Friendly fire | the victim remembers being attacked (−8, one day); any colonist's death is felt by every colonist (−6, three days); no opinions yet |
-| Drafting | the reference's rules: work stops, the colonist holds its position, needs fall but it will not eat or sleep, it hits a hostile on an adjacent cell by itself, and it undrafts itself after **four in-game hours** with no order and no threat; going down or breaking ends the draft |
+| Drafting | the reference's rules: work stops, the colonist holds its position, needs fall but it will not eat or sleep, it hits a hostile on an adjacent cell by itself, and it undrafts itself after **four in-game hours** with no order and no threat; going down or breaking ends the draft. *Since §15 (2026-09-24): holding, it also joins another colonist's fight within eight cells* |
 | Controls | **T** toggles the draft (R stays slice-up, owner's call) as does the pane's Draft button; right-click ground **moves**; right-click an animal, hostile or building **attacks**; **Ctrl+right-click** a colonist attacks it; right-click a downed colonist **rescues**; right-click a weapon **equips** |
 | Weapons | fists by default; **bat and crowbar** (blunt, a chance to stun), **machete and sci-fi blade** (sharp); real items, one hand slot, drawn in the right hand; one or two in the starting kit and any from the debug Spawn tab; our own names in the wiki |
 | Numbers | Melee becomes a live skill: hit 50 % at level 0, 80 % at 10, 90 % at 20; dodge 0 / 10 / 30 % by the *defender's* level; fists about 4 damage every 2 s, weapons 7–10 every 1.6–2.4 s; experience per swing; all of it in Defs, tuned after the first play |
@@ -191,7 +198,7 @@ the carry aspects, the two spellings are held together by a test on each side.
   All three draft marks share the one hue; the selection brackets are untouched.
 - **An order line** from a moving drafted colonist to its destination, with a floor bracket on the
   destination cell, for the **selected** colonists only. Twenty lines across the board is noise; the
-  ones you are commanding are signal.
+  ones you are commanding are signal. **The bracket is now a ring** (§20, 2026-09-24).
 
 Both are drawn through `ChunkRenderer`'s bracket material, like the selection cursor, and cost one
 submission per drafted colonist. That scales with the number drafted, never with the board.
@@ -272,10 +279,10 @@ and what changed when the four were put together §6E.*
   `Job_Flee`; at a walk a hunt never caught a colonist walking away from it.
 - **A struck colonist fights back against whoever struck her**, colonist or not, for
   `retaliationTicks`; a colonist-only memory let her wander off while being beaten.
-- **Death takes the player.** Only the blow that crosses −50 % of the pool kills, a marauder hunts
+- **Death takes the player.** Only the blow that crosses −50 % of the pool kills, a bandit hunts
   only colonists who are standing, and nobody's self-defence strikes a body on the ground — so an
   unordered fight ends in downs, never in corpses. The Long soak, now with a machete in every
-  marauder's hand: 241 swings, 122 hits, nine downs, no deaths. A corpse is made by an order on a
+  bandit's hand: 241 swings, 122 hits, nine downs, no deaths. A corpse is made by an order on a
   downed pawn (`ToTheDeath`, §6A.8). Recorded for the playtest rather than changed: it follows the
   owner's rules, and whether it feels right is the owner's to say.
 
@@ -314,12 +321,12 @@ Every table below is append-only and a save contract, so all of them were extend
 | `JobHandle` / `JobIndex` / `Jobs.xml` / `BuildDrivers` | 14 `AttackMelee`, 15 `Flee`, 16 `Downed`, 17 `Equip`, 18 `Rescue` | `Catalogue.cs`, `PawnContent.cs`, `PawnRegistry.cs` |
 | `SkillIndex` | 5 `Melee` (`Skill_Melee`), live in the Skills tab | `PawnContent.cs`, `Skills.xml`, `SkillCatalogue` |
 | `WorkHandle` / `WorkTypeIndex` | 5 `Rescue` (`Work_Rescue`), live Work-tab column | `Catalogue.cs`, `WorkTypes.xml`, `WorkCatalogue` |
-| `PawnKindIndex` | 3 `Marauder` (a person, faction `Hostile`) | `Species.xml`, `PawnKindLabels` |
+| `PawnKindIndex` | 3 `Bandit` (a person, faction `Hostile`) | `Species.xml`, `PawnKindLabels` |
 | `ItemHandle` | 7 bat, 8 crowbar, 9 machete, 10 arc blade (category `Weapons`, stack 1) | `Items.xml`, `ItemLabels`, `ModuleIds` |
 | `IntentKind` | `OrderAttack`, `OrderEquip`, `OrderRescue` — all apply while paused | `Intents.cs` |
 | `PawnGesture` | 4 `Strike` | `Views.cs` |
 | `PawnPurpose` | `MeleeHit`, `MeleeDodge`, `MeleeDamage`, `Revenge`, `Stun` | `PawnContent.cs` |
-| `icon-keys.csv` | `ui.pawn.marauder`, `ui.status.{fighting,fleeing,equipping,rescuing}`, `ui.item.{bat,crowbar,machete,arcblade}`, `ui.combat.{miss,dodge,stunned,health,dead}`, `ui.debug.spawn{marauder,bat,crowbar,machete,arcblade}` | wiki rebuilt |
+| `icon-keys.csv` | `ui.pawn.bandit`, `ui.status.{fighting,fleeing,equipping,rescuing}`, `ui.item.{bat,crowbar,machete,arcblade}`, `ui.combat.{miss,dodge,stunned,health,dead}`, `ui.debug.spawn{bandit,bat,crowbar,machete,arcblade}` | wiki rebuilt |
 
 **The weapon names are ours**: bat, crowbar, machete and *arc blade* for the owner's "sci-fi
 blade". The job words: Fighting, Fleeing, Downed (already in the registry), Equipping, Rescuing.
@@ -333,8 +340,8 @@ blade". The job words: Fighting, Fleeing, Downed (already in the registry), Equi
 | | `revengePerMille` | hog 700, rat 50 (owner: a hog turns, a rat runs); unread for a person |
 | | `naturalAttack` | hog 6 dmg / 150 ticks / wind-up 30, blunt; rat 2 / 90 / 15, sharp (INVENTED); a person has none |
 | | `meleeSkill` | hog 6, rat 3 (INVENTED); animals have no skills to train |
-| `PawnKindDef` | `faction` | `Colony` (default), `Wild` for both animals, `Hostile` for the marauder |
-| | `weapon` | an item defName the kind arrives holding: `Item_Machete` for the marauder (owner: "armed"; which weapon INVENTED), empty for the rest. Resolved into `PawnContent.KindWeapon` / `WeaponOf(kind)`; a name that is not a weapon fails the load |
+| `PawnKindDef` | `faction` | `Colony` (default), `Wild` for both animals, `Hostile` for the bandit |
+| | `weapon` | an item defName the kind arrives holding: `Item_Machete` for the bandit (owner: "armed"; which weapon INVENTED), empty for the rest. Resolved into `PawnContent.KindWeapon` / `WeaponOf(kind)`; a name that is not a weapon fails the load |
 | `ItemDef` | `weapon` (an `AttackDef`) | bat 7 / 120 / 30 blunt, stun 200 ‰ 60 ticks, heavy; crowbar 8 / 132 / 36 blunt, stun 250 ‰ 90 ticks, heavy; machete 8 / 96 / 22 sharp, light; arc blade 10 / 114 / 26 sharp, light; 50 points a swing (all inside the owner's 7–10 per 1.6–2.4 s, the split INVENTED) |
 | `BuildingDef` | `maxHitPoints` | wall 300, floor 250, deck plate 150, ladder 80, bed 120, door 160, shelf 100 (INVENTED, C6's to tune) |
 | `CombatDef` (`Combat.xml`) | `hitCurve` | 0 → 500, 10 → 800, 20 → 900 ‰ (owner) |
@@ -366,10 +373,10 @@ field on the job record would be a save-format bump) and `CarriedBy`. Derived: `
   (pool 100) and only then reads its kind; a reloaded hog carried 100 of 60 hit points, which is
   combat state, and every round trip of a board with an animal disagreed with itself.
   `AnAnimalReloadedIsWhole` failed with the setter withheld (measured).
-- **`Pawn.NeedsTick`** = a colonist who is not downed. A marauder has no needs (it is spawned to
+- **`Pawn.NeedsTick`** = a colonist who is not downed. A bandit has no needs (it is spawned to
   fight, and a raider that went for the pantry would be a second design); a downed pawn's needs
   pause (the C2 default). `NeedsSystem` asks it and nothing else.
-- **A marauder is nobody's to draft**: `SetDrafted` and `OrderMove` ask `IsColonist`, and a downed
+- **A bandit is nobody's to draft**: `SetDrafted` and `OrderMove` ask `IsColonist`, and a downed
   colonist cannot be drafted. **Nor is either anybody's to force**: `JobSystem.CanForce` refuses a
   pawn that is not a colonist or is downed, so a forced build cannot end a `Job_Downed` (seam
   review, 2026-09-23).
@@ -384,10 +391,10 @@ field on the job record would be a save-format bump) and `CarriedBy`. Derived: `
   colonist does not keep hers under an id that no longer exists. In the despawn rather than the
   death so that every way off the board releases the same things; it does not raise
   `BedOwnershipChanged`, because a bed going to nobody takes nobody out of it.
-- **The marauder arrives armed.** `PawnRegistry.Spawn(cell, kind)` calls
+- **The bandit arrives armed.** `PawnRegistry.Spawn(cell, kind)` calls
   `IWeaponRules.ArmOnSpawn` for a kind whose `weapon` names an item, after the pawn is adopted;
   the loader never does (it restores the hand from the save). Lane D fills it; until then the
-  marauder fights with fists.
+  bandit fights with fists.
 
 ### 5d. What presentation reads
 
@@ -452,9 +459,9 @@ sections after `odyssey.combat`.
 | `HudDirectors.ChooseCorpse(corpseId, snapshot)` | the click on a corpse: lane B's hit-test calls it, lane C checks the corpse is in the frame, calls `Selection.ChooseCorpse` and answers true; answers false | lane C writes; lane B calls |
 | `SelectionDirector.Corpse` / `HasCorpse` / `ChooseCorpse` | the selected corpse by `CorpseView.Id`, 0 for none; one subject like a pile, cleared by every other choice, let go after the grace when the frame stops carrying it. `HudShell` hands it to the pane (`InspectModel.SetCorpse`) | fixed; lane B's cursor brackets it, lane C's pane shows it |
 | `InspectSubject.Corpse`, `InspectModel.Corpse`, `SetCorpse` | the corpse as a pane subject. A stub refresh: the corpse badge, the registry's word, where it lies, no tabs or commands; its state line is the model's `Job` | lane C names it ("Corpse of X") |
-| `InspectModel.ShowsFace`, `ShowsColonistBody`, `ShowsTabBox`, `AvatarKey` | the pane's shape, which `HudShell.Inspect` reads instead of deciding from the subject and `IsAnimal`. Their values reproduce the pane as it was; a marauder and a corpse are lane C's to answer, in the fast tier. `Commands` is drawn for whatever subject the model fills it for | lane C |
+| `InspectModel.ShowsFace`, `ShowsColonistBody`, `ShowsTabBox`, `AvatarKey` | the pane's shape, which `HudShell.Inspect` reads instead of deciding from the subject and `IsAnimal`. Their values reproduce the pane as it was; a bandit and a corpse are lane C's to answer, in the fast tier. `Commands` is drawn for whatever subject the model fills it for | lane C |
 | `HudShell.Combat.cs` | the Health tab's body (build, forget, show, sync — all called by `HudShell.Inspect`) | lane C |
-| `HudShell.Debug.cs` | the Spawn tab's marauder and weapon rows | lane C |
+| `HudShell.Debug.cs` | the Spawn tab's bandit and weapon rows | lane C |
 | Health tab | enabled in `InspectModel`, empty | lane C |
 
 ### 5g. Why the rules are two interfaces
@@ -526,7 +533,7 @@ briefs point at it.
   `HandleForceJob` was written on.
 - **Combat state is hashed only while set** (§5c), and the corpse registry and the damage store
   contribute nothing while empty. That is what lets every combat lane assert the goldens unchanged.
-- **`PawnView.Flags`, never the kind, says what a pawn is.** A marauder is kind 3 and a person.
+- **`PawnView.Flags`, never the kind, says what a pawn is.** A bandit is kind 3 and a person.
 - **`Pawn.Kind`'s setter re-fills a whole pawn's hit points.** Without it a reloaded animal is hurt.
 - **`JobSystem.Load` accepts a save with fewer job defs than the build.** The job table is
   append-only, so the missing ones are the new ones, and their counters start at zero. It used to
@@ -588,7 +595,7 @@ nought (§6A.5), so a colony that fought and healed hashes as one that never fou
 - **It ends:**
   - when the target is gone or dead;
   - when the target is down — unless the order was given on a pawn already down, which is
-    `ToTheDeath` and is how a marauder that "stays down until killed" gets killed;
+    `ToTheDeath` and is how a bandit that "stays down until killed" gets killed;
   - when the target is unreachable;
   - for a drafted colonist's own blow at an adjacent threat, when the target leaves reach: **the
     hold never chases**;
@@ -631,7 +638,7 @@ hurt only**: a whole pawn costs one comparison.
 
 - An **animal** heals anywhere, at `animalHealPerDay`.
 - A **colonist** heals only **lying in a bed** (down or asleep, on a bed cell), at `bedHealPerDay`.
-- A **marauder** never heals.
+- A **bandit** never heals.
 
 The fraction one interval cannot carry is spent by the interval index, so a day's healing is the
 content's figure to the thousandth (`ADaysHealingIsExact`).
@@ -648,7 +655,7 @@ lets C5 and C6 assert the goldens unchanged.
 | Node | Does |
 |---|---|
 | `DownedThinkNode` | down → `Job_Downed`; one branch for anybody standing |
-| `DraftedThinkNode` (`Draft.cs`) | a threat in reach → the blow (not forced, so never chased), and the four quiet hours start again; else the hold. **The hold itself ends when a threat comes into reach**, since a holding colonist never thinks |
+| `DraftedThinkNode` (`Draft.cs`) | a threat in reach → the blow (not forced, so never chased), and the four quiet hours start again; else the hold. **The hold itself ends when a threat comes into reach**, since a holding colonist never thinks. *Since §15: or another colonist's fight nearby, which she joins* |
 | `SelfDefenceThinkNode` | the colonist who struck her while `RetaliateAgainst` holds; else a threat beside her |
 | `HostileThinkNode` | the nearest reachable standing colonist; nobody standing → idle |
 | `AnimalCombatThinkNode` | carries a revenge on across thinks; the roll itself is at the blow |
@@ -667,9 +674,9 @@ at her. So a vengeful hog, or a colonist who Ctrl-attacked her, is answered by t
   is interrupted, so her self-defence answers on her next think.
   - *Our call, past the owner's colonist-on-colonist rule.* Remembering only a colonist was
     tried first, and it failed: the struck colonist landed the step she was on, which took her out
-    of reach; she found nobody beside her and went back to wandering while the marauder beat her
+    of reach; she found nobody beside her and went back to wandering while the bandit beat her
     down (measured).
-- **A marauder** struck by a colonist it is not fighting remembers her for `retaliationTicks`, and
+- **A bandit** struck by a colonist it is not fighting remembers her for `retaliationTicks`, and
   its hunt prefers her while she stands and can be reached. Chasing somebody else, it is
   interrupted and turns on her at once; **already trading blows with a colonist beside it, it keeps
   to her**, and the hitter is next when she goes down (§6F — the first version interrupted every
@@ -683,13 +690,13 @@ at her. So a vengeful hog, or a colonist who Ctrl-attacked her, is answered by t
 
 At walking pace a hunt closed on a wandering colonist at the speed she walked away, and in 3,000
 ticks on a bare board never reached her (measured). With the edit withheld,
-`AColonistStruckByAMarauderFightsBack` fails. No golden window fights, so no golden moved.
+`AColonistStruckByABanditFightsBack` fails. No golden window fights, so no golden moved.
 
 ### 6A.8 The order
 
 `OrderAttack(A, B)` is accepted for a drafted, standing colonist of ours against any pawn that
 exists, is alive, is not herself, and is within reach or reachable. The target may be an animal, a
-marauder, or a colonist.
+bandit, or a colonist.
 
 - **The Ctrl a colonist target needs is the interface's gesture** (`CombatOrders.Route`, lane C).
   The contract gives the intent no argument to carry it. The computed brief asked for "colonist
@@ -714,7 +721,7 @@ the Windows dev machine, 2026-09-23:
 | Case | Tick, mean | Pawns phase, mean |
 |---|---|---|
 | At peace | 0.034 ms | 0.007 ms |
-| Against twenty marauders | 0.069 ms | 0.012 ms |
+| Against twenty bandits | 0.069 ms | 0.012 ms |
 
 The fight run resolved 272 swings in its 1,500 ticks.
 
@@ -727,10 +734,10 @@ Each claim was seen to fail with its rule withheld.
 | `CombatMathTests` | the owner's curves; the rates measured over 4,000 swings; the spread's ends; blunt stuns and sharp never; one stream per roll — failed with a shared stream (measured) |
 | `AttackDriverTests` | the chase; the cooldown; a re-order keeps the clock; the wind-up focus; the weapon on every report; the lost stunned swing; the refusals; the hold that never chases — failed with the rule withheld (measured); a save taken mid-swing resumes on the same hash 600 ticks on, with a forgetful load as the control |
 | `DownedDeathTests` | the fall, death and the corpse; the corpse's facing |
-| `HealingTests` | healing in a bed, and the animal and marauder cases |
+| `HealingTests` | healing in a bed, and the animal and bandit cases |
 | `HostileTests` | the hunt and self-defence |
 | `AnimalRevengeTests` | revenge rates, a hog 700 ± 60 ‰ and a rat 50 ± 30 ‰ over 400 blows each |
-| **Long:** `MarauderSoakTests` | a marauder a day for ten days on the soak's board: invariants at every 500 ticks and a save on day five resumed equal a day later. 9.5 s; 536 swings, all ten marauders down, no deaths with fists |
+| **Long:** `BanditSoakTests` | a bandit a day for ten days on the soak's board: invariants at every 500 ticks and a save on day five resumed equal a day later. 9.5 s; 536 swings, all ten bandits down, no deaths with fists |
 
 `CombatFixture` is the shared test fixture. `HeldWeapon` puts a weapon in a hand without lane D.
 
@@ -771,7 +778,8 @@ wind-ups (18–36 ticks) the light swings play at 0.3–1.2× their authored rat
 
 **Which clip.** The family is the event's weapon's `AttackDef.style` (`WeaponStyles`, read once off
 the content by the bootstrap), else the body: a person punches, an animal bites (§5j). Light swings
-take LightCombo01 A, B, C in turn; heavy ones HeavyCombo01A and HeavyStab01. A hit reacts by the side
+take LightCombo01 A, B, C in turn; heavy ones HeavyCombo01A and HeavyStab01 *(superseded by §22,
+2026-09-25: heavy ones take HeavyCombo01 A, B, C, and nothing stabs)*. A hit reacts by the side
 the blow came from (`CombatPose.SideOf`, F/B/L/R); a stun, or a blow of 10 points or more, staggers;
 a dodge steps away from the blow, **never right** (`Dodge_R` imports Generic), so a blow from the
 left is dodged backwards. Downed is `KnockDown_Begin` then `_Loop`, and `_End` on getting up; stunned
@@ -863,7 +871,7 @@ and runs in the fast tier except the two Presentation files, which **have never 
 
 **The right-click** (`CombatOrders.Route`, `CombatOrdersTests`). A pawn under the pointer wins over
 the cell it stands in. An animal or a hostile is attacked by every selected drafted colonist, a
-downed one included (a marauder stays down until killed). Ctrl on a colonist is an attack by every
+downed one included (a bandit stays down until killed). Ctrl on a colonist is an attack by every
 selected drafted colonist but her — and **Ctrl wins over the rescue**, being the one gesture that
 says "hit this one of ours" outright. A downed colonist is rescued by the **nearest** selected
 drafted colonist only (*our call*: one body, one carrier; sending all of them is a walk the
@@ -891,14 +899,14 @@ animal fights back but is not an enemy.
 
 **The pane** (`InspectModel`, `CombatPaneTests`).
 
-- **A marauder** has no face, no colonist body, no tab box, no tabs, no skills and no commands,
-  and wears `ui.pawn.marauder`; its line is its job in a person's words ("Fighting"). *Our call*:
+- **A bandit** has no face, no colonist body, no tab box, no tabs, no skills and no commands,
+  and wears `ui.pawn.bandit`; its line is its job in a person's words ("Fighting"). *Our call*:
   no Health tab means its health is the bar over its head and nowhere else.
 - **A corpse** is "Corpse of Wrenn" — the name she wore alive, `ColonistNames.Of` over the seed
   and id the corpse kept, so a player's own name outlives her — or "Corpse of a midden hog" /
-  "Corpse of a marauder". The line under it is "Dead · since 07h, day 3 of Larkspur", composed
+  "Corpse of a bandit". The line under it is "Dead · since 07h, day 3 of Larkspur", composed
   once per corpse. A corpse the frame no longer carries says only "Corpse".
-- **A pawn that leaves the frame keeps its shape.** An animal (since #167) or a marauder that died
+- **A pawn that leaves the frame keeps its shape.** An animal (since #167) or a bandit that died
   fell to the colonist's tombstone and grew a Health tab and a Draft button for the grace frames.
 - **The Health tab**: "73 / 100" from `hp.max` and `hp` (no `hp` is whole), rounded **up** so a
   colonist on her feet never reads nought; a fill in the bar's colours; then condition (Unhurt,
@@ -907,10 +915,10 @@ animal fights back but is not an enemy.
 
 **Elsewhere.** `HudDirectors.ChooseCorpse` selects only a corpse the frame carries and leaves the
 selection alone otherwise. The Spawn tab is `DebugDirector.SpawnRows`, a table the fast tier holds
-(the marauder is `SpawnPawn` with kind 3, each weapon `GiveResource` with one item). Alerts and the
+(the bandit is `SpawnPawn` with kind 3, each weapon `GiveResource` with one item). Alerts and the
 Work tab read colonists by the flags; alerts had counted animals toward "is the colony idle" since
 #167, which a wandering hog always defeated. The Almanac opens an animal's corpse on its Fauna
-entry, and nothing for a person's corpse, a marauder (it opened a colonist's Skills page) or a
+entry, and nothing for a person's corpse, a bandit (it opened a colonist's Skills page) or a
 weapon (it opened the Ration Pack). No attack colour was added to `OrderColours`: nothing draws an
 attack order in a colour of its own yet.
 
@@ -948,7 +956,7 @@ carried *patient*, C4's — and nothing here touches it.)
   def has a `weapon` block, not forbidden, and lying somewhere a colonist can take it from — a cell
   or a store, never somebody's hands. Reachability is the order's question, not this one's.
 - `ArmOnSpawn`: the kind's weapon is made on the nearest cell to the spawn that can take it and
-  taken straight up through `WeaponHand.TakeUp`, the same door the equip job uses. A marauder spawned
+  taken straight up through `WeaponHand.TakeUp`, the same door the equip job uses. A bandit spawned
   on a pile is still armed and the pile is undisturbed. A board with nowhere within
   `JobDriver.DropSearchRadius` leaves it bare-handed.
 
@@ -970,7 +978,7 @@ returns to the hold when the job ends; an undrafted one to her work.
 **Death.** `WeaponDropListener`, the first listener `CombatListeners.Register` adds: on `Died` the
 weapon goes down at the corpse's cell, or the nearest cell that can take it; on `Downed` nothing
 happens (the C2 default: a downed pawn keeps its weapon). **A dropped weapon is not forbidden** —
-*our call*: a marauder's machete is the colony's the moment it falls, and a line in the listener is
+*our call*: a bandit's machete is the colony's the moment it falls, and a line in the listener is
 where a forbid would go.
 
 **The starting kit.** `ScenarioDef.startingWeapons`, item defs, **empty by default**, so `Bare` and
@@ -983,9 +991,9 @@ or two"). Placement reports them as `Result.Weapons`. A debug-spawned weapon nee
 **Scales with** nothing per tick: the equip driver is one pawn and one thing; the listener runs on a
 death; the rules are constant-time lookups. No sweep was added.
 
-**Goldens: unchanged** — no golden builds on `Playtest`, spawns a marauder or equips anything.
+**Goldens: unchanged** — no golden builds on `Playtest`, spawns a bandit or equips anything.
 
-**One spine edit**: `CombatContractTests.AMarauderIsSpawnedThroughTheArmingSeamAndAnAnimalIsNot`
+**One spine edit**: `CombatContractTests.ABanditIsSpawnedThroughTheArmingSeamAndAnAnimalIsNot`
 ended by asserting that the stub rules arm nobody. That assertion is exactly what this lane exists
 to make false; it now asserts the machete. Nothing else in the file moved.
 
@@ -1046,7 +1054,7 @@ same in both (`docs/lessons.md`, the two NUnits).
   starting kit did not need its exception: no golden builds on `Playtest`.
 - **The frame with a fight in view** (`FrameTimeTests.TheFrameWithAFightInView`, one run, RTX 5070
   Ti at 640 × 480): fifteen colonists at peace **2.06 ms** (1,127 draw calls), the same with ten
-  marauders among them **2.29 ms** (1,139); the figures section 0.101 → 0.191 ms, the overlays 0.007
+  bandits among them **2.29 ms** (1,139); the figures section 0.101 → 0.191 ms, the overlays 0.007
   → 0.016. The fight costs about a tenth of a millisecond of figures and a dozen draws. Not at a
   play resolution and not on the target laptop, like every number in this project.
 - **The player build** (`scripts/unity.sh build`, then `Odyssey.exe -odyssey-newgame`): built, booted
@@ -1059,32 +1067,32 @@ same in both (`docs/lessons.md`, the two NUnits).
 silent); every computed pose angle, the floating words' lifetimes and colours, and the weapon's
 grip are INVENTED and unseen; a downed pawn past the 64-figure cap is drawn standing, and a downed
 colonist's click box is the standing one; a corpse always falls through the front death variant;
-swapping weapons draws no put-down of the old one; `PawnKindLabels.Marauder = 3` is a Hud copy of
-`PawnKindIndex.Marauder` with nothing holding the two together.
+swapping weapons draws no put-down of the old one; `PawnKindLabels.Bandit = 3` is a Hud copy of
+`PawnKindIndex.Bandit` with nothing holding the two together.
 
 ## 6F. The review (2026-09-23)
 
 Two reviewers read the integrated branch and reported eight faults. All eight were real; each is
 fixed with a test that was seen to fail without the fix. **No golden moved** — no golden window
-fights — and no save format changed: a marauder's retaliation lives in the fields a colonist's
+fights — and no save format changed: a bandit's retaliation lives in the fields a colonist's
 already uses, which were saved and hashed.
 
 | Fault | What the player saw | Fixed | Test |
 |---|---|---|---|
-| A marauder struck by a second colonist was interrupted, then re-chose the nearest — a tie to the lower id | the swing it had wound up vanished, it waited a whole cooldown, and two colonists could keep it from landing anything; it seldom turned on the one hitting it | `CombatSystem.React` records the hitter on the marauder for `retaliationTicks`; `HostileThinkNode` prefers her; no interrupt while it fights somebody beside it (§6A.6) | `HostileTests.AMarauderChasingSomebodyElseTurnsOnTheColonistWhoHitsIt`, `…InAFightKeepsItsSwingWhenASecondColonistHitsIt` |
+| A bandit struck by a second colonist was interrupted, then re-chose the nearest — a tie to the lower id | the swing it had wound up vanished, it waited a whole cooldown, and two colonists could keep it from landing anything; it seldom turned on the one hitting it | `CombatSystem.React` records the hitter on the bandit for `retaliationTicks`; `HostileThinkNode` prefers her; no interrupt while it fights somebody beside it (§6A.6) | `HostileTests.ABanditChasingSomebodyElseTurnsOnTheColonistWhoHitsIt`, `…InAFightKeepsItsSwingWhenASecondColonistHitsIt` |
 | The same attack order again restarted the job | clicking a target again faster than a wind-up stopped a drafted colonist landing any blow | `AlreadyInThatState` for the order already in hand (§6A.8) | `AttackDriverTests.ARepeatedAttackOrderIsQuietAndKeepsTheSwingInTheAir` |
 | The teardown disposed the figures before the corpses | a death on screen, pause, then Load / New game / Leave to menu threw, and a load left a half-built session | the corpses go first; `ReturnCorpse` lets go of a loan whose director is gone | `CorpseTeardownTests` (PlayMode), `CombatDrawnTests.AFallCutShortByATeardownHandsItsFigureBackQuietly` |
-| A pawn killed while downed played its whole fall from standing | finishing a downed marauder stood the body up and knocked it over again | `CorpseDirector` keeps last frame's downed pawns and bakes theirs lying at once | `CombatDrawnTests.APawnKilledWhileDownIsFoundLyingAndOneKilledStandingFalls` |
+| A pawn killed while downed played its whole fall from standing | finishing a downed bandit stood the body up and knocked it over again | `CorpseDirector` keeps last frame's downed pawns and bakes theirs lying at once | `CombatDrawnTests.APawnKilledWhileDownIsFoundLyingAndOneKilledStandingFalls` |
 | The corpse pane's cache outlived the selection | click a corpse, a colonist, the same corpse: the corpse wore her name and job | every other subject clears it | `CombatPaneTests.ACorpseChosenAgainAfterSomethingElseIsNamedAgain` |
 | A falling body ignored the slice, and one baked while hidden measured an empty box | a body fell in view on a layer not drawn; afterwards a click missed it and the cursor bracketed the world's origin | the lent figure's renderers are forced off with its layer; the box is measured before the body is hidden (the empty box did **not** reproduce in this Unity — measured — so that half is the safe order, not a proven fault) | `CombatDrawnTests.ABodyFallingOnAHiddenLayerIsHiddenAndIsFoundWhereItLies` |
 | The floating words ignored the slice | *-7* and *Miss* floated over the grass above a fight in a cave | a word floats only for a fight on a drawn layer, the bars' rule; figures and sound still take every event | `CombatDrawnTests.AFightOffTheDrawnLayersFloatsNoWords` |
 | The pane wrote *colonist*, *hostile*, *animal* as literals | nothing yet; renaming a kind in `icon-keys.csv` would have left the pane on the old word | `Registry.Label(ui.pawn.*)` lower-cased, once, on the living and the corpse pane alike | `RegistryTests.TheInspectPaneWritesNoPawnKindItself` |
 
-**Why a marauder in a fight keeps to it.** The reviewer offered two fixes: turn on every hitter, or
+**Why a bandit in a fight keeps to it.** The reviewer offered two fixes: turn on every hitter, or
 leave a swing in the air alone. Turning on every hitter makes two colonists either side of a
-marauder swap its target on every blow, and each swap lost a swing — the fault again, by another
+bandit swap its target on every blow, and each swap lost a swing — the fault again, by another
 road. So the hitter is remembered, a chase is abandoned for her, and a fight beside somebody is not.
-The attack in reach never re-thinks (§6A.2), so a marauder holds to the colonist in front of it
+The attack in reach never re-thinks (§6A.2), so a bandit holds to the colonist in front of it
 until she goes down, and then the hitter is next rather than whoever is nearest.
 
 **A downed pawn's death is read in presentation, not saved.** The corpse could have carried a
@@ -1133,10 +1141,10 @@ answers with **either** orders **or** menu rows, never both:
 `ui.command.equip` and the item's own name lower-cased, the pane's "Corpse of a midden hog" rule),
 whether it can be chosen, why not, and the intents it sends. Equip sends `OrderEquip` for the
 **primary colonist** — the first *standing* colonist in the selection, drafted or not (§5j), passing
-over an animal, a marauder or a downed colonist ahead of her — aimed at the weapon's own cell.
+over an animal, a bandit or a downed colonist ahead of her — aimed at the weapon's own cell.
 A selection whose every colonist is down gets the row **disabled, reason "Downed"**
 (`ui.status.downed`), so the player sees why. A selection with **no colonist at all** — an animal, a
-marauder — gets **no menu**: they take no orders (the presenter's gate, `HearsRightClick`, never
+bandit — gets **no menu**: they take no orders (the presenter's gate, `HearsRightClick`, never
 asks), and a menu of one Cancel says nothing. `ContextMenuModel.Choose` is the one door from a row to
 the world and sends nothing for Cancel or a disabled row, whatever the row carries — so a view that
 forgets to look at `Enabled` still cannot send one. One new key: `ui.menu.cancel`, in a new
@@ -1181,7 +1189,7 @@ honest about being disabled. `15-building.md` §8 step 4 is otherwise built by t
 **Tests** (fast tier, each seen to fail with the thing it guards removed): `ContextMenuModelTests`
 (13) — the menu for an undrafted and a drafted selection, Equip's intent for the primary, a stale
 selection's primary, Cancel sends nothing, the downed selection's disabled row and its reason, no
-menu for an animal or a marauder, the block under a weapon, a store's one row per kind, ground is a
+menu for an animal or a bandit, the block under a weapon, a store's one row per kind, ground is a
 move with no menu, an enemy is an attack with no menu even standing on a weapon, `Choose` refusing a
 disabled row that carries orders, Escape's top rung, and the label's two registry words;
 `HudLayoutTests.TheContextMenuOpensAtThePointerAndTurnsAtTheEdges`;
@@ -1217,7 +1225,7 @@ target reads as the target shrinking. Every number but the 1.6 and the 0.2 is IN
 (`odyssey.pawn.order.target`, `Pawn.CombatTarget`) changes to that pawn — read off the snapshot, not
 the right-click, so a refused order publishes nothing and draws nothing, and the same order clicked
 again (`AlreadyInThatState`) is quiet here too. **At most one ring per target**: a squad sent at one
-marauder shares it, and a second order restarts the snap only once the first has settled, so one
+bandit shares it, and a second order restarts the snap only once the first has settled, so one
 click on a box selection locks on once. An order already under way when the player first sees it —
 a colonist selected mid-fight, a save loaded mid-fight — is **adopted at rest**, not snapped.
 
@@ -1236,7 +1244,7 @@ would be sim state bought for a colour.
 on the board: not the draft's deep `#8b1212` (which marks *who* is under orders, over the head —
 the ring marks *whom*, under the feet, and both are on screen in every fight), and not
 `HudTheme.Bad`'s salmon `#e06a5c`, which is the Cancel tool and also the hostile marker over the
-very marauder the ring is under — a ring in the marker's colour would read as more marker.
+very bandit the ring is under — a ring in the marker's colour would read as more marker.
 `OrderColoursTests.TheAttackRedIsNeitherTheDraftNorTheCancelRed` holds it 80 points from both and
 from every order hue, the board's own threshold (149 from the draft, 130 from the salmon).
 
@@ -1346,7 +1354,7 @@ the per-tick check both on and off, so the end-state assertions were seen to fai
 two from one side end side by side on that flank (before: one tile); nine on one fill the eight
 sides and the ninth waits at distance 2 (before: three tiles among nine); the waiter takes a side
 that frees up; a target sent ten cells away is surrounded again where it stops (before: all four on
-one tile); three marauders hunting one colonist stand on three sides of her; a save taken while
+one tile); three bandits hunting one colonist stand on three sides of her; a save taken while
 five close resumes on an equal hash 600 ticks on. Every tick of every fight asserts no two attackers
 standing on one tile and no two holding one side. Sim fast tier 1,170 (from 1,164), Hud 797, Long 39,
 all green; `GoldenMasterTests` green without a re-bake.
@@ -1445,8 +1453,8 @@ tiles. Neither was a fault in §7a or §7c. The asks that stand on their own:
 | Ask | Decision (owner, interviewed 2026-09-23) | Section |
 |---|---|---|
 | *"The bar above their heads flicker ... use a green like the one used in the colony stats — more greener — deeper colours please and more prominent"* | Find and fix the flicker, measured rather than guessed. The bar's green is the colony-stat green, deeper and more saturated, as are the amber and red. The bar is thicker and has a dark backing, so it reads at the play camera. | §8a |
-| *"The weapon is not drawn until the attack is about to happen ... marauders always have their weapons drawn ... we need a good mechanism"* | **Sheathed at the left hip**, where it can be seen. **Drawn** when a colonist is drafted, when its attack target is within 2 tiles, or when it is struck and fights back. The pack's *Draw* clip moves the weapon to the right hand. About 2 s after the fight ends, or on release from the draft, the *Sheathe* clip puts it back. Without the pack it snaps between the two. **Marauders always have theirs drawn.** A tool (axe, pick, hammer) still takes the right hand while a colonist works, and the weapon stays at the hip. | §8b |
-| *"Make it a guard that enemies when sharing tiles going side by side as well or handled uniformly"* | One rule for every pawn in a fight: nobody fighting shares a tile. There is a test that walks every tick of mixed brawls (colonists, marauders, hogs, rats, any side) and fails on a shared tile. The drawn crowd sidestep reads the published *person* flag, not "kind 0", so marauders step round each other and round colonists as colonists do. Animals stay outside it (design 29). | §8c |
+| *"The weapon is not drawn until the attack is about to happen ... bandits always have their weapons drawn ... we need a good mechanism"* | **Sheathed at the left hip**, where it can be seen. **Drawn** when a colonist is drafted, when its attack target is within 2 tiles, or when it is struck and fights back. The pack's *Draw* clip moves the weapon to the right hand. About 2 s after the fight ends, or on release from the draft, the *Sheathe* clip puts it back. Without the pack it snaps between the two. **Bandits always have theirs drawn.** A tool (axe, pick, hammer) still takes the right hand while a colonist works, and the weapon stays at the hip. | §8b |
+| *"Make it a guard that enemies when sharing tiles going side by side as well or handled uniformly"* | One rule for every pawn in a fight: nobody fighting shares a tile. There is a test that walks every tick of mixed brawls (colonists, bandits, hogs, rats, any side) and fails on a shared tile. The drawn crowd sidestep reads the published *person* flag, not "kind 0", so bandits step round each other and round colonists as colonists do. Animals stay outside it (design 29). | §8c |
 
 ### 8a. The bar
 
@@ -1476,9 +1484,9 @@ and dull.
 
 1. *The bar is owed on some publishes and not others.* **Ruled out.**
    `HealthBarPublishingTests.ABarIsOwedOnEveryTickItsStateSaysAndBlinksOnNone` fights two drafted
-   colonists against two marauders for 3,000 ticks with the shipped rules and reads every tick's
+   colonists against two bandits for 3,000 ticks with the shipped rules and reads every tick's
    frame: 11,444 pawn-ticks owed a bar, 9,262 hurt. The drafted colonists' bars changed **0** times,
-   and each marauder's changed **once** (on being hurt), exactly as their state did. Its negative
+   and each bandit's changed **once** (on being hurt), exactly as their state did. Its negative
    control, `hp` published only on even ticks, failed on tick 5.
 2. *The draw order of the track and the fill.* **The cause.** A probe (a scratch test, not kept)
    ran the old `CombatMarks.Bar` arithmetic in single precision for a colonist walking 8 m across
@@ -1577,7 +1585,7 @@ owner's rule, and who owns each half of it:
 | **Where** it hangs and **how** it moves | the figure | `PawnFigureDirector.Sheath.cs` |
 
 **The rule** (`WeaponDraw.IsDrawn`). Drawn when the pawn holds a weapon (`WeaponHand.Held`, so a
-field naming a thing on the ground draws nothing) and any of: it is **hostile** (a marauder always
+field naming a thing on the ground draws nothing) and any of: it is **hostile** (a bandit always
 has its weapon out); it is **drafted**; it is in `Job_AttackMelee` and its target is within
 **2 tiles**, Chebyshev on the ground and at most one layer up or down (a rescue names its patient
 in the same `CombatTarget` field, which is why the job is asked and not only the field); or it is
@@ -1627,12 +1635,12 @@ hand.
 from the draft with nobody near → not drawn on the next publish; an undrafted colonist going about
 3,000 ticks of her day → never drawn; the target at 3 tiles → sheathed, at 2 → drawn, at 5 → sheathed;
 the distance rule's layer arithmetic; struck with the striker stood 5 tiles off → drawn, and an armed
-bystander not; a marauder stood 10 tiles from anybody → drawn every tick, and bare-handed → not.
+bystander not; a bandit stood 10 tiles from anybody → drawn every tick, and bare-handed → not.
 **Six mutations of the rule, each seen to fail the test that owns it**: no draft clause, no hostile
 clause, no retaliation clause, reach 3, always a reason, no hand gate. `WeaponSheathTests` (7, Hud):
 the hold, a reason inside it restarting it, the release, a pause, a rewound tick, the first sighting;
 three mutations (no hold, release ignored, a first sighting animating) each seen to fail.
-`CombatContractTests.EveryPawnViewSaysWhatItIs` now expects a spawned marauder to publish `Drawn`.
+`CombatContractTests.EveryPawnViewSaysWhatItIs` now expects a spawned bandit to publish `Drawn`.
 EditMode, **written without a Unity run**: `WeaponSheathPlacementTests` — the rows resolve or the
 weapon snaps; at peace the weapon is on the pelvis (not the floor bone), on the left, at the hip;
 with the pack stripped it snaps both ways, and the hold is 120 ticks; with the pack the draw leaves
@@ -1675,11 +1683,11 @@ jobs or landing. Anything that stays is.
 **The guard** is `FightGuardTests` (fast tier, 16 cases), which asserts the rule after every tick
 of each brawl, with a control that the fight happened:
 
-- several marauders on one colonist;
-- several colonists on one marauder;
-- two marauders on two colonists side by side;
-- marauders walking into a drafted line;
-- marauders converging from one side;
+- several bandits on one colonist;
+- several colonists on one bandit;
+- two bandits on two colonists side by side;
+- bandits walking into a drafted line;
+- bandits converging from one side;
 - hogs turning on the colonists who hit them;
 - a rat fleeing past a brawl;
 - drafted targets ordered about mid-fight;
@@ -1688,7 +1696,7 @@ of each brawl, with a control that the fight happened:
 - every mind at once.
 
 The first five run both with every swing a miss and with the shipped rules. **Long:**
-`MixedBrawlsOnManySeeds` runs twelve seeded colonies of three to six colonists, marauders, hogs and
+`MixedBrawlsOnManySeeds` runs twelve seeded colonies of three to six colonists, bandits, hogs and
 rats. Some colonists are drafted and ordered onto the animals. Each colony runs for 4,000 ticks,
 and the control is that every kind fought.
 
@@ -1697,13 +1705,13 @@ against attackers, but not for everyone else in a fight:
 
 | Hole | Evidence before the fix | Fix |
 |---|---|---|
-| A pawn somebody is attacking held nothing, so another fight's attacker could take its cell as a side | `ABodyBeingFinishedOffIsNobodysSide`: a marauder coming for a colonist stood on the downed marauder a colonist was finishing off beside her, **677 pair-ticks** | `Melee.Holds` (was `SideTaken`) and `ChooseSide`'s mask count **every fighter's `SideOf`**, attacker or target, and the target's own destination |
-| The drafted hold struck from wherever she stood | Long seed 12: two drafted colonists on one tile both swinging at marauder 8 from it, **94 pair-ticks** | the hold asks `MayFightFrom` like anybody. On a cell another fighter holds, or on her threat's own cell, she steps to a free side, and she still never chases. Out of reach, she holds again |
-| Drafting in place never spread | `MaraudersIntoADraftedLine`: two colonists drafted on one tile held there, hunted, **269 pair-ticks** (1,410 with nothing fixed) | a draft is a move order to her own cell, and `SetDrafted` spreads it with the move order's own `Spread` |
-| A move order's spread ignored fighters | `AColonistSentOnToAFighterStopsBesideIt`: sent onto the tile a marauder was swinging from, she was given it | `Spread`'s `Taken` also asks `Melee.Holds` |
+| A pawn somebody is attacking held nothing, so another fight's attacker could take its cell as a side | `ABodyBeingFinishedOffIsNobodysSide`: a bandit coming for a colonist stood on the downed bandit a colonist was finishing off beside her, **677 pair-ticks** | `Melee.Holds` (was `SideTaken`) and `ChooseSide`'s mask count **every fighter's `SideOf`**, attacker or target, and the target's own destination |
+| The drafted hold struck from wherever she stood | Long seed 12: two drafted colonists on one tile both swinging at bandit 8 from it, **94 pair-ticks** | the hold asks `MayFightFrom` like anybody. On a cell another fighter holds, or on her threat's own cell, she steps to a free side, and she still never chases. Out of reach, she holds again |
+| Drafting in place never spread | `BanditsIntoADraftedLine`: two colonists drafted on one tile held there, hunted, **269 pair-ticks** (1,410 with nothing fixed) | a draft is a move order to her own cell, and `SetDrafted` spreads it with the move order's own `Spread` |
+| A move order's spread ignored fighters | `AColonistSentOnToAFighterStopsBesideIt`: sent onto the tile a bandit was swinging from, she was given it | `Spread`'s `Taken` also asks `Melee.Holds` |
 
 With everything withheld, `TargetsThatKeepMoving` also failed, with **8 pair-ticks**: a drafted
-colonist was moved onto a marauder's side and swung from it. It passes with either the hold's step
+colonist was moved onto a bandit's side and swung from it. It passes with either the hold's step
 or the move order's spread alone.
 
 **What the rule costs.** `Holds` and `ChooseSide` gain a lookup by id per attacker, for its target.
@@ -1716,19 +1724,19 @@ own noise.
 
 **The drawn half had already moved.** The combat contracts (`500a6f09`, §5d) put the crowd sidestep
 on the published person flag: `PawnPose` gates on `pawn.IsPerson`, and `CrowdWeight` skips
-`other.IsAnimal`. So a marauder steps round colonists and marauders and is stepped round, and
+`other.IsAnimal`. So a bandit steps round colonists and bandits and is stepped round, and
 animals stay outside it (design 29). No other presentation or HUD site reads "a person" as
 `Kind == 0`. Every remaining `Kind` read is a species-table row: animal looks, labels and bite
 sharpness. Nothing pinned it, though, so two tests now do.
 `PawnPassingTests.ThePersonFlagDecidesWhoStepsRound` covers the seven pairings of colonist,
-marauder and hog. `PawnCrowdIndexTests`' crowd is now a fifth marauders and a seventh hogs, so the
+bandit and hog. `PawnCrowdIndexTests`' crowd is now a fifth bandits and a seventh hogs, so the
 exactness claim holds across the gate as well as the arithmetic. **Both have never been compiled or
 run**, because the fast tier does not build Presentation.
 
 **Do not undo by tidying:**
 
 - **A target holds its `SideOf`, not only its cell.** A target walking to a cell will stand there.
-  Choosing that cell as a side is how a colonist ordered onto a marauder's flank met the marauder
+  Choosing that cell as a side is how a colonist ordered onto a bandit's flank met the bandit
   arriving on it.
 - **The guard's one-tick grace is not a loophole.** Between jobs, on the tick a job is given, and
   on the tick a step lands, a pawn has not yet chosen its cell. The very next tick is checked, and
@@ -1754,7 +1762,7 @@ Played on `claude/combat-c2-polish`. The owner's asks and the interview's answer
 | *"A knockback — in fact a chance you can fall back on to the next tile (maybe on critical hit)"* | **Critical hits:** every landed hit has a 10% chance, plus 1% per 4 attacker Melee levels, and does ×1.5 damage. **A critical knocks the target back one tile** with a 50% chance (75% for a blunt weapon), directly away from the attacker. That tile must be free and standable; it may be **one terrace step down, never water, never two layers or more down, never a climb up**. If the tile is not allowed, the target staggers in place instead. The target lands **knocked down** for about 1.5 s (`PawnFlags.KnockedDown`, the knock-down clip), then stands. Animals can be knocked back too. Events: `Critical`, `KnockedBack` (from-cell in `Amount`). | §9b |
 | *"Baseball bat wasn't close enough to hips/waist when not drawn. Same goes for machete"* | Bring the sheathed weapon in against the hip. Measure the gap from the weapon mesh to the body surface on the drawn meshes, with a numeric test, and photograph it. | §9c |
 | *"We'll make an entry for gear later to include equipped weapon (seam for later)"* | A **seam only**: a Unity-free `GearModel` that lists what the colonist holds (the equipped weapon, drawn or at the hip). The Gear tab stays disabled; later work fills it. | §9d |
-| *"You could still attack a pig after it died — make a guard for this — check marauder does this"* | **A dead pawn is never a target.** The attack order is refused on a dead pawn or a corpse, an attack job ends the tick its target dies or leaves the board, and hostile, animal and drafted target choice never picks the dead. A guard test runs every tick of mixed fights to the death and fails if anybody swings at, walks to, or keeps a job against a dead pawn. The same guard covers marauders. | §9e |
+| *"You could still attack a pig after it died — make a guard for this — check bandit does this"* | **A dead pawn is never a target.** The attack order is refused on a dead pawn or a corpse, an attack job ends the tick its target dies or leaves the board, and hostile, animal and drafted target choice never picks the dead. A guard test runs every tick of mixed fights to the death and fails if anybody swings at, walks to, or keeps a job against a dead pawn. The same guard covers bandits. | §9e |
 | *"Their health needs to be also displayed on their colony stats"* | **The colonist cards along the top get a fourth bar, health, always shown**, in the overhead bar's colours (green, amber below 60%, red below 40%). A downed colonist's card shows it empty and red, with *Downed*. | §9f |
 
 ### 9a. Reactions (built 2026-09-24, `claude/combat-react`)
@@ -1774,7 +1782,7 @@ routed to the struck figure, not the attacker. They were refused. Measured, not 
   impact lands on the wind-up tick: a light swing is drawn for 2.0–4.0 times its wind-up, a heavy
   one 1.6–2.1 times, a computed punch 1.8 times. A machete (22 / 96) is drawn for about 64 % of its
   cycle, and equal cooldowns lock the two fighters in phase.
-- **On real fights.** A probe on the fast tier (a drafted colonist ordered on to a marauder with the
+- **On real fights.** A probe on the fast tier (a drafted colonist ordered on to a bandit with the
   machete, eight fights over three seeds and every weapon, the published tape with lane B's rule
   applied to it; not committed): of **193 landed blows, 86 fell inside the target's own drawn swing
   and drew nothing** (30–70 % per fight), and of the 99 that did start, the target's next swing began
@@ -2016,7 +2024,7 @@ for a critical that rolled its knockback. `TickBenchmarkTests.TwentyAgainstTwent
 
 Three older tests read *when a swing landed* off the rules' own record, which now sees the swing
 start. They read the published impact instead (`Tape.Landed`): `ARepeatedAttackOrderIsQuiet…`,
-`AStunnedAttackersSwingDoesNotLand` and `AMarauderInAFightKeepsItsSwing…`. The damage-spread test
+`AStunnedAttackersSwingDoesNotLand` and `ABanditInAFightKeepsItsSwing…`. The damage-spread test
 skips criticals, which are 1.5 times the spread by design.
 
 **Do not undo by tidying:**
@@ -2039,7 +2047,7 @@ skips criticals, which are 1.5 times the spread by design.
 - **A knocked-down pawn still dodges** at its level. "A pawn lying down does not dodge" is the
   downed rule; whether it extends to the knock-down is a feel question for the playtest.
 - **A knocked-down pawn with nobody attacking it holds no tile.** A drafted hold's blow ends when
-  its target is out of reach, so a marauder knocked back by the hold lies on a tile no fighter
+  its target is out of reach, so a bandit knocked back by the hold lies on a tile no fighter
   claims. It is in nobody's fight until it stands, so §8c's rule does not count it.
 
 ### 9c. At the hip (built 2026-09-23, `claude/combat-c2-r3`)
@@ -2179,7 +2187,7 @@ nothing draws the model yet.
 
 **`Odyssey.Hud.GearModel`** is Unity-free. `Refresh(snapshot, pawn)` fills `Rows`, a reused list of
 `GearRow`, and allocates nothing. It returns false with no rows for a pawn the frame no longer
-carries. It returns true with no rows for an animal. For a person, colonist or marauder, it returns
+carries. It returns true with no rows for an animal. For a person, colonist or bandit, it returns
 true with one row today:
 
 | Field | Today | From |
@@ -2211,7 +2219,7 @@ true with one row today:
 
 **Tests** (fast tier, `GearModelTests`, 12 cases): the bare hands; a weapon at the hip; the drawn
 flag; drafted without the flag still at the hip; the flag over empty hands still the bare hands; a
-marauder read the same way; an animal and a pawn that has gone; and the gear row agreeing with the
+bandit read the same way; an animal and a pawn that has gone; and the gear row agreeing with the
 Health tab for each of the four weapons and the bare hands. Negative controls, each seen to fail and
 then restored:
 
@@ -2226,7 +2234,7 @@ should move the tab names into the registry in the same commit.
 
 ### 9e. The dead are not targets (built 2026-09-24, `claude/combat-crit`)
 
-Owner: *"You could still attack a pig after it died — make a guard for this for now — check marauder
+Owner: *"You could still attack a pig after it died — make a guard for this for now — check bandit
 does this."*
 
 **What let the owner attack the dead pig.** Reproduced before anything was changed. The
@@ -2267,11 +2275,11 @@ there was:
 **The guard** is `DeadTargetGuardTests.NobodyFightsTheDead`, fast tier, six cases, plus
 `NobodyFightsTheDeadOnManySeeds` in the Long tier (24 more). Each case is a fight to the death:
 
-- colonists with machetes against marauders, and colonists against hogs, with a player who keeps
+- colonists with machetes against bandits, and colonists against hogs, with a player who keeps
   ordering every drafted colonist on to the nearest foe, standing or down, and who right-clicks every
   body the moment it dies;
-- marauders and hogs, with no player: the hogs are set on the marauders and the marauders hunt a
-  colonist. This is the "check marauder" case.
+- bandits and hogs, with no player: the hogs are set on the bandits and the bandits hunt a
+  colonist. This is the "check bandit" case.
 
 Half the fights land blows at ten times the damage, so pawns die from standing with several
 attackers on them.
@@ -2282,9 +2290,9 @@ its death was. The one exception is the same-tick `Miss` above. It also checks t
 order sent on a body was refused.
 
 With `EndAttacksOn` withheld, all six fast cases failed (two to six violations each), and so did
-the Long sweep. **Marauders did it too**: on seeds 2, 5 and 6, marauders kept their attack on the
-colonist they had just killed. No hog dies in the marauders-and-hogs mix, because a marauder never
-answers a hog (§6A.6). What that mix guards is the hogs' revenge and the marauders' hunt.
+the Long sweep. **Bandits did it too**: on seeds 2, 5 and 6, bandits kept their attack on the
+colonist they had just killed. No hog dies in the bandits-and-hogs mix, because a bandit never
+answers a hog (§6A.6). What that mix guards is the hogs' revenge and the bandits' hunt.
 
 **Open.** Whether a downed animal should look different from a dead one, or whether a right-click on
 a downed animal should ask before finishing it, is the owner's call. The simulation's rule, that a
@@ -2492,15 +2500,15 @@ honest — the arm was already moving.
 
 ### 9h. Spawns spread (built 2026-09-24, `claude/combat-spawn`)
 
-**Owner, 2026-09-24:** *"when you spawn a marauder they don't spawn from same tile so quickly — spawn
+**Owner, 2026-09-24:** *"when you spawn a bandit they don't spawn from same tile so quickly — spawn
 on free tiles around if quick succession."* A debug spawn used to land on the walkable cell nearest
-the camera's column, whoever already stood there, so marauders spawned in quick succession stacked
+the camera's column, whoever already stood there, so bandits spawned in quick succession stacked
 on one tile. `PawnRegistry.FreeSpawnCell` keeps that cell when nobody stands on it. So the first
-spawn lands exactly where it always did, and `SixMaraudersSentInOneTickStandOnSixTiles` pins that.
+spawn lands exactly where it always did, and `SixBanditsSentInOneTickStandOnSixTiles` pins that.
 Otherwise it takes the nearest free tile in rings of up to 4 cells round it, in a fixed scan order.
 Each column is tried on the spawn layer, then one up, then one down, the same lift a move order
 uses. The tile must be standable, unoccupied, and reachable from the spawn point, so nobody arrives
-walled into a pocket. It applies to **every kind**, not only marauders, because a shared tile is the
+walled into a pocket. It applies to **every kind**, not only bandits, because a shared tile is the
 same fault whoever stands on it.
 
 It is a debug command, so it costs a scan of the pawns per candidate tile and nothing per tick. All
@@ -2517,7 +2525,7 @@ items, enemies ... also include an option to wield every colonist with a random 
 
 - **Wider:** 280 px to 460 px (`.debug` in `Hud.uss`).
 - **The Spawn tab is grouped under headings**, in two columns:
-  - on the left, who: **Colonists** (Spawn colonist, **Arm every colonist**), **Hostiles** (Spawn marauder, **Spawn 3 marauders**), **Animals** (midden hog, duct rat);
+  - on the left, who: **Colonists** (Spawn colonist, **Arm every colonist**), **Hostiles** (Spawn bandit, **Spawn 3 bandits**), **Animals** (midden hog, duct rat);
   - on the right, what: **Weapons** (the four) and **Items** (50 wood, stone, meals).
 
   The Items rows moved here from the Cheats tab, which keeps the clock, the crops, the overlay and
@@ -2525,14 +2533,2257 @@ items, enemies ... also include an option to wield every colonist with a random 
   stylesheet but the width.
 - **`DebugDirector.SpawnRow`** gained `Group` and `Repeat`. The table is the fast tier's
   (`TheSpawnTabIsGroupedUnderNamedHeadings`, `TheNewRowsSendWhatTheySay`), and the shell only lays it
-  out. *Spawn 3 marauders* is one intent sent three times at one column, and the simulation spreads
+  out. *Spawn 3 bandits* is one intent sent three times at one column, and the simulation spreads
   each onto its own tile (§9h).
 - **`IntentKind.DebugArmColonists`** (`PawnRegistry.HandleDebugArmColonists`) gives every colonist
   who is standing and holds nothing one of the content's melee weapons.
   - The weapon is rolled on her own stream (`PawnPurpose.DebugArm`), so a seed deals the same arms
     every time.
-  - It is made beside her and taken straight into her hand, as a marauder is armed at spawn. Being
+  - It is made beside her and taken straight into her hand, as a bandit is armed at spawn. Being
     undrafted, it then hangs at her hip (§8b).
   - A colonist who already holds a weapon keeps it, a downed one and animals are skipped, and a
     second click arms nobody (`AlreadyInThatState`).
   - `DebugArmColonistsTests` fail with the handler unregistered.
+
+## 10. Blood (built 2026-09-24, `claude/combat-blood`)
+
+The unit §7d names, built to the owner's rules there and to the seven points it hands on. Nothing
+here reaches a cell, a save, the hash or the simulation: a load starts clean and a player has
+nothing to clean.
+
+### 10a. What is drawn
+
+- **A spurt** on every landed hit: a handful of drops thrown from the wound along the blow, falling
+  under gravity. **Sharp** throws more and faster drops in a narrower fan, **blunt** fewer and
+  slower. Where the lead drop lands it leaves **one mark**: a sharp hit an elongated **splatter**
+  laid along the blow, with its satellite drops built into the shape; a blunt hit a smaller, round
+  **spot**. One mark per hit, not one per drop, or the cap would be a dozen hits.
+- **A pool** under a body gone down (0.6 of the size) or dead (the whole): it waits for the fall,
+  then spreads to full size over about 8 s of game time.
+- **Misses, dodges, swings, stuns and recoveries draw nothing** — `BloodModel.For`, unchanged.
+
+### 10b. The numbers (all INVENTED, for the playtest)
+
+| | Sharp | Blunt |
+|---|---|---|
+| Drops | 4 + damage/2, at most 16 | 1 + damage/4, at most 5 |
+| Throw | 2.5–4.5 m/s, ±30° | 1–2 m/s, ±60° |
+| Mark | radius 0.22 + 0.02 × damage, at most 0.55 m; 1.7 × as long as wide | radius 0.12 + 0.01 × damage, at most 0.28 m; round |
+
+- **A pool**: radius 0.45 × the body's length × the size factor — 0.81 m for a person's death,
+  0.27 m for a rat's. The body's length is the animal's drawn box, or 1.8 m for a person.
+- **The fade**: a mark holds full strength for the first quarter of a day (15,000 ticks), then
+  thins to nothing at 60,000, **by the simulation's tick**. A pause holds it, and speed three fades
+  it three times as fast (§7d point 3).
+- **The cap**: 200 marks, oldest first (point 4).
+- **Colours**: drops and splatter a deep red, pools darker, both translucent enough for the grass to
+  show through a thin mark.
+
+### 10c. Decisions this unit made
+
+- **The seam changed shape**, because the first implementation of it needed two things it did not
+  carry. `Spurt` now takes the struck pawn's **feet** beside the wound (the drops need a ground to
+  land on), and `Pool` takes **who** it is under and **the body's length** (point 2, and point 7
+  below). The seam is presentation's own; nothing outside `CombatFeedback` calls it.
+- **Where a death's pool goes (point 7).** When the event arrives the body has not fallen, and which
+  way it falls is decided by a clip, not the simulation. So a pool **waits 1.2 s of game time**,
+  then asks the figures where the body is: the midpoint of its feet and its head, which is under the
+  torso whichever way it fell. With no figure (a pawn beyond the figure cap, a checkout without
+  the art) it falls back to the feet it was given.
+- **A mark stands on what is under it (point 6).** A drop that lands over a cell with nothing to
+  stand on (off a terrace edge, into water, against a wall) leaves no mark. And every mark is asked
+  again each frame: **a floor taken away takes its blood with it**, rather than leaving a stain
+  hanging in the air. It does not fall, because a stain that falls three metres and lands intact is
+  stranger than one that goes.
+- **The slice hides a mark on a layer not drawn**, by the corpses' own rule (`LowestDrawnLayer`
+  to `HighestVisibleLayer`). The mark is kept, and shows again when its layer is drawn. Drops in the
+  air are hidden the same way.
+- **Draped, not lifted.** A mark is ground-fixed, so it is placed with `GroundRelief.Drape` and
+  lies along the relief (the standing rule).
+- **Drops move by real time while the game runs**, like the floating words, and freeze on a pause.
+  They are half a second long; the marks they leave are timed by the tick.
+
+### 10d. What it costs
+
+- **Draws in fade steps, never in marks** (`bug-patterns.md` P10). Marks are bucketed by shape
+  (splatter, spot, pool) and by one of six fade steps, each bucket one instanced call; drops are one
+  more. The ceiling is **19 calls** whatever the fight, and a colony with no blood submits
+  **nothing**.
+- **Per frame it scales with the marks (at most 200) and the drops in the air (at most 512)**,
+  never with the board or the colony (`process.md` §3).
+- **Measured** (`FrameTimeTests.TheBloodAtItsCap`, one run, 640 x 480, RTX 5070 Ti): 250 hits
+  laid round the start, 200 marks standing — **3 draw calls** and the frame **2.40 → 2.53 ms**, the
+  whole difference in `Overlays` (0.011 → 0.097 ms).
+- **The fight test reads the ground only once the air has emptied.** Drops fall in real seconds,
+  about 0.7 each, and a brawl in `TheFrameWithAFightInView` lasts well under one on this machine, so
+  read at once it found 54 drops up and no mark — and, with the refusal counters added to find out
+  why, **nothing refused**: the drops had simply not landed. `BloodDirector.Refused*` stay, as the
+  first thing to read when a fight leaves less blood than it should.
+
+## 11. Rescue (C4, built 2026-09-24, `claude/combat-rescue`)
+
+A downed colonist heals only in a bed (§1), and until this unit nothing could carry her to one, so a
+colonist who went down stayed down. Built to the owner's answers of 2026-09-24:
+
+| Question | Owner's answer |
+|---|---|
+| How long does a rescued colonist stay in bed? | **Until whole.** Not up at 15 %: a 15 hp colonist does not walk back into the fight |
+| No free bed? | **Leave her**, and say why. Building a bed is the player's answer |
+| How is she carried? | **Cradled in the arms**, the downed body lifted to the carry cradle |
+
+### 11a. The job
+
+`Job_Rescue` (handle 21, `RescueJobDriver`), four toils, walked in **`TraverseMode.Hauler`** like a
+haul, because a colonist with a body in her arms does not climb a ladder:
+
+1. **Walk to the patient.** The patient is the rescuer's `Pawn.CombatTarget` (saved and hashed, the
+   field the contracts put there for this); the job's `TargetCell` follows her if she is moved.
+2. **Lift**: 45 ticks (INVENTED) stooped over her; then `patient.CarriedBy = rescuer`.
+3. **Carry to the bed** (`Job.DestCell`, the bed's head cell). A carried patient is **where her
+   carrier is**: her `Cell` is set to the carrier's every tick and she has no path of her own.
+4. **Lay her down**: 45 ticks; she is set on the head cell, `CarriedBy` goes back to nought, and the
+   **bed reservation passes to her** (§11c).
+
+Every other end (a failure, a knockback, the carrier downed or killed, a draft toggle, a forced job)
+runs the driver's `Cleanup`, which puts a carried patient down on the carrier's cell, or the nearest
+standable cell if that one is mid-step, and clears `CombatTarget`. **Nobody is left in a pair of
+arms.** A patient who dies or recovers on the way fails the job.
+
+### 11b. Who, and to which bed
+
+- **Only a downed colonist is rescued.** An animal recovers where it lies; a downed bandit stays
+  down until killed (§1). Capturing one is a later unit.
+- **The bed**: the patient's own bed if it is free, else the **nearest free unowned bed**, measured
+  from the patient; never a bed somebody else owns. *Free* means nobody holds its cell reservation,
+  which after §11c includes a patient lying in it. Reachable from the rescuer to the patient and
+  from the patient to the bed, both in the hauler's mode.
+- **Two rescuers never take one patient**: a new reservation kind, `ReservationTargetKind.Pawn`,
+  keyed on the patient's id. Additive; no save holds one before this unit.
+- **The order** (`OrderRescue`, right-click a downed colonist with drafted colonists selected;
+  already routed to the nearest by `CombatOrders.Route`): a drafted, standing, unbroken colonist;
+  a downed colonist who is not already carried or claimed. After it she is still drafted, and
+  holds where she laid the patient.
+- **The automatic rescue** (`RescueWorkGiver`, the emergency giver in the Rescue column): the
+  nearest downed colonist the scanner can reach and bed. It answers no, touching nothing, when
+  nobody is down — so a colony that never fought scans one flag per pawn and no golden moves.
+
+### 11c. In the bed until whole
+
+- **A downed colonist lying in a bed gets up when whole**, not at `downedRecoverAtPerMille`. That
+  threshold is now the **animals'** rule alone: a colonist heals only in a bed, so "up at 15 %"
+  could only ever have happened there. No new state, no new job: while she is down her needs are
+  paused (§5c), she heals at `bedHealPerDay`, and at 100 % the combat pass stands her up
+  (`Recovered`) exactly as before. **Five days at today's invented rate.**
+- **The bed is hers while she lies in it.** The rescuer's cell reservation on the bed passes to the
+  patient on the lay (`Reservations.Reserve` in her name, added to her `HeldReservations`, which
+  are saved, hashed and re-reserved on load). `Job_Downed` holds it until she gets up, when
+  `EndJob` releases it like any other. So `TrySleep` and the next rescuer both see it taken. Without
+  it, the next tired colonist would have climbed in beside her.
+- **Ownership is not claimed.** A patient in an unowned bed is not given it; `BedOwnershipChanged`
+  wakes sleepers, and a sickbed is not a bedroom.
+
+### 11d. No bed: say why
+
+A downed colonist, not carried and not in a bed, for whom no bed is free, publishes
+`odyssey.pawn.rescue.nobed`. The alert model raises **`ui.alert.norescuebed`** — *No bed for the
+wounded* — once per colonist, and it clears the moment a bed frees or is built. The order is refused
+(`NotPermitted`) and the giver answers no, so she stays where she fell (owner). The aspect is
+computed at publish for downed colonists only: a colony with nobody down pays one flag test a pawn.
+
+### 11e. What is drawn
+
+- **Cradled.** A carried patient's figure is placed at the carrier's carry cradle
+  (`CarryPose.Cradle`, measured off the palms), lying across the arms at right angles to the
+  carrier's facing, in the lying pose. The carrier's arms take the item carry's scoop. The carrier
+  is found from the patient's side: the pawn on `Job_Rescue` whose order target she is.
+- **In the bed.** A downed colonist on a bed's head cell is laid in the bed with the sleep pose
+  (`AimSleep`), rather than playing the downed loop on the floor through the frame.
+- **No lock-on ring.** `LockOnRings` asks the rescuer's job and draws nothing for a rescue: the ring
+  says *attack*.
+- **Words.** *Rescuing* (`ui.status.rescuing`) is on the activity line; the patient's stays *Downed*.
+  Whether a colonist healing in bed for five days should read *Downed* is the playtest's question.
+
+### 11f. Do not undo by tidying
+
+- **A carried patient's `Cell` is her carrier's.** Everything that asks who is in a cell scans pawns
+  and reads `Cell`; a patient at `-1` would be off the board to all of them. `IsCellOccupiedByStandingPawn`,
+  `PawnEviction.Occupant` and `TrappedPawnSystem` skip a carried pawn: she is not standing there.
+- **`Cleanup` puts her down on every exit.** `CarriedBy` is saved; a patient left with it set after
+  her carrier's job ended would be carried by nobody, for ever.
+
+### 11g. Measured (2026-09-24)
+
+- **The pose, under the real bootstrap** (`RescueFigureTests`, the head bone, on a figure whose
+  standing head is 2.10–2.15 m): **0.18–0.20 m** over the ground downed on the floor; **1.63–1.66 m
+  over the carrier's feet and 1.07 m to her side** in the arms, mid-walk; **1.02–1.04 m** over the
+  ground in the bed against a mattress top of 0.70. The arms are the load's scoop, which holds the
+  palms level with the chest (1.52 m on this figure), so she lies at chest height with her head
+  half a body to one side: a cradle carry, and the playtest's to judge. `CradleSink` and the scoop
+  are the two levers.
+- **Three readings of the carry were the test's, not the pose's**, and each is why the test reads
+  as it does now. Against the ground of her cell, a carrier climbing a terrace ramp is drawn up the
+  riser before the cell changes (2.93 m). At speed three a bed four cells off is reached inside the
+  sample's wait, so "carried" was her head on the pillow (1.04 m, 0.05 m from the carrier). And one
+  second after the lift caught the scoop still easing in (1.27 m). The test measures against the
+  carrier's feet, at speed one, asserting she is still carried and the carrier still walking.
+- **Controls seen to fail**: the carried-patient pass off leaves her on the ground at the carrier's
+  feet (0.36 m); a bed not counted as a cradle plays the floor loop through the bed frame (0.21 m).
+  In the simulation: the bed not passed, no set-down, no patient reservation, the 15 % threshold and
+  no carried sync each fail their test; the alert with no rows built fails its.
+- **Read in real seconds, not frames.** A batch frame is a couple of milliseconds, so ninety frames
+  read the body mid-fall, and one second after the lift read 1.27 m on one run and 1.79 on another as
+  the scoop eased in. The test waits in real time (`docs/lessons.md`, a frame is not a tick).
+- **A Long soak saw it first.** `BanditSoakTests` carried a downed colonist to bed and she healed
+  past 15 % while down, which its invariant forbade; the invariant now takes the new line.
+
+### 11h. Known and left
+
+- **A carried patient beyond the 64-figure cap** is drawn by the baked far form, standing at her
+  carrier's cell, as a downed pawn out there already is (§6F).
+- **A patient's needs are paused for the whole of her bed rest** (five days at today's rate), because
+  she is down; nobody feeds a patient yet. A later unit, if the playtest wants it.
+- **She reads *Downed* while she heals in bed.** Whether that should say something else is the
+  playtest's question (§11e).
+- ~~**A bed demolished under a patient** kept her reservation on the old head cell~~ — **fixed
+  2026-09-25** (`claude/combat-bed-release`). She still stays down on its cell and is rescued again
+  to another bed, but `ConstructionGrid.Demolish` now releases a downed pawn's claim on the bed it
+  removes, from the table and from her own list together, so a bed raised on that cell is free at
+  once. Only a downed pawn: a sleeper's and a rescuer's jobs ask about their bed and let go
+  themselves. `RescueTests.ABedDemolishedUnderHerLetsGoOfHer`, seen failing without it.
+
+## 12. Friendly fire (C5, built 2026-09-24, `claude/combat-friendly-fire`)
+
+**The owner's rows (§1):** *friendly fire — the victim remembers being attacked (−8, one day); any
+colonist's death is felt by every colonist (−6, three days); no opinions yet*; *Ctrl+right-click a
+colonist attacks it*; *a colonist struck by a colonist fights back*. Built from `main` at
+`d1d64891`, fast tier and Long tier only, no Unity.
+
+### 12a. What was already there
+
+Two of C5's three parts arrived with C2 and were checked against the code rather than rebuilt:
+
+| Part | Where it lives | Already tested by |
+|---|---|---|
+| **Ctrl + right-click on a colonist is an attack** by every selected drafted colonist but her, and wins over the rescue | `CombatOrders.Route` (§6C), fed the Ctrl key by `SelectionPresenter.Order` | `CombatOrdersTests.CtrlRightClickOnAColonistAttacksAndWithoutCtrlItIsAMove`, `ACtrlClickedColonistDoesNotAttackHerself` |
+| **The order accepts a colonist as its target** — no flag, decided at the integration (§6E) | `JobSystem.HandleOrderAttack` (§6A.8) | `AttackDriverTests.TheAttackOrderIsForADraftedColonistAndAPawn`; the duel in that file is two colonists |
+| **A colonist struck by a colonist fights back** — by anybody, in fact, for `retaliationTicks` (§6A.6) | `CombatSystem.React`, `SelfDefenceThinkNode` | `HostileTests.AColonistStruckRetaliatesAndADraftedOneLeavesItToTheHold` |
+
+What nothing tested was the three **joined**: a Ctrl-attack from the order to the answering blow.
+`FriendlyFireTests.ACtrlAttackOnAnUndraftedColonistIsFoughtBackAndRemembered` sends the order, and
+the colonist she attacked — undrafted, at her own business — turns on her and swings, and carries
+the memory. Nothing in the order or the retaliation needed changing for it.
+
+### 12b. The two memories
+
+Two thoughts, appended to `Thoughts.xml` and `ThoughtIndex` (6 and 7; appended because a thought's
+index rides every saved memory), and one listener, `FriendlyFireListener`, registered in
+`CombatListeners.Register` after the weapon drop.
+
+| Thought | Given to | When | Mood | Lasts | Stacks |
+|---|---|---|---|---|---|
+| `Thought_AttackedByColonist` | the colonist swung at | a colonist's swing reaches her, landed or not (`SwingResolved`, since §14f; it was `DamageApplied`) | −80 | one day, 60,000 ticks, renewed by a second swing (§14e) | once |
+| `Thought_ColonistDied` | every other colonist on the board | a colonist dies (`Died`) | −60 | three days, 180,000 ticks | three times, at the usual 750 ‰ each |
+
+**The owner's −8 and −6 are points on a mood of a hundred; ours is thousandths of a thousand**
+(`MoodDef`: base 500, a break below 350), so they are −80 and −60 — the scale every existing
+thought is on (a night on the ground −40, a fall −60). A day is `Calendar.TicksPerDay`.
+
+**Decisions, and why** (each ours, not the owner's, unless it says so):
+
+- *(Superseded by §14f: a miss, a dodge and a blow on air are remembered too.)* **A blow that
+  lands is an attack; a miss or a dodge is not remembered.** The hooks report only
+  hit points taken (`DamageApplied`), and a memory of an attack that never touched her would need a
+  fourth hook for one thought. The smallest reading of "being attacked".
+- **Colonist on colonist only.** A bandit's blow or an animal's bite is not friendly fire and
+  gives nothing; a colonist hurting an animal or a bandit gives nothing. A broken, drafted or
+  downed colonist is still a colonist on both sides.
+- *(Superseded by §14e: it renews now, so the day runs from the latest blow.)* **The same attack
+  again neither stacks nor renews** (stack limit 1). That is how every thought in
+  the game behaves: `Pawn.AddMemory` drops a copy past the limit rather than refreshing one. So the
+  day runs from the **first** blow she remembers; a blow after the memory has gone makes a new one.
+  A second attacker is the same memory, because a memory names no other pawn — that is what
+  "no opinions yet" means in the data. Renewing on a repeat would be a change to `AddMemory` for
+  every thought (and would move the goldens through `Thought_AteMeal`), so it is left to the owner.
+- **The one who started it remembers the blows she takes back.** She is a colonist hurt by a
+  colonist; which of two started a fight is not in the state, and putting it there is the start of
+  opinions. So both sides of a Ctrl-attack end the day at −80. Open for the owner.
+- **Every death is felt, to three.** One death costs every colonist −60; a second −45 more, a third
+  −33, and a fourth nothing further while the three last (−138 at most). The break line is 150
+  below the base, so a massacre brings a content colony to the edge and not over it on its own.
+  *INVENTED*: the limit is the owner's to tune after a play.
+- **The dead feel nothing; everybody else does** — standing, downed, drafted or broken, including a
+  colonist who struck the blow. The pawn is still in the registry when `Died` is heard (the hook's
+  promise, §5e), so the listener skips her by identity. A bandit's or an animal's death is felt by
+  nobody.
+- **Only deaths the hooks hear.** Every death in the game today is `CombatSystem.Kill`'s; a later
+  way to die (starvation, a fall) must raise `Died` or it will not be mourned.
+- **No name, so no wiki row.** No surface names a thought — the pane's Thoughts tab is disabled
+  "until the thought log", and none of the six thoughts before these has a key. The unit that
+  builds the log names all eight at once; adding two keys now would start a namespace a quarter
+  full. The three content gates were run and pass unmoved.
+
+**Cost** (`docs/process.md` §3): nothing per tick. `DamageApplied` is two comparisons and, on friendly
+fire, a walk of the victim's memories; `Died` is one pass over the pawns per colonist death.
+
+**The goldens did not move**, and could not: memories are hashed per pawn, and these two are added
+only by a colonist hurting a colonist or a colonist dying, which no golden window does. The content
+fingerprint moved once, for the two thoughts (the twenty-first move, `PawnContentDefTests`).
+
+### 12c. Tests (`FriendlyFireTests`, fast tier)
+
+Each was seen to fail with its rule withheld — fourteen breaks, one at a time: the attacker or the
+victim need not be a colonist; a miss raises the hook; the attacked thought stacks twice, renews, or
+is −79; the dead mourns herself; non-colonists mourn; the downed do not; any death is mourned;
+deaths stack four; the listener unregistered; the order refusing a colonist target; and a colonist
+not retaliating against a colonist. The last two are C2's rules, broken to show the end-to-end
+test reaches them.
+
+| Test | Claim |
+|---|---|
+| `TheTwoThoughtsAreTheOwnersNumbersOnOurScale` | −80 for a day, once; −60 for three days, three times |
+| `AColonistHurtByAColonistRemembersItForADay` | the memory, its expiry, its −80, gone at the day's end |
+| `ABanditsBlowAndAMissAreNotFriendlyFire` | the controls: a bandit's blow, a miss, a colonist hitting a bandit |
+| `ASecondBlowNeitherStacksNorRenews` | one copy, the first blow's expiry |
+| `EveryOtherColonistFeelsAColonistsDeath` | the survivors, standing and downed, and not the bandit, the animal or the dead |
+| `ABanditsDeathIsFeltByNobody` | the control |
+| `DeathsStackToThree` | three copies at most, −138 |
+| `TheListenerIsRegisteredOnceAfterTheWeaponDrop` | the order `CombatListeners` promises |
+| `ACtrlAttackOnAnUndraftedColonistIsFoughtBackAndRemembered` | the order, the answering blow, the memory |
+
+### 12d. Open for the owner — answered 2026-09-24 (§14)
+
+- ~~Should a second attack within the day **renew** the memory, so the day runs from the last
+  blow?~~ Yes, on our recommendation (§14e).
+- ~~Should the colonist who **started** a fight remember the blows she takes back?~~ Yes, as built.
+- ~~Is **three** the right cap on mourning?~~ Keep. Whether a death should weigh more for somebody
+  close still waits for opinions.
+- ~~Should a swing that **missed** a colonist be remembered as an attack?~~ Yes (§14f).
+
+## 13. Buildings as targets (C6, built 2026-09-24, `claude/combat-buildings`)
+
+**The owner's MVP named buildings as targets from the first interview** (§1: "walls, doors,
+furniture"), and §4 gave the shape: *hit points per placed edifice in a sparse store, demolished at
+zero with no refund.* Simulation and interface model only, fast and Long tiers, no Unity. **No
+golden moved**: nothing new is hashed while no building has been struck, and no golden window
+fights.
+
+### 13a. What was there, and what C6 adds
+
+| Already there (§5) | Added here |
+|---|---|
+| `EdificeDamage` (`odyssey.edificedamage`): a sorted sparse store, saved and hashed only while it has a row, nothing calling it | the calls, a row per struck building, cleared by the one removal path; an indexer for the publish |
+| `BuildingDef.maxHitPoints` on seven rows, INVENTED | the campfire, conduit, generator and heater given theirs; the material's `hitPointsFactorPerMille` read at last |
+| `HandleOrderAttack` refusing `B = 0` | the building branch: accepted for a drafted colonist on a cell a target stands in |
+| the attack driver failing a job with no `CombatTarget` ("C6's branch") | the building mode: stand beside, swing on the weapon's cadence, done when the building is gone |
+| `CombatEventView.Target` "default when the target is a building" | reported so; one new kind, `Demolished` |
+| `odyssey.pawn.order.cell` named for a building target (§5d) | published for it |
+| `CombatOrders.Route` falling through to the move for a building | `CombatOrders.RouteBuilding`, after the context menu and before the move |
+
+### 13b. What is a target
+
+**An edifice standing in the cell whose building row has hit points** — `BuildingTargets.TryFind`,
+the one owner. That is a wall, a door, a ladder, a bed, a shelf, a campfire, a generator and a
+heater. Never:
+
+- **a floor or a deck plate**, which is a slab at the cell's lower boundary and not an edifice
+  (§5j), although both rows carry `maxHitPoints`;
+- **a conduit**, which lives in the power grid's own layer and is not an edifice either. It was
+  given its number with the other three power rows, and nothing reads it;
+- **a tree** (edifices 10 and 11), which has no building row at all, and nor has anything else the
+  ruined city stamps but its walls and doors (windows, pillars, stairs, vault walls, taps);
+- **a site**, which is an order, not a building.
+
+**The ruined city's walls and doors are targets**, because they are walls and doors: the rule the
+owner gave names what a thing is, not who built it. Deconstruct asks `PlacedEdifice.Built` because
+its refund is a yield and the city's yields are Reclaim's and Salvage's; a blow yields nothing, so
+the argument does not carry across. *Our call*, and on the list for the owner (§13j). The scene
+loads the meadow, so no player meets it yet.
+
+### 13c. Hit points
+
+- **A building's pool is its row's `maxHitPoints` times its material's `hitPointsFactorPerMille`**,
+  in thousandths like a pawn's (`BuildingTargets.MaxMilliOf`). That factor had been in the stuff
+  table since U27 — wood 1,000, stone 1,500, the reference's own wood-to-stone relation — waiting
+  for "a durability stat" to consume it, and this is that stat. So a wooden wall stands 300 and a
+  stone one 450; the city's concrete and steel carry the default 1,000.
+- **The row is keyed on the record's own cell** — a two-cell bed or generator on its head, whichever
+  half was struck — which is what `EdificeDamage` asked of its caller.
+- **A building nobody has struck has no row**, and reads as whole.
+- **The new numbers**, all INVENTED: campfire 60 (three stuff and a ring of stones, the cheapest
+  thing in the table), conduit 40 (unread, above), generator 300 (the first expensive thing, a wall's
+  worth), heater 100. `ConstructionContentDefTests.BuildingFingerprint` moved once for them.
+
+### 13d. The order
+
+`OrderAttack(cell, A, B = 0)` — the cell any cell of the building — is accepted for a drafted,
+standing colonist of ours when a target stands there and she is beside it or can reach a cell beside
+it. Otherwise `NotPermitted`.
+
+- **The job carries the building by its record handle, not its cell** (`Job.DestCell`). Handles are
+  never reused (`ConstructionGrid.Demolish` keeps the slot), so a wall pulled down and another raised
+  on the same cell is a new building, and the old order ends rather than carrying on into it.
+  `Job.TargetCell` is the building's cell she is striking at — what `WorkFocus` turns the figure to
+  during the wind-up, and what the order line is drawn to. `Pawn.CombatTarget` stays 0, which is what
+  says "a building" everywhere.
+- **The same building again is `AlreadyInThatState`**, as the same pawn is (§6A.8).
+- A building order is only ever an order: nothing unordered — the hold, the hunt, a revenge, a
+  self-defence — chooses a building. *(Superseded in part by §14b: a bandit with no colonist
+  to reach now chooses a colony building. The hold, a revenge and a self-defence still never do.)*
+
+### 13e. The driver's building mode
+
+`AttackMeleeJobDriver.TickBuilding`, taken at the branch point lane A left.
+
+- **Where she stands is the deconstructor's stance**: on the building's layer, within one cell of
+  any cell of it, never inside it (`BuildingTargets.InReach`). A wall fills its cell, so beside is
+  the only place to strike it from; a door, bed or shelf is struck from beside it too, so the rule is
+  one rule. Diagonals count, as they do for taking a wall apart.
+- **On a side nobody else holds** (`BuildingTargets.ChooseSide`): of the cells in reach that she can
+  stand on and reach, the one no other fighter holds (`Melee.Holds`) and nearest her, on the fixed
+  scan the pawn sides use (§7c). Nowhere free: she waits where she is and looks again every
+  `chaseRepathTicks`. No cell in reach can be reached at all: the order fails.
+- **`Melee.IsInAnAttack` is widened to any standing pawn in `Job_AttackMelee`**, a building attack
+  included, so a building attacker holds her side against every other fighter. It used to require a
+  pawn target; with nothing else ever in the job but a pawn attack, the widening is a no-op there.
+- **A building never moves**, so the side is not chosen again while she walks: she chooses when the
+  attack is new, when she arrives in reach on a cell somebody else holds, and, waiting, at the chase
+  cadence.
+- **It ends in success when the building is gone** — demolished by her, by another attacker, or
+  taken apart by a deconstructor. Only an order ever starts one, so it is always forced and never
+  re-chosen on `rechooseTicks`. A job naming neither a pawn nor a building (`DestCell` −1) still
+  fails on its first tick, which is the stub's contract `CombatContractTests` holds.
+- **Every swing at a building is activity for the draft's quiet clock** (`DraftQuietSinceTick`).
+  Without it a colonist who took more than four hours to beat down a stone wall with her fists
+  (450 points at 4 a blow, a blow every 120 ticks, is 13,500 ticks) would undraft the tick it fell.
+  An ordered fight with a pawn has the same gap; it is recorded here and not changed, since no
+  player has met it.
+- **A knockback keeps the building order**, as it keeps a pawn order (§9b): a drafted colonist
+  knocked off her side by a bandit gets up and goes back to the wall.
+
+### 13f. The blow
+
+**A blow at a building always lands, for its damage in the spread, and nothing else** — no miss, no
+dodge, no stun, no critical, no knockback. A building cannot step aside or be staggered, and a wall
+is the one thing nobody misses: the reference treats a target that cannot move as always hit, and
+that is the rule taken. The one roll is damage, on the pawn's own `MeleeDamage` stream
+(`BuildingTargets.Resolve`, through `MeleeRules.DamageMilli`), decided when the wind-up begins and
+held on the pawn to the impact (§9g). Not through `IMeleeRules.Resolve`: that decides a swing
+between two pawns and reads the defender at every step, and a new interface member would break every
+implementation of the seam.
+
+*(Superseded by §14c: a blow at a building trains nothing.)* **Experience per swing, as for any
+swing** (§6A.1). The design's rule has no exception for what is struck. It does mean a drafted
+colonist can train Melee on her own wall; that is on the owner's list.
+
+### 13g. The impact, and demolition
+
+- **`CombatSystem.StrikeBuilding` is the building's `ApplySwing`**: the one method a building loses a
+  hit point through. It reports `Hit` with `Target` 0 and the struck cell — so the floating number
+  and the thud already work — and writes what is left into `EdificeDamage`.
+- **No hooks.** `DamageReport` names a pawn, and every listener (the weapon drop, C4, C5) is about
+  pawns.
+- **At nought the building is demolished, with no refund**: `Demolished` is reported at once (amount
+  = the edifice id, so presentation knows what came down) and `ConstructionGrid.Demolish` — **the call
+  deconstruction makes** — runs at the end of the tick (`ctx.Defer`), for death's reason: a removal
+  inside the pawn loop edits what the loop is reading. Everything the building held is Demolish's
+  list, exactly as for a deconstruct: the door's nav flag, the bed out of the bed index (its owner
+  with the record), the power device and its hopper, the shelf's contents spilt where the board
+  takes them and lost where it does not — a consequence, as for a building falling on them — the
+  chunks, navigation, support and the ladder connectors. What is not called is
+  `DeconstructJobDriver.TakeApart`'s salvage, which is the refund.
+- **Only the blow that crosses nought demolishes**: a second blow the same tick finds nothing left.
+
+### 13h. One owner for "the building has gone"
+
+**`ConstructionGrid.Demolish` clears the damage row, and any deconstruct order on the building's
+cells.** It is the one way an edifice leaves the world (a collapse erases slabs, never an edifice —
+checked, `SupportSystem.ApplyConsequences`), so the row cannot outlive the building by any route:
+deconstructed, demolished, or anything later that calls it. The deconstruct driver still clears its
+own order before deferring; clearing twice is harmless, and a demolished wall no longer leaves a
+dangling order drawn on an empty cell.
+
+### 13i. What presentation and the interface read
+
+- **`WorldSnapshot.EdificeDamage`**, a row per struck building (`EdificeDamageView`: cell, edifice,
+  hit points and pool, in thousandths), and **`WorldSnapshot.EdificeHitPoints(edifice)`**, the
+  content's base points per edifice id, nought where it is not a target. Both published by
+  `EdificeDamageContributor`; neither saved nor hashed. The table is 17 numbers a publish and is how
+  the interface learns which edifices are targets without a copy of the rule.
+- **The order line**: a building attack publishes `odyssey.pawn.order.cell` (§5d), the struck cell.
+- **`CombatEventKind.Demolished`**, appended.
+- **No blood from a building** — `BloodModel.For(in CombatEventView)` answers none for a target of 0,
+  and `CombatFeedback.Bleed` asks it (a Presentation line, never compiled here).
+- **`CombatFeedbackModel.BuildingHealthBar`** answers a struck building's bar from the rows, for
+  lane B to draw.
+
+**The right-click** (`CombatOrders.RouteBuilding`, from `OrderModel.RightClick`):
+
+1. the pawn half first (`Route`) — a pawn under the pointer wins over the cell it stands in;
+2. then the context menu — **a weapon on a shelf opens the menu** rather than the shelf being
+   attacked, since equipping is the answer the owner asked for on a weapon (§7a);
+3. then the building: with **no pawn under the pointer**, a cell whose edifice has hit points is
+   attacked by every selected drafted colonist (`OrderAttack`, `B = 0`);
+4. then the move — **a floored cell, bare ground, a tree and a site all still move**.
+
+The interface cannot see the grid, so **which edifice stands in the clicked cell is supplied by the
+presenter from the render mirror** (`WorldRenderModel.EdificeDef`), as it supplies the pawn under the
+pointer and Ctrl; **which edifices are targets is the snapshot's**, so the rule has one owner. A
+selection with nobody drafted sends nothing, and the move then sends nothing either.
+
+### 13j. Open for the owner — answered 2026-09-24 (§14)
+
+- ~~**Do bandits attack buildings?**~~ Yes: *"kill colonists, destroy base"* (§14b).
+- ~~**The ruined city's walls are targets** (§13b).~~ *"Forget for now."*
+- ~~**A ladder is a target**, and so are a door and a bed.~~ Yes, as built.
+- ~~**Melee trains on a building** (§13f).~~ No (§14c).
+- ~~**Every weapon strikes a wall alike.**~~ No: blunt against stone, sharp against wood (§14d).
+- ~~**The numbers**~~: placeholders, to be tuned after play.
+
+### 13k. Owed to drawing
+
+Nothing is drawn yet but what the fight already drew off the log — the floating number over the
+struck cell, the swing, the thud, and the order line to the cell. Owed:
+
+- a hit-point bar over a struck building (`BuildingHealthBar` is the answer);
+- the building's hit points on the tile pane;
+- a damaged look — cracks, or a darker tint — once it is struck;
+- a crash and dust on `Demolished`, and a sound of its own for a blow on wood and on stone;
+- the lock-on ring (§7b) round a building target.
+
+### 13l. What it costs
+
+A colony that is not fighting a building pays one branch a pawn a tick (`CombatTarget == 0` on a
+pawn already in `Job_AttackMelee`, which is nobody) and publishes a 17-entry table. A building
+attacker costs a constant reach test a tick; choosing a side costs at most ten candidate cells ×
+(one pass over the pawns for `Holds`, plus a reachability query), asked at the chase cadence and not
+per tick. The publish scales with the buildings that have been struck.
+
+### 13m. Tests, and the controls seen to fail
+
+Fast tier: Sim **1,370** (from 1,349), Hud **985** (from 979), Long **41**, all green;
+`GoldenMasterTests` green without a re-bake. Three content gates clean. Never run in Unity: the
+two Presentation lines below are **uncompiled** until the integrator's run.
+
+`BuildingTargetTests` (Sim, 21): what a target is, both halves of a bed and a generator keyed on
+the head, a deck plate and bare ground not; which edifice ids have hit points; the pool times the
+material; a wall beaten down with no refund, the row gone and she holds again; every blow lands for
+its damage alone at melee 0; the refusals; a wall with no reachable side; the same wall again; two
+on one wall on two sides; the draft outlasting a stone wall; the building going ending the attack; a
+rebuilt wall not the one she was sent at; `Demolish` clearing the row and the order, by fight and by
+deconstruction; a demolished bed and door leaving nothing pointing at them; only the blow that
+crosses nought; the order line; the publish; the hash only once struck; a save mid-blow at a wall
+(with its own forgetful control); a knockback keeping the order. `CombatOrdersTests` (Hud, five, in
+place of the C2 case "a walled cell is still a move" — it is an attack now): a building attacked by
+every drafted colonist; **a floored cell still moves**, and so do a tree and an edifice the table
+does not name; a pawn under the pointer wins; no draft, no fight; a weapon on a shelf opens the
+menu. `BloodModelTests` +1, `CombatFeedbackModelTests` +1.
+
+Each rule was withheld and its test run and seen to fail, then restored:
+
+| Withheld | Failed |
+|---|---|
+| `Demolish` clearing the damage row | four, the row outliving the wall |
+| `Demolish` clearing the deconstruct order | `DemolishClearsTheRowAndTheDeconstructOrder` |
+| `IsInAnAttack` counting a building attack | `TwoOnOneWallStandOnTwoSides` |
+| the quiet clock refreshed by a blow | `TheDraftDoesNotLapseWhileSheBeatsAWall` |
+| a blow that always lands (a hit roll put back) | `EveryBlowAtABuildingLandsForItsDamageAlone` |
+| the knockback keeping a building order | `AKnockedBackColonistGoesBackToTheWall` |
+| the record handle (the cell asked instead) | `ARebuiltWallIsNotTheOneSheWasSentAt` |
+| the material's factor | `APoolIsTheRowTimesItsMaterial` |
+| a pawn under the pointer winning | `APawnUnderThePointerWinsOverTheBuildingItStandsOn` |
+| the interface asking the published table | `AClickOnAFlooredCellIsStillAMove` |
+| the menu before the building | `AWeaponOnAShelfOpensTheMenuRatherThanAnAttack` |
+| no blood from a building | `ABuildingNeverBleeds` |
+| only the blow that crosses nought | `OnlyTheBlowThatCrossesNoughtDemolishes` |
+| no refund (`TakeApart` called instead) | `ADraftedColonistBeatsAWallDownAndGetsNothingBack` |
+| the order line for a building | `TheOrderLineIsDrawnToTheBuilding` |
+| refusing a wall nobody can reach | `AWallWithNoSideAnybodyCanReachIsRefused` |
+| the same wall again changing nothing | `TheSameWallAgainChangesNothing` |
+| the contributor registered | `StruckBuildingsArePublishedAndTheTableNamesTheTargets` |
+
+**Presentation, never compiled here:** `SelectionPresenter.Order` reads the edifice in the clicked
+cell off `WorldRenderModel.EdificeDef` and passes it on; `CombatFeedback.Bleed` asks
+`BloodModel.For(combatEvent)`.
+
+## 14. The owner's answers to Phase 4 (2026-09-24)
+
+The owner answered §12d and §13j on 2026-09-24. Built on `claude/combat-owner-round`, from
+`claude/combat-phase4` at `99ead9a2`, on the fast and Long tiers only, with no Unity. **No golden
+moved.** Nothing new is hashed. The one behaviour a colony at peace could reach is a thought's renewal,
+and that is off for every thought but the friendly-fire one, which no golden window gives (§14e).
+
+### 14a. The answers
+
+| Question | The owner's answer | Built |
+|---|---|---|
+| C6 (a) Do bandits attack buildings? | **Yes**: *"that is the goal: kill colonists, destroy base"* | §14b |
+| C6 (b) Are the ruined city's walls targets? | *"Forget for now"* | nothing. They stay targets for an order (§13b), and a bandit passes them over (§14b) |
+| C6 (c) Doors, beds and ladders as targets? | **Yes, as built** | nothing |
+| C6 (d) Does Melee train on a building? | **No** | §14c |
+| C6 (e) Blunt against stone, sharp against wood? | **Yes** | §14d |
+| C6 (f) The hit-point numbers | placeholders, tuned after play | nothing |
+| C5 (a) Does a second attack in the day renew the memory? | *"Whatever you recommend"*. We recommended **renewing it**, so the day runs from the latest blow | §14e |
+| C5 (b) Does the one who started a fight remember the blows she takes back? | **Yes**, as built | nothing new. The end-to-end test now asserts it (§14h) |
+| C5 (c) Three stacked deaths? | **Keep** | nothing |
+| C5 (d) Does a missed swing count as being attacked? | **Yes** | §14f |
+
+### 14b. A bandit breaks in
+
+`HostileThinkNode` now chooses in this order:
+
+1. the colonist who struck it, while it remembers her (§6A.6);
+2. the nearest standing colonist it can reach;
+3. **only when there is neither: the nearest colony building it can reach that is a target**;
+4. otherwise it idles, as before.
+
+So walls and doors never draw a bandit away from a colonist it can get to. Walling the colony
+in, or losing every colonist to a fall, turns it on the base.
+
+- **A colony building** is one a colonist raised (`PlacedEdifice.Built`) and that is a target by
+  §13b's one rule (`BuildingTargets.TryStanding`): a wall, a door, a ladder, a bed, a shelf, the
+  campfire, a generator or a heater.
+  - The ruined city's walls and doors are passed over. *"Destroy base"* names the colony's own,
+    and the owner's (b) leaves the city for now. A player's order may still strike a city wall,
+    as before (§13b).
+- **It can reach a building** if it already stands in reach of it (§13e, the deconstructor's
+  stance), or if one of the cells beside it can be entered and reached in the bandit's own
+  mode.
+  - This is cheaper than `ChooseSide`: there is no pass over the pawns to see which sides are held.
+  - A held side is the driver's to sort out. It waits and looks again, as a player's attacker does.
+- **Nearest** is `PawnContext.Distance` from the bandit to the building's own cell (a two-cell
+  thing's head). It is the travel estimate every work giver orders its candidates by.
+- **A tie goes to the lower record handle**, which is the older building. The edifice list is
+  saved in handle order, so the choice is the same after a load.
+- **The job is C6's building mode (§13e), unforced.** It carries the record handle in
+  `Job.DestCell`, with `CombatTarget` at 0 and `PlayerForced` false. It chooses a side, strikes
+  with a blow that always lands (§13f, with §14d's multiplier), goes through `StrikeBuilding`, and
+  demolishes at nought with no refund. None of that was written twice.
+- **It looks again every `rechooseTicks` (300)**, between swings, whether it is in reach or not.
+  The building attack ends in success, the think runs again, and a colonist who can now be reached
+  comes first.
+  - This differs from a hunt on a pawn, which re-chooses only while it is chasing. A bandit
+    beating on a wall never chases, so without this it would not look up until the wall fell.
+  - A swing in the air always lands first. The swing clock lives on the pawn, so a re-think costs
+    no blow.
+  - It also looks again **at once** when the building goes (success, then a think) or when a
+    colonist strikes it (`CombatSystem.React` interrupts a bandit that is not fighting a pawn
+    beside it, and a building is not a pawn).
+  - Three hundred ticks is the cadence at which the hunt already notices a nearer colonist. It is
+    the number to tune if play says a bandit is slow to notice a door left open.
+- **A player's order on a building is unchanged.** It is forced, so it is never re-chosen and runs
+  until the building has gone (§13e).
+- **No new state.** `DestCell`, `JobStartTick` and `WorkTicks` are all saved already.
+- **Cost** (`docs/process.md` §3): nothing per tick, and nothing at all while there is no bandit.
+  - The building scan runs only on a bandit's think when no colonist can be reached. While it is
+    at a building, that is at most once per `rechooseTicks`, plus once each time a building attack
+    ends.
+  - The scan scales with the **edifice records**: every edifice ever placed, trees included, with
+    removed ones keeping their slots.
+    - Anything not colony-built costs one branch.
+    - A colony building costs a content lookup of at most twelve rows.
+    - A candidate nearer than the best so far costs a reachability test on at most ten cells, two
+      array reads each.
+
+**Found on the way, and not changed: a bandit opens the colony's doors as a colonist does.** A
+bandit walks as `TraverseMode.Colonist`, and a door can be entered in every mode but an animal's
+(`NavGrid.CanEnter`). So a wall keeps a bandit out and a door does not. The owner's example, *"a
+door broken open"*, assumes a door holds.
+
+Making a door a wall to a hostile is a navigation change and the owner's call (§14g). The mode for
+it half exists: `TraverseMode.IgnoreDoors` is described as "raiders and bashers" and prices a
+closed door as a cost, not an obstacle.
+
+**Superseded by §16 (2026-09-24):** a bandit no longer opens doors, and slot 3 is now
+`TraverseMode.Bandit`.
+
+### 14c. No Melee from a building
+
+`CombatSystem.StrikeBuilding` no longer grants experience. A swing at a pawn still trains Melee,
+landed or not (§6A.1). A wall is no longer a practice dummy, and §13f's paragraph on experience is
+superseded.
+
+### 14d. The blow's kind against the material
+
+- **`StuffDef` gains `sharpDamagePerMille` and `bluntDamagePerMille`**, both 1,000 by default,
+  beside `hitPointsFactorPerMille` in `Buildings.xml` and in the code oracle.
+  - Why the material and not the building row: the owner's rule is wood against stone, so a wooden
+    door and a wooden wall answer alike.
+- **The kind** is the armament's `AttackDef.damageKind`. Fists are blunt (`Combat.xml`).
+- **The values are INVENTED** and are the owner's own examples:
+
+  | Material | Sharp | Blunt |
+  |---|---|---|
+  | wood | ×1.25 | ×1.0 |
+  | stone | ×0.5 | ×1.25 |
+  | concrete, steel, composite, nothing | ×1 | ×1 |
+
+  The city's materials are left at the default under (b). **A building with no material, or one
+  the table does not know, takes ×1.**
+- **Applied in `BuildingTargets.Resolve`**, to the rolled damage, on the tick the wind-up begins.
+  The held outcome, the floating number and the hit points taken are therefore one figure.
+  - The arithmetic is integer: damage × per-mille ÷ 1,000, rounded down.
+  - A blow at a pawn is untouched, because a pawn has no material.
+- **What it does to a wall.** Pools are wood 300 and stone 450; the damage is before the ±20 %
+  spread.
+
+  | Weapon | Wooden wall | Stone wall |
+  |---|---|---|
+  | machete, 8 sharp every 96 ticks | 10 a blow, about 30 blows, ~2,900 ticks | 4 a blow, about 113 blows, ~10,800 ticks |
+  | bat, 7 blunt every 120 ticks | 7 a blow, about 43 blows, ~5,200 ticks | 8.75 a blow, about 52 blows, ~6,200 ticks |
+  | fists, 4 blunt every 120 ticks | 4 a blow, 75 blows, 9,000 ticks | 5 a blow, 90 blows, 10,800 ticks |
+
+  So a machete is the tool for a wooden wall, a bat for a stone one, and stone costs a bandit
+  with a machete nearly four times what wood does.
+- `ConstructionContentDefTests.StuffFingerprint` moved once, deliberately.
+
+### 14e. A second blow renews the memory
+
+- **`ThoughtDef.renewsOnRepeat`**, false by default. When a thought that renews is added at its
+  stack limit, the copy that would expire soonest is pushed out to a full duration from now. It is
+  never shortened.
+- **Only `Thought_AttackedByColonist` sets it.** Every other thought behaves exactly as before:
+  `Thought_AteMeal` at its limit of two is still dropped rather than refreshed. That is what keeps
+  the goldens still, and a test holds it.
+- Still one copy, still −80. **The day now runs from the latest blow** rather than the first.
+- `PawnContentDefTests.ContentFingerprint` moved once, deliberately.
+
+### 14f. A missed swing is an attack
+
+- **A new hook, `ICombatListener.SwingResolved(in SwingReport)`.** `CombatSystem.ApplySwing`
+  raises it once for every swing that reaches a pawn: a hit, a miss, a dodge, and a blow that falls
+  on air because she stepped out of reach during the wind-up.
+  - It is raised **before the outcome is applied**, so for a hit it comes before `DamageApplied`.
+  - It is **not** raised for a blow at a building, since `StrikeBuilding` raises no hooks (§13g).
+  - It is **not** raised for a swing lost in the air to the attacker's own stun or fall, which
+    never reaches `ApplySwing` (§6A.1).
+- **`FriendlyFireListener` gives the memory on `SwingResolved`, and no longer on `DamageApplied`.**
+  That keeps one rule with one owner: the attack is remembered where the attack is heard, whatever
+  came of it. `DamageApplied` keeps its meaning (hit points taken) for the weapon drop and for
+  anything later.
+- **A blow falling on air counts.** It was aimed at her, and the player sees a *miss* float over
+  her head.
+- A target already past the death line when the swing arrives remembers nothing, because the dead
+  feel nothing (§12b).
+- Colonist on colonist only, as before (§12b).
+- §12b's first bullet is superseded.
+
+### 14g. Open for the owner — answered 2026-09-24 (§16)
+
+The owner's answer to all four: *"do what you recommend"*. §16h says what each became.
+
+- **Should a door stop a bandit?** Today it walks through a closed door as a colonist does
+  (§14b). Suppose "walled in" should include "behind a closed door". Then a hostile needs a mode
+  that climbs ladders and opens no door, and the door becomes the thing it breaks.
+- **Does a bandit go for the right building?** It picks the building nearest *itself*. A raider
+  that picked the wall between it and a colonist would read as smarter and would need a path
+  search to find that wall. Worth asking after the first play.
+- **The city's concrete, steel and composite take every blow at ×1.** They would need numbers if
+  (b) comes back.
+- **With every colonist down, a bandit breaks the beds.** A bed is the nearest colony building
+  to a fight more often than not. In the soak's ten days (below) it broke five buildings, and no
+  colonist got back up, against three who did before the change.
+  - That is the owner's rule working as asked, since a bed is a target (c).
+  - It also means a bandit left alone destroys the one thing a rescue needs.
+  - Say if the base should exclude beds, or if a bandit should leave while nobody is standing.
+
+### 14h. Tests, and the controls seen to fail
+
+Fast tier: Sim **1,401** (from 1,391), Hud **1,003** (unchanged), Long **41**, all green.
+`GoldenMasterTests` is green without a re-bake. All three content gates are clean: no name was
+added, so there is no wiki row. Never run in Unity, and **no Presentation or Editor file was
+touched**.
+
+| Test | Claim |
+|---|---|
+| `BuildingTargetTests.ABlowAtABuildingTrainsNoMelee` | the one method and a whole order give no Melee; a swing at a pawn still trains (the control) |
+| `BuildingTargetTests.TheBlowsKindMeetsTheMaterial` | the four numbers and the defaults in content; `Resolve` multiplies the rolled damage by them |
+| `BuildingTargetTests.EveryBlowAtABuildingLandsForItsDamageAlone` (changed) | fists on stone now land at ×1.25 |
+| `BuildingTargetTests.ABanditWithNobodyToReachBreaksInThroughTheNearestWall` | a colonist sealed in eight walls: the nearest wall, unforced, only that one struck, and the colonist once it is down |
+| `BuildingTargetTests.ABanditGoesForAColonistItCanReachBeforeAnyBuilding` | the order of the rule |
+| `BuildingTargetTests.WithEveryColonistDownItTakesTheNearestColonyBuildingAndTheOlderOnATie` | all down; a tie to the older record; a nearer city wall passed over |
+| `BuildingTargetTests.ABuildingItCannotGetBesideIsPassedOver` | a nearer shelf sealed in city walls against a reachable wall further off |
+| `BuildingTargetTests.ABanditAtAWallLooksUpWhenAColonistCanBeReached` | a way in opened while it strikes: on her 104 ticks later, the wall still standing |
+| `FriendlyFireTests.ASecondBlowRenewsTheDay` (replaces `…NeitherStacksNorRenews`) | one copy, the latest blow's day |
+| `FriendlyFireTests.NoOtherThoughtRenews` | the flag is the friendly-fire memory's alone; a meal past its limit is still dropped |
+| `FriendlyFireTests.ABanditsBlowIsNotFriendlyFire` (replaces `…AndAMissAreNotFriendlyFire`) | a bandit's hit or miss, and a colonist hitting a bandit, give nothing |
+| `FriendlyFireTests.AColonistsSwingThatMissesIsRememberedToo` | a miss and a dodge each give the memory; a miss then a hit is one memory; the dead remember nothing |
+| `FriendlyFireTests.EverySwingAtAPawnIsHeardOnceAndNoneAtABuilding` | the hook's order (a swing before its damage) and that a building blow raises none |
+| `FriendlyFireTests.ACtrlAttackOnAnUndraftedColonistIsFoughtBackAndRemembered` (changed) | the one who started it remembers the swing she takes back (C5 (b)) |
+| `HostileTests.WithNobodyStandingAndNothingBuiltABanditIdles` (renamed) | idling needs no building on the board now; the board has no bed |
+
+**The soak** (`BanditSoakTests`, Long) now logs the buildings broken down. Over ten days it
+broke five. It resolved 231 pawn swings against 377 before, 7 colonists went down against 11, and
+none got up against 3 (§14g). Every invariant held, and the mid-fight save resumed equal.
+
+Each rule was withheld and its test run and seen to fail, then restored:
+
+| Withheld | Failed |
+|---|---|
+| no Melee from a building (the grant put back) | `ABlowAtABuildingTrainsNoMelee` |
+| the material multiplier | `TheBlowsKindMeetsTheMaterial`, `EveryBlowAtABuildingLandsForItsDamageAlone` |
+| the XML and the code oracle agreeing (stone sharp 501 in the XML only) | `TheXmlIsTheSameContentAsTheCodeOracle` and the two fingerprint tests |
+| renewal (`AddMemory` as it was) | `ASecondBlowRenewsTheDay` |
+| renewal only where the thought says (the flag ignored) | `NoOtherThoughtRenews` |
+| the memory on the swing (heard on `DamageApplied` only) | `AColonistsSwingThatMissesIsRememberedToo`, and the starter's line of `ACtrlAttack…` |
+| the dead remember nothing | `AColonistsSwingThatMissesIsRememberedToo` |
+| the building fallback (the node as it was) | `…BreaksInThroughTheNearestWall`, `WithEveryColonistDown…`, `…LooksUpWhenAColonistCanBeReached` |
+| the unforced re-look (the driver as it was) | `…LooksUpWhenAColonistCanBeReached` |
+| a building only when no colonist (the building first) | `…GoesForAColonistItCanReachBeforeAnyBuilding`, `…BreaksIn…`, `…LooksUp…` |
+| the tie to the lower handle (`>` for `>=`) | `WithEveryColonistDown…OlderOnATie` |
+| colony-built only | `WithEveryColonistDown…`, `ABuildingItCannotGetBesideIsPassedOver` |
+| a side it can reach | `ABuildingItCannotGetBesideIsPassedOver` |
+| the re-look for unforced attacks only (applied to a player's order too) | six of C6's order tests, `TheDraftDoesNotLapseWhileSheBeatsAWall` among them |
+
+**Content fingerprints, each moved once, deliberately:**
+
+- `ConstructionContentDefTests.StuffFingerprint`, 4054578596745551293 → 3846353424243238969, for
+  the two damage columns;
+- `PawnContentDefTests.ContentFingerprint`, 13836212755718261116 → 5393620802301053337, for
+  `renewsOnRepeat`.
+
+## 15. Drafted colonists help (2026-09-24)
+
+**The owner, after playtesting, 2026-09-24:** *"if a colonist attack - by default they will fight
+back. If I draft colonist/colonists by default - if there is any fight going on nearby (another
+colonist is being attack) they will help and start attacking the attacker and help other colonists
+by default. Buildings work fine"*
+
+Built on `claude/combat-drafted-help`, from `claude/combat-owner-round` at `cd53b5cf`, on the fast
+and Long tiers only, with no Unity. **Simulation only; no Presentation, Hud or Editor file was
+touched.** **No golden moved**: nothing new happens unless a colonist is drafted, and no golden
+window drafts anybody. The content fingerprint moved once, for the one new number.
+
+### 15a. What was there
+
+- **Fighting back when struck** was built by C2 and needed nothing. Undrafted, a colonist struck
+  remembers who struck her and her self-defence answers (`CombatSystem.React`,
+  `SelfDefenceThinkNode`, §6A.6). Drafted, her hold strikes any threat beside her — a hostile, or
+  anybody attacking her (§2b). `AColonistAttackedFightsBackDraftedOrNot` now holds both halves of
+  the owner's first sentence in one place.
+- **The hold never chased** (§6A.2, §6A.6). A drafted colonist three cells from a colonist being
+  beaten stood and watched until the bandit came to her. That is the gap the owner found.
+- *"Buildings work fine"* is the verdict on C6 (§13). It closes that playtest row and changes
+  nothing.
+
+### 15b. The rule
+
+A drafted colonist **on her hold** joins a fight nearby. "On her hold" is exactly where the rule is
+asked: by `DraftHoldJobDriver` every tick and by `DraftedThinkNode` at each think. So it is never
+asked of a colonist who is:
+
+- walking a move order (`Job_Goto`);
+- already on an attack, equip or rescue order;
+- stunned or knocked down (her job is paused and she does not think, §5c);
+- downed or broken (either ends the draft);
+- undrafted. **Undrafted colonists keep today's behaviour**: they fight back only when struck
+  themselves.
+
+She joins when all of these hold:
+
+1. **Another colonist is being attacked.** The one answer is `Melee.ColonistUnderAttackBy`: the
+   attacker's own melee job and `CombatTarget`, which is the thing that swings at her. It is the
+   same signal the fight guard and the side rule (§7c, §8c) read. A fight in which every swing
+   misses is still a fight, because the question is the job, not a blow that landed.
+2. **The attacker is a bandit or an animal.** A colonist attacking a colonist summons nobody.
+   That covers both the player's Ctrl order (§12) and the blows the victim takes back.
+3. **The victim and her attacker are both within `CombatDef.helpRadiusCells`** — eight cells,
+   INVENTED (20 m). The distance is Chebyshev across the layer, on the same layer or one either
+   side, so a fight on the terrace step above counts and one three storeys down does not.
+   - Both, not just the victim: a bandit hunting a colonist from across the board is not "a
+     fight going on nearby". She goes once it has come within eight cells.
+4. **She can reach the attacker** in her own mode (`PawnContext.Reachable`, two array reads).
+
+**Which fight:** the nearest victim's attacker, by squared distance in cells, which is how
+`ChooseSide` measures. A tie goes to the lower victim id, then the lower attacker id.
+
+**The threat beside her comes first**, unchanged: one pass over the pawns
+(`Melee.HoldTarget`) returns the first threat in reach exactly as `AdjacentThreat` did, and she
+strikes it from where she stands. Only with no threat in reach does she look for a fight to join.
+Several drafted colonists may join one fight. Each takes a side of her own by the one guard for
+every fighter (§8c).
+
+### 15c. The job
+
+**The existing `Job_AttackMelee`, not a fork.** The Drafted node starts it just as it starts the
+blow at a threat beside her: unforced, named on the pawn, the four quiet hours restarted. The one
+difference is a mark: `Job.DestCell = AttackMeleeJobDriver.Joining` (2).
+
+- **The mark is what lets her chase.** The driver treats an unforced attack by a drafted colonist
+  as the hold's blow, which never leaves its cell. With the mark she is a chaser like any other
+  attacker. She walks to a side (`ChooseSide`) and re-plans at the chase cadence.
+- **Why `DestCell`:** for an attack on a pawn it already means "how this attack ends"
+  (`ToTheDeath`), and it is saved and hashed. So there is no new field, no new state and no
+  save-format change. A save taken mid-join resumes as a join.
+- **Why unforced:** it is her own idea, like the blow beside her. A forced attack is never
+  re-chosen and would follow its target across the board. Nothing a player's order does applies:
+  - a knockback does not give it back (§9b);
+  - the order-cell aspect ignores it;
+  - the four-hour release is not an order's reset.
+
+**It ends** as any unforced attack on a pawn ends:
+
+- the attacker down, dead or gone: success;
+- the attacker unreachable: failure;
+- `rechooseTicks` (300) at a step boundary: the node looks again. It finds the same fight, or a
+  nearer one, or — standing beside a hostile — the blow from where she stands.
+
+**And one ending is new: the attacker on no colonist any more.** The job ends at a step boundary.
+
+- *Why:* an animal's revenge runs out. A hog rooting about is not a threat, and without this she
+  chased it for up to 300 ticks. Her blow would then have started the fight again.
+- A bandit that turns on her is still on a colonist, so she fights on.
+- A bandit that goes to beat a wall is on no colonist, so she would let it go. In practice this
+  hardly arises: a bandit turns to a building only when it can reach no colonist (§14b), and a
+  helper who can reach it is a colonist it can reach.
+
+**She holds where the fight ended.** When the job ends the Drafted node gives the hold, and the hold
+has no cell of its own to go back to. So she stands where the fight left her, still drafted, and
+the next fight within eight cells of *there* is the one she joins.
+
+### 15d. The quiet hours: a swing is activity
+
+**Found by the test, and fixed.** A swing at a building restarted the draft's quiet clock (§13); a
+swing at a pawn did not. Only the start of a fight did — the node, or the order.
+
+- An attacker standing on her side in reach never re-thinks, so a fight longer than four hours ran
+  the clock out.
+- The draft then let go on the tick the fight ended.
+- That was true of the hold's own blow before this unit, and it would have been true of every
+  join.
+
+`AttackMeleeJobDriver.StartSwing` now restarts the clock for a drafted attacker, as
+`StartSwingAtBuilding` already did. It applies to every drafted swing at a pawn, forced or not.
+`AFightLongerThanFourHoursKeepsTheDraft` failed without it: undrafted and wandering ten ticks after
+the bandit went down.
+
+### 15e. What is drawn
+
+Nothing new, and nothing was touched outside the simulation.
+
+- A helper publishes `odyssey.pawn.order.target` as the hold's own blow does. The aspect means
+  *whom she is attacking*, not whose idea it was (§7b).
+- So a **selected** helper wears the lock-on ring under the bandit, with the order line to it.
+- **The request assumed a self-started fight would not light the ring. The blow beside her already
+  does, by §7b's decision, and following that, so does the help.** Filtering it would need a second
+  aspect, which is simulation state bought for a colour. §15i puts it to the owner.
+
+### 15f. What it costs
+
+- **Nothing while nobody is drafted.** The scan is asked only by a drafted colonist on her hold,
+  every tick, and at her thinks.
+- **It is still one pass.** The threat scan the hold already made per tick is now `HoldTarget`, one
+  pass over the pawns.
+  - A pawn at peace costs one integer comparison more (its target is nought).
+  - A pawn in an attack costs a lookup by id and a content row.
+  - A reachability test (two array reads) is made only for a candidate nearer than the best so far.
+- **It scales with the pawns on the board, per drafted colonist on her hold.** A colonist already in
+  a fight or walking an order does not scan.
+
+`TickBenchmarkTests.TwentyAgainstTwenty` (explicit) gained a third arm, *twenty drafted against
+twenty*: every colonist drafted, so all twenty scan on every tick they hold. Two runs on the Windows
+dev machine, with the join and with it withheld (`HoldTarget` answering the threat only), each
+against the other arms in the same run:
+
+| Arm | Tick, mean | Pawns phase, mean | Swings |
+|---|---|---|---|
+| twenty undrafted against twenty | 0.101–0.168 ms | 0.020–0.038 ms | 307 |
+| twenty drafted against twenty, with the join | 0.165–0.217 ms | 0.072–0.095 ms | 361 |
+| the same, the join withheld | 0.164–0.183 ms | 0.075–0.082 ms | 361 |
+
+The join costs nothing measurable. In this arm the bandits come to the drafted line, so the fight
+is the same, swing for swing, with and without it. What the drafted arm costs over the undrafted one
+is the hold's own per-tick scan, which was there before this unit (§6A.9).
+
+### 15g. Do not undo by tidying
+
+- **The mark is on the job, not the pawn.** It dies with the job. A flag on the pawn would outlive
+  the fight and would be new saved, hashed state.
+- **The victim and the attacker both within the radius.** Dropping the attacker's half sends a
+  helper across the board after a bandit that is still hunting from afar.
+- **A colonist's fight with a colonist summons nobody.** The attacker's side is what is asked, not
+  the victim's.
+- **A move order is not diverted.** The rule lives in the hold and the node, never in the walk.
+- **The blow beside her comes first, in the same pass.** `HoldTarget` returns the first threat in
+  reach in list order, which is `AdjacentThreat`'s answer. A helper who walked past a hostile
+  beside her to reach another fight would be wrong.
+- **The on-nobody ending is for a join only.** The hold's blow and every other attack keep their
+  own endings.
+
+### 15h. Tests, and the controls seen to fail
+
+Fast tier: Sim **1,416** (from 1,401), Hud **1,003** (unchanged). Long **41**, all green.
+`GoldenMasterTests` is green without a re-bake. `PawnContentDefTests.ContentFingerprint` moved once,
+deliberately: 5393620802301053337 → 1636227730504628602, for `helpRadiusCells`. All three content
+gates are clean, because no name was added.
+
+| Test (`DraftedHelpTests`) | Claim |
+|---|---|
+| `AHoldingColonistJoinsAFightNearbyAndNotOneFarOff` (5, 12) | five cells from a bandit on a colonist she joins — unforced, marked, the bandit on the victim, out of her reach — swings and has left her cell; twelve cells off she holds, and the fight happened |
+| `OneWalkingAMoveOrderDoesNotTurnAsideAndJoinsOnceSheHolds` | sent across the radius mid-fight, she walks to the cell she was sent to; holding there, she joins |
+| `AnUndraftedColonistLeavesAFightNearbyAlone` | undrafted, five cells off, she never takes the bandit on |
+| `AColonistFightingAColonistSummonsNobody` | a Ctrl attack and the blows taken back, four cells off: nobody comes |
+| `WhenTheAttackerIsDownSheHoldsWhereTheFightEnded` | on the hold, on the cell the fight ended on, for 600 ticks, still drafted |
+| `SheJoinsAgainstAnAnimalAndLetsItGoWhenItIsOnNobody` | a hog on a colonist is joined; its revenge spent, she holds and does not follow it |
+| `TwoHelpersNeverShareATile` | two from one side, the fight guard after every tick; both joined and swung |
+| `AFightLongerThanFourHoursKeepsTheDraft` | twelve thousand ticks of fighting, still drafted; the quiet hours count from the fight's end |
+| `TheRadiusHoldsTheVictimAndHerAttacker` (three cases) | 7/8 in; victim 8 attacker 9 out; victim 9 attacker 8 out |
+| `TheNearestVictimsAttackerFirstAndATieToTheLowerVictim` | three cells beats six; on a tie the lower victim wins though her attacker has the higher id |
+| `AColonistAttackedFightsBackDraftedOrNot` (two cases) | the owner's first sentence, which C2 already did |
+
+**Long:** `FightGuardTests.MixedBrawlsOnManySeeds` now counts the pawn-ticks spent joining, and
+asserts there are some. Its drafted colonists join the fights round them once their own orders are
+done: 4,134 pawn-ticks over twelve seeds, 1,460 swings against 1,448 with the join
+withheld. The guard held on every tick. `BanditSoakTests` drafts nobody, and its log is identical
+line for line. Every other Long test is unchanged.
+
+Each rule was withheld, its tests run and seen to fail, then restored:
+
+| Withheld | Failed |
+|---|---|
+| the victim's half of the radius | `TheRadiusHoldsTheVictimAndHerAttacker(9,8)` |
+| the attacker's half of the radius | `TheRadiusHoldsTheVictimAndHerAttacker(8,9)` |
+| a colonist attacker summons nobody | `AColonistFightingAColonistSummonsNobody` |
+| the join's mark in the driver (treated as the hold's blow) | `…JoinsAFightNearby…(5)`, `…WhenTheAttackerIsDown…`, `…AgainstAnAnimal…`, `TwoHelpers…`, `AFightLonger…` |
+| the hold's scan (the threat only, as before) | the same five |
+| the whole join (`HoldTarget` never joining) | all eight positive cases and `MixedBrawlsOnManySeeds` |
+| a move order diverted by the scan | `OneWalkingAMoveOrder…` |
+| undrafted colonists scanning too (self-defence asks `HoldTarget`) | `AnUndraftedColonistLeavesAFightNearbyAlone` |
+| the on-nobody ending | `SheJoinsAgainstAnAnimalAndLetsItGoWhenItIsOnNobody` |
+| the on-nobody ending and the down ending together | `…WhenTheAttackerIsDown…`, `…AgainstAnAnimal…`, `AFightLonger…` |
+| the side mask ignoring other attackers | `TwoHelpersNeverShareATile` |
+| a swing as activity for the draft | `AFightLongerThanFourHoursKeepsTheDraft` |
+| nearest first (farthest instead) | `TheNearestVictimsAttackerFirst…` |
+| the tie to the lower victim (to the attacker's id instead) | `TheNearestVictimsAttackerFirst…` |
+| self-defence (C2's rule) | `AColonistAttackedFightsBackDraftedOrNot(False)` |
+| the threat in reach first (C2's rule) | `AColonistAttackedFightsBackDraftedOrNot(True)`, `AColonistFightingAColonistSummonsNobody` |
+
+**The down ending alone did not fail anything.** A downed attacker is not in an attack, so the
+on-nobody ending ends the join as well. Both endings stay: the down ending is every attack's, and
+the on-nobody ending is the join's own.
+
+**Not tested:** the layer half of the radius (one layer either side). The bare board is flat, and a
+pawn put on another layer by hand is unreachable anyway, so a test could not tell the radius from
+the reachability.
+
+### 15i. Open for the owner
+
+- **The ring and the line on a helper.** A selected helper wears the lock-on ring under the
+  bandit she joined, as she does under one she hits beside her (§7b). If the ring should mean
+  "an order I gave" only, that is a second aspect. Say so. *Answered 2026-09-24 (§18b): the ring
+  means an order. A helper wears none now; the rescue's patient took the second aspect instead.*
+- **Eight cells** (20 m) is invented. If helpers come from too far or not far enough, it is one
+  number in `Combat.xml`.
+- **Undrafted colonists** still help nobody, as asked; they fight back only when struck. Say if a
+  colonist at work should drop it for a friend being beaten beside her. *Answered 2026-09-24
+  (§18c): a setting per colonist, Defend, built on this section's rule.*
+
+## 16. Doors hold bandits; beds are spared (2026-09-24)
+
+§14g asked the owner three things about a bandit and the base. The answer was *"do what you
+recommend"*. Built on `claude/combat-bandit-doors`, from `claude/combat-owner-round` at
+`cd53b5cf`, on the fast and Long tiers only, with no Unity. **No golden moved.** No Presentation or
+Editor file was touched.
+
+### 16a. The three decisions
+
+| §14g question | Decision | Built |
+|---|---|---|
+| Should a door stop a bandit? | **Yes.** A bandit does not open a colony door. It breaks it down. | §16b |
+| Should a bandit break the beds? | **No.** A bed is never the bandit's own choice of target. A player's order may still strike one (C6 answer (c)). | §16d |
+| Does it go for the right building? | **Unchanged:** the nearest colony building to the bandit. A smarter breach is deferred until play asks for it. | §16e |
+
+The reason for the first is the owner's own example, *"a door broken open"*, and C6's answer,
+*"kill colonists, destroy base"*. Both assume a door holds. A bandit that opens doors makes the
+door the one building in the base that never needs breaking.
+
+The reason for the second is §14g's soak. With every colonist down, the nearest colony building is
+usually a bed, and in ten days nobody got up again. Sparing beds keeps a downed colony rescuable.
+
+### 16b. A bandit moves as a colonist, less a closed door
+
+- **`TraverseMode.Bandit`**: ladders, stairs, the hop and the wade, as `Colonist`. **A closed
+  door is a wall.** An open door is a floor.
+  - `TraverseModes.OpensDoors` is the one owner of the rule: everyone but `Animal` and `Bandit`.
+    `NavGrid.CanEnter` is its only caller, so the district flood, the region links, the cell
+    search, `IsLegalStep` and `Reachable` all follow from it.
+  - The rat (`Climber`) still opens doors, as it always has. The hog still does not. Colonists and
+    haulers are untouched.
+- **It is slot 3, repurposed rather than added.** Slot 3 was `IgnoreDoors`, "a closed door is a
+  cost, not an obstacle". No pawn, Def or test used it.
+  - A sixth mode would cost a sixth district flood on **every** nav rebuild, on every board, with
+    or without a bandit. Slot 3 was already being flooded for nothing.
+  - The old meaning was the RimWorld-style basher: path through the door at a price. That is not
+    what the owner asked for. The door must stop the bandit so that §14b's fallback breaks it.
+  - `MoveCost.DoorBash` went with it. The cell search charged it and the region graph never did,
+    a disagreement nothing was walking into.
+  - The ladder's mask already carried slot 3, and the hop and the wade read "not an animal", so
+    nothing else changed.
+- **The mode is the kind's, not the species'.** A bandit is `Species_Person`, drawn and hurt as
+  a colonist is.
+  - `PawnKindDef.traverseMode` names a mode, or is empty for the species' own.
+  - `PawnContent.KindMode` resolves it once at load. A name the enum does not have fails the load.
+  - `PawnKind_Bandit` names `Bandit` in `Species.xml`. It is the only kind that names one.
+- **`Pawn.OwnMode` is the one owner of "how does this pawn move when it chooses for itself".**
+  Every place that read `Species.traverseMode` reads it now:
+  - the hunt and the building fallback (`HostileThinkNode`), the animal's revenge, the downed job
+    (both where it is thought and where it is started);
+  - `FightingBeside` and the flight (`CombatSystem.Apply`);
+  - the knockback: a bandit is not knocked into a shut door, where standing would open it;
+  - the animal's idle mind (identical for animals, whose kinds name no mode);
+  - `Pawn.Mode` between jobs.
+- **Two places that were `Colonist` for everybody now read `OwnMode`**:
+  - `WanderTarget.Fill`'s person overload. An idle bandit with nothing to hunt wanders, and it
+    would have wandered through the front door;
+  - the idle `Wait` job's mode, so a waiting bandit is a bandit to anything that asks
+    `pawn.Mode`.
+  - A colonist's `OwnMode` is `Colonist`, so both are unchanged for her.
+- **Left as `Colonist` on purpose**: a player's orders, the draft, self-defence and every work job.
+  Only colonists take them.
+
+**So a door behaves like this.** With the colonists behind a closed door they are unreachable, and
+§14b's fallback takes the nearest colony building the bandit can stand beside. When that is the
+door, the door goes down, and the bandit looks again and goes in.
+
+**A door a colonist is walking through is open**, and a bandit may follow her through it. That is
+the door working, not a leak.
+
+### 16c. What it costs
+
+- **Nothing per tick, and nothing new on a rebuild.** Slot 3's district flood ran before and runs
+  now, over the same regions.
+- **The nav graph for the other four modes is identical.** Measured with a probe that hashed every
+  region's district and every link's and portal edge's mask with slot 3 masked out, on all three
+  goldens at generation and after 3,000 ticks. The ruined city, with 34 doors, included. Every
+  number was the same before and after, and so were the state hashes.
+- **The goldens did not move.** No golden has a bandit, and the nav graph is not in the state
+  hash.
+- **`PawnContentDefTests.ContentFingerprint`** moved once, deliberately:
+  5393620802301053337 → 9855151047521430616, for the new field and its table.
+
+### 16d. Beds are spared
+
+- **`BuildingTargets.IsBanditTarget`**: every target but a bed. `TryNearestColonyTarget` asks it
+  before anything else about a record.
+- **What a target is does not change.** `TryStanding` still answers yes for a bed, so a player's
+  order on one is taken and its blows land.
+- It keys on `CoreContent.EdificeBed`, as every other bed rule in `ConstructionGrid` does. It is
+  one method, so a medical bed or a cot joins it there.
+
+### 16e. Target choice stays the nearest
+
+The bandit still picks the colony building nearest **itself**. It does not look for the door
+between it and a colonist, nor for the wall that is cheapest to go through.
+
+- A door on the far side of the room from the bandit is not preferred to a nearer wall.
+  `ItTakesTheNearestBuildingNotTheDoor` pins that.
+- A breach chooser would need a path search with walls priced as time to break them. That is
+  deferred until play shows that "nearest" reads as stupid.
+
+### 16f. The soak
+
+`BanditSoakTests` (Long) now reads **377 swings, 165 hits, 11 downed, 0 died, 3 got up, 0
+buildings broken down**. Before §16 it was 231 swings, 7 downed, none up and 5 buildings broken.
+
+- The soak's only colony buildings are the scenario's beds, and it has no doors.
+- So sparing beds leaves the bandits nothing to break. The run is again exactly the one from
+  before §14b, number for number, which is the measurement that the change reached no further.
+
+### 16g. Tests, and the controls seen to fail
+
+Fast tier: Sim **1,412** (from 1,401), Hud **1,003** (unchanged), Long **41**, all green.
+`GoldenMasterTests` is green without a re-bake. All three content gates are clean, since no name was
+added.
+
+| Test (`BanditDoorTests`) | Claim |
+|---|---|
+| `EachKindMovesInItsOwnMode` | the bandit's kind is `Bandit` and its species still `Colonist`; the other three kinds keep their species' modes |
+| `AClosedDoorIsAWallToTheBanditAndTheHogOnly` | the five modes at a shut door and an open one; the bandit wades and climbs a ladder |
+| `OnEveryLinkTheBanditsModeIsTheColonistsLessAClosedDoor` | on the city's 2,066 link ends and 218 portal edges, the bandit's bit equals the colonist's except into a shut door (128 link ends) |
+| `BehindAClosedDoorSheIsUnreachableToABanditAndNotToAColonist` | the district, the step and the search say no to a bandit and yes to a colonist |
+| `ABanditBreaksTheDoorDownAndThenGoesForHer` | the door is its target, unforced; it never stands in the doorway or opens it; no wall is struck; then her |
+| `WithTheDoorOpenItGoesStraightIn` | the control: an open door is a way in, and it is not struck |
+| `ItTakesTheNearestBuildingNotTheDoor` | decision three: the door far side, the nearest wall broken |
+| `ABanditIsNotKnockedIntoAShutDoor` | a knockback asks the target's own mode; a colonist in the same place is the control |
+| `AnIdleBanditDoesNotWanderThroughAShutDoor` | 6,000 ticks of an idle bandit in a yard whose only way out is a city door |
+| `ABanditLeavesABedAloneAndBreaksTheWallInstead` | 600 ticks with only a bed: nothing struck; add a wall further off than the bed, and the wall is struck |
+| `APlayerCanStillOrderAnAttackOnABed` | the order is taken and a blow lands |
+
+Each rule was withheld and the tests run and seen to fail, then restored:
+
+| Withheld | Failed |
+|---|---|
+| the kind's mode (the XML line removed) | `EachKind…`, `…BreaksTheDoorDown…`, `…NotKnockedInto…`, `AnIdleBandit…`, `ItTakesTheNearest…` |
+| `CanEnter` as it was (only the hog refused a shut door) | seven of the eleven: all but the kind, the open door, the bed and the order tests |
+| the idle wander in `Colonist` for everybody | `AnIdleBanditDoesNotWanderThroughAShutDoor` |
+| the knockback in the species' mode | `ABanditIsNotKnockedIntoAShutDoor` |
+| the hunt in the species' mode | `…BreaksTheDoorDown…`, `ItTakesTheNearest…` |
+| a bed as a bandit's target | `ABanditLeavesABedAlone…` (and the order test's own control line) |
+| a bed as no target at all (spared in `TryStanding`) | `ABanditLeavesABedAlone…`, `APlayerCanStillOrderAnAttackOnABed` |
+| the ladder's mask without the bandit | `AClosedDoorIsAWall…`, `OnEveryLink…` |
+
+**Not tested directly**: the idle `Wait` job's mode. Nothing a bandit does while waiting asks
+`pawn.Mode` today, so no test can see it. It is there so the next thing that asks is right.
+
+### 16h. §14g, answered
+
+- *Should a door stop a bandit?* Yes (§16b).
+- *Does a bandit go for the right building?* Nearest to itself, unchanged. Revisit after play
+  (§16e).
+- *The city's materials at ×1*: unchanged. It is (b)'s question, which stays forgotten for now.
+- *With every colonist down, a bandit breaks the beds*: it no longer does (§16d). A bandit
+  with nothing to hunt and nothing else to break now **idles**. Leaving is a separate question for
+  the owner, not taken here. *(Answered 2026-09-24: it steals and leaves, §17.)*
+
+## 17. Bandits steal and leave (2026-09-24)
+
+§16h left one thing to the owner: with every colonist down and nothing left it may break, a
+bandit idled for ever. Asked whether it should leave, the owner answered:
+
+> *"It will thieve items or kidnap people depending on their motivation creating a negative event
+> (but they could be rescued later) - seam this later but for now - thieve items"*
+
+Built on `claude/combat-thieves`, from `claude/combat-owner-round` at `2e01d57e`, on the fast and
+Long tiers only, with no Unity. **No golden moved.** One Presentation file was touched and has
+never been compiled (§17g).
+
+### 17a. The decisions
+
+| Question | Decision |
+|---|---|
+| When does a bandit steal? | When its mind finds **no colonist standing that it can reach and no colony building it may break** (§14b's fallback finds nothing; beds are spared, §16d). Theft is the **last** thing the mind reaches for |
+| What does it take? | **The nearest stack it can reach and lift**, on the ground or in a store. There is no value yet, so nearest is the whole of the choice; **a tie goes to the lower item id**, the older stack |
+| Where does it go? | **The nearest edge cell it can reach from the stack**, on a layer it can stand on, and it leaves the board there |
+| And with nothing to take? | It leaves **empty-handed** by the edge nearest itself |
+| And with no edge to reach? | It **stays**, takes nothing, and thinks again as it did before |
+| Leaving is? | **Removal, not death**: no corpse, no `Died` report, no hook, nobody mourns. **The stack goes with it**, out of the colony's things, and so does its weapon |
+| Struck down carrying it? | It **drops the load where it falls** (`DropCarried`), as every carrier does. Killed, the same, and the corpse is the death's |
+| A colonist it can reach again? | It **drops the load and goes back to the fight**, within one look (§17c) |
+| The negative event? | A **Theft** row on the Events panel, in the blow's red, with its chime: *Theft · Meal × 12*. An empty-handed leaving is a neutral **Bandit left** |
+| Kidnap? | A **motive** on the kind: `Loot` or `Kidnap`. Only `Loot` is acted on; **`Kidnap` does exactly what `Loot` does today** (§17f) |
+
+### 17b. The mind
+
+`HostileThinkNode` now chooses in this order:
+
+1. the colonist who struck it, while it remembers her (§6A.6);
+2. the nearest standing colonist it can reach;
+3. the nearest colony building it may break (§14b, less beds, §16d);
+4. **what it came for** (`Theft.TryFill`), if it came for anything and an edge can be reached;
+5. otherwise it idles, as before.
+
+The first two are one method now, `ColonistToFight`, so the think and the thief's look (§17c) ask
+exactly the same question. `HostileThinkNode.HasAFight` is the first three without filling a job.
+
+**What it came for is the kind's** (`PawnKindDef.motive`, resolved into `PawnContent.KindMotive`
+and read through `Pawn.Motive`). `PawnKind_Bandit` names `Loot`; every other kind is `None`,
+so a colonist or an animal is untouched. It is on the kind, as the weapon and the way of walking
+are, because nothing yet rolls a bandit's reason for coming. The owner's *"depending on their
+motivation"* reads as per bandit; the day a raid rolls one, it becomes a field on the pawn,
+saved and hashed only while set, and the kind's value is its default.
+
+### 17c. The job
+
+**`Job_Steal`**, handle 22, `StealJobDriver`, four toils:
+
+1. **Walk to the stack** (`Job.TargetItem`, lying at `Job.TargetCell`). Taken, eaten or moved
+   before it gets there: the job fails and it thinks again.
+2. **Lift it** through `LiftToil`, the hauler's own stoop, grasp and rise. The load is the job's
+   `CarriedItem`, so it is published on the carry aspects and **drawn in its arms for nothing**,
+   and the activity line reads *Stealing · Meal × 12* by `JobLabels.Carrying`.
+3. **Walk to the edge** (`Job.DestCell`), chosen at the think as the nearest reachable edge cell
+   **from the stack**, so the job is fixed from the start and a save resumes it exactly.
+4. **Leave**: on the edge cell, `Theft.Leave` runs at the end of the tick (`ctx.Defer`), for
+   death's reason — `PawnRegistry.Despawn` shifts the list every pawn loop walks.
+
+With no stack, the first two are skipped. The job reserves the stack (`ReservationTargetKind.Item`),
+so a hauler never sets off for the thing a thief has chosen, and a stack a hauler has claimed is
+passed over.
+
+- **In its own mode** (`TraverseMode.Bandit`) all the way, so it opens no door with its arms full
+  either. **It climbs a ladder with a load**, which a hauler does not (`TraverseMode.Hauler`). A
+  mode that was both would be a sixth district flood on every nav rebuild, on every board, for the
+  sake of a thief (§16b's argument); recorded rather than built.
+- **It walks.** `UrgencyPerMille` runs only an attack and a flight. A thief that ran would be hard
+  to catch; the playtest decides.
+- **No expiry.** An expiry ends the job, and ending it drops the load, so a long walk to the edge
+  would put the loot down and pick it up again.
+- **It looks up while it goes.** Once every `rechooseTicks` (300) of the job, at a step boundary, it
+  asks `HostileThinkNode.HasAFight`; if there is a colonist it can reach or a building it may break,
+  the job fails, `Cleanup` drops the load, and the next think fights. A hunt re-chooses by ending
+  its job on the same cadence; a thief cannot, or it would drop the load every three hundred ticks.
+  **`Job.WorkTicks` counts the looks taken** — a theft has no duration for it to override — so the
+  cadence is saved and hashed with the job, and a load resumes it on the same tick.
+- **A colonist who strikes it** turns it at once, as she turns any bandit not fighting beside it
+  (`CombatSystem.React`): the job is interrupted and the load dropped.
+- **Every end but the leaving drops the load** (`Cleanup` → `DropCarried`): downed, killed, knocked
+  back, a look that finds a fight, a failed walk.
+
+**The stack**, `Theft.NearestLoot`: every thing on the three listers a hauler walks (loose, stored,
+contained) that has a place (`WhereIs`), can be carried, is not claimed by anybody else and can be
+reached, nearest by `PawnContext.Distance`, a tie to the lower id. **A forbidden thing is taken
+too**: forbidding is the colony's word to its own people. A weapon in a hand and a load in somebody's
+arms have no place and are passed over. A stack from which no edge can be reached is no loot (a
+drop into a pocket can be one way), and it leaves empty-handed instead.
+
+### 17d. Leaving the board
+
+`Theft.Leave`, deferred, asks again that it is still a thief standing on its edge — the fight's pass
+runs between the driver and the end of the tick, and a thief downed there has already dropped its
+load. Then, in order:
+
+1. the load out of the job and **despawned** — out of the colony's things;
+2. **its weapon despawned too**. `PawnRegistry.Despawn` puts a held weapon down where the pawn
+   stood, which is right for a death and for a pawn that is simply gone; a bandit walking off
+   with its machete has not been disarmed, and leaving one at the edge for every thief would arm
+   the colony for free;
+3. the ledger entry (§17e);
+4. the job ended (`EndJob`, a success) and the pawn despawned through `PawnRegistry.Despawn`, the
+   one way off the board: it ends every attack on the thief, releases its reservations and any bed.
+
+**Not a death**: no corpse (`CorpseRegistry` untouched), no `Died` on the combat log, no
+`CombatHooks.RaiseDied`, so the friendly-fire listener's *a colonist died* memory never fires.
+Nobody mourns a bandit that walked off.
+
+### 17e. The negative event
+
+**The ledger, not a new channel.** Design 23 §5 made the incident ledger the colony's memory of
+what has happened and the Events panel its reader, and a theft is a thing that happened. Two
+incident Defs, appended at 2 and 3:
+
+| Def | Bulletin | Favourability | Row |
+|---|---|---|---|
+| `Incident_Theft` | `ui.bulletin.theft` *Theft* | **Bad**: red ink, the negative chime | *Theft · Meal × 12* |
+| `Incident_BanditLeft` | `ui.bulletin.banditleft` *Bandit left* | Neutral | *Bandit left* |
+
+- **Written down, never fired.** Both name a new worker, **`Recorded`** (`RecordedIncidentWorker`):
+  `CanFireNow` is false, so `InvokeIncident` refuses it, and `Fireable` is false, so **the debug
+  menu's Events tab leaves it off its list** — the one Presentation line in this unit. A worker
+  rather than a flag on the Def, because every Def names one and the loader refuses a Def that names
+  none.
+- **What was taken rides beside the entry, not in it.** Design 23 §8 foresaw that an entry wanting
+  more than `(id, tick, def, cell)` would add fields and bump the save format. It does neither: the
+  ledger keeps a **sparse detail row** per entry that is about a thing (`IncidentLedger.Detail`: id,
+  item def, amount), saved in its own section, **`odyssey.incidents.detail`**, appended to
+  `ColonyWorld.SaveComponents`, and hashed only while it has a row. A save from before it loads
+  with no detail, which is what it had. **Save format unchanged.**
+- **Published on the bulletin**: `BulletinView` gained `Subject` and `Amount` (−1 and 0 by default),
+  and `BulletinModel.Title` writes *name · thing × n*, as the activity line writes a load (one of
+  a thing has no count). Both names are the registry's; only the separator and the sign are written
+  in C#.
+- **Where**: the entry's cell is the edge cell the thief left from, so clicking the row jumps the
+  camera to where it went.
+
+### 17f. The kidnap seam (not built)
+
+`Motive.Kidnap` exists, is loaded, and **does exactly what `Loot` does today** — the switch in
+`Theft.TryFill` says so, and `TheftTests.AKidnapperStealsAsALooterDoes` holds the two to the same
+hash every hundred ticks of a whole theft. How kidnap would work, when it is built:
+
+- **What it takes**: the nearest **downed colonist** it can reach, in place of the nearest stack.
+  `RescueRules` already answers who is downed, not carried and not claimed, and the rescuer's
+  `ReservationTargetKind.Pawn` claim keeps a rescuer and a kidnapper off one body.
+- **How it carries her**: C4's cradle (§11). `Pawn.CarriedBy` and the carried patient's cell riding
+  her carrier's are the rescue's, and the kidnapper's job reuses them, with `Cleanup` putting her
+  down on every end that is not the leaving, as the rescue's does.
+- **Leaving with her**: the colonist is **not despawned into nothing**. She leaves the board into a
+  record — *held by the raiders* — that a later unit reads: a rescue, a ransom, or a raid on the
+  camp. That record is new saved state, and the unit that builds it decides its shape.
+- **The event**: a *Kidnapped* bulletin naming her (a `ui.bulletin.*` key, and a detail row whose
+  subject is a pawn rather than an item; the row's shape already allows it).
+- **Which it does**: a rolled motive per bandit once raids arrive (§17b), with `Kidnap` chosen
+  only when there is somebody down to take, falling back to `Loot`.
+
+### 17g. What was touched
+
+- **Simulation**: `Theft` and `StealJobDriver` (new); `HostileThinkNode` (the order, `HasAFight`);
+  `Job_Steal` in `Jobs.xml`, `JobIndex`, the driver pool; `Motive`, `PawnKindDef.motive`,
+  `KindMotive`, `Pawn.Motive`, `<motive>Loot</motive>` on the bandit; `EdgeTarget.Find`, shared
+  with the animal's leaving walk and unchanged for it; the ledger's detail rows and section;
+  `RecordedIncidentWorker`, `IncidentWorker.Fireable`; two incident Defs.
+- **The hash**: `JobSystem.HashedAlways` (22). A job def below it hashes its counters as it always
+  did; one appended at or after it is hashed **only once it has a count**, with its index. The
+  contracts step moved every golden once for ten zeros (§5h); this is what let `Job_Steal` arrive
+  without doing that again, and the next job inherits it.
+- **Contracts**: `JobHandle.Steal` 22 (`Count` 23), `IncidentHandle.Theft` 2 and `BanditLeft` 3
+  (`Count` 4), `BulletinView.Subject` and `Amount`.
+- **Interface**: `JobLabels` (*Stealing*), `IncidentLabels` (the two bulletins), `BulletinModel.Title`.
+- **Presentation, never compiled**: `HudShell.Debug.cs`, one line skipping a worker that is not
+  `Fireable`.
+- **Registry**: `ui.status.stealing`, `ui.bulletin.theft`, `ui.bulletin.banditleft`, with two
+  icon-map gap rows for the bulletins. All three content gates clean.
+
+**Cost** (`docs/process.md` §3): nothing per tick, and nothing at all while there is no bandit.
+The theft scan runs on a bandit's think only when it has nobody to fight and nothing to break,
+and scales with **the item stacks on the board** (a branch and a reservation probe each, a
+reachability test for each nearer than the best so far) plus the edge search, bounded by the
+board's side. A thief's look is one colonist scan and one building scan per `rechooseTicks`.
+
+### 17h. Tests, the soak, and the controls seen to fail
+
+Fast tier: Sim **1,439** (from 1,427), Hud **1,004** (from 1,003). Long **41**, all green.
+`GoldenMasterTests` is green without a re-bake. Two fingerprints moved once, deliberately, with the
+reason beside each: `PawnContentDefTests.ContentFingerprint` 6953925138484699291 →
+12926174003015880195 (`Job_Steal`, `PawnKindDef.motive`), and `IncidentContentTests`
+15479437417230274748 → 17580740474630100120 (the two recorded incidents). `CombatContractTests`
+holds the new handle at 22 and the pool's driver. All three content gates are clean.
+
+| Test (`TheftTests` unless named) | Claim |
+|---|---|
+| `WithEveryoneDownItCarriesOffTheNearestStackAndLeaves` | the nearer of two stacks, stood on and lifted, carried to the edge nearest it; the stack and the machete despawned, the other stack untouched; one pawn fewer, no corpse, no `Died`, no mourning. 3,267 ticks on the 60 × 60 board |
+| `TheLedgerRecordsTheTheftAndTheBulletinSaysWhat` | one `Theft` entry at the edge it left from, the detail Meal × 12, and the published bulletin carrying both, in the blow's favourability |
+| `WithNothingToStealItLeavesEmptyHanded` | by the edge nearest itself; `BanditLeft`, with no detail |
+| `OnATieItTakesTheOlderStack` | two stacks the same distance off: the lower id |
+| `AColonistThenABuildingComeBeforeTheft` | a standing colonist first, then a wall, never the meal beside it; with both gone, it steals |
+| `AThiefThatCanReachAColonistAgainDropsTheLoadAndFights` | a colonist spawned mid-carry: the load is dropped, on the ground, within one look, and it goes for her |
+| `DownedWhileCarryingItDropsTheLoad` | the load beside it, not despawned; a downed thief never leaves and records nothing |
+| `KilledWhileCarryingItDropsTheLoad` | the load dropped, one corpse, no theft recorded |
+| `WithNoEdgeToReachItStays` | ringed by walls it may not break: 3,000 ticks without a theft or the meal lifted; a gap opened, and it leaves with the meal |
+| `AKidnapperStealsAsALooterDoes` | the same hash every hundred ticks of a whole theft; one that came for nothing stays |
+| `AJobAppendedAfterTheCombatLineIsHashedOnlyOnceItHasRun` | an unrun `Job_Steal` hashes as the goldens were baked; a run one is in the hash |
+| `ATheftSavedMidCarryResumesIdentically` | the job, the stack in its arms and the hash after the load; the same edge and tick on leaving; the ledger's detail through a second save |
+| `BulletinModelTests.ATheftSaysWhatWasTakenAndHowMany` (Hud) | *Theft · Meal × 12*, no count for one, *Bandit left* alone, and the blow's chime |
+| `BanditDoorTests.ABanditLeavesABedAloneAndBreaksTheWallInstead` (changed) | its bandit comes for nothing, in that colony's own content record: a looter would carry off the scenario's meals and be gone before the wall went up |
+
+**The soak** (`BanditSoakTests`, Long) now accounts for every bandit — still on the board,
+killed, or off the edge — and asserts that the ones off the edge are exactly the ledger's thefts and
+empty-handed leavings. It reads **7 left with a stack, 0 empty-handed, 3 still on the board (down),
+391 swings, 211 hits, 12 downed, 0 died, 4 got up**, and every colonist down at the end. With the
+theft withheld (the kind's `<motive>` line removed) the same run reads **377 swings, 165 hits, 11
+downed, 0 died, 3 got up** and ten bandits on the board, which is §16f number for number: the
+change reached nothing but what a bandit does once nobody is standing. The fights that follow a
+theft differ because seven bandits are no longer standing about the colony when its colonists
+get up.
+
+Each rule was withheld, its tests run and seen to fail, then restored:
+
+| Withheld | Failed |
+|---|---|
+| theft before the building | `AColonistThenABuildingComeBeforeTheft` |
+| theft before the colonist | the same, and `AThiefThatCanReachAColonistAgain…` |
+| the nearest stack (the farthest instead) | `WithEveryoneDown…` |
+| the tie to the lower id | `OnATieItTakesTheOlderStack` |
+| the edge nearest the stack (the thief's instead) | `WithEveryoneDown…` |
+| the stack despawned on leaving | `WithEveryoneDown…` |
+| the weapon despawned on leaving (left to `Despawn`, which drops it) | `WithEveryoneDown…` |
+| leaving as removal (`Kill` instead) | `WithEveryoneDown…`, `WithNothingToSteal…`, `AJobAppended…` |
+| the ledger entry | `TheLedgerRecords…`, `WithNothingToSteal…`, `ATheftSaved…` |
+| the detail row | `TheLedgerRecords…`, `ATheftSaved…` |
+| the detail section in the save | `ATheftSaved…` |
+| the drop on every other end | `AThiefThatCanReachAColonistAgain…`, `DownedWhileCarrying…`, `KilledWhileCarrying…` |
+| the look while stealing | `AThiefThatCanReachAColonistAgain…` |
+| no edge, no theft (its own cell taken as the edge) | `WithNoEdgeToReachItStays` |
+| `Kidnap` as `Loot` (kidnap doing nothing) | `AKidnapperStealsAsALooterDoes` |
+| `None` doing nothing (looting too) | `AKidnapperStealsAsALooterDoes` |
+| the bandit's motive (the XML line) | eleven of the twelve; the soak back to §16f's numbers |
+| the sparse job hash (every counter hashed) | the three `GoldenMasterTests` hashes, `AJobAppended…` |
+| the bed test's motive set aside | `ABanditLeavesABedAlone…` |
+| the row's thing and count (Hud) | `ATheftSaysWhatWasTakenAndHowMany` |
+
+**Not tested**: the debug menu leaving a recorded incident off its Events tab (Presentation, never
+compiled); a stack in a shelf (the contained lister is walked exactly as a hauler walks it, and
+`LiftToil`'s reach into a shelf is the haul's own); and the thief's look finding a building rather
+than a colonist, which is `HasAFight`'s second half and the think's own rule.
+
+### 17i. Open for the owner
+
+- **It walks.** A thief that ran would be hard to catch; one that walks can be run down by a
+  colonist who gets up. Say which.
+- **Its machete goes with it.** Say if a thief should drop its weapon at the edge instead.
+- **Nearest, whatever it is.** A pile of stone is as good as the meals. There is no value on a
+  thing yet; say if the choice reads as stupid, because that is what a value would answer.
+- **A thief climbs a ladder with a load**, which a hauler does not (§17c). Say if it looks wrong.
+
+## 18. The ring means an order; a colonist's response (2026-09-24)
+
+**The owner, 2026-09-24**, asked whether the red lock-on ring should mean only orders the player
+gave: *"Update the depending on the correct action."* And asked whether undrafted colonists should
+ever help others in a fight: *"Maybe a setting to configure this - if there is a UI manage the colony
+with such things - IE a management of rules - we might need another UI to say that all colonists (by
+default) - even if undrafted, will draft themselves and fight maybe? not sure what do you
+recommend"*.
+
+Built on `claude/combat-response`, from `claude/combat-owner-round` at `2e01d57e`, on the fast and
+Long tiers only, with no Unity.
+
+### 18a. The two decisions
+
+| Question | Decision |
+|---|---|
+| What does the ring mean? | **An attack the player ordered**, and nothing else. A fight a colonist started herself — the drafted hold's blow beside her, fighting back when struck, a drafted colonist joining a fight nearby (§15), and the new *Defend* below — draws no ring. A rescue already drew none (§11e). |
+| Should undrafted colonists help? | **Yes, if the player says so, colonist by colonist.** Each colonist has a **response**, cycled by a button on her pane beside Draft: **Fight back** (the default, today's behaviour), **Defend** (she joins a fight near her, then goes back to work) and **Flee** (she runs from danger near her). |
+| Should a colonist draft herself? | **No** (our recommendation, recorded for the owner). A draft takes a colonist off work until released, or until four quiet hours pass; *Defend* gives the protective behaviour without taking her off work. |
+| A colony-wide rules panel? | **Deferred.** One default response for everybody is one rule; a panel is worth building when there are several colony rules for it to hold. Until then the pane's button, on a box selection, sets everybody selected at once (§18e). |
+
+### 18b. The ring means an order
+
+**The rule has one owner: what the simulation publishes.**
+
+- `odyssey.pawn.order.target` is published **only for an attack the player ordered**: the pawn's
+  job is `Job_AttackMelee`, `PlayerForced`, on a pawn (`PawnRegistry.OrderTargetOf`). That is
+  `OrderAttack`, and the knockback's re-issue of it (§9b), which keeps the order forced.
+- **A rescue's patient moved to an aspect of its own**, `odyssey.pawn.rescue.patient`, published for
+  every rescue, ordered or the giver's (`PawnRegistry.RescuePatientOf`). The target aspect had been
+  carrying two meanings — *whom she was sent to hit* and *whom she is carrying* — and the ring had to
+  ask the job to tell them apart. Presentation's carrier lookups (`PawnFigureDirector.CarriesAPatient`
+  and `CarrierOf`) read the patient aspect now.
+- **`LockOnRings` asks the aspect and nothing else about the job.** Its two filters went: the
+  rescue's (the aspect no longer names a patient) and "drafted only" (an order needs a draft, which
+  the simulation already enforces). A second copy of "was this an order" in the interface is the
+  bug pattern the catalogue lists first.
+- **Nothing that reads *whom she is fighting* was lost.** The target stays on the pawn
+  (`Pawn.CombatTarget`), saved and hashed, and the simulation reads it there. No other reader of the
+  published aspect existed; the figure turns to a swing's target through `WorkFocus`, which is the
+  cell and unchanged.
+
+**What each kind of fight draws now:**
+
+| Fight | Ring | Order line | Diamond |
+|---|---|---|---|
+| Ordered attack on a pawn (right-click, Ctrl on a colonist) | yes | none — a pawn target never drew one | yes (drafted) |
+| Ordered attack on a building (§13i) | no — a building is not a pawn | yes, to the struck cell | yes |
+| Drafted hold's blow beside her | **no** (was yes) | none | yes |
+| Drafted colonist joining a fight (§15) | **no** (was yes) | none | yes |
+| Undrafted: fighting back, or *Defend* | no | none | none |
+| Rescue, ordered or automatic | no | none | while drafted |
+
+So the order marks — the ring and the line — are the player's orders and only those. The diamond is
+not an order mark: it says *drafted*, and a drafted colonist fighting on her own is still drafted.
+
+### 18c. The response
+
+`HostilityResponse` on the pawn: **Fight back** 0, **Defend** 1, **Flee** 2.
+
+- **Saved** in `odyssey.combat`, in the record's flags word (two bits beside the draft and the
+  downed flags), and the record is written for a colonist whose response is not the default. **No
+  layout change**: an older build reading the word ignores the bits, and an older save loads with
+  everybody at Fight back.
+- **Hashed** as two bits of the kind word (bits 24–25; 22 and 23 left for the thief line, which is
+  building beside this one), so a colony with every colonist at the default hashes exactly as before
+  and **no golden moved**.
+- **Published** as `odyssey.pawn.response` (1 or 2), sparse: absent at the default.
+- **Set by `SetHostilityResponse(A pawn, B response)`**, applied while paused like the other orders
+  over a colonist (`PausedIntents`). Refused for a pawn that is not a colonist and for a value outside
+  the three; `AlreadyInThatState` for a no-op. It may be set on anybody of ours — drafted, downed or
+  broken — because it is a standing setting, not an order to act. An undrafted colonist on a fight or
+  a flight **the new setting would not have started** is interrupted, keeping her step, so it
+  answers at once rather than when that one ends (`HostilityResponses.Started`): a flight under
+  anything but Flee, a fight of her own under Flee, a join into somebody else's fight under Fight
+  back. A fight she would have started anyway is left alone, so no swing in the air is lost.
+- **The draft overrides it.** A drafted colonist does what §2 and §15 say whatever her response; it
+  takes effect again when she is released.
+
+### 18d. What each response does
+
+**Fight back** is unchanged: she answers whoever strikes her, and a threat beside her when she next
+thinks (§6A.6).
+
+**Defend** is Fight back, and she also **joins a fight near her exactly as a drafted colonist on her
+hold does** (§15b): the one rule, `Melee.HoldTarget` — a threat in reach first, else the nearest
+victim's attacker, a bandit or an animal on another colonist, both within
+`CombatDef.helpRadiusCells`, and she can reach it. The job is §15c's — the unforced attack marked
+`Joining` — and it ends as that one ends: the attacker down, dead, gone, unreachable, or on no
+colonist any more. **Then she goes back to work**: the tree runs and gives her whatever it would
+have. She is never drafted, so no four-hour clock runs and nothing needs releasing.
+
+**Flee** runs from danger near her instead of fighting.
+
+- **Danger** is a standing pawn within the same `helpRadiusCells` (eight cells, 20 m — one number
+  for *near* in a fight) that is a bandit, whatever it is doing; an animal attacking a colonist;
+  or anybody attacking her. A wild animal at peace is not danger. **Only danger that can reach her
+  in its own mode counts**: a bandit behind a shut door (§16b) does not keep her off work.
+- **She runs** on `Job_Flee`, to `FleeJobDriver.FindFleeCell`, `fleeCells` (12) straight away from
+  the nearest danger, turning 45° and then 90° either side when that is blocked — the animals' own
+  flight, at the run's pace (§6A.7).
+- **She stops** when she arrives. The tree asks again: danger still within eight cells, she runs
+  again from where she is; none, she goes back to work.
+- **Struck, she runs rather than fighting back.** Cornered — no flee cell at all — she fights back,
+  as Fight back would: the retaliation memory is still written at the blow, for exactly that case.
+- **She does not go back for whoever struck her.** With no danger near her the node gives her no
+  fight at all, even with the blow still remembered; at Fight back the same memory sends her after
+  it across the board, which is the difference the setting is for.
+
+**Both are noticed while working.** The tree runs only between jobs, so a colonist chopping a tree
+would never see a fight until the tree was down. `JobSystem.TickPawn` asks each undrafted *Defend*
+or *Flee* colonist, every tick, whether her response would act now (`HostilityResponses.WouldAct`,
+the same function the think node asks); if so, the job in hand ends as a failure, keeping the step
+in progress (§2d), and the tree runs the same tick. **Not asked** of a colonist who is:
+
+- asleep — a fight nearby does not wake her; a blow does (it interrupts, §6A.6);
+- already fighting, fleeing, down, or carrying somebody to a bed;
+- on a job the player forced (an equip, a prioritised build): the player's order stands;
+- stunned, knocked down, broken, drafted.
+
+### 18e. The pane
+
+A second live button on a colonist's pane, after Draft. **It shows the response she has** — *Fight
+back*, *Defend*, *Flee*, each a registry name (`ui.command.fightback`, `ui.command.defend`,
+`ui.command.flee`) — and pressing it moves to the next, round the three. Its tooltip says what the
+current one does and that a press changes it.
+
+- **On a selection of several**, the next response is the one after the first selected colonist's,
+  and every selected colonist is set to it, so one press can put a whole squad on Defend. The same
+  shape as the draft key's rule for a mixed selection (§2f).
+- The decision is `Hud.ResponseModel`, Unity-free and fast-tier tested. The shell only carries its
+  intents to the world (`HudShell.CycleResponse`, one line in `ActionButton`).
+
+### 18f. What it costs
+
+- **Nothing while every colonist is at the default.** The notice is asked only of a *Defend* or
+  *Flee* colonist, one byte comparison for everybody else.
+- **For a *Defend* or *Flee* colonist, nothing while nothing is hostile.** Whether anything is —
+  a standing bandit, or anybody in an attack on a colonist — is found once a tick, lazily, by the
+  first colonist who asks, in one pass over the pawns (`PawnContext.AnythingHostile`), and reset
+  when the job system's tick begins.
+- **With something hostile about**, each responder's notice is the §15 scan (`HoldTarget`) or the
+  flee scan, one pass over the pawns, and a flee also costs the flee-cell search (at most twenty-five
+  column searches) while danger is near. **It scales with the pawns on the board, per responder,
+  per tick, while there is a fight** — the drafted hold's own cost profile (§15f).
+
+### 18g. Do not undo by tidying
+
+- **The ring reads the aspect and asks nothing else.** Putting a job or a draft check back in
+  `LockOnRings` makes the interface a second owner of "was this an order".
+- **A rescue's patient is its own aspect.** Folding it back into the order target puts the rescue
+  filter back in the ring.
+- **The notice and the node ask one function.** A notice that decided differently from the node
+  would interrupt her and then give her work again, every tick, until the think-loop breaker parked
+  her.
+- **The hostility gate is reset by the job system's tick, not cached by tick number.** A cache keyed
+  on the tick would survive a load of an earlier save into the same world.
+- **Defend never drafts.** A draft is the player's hand; her own response is not.
+
+### 18h. Open for the owner
+
+- **The recommendation itself**: Defend rather than self-drafting, and the colony-wide rules panel
+  deferred until there is more than one rule to hold.
+- **Flee's radius** is the help radius, eight cells. If fleeing colonists run from a bandit that
+  was never coming for them, it wants its own number.
+- **A *Defend* colonist asleep** is not woken by a fight nearby. Say if she should be.
+- **The button shows the current response**, where Draft shows what pressing it will do. The
+  Draft button's face is an action; this one is a setting. Say if they read as inconsistent.
+
+### 18i. Tests, and the controls seen to fail
+
+Fast tier: Sim **1,458** (from 1,427), Hud **1,015** (from 1,003). Long **41**, all green.
+`GoldenMasterTests` is green without a re-bake, and no content number moved, so no fingerprint
+did. All three content gates are clean; the wiki and `Registry.g.cs` carry the three new names and
+a reworded *Fleeing* tooltip.
+
+**Tests changed on purpose, not relaxed:**
+
+- `CombatContractTests.TheFightsAspectsArePublishedOnlyWhileTheyHaveSomethingToSay` set a target on
+  a colonist with no job and expected it published. It now expects nothing without an order, and
+  the order as its control.
+- `LockOnRingTests.ARescueDrawsNoRing` now feeds the rescuer as the simulation publishes her — the
+  patient aspect, no order target — and its control is the same rescuer *with* an order target,
+  which draws: the ring asks the aspect, not the job.
+- `LockOnRingTests.AnUndraftedColonistsTargetIsNotAnOrder` became `AFightNobodyOrderedDrawsNoRing`:
+  the drafted check it tested is gone, because the simulation no longer publishes an unordered
+  target at all.
+- `HudModelTests.ColonistPaneShowsNeedsAndDisabledTabsAndCommands`: two live commands, not one.
+
+| Test | Claim |
+|---|---|
+| `ResponseTests.OnlyAnOrderedAttackPublishesItsTarget` (five cases) | the ordered attack publishes its target; the hold's blow, fighting back, a drafted join and a Defend join publish none |
+| `…ARescuePublishesItsPatientAndNoOrderTarget` (ordered, automatic) | the patient under its own aspect, carried, and no order target |
+| `…TheNumbersAreTheInterfaces` | 0, 1, 2 — the save contract and `ResponseModel`'s |
+| `…TheIntentSetsItAndRefusesWhatMeansNothing` | default, published only off it, no-op quiet, refused for 3, −1, a bandit, a hog; a drafted colonist keeps her hold |
+| `…ItAppliesWhilePaused` | landed by a republish that spends no tick |
+| `…ItIsSavedAndHashedOnlyWhenNotTheDefault` | set and set back hashes and saves byte for byte as before; Defend and Flee survive a load and the worlds stay together for 300 ticks |
+| `…DefendJoinsAFightNearbyThenGoesBackToWorkNeverDrafted` (5, 12) | off a 20,000-tick job to join, unforced and marked, then work; never drafted; twelve cells off she stays on the job |
+| `…FightBackLeavesAFightNearbyAlone` (default, and back from Defend) | today's behaviour |
+| `…DefendIgnoresAColonistFightingAColonist` | a Ctrl attack four cells off leaves her working |
+| `…ASleeperIsNotRousedByAFightNearby` | asleep, she sleeps on; awake, the control, she goes |
+| `…APlayersOrderIsNotTurnedAsideByDefend` | sent for a weapon across the fight, she keeps walking |
+| `…FleeRunsFromABanditNearHerAndGoesBackToWork` (Flee, Fight back) | she runs within 30 ticks, never swings in 300, and works again once it is down; at Fight back she stays on her job |
+| `…StruckSheRunsRatherThanFightingBack` (Flee, Fight back) | on a forced job the notice leaves alone, the blow makes her run; at Fight back it makes her fight |
+| `…CorneredSheFightsBack` | walled into two cells with it, no flee cell, she fights |
+| `…AnAnimalAtPeaceIsNotDangerAndOneOnAColonistIs` | a rooting hog three cells off leaves her working; the same hog on the colonist beside her makes her run |
+| `…ABanditBehindAShutDoorIsNotDanger` (shut, empty doorway) | a shut door: she works; an empty doorway: she runs |
+| `…SheDoesNotGoBackForWhoeverStruckHer` (Flee, Fight back) | out of range, the blow remembered, she stays; at Fight back she goes for it |
+| `…ANewSettingAnswersAtOnce` | fighting back, set to Flee, she is running in the same call |
+| `…DraftedSheDoesWhatTheDraftSays` | drafted at Flee: no job starts under her hold in 60 ticks with danger six cells off, and the bandit beside her is struck |
+| `…TheGateIsAskedAgainEachTick` | a Defend colonist whose first asking found nothing still notices a bandit that comes later |
+| `ResponseModelTests` (twelve) | the pane shows the response she has with the registry's name, after Draft, off for a colonist who has gone, none for a bandit; a press moves one round the three; a selection takes the first colonist's next and passes over the rest; an unknown number reads as Fight back |
+| `CombatAspectNamesTests`, `CombatContractTests` | `odyssey.pawn.response` spelled alike on both sides; `odyssey.pawn.rescue.patient` held in the simulation |
+
+Each rule was withheld, its tests run and seen to fail, then restored:
+
+| Withheld | Failed |
+|---|---|
+| the order target for any target (the old rule) | `OnlyAnOrdered…` hold, struck, joined, defend; `ARescuePublishes…` both |
+| the rescue's patient never published | `ARescuePublishes…` both |
+| the ring's rescue filter put back | `ARescueDrawsNoRing` (its control) |
+| the notice | `DefendJoins…(5)`, `FleeRuns…(Flee)`, `ASleeper…` (its control), `AnAnimalAtPeace…`, `…ShutDoor(empty)`, `TheGateIsAsked…` |
+| the notice waking a sleeper | `ASleeperIsNotRoused…` |
+| the notice overriding a forced job | `APlayersOrder…`, `StruckSheRuns…(Flee)` |
+| the notice asking a drafted colonist | `DraftedSheDoes…` (seen to pass first: the draft's own hold is forced and the forced-job rule hid it; the test now puts her on a hold her mind gave) |
+| the node's Defend branch | `DefendJoins…(5)`, `ASleeper…`, `OnlyAnOrdered…(defend)`, `TheGateIsAsked…` |
+| the node's Flee branch | six, every Flee test that expects a run |
+| "no danger, no fight" at Flee | `SheDoesNotGoBack…(Flee)` |
+| the setting's interrupt | `ANewSettingAnswersAtOnce` |
+| the hash bits; the flags bits; the record for a response alone | `ItIsSavedAndHashed…`, each |
+| the gate always shut; the gate never forgotten | the same six as the notice, each |
+| danger that need not reach her | `…ShutDoor(shut)` |
+| any animal as danger | `AnAnimalAtPeace…` (seen to pass first: nothing hostile about, so the gate kept the notice from asking; the test now keeps a stunned bandit far off) |
+| Defend's join unmarked | `DefendJoins…(5)` |
+| the cycle per colonist rather than from the first | `ASelectionTakes…` |
+| the pane's button | four `ResponseModelTests` |
+
+**Not tested:** the Presentation wiring (the button's click, the carrier lookup's new aspect) —
+never compiled here, and the fast tier has no Unity. A Defend or Flee colonist on a knock-down or a
+stun is held by the job loop before the notice, which is §5c's rule and not re-tested.
+
+### 18j. Never compiled here
+
+`Presentation/Ui/HudShell.Inspect.cs` (the button's click), `Presentation/Ui/HudShell.Bar.cs`
+(`CycleResponse`), `Presentation/World/PawnFigureDirector.Poses.cs` (the carrier lookups read
+`CombatAspects.RescuePatient`). Three buttons now share the inspect pane's header — Prioritise,
+Draft and the response — and nothing measures whether they fit; that is the playtest's question.
+
+## 19. The playtest after the owner's rounds (2026-09-24)
+
+The owner played the combined combat branch (PR #194) and reported two things:
+
+> *"I noticed when the mauraders came to attack - 3 of them. Only one of them started attackign the
+> building after destroying a campfire - the other 2 said they were fighting but kinda stood around -
+> maybe it was because it didn't read the building was up on the hill at another depth or didn't
+> know where to attack. Something is off there. Also it seemed tricky to draft then move my
+> colonists to another floor in the building - just double check that."*
+
+Built on `claude/combat-stall-fix`, from `claude/combat-owner-round` at `f87a3ab0`, on the fast and
+Long tiers only, with no Unity. **No golden moved.** No Presentation or Editor file was touched.
+
+### 19a. Measured on the owner's own save
+
+Every finding below was measured, not reasoned. The save was on the disk: `the-latest-tim.odyssey`,
+written at 17:51 on the day, tick 89,868, three bandits already on their way to the campfire at
+(59, 37, L10). The colony is a two-storey house on a terrace one layer up: walls on x 56–60,
+z 40–47 at L11, the door at (58, 40) on the edge of the step, a ladder at (58, 43), an upper floor
+at L12, and four drafted colonists inside. A throwaway fast-tier probe loaded it the way
+`Odyssey.SaveProbe` does and ran it on, logging every bandit's job, target, side, path and cell.
+
+**First: a loaded world kept the generated board's paths.** Seven walls on x = 60 (z 41–47) were
+walkable to the navigation graph and the floor above them was not. Bandits stepped into those
+walls and chose sides inside them, and a colonist ordered to six upper-floor cells over that column
+was refused. `ColonyWorld.RebuildDerived` called `NavGraph.Rebuild`, which floods only the blocks
+something marked dirty, and a load writes the cell arrays wholesale without marking any. So the
+graph the fresh world built for the generated meadow survived the load everywhere a door or a
+ladder had not happened to dirty a block — and x = 60 is the first column of a ten-cell block, one
+column past the door's. **Fixed:** `MarkAllDirty` before the rebuild. After it, no cell on the board
+is blocked in the grid and enterable in the graph. This is older than the combat line: every loaded
+game has had it, in every block the player built in that nothing on the load path happened to
+dirty.
+
+**Then, with the graph right, the owner's report exactly.** With the colonists behind the shut
+door no colonist can be reached, so all three bandits turn on the base (§14b), and all three took
+the same wall: (59, 40, L11), beside the door, the nearest colony building to all of them. A side
+is a cell beside the wall **on its own layer**, and on the edge of a terrace most of those are air
+over the step below: that wall had one, (60, 40, L11). One bandit took it and struck. The other
+two stood at (59, 36) and (60, 37) on the lower ground, on *Fighting*, for **3,245 and 3,312
+ticks** — to the end of the run.
+
+- **One rule, two owners** (`docs/bug-patterns.md` P1). The choice,
+  `BuildingTargets.TryNearestColonyTarget`, asked `CanReach`: is there a side it can get to, held
+  or not. The driver asked `ChooseSide`: is there a side nobody holds. §14b wrote the difference
+  down on purpose — *"a held side is the driver's to sort out"* — and the driver's sorting was to
+  wait and look again. Every 300 ticks the mind thought again, and the choice sent it back to the
+  same wall.
+- **The owner's guess was half right.** The height is why the wall had one side; the bandits read
+  the level correctly.
+
+### 19b. The fix: a building is chosen only with a side free
+
+- **`BuildingTargets.HasAFreeSide`** is `ChooseSide(...) >= 0`: the driver's own answer, her own
+  cell counting as hers. `TryNearestColonyTarget` asks it instead of `CanReach`, so a building whose
+  every side is held is passed over for the next one. With no building free at all the bandit
+  turns to what it came for (§17), as it does with no building.
+- **An unforced building attack whose look finds every side held ends**, and the mind chooses again
+  in the same tick. Two bandits can choose one side in the same tick — a job given at the end of a
+  tick has no destination until its driver's first look — and this is what sorts them out; without
+  it the second waited the 300 ticks to its next think.
+- **A player's order is unchanged.** It still waits for a side, and `CanReach` is still the order's
+  question (§13d): a drafted colonist sent at a wall whose one side is taken queues for it.
+- **`HostileThinkNode.HasAFight`** asks the same choice, so a thief (§17c) drops its load only for a
+  building it could start on.
+- **What it costs.** The choice's side search is now `ChooseSide`: at most ten cells, a reachability
+  query each and, for a cell nearer than the last, a pass over the pawns (`Melee.Holds`). Only for a
+  building nearer than the best so far, only on a bandit's think with no colonist to reach, never
+  per tick.
+- **Measured after, on the save:** a colonist placed on each of the house's inside cells in turn, the
+  rest down, 92 runs; no bandit stood longer than 183 ticks in one cell without a swing, which is
+  the time of the hop up the step. Before, 3,245 and 3,312.
+
+### 19c. Moving a drafted squad to another floor
+
+**One colonist was fine; a squad was not.** From the same save, with the bandits removed:
+
+- One drafted colonist inside, ordered to each of the 117 standable cells in and round the house on
+  L10–L13, reached 113; the other four were spread off a cell another drafted colonist stood on
+  (§8c). With the stale graph of §19a, six upper-floor cells over x = 60 refused the order outright —
+  a right-click that does nothing.
+- **All four ordered at once to each of the 40 upper-floor cells — one right-click with the squad
+  selected — sent 49 of 160 orders to another layer.** The first colonist goes to the clicked cell;
+  the others are spread to free cells round it (`JobSystem.Spread`), and the spread lifted each ring
+  cell by the **click's** rule, `StandAt`: that cell, else the one above, else the one below. The
+  ladder's open shaft and the air past the floor's edge are not places to stand, so it dropped a
+  layer and sent those colonists to the room below or the ground beside the house.
+- **Fixed:** the spread keeps to the named cell's own layer. The click itself is still lifted by
+  `StandAt` — a click names a block and she stands on top of it — but a spread already knows which
+  floor it is on. After: **0 of 160**.
+
+**What a click resolves to, read and not run** (Presentation; no Unity here). `SlicePicker.Owner`
+returns a built floor slab's own cell, so a right-click on the upper floor names L12 and she is sent
+there. Two things for a person at the keyboard:
+
+- **A right-click on a ladder, a door or a bed with drafted colonists selected is an attack** (§13i;
+  C6 answer (c) made all three targets). Right-clicking the ladder to send a squad up it starts them
+  beating the ladder. That is as built and as answered; it may be the other half of "tricky", and it
+  is the owner's call.
+- **Seeing into the ground floor of a two-storey house** needs the cut-away ceiling
+  (`GraphicsOption.CutAwayCeiling`) or a lower slice: at the surface every layer above is drawn
+  solid, and a click there lands on the storey above.
+
+### 19d. Found and left
+
+- **A colonist with one open side is queued for** (§7c, by design). A drafted colonist on the narrow
+  ledge behind the house, (57, 48, L11): one bandit fights her, the other two wait a ring back for
+  **2,360 and 2,506 ticks** — and the ring back can be on the far side of a wall. The same shape as
+  §19a with a pawn for a wall, but it is §7c's queue and not a slip: whether a bandit that can get
+  no side of any colonist should break a building instead is the owner's call.
+- **A spread's ring is by distance, not by path.** Once, a colonist sent to a taken cell inside the
+  house was spread to (55, 46, L11), outside the west wall on the same layer, a long walk round. Not
+  pursued.
+- **Exhausted colonists let the draft go the moment they arrive** (rest at nought, §2b). Several in
+  the save were; it will look like a squad that will not stay upstairs.
+- **An unexplained difference between two runs of the probe.** One placement gave different numbers
+  in two versions of the throwaway probe that differed only in read-only logging. Three runs of one
+  scenario in one process came to the same hash every hundred ticks, so determinism within a run
+  holds; the difference across runs was not chased.
+
+### 19e. Tests, and the controls seen to fail
+
+Fast tier: Sim **1,475** (from 1,470), Hud **1,016** (unchanged). Long **41**, all green.
+`GoldenMasterTests` green without a re-bake. `BanditSoakTests` reads exactly §17h's numbers
+(7 left with a stack, 391 swings, 211 hits, 12 downed, 4 got up): its only buildings are beds.
+
+| Test | Claim |
+|---|---|
+| `WorldRoundTripTests.ABuiltWallIsStillAWallToThePathsAfterTheLoad` | walls raised through `Raise` are walls to the world that built them (control) and to the one it is loaded into; the two graphs agree cell for cell |
+| `BanditSideTests.ThreeBanditsAtAWallWithOneSideDoNotStandAbout` | the owner's case built small — a two-cell step, a wall on its edge with one side (control), a colonist sealed in (control), three bandits: each swings, three walls are struck, and the longest wait at a building with no side is two ticks |
+| `BanditSideTests.AWallWhoseOnlySideIsHeldIsPassedOverForOneWithASide` | with its side free the edge wall is chosen (control); held, `CanReach` still says yes, `HasAFreeSide` says no, and another wall is chosen |
+| `DraftOrderLevelTests.ASquadSentUpstairsIsSpreadOnTheFloorItWasSentTo` | a storey on walls up a ladder; three drafted colonists sent to its corner by the shaft and the edge are each sent to, and hold on, a different upper-floor cell |
+| `DraftOrderLevelTests.AClickOnTheWallUnderTheFloorStillSendsHerOnToIt` | the control: the click's own lift is untouched |
+
+| Withheld | Failed |
+|---|---|
+| the whole-graph rebuild on load | `ABuiltWallIsStillAWall…`: a wall walked through after the load |
+| the choice's free side (`CanReach` put back) | both `BanditSideTests`: two bandits never swing; the held wall is chosen |
+| the driver's rethink when every side is held | `ThreeBandits…`: a 301-tick wait |
+| both | `ThreeBandits…`: two never swing |
+| the spread on its own layer (`StandAt` put back) | `ASquadSentUpstairs…`: the second sent to the ground a layer down |
+
+**`AWorldWhoseGridHasChangedStillResumesIdentically` could not have caught §19a** and is left as it
+is: its wall is written straight into the grid and nothing marks the graph dirty in either world, so
+the original is exactly as stale as the copy and the hashes agree. The new test raises its walls
+through `Raise`, which marks the graph, so the original is right and the copy is compared with it.
+
+## 20. The landing ring and dragging across the roster (2026-09-24)
+
+**The owner's words:** *"instead of using a square to indicate where to land when drafting people,
+can it be a ring that flashes temporarily or has a transition effect that makes sense. Also when
+I'm in default mode and I want to select many colonists, I should be drag the across their roster
+profile and select them all this as well."*
+
+Two interface changes, both presentation only. **No golden moved**: nothing here reaches a cell, a
+save or the hash, and the simulation is untouched. Built on `claude/draft-ring-roster-drag` from
+`claude/combat-owner-round` (`0c868710`).
+
+### 20a. The decisions (told to the owner, built as told)
+
+| Ask | Decision |
+|---|---|
+| A ring, not a square, where a drafted colonist is sent | **A ring on each colonist's own destination**, replacing the floor bracket of §2g. A squad is spread over several cells (§2d), so one ring per colonist. The Equip order (§7a) shares the marker and gets the ring too. |
+| *"flashes temporarily or has a transition effect that makes sense"* | **The lock-on ring's transition** (§7b), so the two read as one family: it snaps in from 1.6 times its size over 0.2 s, flashes once as it lands, holds faint while she walks, and fades when she arrives, the order changes or she is undrafted. |
+| Its colour | **Pale and neutral, not red**, so it can never be read as the red attack ring: `OrderColours.Move`, `#dce4ec`. |
+| The order line and the diamond | **Unchanged.** The line keeps the draft's deep red and ends on the ring. |
+| Drag across the roster | **A left press on a card dragged across others selects every card passed over**, as the box does in the world. A click without a drag still selects one; **Shift** adds to the selection; **right-drag still reorders** the cards; paging is untouched, and dragging off the end of a page does not page. |
+
+### 20b. The landing ring
+
+**What starts one.** The frame a **selected** colonist's published order cell
+(`odyssey.pawn.order.cell`, §2e) changes to a new cell — read off the frame, not the click, exactly
+as the lock-on is, so a refused move draws nothing and the same move clicked twice is quiet. The
+order cell is published for a drafted move, a forced Equip and an attack on a building (§13i), and
+the ring follows it in all three, as the bracket did. **An order already under way when the player
+first sees it** — a colonist selected mid-walk, a world just loaded — is adopted at rest, faint,
+with no snap.
+
+**One ring per colonist, keyed on her and the cell.** Sent somewhere else mid-walk, the old ring
+fades where it was while the new one snaps in on the new cell; for the length of the fade both are
+drawn. Sent back to a cell whose ring is still fading, it snaps again, because that is a new order.
+
+**What ends one.** The cell stops being published — she arrived, she was undrafted (a drafted move
+needs the draft), the order became something else — or she is deselected, since only the
+selection's orders are drawn (§2g).
+
+**The clock is the lock-on's, not a copy of it.** `LandingRings` evaluates every frame through
+`LockOnRing.Evaluate` and quantises through `LockOnRing.Quantise`: the snap from
+`StartScale` 1.6 over `SnapSeconds` 0.2, the flash to `FlashAlpha` at the landing, the settle over
+`FlashSeconds` 0.18 to `HoldAlpha` 0.35, and the linear fade over `FadeSeconds` **0.25 s**. The owner
+was told "about 0.3 s" for the fade; the lock-on's 0.25 is inside that, and a second fade constant
+would have been a second clock. A retune of the lock-on retunes this ring too, and
+`LandingRingTests.TheRingRunsOnTheLockOnsClock` fails on any curve of its own.
+
+**Its own numbers, in `LandingRings`, INVENTED for the playtest:**
+
+| Number | Value | Why |
+|---|---|---|
+| `Radius` | 0.8 m (1.6 m across) | inside the 2.5 m cell and wider than a person's lock-on ring (0.575 m), so it reads as a *place* rather than a body |
+| `OrderColours.Move` | `#dce4ec` | a cool near-white a step under the interface's ink (`TextPrimary` `#eef3f6`) |
+| lift | 2 cm | the lock-on's `LockOnRingLift`, shared |
+
+**The colour** has one owner, `OrderColours` (CLAUDE.md), and a test:
+`OrderColoursTests.TheMoveRingIsPaleAndNeutralAndNoRed` holds it 80 points (the board's threshold)
+from the attack red, the draft red, the hostile marker's salmon and every order hue, then pale (no
+channel under `0xc0`) and neutral (channels within 24). It is **not** held apart from the selection
+cursor's white: the cursor is brackets round a colonist and the ring lies on an empty cell, and a
+rule the design does not need is a rule a later retune would fight.
+
+**How it is drawn.** `OdysseyBootstrap.DrawLandingRings`, called straight after the draft marks:
+`PrimitiveMeshes.UnitRing` through `ChunkRenderer.DrawRing` in the bracket material, draped with
+`GroundRelief.Drape` on the destination cell's floor centre — the placement the bracket had — and
+scaled by `Radius × scale`. A ring on a layer the slice does not draw is not drawn, the lock-on's
+rule. **Cost**: one submission per ring, one ring per selected colonist under orders (two for a
+fade's length after a re-order); it scales with the selection, never the board. The alpha is
+quantised, so the animation reuses at most 33 cached materials for the hue. `DrawOrderLine` no
+longer draws the bracket.
+
+### 20c. Dragging across the roster
+
+**The rule** is `Odyssey.Hud.RosterSweep`, Unity-free and fast-tier tested. A left press on a card
+starts a sweep, and copies the page's cards in slot order.
+
+- **A range, as the box is an area.** The sweep covers the cards from the one pressed to the one
+  under the pointer, inclusive. Dragged back, it lets go of the cards it no longer spans. A flick
+  that never lands on the cards in between still covers them, which is only sound because the strip
+  is always **one row** (`HudLayout.StripRowsAllowed`, owner 2026-09-18) — a second row would need
+  a rectangle instead.
+- **Without Shift** the covered cards are the selection, the **pressed card first**, so the inspect
+  pane shows whom the drag began on.
+- **With Shift** they are added to the selection held at the press, which stays ahead of them.
+- **A press that covers no other card is a click.** Without Shift, that colonist; with Shift, she is
+  toggled in or out, as a Shift-click does in the world. Once a sweep has covered a second card it
+  is a sweep for good: dragging back on to the pressed card leaves her selected rather than
+  toggling her out, and is not taken for a click.
+- **Only the page the press was on.** A card that was not on it covers nothing.
+
+**What moved from the press to the release.** A plain click on a card was `ChooseColonist` on the
+**press**: select her, put the slice on her layer and take the camera to her. A press cannot know
+yet whether it is a click or the start of a drag, and a drag that swung the camera to its first card
+would be a lurch nobody asked for. So the press now selects the card at once (the visible answer)
+and **the slice change and the camera jump wait for the release**, and happen only for a plain
+click. A Shift-click still never jumps.
+
+**What was there.** The strip already had a Shift-drag (`_sweepingRoster`) that **toggled** every
+card it entered — the catalogue's A2 "drag-select a range" (`10-ui-panel-catalogue.md`), built as a
+toggle. It is replaced: a Shift-drag now adds, which is what Shift means on the world's box
+(`SelectionDirector.PickMany`, additive). A drag that re-entered a card toggled it back out; a
+range cannot.
+
+**The view** (`HudShell.Panels.cs`, `NewCard`): the press copies `_cards`' ids into a scratch list
+and calls `Press`; `PointerEnterEvent` on a card calls `Over` and, when it moved, writes the sweep's
+selection through `SelectionDirector.PickMany` (non-additive, since the model already carries
+Shift's base) with `SelectionChange.Boxed`; the press uses `Chosen`, or `Toggled` with Shift. The
+release is the card's own `PointerUpEvent`, or `HudShell.Update` seeing the left button up wherever
+the pointer is (the old sweep's rule, since a release off the strip never reaches a card).
+A `PointerCancelEvent` drops the sweep with no jump. The left press does **not** capture the
+pointer, or the other cards would never see it enter. Right-drag (button 2) is untouched code.
+
+**Not gated on the tool.** The owner said "in default mode", describing where he meets it; the
+card's click was never gated on the armed tool, and gating the drag alone would make a click and a
+drag behave differently with a tool in hand.
+
+### 20d. Do not undo by tidying
+
+- **The landing ring calls `LockOnRing.Evaluate`.** A curve of its own is a second clock.
+- **It starts off the frame, not the click**, for the lock-on's reason: a click draws an order the
+  simulation may have refused.
+- **The camera jump is on the release.** Moving it back to the press makes every drag swing the
+  camera to its first card.
+- **The sweep is a range, not the cards entered.** Entered cards leave gaps on a quick flick.
+
+### 20e. Open, for the playtest
+
+- Whether the pale ring reads against **snow, pale stone and a lit floor** at night; it is drawn
+  lit, like the bracket was.
+- Whether 1.6 m across is the right size, and whether the hold at 0.35 is too faint to find a
+  squad's destinations on grass.
+- The draft-red line ending on a pale ring: whether the two read as one mark.
+- **An attack on a building also rides the order cell** (§13i), so it now wears the pale ring at the
+  struck cell, as it wore the bracket. The lock-on ring round a building target is owed (§13k); until
+  then the pale ring there says "going here", not "hitting that".
+- Whether the jump on release (rather than press) is noticed.
+
+### 20f. Tests, and the controls seen to fail
+
+Fast tier: Sim **1,475** (unchanged), Hud **1,038** (from 1,016: `LandingRingTests` 12,
+`RosterSweepTests` 9, `OrderColoursTests` one). Long **41**, all green. No golden moved.
+
+| Test | Claim |
+|---|---|
+| `LandingRingTests.TheRingStartsOnTheFrameTheCellIsPublishedAndLandsWithAFlash` | nothing for a refused move; starts at 1.6; lands at 0.2 s on the flash; holds faint |
+| `…TheRingRunsOnTheLockOnsClock` | every frame of the snap, the flash and the fade equals `LockOnRing.Evaluate` |
+| `…ArrivingFadesTheRingAndThenItIsGone` | the cell unpublished: lets go where it was, fades, gone after `FadeSeconds` |
+| `…EachColonistOfASquadWearsARingOnHerOwnCell` | two colonists, two cells, two snapping rings |
+| `…SentElsewhereTheOldRingFadesAndTheNewOneSnaps` | re-ordered: the old fades, the new snaps, then only the new |
+| `…AnUnselectedColonistsOrderDrawsNothing`, `…DeselectingFadesTheRing` | only the selection's orders |
+| `…AnOrderAlreadyUnderWayIsAdoptedAtRestNotSnapped` | a load, a selection mid-walk and a new world object adopt at rest |
+| `…TheSameOrderAgainDoesNotSnapAgain`, `…SentBackToAFadingRingSnapsAgain` | quiet on a repeat; a new order on a fading ring snaps |
+| `…AnEquipOrderWearsTheRingAndABanditNever` | an undrafted colonist's Equip cell wears it; a hostile's published cell does not |
+| `…TheRingIsAPlaceWiderThanAPersonAndInsideItsCell` | 0.575 m < `Radius`, 2 × `Radius` < 2.5 m |
+| `OrderColoursTests.TheMoveRingIsPaleAndNeutralAndNoRed` | 80 from both reds, the salmon and every order hue; pale; neutral |
+| `RosterSweepTests.AClickWithoutADragSelectsOneAndIsAClick` | a press replaces the selection with her, and the release is a click |
+| `…DraggingAcrossCardsSelectsEveryCardPassedOver` | the owner's case: the range, pressed first, the held selection dropped, a sweep |
+| `…AFlickPastCardsCoversThemAll`, `…DraggingLeftwardsCoversTheRangeWithThePressedCardFirst` | the range is filled and runs either way |
+| `…DraggingBackLetsGoOfTheCardsNoLongerSpanned` | the range shrinks; home on the pressed card is still a sweep |
+| `…ShiftAddsTheSweepToTheSelectionHeld` | Shift keeps the held selection ahead and adds the range |
+| `…AShiftClickTogglesAndAShiftDragOnlyAdds` | Shift-click toggles in and out; a Shift-drag re-adds the pressed card |
+| `…ACardOffThePageOrAfterTheReleaseChangesNothing`, `…ThePageIsTheOneThePressSaw` | nothing idle, off the page, after the release, or from a page refilled under the drag |
+
+| Withheld | Failed |
+|---|---|
+| the snap (every ring adopted) | five `LandingRingTests`: the start, the clock, the squad, the re-order, the fading re-order |
+| the release (rings held for ever) | `Arriving…`, `Deselecting…`, `SentElsewhere…`, `…LockOnsClock` |
+| keyed on the colonist alone (the ring moved to the new cell) | `SentElsewhere…` |
+| a fade of its own at 0.3 s | `…LockOnsClock` |
+| the colonist check | `…AndABanditNever` |
+| `Move` a pale pink `#f4c8cc`; the attack red; a mid grey `#9098a0` | `TheMoveRingIsPaleAndNeutralAndNoRed`, each |
+| the range filled (only its two ends) | five `RosterSweepTests`, `AFlick…` among them |
+| Shift ignored | `ShiftAdds…`, `AShiftClickToggles…` |
+| every release a click | `DraggingAcross…`, `DraggingBack…`, `ShiftAdds…` |
+| `Dragged` not sticky | `DraggingBack…` |
+| every press composed as a click (Shift toggling the pressed card out) | seven `RosterSweepTests` |
+| a plain drag keeping the held selection | `DraggingAcross…` |
+| the page read live rather than copied | `ThePageIsTheOneThePressSaw` |
+
+### 20g. Never compiled here
+
+The fast tier does not build Presentation and Unity was not run. **Never compiled:**
+`OdysseyBootstrap.cs` (`DrawLandingRings`, the two-argument `DrawOrderLine`), `HudShell.cs` and
+`HudShell.Panels.cs` (`ApplyRosterSweep`, `FinishRosterSweep`, the card callbacks). Every Unity
+call in them is one the same files already make — `ChunkRenderer.DrawRing`, `GroundRelief.Drape`,
+`CellMetrics.FloorCentre`, `Time.unscaledTime`, `PointerDownEvent.shiftKey`, `PointerEnterEvent`,
+`PointerUpEvent.button`, `SelectionDirector.PickMany` — so what is unverified is the
+compilation, not an API shape. **Nothing tests that the pointer reaches the cards** (CLAUDE.md): in
+particular, that `PointerEnterEvent` reaches the other cards while the left button is held. The old
+Shift-sweep relied on the same, and was never reported broken.
+
+## 21. The gate (C7, 2026-09-24, `claude/combat-c7`)
+
+The last unit of the plan: the ten-day gate with and without hostiles, the benchmark rows, the
+records. Built from `main` at `3ca5098c` (PR #194, every combat unit and playtest round in).
+
+### 21a. Without hostiles
+
+`SoakRunTests.TenDays` on seeds 1, 2 and 3 holds on today's `main` with nothing changed: every
+colonist alive and published, no need at zero past 2,000 ticks, the reservation table agreeing every
+1,000 ticks, a haul, a meal and a sleep completed. **No golden moved** in this unit — `Golden.cs`
+is untouched and `GoldenMasterTests` is green in both the fast and Long tiers. The numbers are in
+`docs/milestones/soak-runs.md`.
+
+### 21b. With hostiles: `BanditSoakTests.TheGateWithRaids`
+
+There is no storyteller (owner's call), so the test is the storyteller. On the soak's own board and
+colony (120 × 120 × 16, `Scenario_Bare`, five colonists, five beds, nine stockpile cells):
+
+- **Armed by the debug menu's own row**, `DebugArmColonists`, so every colonist holds one of the
+  four weapons, dealt by her seed.
+- **A hut**: a five-by-five ring of wooden walls with a door on the side facing the start, eight
+  cells off it, raised outright — sixteen colony buildings and a door (§16) beside the scenario's
+  beds.
+- **Seven raids** through the debug spawn, a quarter into days 0, 1, 3, 4, 6, 7 and 9: one bandit
+  or three, alternately, twenty cells out on a heading that turns. Thirteen bandits.
+- **A party of three is answered**: every colonist on her feet is drafted (`SetDrafted`) and sent
+  to the start with one `OrderMove` each, as a box selection sends a squad; the spread (§2d) stands
+  them together and the four quiet hours (§2b) let them go. A lone bandit is left to each
+  colonist's own response (§18). *Why*: unanswered, every seed was all down by day two and eight
+  days of the gate were theft; drafted where each stood, five colonists across a 120-cell board met
+  the party of three one at a time and lost every fight three to one. Gathered, they fight as a
+  squad, which is the fight a player has.
+
+**Asked every in-game hour**, in the invariants both soaks now share (`Invariants`, extended rather
+than forked):
+
+- nobody dead still on the board, nobody over the pool, nobody at or under nought standing;
+- nobody down past the line she gets up at — whole for a colonist (§11c), the content's for an
+  animal — and every downed pawn on `Job_Downed`, never drafted;
+- **a carried pawn** is carried by a pawn that exists, is on `Job_Rescue`, names her, and stands
+  where she is (§11a, §11f);
+- **nobody inside anything solid** — the `TrappedPawnSystem` test: solid or blocked and not
+  enterable in her own mode;
+- **every claim a pawn believes it holds is in the table under its name**, and the table's count
+  is the pawns' — together, "no reservation held by a pawn that has gone".
+
+**Asked every tick** (scales with the pawns):
+
+- **no attacker on a target already gone** for more than one tick: a pawn despawned, dead, or down
+  when the attack was not to the death; a building no longer standing. The driver ends the job on
+  the tick it sees one, so one tick — the fight's pass downing a target after the jobs ran — is the
+  bound.
+- **no bandit on *Fighting* at a building** without a step or a swing for more than **500
+  ticks**: every unforced attack thinks again at `rechooseTicks` (300), and since §19b one whose
+  every side is held ends at once, so the owner's "said they were fighting but kinda stood around"
+  is at most a re-choice, the longest cooldown (144) and §19b's 183-tick hop. The same stand at a
+  **colonist** is printed and not bound: a bandit that can get no side of her queues a ring back
+  by design (§7c), which §19d measured at 2,506 ticks and left for the owner.
+
+**Asked every hour, a rescue**: a downed colonist out of bed who could be carried — nothing hostile
+standing, a free bed she can reach, and a colonist on her feet, undrafted, unbroken, awake and **not
+already carrying somebody** — may lie like that for at most **two hours**. Rescue is emergency work
+taken at the rescuer's next think (§11b). The first cut counted a rescuer already carrying someone
+as free, and seed 1 read 12,500 ticks: one colonist left standing working through four patients in
+turn, each carry 2,500–4,000 ticks. That is one rescuer at a time, not a fault, and the predicate
+says so now. On failure it prints every standing colonist's job, reach, bed and claim.
+
+**Determinism, twice.** A **lockstep twin** — the same seed, the same raids, built beside it — must
+hash the same **every hour** for ten days, which is stronger than "the same final hash" and says
+where two runs part if they ever do. And **a save at the first swing of day one's raid** (at a
+colonist or a building, from the combat tape) is loaded into a fresh world and run a day on: it must
+come to the original's hash. Day one because it is the one fight every seed has; by day four seed
+1's colony is all down and its hut broken, so that party only steals.
+
+**Accounted for at the end**, as the soak does: every bandit is on the board, dead with its corpse,
+or off the edge with a ledger entry (§17e); every death has its corpse; `Job_Downed` never failed;
+**no colonist died** — an unordered fight ends in downs (§3).
+
+### 21c. What it found: a step lost across a load
+
+The save round trip failed on seeds 1 and 2 at first. The lockstep twin agreed every hour, so the
+fault was the round trip and not the simulation. One tick after the load a drafted colonist who had
+joined a fight (§15) had not moved: every saved and hashed field matched, her progress through a
+step 69,050 in the loaded world and 71,304 in the other.
+
+`Job_AttackMelee` has five branches that **let a step already under way land** before they decide
+(`if (!boundary) return Ongoing`): the join ended, in reach, the hold out of reach, and the building
+mode's in-reach and every-side-held. They rely on the mover to finish the step along the path she
+holds. **A path is never saved** (`MovementSystem`), and a driver that walks re-asks for one through
+`GotoCell` — but these branches wait rather than walk, so a pawn loaded in reach part way through a
+step held no path, nothing asked for one, and she stood frozen until her target moved away.
+
+**Fixed**: `LandTheStep` asks for the path again when she has none and none is pending; it is served
+before anybody steps in the same tick. A world that was never loaded always holds one there, so it
+changes nothing in play: **no golden moved, and the gate's three final hashes were identical to the
+digit before and after the fix.** `AttackDriverTests.ASaveTakenMidStepInReachResumesTheSame` finds
+that moment in a three-against-two fight and saves there; without the fix it fails one tick on (the
+loaded attacker 2,096 into the step against 4,192). `docs/bug-patterns.md`, 2026-09-24.
+
+Nothing else broke. No invariant failed on any seed, nobody was freed from a wall, and nobody died.
+
+### 21d. The numbers
+
+| Seed | Drafts | Swings at pawns | Downed (colonists) | Died | Got up | Rescues (failed) | Buildings broken | Thefts | Colonists at day ten | Longest at a building | Longest unrescued |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 4 | 220 | 7 (5) | 0 | 1 | 5 (1) | 16 of 16 | 12 | 0 up, 5 down | 95 | 0 |
+| 2 | 9 | 420 | 14 (5) | 0 | 4 | 5 (1) | 16 of 16 | 8 | 0 up, 5 down | 95 | 2,500 |
+| 3 | 6 | 327 | 12 (5) | 0 | 3 | 5 (2) | 16 of 16 | 7 | 2 up, 3 down | 95 | 0 |
+
+22–62 s a seed for the colony and its twin, on a machine that was not quiet, so the Long tier grew from 41 tests in 1 m 44 s to
+44 in 3 m 03 s. The final hashes are in `docs/milestones/soak-runs.md`.
+
+**The colony loses, and that is for the owner.** Ten days of raids leave two seeds of three with
+every colonist down. On seed 1 an armed, drafted squad of four gathered at the start lost to three
+bandits on day one; the other two seeds' squads downed nine and seven bandits over the run. Every
+number in the fight is INVENTED (§1), so this reads the tuning, not the code: a bandit carries a
+machete and is dealt its level like anybody, and a colonist's weapon is a roll. Whether three
+bandits should beat four armed colonists is a playtest question (the queue).
+
+**What the gate does not cover**: animals in the fight (the bare board has none), a colonist
+ordered to kill (every death here would be a fault), kidnap (seamed, §17f), and anything drawn — the
+frame is §21e.
+
+### 21e. What a fight costs
+
+**The tick** (`TickBenchmarkTests.FiftyAgainstTenOnTheBigBoards`, new, and `TwentyAgainstTwenty` beside
+it; Explicit; the Windows dev machine, AMD Ryzen 7 9800X3D, CoreCLR, **alone** — no Unity process and
+the CPU at 5 % when it started; two runs, the swings identical to the digit and the times within the
+spread shown). **Not the room lattice**: these colonies are built by `ColonyWorld.Build` on the played
+map (barren and wooded), so the region counts — 24,412 on the scale target, 8,690 on Huge — are a
+generated board's, and the figures compare with the game rather than with the class's lattice arms.
+Fifty colonists and the board's own animals (23 and 20):
+
+| Board | At peace | Fifty against ten | Fifty drafted against ten | Fight over peace |
+|---|---|---|---|---|
+| 250 × 250 × 40 | 0.096–0.108 ms | 0.158–0.187 | 0.186–0.189 | +0.05–0.09 ms |
+| Huge 240 × 240 × 16 | 0.093–0.098 | 0.117–0.125 | 0.160–0.174 | +0.02–0.03 ms |
+| 120 × 120 × 16, twenty against twenty (bare, the older row) | 0.036 | 0.087 | 0.091 | +0.05 ms |
+
+The whole tick stays under **0.19 ms** in every arm. The dearest part is the drafted hold: its Pawns
+phase is 0.073–0.081 ms against 0.022–0.028 undrafted, because each drafted colonist scans the pawns
+every tick for a threat beside her or a fight to join (§15f) — fifty drafted is fifty scans of eighty
+pawns. It scales with drafted × pawns and is a tenth of a millisecond at this size; the day a colony
+drafts hundreds it is the number to watch.
+
+**The frame** (`FrameTimeTests`, measured inside the full PlayMode tier, which started with no other
+Unity process on the machine and the CPU at 7 %; 640 × 480, RTX 5070 Ti):
+
+- **A fight in view** (`TheFrameWithAFightInView`): peace **1.79 ms**, brawl **2.24 ms**, 738 → 762
+  draw calls. The difference is the figures (0.111 → 0.238 ms) and the overlays (0.010 → 0.033). At the
+  C2 integration the same arm read 2.06 → 2.29 (§6E): the frame is faster underneath and the fight
+  itself dearer by about 0.2 ms, which is the reactions, the draw and sheathe and the criticals the
+  playtest rounds added (§8b, §9a–§9c).
+- **Blood at its cap** (`TheBloodAtItsCap`, 200 marks): **1.87 → 1.95 ms**, 738 → 741 draw calls, three
+  of them blood — §10d's ceiling holding.
+- Not at a play resolution and not on the target laptop, like every frame number here.
+
+## 22. A blunt weapon swings (2026-09-25, `claude/blunt-swings`)
+
+The owner: *"correct crowbar and baseball bat not to have the stabbing motion — only swinging type
+moves can be used with these weapons."* The bat and the crowbar are the only two weapons whose
+`style` is `Heavy`, and the heavy row alternated `HeavyCombo01A` with **`HeavyStab01`**, so every
+second blow with either was a thrust, for colonists and bandits alike.
+
+**The heavy row is `HeavyCombo01A`, `B`, `C` now**, played in turn like the light row, and nothing
+the game draws uses the stab. The owner chose the pack's own three-step heavy combo over repeating
+`A` (monotonous in a long fight) and over adding `HeavyFlourish01`; the blades keep their three light
+swings untouched. The combo is three steps for both families, so `StartSwing`'s literal
+`heavy ? 2 : 3` is gone and both read `CombatVariant.Combo.Length`.
+
+### 22a. Measured before it went in
+
+`B` and `C` had never been looked at, and a clip's name is the only thing that said it was a swing.
+`HeavySwingSheet` (`scripts/unity.sh shot Odyssey.EditorTools.HeavySwingSheet.Shoot`) plays each
+clip on a real body and tracks the right hand over the Hit cut, with the stab as the negative
+control and `LightCombo01A` as the positive:
+
+| Clip | Along the arm | Arm turns | Reads as |
+|---|---|---|---|
+| `HeavyStab01` (control) | 70 % | 49° | a thrust |
+| `LightCombo01A` (control) | 36 % | 145° | a swing |
+| `HeavyCombo01A` | 18 % | 126° | a swing |
+| `HeavyCombo01B` | 23 % | 114° | a swing — a two-handed overhead chop |
+| `HeavyCombo01C` | 22 % | 102° | a swing — a two-handed overhead chop |
+
+**The first metric was blind and was thrown out**: the hand's forward share *before* the impact
+scored the stab 59 % forward with a 93° arc — a swing — because the wind-up turns the body. A thrust
+is told from a swing by whether the hand moves along the arm or across it *during* the blow. The
+contact sheet (`docs/reference/screenshots/2026-09-25-heavy-swings.png`) agrees with the numbers.
+
+### 22b. What the probe found on the way: `HeavyCombo01C` had no impact
+
+The pack misspells one cut: `A_Attack_HeavyCombo01CWindUp_Sword`, no underscore before `WindUp`.
+`PlayScene.MeasureImpact` asked only for the spelling every other file uses, found nothing and
+returned **0 s**, so `C` would have been scaled to land its blow at the very start of its own
+wind-up. It reads the unscored spelling too now: 0.933 s, which is (140 − 112) / 30 off the
+importer. `AClipsImpactLandsOnTheWindupTick` passed a zero trivially and now also requires every
+swing clip's impact to be above zero.
+
+### 22c. Do not undo by tidying
+
+- **`ABluntWeaponOnlySwings`** reads the weapons off the content, not two names: any item whose
+  `damageKind` is `Blunt` is held to a swing row with no `Stab` clip in it, so a third blunt weapon
+  is covered the day it is added. It also holds both swing rows to exactly the combo's steps, so no
+  step falls back to the computed pose. Clip names are committed, so it runs on the runner too.
+- **The catalogue change is ten lines.** Rebuilding it drops every colonist's `appearance` block
+  unless `CharacterSwatches.Classify` follows (`docs/lessons.md`); rebuilt-and-classified, it is
+  byte-identical to the committed asset apart from line endings.

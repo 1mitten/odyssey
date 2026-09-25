@@ -280,10 +280,18 @@ namespace Odyssey.Sim.Contracts
         /// <summary>
         /// Debug-menu-only (design 33 §9i): every colonist standing with nothing in her hand takes a
         /// random melee weapon into it at once — made beside her and taken straight up, as a
-        /// marauder is armed at spawn. Colonists already holding one keep it. No arguments. Not
+        /// bandit is armed at spawn. Colonists already holding one keep it. No arguments. Not
         /// player content; not applied while paused, like the other debug spawns.
         /// </summary>
         DebugArmColonists,
+
+        /// <summary>
+        /// Set what one colonist does about danger near her while undrafted (design 33 §18c):
+        /// <c>A</c> is her <c>PawnId</c> value and <c>B</c> the response — 0 fight back, 1 defend,
+        /// 2 flee. A standing setting, not an order to act: it may be set on any colonist, drafted,
+        /// downed or not. Handler: <c>JobSystem.HandleSetHostilityResponse</c>.
+        /// </summary>
+        SetHostilityResponse,
     }
 
     /// <summary>
@@ -368,6 +376,10 @@ namespace Odyssey.Sim.Contracts
             IntentKind.OrderAttack => true,
             IntentKind.OrderEquip => true,
             IntentKind.OrderRescue => true,
+            // A colonist's response (design 33 §18c): a setting over a colonist, on a pane you open
+            // while paused, and a button that read one thing while the world did another until you
+            // pressed play would be the slab fault again.
+            IntentKind.SetHostilityResponse => true,
             _ => false,
         };
     }

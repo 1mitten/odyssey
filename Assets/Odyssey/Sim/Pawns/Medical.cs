@@ -365,17 +365,21 @@ namespace Odyssey.Sim.Pawns
                         return JobStatus.Ongoing;
                     }
 
-                    // Beside her rather than on her: she is lying in the cell.
+                    // Beside her rather than on her: she is lying in the cell. No free cell beside
+                    // her (a packed bed row, §12a) fails the toil rather than overlapping the
+                    // patient — the giver picks somebody else, or the same patient once a
+                    // neighbour clears.
                     Job.DestCell = patient.Cell;
                     int stand = FellJobDriver.StandBeside(ctx, Pawn, patient.Cell);
-                    if (stand < 0) stand = patient.Cell;
-                    if (StillInReach(ctx, Pawn, patient.Cell, 0, 0))
+                    if (Pawn.Cell != patient.Cell && StillInReach(ctx, Pawn, patient.Cell, 0, 0))
                     {
                         Pawn.ClearPath();
                         Pawn.Destination = -1;
                         NextToil();
                         return JobStatus.Ongoing;
                     }
+
+                    if (stand < 0) return JobStatus.Failed;
 
                     JobStatus walk = GotoCell(ctx, stand);
                     if (walk == JobStatus.Succeeded) NextToil();

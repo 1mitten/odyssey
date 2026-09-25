@@ -5,6 +5,7 @@
 #   scripts/test-fast.sh --filter TestCategory=Long   run the slow ones
 #   scripts/test-fast.sh --filter Name~Def      run a subset (dotnet test filter syntax)
 #   ODYSSEY_TEST_ALL=1 scripts/test-fast.sh     run everything, Long included
+#   scripts/test-fast.sh --project sim|hud      one of the two projects (CI runs them apart)
 #
 # The default excludes TestCategory=Long, which is where soak runs, scale-target round trips and
 # anything else measured in seconds lives. That boundary is the reason the default tier stays
@@ -16,8 +17,9 @@
 #
 # Why this exists: Unity batchmode spends tens of seconds booting the editor, refreshing the
 # asset database and reloading the script domain. The tests themselves take about 0.06 seconds.
-# Filtering which tests Unity runs saves nothing; not starting Unity saves everything. This
-# tier is for the inner loop. scripts/unity.sh test editmode remains the authoritative gate,
+# Not starting Unity saves the most; filtering what Unity runs saves only the tests' own time, which
+# was nothing when this was written and is 87 of EditMode's 91 seconds now (2026-09-24), so CI
+# does both (docs/process.md §5). This tier is for the inner loop. scripts/unity.sh test editmode remains the authoritative gate,
 # because only Unity proves the assembly definitions and the editor-facing code.
 #
 # The Unity install ships a .NET *runtime* but not an SDK, so this needs a real SDK on the path
@@ -29,10 +31,25 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-PROJECTS=(
-  "tools/dotnet/Odyssey.Tests.Sim/Odyssey.Tests.Sim.csproj"
-  "tools/dotnet/Odyssey.Tests.Hud/Odyssey.Tests.Hud.csproj"
-)
+SIM_PROJECT="tools/dotnet/Odyssey.Tests.Sim/Odyssey.Tests.Sim.csproj"
+HUD_PROJECT="tools/dotnet/Odyssey.Tests.Hud/Odyssey.Tests.Hud.csproj"
+PROJECTS=("$SIM_PROJECT" "$HUD_PROJECT")
+
+# --project sim|hud picks one; it is ours, so it is taken out before the rest go to dotnet test.
+ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --project)
+      case "${2:-}" in
+        sim) PROJECTS=("$SIM_PROJECT") ;;
+        hud) PROJECTS=("$HUD_PROJECT") ;;
+        *) echo "test-fast.sh: --project takes sim or hud" >&2; exit 2 ;;
+      esac
+      shift 2 ;;
+    *) ARGS+=("$1"); shift ;;
+  esac
+done
+set -- "${ARGS[@]+"${ARGS[@]}"}"
 
 has_sdk() {
   # A runtime-only install answers --list-sdks with an error on stdout and still exits 0, so

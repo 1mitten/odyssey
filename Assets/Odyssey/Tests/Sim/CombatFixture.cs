@@ -14,11 +14,13 @@ namespace Odyssey.Tests.Sim
     {
         public static readonly GridSize Size = new GridSize(60, 60, 16);
 
-        public static ColonyWorld Board(int colonists = 2, uint seed = 7u)
+        /// <param name="beds">A bed each unless a test says otherwise: a bandit with nobody standing
+        /// attacks the colony's buildings (design 33 §14b), so a test of it idling has none.</param>
+        public static ColonyWorld Board(int colonists = 2, uint seed = 7u, int beds = -1)
         {
             ScenarioDef scenario = ScenarioDef.Bare();
             scenario.colonists = colonists;
-            scenario.beds = colonists;
+            scenario.beds = beds < 0 ? colonists : beds;
             return ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: false);
         }
 
@@ -173,7 +175,13 @@ namespace Odyssey.Tests.Sim
         public sealed class HookCounter : ICombatListener
         {
             public readonly List<string> Heard = new List<string>();
-            public int DamageCount, DownedCount, DiedCount, LastCorpse;
+            public int SwingCount, DamageCount, DownedCount, DiedCount, LastCorpse;
+
+            public void SwingResolved(in SwingReport report)
+            {
+                SwingCount++;
+                Heard.Add("swing:" + report.Target.Id.Value);
+            }
 
             public void DamageApplied(in DamageReport report)
             {

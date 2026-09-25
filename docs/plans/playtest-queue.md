@@ -23,6 +23,370 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do the bat and the crowbar only swing?** (`claude/blunt-swings`, design 33 §22.) Debug menu >
+  Spawn 3 bandits, arm a colonist with a bat and another with a crowbar (*Arm every colonist*, or
+  right-click > Equip), draft them and order attacks. Watch several blows in a row: each should be
+  a big two-handed swing or overhead chop, cycling through three different ones. A wrong answer is
+  any blow that thrusts the weapon straight forward, a blow that lands before the swing reaches the
+  target (the third one especially, whose timing was broken until now), or the machete and blade
+  swinging differently from before.
+
+- **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
+  Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest
+  over bare arms and black trousers, and carry a crowbar or a bat; click one and the pane shows a
+  name, "bandit" under it and a masked portrait. Zoom out past the figure cap (or spawn a crowd):
+  a far bandit keeps the helmet and the red. A wrong answer is hair or a beard poking through the
+  helmet, a vest that is still camo, trousers that are red, a far bandit in camo or the white
+  jumpsuit, or three bandits you cannot tell from colonists at play distance.
+
+- **Do the streams and ponds read as water with a natural edge?** (`claude/meadow-shorelines`,
+  design 38 §24.) New game; pan to the nearest stream and a pond, close in and pulled back.
+  **Look for** a shoreline that curves and cuts corners instead of following the cells, marsh as a
+  soft dark band rather than pale tiles, a pond's deep middle as a darker blob, and murky green-teal
+  water like the reference. Walk a colonist along a bank. **A wrong answer looks like:** a staircase
+  still visible along a diagonal stream; pale slivers or wedges at the water's edge; a colonist
+  standing in the water or floating over a bank; a waterfall missing or cut short; or the water too
+  dark to read as water at dusk.
+- **Can you click any water tile now, and does the water move?** (`claude/meadow-shorelines`,
+  design 38 §24f.) Click shallow water, deep water, a one-cell pool and the edge of a stream: each
+  should select the water tile. Click the grass beside it: that should still select the bank. Watch
+  a stream for a few seconds, then a pond, then pause. **Look for** light streaks drifting downstream,
+  gentle swells on ponds, a soft rim at the edge that slowly brightens and fades, and everything
+  holding still on pause. **A wrong answer looks like:** a click on water selecting the bank or the
+  tile beyond it; streaks flowing uphill or away from a fall; motion that reads as clouds or noise
+  rather than water; or water still moving while the game is paused.
+
+- **Does the title screen's dock read well, and does Exit ask?** (`claude/settings-frame`, design
+  40.) Press Play. A dark panel down the left edge with the layered mark and ODYSSEY, four
+  coloured buttons and the build line at the foot, the starfield clear to the right. New game should
+  already be lit, so Enter starts a game; Up and Down move the light. Hover each button: it fills in
+  its colour with a bar on its left. Settings opens the centred window over the dock, and closing it
+  leaves Settings lit. Exit game asks "Exit game?" with only Exit and Cancel. A wrong answer is the
+  wordmark touching the dock's edge or wrapping, the starfield dimmed, the load list not fitting the
+  dock, or Exit closing the game without asking.
+- **Is the settings window one steady box, and can it be driven from the keyboard?**
+  (`claude/settings-frame`, design 39.) Open Menu > Settings and click through all five tabs: the
+  window should not move or change size at all, and should sit dead centre. Save, Save as, Load,
+  Quit to main menu and Exit game appear once, at the foot of the rail. Then press Tab and use the
+  arrows, Enter and Space to change a setting without the mouse: a white ring should follow you, and
+  the camera should not pan and the game should not pause while it does. A wrong answer is a window
+  that shifts as you change tab, a Keys tab with a scrollbar, a ring that jumps two rows for one
+  arrow press (the engine moving focus as well as us), or Space pausing the game from a switch.
+- **Trees grouped and simpler far away** (`claude/meadow-trees`, design 38 §23). On Huge, zoom right
+  out and pan across woods, then back in. **Look for** a smoother frame when zoomed out and trees
+  that look the same up close. **A wrong answer looks like:** trees flickering or missing at the
+  screen edge, a visible pop as distant trees change detail while you zoom, or a felled tree that stays
+  standing for a frame.
+
+- **Does zooming out over Full grass feel smoother, and does anything flicker or vanish?**
+  (`claude/meadow-grass-perf`, PR #195, design 38 §22). Grass → Full, zoom slowly from the start out to the
+  farthest pull and pan along the board's edge, watching the overlay's `frame` and `gpu`. The scenery
+  (grass, flowers, bushes) is now drawn from GPU buffers. **A wrong answer looks like:** a patch of flowers
+  or a bush that vanishes at the screen's edge or pops in late; grass that flickers while panning; a stutter
+  when a colonist digs, builds or a crop grows; or no smoother than before at the far zoom.
+
+- **Should four armed colonists lose to three bandits?** (`claude/combat-c7`, design 33 §21d,
+  `docs/milestones/combat-report.md` §5.) **Every combat row from here down is on `main` since PR
+  #194**, whatever branch it names; the combat plan is done and these are what is left of it.
+  - *Set-up.* New game, five colonists. Debug menu: *Arm every colonist*, then draft them all and
+    move them together. *Spawn 3 bandits* about twenty cells off.
+  - *What the gate saw.* On one seed of three the gathered squad of four lost to the three; on the
+    other two the squads downed nine and seven bandits over ten days. Every number in the fight is
+    invented, so this is the tuning speaking.
+  - *A wrong answer looks like* an armed squad that feels hopeless against three (the bandits too
+    strong — their level, the machete, or the colonists' weapon roll), or three bandits that never
+    get a colonist down (too weak). Say which, and roughly how many a squad of four should beat.
+- **Does the landing ring read, and does a drag across the roster select the squad?**
+  (`claude/draft-ring-roster-drag`, design 33 §20.)
+  - *Set-up.* Any colony with four or more colonists. Draft them all.
+  - *Expect.* Select the squad and right-click the ground: under each colonist's own destination a
+    **pale ring** snaps in from wide, flashes once as it lands, stays faint while she walks, and
+    fades as she arrives. Sent somewhere else mid-walk, the old ring fades as the new one snaps.
+    Undraft mid-walk and it fades. The red attack ring (right-click a bandit) still looks like
+    the same family in a different colour.
+  - *Then the roster.* With no tool armed, press on one card and drag across three more: all four
+    are selected, the first as the one in the pane, and the camera does not move. Drag back: the
+    cards behind the pointer drop out. A plain click still selects one and jumps the camera, **on
+    the release now rather than the press**. Shift-drag adds to what was selected. Right-drag still
+    swaps two cards.
+  - A wrong answer looks like any of these:
+    - the ring lost on grass, snow or a lit floor, or read as the selection cursor;
+    - a ring that pops rather than snaps, never flashes, or hangs about after she has arrived;
+    - a pale ring and a red line that read as two unrelated marks;
+    - a drag that selects only the first and last card, or toggles cards out;
+    - the camera swinging to the first card during a drag, or a click that no longer jumps;
+    - a right-drag that selects instead of reordering.
+
+- **Do three bandits all get to work, and does a squad go upstairs?** (`claude/combat-stall-fix`,
+  design 33 §19.)
+  - *Set-up.* Load a save with a building on a terrace (the owner's `the-latest-tim` will do), wall
+    the colonists in or put them behind a shut door, and let three bandits come.
+  - *Expect.* Each bandit breaks something: one at a wall with a single side, the others at other
+    walls. None stands on *Fighting* with nothing to hit for more than a moment. No bandit or
+    colonist walks through a wall after a load.
+  - *Also check:* draft the squad, select them all and right-click the upper floor of a two-storey
+    building: all go up, on that floor, none to the room below or the ground outside. Then
+    right-click the ladder itself and see whether the attack it starts (§13i) is what you want.
+
+- **Does a bandit steal and leave?** (`claude/combat-thieves`, design 33 §17.)
+  - *Set-up.* Let a bandit down every colonist, with no walls, doors or other buildings of yours
+    about (beds are fine: it leaves them alone), and a few stacks lying around — the starting meals
+    will do.
+  - *Expect.* It walks to the nearest stack, stoops and lifts it, and walks off with it in its
+    arms to the nearest edge of the board. Its activity line reads *Stealing · Meal × 12*. At the
+    edge it vanishes, with no body, and the Events panel shows a red **Theft · Meal × 12** row with
+    the negative chime; clicking it jumps the camera to where it left.
+  - *Also check:*
+    - with nothing on the board to take, it walks off empty-handed and the panel says **Bandit
+      left**, in the neutral colour;
+    - knock it down while it carries something and the stack is dropped where it falls;
+    - spawn a colonist from the debug menu while it is walking off: within about five seconds it
+      drops the stack and goes for her;
+    - the debug menu's Events tab lists the two drops and nothing new.
+  - A wrong answer looks like any of these:
+    - a bandit that stands about for ever with everybody down and stacks lying in the open;
+    - one that takes a stack while a colonist it could reach stands in the open, or while it has
+      a wall of yours to break;
+    - the stack still drawn on the ground after it is lifted, or nothing in its arms;
+    - a body left at the edge, or colonists upset as if somebody had died;
+    - the stack still in the colony's stock after it has gone.
+  - Three things to judge.
+    - **It walks, it does not run.** A thief that ran would be hard to catch. Say which.
+    - **Its machete goes with it.** Say if a thief should drop its weapon at the edge instead.
+    - **It takes the nearest stack, whatever it is**: a pile of stone is as good as the meals.
+      There is no value yet; say if the choice reads as stupid.
+
+- **Does the ring now mean only your orders?** (`claude/combat-response`, design 33 §18b.)
+  - *Set-up.* Draft two colonists and select both. Spawn a bandit beside one of them from the
+    debug menu, and another on an undrafted colonist about five cells from them.
+  - *Expect.* No red ring while they fight of their own accord — the one striking the bandit
+    beside her, the other running over to help. Right-click the bandit: the ring snaps in, as
+    before. Rescue a downed colonist: no ring, and she is still carried in the arms.
+  - A wrong answer looks like any of these:
+    - a ring under a bandit nobody right-clicked;
+    - no ring after a right-click on one;
+    - a rescued colonist left on the ground or standing at the carrier's feet — the carrier lookup
+      moved to a new aspect, and only Unity can say it still finds her.
+
+- **Do Defend and Flee do what their names say?** (`claude/combat-response`, design 33 §18c–§18e.)
+  - *Set-up.* Select a colonist and press the new button beside Draft on her pane: it reads
+    *Fight back*, then *Defend*, then *Flee*, then round again. Box-select three and press it
+    once: all three should read the same.
+  - *Defend.* Put a colonist on Defend while she works. Spawn a bandit on another colonist
+    about five cells from her. She drops her work, runs to it and fights it; when it is down she
+    goes back to work. She is never drafted: no diamond, no four-hour clock.
+  - *Flee.* Put a colonist on Flee and spawn a bandit about six cells from her. She drops her
+    work and runs, well away; when it is down or far off, she goes back to work. Struck, she runs
+    rather than fighting back.
+  - *Fight back.* The default does what it always did: works on until she is struck.
+  - A wrong answer looks like any of these:
+    - a colonist at Defend who watches a friend being beaten five cells away;
+    - one who comes from across the map;
+    - one who drafts herself, or stands about after the fight instead of working;
+    - a colonist at Flee who fights while she has room to run;
+    - one who runs from a hog that is only rooting about;
+    - one who never stops running once the danger is gone;
+    - the button's label overlapping Draft or running off the pane (three buttons now share that
+      header, and nothing in the fast tier can measure it).
+  - Three things to judge.
+    - Whether a setting per colonist is enough, or the colony-wide rules panel you mentioned is
+      wanted now (deferred, §18a).
+    - Whether Flee's eight cells is too far or not far enough (it is the help radius).
+    - Whether the button showing the *current* response reads well beside Draft, which shows
+      what pressing it will *do*.
+
+- **Do drafted colonists come to help?** (`claude/combat-drafted-help`, design 33 §15.)
+  - *Set-up.* Draft two or three colonists and leave them standing within about eight cells of a
+    colonist who is **not** drafted. Spawn a bandit beside her from the debug menu.
+  - *Expect.* As soon as it is on her, the drafted ones run to it and fight it, each on a free side.
+    When it goes down they stand where they are, still drafted.
+  - *Also check:*
+    - a drafted colonist further off than about eight cells stays where she is;
+    - one walking to a cell you clicked keeps walking, and joins only once she has stopped, if the
+      fight is within eight cells of where she stopped;
+    - an undrafted colonist nearby carries on with her own business;
+    - a Ctrl-attack between two colonists draws nobody.
+  - A wrong answer looks like any of these:
+    - drafted colonists who watch a colonist being beaten a few cells away;
+    - helpers who come from across the map;
+    - two helpers on one tile;
+    - a helper who walks back to where she stood before the fight;
+    - one who chases a hog that has calmed down;
+    - one who undrafts herself the moment a long fight ends.
+  - Two numbers to judge.
+    - ~~A **selected** helper shows the red lock-on ring~~ — answered 2026-09-24: the ring means
+      only your orders, and a helper wears none now (design 33 §18b; the row above).
+    - Eight cells (20 m): say if it is too far or not far enough.
+
+- **Does a bandit break in, and do the weapons feel different on wood and stone?**
+  (`claude/combat-owner-round`, design 33 §14b, §14d.)
+  - *Break in.* Build a small room of wooden walls with **no door** round a colonist, or down
+    every colonist. Then spawn a bandit from the debug menu. It should walk to the nearest wall
+    you built and beat it down: floating numbers, the thud, and the wall gone with nothing left
+    behind.
+  - *Look up.* Take down another wall of the room yourself, or send a colonist out. Within a few
+    seconds it should leave the wall and go for her.
+  - *Weapons.* Order a drafted colonist with a machete on to a wooden wall, then on to a stone
+    one; do the same with a bat.
+    - The machete should chew through wood (about 10 a blow) and barely mark stone (about 4).
+    - The bat should do better on stone (about 9) than on wood (about 7).
+    - Her Melee should not rise while she does it.
+  - A wrong answer looks like any of these:
+    - a bandit that idles beside your walls;
+    - one that attacks a wall while a colonist it could reach stands in the open;
+    - one that keeps at a wall for a long time after a way in has opened;
+    - one that goes for a ruined-city wall;
+    - the same numbers from every weapon on every wall.
+  - Since §16 (`claude/combat-bandit-doors`) a closed door holds it and it leaves beds alone;
+    the row below is the test for both.
+
+- **Does a door hold a bandit, and does it spare the beds?** (`claude/combat-bandit-doors`,
+  design 33 §16.)
+  - *The door.* Build a small room of wooden walls **with a door**, put a colonist inside and
+    draft her so she stays. Spawn a bandit outside, on the door's side. It should walk to the
+    door and beat it down — it never opens it — then go in for her.
+  - *The far side.* Do it again with the bandit on the side away from the door. It should break
+    the nearest wall, not walk round to the door. That is the rule as decided (§16e); say if it
+    reads as stupid, because that is the question a smarter breach would answer.
+  - *Following in.* Undraft her and let her walk out while the bandit is near. It may follow
+    her through the open door; that is expected.
+  - *Beds.* Build a bed, then let a bandit down every colonist. It should stand about or
+    wander, and not touch the bed. Build a wall near it and it should go for the wall. Then
+    order a drafted colonist on to the bed: the order still works.
+  - A wrong answer looks like any of these:
+    - a bandit standing in a doorway, or a door swinging open for it;
+    - one that idles outside a closed door with a colonist behind it, and breaks nothing;
+    - one that walks round a room to reach its door rather than breaking the nearer wall;
+    - a bed with floating numbers over it and nobody ordered to strike it;
+    - a hog walking through a closed door, or a colonist or a rat unable to.
+
+- **Does friendly fire feel like anything?** (C5, `claude/combat-phase4`, design 33 §12). Draft a
+  colonist, Ctrl + right-click another: she is attacked, fights back, and her mood drops by about 8
+  points for a day (the Needs panel's mood; the Thoughts tab that would name it is still disabled).
+  Let a colonist die: every other colonist's mood drops by about 6 for three days, and a
+  bandit's death moves nobody. A wrong answer is no drop, a drop for a bandit, or a drop that
+  stacks up on every blow. **Since the owner's answers (§14, `claude/combat-owner-round`)**: a
+  swing that misses or is dodged gives the drop too, and a second swing renews the day rather than
+  stacking. Both sides of a fight carry it.
+
+- **Does blood read as blood, and is it too much?** (`claude/combat-blood`, design 33 §10).
+  *Arm every colonist*, *Spawn 3 bandits*, and watch at the play camera's distance. Every landed
+  hit should throw a few red drops from the wound along the blow and leave one mark where they
+  land: a machete or arc blade a long splatter with drops thrown ahead, a bat, crowbar or fist a
+  smaller round spot. Somebody going down should get a pool under the middle of the body a moment
+  after they land, spreading over a few seconds; a death's pool is larger. Pause: the drops hang.
+  Run the day on at speed three: the marks thin and are gone by the next day. Slice down a layer:
+  they hide with it. A wrong answer is drops too small to see or so many they read as a particle
+  effect, a mark that looks like a hole or a shadow rather than blood, a pool at the feet rather
+  than under the body, marks sunk into a slope or floating over one, or a battlefield that is red
+  from edge to edge after one fight (the cap is 200, oldest first).
+- **No more orange suits past 64 colonists?** (`claude/pawn-ceiling`, PR #175, design
+  `29-modular-colonists.md` §13a.) Spawn about 100 colonists from the debug menu, pull the camera out
+  and pan across the colony. Everyone should be in the white uniform, near and far. A wrong answer
+  looks like some colonists in burnt orange, or clothes flicking as you pan. Two things are expected
+  and are not faults: a far colonist's **skin tone and hair colour** can still change as they cross
+  the cap (recorded, not fixed), and the debug menu **stops spawning at 200**.
+
+- **Bushes stay, and grass at distance is cheaper** (`claude/meadow-grass-perf`, design 38 §21).
+  Walk colonists through and past bushes: **the bush stays solid** — if it fades or vanishes, the
+  dressing is still in the sight fade. Then Settings → Graphics → Grass → **Full**, overlay on
+  (backtick), and zoom out to the farthest pull and back: the near meadow looks as it did, the far
+  field thins smoothly as you pull back and fills in as you come close — **a wrong answer is clumps
+  popping in or out at a line, or the far field reading bald**; and `gpu` at the farthest pull should
+  be lower than before this branch. Trees still fade for colonists.
+
+- **Do the terraces read as slopes?** (`claude/meadow-skin`, design 38 §20). New game; walk the
+  camera along a hillside and a stream. The steps between terraces should read as grassy slopes, the
+  stream banks should run down into the water, and there should be no line where the board meets the
+  land around it. **A wrong answer looks like:** a gap or a dark crack between cells; a slope that
+  flickers where it meets flat ground; a colonist, item or tuft of grass sunk into a slope or floating
+  over it; a click on a slope picking the wrong cell; the meadow a different green from before.
+
+- **Is a dropped stack or a fallen colonist easy to see now?** (`claude/meadow-look-polish`,
+  design 38 §19a). Drop a stack on long grass and next to a bush; let a colonist sleep outdoors (or
+  get downed). The grass should lie flat in a ring round each, and a bush over one should fade to a
+  ghost. **A wrong answer looks like:** the stack or body still half-hidden (the ring is too small),
+  a bald patch much bigger than the thing, or a square of ghosted ground under it.
+- **Do trees fade for colonists you have not selected?** (design 38 §19b). Let colonists walk into a
+  wood with nothing selected. Crowns between the camera and any of them should ghost. **A wrong answer
+  looks like:** only selected colonists get the fade, or whole walls and ground ghost round unselected
+  ones.
+- **Does the land beyond the board read wooded?** (design 38 §19c). Zoom right out over an edge of
+  the board. **A wrong answer looks like:** bare lawn past the rim — then check Settings → Graphics →
+  Surround is on and send a screenshot, because our photographs show wood there.
+
+- **Can you see a colonist through a tree now?** (`claude/meadow-look-fixes`, design 38 §17c). Walk
+  a colonist behind a tree and a bush: the leaves should fade to a faint ghost (about 15%) with the
+  trunk, soft rather than dotted, and come back when the colonist leaves. **A wrong answer looks
+  like:** the crown still hiding the colonist (the ghost is not reaching it), a dotted screen-door
+  pattern, or the tree flickering as a colonist walks along its edge.
+- **Are the lines gone from the terraces?** (same). The steps, banks and stream edges should have no
+  black line; colonists, walls, furniture, piles and rock outcrops keep theirs. **A wrong answer looks
+  like:** a black line still along a step (a terrain left off the ground shader), or a colonist or a
+  pile that has lost its outline (something missing from the normals prepass).
+- **Is there enough colour in the trees?** (same). Mostly greens, with gold and orange stands and
+  the odd red, varying tree to tree. **A wrong answer looks like:** trees all one colour again, the
+  autumn reading as brown or olive, or colour changing tree by tree so evenly it looks like confetti
+  rather than stands.
+
+- **Does the meadow look like the Synty screenshot now?** (`claude/meadow-look-dressing` with the
+  ground-and-light half, design 38 §17). New game; zoom out to about the reference's height. Look
+  for: Meadow trees in stands (birches in autumn colour, round meadow trees), round bushes across the
+  meadow and at wood edges, tall-grass stands, wildflowers, stones by rock — as patches, not a
+  sprinkle. Then at 3840 x 2160 on **High** on a **Huge** board, backtick for the overlay: **`gpu`
+  under about 16 ms** holds 60 fps; the batch arm read 19 ms with other Unity runs on the machine.
+  **A wrong answer looks like:** trees or bushes with black scribbled edges (ink on the leaves);
+  a sprinkle of the same bush in rows; grass hiding a dropped item (it should part round it); the
+  colours dark and olive (that is the light, judged with the ground half); Huge High well over 16 ms.
+
+- **Does the ground read like the Meadow screenshots now?** (`claude/meadow-look-ground`, design 38
+  §17a, integrated into the look PR). New game, default camera, then watch a day go by. Look for:
+  the ground painted in patches — grass, clover, yellow flowers here and there — with no grid of
+  tiles, in a bright yellow-green rather than lime; shade soft and cool rather than dark. **A wrong
+  answer looks like:** a repeating pattern you can see at the default zoom (the 4 m repeat is too
+  small); flowers everywhere rather than in patches; the ground washing out or turning too bright
+  at midday (the Meadow light is too strong — one number, `Daylight.MeadowSunScale`); or dawn and
+  dusk looking different from before (they should not have moved at all).
+
+- **Does the Meadow grass read as grass, and is this the grass to judge?** (PR for
+  `claude/meadow-m3-foliage`, design 38 §16) **This is the first branch to test grass in.** New game,
+  play camera. Three things: (1) the meadow reads as grass and the green is the lighter spring green
+  you asked for — if it reads as grey fuzz or olive, the grade is the one number to move; (2) it
+  sways, and **stops dead when you pause** — if it keeps moving, the wind is on wall time; (3) drop
+  or haul a stack onto grass, and designate a tree: **the grass clears in a small ring round each** —
+  if a log disappears into the grass, the clearance is not reaching the drawn view. Density is
+  unchanged (full cover is M4), and trees are still the old ones (M5).
+
+- **Grass → Full: the first grass you can see change** (`claude/meadow-m6-presets`, design 38 §13,
+  §15). New game on the default meadow, the camera at its starting zoom over the clearing. Settings
+  → Graphics → **Grass**: press **Meadow** (today's grass), then **Full**, then **Off**, a few
+  seconds apart, with the overlay (backtick) showing `gpu`. **Full** should read as a meadow mostly
+  covered, soil showing only in patches, about 1 ms dearer on the GPU than Meadow at 4K; **Off**
+  should be bare ground. The grass redraws a few chunks at a time, so it spreads across the screen
+  over a second rather than switching at once. **A wrong answer looks like:** Full no thicker than
+  Meadow (the ladder is not reaching the renderer); the frame stuttering while it redraws; or Full
+  costing well over 2 ms of `gpu`. **Known, not a fault here:** at Full the grass will stand over
+  dropped items and order marks — nothing clears grass round them until M3's clearance field — so
+  judge the look on open meadow.
+
+- **Do the quality presets feel right?** (`claude/meadow-m6-presets`, design 38 §15,
+  `27-graphics-settings.md` §10). Settings -> Graphics: a Quality row across the top. At 3840 x 2160
+  pick each of Low, Medium, High, Ultra and watch the overlay's `gpu` and the frame. **Ultra** should
+  hold 60 fps with grass on every cell; if it does not, or it looks no richer than High, say so.
+  **Low** should look acceptable at 1080p on a laptop — if the 70% render scale is too soft or the
+  missing surround reads as the world ending, that is the row to change. Moving any lever by hand
+  should light **Custom**; restarting the game should come back on the preset you left.
+
+- **Does a rescue read, and is a five-day bed rest right?** (`claude/combat-rescue`, design 33 §11).
+  Build a bed, let a bandit down a colonist, then draft another, select her and right-click the
+  one on the ground: she walks over, stoops, stands up with the body across her arms, carries it to
+  the bed and lays it down. Undrafted, with Rescue ticked on the Work tab, colonists do it by
+  themselves. With no free bed, *No bed for the wounded* appears and nobody comes. A wrong answer is
+  a body that floats beside the carrier or sinks into her, a carry too high or too low to read as
+  arms (head near the carrier's shoulder is the intent), a patient who stands up at 15 % or lies
+  on the floor through the bed, two colonists running for one body, or a colonist still *Downed*
+  on the card for five days when you expected something else.
+
 - **Does the hearth read as a hearth?** (`claude/campfire-art`, PR #170, `docs/design/31-campfire-art-and-fire.md`
   §17–§18d.) Build a campfire, give the colony nothing to do, and watch for a game hour. Idlers
   should drift to it two times in three and **stay** once there, about half of them turned to face
@@ -32,7 +396,7 @@ the next session learns to ignore.
   colonists waiting on a job. **And since the merge with combat (design 31 §19)**: the right-hand
   column is **271 px, down from 296**, so check the outdoor temperature on the clock still clears the
   speed buttons beside it — a wrong answer is the reading touching or running under them again; and
-  spawn a marauder with nobody to fight near a campfire — a wrong answer is it settling at the fire.
+  spawn a bandit with nobody to fight near a campfire — a wrong answer is it settling at the fire.
 
 - **Medical supplies: the box, the doctor and the patient** (`claude/medical-supplies`, design 37
   §9). Start a new game: there should be a red first-aid case among the starting piles, and it
@@ -46,13 +410,13 @@ the next session learns to ignore.
   health, a colonist lying down and getting up on the spot, or nobody fetching the case at all.
 
 - **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
-  Spawn a marauder, draft two colonists, select both and right-click it: a translucent red ring
+  Spawn a bandit, draft two colonists, select both and right-click it: a translucent red ring
   should appear wide round its feet and snap in, in a fifth of a second, flash once as it lands
   and stay faint under it until it goes down — then fade. Right-click a hog: its ring hugs the
   hog's own length. Deselect them: it fades; reselect: it is back at rest, without the snap. A
   wrong answer is a ring you notice only when it lands (the 0.2 s is too quick), a flash that
   reads as a glitch, a hold so faint it is lost on grass or at night, a red you confuse with the
-  draft's dark red over their heads or the salmon diamond over the marauder, or a ring sunk into a
+  draft's dark red over their heads or the salmon diamond over the bandit, or a ring sunk into a
   slope or floating on a terrace step.
 
 - **Does the context menu make taking up a weapon clear?** (design 33 §7a, `claude/combat-menu`).
@@ -67,7 +431,7 @@ the next session learns to ignore.
   still unclear — in which case say what would make it clear (the colonist's name on the row?).
 
 - **Should an unattended fight end in downs, never deaths?** (design 33 §3, PR #180). Only an
-  order strikes a body on the ground, so a marauder left alone downs a colonist and turns to the
+  order strikes a body on the ground, so a bandit left alone downs a colonist and turns to the
   next; nobody dies unless you send someone to finish it. Say if that is wrong.
 
 - **Is a weapon held and dropped where it should be?** (checkpoint 3, C3 — `claude/combat-c2`,
@@ -783,6 +1147,9 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-24 | **Walls down, both rounds** (PR #197, `docs/design/42-walls-down.md`) | working — owner, first look: *"works brilliantly but a few things"*; after the second round: *"excellent - get this ready for merge"* | the first look moved two things (the R / F label went; a lower terrace counts as ground and only upper storeys hide, §3a); ready to merge |
+| 2026-09-24 | **Beating a wall down** (C6, `claude/combat-buildings`, `docs/design/33-combat.md` §13) | working — owner: *"Buildings work fine"* | none. The row's own question, whether a wall reads without a damage bar, was not raised, so none is built. The break-in row (§14b, §14d) stays open: it was built after that playtest |
+| 2026-09-24 | **What grass costs on the GPU at 4K** (PR #183, `docs/design/38-meadow-overhaul.md` §13) | measured — owner: *"6–7 ms on gpu (sometimes bit lower) without grass tufts. On — 7 ish — spikes up to 8 moving around"* | about 0.5–1 ms, peaks ~1.5; under the 2 ms line, so M4 plans for full cover; agrees with the batch arm |
 | 2026-09-24 | **Combat C2 + C3 and the three rounds after play** (PR #180, `docs/design/33-combat.md` §3–§9) | working — owner: *"it seems great ... weapons sit at hips, have a battle with tons and tons of characters - was hovering 3.5ms ... it flowed really well"* | closes the brawl and fight rows; 3.5 ms is inside the 5 ms budget on the dev GPU, unmeasured on the target laptop; the ring, menu and grip rows stay open for the "more testing later" |
 | 2026-09-24 | **The Inventory tab, restyled** (PR #177, `docs/design/35-inventory-tab.md` §5a) | working — owner: *"it's good"* | none; ready to merge |
 | 2026-09-23 | **The Research tab** (PR #177, `docs/design/34-research-tab.md`) | working — owner: *"the research control is fine"*, after the list was cut to what the game has | the list became Electricity, Power lines, Generator, Ladder (34 §2) |

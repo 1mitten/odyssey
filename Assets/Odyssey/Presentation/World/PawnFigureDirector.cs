@@ -391,6 +391,27 @@ namespace Odyssey.Presentation.World
         /// <summary>Whether this pawn has a live figure at all. See <see cref="TryGetCarried"/>.</summary>
         public bool HasFigureFor(int pawnId) => Drawn.Contains(pawnId);
 
+        /// <summary>
+        /// What a pawn's live figure has on (design 42), for a test that must see the dress rather
+        /// than the appearance it was dressed from: whether the hair, beard and headgear slots are
+        /// drawn, and how many of the rig's <c>_Armor_</c> overlays are switched on. False when the
+        /// pawn has no figure.
+        /// </summary>
+        public bool TryGetDress(int pawnId, out bool hair, out bool beard, out bool headgear, out int vests)
+        {
+            hair = beard = headgear = false;
+            vests = 0;
+            if (!_byPawn.TryGetValue(pawnId, out Figure? figure)) return false;
+            hair = figure.HairRenderer != null && figure.HairRenderer.enabled;
+            beard = figure.BeardRenderer != null && figure.BeardRenderer.enabled;
+            headgear = figure.HeadRenderer != null && figure.HeadRenderer.enabled;
+            foreach (SkinnedMeshRenderer skin in figure.Skins)
+                if (skin != null && skin.gameObject.activeInHierarchy &&
+                    skin.gameObject.name.IndexOf("_Armor_", StringComparison.Ordinal) >= 0)
+                    vests++;
+            return true;
+        }
+
         /// <summary>Which style a pawn is worked in, the override first. See <see cref="StyleOverride"/>.</summary>
         int StyleFor(int jobDef) =>
             StyleOverride >= 0 && StyleOverride < Styles.Length
@@ -569,6 +590,12 @@ namespace Odyssey.Presentation.World
 
             /// <summary>A feminine body: the draw and the sheathe are the pack's <c>_Femn</c> clips (design 33 §8b).</summary>
             public bool Feminine;
+
+            /// <summary>The skinned overlay this body wears switched on — a bandit's vest — or empty (design 42).</summary>
+            public string Overlay = string.Empty;
+
+            /// <summary>The overlay's own rectangles, or null when it has none.</summary>
+            public AppearanceCells? OverlayCells;
         }
 
         readonly Look?[] _looks;
@@ -937,6 +964,8 @@ namespace Odyssey.Presentation.World
                     Speeds = GroundSpeeds(gaits, row.scale),
                     Sit = row.sitClip,
                     Feminine = row.sex == BodySex.Female,
+                    Overlay = row.overlayName ?? string.Empty,
+                    OverlayCells = row.overlayAppearance != null && row.overlayAppearance.Any ? row.overlayAppearance : null,
                 };
             }
             return looks;
@@ -984,11 +1013,14 @@ namespace Odyssey.Presentation.World
         uint RollSeedOf(PawnId pawn) =>
             _frame == null ? 0u : ColonistNames.RollSeedOf(_frame, pawn);
 
-        int LookFor(PawnId pawn) => Appearances.LookFor(pawn.Value, RollSeedOf(pawn));
-
-        /// <summary>An animal's look is its kind's row; a person's is the face the book dealt.</summary>
+        /// <summary>
+        /// An animal's look is its kind's row; a person's is the body the book dealt them in the
+        /// outfit they wear — a bandit's is the gang's (design 42), never the colonist lottery's.
+        /// </summary>
         int LookFor(in PawnView pawn) =>
-            pawn.IsAnimal ? AnimalLookIndex(pawn.Kind) : LookFor(pawn.Id);
+            pawn.IsAnimal
+                ? AnimalLookIndex(pawn.Kind)
+                : Appearances.LookFor(pawn.Id.Value, RollSeedOf(pawn.Id), PawnOutfits.For(pawn));
 
         /// <summary>
         /// How far the sole sits below the ankle, on the figure whose boot is thickest.
@@ -1010,19 +1042,18 @@ namespace Odyssey.Presentation.World
         public float MeasuredStandingHeight { get; private set; }
 
 
-        /// <summary>True when this pawn's face resolved to art and a figure can be built for it.</summary>
-        bool CanDraw(PawnId pawn)
+        /// <summary>
+        /// True when this pawn's face resolved to art and a figure can be built for it. Asked of a
+        /// view, which is the only thing that knows a pawn's kind and what it wears.
+        /// </summary>
+        bool CanDraw(in PawnView pawn)
         {
+            if (pawn.IsAnimal)
+                return (uint)pawn.Kind < (uint)_animalLooks.Length && _animalLooks[pawn.Kind] != null;
             if (_looks.Length == 0) return false;
-            int look = LookFor(pawn);
+            int look = LookFor(in pawn);
             return (uint)look < (uint)_looks.Length && _looks[look] != null;
         }
-
-        /// <summary>The same question of a view, which is the only thing that knows a pawn's kind.</summary>
-        bool CanDraw(in PawnView pawn) =>
-            pawn.IsAnimal
-                ? (uint)pawn.Kind < (uint)_animalLooks.Length && _animalLooks[pawn.Kind] != null
-                : CanDraw(pawn.Id);
 
         /// <summary>Gaits with a live clip, slowest first. Order is what makes the blend a blend.</summary>
         static LocomotionEntry[] Gaits(ModuleEntry? row)
@@ -1123,6 +1154,9 @@ namespace Odyssey.Presentation.World
             {
                 CellRef cell = pawns[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
+                // Walls down: gone with the storey they stand on (design 42 §5). Skipped here and
+                // in the baked pass alike, so a hidden colonist does not fall through to a stand-in.
+                if (slice.HidesStandingAt(activeLayer, cell, World)) continue;
 
                 // A face that did not resolve is not drawn here at all: the pawn falls through to
                 // the baked path, which will draw whatever that row does resolve to (a marker, if
@@ -1793,8 +1827,11 @@ namespace Odyssey.Presentation.World
             // over means the fold begins from where the rise left the hands, which is continuous.
             // The load itself is unaffected: it follows the palms either way (see PlaceCarriedLoad).
             bool gesturing = figure.Gesture != PawnGesture.None || ForceGesture.HasValue;
+            // A body in the arms takes the same scoop as a load (design 33 §11e); the body itself
+            // is laid in them by PlaceCarriedPatients, once every bone is final.
+            bool carryingSomebody = CarriesAPatient(in pawn);
             figure.CarryWeight = CarryPose.Settle(
-                figure.CarryWeight, carryDef >= 0 && !gesturing ? 1f : 0f, deltaTime);
+                figure.CarryWeight, (carryDef >= 0 || carryingSomebody) && !gesturing ? 1f : 0f, deltaTime);
 
             // Asleep, and where. A bed decides which way the body lies and how high off the floor;
             // with no bed the colonist lies where it dropped, facing wherever it last faced, which
@@ -1804,6 +1841,9 @@ namespace Odyssey.Presentation.World
             figure.SleepWeight = ForceSleep.HasValue
                 ? ForceSleep.Value
                 : SleepPose.Settle(figure.SleepWeight, pawn.Asleep || figure.Fight.Lying ? 1f : 0f, deltaTime);
+            // Lifted or laid in a bed, she goes from the floor loop to lying at once: both are lying
+            // down, and easing between them would stand her up half way (design 33 §11e).
+            if (!ForceSleep.HasValue && Cradled(in pawn)) figure.SleepWeight = 1f;
             if (figure.SleepWeight > 0.001f) AimSleep(figure, in pawn);
 
             // Sitting by a fire (design 31 §18d). Eased like sleep; the blend itself is in Blend,
@@ -1812,7 +1852,7 @@ namespace Odyssey.Presentation.World
                 ? ForceSit.Value
                 : SitPose.Settle(figure.SitWeight, pawn.Seated ? 1f : 0f, deltaTime);
             // The weapon in the right hand, now that the tool, the load and the lie are known.
-            ShowWeapon(figure, in pawn, carrying: carryDef >= 0, deltaTime);
+            ShowWeapon(figure, in pawn, carrying: carryDef >= 0 || carryingSomebody, deltaTime);
 
             // Face the work. A pawn that has stopped walking has no heading left — that is what
             // makes PawnPose hand back a zero vector — so without the work cell the figure would
@@ -2243,20 +2283,25 @@ namespace Odyssey.Presentation.World
             if (Materials == null || figure.Skins.Length == 0) return;
 
             AppearanceCells? cells = CellsFor(figure.Look);
-            ColonistAppearance look = Appearances.For(pawn.Value, rollSeed);
+            ColonistAppearance look = Appearances.For(pawn.Value, rollSeed, figure.Outfit);
 
             // The hair and the beard, before the body: they are part of being dressed in this
             // pawn's colours rather than a separate pass, so nothing can repaint one and forget
             // the other (docs/design/29-modular-colonists.md, MC5).
             Dress(figure, look);
 
+            // The bandit's vest is painted from its own rectangles, not the body's (design 42):
+            // its camo and the male rig's trousers share a region of the atlas.
+            Look? face = LookAt(figure.Look);
             for (int i = 0; i < figure.Skins.Length; i++)
             {
                 SkinnedMeshRenderer skin = figure.Skins[i];
                 if (skin == null) continue;
 
+                bool overlay = face != null && face.Overlay.Length > 0 &&
+                               string.Equals(skin.gameObject.name, face.Overlay, StringComparison.Ordinal);
                 Material? art = figure.ArtMaterials[i];
-                Material? painted = Materials.For(art, cells, look);
+                Material? painted = Materials.For(art, overlay ? face!.OverlayCells : cells, look);
                 skin.sharedMaterial = painted != null ? painted : art;
             }
         }
@@ -2296,11 +2341,17 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void Dress(Figure figure, in ColonistAppearance look)
         {
+            // Under a helmet the hair and beard are not worn, but they are still the person's:
+            // the appearance keeps both, so the helmet coming off gives them back (design 42).
+            bool covered = look.HidesHair;
             ColonistAttachments.Wear(
-                figure.HairMesh, figure.HairRenderer, Attachments.Hair(look.HairPiece),
-                Materials, look);
+                figure.HairMesh, figure.HairRenderer,
+                covered ? default : Attachments.Hair(look.HairPiece), Materials, look);
             ColonistAttachments.Wear(
-                figure.BeardMesh, figure.BeardRenderer, Attachments.Beard(look.BeardPiece),
+                figure.BeardMesh, figure.BeardRenderer,
+                covered ? default : Attachments.Beard(look.BeardPiece), Materials, look);
+            ColonistAttachments.Wear(
+                figure.HeadMesh, figure.HeadRenderer, Attachments.Headgear(look.HeadPiece),
                 Materials, look);
         }
 
@@ -2326,6 +2377,7 @@ namespace Odyssey.Presentation.World
             // different face would put the wrong person on screen rather than save any work.
             int look = LookFor(in view);
             Figure figure = Free(look) ?? Create(look);
+            figure.Outfit = PawnOutfits.For(view);
             Repaint(figure, pawn);
             figure.Pawn = pawn.Value;
             figure.Settled = false;
@@ -2433,6 +2485,10 @@ namespace Odyssey.Presentation.World
             // and a bare head is reachable at all (docs/design/29-modular-colonists.md).
             ColonistAttachments.BareTheHead(instance);
 
+            // The bandit's vest (design 42): the one overlay its row names, switched back on after
+            // the head was bared, and before the skins are gathered below so it is painted too.
+            ColonistAttachments.ShowOverlay(instance, face.Overlay);
+
             // Re-skin from the bones as they are at the moment of drawing, not as they were when
             // the animation system last looked at them.
             //
@@ -2506,10 +2562,14 @@ namespace Odyssey.Presentation.World
                     out MeshFilter hf, out MeshRenderer hr);
                 ColonistAttachments.MakeSlot(figure.Head, "Beard", _layer,
                     out MeshFilter bf, out MeshRenderer br);
+                ColonistAttachments.MakeSlot(figure.Head, "Headgear", _layer,
+                    out MeshFilter gf, out MeshRenderer gr);
                 figure.HairMesh = hf;
                 figure.HairRenderer = hr;
                 figure.BeardMesh = bf;
                 figure.BeardRenderer = br;
+                figure.HeadMesh = gf;
+                figure.HeadRenderer = gr;
             }
 
             figure.SoleOffset = MeasureSole(figure);

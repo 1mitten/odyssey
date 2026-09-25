@@ -103,6 +103,9 @@ namespace Odyssey.Sim.Events
         {
             "Incident_SupplyDrop",
             "Incident_ScrapDrop",
+            // Written down by the world, never fired (design 33 §17): a bandit leaving the board.
+            "Incident_Theft",
+            "Incident_BanditLeft",
             "Incident_MedicalDrop",
         };
 

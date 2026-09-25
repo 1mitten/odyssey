@@ -193,16 +193,16 @@ namespace Odyssey.Tests.Sim
         // claims every handle the combat line needs at once: five jobs (Job_AttackMelee, Job_Flee,
         // Job_Downed, Job_Equip, Job_Rescue at drivers 14 to 18), Skill_Melee, Work_Rescue, four
         // weapons (Item_Bat, Item_Crowbar, Item_Machete, Item_ArcBlade, each with a weapon block),
-        // PawnKind_Marauder with PawnKindDef.faction (the two animal kinds Wild), SpeciesDef's
+        // PawnKind_Bandit with PawnKindDef.faction (the two animal kinds Wild), SpeciesDef's
         // combat fields with the owner's pools (person 100, hog 60, rat 15), death at -500 per mille,
         // revenge (hog 700, rat 50) and the two natural attacks, and a new CombatDef carrying the
         // owner's hit and dodge curves and fists. Taken from a freshly loaded pack. The goldens
         // moved in the same commit, and not for any of the numbers: see Golden.cs.
         //
         // Moved an eighteenth time, 2026-09-23, by the seam review of the same step: PawnKindDef
-        // gained `weapon` and PawnKind_Marauder names Item_Machete (design 33 §1: "debug-spawned,
+        // gained `weapon` and PawnKind_Bandit names Item_Machete (design 33 §1: "debug-spawned,
         // armed"; IWeaponRules.ArmOnSpawn puts it in the hand). No golden moved: no golden spawns
-        // a marauder.
+        // a bandit.
         //
         // Moved a nineteenth time, 2026-09-23, at the C2/C3 integration: CombatDef gained
         // `rechooseTicks` (300), lane A's constant on the attack driver, proposed for the Def in its
@@ -225,9 +225,46 @@ namespace Odyssey.Tests.Sim
         // on every other item. Taken from a freshly loaded pack.
         //
         // And again the same day by MD2 (design 37): Skill_Medicine, Work_Doctor (rateSkill 6 on
-        // growing's curve), Job_Treat (driver 22, 600 work ticks, trains medicine) and Job_Patient
-        // (driver 23), and CombatDef's eight treatment integers. Taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 17440679233709904344UL;
+        // growing's curve), Job_Treat and Job_Patient, and CombatDef's eight treatment integers.
+        // Taken from a freshly loaded pack.
+        //
+        // Moved a twenty-first time, 2026-09-24, by C5, friendly fire (design 33 §12): two thoughts
+        // appended at indices 6 and 7 — Thought_AttackedByColonist (-80, one day, once) and
+        // Thought_ColonistDied (-60, three days, three deep), the owner's -8 and -6 on our scale of
+        // thousandths. No golden moved: no golden window has a colonist hurt by a colonist or a
+        // death, and a memory is hashed only once a pawn has one.
+        //
+        // Moved a twenty-second time, deliberately, 2026-09-24, by the owner's answers to Phase 4
+        // (design 33 §14e): ThoughtDef gained renewsOnRepeat, false everywhere but
+        // Thought_AttackedByColonist, so a second swing renews the day rather than being dropped.
+        // No golden moved: no other thought renews, and no golden window has friendly fire.
+        //
+        // Moved a twenty-third time, deliberately, 2026-09-24, by drafted colonists helping (design
+        // 33 §15): CombatDef gained helpRadiusCells (8, INVENTED), how near another colonist's
+        // fight must be for a drafted colonist on her hold to join it. No golden moved: no golden
+        // window drafts anybody.
+        // And a twenty-fourth, the same day, by doors holding bandits out (design 33 §16):
+        // PawnKindDef gained traverseMode, empty everywhere but PawnKind_Bandit (Bandit), and
+        // PawnContent the resolved KindMode table. No golden moved: no golden has a bandit, and
+        // every other kind resolves to its species' mode exactly as before. The value below is the
+        // two together, measured on the merge rather than taken from either side.
+        //
+        // Moved a twenty-fifth time, deliberately, 2026-09-24, by bandits stealing (design 33
+        // §17): Job_Steal appended at 22, PawnKindDef gained motive (None everywhere but
+        // PawnKind_Bandit, Loot), and PawnContent the KindMotive table. No golden moved: no
+        // golden has a bandit, and the job system hashes a job appended after the combat line's
+        // only once it has run (JobSystem.HashedAlways).
+        //
+        // Moved a twenty-sixth time, deliberately, 2026-09-24, by the bandit (design 42): the kind
+        // renamed PawnKind_Bandit -> PawnKind_Bandit (index 3 unchanged, so no save moves), its
+        // traverse mode likewise, and PawnKindDef.weapon became weapons, the bandit's being a
+        // crowbar or a bat where it was a machete. No golden moved: no golden has a bandit.
+        //
+        // Moved a twenty-seventh time, 2026-09-25, at the merge of medical supplies (design 37)
+        // with main: Job_Treat and Job_Patient renumbered 22-23 -> 23-24, after Job_Steal, since
+        // bandits shipped first. Neither side's number covers the merged pack, so it is re-taken
+        // from a freshly loaded pack rather than adopted from either.
+        const ulong ContentFingerprint = 17514960997662400843UL;
 
 
         [Test]

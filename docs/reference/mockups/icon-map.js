@@ -137,6 +137,13 @@ window.ICON_MAP = {
   "r": null,
   "s": "02"
  },
+ "ui.alert.nofuel": {
+  "c": null,
+  "d": "jerrycan",
+  "q": "med",
+  "r": null,
+  "s": "08"
+ },
  "ui.alert.nomedicine": {
   "c": null,
   "d": "first-aid kit, empty or crossed",
@@ -277,13 +284,6 @@ window.ICON_MAP = {
   "r": null,
   "s": "03"
  },
- "ui.arch.tool.brazier": {
-  "c": null,
-  "d": "campfire",
-  "q": "high",
-  "r": null,
-  "s": "03"
- },
  "ui.arch.tool.bunk": {
   "c": null,
   "d": "bedroll",
@@ -297,6 +297,13 @@ window.ICON_MAP = {
   "q": "high",
   "r": null,
   "s": "05"
+ },
+ "ui.arch.tool.campfire": {
+  "c": null,
+  "d": "campfire",
+  "q": "high",
+  "r": null,
+  "s": "03"
  },
  "ui.arch.tool.chair": {
   "c": null,
@@ -556,6 +563,13 @@ window.ICON_MAP = {
   "q": "high",
   "r": null,
   "s": "03"
+ },
+ "ui.arch.tool.unwire": {
+  "c": null,
+  "d": "coil of wire",
+  "q": "med",
+  "r": null,
+  "s": "04"
  },
  "ui.arch.tool.vent": {
   "c": null,
@@ -1994,14 +2008,18 @@ window.ICON_GAPS = [
  "ui.bulletin.crash",
  "ui.bulletin.recruited",
  "ui.bulletin.refugee",
+ "ui.bulletin.scrapdrop",
  "ui.bulletin.supplydrop",
  "ui.bulletin.wanderer",
  "ui.command.arrest",
  "ui.command.bury",
  "ui.command.capture",
  "ui.command.copysettings",
+ "ui.command.defend",
  "ui.command.drop",
  "ui.command.evacuate",
+ "ui.command.fightback",
+ "ui.command.flee",
  "ui.command.hold",
  "ui.command.install",
  "ui.command.jumpto",

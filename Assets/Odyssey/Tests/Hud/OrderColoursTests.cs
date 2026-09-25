@@ -169,6 +169,39 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// The landing ring's colour (design 33 §20) is pale and neutral — the owner asked for a
+        /// ring, and a ring the shape and clock of the lock-on in any red would read as an attack.
+        /// Held eighty points from the attack red, the draft red and the hostile marker's salmon,
+        /// and from every order hue a destination can lie among; then held pale (no channel under
+        /// 0xc0) and neutral (the channels within 24 of each other), so a retune cannot quietly
+        /// make it a colour.
+        /// </summary>
+        [Test]
+        public void TheMoveRingIsPaleAndNeutralAndNoRed()
+        {
+            static int Distance(HudColour a, HudColour b) =>
+                Math.Abs(a.R - b.R) + Math.Abs(a.G - b.G) + Math.Abs(a.B - b.B);
+
+            HudColour move = OrderColours.Move;
+            Assert.That(Distance(move, OrderColours.Attack), Is.GreaterThanOrEqualTo(80), $"{move.Hex} is near the attack red");
+            Assert.That(Distance(move, OrderColours.Draft), Is.GreaterThanOrEqualTo(80), $"{move.Hex} is near the draft red");
+            Assert.That(Distance(move, HudTheme.Bad), Is.GreaterThanOrEqualTo(80), $"{move.Hex} is near the hostile marker");
+
+            foreach (DesignateTool tool in new[]
+                     {
+                         DesignateTool.Fell, DesignateTool.Mine, DesignateTool.Deconstruct, DesignateTool.Cancel,
+                         DesignateTool.Build, DesignateTool.GrowZone, DesignateTool.Stockpile,
+                     })
+                Assert.That(Distance(move, OrderColours.Hue(tool)), Is.GreaterThanOrEqualTo(80),
+                    $"move {move.Hex} is too close to {tool}'s {OrderColours.Hue(tool).Hex}");
+
+            int lowest = Math.Min(move.R, Math.Min(move.G, move.B));
+            int highest = Math.Max(move.R, Math.Max(move.G, move.B));
+            Assert.That(lowest, Is.GreaterThanOrEqualTo(0xc0), $"{move.Hex} is not pale");
+            Assert.That(highest - lowest, Is.LessThanOrEqualTo(24), $"{move.Hex} is not neutral");
+        }
+
+        /// <summary>
         /// A mark is lighter than the box being dragged. The cursor is following the hand and has
         /// to be found among however many marks are already down; a mark is paint over something
         /// the player is meant to keep looking at.

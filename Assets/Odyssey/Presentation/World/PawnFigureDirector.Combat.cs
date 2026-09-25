@@ -432,8 +432,7 @@ namespace Odyssey.Presentation.World
             if (fight.Downed || (IsHeldPhase(fight.Action) && fight.Variant != CombatVariant.End)) return;
 
             CombatRole role = CombatPose.SwingRole(style);
-            int steps = role == CombatRole.SwingHeavy ? 2 : 3;
-            string variant = CombatVariant.Combo[Mathf.Abs(fight.Combo) % steps];
+            string variant = CombatVariant.Combo[Mathf.Abs(fight.Combo) % CombatVariant.Combo.Length];
             fight.Combo++;
 
             fight.Action = role;
@@ -664,7 +663,10 @@ namespace Odyssey.Presentation.World
                 if (downed || stunned) fight.Shown = downed ? CombatRole.Downed : CombatRole.Stun;
                 if (downed)
                 {
-                    CombatClipEntry? loop = fight.HasLayer ? ExactClip(CombatRole.Downed, CombatVariant.Loop) : null;
+                    // Carried, or lying in a bed (design 33 §11e): not the pack's floor loop but the
+                    // lying path, which the sleep pose aims at the cradle or the mattress.
+                    CombatClipEntry? loop = fight.HasLayer && !Cradled(in pawn)
+                        ? ExactClip(CombatRole.Downed, CombatVariant.Loop) : null;
                     if (loop != null)
                     {
                         showing = loop;
@@ -894,7 +896,7 @@ namespace Odyssey.Presentation.World
         public int LookForCorpse(in CorpseView corpse) =>
             (corpse.Flags & PawnFlags.Person) == 0
                 ? AnimalLookIndex(corpse.Kind)
-                : Appearances.LookFor(corpse.Pawn.Value, corpse.RollSeed);
+                : Appearances.LookFor(corpse.Pawn.Value, corpse.RollSeed, PawnOutfits.For(corpse));
 
         /// <summary>Whether this corpse can be drawn as a body at all; if not, a marker stands in.</summary>
         public bool CanDrawCorpse(in CorpseView corpse)
@@ -917,6 +919,7 @@ namespace Odyssey.Presentation.World
             Figure figure = Free(look) ?? Create(look);
             figure.Borrowed = true;
             figure.Pawn = -1;
+            figure.Outfit = PawnOutfits.For(corpse);
             Repaint(figure, corpse.Pawn, corpse.RollSeed);
             figure.Fight.Forget();
             figure.WorkWeight = 0f;

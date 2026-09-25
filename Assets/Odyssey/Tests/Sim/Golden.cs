@@ -442,8 +442,11 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 6045123471689814645UL,
-            Simulated = 1856404441052394208UL,
+            // Re-baked 2026-09-25 at the merge of medical supplies (design 37) with main: the
+            // combined job, item, skill and incident tables moved the hash the same way any
+            // content append does (ODYSSEY_REGOLDEN=1).
+            Generated = 5861348134596726069UL,
+            Simulated = 13815386141261495008UL,
         };
 
         /// <summary>
@@ -468,8 +471,10 @@ namespace Odyssey.Tests.Sim
             // zeros in the job counters; the probe diffs clean.
             // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
             // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
-            Generated = 16765407320084916726UL,
-            Simulated = 17580394282528145421UL,
+            // Re-baked 2026-09-25 at the merge of medical supplies (design 37) with main
+            // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
+            Generated = 5189564746966039670UL,
+            Simulated = 10706784249471341773UL,
         };
 
         /// <summary>
@@ -508,8 +513,10 @@ namespace Odyssey.Tests.Sim
             // 2026-09-23, wildlife (design 30): the ruin is seeded with its rats and hogs.
             // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
             // 2026-09-23, the combat contracts step; the widened probe diffs clean.
-            Generated = 9697163389190815735UL,
-            Simulated = 6061768179668941337UL,
+            // Re-baked 2026-09-25 at the merge of medical supplies (design 37) with main
+            // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
+            Generated = 16706744741442193975UL,
+            Simulated = 7503129706193660889UL,
         };
     }
 }

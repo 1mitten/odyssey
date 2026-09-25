@@ -12,16 +12,17 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// <c>OrderAttack(cell, A = attacker, B = target pawn, or 0 and the cell a building)</c>.
         /// A drafted colonist closes on the target and swings until one of them goes down — or,
-        /// ordered on a pawn already down, until it is dead (the only way a marauder that stays
+        /// ordered on a pawn already down, until it is dead (the only way a bandit that stays
         /// down is finished). The job is forced, like a move (design 33 §2c): the same
         /// <c>Job_AttackMelee</c> the hunt uses, with <see cref="Job.PlayerForced"/> set and the
         /// target named on the pawn (<see cref="Pawn.CombatTarget"/>).
         ///
         /// <para><b>Refused</b> (<c>NotPermitted</c>) for an attacker that does not exist, is not
         /// one of ours, is not drafted (§5j: attack needs a draft) or is down; for a target of 0 —
-        /// a building, which is C6's; for a target that does not exist, is dead, is the attacker
+        /// a building (C6, design 33 §13d) — as <see cref="OrderAttackBuilding"/> says; for a
+        /// target that does not exist, is dead, is the attacker
         /// herself, or cannot be reached. <b>Any pawn may be the target</b> — an animal, a
-        /// marauder, a colonist: the Ctrl that a colonist target needs is the interface's gesture
+        /// bandit, a colonist: the Ctrl that a colonist target needs is the interface's gesture
         /// (<c>CombatOrders.Route</c>), and the contract gives the intent no argument to carry it
         /// (design 33 §6A). <b><c>AlreadyInThatState</c></b> for the order she is already carrying
         /// out: the same target, forced, to the same end.</para>
@@ -31,8 +32,8 @@ namespace Odyssey.Sim.Pawns
             Pawn? pawn = _ctx.Pawns.Get(new PawnId(intent.A));
             if (pawn == null || !pawn.IsColonist || !pawn.Drafted || pawn.Downed) return IntentRejection.NotPermitted;
 
-            // C6: a building. Refused until that lane routes it (design 33 §5j).
-            if (intent.B == 0) return IntentRejection.NotPermitted;
+            // C6: a building, named by a cell of it (design 33 §13d).
+            if (intent.B == 0) return OrderAttackBuilding(pawn, intent.Cell);
 
             Pawn? target = _ctx.Pawns.Get(new PawnId(intent.B));
             if (target == null || target == pawn || Melee.IsDead(target)) return IntentRejection.NotPermitted;
@@ -62,6 +63,43 @@ namespace Odyssey.Sim.Pawns
             job.Reset(JobIndex.AttackMelee);
             job.TargetCell = target.Cell;
             job.DestCell = toTheDeath;
+            job.PlayerForced = true;
+            return StartJob(pawn, job, tick) ? IntentRejection.None : IntentRejection.NotPermitted;
+        }
+
+        /// <summary>
+        /// <c>OrderAttack(cell, A, B = 0)</c>: beat down the building standing in <paramref name="at"/>
+        /// (design 33 §13d). The drafted checks are the caller's; refused here when no target stands
+        /// there (<see cref="BuildingTargets.TryFind"/> — a floor, a tree, bare ground) or no cell
+        /// beside it can be reached.
+        ///
+        /// <para><b>The job carries the building by its record handle</b>, in
+        /// <see cref="Job.DestCell"/> — handles are never reused, so a wall pulled down and raised
+        /// again is a new building and the order does not carry on into it — and the cell she strikes
+        /// at in <see cref="Job.TargetCell"/>. <see cref="Pawn.CombatTarget"/> stays 0, which is what
+        /// says "a building" to the driver, the resolver and the publish. The same building again is
+        /// <c>AlreadyInThatState</c>, as the same pawn is.</para>
+        /// </summary>
+        IntentRejection OrderAttackBuilding(Pawn pawn, CellRef at)
+        {
+            if (!_ctx.Size.Contains(at.X, at.Z, at.Y)) return IntentRejection.NotPermitted;
+            if (!BuildingTargets.TryFind(_ctx, _ctx.Size.Index(at), out BuildingTarget target)) return IntentRejection.NotPermitted;
+            if (!BuildingTargets.CanReach(_ctx, pawn, target, TraverseMode.Colonist)) return IntentRejection.NotPermitted;
+
+            if (pawn.CurrentJob is { DefIndex: JobIndex.AttackMelee, PlayerForced: true } current
+                && pawn.CombatTarget == 0 && current.DestCell == target.Handle)
+                return IntentRejection.AlreadyInThatState;
+
+            int tick = IntentTick;
+            pawn.DraftQuietSinceTick = tick;
+
+            Interrupt(pawn, JobStatus.Failed);
+            pawn.CombatTarget = 0;
+
+            Job job = pawn.JobBuffer;
+            job.Reset(JobIndex.AttackMelee);
+            job.TargetCell = BuildingTargets.StruckCell(_ctx, pawn.Cell, target);
+            job.DestCell = target.Handle;
             job.PlayerForced = true;
             return StartJob(pawn, job, tick) ? IntentRejection.None : IntentRejection.NotPermitted;
         }

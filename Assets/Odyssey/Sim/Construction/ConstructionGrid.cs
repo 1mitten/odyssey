@@ -1535,7 +1535,11 @@ namespace Odyssey.Sim.Construction
             _edifices[handle] = gone;
 
             if (was.Def == CoreContent.EdificeDoor) ctx.Nav.SetDoor(was.CellIndex, isDoor: false, open: false);
-            if (was.Def == CoreContent.EdificeBed) _items.RemoveBed(was.CellIndex);
+            if (was.Def == CoreContent.EdificeBed)
+            {
+                _items.RemoveBed(was.CellIndex);
+                ReleasePatientsBed(ctx, was.CellIndex);
+            }
 
             // A store coming down spills what the board will take and loses the rest. That this
             // destroys is right here and refused one level up: the deconstruct job will not finish
@@ -1545,6 +1549,13 @@ namespace Odyssey.Sim.Construction
 
             // Its switch and whatever wood was in its hopper go with it (design 32 §5).
             ctx.Power?.RemoveDevice(handle);
+
+            // Nothing may go on pointing at a building that has gone (design 33 §13h): what was
+            // left of it after a fight, and an order to take it apart. Here, because this is the one
+            // way an edifice leaves the world — taken apart, beaten down, or whatever calls it next.
+            ctx.EdificeDamage.Clear(was.CellIndex);
+            ClearDeconstructOrder(ctx, was.CellIndex);
+            if (second >= 0) ClearDeconstructOrder(ctx, second);
 
             // 2. The cells and everything touching them must be re-meshed: a thing coming down
             // changes how its neighbours draw their own faces, and the vertical neighbours are in
@@ -1563,6 +1574,37 @@ namespace Odyssey.Sim.Construction
             MarkNavAround(ctx, was.CellIndex);
             if (second >= 0) MarkNavAround(ctx, second);
             return true;
+        }
+
+        /// <summary>
+        /// A bed coming down lets go of the patient lying in it (design 33 §11h). The bed's head-cell
+        /// reservation passed to her on the lay and her <c>Job_Downed</c> holds it until she gets up,
+        /// so without this she kept a claim on bare ground for days and a bed raised on that cell read
+        /// as taken. Only a downed pawn: a sleeper's and a rescuer's jobs ask about their bed and let
+        /// go themselves. Taken off her own list as well as the table, so the two keep agreeing and
+        /// her job's end has nothing left to release. Scales with the pawns, once per bed demolished.
+        /// </summary>
+        static void ReleasePatientsBed(PawnContext ctx, int head)
+        {
+            long key = ReservationManager.Key(ReservationTargetKind.Cell, head);
+            var pawns = ctx.Pawns.All;
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                Pawn pawn = pawns[i];
+                if (!pawn.Downed || !pawn.HeldReservations.Remove(key)) continue;
+                ctx.Reservations.Release(pawn.Id, key);
+            }
+        }
+
+        /// <summary>
+        /// An order to take apart a building that is no longer there is an order on nothing. The
+        /// deconstruct driver clears its own before the removal; this is for every other route.
+        /// </summary>
+        static void ClearDeconstructOrder(PawnContext ctx, int cell)
+        {
+            var designations = ctx.Designations;
+            if (designations != null && designations.At(cell) == Designations.DesignationKind.Deconstruct)
+                designations.Clear(cell);
         }
 
         /// <summary>

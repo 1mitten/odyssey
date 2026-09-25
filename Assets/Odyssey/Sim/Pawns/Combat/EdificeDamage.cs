@@ -11,10 +11,11 @@ namespace Odyssey.Sim.Pawns
     /// struck is at its <c>BuildingDef.maxHitPoints</c> and has no row, so the store is empty in
     /// every colony that has never fought one.
     ///
-    /// <para><b>An empty store from the contracts step</b>: the three verbs and the save and hash
-    /// are here, and nothing calls them. <b>C6's lane owns what calls them</b> — the attack
-    /// driver's building mode, and demolishing at nought with no refund — and must keep a row's
-    /// cell the building's own cell (a two-cell bed keys on its head).</para>
+    /// <para><b>Written by C6</b> (design 33 §13): <see cref="CombatSystem.StrikeBuilding"/> sets a
+    /// row, on the building's own cell (a two-cell bed or generator keys on its head), and
+    /// <c>ConstructionGrid.Demolish</c> — the one way an edifice leaves the world — clears it, so a
+    /// row cannot outlive its building by any route. A struck building's pool is
+    /// <see cref="BuildingTargets.MaxMilliOf"/>, the row times its material.</para>
     ///
     /// <para><b>Sorted by cell, never a dictionary</b>, because the hash and the save walk it and a
     /// hash table's order is not allowed to be a simulation input. Saved (<c>odyssey.edificedamage</c>)
@@ -26,6 +27,12 @@ namespace Odyssey.Sim.Pawns
         readonly List<int> _hpMilli = new List<int>();
 
         public int Count => _cells.Count;
+
+        /// <summary>The cell of the <paramref name="index"/>th row, by cell ascending.</summary>
+        public int CellAt(int index) => _cells[index];
+
+        /// <summary>What is left of the <paramref name="index"/>th row's building, in thousandths.</summary>
+        public int HpMilliAt(int index) => _hpMilli[index];
 
         /// <summary>The hit points left on the building in this cell, in thousandths, or false for one never struck.</summary>
         public bool TryGet(int cell, out int hpMilli)

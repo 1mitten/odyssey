@@ -87,6 +87,13 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>Ground, slabs and water — everything a storey above the slice drops.</summary>
         public void Roof(int module, int tint, in Matrix4x4 at) => _mesher.SinkRoof(_batch, module, tint, at);
+
+        /// <summary>Whether this earth cell's top belongs in the ground skin (see <see cref="GroundSkin"/>).</summary>
+        public bool SkinsTop(in TerrainCell cell) => _mesher.SinkSkinsTop(cell);
+
+        /// <summary>The flat top of an earth cell, drawn as skin in this module's material and tint.</summary>
+        public void SkinTop(int module, int tint, int x, int z, int y) =>
+            _mesher.SinkSkin(_batch, module, tint, x, z, y);
     }
 
     /// <summary>
@@ -340,14 +347,43 @@ namespace Odyssey.Presentation.Rendering
             if (!Enabled || !cell.ShowsAFace || !GroundLook.IsEarth(cell.Terrain)) return false;
 
             int variant = GroundLook.Variant(cell.X, cell.Z, cell.Y);
+
+            // A stream or pond bank takes a sheet of water over it at the water line (design 38 §24):
+            // the bank slopes down through that line (BankLayout.ShoreFan), so the water shows
+            // exactly where the ground has gone below it, and the shore is the line where the two
+            // cross.
+            if (WaterShore.Enabled && BankLayout.BankDips(cell.Model, cell.X, cell.Z, cell.Y, out _))
+                EmitShoreWater(cell, sink);
+
+            // Nothing but its top can be seen — or its only open sides are water, a stream bank —
+            // and nothing built stands on it: it goes into the chunk's ground skin rather than a box
+            // (design 38 §20).
+            if (sink.SkinsTop(cell))
+            {
+                ushort skinTerrain = cell.Terrain;
+                int skinTint = cell.Tint;
+                // A bed that rises to meet its bank is the bank carried on down under the water,
+                // and wears its grass: in its own sand, the tip where a pond's corner is rounded
+                // off stood pale above the water line (design 38 §24).
+                if (WaterShore.Enabled && BankLayout.BedRises(cell.Model, cell.X, cell.Z, cell.Y, out _))
+                {
+                    skinTerrain = NaturalContent.TerrainGrass;
+                    skinTint = TintCode.Daylit(TintCode.Terrain(skinTerrain),
+                        cell.Model.OpenToTheSky(cell.Index, cell.Y));
+                }
+                sink.SkinTop(cell.Model.EarthModule(skinTerrain, variant, showsAFace: false),
+                    skinTint, cell.X, cell.Z, cell.Y);
+                return true;
+            }
+
             int exposed = cell.ExposedSides();
 
             float yaw;
             int earth;
             if (exposed == 0)
             {
-                yaw = GroundLook.Yaw(cell.X, cell.Z, cell.Y);
                 earth = cell.Model.EarthModule(cell.Terrain, variant, showsAFace: false);
+                yaw = GroundLook.Yaw(cell.X, cell.Z, cell.Y);
             }
             else
             {
@@ -358,6 +394,30 @@ namespace Odyssey.Presentation.Rendering
 
             sink.Body(earth, cell.Tint, cell.Drape * Matrix4x4.Rotate(Quaternion.Euler(0f, yaw, 0f)));
             return true;
+        }
+
+        /// <summary>
+        /// The water sheet over a bank: the same surface, at the same height and draped the same
+        /// way as the water beside it, so the two are one level sheet with no seam between them.
+        ///
+        /// <para>In the roof list, like the water it continues, and shallow: the depth the shader
+        /// shades by comes from the ground field, not from this cell's own class
+        /// (<see cref="GroundField"/>). Water writes no depth, so where the bank is above it the
+        /// ground simply hides it.</para>
+        /// </summary>
+        static void EmitShoreWater(in TerrainCell cell, in MeshSink sink)
+        {
+            var model = cell.Model;
+            int module = model.ModuleForTerrain(Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainShallowWater);
+            if (module == 0) return;
+
+            float lift = CellMetrics.SizeY * ChunkMesher.WaterSurface;
+            Vector3 centre = CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y) + Vector3.up * lift;
+            int above = cell.Index + model.Size.LayerStride;
+            int tint = TintCode.Daylit(
+                TintCode.Water(Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainShallowWater),
+                model.OpenToTheSky(above, cell.Y + 1));
+            sink.Roof(module, tint, GroundRelief.Drape(centre));
         }
     }
 

@@ -70,13 +70,24 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Carry a downed colonist to a bed (C4).</summary>
         public const int Rescue = 21;
 
+        /// <summary>
+        /// A bandit with nobody to fight and nothing to break lifts the nearest stack and walks
+        /// off the board with it (design 33 §17). Appended after the combat line's five; the job
+        /// system hashes its counters only once one has run, so no golden moved for it.
+        /// </summary>
+        public const int Steal = 22;
+
+        // Medical (design 37), claimed after Steal at the merge with main (2026-09-25): bandits
+        // shipped first and a shipped handle is a save contract, so the unshipped pair moved from
+        // 22-23 to 23-24. No save with a Treat or Patient job in it has left this branch.
+
         /// <summary>Treat a patient, with medical supplies or without, or treat yourself (design 37).</summary>
-        public const int Treat = 22;
+        public const int Treat = 23;
 
         /// <summary>A hurt colonist lying in a bed until she is well enough to get up (design 37).</summary>
-        public const int Patient = 23;
+        public const int Patient = 24;
 
-        public const int Count = 24;
+        public const int Count = 25;
     }
 
     /// <summary>
@@ -278,10 +289,20 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A stack of scrap metal falling out of the sky (design 32 §14): the supply drop's worker, another cargo.</summary>
         public const int ScrapDrop = 1;
 
-        /// <summary>Medical supplies from the sky (design 37 §5): the supply drop's worker, another cargo.</summary>
-        public const int MedicalDrop = 2;
+        /// <summary>
+        /// A bandit carried a stack off the board (design 33 §17). Written down by the world when
+        /// it happens and never fired: the bulletin carries the item and the amount.
+        /// </summary>
+        public const int Theft = 2;
 
-        public const int Count = 3;
+        /// <summary>A bandit with nothing to fight, break or take walked off the board empty-handed (design 33 §17).</summary>
+        public const int BanditLeft = 3;
+
+        /// <summary>Medical supplies from the sky (design 37 §5): the supply drop's worker, another cargo.
+        /// After <see cref="BanditLeft"/> at the merge with main (2026-09-25); bandits shipped first.</summary>
+        public const int MedicalDrop = 4;
+
+        public const int Count = 5;
     }
 
     /// <summary>

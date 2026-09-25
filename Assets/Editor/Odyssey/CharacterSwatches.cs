@@ -134,6 +134,18 @@ namespace Odyssey.EditorTools
                 }
 
                 AppearanceCells cells = Classify(row.prefab, out string note);
+                if (row.bandit)
+                {
+                    // The gang (design 42 §5): the body keeps its skin and everything else on it
+                    // is the trousers' black; the vest is its own set, red.
+                    cells = BanditBodyCells(cells);
+                    SkinnedMeshRenderer? vest = FindOverlay(row.prefab, row.overlayName);
+                    AppearanceCells vestCells = vest != null ? BanditVestCells(vest) : new AppearanceCells();
+                    if (write) row.overlayAppearance = vestCells;
+                    note += vest == null
+                        ? $" BANDIT: no overlay {row.overlayName}"
+                        : $" bandit, vest {row.overlayName} box {Box(vestCells.cloth)}";
+                }
                 if (write) row.appearance = cells;
 
                 tally.TryGetValue(cells.quality, out int n);
@@ -151,6 +163,8 @@ namespace Odyssey.EditorTools
             // done here rather than at runtime: three of the four character FBXs are imported
             // without read/write, so Mesh.uv is unavailable in a player. What ships is a rectangle.
             int pieces = 0;
+            // Headgear is not here: it is worn in the pack's own paint (design 42), so its rows
+            // keep an empty appearance and are drawn through ColonistMaterials.InOwnPaint.
             foreach (string family in new[] { ModuleIds.HairBase, ModuleIds.BeardBase })
             {
                 foreach (ModuleEntry row in catalogue.FindFamily(family))
@@ -266,6 +280,159 @@ namespace Odyssey.EditorTools
             cells.totalVerts = mesh.vertexCount;
             cells.quality = AppearanceQuality.Full;
             return cells;
+        }
+
+        /// <summary>The whole atlas, as a slot: "everything not already claimed by an earlier slot".</summary>
+        static readonly Rect WholeAtlas = Rect.MinMaxRect(0f, 0f, 1f, 1f);
+
+        /// <summary>
+        /// A bandit's body (<c>docs/design/42-bandits.md</c> §5): its own skin, and everything else
+        /// on it — trousers, boots, belt, straps, the woman's stripes and wristbands — in the
+        /// second cloth slot, which the shader fills after the skin and so only where the skin is
+        /// not. Hair and the first cloth slot are empty: the helmet covers the scalp, and the red
+        /// belongs to the vest, which is another renderer with <see cref="BanditVestCells"/>.
+        ///
+        /// <para>Not by clustering the trousers, because on these bodies there is nothing to
+        /// cluster: the topless male's trousers are camo texture spanning a box of the atlas the
+        /// size of forty swatch cells, and the contact sheet showed the classifier catching his
+        /// belt and boots instead.</para>
+        /// </summary>
+        public static AppearanceCells BanditBodyCells(AppearanceCells classified) => new AppearanceCells
+        {
+            skin = classified.skin,
+            skinVerts = classified.skinVerts,
+            cloth2 = new[] { WholeAtlas },
+            cloth2Verts = classified.totalVerts - classified.skinVerts,
+            totalVerts = classified.totalVerts,
+            quality = classified.skin.Length > 0 ? AppearanceQuality.Full : AppearanceQuality.None,
+        };
+
+        /// <summary>
+        /// A bandit's vest: the box of every vertex outside the near-black corner (its camo, its
+        /// plates and pads) in the red slot, and the rest — the straps and buckles in that corner
+        /// — in the black one. Measured by <c>BanditSheet.Measure</c>: no other vertex of the vest
+        /// falls inside its box, so the fill repaints the vest and nothing else of it.
+        /// </summary>
+        public static AppearanceCells BanditVestCells(SkinnedMeshRenderer vest)
+        {
+            var cells = new AppearanceCells();
+            Mesh? mesh = vest.sharedMesh;
+            if (mesh == null) return cells;
+
+            float x0 = 1f, y0 = 1f, x1 = 0f, y1 = 0f;
+            int n = 0;
+            foreach (Vector2 t in mesh.uv)
+            {
+                if (t.x < 0.05f && t.y < 0.05f) continue;
+                n++;
+                x0 = Mathf.Min(x0, t.x); y0 = Mathf.Min(y0, t.y);
+                x1 = Mathf.Max(x1, t.x); y1 = Mathf.Max(y1, t.y);
+            }
+            if (n == 0) return cells;
+
+            cells.cloth = new[] { Padded(Rect.MinMaxRect(x0, y0, x1, y1)) };
+            cells.clothVerts = n;
+            cells.cloth2 = new[] { WholeAtlas };
+            cells.cloth2Verts = mesh.vertexCount - n;
+            cells.totalVerts = mesh.vertexCount;
+            cells.quality = AppearanceQuality.ClothOnly;
+            return cells;
+        }
+
+        /// <summary>The overlay child a row names, found on the prefab asset with its inactive children.</summary>
+        public static SkinnedMeshRenderer? FindOverlay(GameObject prefab, string overlayName)
+        {
+            if (string.IsNullOrEmpty(overlayName)) return null;
+            foreach (SkinnedMeshRenderer skin in prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                if (string.Equals(skin.gameObject.name, overlayName, StringComparison.Ordinal))
+                    return skin;
+            return null;
+        }
+
+        static string Box(Rect[] rects) =>
+            rects.Length == 0 ? "-" : $"({rects[0].xMin:F3},{rects[0].yMin:F3})-({rects[0].xMax:F3},{rects[0].yMax:F3})";
+
+        /// <summary>
+        /// Where a skinned overlay worn over a body takes its colour from: Battle Royale's armour
+        /// vests (<c>docs/design/39-bandits.md</c>).
+        ///
+        /// <para>An overlay has no skin and no hair to find, so every one-cell cluster is garment:
+        /// the largest goes in <c>cloth</c> and the next in <c>cloth2</c>, the same ranking
+        /// <see cref="Classify"/> uses for a body's clothing. <paramref name="note"/> lists every
+        /// cluster with its vertex count, largest first, which is what a contact sheet needs to say
+        /// which of them is the vest and which the straps.</para>
+        /// </summary>
+        public static AppearanceCells ClassifyOverlay(SkinnedMeshRenderer overlay, out string note)
+        {
+            note = string.Empty;
+            var cells = new AppearanceCells();
+
+            Mesh? mesh = overlay.sharedMesh;
+            if (mesh == null) { note = "no mesh"; return cells; }
+
+            Vector2[] uv = mesh.uv;
+            if (uv.Length == 0) { note = "mesh has no UVs"; return cells; }
+
+            List<Cluster> clusters = ClustersOf(uv, mesh.boneWeights, overlay.bones);
+            clusters.Sort((a, b) => b.Count.CompareTo(a.Count));
+            cells.totalVerts = mesh.vertexCount;
+
+            var garment = new List<Cluster>();
+            var described = new StringBuilder();
+            foreach (Cluster c in clusters)
+            {
+                described.Append($"[{c.Count}v @({c.Rect.center.x:F3},{c.Rect.center.y:F3})" +
+                                 $"{(IsOneCell(c) ? "" : " wide")}] ");
+                if (garment.Count < 2 && c.Count >= MinSlotVertices && IsOneCell(c)) garment.Add(c);
+            }
+            note = described.ToString();
+
+            if (garment.Count > 0)
+            {
+                cells.cloth = Rects(garment.GetRange(0, 1));
+                cells.clothVerts = garment[0].Count;
+            }
+            if (garment.Count > 1)
+            {
+                cells.cloth2 = Rects(garment.GetRange(1, 1));
+                cells.cloth2Verts = garment[1].Count;
+            }
+
+            cells.quality = cells.cloth.Length > 0 ? AppearanceQuality.ClothOnly : AppearanceQuality.None;
+            return cells;
+        }
+
+        /// <summary>
+        /// The clusters of a body's own mesh, largest first, with where on the body each one is
+        /// worn — for a contact sheet that has to say which slot is the trousers
+        /// (<c>docs/design/39-bandits.md</c>). The classifier counts torso and leg vertices only to
+        /// filter; this prints them.
+        /// </summary>
+        public static string DescribeBody(GameObject prefab, int top)
+        {
+            SkinnedMeshRenderer? skin = null;
+            int mostVertices = 0;
+            foreach (SkinnedMeshRenderer candidate in prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                if (!candidate.gameObject.activeSelf || candidate.sharedMesh == null) continue;
+                if (candidate.sharedMesh.vertexCount <= mostVertices) continue;
+                mostVertices = candidate.sharedMesh.vertexCount;
+                skin = candidate;
+            }
+            if (skin == null || skin.sharedMesh == null) return "no active skinned mesh";
+
+            List<Cluster> clusters = ClustersOf(skin.sharedMesh.uv, skin.sharedMesh.boneWeights, skin.bones);
+            clusters.Sort((a, b) => b.Count.CompareTo(a.Count));
+
+            var text = new StringBuilder();
+            for (int i = 0; i < clusters.Count && i < top; i++)
+            {
+                Cluster c = clusters[i];
+                text.AppendLine($"    {c.Count,5}v @({c.Rect.center.x:F3},{c.Rect.center.y:F3}) " +
+                                $"head {c.Head} torso {c.Torso} arm {c.Arm} leg {c.Leg}" +
+                                $"{(IsOneCell(c) ? "" : " wide")}");
+            }
+            return text.ToString();
         }
 
         public static AppearanceCells Classify(GameObject prefab, out string note)

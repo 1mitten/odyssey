@@ -88,7 +88,7 @@ namespace Odyssey.Hud
         /// board. Not <see cref="Draft"/>'s deep dark red, which marks <i>who</i> is under orders —
         /// the ring marks <i>whom</i> they are sent at, and the two are on screen together in every
         /// fight, one over a head and one under feet. Not <see cref="HudTheme.Bad"/>, the Cancel
-        /// tool's salmon red, which is also the hostile marker's diamond over the very marauder the
+        /// tool's salmon red, which is also the hostile marker's diamond over the very bandit the
         /// ring is drawn under: a ring in the marker's colour would read as more of the marker —
         /// "this is an enemy" — rather than "this is the one you sent them at". Pure red with a
         /// little blue kept out of pink sits apart from both: brighter than the draft by half
@@ -98,6 +98,19 @@ namespace Odyssey.Hud
         /// (<see cref="LockOnRing"/>), not a constant here.
         /// </summary>
         public static readonly HudColour Attack = new HudColour(0xf0, 0x28, 0x2c);
+
+        /// <summary>
+        /// A move order's hue: the landing ring on the cell a selected colonist was sent to, drafted
+        /// or fetching a weapon (design 33 §20; owner, 2026-09-24: <i>"instead of using a square to
+        /// indicate where to land when drafting people, can it be a ring"</i>). <b>Pale and
+        /// neutral</b>, a cool near-white a step under the interface's own ink, and <b>not a red</b>:
+        /// it is the same shape as the <see cref="Attack"/> ring and animates on the same clock, so
+        /// the colour is the whole of what tells "go here" from "hit that". Far from both reds and
+        /// the hostile marker's salmon, and from every order hue that can lie in the field it
+        /// lands in — <c>OrderColoursTests.TheMoveRingIsPaleAndNeutralAndNoRed</c>. Its opacity is
+        /// the ring's clock's (<see cref="LockOnRing"/>), not a constant here.
+        /// </summary>
+        public static readonly HudColour Move = new HudColour(0xdc, 0xe4, 0xec);
 
         /// <summary>
         /// The hue of an order, opaque — the chip's colour, and the colour every mark and cursor

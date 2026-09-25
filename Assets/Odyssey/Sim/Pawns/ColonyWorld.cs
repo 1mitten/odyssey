@@ -176,6 +176,10 @@ namespace Odyssey.Sim.Pawns
                 // absent from an older save, which loads with no corpses and every building whole.
                 pawns.Corpses,
                 pawns.EdificeDamage,
+                // What a ledger entry is about — the stack a bandit carried off (design 33 §17).
+                // Appended, after the ledger whose load clears it; absent from an older save, which
+                // loads with no entry about anything, as none then was.
+                pawns.Incidents!.Ledger.DetailSection,
             };
         }
 
@@ -284,6 +288,15 @@ namespace Odyssey.Sim.Pawns
             // disagree, and nothing at all on every file this build wrote (design 32 §8).
             Pawns.Power?.Reconcile();
 
+            // **The whole graph, not the dirty blocks** (design 33 §19a). `NavGraph.Rebuild` floods
+            // only the blocks something marked, and a load writes the cell arrays wholesale without
+            // marking any: the graph the fresh world built for the generated board survived the
+            // load everywhere a door or a ladder above did not happen to dirty a block. In the
+            // owner's save seven walls of a house on the first column of a block (x = 60) stayed
+            // walkable, and bandits walked through them and chose sides inside them. On the
+            // generation path every block is still dirty from the graph's construction, so this
+            // changes nothing there.
+            _nav.MarkAllDirty();
             _nav.Rebuild();
         }
 
@@ -316,14 +329,28 @@ namespace Odyssey.Sim.Pawns
         ///
         /// <para>The def is mutable and is mutated here, so a caller gets a fresh one each time
         /// and must not cache it.</para>
+        ///
+        /// <para><paramref name="surfaceRelief"/> overrides a natural map's relief — the layers the
+        /// surface may rise or fall from the ground layer — and re-derives the ground layer from it,
+        /// as <see cref="NaturalMapGenDef.For"/> would have. <b>A measurement seam</b>
+        /// (<c>docs/design/38-meadow-overhaul.md</c> §7, M7): the game passes -1, the def's own.
+        /// It is here rather than in the arms so that the measured board is still the one this
+        /// method chooses, which is why this method exists at all.</para>
         /// </summary>
-        public static MapGenDef DefFor(MapType map, GridSize size, bool barren, bool wooded)
+        public static MapGenDef DefFor(MapType map, GridSize size, bool barren, bool wooded,
+            int surfaceRelief = -1)
         {
             MapGenDef gen = MapGenerator.DefaultDef(map, size);
             if (barren && gen is NaturalMapGenDef natural)
             {
                 if (wooded) natural.MakeWooded();
                 else natural.MakeBarren();
+            }
+
+            if (surfaceRelief >= 0 && gen is NaturalMapGenDef hills)
+            {
+                hills.surfaceRelief = surfaceRelief;
+                hills.groundLayer = hills.GroundLayerFor(size);
             }
 
             return gen;
@@ -359,7 +386,7 @@ namespace Odyssey.Sim.Pawns
             uint seed = request.Seed;
             ChunkGrid? chunks = request.Chunks;
 
-            MapGenDef gen = DefFor(request.Map, size, request.Barren, request.Wooded);
+            MapGenDef gen = DefFor(request.Map, size, request.Barren, request.Wooded, request.SurfaceRelief);
             if (!request.Wildlife)
             {
                 gen.wildlife = System.Array.Empty<Wildlife.WildlifeEntry>();

@@ -386,6 +386,12 @@ namespace Odyssey.Presentation.CameraRig
             }
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.FrameMap)) Frame();
 
+            // Walls down (design 42 §7): the player's choice, kept by the settings store like
+            // every other view option, so the key, the rail's button and the settings row are
+            // three switches over one value. Build mode is applied on top of it, elsewhere.
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.WallsDown))
+                _directors.Settings.Toggle(GraphicsOption.WallsDown);
+
             // Opens the debug menu rather than the overlay directly since 2026-09-17 — the overlay
             // is that menu's first row now, not a second thing the same key does.
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.DebugMenu))

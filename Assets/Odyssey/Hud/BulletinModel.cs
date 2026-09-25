@@ -186,8 +186,22 @@ namespace Odyssey.Hud
         static BulletinRow Make(in BulletinView view)
         {
             string key = IncidentLabels.IconKey(view.IncidentDef);
-            return new BulletinRow(view.Id, key, Registry.Label(key), Stamp(view.Tick), view.Cell, view.Tick,
-                view.IncidentDef, view.Favourability);
+            return new BulletinRow(view.Id, key, Title(key, view.Subject, view.Amount), Stamp(view.Tick), view.Cell,
+                view.Tick, view.IncidentDef, view.Favourability);
+        }
+
+        /// <summary>
+        /// The row's words: the incident's name, and — for an entry about a thing (design 33 §17)
+        /// — the thing and how many, as the activity line writes a load: "Theft · Meal × 12". Both
+        /// names come from <see cref="Registry"/>; only the separator and the sign are written here,
+        /// and they name nothing (<see cref="JobLabels.Carrying"/> makes the same bargain).
+        /// </summary>
+        public static string Title(string key, int subject, int amount)
+        {
+            string name = Registry.Label(key);
+            if (subject < 0) return name;
+            string thing = ItemLabels.Label(subject);
+            return amount > 1 ? name + " · " + thing + " × " + amount : name + " · " + thing;
         }
 
         /// <summary>"Day 3 · 14h": the day as the clock counts it, and the hour. Built here so the

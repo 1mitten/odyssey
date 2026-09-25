@@ -203,7 +203,11 @@ namespace Odyssey.Sim.Construction
         /// Hit points the finished thing has when it is struck (design 33 §4, C6), in whole points.
         /// Nought for nothing. A building nobody has hit is at this and carries no row anywhere;
         /// what is left of a struck one is <c>EdificeDamage</c>'s. INVENTED, per thing, before any
-        /// material scaling — C6's to tune. Claimed by the combat contracts step.
+        /// material scaling — C6's to tune. Claimed by the combat contracts step; the campfire,
+        /// conduit, generator and heater were given theirs by C6 (design 33 §13c). The pool is this
+        /// times <see cref="StuffDef.hitPointsFactorPerMille"/> (<c>BuildingTargets.MaxMilliOf</c>),
+        /// and only an edifice standing in a cell is ever struck, so a slab's and a line's number
+        /// is not read yet.
         /// </summary>
         public int maxHitPoints;
     }
@@ -254,15 +258,28 @@ namespace Odyssey.Sim.Construction
         /// <summary>
         /// The material's effect on how much punishment the finished thing takes, in thousandths.
         ///
-        /// <para><b>Factor-only, still, and deliberately.</b> U27 gave <see cref="workOffsetTicks"/>
-        /// a base stat to add to because <see cref="ConstructionContent.WorkFor"/> already turns
-        /// <see cref="BuildingDef.workToBuild"/> into a real number every tick. Hit points has no
-        /// such consumer yet — no <c>BuildingDef.maxHitPoints</c> exists and nothing gives a built
-        /// wall a damage state — so an offset here would be a second field with nothing to add to
-        /// and no test that could exercise it. It is next when a durability stat lands, not
-        /// invented ahead of it.</para>
+        /// <para><b>Read since C6</b> (design 33 §13c): a struck building's pool is its
+        /// <see cref="BuildingDef.maxHitPoints"/> times this, so a stone wall stands half as long
+        /// again as a wooden one. <b>Factor-only, still</b>: an offset beside it would be a second
+        /// number nobody has asked for, and U27's argument for the work offset — a flat cost the
+        /// factor cannot express — has no counterpart here yet.</para>
         /// </summary>
         public int hitPointsFactorPerMille = 1000;
+
+        /// <summary>
+        /// How hard a <b>sharp</b> blow bites a thing built of this, in thousandths of the blow's
+        /// rolled damage (design 33 §14d; the owner, 2026-09-24: blunt against stone, sharp against
+        /// wood). Read by <c>BuildingTargets.DamageFactorPerMille</c> and nothing else.
+        ///
+        /// <para><b>On the material, not the building row</b>, because the owner's rule is wood
+        /// against stone: a wooden door and a wooden wall answer a machete alike. Defaults to the
+        /// blow as it comes, which is every material the rule has no opinion on — the ruined
+        /// city's, left for now (§14a (b)).</para>
+        /// </summary>
+        public int sharpDamagePerMille = 1000;
+
+        /// <summary>As <see cref="sharpDamagePerMille"/>, for a <b>blunt</b> blow — a bat, a crowbar or fists.</summary>
+        public int bluntDamagePerMille = 1000;
 
         /// <summary>
         /// The material's effect on how much heat crosses a wall made of it, in thousandths of
@@ -580,7 +597,7 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Campfire", label = "campfire", edifice = CoreContent.EdificeCampfire,
                     blocking = true, needsClearCell = true, heatPerPass = 1_200, radiantC = 2_600,
                     costCount = 3, workToBuild = 60, minSkill = 0,
-                    iconKey = "ui.arch.tool.campfire",
+                    iconKey = "ui.arch.tool.campfire", maxHitPoints = 60,
                 },
 
                 // A power line (design 32 §3, §14). Not an edifice — `conduit` sends the order to
@@ -592,7 +609,7 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Conduit", label = "conduit", edifice = CoreContent.EdificeNone,
                     conduit = true, blocking = false, costCount = 0,
                     partItem = ItemHandle.Salvage, partCount = 1, workToBuild = 40, minSkill = 0,
-                    iconKey = "ui.arch.tool.conduit",
+                    iconKey = "ui.arch.tool.conduit", maxHitPoints = 40,
                 },
 
                 // The wood-fired generator (design 32 §6). a-07's output, hopper and full-load burn
@@ -609,7 +626,7 @@ namespace Odyssey.Sim.Construction
                     powerOutputW = 1_000, fuelItem = ItemHandle.Wood, fuelCapacity = 75, fuelPerDay = 22,
                     heatPerPass = 400, costCount = 30, partItem = ItemHandle.Salvage, partCount = 20,
                     workToBuild = 600, minSkill = 0,
-                    iconKey = "ui.arch.tool.generator",
+                    iconKey = "ui.arch.tool.generator", maxHitPoints = 300,
                 },
 
                 // The electric heater (design 32 §7): a-07's 175 W, and 1,000 heat a pass into its
@@ -622,7 +639,7 @@ namespace Odyssey.Sim.Construction
                     blocking = true, rotates = true, needsClearCell = true, powerDrawW = 175, heatPerPass = 1_000,
                     costCount = 10, partItem = ItemHandle.Salvage, partCount = 5,
                     workToBuild = 240, minSkill = 0,
-                    iconKey = "ui.arch.tool.heater",
+                    iconKey = "ui.arch.tool.heater", maxHitPoints = 100,
                 },
             };
         }
@@ -645,6 +662,9 @@ namespace Odyssey.Sim.Construction
                     item = ItemHandle.Wood, workFactorPerMille = 1000, workOffsetTicks = 0,
                     hitPointsFactorPerMille = 1000, iconKey = "ui.res.wood",
                     thermalConductancePerMille = 600,
+                    // Design 33 §14d, INVENTED: an edge bites wood, a club does no better on it
+                    // than on anything else.
+                    sharpDamagePerMille = 1250, bluntDamagePerMille = 1000,
                 },
 
                 // 1.7x the work and 1.5x the hit points: the reference's own relation between a
@@ -665,6 +685,8 @@ namespace Odyssey.Sim.Construction
                     item = ItemHandle.Stone, workFactorPerMille = 1700, workOffsetTicks = 15,
                     hitPointsFactorPerMille = 1500, iconKey = "ui.res.stone",
                     thermalConductancePerMille = 1000,
+                    // Design 33 §14d, INVENTED: an edge turns on stone, a club breaks it.
+                    sharpDamagePerMille = 500, bluntDamagePerMille = 1250,
                 },
             };
         }

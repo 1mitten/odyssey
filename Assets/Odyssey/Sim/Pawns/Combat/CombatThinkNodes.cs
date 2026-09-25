@@ -21,7 +21,7 @@ namespace Odyssey.Sim.Pawns
         {
             if (!pawn.Downed) return false;
             job.Reset(JobIndex.Downed);
-            job.Mode = pawn.Species.traverseMode;
+            job.Mode = pawn.OwnMode;
             return true;
         }
     }
@@ -40,6 +40,23 @@ namespace Odyssey.Sim.Pawns
             pawn.CombatTarget = target.Id.Value;
             return true;
         }
+
+        /// <summary>
+        /// Fill <paramref name="job"/> with a melee attack on a building — C6's building mode (design
+        /// 33 §13e), as the order starts it but <b>unforced</b>, so it thinks again on
+        /// <see cref="CombatDef.rechooseTicks"/> (§14b): the record handle in
+        /// <see cref="Job.DestCell"/>, the cell she strikes in <see cref="Job.TargetCell"/>, and no
+        /// pawn target, which is what says "a building" everywhere.
+        /// </summary>
+        public static bool FillBuilding(PawnContext ctx, Pawn pawn, in BuildingTarget building, Job job, TraverseMode mode)
+        {
+            job.Reset(JobIndex.AttackMelee);
+            job.TargetCell = BuildingTargets.StruckCell(ctx, pawn.Cell, building);
+            job.DestCell = building.Handle;
+            job.Mode = mode;
+            pawn.CombatTarget = 0;
+            return true;
+        }
     }
 
     /// <summary>
@@ -50,6 +67,9 @@ namespace Odyssey.Sim.Pawns
     /// outranks being hungry. A blow interrupts whatever she was doing
     /// (<c>CombatSystem.React</c>), which is what brings her here. <b>Scales with the pawns on
     /// the board</b> per think, for the threat scan.
+    /// <para><b>And her response</b> (design 33 §18): Defend joins a fight near her as a drafted
+    /// colonist's hold does; Flee runs from danger near her and fights back only when cornered
+    /// (<see cref="HostilityResponses"/>).</para>
     /// </summary>
     public class SelfDefenceThinkNode : ThinkNode
     {
@@ -59,6 +79,21 @@ namespace Odyssey.Sim.Pawns
         {
             if (!pawn.IsColonist || pawn.Downed || pawn.IsBroken) return false;
 
+            // Her response (design 33 §18d). Flee comes before fighting back: struck, she runs,
+            // and only when there is nowhere to run does the retaliation below answer. Defend comes
+            // after it, in place of the threat beside her, which its own scan answers first.
+            // Fight back asks nothing here. One function with the job system's per-tick notice
+            // (HostilityResponses.Choose), so the two never disagree.
+            if (pawn.Response == HostilityResponse.Flee)
+            {
+                if (HostilityResponses.Choose(ctx, pawn, out Pawn? danger, out _, out int fleeCell))
+                    return HostilityResponses.Fill(pawn, danger!, false, fleeCell, job);
+                // No danger near her: nothing to fight, even with a blow still remembered — she
+                // does not walk back to whoever struck her. Danger and nowhere to run: cornered,
+                // and she fights back below.
+                if (danger == null) return false;
+            }
+
             if (pawn.RetaliateAgainst != 0 && ctx.CurrentTick < pawn.RetaliateUntilTick)
             {
                 Pawn? foe = ctx.Pawns.Get(new PawnId(pawn.RetaliateAgainst));
@@ -66,21 +101,31 @@ namespace Odyssey.Sim.Pawns
                     return AttackJob.Fill(pawn, foe, job, TraverseMode.Colonist);
             }
 
+            if (pawn.Response == HostilityResponse.Defend
+                && HostilityResponses.Choose(ctx, pawn, out Pawn? fight, out bool joining, out _))
+                return HostilityResponses.Fill(pawn, fight!, joining, -1, job);
+
             Pawn? threat = Melee.AdjacentThreat(ctx, pawn);
             return threat != null && AttackJob.Fill(pawn, threat, job, TraverseMode.Colonist);
         }
     }
 
     /// <summary>
-    /// A marauder's whole purpose (design 33 §1): hunt the nearest reachable colonist who is
-    /// standing, and attack. A downed colonist is not hunted; a marauder with nobody left to
-    /// hunt falls through to idling. The attack it starts re-chooses after
+    /// A bandit's whole purpose (design 33 §1, §14b; the owner: <i>"kill colonists, destroy
+    /// base"</i>): hunt the nearest reachable colonist who is standing, and attack. A downed colonist
+    /// is not hunted. <b>With no colonist to reach</b> — walled out, or every one down — it attacks
+    /// the nearest colony building it can reach (<see cref="BuildingTargets.TryNearestColonyTarget"/>),
+    /// unforced, so it thinks again every <see cref="CombatDef.rechooseTicks"/> and a colonist who
+    /// can be reached comes first again. <b>With neither</b>, a bandit that came for something
+    /// (<see cref="Pawn.Motive"/>) steals it and leaves the board (<see cref="Theft.TryFill"/>,
+    /// design 33 §17); one that cannot reach an edge falls through to idling. The attack it starts re-chooses after
     /// <see cref="CombatDef.rechooseTicks"/>, so a nearer colonist is noticed. <b>A colonist who
     /// struck it</b> comes first while <see cref="Pawn.RetaliateAgainst"/> holds and she is
     /// standing and reachable (<c>CombatSystem.React</c> records her), so the hitter is fought
     /// even when another colonist is as near.
     /// <b>Scales with the pawns on the board</b> per think: one pass, a reachability test (two
-    /// array reads) for each standing colonist nearer than the best so far.
+    /// array reads) for each standing colonist nearer than the best so far — and, only on a think
+    /// that finds no colonist to reach, with the edifice records as well (the building scan).
     /// </summary>
     public class HostileThinkNode : ThinkNode
     {
@@ -89,13 +134,43 @@ namespace Odyssey.Sim.Pawns
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
             if (pawn.Downed) return false;
-            TraverseMode mode = pawn.Species.traverseMode;
+            TraverseMode mode = pawn.OwnMode;
 
+            Pawn? foe = ColonistToFight(pawn, ctx, mode);
+            if (foe != null) return AttackJob.Fill(pawn, foe, job, mode);
+
+            // Nobody to reach: the base (design 33 §14b). Only here, so a building never draws a
+            // bandit from a colonist it could get to.
+            if (BuildingTargets.TryNearestColonyTarget(ctx, pawn, mode, out BuildingTarget building))
+                return AttackJob.FillBuilding(ctx, pawn, building, job, mode);
+
+            // Nobody to fight and nothing to break: what it came for (design 33 §17). Last, so a
+            // stack of meals never draws a bandit from a colonist or a wall.
+            return Theft.TryFill(ctx, pawn, mode, job);
+        }
+
+        /// <summary>
+        /// Is there anything for <paramref name="pawn"/> to fight — a colonist it can reach, or a
+        /// colony building it may break? The first two questions of <see cref="TryGiveJob"/>, asked
+        /// without filling a job or naming a target: what a thief asks as it goes
+        /// (<see cref="StealJobDriver"/>), so the theft gives way to the fight by the same rule the
+        /// think would apply.
+        /// </summary>
+        public static bool HasAFight(Pawn pawn, PawnContext ctx, TraverseMode mode) =>
+            ColonistToFight(pawn, ctx, mode) != null
+            || BuildingTargets.TryNearestColonyTarget(ctx, pawn, mode, out _);
+
+        /// <summary>
+        /// The colonist the hunt takes: the one who struck it while it remembers her and she stands
+        /// and can be reached, else the nearest standing colonist it can reach, or null.
+        /// </summary>
+        static Pawn? ColonistToFight(Pawn pawn, PawnContext ctx, TraverseMode mode)
+        {
             if (pawn.RetaliateAgainst != 0 && ctx.CurrentTick < pawn.RetaliateUntilTick)
             {
                 Pawn? foe = ctx.Pawns.Get(new PawnId(pawn.RetaliateAgainst));
                 if (foe != null && foe.IsColonist && Melee.IsStanding(foe) && ctx.Reachable(pawn, foe.Cell, mode))
-                    return AttackJob.Fill(pawn, foe, job, mode);
+                    return foe;
             }
 
             Pawn? best = null;
@@ -111,8 +186,7 @@ namespace Odyssey.Sim.Pawns
                 best = other;
                 bestDistance = distance;
             }
-
-            return best != null && AttackJob.Fill(pawn, best, job, mode);
+            return best;
         }
     }
 
@@ -135,7 +209,7 @@ namespace Odyssey.Sim.Pawns
             Pawn? foe = ctx.Pawns.Get(new PawnId(pawn.RetaliateAgainst));
             if (foe == null || !Melee.IsStanding(foe)) return false;
 
-            TraverseMode mode = pawn.Species.traverseMode;
+            TraverseMode mode = pawn.OwnMode;
             if (!ctx.Reachable(pawn, foe.Cell, mode)) return false;
             return AttackJob.Fill(pawn, foe, job, mode);
         }

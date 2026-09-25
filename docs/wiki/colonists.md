@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-48 entries, 30 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+49 entries, 31 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -17,7 +17,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Corpse** | `ui.pawn.corpse` | Rots, upsets people, can be buried or worse | sheet 07 (anatomy), high | M2 |
 | **Midden hog** | `ui.pawn.hog` | Pig-descended, thrives on refuse heaps. Wild for now; the one you meet first | no art | AN |
 | **Duct rat** | `ui.pawn.rat` | Vermin from the ducts and the caverns. Climbs anything | no art | AN |
-| **Marauder** | `ui.pawn.marauder` | Armed, alone and hostile. Hunts whoever is still standing | no art | CB |
+| **Bandit** | `ui.pawn.bandit` | Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing | no art | CB |
 
 ## Needs
 
@@ -66,9 +66,10 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Wandering** | `ui.status.wandering` | An animal on a leg of its own: going somewhere nearby for no reason | no art | AN |
 | **Resting** | `ui.status.resting` | An animal between legs | no art | AN |
 | **Fighting** | `ui.status.fighting` | Closing on a target and swinging at it | no art | CB |
-| **Fleeing** | `ui.status.fleeing` | Running from whatever hurt it | no art | CB |
+| **Fleeing** | `ui.status.fleeing` | Running from danger, or from whatever hurt it | no art | CB |
 | **Equipping** | `ui.status.equipping` | Fetching a weapon to hold | no art | CB |
 | **Rescuing** | `ui.status.rescuing` | Carrying the downed to a bed | no art | CB |
+| **Stealing** | `ui.status.stealing` | A bandit carrying something off the board | no art | CB |
 | **Treating** | `ui.status.treating` | Tending the hurt, or herself <br>**Needs:** hands dressing a wound. Blocked on the missing human figure | no art | M3 |
 | **Resting as a patient** | `ui.status.patient` | In bed until the wound allows getting up <br>**Needs:** a figure lying in bed. Blocked on the missing human figure | no art | M3 |
 

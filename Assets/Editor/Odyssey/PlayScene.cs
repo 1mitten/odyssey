@@ -1169,6 +1169,30 @@ namespace Odyssey.EditorTools
         /// <para>A beard is painted from the hair's own atlas cell, so it is the hair colour
         /// exactly and there is nothing here to colour it with.</para>
         /// </summary>
+        /// <summary>
+        /// The bandit gang's bodies, each with the armour vest its rig switches on
+        /// (<c>docs/design/42-bandits.md</c> §4). Chosen from contact sheets by the owner,
+        /// 2026-09-24: the topless male, whose camo trousers go black, and
+        /// <c>SportyFemale_02</c>, whose black trousers are already there and whose stripes,
+        /// shoulders and wristbands go black with them. The sports-bra body wears shorts and the
+        /// owner asked for trousers. One row per vest cut, so the cut is dealt with the body.
+        /// </summary>
+        static readonly (string Prefab, string Vest)[] BanditBodies =
+        {
+            ("Character_ToplessMale_01", "SM_Char_Attach_Male_Armor_01"),
+            ("Character_ToplessMale_01", "SM_Char_Attach_Male_Armor_02"),
+            ("Character_ToplessMale_01", "SM_Char_Attach_Male_Armor_03"),
+            ("Character_SportyFemale_02", "SM_Char_Attach_Female_Armor_01"),
+            ("Character_SportyFemale_02", "SM_Char_Attach_Female_Armor_02"),
+            ("Character_SportyFemale_02", "SM_Char_Attach_Female_Armor_03"),
+        };
+
+        /// <summary>
+        /// The bandit's headgear: Battle Royale's welding helmet, which the pack names
+        /// <c>Helmet_03</c> — picked off <c>Logs/bandit-heads.png</c> (design 42 §4).
+        /// </summary>
+        static readonly string[] HeadgearPieces = { "SM_Chr_Attach_Helmet_03" };
+
         static readonly string[] Beards =
         {
             "SM_Chr_Attach_Beard_02",
@@ -1304,6 +1328,15 @@ namespace Odyssey.EditorTools
                 centreXZ = true, baseAtY = true,
                 scale = new Vector3(size, size, size),
             });
+
+            // A piece of the Meadow dressing. The same shape as a tuft, named apart because the
+            // two are placed by different rules and a reader should be able to tell which is which.
+            // Meadow's own prefab, never another pack's of the same name (design 38 §18c).
+            void Dress(string id, string prefab, float size)
+            {
+                Tuft(id, prefab, size);
+                rows[rows.Count - 1].prefabUnder = MeadowFolder;
+            }
 
             // A cell-shaped box wearing a tiling terrain texture. See the note above the natural
             // terrain rows for why this is the one kind of pack material a box may wear.
@@ -1541,6 +1574,34 @@ namespace Odyssey.EditorTools
             Tuft(ModuleIds.GrassTuftB, "SM_Env_Grass_Med_Clump_02", 1.0f);
             Tuft(ModuleIds.GrassTuftC, "SM_Env_Grass_Tall_Clump_03", 1.0f);
 
+            // The Meadow dressing (the look pass, owner 2026-09-24, design 38 §17): what stands on
+            // the ground in the reference screenshot and is not simulated. Pivots at the base and
+            // centred, like a tuft; the sizes are the art's own except where a piece would swamp a
+            // 2.5 m cell. None of it is Wildflowers_Patch or Grass_Large, which are 135-211k-triangle
+            // set-dressing meshes authored for a hand-built scene, not for instancing (e-09).
+            Dress(ModuleIds.DressTallGrass[0], "SM_Env_Grass_Tall_Clump_04", 1.0f);
+            Dress(ModuleIds.DressTallGrass[1], "SM_Env_Grass_Tall_Clump_05", 0.8f);
+            Dress(ModuleIds.DressCover[0], "SM_Env_Ground_Cover_01", 1.0f);
+            Dress(ModuleIds.DressCover[1], "SM_Env_Ground_Cover_02", 1.0f);
+            Dress(ModuleIds.DressCover[2], "SM_Env_Ground_Cover_03", 1.0f);
+            Dress(ModuleIds.DressCover[3], "SM_Env_Grass_Bush_01", 1.0f);
+            Dress(ModuleIds.DressFlowers[0], "SM_Env_Wildflowers_01", 1.3f);
+            Dress(ModuleIds.DressFlowers[1], "SM_Env_Wildflowers_02", 1.3f);
+            Dress(ModuleIds.DressFlowers[2], "SM_Env_Wildflowers_03", 1.3f);
+            // The flat flower cards were tried and read as scattered lilac pebbles from the play
+            // camera, so only the standing wildflowers are used.
+            Dress(ModuleIds.DressSunflower[0], "SM_Env_Sunflower_01", 1.0f);
+            // Bushes are the biggest thing in the reference picture after the trees; the largest is
+            // six metres across, so it is drawn a little smaller to sit among cells.
+            Dress(ModuleIds.DressBushes[0], "SM_Env_Bush_01", 1.0f);
+            Dress(ModuleIds.DressBushes[1], "SM_Env_Bush_02", 0.8f);
+            Dress(ModuleIds.DressBushes[2], "SM_Env_Bush_03", 0.7f);
+            // Stones sized to lie inside a cell. The pebble piles were tried and read as lilac
+            // confetti from the play camera, so they are left out.
+            Dress(ModuleIds.DressRocks[0], "SM_Env_Rock_01", 0.6f);
+            Dress(ModuleIds.DressRocks[1], "SM_Env_Rock_02", 0.55f);
+            Dress(ModuleIds.DressRocks[2], "SM_Env_Rock_Round_01", 0.45f);
+
             // A crop's drawn stages: sprout, half-grown, mature, one row each, standing on the
             // soil like a tuft does. The ids are the PlantDef's own module ids, so this table and
             // the simulation read from one copy of the names.
@@ -1580,19 +1641,28 @@ namespace Odyssey.EditorTools
             Crop("odyssey.module.carrot.l", "SM_Prop_Carrot_01_L", 1.4f, sink: 0.25f);
 
 
-            // Trees are the pieces that actually make this look like a place. Measured widths
-            // decide the casting: the pines are 1.78–2.12 m and sit inside a 2.5 m cell, while the
-            // broadleaf trees run 2.74–4.32 m. Tree_03 at 2.74 m is the closest fit, and a little
-            // overspill between neighbouring trees reads as canopy rather than as error.
-            rows.Add(new ModuleEntry
+            // Trees are the pieces that actually make this look like a place. Since the look pass
+            // (owner 2026-09-24: the Meadow screenshots are the target) the two simulated species
+            // wear Meadow art, several trees each, chosen per cell by the mesher: the conifer slot
+            // is the birch, the broadleaf slot the round meadow trees and the fruit trees, with the
+            // fifteen-metre giant as a rare fifth. Pivots are the trunk's foot (e-09), so they are
+            // not centred on their bounds — a lopsided crown must not walk the trunk off its cell.
+            // The canopies overhang their cells by a good deal; in the reference they touch, and
+            // that is what a wood looks like from above.
+            Tree(NaturalContent.ModuleTreeConifer, 0, "SM_Env_Tree_Birch_01", 0.85f);
+            Tree(NaturalContent.ModuleTreeConifer, 1, "SM_Env_Tree_Birch_02", 0.85f);
+            Tree(NaturalContent.ModuleTreeConifer, 2, "SM_Env_Tree_Birch_03", 1.2f);
+            Tree(NaturalContent.ModuleTreeBroadleaf, 0, "SM_Env_Tree_Meadow_02", 0.8f);
+            Tree(NaturalContent.ModuleTreeBroadleaf, 1, "SM_Env_Tree_Fruit_01", 1.1f);
+            Tree(NaturalContent.ModuleTreeBroadleaf, 2, "SM_Env_Tree_Fruit_02", 1.1f);
+            Tree(NaturalContent.ModuleTreeBroadleaf, 3, "SM_Env_Tree_Fruit_03", 1.1f);
+            Tree(NaturalContent.ModuleTreeBroadleaf, 4, "SM_Env_Tree_Meadow_01", 0.6f);
+
+            void Tree(string baseId, int variant, string prefab, float size) => rows.Add(new ModuleEntry
             {
-                moduleId = "odyssey.module.tree.conifer", shape = ModuleShape.Pillar,
-                prefabName = "SM_Gen_Env_Tree_Pine_01", centreXZ = true, baseAtY = true,
-            });
-            rows.Add(new ModuleEntry
-            {
-                moduleId = "odyssey.module.tree.broadleaf", shape = ModuleShape.Pillar,
-                prefabName = "SM_Gen_Env_Tree_03", centreXZ = true, baseAtY = true,
+                moduleId = ModuleIds.TreeVariant(baseId, variant), shape = ModuleShape.Pillar,
+                prefabName = prefab, centreXZ = false, baseAtY = true,
+                scale = new Vector3(size, size, size),
             });
 
             // The axe a colonist swings while felling. One row, held by whoever is working: it is
@@ -1671,6 +1741,35 @@ namespace Odyssey.EditorTools
             for (int variant = 0; variant < Hairs.Length; variant++) Hair(variant);
             for (int variant = 0; variant < Beards.Length; variant++) Beard(variant);
 
+            // The bandit gang's bodies (design 42), in the colonist family but **after** every
+            // colonist row, so no colonist's look index moves. Flagged bandit, which keeps them
+            // out of the lottery; each names the vest its rig switches on.
+            for (int b = 0; b < BanditBodies.Length; b++) BanditBody(Cast.Length + b, BanditBodies[b]);
+            for (int variant = 0; variant < HeadgearPieces.Length; variant++) Headgear(variant);
+
+            void BanditBody(int variant, (string Prefab, string Vest) body)
+            {
+                ModuleEntry row = PersonRow(variant, body.Prefab);
+                row.colonistPool = false;
+                row.uniform = false;
+                row.bandit = true;
+                row.overlayName = body.Vest;
+                rows.Add(row);
+            }
+
+            // The welding helmet, on the hair's terms: a rigid prop on the head bone. Not
+            // recoloured -- it is worn as the pack painted it (owner, 2026-09-24).
+            void Headgear(int variant)
+            {
+                rows.Add(new ModuleEntry
+                {
+                    moduleId = ModuleIds.Headgear(variant), shape = ModuleShape.Pillar,
+                    prefabName = HeadgearPieces[variant],
+                    recolours = false,
+                    centreXZ = false, baseAtY = false,
+                });
+            }
+
             // The animals (design 29): one row per kind, by the name ModuleIds keeps for it. The
             // art is the project's own (CC0, Assets/Art/Custom/Animals) rather than a pack's, so
             // these rows resolve on a machine with no Synty folder at all — the first figures
@@ -1743,7 +1842,16 @@ namespace Odyssey.EditorTools
             void Colonist(int variant)
             {
                 string prefab = Cast[variant].Prefab;
+                ModuleEntry row = PersonRow(variant, prefab);
+                row.colonistPool = Cast[variant].Pool;
+                row.uniform = IsUniform(prefab);
+                rows.Add(row);
+            }
 
+            // What every person row shares, colonist or bandit: the body, its sex, its pose and
+            // its gaits.
+            static ModuleEntry PersonRow(int variant, string prefab)
+            {
                 // The locomotion pack ships every clip masculine and feminine, and the packs name
                 // their characters, so the two can simply be matched up. It costs one string test
                 // and it is the difference between a colony of people and a colony of people half
@@ -1752,12 +1860,10 @@ namespace Odyssey.EditorTools
                                 || prefab.IndexOf("Girl", StringComparison.OrdinalIgnoreCase) >= 0;
                 string suffix = feminine ? "Femn" : "Masc";
 
-                rows.Add(new ModuleEntry
+                return new ModuleEntry
                 {
                     moduleId = ModuleIds.Colonist(variant), shape = ModuleShape.Pillar,
                     prefabName = prefab,
-                    colonistPool = Cast[variant].Pool,
-                    uniform = IsUniform(prefab),
                     sex = feminine ? BodySex.Female : BodySex.Male,
                     poseClipName = $"A_Idle_Standing_{suffix}",
                     // No sitClipName yet: no pack ships a seated clip, and the crouching idle
@@ -1779,7 +1885,7 @@ namespace Odyssey.EditorTools
                             speedFromClipName = $"A_Run_F_RootMotion_{suffix}",
                         },
                     },
-                });
+                };
             }
 
 
@@ -1954,8 +2060,11 @@ namespace Odyssey.EditorTools
             Row(ModuleIds.CombatSwingLight,
                 ("A_Attack_LightCombo01A_Sword", "A"), ("A_Attack_LightCombo01B_Sword", "B"),
                 ("A_Attack_LightCombo01C_Sword", "C"));
+            // Swings only: the heavy row is the bat's and the crowbar's, and a blunt weapon does
+            // not stab (owner, 2026-09-25). HeavyStab01 was B until then (design 33 §22).
             Row(ModuleIds.CombatSwingHeavy,
-                ("A_Attack_HeavyCombo01A_Sword", "A"), ("A_Attack_HeavyStab01_Sword", "B"));
+                ("A_Attack_HeavyCombo01A_Sword", "A"), ("A_Attack_HeavyCombo01B_Sword", "B"),
+                ("A_Attack_HeavyCombo01C_Sword", "C"));
             Row(ModuleIds.CombatHitReact,
                 ("A_Hit_F_React_Sword", F), ("A_Hit_B_React_Sword", B),
                 ("A_Hit_L_React_Sword", L), ("A_Hit_R_React_Sword", R));
@@ -2037,7 +2146,7 @@ namespace Odyssey.EditorTools
         /// Seconds from a clip's start to the end of its WindUp sub-clip, or 0 when the file has no
         /// WindUp — a reaction, a death, anything that is not a blow.
         /// </summary>
-        static float MeasureImpact(string path, string clipName, AnimationClip clip)
+        internal static float MeasureImpact(string path, string clipName, AnimationClip clip)
         {
             if (!(AssetImporter.GetAtPath(path) is ModelImporter importer)) return 0f;
             ModelImporterClipAnimation[] cuts = importer.clipAnimations;
@@ -2046,11 +2155,15 @@ namespace Odyssey.EditorTools
             string windUpName = clipName.EndsWith("_Sword", StringComparison.Ordinal)
                 ? clipName.Substring(0, clipName.Length - "_Sword".Length) + "_WindUp_Sword"
                 : clipName + "_WindUp";
+            // The pack drops the underscore once: HeavyCombo01C's cut is "..._HeavyCombo01CWindUp_Sword".
+            // Asking only for the spelling every other file uses measured its blow at 0 s — drawn
+            // at the very start of its own wind-up — and nothing said so (design 33 §22).
+            string unscored = windUpName.Replace("_WindUp", "WindUp");
             ModelImporterClipAnimation? whole = null, windUp = null;
             foreach (ModelImporterClipAnimation cut in cuts)
             {
                 if (cut.name == clipName) whole = cut;
-                else if (cut.name == windUpName) windUp = cut;
+                else if (cut.name == windUpName || cut.name == unscored) windUp = cut;
             }
             if (whole == null || windUp == null) return 0f;
 
@@ -2069,7 +2182,7 @@ namespace Odyssey.EditorTools
         /// that insisted on the two agreeing silently lost the stun's loop and one death pose. The search
         /// has no type filter for the same reason: a clip search matches the clip's name, not the file's.</para>
         /// </summary>
-        static AnimationClip? FindSwordCombatClip(string exactName, out string? path)
+        internal static AnimationClip? FindSwordCombatClip(string exactName, out string? path)
         {
             path = null;
             if (!Directory.Exists(Path.GetFullPath(SwordCombatPolygon))) return null;
@@ -2125,7 +2238,7 @@ namespace Odyssey.EditorTools
                 if (string.IsNullOrEmpty(row.prefabName)) continue;
                 if (!cache.TryGetValue(row.prefabName, out GameObject? prefab))
                 {
-                    prefab = FindSyntyPrefab(row.prefabName) ?? FindCustomModel(row.prefabName);
+                    prefab = FindSyntyPrefab(row.prefabName, row.prefabUnder) ?? FindCustomModel(row.prefabName);
                     cache[row.prefabName] = prefab;
                 }
                 row.prefab = prefab;
@@ -2263,16 +2376,29 @@ namespace Odyssey.EditorTools
         }
 
         /// <summary>Exact-name lookup under Assets/Synty. Absent packs give null, which is fine.</summary>
-        static GameObject? FindSyntyPrefab(string exactName)
+        /// <summary>Where the Meadow Forest pack's own prefabs live.</summary>
+        const string MeadowFolder = "Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest";
+
+        /// <summary>
+        /// Exact-name prefab lookup under Assets/Synty, looking in <paramref name="under"/> first
+        /// when it is given. The packs share names — three have an <c>SM_Env_Bush_01</c> — and by
+        /// name alone the one whose path sorts first wins, which is how the Meadow dressing came to
+        /// draw Battle Royale's bushes (design 38 §18c).
+        /// </summary>
+        static GameObject? FindSyntyPrefab(string exactName, string? under = null)
         {
             if (!Directory.Exists(Path.GetFullPath("Assets/Synty"))) return null;
             string[] guids = AssetDatabase.FindAssets($"{exactName} t:Prefab", new[] { "Assets/Synty" });
-            string? path = guids
+            string[] paths = guids
                 .Select(AssetDatabase.GUIDToAssetPath)
                 .Where(p => string.Equals(Path.GetFileNameWithoutExtension(p), exactName,
                     StringComparison.OrdinalIgnoreCase))
                 .OrderBy(p => p, StringComparer.Ordinal)
-                .FirstOrDefault();
+                .ToArray();
+            string? path = null;
+            if (!string.IsNullOrEmpty(under))
+                path = paths.FirstOrDefault(p => p.StartsWith(under + "/", StringComparison.OrdinalIgnoreCase));
+            path ??= paths.FirstOrDefault();
             return path == null ? null : AssetDatabase.LoadAssetAtPath<GameObject>(path);
         }
 

@@ -21,15 +21,17 @@ namespace Odyssey.Tests.Presentation
     {
         sealed class Recorder : IBloodEffects
         {
-            public readonly List<(Vector3 At, Vector3 Direction, float Amount, bool Sharp)> Spurts =
-                new List<(Vector3, Vector3, float, bool)>();
-            public readonly List<(Vector3 At, float Size)> Pools = new List<(Vector3, float)>();
+            public readonly List<(Vector3 Feet, Vector3 Wound, Vector3 Direction, float Amount, bool Sharp)> Spurts =
+                new List<(Vector3, Vector3, Vector3, float, bool)>();
+            public readonly List<(PawnId Who, Vector3 At, float Size, float Length)> Pools =
+                new List<(PawnId, Vector3, float, float)>();
             public int Clears;
 
-            public void Spurt(Vector3 at, Vector3 direction, float amount, bool sharp) =>
-                Spurts.Add((at, direction, amount, sharp));
+            public void Spurt(Vector3 feet, Vector3 wound, Vector3 direction, float amount, bool sharp) =>
+                Spurts.Add((feet, wound, direction, amount, sharp));
 
-            public void Pool(Vector3 at, float sizeFactor) => Pools.Add((at, sizeFactor));
+            public void Pool(PawnId who, Vector3 feet, float sizeFactor, float bodyLength) =>
+                Pools.Add((who, feet, sizeFactor, bodyLength));
 
             public void Clear() => Clears++;
         }
@@ -41,7 +43,7 @@ namespace Odyssey.Tests.Presentation
             var snapshot = new WorldSnapshot();
             snapshot.BeginWrite(500, new GridSize(12, 12, 4), 0);
             snapshot.AddPawn(new PawnView(Attacker, new CellRef(1, 1, 0), 800, 800, 600, flags: PawnFlags.Person));
-            snapshot.AddPawn(new PawnView(Victim, new CellRef(3, 1, 0), 800, 800, 600, kind: PawnKindIndex.Marauder,
+            snapshot.AddPawn(new PawnView(Victim, new CellRef(3, 1, 0), 800, 800, 600, kind: PawnKindIndex.Bandit,
                 flags: PawnFlags.Person | PawnFlags.Hostile));
             foreach (CombatEventView e in events) snapshot.AddCombatEvent(e);
             return snapshot;
@@ -85,11 +87,14 @@ namespace Odyssey.Tests.Presentation
             Vector3 along = blood.Spurts[0].Direction;
             Assert.That(along.x, Is.GreaterThan(0.99f), $"the blow travelled {along}");
             Assert.That(along.y, Is.EqualTo(0f));
-            Assert.That(blood.Spurts[0].At.y, Is.GreaterThan(blood.Pools[0].At.y), "a spurt starts at the wound, not the feet");
+            Assert.That(blood.Spurts[0].Wound.y, Is.GreaterThan(blood.Spurts[0].Feet.y), "a spurt starts at the wound, not the feet");
+            Assert.That(blood.Spurts[0].Feet.y, Is.EqualTo(blood.Pools[0].At.y).Within(1e-4f), "and lands on the ground the body stands on");
 
             Assert.That(blood.Pools.Count, Is.EqualTo(2), "a down and a death");
             Assert.That(blood.Pools[0].Size, Is.EqualTo(BloodModel.PoolSize(CombatEventKind.Downed)));
             Assert.That(blood.Pools[1].Size, Is.EqualTo(BloodModel.PoolSize(CombatEventKind.Died)));
+            Assert.That(blood.Pools[0].Who, Is.EqualTo(Victim), "a pool is under the body that fell");
+            Assert.That(blood.Pools[0].Length, Is.EqualTo(BloodSpray.PersonLength), "a person is a person's length");
 
             feedback.Consume(Frame(), new object(), null, null);
             Assert.That(blood.Clears, Is.EqualTo(2), "a load kept the last world's blood");
@@ -110,7 +115,7 @@ namespace Odyssey.Tests.Presentation
             Assert.That(sides.IsSharp(ItemHandle.Machete, PawnKindIndex.Colonist), Is.True);
             Assert.That(sides.IsSharp(ItemHandle.ArcBlade, PawnKindIndex.Colonist), Is.True);
             Assert.That(sides.IsSharp(-1, PawnKindIndex.Colonist), Is.False, "fists");
-            Assert.That(sides.IsSharp(-1, PawnKindIndex.Marauder), Is.False, "a marauder's fists");
+            Assert.That(sides.IsSharp(-1, PawnKindIndex.Bandit), Is.False, "a bandit's fists");
             Assert.That(sides.IsSharp(-1, PawnKindIndex.DuctRat), Is.True, "a rat's bite");
             Assert.That(sides.IsSharp(-1, PawnKindIndex.MiddenHog), Is.False, "the hog's tusks, as the content has them");
         }

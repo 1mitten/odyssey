@@ -86,4 +86,35 @@
     <fallTicks>360</fallTicks>
   </IncidentDef>
 
+  <!--
+    A bandit with nobody left to fight and nothing left to break carried a stack off the board
+    (docs/design/33-combat.md section 17; owner, 2026-09-24: "thieve items ... creating a negative
+    event"). Written down by the world when it happens and never fired, so its worker is Recorded,
+    which the debug menu's Events tab leaves off its list; the bulletin carries the item and the
+    amount. The gates are the defaults and read by nothing, since no storyteller picks it.
+  -->
+  <IncidentDef>
+    <defName>Incident_Theft</defName>
+    <label>theft</label>
+    <description>A bandit carried a stack off the board. Recorded when it happens; nothing fires it</description>
+    <bulletinKey>ui.bulletin.theft</bulletinKey>
+    <favourability>Bad</favourability>
+    <category>ThreatSmall</category>
+    <worker>Recorded</worker>
+  </IncidentDef>
+
+  <!--
+    The same bandit with nothing it could reach to take: it walks off the board empty-handed.
+    Neutral, because nothing was lost; on the panel so a player who watched it go knows it has.
+  -->
+  <IncidentDef>
+    <defName>Incident_BanditLeft</defName>
+    <label>bandit left</label>
+    <description>A bandit walked off the board with nothing. Recorded when it happens; nothing fires it</description>
+    <bulletinKey>ui.bulletin.banditleft</bulletinKey>
+    <favourability>Neutral</favourability>
+    <category>ThreatSmall</category>
+    <worker>Recorded</worker>
+  </IncidentDef>
+
 </Defs>

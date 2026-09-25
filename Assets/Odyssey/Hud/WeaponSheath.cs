@@ -61,7 +61,7 @@ namespace Odyssey.Hud
         /// Step one figure's clock: <paramref name="drawn"/> is the simulation's answer this frame,
         /// <paramref name="drafted"/> the draft. Returns the edge to animate, if any. A first
         /// sighting takes the published state as it is and animates nothing — somebody scrolled to
-        /// a marauder who has had its blade out all along.
+        /// a bandit who has had its blade out all along.
         /// </summary>
         public static SheathChange Step(ref SheathClock clock, bool drawn, bool drafted, int tick)
         {

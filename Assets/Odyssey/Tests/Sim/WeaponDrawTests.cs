@@ -175,31 +175,31 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// A marauder's weapon is always out — stood ten tiles from anybody, so its hunt's target is
-        /// no reason, and never struck. A marauder with its weapon taken from it draws nothing.
+        /// A bandit's weapon is always out — stood ten tiles from anybody, so its hunt's target is
+        /// no reason, and never struck. A bandit with its weapon taken from it draws nothing.
         /// </summary>
         [Test]
-        public void AMarauderAlwaysHasItsWeaponDrawn()
+        public void ABanditAlwaysHasItsWeaponDrawn()
         {
             var colony = Board();
             Pawn colonist = colony.Pawns.Pawns.All[0];
             colony.World.Tick(30);
-            Pawn marauder = WeaponFixture.SpawnKind(colony, PawnKindIndex.Marauder);
-            Assume.That(WeaponHand.Held(marauder, colony.Pawns), Is.Not.Null, "spawned unarmed");
-            Assert.That(Drawn(colony, marauder), Is.True, "spawned with its weapon sheathed");
+            Pawn bandit = WeaponFixture.SpawnKind(colony, PawnKindIndex.Bandit);
+            Assume.That(WeaponHand.Held(bandit, colony.Pawns), Is.Not.Null, "spawned unarmed");
+            Assert.That(Drawn(colony, bandit), Is.True, "spawned with its weapon sheathed");
 
             Stand(colony, colonist, Near(colony, 0, 0));
-            Stand(colony, marauder, East(colony, colonist, 10));
+            Stand(colony, bandit, East(colony, colonist, 10));
             for (int t = 0; t < 60; t++)
             {
                 colony.World.Tick();
-                Assume.That(WeaponDraw.TargetNear(colony.Pawns, marauder), Is.False);
-                Assert.That(Drawn(colony, marauder), Is.True, $"a marauder sheathed its weapon at tick {colony.World.CurrentTick}");
+                Assume.That(WeaponDraw.TargetNear(colony.Pawns, bandit), Is.False);
+                Assert.That(Drawn(colony, bandit), Is.True, $"a bandit sheathed its weapon at tick {colony.World.CurrentTick}");
             }
 
-            WeaponHand.PutDown(marauder, colony.Pawns, marauder.Cell);
+            WeaponHand.PutDown(bandit, colony.Pawns, bandit.Cell);
             colony.World.Tick();
-            Assert.That(Drawn(colony, marauder), Is.False, "the control: bare-handed, and something was drawn");
+            Assert.That(Drawn(colony, bandit), Is.False, "the control: bare-handed, and something was drawn");
         }
     }
 }

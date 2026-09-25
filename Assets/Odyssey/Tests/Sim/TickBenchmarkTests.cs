@@ -258,7 +258,7 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// Twenty colonists against twenty marauders on the played board (design 33 §6A, lane A):
+        /// Twenty colonists against twenty bandits on the played board (design 33 §6A, lane A):
         /// what a fight costs the tick, beside the same colony at peace in the same run. The
         /// combat pass walks every pawn with one branch each and does its real work only for the
         /// swings landing and the hurt healing, and the hunt and the self-defence each scan the
@@ -271,30 +271,69 @@ namespace Odyssey.Tests.Sim
         public void TwentyAgainstTwenty()
         {
             var report = new StringBuilder();
-            double peace = MeasureFight(report, "twenty colonists at peace", marauders: 0, out _);
-            double fight = MeasureFight(report, "twenty against twenty", marauders: 20, out int swings);
+            double peace = MeasureFight(report, "twenty colonists at peace", bandits: 0, out _);
+            double fight = MeasureFight(report, "twenty against twenty", bandits: 20, out int swings);
             report.AppendLine($"the fight costs {fight - peace:F3} ms a tick over the colony at peace ({fight / Math.Max(peace, 1e-9):F2}x)");
+            // Every colonist drafted (design 33 §15): each one on her hold scans the pawns every
+            // tick for a threat beside her or a fight to join, and joins the ones nearby.
+            double drafted = MeasureFight(report, "twenty drafted against twenty", bandits: 20, out _, drafted: true);
+            report.AppendLine($"drafted, the fight costs {drafted - peace:F3} ms a tick over the colony at peace");
             TestContext.WriteLine(report.ToString());
             Assert.That(swings, Is.GreaterThan(50), "the measured window held no fight");
         }
 
-        static double MeasureFight(StringBuilder report, string label, int marauders, out int swings)
+        /// <summary>
+        /// Fifty colonists and ten bandits on the scale target and on the Huge board (C7, the
+        /// combat gate's benchmark rows), each beside the same colony at peace and drafted, in one
+        /// run. <b>Not the lattice world</b>: these colonies are built by <see cref="ColonyWorld.Build"/>
+        /// on the map the game generates (barren and wooded, <see cref="ColonyWorld.DefFor"/>), so
+        /// the region count is a played board's, and the figure is comparable with the game rather
+        /// than with the rest of this class. The fight is the colony's, not the board's: the
+        /// combat pass and the hunt both scale with the pawns, so the row that matters is the Pawns
+        /// phase against peace on the same board.
+        /// </summary>
+        [Test, Explicit, Category("Benchmark")]
+        public void FiftyAgainstTenOnTheBigBoards()
         {
-            var size = new GridSize(120, 120, 16);
+            var report = new StringBuilder();
+            int swings = 0;
+            foreach ((string name, GridSize size) in new[] { ("scale target", Scale), ("huge", BoardSizes.Huge) })
+            {
+                double peace = MeasureFight(report, $"fifty at peace, {name}", 0, out _, size: size, colonists: 50, wooded: true);
+                double fight = MeasureFight(report, $"fifty against ten, {name}", 10, out int here, size: size, colonists: 50, wooded: true);
+                double drafted = MeasureFight(report, $"fifty drafted against ten, {name}", 10, out _, drafted: true, size: size, colonists: 50, wooded: true);
+                report.AppendLine($"{name}: the fight costs {fight - peace:F3} ms a tick over peace ({fight / Math.Max(peace, 1e-9):F2}x), " +
+                                  $"drafted {drafted - peace:F3} ms");
+                report.AppendLine();
+                swings = Math.Min(swings == 0 ? here : swings, here);
+            }
+            TestContext.WriteLine(report.ToString());
+            Assert.That(swings, Is.GreaterThan(20), "a measured window held no fight");
+        }
+
+        static double MeasureFight(StringBuilder report, string label, int bandits, out int swings, bool drafted = false,
+                                   GridSize? size = null, int colonists = 20, bool wooded = false)
+        {
+            GridSize board = size ?? new GridSize(120, 120, 16);
             ScenarioDef scenario = ScenarioDef.Bare();
-            scenario.colonists = 20;
-            scenario.beds = 20;
+            scenario.colonists = colonists;
+            scenario.beds = colonists;
             scenario.stockpileCells = 9;
-            ColonyWorld colony = ColonyWorld.Build(size, 12345u, scenario);
+            var setup = Stopwatch.StartNew();
+            ColonyWorld colony = ColonyWorld.Build(board, 12345u, scenario, wooded: wooded);
+            setup.Stop();
             var rules = new CombatFixture.RecordingRules();
             colony.Pawns.MeleeRules = rules;
 
             CellRef start = colony.Start;
-            for (int i = 0; i < marauders; i++)
+            for (int i = 0; i < bandits; i++)
             {
                 int cell = colony.Pawns.Cells.NearestWalkableInColumn(start.X + 12 + i % 5, start.Z - 2 + i / 5, start.Y);
-                if (cell >= 0) colony.Pawns.Pawns.Spawn(cell, PawnKindIndex.Marauder);
+                if (cell >= 0) colony.Pawns.Pawns.Spawn(cell, PawnKindIndex.Bandit);
             }
+            if (drafted)
+                foreach (Pawn pawn in new System.Collections.Generic.List<Pawn>(colony.Pawns.Pawns.All))
+                    if (pawn.IsColonist) CombatFixture.Draft(colony, pawn);
 
             // Past the approach, into the thick of it, before the window opens.
             colony.World.Tick(600);
@@ -308,10 +347,16 @@ namespace Odyssey.Tests.Sim
             colony.World.PhaseSink = null;
             swings = rules.Swings.Count - before;
 
-            int downed = 0;
-            foreach (Pawn pawn in colony.Pawns.Pawns.All) if (pawn.Downed) downed++;
+            int downed = 0, people = 0;
+            foreach (Pawn pawn in colony.Pawns.Pawns.All)
+            {
+                if (pawn.Downed) downed++;
+                if (pawn.IsColonist) people++;
+            }
             double tick = trace.MeanTickMs();
-            report.AppendLine($"--- {label}: {colony.Pawns.Pawns.Count} pawns on {size.SizeX} x {size.SizeZ} x {size.SizeY}, {Ticks} ticks ---");
+            report.AppendLine($"--- {label}: {colony.Pawns.Pawns.Count} pawns ({people} colonists, the rest the board's animals and the bandits) on {board.SizeX} x {board.SizeZ} x {board.SizeY} " +
+                              $"({(wooded ? "the played map" : "bare")}, {colony.Pawns.Nav.RegionCapacity:N0} regions), {Ticks} ticks, " +
+                              $"setup {setup.ElapsedMilliseconds} ms ---");
             report.AppendLine($"tick {tick:F3} ms mean, {trace.P95TickMs():F3} p95; Pawns phase {trace.MeanMs(TickSegment.Pawns):F3} ms mean, " +
                               $"{trace.P95Ms(TickSegment.Pawns):F3} p95; {swings} swings resolved in the window, {downed} down at its end");
             return tick;

@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Saving;
 using Odyssey.Sim.World;
@@ -146,6 +147,50 @@ namespace Odyssey.Tests.Sim
             }
 
             world.RebuildDerived();
+        }
+
+        /// <summary>
+        /// A wall the colony built is a wall to the paths after a load (design 33 §19a). The board a
+        /// save is read over is the one the seed generates, and its navigation graph was built for
+        /// that board: every block the loaded grid differs in must be flooded again, not only the
+        /// ones something on the load path happens to dirty. Measured in the owner's save
+        /// (2026-09-24): seven walls of a house on the first column of a navigation block were
+        /// walkable after the load, and bandits walked through them and chose sides inside them.
+        ///
+        /// <para><see cref="AWorldWhoseGridHasChangedStillResumesIdentically"/> cannot see this: its
+        /// wall is written straight into the grid and nothing marks the graph dirty in either
+        /// world, so the original is exactly as stale as the copy and the hashes agree. Here the
+        /// walls go up through <c>ConstructionGrid.Raise</c>, which dirties the graph, so the
+        /// original is right and the copy is compared against it cell by cell.</para>
+        /// </summary>
+        [Test]
+        public void ABuiltWallIsStillAWallToThePathsAfterTheLoad()
+        {
+            var original = Fresh();
+            original.World.Tick();
+            CellRef at = original.Start;
+            var walls = new System.Collections.Generic.List<int>();
+            for (int dz = -2; dz <= 2; dz++)
+            {
+                int cell = original.Pawns.Cells.NearestWalkableInColumn(at.X + 12, at.Z + dz, at.Y);
+                Assert.That(original.Construction.Place(Size.FromIndex(cell), BuildingHandle.Wall, StuffHandle.Wood, 0),
+                    Is.EqualTo(IntentRejection.None), $"could not order a wall at {Size.FromIndex(cell)}");
+                Assert.That(original.Construction.Raise(original.Pawns, cell), Is.True);
+                walls.Add(cell);
+            }
+            original.World.Tick();
+            foreach (int wall in walls)
+                Assert.That(original.Pawns.Nav.Grid.CanEnter(wall, TraverseMode.Colonist), Is.False,
+                    $"the control: the wall at {Size.FromIndex(wall)} is a wall to the world that built it");
+
+            var restored = Fresh();
+            restored.Load(original.Save());
+
+            foreach (int wall in walls)
+                Assert.That(restored.Pawns.Nav.Grid.CanEnter(wall, TraverseMode.Colonist), Is.False,
+                    $"the wall at {Size.FromIndex(wall)} can be walked through after the load");
+            Assert.That(restored.Pawns.Nav.Grid.Flags, Is.EqualTo(original.Pawns.Nav.Grid.Flags),
+                "the loaded world's navigation disagrees with the world that was saved");
         }
 
         [Test]

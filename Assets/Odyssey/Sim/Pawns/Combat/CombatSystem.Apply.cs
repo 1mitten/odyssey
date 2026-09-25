@@ -32,6 +32,14 @@ namespace Odyssey.Sim.Pawns
             CellRef at = _ctx.Size.FromIndex(target.Cell);
             int weapon = armament.ItemDef;
 
+            // Every swing that reaches her is heard, whatever came of it (design 33 §14f: a missed
+            // swing is an attack), from here and nowhere else — before the outcome, so a hit's
+            // DamageApplied follows it.
+            CombatEventKind result = !outcome.Landed && outcome.Result == CombatEventKind.Dodge
+                ? CombatEventKind.Dodge
+                : outcome.Landed ? CombatEventKind.Hit : CombatEventKind.Miss;
+            _ctx.CombatHooks.RaiseSwingResolved(new SwingReport(target, attacker, result, weapon, tick));
+
             if (!outcome.Landed)
             {
                 CombatEventKind kind = outcome.Result == CombatEventKind.Dodge ? CombatEventKind.Dodge : CombatEventKind.Miss;
@@ -98,7 +106,7 @@ namespace Odyssey.Sim.Pawns
 
             Job job = pawn.JobBuffer;
             job.Reset(JobIndex.Downed);
-            job.Mode = pawn.Species.traverseMode;
+            job.Mode = pawn.OwnMode;
             _jobs.StartJob(pawn, job, tick);
 
             _ctx.CombatLog.Report(CombatEventKind.Downed, by?.Id ?? default, pawn.Id,
@@ -171,7 +179,7 @@ namespace Odyssey.Sim.Pawns
         /// <see cref="CombatDef.revengeTicks"/>; not turning, it runs — unless it had already
         /// turned on this attacker, which a failed roll does not undo. A colonist not under the
         /// player's hand stops what she is doing and fights back against whoever struck her for
-        /// <see cref="CombatDef.retaliationTicks"/>. A marauder remembers a colonist hitting it for the
+        /// <see cref="CombatDef.retaliationTicks"/>. A bandit remembers a colonist hitting it for the
         /// same window and turns on her, unless it is already fighting somebody beside it.
         /// </summary>
         void React(Pawn target, Pawn attacker, int tick)
@@ -197,10 +205,10 @@ namespace Odyssey.Sim.Pawns
                 return;
             }
 
-            // A marauder struck by a colonist it is not fighting remembers her for the retaliation
+            // A bandit struck by a colonist it is not fighting remembers her for the retaliation
             // window, and its hunt prefers her (HostileThinkNode). Chasing somebody else, it turns
             // now. Already trading blows with a colonist beside it, it keeps to her: an interrupt
-            // there threw away the swing in the air and left the marauder a whole cooldown, so two
+            // there threw away the swing in the air and left the bandit a whole cooldown, so two
             // colonists could keep it from ever landing a blow — and the re-think chose the
             // nearest, which on a tie was the lower id, not the hitter (review, 2026-09-23).
             if (target.IsHostile)
@@ -214,13 +222,16 @@ namespace Odyssey.Sim.Pawns
 
             if (!target.IsColonist || target.Drafted || target.IsBroken) return;
 
-            // Whoever struck her, for the window: a colonist (the owner's rule), a marauder or a
+            // Whoever struck her, for the window: a colonist (the owner's rule), a bandit or a
             // hog alike. Remembering only the colonist was tried first and a struck colonist
             // stepped out of reach landing the step she was on, found nobody beside her, and went
-            // back to wandering while the marauder beat her down (measured).
+            // back to wandering while the bandit beat her down (measured).
             target.RetaliateAgainst = attacker.Id.Value;
             target.RetaliateUntilTick = tick + combat.retaliationTicks;
 
+            // Set to Flee (design 33 §18d) she runs rather than fighting back: the interrupt below
+            // brings her to her self-defence, which asks her response first. The memory above is
+            // still written, for when she is cornered and fights back as Fight back would.
             if (!Melee.IsAttacking(target, attacker)) _jobs.Interrupt(target, JobStatus.Failed);
         }
 
@@ -233,7 +244,7 @@ namespace Odyssey.Sim.Pawns
             if (pawn.CombatTarget == 0 || pawn.CurrentJob == null || pawn.CurrentJob.DefIndex != JobIndex.AttackMelee)
                 return false;
             Pawn? foe = _ctx.Pawns.Get(new PawnId(pawn.CombatTarget));
-            return foe != null && Melee.IsStanding(foe) && Melee.InReach(_ctx, pawn, foe, pawn.Species.traverseMode);
+            return foe != null && Melee.IsStanding(foe) && Melee.InReach(_ctx, pawn, foe, pawn.OwnMode);
         }
 
         /// <summary>
@@ -242,7 +253,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         void Flee(Pawn pawn, Pawn threat, int tick)
         {
-            TraverseMode mode = pawn.Species.traverseMode;
+            TraverseMode mode = pawn.OwnMode;
             int cell = FleeJobDriver.FindFleeCell(_ctx, pawn, threat.Cell, _ctx.Content.Combat.fleeCells, mode);
             if (cell < 0) return;
 

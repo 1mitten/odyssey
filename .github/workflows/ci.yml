@@ -1,15 +1,31 @@
-# Odyssey CI. Two tiers, the same two the working rules name.
+# Odyssey CI. Two tiers, the same two the working rules name, and a selector in front of them.
 #
-# The fast tier runs on GitHub's own Linux machines on every push and pull request: the Sim and
-# Hud test projects through the dotnet SDK, the content-registry gates, and the icon tooling's
-# own tests. None of it needs Unity, so it is a real gate from the day this file lands.
+# The fast tier runs on GitHub's own Linux machines: the Sim and Hud test projects through the
+# dotnet SDK, the Long tier, the content-registry gates and the Python tooling's own tests. None
+# of it needs Unity.
 #
 # The Unity tier is the authority (assembly boundaries, editor tooling, PlayMode, the headless
-# day) and needs the owner's Windows machine as a self-hosted runner, per
-# docs/research/d-08-ci-tooling.md. It is switched on by a repository variable, UNITY_RUNNER=1,
-# set once the runner is registered with the labels self-hosted, windows and unity; until then
-# the job is skipped rather than left waiting for a machine that does not exist. Branch
-# protection on main should require "Fast tier" now and "Unity tests" once the variable is set.
+# day) and runs on the owner's Windows machine as a self-hosted runner, per
+# docs/research/d-08-ci-tooling.md, switched on by the repository variable UNITY_RUNNER=1. That
+# runner is one machine, so every minute it spends is a minute every other open PR queues.
+#
+# What runs is decided by tools/ci/tiers.py from the paths a PR touches (docs/process.md §5):
+#
+#   - by assembly, never by feature: a Hud change skips the Sim tests, a docs change skips every
+#     test tier, and anything the selector does not recognise runs everything;
+#   - the PlayMode measurements (Category "Measurement") run nightly and on the label ci:perf,
+#     not on every PR, because they time things rather than assert them;
+#   - a push to main runs the hosted tiers only. Branch protection requires a PR to be up to
+#     date, so the tree a merge produces is the tree its PR already tested in Unity; the nightly
+#     re-runs all of it on main, measurements included, and skips itself when main has not moved.
+#
+# Labels are read when an event fires: add ci:full or ci:perf, then push (or run
+# `gh workflow run ci.yml --ref <branch>`, which is everything).
+#
+# Branch protection requires "Fast tier" and "Unity tests". A job skipped by its `if:` reports
+# success to a required check, which is what lets a docs PR merge without the Unity runner -- and
+# is also why "Fast tier" is an aggregator that fails when the selector itself failed: otherwise a
+# broken selector would skip every job and a PR would merge on nothing.
 
 name: CI
 
@@ -17,21 +33,84 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "0 3 * * *"   # 03:00 UTC nightly, on main
   workflow_dispatch:
 
 concurrency:
-  # One Unity run at a time per branch: the editor locks the project directory.
-  group: ci-${{ github.ref }}
+  # One run at a time per branch and event, so a push to main never cancels the nightly.
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
   checks: write        # dorny/test-reporter creates the PR check
   pull-requests: read
+  actions: read        # the nightly asks whether main has moved since its last green run
 
 jobs:
-  fast:
-    name: Fast tier
+  changes:
+    name: Select tiers
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sim: ${{ steps.select.outputs.sim }}
+      hud: ${{ steps.select.outputs.hud }}
+      unity: ${{ steps.select.outputs.unity }}
+      simu: ${{ steps.select.outputs.simu }}
+      perf: ${{ steps.select.outputs.perf }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # A pull_request checkout is the merge commit, so HEAD^1 is the base it merges into
+          # and HEAD^1..HEAD is exactly what the PR changes.
+          fetch-depth: 2
+
+      - name: Changed paths
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # --no-renames lists a moved file at both ends, so a file moved out of Sim still
+            # counts as a Sim change.
+            git diff --no-renames --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed.txt"
+          else
+            : > "$RUNNER_TEMP/changed.txt"
+          fi
+          echo "$(wc -l < "$RUNNER_TEMP/changed.txt") changed path(s)"
+
+      - name: Has main moved since the last green nightly
+        id: nightly
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last=$(gh run list -R "${{ github.repository }}" --workflow ci.yml --event schedule \
+                 --status success --branch main -L 1 --json headSha -q '.[0].headSha' || true)
+          echo "last green nightly: ${last:-none}; now: ${{ github.sha }}"
+          if [[ "$last" == "${{ github.sha }}" ]]; then echo "flag=--unchanged" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Select
+        id: select
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
+        run: |
+          python3 tools/ci/tiers.py --event "${{ github.event_name }}" --labels "$LABELS" \
+            ${{ steps.nightly.outputs.flag }} < "$RUNNER_TEMP/changed.txt" > "$RUNNER_TEMP/tiers.txt" \
+            2> "$RUNNER_TEMP/why.txt"
+          cat "$RUNNER_TEMP/tiers.txt" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Tiers selected"
+            echo '```'
+            cat "$RUNNER_TEMP/tiers.txt"
+            echo
+            cat "$RUNNER_TEMP/why.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/tiers.txt" "$RUNNER_TEMP/why.txt"
+
+  unit:
+    name: Sim and Hud tests
+    needs: changes
+    if: needs.changes.outputs.sim == 'true' || needs.changes.outputs.hud == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -41,11 +120,36 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Sim and Hud tests
-        run: bash scripts/test-fast.sh
+      - name: Sim tests
+        if: needs.changes.outputs.sim == 'true'
+        run: bash scripts/test-fast.sh --project sim
+
+      - name: Hud tests
+        if: needs.changes.outputs.hud == 'true'
+        run: bash scripts/test-fast.sh --project hud
+
+  long:
+    name: Long tier
+    needs: changes
+    if: needs.changes.outputs.sim == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
 
       - name: Long tier (soaks and scale-target round trips)
-        run: ODYSSEY_TEST_ALL=1 bash scripts/test-fast.sh --filter "TestCategory=Long"
+        run: ODYSSEY_TEST_ALL=1 bash scripts/test-fast.sh --project sim --filter "TestCategory=Long"
+
+  gates:
+    name: Content gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
 
       - name: Content registry is current
         run: python3 tools/wiki/build_wiki.py --check
@@ -56,15 +160,51 @@ jobs:
       - name: Icon tooling tests
         run: python3 -m unittest discover -s tools/icons -t tools/icons
 
+      - name: Trace reader tests
+        run: python3 -m unittest discover -s tools/perf -t tools/perf
+
+      - name: Tier selector tests
+        run: python3 -m unittest discover -s tools/ci -t tools/ci
+
+  # The required check. It waits for the hosted jobs and fails if any failed, or if the selector
+  # did -- a job skipped because the selector said so is fine; one skipped because the selector
+  # broke is not, and GitHub reports both as a pass.
+  fast:
+    name: Fast tier
+    needs: [changes, unit, long, gates]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every hosted job passed or was deliberately skipped
+        run: |
+          echo "changes=${{ needs.changes.result }} unit=${{ needs.unit.result }} long=${{ needs.long.result }} gates=${{ needs.gates.result }}"
+          [[ "${{ needs.changes.result }}" == "success" ]] || { echo "::error::the tier selector failed, so nothing it skipped is proven"; exit 1; }
+          [[ "${{ needs.gates.result }}" == "success" ]] || { echo "::error::the content gates failed"; exit 1; }
+          for r in "${{ needs.unit.result }}" "${{ needs.long.result }}"; do
+            [[ "$r" == "success" || "$r" == "skipped" ]] || { echo "::error::a test job ended $r"; exit 1; }
+          done
+
   unity:
     name: Unity tests
-    if: vars.UNITY_RUNNER == '1'
+    needs: changes
+    if: >-
+      ${{ !cancelled() && vars.UNITY_RUNNER == '1' &&
+      needs.changes.result == 'success' && needs.changes.outputs.unity == 'true' }}
     # Label the owner's Windows 11 machine with all three of these.
     runs-on: [self-hosted, windows, unity]
     timeout-minutes: 60
     defaults:
       run:
         shell: bash    # Git Bash, once the step below has put it on the PATH.
+    env:
+      # The fast tier ran the Sim tests under CoreCLR minutes ago; they run again here, under
+      # Mono, only when the Sim changed (and nightly), which is when the hash agreement between
+      # the two runtimes can move. Measured 2026-09-24: 87.5 of EditMode's 91 s.
+      EDITMODE_FILTER: ${{ needs.changes.outputs.simu != 'true' && '-assemblyNames !Odyssey.Tests.Sim' || '' }}
+      # The measurements pass anything under a 30 Hz frame, so on a PR they only cost time:
+      # 125 of PlayMode's 260 s, measured the same day.
+      PLAYMODE_FILTER: ${{ needs.changes.outputs.perf != 'true' && '-testCategory !Measurement' || '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -88,14 +228,20 @@ jobs:
       - name: Which editor
         run: scripts/unity.sh which
 
+      # Stale results from the last run on this machine would otherwise be published as this
+      # run's, since a step that is skipped writes nothing.
+      - name: Clear old results
+        run: rm -f TestResults/*.xml
+
       # EditMode: pure Sim plus editor tooling. Runs with -nographics, the unity.sh default.
+      # $EDITMODE_FILTER is unquoted on purpose: empty is no argument, not an empty one.
       - name: EditMode tests
-        run: scripts/unity.sh test editmode
+        run: scripts/unity.sh test editmode $EDITMODE_FILTER
 
       # PlayMode: unity.sh already drops -nographics for it, because URP needs a device and
       # the self-hosted box has a GPU.
       - name: PlayMode tests
-        run: scripts/unity.sh test playmode
+        run: scripts/unity.sh test playmode $PLAYMODE_FILTER
 
       # The milestone gate: a headless one-day simulation with no errors.
       - name: Headless one-day simulation

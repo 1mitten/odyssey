@@ -31,15 +31,22 @@ namespace Odyssey.Sim.Pawns
 
             // A threat beside her is hit without an order (design 33 §1): a standing hostile, or
             // anybody attacking her. Not a forced job, so the attack driver never chases — she
-            // strikes from where she stands and holds again when it steps away or goes down. A
-            // threat is activity, so the four quiet hours start again.
-            Pawn? threat = Melee.AdjacentThreat(ctx, pawn);
-            if (threat != null)
+            // strikes from where she stands and holds again when it steps away or goes down.
+            //
+            // Else another colonist's fight nearby (design 33 §15): a bandit or an animal on a
+            // colonist within the help radius. Also unforced — self-started, like the blow — but
+            // marked Joining, so she goes to the attacker; when it is down, dead, out of reach or
+            // no longer on a colonist the job ends and she holds wherever she is.
+            //
+            // Either is activity, so the four quiet hours start again.
+            Pawn? foe = Melee.HoldTarget(ctx, pawn, out bool joining);
+            if (foe != null)
             {
                 pawn.DraftQuietSinceTick = ctx.CurrentTick;
                 job.Reset(JobIndex.AttackMelee);
-                job.TargetCell = threat.Cell;
-                pawn.CombatTarget = threat.Id.Value;
+                job.TargetCell = foe.Cell;
+                if (joining) job.DestCell = AttackMeleeJobDriver.Joining;
+                pawn.CombatTarget = foe.Id.Value;
                 return true;
             }
 
@@ -64,12 +71,14 @@ namespace Odyssey.Sim.Pawns
         {
             if (!Pawn.Drafted) return JobStatus.Succeeded;
 
-            // A threat within reach ends the hold, and the Drafted node's next answer is the blow
-            // (design 33 §1). Asked every tick, and it scales with the pawns on the board for each
-            // colonist drafted: an integer comparison each, and a step test for the few that are
-            // threats. A drafted colonist is exempt from the think-loop breaker, so the hold, the
-            // blow and the hold again cost nothing but the job counters.
-            if (Melee.AdjacentThreat(ctx, Pawn) != null) return JobStatus.Succeeded;
+            // A threat within reach, or another colonist's fight nearby (design 33 §1, §15), ends
+            // the hold, and the Drafted node's next answer is the blow or the help. Asked every
+            // tick, and it scales with the pawns on the board for each colonist drafted: one pass,
+            // an integer comparison or two each, a step test for the few that are threats and a
+            // lookup for the few in an attack (Melee.HoldTarget). A drafted colonist is exempt
+            // from the think-loop breaker, so the hold, the blow and the hold again cost nothing
+            // but the job counters.
+            if (Melee.HoldTarget(ctx, Pawn, out _) != null) return JobStatus.Succeeded;
 
             // Exhaustion, asked here as well as in the node: a colonist already holding never
             // thinks again, so the node alone would never see her rest reach nought.

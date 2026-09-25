@@ -11535,6 +11535,54 @@ walls rather than being overruled by them — the ladder's rule would have left 
 against every wall. Which way the air-conditioner's front looks was read off the mesh (its detail is
 at +Z, the pivot on the plain back face), not seen, and is the first thing to look at. Design 32 §14c.
 
+## 2026-09-23 — the orange suits: what was ruled out, and a rail that is not a fix
+
+Owner, playing after the frame work: past a certain number of colonists, some "spawned in an orange
+suit", textures "kept switching" and the session "got buggy". They asked whether colonists should be
+hard capped, including on the debug menu.
+
+**The orange is identified and it is not a texture.** `OdysseyBootstrap` paints `_actorMaterial`
+`Color(0.98, 0.36, 0.20)`, and `ChunkRenderer`'s fallback branch draws
+`new Vector3(1.4f, 2.6f, 1.4f)` in it — a person-sized cube. A colonist is drawn that way when
+`!colonist.UsesArt || colonist.IsEmpty`, so the report names one branch exactly: **those colonists'
+body modules did not resolve.**
+
+**Two hypotheses, both mine, both refuted by measurement.** This is the record of what it is *not*,
+which is worth as much as a diagnosis would have been.
+
+1. *Faces failing to bake as the colony grows.* `ColonistModule` resolves lazily — instantiating a
+   rigged character and baking its skinned meshes — so I supposed a growing colony touched more
+   faces until something gave way. Instrumented (`ColonistStandIns`, `ColonistLooksUsed`) and swept
+   8 to 384 colonists: **zero stand-ins at every size**, and the lottery resolves **two** faces, not
+   more. Two is the MC uniform working as designed — everyone wears the issued jumpsuit, so there is
+   a male body and a female body, and identity is carried by face, hair and beard. The mechanism I
+   proposed does not exist.
+2. *The recoloured material cache leaking per colonist.* `ColonistMaterials` keys on
+   `(source, cells, skin, hair, cloth, cloth2)` and those colours are per colonist, so it looked
+   unbounded. Measured: **flat at 22–23 materials from 8 colonists to 384.** No leak.
+
+**A third, checked and weakened.** `Odyssey/Character` missing from a build would draw colonists "in
+the pack's own colours", which is the right shape — but it is in `ShaderInclusion`'s always-included
+list. A player was built and smoke-run: `162/179 rows have art`, no colonist module in the fallback
+list, no missing-shader warning. I briefly read `colonist cast seed 1 over 73 faces, the fallback
+only` as a fault; it is the healthy state — the cast seed *is* only a fallback when every colonist
+has their own roll seed.
+
+**So the editor is clean on every axis I can measure at 384 colonists** — 3.90 ms, no stand-ins, 23
+materials, two faces — and I could not reproduce the report. What remains needs two facts only the
+owner has: whether this was the editor or a built player, and roughly what number it began at. A
+number near 61 would have meant faces; it is not faces. A sharp round number points somewhere I have
+not looked.
+
+**The ceiling is built anyway, and is deliberately not presented as the fix.** `PawnRegistry.PawnCeiling`
+is 200, enforced on the spawn *intent* as a refusal rather than a clamp, in the same shape as
+`PawnFigureDirector.FigureCeiling`: a test pins the number and moving it is a measurement. It is four
+times the audit's scale target and three times the figure ceiling, and **384 was measured healthy**,
+so it is not where anything was found to break. Its whole job is that a debug command cannot run a
+session into a state nobody designed for. `PawnCeilingTests` carries the negative control that
+matters — under the ceiling nothing is refused — because a rail that started governing ordinary play
+would be worse than the fault it guards.
+
 ## 2026-09-24 — Power merged with main
 
 Temperature (#164) merged, and main had taken combat's draft, wildlife and the stockpile outline
@@ -11685,3 +11733,654 @@ Tiers: fast 1,338 Sim + 977 Hud, Long 41, all three content gates clean. EditMod
 passed, 0 failed. PlayMode 115 total, 110 passed, 0 failed. It read 1 failed on the first run:
 `WorkTabCostTests` at 0.820 ms, with its baseline at 0.747 ms while the CI runner's Unity was busy,
 which is contention. It passed on the re-run.
+
+## 2026-09-24 — The orange suits were the uniform past the figure cap
+
+The 2026-09-23 entry above ruled out three causes and left the report unreproduced. The cause was
+none of the three. **"Past a certain number" is the 64-figure cap**, and past it a colonist is drawn
+in the baked far form, which wears the pack's own paint. The issued uniform is a recolour the live
+figure applies and the far form never did. PolygonGeneric's jumpsuit is painted burnt orange:
+`#B06F24`, sampled off the atlas at the uniform row's own cloth rectangle, with the unflipped sample
+landing on grey as the control. So every colonist beyond the nearest 64 was in an orange suit, and
+panning the camera moved people in and out of the nearest 64. That is the "switching".
+
+The investigation before this one asked whether the orange *stand-in* was drawn, correctly found it
+was not, and stopped. The lesson: **a report's colour matching a debug colour is a hypothesis, not an
+identification**, and "past a certain number" in this project should send you to the caps first
+(`FigureCeiling`, `MaxFigures`), because behaviour changes form there.
+
+The fix is `ColonistAppearance.IssuedCloth`, which says whether a *body* has one colour for everybody.
+That is the uniform, and only while it is issued. `ChunkRenderer` draws those two far bodies through
+the shared `ColonistMaterials` with the cloth rectangles alone. It is one material per body and adds no
+draw calls. Skin and hair still keep the pack's paint across the cap; that is recorded as a decision
+in design 29-modular-colonists §13a, not a fix. The spawn ceiling of 200 on this branch stays, as the
+rail it always said it was.
+
+**The ceiling also hung CI**, which is why PR #175's Unity tier was red: *timed out after 1800s with
+no results*, where `main` takes about six minutes. `FrameTimeTests.GrowColonyTo` grew its sweeps to
+256 and 384 through the spawn intent, and its escape was `at > wanted * 4`. But `at` goes back to
+zero whenever the placement walks off the board, and for 384 that happens at about 650, below the
+escape at 1,536. Before the ceiling every spawn took, so the loop reached its count first. After it,
+every intent past 200 was refused, the index cycled for ever, and the coroutine never yielded. The
+harness now counts attempts apart from the index and spawns straight into the registry, the path
+worldgen and the scenario use and that the ceiling deliberately leaves open, so the 256 and 384 arms
+still measure what they say.
+
+## 2026-09-24 — The Meadow overhaul: explored, interviewed, researched (design 38)
+
+The owner asked to overhaul the graphics with Synty's Meadow Forest pack — grass, flowers and trees
+replaced, the terraces replaced by a landscape that carries real heights, with culling, occlusion,
+performance and a loading screen all in view — and to be interviewed after the exploration. The
+package they downloaded turned out to be **already imported**: the same 182 prefabs sit under
+`Assets/Synty/PolygonNatureBiomes`, and the grass tufts and the grass ground have been Meadow assets
+for a week. So this is a wiring job, and the package's own `PolygonGeneric` — Battle Royale's GUID
+trap again — is never touched.
+
+Twenty questions in five rounds (`meadow-interview.md`). The landscape decision is the one with
+reach: **a smooth skin drawn over the unchanged simulation layers**, generalising the banks, rather
+than Unity Terrain (one surface, fighting the slice, digging and cut faces) or finer simulation
+heights (ADR 0002). Mid-interview the owner added *"completely full of grass … also consider
+performance"*, which replaced the 2026-09-22 answer that density should follow the land.
+
+Four research lanes, each capped. **d-18 found the thing that reorders the work**: as the project is
+configured, every foliage instance is drawn up to six times a frame — the SSAO DepthNormals prepass,
+the forward pass, and four shadow cascades — with depth priming off, so the forward pass gains
+nothing from the prepass it already pays for. Full-cover grass is decided there before it is decided
+by clump counts, so a new first unit measures priming and grass shadows before any art moves.
+**e-09 found the fact the renderer rests on**: every Meadow LOD child and FBX node is identity, so
+one matrix per plant draws every part of every level, and the wind weights are already in the vertex
+colours. **d-16 found the player starts on DX11**, which decides which warm-up exists, and recommends
+measuring for hitches before building any. **d-17** settled the skin's shading on two texture arrays
+filled on the GPU.
+
+A planning agent checked the three risky mechanisms against the code and found what the first sketch
+had missed: stand heights have about fifteen owners that already disagree on banks; the slice
+assumes one surface layer, which eight layers of hills would break; a naive corner rule caps pits the
+simulation can fill; and a per-chunk grass count pops at the 62.5 m seam unless the shader fades by
+the same rank. All four are in design 38.
+
+PR #174 (frustum culling) is green but conflicts with `main` as of today and needs an approving
+review; it gates M1.
+
+## 2026-09-24 — Meadow M1: the grass is drawn once, and costs about a millisecond at 4K
+
+M1 was written to test d-18's prediction that every foliage instance is drawn up to six times a
+frame — prepass, forward, four shadow cascades — and to measure depth priming against it. Reading
+the code before writing the arm dissolved the premise: `ChunkRenderer.FoliageCastsShadows` is off,
+and foliage is drawn in queue 2501, past the opaque range so the outline never inks it, which also
+keeps it out of the opaque-only DepthNormals prepass. Grass is drawn once. Depth priming, which only
+reaches the opaque range, could never have touched it. The prediction holds for trees.
+
+So the arm measured what grass does cost, at the owner's resolution: `TheGrassAgainstTheFrame`, one
+world, none / shipped / full cover / full cover in the opaque queue, at 640 x 480 and with the camera
+drawing into a 3840 x 2160 target, every control asserted to have applied. Twice, because the first
+run's full-cover step looked large: **+1.24 and +1.11 ms for the shipped grass, +1.78 and +0.83 for
+five times the clumps.** The cost is in having grass at all, and the step to full cover is inside a
+half-millisecond noise floor — two other batch Unity runs shared the machine throughout. The opaque
+queue was 0.18–0.19 ms cheaper both times, the back-to-front sort of the transparent range showing,
+and is not worth grass under the ink. The queue stays and priming is dropped.
+
+`GpuFrameMs` reads unavailable in a batch run on Direct3D 11, so the frame stood in for the GPU (it
+is GPU-bound at 4K: submission is 1.6–2.0 ms of 7.4–9.2). One reading is owed from the owner's
+overlay, and the playtest queue carries it. Design 38 §13; d-18 carries a correction note.
+
+A third reading came from the full PlayMode tier, busier than either filtered run, and it moved one
+conclusion. The shipped grass held at +1.27 ms — three runs, 1.11 to 1.27 — but the opaque queue came
+out **2.51 ms** cheaper than full cover in 2501 where the quiet runs had it at 0.18 and 0.19. Three of
+three in one direction is not noise, and a gap that grows with load is what a sort order would do.
+So the queue is kept for now rather than settled, and design 38 §13 names the lever if the GPU
+reading confirms it: keep grass out of the outline by a rendering-layer mask and draw it opaque,
+front to back, instead of relying on the queue to hide it from the ink.
+
+The owner took the one reading only Play could: at 3840 x 2160 the overlay's `gpu` read 6–7 ms with
+the tufts off and about 7, spiking to 8 while moving, with them on. Half a millisecond to one and a
+half of GPU for the shipped grass, which is the batch arm's answer by an independent instrument.
+
+## 2026-09-24 — Meadow M2: levels of detail through instancing, and why they ship off
+
+The world is drawn with `RenderMeshInstanced`, so a prefab's `LODGroup` never runs, and the library
+kept each prefab's finest level only. M2 keeps every level. It rests on e-09's one fact — every
+Meadow LOD child sits on the prefab's origin — so a module whose parts all share one local transform
+is emitted into a single bucket and drawn from it with whichever level's parts the chunk's distance
+chooses. Art that breaks the rule is not an error; it keeps drawing its finest level, as before.
+
+The arm on the played meadow gave two answers at once. The mechanism works — the three Meadow grass
+tufts qualify, and switched on, 4,403 of the ~4,800 on screen drop a level — and that is exactly why
+it ships off: the pack's switch heights assume a camera near the ground, and at 60–160 m every tuft
+is past its first switch. With levels off the counts are M1's to the instance, which is the proof
+the one-bucket path changed nothing. The saving is for the Meadow trees in M5, which will turn
+levels on with a bias chosen against them and a person looking.
+
+## 2026-09-24 — Meadow M3: the grass drawn by our own shader
+
+`Odyssey/Foliage` draws the Meadow grass from the art's own leaf texture, with this project's wind,
+clearing and colour: the wind is a function of the tick, so a paused meadow holds still; items and
+order marks push the grass back through the clearance field the closed grass branch built, now
+centred on what the camera looks at rather than where it stands; and the green is lifted towards
+the spring lime the owner asked for on 2026-09-22. Measured against the pack's own shader on the
+same meshes in one run, ours is half a millisecond cheaper at 4K and level at the batch view.
+
+The first attempt died on a full disk — D: had 0.1 GB left across sixty worktrees' Library folders —
+before Unity compiled a line; the unit moved into M2's warm worktree once there was room. The
+shader compiled clean on its first real run and every foliage test passed; the player build keeps
+it, and its log carries no fallback warning.
+
+## 2026-09-24 — Walls down, after the first play
+
+*"Works brilliantly but a few things"*: the "R / F" label was still there, and at L10 — ground — the
+building above was see-through. The cause was not walls-down at all but the surface being one
+number: `surfaceLayer` is the layer the colony opened on (L12 on seed 1) while the lowest terrace
+is walked on L9 (its rock tops out at L8 — measured, after a first comment said L7), so L10 was
+"underground" and got the one-layer x-ray, which the first build left alone
+deliberately. The owner chose to fix it inside walls-down only: with the walls down, anything above
+`LowestOutdoorLayer` is ground. And the hiding narrowed from "everything built above" to "what is
+stacked" — built with no terrain beneath — because hiding everything built took the house on the
+next terrace with it. That became a bucket key bit rather than a tint test, so the renderer still
+only skips buckets. The label went; its keys went into the rail cells' tooltips. Design 42 §3a, §10.
+
+## 2026-09-24 — Walls down
+
+The owner could not see colonists inside their own buildings: at or above the surface every
+storey above the slice is drawn solid, and the working storey's walls are always 3 m tall. The
+request was a toggle by the R/F control, on by default, that **removes** the walls rather than
+making them translucent and leaves a low stump. Build mode ignores it. The interview settled the
+rest (design 42 §2): build mode is the palette or Build/Deconstruct; the stump is a 0.75 m block;
+built storeys above are hidden and the landscape is not; rock never lowers; H, a drawn icon under
+the rail, remembered per player.
+
+**Research backed removal over transparency** (`b-walls-down-cutaway.md`): every complaint thread
+found was about see-through or clickable leftovers. Nothing found says any game raises walls on its
+own in build mode, so that half is ours to judge in play.
+
+**It costs no re-meshing, and that decided the shape.** The toggle flips every time the Build
+palette opens, and a board re-mesh is seconds of visible arrival at eleven chunks a frame. So the
+chunk batch holds both forms: walls, door frames and pillars moved out of `Body` into `Walls`,
+their stumps into `Stumps`, and the renderer picks one as it draws — the principle the roof list
+was already built on. Above the slice, the storey is filtered by bucket tint: anything carrying a
+terrain, foliage, water, tree or whole-surface bit is landscape, and the rest is built.
+
+**One owner of the rule.** `WallsView.Lowered` (Hud, fast tier) is evaluated once a frame by the
+composition root and written to `SliceSettings.wallsLowered`. The renderer, picker, order marks,
+door leaves, colonists, items, corpses, fire, health bars, rings, blood and sites all ask the
+slice's three questions and nothing else (P1). Moving walls out of `Body` meant nine mesher tests
+that counted walls there were re-pointed at `Walls`, deliberately.
+
+## 2026-09-24 — Blood
+
+The unit design 33 §7d cut the seam for, built to the owner's rules there (§10). Two tests on PR
+#180 had to go green first, and neither was combat's fault: both counted frames across a tick the
+bootstrap paces by real time, and the CI runner draws a frame in a millisecond (`docs/lessons.md`).
+
+**The seam changed shape**, because the first thing to implement it needed two facts it did not
+carry: the drops need ground to land on, so a spurt now takes the struck pawn's feet beside the
+wound; and a pool has to go under a body that has not fallen yet when the event arrives, so it
+takes who it is under. **Which way a body falls is a clip's decision, not the simulation's**, so no
+place computed at the event could be right. The pool waits 1.2 s and then asks: the corpse's own
+drawn box once it is at rest, and halfway from the figure's feet to its head while it is still
+falling or merely downed — a midpoint that is on the body whichever way it went.
+
+**One mark per hit, not per drop.** A sharp hit throws up to sixteen drops; a mark each would have
+filled the owner's cap of two hundred in a dozen blows. The splatter's satellite drops are built
+into its shape instead, ahead along the blow.
+
+**A floor taken away takes its blood with it**, rather than letting the stain fall: every mark
+asks, each frame, whether it still has ground, which is two hundred cheap reads. And nothing is laid
+over a drop, into water (in the cell or under it, the knockback's rule) or against a wall.
+
+**Cost.** Marks are bucketed by shape and one of six fade steps and go out through the renderer's
+cached translucent material, so no new shader has to survive the player build. The ceiling is 19
+calls whatever the fight, and a colony with no blood submits nothing. Negative controls seen to
+fail: the cap dropping the newest, the fade brightening before its hold ends, the fans wound face
+down, the per-frame ground check off, the water rule off.
+
+## 2026-09-24 — The settings window: one fixed, centred frame
+
+The owner brought an approved design (the rail layout, mockups 14a-14e) and one instruction on top:
+keep it centred and keep its size. The old panel sized itself to the open tab and carried the five
+session rows under every tab, so the box moved on every click. It is 1240 x 720 now, centred by
+fixed offsets, with the session actions once in the rail (`docs/design/39-settings-window.md`).
+
+**The "empty checkbox" on every row was `IconBadge`'s placeholder glyph.** No settings key has art,
+so every row drew the "no art yet" square. Nothing was wrong with the badge; the settings rows were
+the wrong place for one. The new rows carry no badge and a PlayMode test says so.
+
+Two things the brief asked for did not exist: a reset on every tab (only Keys had one) and Backspace
+clearing a key slot (the hint promised it; nothing did it). Both are small director methods with
+fast-tier tests. The window is a modal now, which reverses the B17 decision that it should not be;
+the reason is the size of the thing, recorded in design 39 section 2.
+
+Two UI Toolkit gaps shaped the build: no `outline` (one focus ring for the window, moved to the
+focused control and drawn last) and no dashed border (a painted `DashedOutline`). The icons are the
+brief's SVG paths, flattened once by `SvgPath` and stroked by `PathGlyph`, so no mark on the window
+is a font glyph.
+
+## 2026-09-24 — The title screen: a dock on the left
+
+Folded into the settings branch on the owner's word. The centred 420 x 384 card became a 560 px
+dock, flush left, full height, with the Strata mark and the wordmark at the top and four buttons that
+are the Settings rail's own icons and inks (`docs/design/40-title-screen.md`). Two things are worth
+keeping. **The brief's width estimate was wrong**: the tracked wordmark does not fit at .3em, and the
+dock measures it after layout and falls back to .26em, which the brief allowed (460 px of 464).
+**And Exit game stopped arming**: it raises the leave prompt in a no-colony form, so
+`SessionCommands` no longer asks twice on the main screen, and the four director tests that used Quit
+as their example of arming were retired with it.
+
+Before this, the first play of the settings window found that Settings opened from the main menu
+showed but took no clicks. The start screen's scrim is built after the window and is pickable; the
+window is brought to the front when it opens now, and a pick at its centre is asserted, with a
+negative control that fails on `start-scrim`.
+
+## 2026-09-24 — Meadow M6: quality presets, and preferences that never reached a session
+
+The Graphics tab gained a Quality row — Low, Medium, High, Ultra, and Custom whenever the levers
+match none — and the grass became a ladder (Off to Full) in place of the tufts toggle, with a grass
+distance and a grass-shadows toggle beside it. The preset is read off the levers every time and
+never stored, so it cannot disagree with them. High is what ships; Ultra adds full cover, the one
+step up M1 measured; the lower tiers only take things away.
+
+Building it found a bug older than the unit. Nothing put the player's stored graphics preferences
+on a session's renderer: the settings presenter attaches at the start screen, when there is no
+renderer, so its `Apply` returned early, and the renderer was then built from the bootstrap's own
+fields. A stored "shadows off" has been lost at every new game since the panel existed — and a
+preset that came back as High after a restart would have made it impossible to miss.
+`SettingsPresenter.ApplyRendererLevers` is now the one mapping, and the root calls it as it builds a
+renderer, before meshing, whenever a store is attached.
+
+The Unity tiers were not run: drive D: filled during the first import in this worktree. The fast
+tier (1,345 + 988), the Long tier (41) and the three content gates pass.
+
+## 2026-09-24 — The look pass, the dressing: a meadow of the reference's own parts
+
+The owner looked at M3's grass and said it looked nothing like Synty's screenshots. The screenshot
+at the play camera's angle (their #13) is not a grass setting: it is bushes everywhere, trees in
+stands, tall grass in mats, flowers in sweeps, stones and warm light. So the first thing built was
+an instrument — `TheLookAtThePlayCamera`, which photographs the played meadow three ways — and
+everything after it was decided by looking.
+
+It found things reasoning would not have. Two of the three tuft tints lifted blue 2.2 times for the
+pack's shader and turned the grass teal under ours. The pack colours a leaf from material values,
+not from its texture — base at the root, two noise colours at the tip, frosting on the sunlit top —
+and the birches' autumn lives there; `FoliageLook` now reads those off the art at runtime as it
+reads the textures. Meadow trees in the opaque queue were inked leaf by leaf into black scribbles.
+The flat flower cards and pebble piles read as lilac confetti from above and were dropped.
+
+The measurement found the money in shadows: every Meadow crown and bush drawing its finest mesh
+into four cascades. Trees now cast from a coarse proxy level (1.5 ms at 4K) and bushes cast nothing;
+the dressing costs about 2 ms at High and 3 at Full on Standard. Huge at High was over the 60 fps
+line in a run shared with other Unity processes and at the asset's 250 m of shadow; the owner's GPU
+reading decides it. Design 38 §17.
+
+## 2026-09-24 — The look pass, ground and light: the floor painted, and the light that paints it
+
+The owner put three of Synty's own screenshots beside the game and said it looked nothing like them.
+The ground half of the answer turned out to be half ground and half light. The painted ground — six
+of the pack's terrain textures blended by noise in world space, a 4 m repeat instead of one tile a
+cell — came out *darker* than the stock tile on its first frame, because the stock tile had been
+lifted towards lime by a (1.04, 1.30, 1.55) multiply and the pack paints its terrain olive. The
+brightness in the screenshots is the demo's light: an orange key at 3 over a trilight ambient at 1.6,
+three times ours. So the day's light moves towards that by daylight only, as a transform of the
+sampled state so the keys the owner judged at dawn and dusk stand, and with that the painted meadow
+comes up to something recognisably like #13.
+
+The demo's grade was tried and refused on two counts, both measured: it haloes every white thing, and
+its lens-dirt bloom costs eight milliseconds at 4K. And the harness had been photographing a frame
+nobody plays — the Play scene carries the golden-hour Volume and the test rig did not — which is the
+board-nobody-plays fault met a third time, in the one tool built to show what the player sees.
+Design 38 §17a.
+
+## 2026-09-24 — The look's first playtest, and three fixes (design 38 §17c)
+
+The owner played the merged look: a step in the right direction, and four things — leaves that still
+blocked a colonist behind a tree, the lines along the terraces, more leaf colour, and performance
+(the last its own unit). Three were fixed on `claude/meadow-look-fixes`, each judged by photograph
+before it was believed.
+
+The fade took two attempts. Wiring the foliage shader's dither at the owner's 15% produced exactly
+what a sparse ordered dither is — a screen door, invisible at the play camera. A two-pass ghost
+(depth first, then colour blended at 15%) shows one faint layer of the front-most leaves, which is
+what the owner described. The ink needed a mask the outline could read cheaply; the DepthNormals
+prepass already runs for SSAO and has a spare channel, so the ground marks itself there — and
+colonists, who were never in that prepass, had to join it or lose their own outlines. Stone stays
+inked on purpose. The colour pass was photographed to be *reducing* the variety on its first cut —
+it was overwriting each species' own colour with green — and was retuned until the range widened.
+
+## 2026-09-24 — Performance of the look: the shadow margin, and a tie-breaker that could not break
+
+d-19 found shadows the largest term in the look's 4K frame, half of it the cull keeping every chunk
+within the shadow distance in every direction. The margin now sweeps towards the sun along the key
+light's path, as long as the light can fall before it leaves the drawn layers: 104 chunks to 42 on
+Standard, submit 2.92 → 1.42 ms, frame 12.81 → 11.23, in one run. The new low-sun case of the picture
+proof caught the first version: 80 pixels at one edge at 19.5 h, the shadow of a Meadow crown that
+overhangs its chunk's box by metres — the old shell had covered it by accident. The box grows by the
+widest resolved module's reach now, and the proof reads 0.00% at noon and at dusk.
+
+The tie-breaker for indirect drawing — the tufts alone — came out picture-exact and unmeasurable.
+After the sweep the tufts are 67 of the 1,175 calls on screen; d-19's 722 "tufts" were every
+foliage-tinted bucket, mostly the dressing's grass stands and flowers. So the path ships off and
+the question moves to the kinds that hold the calls, which join it after the leaf-fade branch lands.
+Design 38 §18.
+
+The first real GPU numbers came from a development player (`PlayerBench`, design 38 §18e), and they
+reorder what is left. At 4K after the sun-ward margin: shadows ~2.1 ms of GPU, the dressing's fill
+~1.0–1.3 (and ~1.0 of it comes back at the coarsest level), the grade ~0.9, the painted ground ~0.7,
+against a drift of ~0.4 between two runs of the same arm. CPU submission is ~1 ms, so the indirect
+conversion d-19 ranked second would buy ~0.2 ms of CPU on a GPU-bound frame; levels of detail on the
+dressing and the shadow casters come first. The bench's first attempt had no guard, died on an
+unsupported profiler flag, and held the owner's screen fullscreen for six minutes; it now runs
+under a try/catch per step, a watchdog and a hard kill, and only on the owner's word.
+
+## 2026-09-24 — The dressing's levels, the wrong pack's bushes, and three shadow reductions
+
+Tuning the bushes' levels found they had none, and the reason was not the levels: the dressing rows
+look their prefab up by name, three packs have an `SM_Env_Bush_01`, and the lookup took Battle
+Royale's because its path sorts first — the Meadow look had been drawing another pack's bushes and
+two of its stones since it was built. Rows can name their pack now, and the five references were
+patched by hand, because a catalogue rebuild also drops the probed swatches. The grass stands and
+flowers take levels at bias 8, chosen by photographs (the near meadow unchanged; 4 thinned the
+nearest flowers), and bushes at 1.5.
+
+The owner asked to try three shadow reductions — trees casting from their card, two cascades, and
+nothing small casting — and all three are in, on the runtime pipeline copy, photographed at noon and
+dusk with no visible seam, for the owner to judge. The bench after them was only half usable: it did
+not pause the colony or hold the hour, and two identical arms a minute apart differed by 2.7 ms. The
+first four arms, back to back, put the whole of 18c and 18f at about 1.2 ms of GPU at 4K. The bench
+pauses and holds noon now; one more run is owed. Design 38 §18c, §18f, §18g.
+
+## 2026-09-24 — Meadow polish: grass that lies flat, bushes that fade, every colonist, a thicker wood
+
+The owner asked for grass flattened round dropped things and fallen people, and trees in the land
+beyond the board. The first was a ring and a rule — footprint plus half a metre round an item, 1.4 m
+round a body downed, asleep off a bed or dead — and one thing more: a bush cannot lie flat, so a
+bush over a body or a stack now fades, found by discs the mesher records as it plants them. The
+owner's earlier decision that trees fade for *every* colonist had never reached the code; it does
+now, bounded to the sixteen nearest the camera's focus. Its first cut cost 1.9 ms of `World` at 4K
+with fifty colonists, nearly all of it ground boxes tested against thirty-two lines, so the lines to
+unselected colonists fade only trees and bushes and the cost fell to 0.1–0.3 ms.
+
+The surround was the surprise: photographed from the board's corner it was already wooded. What it
+lacked was undergrowth and depth, so the wood thins less, the far wood is denser, three trees in
+four have a bush beside them — and all of it is drawn at coarse levels of detail and the card, which
+design §3 promised and nobody had built. More trees, 31 more draw calls, the same CPU. Design 38 §19.
+
+## 2026-09-24 — Meadow M9: the terraces drawn as a skin
+
+The terraces were a box per cell and a wedge per bank. They are now a mesh per chunk: a ramp in each
+terrace foot cell, its corners set by one rule (a corner rises where any of the three cells meeting it
+is a step), the flat ground around it out of its boxes, stream banks sloping into their water, and an
+apron at the board's edge that meets the surround. The simulation did not move and neither did a
+golden: the rule changes a ramp's shape, never which cells have one, and those are exactly the cells
+`TerraceFoot` already knew.
+
+Three findings came from photographs rather than tests. The skin first drew the meadow yellow; a
+same-run pair with the skin switched off proved the draw path, not the mesh — `RenderMesh` lights the
+ground differently from `RenderMeshInstanced`, and the skin now takes the instanced path. The stream
+banks were the most terraced thing left on screen, and are not foot cells at all (a stream cell is
+water, not air), so they needed a rule of their own; `SlicePickerBoardTests` then caught that rule
+dipping the bed under a cascade and dragging the water down with it. And the brown line round the
+board turned out to be the surround's deep tiles showing at a one-layer step, which the skin, having
+removed the rim boxes, showed more of — hence the apron.
+
+It costs the frame nothing measurable and meshing about 0.2 ms more a chunk, after three cuts. Design
+38 §20.
+
+## 2026-09-24 — Grass at distance, measured before it was cut (design 38 §21)
+
+The owner: bushes should stay put when walked through, and grass — "especially when full at distance"
+— was the biggest drop. Bushes were one line (the dressing never fades) and the removal of the lines
+that faded them over items. Grass took three measurements, and the second overturned the first plan.
+
+The plan approved was to thin Full towards the Meadow rung's density far out. Built and measured at
+the farthest pull, it bought almost nothing, because the split showed why: Meadow already cost what
+Full did there. The cost at distance is having the grass layer at all — and most of that is the
+dressing, not the tufts: flowers, bushes, ground cover and stones each adding a hundred-odd draw
+calls at that zoom, a bucket per kind and variant in every visible chunk. So the thinning became a
+rule for every rung, falling as the square of distance from 70 m to a floor of a tenth, sorted by a
+hashed rank the CPU and the shader agree on so the far field loses clumps one at a time. At the
+reference's framing the meadow still reads lush; at the farthest pull more painted ground shows.
+
+The solid far blades were not built: the measurement named draw calls and instance counts, not
+overdraw, and the lever that removes draw calls per kind is the indirect path §18b built for the
+tufts and left off. The owner's editor was open on the same GPU for every reading, so each condition
+was taken twice and the lower kept, Huge's numbers were discarded as noise, and the player bench —
+the one instrument with the GPU's own clock — is prepared and waits for the owner's go.
+
+Two operational slips on the way, both recovered: the owner opened the worktree this work began in,
+so the work moved (stash, then a clean re-apply) rather than editing under a live editor; and a
+`cd` into a worktree that had been deleted to free disk space failed silently, so two git commands
+ran in the main checkout — it was switched back to `main` and the stash re-taken within the minute.
+Every chain now guards its `cd`.
+
+## 2026-09-24 — The scenery drawn from GPU buffers (design 38 §22)
+
+The owner asked for the scenery next, to go in with the grass. §21 had put the zoomed-out frame drop in
+draw calls — every chunk submitting every kind — and §18b's indirect path, built for the tufts and left
+off, was the tool. It now draws the tufts, the grass dressing and the bushes: one buffer per kind and
+layer, a compute cull, one indirect draw per level part. Trees and stones stay on the chunk path, for
+reasons (the fade and the shadow proxy; a pack shader) that are the next unit's.
+
+Two things worth keeping. **The decisions stay on the CPU**, per segment, made by the very code the
+chunk path uses, so the picture proof reads 0.00% against a 0.00% floor at three framings and two hours —
+the GPU only applies them. And **the first regather was a stutter waiting to happen**: one chunk
+re-meshed on Huge regathered the whole surface layer, 3.9 ms, on every dig, build and growing crop. Per
+chunk slots rewritten in place took it to 0.16 ms. A call breakdown by kind also caught the first cut
+moving only the tufts and bushes: the grass dressing is tinted as plain foliage, not as dressing.
+
+At 140 m the 4K frame is 4–5 ms lighter on Standard and Huge in two noisy runs; at the start framing the
+gain is inside the noise. The GPU's own numbers wait on the owner's go for the player bench.
+
+The owner ran the scenery benchmark in the player at 4K: with Full grass, the GPU is 5.44 / 7.43 /
+6.62 ms at 32 / 70 / 140 m with the scenery drawn from GPU buffers, against 6.12 / 8.31 / 7.04 chunk
+by chunk — a real 0.4–0.9 ms, and the whole look at 125–170 fps. The batch arm's 4–5 ms was the
+editor's inflation; design 38 §22a keeps the player's numbers as the ones to quote.
+
+## 2026-09-24 — Trees: grouped, and simpler far away (design 38 §23)
+
+The owner asked whether trees belonged on the GPU-driven path. Measured first, trees on and off: the
+CPU part was 0.3 to 1.3 ms, the GPU part a quarter to two-fifths of a 1080p frame, and the trees went
+out five to a call. So the CPU part was batching and the GPU part was detail; GPU-driven drawing would
+have bought only the first. The owner chose grouping and simpler far trees. Grouping gathers each
+tree bucket's submissions for the frame and sends them once per material and mesh; every cull, level
+and fade decision stays per chunk. Its first cut grouped nothing in the game while its EditMode test
+passed — it took only the opaque queue, and the Meadow crowns sit at 2501 like the grass — and the
+picture proof, not the unit test, said so. Tree calls fell 80–96%, the frame most on Huge zoomed out
+(20.1 → 13.8 ms at 1080p in the editor), and neither change moved the near picture.
+
+## 2026-09-24 — Rescue (C4)
+
+The owner answered three questions first: a rescued colonist stays in bed **until whole**; with no
+free bed, **leave her** and say why; and she is **cradled** in the arms (design 33 §11).
+
+**"Until whole" needed no new state.** A colonist heals only in a bed, and a downed pawn's needs
+pause, so the whole rule is the recovery line: a colonist gets up at 100 %, and the content's 15 % is
+the animals' alone. What it did need was **a bed that stays hers**: the rescuer's reservation ended
+with its job, and the next tired colonist would have climbed in beside her. The lay passes the
+reservation to the patient, whose `Job_Downed` holds it until she gets up.
+
+**The carry is the item carry's, from the outside in.** The lift and the lay use the item's
+`LiftTicks` and its Lift and Stow gestures, so the stoop is already drawn; the carrier takes the
+load's scoop; and the body is laid on the cradle the load uses, measured off the palms, by a third
+pass after the loads for the reason the second exists — the palms are final only then. The sleep
+pose, which can be aimed at a head point, a direction and a surface, lays her across the arms and on
+the mattress; the pack's floor loop could only lie on whatever floor the root stood on.
+
+**Two measurements corrected guesses.** The test's first bounds assumed a person-sized figure; the
+figures are drawn 2.1 m to the head, so the arms are at 1.5 m and a carried head at 1.8. And ninety
+batch frames read the body mid-fall: a frame is a couple of milliseconds, so the test waits in real
+seconds. The Long soak caught the rule change on its own — a colonist rescued in a marauder soak
+healed past 15 % while down, which its invariant still forbade.
+
+## 2026-09-24 — CI chooses its tiers by what a PR touches (process §5)
+
+The owner asked for tests to run only for the area a change touched, because every PR retested
+everything. Measured before designing anything, from the runner's own results: EditMode was 91 s and
+87.5 of them were the Sim tests the fast tier had run on Linux minutes before; PlayMode was 260 s and
+141 of them `FrameTimeTests`, most of it arms that assert only that they measured something; and
+every merge re-ran the whole Unity tier on `main` against a tree its PR had already tested, since
+branch protection is strict. PRs were taking 20–40 minutes, mostly queued behind the one runner.
+Over the week's 80 merged PRs, 43 touched the simulation, 31 only the Unity side and 5 only words.
+
+What went in: `tools/ci/tiers.py` maps changed paths to assemblies and picks tiers; a path it does
+not know runs everything. The Sim tests skip both tiers when no Sim path changed; the Long tier runs
+beside the unit tests rather than after them; eighteen timing-only arms carry `Category("Measurement")`
+and run nightly or on `ci:perf`; a push to `main` no longer touches the runner, and a nightly on
+`main` runs everything and skips itself when `main` has not moved. Replayed over the same 80 PRs the
+selector runs everything on 48, the Unity side only on 26 and no test tier on 6.
+
+**Rejected: choosing tests within a tier by feature.** It was the literal ask, and it would save
+seconds out of a fast tier that takes twenty while removing exactly the tests that fail far from
+their edit — the goldens moving on a new job def, `RegistryTests` catching the campfire's missing
+shape. Assembly edges are proven by the compiler; feature edges are a guess.
+
+**What stays open.** `HudGeometryTests.TheBuildHeaderIsOneRowInEveryLayout` is 35 s of the gate,
+nearly all of it `Settle`'s 0.4 s of wall clock repeated 63 times; the wait exists because the HUD's
+cadence buckets run on wall-clock time, so shortening it needs a Unity run to prove, not a guess.
+And "a skipped job passes a required check" is what the whole scheme rests on; *Fast tier* is an
+aggregator that fails when the selector does, so a broken selector cannot skip its way to a merge.
+
+## 2026-09-24 — Meadow M7: what eight layers of hills cost, and a full disk
+
+The owner chose hills of about eight layers and asked that performance not suffer; the ground sits at
+`SizeY − 1 − 3 − relief`, so ±4 on a 16-layer board takes two layers out of the mine. The measurement
+went through the game's own chooser — `ColonyWorld.DefFor` gained a relief parameter, the one seam,
+so the measured board is the played meadow and differs only in relief and height.
+
+Two findings were not the expected ones. **±4 with today's noise produces no cliffs** on any board
+over five seeds — the worry that M8 would need slope spacing just to stay walkable was wrong. And the
+cost of depth is almost all memory: the edit tick on Huge follows the relief (more terrace links), not
+the extra layers of rock. **Sixteen layers is ruled out** — it leaves no rock at all under the lowest
+valley — and twenty is recommended over twenty-four, with the 4K frame as the tie-breaker.
+
+That tie-breaker could not be run: drive D: filled to zero bytes during this session and Unity's
+package import failed with `ENOSPC`. The arm is written. Every worktree on D: and the CI runner share
+the drive, so the next Unity run anywhere will fail the same way until space is freed.
+
+The frame arm ran the same day, in another worktree's warm Library once space was found, and it
+reversed the recommendation. Depth costs the frame nothing — 20 and 24 layers draw identical calls
+and chunks on every board — so the deeper mine is free at the frame and 24 is recommended, with
+memory the only price. What the frame *does* feel is the relief: ±4 hills add about 600 draw calls
+and 0.6–0.75 ms of `World` on Standard and Huge, because taller hills put more layers of chunks in
+view. So the owner's "make sure performance doesn't suffer" is a question for the ground skin (M9),
+not for the board height. EditMode 3,261 / 3,229 / 0, PlayMode 117 / 112 / 0.
+
+## 2026-09-24 — The combat gate (C7)
+
+The last unit of the combat plan: ten days with and without hostiles, on three seeds, and the
+records. Without hostiles nothing needed doing — `SoakRunTests.TenDays` holds on today's `main` and
+no golden moved. With them, the gate became `MarauderSoakTests.TheGateWithRaids`, and three things
+about writing it are worth keeping.
+
+**An unanswered colony is not a gate.** The first cut spawned the raids and left the colony alone,
+armed. Every seed was all down by day two, so eight of the ten days tested theft and nothing else.
+Drafting the colonists where they stood did not help: five colonists across a 120-cell board met a
+party of three one at a time and lost each fight three to one, which the probe showed as one
+marauder walking the board downing four drafted, armed colonists in turn. What a player does is
+draft **and gather**, so the gate answers each party of three with a draft and one move order to the
+start, and leaves a lone marauder to each colonist's own response. Then the squads fought: seeds 2
+and 3 downed nine and seven marauders. Seed 1's squad of four still lost to three on day one — the
+invented numbers, recorded for the owner rather than tuned here.
+
+**A bound on "rescuable" needs the rescuer to be free.** The first rescue invariant read 12,500 ticks
+on seed 1 and looked like a stuck rescue. The trace said otherwise: one colonist left standing,
+carrying four patients to bed one at a time, each carry 2,500–4,000 ticks. A rescuer already
+carrying somebody is not free, and the predicate says so now.
+
+**The save round trip found a real fault, and only a crowd could.** Saved at the first swing of day
+one's raid and loaded, two seeds of three came to a different hash a day later, while the lockstep
+twin agreed every hour — so the round trip, not the simulation. Per-pawn hashes named one drafted
+colonist who had joined a fight; every field matched except her progress through a step, which had
+not moved in the loaded world. Five branches of the attack driver let a step under way land before
+deciding and trust the mover to finish it on the pawn's path, and a path is never saved. The fix asks
+for the path again when a waiting pawn has none (`LandTheStep`); the regression test saves at exactly
+that moment in a three-against-two fight and failed without it. The gate's final hashes were
+identical to the digit before and after the fix, which is the cleanest evidence available that it
+reaches nothing but a loaded world. Every earlier round trip saved a duel mid-swing or a thief
+mid-carry; an attacker in reach while still walking needs several attackers on one target.
+
+The twin every hour is the thing to copy: "the same final hash" would have said the same, but an
+hourly comparison says *where* two runs part, and here it said they never did — which is what pointed
+at the save.
+
+## 2026-09-24 — The marauder becomes the bandit, and stops looking like a colonist
+
+The owner: *"The marauders look like colonists."* They did, exactly. The figure director asked a
+pawn only whether it was an animal, so a hostile person was dealt a colonist's body and the colony's
+white jumpsuit. The word is **bandit** now, everywhere but this journal (design 42). A bandit is a
+person rolled as a colonist and then dressed: welding helmet, red vest, black trousers, and a
+crowbar or a bat. The owner asked for each to have a name of their own, because bandits may be
+kidnapped one day.
+
+The contact sheets settled more than the helmet. The trousers and every vest in Battle Royale are
+**camo texture**, not swatch cells, so the swatch classifier painted the male's belt and boots and
+left the garments alone. The male rig's trouser camo also shares a box of the atlas with every vest.
+Three consequences:
+
+- Each gang row carries two sets of rectangles.
+- The body's black is the *whole atlas*, lying behind its skin. The character shader now lets the
+  first slot a fragment is inside win. That changes nothing for a colonist, because the classifier
+  keeps a colonist's slots disjoint.
+- The far form keeps the vest a separate part, through a twin material, so it can be painted from
+  its own set.
+
+The weapon is dealt by a hash of the pawn rather than a draw, so no roll after the first bandit
+moves.
+
+One test had been measuring swing speed without saying so. Three bandits at a one-sided wall struck
+three walls with the machete and two with the slower blunt weapons, because fewer walls fell in the
+run. The test is now pinned to the machete it was measured with. Nobody stood about either way.
+
+## 2026-09-24 — Meadow: the shoreline is geometry, not shading
+
+The target was the reference's stream (#13): a soft edge, murky green water, no grid. Three shading
+attempts failed before the fourth, and the reason is worth keeping. Sinking a bank under the water
+line and laying water over it left the edge at the underwater wall, because the depth fade made the
+thin water clear. Driving the edge from a soft board field instead gave a soft blob — over square
+geometry, which showed wherever the blob and the cells disagreed: pits onto the sand bed at a water
+cell's corners, the bank's sawtooth where it overran. **A soft edge painted over a square hole is
+still a square hole.** What worked was making the ground itself cross the water line on a line of
+its own: the bank and the bed as one height field, each of nine points a cell at `(1 − w)` of a layer
+above the bed by how much water surrounds it. Every cell's centre keeps its height, so nothing in the
+simulation moved.
+
+The deep water's cross of squares survived a correct blend, and the way it was found is the lesson.
+Drawing the shader's own intermediate terms as colour, one at a time — the field, then the depth each
+material thought it was, then the lit colour — showed each term right and the result wrong: the two
+palette colours reached the shader as globals and `_BaseColor` as a material property, and the two
+do not share a colour-space path, so a ratio of them was a different constant per material. Four
+Unity runs, each a few minutes, against an afternoon of reasoning from screenshots.
+
+Measured in one run on Standard and Huge at 640 × 480 and 4K: draw calls identical, instances up by
+the banks, meshing 7–9% dearer a chunk. Design 38 §24.
+
+## 2026-09-25 — Water that can be clicked, and water that moves
+
+The owner played the shoreline and found two regressions. The first was not one. "I couldn't click on
+a lot of the water tiles anymore" was measured through the rig's own pick path before anything was
+read: 280 of 307 aimed points on the played board missed their water — and the control, the old
+square shore, missed exactly the same 280. The picker had always met water at its bed, two metres
+under the surface and two metres past the aim at the play camera's angle; the new shoreline only made
+the water inviting to click. **A report of a regression is a report of a bug, and the control is what
+says which.** Water is met on its surface now, and a shore bank on its fan through the same
+`HeightAt` the figures stand on, so one surface owner answers both.
+
+The second was real: the ripples lived in the normal, invisible at 48 degrees, which the falls had
+already taught once. Motion is carried by colour — streaks drifting along a flow derived from the
+water network, swells on still water, a breathing rim at the shore — on the game's clock, so a
+paused world holds still. Design 38 §24f.
+
+## 2026-09-25 — The bat and the crowbar stop stabbing
+
+The owner: *"correct crowbar and baseball bat not to have the stabbing motion — only swinging type
+moves."* The heavy clip row, which only those two weapons use, alternated a swing with the pack's
+`HeavyStab01`. The owner chose the pack's three-step heavy combo, `HeavyCombo01A`, `B`, `C`, and
+left the blades alone.
+
+Two of the three clips had never been looked at, so a probe measured them before they went in, with
+the stab as the control that had to fail. The first metric (how much of the hand's motion before
+the impact went forward) passed the stab as a swing and was thrown out. What separates them is
+whether the hand moves along the arm during the blow, which a thrust does and a swing does not: the
+stab scored 70 %, the three heavy combos 18–23 %.
+
+The probe also found that `HeavyCombo01C` would have landed its blow at 0 s. The pack spells that
+one cut `...01CWindUp` without the underscore, and the impact measurement found nothing and returned
+zero. The existing test accepted a zero, so it now requires an impact above zero, and a new test
+holds every blunt weapon, read from the content, to a row with no stab in it. Design 33 §22.

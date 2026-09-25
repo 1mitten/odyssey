@@ -65,9 +65,9 @@ is what a person does. A `max` has a winner, and a winner can be swapped.
 
 **Who is in it: every person, by the published flag.** The crowd term is asked only for a pawn
 whose view carries `PawnFlags.Person`, and only other persons count (`PawnPose.Of`,
-`CrowdWeight`). So colonists and marauders step round one another in any pairing, and animals are
+`CrowdWeight`). So colonists and bandits step round one another in any pairing, and animals are
 outside it on both sides (design 29). It was `Kind == 0` until the combat contracts, which left a
-marauder walking through everybody. `PawnPassingTests.ThePersonFlagDecidesWhoStepsRound` pins it
+bandit walking through everybody. `PawnPassingTests.ThePersonFlagDecidesWhoStepsRound` pins it
 (design 33 §8c).
 
 ## 4. The sway, and where it may not be applied

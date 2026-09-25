@@ -197,6 +197,7 @@ namespace Odyssey.Sim.Pawns
         public void Tick(SimWorld world)
         {
             _ctx.Sync(world);
+            _hostilityKnown = false;
             GetOutOfTheWrongBed(world.CurrentTick);
             var pawns = _ctx.Pawns.All;
             for (int i = 0; i < pawns.Count; i++) TickPawn(pawns[i], world.CurrentTick);
@@ -344,6 +345,12 @@ namespace Odyssey.Sim.Pawns
             // an order given meanwhile starts, and waits here until it stands.
             if (pawn.StunnedAt(tick) || pawn.KnockedDownAt(tick)) return;
 
+            // A colonist set to Defend or Flee (design 33 §18d) notices a fight or danger near her
+            // while she works: the tree runs only between jobs, and a colonist felling a tree would
+            // otherwise see nothing until it fell. The job in hand ends, her step kept, and the
+            // tree below gives her the response's job this same tick.
+            if (ResponseActs(pawn)) Interrupt(pawn, JobStatus.Failed);
+
             if (pawn.CurrentJob != null)
             {
                 var def = _ctx.Content.Jobs[pawn.CurrentJob.DefIndex];
@@ -390,12 +397,28 @@ namespace Odyssey.Sim.Pawns
         // resumes wrongly, which is the failure this pairing exists to prevent; the round-trip
         // test in WorldRoundTripTests is what enforces it.
 
+        /// <summary>
+        /// The job defs every golden was baked with (design 33 §17). Below this every counter is
+        /// hashed, zero or not, as it always was; a def appended at or after it is hashed only once
+        /// it has a count, with its index beside it, so a colony that has never run it hashes
+        /// exactly as it did before it existed. The combat line's contracts step moved every golden
+        /// once for ten zeros (§5h); this is what lets the next job arrive without doing that again.
+        /// </summary>
+        public const int HashedAlways = JobIndex.Steal;
+
         public void ContributeTo(ref StateHash hash)
         {
             hash.Add(JobsStarted);
             hash.Add(JobsFailed);
             for (int i = 0; i < _completed.Length; i++)
             {
+                if (i >= HashedAlways)
+                {
+                    // Sparse, and only while set: the index says which, so two defs that swapped
+                    // counts could not hash alike.
+                    if (_completed[i] == 0 && _failed[i] == 0) continue;
+                    hash.Add(i);
+                }
                 hash.Add(_completed[i]);
                 hash.Add(_failed[i]);
             }
@@ -489,8 +512,9 @@ namespace Odyssey.Sim.Pawns
         };
 
         /// <summary>
-        /// A marauder's mind (design 33 §1, §5): down, else hunt, else idle. No needs, no work, no
-        /// draft: it is debug-spawned to fight and is never one of ours.
+        /// A bandit's mind (design 33 §1, §5): down, else hunt — a colonist, else a building, else
+        /// what it came for, which it carries off the board (§14b, §17) — else idle. No needs, no
+        /// work, no draft: it is debug-spawned to fight and is never one of ours.
         /// </summary>
         static readonly ThinkNode[] HostileTree =
         {
@@ -576,7 +600,7 @@ namespace Odyssey.Sim.Pawns
             stand = -1;
             if (pawn == null || ctx == null) return false;
 
-            // Only one of ours, and only standing (design 33 §5c): a marauder is nobody's to
+            // Only one of ours, and only standing (design 33 §5c): a bandit is nobody's to
             // command, and a downed colonist's Job_Downed is never interruptible — a forced build
             // would otherwise end it and walk her to the site.
             if (!pawn.IsColonist || pawn.Downed) return false;
@@ -889,7 +913,7 @@ namespace Odyssey.Sim.Pawns
             var rng = DeterministicRandom.ForTick(
                 ctx.Seed, ctx.CurrentTick, PawnPurpose.Fireside ^ (uint)pawn.Id.Value);
 
-            // **The hearth is the colony's, not a marauder's.** This node is also the last in
+            // **The hearth is the colony's, not a bandit's.** This node is also the last in
             // the hostile mind (design 33 §5), so without the guard a raider with nobody to hunt
             // walked to the colony's own fire and settled at it, facing the flames among the
             // people it came to kill. A hostile idler wanders instead, as it did before fires.
@@ -949,6 +973,9 @@ namespace Odyssey.Sim.Pawns
             if (WanderTarget.Fill(pawn, ctx, job)) return true;
 
             job.Reset(JobIndex.Wait);
+            // The pawn's own mode, so a waiting bandit is a bandit to everything that asks
+            // pawn.Mode (design 33 §16). A colonist's is Colonist, which Reset already set.
+            job.Mode = pawn.OwnMode;
             return true;
         }
     }
@@ -991,17 +1018,17 @@ namespace Odyssey.Sim.Pawns
                     // On the edge: stand, and the level-keeper takes it from here on its next
                     // rare tick. Another leg from here would be a walk along the edge for ever.
                     job.Reset(JobIndex.Wait);
-                    job.Mode = species.traverseMode;
+                    job.Mode = pawn.OwnMode;
                     job.WorkTicks = (int)TickGroup.Rare;
                     return true;
                 }
-                if (EdgeTarget.Fill(pawn, ctx, job, species.traverseMode)) return true;
+                if (EdgeTarget.Fill(pawn, ctx, job, pawn.OwnMode)) return true;
             }
 
             bool active = IsNight(ctx) == species.nocturnal;
             int legPerCent = active ? LegPerCent : LegPerCent / OffHoursFactor;
             if (rng.NextInt(100) < legPerCent &&
-                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, species.traverseMode, avoidSlopes: true))
+                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, pawn.OwnMode, avoidSlopes: true))
                 return true;
 
             int span = species.restTicksMax > species.restTicksMin
@@ -1009,7 +1036,7 @@ namespace Odyssey.Sim.Pawns
                 : species.restTicksMin;
             if (!active) span *= OffHoursFactor;
             job.Reset(JobIndex.Wait);
-            job.Mode = species.traverseMode;
+            job.Mode = pawn.OwnMode;
             job.WorkTicks = span > 0 ? span : 1;
             return true;
         }
@@ -1032,8 +1059,26 @@ namespace Odyssey.Sim.Pawns
     {
         public static bool Fill(Pawn pawn, PawnContext ctx, Job job, TraverseMode mode)
         {
+            int best = Find(ctx, pawn.Cell, mode);
+            if (best < 0) return false;
+            job.Reset(JobIndex.Wander);
+            job.TargetCell = best;
+            job.Mode = mode;
+            return true;
+        }
+
+        /// <summary>
+        /// The nearest cell on the board's outer ring that can be entered in <paramref name="mode"/>
+        /// and reached from <paramref name="origin"/>, other than <paramref name="origin"/> itself,
+        /// or -1. The animal's leaving walk and the thief's (design 33 §17) share it, so the two
+        /// cannot come to disagree about where the edge of the board is. Bounded by the board's
+        /// side: at most two column lookups and two reachability reads per step outward on each of
+        /// the four edges.
+        /// </summary>
+        public static int Find(PawnContext ctx, int origin, TraverseMode mode)
+        {
             GridSize size = ctx.Size;
-            CellRef from = size.FromIndex(pawn.Cell);
+            CellRef from = size.FromIndex(origin);
             int best = -1, bestDist = int.MaxValue;
             int reach = System.Math.Max(size.SizeX, size.SizeZ);
             for (int edge = 0; edge < 4; edge++)
@@ -1056,7 +1101,7 @@ namespace Odyssey.Sim.Pawns
                         int dist = System.Math.Max(System.Math.Abs(x - from.X), System.Math.Abs(z - from.Z));
                         if (dist >= bestDist) { found = true; break; }
                         int cell = ctx.Cells.NearestWalkableInColumn(x, z, from.Y);
-                        if (cell < 0 || cell == pawn.Cell || !ctx.Reachable(pawn, cell, mode)) continue;
+                        if (cell < 0 || cell == origin || !Reachable(ctx, origin, cell, mode)) continue;
                         best = cell;
                         bestDist = dist;
                         found = true;
@@ -1065,12 +1110,14 @@ namespace Odyssey.Sim.Pawns
                     if (found) break;
                 }
             }
-            if (best < 0) return false;
-            job.Reset(JobIndex.Wander);
-            job.TargetCell = best;
-            job.Mode = mode;
-            return true;
+            return best;
         }
+
+        /// <summary><see cref="PawnContext.Reachable(Pawn, int, TraverseMode)"/> from a cell rather than a pawn.</summary>
+        static bool Reachable(PawnContext ctx, int from, int cell, TraverseMode mode) =>
+            (uint)cell < (uint)ctx.Size.CellCount &&
+            ctx.Nav.Grid.CanEnter(cell, mode) &&
+            ctx.Nav.Reachable(from, cell, mode);
     }
 
     /// <summary>Picking somewhere nearby to drift to. Shared by idling, by the break and by an animal.</summary>
@@ -1198,8 +1245,14 @@ namespace Odyssey.Sim.Pawns
 
     static class WanderTarget
     {
+        /// <summary>
+        /// A person's wander — the mental break's, and an idler's — under the pawn's own mode: a
+        /// colonist's is <see cref="TraverseMode.Colonist"/>, as it always was, and a bandit with
+        /// nothing to hunt wanders without opening a door (design 33 §16). It was Colonist for
+        /// everybody, which would have walked an idle bandit through the colony's front door.
+        /// </summary>
         public static bool Fill(Pawn pawn, PawnContext ctx, Job job) =>
-            Fill(pawn, ctx, job, ctx.Content.Break.wanderRadius, TraverseMode.Colonist, avoidSlopes: false);
+            Fill(pawn, ctx, job, ctx.Content.Break.wanderRadius, pawn.OwnMode, avoidSlopes: false);
 
         /// <summary>
         /// The same pick under a given radius and traverse mode (design 29 §3, §4). The mode goes
