@@ -315,16 +315,34 @@
   </JobDef>
 
   <!--
+    The kitchen (design 48 section 5), JobHandle 26, after the forager's 25 (nature reached main first). One job for both halves of a bill: fetching a
+    load of raw food into a station's pan, and cooking what the pan holds. The work is the
+    recipe's (Recipes.xml) and not this def's, so there is no workTicks here - Job_Build's
+    argument. It trains cooking at every working job's rate. Not casually interruptible: a cook
+    stirring a pan finishes the meal. Expiry is the walking jobs' generous one, because the
+    carrots can be a long way from the kitchen.
+  -->
+  <JobDef>
+    <defName>Job_Cook</defName>
+    <driver>26</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>7</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
+  <!--
     The ranged attack (design 47 section 2d): stand where the line to the target is open and
-    shoot. Not casually interruptible, as the melee attack is not. Trains Skill_Shooting (7) per
+    shoot. Not casually interruptible, as the melee attack is not. Trains Skill_Shooting (8) per
     SHOT, hit or miss, as the melee attack trains per swing: the gun's experiencePerSwing is the
     amount (Items.xml), so experiencePerWorkTick is nought.
   -->
   <JobDef>
     <defName>Job_AttackRanged</defName>
-    <driver>26</driver>
+    <driver>27</driver>
     <casuallyInterruptible>false</casuallyInterruptible>
-    <trainsSkill>7</trainsSkill>
+    <trainsSkill>8</trainsSkill>
   </JobDef>
 
 </Defs>

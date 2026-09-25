@@ -230,7 +230,8 @@ namespace Odyssey.Tests.Hud
             return snapshot;
         }
 
-        static LedgerRow Meals(LedgerModel ledger) => ledger.Rows.Find(r => r.IconKey == "ui.res.meal");
+        // The frames above lay ration packs (handle 0), whose row is ui.res.rations since the kitchen.
+        static LedgerRow Meals(LedgerModel ledger) => ledger.Rows.Find(r => r.IconKey == "ui.res.rations");
 
         [Test]
         public void NothingIsFallingOnTheFirstLook()

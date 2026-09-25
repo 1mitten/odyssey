@@ -147,6 +147,12 @@ namespace Odyssey.Sim.Pawns
         public Power.PowerGrid? Power { get; set; }
 
         /// <summary>
+        /// The kitchen (design 48 §5): every cooking station's bills and pan. Null in a bare pawn
+        /// fixture, which has nothing to cook on.
+        /// </summary>
+        public Cooking.Kitchen? Kitchen { get; set; }
+
+        /// <summary>
         /// The structure of this cell changed, so the boundary above it has to be re-judged.
         ///
         /// <para>Both the cell and the one above it, always, because they are two different

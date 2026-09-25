@@ -243,7 +243,9 @@ namespace Odyssey.Presentation.Ui
                  : _inspect.Position + ":" + _inspect.Layer
                     // A campfire's header says whether it is the hearth or offers to be (design 43
                     // §6), so the hearth moving is a change of structure.
-                    + (_inspect.IsHearth ? ":hearth" : _inspect.OffersHearth ? ":fire" : string.Empty));
+                    + (_inspect.IsHearth ? ":hearth" : _inspect.OffersHearth ? ":fire" : string.Empty)
+                    // A station's pane is the bench width (design 49), so becoming one is structure.
+                    + (_inspect.IsStation ? ":bench" : string.Empty));
             if (signature != _inspectBuiltFor)
             {
                 BuildInspectBody();
@@ -328,7 +330,12 @@ namespace Odyssey.Presentation.Ui
                 ? DisplayStyle.Flex : DisplayStyle.None;
 
             if (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item)
+            {
                 SyncCellRows();
+                // A cooking station's bills (design 48 §5), above the tile's facts.
+                WorldSnapshot? frame = _boot?.World?.Views.Current;
+                if (frame != null) SyncBills(frame);
+            }
 
             if (!_inspect.ShowsColonistBody || _inspect.Tombstoned) return;
 
@@ -653,6 +660,8 @@ namespace Odyssey.Presentation.Ui
             _locationRow = null;
             _locationValue = null;
             _needRows = 0;
+            // The bill list belongs to the subject being replaced (design 48 §5).
+            _billList = null;
 
             // Nothing selected: no panel at all (owner, 2026-09-16), and this is the HUD's resting
             // state. It was a 41 px strip reading "Nothing selected", itself already a cut-down of
@@ -677,6 +686,10 @@ namespace Odyssey.Presentation.Ui
             // A campfire is never narrow either (owner, 2026-09-25): the hearth's button does not fit.
             _inspectPanel.EnableInClassList("inspect--narrow",
                 !_inspect.IsWide
+                && (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item));
+            // A station is wider still (design 49): its bill row carries seven columns.
+            _inspectPanel.EnableInClassList("inspect--bench",
+                _inspect.IsStation
                 && (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item));
 
             // ---- header: avatar, name and its two lines, then the actions on the right
@@ -897,6 +910,10 @@ namespace Odyssey.Presentation.Ui
                 // arrives and the facts change, so the pane never rebuilds its tree for a value.
                 // Items too, since 2026-09-19: a pile lying in a field carries the field's
                 // growing row, so the tile answers wherever on it the click lands.
+                // The bill list first (design 48 §5): built for every tile and shown only over a
+                // galley or a campfire, so the pane never rebuilds when the answer arrives.
+                BuildBills(_inspectBody);
+
                 _cellRowsGrid = new VisualElement();
                 _cellRowsGrid.AddToClassList("inspect__rows");
 
@@ -1004,6 +1021,11 @@ namespace Odyssey.Presentation.Ui
                 // own now, so a row that opened a popover would be a second way in to the same
                 // thing and the one a player found by accident.
                 bool switchPick = row.Name == InspectModel.PowerSwitchRow && _inspect.PowerSwitchUnderPane;
+                // A station with no power carries its switch in the status strip at the top of the
+                // pane (design 49 §2), so the row would be the same button twice.
+                DisplayStyle shown = switchPick && _bills.HasProblem && _bills.HasSwitch
+                    ? DisplayStyle.None : DisplayStyle.Flex;
+                if (view.Root.style.display.value != shown) view.Root.style.display = shown;
                 bool linePick = row.Name == InspectModel.OrderActionRow && _inspect.OrderActionUnderPane;
                 bool pick = (row.Name == "owner" && _inspect.BedUnderPane) || switchPick || linePick;
                 // The pickable row's value is set in the heavier Row role, which is where weight
@@ -2029,7 +2051,7 @@ namespace Odyssey.Presentation.Ui
             return element;
         }
 
-        static HudGlyphKind CategoryGlyph(int category) => category switch
+        internal static HudGlyphKind CategoryGlyph(int category) => category switch
         {
             0 => HudGlyphKind.CategoryFood,
             1 => HudGlyphKind.CategoryMedicine,

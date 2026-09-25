@@ -390,7 +390,9 @@ namespace Odyssey.Sim.Pawns
             new PatientJobDriver(),
             // Picking a berry bush (design 45 §6), JobHandle 25, after medical supplies.
             new ForageJobDriver(),
-            // The ranged attack (design 47 §2d), JobHandle 26, after the forager's.
+            // The kitchen (design 48 §5), JobHandle 26, after the forager's.
+            new Cooking.CookJobDriver(),
+            // The ranged attack (design 47 §2d), JobHandle 27, after the kitchen's.
             new AttackRangedJobDriver(),
         };
 

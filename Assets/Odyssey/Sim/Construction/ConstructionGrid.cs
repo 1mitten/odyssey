@@ -1568,6 +1568,9 @@ namespace Odyssey.Sim.Construction
             // Its switch and whatever wood was in its hopper go with it (design 32 §5).
             ctx.Power?.RemoveDevice(handle);
 
+            // And a cooking station's bills and whatever was on the hob (design 48 §5).
+            ctx.Kitchen?.Remove(handle);
+
             // Nothing may go on pointing at a building that has gone (design 33 §13h): what was
             // left of it after a fight, and an order to take it apart. Here, because this is the one
             // way an edifice leaves the world — taken apart, beaten down, or whatever calls it next.

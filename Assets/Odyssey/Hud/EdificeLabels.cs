@@ -33,6 +33,8 @@ namespace Odyssey.Hud
             // The wild things of design 45, after the buildings: two more trees, then the bushes.
             "ui.terrain.tree.fruit", "ui.terrain.tree.giant",
             "ui.terrain.bush", "ui.terrain.bush.berry", "ui.terrain.bush.picked",
+            // The kitchen (design 48), edifice 22, after the wild things.
+            "ui.arch.tool.galley",
         };
 
         public static string IconKey(int edifice) =>

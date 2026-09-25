@@ -56,7 +56,7 @@ namespace Odyssey.Tests.Hud
             var ledger = new LedgerModel();
             ledger.Refresh(snapshot);
 
-            LedgerRow meals = FindRow(ledger, "ui.res.meal");
+            LedgerRow meals = FindRow(ledger, "ui.res.rations");
             Assert.That(meals.Quantity, Is.EqualTo(12));
         }
 

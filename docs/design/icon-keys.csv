@@ -23,7 +23,9 @@ ui.res.cord,Cord,ui.res,M1,"Rope and cable. Ladders, lifts, bindings"
 ui.res.insulation,Insulation,ui.res,M1,Foam batting. Slows heat through a wall
 ui.res.paper,Paper,ui.res,M1,Records and packaging. Research feedstock
 ui.res.rations,Rations,ui.res,M1,"Sealed pre-collapse food. Never spoils, nobody enjoys it"
-ui.res.meal,Meal,ui.res,M1,Cooked at a galley. Mood as well as nutrition
+ui.res.meal,Meal,ui.res,M3,"Cooked at an electric cooker or a campfire. The best food there is, and it rots in four days"
+ui.res.meal.veg,Vegetable meal,ui.res,M3,"A meal cooked without meat. As filling and as welcome as one with"
+ui.res.meal.burnt,Burnt meal,ui.res,M3,"A meal the cook let catch. Edible, less filling, and nobody enjoys it"
 ui.res.protein,Protein paste,ui.res,M1,Reclaimed nutrition. Edible; that is all
 ui.res.meat,Raw meat,ui.res,M1,Butchered. Spoils without cold
 ui.res.produce,Produce,ui.res,M1,"Grown food, uncooked"
@@ -67,7 +69,7 @@ ui.mood.broken,Breaking down,ui.mood,M2,In a mental break now
 ui.skill.construction,Construction,ui.skill,M2,"Building, and the quality of what is built"
 ui.skill.mining,Mining,ui.skill,M2,"Digging, rubble clearance and salvage extraction"
 ui.skill.salvage,Salvage,ui.skill,M2,Stripping a shell without wrecking what is in it
-ui.skill.cooking,Cooking,ui.skill,M2,"Meal quality, and food poisoning avoided"
+ui.skill.cooking,Cooking,ui.skill,M3,"How fast a colonist cooks, and how seldom the meal burns"
 ui.skill.growing,Growing,ui.skill,M2,Yield and harvest speed
 ui.skill.cutting,Chopping,ui.skill,M2,"Felling trees. How fast the axe comes down, and how fast the trunk goes over"
 ui.skill.animals,Animals,ui.skill,M2,"Taming, training and husbandry"
@@ -120,6 +122,7 @@ ui.status.rescuing,Rescuing,ui.status,CB,Carrying the downed to a bed
 ui.status.stealing,Stealing,ui.status,CB,"A bandit carrying something off the board"
 ui.status.treating,Treating,ui.status,M3,"Tending the hurt, or herself"
 ui.status.patient,Resting as a patient,ui.status,M3,In bed until the wound allows getting up
+ui.status.cooking,Cooking,ui.status,M3,"At an electric cooker or a campfire, or fetching food for the pan"
 ui.status.sheltering,Sheltering,ui.status,WE,"An animal waiting out the rain under a roof or a tree, or walking to one"
 ui.status.inrain,In the rain,ui.status,WE,"A colonist under open sky while it rains, and walking slower for it. Said beside her pace"
 ui.stat.pace,Pace,ui.stat,WE,"How fast a colonist walks, as a share of the standard walk. Not the tile's walk speed, which is the ground"
@@ -148,7 +151,7 @@ ui.work.bedrest,Bed rest,ui.work,M7,Stay in bed while recovering
 ui.work.doctor,Doctor,ui.work,M3,"Treat the hurt, with medical supplies or without"
 ui.work.warden,Warden,ui.work,M7,"Feed, talk to and recruit prisoners"
 ui.work.handling,Handling,ui.work,M7,"Tame, train and feed animals"
-ui.work.cooking,Cooking,ui.work,M7,Prepare meals and butcher
+ui.work.cooking,Cooking,ui.work,M3,Work the bills at an electric cooker or a campfire
 ui.work.hunting,Hunting,ui.work,M7,Kill wild animals for meat
 ui.work.construction,Construction,ui.work,M7,Build frames and blueprints
 ui.work.growing,Growing,ui.work,M7,Sow and harvest growing zones
@@ -170,6 +173,21 @@ ui.schedule.sleep,Sleep,ui.schedule,M7,Go to bed whether tired or not
 ui.schedule.recreation,Recreation,ui.schedule,M7,Rest and recover mood
 ui.schedule.eat,Eat,ui.schedule,M7,Take a meal even if not yet hungry
 ui.schedule.meditate,Meditate,ui.schedule,M7,"Quiet hours, for whatever comes to need them"
+ui.recipe.meal,Cook a meal,ui.recipe,M3,"Any raw food, three carrots' worth, into one meal"
+ui.bill.heading,Bills,ui.bill,M3,What this station is told to make. The top one is worked first
+ui.bill.add,Add a bill,ui.bill,M3,Put a new order at the bottom of the list
+ui.bill.none,No bills yet,ui.bill,M3,Nothing will be made here until a bill is added
+ui.bill.mode.until,Until you have,ui.bill,M3,"Cook while the colony holds fewer than this many meals, and start again when it drops below"
+ui.bill.mode.times,Make,ui.bill,M3,"Cook this many, then stop"
+ui.bill.mode.forever,Forever,ui.bill,M3,Never stop cooking
+ui.bill.suspended,Paused,ui.bill,M3,"Stopped by you. The next bill down is worked instead"
+ui.bill.done,Done,ui.bill,M3,"This bill's count is met. It starts again by itself when it needs to"
+ui.bill.unpowered,No power,ui.bill,M3,"The electric cooker needs power to cook. Nothing on the hob will spoil in the meantime"
+ui.bill.waiting,Waiting for power,ui.bill,M3,"This bill will be worked once the station has power again"
+ui.bill.needs,"Each meal: raw food, about 3 carrots",ui.bill,M3,"A meal takes 500 of any raw food by nutrition: three carrots, or meat once there is any"
+ui.bill.needs.fire,"Each meal: raw food, about 3 carrots, and 1 wood",ui.bill,M3,"A campfire burns one wood for every meal it cooks"
+ui.bill.supply,Raw food for {n} meals,ui.bill,M3,"What the raw food on the map, in stores and on the ground, would cook into"
+ui.bill.nosupply,No raw food on the map,ui.bill,M3,"Nothing to cook. Grow carrots, or use the debug menu's Give carrots"
 ui.arch.category.structure,Structure,ui.arch.category,M3,"Walls, doors, floors and vertical connectors"
 ui.arch.category.zones,Zones,ui.arch.category,M3,"Stockpiles, growing zones and allowed areas"
 ui.arch.category.orders,Orders,ui.arch.category,M3,One-off designations on existing things
@@ -216,7 +234,7 @@ ui.arch.tool.geothermal,Geothermal tap,ui.arch.tool,M3,"Deep, expensive, constan
 ui.arch.tool.switch,Power switch,ui.arch.tool,M3,Cuts a net in two
 ui.arch.tool.reactor,Reactor,ui.arch.tool,M3,"Late, enormous, dangerous"
 ui.arch.tool.fabricator,Fabricator,ui.arch.tool,M3,Makes refined materials and components
-ui.arch.tool.galley,Galley,ui.arch.tool,M3,Cooks meals
+ui.arch.tool.galley,Electric Cooker,ui.arch.tool,M3,"Cooks meals from bills. Needs power"
 ui.arch.tool.reclaimer,Reclaimer,ui.arch.tool,M3,Sorts scrap into usable material
 ui.arch.tool.hydroponics,Hydroponics basin,ui.arch.tool,M3,"Grows without soil, needs power"
 ui.arch.tool.bench,Crafting bench,ui.arch.tool,M3,General making
@@ -532,7 +550,8 @@ ui.debug.panel,Debug,ui.debug,M3,"Debug-only actions: not saved and not for a sh
 ui.debug.spawnpawn,Spawn colonist,ui.debug,M3,"Adds a colonist with no scenario and no starting kit"
 ui.debug.givewood,Give wood,ui.debug,M3,"Adds 50 wood near the camera"
 ui.debug.givestone,Give stone,ui.debug,M3,"Adds 50 stone near the camera"
-ui.debug.givefood,Give food,ui.debug,M3,"Adds 50 meals near the camera"
+ui.debug.givefood,Give food,ui.debug,M3,"Adds 50 ration packs near the camera"
+ui.debug.givecarrots,Give carrots,ui.debug,M3,"Adds 50 carrots near the camera: raw food a cook can put in a pan"
 ui.debug.tab.cheats,Cheats,ui.debug,M3,"The overlay toggle and the grants"
 ui.debug.tab.events,Events,ui.debug,M3,"One row per event the content declares, each fired on click"
 ui.debug.tab.spawn,Spawn,ui.debug,AN,"Colonists and animals, placed near the camera"

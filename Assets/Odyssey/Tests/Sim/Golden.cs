@@ -462,6 +462,16 @@ namespace Odyssey.Tests.Sim
         /// <c>AnimalShelterThinkNode</c> gives them. Both together: 300 started, 74 wanders, 217
         /// waits, 341,744 progress.</para>
         ///
+        /// <para><b>All six moved on 2026-09-25, with the kitchen (design 48, K1).</b> Every
+        /// colonist carries an eighth work priority (<c>Work_Cooking</c>) and an eighth skill
+        /// (<c>Skill_Cooking</c>), and the job system one more counter pair (<c>Job_Cook</c>); all
+        /// are hashed. The kitchen itself is hashed only once a station has been used, and none of
+        /// these colonies has one. Eating changed too — the best tier first, and a thought that is
+        /// the food's own — but nobody in these windows gets hungry enough to eat.
+        /// <b>Measured</b>: <c>GoldenColonyProbe</c> run on <c>main</c> (837c895a) and on this
+        /// branch; the outputs are identical on all three boards, food, rest, mood, experience and
+        /// every job counted included. The hash sees more; no colony does anything different.</para>
+        ///
         /// <para><b>All six moved on 2026-09-25, by the ranged line's contracts step (design 47 R0):
         /// the hash seeing more, and no colony doing anything different.</b> Every person carries a
         /// seventh skill, passion and daily-gain slot — Shooting — and each colonist is dealt a
@@ -479,6 +489,11 @@ namespace Odyssey.Tests.Sim
         /// item: longer hashed tables, dealt after everything main deals. <b>Measured</b> the same
         /// way: <c>GoldenColonyProbe</c> on <c>origin/main</c> and on the merge is identical on all
         /// three boards, all nine census lines.</para>
+        ///
+        /// <para><b>And a third time at the merge with the kitchen (<c>origin/main</c> fc6b8ba6).</b>
+        /// Cooking took the eighth skill, so Shooting is the ninth, <c>Job_AttackRanged</c> the
+        /// twenty-eighth job and the pistol the eighteenth item. <b>Measured</b> the same way; the
+        /// merge commit says what the probe found.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -492,9 +507,9 @@ namespace Odyssey.Tests.Sim
             // Re-baked 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1), on top of the weather's own re-bake: the combined job, item,
             // skill and incident tables moved the hash the same way any content append does.
-            // The ranged line merged with main, 2026-09-25: the eighth skill; the probe diffs clean.
-            Generated = 12585683473682642403UL,
-            Simulated = 6637339537519055973UL,
+            // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            Generated = 14881731598722590511UL,
+            Simulated = 5300718913518332604UL,
         };
 
         /// <summary>
@@ -550,9 +565,13 @@ namespace Odyssey.Tests.Sim
             // board; re-taken from the merged code.
             // The scenery line merged with medical supplies (design 37), 2026-09-25: re-taken from the
             // merged code; the probe against main is in the merge commit's message.
-            // The ranged line merged with main, 2026-09-25: the eighth skill; the probe diffs clean.
-            Generated = 6448561345556924345UL,
-            Simulated = 205266770687858760UL,
+            // The kitchen merged with the wild foods, 2026-09-25: an eighth work priority and skill
+            // on every colonist and Job_Cook's counter pair, on the wild-food board. Re-taken from
+            // the merged code; GoldenColonyProbe on main (2a1cfa63) and on the merge is identical on
+            // all three boards, so the hash sees more and no colony does anything different.
+            // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            Generated = 13308657285820379759UL,
+            Simulated = 16876557663456853837UL,
         };
 
         /// <summary>
@@ -594,9 +613,9 @@ namespace Odyssey.Tests.Sim
             // 2026-09-25, weather-world: it rains here all run — pace and animal shelter (remarks).
             // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
-            // The ranged line merged with main, 2026-09-25: the eighth skill; the probe diffs clean.
-            Generated = 1493952951688867980UL,
-            Simulated = 1263214685449011760UL,
+            // And merged with the kitchen (fc6b8ba6), 2026-09-25: Shooting the ninth skill; the probe diffs clean.
+            Generated = 14180088319569370523UL,
+            Simulated = 7648152829369388509UL,
         };
     }
 }

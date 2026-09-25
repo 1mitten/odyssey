@@ -139,6 +139,15 @@
   </SkillDef>
 
   <!--
+    Cooking (design 48 section 5). Buys speed at the stove through Work_Cooking's curve, and keeps
+    the meal from burning through Recipe_Meal's table. Cooking trains it, at every station.
+  -->
+  <SkillDef ParentName="SkillBase">
+    <defName>Skill_Cooking</defName>
+    <label>cooking</label>
+  </SkillDef>
+
+  <!--
     Shooting (design 47 section 2a): the per-cell accuracy curve in Combat.xml reads it, and
     every shot trains it, hit or miss. Appended with the ranged line; a colonist from a save
     older than format 10 is dealt it once on load.

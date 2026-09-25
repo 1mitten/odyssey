@@ -612,6 +612,8 @@ namespace Odyssey.Hud
             Commands.Clear();
             _bedUnderPane = false;
             _powerSwitchUnderPane = false;
+            TileEdifice = 0;
+            TileCellIndex = -1;
             _orderActionUnderPane = false;
             IsCampfire = false;
             IsHearth = false;
@@ -1129,6 +1131,16 @@ namespace Odyssey.Hud
         bool _powerSwitchUnderPane;
 
         /// <summary>
+        /// What stands in the tile under the pane, as an <see cref="EdificeHandle"/> value, or 0.
+        /// Cleared every refresh and set by <see cref="SetCellRows"/> with the other tile flags, so
+        /// the bill list (design 48 §5) is shown for exactly the station the answer is about.
+        /// </summary>
+        public int TileEdifice { get; private set; }
+
+        /// <summary>The whole-world index of the tile the answer is about, or -1 before there is one.</summary>
+        public int TileCellIndex { get; private set; } = -1;
+
+        /// <summary>
         /// Whether the pane holds an order whose action row can be pressed: a building site's
         /// Cancel, or a line's — Cancel an order, Remove a laid line, Keep one marked to come up
         /// (design 32 §14; owner, 2026-09-23: "the same for any building blueprint that has been
@@ -1177,7 +1189,13 @@ namespace Odyssey.Hud
         public bool OffersHearth => IsCampfire && !IsHearth;
 
         /// <summary>A store's pane and a campfire's are the full 560; every other tile's is the narrow column.</summary>
-        public bool IsWide => IsStore || IsCampfire;
+        public bool IsWide => IsStore || IsCampfire || IsStation;
+
+        /// <summary>
+        /// Something that takes bills stands in the tile (design 49): the pane is the bench width
+        /// and carries the bill list. A campfire is one, so it is wide on both counts.
+        /// </summary>
+        public bool IsStation => BillsModel.IsStation(TileEdifice);
 
         /// <summary>The header line on the hearth, and the button on any other campfire.</summary>
         public const string HearthKey = "ui.home.hearth";
@@ -1273,6 +1291,8 @@ namespace Odyssey.Hud
             // piece of quality-bearing furniture would, and the row it grew would open the *bed*
             // picker over it. Three characters against a report.
             _bedUnderPane = detail.EdificeQuality > 0 && detail.Edifice == EdificeHandle.Bed;
+            TileEdifice = detail.Edifice;
+            TileCellIndex = detail.CellIndex;
             if (snapshot.TryGetPowerDevice(detail.CellIndex, out PowerDeviceView switchable))
             {
                 _powerSwitchUnderPane = true;

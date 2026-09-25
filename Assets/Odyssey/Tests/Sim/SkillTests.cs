@@ -88,6 +88,8 @@ namespace Odyssey.Tests.Sim
                     "melee",
                     // Medical supplies (design 37): SkillCatalogue's medicine row went live with it.
                     "medicine",
+                    // The kitchen (design 48): SkillCatalogue's cooking row went live with it.
+                    "cooking",
                     // The ranged line's contracts step (design 47 §3a): SkillCatalogue's shooting
                     // row went live in the same commit, and SkillCatalogueTests with it.
                     "shooting",

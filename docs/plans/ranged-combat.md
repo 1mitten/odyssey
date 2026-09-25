@@ -4,7 +4,7 @@
 every answer is in the decision table of `docs/design/47-ranged-combat.md` §1). **Not yet approved
 for code**: the next hard stop is the owner's reading of design 47, whose §8 lists seven
 recommendations to confirm or overrule. This planning work is on `claude/beautiful-cannon-pldakk`,
-**PR #220** (documents, plus the baked gunshot and its bake script). **Approved and built 2026-09-25** (R0–R4, H1, P1–P3 on `claude/ranged-combat`; R5, R6, P4 and R7 not started — design 47 §10). **Reviewed 2026-09-25**
+**PR #220** (documents, plus the baked gunshot and its bake script). **Approved and built 2026-09-25** (R0–R4, H1, P1–P3 and R7 on `claude/ranged-combat`, PR #225; played three times and merged with `main`, design 47 §10–§13; R5, R6 and P4 not started). **Reviewed 2026-09-25**
 (design 47 §9): renumbered 44 → 47, the prop moved to Battle Royale's pistol, the contracts corrected
 against `main`, and the animation, flight and sound decisions the first draft left open are now in
 the design, so no unit below has anything left to invent. The research is `a-10-ranged-combat`, `a-10-projectile-path`, `c-3d-shot-line`,
@@ -21,7 +21,7 @@ Hud, P presentation. Sizes S / M / L. Branch per unit `claude/ranged-<unit>`.
 | R1 (M) | `LineOfSight` (3D integer supercover, symmetric, doors, slabs, the lenient corner) and `RangedGeometry`; `LineOfSightTests` incl. the terrace hit, the slab control, the symmetry and mirror properties | fast | none | built 2026-09-25 |
 | R2 (M) | `Projectiles` (save / hash / publish), `IRangedRules` / `RangedRules`, `CombatSystem.LandBullet` and `FireOrLose`, `ApplySwing`'s `Pawn?` and skill line, `BuildingTargets` ×1, dodge 0 mid-aim; `RangedMathTests`, `ProjectileTests`, `BulletLandingTests` | fast | none, asserted | built 2026-09-25 |
 | R3 (L) | `AttackRangedJobDriver`, `CombatJobs.AttackJobFor` / `CanBreakBuildings`, every simulation site in design 47 §3e, fire at will in `HoldTarget` / `SelfDefence`, `HandleOrderAttack` sight-or-reach, `Ranged.NearestTargetInSight`, the building refusal; `RangedDriverTests` incl. the two save tests | fast; **▶ playtest** with R4, P1–P3 | none, asserted | built 2026-09-25 (the unreachable-in-sight test owed, design 47 §10) |
-| R4 (S) | Debug: `Spawn(cell, kind, weapon)`, `SpawnPawn.B`, *Spawn sidearm* and *Spawn pistol bandit*, the Arm-row test | fast + Hud | none | built 2026-09-25 |
+| R4 (S) | Debug: `Spawn(cell, kind, weapon)`, `SpawnPawn.B`, *Spawn pistol* (was *sidearm*) and *Spawn pistol bandit*, the Arm-row test | fast + Hud | none | built 2026-09-25 |
 | H1 (S) | Hud spill from R0, `CombatSoundTiming` / `FloatingText` for `Shot`, `SkillCatalogueTests` | Hud fast | none | built 2026-09-25 |
 | P1 (M) | The pistol prop — **Battle Royale `SM_Wep_Pistol_Heavy_01`** (design 47 §4a, measured): `PlayScene` row pinned to `PolygonBattleRoyale`, `FitPistol`, the muzzle socket measured off the drawn mesh, the holster fit, `WeaponProfileBake` + regenerated table, `WeaponPropTests` / `WeaponSheathGapTests` arms | EditMode (art-dependent; ignores itself on the runner) | none | built 2026-09-25 |
 | P2 (L) | Aim stance with **tracking**, recoil, the **slide**, **low ready**, computed draw (**0.45 s, inside the first aim; a shot mid-draw snaps to aimed**) / holster keyed by style, the draw/holster rows in `SheathRows` and aim/fire as `CombatRole`s, `PlaysWorkStroke`, design 47 §4b's state table as the checklist; `CombatDrawnTests` arms fed a scripted view and event stream so it does not wait for R3 | EditMode | none | built 2026-09-25 (draw and holster reuse the sword pack's cross-draw, design 47 §10) |
@@ -29,7 +29,7 @@ Hud, P presentation. Sizes S / M / L. Branch per unit `claude/ranged-<unit>`.
 | R5 (M) | The gate: `BanditSoakTests.TheGateWithGunmen` (Long), `TickBenchmarkTests.FiftyShootersAgainstTen` beside the machete arm, `rangedScanTicks` tuned from its number | Long green; numbers in design 47 §5 | none, asserted | after R3, R4 |
 | P4 (S) | `FrameTimeTests.TheFrameWithGunfireInView` (peace / brawl / gunfight; the audio director's `VoiceStarved` / `CooldownSkipped` logged; the gunfight timed with `ProjectileDirector.Enabled = false` as the control; the pass's draw calls ≤ 2 whatever the count as the structural gate; timing under `Measurement`); a player build smoke run with a gunfight | PlayMode, alone on the machine | none | after P2, P3, R3 |
 | R6 (M) | Buildings under fire: the ranged driver's `TickBuilding`, `OrderAttackBuilding` for a gun, the bandit gunman's base attack; lifts R3's refusal | fast | none | after R3; may follow the playtest |
-| R7 (S) | Records: design 47's status, this table's state column, the journal, the `CLAUDE.md` row, the playtest-queue rows, the wiki republish | — | — | last |
+| R7 (S) | Records: design 47's status, this table's state column, the journal, the `CLAUDE.md` row, the playtest-queue rows, the wiki republish | — | — | done 2026-09-25 at the merge with `main`, except the wiki republish, which waits for the merge so the hosted copy shows `main` |
 
 ## Lanes and merge order
 

@@ -515,8 +515,8 @@ namespace Odyssey.Tests.Hud
             pane.Refresh(snapshot);
 
             Assert.That(pane.Skills.Count, Is.EqualTo(SkillCatalogue.All.Length));
-            Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(7),
-                "mining, chopping, construction, growing, melee, medicine and shooting are the seven the " +
+            Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(8),
+                "mining, chopping, construction, growing, melee, medicine, cooking and shooting are the eight the " +
                 "simulation backs; hauling is a work type and not a skill in the design's list");
 
             SkillRow mining = pane.Skills.Single(s => s.IconKey == "ui.skill.mining");
@@ -558,6 +558,8 @@ namespace Odyssey.Tests.Hud
                     "ui.skill.melee",
                     // Live since medical supplies (design 37).
                     "ui.skill.medicine",
+                    // Live since the kitchen (design 48).
+                    "ui.skill.cooking",
                     // And since the ranged line's (design 47 §3a).
                     "ui.skill.shooting",
                 }),
@@ -705,8 +707,9 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void RealRowsCountStacksAndPlannedRowsStayGreyed()
         {
-            // Two piles of meals, twenty and four, are twenty-four meals, not two; the ledger is
-            // the number the player decides on, and a pile is not a number.
+            // Two piles of ration packs, twenty and four, are twenty-four rations, not two; the
+            // ledger is the number the player decides on, and a pile is not a number. Handle 0 is
+            // the ration pack, and has had a row of its own since the kitchen (design 48 §3).
             var snapshot = Frame.Write();
             snapshot.AddThing(new ThingView(new ThingId(1), new CellRef(1, 1, 1), ItemHandle.Meal, 0, stack: 20));
             snapshot.AddThing(new ThingView(new ThingId(2), new CellRef(2, 2, 1), ItemHandle.Meal, 0, stack: 4));
@@ -716,8 +719,8 @@ namespace Odyssey.Tests.Hud
             var ledger = new LedgerModel();
             ledger.Refresh(snapshot);
 
-            var meals = ledger.Rows.Find(r => r.Name == "Meal");
-            Assert.That(meals.Real, Is.True, "the row is named as the registry names ui.res.meal");
+            var meals = ledger.Rows.Find(r => r.Name == "Rations");
+            Assert.That(meals.Real, Is.True, "the row is named as the registry names ui.res.rations");
             Assert.That(meals.Quantity, Is.EqualTo(24));
             Assert.That(ledger.Rows.Find(r => r.Name == "Wood").Quantity, Is.EqualTo(20), "felled wood is a real row");
 

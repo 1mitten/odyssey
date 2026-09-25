@@ -283,6 +283,16 @@ namespace Odyssey.Tests.Sim
         // M13 on the merged line, 2026-09-25: re-taken from the merged pack.
         // The scenery line merged with medical supplies, 2026-09-25: Job_Forage renumbered 23 -> 25
         // and Item_Berries/Item_Mushrooms 11-12 -> 12-13, after main's. Re-taken from the merged pack.
+        //
+        // Moved a twenty-ninth time, deliberately, 2026-09-25, by the kitchen (design 48 §4-§5):
+        // Skill_Cooking, Work_Cooking and Job_Cook appended; the three meals appended as items;
+        // Recipe_Meal the first RecipeDef; ItemDef gained foodTier, rawIngredient, meat, ticksToRot
+        // and ateThought, set on the ration pack and the carrots; Thought_AteMeal went from +20 to
+        // +50 as the cooked meal's, and AteRation (+20), AteBurnt (-40) and AteRaw (-50) were
+        // appended; and the work types' scan ranks moved to put cooking between growing and
+        // cutting. Every golden moves with it, measured in the same commit.
+        // Both lines together, 2026-09-25: the kitchen merged with the wild foods; Job_Cook
+        // renumbered 25 -> 26 and the meals 12-14 -> 14-16. Re-taken from the merged pack.
         // 2026-09-25, design 47 §3 (R0, the ranged line's contracts): Job_AttackRanged, Skill_Shooting
         // and Item_Pistol appended; AttackDef gained a ranged block, CombatDef the shooting numbers
         // (the per-cell curve, the floor, cover, the dead zone, the scatter, the scan cadence) and
@@ -292,7 +302,8 @@ namespace Odyssey.Tests.Sim
         // 2026-09-25, design 47 §12: the pistol's ranged block gained its own melee blow (blunt, 5,
         // the fists' cadence) — an enemy within reach is clubbed, never shot.
         // The ranged line merged with main (medical supplies, the scenery), 2026-09-25: re-taken from the merged pack.
-        const ulong ContentFingerprint = 1351662570230180524UL;
+        // And merged with the kitchen (design 48), 2026-09-25: the ranged handles to 27 / 17 / 8; re-taken.
+        const ulong ContentFingerprint = 2941432541773940875UL;
 
 
         [Test]

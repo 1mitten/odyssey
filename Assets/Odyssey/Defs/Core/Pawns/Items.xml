@@ -22,6 +22,10 @@
     <nutrition>900</nutrition>
     <stackLimit>20</stackLimit>
     <category>Food</category>
+    <!-- Design 48 section 4: second choice after a cooked meal, never rots, and thought of as
+         exactly what every food was thought of before the kitchen (Thought_AteRation, +20). -->
+    <foodTier>1</foodTier>
+    <ateThought>8</ateThought>
   </ItemDef>
 
   <!--
@@ -88,6 +92,11 @@
     <nutrition>180</nutrition>
     <stackLimit>75</stackLimit>
     <category>Food</category>
+    <!-- Design 48 section 4: raw food, so a cook can put three in a pan (540 of the meal's 500),
+         and a colonist eating them straight thinks less of it (Thought_AteRaw). -->
+    <foodTier>3</foodTier>
+    <rawIngredient>true</rawIngredient>
+    <ateThought>10</ateThought>
   </ItemDef>
 
   <!--
@@ -101,6 +110,12 @@
     <nutrition>60</nutrition>
     <stackLimit>75</stackLimit>
     <category>Food</category>
+    <!-- Raw food, like the carrots (design 48 section 4): a cook can put them in a pan, and eaten
+         straight they are thought of as raw. Without these a wild food would default to tier 0
+         and be taken before a cooked meal. -->
+    <foodTier>3</foodTier>
+    <rawIngredient>true</rawIngredient>
+    <ateThought>10</ateThought>
   </ItemDef>
 
   <ItemDef>
@@ -109,6 +124,12 @@
     <nutrition>70</nutrition>
     <stackLimit>75</stackLimit>
     <category>Food</category>
+    <!-- Raw food, like the carrots (design 48 section 4): a cook can put them in a pan, and eaten
+         straight they are thought of as raw. Without these a wild food would default to tier 0
+         and be taken before a cooked meal. -->
+    <foodTier>3</foodTier>
+    <rawIngredient>true</rawIngredient>
+    <ateThought>10</ateThought>
   </ItemDef>
 
   <!--
@@ -203,6 +224,51 @@
     <stackLimit>10</stackLimit>
     <category>Medicine</category>
     <healPerUnit>40</healPerUnit>
+  </ItemDef>
+
+  <!--
+    The kitchen (design 48 section 4). A cooked meal is worth what a ration pack is (900, a-18's
+    simple meal) and is the best thing to eat: tier 0, and Thought_AteMeal. Whether there was
+    meat in the pan decides which of the two comes out; they are two defs rather than one with a
+    memory of its ingredients, so a stack is still one def and nothing about stacking changes.
+    Ten to a stack, a pot's worth, so a shelf bay holds a day's cooking for five.
+
+    ticksToRot 240000 is four days (a-19): declared now, read from the cold store (K2) on.
+
+    The burnt meal (owner, interview #4): edible, less filling (700, INVENTED), and a colonist who
+    eats one minds (Thought_AteBurnt). Tier 2, under the ration pack and over raw food.
+  -->
+  <ItemDef>
+    <defName>Item_CookedMeal</defName>
+    <label>meal</label>
+    <nutrition>900</nutrition>
+    <stackLimit>10</stackLimit>
+    <category>Food</category>
+    <foodTier>0</foodTier>
+    <ticksToRot>240000</ticksToRot>
+    <ateThought>1</ateThought>
+  </ItemDef>
+
+  <ItemDef>
+    <defName>Item_VegetableMeal</defName>
+    <label>vegetable meal</label>
+    <nutrition>900</nutrition>
+    <stackLimit>10</stackLimit>
+    <category>Food</category>
+    <foodTier>0</foodTier>
+    <ticksToRot>240000</ticksToRot>
+    <ateThought>1</ateThought>
+  </ItemDef>
+
+  <ItemDef>
+    <defName>Item_BurntMeal</defName>
+    <label>burnt meal</label>
+    <nutrition>700</nutrition>
+    <stackLimit>10</stackLimit>
+    <category>Food</category>
+    <foodTier>2</foodTier>
+    <ticksToRot>240000</ticksToRot>
+    <ateThought>9</ateThought>
   </ItemDef>
 
   <!--

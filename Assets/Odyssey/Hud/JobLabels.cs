@@ -53,7 +53,10 @@ namespace Odyssey.Hud
             "ui.status.treating", "ui.status.patient",
             // Picking a berry bush (design 45 §6), JobHandle 25, after medical supplies.
             "ui.status.foraging",
-            // The ranged attack (design 47 §2d), JobHandle 26, after the forager's: a word of its own rather than
+            // The kitchen (design 48): Job_Cook, 26 — fetching food for the pan reads as cooking,
+            // because it is the bill being worked.
+            "ui.status.cooking",
+            // The ranged attack (design 47 §2d), JobHandle 27, after the kitchen's: a word of its own rather than
             // "Fighting", so a line of shooters reads as shooting.
             "ui.status.shooting",
         };

@@ -57,6 +57,9 @@ namespace Odyssey.Hud
         public const string GiveWoodKey = "ui.debug.givewood";
         public const string GiveStoneKey = "ui.debug.givestone";
         public const string GiveFoodKey = "ui.debug.givefood";
+
+        /// <summary>Fifty carrots: raw food for a cook to put in a pan (design 48 §14).</summary>
+        public const string GiveCarrotsKey = "ui.debug.givecarrots";
         public const string SkipDayKey = "ui.debug.skipday";
         public const string SkipMorningKey = "ui.debug.skipmorning";
         public const string RipenCropsKey = "ui.debug.ripen";
@@ -120,7 +123,7 @@ namespace Odyssey.Hud
             SpawnBanditKey, SpawnBatKey, SpawnCrowbarKey, SpawnMacheteKey, SpawnArcBladeKey,
             SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey,
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
-            GiveWoodKey, GiveStoneKey, GiveFoodKey,
+            GiveWoodKey, GiveStoneKey, GiveFoodKey, GiveCarrotsKey,
             SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
             JumpsFailKey,
             WeatherTabKey, WeatherClearKey, WeatherOvercastKey, WeatherDrizzleKey, WeatherRainKey,
@@ -307,7 +310,10 @@ namespace Odyssey.Hud
                 ItemHandle.Pistol),
             Resource(GiveWoodKey, "Adds 50 wood near the camera", ItemHandle.Wood),
             Resource(GiveStoneKey, "Adds 50 stone near the camera", ItemHandle.Stone),
-            Resource(GiveFoodKey, "Adds 50 meals near the camera", ItemHandle.Meal),
+            Resource(GiveFoodKey, "Adds 50 ration packs near the camera", ItemHandle.Meal),
+            // The kitchen (design 48 §14): something to cook, without growing a field first.
+            Resource(GiveCarrotsKey, "Adds 50 carrots near the camera: raw food a cook can put in a pan",
+                ItemHandle.Carrots),
         };
 
         public static string TabKey(DebugTab tab) =>

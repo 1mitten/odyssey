@@ -23,6 +23,27 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the new bill list read at a glance, and is anything on it in the way?** (`claude/bills-pane`,
+  design 49, stacked on `claude/cooking`.) Click an **Electric Cooker** with no power: the pane is
+  wider (680), a warn strip reads **No power** with a green **Switch off** beside it, and the tile's
+  own Switch row is gone. Add three bills with the full-width cyan **Add a bill**; cycle one's mode
+  (the cell with the round arrow), step a target with the red minus and green plus (shift for ten),
+  pause one (it fades, its buttons do not), move one with the stacked arrows, bin one. Then a
+  campfire, which has no strip. A wrong answer is a count or a number that is not centred, a row
+  whose name is cut off at a length you would use, the pane jumping under the pointer while you
+  press Add or the bin, or the reorder pair being too small to hit. Say whether the empty status
+  line on a working bill looks unfinished.
+- **Does a cook turn carrots into meals from a bill, and does it read as cooking?** (`claude/cooking`,
+  design 48 K1.) Build an **Electric Cooker** (Build → Production) on a powered line, or use a **campfire**.
+  Click it: the pane shows **Bills** with *Add a bill*. Add one, stock carrots, and watch: a cook
+  fetches three carrots, stands at the station tossing a frying pan, and puts a meal down. Try the
+  mode (press it: until you have → make → forever), the ‹ › target, suspend, reorder and remove;
+  switch the cooker off mid-cook and back on. A campfire meal also costs one wood. A wrong answer is
+  a bill that does nothing, a pane that jumps when you add a row, a cook who swings at the stove
+  instead of tossing a pan, or colonists who still reach for carrots with a meal in the store.
+  The cooker is the POLYGON Shops stove: say whether it is the right size, and whether it faces the
+  side the cook stands on. **Known:** the pan shows no food going raw → cooked yet, and the meals are
+  Sci-Fi food trays.
 - **Can you click a campfire a terrace above you while building?** (`claude/terrace-click`,
   design 42 §3a amended.) On a lower terrace, open Build and raise a campfire on the terrace one step
   up, then click it with the palette still open: its pane should open, with *Make this the hearth*.
@@ -30,22 +51,6 @@ the next session learns to ignore.
   into a hillside tunnel: the layer above should still be see-through, as before. A wrong answer is
   a fire that does nothing, a click that selects the ground beside it, or rock drawn solid over a
   tunnel with Walls down off.
-- **Do guns read — the aim, the shot, the tracer, the near miss, the sound?** (`claude/ranged-combat`, design 47.)
-  Debug menu → Spawn → *Arm every colonist* until one holds a *Pistol* (or *Spawn pistol* and equip it), draft
-  her, then *Spawn pistol bandit* ten cells off. She should draw from the left hip, raise the pistol in both hands
-  and fire unordered; each shot kicks the gun and chest and flashes at the muzzle, and a streak crosses to the
-  target. A hit ends on the body with blood; a miss runs past and throws dust. The report is loud up close and a
-  dull thump zoomed out. **A wrong answer looks like**: the gun floating off the hands, the barrel not at the target,
-  a streak ending in the air beside a walking body, a near miss you cannot tell from a hit, or a sound that is too
-  loud or too dry. Also watch a gunfight on a terrace: a colonist on the upper step should fire down at the foot.
-  **Second look (2026-09-25), after the first play moved three things (design 47 §10a):** shots from a
-  height should mostly land at mid range now; a miss should pass just beside the target and go into the
-  ground behind it, never off to one side or into the terrace; a hit's streak should end on the body
-  even when the target is walking. And **weapon quality** (§11): a weapon's pane and the colonist's
-  weapon row read *Pistol (Decent)* and the like; better weapons hit more and harder. **A wrong answer
-  looks like**: still missing most shots from a step up, a streak ending beside a walking body, or no
-  quality shown on a spawned weapon.
-
 - **Does the selection highlight make it obvious who is selected?** (`claude/selection-highlight`, design 44.)
   Click a colonist, an item, a wall, a tree and a patch of ground. Each should gain a thin white line round its own
   shape and look a touch brighter; the ground gets a pale wash. Then walk a selected colonist behind a wall: a
@@ -1288,6 +1293,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-25 | **Ranged combat, three rounds** (PR #225, `docs/design/47-ranged-combat.md` §10a–§12): the aim, the shot, the tracer, the sound, then accuracy from a height, weapon quality and the reach rule | working — owner, first play: *"it's really decent and everything seemed to work well"*; after the reach rule: *"great job - just played a big battle"* | the first play raised the accuracy, sent a miss past its target into the ground and landed a hit on the body wherever it stands (§10a); asked for weapon quality (§11) and the reach rule (§12), both built and played in the big battle. Ready to merge. The frame with gunfire (P4) is still unmeasured |
 | 2026-09-25 | **The home area, the hearth and the Assign tab** (PR #214, `docs/design/43-home-area.md`), after the review's five fixes | working — owner: *"it all works get ready to merge in"* | none; ready to merge. The house over the hearth, which the frame test logged hidden, is covered by "it all works" |
 | 2026-09-24 | **Walls down, both rounds** (PR #197, `docs/design/42-walls-down.md`) | working — owner, first look: *"works brilliantly but a few things"*; after the second round: *"excellent - get this ready for merge"* | the first look moved two things (the R / F label went; a lower terrace counts as ground and only upper storeys hide, §3a); ready to merge |
 | 2026-09-24 | **Beating a wall down** (C6, `claude/combat-buildings`, `docs/design/33-combat.md` §13) | working — owner: *"Buildings work fine"* | none. The row's own question, whether a wall reads without a damage bar, was not raised, so none is built. The break-in row (§14b, §14d) stays open: it was built after that playtest |

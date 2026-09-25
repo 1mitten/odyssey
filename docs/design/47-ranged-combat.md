@@ -1,6 +1,12 @@
 # 47 — Ranged combat: the pistol
 
-**Status (2026-09-25): designed, nothing built.** Ground, interview, research and this document are
+**Status (2026-09-25): built, played three times and merged with `main` — ready to merge, PR #225**
+(owner, after a big battle: *"great job"*). R0–R4, H1 and P1–P3 are in, with the three rounds that
+play moved (§10a accuracy, §11 weapon quality, §12 the reach rule); §13 is the merge. **Owed**: R5
+(the soak with gunmen and the fifty-shooter benchmark), R6 (buildings under fire) and P4 (the frame
+with gunfire). What follows is the design-time status, kept as written.
+
+*Design-time*: designed, nothing built. Ground, interview, research and this document are
 the whole of the work so far. The plan is `docs/plans/ranged-combat.md`, the interview
 `docs/research/ranged-interview.md`, the research `a-10-ranged-combat.md`, `a-10-projectile-path.md`,
 `c-3d-shot-line.md`, `d-21-projectile-rendering.md`, `d-22-procedural-aim-and-recoil.md` and
@@ -1082,3 +1088,30 @@ at arm's length. Melee fighters in front and shooters behind is the formation th
 the reference's balance.
 
 **Do not undo by tidying**: this replaces §7's "No minimum range" and §8 item 5.
+
+## 13. Merged with `main`, 2026-09-25
+
+Sixty commits of `main` came in at 2a1cfa63, and the kitchen (#227) at fc6b8ba6 the same evening — medical supplies (#184), foraging and the scenery
+(#223, #222), the home area (#214) among them — and three of them had taken the handles §3a said
+would race.
+
+- **The handles moved at the merge**: `Job_AttackRanged` is **27** (after Treat 23, Patient 24,
+  Forage 25 and the kitchen's Cook 26), `Item_Pistol` **17** (after medical supplies 11, the wild foods 12–13
+  and the kitchen's meals 14–16), `Skill_Shooting` **8** (after Medicine 6 and Cooking 7), so
+  `SkillIndex.Count` is **9**. `Jobs.xml`'s driver and
+  `trainsSkill` moved with them; `CombatContractTests` pins all three.
+- **Combat asks the physical question.** `main` made `PawnContext.Reachable` mean *can travel and may
+  work there* (the home area, design 43), and the melee line moved to `CanTravel`. The ranged line's
+  two sites — `AttackRangedJobDriver`'s approach and `CanFight` in `CombatThinkNodes` — followed, so a
+  colonist kept home still shoots, and closes on, an enemy outside it.
+- **Goldens re-baked once more, measured**: `GoldenColonyProbe` on `origin/main` and on the merge is
+  identical on all three boards, all nine census lines. The hash sees a ninth skill and longer job
+  and item tables; no colony did anything different. Content fingerprint re-taken.
+- **The textual merge dropped closing tags** in `Items.xml`, `Jobs.xml` and `Skills.xml` — both sides
+  appended after the same last element, and the shared `</…Def>` fell outside the conflict — and
+  doubled the closers of three `ByName` lists in `PawnContent.cs`. The fast tier found all six in one
+  run. Worth knowing for the next append-only merge: after resolving an XML or list hunk as *theirs
+  then ours*, look at the join.
+- **Tiers on the merge**: on the first merge, EditMode 4,011 / 3,975 / 0 failed, PlayMode 156 / 140 / 0 failed (a first full run had one intermittent failure, RescueFigureTests, not reproduced on the second with every rescue gate true) and a player build that boots into a colony clean; on the second, fast 1,747 Sim + 1,166 Hud and the three content gates. **Open**: `PathAllocationTests.ATickThatDoesNothingAllocatesNextToNothing` (Long) fails inside the full Long run on the second merge (an idle colony at 11.5 to over 16 bytes a tick against main's 3.3 in the same run) and passes alone at main's 3.3, so an earlier Long test leaves something behind that the ranged line then allocates on; not yet bisected. A catalogue rebuild was run and discarded: it re-resolved
+  an unrelated colonist (`SM_Chr_Hunter_Male_01`, two packs ship the name) and re-sampled its swatches,
+  and the merged asset was already exactly `main`'s plus the pistol row.
