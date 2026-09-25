@@ -397,8 +397,8 @@ The grid is left open to the right for a fourth column.
 | Arm | Where | Taken in |
 |---|---|---|
 | One home rebuild, all layers and one layer, Standard / Huge / scale target | `TickBenchmarkTests.WhatOneHomeRebuildCosts` | H1/HH, measured below |
-| The view off against on, over a hearth and walls every nine cells across the board, one run; draw calls 0 off and at most 2 on (the gate) | `FrameTimeTests.TheHomeViewCostsWhatItSubmits` (PlayMode; milliseconds logged, not asserted) | **owed**: needs the Unity tier on the owner's machine |
-| The edge pass alone: two calls whatever the size, a still frame rebuilds nothing | `HomeEdgePassTests` (EditMode) | **owed**: the same |
+| The view off against on, over a hearth and walls every nine cells across the board, one run; draw calls 0 off and at most 2 on (the gate) | `FrameTimeTests.TheHomeViewCostsWhatItSubmits` (PlayMode; milliseconds logged, not asserted) | **Measured 2026-09-25** on the RTX 5070 Ti at 640 × 480, one run: off 2.17 ms, on 2.24 ms (**+0.07**), **2 draw calls**, `Overlays` 0.020 → 0.183 ms; 125 walls, 34,652 home cells, 203 strips on the active layer and 633 below, 609 grass stamps. The arm logged the hearth mark **not** shown and does not assert it — unproven either way, a playtest item |
+| The edge pass alone: two calls whatever the size, a still frame rebuilds nothing | `HomeEdgePassTests` (EditMode) | **Passed** 2026-09-25, all four |
 
 Each number goes here with its machine and date.
 

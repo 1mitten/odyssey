@@ -12965,3 +12965,11 @@ Five faults, each with a test that failed first and a control:
 
 The lesson worth keeping is the first one: **a conflict in a bit-packed hash word is a semantic
 conflict**, and "keep both sides" is the wrong default there.
+
+Then the first Unity run this branch had ever had. **The Presentation half did not compile**, twice over:
+`HomeEdgePass` used `HudTokens` without its namespace, and the Assign geometry test enumerated a span
+inside an iterator. Both were written in a container with no Unity and both were green on the fast
+tier, which compiles neither assembly — the warning in CLAUDE.md's test section, met again. Fixed,
+EditMode is 3,848 / 3,814 / 0 failed and PlayMode 150 / 138 / 0, and the Home view's frame arm
+measured +0.07 ms and two draw calls. That arm logs the hearth mark as not shown and asserts nothing
+about it, so whether the house appears is still a question for Play.

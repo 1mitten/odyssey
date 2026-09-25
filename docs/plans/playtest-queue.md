@@ -142,6 +142,10 @@ the next session learns to ignore.
   outside the line: that colonist should leave it and walk home when idle, while an *Anywhere*
   colonist fells it. A wrong answer is a Home colonist working outside, or a tab that closes when you
   click a name.
+  **After the review (2026-09-25):** switch Home off and on twice — the line should come back each
+  time; press a name in Assign — the tab stays and no pane covers it, and closing the tab shows her
+  pane; keep a colonist Home while she is two layers down a pit — she should climb out and come home.
+  The house over the hearth is **unproven**: the frame test logged it hidden, so say whether you see it.
 - **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
   Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest
   over bare arms and black trousers, and carry a crowbar or a bat; click one and the pane shows a
