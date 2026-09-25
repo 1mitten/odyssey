@@ -419,8 +419,11 @@ namespace Odyssey.Presentation.Bootstrap
                     if (renderer.ScatterDensity == _director.Value(ladder)) return;
                     renderer.ScatterDensity = _director.Value(ladder);
                     // Re-meshed through the meshing budget, so a board-wide change lands over a
-                    // few frames and never in one (06-rendering-and-camera.md §6c.7).
-                    Redraw(renderer);
+                    // few frames and never in one (06-rendering-and-camera.md §6c.7). The surround
+                    // re-strews its tufts only: rebuilding all of it was a 50 ms frame on the rung
+                    // press (design 38 §25).
+                    _bootstrap?.Model?.Remesh();
+                    if (renderer.Skirt.Enabled) renderer.Skirt.RebuildTufts();
                     break;
 
                 case GraphicsLadder.GrassDistance:

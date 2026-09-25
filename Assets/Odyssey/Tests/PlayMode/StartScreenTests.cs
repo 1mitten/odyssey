@@ -159,6 +159,55 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// A new world is drawn behind a cover for <see cref="HudShell.CurtainFrames"/> frames
+        /// before it is shown (design 38 §25).
+        ///
+        /// <para>The M10 tour measured the frame after the world first appeared at 102.5 ms — the
+        /// driver and the GPU meeting it for the first time — and the one after at 18.7. The curtain
+        /// pays those behind the start screen's own picture. The hand-over itself happens when the
+        /// world is built — the interface is up under the cover — because deferring it moved the
+        /// interface's first layout onto the reveal frame (43 ms). Asserted: the cover is up and the
+        /// interface already behind it on the build frame, and the cover is gone once it lifts. A
+        /// second press cannot build a second world.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ANewWorldIsDrawnBehindACurtainBeforeItIsShown()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell, buildOnPlay: false);
+            try
+            {
+                yield return Settle();
+                var doc = boot.GetComponent<UIDocument>();
+                Assert.That(Shown(doc.rootVisualElement.Q("curtain")), Is.False, "the curtain is up over the title screen");
+                shell.Menu.Choose(SessionCommands.NewGameKey);
+                yield return Settle();
+
+                Assert.That(shell.Menu.Start(), Is.True);
+                Assert.That(boot.HasSession, Is.True, "Start built no world");
+                var built = boot.World;
+                Assert.That(shell.CurtainUp, Is.True, "the new world was shown at once, with no frames behind a cover");
+                Assert.That(Shown(doc.rootVisualElement.Q("curtain")), Is.True, "the curtain is not on screen");
+                Assert.That(Shown(doc.rootVisualElement.Q("world-ui")), Is.True,
+                    "the interface is not up under the curtain, so its first layout lands on the reveal");
+
+                shell.Menu.Start();
+                Assert.That(boot.World, Is.SameAs(built), "a second press built a second world");
+
+                for (int frame = 0; frame < HudShell.CurtainFrames + 1; frame++) yield return null;
+
+                Assert.That(shell.CurtainUp, Is.False, "the curtain never lifted");
+                Assert.That(Shown(doc.rootVisualElement.Q("curtain")), Is.False, "the curtain is still up over the colony");
+                Assert.That(Shown(doc.rootVisualElement.Q("backdrop")), Is.False,
+                    "the start screen is still up after the curtain");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// <b>The in-game interface is not on screen when there is no game</b> (owner, 2026-09-17).
         ///
         /// <para>It used to be: every region was built straight onto the shell root and drawn
