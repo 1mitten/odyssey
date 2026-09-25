@@ -22,10 +22,10 @@ steps are one PR. What is built:
 - `DebugSetWeather` is the debug menu's command.
 - The clock shows the sky as a glyph with the word in its tooltip. The row has no room for a word.
 
-**§8's second step, `weather-world`, is not built**: rain slowing colonists, watering crops and
-sending animals for cover, and the sim-side column rule of §6. The render mirror's `SkyHeightMap`
-stands in for the drawing until then. `CellGrid.SkyLanding(x, z)`, the supply drop's column rule,
-is where that rule should be built (P1).
+**Built 2026-09-25: `weather-world`, §8's second step** (`claude/weather-world`, worktree
+`D:\code\odyssey-weather-world`). Rain slows whoever stands in it, waters the crops it reaches and
+sends animals for cover, and all three ask one shelter rule that the drawing now asks too. What was
+built, and the three places it departs from the letter of this design, are in §6a.
 
 **Status as designed, 2026-09-24:** design only, nothing built. Branch `claude/weather-design`, worktree
 `D:\code\odyssey-weather`. Ground: `main` at `3a39dd8d`. The owner approved the shape — three kinds
@@ -185,6 +185,88 @@ Two facts compose, and the composition is the query — nobody else re-derives e
    Cost: a column walk stops at the first thing it meets — two or three cells on the surface —
    and runs only for the columns an edit dirtied, plus the canopy reach around them.
 
+### 6a. As built (2026-09-25, `weather-world`)
+
+**The rule** is `SkyColumnRule.Compute` in `Sim/World/SkyColumns.cs`, a pure function over four
+questions (`ISkyColumnSource`: solid, water, slab, tree). The simulation asks them of the cell grid
+(`GridSkySource`), and `SkyHeightMap` asks them of the render mirror (`MirrorSkySource`). So the
+rule has one owner, and the two readers can differ only in what they are told.
+- **In layers, not metres.** A column's answer is a stop layer and a kind. Every cell below the
+  stop layer is sheltered.
+  - A solid cell's stop is the layer above it.
+  - Water and a slab are landed *on*, so a swimmer and a colonist on a roof are in the rain.
+  - A canopy covers the trunk's own layer and the one above it (`CanopyLayers` 2, `CanopyReach` 1).
+  - `SkyHeightMap.Metres` turns the answer into the drawing's heights: a slab's lift, a pond's
+    surface, and the crown 4.5 m above the trunk's floor.
+- **One consequence of layers.** A pond one layer above a trunk and within its reach now counts as
+  under the crown. Comparing metres had it above. The picture follows the simulation. The case
+  needs a pond on the terrace above a tree.
+- **Departure 1: it is built beside `SkyLanding`, not on it.** The two rules answer different
+  questions. `SkyLanding` stops at the first edifice, and a tree is an edifice. It returns −1 for
+  any column it cannot land in, and a pond is one. The column rule has to walk past a trunk and
+  record it, and has to land on water. Building one on the other would have meant a flag on
+  `SkyLanding` that changes what it means. So there are two functions, each named for its own
+  question. §6's point stands: `IsRoofed` and `HasRoof` are not used.
+
+**How the map hears about an edit.** Every edit path already tells the `ChunkGrid` which cell
+changed, so the drawing re-meshes it. The chunk grid now also keeps the *columns* touched
+(`TakeEditedColumns`), and `SkyColumns` reads them lazily on the next question. Each touched
+column is widened by the canopy's reach and recomputed. So the sim map and the mirror are fresh
+about exactly the same edits.
+- **Departure 2: every colony now has a chunk grid**, a headless one included. `ColonyWorld.Build`
+  makes one when no renderer hands one in, and `AddColony` does the same for hand-built
+  fixtures. It was null headless, which would have left a headless run with a felled tree's shade
+  for ever. `SupportSystem` falls back to the colony's chunk grid for a collapse, for the fixtures
+  that build it first.
+- A load rebuilds the whole map inside `RebuildDerived`, so the first tick does not pay for it.
+
+**Measured** (`TickBenchmarkTests.TheSkyColumnsCostWhatAnEditTouches`, Long tier, played map, one
+run on the Windows machine):
+
+| Board | Board-wide build | One slab | Columns an edit recomputes |
+|---|---|---|---|
+| Standard 120 × 120 × 16 | 1.33 ms | 7.5 µs | 9 (25 for an order's 3 × 3 × 3 marking) |
+| Large 180 × 180 × 24 | 3.16 ms | 8.7 µs | 9 (25) |
+| Huge 240 × 240 × 16 | 5.59 ms | 7.9 µs | 9 (25) |
+
+The column counts are asserted; the times are only printed. The first board build asked
+`Compute` of every column, which walks nine columns each time: 13.8 ms on Standard and 53 ms on
+Huge. `ComputeBoard` walks each column once, and both readers use it.
+
+**Pace** is `Pawn.WeatherPerMille()`, one factor in `MoveRatePerMille`'s product, before urgency.
+It is `WeatherSystem.PacePerMilleAt(cell)`: the sky's pace where the sky reaches, and exactly
+1,000 under cover, on a dry day, or with no weather.
+- The pace is each spell's `PaceOf(def, intensity)` blended across the hand-over, like every
+  other term.
+- A pawn reaches the weather through `Pawn.Context`, set by the registry on adopt and on load.
+- The planner is untouched. `WeatherWorldTests.TheRainIsARateAndNeverAPathPrice` plans one path
+  under a clear sky and a storm and gets one cost.
+
+**Growth** is one multiply in `PlantGrowthSystem`, after temperature: `GrowthPerMilleAt(cell,
+tick)`, 1,000 plus the blended `growBonusPerMilleAtFull × intensity / 1000` on an exposed crop.
+
+**Animals.** `AnimalShelterThinkNode` sits between the combat node and the idle node.
+- It acts past 400 per mille of rain, for an animal that is not leaving the board.
+- Under cover, it waits 120 ticks, the weather's own cadence, and asks again. So a felled tree or
+  a removed roof is noticed within one step of the sky.
+- In the open, `ShelterTarget.Find` scans square rings outward to the species' wander radius. It
+  takes the nearest sheltered cell by the travel estimate, first found on a tie, in the walkable
+  cell nearest the animal's layer in each column. It keeps no list of cover.
+- **Departure 3: an animal sheltering reads *Wandering* and then *Resting*.** Those are the
+  statuses of the two jobs it uses. The registry has no `ui.status.sheltering` and no colonist
+  "In the rain", so neither was invented; both are owed (§8).
+
+**Content** (`Weather.xml`, invented for the owner to tune). Rain and Storm both have
+`moveFloorPerMille` 900 and `growBonusPerMilleAtFull` 250. The first is RimWorld's ×0.90 anchor.
+The second makes a downpour grow a crop a quarter faster.
+
+**Goldens.** Only the ruined city's simulated hash moved, because it is the only golden board that
+rains inside its window: intensity 459 all run. The meadow and the played board roll a cloudy
+spell that lasts their whole windows. The reason, measured with each half switched off in turn, is
+in `Golden.cs`: pace moves positions and move progress, shelter moves the waits, and nothing else
+moved. **So no golden exercises rain on the played board.** A golden that does would need a
+seed chosen for it.
+
 `EnclosureGrid` keeps the indoors question — a tree is not a room, and cover grants no thermal
 enclosure, no room temperature, nothing but dry. Growth deliberately does **not** read canopy as
 shade: sky-cover and the light model are different hooks (22 §8 keeps light separate), and a
@@ -326,7 +408,10 @@ Three PRs, each green on both tiers and playable at the keyboard:
    reads in the corner.*
 2. **`claude/weather-world`** — `ShelteredFromSky` (roof + canopy, with eviction), the pace
    factor, the growth multiply, `AnimalShelterThinkNode`, fixture tests, TickBenchmark rows.
-   *Rain touches pawns, crops and animals.*
+   *Rain touches pawns, crops and animals.* **Built 2026-09-25 (§6a).** Still owed:
+   - a colonist's "In the rain" and an animal's "Sheltering" on the inspect pane, each waiting on
+     a registry key;
+   - rain audio, which step 3's own paragraph in §7 places here and which nothing plays yet.
 3. **`claude/weather-visuals`** — grown from `claude/rain-look`: `RainDirector` and
    `Odyssey/Rain` (streaks, splashes), the sky texture read off the column map, wetness in the
    ground and foliage shaders, `Overcast` in `DaylightDirector`, the rain loop, the density rung

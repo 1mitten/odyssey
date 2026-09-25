@@ -12569,3 +12569,59 @@ with rain, cloud with a bolt) with the word in its tooltip, from the registry.
 
 **Flakes seen, not fixed:** one unnamed Sim test and one unnamed Long-tier test each failed once
 and passed on the re-run, on a machine with a CI job running beside it.
+
+## 2026-09-25 — Rain touches the world: one shelter rule, pace, crops and animals
+
+Design 43 §8's second step, `weather-world`, on `claude/weather-world` off `main` after #203. The
+details are in design 43 §6a. This entry records the reasoning.
+
+**The column rule is one pure function with two readers.** `SkyColumnRule.Compute` reads four
+facts: solid, water, slab and tree. The simulation reads them from the cell grid and the drawing
+from the render mirror. The rain texture used to keep its own copy of the rule. Now it calls the
+simulation's, so the drawing and the pace penalty cannot disagree about where a roof is. The rule
+answers in layers because the simulation has no metres, and the drawing converts to metres. That
+moves one rare case in the picture, a pond on the terrace above a tree, and the picture now follows
+the simulation.
+
+**It is not built on `SkyLanding`, against the design's pointer.** `SkyLanding` stops at the first
+edifice, and a tree is one. It also refuses any column it cannot land in, and a pond is one. Rain
+has to walk past a trunk to record it and has to land on water. Building one on the other needed a
+flag that changes what `SkyLanding` means, and a flag like that is how P1 starts. This is recorded
+as a departure for the owner. I did not stop and ask before building it, and I should have.
+
+**The map hears about edits the way the drawing does.** Every edit path already tells the chunk
+grid which cell changed, so it will re-mesh. The chunk grid now also records the columns, and the
+sky map takes them on its next question. So the map and the mirror are fresh about the same edits,
+and the two tree-removal paths needed no hook: both mark the chunk, and neither marks the record
+removed. The catch was that a headless world had no chunk grid at all. Every colony gets one now.
+
+**The first board build walked the board nine times.** It took 13.8 ms on Standard and 53 ms on
+Huge, which the benchmark row caught as soon as it existed. `ComputeBoard` walks each column once
+and lifts from the trunks it found: 1.33 ms and 5.59 ms. An edit costs 7–9 µs and 9 columns on
+every board, which is what the row asserts. The build now runs during loading.
+
+**The goldens: one moved, and it was measured.** Only the ruined city rains inside its window,
+at intensity 459 from tick 0 to 10,000. The meadow and the played board are cloudy for their whole
+runs. `GoldenColonyProbe` was run on `origin/main`, on the branch, and on the branch twice more
+with one half switched off each time:
+- **pace alone** moved positions and move progress (519,595 → 341,744) and left the jobs where
+  they were;
+- **shelter alone** moved the jobs: waits went from 30 to 220, which is the four animals standing
+  under cover;
+- food, rest, mood and experience were identical in all four runs.
+
+**No golden rains on the played board.** That coverage gap is recorded rather than fixed. A
+golden that rains would need a seed picked to make it rain.
+
+**Two clock tests were measuring the sky.** `PlantGrowthTests` checks the growth window and the
+cadence, and seed 5 rolled rain over its field. The sky is now held clear with the debug command,
+re-held on each pass of the long loop, because a forced spell ends and the season takes over.
+Same fix as `BedTests`.
+
+**A negative control earned its place on its first run.** "The hog under a roof stays put in the
+rain" passed. Its control, "the same hog wanders on a dry day", failed: the board started at
+midnight, when a hog rests three times as long. So the first test would have passed on a sleeping
+hog. The animal boards now start at 08:00.
+
+**Owed:** a colonist's "In the rain" and an animal's "Sheltering" on the inspect pane (neither has
+a registry key, so no UI was invented), and rain audio.

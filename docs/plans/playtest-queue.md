@@ -39,6 +39,22 @@ the next session learns to ignore.
   game days, skipping days with the debug menu: the sky should change by itself, mostly clear in
   Glare, showery in Wash, grey in Rime, with the clock's glyph following. A wrong answer is a sky
   that never changes, one that flips at midnight, or a storm every other day.
+- **Does the rain touch the world?** (`claude/weather-world`, design 43 §6a.) New game, backtick
+  > Weather > Downpour, and watch at normal speed:
+  - Colonists crossing open ground should walk visibly slower in the rain and at their usual pace
+    under a roof or under a tree.
+  - A field in the open should ripen faster than one under a roof. *Ripen crops* is no help here;
+    let the days run.
+  - Animals in the open should head for the nearest trees within a few seconds. Fell the tree one
+    stands under and it should get up and go to another.
+
+  A wrong answer is:
+  - a colonist slowed under a roof, or one who is not slowed at all in the open;
+  - an animal sheltering from a drizzle (the gate is 400 per mille), or one that stands in the rain
+    beside a tree it could reach;
+  - an animal still standing where its tree was, a minute after the tree is gone.
+
+  Also say whether a tenth off the walking pace is too little to notice.
 - **Do the bat and the crowbar only swing?** (`claude/blunt-swings`, design 33 §22.) Debug menu >
   Spawn 3 bandits, arm a colonist with a bat and another with a crowbar (*Arm every colonist*, or
   right-click > Equip), draft them and order attacks. Watch several blows in a row: each should be

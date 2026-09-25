@@ -238,6 +238,7 @@ this file.
 | How a pile on the ground says its size | `docs/design/24-pile-reading.md` |
 | Temperature, rooms, seasons, the campfire, what a tile says it is | `docs/design/28-temperature.md` |
 | How the interface writes a temperature | `Odyssey.Hud.TemperatureLabels`, design 28 §13a |
+| The sky, rain, what a roof or a tree keeps dry, rain's pace and growth, animals sheltering | `docs/design/43-weather.md` (§6a for the one shelter rule, `SkyColumns`) |
 | **The settings window, its frame, rail, controls and keyboard** | `docs/design/39-settings-window.md` |
 | **The title screen, its dock, logo and buttons** | `docs/design/40-title-screen.md` |
 | The debug menu | `docs/design/18-debug-menu.md` |
