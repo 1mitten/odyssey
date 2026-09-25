@@ -12882,3 +12882,64 @@ text was 38. The third line makes 54. That sum is now a constant with a test, as
 heights against the stylesheet, so a fourth line fails rather than drawing over the tabs.
 
 No golden moved. The colony probe matches `origin/main` on all three boards. Not yet played.
+
+## 2026-09-25 — Cooking, interviewed and designed (CK)
+
+The owner asked how the colony cooks, with the POLYGON Shops pack in hand: a cooker, fridges,
+plates, cutlery and meat in raw, cooked and burnt states. Their chain was a hog's raw meat hauled to
+a fridge, cooked, and eaten on a plate with a knife and fork, with the cooker and fridge on power
+and the cook's skill deciding when food burns. Mid-interview they added that every cooking and
+eating animation must make sense.
+
+**The ground was almost empty.** Eating is the nearest thing with nutrition, eaten standing where it
+lies, with the same +20 for everything. There is no recipe, bill, station, spoilage, meat, table or
+chair. What does exist lines up well:
+
+- the power grid already answers "is this building powered";
+- a shelf is a built store, and a def with both slots and a power draw already registers as both;
+- the refuel and treatment jobs are a fetch-and-work template;
+- a hog can already be killed.
+
+The one real obstacle was the corpse, which is a record nothing can remove.
+
+**Twelve questions, every recommendation taken** (`docs/research/cooking-interview.md`). The ones
+that shape the most:
+
+- butcher on the spot rather than haul corpses;
+- rot yes, but not temperature-driven;
+- one step from raw to meal, from any raw food, so the kitchen works on carrots before the first
+  hunt;
+- a burnt meal rather than food poisoning, because health is not in;
+- the campfire cooks too, because a colony without a generator should not be stuck on raw carrots;
+- **kitchen first**, so the first PR has something to cook.
+
+**Four research lanes.**
+
+- `a-18` found the reference's simple meal is already the owner's one-step any-raw recipe
+  (500 in, 900 out).
+- `a-19` found the three merge sites and the one split site. It named the bug most likely to ship:
+  a stack changing kind under a hauler walking more of the same kind to it.
+- `e-10` measured the pack without importing it. It ships PolygonGeneric with identical GUIDs and 109
+  older `.mat` files, so it is imported as `PolygonShops/` only, and only while no editor holds the
+  shared junction.
+- `e-11` disagreed with the note in `SitPose.cs` that a sit cannot be computed. That is true of the
+  floor and not of a chair, so one contact sheet decides before dining is written. It also found
+  every stoop in the game is 66 mm deep because its depth scales with the clamped
+  `StandingHipHeight`, P11 for a third time.
+
+**Decisions made without the owner, in design 48:**
+
+- **No handle numbers.** Two open PRs claim the next ones.
+- **The ration pack gives up `ui.res.meal`** to the cooked meal.
+- **A campfire meal costs one wood**, rather than building a fuel hopper the campfire never had.
+- **The burn roll is made when cooking starts**, so the pan can darken before a burnt meal comes out.
+- **A meal with any meat in it is a Meal; without, a Vegetable meal.** Two defs, not per-stack
+  ingredient memory.
+
+Four things go back to the owner at the plan review (design 48 §13):
+
+- the mood table, because today every food is +20 and a carrot colony would lose mood;
+- galley or cooker, and cold store or fridge;
+- whether rotten food is hauled or deleted;
+- whether an unpowered fridge rots faster than the floor, as storage decision 24 says of every
+  container.
