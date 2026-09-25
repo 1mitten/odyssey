@@ -256,6 +256,7 @@ namespace Odyssey.Sim.Pawns
                 // refuses until its lane writes it.
                 .AddIntentHandler(IntentKind.OrderAttack, pipeline.HandleOrderAttack)
                 .AddIntentHandler(IntentKind.OrderEquip, pipeline.HandleOrderEquip)
+                .AddIntentHandler(IntentKind.OrderUnequip, pipeline.HandleOrderUnequip)
                 .AddIntentHandler(IntentKind.OrderRescue, pipeline.HandleOrderRescue)
                 // A colonist's response to danger (design 33 §18c), on the pipeline because a new
                 // setting may end a fight or a flight she started under the old one.

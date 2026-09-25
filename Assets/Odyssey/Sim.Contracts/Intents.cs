@@ -329,6 +329,15 @@ namespace Odyssey.Sim.Contracts
         /// question, handled by the world itself as <c>WatchPower</c> is.
         /// </summary>
         WatchHome,
+
+        /// <summary>
+        /// Empty one colonist's hand at once (design 47 §3, the Gear tab's weapon popover): <c>A</c>
+        /// is her <c>PawnId</c> value and <c>B</c> how — 0 <b>Unequip</b>, "put it down", which
+        /// leaves the weapon to the haulers; 1 <b>Drop</b>, "leave this here", which forbids it so
+        /// it stays where it lies. The weapon goes to the ground at her feet, or the nearest cell
+        /// that can take it. Handler: <c>JobSystem.HandleOrderUnequip</c>.
+        /// </summary>
+        OrderUnequip,
     }
 
     /// <summary>
@@ -414,6 +423,9 @@ namespace Odyssey.Sim.Contracts
             IntentKind.OrderAttack => true,
             IntentKind.OrderEquip => true,
             IntentKind.OrderRescue => true,
+            // Putting a weapon down (design 47 §3): a button on the Gear tab, which is a pane you
+            // open while paused, and nothing needs to run to make it true.
+            IntentKind.OrderUnequip => true,
             // A colonist's response (design 33 §18c): a setting over a colonist, on a pane you open
             // while paused, and a button that read one thing while the world did another until you
             // pressed play would be the slab fault again.
