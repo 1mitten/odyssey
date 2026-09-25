@@ -1089,12 +1089,55 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int WaitTicks = Weather.WeatherSystem.IntervalTicks;
 
-        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        /// <summary>
+        /// Present, at 1, on an animal the rain has sent for cover: the pane's "Sheltering"
+        /// (design 43 §6a). See <see cref="IsSheltering"/> for how it is derived.
+        /// </summary>
+        public const string ShelteringName = "odyssey.pawn.sheltering";
+
+        public static readonly AspectKey Sheltering = AspectKey.Of(ShelteringName);
+
+        /// <summary>
+        /// Whether this animal minds the rain at all right now: it is raining past the gate, the
+        /// world has a sky to shelter from, and the animal is not on its way off the board. The
+        /// node's own first question, and <see cref="IsSheltering"/>'s, so the two cannot drift.
+        /// </summary>
+        public static bool Minds(Pawn pawn, PawnContext ctx)
         {
             Weather.WeatherSystem? weather = ctx.Weather;
-            World.SkyColumns? sky = ctx.Sky;
-            if (weather == null || sky == null || pawn.Leaving) return false;
-            if (weather.RainPerMille(weather.Now) < RainGatePerMille) return false;
+            return weather != null && ctx.Sky != null && !pawn.Leaving
+                && weather.RainPerMille(weather.Now) >= RainGatePerMille;
+        }
+
+        /// <summary>
+        /// Is this animal sheltering from the rain — waiting it out under cover, or walking to
+        /// cover? Asked at publish time, so the pane can say "Sheltering" rather than the
+        /// "Resting" and "Wandering" of the two jobs this node borrows (design 43 §6a).
+        ///
+        /// <para><b>Derived, not recorded.</b> A job def of its own would be one more hashed
+        /// per-job tally and would move every golden; a flag set by this node would have to be
+        /// saved or be wrong for a tick after a load. Instead it is read off what is already
+        /// true: the rain past the gate (<see cref="Minds"/>), a wait standing in a sheltered
+        /// cell or a walk ending in one. That is exactly the pair of jobs <see cref="TryGiveJob"/>
+        /// gives, and while the animal minds the rain the idle node behind it never runs — so an
+        /// idle rest that happened to be under a tree when the rain came reads as sheltering too,
+        /// which it now is.</para>
+        /// </summary>
+        public static bool IsSheltering(Pawn pawn, PawnContext ctx)
+        {
+            Job? job = pawn.CurrentJob;
+            if (job == null) return false;
+            bool wait = job.DefIndex == JobIndex.Wait;
+            if (!wait && job.DefIndex != JobIndex.Wander) return false;
+            if (!Minds(pawn, ctx)) return false;
+            int cell = wait ? pawn.Cell : job.TargetCell;
+            return cell >= 0 && ctx.Sky!.ShelteredFromSky(cell);
+        }
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            if (!Minds(pawn, ctx)) return false;
+            World.SkyColumns sky = ctx.Sky!;
 
             if (sky.ShelteredFromSky(pawn.Cell))
             {

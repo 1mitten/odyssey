@@ -254,7 +254,30 @@ tick)`, 1,000 plus the blended `growBonusPerMilleAtFull × intensity / 1000` on 
   cell nearest the animal's layer in each column. It keeps no list of cover.
 - **Departure 3: an animal sheltering reads *Wandering* and then *Resting*.** Those are the
   statuses of the two jobs it uses. The registry has no `ui.status.sheltering` and no colonist
-  "In the rain", so neither was invented; both are owed (§8).
+  "In the rain", so neither was invented; both are owed (§8). **Closed 2026-09-25**, below.
+
+**The statuses, as built (2026-09-25, `claude/pace-readout`).**
+- **An animal reads *Sheltering*** on the inspect pane and in the Animals tab, while it walks to
+  cover and while it waits under it.
+  - The simulation publishes `odyssey.pawn.sheltering` (1, sparse), and the activity line prefers it
+    to the borrowed job's word.
+  - **It is derived at publish time, never recorded.** `AnimalShelterThinkNode.IsSheltering` returns
+    true when the animal minds the rain and is running one of the node's own two jobs: a wait
+    standing in a sheltered cell, or a wander whose target is one.
+  - The animal minds the rain when it is raining past the gate, there is a sky, and it is not
+    leaving. That is `Minds`, which is now the node's own first question too, so the gate has one
+    owner.
+  - A job def of its own would have been one more hashed per-job tally and would have moved every
+    golden. A flag set by the node would have had to be saved, or it would be wrong for a tick after
+    a load.
+  - **One consequence, taken knowingly.** An idle rest that was already under a tree when the rain
+    came reads as *Sheltering*. While the animal minds the rain, the idle node behind this one never
+    runs, so that is what the rest has become.
+- **A colonist reads *in the rain*** on her Pace line (`Pace 90% · in the rain`, design 17 §5a).
+  It shows while `odyssey.pawn.rate.move.weather` is published, which is exactly while
+  `WeatherPerMille` is below 1,000. So it follows the one shelter rule: a roof or a crown takes it
+  away on the same step it gives the pace back.
+- Neither status moved a golden. The colony probe matches `origin/main` on all three boards.
 
 **Content** (`Weather.xml`, invented for the owner to tune). Rain and Storm both have
 `moveFloorPerMille` 900 and `growBonusPerMilleAtFull` 250. The first is RimWorld's ×0.90 anchor.
@@ -443,9 +466,8 @@ Three PRs, each green on both tiers and playable at the keyboard:
 2. **`claude/weather-world`** — `ShelteredFromSky` (roof + canopy, with eviction), the pace
    factor, the growth multiply, `AnimalShelterThinkNode`, fixture tests, TickBenchmark rows.
    *Rain touches pawns, crops and animals.* **Built 2026-09-25 (§6a), and the rain's sound with it
-   (§7a).** Still owed:
-   - a colonist's "In the rain" and an animal's "Sheltering" on the inspect pane, each waiting on
-     a registry key;
+   (§7a).** A colonist's "in the rain" and an animal's "Sheltering" were owed, and are **built
+   2026-09-25** with the pace readout (`claude/pace-readout`, §6a, design 17 §5a). Still owed:
    - the rain drumming on a roof (§7a).
 3. **`claude/weather-visuals`** — grown from `claude/rain-look`: `RainDirector` and
    `Odyssey/Rain` (streaks, splashes), the sky texture read off the column map, wetness in the
