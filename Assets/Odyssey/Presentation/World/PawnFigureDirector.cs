@@ -392,6 +392,14 @@ namespace Odyssey.Presentation.World
         public bool HasFigureFor(int pawnId) => Drawn.Contains(pawnId);
 
         /// <summary>
+        /// The live figure drawing this pawn, for the selection highlight to draw again (design 44
+        /// §3): every renderer under it — body, hair, beard, headgear, the weapon and a tool in use —
+        /// is the thing, as drawn. Null when the pawn has no figure this frame.
+        /// </summary>
+        public GameObject? FigureObject(int pawnId) =>
+            Drawn.Contains(pawnId) && _byPawn.TryGetValue(pawnId, out Figure? figure) ? figure.GameObject : null;
+
+        /// <summary>
         /// What a pawn's live figure has on (design 42), for a test that must see the dress rather
         /// than the appearance it was dressed from: whether the hair, beard and headgear slots are
         /// drawn, and how many of the rig's <c>_Armor_</c> overlays are switched on. False when the

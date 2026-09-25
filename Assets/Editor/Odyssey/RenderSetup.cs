@@ -39,6 +39,7 @@ namespace Odyssey.EditorTools
                     throw new InvalidOperationException($"no renderer asset at {RendererPath}");
 
                 bool changed = EnsureFeature<OutlineFeature>(data, "Odyssey Outline", Configure);
+                changed |= EnsureFeature<SelectionHighlightFeature>(data, "Odyssey Selection Highlight", Configure);
 
                 ConfigurePipeline();
                 GoldenHour.BuildProfile();
@@ -90,6 +91,24 @@ namespace Odyssey.EditorTools
             // Before transparents: foliage is drawn in the transparent range so that it lands
             // after the ink and is never outlined (MaterialCache.FoliageQueue).
             outline.stage = RenderPassEvent.BeforeRenderingTransparents;
+        }
+
+        /// <summary>
+        /// The selection highlight's tuning (<c>docs/design/44-selection-highlight.md</c>), written
+        /// every run for the outline's reason above: a serialised value outranks a changed default.
+        /// The owner chose white, about 2.5 px at 1080 lines, a dimmed line through walls, a faint
+        /// lift and a soft wash on a tile (interview, 2026-09-25).
+        /// </summary>
+        static void Configure(SelectionHighlightFeature highlight)
+        {
+            highlight.colour = new Color(1.25f, 1.25f, 1.25f, 1f);
+            highlight.width = 2.5f;
+            highlight.hiddenStrength = 0.4f;
+            highlight.lift = 0.12f;
+            highlight.fill = 0.16f;
+            // After the transparents, so the line lies over grass, water and the see-through fade;
+            // before post-processing, so it is graded with the frame it sits in.
+            highlight.stage = RenderPassEvent.AfterRenderingTransparents;
         }
 
         /// <summary>

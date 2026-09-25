@@ -324,6 +324,18 @@ namespace Odyssey.Presentation.World
         }
 
         /// <summary>
+        /// The drawn body of a corpse, for the selection highlight (design 44 §3): the baked body
+        /// once it has settled, the lent figure while it is still falling. Null for a corpse that is
+        /// not drawn, and for the stand-in marker, which is the brackets' job.
+        /// </summary>
+        public GameObject? BodyObject(int corpseId)
+        {
+            if (!_bodies.TryGetValue(corpseId, out Body? body) || !body.Visible || body.Marker) return null;
+            if (body.Object != null) return body.Object;
+            return body.Loan != null && body.Loan.Transform != null ? body.Loan.Transform.gameObject : null;
+        }
+
+        /// <summary>
         /// The nearest drawn corpse the ray passes through, at or above <paramref name="lowestLayer"/>,
         /// or 0. The click half of "clickable as Corpse of X": the hit-test beside the colonists'.
         /// </summary>
