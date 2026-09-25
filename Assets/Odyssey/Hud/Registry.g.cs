@@ -774,6 +774,7 @@ namespace Odyssey.Hud
             { "ui.settings.resetkeys", "Reset keys to defaults" },
             { "ui.settings.resolution", "Resolution" },
             { "ui.settings.seethrough", "See through to selection" },
+            { "ui.settings.seethroughall", "Trees fade for every colonist" },
             { "ui.settings.selectionstyle", "Selection style" },
             { "ui.settings.shadowdist", "Shadow distance" },
             { "ui.settings.shadows", "Shadows" },

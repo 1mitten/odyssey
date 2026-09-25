@@ -153,8 +153,8 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Fade whatever stands between the camera and a selected colonist, so a tree cannot hide the person you are watching.")]
         public bool seeThroughToSelection = true;
 
-        [Tooltip("See-through for every colonist on screen, not only the selected ones (design 38 §19).")]
-        public bool seeThroughToEveryColonist = true;
+        [Tooltip("See-through for every colonist on screen, not only the selected ones (design 38 §19). Off by default since 2026-09-25 (design 38 §27): on, the trees cleared round the colony with nothing selected. The Graphics setting \"Trees fade for every colonist\" writes it.")]
+        public bool seeThroughToEveryColonist;
 
         [Tooltip("How wide the beam to a selected colonist is, in metres. It stands for the width of the person, not the thickness of the line.")]
         [Range(0.2f, 3f)]
@@ -1555,7 +1555,7 @@ namespace Odyssey.Presentation.Bootstrap
                 _renderer.Render(activeLayer, slice);
 
                 // Once per session, a few hundred frames in: which way the scenery went on this
-                // machine's API, so a player log says whether the GPU path ran (design 38 §22).
+                // machine's API, so a player log says whether the GPU path ran (design 38 §27).
                 if (!_sceneryPathLogged && ++_framesRendered == 300)
                 {
                     _sceneryPathLogged = true;
@@ -2897,6 +2897,8 @@ namespace Odyssey.Presentation.Bootstrap
             // Then every other colonist on screen, nearest the focus first, up to a fixed count
             // (owner, 2026-09-24: trees fade for every colonist). Bounded so the cost does not
             // grow with the colony: each line is a slab test per instance in the chunks it crosses.
+            // Off by default since 2026-09-25 — the Graphics switch "Trees fade for every
+            // colonist" turns it on (design 38 §27: the trees cleared with nothing selected).
             _sightCandidates.Clear();
             System.ReadOnlySpan<PawnView> pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length && seeThroughToEveryColonist; i++)
