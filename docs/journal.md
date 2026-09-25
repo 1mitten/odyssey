@@ -12941,3 +12941,17 @@ it to 0.096. Measured back to back on this machine (RTX 5070 Ti), base then bran
 **One owner decision left open.** The Harvest chip is pinned beside Chop and clear, which makes the
 orders strip seven; the rule that caps it asks for a paragraph and got one, and the paragraph says
 Harvest is the one to move if seven reads long.
+
+## 2026-09-25 — Bushes you can click, and berries on the bush (design 45 §12)
+
+Two faults from the owner's first play of #222. **Clicking a bush named the grass**: measured
+through the rig's real pick path, 14 of 18 clicks on a bush's middle and 56 of 73 on its crown
+missed, because a 2–3 m bush was claimed only where the ray crossed its cell's floor, and the ray
+aimed at the crown reaches the floor a metre or two on — or, in its own column, the ground block
+below, which the solid-cell rule claims first. The bush is a box to its drawn crown now, its height
+noted by the mesher that drew it: 0 of 18 and 1 of 68, and no ground in front of a bush is taken by
+it. Shrinking and re-centring the bushes was tried as a second arm and bought nothing, so it was
+not kept. **The berries floated**: placed on a ring by the footprint's half-diagonal with neither
+the bush's turn nor its crown's shape. They go through the bush's own drawn matrix onto the upper
+dome of its bounds now, 15 % inside. Before and after photographs are `BushPickTests.TheBerryBushAtThePlayCamera`.
+

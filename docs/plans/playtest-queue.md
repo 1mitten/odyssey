@@ -40,6 +40,9 @@ the next session learns to ignore.
   hauled once a store takes stone. Wrong answers: a giant that looks like any other tree; a bush
   you cannot tell is a berry bush; the stones reading as litter rather than rock; a seven-button
   orders strip that reads long (then Harvest moves off it).
+  **Since the first play (§12):** click anywhere on a bush's crown — ripe, picked or plain — and
+  the pane names the bush; the berries sit on the bush. Wrong: a click on a bush naming the grass,
+  or a berry hanging in the air beside its bush.
 
 - **Which rain reads as a rainy day: §7's particles, or GPU rain with wet ground?** (`claude/rain-look`,
   #203; design 43 §7, #202.) No Play needed. Open https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3, pick

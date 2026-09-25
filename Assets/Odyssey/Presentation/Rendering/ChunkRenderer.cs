@@ -34,6 +34,9 @@ namespace Odyssey.Presentation.Rendering
         readonly WorldRenderModel _model;
         readonly ChunkMesher _mesher;
 
+        /// <summary>The mesher, for the few questions only it can answer — where a drawn bush stands.</summary>
+        public ChunkMesher Mesher => _mesher;
+
         /// <summary>What the ground is at each column, for the shaders (design 38 §24).</summary>
         readonly GroundField _field;
 

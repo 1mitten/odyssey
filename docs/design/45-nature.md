@@ -226,3 +226,30 @@ Two stacked branches: `claude/meadow-nature` (M5, §2–§5) and `claude/meadow-
   (P12). **The first reading was not flat**: the actor pass drew every thing on the board with no
   view test, and the map's stones and mushrooms took `Actors` from 0.089 to 1.421 ms on Huge. It
   culls to the frustum now (`docs/bug-patterns.md`, 2026-09-25).
+
+## 12. First play: clicking a bush, and berries on the bush (2026-09-25)
+
+Owner, playing #222: *"I couldn't click on some of the berry bushes properly"* and *"the berries
+were never flush against the bush … they appear to be floating away from the bush."*
+
+**The click, measured first** (`BushPickTests`, through the rig's own pick path at the screen
+position of each drawn bush on screen, plain, ripe and picked): **14 of 18 clicks on the middle of
+a bush and 56 of 73 on its crown named something else**. A bush is 1.9–2.9 m tall and its cell was
+claimed only where the ray crossed the cell's floor; a ray aimed at the crown meets the ground a
+metre or two further on, and in its own column the solid-ground rule claimed the ground block under
+the bush first, so the pane named the grass. **Fix**: a bush's cell is a box to its drawn crown —
+`SlicePicker` claims it wherever the ray is inside that column below the crown, at the point the ray
+entered it — and the crown's height is the drawn one, noted per cell by the mesher
+(`WorldRenderModel.BushTop`). After: **0 of 18 and 1 of 68** (the one a rim point), the pane names
+every bush clicked, and **no ground in front of a bush is taken by it**; ground behind a bush, which
+the bush hides, is the bush's. Resizing or re-centring the bushes was measured and bought nothing,
+so their look is unchanged.
+
+**The berries.** They were set on a ring at a fraction of the footprint's half-diagonal, at heights
+off the bush's top, with neither the bush's turn nor the crown's shape — so most hung in the air
+round it. They are placed through the bush's own drawn matrix now (`ChunkMesher.TryBushPlacement`,
+the one owner of where a bush is drawn), on the crown's upper dome as the bounds describe it,
+set 15 % inside so they sit in the leaves. The meshes are not readable at run time and nothing of
+the art is copied: the bounds are the resolved module's. **Left out**: the berries do not sway with
+the bush's wind bow (0.18 of the grass's); set into the leaves the difference is a few centimetres.
+`ChunkMesher.BerriesOnTheCrown = false` draws them as first built, for the before photograph.

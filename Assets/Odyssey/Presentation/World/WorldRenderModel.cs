@@ -1506,6 +1506,22 @@ namespace Odyssey.Presentation.World
             }
         }
 
+        /// <summary>
+        /// How high the bush drawn in this cell stands, in metres over its floor — what a click
+        /// on it is measured against (design 45 §12). Written by the mesher when it draws the bush,
+        /// because only the mesher knows which art and what size; until then, and for a bush with
+        /// no art, <see cref="DefaultBushTop"/>.
+        /// </summary>
+        public float BushTop(int index) => _bushTop.TryGetValue(index, out float top) ? top : DefaultBushTop;
+
+        /// <summary>The mesher's note of a drawn bush's height. Presentation only.</summary>
+        public void NoteBushTop(int index, float top) => _bushTop[index] = top;
+
+        /// <summary>A bush's height before its art has been measured: about the Meadow bushes' middle.</summary>
+        public const float DefaultBushTop = 1.4f;
+
+        readonly Dictionary<int, float> _bushTop = new Dictionary<int, float>();
+
         /// <summary>A tree that has just left the mirror: where it stood and what it was.</summary>
         public readonly struct FelledTree
         {
