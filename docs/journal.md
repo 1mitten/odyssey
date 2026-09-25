@@ -13099,3 +13099,15 @@ a square root for each of ~50,000 texels. Writing the inside flat and paying onl
 took it to +0.47 ms over the same box without the clearing, most of that the faded trees' extra
 draws. Measured in one world, three arms (cleared, armed without, nothing armed).
 
+## 2026-09-25 — An ordered cell is bare (design 45 §13a)
+
+The owner's screenshot of a harvest box in rain: flattened blades lying across every pink plate.
+Flattening was the wrong verb for a mark — the plate is on the ground, so a blade laid on the ground
+lies over it — and the mark cleared a 1.1 m disc in a 2.5 m cell besides. The fix is a second field
+beside the clearing that the foliage shader discards against, per fragment, written as coverage so
+the cut's edge is the cell's to a few centimetres (`OrderCutTests` walks three cells across every
+texel phase). It lives in the one gatherer every plate goes through, which is how "all orders
+should be checked" is answered once rather than per order. The photograph found a second, larger
+fault the screenshot had hidden: faded crowns write depth and share the plates' transparent queue,
+so where the instanced batch sorted second, half the harvest box was simply not drawn. Marks now
+draw one queue earlier.

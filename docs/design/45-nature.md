@@ -277,3 +277,41 @@ one world): 2.57 ms cleared, 2.10 ms armed without the clearing, 2.11 ms with no
 first version cost 2.4 ms, all of it a square root per texel of the stamp; the inside of the
 rectangle is written flat now and only the margin pays for a distance. Photographs:
 `placing-before.png` and `placing-after.png` from the same test.
+
+## 13a. An ordered cell is bare (2026-09-25)
+
+Owner, playing §13: *"the grass is still appearing on top of the selection tiles … can this be
+clear so you can see clearer what is being targeted — especially with the new order to harvest"*,
+and then: *"all orders should be checked for this"*.
+
+Laying the grass flat was not enough. A flattened blade still lies across a plate painted on the
+ground, and an order's mark cleared only a 1.1 m disc at the middle of a 2.5 m cell, so the corners
+kept standing grass. **The cell is now cut bare to its edge**, and the grass round it is laid flat
+over 0.4 m so nothing leans in:
+
+- **A second field beside the clearing** (`GrassClearance.CutRect`, `_OdysseyCutTex`): same window
+  and texel, each texel holding how much of it the rectangle covers, so the shader's filtered read
+  cut at one half lands within a few centimetres of the cell's edge rather than on a 0.375 m
+  staircase. `Odyssey/Foliage`'s forward pass discards every clearable fragment standing on a cut,
+  asked where the fragment is, not where its clump is rooted. Only grass, flowers and cover are
+  clearable; trees and bushes are not, and grass reaches no depth or shadow pass.
+- **Every order, by construction.** Every plate the renderer draws goes through one gatherer
+  (`ChunkRenderer.GatherCellPlate`): each standing order — mine, chop, harvest, forage, clear,
+  deconstruct, cancel — a job's progress cut, a site and its rising fill, every drag box and hover
+  preview, and a power line's cursor. The cut is there, so a new order inherits it.
+  `OrderCutTests.EveryKindOfPlateCutsItsOwnCellAndNoOther` holds all four plate shapes to it. A
+  waiting site and an armed placement's footprint cut too (`PlacementClearing`).
+- **Whole cells, whatever the plate's inset**, so the ground between two marked cells is bare and
+  a marked field reads as one patch.
+
+**And the plates were being hidden by faded crowns.** A bush or tree faded out of a placement's way
+writes its depth and then blends; plates shared its transparent queue and were sorted against it by
+the centre of their whole instanced batch, so where the batch came second the crown's depth cut
+leaf-shaped holes out of the pink — in the first photograph half the harvest box was missing.
+Marks draw one queue ahead of every other transparent now (`ChunkRenderer.MarkQueue`), which is
+what they are: paint on the ground.
+
+**Left as they are:** growing plots already grow no grass (their tiles are drawn as tilled
+ground). **Stockpiles do grow grass**, under the storage wash; a stockpile is a zone, not an order,
+and whether it should be bare too is the owner's call. Photographs: `BushPickTests.OrdersOverTallGrass`
+(`orders-before.png`, `orders-after.png`), with `GrassClearance.Cutting` as the before switch.

@@ -46,6 +46,10 @@ the next session learns to ignore.
   **And placing (§13):** arm a wall or an order and drag over tall grass and a bush — the grass under
   the drag lies flat and the bush fades while you place, and comes back when you disarm. Wrong: a
   blueprint you still cannot see, a bush that stays faded after placing, or grass that pops.
+  **And every order's cell is bare (§13a):** drag a Harvest box, a Chop box and a Mine box over tall
+  grass, and place a wall — no blade lies on any plate and the plates are whole under a faded bush or
+  tree. Wrong: grass across a plate, a leaf-shaped hole in one, or a bare square left behind after
+  the order is cancelled or done.
 
 - **Which rain reads as a rainy day: §7's particles, or GPU rain with wet ground?** (`claude/rain-look`,
   #203; design 43 §7, #202.) No Play needed. Open https://claude.ai/artifact/BXgdcC9mYZ6MQR3DpYWLJ3, pick

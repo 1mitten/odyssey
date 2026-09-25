@@ -2101,6 +2101,7 @@ namespace Odyssey.Presentation.Bootstrap
                 // blueprint not seen.
                 PlacementClearing.Rect(cell, cell, out Vector2 low, out Vector2 high);
                 _renderer.Clearance.StampRect(low, high, PlacementClearing.Margin * 0.5f);
+                _renderer.Clearance.CutRect(low, high);
 
                 // **A slab does not rise, so it must not be drawn rising** (owner, 2026-09-17:
                 // "these little gaps or white lines appearing on the builds"). DrawCellFill grows

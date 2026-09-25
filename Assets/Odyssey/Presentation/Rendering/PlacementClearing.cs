@@ -38,6 +38,9 @@ namespace Odyssey.Presentation.Rendering
             {
                 (CellRef min, CellRef max) = footprint[i];
                 Rect(min, max, out Vector2 low, out Vector2 high);
+                // Bare to the footprint's edge and laid flat round it (§13a): a blade lying flat
+                // across the ghost still hid it.
+                field.CutRect(low, high);
                 if (field.StampRect(low, high, Margin)) stamped++;
             }
             return stamped;

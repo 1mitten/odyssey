@@ -974,7 +974,22 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>The same for an order mark, which covers a cell face and so wants a wider ring
         /// than a stack of logs does.</summary>
-        public float MarkClearance { get; set; } = 1.1f;
+        public float MarkClearance { get; set; } = 0.4f;
+
+        /// <summary>
+        /// The cell a plate stands in, cut bare and the grass round it laid flat over
+        /// <see cref="MarkClearance"/> metres (design 45 §13a). Whole cells, whatever the plate's
+        /// inset: the ground between two marked cells is bare too, so a marked field reads as one
+        /// patch rather than as tiles in grass.
+        /// </summary>
+        void CutUnder(Vector3 at)
+        {
+            float size = CellMetrics.SizeXZ;
+            var low = new Vector2(Mathf.Floor(at.x / size) * size, Mathf.Floor(at.z / size) * size);
+            var high = low + new Vector2(size, size);
+            Clearance.StampRect(low, high, MarkClearance);
+            Clearance.CutRect(low, high);
+        }
 
         /// <summary>
         /// How far past a thing's own footprint the grass lies flat (owner, 2026-09-24: "flatten
@@ -3293,9 +3308,22 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         const float BracketGlow = 0.85f;
 
-        Material BracketMaterial(Color colour) =>
-            _materials.Get(_model.Library.FallbackMaterial, colour, colour * BracketGlow,
+        Material BracketMaterial(Color colour)
+        {
+            Material material = _materials.Get(_model.Library.FallbackMaterial, colour, colour * BracketGlow,
                 ghost: true, alpha: colour.a * BracketOpacity);
+            if (material.renderQueue != MarkQueue) material.renderQueue = MarkQueue;
+            return material;
+        }
+
+        /// <summary>
+        /// A mark is paint on the ground, so it is drawn ahead of every other transparent (design 45
+        /// §13a). A crown faded out of the way writes its depth before it blends; sharing its queue,
+        /// the marks were sorted against it by the centre of their whole instanced batch, and where
+        /// the batch came second the crown's depth cut leaf-shaped holes out of the plates under it —
+        /// the photograph showed ground through a faint crown where the harvest box should have been.
+        /// </summary>
+        public const int MarkQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent - 1;
 
         /// <summary>
         /// How strongly a see-through mark shows where something stands in front of it, as a share
@@ -4069,10 +4097,11 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         void GatherCellPlate(Color colour, in Matrix4x4 place)
         {
-            // Every mark on the floor comes through here — chop crosses, mine marks, build and
-            // deconstruct plates — and a mark painted flat on the ground is exactly what tall
-            // grass covers.
-            Clearance.Stamp(place.GetColumn(3), MarkClearance);
+            // Every mark on the floor comes through here — every standing order, every site and
+            // its progress, every drag and hover preview — and a mark painted flat on the ground is
+            // exactly what tall grass covers. The cell is cut bare to its edge and the grass round
+            // it laid flat, so nothing leans over the plate (design 45 §13a).
+            CutUnder(place.GetColumn(3));
 
             PlateBucket? bucket = null;
             for (int i = 0; i < _plateBucketCount; i++)

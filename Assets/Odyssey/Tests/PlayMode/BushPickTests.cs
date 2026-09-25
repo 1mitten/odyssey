@@ -231,6 +231,67 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// Orders over tall grass from the play camera, the grass laid flat and cut bare (design 45
+        /// §13a; owner, 2026-09-25: "the grass is still appearing on top of the selection tiles"):
+        /// a harvest box being dragged, then the same box of cells with the pointer elsewhere and
+        /// only a hover armed. <c>orders-before.png</c> and <c>orders-after.png</c> in
+        /// <c>Logs/look/</c>. Explicit.
+        /// </summary>
+        [UnityTest, Explicit("a photograph for judging the cut under an order, not a test")]
+        public IEnumerator OrdersOverTallGrass()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out SliceCameraRig rig);
+            RenderTexture? target = null;
+            Camera cam = rig.Camera;
+            try
+            {
+                yield return Settle(boot, rig);
+                var colony = boot.Colony!;
+                var size = colony.Grid.Size;
+                CellRef start = colony.Start;
+                int bush = -1, best = int.MaxValue;
+                for (int i = 0; i < size.CellCount; i++)
+                {
+                    if (!colony.Grid.IsUndergrowth(i)) continue;
+                    CellRef at = size.FromIndex(i);
+                    int d = Math.Abs(at.X - start.X) + Math.Abs(at.Z - start.Z);
+                    if (d < best) { best = d; bush = i; }
+                }
+                Assert.That(bush, Is.GreaterThanOrEqualTo(0), "no bush on the board");
+                CellRef b = size.FromIndex(bush);
+                int groundY = b.Y - 1;
+
+                var presenter = boot.GetComponent<DesignatePresenter>();
+                DesignateDirector director = presenter.Director;
+                director.Tool = DesignateTool.Harvest;
+                director.Begin(new CellRef(b.X - 2, b.Z - 3, groundY));
+                director.DragTo(new CellRef(b.X + 2, b.Z + 2, groundY));
+
+                target = new RenderTexture(1920, 1080, 24) { name = "orders" };
+                cam.targetTexture = target;
+                Directory.CreateDirectory(Path.GetFullPath("Logs/look"));
+                rig.FocusOn(b, 22f);
+                for (int i = 0; i < 150; i++) yield return null;
+
+                GrassClearance.Cutting = false;
+                for (int i = 0; i < 20; i++) yield return null;
+                yield return Photograph("orders-before", target);
+                GrassClearance.Cutting = true;
+                for (int i = 0; i < 20; i++) yield return null;
+                yield return Photograph("orders-after", target);
+                Debug.Log($"[Orders] cuts this frame {boot.Renderer!.Clearance.Cuts}, stamps {boot.Renderer.Clearance.Stamps}");
+                Assert.That(boot.Renderer.Clearance.Cuts, Is.GreaterThan(0), "the dragged box cut nothing");
+            }
+            finally
+            {
+                GrassClearance.Cutting = true;
+                cam.targetTexture = null;
+                if (target != null) target.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
         sealed class Tally
         {
             public bool NoArt;
