@@ -30,13 +30,36 @@ namespace Odyssey.Hud
         /// <summary>A pager's two chevrons (design 43 §6), stroked.</summary>
         public const string ChevronLeft = "M15 5 8 12l7 7";
         public const string ChevronRight = "M9 5l7 7-7 7";
+        public const string ChevronUp = "M5 15l7-7 7 7";
+        public const string ChevronDown = "M5 9l7 7 7-7";
+
+        // ---- the bill list (design 49 §3), stroked unless it says otherwise
+
+        /// <summary>A bolt struck through: the status strip's "no power".</summary>
+        public const string NoPower = "M13 3 6 13h5l-1 8 7-10h-5zM3 3l18 18";
+
+        /// <summary>The power switch's symbol: a stem in an open ring.</summary>
+        public const string Power = "M12 3v8M7 6.3a7 7 0 1 0 10 0";
+
+        /// <summary>The stepper's two marks, stroked at <see cref="StepStroke"/>.</summary>
+        public const string Minus = "M5 12h14";
+        public const string Plus = "M12 5v14M5 12h14";
+        public const float StepStroke = 1.8f;
+
+        /// <summary>Pause is two bars; resume is a triangle, filled.</summary>
+        public const string PauseBars = "M8 5v14M16 5v14";
+        public const string PlayTriangle = "M8 5l11 7-11 7z";
+
+        public const string Bin = "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13";
+
+        /// <summary>Add a bill's plus, heavier because it sits on the accent fill.</summary>
+        public const float AddStroke = 2.6f;
 
         /// <summary>
-        /// The Gear tab's two marks (design 47 §2, Claude Design's paths): the lock on a pack slot
-        /// with no pack, and the loadout cell's down chevron — the right one turned a quarter.
+        /// The Gear tab's mark (design 47 §2, Claude Design's path): the lock on a pack slot
+        /// with no pack. The loadout cell's down chevron is <see cref="ChevronDown"/> above, the same path.
         /// </summary>
         public const string Lock = "M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5z";
-        public const string ChevronDown = "M5 9l7 7 7-7";
 
         /// <summary>The path registered under an icon key, or null for a key with none.</summary>
         public static string? PathOf(string iconKey) => iconKey switch

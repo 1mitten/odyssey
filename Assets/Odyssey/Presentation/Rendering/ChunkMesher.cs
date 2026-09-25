@@ -92,6 +92,7 @@ namespace Odyssey.Presentation.Rendering
 
         public void Mesh(ChunkBatch batch, int chunkIndex)
         {
+            long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
             _model.ChunkBounds(chunkIndex, out int x0, out int z0, out int y, out int x1, out int z1);
 
             batch.ChunkIndex = chunkIndex;
@@ -115,6 +116,8 @@ namespace Odyssey.Presentation.Rendering
                 _stumpIndex[KeyOf(batch.Stumps[i])] = i;
 
             var size = _model.Size;
+            long t1 = System.Diagnostics.Stopwatch.GetTimestamp();
+            MeshPart skip = SkipForMeasure;
             for (int z = z0; z < z1; z++)
             for (int x = x0; x < x1; x++)
             {
@@ -122,27 +125,46 @@ namespace Odyssey.Presentation.Rendering
                 // Once per cell, for everything the cell emits: only something built can be
                 // stacked, so terrain, trees and grass are never marked by it.
                 _stacked = _model.IsStackedAt(index);
-                EmitTerrain(batch, index, x, z, y);
-                EmitBank(batch, index, x, z, y);
+                if (skip == MeshPart.None)
+                {
+                    EmitTerrain(batch, index, x, z, y);
+                    EmitBank(batch, index, x, z, y);
+                    EmitScatter(batch, index, x, z, y);
+                    EmitDressing(batch, index, x, z, y);
+                    EmitFloor(batch, index, x, z, y);
+                    EmitStoreEdge(batch, index, x, z, y);
+                    EmitEdifice(batch, index, x, z, y);
+                    EmitCrop(batch, index, x, z, y);
+                    continue;
+                }
+                if ((skip & MeshPart.Terrain) == 0) EmitTerrain(batch, index, x, z, y);
+                if ((skip & MeshPart.Bank) == 0) EmitBank(batch, index, x, z, y);
                 EmitScatter(batch, index, x, z, y);
                 EmitDressing(batch, index, x, z, y);
-                EmitFloor(batch, index, x, z, y);
-                EmitStoreEdge(batch, index, x, z, y);
-                EmitEdifice(batch, index, x, z, y);
-                EmitCrop(batch, index, x, z, y);
+                if ((skip & MeshPart.Floor) == 0) { EmitFloor(batch, index, x, z, y); EmitStoreEdge(batch, index, x, z, y); }
+                if ((skip & MeshPart.Edifice) == 0) EmitEdifice(batch, index, x, z, y);
+                if ((skip & MeshPart.Crop) == 0) EmitCrop(batch, index, x, z, y);
             }
+            long t2 = System.Diagnostics.Stopwatch.GetTimestamp();
 
             // Grass in rank order, so the renderer's distance thinning submits a prefix (design 38
             // §21, GrassThinning). Once per meshing, not per frame.
-            for (int i = 0; i < batch.Body.Count; i++)
-            {
-                InstanceBucket bucket = batch.Body[i];
-                if (bucket.Count > 1 && !bucket.IsColoured && IsGrassModule(bucket.Module))
-                    GrassThinning.SortByRank(bucket.Matrices, bucket.Count, ref _rankKeys);
-            }
+            if ((skip & MeshPart.Sort) == 0)
+                for (int i = 0; i < batch.Body.Count; i++)
+                {
+                    InstanceBucket bucket = batch.Body[i];
+                    if (bucket.Count > 1 && !bucket.IsColoured && IsGrassModule(bucket.Module))
+                        GrassThinning.SortByRank(bucket.Matrices, bucket.Count, ref _rankKeys);
+                }
+            long t3 = System.Diagnostics.Stopwatch.GetTimestamp();
 
-            batch.Skin.Build(batch.Bounds);
+            if ((skip & MeshPart.Skin) == 0) batch.Skin.Build(batch.Bounds);
             batch.Version = _model.ChunkVersion(chunkIndex);
+            long t4 = System.Diagnostics.Stopwatch.GetTimestamp();
+            _prologueTicks += t1 - t0;
+            _cellsTicks += t2 - t1;
+            _sortTicks += t3 - t2;
+            _skinTicks += t4 - t3;
         }
 
         float[] _rankKeys = new float[256];
@@ -380,6 +402,35 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Which dressing kinds are strewn, one bit per <see cref="MeadowDressing.Kind"/>.
         /// A measurement seam (design 38 §21: what each kind costs at distance): all on in the game.</summary>
         public int DressingKinds { get; set; } = ~0;
+
+        /// <summary>
+        /// Which of a chunk's parts <see cref="Mesh"/> leaves out, for pricing each by its absence
+        /// (<c>FrameTimeTests.TheMeshingByPart</c>). A measurement seam only: none in the game.
+        /// </summary>
+        [System.Flags]
+        public enum MeshPart
+        {
+            None = 0, Terrain = 1, Bank = 2, Floor = 4, Edifice = 8, Crop = 16, Sort = 32, Skin = 64,
+        }
+
+        /// <summary>See <see cref="MeshPart"/>.</summary>
+        public MeshPart SkipForMeasure { get; set; }
+
+        /// <summary>
+        /// Where a chunk's meshing time went, summed over every <see cref="Mesh"/> since the last
+        /// <see cref="ResetPhaseTimes"/>: the set-up (the corner relief and the bucket indexes), the
+        /// walk over the cells, the grass sort and the skin's build. A few timestamps a chunk, never
+        /// one a cell, so the timing costs nothing next to what it times.
+        /// </summary>
+        public double PrologueMs => _prologueTicks * TickMs;
+        public double CellsMs => _cellsTicks * TickMs;
+        public double SortMs => _sortTicks * TickMs;
+        public double SkinMs => _skinTicks * TickMs;
+
+        public void ResetPhaseTimes() => _prologueTicks = _cellsTicks = _sortTicks = _skinTicks = 0;
+
+        static readonly double TickMs = 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        long _prologueTicks, _cellsTicks, _sortTicks, _skinTicks;
 
         int[] _scatterModules = System.Array.Empty<int>();
 
@@ -1626,8 +1677,19 @@ namespace Odyssey.Presentation.Rendering
                 // has the tinted block, which is drawn per cell below as it always was.
                 case CoreContent.EdificeGenerator:
                 case CoreContent.EdificeHeater:
+                case CoreContent.EdificeGalley:
                     if (shape == ModuleShape.Pillar)
                     {
+                        // The galley's facing is the player's too: it is the side the cook
+                        // stands on (design 48 §5), so it is drawn turned to it and never backed.
+                        if (def == CoreContent.EdificeGalley)
+                        {
+                            if (_model.EdificeHead(index))
+                                AddBody(batch, module, TintCode.Stuff(CoreContent.StuffNone),
+                                    PropShape.Root(x, z, y, _model.EdificeFacing(index), 1));
+                            return;
+                        }
+
                         // The generator's facing is where its second cell lies, so it is the
                         // player's; the heater's is drawing only, and backs on to a wall (§14c).
                         if (_model.EdificeHead(index))

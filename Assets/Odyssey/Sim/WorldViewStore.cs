@@ -33,6 +33,16 @@ namespace Odyssey.Sim
         /// <summary>Publish one built store — a shelf — and how full it is.</summary>
         public void AddStorageUnit(in StorageUnitView view) => _target.AddStorageUnit(view);
 
+        /// <summary>Publish one cooking station, after its bills: <see cref="StationView.FirstBill"/> is
+        /// <see cref="BillCursor"/> read before the first of them was added.</summary>
+        public void AddStation(in StationView view) => _target.AddStation(view);
+
+        /// <summary>Publish one bill. See <see cref="AddStation"/>.</summary>
+        public void AddBill(in BillView view) => _target.AddBill(view);
+
+        /// <summary>How many bills this frame holds so far: where the next one will land.</summary>
+        public int BillCursor => _target.BillCount;
+
         /// <summary>Publish one building site, wherever in the world it is.</summary>
         public void AddSite(in SiteView view) => _target.AddSite(view);
 
@@ -70,6 +80,8 @@ namespace Odyssey.Sim
 
         /// <summary>Publish one thing in the air. See <see cref="FallingView"/>.</summary>
         public void AddFalling(in FallingView view) => _target.AddFalling(view);
+
+        public void AddProjectile(in ProjectileView view) => _target.AddProjectile(view);
 
         /// <summary>Publish one line cell. See <see cref="ConduitView"/> for which are published when.</summary>
         public void AddConduit(in ConduitView view) => _target.AddConduit(view);

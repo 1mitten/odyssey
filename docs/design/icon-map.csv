@@ -24,6 +24,8 @@ ui.res.insulation,04,,,foam block,med,mapped
 ui.res.paper,04,,,rolled paper,high,mapped
 ui.res.rations,02,,,sealed food packet,high,mapped
 ui.res.meal,02,,,bowl of cooked food,high,mapped
+ui.res.meal.veg,-,,,"a bowl of cooked vegetables. The food sheet's bowl may serve once the art is judged",-,gap
+ui.res.meal.burnt,-,,,"a blackened bowl of food. Our own concept",-,gap
 ui.res.protein,02,,,carton or tub,med,mapped
 ui.res.meat,07,,,"raw meat slab — the owner's own icon, not sheet 07's cell",high,mapped
 ui.res.produce,02,,,carrot and potato,high,mapped
@@ -119,6 +121,7 @@ ui.work.operating,04,,,gear,high,shared
 ui.work.rescue,-,,,carrying a casualty. Blocked on the missing human figure,-,gap
 ui.status.treating,-,,,"hands dressing a wound. Blocked on the missing human figure",-,gap
 ui.status.patient,-,,,"a figure lying in bed. Blocked on the missing human figure",-,gap
+ui.status.cooking,-,,,"a figure stirring a pan. Blocked on the missing human figure",-,gap
 ui.health.brain,07,,,brain,high,mapped
 ui.health.head,07,,,skull,high,shared
 ui.health.eye,07,,,eyeball,high,mapped
@@ -448,3 +451,18 @@ ui.res.category.items,-,,,"a slung pack with a buckled strap",-,gap
 ui.res.category.weapons,-,,,"a knife crossed over a rifle barrel",-,gap
 ui.tab.storage,-,,,"an open crate seen from above",-,gap
 ui.tab.tile,-,,,"a single square of ground, in plan",-,gap
+ui.recipe.meal,-,,,"a pan with food in it. Our own concept",-,gap
+ui.bill.heading,-,,,"a list of orders pinned up. Our own concept",-,gap
+ui.bill.add,-,,,"a plus. Interface furniture drawn as a HudGlyph",-,gap
+ui.bill.none,-,,,"an empty list. Interface words, no icon wanted",-,gap
+ui.bill.mode.until,-,,,"Interface words, no icon wanted",-,gap
+ui.bill.mode.times,-,,,"Interface words, no icon wanted",-,gap
+ui.bill.mode.forever,-,,,"Interface words, no icon wanted",-,gap
+ui.bill.suspended,-,,,"a pause mark. Interface furniture drawn as a HudGlyph",-,gap
+ui.bill.done,-,,,"a tick. Interface furniture drawn as a HudGlyph",-,gap
+ui.bill.unpowered,-,,,"a broken plug. Our own concept",-,gap
+ui.bill.waiting,-,,,"Interface words, no icon wanted",-,gap
+ui.bill.needs,-,,,"Interface words, no icon wanted",-,gap
+ui.bill.needs.fire,-,,,"Interface words, no icon wanted",-,gap
+ui.bill.supply,-,,,"Interface words, no icon wanted",-,gap
+ui.bill.nosupply,-,,,"an empty basket. Our own concept",-,gap

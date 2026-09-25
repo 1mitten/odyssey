@@ -331,6 +331,33 @@ namespace Odyssey.Sim.Contracts
         WatchHome,
 
         /// <summary>
+        /// Edit the bill list of the cooking station in <see cref="Intent.Cell"/> (design 48 §5).
+        /// <c>A</c> is the <see cref="BillEdit"/>, <c>B</c> the bill's place in the list (for
+        /// <see cref="BillEdit.Add"/>, the <see cref="RecipeHandle"/> instead), and <c>C</c> the
+        /// value a setting takes. One kind for the whole pane, because every row of it is a setting
+        /// over one station, and a kind per button would be seven entries saying the same thing.
+        /// Handler: <c>Kitchen.HandleEditBill</c>. Appended last, so no recorded intent renumbers.
+        /// </summary>
+        EditBill,
+
+        /// <summary>
+        /// Debug-menu-only (design 43 §11): act on the colonist nearest <see cref="Intent.Cell"/>
+        /// — <c>A</c> 0 hurts her (a 20-point wound on a region by the blow's own coverage), 1 heals
+        /// her whole and stands her up, 2 kills her. Through the one owner of damage and the one
+        /// way to die, so a debug kill leaves a corpse and is mourned. Appended; not applied while
+        /// paused, like the other debug spawns.
+        /// </summary>
+        DebugHealth,
+
+        /// <summary>
+        /// Send one colonist to treat another (design 43 §5, §11, §15): <c>A</c> is the doctor's
+        /// <c>PawnId</c> value and <c>B</c> the patient's. Drafted or not, as the Equip order is; the
+        /// same <c>Job_Treat</c> the Doctor work type gives, supplies fetched if any can be reached.
+        /// Handler: <c>JobSystem.HandleOrderTend</c>. Appended.
+        /// </summary>
+        OrderTend,
+
+        /// <summary>
         /// Empty one colonist's hand at once (design 47 §3, the Gear tab's weapon popover): <c>A</c>
         /// is her <c>PawnId</c> value and <c>B</c> how — 0 <b>Unequip</b>, "put it down", which
         /// leaves the weapon to the haulers; 1 <b>Drop</b>, "leave this here", which forbids it so
@@ -338,6 +365,31 @@ namespace Odyssey.Sim.Contracts
         /// that can take it. Handler: <c>JobSystem.HandleOrderUnequip</c>.
         /// </summary>
         OrderUnequip,
+    }
+
+    /// <summary>What an <see cref="IntentKind.EditBill"/> does, as its <c>A</c> carries it.</summary>
+    public static class BillEdit
+    {
+        /// <summary>Append a bill for recipe <c>B</c>, in the default mode.</summary>
+        public const int Add = 0;
+
+        /// <summary>Delete bill <c>B</c>.</summary>
+        public const int Remove = 1;
+
+        /// <summary>Swap bill <c>B</c> with the one above it.</summary>
+        public const int MoveUp = 2;
+
+        /// <summary>Swap bill <c>B</c> with the one below it.</summary>
+        public const int MoveDown = 3;
+
+        /// <summary>Set bill <c>B</c>'s mode to <c>C</c>, a <see cref="BillModeHandle"/>.</summary>
+        public const int SetMode = 4;
+
+        /// <summary>Set bill <c>B</c>'s target to <c>C</c>, clamped to 1..999.</summary>
+        public const int SetTarget = 5;
+
+        /// <summary>Suspend bill <c>B</c> (<c>C</c> = 1) or let it run again (<c>C</c> = 0).</summary>
+        public const int SetSuspended = 6;
     }
 
     /// <summary>
@@ -423,6 +475,7 @@ namespace Odyssey.Sim.Contracts
             IntentKind.OrderAttack => true,
             IntentKind.OrderEquip => true,
             IntentKind.OrderRescue => true,
+            IntentKind.OrderTend => true,
             // Putting a weapon down (design 47 §3): a button on the Gear tab, which is a pane you
             // open while paused, and nothing needs to run to make it true.
             IntentKind.OrderUnequip => true,
@@ -439,6 +492,9 @@ namespace Odyssey.Sim.Contracts
             IntentKind.SetPawnArea => true,
             // The hearth (design 43 §3f): a choice made on a campfire's pane, paused or not.
             IntentKind.SetHearth => true,
+            // A cooking station's bills (design 48 §5): settings over a building, on a pane you
+            // open while paused. The storage filter's argument exactly.
+            IntentKind.EditBill => true,
             _ => false,
         };
     }

@@ -59,7 +59,7 @@ Everything on the architect menu: what can be built, and the one-off orders that
 | **Power switch** | `ui.arch.tool.switch` | Cuts a net in two <br>**Needs:** a power switch or breaker | no art | M3 |
 | **Reactor** | `ui.arch.tool.reactor` | Late, enormous, dangerous | sheet 08 (salvage gear), med | M3 |
 | **Fabricator** | `ui.arch.tool.fabricator` | Makes refined materials and components | sheet 06 (action tiles), med | M3 |
-| **Galley** | `ui.arch.tool.galley` | Cooks meals | sheet 03 (camp and crafting), high | M3 |
+| **Electric Cooker** | `ui.arch.tool.galley` | Cooks meals from bills. Needs power | sheet 03 (camp and crafting), high | M3 |
 | **Reclaimer** | `ui.arch.tool.reclaimer` | Sorts scrap into usable material <br>**Needs:** a machine that sorts scrap. Our own invention | no art | M3 |
 | **Hydroponics basin** | `ui.arch.tool.hydroponics` | Grows without soil, needs power <br>**Needs:** a hydroponic basin. Central to food in a ruined city | no art | M3 |
 | **Crafting bench** | `ui.arch.tool.bench` | General making | sheet 03 (camp and crafting), high | M3 |

@@ -706,6 +706,13 @@ namespace Odyssey.Tests.Sim
                 "and it remembers the fall");
             Assert.That(pawn.MemoryMoodOffset(colony.World.CurrentTick), Is.LessThan(0),
                 "which is worth something to be miserable about");
+            // And it hurt (design 43 §7): a floor giving way is a fall even at one layer, a bruise
+            // of about fifteen points on the bottom-facing regions and nothing worse.
+            Assert.That(pawn.Health, Is.Not.Null, "rode a floor down unharmed");
+            int loss = pawn.HpMaxMilli - pawn.HpMilli;
+            Assert.That(loss, Is.InRange(12_000, 18_000), "one layer is fifteen points, a fifth either way");
+            Assert.That(pawn.Health!.TotalSeverityMilli, Is.EqualTo(loss));
+            Assert.That(pawn.Downed, Is.False, "one layer bruises and walks away");
         }
 
         /// <summary>
@@ -736,6 +743,7 @@ namespace Odyssey.Tests.Sim
             Assume.That(colony.Grid.Floor[slab], Is.EqualTo(CoreContent.SlabNone), "it did collapse");
             Assert.That(pawn.Memories.Exists(m => m.ThoughtIndex == ThoughtIndex.Fell), Is.False,
                 "a colonist that did not move has nothing to remember");
+            Assert.That(pawn.HasHealthState, Is.False, "and nothing to hurt");
         }
 
         /// <summary>

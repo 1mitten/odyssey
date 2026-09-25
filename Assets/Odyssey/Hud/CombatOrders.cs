@@ -108,13 +108,14 @@ namespace Odyssey.Hud
             new Intent(IntentKind.OrderUnequip, default, colonist.Value, leaveHere ? 1 : 0);
 
         /// <summary>
-        /// Is this item def a weapon — one of the four melee weapons of design 33 §1? Parallel to
-        /// the item table's <c>Weapons</c> category, which this assembly cannot read: the four are
-        /// appended together in <see cref="ItemHandle"/> and a test walks the whole table.
+        /// Is this item def a weapon — one of the four melee weapons of design 33 §1, or the pistol
+        /// of design 47? Parallel to the item table's <c>Weapons</c> category, which this assembly
+        /// cannot read: a test walks the whole table.
         /// </summary>
         public static bool IsWeapon(int itemDef) =>
             itemDef == ItemHandle.Bat || itemDef == ItemHandle.Crowbar
-            || itemDef == ItemHandle.Machete || itemDef == ItemHandle.ArcBlade;
+            || itemDef == ItemHandle.Machete || itemDef == ItemHandle.ArcBlade
+            || itemDef == ItemHandle.Pistol;
 
         /// <summary>A selected colonist the player may give a fight order to: drafted and standing.</summary>
         static bool CanFight(WorldSnapshot snapshot, PawnId pawn, out PawnView view) =>

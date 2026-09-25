@@ -55,11 +55,14 @@ namespace Odyssey.Sim.Pawns
         /// Tuesday, and passes none.</para>
         /// </summary>
         /// <returns>How many pawns actually moved.</returns>
-        public static int OutOf(PawnContext ctx, int cell, int thought = NoThought, int tick = 0)
+        /// <param name="collapse">A floor gave way (design 43 §7): even a one-layer drop is a fall
+        /// and hurts. Without it a one-layer drop is a step — a miner into the hole she dug, a
+        /// deconstructor off the slab she took up — and only two layers or more hurt.</param>
+        public static int OutOf(PawnContext ctx, int cell, int thought = NoThought, int tick = 0, bool collapse = false)
         {
             if ((uint)cell >= (uint)ctx.Size.CellCount) return 0;
 
-            int moved = PawnsOutOf(ctx, cell, thought, tick);
+            int moved = PawnsOutOf(ctx, cell, thought, tick, collapse);
             ItemsOutOf(ctx, cell);
             PlantsOutOf(ctx, cell);
             TreesOutOf(ctx, cell);
@@ -74,10 +77,15 @@ namespace Odyssey.Sim.Pawns
         /// hole, or one standing on a cell the collapse merely opened a view of, has nothing to
         /// remember — and a thought handed out for standing still is how a mood becomes noise.</para>
         /// </summary>
-        public static int PawnsOutOf(PawnContext ctx, int cell, int thought = NoThought, int tick = 0)
+        public static int PawnsOutOf(PawnContext ctx, int cell, int thought = NoThought, int tick = 0, bool collapse = false)
         {
             int landing = ctx.Cells.FirstFloorAtOrBelow(cell);
             if (landing == cell) return 0;
+
+            // How far, in layers: the landing's height is the fall (design 43 §7), and each landing
+            // of a cascade is its own fall, because a later collapse under her calls this again.
+            int layers = ctx.Size.FromIndex(cell).Y - ctx.Size.FromIndex(landing).Y;
+            bool hurts = layers >= 2 || (collapse && layers >= 1);
 
             int moved = 0;
             var pawns = ctx.Pawns.All;
@@ -90,6 +98,9 @@ namespace Odyssey.Sim.Pawns
                 pawn.ClearPath();
                 pawn.Destination = -1;
                 if (thought != NoThought) pawn.AddMemory(thought, tick);
+                // The injury, through the one owner of damage, so a fall that kills is mourned. The
+                // memory stays as well: a fall is frightening as well as painful.
+                if (hurts) ctx.Combat?.Fall(pawn, layers, ctx.CurrentTick);
                 moved++;
             }
 

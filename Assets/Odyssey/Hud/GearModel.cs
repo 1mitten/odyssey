@@ -211,7 +211,7 @@ namespace Odyssey.Hud
         public GearPreview? Preview { get; set; }
 
         // What the rows were last built from.
-        int _builtPawn = int.MinValue, _builtWeapon = int.MinValue, _builtCarry = -1, _builtPreview = -1;
+        int _builtPawn = int.MinValue, _builtWeapon = int.MinValue, _builtTier = -1, _builtCarry = -1, _builtPreview = -1;
         bool _builtDowned, _builtPerson;
 
         /// <summary>The row for one slot. Only meaningful after a refresh that returned true for a person.</summary>
@@ -241,21 +241,23 @@ namespace Odyssey.Hud
             }
 
             bool armed = snapshot.TryGetPawnAspect(pawn, CombatAspectNames.WeaponKey, out int def) && def >= 0;
+            int tier = snapshot.TryGetPawnAspect(pawn, CombatAspectNames.WeaponQualityKey, out int q) ? q : 0;
             GearCarry carry = !armed ? GearCarry.None : view.IsWeaponDrawn ? GearCarry.Drawn : GearCarry.AtHip;
             int weapon = armed ? def : -1;
             int preview = Preview != null ? (Preview.On ? 1 : 0) + (Preview.Version << 1) : -1;
 
-            if (_builtPerson && _builtPawn == pawn.Value && _builtWeapon == weapon && _builtCarry == (int)carry
+            if (_builtPerson && _builtPawn == pawn.Value && _builtWeapon == weapon && _builtTier == tier && _builtCarry == (int)carry
                 && _builtDowned == view.IsDowned && _builtPreview == preview)
                 return true;
 
             _builtPerson = true;
             _builtPawn = pawn.Value;
             _builtWeapon = weapon;
+            _builtTier = tier;
             _builtCarry = (int)carry;
             _builtDowned = view.IsDowned;
             _builtPreview = preview;
-            Build(pawn, weapon, carry, view.IsDowned);
+            Build(pawn, weapon, tier, carry, view.IsDowned);
             return true;
         }
 
@@ -270,7 +272,7 @@ namespace Odyssey.Hud
             if (had) Version++;
         }
 
-        void Build(PawnId pawn, int weapon, GearCarry carry, bool downed)
+        void Build(PawnId pawn, int weapon, int tier, GearCarry carry, bool downed)
         {
             Rows.Clear();
             Kit.Clear();
@@ -284,7 +286,7 @@ namespace Odyssey.Hud
             {
                 if (slot == GearSlot.Weapon)
                 {
-                    Rows.Add(WeaponRow(weapon, carry));
+                    Rows.Add(WeaponRow(weapon, tier, carry));
                     continue;
                 }
 
@@ -390,12 +392,16 @@ namespace Odyssey.Hud
             EffectA = string.Empty, EffectAValue = string.Empty, EffectB = string.Empty, EffectBValue = string.Empty,
         };
 
-        static GearRow WeaponRow(int weapon, GearCarry carry)
+        static GearRow WeaponRow(int weapon, int tier, GearCarry carry)
         {
             if (weapon < 0) return Nothing(GearSlot.Weapon, Registry.Label(BareHandsKey));
             GearRow row = Nothing(GearSlot.Weapon, ItemLabels.Label(weapon));
             row.State = GearSlotState.Filled;
             row.ItemDef = weapon;
+            // How well it was made (design 47 §11, ranged combat) beside the slot word, as a worn
+            // thing's is, rather than bracketed into the name as the inspect pane writes it.
+            row.Quality = tier;
+            row.QualityWord = QualityWord(tier);
             row.IconKey = ItemLabels.IconKey(weapon);
             row.Carry = carry;
             row.CarryWord = carry == GearCarry.Drawn ? Registry.Label(DrawnKey) : Registry.Label(AtHipKey);

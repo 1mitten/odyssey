@@ -64,7 +64,17 @@ namespace Odyssey.Sim.Pawns
         /// <see cref="Spawn(int)"/> makes; anything else is an animal, and the caller has checked
         /// the kind against <see cref="KindCount"/>.
         /// </summary>
-        public Pawn Spawn(int cell, int kind)
+        public Pawn Spawn(int cell, int kind) => Spawn(cell, kind, weaponDef: -1);
+
+        /// <summary>
+        /// Build a pawn of a kind at a cell holding <paramref name="weaponDef"/> — an item def with a
+        /// weapon block — in place of whatever the kind arrives holding (design 47 §3e: the debug
+        /// pistol bandit, a bandit and so still helmeted and vested, with a pistol and no new
+        /// kind). -1 is the kind's own table, which is what <see cref="Spawn(int, int)"/> sends.
+        /// <b>Bypasses <c>PawnContent.WeaponFor</c></b> for that one pawn; a gunman kind with its own
+        /// table is the later unit that restores the one owner.
+        /// </summary>
+        public Pawn Spawn(int cell, int kind, int weaponDef)
         {
             var pawn = new Pawn(new PawnId(_nextId++), cell, _ctx.Content, kind);
             // The world's seed unless a caller says otherwise (U40). This is what keeps every
@@ -75,8 +85,25 @@ namespace Odyssey.Sim.Pawns
             // What the kind arrives holding (design 33 §1: the bandit is armed). After the
             // adoption, so the rules see a pawn the registry knows; a kind naming no weapon is one
             // comparison. The loader never comes here — it restores the hand from the save.
-            if (_ctx.Content.ArmsOnSpawn(kind)) _ctx.WeaponRules.ArmOnSpawn(pawn, _ctx);
+            if (weaponDef >= 0) GiveWeapon(pawn, weaponDef);
+            else if (_ctx.Content.ArmsOnSpawn(kind)) _ctx.WeaponRules.ArmOnSpawn(pawn, _ctx);
+            // What it arrived holding is its own gear, and a bandit's gear is poor (design 47 §11).
+            WeaponQuality.Assign(_ctx, WeaponHand.Held(pawn, _ctx), WeaponQuality.BanditSkill);
             return pawn;
+        }
+
+        /// <summary>
+        /// Make one <paramref name="def"/> on the nearest cell that can take it and put it straight
+        /// into <paramref name="pawn"/>'s hand, as the arming on spawn and the debug Arm row do. A
+        /// def with no weapon block, or no room anywhere near, gives nothing.
+        /// </summary>
+        void GiveWeapon(Pawn pawn, int def)
+        {
+            if ((uint)def >= (uint)_ctx.Content.Items.Length || _ctx.Content.Items[def].weapon == null) return;
+            int cell = _ctx.Items.NearestCellWithSpace(_ctx.Cells, pawn.Cell, def, 1, JobDriver.DropSearchRadius);
+            if (cell < 0) return;
+            ThingId id = _ctx.Items.Spawn(def, cell);
+            WeaponHand.TakeUp(pawn, _ctx.Items.Get(id)!, _ctx);
         }
 
         /// <summary>
@@ -138,6 +165,12 @@ namespace Odyssey.Sim.Pawns
             int kind = intent.A;
             if (kind < 0 || kind >= KindCount) return IntentRejection.NotPermitted;
 
+            // B is a weapon to hold instead of the kind's own, plus one (design 47 §3e): 0 — what
+            // every row sent before — is the kind's own table. Not a weapon is refused.
+            int weaponDef = intent.B - 1;
+            if (weaponDef >= 0 && ((uint)weaponDef >= (uint)_ctx.Content.Items.Length
+                || _ctx.Content.Items[weaponDef].weapon == null)) return IntentRejection.NotPermitted;
+
             // The ceiling. Refused rather than clamped, and refused before anything is built, so a
             // caller that has asked for one too many is told so rather than quietly ignored.
             if (Count >= PawnCeiling) return IntentRejection.NotPermitted;
@@ -147,7 +180,7 @@ namespace Odyssey.Sim.Pawns
             int index = _ctx.Cells.NearestWalkableInColumn(cell.X, cell.Z, cell.Y);
             if (index < 0) return IntentRejection.NotPermitted;
             index = FreeSpawnCell(index);
-            Pawn pawn = Spawn(index, kind);
+            Pawn pawn = Spawn(index, kind, weaponDef);
             // An animal has no skills to be passionate about (design 29 §2).
             if (pawn.IsPerson) pawn.RollPassions();
             return IntentRejection.None;
@@ -182,10 +215,60 @@ namespace Odyssey.Sim.Pawns
                 if (cell < 0) continue;
 
                 ThingId id = _ctx.Items.Spawn(def, cell);
+                // A weapon dealt is a find (design 47 §11).
+                WeaponQuality.Assign(_ctx, _ctx.Items.Get(id), WeaponQuality.FoundSkill);
                 WeaponHand.TakeUp(pawn, _ctx.Items.Get(id)!, _ctx);
                 armed++;
             }
             return armed > 0 ? IntentRejection.None : IntentRejection.AlreadyInThatState;
+        }
+
+        /// <summary>
+        /// The debug menu's Hurt, Heal and Kill (design 43 §11): on the colonist nearest the cell
+        /// the menu was opened over. Hurt is a 20-point wound on a region by melee coverage; heal
+        /// fills the pool, clears the ledger and stands her up; kill goes through
+        /// <see cref="CombatSystem.Kill"/>, so she leaves a corpse and is mourned. Design 18 once
+        /// declined these because <c>Pawn</c> had no health; with one owner of damage and one way
+        /// to die, a debug kill is a real death rather than a despawn.
+        /// </summary>
+        public IntentRejection HandleDebugHealth(Intent intent)
+        {
+            CombatSystem? combat = _ctx.Combat;
+            if (combat == null) return IntentRejection.NotPermitted;
+            int tick = _ctx.World?.CurrentTick ?? _ctx.CurrentTick;
+            int at = _ctx.Size.Contains(intent.Cell) ? _ctx.Size.Index(intent.Cell) : -1;
+
+            Pawn? nearest = null;
+            int best = int.MaxValue;
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                Pawn pawn = _pawns[i];
+                if (!pawn.IsColonist || Melee.IsDead(pawn)) continue;
+                int distance = at < 0 ? 0 : _ctx.Distance(at, pawn.Cell);
+                if (distance >= best) continue;
+                nearest = pawn;
+                best = distance;
+            }
+            if (nearest == null) return IntentRejection.NotPermitted;
+
+            switch (intent.A)
+            {
+                case 0:
+                    combat.Hurt(nearest, null, 20_000, AfflictionKind.Wound, HitSet.Melee, -1, tick);
+                    return IntentRejection.None;
+                case 1:
+                    if (nearest.HpMilli == nearest.HpMaxMilli && !nearest.HasHealthState && !nearest.Downed)
+                        return IntentRejection.AlreadyInThatState;
+                    nearest.HpMilli = nearest.HpMaxMilli;
+                    nearest.Health = null;
+                    if (nearest.Downed) combat.Recover(nearest, tick);
+                    return IntentRejection.None;
+                case 2:
+                    combat.Kill(nearest, null, -1, tick);
+                    return IntentRejection.None;
+                default:
+                    return IntentRejection.NotPermitted;
+            }
         }
 
         /// <summary>How far round the spawn point a debug spawn looks for a free tile, in rings.</summary>
@@ -355,7 +438,30 @@ namespace Odyssey.Sim.Pawns
             new PatientJobDriver(),
             // Picking a berry bush (design 45 §6), JobHandle 25, after medical supplies.
             new ForageJobDriver(),
+            // The kitchen (design 48 §5), JobHandle 26, after the forager's.
+            new Cooking.CookJobDriver(),
+            // The ranged attack (design 47 §2d), JobHandle 27, after the kitchen's.
+            new AttackRangedJobDriver(),
         };
+
+        /// <summary>
+        /// Deal the skills a save older than <paramref name="formatVersion"/> could not carry
+        /// (design 47 §3a): Shooting, for a file below format 10. Called by <c>ColonyWorld</c> after
+        /// every section has loaded — not from this section's own load, because a pawn's kind
+        /// arrives in a later section and until then an animal reads as a colonist.
+        ///
+        /// <para>Through <see cref="Pawn.RollStartingSkills"/>, which draws in skill order and
+        /// writes only a skill still at nought: the first six come out as they were dealt, a
+        /// trained skill is never touched, and Shooting is dealt from the same stream a new colonist
+        /// of this seed and id would have been dealt it from. Passions are not re-dealt, so a
+        /// colonist from an older save has none for Shooting. A file at 10 or above does nothing.</para>
+        /// </summary>
+        public void BackfillSkills(int formatVersion)
+        {
+            if (formatVersion >= 10) return;
+            for (int i = 0; i < _pawns.Count; i++)
+                if (_pawns[i].IsPerson) _pawns[i].RollStartingSkills();
+        }
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------
 
@@ -501,11 +607,15 @@ namespace Odyssey.Sim.Pawns
                 // comes. Asked only of the downed, so a colony nobody has hurt pays one flag.
                 if (pawn.Downed && RescueRules.NeedsRescue(pawn, _ctx) && RescueRules.BedFor(pawn, pawn, _ctx) < 0)
                     writer.AddPawnAspect(pawn.Id, CombatAspects.RescueNoBed, 1);
+                // The body (design 43 §9), sparse: a pawn with nothing on its ledger publishes
+                // nothing new, so a healthy colony's rows did not move.
+                if (pawn.HasHealthState) HealthAspects.Publish(writer, pawn, _ctx.Content.DayTicks);
                 if (pawn.EquippedItem != 0)
                 {
                     var weapon = _ctx.Items.Get(new ThingId(pawn.EquippedItem));
                     if (weapon != null && !weapon.Despawned)
                         writer.AddPawnAspect(pawn.Id, CombatAspects.Weapon, weapon.DefIndex);
+                        if (weapon.Quality != 0) writer.AddPawnAspect(pawn.Id, CombatAspects.WeaponQuality, weapon.Quality);
                 }
 
                 // An animal publishes its kind and its pace and nothing else of what follows
@@ -634,7 +744,8 @@ namespace Odyssey.Sim.Pawns
 
                 if (item.Cell >= 0)
                 {
-                    writer.AddThing(new ThingView(item.Id, size.FromIndex(item.Cell), item.DefIndex, 0, item.Stack));
+                    writer.AddThing(new ThingView(item.Id, size.FromIndex(item.Cell), item.DefIndex, 0, item.Stack,
+                        quality: item.Quality));
                     continue;
                 }
 
@@ -663,7 +774,7 @@ namespace Odyssey.Sim.Pawns
                 }
 
                 writer.AddThing(new ThingView(item.Id, size.FromIndex(where), item.DefIndex, 0,
-                    item.Stack, item.ContainerId, (byte)slot));
+                    item.Stack, item.ContainerId, (byte)slot, item.Quality));
             }
         }
 
@@ -682,7 +793,7 @@ namespace Odyssey.Sim.Pawns
             if (job.DefIndex == JobIndex.Equip && job.PlayerForced) return job.TargetCell;
             // A building has no pawn id to draw a line to, so it rides the order cell (design 33
             // §5d, §13i): the cell of it she strikes at.
-            if (job.DefIndex == JobIndex.AttackMelee && job.PlayerForced && pawn.CombatTarget == 0) return job.TargetCell;
+            if (CombatJobs.IsAttack(job.DefIndex) && job.PlayerForced && pawn.CombatTarget == 0) return job.TargetCell;
             return -1;
         }
 
@@ -697,7 +808,7 @@ namespace Odyssey.Sim.Pawns
         public static int OrderTargetOf(Pawn pawn)
         {
             Job? job = pawn.CurrentJob;
-            return job != null && job.DefIndex == JobIndex.AttackMelee && job.PlayerForced ? pawn.CombatTarget : 0;
+            return job != null && CombatJobs.IsAttack(job.DefIndex) && job.PlayerForced ? pawn.CombatTarget : 0;
         }
 
         /// <summary>

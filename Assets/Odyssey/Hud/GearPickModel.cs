@@ -111,7 +111,7 @@ namespace Odyssey.Hud
                 _all.Add(new GearPickRow
                 {
                     IconKey = ItemLabels.IconKey(thing.DefIndex), Name = ItemLabels.Label(thing.DefIndex),
-                    QualityWord = string.Empty, Place = InventoryPlace.NameOf(thing.Contained, ordinal),
+                    Quality = thing.Quality, QualityWord = GearModel.QualityWord(thing.Quality), Place = InventoryPlace.NameOf(thing.Contained, ordinal),
                     Thing = thing, PreviewIndex = -1,
                 });
             }

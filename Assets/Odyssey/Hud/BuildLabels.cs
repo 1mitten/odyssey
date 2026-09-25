@@ -28,6 +28,8 @@ namespace Odyssey.Hud
             "ui.arch.tool.ladder", "ui.arch.tool.bed", "ui.arch.tool.door",
             "ui.arch.tool.shelf", "ui.arch.tool.campfire",
             "ui.arch.tool.conduit", "ui.arch.tool.generator", "ui.arch.tool.heater",
+            // The kitchen (design 48), BuildingHandle 12.
+            "ui.arch.tool.galley",
         };
 
         /// <summary>

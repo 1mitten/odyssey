@@ -899,6 +899,23 @@
     width: 280px;
 }
 
+/* A station's pane (design 49): wider than a store's, because a bill row carries seven
+   columns. BillsLayout.PaneWidth is the same number and BillsLayoutTests holds the two. */
+.inspect--bench {
+    width: 680px;
+}
+
+/* The bill list's square controls: the mode cell, the reorder pair, pause and remove. The border
+   lives here rather than inline so the hover can move it. */
+.bills__ctl {
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.26);
+}
+
+.bills__ctl:hover {
+    border-color: rgba(255, 255, 255, 0.50);
+}
+
 /* One fact of the readout: the label in a fixed-width column, the value beside it. The label
    column is a width rather than a gap so the values line up whatever the labels are. */
 .inspect__rows { margin-top: 2px; }

@@ -56,6 +56,39 @@ namespace Odyssey.Tests.Presentation
             return renderer;
         }
 
+        /// <summary>
+        /// The time budget (design 38 §20f): a frame stops meshing once its milliseconds are spent,
+        /// however many chunks the count would still allow — and meshes one whatever the clock says,
+        /// so the board still finishes arriving.
+        /// </summary>
+        [Test]
+        public void AFrameStopsMeshingWhenItsMillisecondsAreSpentButAlwaysMeshesOne()
+        {
+            RenderTestWorld world = Board();
+            using ChunkRenderer renderer = RendererFor(world, budget: 50);
+            renderer.MeshBudgetMs = 1e-6;
+
+            renderer.Render(1, new SliceSettings());
+            Assert.That(renderer.ChunksMeshedThisFrame, Is.EqualTo(1),
+                "a budget of a nanosecond should mesh exactly the one chunk a frame is always owed");
+            Assert.That(renderer.ChunksMeshDeferred, Is.GreaterThan(0), "nothing was waiting, so this proves nothing");
+
+            int frames = 1;
+            while (renderer.ChunksMeshedThisFrame > 0 && frames < 4096)
+            {
+                renderer.Render(1, new SliceSettings());
+                frames++;
+            }
+            Assert.That(renderer.ChunksMeshDeferred, Is.Zero, "one a frame never drained the board");
+
+            // And no time budget is the count alone.
+            world.Model.Remesh();
+            renderer.MeshBudgetMs = 0d;
+            renderer.MeshBudgetPerFrame = 4;
+            renderer.Render(1, new SliceSettings());
+            Assert.That(renderer.ChunksMeshedThisFrame, Is.EqualTo(4), "with no time budget the count decides");
+        }
+
         [Test]
         public void AFrameMeshesNoMoreThanItsBudget()
         {

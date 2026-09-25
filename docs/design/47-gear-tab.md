@@ -99,7 +99,7 @@ Every number is in `Odyssey.Hud.GearLayout`; Presentation writes none of its own
 | 12 side padding in the body | none of its own | The pane already pads every tab by 12; a second 12 would narrow the doll by 24 for nothing. |
 | "4 to 26 C", no degree sign | **"4 to 26 °C"** | The brief was wrong: both shipped fonts draw °, `HudFontTests` proves it, and `TemperatureLabels` owns the form (`Range`, whole degrees). |
 | Mock *Flashlight* | **Torch** | The registry has called `ui.item.flashlight` "Torch" since M3, and the registry wins. |
-| Crowbar "Normal" | no quality on a weapon | Weapons have no quality in the simulation; a made-up word on a real thing would lie. |
+| Crowbar "Normal" | **the weapon's real tier** beside the slot word, tinted | Built with none, because weapons had no quality; ranged combat gave them one (`CombatAspectNames.WeaponQuality`, `ThingView.Quality`) and the merge with `main` on 2026-09-25 wired it into the weapon tile, its popover and *Pick from stores*. The inspect pane brackets it into the name ("Pistol (Decent)"); the Gear tab writes it where a worn thing's goes. |
 | Tab strip "no radius, 2 px inset line" | the shipped strip | The specification says the header is unchanged; the strip keeps its USS. |
 | Loadout picker from the Assign tab | a small picker beside the pane: None, plus Doctor / Winter under the preview, and a line saying loadouts arrive with their editor | The column and the editor are G6. |
 | Kit hover name "through the game's tooltip" | `VisualElement.tooltip` | That is the game's tooltip. |

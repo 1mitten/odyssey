@@ -283,7 +283,34 @@ namespace Odyssey.Tests.Sim
         // M13 on the merged line, 2026-09-25: re-taken from the merged pack.
         // The scenery line merged with medical supplies, 2026-09-25: Job_Forage renumbered 23 -> 25
         // and Item_Berries/Item_Mushrooms 11-12 -> 12-13, after main's. Re-taken from the merged pack.
-        const ulong ContentFingerprint = 2326022620442813876UL;
+        //
+        // Moved a twenty-ninth time, deliberately, 2026-09-25, by the kitchen (design 48 §4-§5):
+        // Skill_Cooking, Work_Cooking and Job_Cook appended; the three meals appended as items;
+        // Recipe_Meal the first RecipeDef; ItemDef gained foodTier, rawIngredient, meat, ticksToRot
+        // and ateThought, set on the ration pack and the carrots; Thought_AteMeal went from +20 to
+        // +50 as the cooked meal's, and AteRation (+20), AteBurnt (-40) and AteRaw (-50) were
+        // appended; and the work types' scan ranks moved to put cooking between growing and
+        // cutting. Every golden moves with it, measured in the same commit.
+        // Both lines together, 2026-09-25: the kitchen merged with the wild foods; Job_Cook
+        // renumbered 25 -> 26 and the meals 12-14 -> 14-16. Re-taken from the merged pack.
+        // 2026-09-25, design 47 §3 (R0, the ranged line's contracts): Job_AttackRanged, Skill_Shooting
+        // and Item_Pistol appended; AttackDef gained a ranged block, CombatDef the shooting numbers
+        // (the per-cell curve, the floor, cover, the dead zone, the scatter, the scan cadence) and
+        // SpeciesDef interceptPerMille (person 400, hog 500, rat 40).
+        // 2026-09-25, design 47 on the owner's first play ("keep it more accurate"): shootingPerCell
+        // 876/943/983 and the pistol's bands 950/850/650/450; the pistol's label "pistol" (was sidearm).
+        // 2026-09-25, design 47 §12: the pistol's ranged block gained its own melee blow (blunt, 5,
+        // the fists' cadence) — an enemy within reach is clubbed, never shot.
+        // The ranged line merged with main (medical supplies, the scenery), 2026-09-25: re-taken from the merged pack.
+        // And merged with the kitchen (design 48), 2026-09-25: the ranged handles to 27 / 17 / 8; re-taken.
+        //
+        // Health (design 43), merged onto all of that, 2026-09-25: a new HealthDef, Health_Person,
+        // carrying the six regions and the pain, blood, tend and fall numbers, named by
+        // Species_Person's new `health` field. Its own Job_Tend, Item_Medkit and Doctor and
+        // Medicine rows were dropped for design 37's (design 43 §15), so no handle moved. No golden
+        // moved: the ledger is hashed only while a pawn has anything on it. Re-taken from the
+        // merged pack.
+        const ulong ContentFingerprint = 5726159748193892954UL;
 
 
         [Test]

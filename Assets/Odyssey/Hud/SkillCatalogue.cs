@@ -114,7 +114,9 @@ namespace Odyssey.Hud
             new Entry("ui.skill.construction", "construction", string.Empty),
             new Entry("ui.skill.mining", "mining", string.Empty),
             new Entry("ui.skill.salvage", NotSimulated, "salvage is hauled, not stripped"),
-            new Entry("ui.skill.cooking", NotSimulated, "meals are found, not made"),
+            // Live with the kitchen (design 48 §5): cooking trains it, and it buys speed at the
+            // stove and keeps the meal from burning.
+            new Entry("ui.skill.cooking", "cooking", string.Empty),
             new Entry("ui.skill.growing", "growing", string.Empty),
             new Entry("ui.skill.cutting", "cutting", string.Empty),
             new Entry("ui.skill.animals", NotSimulated, "no creature simulation"),
@@ -123,7 +125,9 @@ namespace Odyssey.Hud
             // Live with medical supplies (design 37): treating trains it, and it buys speed at it.
             new Entry("ui.skill.medicine", "medicine", string.Empty),
             new Entry("ui.skill.social", NotSimulated, "no other people"),
-            new Entry("ui.skill.shooting", NotSimulated, "no combat"),
+            // Live from the ranged line's contracts step (design 47 §3a): Skill_Shooting, rolled at
+            // the start and read by the per-cell accuracy curve.
+            new Entry("ui.skill.shooting", "shooting", string.Empty),
             // Live from the combat contracts step (design 33 §5): Skill_Melee, rolled at the start
             // and read by the hit and dodge curves.
             new Entry("ui.skill.melee", "melee", string.Empty),

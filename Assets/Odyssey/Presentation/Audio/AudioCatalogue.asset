@@ -157,6 +157,33 @@ MonoBehaviour:
     MaxDistance: 200
     Priority: 110
     Cooldown: 0
+  - Id: odyssey.sound.combat.shot
+    Clips:
+    - {fileID: 8300000, guid: 51f7e36874ce4798872acee77ee531b2, type: 3}
+    - {fileID: 8300000, guid: bf3fd593959b484a88c848bea144e4db, type: 3}
+    - {fileID: 8300000, guid: d4e531b54392445eade273525a46d9bc, type: 3}
+    Bus: 3
+    Volume: 0.85
+    VolumeVariance: 0.12
+    PitchVariance: 0.04
+    SpatialBlend: 1
+    MinDistance: 20
+    MaxDistance: 150
+    Priority: 90
+    Cooldown: 0.03
+  - Id: odyssey.sound.combat.shot-far
+    Clips:
+    - {fileID: 8300000, guid: 28b8b00ab7a44014b3e01980628383db, type: 3}
+    - {fileID: 8300000, guid: cc7c9bb104fb43cc831ad0f47bd7c83f, type: 3}
+    Bus: 3
+    Volume: 0.8
+    VolumeVariance: 0.1
+    PitchVariance: 0.03
+    SpatialBlend: 1
+    MinDistance: 50
+    MaxDistance: 400
+    Priority: 120
+    Cooldown: 0.06
   - Id: odyssey.sound.alert.normal
     Clips:
     - {fileID: 8300000, guid: 4fbee70b8ee55175ff8cf6688ed11531, type: 3}

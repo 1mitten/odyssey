@@ -27,7 +27,9 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly string[] Keys =
         {
-            "ui.res.meal", "ui.res.scrap", "ui.res.wood", "ui.res.stone", "ui.res.ironore", "ui.res.coal",
+            // Handle 0 is the ration pack, and is named as one since the kitchen (design 48 §3):
+            // it had borrowed ui.res.meal, which the cooked meal below takes back.
+            "ui.res.rations", "ui.res.scrap", "ui.res.wood", "ui.res.stone", "ui.res.ironore", "ui.res.coal",
             "ui.res.carrots",
             // The four melee weapons (design 33 §1, C3), in ItemHandle order 7 to 10.
             "ui.item.bat", "ui.item.crowbar", "ui.item.machete", "ui.item.arcblade",
@@ -35,11 +37,26 @@ namespace Odyssey.Hud
             "ui.res.medkit",
             // The wild foods (design 45 §6), ItemHandle 12 and 13, after medical supplies.
             "ui.res.berries", "ui.res.mushrooms",
+            // The kitchen (design 48 §4), handles 14 to 16, after the wild foods: the meal, the vegetable meal, the burnt one.
+            "ui.res.meal", "ui.res.meal.veg", "ui.res.meal.burnt",
+            // The pistol (design 47), ItemHandle 17, after the kitchen's meals.
+            "ui.item.pistol",
         };
 
         public static string IconKey(int def) =>
             def >= 0 && def < Keys.Length ? Keys[def] : "ui.res.scrap";
 
         public static string Label(int def) => Registry.Label(IconKey(def));
+
+        /// <summary>
+        /// A thing's name with how well it was made after it — "Pistol (Decent)" — or the bare name for
+        /// a thing with no tier (design 47 §11). Both words are the registry's; only the brackets are
+        /// the layout's.
+        /// </summary>
+        public static string Label(int def, int quality)
+        {
+            string key = QualityLabels.Key(quality);
+            return key.Length == 0 ? Label(def) : Label(def) + " (" + Registry.Label(key) + ")";
+        }
     }
 }

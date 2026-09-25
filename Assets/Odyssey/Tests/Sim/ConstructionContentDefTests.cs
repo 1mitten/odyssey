@@ -111,7 +111,12 @@ namespace Odyssey.Tests.Sim
         // Moved once, deliberately, 2026-09-24, C6 buildings as targets (design 33 §13c): the
         // campfire 60, conduit 40, generator 300 and heater 100 `maxHitPoints`, all INVENTED,
         // in the XML and the code oracle together. Nothing else in the table moved.
-        const ulong BuildingFingerprint = 5425507577810914397UL;
+        // Moved once, deliberately, 2026-09-25, the kitchen (design 48 §5): Building_Galley
+        // appended at handle 12 — 350 W, 15 stuff and 10 scrap, 300 ticks, 100 hit points — in the
+        // XML and the code oracle together. Nothing else in the table moved.
+        // Moved on merging main (design 45): the galley's edifice renumbered 17 -> 22, after the
+        // wild things, which reached main first. Re-taken from the merged table.
+        const ulong BuildingFingerprint = 12620201722140175747UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone
@@ -130,7 +135,10 @@ namespace Odyssey.Tests.Sim
         /// per cent of a plain bed's rest — the owner's interview answers, 2026-09-17. Update this
         /// only when the owner retunes a tier, and say which one moved.
         /// </summary>
-        const ulong QualityFingerprint = 11231177996547656315UL;
+        // 2026-09-25, design 47 §11: every tier gained weaponDamagePerMille and weaponAccuracyPerMille
+        // (Poor 900/900, Normal 1000/1000, Decent 1100/1050, Uber 1200/1100, Epic 1350/1150); no
+        // rest effectiveness moved. The owner asked for weapon quality "like you do with beds".
+        const ulong QualityFingerprint = 6254407845041903790UL;
 
         [Test]
         public void TheBuildingTableIsStillWhatItWas()

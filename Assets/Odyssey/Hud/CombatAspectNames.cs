@@ -24,6 +24,9 @@ namespace Odyssey.Hud
         /// <summary>The item def index of the weapon in the hand; absent for bare hands.</summary>
         public const string Weapon = "odyssey.pawn.weapon";
 
+        /// <summary>The held weapon's quality tier; absent for none (design 47 §11).</summary>
+        public const string WeaponQuality = "odyssey.pawn.weapon.quality";
+
         /// <summary>
         /// The <see cref="PawnId"/> value this pawn was ordered to attack by the player; absent for
         /// a fight she started herself and for a rescue (design 33 §18b). What the ring reads.
@@ -42,6 +45,7 @@ namespace Odyssey.Hud
         public static readonly AspectKey HpKey = AspectKey.Of(Hp);
         public static readonly AspectKey HpMaxKey = AspectKey.Of(HpMax);
         public static readonly AspectKey WeaponKey = AspectKey.Of(Weapon);
+        public static readonly AspectKey WeaponQualityKey = AspectKey.Of(WeaponQuality);
         public static readonly AspectKey OrderTargetKey = AspectKey.Of(OrderTarget);
         public static readonly AspectKey RescueNoBedKey = AspectKey.Of(RescueNoBed);
         public static readonly AspectKey ResponseKey = AspectKey.Of(Response);
