@@ -13143,6 +13143,19 @@ few per cent, under, behind or nothing is the ray passing through and never allo
 `SaveProbe` gained a hearth report on the way: every campfire in a save, which is the hearth, the
 ground round each, and what the pane is told when each is clicked.
 
+## 2026-09-25 — What a chunk costs to mesh (design 38 §26)
+
+The owed re-measure of the meshing budget. Two findings. The per-chunk figure the design carried,
+0.43 ms, was the frame's delta shared out over the chunks meshed in it; timed round `Mesh` itself it
+is 0.31–0.43 on Standard, and the part the design suspected, the skin's mesh upload, is 0.003. A
+quarter of it was the ground relief — four sines a point, at the same lattice of centres and corners,
+every re-mesh — so the board's field is now remembered on that lattice, bit for bit, and a chunk is
+23–30 % cheaper. And the average was the wrong number to size a budget on: draining a whole-board
+re-mesh at eleven chunks a frame, the worst frame spent 8.6–12 ms meshing, because the grassy chunks
+near the camera cost about a millisecond each. The budget is milliseconds as well as chunks now, two of
+them, which also stops a count charging a slower laptop more for the same chunks; the worst frame is
+2.8–3.8 ms and a board takes a third of a second rather than a sixth to finish arriving.
+
 
 ## 2026-09-25 — Cooking, interviewed and designed (CK)
 

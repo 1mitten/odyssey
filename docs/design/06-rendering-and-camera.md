@@ -1638,6 +1638,13 @@ Both are invisible at 150 fps and neither is a 165 ms freeze. **That is the whol
 the right way round: a chunk two frames late is 13 ms of being slightly wrong; the alternative is a
 sixth of a second of nothing at all.
 
+**Amended 2026-09-25 (design 38 §26).** The budget is milliseconds as well as chunks:
+`MeshBudgetMs`, 2.0 by default, and whichever of it and the count is reached first ends the frame's
+meshing. The ground skin had taken a chunk from the 0.18 ms this section sized eleven on to about
+0.3–0.4 ms, and the thick meadow near the camera to about a millisecond, so eleven had become a
+worst frame of 8.6–12 ms while a whole board drained. A count also charges a slower machine more.
+With both, the worst frame is 2.8–3.8 ms and the board takes 14–21 frames to drain instead of 9–11.
+
 ### The one exception: building a world
 
 On a new game every chunk is never-meshed, and budgeting that would dribble the board in over
