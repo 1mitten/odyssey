@@ -1,7 +1,9 @@
 # 43 — Jumping a one-cell stream
 
-**Status:** designed and built 2026-09-25, **not yet played.** Branch `claude/funny-allen-2qipcn`.
-The owner's decisions in §2 are settled; the price in §3 is derived, not chosen.
+**Status:** designed and built 2026-09-25, **not yet played, and the Unity tier has not been run**
+(the session that built it had no Unity: the simulation half is proven in the fast and Long tiers,
+the drawing half only by reading). Branch `claude/funny-allen-2qipcn`. The owner's decisions in §2
+are settled; the price in §3 is derived, not chosen.
 
 **Read this before touching** `NavGraph.IsJump`, `NavGraph.IsJumpAcross`, `NavGraph.JumpCost`,
 `MoveCost.Jump`, `MovementSystem.StepCost`, `Pawn.JumpLanding`, `CombatSection` layout 4,
@@ -145,11 +147,14 @@ water, and the hop out costs what it always has.
 the kind word (22 and 23 are promised to the power line; 24 and 25 are the response), so a colony
 that never jumps hashes as it did before.
 
-**Published** as `PawnFlags.JumpingShort` while the landing is a layer below. The drawing needs it
-and the audio listens for its end.
+**Published** as `PawnView.JumpingShort` while the landing is a layer below. A bool beside
+`Seated` rather than a `PawnFlags` bit, because that byte is full. The drawing needs it, because a
+short jump's step has exactly the shape of a drop off the bank, and the audio listens for its end.
 
-**The debug menu's Pawns tab has *Jumps always fail***, because a 3 % event is not something a
-playtest can wait for. `IntentKind.DebugJumpsFail`, unsaved and unhashed.
+**The debug menu's Cheats tab has *Jumps always fail***, because a 3 % event is not something a
+playtest can wait for. `IntentKind.DebugJumpsFail`, appended last so no recorded intent
+renumbers, applied while paused, unsaved and unhashed. It is the one thing in this unit a player
+could see named, so `ui.debug.jumpsfail` is in `icon-keys.csv` and the wiki moved by one row.
 
 ## 7. The drawing
 
@@ -167,8 +172,15 @@ playtest can wait for. `IntentKind.DebugJumpsFail`, unsaved and unhashed.
   centre, where `WaterLine` takes over — a hand-over gap of nought by construction.
 - **Clips**: `A_Jump_Walking` and `A_Land_Walking` (Base Locomotion, Masc and Femn, in place),
   played in the combat action slot at speed nought with their time set by hand, the way a sword
-  swing is timed to its tick. With no clip — the runner, or a clone without the packs — the gait is
-  held through the flight, as it is through a hop.
+  swing is timed to its tick. The jump takes the slot only when the fight has nothing to show. With
+  no clip — the runner, or a clone without the packs — the gait is held through the flight, as it is
+  through a hop.
+- **Both clips live in one file**, `A_Jump_Walking_*.fbx`, so a clip row gained `fileName` and the
+  catalogue build resolves the jump rows by file *and* exact clip name (`ResolveJumpClips`). The
+  generic by-file lookup would have returned whichever clip came first. **The two rows were added
+  to the committed `ModuleCatalogue.asset` by hand, with empty clip references**, so the runner has
+  them; the owner's rebuild fills the references, and `JumpClipRowTests` fails until it does on a
+  machine with the pack.
 - **Footing** is faded out in the air. **The load** rides the palms, because the carry pose is
   applied after the clip.
 - **The far form** is placed by `PawnPose.Of` and glides the same arc.
@@ -184,18 +196,38 @@ playtest can wait for. `IntentKind.DebugJumpsFail`, unsaved and unhashed.
 - **No run-up.** Drafted colonists jump faster only because they move faster.
 - **Deep water stays impassable.**
 
-## 9. Tests
+## 9. Tests and measurements
 
-Sim, fast tier — `JumpTests`, `HopPriceHasOneOwnerTests` (extended), the randomised-edit rebuild
-fixture (a channel added). Presentation, EditMode — `JumpArcTests`, and the jump arm of
-`ShorelineWalkTests`, which also prints how many one-cell crossings the played board has.
-PlayMode — `JumpDrawnTests`, which asks `CanDrawColonists` and ignores itself on the runner.
+**Sim, fast tier** — `JumpTests` (the rule, the price, the region link, animals, and
+`IncrementalRebuildMatchesAFullRebuildWithStreamsInIt`, the sibling of the randomised-edit rebuild
+test with water in it — mutation-checked: never clearing the jump's dedupe table fails it) and
+`JumpColonyTests` (a real colonist through the composition root: a clean jump that stays dry, a
+short one that lands at the jump's price and climbs out, the lockstep twin, a save mid-jump for both
+outcomes that never rolls again, an order given mid-jump, the published short jump, the odds).
+`HopPriceHasOneOwnerTests` now guards `MoveCost.Jump`.
+
+**Presentation, EditMode, not yet run** — `JumpArcTests` (the shares, gravity, the ends, walking
+pace, the per-frame displacement budget, the hand-over to the water line, the clip order, and
+`PawnPose.Of` drawing a jump from the arc) and `JumpClipRowTests` (the committed rows and, with the
+pack, that each clip is the right in-place Humanoid clip of the length the arc assumes).
+
+**The played board has plenty to jump** (`ThePlayedBoardHasStreamsNarrowEnoughToJump`, 120 × 120 ×
+16, the played map):
+
+| Seed | One-cell crossings | Wadeable cells |
+|---|---|---|
+| 1 | 86 | 596 |
+| 2 | 73 | 658 |
+| 3 | 89 | 651 |
+
+**Goldens.** Only `PlayedBoard.Simulated` moved, as predicted: its `Generated` hash, the stream-free
+`Meadow` and the `City`, and every soak run held. See §9a for what the probe said moved.
 
 ## 10. Test procedure, by hand
 
 1. New game on the wooded meadow. Find a stream one cell wide.
 2. Right-click a colonist to the far bank. **They should jump, not swim.**
-3. Debug menu → Pawns → *Jumps always fail*. Do it again. **They should land in the water with a
+3. Debug menu → Cheats → *Jumps always fail*. Do it again. **They should land in the water with a
    splash and climb out on the far side.**
 4. Give a hauler a load whose route crosses the stream. **The load should stay in the hands.**
 5. Find a stream three cells wide. **They should wade it, as before.**

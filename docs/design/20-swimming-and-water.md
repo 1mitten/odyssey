@@ -4,6 +4,14 @@
 simulation half — deep water becoming passable, the helpless-swimmer rules — is **not**. The
 owner's decisions in §2 and §2a are settled; nobody has pressed Play on the float.
 
+> **Since 2026-09-25 a one-cell stream is jumped, not swum** (design 43, owner: *"swimming isn't
+> necessary most of the time"*). A person on one bank of a stream one cell wide jumps to the other
+> at walking pace; wider water is still waded and floated exactly as below, and a jump that falls
+> short lands in the water and is floated out. Deep water stays impassable — decision 2 below is
+> still unbuilt. Two lines here are stale and corrected in place rather than rewritten: §3 lists two
+> traverse modes where there are five (`NavGrid.TraverseMode`), and §6's "no animals swimming …
+> until there is an animal" is now `TraverseModes.Swims`, which keeps both animals out of water.
+
 ## 2a. The float came back for a second round (owner, 2026-09-17)
 
 After the depth experiment, the owner played again: *"I saw someone walk under water again when it

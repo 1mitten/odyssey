@@ -141,6 +141,15 @@ namespace Odyssey.Presentation.Audio
         public const string DropLand = SoundPrefix + "drop.land";
 
         /// <summary>
+        /// A jump over a stream falling short: a body landing in the water (design 43 §7).
+        /// <b>Named, and in no catalogue yet</b>, like <see cref="DropLand"/> — the director
+        /// declines a sound it has no clip for, so this plays the day a splash is sourced under
+        /// ADR 0010 and added, and not before. Raised by <see cref="AudioDirector"/> from the
+        /// published frame, on the first frame a pawn that was falling short stands in the water.
+        /// </summary>
+        public const string Splash = SoundPrefix + "splash";
+
+        /// <summary>
         /// The neutral chime: something has happened that is worth a glance and is nobody's
         /// emergency. What an <see cref="Hud.AlertSeverity.Notice"/> row sounds like.
         /// </summary>

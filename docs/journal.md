@@ -12285,3 +12285,37 @@ moves.
 One test had been measuring swing speed without saying so. Three bandits at a one-sided wall struck
 three walls with the machete and two with the slower blunt weapons, because fewer walls fell in the
 run. The test is now pinned to the machete it was measured with. Nobody stood about either way.
+
+## 2026-09-25 — Jumping a one-cell stream (JP)
+
+The owner: *"A colonist/bandit assumes to swim across a stream. If the stream is 1 tile … the colonist
+will jump across and there is already synty animation."* An interview settled the rest: one cell only,
+people with their load, water only, wading kept, walking pace, and a jump that can fail into the
+water with the harm left for the health model (design 43 §2).
+
+Two things in the code decided more than the interview did. **A stream is not level with its banks**
+— it is cut a layer down — so crossing one was never a wade at all but a drop in and a hop out, 290
+against 200 for two cells of grass. And **the cell search's heuristic counts one `Orthogonal` a
+cell**, so a two-cell step priced under 200 would have made A* inadmissible everywhere for a rare
+edge. That fixed the price at exactly 200, which is also the owner's "walking pace".
+
+The first two-cell step the simulation has ever had arrived through three doors that each had to be
+opened. The mover charged any same-layer step at the entered cell's price, so a jump would have been
+billed as one cell of grass: `HopPriceHasOneOwnerTests` guards `MoveCost.Jump` now. The region graph
+needed a link kind of its own, because `Portal` links are counted as ways between layers. And the
+per-tick legality check would have dropped every path through a jump. The dirty radius did **not**
+need to grow, which was the plan's worst guess: the link is owned by the block holding its near end,
+every cell the rule reads is within one cell of the gap, and a sibling of the randomised-edit rebuild
+test with water in it proves it. It fails if the jump's dedupe table is never cleared, which is how it
+was checked for teeth.
+
+**The roll is made at take-off and saved on success too**, so neither a load nor an order given in
+mid-air rolls it twice. The order case was found by reading `JobSystem.Interrupt`, which clears the
+path and re-adopts the step: the landing had to be carried across it. **The played board has 73 to 89
+one-cell crossings a seed**, so colonists meet them. Only the played board's simulated golden moved;
+the colony probe against `main` differs only in where colonists stand, their step progress and seven
+fewer wander legs, with needs, items and experience identical.
+
+**The Unity tier was not run.** This session had no Unity, so the drawing — `JumpArc`, the clips in
+the combat slot, the splash — is unproven beyond reading, and the catalogue rows were added to the
+asset by hand with empty clip references until the owner's rebuild fills them.

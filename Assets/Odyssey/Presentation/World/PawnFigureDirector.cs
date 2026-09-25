@@ -1111,6 +1111,11 @@ namespace Odyssey.Presentation.World
             _frameTicks = snapshot.Tick + tickAlpha;
             FightingFigures = 0;
 
+            // And the part-tick itself, for the jump's clips (design 43 §7): timed from the step
+            // exactly as PawnPose places the figure on it, through PawnPose.StepProgress.
+            _tickAlpha = tickAlpha;
+            _movePerTick = movePerTick;
+
             // Is the world actually running? The snapshot says so — see WorldSnapshot.GameSpeed.
             //
             // It used to be inferred from the tick standing still, with a quarter of a second of
@@ -1585,6 +1590,10 @@ namespace Odyssey.Presentation.World
                 figure.SeenSerial = pawn.GestureSerial;
             }
 
+            // A jump over a stream (design 43 §7): how far off the ground, and which clip is due —
+            // before the fight is posed, because the jump borrows the fight's slot.
+            PoseJump(figure, in pawn);
+
             // The fight: the action it is drawing and the held states, before anything below
             // reads them — the downed lie rides the sleeper's weight.
             PoseCombat(figure, in pawn, frameTime, running);
@@ -1750,8 +1759,12 @@ namespace Odyssey.Presentation.World
             // water carries what it was carrying, works where it was working, and pays the third
             // speed the cost class has always charged. The helpless-swimmer rules are deep water's
             // and are not built — docs/design/20-swimming-and-water.md.
-            float afloat = ForceSwim ?? WaterLine.Weight(World, pawn.Cell, pawn.NextCell,
-                Mathf.Clamp01(pawn.MovePercent * 0.01f));
+            // A jump falling short is the exception (design 43 §7): its step runs from the bank
+            // into the water like a wade, but the body is in the air for most of it and must not
+            // lie down until it is nearly at the water line.
+            float afloat = ForceSwim ?? (JumpArc.IsJump(in pawn) && pawn.JumpingShort
+                ? JumpArc.ShortSwimWeight(PawnPose.StepProgress(in pawn, _tickAlpha, _movePerTick))
+                : WaterLine.Weight(World, pawn.Cell, pawn.NextCell, Mathf.Clamp01(pawn.MovePercent * 0.01f)));
 
             // Forced weight is taken whole rather than eased towards, so a harness that sets it
             // gets the pose on the frame it asks rather than a third of a second later — the same
@@ -1882,7 +1895,7 @@ namespace Odyssey.Presentation.World
             // blend and did not find, because it was never in the blend.
             Vector3 walked = position - steer;
             figure.Speed = ObserveSpeed(figure.Speed, figure.SimPosition, walked, deltaTime, settled,
-                hopping: pawn.Moving && PawnPose.IsDrawnAsAHop(World, in pawn));
+                hopping: pawn.Moving && (PawnPose.IsDrawnAsAHop(World, in pawn) || JumpArc.IsJump(in pawn)));
             figure.Settled = true;
             figure.SimPosition = walked;
 

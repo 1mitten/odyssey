@@ -308,7 +308,7 @@ namespace Odyssey.Presentation.Audio
             StepAmbience(deltaTime, focus, activeLayer);
             StepPhaseLoops(deltaTime, frame.Tick, activeLayer);
             StepLandings(frame);
-
+            StepSplashes(frame);
         }
 
         // ---- things landing (design 23 §6) ---------------------------------------------------
@@ -337,6 +337,32 @@ namespace Odyssey.Presentation.Audio
 
             _airborne.Clear();
             _airborne.AddRange(_airborneNow);
+        }
+
+        // ---- a jump falling short (design 43 §7) ----------------------------------------------
+
+        readonly Dictionary<int, CellRef> _fallingShort = new();
+        readonly Dictionary<int, CellRef> _fallingShortNow = new();
+
+        /// <summary>
+        /// A pawn that was falling short of a jump last frame and now stands in the water it was
+        /// falling into has landed in it. Keyed on the water cell, so a jump dropped by anything
+        /// else — an order, a load, a knock — makes no sound, because it never reached the water.
+        /// </summary>
+        void StepSplashes(WorldSnapshot frame)
+        {
+            _fallingShortNow.Clear();
+            ReadOnlySpan<PawnView> pawns = frame.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                if (pawns[i].JumpingShort) _fallingShortNow[pawns[i].Id.Value] = pawns[i].NextCell;
+                else if (_fallingShort.TryGetValue(pawns[i].Id.Value, out CellRef water) && pawns[i].Cell == water)
+                    PlayOneShot(SoundIds.Splash,
+                        CellMetrics.FloorCentre(water) + Vector3.up * (CellMetrics.SizeY * ChunkMesher.WaterSurface));
+            }
+
+            _fallingShort.Clear();
+            foreach (var entry in _fallingShortNow) _fallingShort[entry.Key] = entry.Value;
         }
 
         /// <summary>

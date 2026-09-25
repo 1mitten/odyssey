@@ -23,6 +23,22 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does a colonist jump a one-cell stream, and does it read as a jump?** (`claude/funny-allen-2qipcn`,
+  design 43.) **Rebuild the module catalogue first** (the jump rows are in the asset with empty clip
+  references until then). New game, find a stream one cell wide, right-click a drafted colonist to
+  the far bank. They walk to the lip, gather, leap and land on the far lip without touching the
+  water. A wrong answer is a figure that slides across level with the bank (the clips did not
+  resolve), a pause at the lip long enough to read as stuck, feet sliding on landing, or a colonist
+  who still swims a one-cell stream.
+- **Does a failed jump read as a slip and not a bug?** (same.) Debug menu > Cheats > *Jumps always
+  fail*, then the same order. They leap, come down in the water with a splash (silent until a splash
+  is sourced), float and climb out on the far side. A wrong answer is a figure that lies down in
+  mid-air, a snap as it reaches the water, or a colonist stuck in the stream.
+- **Does a hauler keep the load in its hands over the jump?** (same.) A wrong answer is the load
+  left behind at the lip or drawn in the air beside the colonist.
+- **Is one in thirty-three the right rate?** (same.) With the switch off, watch colonists cross for a
+  day. A wrong answer is never seeing one fall in, or seeing it so often it reads as clumsy.
+
 - **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
   Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest
   over bare arms and black trousers, and carry a crowbar or a bat; click one and the pane shows a

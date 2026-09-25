@@ -306,6 +306,38 @@ namespace Odyssey.Tests.Sim
                 : NaturalContent.TerrainAir;
         }
 
+        /// <summary>
+        /// How many one-cell crossings the board the game loads actually has (design 43 §8). A
+        /// measurement as much as a test: if the played board had none, no golden could move, no
+        /// colonist would ever jump in play, and the owner would find nothing to try.
+        /// </summary>
+        [TestCase(1u)]
+        [TestCase(2u)]
+        [TestCase(3u)]
+        public void ThePlayedBoardHasStreamsNarrowEnoughToJump(uint seed)
+        {
+            var size = new GridSize(120, 120, 16);
+            CellGrid cells = PlayedMap.Generate(size, seed);
+            var nav = new NavGraph(cells);
+            nav.MarkAllDirty();
+            nav.Rebuild();
+
+            int jumps = 0, wet = 0;
+            for (int y = 0; y < size.SizeY; y++)
+            for (int z = 0; z < size.SizeZ; z++)
+            for (int x = 0; x < size.SizeX; x++)
+            {
+                int c = size.Index(x, z, y);
+                if (nav.Grid.CostClass[c] == NaturalContent.CostClassShallowWater && (nav.Grid.Flags[c] & NavFlags.Walkable) != 0) wet++;
+                if (x + 2 < size.SizeX && nav.IsJumpAcross(c, size.Index(x + 2, z, y), TraverseMode.Colonist)) jumps++;
+                if (z + 2 < size.SizeZ && nav.IsJumpAcross(c, size.Index(x, z + 2, y), TraverseMode.Colonist)) jumps++;
+            }
+
+            TestContext.Out.WriteLine($"MEASURED seed {seed}: {jumps} one-cell crossings over {wet} wadeable cells");
+            Assert.That(wet, Is.GreaterThan(0), "the played board grew no water");
+            Assert.That(jumps, Is.GreaterThan(0), "the played board has water and nowhere narrow enough to jump it");
+        }
+
         static int CountJumps(NavGraph nav, GridSize size)
         {
             int count = 0;
