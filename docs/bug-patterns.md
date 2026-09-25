@@ -603,6 +603,54 @@ fixture had just queued still going through. It landed on the dev machine and di
 
 ## The register
 
+### 2026-09-25 — A gate invariant that counted the ticks a driver was not allowed to look (P1, in a test)
+
+**Symptom.** `BanditSoakTests.TheGateWithRaids` asserts that no attacker stays on *Fighting* at a
+target already gone for more than a tick. On `main` it passed; with PR #184 merged — new Defs, none of
+its code on the path — one seed read 40 to 109 ticks. The report blamed the combat retarget logic.
+
+**Cause.** The retarget logic was right. Every stale streak was a **drafted colonist, stunned**, whose
+bandit went down while she was stunned (the message said "a bandit"; the check covers every
+attacker). The job loop holds a stunned pawn's driver by design — a stun is a pause, not an
+interrupt (design 33 §5c) — so her attack could not end until the stun wore off, and it ended on the
+first tick after. The gate's watcher re-derived "should have noticed by now" without the job loop's
+hold rule: two owners of one rule, one of them incomplete. It passed on one random stream and failed
+on another, which is what made it look like a latent sim bug that #184 "exposed".
+
+**How it was found.** Measured, not reasoned: the watcher printed every field that could hold a
+driver at each new record — stun, knock-down, a kept step, the toil, the target's state — and one run
+showed all of them.
+
+**Fix.** The hold rule is one predicate, `JobSystem.HoldsDriver` (landing a kept step, stunned,
+knocked down), used by the job loop and by the gate, which counts only ticks the next job loop is free
+to act. The loop's behaviour is identical; no golden moved. With #184 merged all three seeds read 1;
+with the hold check withheld seed 2 reads 109 again. `33-combat.md` §21b.
+
+**The check this earns.** *An invariant about whether something reacted in time must ask the system
+whether it was allowed to react*, not copy the conditions: the copy is right until the system gains a
+reason to wait. And when a test flips on an unrelated merge, find what the failing trace was doing
+before deciding the code is fragile.
+
+### 2026-09-25 — A claim handed to a pawn outlives the thing it was a claim on (P14-adjacent)
+
+**Symptom, recorded at the combat Phase 4 integration and fixed after the gate.** A bed demolished
+under a patient left her holding its head-cell reservation until she got up, days later, so a new bed
+raised on that cell read as taken.
+
+**Cause.** The rescue's lay hands the bed's reservation to the patient, and her `Job_Downed` holds it
+until it ends. Every holder of a claim usually has a job that re-asks whether its target is still
+there — the sleeper's, the rescuer's `StillFree` — but a patient's job does nothing but wait, so
+nothing re-asked. `ConstructionGrid.Demolish` already cleared everything else that points at a
+building that has gone (damage rows, deconstruct orders, stores, power); claims were not on its list.
+
+**Fix.** `Demolish` releases a downed pawn's claim on a bed it removes, from the table and her own
+`HeldReservations` together. `RescueTests.ABedDemolishedUnderHerLetsGoOfHer`, seen failing without it.
+`33-combat.md` §11h.
+
+**The check this earns.** *When a claim is handed to a pawn whose job only waits, the thing that
+removes the target must release it.* A job that waits never re-asks; that is the same shape as the
+lost step (2026-09-24, below): a wait is a place nobody looks again.
+
 ### 2026-09-24 — A wait that trusts a path the save does not keep (P14-adjacent; found by the gate)
 
 **Symptom, found by the combat gate before anybody played it.** A save taken at the first swing of

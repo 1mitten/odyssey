@@ -467,6 +467,51 @@ namespace Odyssey.Tests.Hud
             Assert.That(debug.Open, Is.False);
             Assert.That(raised, Is.EqualTo(2));
         }
+
+        [Test]
+        public void TheWeatherTabsSwitchesStartOffAndAnnounceEachChange()
+        {
+            var debug = new DebugDirector();
+            int raised = 0;
+            debug.WeatherChanged += () => raised++;
+
+            Assert.That(debug.RainAsParticles, Is.False, "the GPU rain is the proposal, the particles the control");
+            Assert.That(debug.WetGlossOnly, Is.False, "richer is the default wet look");
+            debug.SetRainAsParticles(true);
+            debug.SetRainAsParticles(true);
+            debug.SetWetGlossOnly(true);
+            debug.SetWetGlossOnly(true);
+            Assert.That(raised, Is.EqualTo(2), "setting what is already set says nothing");
+        }
+
+        [Test]
+        public void EveryWeatherRowCommandsTheSimulationWithAKindItCanRoll()
+        {
+            // Since the weather system (design 43 §8) a row is a command, not a look.
+            foreach (DebugDirector.WeatherPreset p in DebugDirector.WeatherPresets)
+            {
+                Intent intent = p.ToIntent();
+                Assert.That(intent.Kind, Is.EqualTo(IntentKind.DebugSetWeather), p.Key);
+                Assert.That(intent.A, Is.InRange(0, 3), $"{p.Key} names no weather kind");
+                Assert.That(intent.B, Is.InRange(1, 1000), $"{p.Key}'s intensity");
+                Assert.That(intent.C, Is.EqualTo(1), $"{p.Key} should blend in over seconds, not two game hours");
+                Assert.That(DebugDirector.IconKeys, Does.Contain(p.Key), $"{p.Key} is not held to the naming CSV");
+            }
+            Assert.That(DebugDirector.WeatherPresets[0].Kind, Is.EqualTo(WeatherKind.Clear), "the first row clears the sky");
+            Assert.That(System.Array.Exists(DebugDirector.WeatherPresets, p => p.Kind == WeatherKind.Storm),
+                "the storm cannot be set by hand");
+            Assert.That(DebugDirector.TabKey(DebugTab.Weather), Is.EqualTo(DebugDirector.WeatherTabKey));
+        }
+
+        [Test]
+        public void TheClockNamesEverySkyFromTheRegistry()
+        {
+            foreach (WeatherKind kind in System.Enum.GetValues(typeof(WeatherKind)))
+                Assert.That(WeatherLabels.IconKeys, Does.Contain(WeatherLabels.KeyOf(kind)), kind.ToString());
+            Assert.That(WeatherLabels.Describe(WeatherView.None), Is.Empty, "a world without weather names no sky");
+            var rain = new WeatherView(WeatherKind.Rain, 700, 560, 0, 700, 1000, -210);
+            Assert.That(WeatherLabels.Describe(rain), Is.EqualTo(Registry.Label(WeatherLabels.RainKey)));
+        }
     }
 }
 

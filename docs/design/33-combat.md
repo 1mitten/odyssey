@@ -778,7 +778,8 @@ wind-ups (18–36 ticks) the light swings play at 0.3–1.2× their authored rat
 
 **Which clip.** The family is the event's weapon's `AttackDef.style` (`WeaponStyles`, read once off
 the content by the bootstrap), else the body: a person punches, an animal bites (§5j). Light swings
-take LightCombo01 A, B, C in turn; heavy ones HeavyCombo01A and HeavyStab01. A hit reacts by the side
+take LightCombo01 A, B, C in turn; heavy ones HeavyCombo01A and HeavyStab01 *(superseded by §22,
+2026-09-25: heavy ones take HeavyCombo01 A, B, C, and nothing stabs)*. A hit reacts by the side
 the blow came from (`CombatPose.SideOf`, F/B/L/R); a stun, or a blow of 10 points or more, staggers;
 a dodge steps away from the blow, **never right** (`Dodge_R` imports Generic), so a blow from the
 left is dodged backwards. Downed is `KnockDown_Begin` then `_Loop`, and `_End` on getting up; stunned
@@ -2743,11 +2744,12 @@ computed at publish for downed colonists only: a colony with nobody down pays on
   she is down; nobody feeds a patient yet. A later unit, if the playtest wants it.
 - **She reads *Downed* while she heals in bed.** Whether that should say something else is the
   playtest's question (§11e).
-- **A bed demolished under a patient** (C6, found at the Phase 4 integration): she stays down on
-  its cell and is rescued again to another bed, but keeps her reservation on the old head cell until
-  she gets up, so a new bed raised on exactly that cell reads as taken until then. Small, and left:
-  the fix is releasing a patient's bed reservation in `ConstructionGrid.Demolish` beside the damage
-  row it already clears.
+- ~~**A bed demolished under a patient** kept her reservation on the old head cell~~ — **fixed
+  2026-09-25** (`claude/combat-bed-release`). She still stays down on its cell and is rescued again
+  to another bed, but `ConstructionGrid.Demolish` now releases a downed pawn's claim on the bed it
+  removes, from the table and from her own list together, so a bed raised on that cell is free at
+  once. Only a downed pawn: a sleeper's and a rescuer's jobs ask about their bed and let go
+  themselves. `RescueTests.ABedDemolishedUnderHerLetsGoOfHer`, seen failing without it.
 
 ## 12. Friendly fire (C5, built 2026-09-24, `claude/combat-friendly-fire`)
 
@@ -4628,7 +4630,12 @@ than forked):
 - **no attacker on a target already gone** for more than one tick: a pawn despawned, dead, or down
   when the attack was not to the death; a building no longer standing. The driver ends the job on
   the tick it sees one, so one tick — the fight's pass downing a target after the jobs ran — is the
-  bound.
+  bound. **Only ticks the driver is free to see it** (corrected 2026-09-25): a stunned or
+  knocked-down attacker, or one landing a kept step, has its driver held by the job loop and cannot
+  end its job — a stun is a pause, not an interrupt (§5c), so a drafted colonist keeps the player's
+  order through it. The gate asks the job system's own rule, `JobSystem.HoldsDriver`, rather than
+  counting through the hold; counting through it read a stunned colonist whose bandit went down as
+  a 109-tick stall on one seed whenever the random stream moved.
 - **no bandit on *Fighting* at a building** without a step or a swing for more than **500
   ticks**: every unforced attack thinks again at `rechooseTicks` (300), and since §19b one whose
   every side is held ends at once, so the owner's "said they were fighting but kinda stood around"
@@ -4733,3 +4740,55 @@ Unity process on the machine and the CPU at 7 %; 640 × 480, RTX 5070 Ti):
 - **Blood at its cap** (`TheBloodAtItsCap`, 200 marks): **1.87 → 1.95 ms**, 738 → 741 draw calls, three
   of them blood — §10d's ceiling holding.
 - Not at a play resolution and not on the target laptop, like every frame number here.
+
+## 22. A blunt weapon swings (2026-09-25, `claude/blunt-swings`)
+
+The owner: *"correct crowbar and baseball bat not to have the stabbing motion — only swinging type
+moves can be used with these weapons."* The bat and the crowbar are the only two weapons whose
+`style` is `Heavy`, and the heavy row alternated `HeavyCombo01A` with **`HeavyStab01`**, so every
+second blow with either was a thrust, for colonists and bandits alike.
+
+**The heavy row is `HeavyCombo01A`, `B`, `C` now**, played in turn like the light row, and nothing
+the game draws uses the stab. The owner chose the pack's own three-step heavy combo over repeating
+`A` (monotonous in a long fight) and over adding `HeavyFlourish01`; the blades keep their three light
+swings untouched. The combo is three steps for both families, so `StartSwing`'s literal
+`heavy ? 2 : 3` is gone and both read `CombatVariant.Combo.Length`.
+
+### 22a. Measured before it went in
+
+`B` and `C` had never been looked at, and a clip's name is the only thing that said it was a swing.
+`HeavySwingSheet` (`scripts/unity.sh shot Odyssey.EditorTools.HeavySwingSheet.Shoot`) plays each
+clip on a real body and tracks the right hand over the Hit cut, with the stab as the negative
+control and `LightCombo01A` as the positive:
+
+| Clip | Along the arm | Arm turns | Reads as |
+|---|---|---|---|
+| `HeavyStab01` (control) | 70 % | 49° | a thrust |
+| `LightCombo01A` (control) | 36 % | 145° | a swing |
+| `HeavyCombo01A` | 18 % | 126° | a swing |
+| `HeavyCombo01B` | 23 % | 114° | a swing — a two-handed overhead chop |
+| `HeavyCombo01C` | 22 % | 102° | a swing — a two-handed overhead chop |
+
+**The first metric was blind and was thrown out**: the hand's forward share *before* the impact
+scored the stab 59 % forward with a 93° arc — a swing — because the wind-up turns the body. A thrust
+is told from a swing by whether the hand moves along the arm or across it *during* the blow. The
+contact sheet (`docs/reference/screenshots/2026-09-25-heavy-swings.png`) agrees with the numbers.
+
+### 22b. What the probe found on the way: `HeavyCombo01C` had no impact
+
+The pack misspells one cut: `A_Attack_HeavyCombo01CWindUp_Sword`, no underscore before `WindUp`.
+`PlayScene.MeasureImpact` asked only for the spelling every other file uses, found nothing and
+returned **0 s**, so `C` would have been scaled to land its blow at the very start of its own
+wind-up. It reads the unscored spelling too now: 0.933 s, which is (140 − 112) / 30 off the
+importer. `AClipsImpactLandsOnTheWindupTick` passed a zero trivially and now also requires every
+swing clip's impact to be above zero.
+
+### 22c. Do not undo by tidying
+
+- **`ABluntWeaponOnlySwings`** reads the weapons off the content, not two names: any item whose
+  `damageKind` is `Blunt` is held to a swing row with no `Stab` clip in it, so a third blunt weapon
+  is covered the day it is added. It also holds both swing rows to exactly the combo's steps, so no
+  step falls back to the computed pose. Clip names are committed, so it runs on the runner too.
+- **The catalogue change is ten lines.** Rebuilding it drops every colonist's `appearance` block
+  unless `CharacterSwatches.Classify` follows (`docs/lessons.md`); rebuilt-and-classified, it is
+  byte-identical to the committed asset apart from line endings.

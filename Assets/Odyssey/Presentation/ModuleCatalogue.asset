@@ -15579,10 +15579,14 @@ MonoBehaviour:
       clip: {fileID: -8709411803423658444, guid: f3800f1bd189abc469fcc7c374371a91, type: 3}
       variant: A
       impactSeconds: 0.96666664
-    - clipName: A_Attack_HeavyStab01_Sword
-      clip: {fileID: 8332939666779294377, guid: b963d0c4e093a9c4ea792b8095e51ba2, type: 3}
+    - clipName: A_Attack_HeavyCombo01B_Sword
+      clip: {fileID: 7713716175428577925, guid: 94770028b07a9ce44b555d283c113a86, type: 3}
       variant: B
-      impactSeconds: 0.8666667
+      impactSeconds: 0.8
+    - clipName: A_Attack_HeavyCombo01C_Sword
+      clip: {fileID: -2621343224683262629, guid: 2511e6dc0955bde4395e6b369d7d8707, type: 3}
+      variant: C
+      impactSeconds: 0.93333334
     sitClip: {fileID: 0}
     sitClipName: 
     quadrupedGait: 0

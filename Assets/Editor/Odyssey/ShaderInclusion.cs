@@ -73,6 +73,9 @@ namespace Odyssey.EditorTools
             // the grass terrain falls back to the pack's single tiled texture.
             "Odyssey/MeadowGround",
 
+            // Rain (the rain-look prototype): streaks and splashes drawn procedurally.
+            "Odyssey/Rain",
+
             // The sky, and it was not on the first draft of this list — `ShaderInclusionTests`
             // found it on the run that was meant to confirm the fix, along with `Standard` below.
             // Worth recording rather than quietly adding: a list of runtime-found shaders
