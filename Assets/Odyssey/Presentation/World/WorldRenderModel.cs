@@ -157,6 +157,8 @@ namespace Odyssey.Presentation.World
         readonly int _galleyModule;
         readonly int _bedPillowModule;
         readonly int _shelfModule;
+        readonly int _sandbagModule;
+        readonly int _barricadeModule;
         readonly int _storeEdgeModule;
 
         /// <summary>The strip drawn along a stockpile's outer edge. See <c>ChunkMesher.EmitStoreEdge</c>.</summary>
@@ -228,6 +230,9 @@ namespace Odyssey.Presentation.World
             // whatever the bed's frame is made of (BedShape, PillowMesh).
             _bedPillowModule = library.Resolve(ModuleIds.BedPillow, ModuleShape.Pillow);
             _shelfModule = library.Resolve(ModuleIds.Shelf, ModuleShape.SolidBlock);
+            // Cover (design 50 §7): the plain block, drawn as a joined run by CoverShape.
+            _sandbagModule = library.Resolve(ModuleIds.Sandbags, ModuleShape.SolidBlock);
+            _barricadeModule = library.Resolve(ModuleIds.Barricade, ModuleShape.SolidBlock);
             _storeEdgeModule = library.Resolve(ModuleIds.StoreEdge, ModuleShape.FloorSlab);
         }
 
@@ -921,6 +926,10 @@ namespace Odyssey.Presentation.World
             // and a rolling neighbour in front could take the click instead — measured by
             // CampfirePickTests. FireDirector draws the flames at this height; one number.
             if (_edifice[index] == CoreContent.EdificeCampfire) return FireDirector.FlameHeight;
+
+            // Cover (design 50 §7): the top of the bags or the rail, which is what is clicked and
+            // what a deconstruct mark sits on.
+            if (CoverShape.Draws(_edifice[index])) return CoverShape.Top(_edifice[index]);
             return 0f;
         }
 
@@ -1045,6 +1054,9 @@ namespace Odyssey.Presentation.World
             if (def == CoreContent.EdificeHeater) return _heaterModule;
             // The galley (design 48), above the trees' range for the same reason.
             if (def == CoreContent.EdificeGalley) return _galleyModule;
+            // Cover (design 50), above the trees' range for the same reason.
+            if (def == CoreContent.EdificeSandbags) return _sandbagModule;
+            if (def == CoreContent.EdificeBarricade) return _barricadeModule;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below
             // to the wall module and the woodland rendered as a grid of grey boxes.

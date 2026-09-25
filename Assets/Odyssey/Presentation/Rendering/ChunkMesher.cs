@@ -1621,6 +1621,10 @@ namespace Odyssey.Presentation.Rendering
                 case CoreContent.EdificeShelf:
                     EmitShelf(batch, module, tint, index, x, z, y);
                     return;
+                case CoreContent.EdificeSandbags:
+                case CoreContent.EdificeBarricade:
+                    EmitCover(batch, module, tint, def, x, z, y);
+                    return;
                 // Power's machines, drawn from pack art once from the head at the middle of their
                 // footprint (design 32 §14). Only when the art resolved: a clone without the packs
                 // has the tinted block, which is drawn per cell below as it always was.
@@ -1917,6 +1921,28 @@ namespace Odyssey.Presentation.Rendering
             Matrix4x4 root = ShelfShape.Root(x, z, y, facing);
             for (int part = 0; part < ShelfShape.PartCount; part++)
                 AddBody(batch, module, tint, ShelfShape.Part(root, facing, part));
+        }
+
+        readonly Matrix4x4[] _coverParts = new Matrix4x4[CoverShape.MaxParts];
+
+        /// <summary>
+        /// Sandbags or a barricade (design 50 §7): a core and an arm towards each neighbour that
+        /// holds the same thing, so a dragged line is drawn joined. Sandbags wear the colour of sand
+        /// whatever stone filled them; a barricade wears what it was built of. A neighbour raised or
+        /// taken down re-meshes this chunk too (<c>MarkChunksAround</c>), so the join follows.
+        /// </summary>
+        void EmitCover(ChunkBatch batch, int module, int tint, ushort def, int x, int z, int y)
+        {
+            var size = _model.Size;
+            int joins = 0;
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
+                if (size.Contains(nx, nz, y) && _model.EdificeDef(size.Index(nx, nz, y)) == def) joins |= 1 << dir;
+            }
+            if (def == CoreContent.EdificeSandbags) tint = TintCode.Terrain(NaturalContent.TerrainSand);
+            int count = CoverShape.Parts(def, x, z, y, joins, _coverParts);
+            for (int i = 0; i < count; i++) AddBody(batch, module, tint, _coverParts[i]);
         }
 
         int FirstOpenDirection(int x, int z, int y) => _model.DoorFacing(x, z, y);

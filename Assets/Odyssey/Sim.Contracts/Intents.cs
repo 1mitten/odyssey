@@ -339,6 +339,14 @@ namespace Odyssey.Sim.Contracts
         /// Handler: <c>Kitchen.HandleEditBill</c>. Appended last, so no recorded intent renumbers.
         /// </summary>
         EditBill,
+
+        /// <summary>
+        /// Ask what a shot would come to (design 50 §8b): <c>A</c> is the shooter's pawn id and
+        /// <c>B</c> the target's; <c>A</c> of nought or less withdraws the question. A question like
+        /// <see cref="QueryCell"/>: it changes nothing the simulation owns, and the answer is a
+        /// <c>ShotReportView</c> on the next publish while it stands. What the hover readout reads.
+        /// </summary>
+        QueryShot,
     }
 
     /// <summary>What an <see cref="IntentKind.EditBill"/> does, as its <c>A</c> carries it.</summary>
@@ -465,6 +473,8 @@ namespace Odyssey.Sim.Contracts
             // A cooking station's bills (design 48 §5): settings over a building, on a pane you
             // open while paused. The storage filter's argument exactly.
             IntentKind.EditBill => true,
+            // A view question, like QueryCell: the readout answers paused as well as running.
+            IntentKind.QueryShot => true,
             _ => false,
         };
     }

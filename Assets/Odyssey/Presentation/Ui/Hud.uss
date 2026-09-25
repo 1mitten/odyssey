@@ -3799,3 +3799,9 @@
     color: rgba(255, 255, 255, 0.50);
     margin-left: 10px;
 }
+
+/* The hit-chance readout beside the pointer (design 50 section 8b). */
+.shotreadout {
+    padding: 4px 8px;
+    background-color: rgba(12, 16, 20, 0.96);
+}

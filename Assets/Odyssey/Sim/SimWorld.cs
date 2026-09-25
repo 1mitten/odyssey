@@ -224,6 +224,12 @@ namespace Odyssey.Sim
                     Views.WatchHome = intent.A != 0;
                     return IntentRejection.None;
 
+                case IntentKind.QueryShot:
+                    // A question about a shot (design 50 §8b), the QueryCell shape.
+                    Views.QueryShotShooter = intent.A > 0 ? intent.A : 0;
+                    Views.QueryShotTarget = intent.A > 0 ? intent.B : 0;
+                    return IntentRejection.None;
+
                 case IntentKind.QueryCell:
                     // A question, not a command: it touches nothing but the view, so it has no
                     // state worth rejecting against. Re-asking the cell already asked, and asking

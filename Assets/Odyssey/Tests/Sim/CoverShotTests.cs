@@ -207,5 +207,40 @@ namespace Odyssey.Tests.Sim
             covered.ContributeTo(ref b);
             Assert.That(b.Value, Is.Not.EqualTo(a.Value));
         }
+
+        // ---- the readout's numbers (design 50 §8b) --------------------------------------------
+
+        /// <summary>
+        /// Asked about a shot at a target behind sandbags, the world publishes the rule's own
+        /// numbers — the aim, the cover, the total the player is told, the sandbags as what gives it —
+        /// and withdrawing the question withdraws the answer.
+        /// </summary>
+        [Test]
+        public void AQueryShotIsAnsweredWithTheRulesOwnNumbers()
+        {
+            var colony = Range(out Pawn shooter, out Pawn target);
+            int spot = Near(colony, -15, 12);
+            Stand(colony, target, spot);
+            Stand(colony, shooter, Offset(spot, 8));
+            Raise(colony, Offset(spot, 1), BuildingHandle.Sandbags, StuffHandle.Stone);
+            int cell = colony.Pawns.Items.NearestCellWithSpace(colony.Pawns.Cells, shooter.Cell, ItemIndex.Pistol, 1, JobDriver.DropSearchRadius);
+            ThingId pistol = colony.Pawns.Items.Spawn(ItemIndex.Pistol, cell);
+            WeaponHand.TakeUp(shooter, colony.Pawns.Items.Get(pistol)!, colony.Pawns);
+
+            Send(colony, new Intent(IntentKind.QueryShot, default, shooter.Id.Value, target.Id.Value));
+            colony.World.Tick();
+            Assert.That(colony.World.Views.Current.TryGetShotReport(out ShotReportView report), Is.True);
+            int distance = RangedGeometry.DistanceMm(Size, shooter.Cell, target.Cell);
+            int aim = colony.Pawns.RangedRules.HitChancePerMille(shooter, distance, colony.Pawns.WeaponRules.ArmamentOf(shooter, colony.Pawns), colony.Pawns);
+            Assert.That(report.AimPerMille, Is.EqualTo(aim));
+            Assert.That(report.CoverPerMille, Is.EqualTo(550));
+            Assert.That(report.TotalPerMille, Is.EqualTo(aim * 450 / 1_000));
+            Assert.That(report.TopCoverEdifice, Is.EqualTo(EdificeHandle.Sandbags));
+            Assert.That(report.InRange && report.InSight, Is.True);
+
+            Send(colony, new Intent(IntentKind.QueryShot, default, 0, 0));
+            colony.World.Tick();
+            Assert.That(colony.World.Views.Current.TryGetShotReport(out _), Is.False);
+        }
     }
 }

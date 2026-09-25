@@ -716,6 +716,19 @@ namespace Odyssey.Presentation.Rendering
         public const string Shelf = Prefix + "shelf";
 
         /// <summary>
+        /// Sandbags (design 50 §7). No catalogue row yet: the id resolves to the plain block and
+        /// <c>CoverShape</c> draws a joined run of bags from scaled instances of it, in the colour
+        /// of sand. The owner's custom modular pieces become a row on this id.
+        /// </summary>
+        public const string Sandbags = Prefix + "sandbags";
+
+        /// <summary>
+        /// The barricade (design 50 §7): a post and two rails from the plain block, tinted by what
+        /// it was built of, until the Western Frontier timber and the Meadow stone wall are rows here.
+        /// </summary>
+        public const string Barricade = Prefix + "barricade";
+
+        /// <summary>
         /// The line round a stockpile's outer edge (owner, 2026-09-23: "wash + edge outline"). No
         /// art is meant to exist for it: it resolves to the plain slab primitive, which the edge
         /// tint colours flat, the way the bed's placeholder is a box the tint colours.

@@ -39,6 +39,18 @@ namespace Odyssey.Presentation.World
         /// <summary>How long low ready takes to come and go.</summary>
         public const float LowReadyEaseSeconds = 0.25f;
 
+        /// <summary>How long going down behind cover, or coming up from it, takes, in seconds (design 50 §8a).</summary>
+        public const float CoverCrouchEaseSeconds = 0.2f;
+
+        /// <summary>
+        /// How far the hips come down behind cover, as a fraction of the figure's own measured leg
+        /// (<see cref="Figure.LegLength"/>, a real length — never <c>StandingHipHeight</c>, which is
+        /// not one). A third of the leg puts a head just over a 1.3 m wall of bags on a figure
+        /// drawn about 2.5 m tall, and stays well inside what a two-bone solve can deliver. INVENTED;
+        /// the owner judges it at the keyboard (design 50 §10).
+        /// </summary>
+        public const float CoverCrouchLegFraction = 0.33f;
+
         /// <summary>How long the aim point takes to catch a walking target (a critically damped follow).</summary>
         public const float AimFollowSeconds = 0.12f;
 
@@ -145,6 +157,13 @@ namespace Odyssey.Presentation.World
             figure.AimWeight = figure.FiredThisFrame && aiming ? 1f : Mathf.MoveTowards(figure.AimWeight, aiming ? 1f : 0f, aimStep);
             float readyStep = LowReadyEaseSeconds > 1e-4f ? deltaTime / LowReadyEaseSeconds : 1f;
             figure.LowReadyWeight = Mathf.MoveTowards(figure.LowReadyWeight, ready ? 1f : 0f, readyStep);
+
+            // Down behind cover (design 50 §8a): the simulation says when, from the cover rule, and
+            // the figure eases into it and out again when she walks.
+            bool crouch = _frame != null && !pawn.IsDowned
+                && _frame.TryGetPawnAspect(pawn.Id, Odyssey.Sim.Pawns.CombatAspects.CoverCrouch, out int _);
+            float crouchStep = CoverCrouchEaseSeconds > 1e-4f ? deltaTime / CoverCrouchEaseSeconds : 1f;
+            figure.CoverCrouchWeight = Mathf.MoveTowards(figure.CoverCrouchWeight, crouch ? 1f : 0f, crouchStep);
 
             if (!aiming || pawn.WorkCell.Y < 0)
             {
