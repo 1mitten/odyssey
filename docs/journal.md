@@ -11891,6 +11891,60 @@ calls whatever the fight, and a colony with no blood submits nothing. Negative c
 fail: the cap dropping the newest, the fade brightening before its hold ends, the fans wound face
 down, the per-frame ground check off, the water rule off.
 
+## 2026-09-24 — Weather, designed
+
+The seam 28 §10 left open gets its plan: design `43-weather.md` (written as 39), on `claude/weather-design`. The
+owner asked for rain that roofs stop, cloudy mid-days, sunnier ones, and weather that moves
+temperature, growth and animals; approved the shape (Clear/Cloudy/Rain, shared emitters, three
+phased PRs) and asked for the design as the PR — nothing built yet.
+
+**The one decision everything hangs off: the sky is map-wide state, asked like the roof grid is
+asked.** One `WeatherSystem` (WorldSystems, Order 45, before Temperature 50) holds kind,
+intensity in per-mille and the episode clock; every consumer — thermometer, pace, growth, animal
+minds, the rain drawing — asks it, and `WeatherOffsetC` gets its one writer at last. Episodes
+roll from a `WeatherDef` table weighted by `Calendar.SeasonOfYear`, last game-hours and blend
+over ≈2 h integer-linear, so the sky never flips at midnight and the first drop is an event.
+
+**Shelter composes two facts into one query**: `CellGrid.IsRoofed` (already built, already
+tested) plus a sparse tree-canopy map with the eviction half the patterns owe — chopping the
+tree dries the 3×3 under it, as a named test. Rain drawing is an emission rule and not a clip:
+shared emitters (the campfire's measured shape, no new shader, `ShaderInclusion` untouched)
+sample columns near the camera and spawn only where the sky reaches, so cost scales with bursts
+and never with cells. Overcast rides the hook 28 §10 named — `DaylightDirector` already owns sun,
+sky, ambient and fog.
+
+Rime's cold rain is the honest compromise of shipping rain before snow, and its weight in the
+invented table is lowest for that reason; snow, fog, storms, moisture, apparel, deterioration,
+accuracy, the firewatcher and the almanac's promised cold snap are recorded seams, each with the
+mechanism that will carry it when a follow-up asks.
+
+## 2026-09-24 — Weather, reviewed: the column, the order, and rain drawn on the GPU
+
+A review of the weather design (`claude/weather-design-review`, stacked on #190) against
+`origin/main` 3ca5098c, the design's own ground being 113 commits old by then. Five findings in the
+code, and one about the picture:
+
+- **The number.** 39 had gone to the settings window, and 40–42 are held in flight: the design is 43.
+- **The order.** Order 45 is `PowerGrid`'s. Weather is 35, ahead of growth as well as temperature,
+  so growth reads this pass's rain.
+- **The roof.** `CellGrid.IsRoofed`, the rule the design leaned on as "already built, already
+  tested", looks one layer up for a slab and nothing else, and nothing tests it. A tall room or a
+  cave mouth would have been rained in. The owner becomes a per-column rain-stop height with one
+  pure function, read by the simulation and by the render mirror's texture, and held together by
+  an agreement test.
+- **The canopy.** A counted canopy map had two decrement sites to hook (felling and a collapsing
+  floor), and a rebuild on load would have resurrected felled trees, because neither path marks
+  its record removed. Derived from the grid per dirty column instead.
+- **The save.** A new keyed section needs no format bump.
+
+**The picture is the larger change.** The design drew rain with the campfire's shared particle
+systems. From this camera a falling streak is the weakest sign of rain (two-thirds of its length,
+two pixels a frame at the far zoom), and a CPU particle per drop is paid in the budget that is
+already tight. §7 now draws streaks and splashes procedurally on the GPU (two draws, no per-drop
+CPU), masks them with a texture of the same column rule, and gives the ground a wetness term, the
+part that actually reads from above. The owner had approved the emitters, so both are photographed
+on `claude/rain-look` and the choice stays theirs.
+
 ## 2026-09-24 — The settings window: one fixed, centred frame
 
 The owner brought an approved design (the rail layout, mockups 14a-14e) and one instruction on top:
