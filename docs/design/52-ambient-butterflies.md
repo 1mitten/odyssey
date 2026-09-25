@@ -11,8 +11,8 @@ Decided in `docs/research/butterflies-interview.md`; researched in `e-13-butterf
 **Numbered 52** because 50 and 51 are held by branches in flight (`50-ambient-birds.md`,
 `50-cover.md`, `51-traits-and-mental-health.md`), and research `d-23` and `e-12` are the birds'.
 
-**Read first:** `50-ambient-birds.md` (on `claude/wizardly-ride-wely6j`, PR #230), whose shape this
-follows on purpose; `43-weather.md` §7 (the rain pass this borrows its draw from);
+**Read first:** `50-ambient-birds.md` (merged as PR #230 while this was built; merged in on
+2026-09-26), whose shape this follows on purpose; `43-weather.md` §7 (the rain pass this borrows its draw from);
 `38-meadow-overhaul.md` §9 (the presets) and §17 (the flower dressing a butterfly lands on);
 `06-rendering-and-camera.md` §6c (what a submission costs, and bloom's threshold).
 

@@ -3600,6 +3600,95 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What the ambient birds cost (<c>docs/design/50-ambient-birds.md</c> §8): the played meadow
+        /// on Standard (18 birds) and Huge (51), at 640 x 480 and into a 3840 x 2160 target, each
+        /// timed with the birds off, on, and off again. The second "off" is the noise floor, so the
+        /// birds' price is read against the spread of two identical arms rather than assumed.
+        ///
+        /// <para>The budget design 50 set is <c>FrameSection.Birds</c> under 0.1 ms; the arm logs it
+        /// and asserts no times. It asserts the controls applied: off drew nothing and ran no
+        /// section, on drew birds in one call a species, and the camera drew at 4K.</para>
+        /// </summary>
+        [UnityTest, Category("Measurement")]
+        public IEnumerator TheBirdsAgainstTheFrame()
+        {
+            var lines = new List<string>();
+            foreach ((string board, int side) in new[] { ("standard", 120), ("huge", 240) })
+            {
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                    out OdysseyBootstrap boot, side, side, 16);
+                UnityEngine.Camera? cam = null;
+                RenderTexture? previousTarget = null;
+                RenderTexture? fourK = null;
+                try
+                {
+                    yield return TimeFrames($"birds/{board}/warm", boot, WarmupFrames, _ => { });
+                    BirdDirector birds = boot.Birds!;
+                    if (!birds.Available) Assert.Ignore("Odyssey/Bird did not load in this editor");
+                    cam = boot.cameraRig!.Camera;
+                    previousTarget = cam.targetTexture;
+                    fourK = new RenderTexture(3840, 2160, 24) { name = "birds-4k" };
+
+                    foreach (bool big in new[] { false, true })
+                    {
+                        cam.targetTexture = big ? fourK : previousTarget;
+                        string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                        var frame = new Dictionary<string, float>();
+                        var gpu = new Dictionary<string, float>();
+                        double section = 0d;
+                        foreach (string arm in new[] { "off", "on", "off again", "on again", "on, no shadows" })
+                        {
+                            bool on = arm.StartsWith("on");
+                            birds.Enabled = on;
+                            birds.CastShadows = arm != "on, no shadows";
+                            float ms = 0f, g = 0f;
+                            double birdMs = 0d;
+                            yield return TimeFrames($"birds/{board}/{resolution}/{arm}", boot, WarmupFrames,
+                                m => ms = m, s => birdMs = s[(int)OdysseyBootstrap.FrameSection.Birds], x => g = x);
+                            frame[arm] = ms;
+                            gpu[arm] = g;
+                            if (on)
+                            {
+                                if (arm == "on") section = birdMs;
+                                Assert.That(birds.LastDrawn, Is.GreaterThan(0), $"{board}: no bird was in the sky to price");
+                                Assert.That(birds.LastDrawCalls, Is.LessThanOrEqualTo(Odyssey.Hud.BirdSpecies.All.Length),
+                                    "more than one call a species");
+                            }
+                            else
+                            {
+                                Assert.That(birds.LastDrawn, Is.Zero, "the birds were still drawn with the switch off");
+                            }
+                            if (big) Assert.That(cam.pixelWidth, Is.EqualTo(3840), "the camera was not drawing at 4K");
+                        }
+                        float off = (frame["off"] + frame["off again"]) * 0.5f;
+                        float onMean = (frame["on"] + frame["on again"]) * 0.5f;
+                        float floor = Math.Max(Math.Abs(frame["off again"] - frame["off"]),
+                                               Math.Abs(frame["on again"] - frame["on"]));
+                        lines.Add($"{board} {resolution}: {birds.Sky.Birds.Length} birds, section {section:0.000} ms, " +
+                                  $"frame off {frame["off"]:0.00} / on {frame["on"]:0.00} / off {frame["off again"]:0.00} / " +
+                                  $"on {frame["on again"]:0.00} / on, no shadows {frame["on, no shadows"]:0.00} ms " +
+                                  $"(birds {onMean - off:+0.00;-0.00} ms, their shadows {onMean - frame["on, no shadows"]:+0.00;-0.00}, " +
+                                  $"noise {floor:0.00}), gpu " +
+                                  (gpu["on"] > 0f ? $"off {gpu["off"]:0.00} / on {gpu["on"]:0.00} ms" : "unavailable"));
+                    }
+                }
+                finally
+                {
+                    if (boot != null && boot.Birds != null)
+                    {
+                        boot.Birds.Enabled = true;
+                        boot.Birds.CastShadows = true;
+                    }
+                    if (cam != null) cam.targetTexture = previousTarget;
+                    if (fourK != null) fourK.Release();
+                    UnityEngine.Object.Destroy(root);
+                }
+                yield return null;
+            }
+            Debug.Log($"[FrameTime] birds ({SystemInfo.graphicsDeviceName}): " + string.Join("; ", lines));
+        }
+
+        /// <summary>
         /// The shoreline against the square one it replaces (design 38 §24): the played meadow on
         /// Standard and Huge, each built once with <see cref="WaterShore.Enabled"/> off and once on
         /// — the switch decides how marsh is dressed when the library resolves, so each arm is its

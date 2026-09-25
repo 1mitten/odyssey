@@ -227,6 +227,12 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>The weather as drawn: rain, wet ground and the grey sky (design 43 §7, prototype).</summary>
         WeatherLook? _weather;
 
+        /// <summary>The ambient birds (design 50): drawn, never simulated.</summary>
+        BirdDirector? _birds;
+
+        /// <summary>The ambient birds, for the tests and the developer overlay. Null between sessions.</summary>
+        public BirdDirector? Birds => _birds;
+
         /// <summary>For tests and the overlay: the weather as drawn this session, or null.</summary>
         public WeatherLook? Weather => _weather;
 
@@ -397,6 +403,11 @@ namespace Odyssey.Presentation.Bootstrap
             /// <summary>Orders, zones, sites, the tool preview and the cursors.</summary>
             Overlays,
             /// <summary>
+            /// The ambient birds (design 50): the flock step and the two instanced calls. Its own
+            /// line so the first Play session reads what it costs; over 0.1 ms is the cue for the
+            /// compute path research d-23 ranked second.
+            /// </summary>
+            Birds,
             /// The butterflies (design 52): the meadow's step, the buffer upload and its one or two
             /// procedural calls. Its own line so the Butterflies ladder's cost can be read off the
             /// overlay and the trace, which is what decides the presets' rungs (§9).
@@ -1108,6 +1119,8 @@ namespace Odyssey.Presentation.Bootstrap
                 _combatFeedback.Projectiles = _projectiles;
                 // The weather as drawn (design 43 §7): the simulation's sky, read from the snapshot.
                 _weather = new WeatherLook(_model, transform);
+                // The birds (design 50): rooks and a buzzard over the board, perching on what is drawn.
+                _birds = new BirdDirector(_model);
                 // The butterflies (design 52), seeded from the world so a board shows the same
                 // meadow twice, and sized by the player's rung.
                 _butterflies = new ButterflyDirector(_model, _world.Seed)
@@ -1716,6 +1729,14 @@ namespace Odyssey.Presentation.Bootstrap
                 cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);
 
+            // The birds last: nothing reads them, and they read only the snapshot, the slice and
+            // the camera. Game seconds, so a paused world holds them in the air (design 50 §3).
+            _birds?.Sync(Time.deltaTime * _world.GameSpeed, _world.CurrentTick, _world.Views.Current.Weather,
+                _world.Views.Current.Pawns,
+                cameraRig != null ? cameraRig.TargetDistance : 48f,
+                slice.BelowSurface(activeLayer),
+                slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY));
+            MarkSection(FrameSection.Birds);
             // The butterflies after the weather, which has eased the rain and cloud they read, and
             // in the band the blood is drawn in. Real seconds while the world runs and none on a
             // pause: a ten-beat wing at speed 3 would strobe (design 52 §7). The hour, the season
@@ -4285,6 +4306,7 @@ namespace Odyssey.Presentation.Bootstrap
             _doors?.Dispose();
             _fires?.Dispose();
             _weather?.Dispose();
+            _birds?.Dispose();
             _butterflies?.Dispose();
             _floaterView?.Dispose();
             _hearthMark?.Dispose();
@@ -4324,6 +4346,7 @@ namespace Odyssey.Presentation.Bootstrap
             _doors = null;
             _fires = null;
             _weather = null;
+            _birds = null;
             _butterflies = null;
             _corpses = null;
             _floaterView = null;

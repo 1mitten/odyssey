@@ -85,6 +85,8 @@ namespace Odyssey.EditorTools
             // Rain (the rain-look prototype): streaks and splashes drawn procedurally.
             "Odyssey/Rain",
 
+            // The ambient birds (design 50): one instanced call a species, flapped in the shader.
+            "Odyssey/Bird",
             // The butterflies (design 52): wings and glow, drawn procedurally from a buffer.
             "Odyssey/Butterfly",
 
