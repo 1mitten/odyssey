@@ -194,7 +194,9 @@ could see named, so `ui.debug.jumpsfail` is in `icon-keys.csv` and the wiki move
   generic by-file lookup would have returned whichever clip came first. **The two rows were added
   to the committed `ModuleCatalogue.asset` by hand, with empty clip references**, so the runner has
   them; the owner's rebuild fills the references, and `JumpClipRowTests` fails until it does on a
-  machine with the pack.
+  machine with the pack. **Filled 2026-09-25** by grafting the four references a headless rebuild
+  resolved into the committed asset — the rebuild itself was discarded, because without
+  `CharacterSwatches.Classify` after it every colonist row lost its swatch rectangles.
 - **Footing** is faded out in the air. **The load** rides the palms, because the carry pose is
   applied after the clip.
 - **The far form** is placed by `PawnPose.Of` and glides the same arc.
