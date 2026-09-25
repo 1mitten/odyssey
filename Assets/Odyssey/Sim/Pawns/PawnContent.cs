@@ -172,6 +172,7 @@ namespace Odyssey.Sim.Pawns
         public const int Equip = JobHandle.Equip;
         public const int Rescue = JobHandle.Rescue;
         public const int Steal = JobHandle.Steal;
+        public const int AttackRanged = JobHandle.AttackRanged;
         public const int Count = JobHandle.Count;
     }
 
@@ -359,7 +360,15 @@ namespace Odyssey.Sim.Pawns
         /// Claimed by the combat contracts step.
         /// </summary>
         public const int Melee = 5;
-        public const int Count = 6;
+
+        /// <summary>
+        /// Ranged combat (design 47 §2a): the shooter's level reads the per-cell accuracy curve in
+        /// <see cref="CombatDef"/>, raised to the distance in cells, and every shot trains it, hit
+        /// or miss. Claimed by the ranged line's contracts step; a colonist from a save older than
+        /// format 10 is dealt it once on load (<see cref="PawnRegistry.BackfillSkills"/>).
+        /// </summary>
+        public const int Shooting = 6;
+        public const int Count = 7;
 
         /// <summary>
         /// The names skills are published under, parallel to the indices above.
@@ -369,7 +378,7 @@ namespace Odyssey.Sim.Pawns
         /// assembly or sharing an enum with it. The prefix is the project's, the middle is this
         /// feature's, and the leaf is the value — the same shape as an icon key.</para>
         /// </summary>
-        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee" };
+        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee", "shooting" };
     }
 
     /// <summary>
@@ -603,6 +612,7 @@ namespace Odyssey.Sim.Pawns
         public const int Crowbar = ItemHandle.Crowbar;
         public const int Machete = ItemHandle.Machete;
         public const int ArcBlade = ItemHandle.ArcBlade;
+        public const int Pistol = ItemHandle.Pistol;
         public const int Count = ItemHandle.Count;
     }
 
@@ -784,6 +794,13 @@ namespace Odyssey.Sim.Pawns
         /// of the species. Unread for a person.
         /// </summary>
         public int meleeSkill;
+
+        /// <summary>
+        /// The chance, per mille, that a bullet crossing this pawn's cell takes it (design 47 §2c),
+        /// before the dead zone near the shooter scales it. The reference's 40 % × body size,
+        /// clamped to 4–80 %.
+        /// </summary>
+        public int interceptPerMille = 400;
     }
 
     /// <summary>What a pawn starts life with.</summary>
@@ -1322,7 +1339,9 @@ namespace Odyssey.Sim.Pawns
                 // The combat line, claimed together by its contracts step (design 33 §5).
                 "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue",
                 // A bandit carrying something off the board (design 33 §17).
-                "Job_Steal");
+                "Job_Steal",
+                // The ranged attack (design 47 §2d).
+                "Job_AttackRanged");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",
@@ -1333,7 +1352,9 @@ namespace Odyssey.Sim.Pawns
                 "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction",
                 "Skill_Growing",
                 // Appended with the combat line (design 33 §5).
-                "Skill_Melee");
+                "Skill_Melee",
+                // Appended with the ranged line (design 47 §3a).
+                "Skill_Shooting");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal",
                 // Appended, never inserted: an item handle is stored in every stack, every haul
@@ -1341,7 +1362,9 @@ namespace Odyssey.Sim.Pawns
                 // (docs/design/22-growing.md §2).
                 "Item_Carrots",
                 // The four melee weapons (design 33 §1, C3), appended together.
-                "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade");
+                "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade",
+                // The pistol (design 47), the first ranged weapon.
+                "Item_Pistol");
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");
             content.Break = One<MentalBreakDef>(defs, "Break_Wander");
@@ -1622,5 +1645,21 @@ namespace Odyssey.Sim.Pawns
         /// constant.
         /// </summary>
         public const uint Jump = 0x2431_85BE;
+
+        // The ranged line's four (design 47 §3a). SHA-256's thirteenth, fourteenth, seventeenth
+        // and eighteenth round constants: the eleventh is taken by the stream jump, the twelfth
+        // is claimed by the health line (#213), and the fifteenth and sixteenth by the weather.
+
+        /// <summary>Whether a shot hits (design 47 §2a).</summary>
+        public const uint RangedHit = 0x72BE_5D74;
+
+        /// <summary>How hard a bullet strikes, within the spread — rolled for a miss too, because a stray still carries its weight.</summary>
+        public const uint RangedDamage = 0x80DE_B1FE;
+
+        /// <summary>Where a miss goes: the scatter cell round the target (design 47 §2c).</summary>
+        public const uint RangedScatter = 0xE49B_69C1;
+
+        /// <summary>Whether a bystander on the line takes the bullet, salted by the cell as well as the shooter.</summary>
+        public const uint RangedIntercept = 0xEFBE_4786;
     }
 }

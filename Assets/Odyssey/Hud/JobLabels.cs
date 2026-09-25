@@ -49,6 +49,9 @@ namespace Odyssey.Hud
             // A bandit carrying something off the board (design 33 §17), JobHandle 22. With a
             // load in its arms the line reads "Stealing · Meal × 12" by Carrying below.
             "ui.status.stealing",
+            // The ranged attack (design 47 §2d), JobHandle 23: a word of its own rather than
+            // "Fighting", so a line of shooters reads as shooting.
+            "ui.status.shooting",
         };
 
         public static string IconKey(int jobDef) =>

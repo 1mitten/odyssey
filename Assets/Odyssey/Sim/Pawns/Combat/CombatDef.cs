@@ -9,6 +9,13 @@ namespace Odyssey.Sim.Pawns
     {
         Blunt = 0,
         Sharp = 1,
+
+        /// <summary>
+        /// A bullet (design 47 §2c): never stuns, bleeds as sharp does, and strikes a building at
+        /// ×1 (<see cref="BuildingTargets"/>). Never rolled through <see cref="MeleeRules"/>, so
+        /// the sharp knockback chance there never reaches it.
+        /// </summary>
+        Bullet = 2,
     }
 
     /// <summary>
@@ -22,6 +29,9 @@ namespace Odyssey.Sim.Pawns
         Light = 1,
         Heavy = 2,
         Bite = 3,
+
+        /// <summary>A pistol (design 47 §4b): the aim, the shot and the recoil, not a swing.</summary>
+        Pistol = 4,
     }
 
     /// <summary>
@@ -60,6 +70,64 @@ namespace Odyssey.Sim.Pawns
         public int experiencePerSwing;
 
         public AttackStyle style = AttackStyle.Fists;
+
+        /// <summary>
+        /// A gun's block (design 47 §3b), null for everything that swings. <b>For a gun
+        /// <see cref="windupTicks"/> is the aim and <see cref="cooldownTicks"/> the cooldown</b> —
+        /// the melee fields under the melee names, so one clock serves both — and
+        /// <see cref="experiencePerSwing"/> is Shooting experience a shot, hit or miss.
+        /// </summary>
+        public RangedDef? ranged;
+
+        /// <summary>Is this a gun?</summary>
+        public bool IsRanged => ranged != null;
+    }
+
+    /// <summary>One point of a distance curve: at this many millimetres, this per mille.</summary>
+    public class DistancePoint
+    {
+        public int mm;
+        public int perMille;
+    }
+
+    /// <summary>
+    /// What makes an attack a gun's (design 47 §3b): how far it reaches, how fast its bullet flies,
+    /// and how its accuracy falls away with distance. Distances are millimetres over the true
+    /// 2.5 × 2.5 × 3 m cell (<c>GridSize.CellSizeXZMm</c>), so a shot up a layer is longer
+    /// than one along it and the fall-off, which is per gun, sees it.
+    /// </summary>
+    public class RangedDef
+    {
+        /// <summary>The furthest a target may be, straight-line, in millimetres.</summary>
+        public int rangeMm = 26_000;
+
+        /// <summary>How far the bullet flies a tick. The flight is <c>ceil(distance / speed)</c> ticks, never under one.</summary>
+        public int speedMmPerTick = 1_000;
+
+        /// <summary>
+        /// The gun's own accuracy by distance, per mille (design 47 §2a): linear between the points
+        /// and flat past the ends. This is where "inaccurate with distance depending on the gun"
+        /// lives.
+        /// </summary>
+        public List<DistancePoint> accuracyByDistance = new List<DistancePoint>();
+
+        /// <summary>The gun's accuracy at a distance, per mille. Integer throughout.</summary>
+        public int AccuracyPerMille(int distanceMm)
+        {
+            var curve = accuracyByDistance;
+            if (curve == null || curve.Count == 0) return 1_000;
+            if (distanceMm <= curve[0].mm) return curve[0].perMille;
+            for (int i = 1; i < curve.Count; i++)
+            {
+                DistancePoint hi = curve[i];
+                if (distanceMm > hi.mm) continue;
+                DistancePoint lo = curve[i - 1];
+                long span = hi.mm - lo.mm;
+                if (span <= 0) return hi.perMille;
+                return (int)(lo.perMille + (hi.perMille - lo.perMille) * (long)(distanceMm - lo.mm) / span);
+            }
+            return curve[curve.Count - 1].perMille;
+        }
     }
 
     /// <summary>One point of a level curve: at this skill level, this per mille.</summary>
@@ -164,6 +232,45 @@ namespace Odyssey.Sim.Pawns
         /// about a second and a half).
         /// </summary>
         public int knockedDownTicks = 90;
+
+        // ── The gun (design 47 §2a, §2c, §3b). ──────────────────────────────────────────────
+
+        /// <summary>
+        /// The shooter's chance not to miss <b>per 2.5 m cell</b>, per mille, by Shooting level: the
+        /// hit chance is this raised to the distance in cells. The reference's 89 %/m at level 0
+        /// and ~98 %/m at 20, raised to the power 2.5; the middle point is ours.
+        /// </summary>
+        public List<CurvePoint> shootingPerCell = new List<CurvePoint>();
+
+        /// <summary>No shot is surer to miss than this, per mille (the reference's 2 %).</summary>
+        public int hitFloorPerMille = 20;
+
+        /// <summary>
+        /// Partial cover, per mille of the hit chance. Always 1,000: a wall blocks the line or it
+        /// does not (owner). The slot a cover value will read.
+        /// </summary>
+        public int coverPerMille = 1_000;
+
+        /// <summary>A bystander nearer the shooter than this is never hit by her bullet, in millimetres.</summary>
+        public int interceptDeadZoneMm = 5_000;
+
+        /// <summary>…and one this far or further takes its full chance; linear between.</summary>
+        public int interceptFullMm = 12_000;
+
+        /// <summary>The widest a miss scatters round its target, in cells. INVENTED.</summary>
+        public int scatterMaxCells = 3;
+
+        /// <summary>
+        /// How fast the scatter grows with how bad the shot was: <c>r = min(max, 1 + (1000 − hit‰) ×
+        /// this / 1000)</c> cells. INVENTED.
+        /// </summary>
+        public int scatterPerMissPerMille = 3;
+
+        /// <summary>How often a drafted gun-holder looks for a target in sight, in ticks, phase-spread by id. INVENTED.</summary>
+        public int rangedScanTicks = 15;
+
+        /// <summary>The per-cell chance at a Shooting level, per mille.</summary>
+        public int ShootingPerCellPerMille(int level) => Evaluate(shootingPerCell, level);
 
         /// <summary>
         /// The chance of a critical for an attacker at <paramref name="level"/>, per mille:

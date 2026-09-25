@@ -31,6 +31,8 @@ namespace Odyssey.Hud
             "ui.res.carrots",
             // The four melee weapons (design 33 §1, C3), in ItemHandle order 7 to 10.
             "ui.item.bat", "ui.item.crowbar", "ui.item.machete", "ui.item.arcblade",
+            // The pistol (design 47), ItemHandle 11 — "Sidearm" on every screen.
+            "ui.item.pistol",
         };
 
         public static string IconKey(int def) =>

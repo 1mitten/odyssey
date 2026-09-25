@@ -74,14 +74,18 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(new[] { 17, 18, 19, 20, 21 }));
             // One more after them since design 33 §17: the thief's, appended.
             Assert.That(JobHandle.Steal, Is.EqualTo(22));
-            Assert.That(JobHandle.Count, Is.EqualTo(23));
+            // And the ranged line's (design 47 §3a), appended after the thief's.
+            Assert.That(JobHandle.AttackRanged, Is.EqualTo(23));
+            Assert.That(JobHandle.Count, Is.EqualTo(24));
             Assert.That(new[] { ItemHandle.Bat, ItemHandle.Crowbar, ItemHandle.Machete, ItemHandle.ArcBlade },
                 Is.EqualTo(new[] { 7, 8, 9, 10 }));
-            Assert.That(ItemHandle.Count, Is.EqualTo(11));
+            Assert.That(ItemHandle.Pistol, Is.EqualTo(11));
+            Assert.That(ItemHandle.Count, Is.EqualTo(12));
             Assert.That(WorkHandle.Rescue, Is.EqualTo(5));
             Assert.That(WorkHandle.Count, Is.EqualTo(6));
             Assert.That(SkillIndex.Melee, Is.EqualTo(5));
-            Assert.That(SkillIndex.Count, Is.EqualTo(6));
+            Assert.That(SkillIndex.Shooting, Is.EqualTo(6));
+            Assert.That(SkillIndex.Count, Is.EqualTo(7));
             Assert.That(PawnKindIndex.Bandit, Is.EqualTo(3));
             Assert.That(PawnKindIndex.Count, Is.EqualTo(4));
 
@@ -99,17 +103,22 @@ namespace Odyssey.Tests.Sim
         {
             PawnContent content = ContentPack.Pawns();
             Assert.That(content.Jobs.Skip(17).Select(j => j.defName), Is.EqualTo(new[]
-                { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue", "Job_Steal" }));
+                { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue", "Job_Steal", "Job_AttackRanged" }));
             for (int i = 0; i < content.Jobs.Length; i++)
                 Assert.That(content.Jobs[i].driver, Is.EqualTo(i), content.Jobs[i].defName + " names another driver");
             Assert.That(content.Jobs[JobIndex.AttackMelee].trainsSkill, Is.EqualTo(SkillIndex.Melee));
+            Assert.That(content.Jobs[JobIndex.AttackRanged].trainsSkill, Is.EqualTo(SkillIndex.Shooting));
+            Assert.That(content.Skills[SkillIndex.Shooting].defName, Is.EqualTo("Skill_Shooting"));
+            Assert.That(SkillIndex.Names[SkillIndex.Shooting], Is.EqualTo("shooting"));
 
             Assert.That(content.Skills[SkillIndex.Melee].defName, Is.EqualTo("Skill_Melee"));
             Assert.That(content.WorkTypes[WorkTypeIndex.Rescue].defName, Is.EqualTo("Work_Rescue"));
             Assert.That(WorkTypeIndex.Names[WorkTypeIndex.Rescue], Is.EqualTo("rescue"));
             Assert.That(SkillIndex.Names[SkillIndex.Melee], Is.EqualTo("melee"));
             Assert.That(content.Items.Skip(7).Select(i => i.defName), Is.EqualTo(new[]
-                { "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade" }));
+                { "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade", "Item_Pistol" }));
+            Assert.That(content.Items[ItemIndex.Pistol].weapon!.ranged, Is.Not.Null, "the pistol is a gun");
+            Assert.That(content.Items[ItemIndex.Machete].weapon!.ranged, Is.Null, "a machete is not");
             Assert.That(content.Kinds[PawnKindIndex.Bandit].defName, Is.EqualTo("PawnKind_Bandit"));
         }
 

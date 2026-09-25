@@ -115,6 +115,7 @@ ui.status.fleeing,Fleeing,ui.status,CB,"Running from danger, or from whatever hu
 ui.status.equipping,Equipping,ui.status,CB,Fetching a weapon to hold
 ui.status.rescuing,Rescuing,ui.status,CB,Carrying the downed to a bed
 ui.status.stealing,Stealing,ui.status,CB,"A bandit carrying something off the board"
+ui.status.shooting,Shooting,ui.status,RC,"Standing where the line is open and firing at a target"
 ui.combat.miss,Miss,ui.combat,CB,A swing that did not land
 ui.combat.dodge,Dodge,ui.combat,CB,A swing the target stepped out of
 ui.combat.stunned,Stunned,ui.combat,CB,"Knocked senseless by a blunt blow, for a moment"
@@ -521,8 +522,10 @@ ui.debug.spawnbat,Spawn bat,ui.debug,CB,"Adds a bat near the camera"
 ui.debug.spawncrowbar,Spawn crowbar,ui.debug,CB,"Adds a crowbar near the camera"
 ui.debug.spawnmachete,Spawn machete,ui.debug,CB,"Adds a machete near the camera"
 ui.debug.spawnarcblade,Spawn arc blade,ui.debug,CB,"Adds an arc blade near the camera"
+ui.debug.spawnpistol,Spawn sidearm,ui.debug,RC,"Adds a sidearm near the camera"
 ui.debug.spawnrat,Spawn duct rat,ui.debug,AN,"Adds a duct rat near the camera"
 ui.debug.spawnbandits,Spawn 3 bandits,ui.debug,CB,"Adds three bandits near the camera, each on its own tile"
+ui.debug.spawngunman,Spawn pistol bandit,ui.debug,RC,"Adds a hostile bandit near the camera, holding a sidearm. It shoots whoever it can see"
 ui.debug.armcolonists,Arm every colonist,ui.debug,CB,"Every colonist standing with nothing in hand takes a random melee weapon"
 ui.debug.jumpsfail,Jumps always fail,ui.debug,JP,"Every jump over a stream falls short into the water, so a failed jump can be watched"
 ui.debug.group.colonists,Colonists,ui.debug,CB,"The Spawn tab heading over the colonist rows"

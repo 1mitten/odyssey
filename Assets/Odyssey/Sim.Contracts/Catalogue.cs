@@ -77,7 +77,15 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Steal = 22;
 
-        public const int Count = 23;
+        /// <summary>
+        /// Stand where the line to a target is open and shoot at it (design 47 §2d): the ranged
+        /// attack, claimed by the ranged line's contracts step (R0). Above
+        /// <c>JobSystem.HashedAlways</c>, so its counters reach the hash only once one has run and
+        /// its registration moved no golden.
+        /// </summary>
+        public const int AttackRanged = 23;
+
+        public const int Count = 24;
     }
 
     /// <summary>
@@ -205,7 +213,13 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Sharp, and the best thing a colonist can hold.</summary>
         public const int ArcBlade = 10;
 
-        public const int Count = 11;
+        /// <summary>
+        /// The pistol (design 47): the first ranged weapon, appended by the ranged line's contracts
+        /// step. Code says <c>Pistol</c>; every screen says what <c>ui.item.pistol</c> says.
+        /// </summary>
+        public const int Pistol = 11;
+
+        public const int Count = 12;
     }
 
     /// <summary>

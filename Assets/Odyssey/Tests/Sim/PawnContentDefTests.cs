@@ -253,7 +253,11 @@ namespace Odyssey.Tests.Sim
         // crowbar or a bat where it was a machete. No golden moved: no golden has a bandit.
         // 2026-09-25, design 46 §6: MovementDef gained jumpFailPerMille (30) and
         // jumpFailCarryingPerMille (2,000) — the jump over a one-cell stream falling short.
-        const ulong ContentFingerprint = 17786154627329906510UL;
+        // 2026-09-25, design 47 §3 (R0, the ranged line's contracts): Job_AttackRanged, Skill_Shooting
+        // and Item_Pistol appended; AttackDef gained a ranged block, CombatDef the shooting numbers
+        // (the per-cell curve, the floor, cover, the dead zone, the scatter, the scan cadence) and
+        // SpeciesDef interceptPerMille (person 400, hog 500, rat 40).
+        const ulong ContentFingerprint = 17944873502910780801UL;
 
 
         [Test]

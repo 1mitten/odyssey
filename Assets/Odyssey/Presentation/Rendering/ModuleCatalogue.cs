@@ -876,6 +876,10 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemMachete = Prefix + "item.machete";
         public const string ItemArcBlade = Prefix + "item.arcblade";
 
+        // The pistol (design 47 §4a), claimed by the ranged line's contracts step: POLYGON Battle
+        // Royale's SM_Wep_Pistol_Heavy_01, the ground item and the held prop alike.
+        public const string ItemPistol = Prefix + "item.pistol";
+
 
         /// <summary>
         /// Module ids for item def indices, in <c>ItemIndex</c> order.
@@ -890,6 +894,7 @@ namespace Odyssey.Presentation.Rendering
         {
             ItemMeal, ItemSalvage, ItemWood, ItemStone, ItemIronOre, ItemCoal, ItemCarrots,
             ItemBat, ItemCrowbar, ItemMachete, ItemArcBlade,
+            ItemPistol,
         };
 
         /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>

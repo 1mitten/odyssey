@@ -86,6 +86,9 @@ namespace Odyssey.Tests.Sim
                     // The combat contracts step (design 33 §5): SkillCatalogue's melee row went
                     // live in the same commit, and SkillCatalogueTests with it.
                     "melee",
+                    // The ranged line's contracts step (design 47 §3a): SkillCatalogue's shooting
+                    // row went live in the same commit, and SkillCatalogueTests with it.
+                    "shooting",
                 }),
                 "the simulation's skills have changed. A skill that trains is a skill the " +
                 "colonist pane must stop calling unavailable: add or remove the matching live " +

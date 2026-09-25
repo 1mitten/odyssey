@@ -450,6 +450,17 @@ namespace Odyssey.Tests.Sim
         /// which are the four animals standing under cover in the 120-tick waits
         /// <c>AnimalShelterThinkNode</c> gives them. Both together: 300 started, 74 wanders, 217
         /// waits, 341,744 progress.</para>
+        ///
+        /// <para><b>All six moved on 2026-09-25, by the ranged line's contracts step (design 47 R0):
+        /// the hash seeing more, and no colony doing anything different.</b> Every person carries a
+        /// seventh skill, passion and daily-gain slot — Shooting — and each colonist is dealt a
+        /// level in it on the first tick, from the same stream the first six are dealt from and
+        /// after them, so the six come out exactly as they were. That moves the generated numbers
+        /// (the arrays are longer before a tick runs) and the simulated ones (the dealt level is
+        /// hashed). <b>Measured</b>: <c>GoldenColonyProbe</c> on <c>origin/main</c> (804c2e6a) and on
+        /// the branch is identical on all three boards, line for line — food, rest, mood, work
+        /// progress, the shared skills' experience and passions, jobs, and where every pawn
+        /// stands.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -460,8 +471,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 7623512122801076561UL,
-            Simulated = 1235041211937114867UL,
+            Generated = 11319031812075797929UL,
+            Simulated = 7223500268688215089UL,
         };
 
         /// <summary>
@@ -494,8 +505,8 @@ namespace Odyssey.Tests.Sim
             // the wander legs started (105 -> 98 in the window) differ. Re-baked again on merging
             // the weather from main: Generated is main's, and the probe against main (0dff2b36)
             // differs in exactly the same three numbers and nothing else.
-            Generated = 13501204456710631653UL,
-            Simulated = 11502160785219034506UL,
+            Generated = 17536693258134386138UL,
+            Simulated = 8006061635181976714UL,
         };
 
         /// <summary>
@@ -535,8 +546,8 @@ namespace Odyssey.Tests.Sim
             // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
             // 2026-09-23, the combat contracts step; the widened probe diffs clean.
             // 2026-09-25, weather-world: it rains here all run — pace and animal shelter (remarks).
-            Generated = 15627359971669991438UL,
-            Simulated = 7586243452283492469UL,
+            Generated = 17250134411037349117UL,
+            Simulated = 8522126525455240176UL,
         };
     }
 }

@@ -217,6 +217,7 @@ namespace Odyssey.Sim.Pawns
         public SaveHeader Load(Stream stream)
         {
             var header = WorldSave.Load(World, stream, SaveComponents);
+            Pawns.Pawns.BackfillSkills(header.FormatVersion);
             RebuildDerived();
             return header;
         }
@@ -231,6 +232,7 @@ namespace Odyssey.Sim.Pawns
         public SaveHeader LoadFromFile(string path)
         {
             var header = WorldSave.LoadFromFile(path, World, SaveComponents);
+            Pawns.Pawns.BackfillSkills(header.FormatVersion);
             RebuildDerived();
             return header;
         }

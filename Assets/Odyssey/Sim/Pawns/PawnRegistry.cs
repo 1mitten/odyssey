@@ -350,7 +350,28 @@ namespace Odyssey.Sim.Pawns
             new RescueJobDriver(),
             // A bandit carrying something off the board (design 33 §17), JobHandle 22.
             new StealJobDriver(),
+            // The ranged attack (design 47 §2d), JobHandle 23.
+            new AttackRangedJobDriver(),
         };
+
+        /// <summary>
+        /// Deal the skills a save older than <paramref name="formatVersion"/> could not carry
+        /// (design 47 §3a): Shooting, for a file below format 10. Called by <c>ColonyWorld</c> after
+        /// every section has loaded — not from this section's own load, because a pawn's kind
+        /// arrives in a later section and until then an animal reads as a colonist.
+        ///
+        /// <para>Through <see cref="Pawn.RollStartingSkills"/>, which draws in skill order and
+        /// writes only a skill still at nought: the first six come out as they were dealt, a
+        /// trained skill is never touched, and Shooting is dealt from the same stream a new colonist
+        /// of this seed and id would have been dealt it from. Passions are not re-dealt, so a
+        /// colonist from an older save has none for Shooting. A file at 10 or above does nothing.</para>
+        /// </summary>
+        public void BackfillSkills(int formatVersion)
+        {
+            if (formatVersion >= 10) return;
+            for (int i = 0; i < _pawns.Count; i++)
+                if (_pawns[i].IsPerson) _pawns[i].RollStartingSkills();
+        }
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------
 

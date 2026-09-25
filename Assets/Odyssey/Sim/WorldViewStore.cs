@@ -71,6 +71,8 @@ namespace Odyssey.Sim
         /// <summary>Publish one thing in the air. See <see cref="FallingView"/>.</summary>
         public void AddFalling(in FallingView view) => _target.AddFalling(view);
 
+        public void AddProjectile(in ProjectileView view) => _target.AddProjectile(view);
+
         /// <summary>Publish one line cell. See <see cref="ConduitView"/> for which are published when.</summary>
         public void AddConduit(in ConduitView view) => _target.AddConduit(view);
 

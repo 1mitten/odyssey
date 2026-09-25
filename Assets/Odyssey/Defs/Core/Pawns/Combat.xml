@@ -107,6 +107,36 @@
     <knockbackPerMille>500</knockbackPerMille>
     <knockbackBluntPerMille>750</knockbackBluntPerMille>
     <knockedDownTicks>90</knockedDownTicks>
+
+    <!--
+      The gun (design 47 sections 2a, 2c, 3b). The hit chance is shootingPerCell at the shooter's
+      level, raised to the distance in 2.5 m cells, times the gun's own accuracy at that distance,
+      floored at hitFloorPerMille. The per-cell curve is the reference's 89 per cent a metre at
+      level 0 and about 98 at 20, raised to the power 2.5 for our cell; the middle point (903 at
+      level 10) is OURS. The floor is the reference's 2 per cent.
+    -->
+    <shootingPerCell>
+      <li><level>0</level><perMille>747</perMille></li>
+      <li><level>10</level><perMille>903</perMille></li>
+      <li><level>20</level><perMille>951</perMille></li>
+    </shootingPerCell>
+    <hitFloorPerMille>20</hitFloorPerMille>
+    <!-- No partial cover (owner): a wall blocks the line or it does not. The slot a cover value reads. -->
+    <coverPerMille>1000</coverPerMille>
+    <!--
+      A bystander on the bullet's line: never hit within 5 m of the shooter, the full species
+      chance from 12 m, linear between - the reference's 5 and 12 tiles, kept in metres.
+    -->
+    <interceptDeadZoneMm>5000</interceptDeadZoneMm>
+    <interceptFullMm>12000</interceptFullMm>
+    <!--
+      A miss scatters to a cell within r of the target, r = min(3, 1 + (1000 - hit) x 3 / 1000):
+      one cell for a good shot, three for a hopeless one. Both 3s are INVENTED.
+    -->
+    <scatterMaxCells>3</scatterMaxCells>
+    <scatterPerMissPerMille>3</scatterPerMissPerMille>
+    <!-- How often a drafted gun-holder looks for something in sight to shoot. INVENTED; R5 measures it. -->
+    <rangedScanTicks>15</rangedScanTicks>
   </CombatDef>
 
 </Defs>
