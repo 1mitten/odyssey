@@ -523,6 +523,13 @@ namespace Odyssey.Presentation.Rendering
 
         [Tooltip("Seconds from the clip's start to the blow landing: where its WindUp sub-clip ends. 0 for a clip with no blow.")]
         public float impactSeconds;
+
+        /// <summary>
+        /// The file the clip lives in, when that is not its own name — a jump's landing is inside
+        /// the take-off's file (design 46 §7). Empty for every row whose clip is its file's.
+        /// </summary>
+        [Tooltip("The FBX the clip is in, by name, when that is not the clip's own name. Empty = the same.")]
+        public string fileName = string.Empty;
     }
 
     /// <summary>
@@ -798,6 +805,23 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>The two sheath rows, for the catalogue build and the test that each resolves or snaps.</summary>
         public static readonly string[] SheathRows = { CombatDraw, CombatSheathe };
+
+        /// <summary>
+        /// Jumping a one-cell stream (design 46 §7): the take-off, <c>A_Jump_Walking_Masc</c> and
+        /// <c>_Femn</c> from Base Locomotion, the variant by the body's sex as the sheath's is.
+        /// In place; the arc is <c>JumpArc</c>'s. Played in the combat action slot.
+        /// </summary>
+        public const string JumpTakeOff = Prefix + "anim.jump.takeoff";
+
+        /// <summary>
+        /// The landing, <c>A_Land_Walking_Masc</c> and <c>_Femn</c>. <b>Inside the take-off's own
+        /// file</b> (<c>A_Jump_Walking_*.fbx</c> holds both), which is why the row carries a file name
+        /// beside the clip name: a lookup by file would return whichever clip came first.
+        /// </summary>
+        public const string JumpLand = Prefix + "anim.jump.land";
+
+        /// <summary>The two jump rows, for the catalogue build and the test that each resolves.</summary>
+        public static readonly string[] JumpRows = { JumpTakeOff, JumpLand };
 
         /// <summary>
         /// Hair pieces a colonist can be dealt, as a family

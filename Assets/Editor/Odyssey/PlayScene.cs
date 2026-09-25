@@ -2038,8 +2038,88 @@ namespace Odyssey.EditorTools
             });
 
             AddCombatRows(rows);
+            AddJumpRows(rows);
 
             return rows;
+        }
+
+        /// <summary>
+        /// Jumping a one-cell stream (design 46 §7): Base Locomotion's walking take-off and landing,
+        /// Polygon, in place, one per body. <b>Both clips live in the take-off's file</b>
+        /// (<c>A_Jump_Walking_Femn.fbx</c> holds <c>A_Jump_Walking_Femn</c> and
+        /// <c>A_Land_Walking_Femn</c>), so each entry names its file beside its clip and is resolved
+        /// by <see cref="ResolveJumpClips"/>, never by the by-file lookup, which would hand back
+        /// whichever clip came first.
+        /// </summary>
+        static void AddJumpRows(List<ModuleEntry> rows)
+        {
+            const string Masc = Odyssey.Presentation.World.CombatVariant.Masc;
+            const string Femn = Odyssey.Presentation.World.CombatVariant.Femn;
+            Row(ModuleIds.JumpTakeOff,
+                ("A_Jump_Walking_Masc", "A_Jump_Walking_Masc", Masc), ("A_Jump_Walking_Femn", "A_Jump_Walking_Femn", Femn));
+            Row(ModuleIds.JumpLand,
+                ("A_Jump_Walking_Masc", "A_Land_Walking_Masc", Masc), ("A_Jump_Walking_Femn", "A_Land_Walking_Femn", Femn));
+
+            void Row(string id, params (string File, string Clip, string Variant)[] clips)
+            {
+                var entry = new ModuleEntry
+                {
+                    moduleId = id, shape = ModuleShape.None, centreXZ = false, baseAtY = false,
+                };
+                foreach ((string file, string clip, string variant) in clips)
+                    entry.combat.Add(new CombatClipEntry { clipName = clip, fileName = file, variant = variant });
+                rows.Add(entry);
+            }
+        }
+
+        /// <summary>Where Base Locomotion's Polygon clips live. The jump search never leaves it.</summary>
+        public const string BaseLocomotionPolygon = "Assets/Synty/AnimationBaseLocomotion/Animations/Polygon";
+
+        /// <summary>
+        /// Resolve the jump rows' clips by file and exact clip name, in place only, Humanoid only
+        /// (design 46 §7). A clip that is missing leaves the figure holding its gait through the
+        /// jump, which is what a checkout without the pack does anyway.
+        /// </summary>
+        static void ResolveJumpClips(List<ModuleEntry> rows)
+        {
+            foreach (ModuleEntry row in rows)
+            {
+                if (Array.IndexOf(ModuleIds.JumpRows, row.moduleId) < 0) continue;
+                foreach (CombatClipEntry entry in row.combat)
+                {
+                    string file = string.IsNullOrEmpty(entry.fileName) ? entry.clipName : entry.fileName;
+                    entry.clip = FindLocomotionClip(file, entry.clipName);
+                    entry.impactSeconds = 0f;
+                    if (entry.clip != null && !entry.clip.humanMotion)
+                    {
+                        Debug.LogWarning(
+                            $"[Odyssey] {entry.clipName} did not import Humanoid, so it cannot drive a colonist; left out.");
+                        entry.clip = null;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// A clip by its own name inside a Base Locomotion file by its name — never the file's
+        /// root-motion twin, never Unity's preview clip. Null when the pack is absent.
+        /// </summary>
+        static AnimationClip? FindLocomotionClip(string fileName, string clipName)
+        {
+            if (!Directory.Exists(Path.GetFullPath(BaseLocomotionPolygon))) return null;
+            foreach (string guid in AssetDatabase.FindAssets(fileName, new[] { BaseLocomotionPolygon }))
+            {
+                string candidate = AssetDatabase.GUIDToAssetPath(guid);
+                if (!string.Equals(Path.GetFileNameWithoutExtension(candidate), fileName,
+                        StringComparison.OrdinalIgnoreCase)) continue;
+                if (candidate.IndexOf("RootMotion", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+
+                foreach (UnityEngine.Object asset in AssetDatabase.LoadAllAssetsAtPath(candidate))
+                    if (asset is AnimationClip clip && !clip.name.StartsWith("__preview__")
+                        && string.Equals(clip.name, clipName, StringComparison.Ordinal))
+                        return clip;
+            }
+            return null;
         }
 
         /// <summary>
@@ -2130,6 +2210,9 @@ namespace Odyssey.EditorTools
             foreach (ModuleEntry row in rows)
             foreach (CombatClipEntry entry in row.combat)
             {
+                // The jump's rows are Base Locomotion's, not the Sword Combat pack's (design 46 §7).
+                if (Array.IndexOf(ModuleIds.JumpRows, row.moduleId) >= 0) continue;
+
                 entry.clip = FindSwordCombatClip(entry.clipName, out string? path);
                 entry.impactSeconds = 0f;
                 if (entry.clip == null || path == null) continue;
@@ -2275,6 +2358,7 @@ namespace Odyssey.EditorTools
             ResolveGaits(rows, clips);
             foreach (ModuleEntry row in rows) row.sitClip = LookUpClip(row.sitClipName, clips);
             ResolveCombatClips(rows);
+            ResolveJumpClips(rows);
 
             var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
             if (catalogue == null)

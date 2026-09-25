@@ -696,6 +696,13 @@ namespace Odyssey.Presentation.World
         public event Action<Vector3>? LoadLifted;
 
         /// <summary>
+        /// A swimmer's hand has just gone forward into the water, at the swimmer (design 20 §9).
+        /// Raised <see cref="SwimPose.StrokeSoundPeakSeconds"/> before the hand arrives, so a sound
+        /// started now is loudest on the splash.
+        /// </summary>
+        public event Action<Vector3>? SwimStroked;
+
+        /// <summary>
         /// A load has just finished settling out of the arms onto the ground, at the point it
         /// landed.
         ///
@@ -1118,6 +1125,11 @@ namespace Odyssey.Presentation.World
             // at the part-tick this frame is drawn at, so its blow lands on the tick it is resolved.
             _frameTicks = snapshot.Tick + tickAlpha;
             FightingFigures = 0;
+
+            // And the part-tick itself, for the jump's clips (design 46 §7): timed from the step
+            // exactly as PawnPose places the figure on it, through PawnPose.StepProgress.
+            _tickAlpha = tickAlpha;
+            _movePerTick = movePerTick;
 
             // Is the world actually running? The snapshot says so — see WorldSnapshot.GameSpeed.
             //
@@ -1593,6 +1605,10 @@ namespace Odyssey.Presentation.World
                 figure.SeenSerial = pawn.GestureSerial;
             }
 
+            // A jump over a stream (design 46 §7): how far off the ground, and which clip is due —
+            // before the fight is posed, because the jump borrows the fight's slot.
+            PoseJump(figure, in pawn);
+
             // The fight: the action it is drawing and the held states, before anything below
             // reads them — the downed lie rides the sleeper's weight.
             PoseCombat(figure, in pawn, frameTime, running);
@@ -1758,8 +1774,12 @@ namespace Odyssey.Presentation.World
             // water carries what it was carrying, works where it was working, and pays the third
             // speed the cost class has always charged. The helpless-swimmer rules are deep water's
             // and are not built — docs/design/20-swimming-and-water.md.
-            float afloat = ForceSwim ?? WaterLine.Weight(World, pawn.Cell, pawn.NextCell,
-                Mathf.Clamp01(pawn.MovePercent * 0.01f));
+            // A jump falling short is the exception (design 46 §7): its step runs from the bank
+            // into the water like a wade, but the body is in the air for most of it and must not
+            // lie down until it is nearly at the water line.
+            float afloat = ForceSwim ?? (JumpArc.IsJump(in pawn) && pawn.JumpingShort
+                ? JumpArc.ShortSwimWeight(PawnPose.StepProgress(in pawn, _tickAlpha, _movePerTick))
+                : WaterLine.Weight(World, pawn.Cell, pawn.NextCell, Mathf.Clamp01(pawn.MovePercent * 0.01f)));
 
             // Forced weight is taken whole rather than eased towards, so a harness that sets it
             // gets the pose on the frame it asks rather than a third of a second later — the same
@@ -1767,7 +1787,20 @@ namespace Odyssey.Presentation.World
             figure.SwimWeight = ForceSwim.HasValue
                 ? afloat
                 : SwimPose.Settle(figure.SwimWeight, afloat, deltaTime);
-            if (running && figure.SwimWeight > 0.001f) figure.SwimClock += deltaTime;
+            if (running && figure.SwimWeight > 0.001f)
+            {
+                float strokeWas = figure.SwimClock;
+                figure.SwimClock += deltaTime;
+
+                // A hand going into the water (design 20 §9): one sound per arm, on the stroke the
+                // figure is drawn making. Only a figure plainly afloat, and only live figures —
+                // which is every swimmer near enough to the camera to be heard.
+                if (figure.SwimWeight >= SwimPose.StrokeSoundWeight && SwimStroked != null
+                    && SwimPose.StrokeSoundsBetween(strokeWas, figure.SwimClock) > 0)
+                    SwimStroked(figure.Transform != null
+                        ? figure.Transform.position
+                        : GroundRelief.Lift(CellMetrics.FloorCentre(pawn.Cell)));
+            }
 
             // What is in her arms, and how far into looking like it (design 24 §4).
             //
@@ -1890,7 +1923,7 @@ namespace Odyssey.Presentation.World
             // blend and did not find, because it was never in the blend.
             Vector3 walked = position - steer;
             figure.Speed = ObserveSpeed(figure.Speed, figure.SimPosition, walked, deltaTime, settled,
-                hopping: pawn.Moving && PawnPose.IsDrawnAsAHop(World, in pawn));
+                hopping: pawn.Moving && (PawnPose.IsDrawnAsAHop(World, in pawn) || JumpArc.IsJump(in pawn)));
             figure.Settled = true;
             figure.SimPosition = walked;
 

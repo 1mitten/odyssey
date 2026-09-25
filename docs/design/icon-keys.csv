@@ -532,6 +532,7 @@ ui.debug.spawnarcblade,Spawn arc blade,ui.debug,CB,"Adds an arc blade near the c
 ui.debug.spawnrat,Spawn duct rat,ui.debug,AN,"Adds a duct rat near the camera"
 ui.debug.spawnbandits,Spawn 3 bandits,ui.debug,CB,"Adds three bandits near the camera, each on its own tile"
 ui.debug.armcolonists,Arm every colonist,ui.debug,CB,"Every colonist standing with nothing in hand takes a random melee weapon"
+ui.debug.jumpsfail,Jumps always fail,ui.debug,JP,"Every jump over a stream falls short into the water, so a failed jump can be watched"
 ui.debug.group.colonists,Colonists,ui.debug,CB,"The Spawn tab heading over the colonist rows"
 ui.debug.group.hostiles,Hostiles,ui.debug,CB,"The Spawn tab heading over the bandit rows"
 ui.debug.group.animals,Animals,ui.debug,CB,"The Spawn tab heading over the animal rows"

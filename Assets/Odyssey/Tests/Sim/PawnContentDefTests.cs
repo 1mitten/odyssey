@@ -255,11 +255,15 @@ namespace Odyssey.Tests.Sim
         // Moved again, 2026-09-25, by design 45 (the scenery made real): the tuning's woodPerTree
         // is gone, because what a felled tree yields is its species' own now, in
         // World/WildPlants.xml. Taken from a freshly loaded pack.
+        // 2026-09-25, design 46 §6: MovementDef gained jumpFailPerMille (30) and
+        // jumpFailCarryingPerMille (2,000) — the jump over a one-cell stream falling short.
+        // Both, 2026-09-25, on merging main into the scenery line: re-taken from the merged pack.
         //
         // And again the same day by M13 (design 45 §6): Job_Forage appended at 23, and
         // Item_Berries and Item_Mushrooms at 11 and 12 (Food, 60 and 70, stacks of 75). Taken from
         // a freshly loaded pack.
-        const ulong ContentFingerprint = 17088154382837571676UL;
+        // M13 on the merged line, 2026-09-25: re-taken from the merged pack.
+        const ulong ContentFingerprint = 9816125028376854740UL;
 
 
         [Test]
