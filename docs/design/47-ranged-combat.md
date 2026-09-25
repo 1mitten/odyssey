@@ -712,6 +712,47 @@ how loud every chop, blow and stroke is** and wants a listen, so it is its own s
 one. **Unverified in Unity**: the evidence is the metas and the importer's documented behaviour;
 the check is `AudioClip.GetData` on `combat-hit` against the WAV's own −3.0 dBFS peak.
 
+### 4c-ter. As built (P3, 2026-09-25)
+
+`Presentation/World/ProjectileDirector.cs`, wired in `OdysseyBootstrap.LateUpdate` straight after
+the blood's draw, inside `FrameSection.Overlays`, with the blood's band (`LowestDrawnLayer` to
+`HighestVisibleLayer`). `CombatFeedback` hands it every `Shot` and every gun's `Hit` and `Miss`
+before it draws, so the director follows a bullet from its `Shot` even when no snapshot ever
+carried it — the 3× point-blank case — and learns where it ended from the impact's event. Where the
+build departs from, or had to settle, what §4c and §4c-bis say:
+
+- **The streak's shape is in its matrix.** `Odyssey/Tracer` reads the tail from the translation, the
+  line from the z column, the width and the fade from the lengths of the x and y columns (built
+  square to the line, so the matrix stays invertible). That is what lets the afterimage's fade ride
+  in the same bucket with no per-instance property to keep alive in a player. It follows that the
+  shader has **no fallback**: any other shader would draw the matrix as a transform. It is in
+  `ShaderInclusion.Required`, the always-included list and the keep-alive folder.
+- **The draw is counted through the renderer** (`ChunkRenderer.DrawOverlayInstances`, gated on
+  `SubmitToGpu`), as the blood's is, with an explicit world box, because a shader that places its own
+  vertices cannot be culled from the quad's bounds. Streaks and afterimages are one call, flashes a
+  second.
+- **"Stands on or is stepping out of the end cell"** is taken as `Cell == End || NextCell == End`:
+  a figure stepping *into* the end cell is drawn half on it, and ending the streak at the cell centre
+  there is the "stops in the air beside the body" the rule exists to prevent.
+- **A walls-down storey's clip plane is its own floor**, not the band's ceiling: the band still
+  reaches above it (walls-down hides stacked storeys, not layers), so the plane a bullet from it
+  crosses is the ceiling of what is drawn beneath.
+- **The muzzle is used only while `PawnFlags.Drawn` is set**; a holstered or absent prop starts the
+  streak at the shooter's drawn chest, else the start cell at chest height. It is latched on the
+  frame the bullet is first seen; the flash re-reads it each frame, so it rides the recoil.
+- **"A wall → the stone or timber chips the building-hit path already picks" — no such path
+  exists.** Nothing in presentation throws chips for a blow on a building; chips come only from the
+  work stroke. A bullet that strikes a building (a `Hit` with no target) throws the same dust as one
+  into the ground, until a unit gives building hits their material's chips.
+- **`importer.normalize` does not exist in the scripting API.** `AudioImporter` exposes
+  `forceToMono`, `loadInBackground` and the sample settings, and not the normalise switch, which is
+  why `AudioSetup` never set it. It is written through the importer's serialised form
+  (`AudioSetup.SetNormalize`), for the two gunshot families only, and the build throws if the field
+  cannot be found. The fix for every other clip stays its own PR.
+- **The shot's sound is chosen in `CombatFeedback.ShotSoundFor`**, at `ShotNearMetres` (70 m) from
+  `AudioDirector.ListenerPosition`, and plays from the shooter's drawn feet on the `Shot`'s frame;
+  `CombatSoundTiming` is untouched. Blood reads `damageKind != Blunt`, so a bullet bleeds as an edge.
+
 ### 4d. Interface
 
 Right-click on a hostile from a gun-holder already routes through `CombatOrders.Route` →
