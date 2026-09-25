@@ -136,8 +136,15 @@ namespace Odyssey.Hud
         /// <summary>The electric heater (design 32 §7), the first thing that spends power.</summary>
         public const string Heater = "ui.arch.tool.heater";
 
+        /// <summary>The galley (design 48 §5): the electric cooker, where bills are worked.</summary>
+        public const string Galley = "ui.arch.tool.galley";
+
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
+
+        /// <summary>Pick a ripe berry bush (design 45 §6). The key predates the order, as the
+        /// growing zone's did.</summary>
+        public const string Harvest = "ui.arch.tool.harvest";
         public const string Cancel = "ui.arch.tool.cancel";
         public const string Deconstruct = "ui.arch.tool.deconstruct";
 
@@ -186,7 +193,7 @@ namespace Odyssey.Hud
         public static readonly (string key, string[] tools)[] Categories =
         {
             ("ui.arch.category.structure", new[] { Wall, Paving, Door, "ui.arch.tool.stair", Ladder, Slab, "ui.arch.tool.reclaim" }),
-            ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
+            ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", Galley, "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
             ("ui.arch.category.furniture", new[] { Bed, Shelf, Campfire, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp" }),
             // Power (design 32): the line and its undoing, then what makes power and what spends
             // it. Battery and reactor stay drawn and disabled — the shape of what is coming.
@@ -270,7 +277,7 @@ namespace Odyssey.Hud
         /// builds one button per entry. Cancel stays last: it is the one a player reaches for
         /// blind, and a fixed last position is how a hand learns where it is.</para>
         /// </summary>
-        public static readonly string[] Pinned = { Fell, Mine, Deconstruct, GrowZone, Stockpile, Cancel };
+        public static readonly string[] Pinned = { Fell, Harvest, Mine, Deconstruct, GrowZone, Stockpile, Cancel };
 
         /// <summary>
         /// The word the armed banner uses for an order: the order's own name, the one the wiki
@@ -357,8 +364,14 @@ namespace Odyssey.Hud
                 d => d.ArmBuild(BuildingHandle.Heater),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Heater,
                 wantsMaterial: true),
+            // The kitchen (design 48 §5): built of wood or stone like the heater, with scrap in it.
+            new PaletteTool(Galley,
+                d => d.ArmBuild(BuildingHandle.Galley),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Galley,
+                wantsMaterial: true),
             new PaletteTool(Mine, Toggle(DesignateTool.Mine), Holding(DesignateTool.Mine)),
             new PaletteTool(Fell, Toggle(DesignateTool.Fell), Holding(DesignateTool.Fell)),
+            new PaletteTool(Harvest, Toggle(DesignateTool.Harvest), Holding(DesignateTool.Harvest)),
             new PaletteTool(Cancel, Toggle(DesignateTool.Cancel), Holding(DesignateTool.Cancel)),
             new PaletteTool(Deconstruct, Toggle(DesignateTool.Deconstruct), Holding(DesignateTool.Deconstruct)),
             new PaletteTool(GrowZone, Toggle(DesignateTool.GrowZone), Holding(DesignateTool.GrowZone),

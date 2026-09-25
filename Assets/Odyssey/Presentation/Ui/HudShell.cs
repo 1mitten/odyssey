@@ -188,6 +188,7 @@ namespace Odyssey.Presentation.Ui
         Label _inspectTitle = null!;
         Label _inspectMeta = null!;
         Label _inspectState = null!;
+        Label _inspectPace = null!;
         IconBadge _inspectAvatar = null!;
 
         // The colonist half of that slot: a drawn face rather than a keyed badge, because no icon
@@ -206,6 +207,7 @@ namespace Odyssey.Presentation.Ui
         int _metaLayer = int.MinValue;
         string? _metaPosition;
         string? _stateJob;
+        string? _statePace;
         string? _stateBand;
         int _stateSelected = int.MinValue;
         string? _stateSite;
@@ -606,6 +608,7 @@ namespace Odyssey.Presentation.Ui
             BuildAnimals();
             BuildInventory();
             BuildResearch();
+            BuildAssign();
             BuildAlmanac();
 
             // B18, last, so it is the top-most element in the tree and its scrim covers everything
@@ -620,6 +623,9 @@ namespace Odyssey.Presentation.Ui
             // And the leave prompt after it, on the same argument: two modals cannot be up at
             // once today, and if that ever changes the later one should be the one on top.
             BuildLeavePrompt();
+
+            // Last of all, above every modal: the cover a new world is drawn behind (CurtainFrames).
+            BuildCurtain();
 
             _hud.RegisterCallback<GeometryChangedEvent>(_ => OnResized());
 
@@ -655,9 +661,8 @@ namespace Odyssey.Presentation.Ui
         void Attach(HudDirectors directors)
         {
             _directors = directors;
-            // A new session's overlay starts off; the menu row and the views strip must not go on
-            // saying otherwise.
-            _powerOverlayRow?.EnableInClassList("menu__row--on", directors.Overlays.PowerVisible);
+            // A new session's overlays start off; the menu rows and the views strip must not go on
+            // saying otherwise, and MarkViews repaints both on the next frame.
             _viewsPaintedFor = -1;
             _directors.Selection.Changed += OnSelectionChanged;
             _directors.Slice.LayerChanged += OnLayerChanged;
@@ -670,6 +675,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.AutosaveDaysChanged += OnAutosaveDaysChanged;
             _directors.Settings.CameraSpeedChanged += OnCameraSpeedChanged;
             _directors.Settings.BuildPaletteLayoutChanged += OnBuildLayoutChanged;
+            _directors.Settings.SelectionStyleChanged += OnSelectionStyleChanged;
             _directors.Settings.DeveloperOverlayChanged += OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged += OnBusDbChanged;
             _directors.Settings.ExitChanged += OnExitChanged;
@@ -683,6 +689,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Inventory.Changed += OnInventoryChanged;
             _directors.Research.Changed += OnResearchChanged;
             _directors.Research.StateChanged += OnResearchStateChanged;
+            _directors.Assign.Changed += OnAssignChanged;
             _directors.Almanac.Changed += OnAlmanacChanged;
             _directors.Almanac.Navigated += OnAlmanacNavigated;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
@@ -703,6 +710,7 @@ namespace Odyssey.Presentation.Ui
             OnAutosaveDaysChanged(_directors.Settings.AutosaveDays);
             OnCameraSpeedChanged(_directors.Settings.CameraSpeed);
             OnBuildLayoutChanged(_directors.Settings.BuildPaletteLayout);
+            OnSelectionStyleChanged(_directors.Settings.SelectionStyle);
             OnDeveloperOverlayChanged();
             foreach (SettingsBus bus in SettingsDirector.Buses) OnBusDbChanged(bus);
             OnExitChanged();
@@ -722,6 +730,7 @@ namespace Odyssey.Presentation.Ui
             OnWorkChanged();
             OnInventoryChanged();
             OnResearchChanged();
+            OnAssignChanged();
         }
 
         void Detach()
@@ -738,6 +747,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.AutosaveDaysChanged -= OnAutosaveDaysChanged;
             _directors.Settings.CameraSpeedChanged -= OnCameraSpeedChanged;
             _directors.Settings.BuildPaletteLayoutChanged -= OnBuildLayoutChanged;
+            _directors.Settings.SelectionStyleChanged -= OnSelectionStyleChanged;
             _directors.Settings.DeveloperOverlayChanged -= OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged -= OnBusDbChanged;
             _directors.Settings.ExitChanged -= OnExitChanged;
@@ -750,6 +760,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Inventory.Changed -= OnInventoryChanged;
             _directors.Research.Changed -= OnResearchChanged;
             _directors.Research.StateChanged -= OnResearchStateChanged;
+            _directors.Assign.Changed -= OnAssignChanged;
             _directors.Almanac.Changed -= OnAlmanacChanged;
             _directors.Almanac.Navigated -= OnAlmanacNavigated;
             _directors.Hotkeys.BindingChanged -= OnBindingChanged;
@@ -821,6 +832,10 @@ namespace Odyssey.Presentation.Ui
 
         void Update()
         {
+            // The curtain (HudShell.Start.cs, CurtainFrames): the new world has been drawn behind
+            // the start screen for long enough, so the screen gives way now.
+            if (_curtain > 0 && --_curtain == 0) LiftCurtain();
+
             var world = _boot!.World;
             if (world == null || _hud == null) return;
             if (_directors == null)
@@ -867,6 +882,7 @@ namespace Odyssey.Presentation.Ui
                 RefreshWork();
                 RefreshAnimals();
                 RefreshInventory();
+                RefreshAssign();
             }
             if (_slow >= SlowBucketSeconds)
             {
@@ -1134,6 +1150,11 @@ namespace Odyssey.Presentation.Ui
                 _directors.Inventory.SetOpen(false);
                 _directors.Research.SetOpen(false);
             }
+
+            // The Assign tab is the exception, as the Work tab is: pressing a name there selects
+            // that colonist, and the tab stays open to set the next one (design 43 §6). Its rows
+            // follow the selection at once rather than on the next cadence pass.
+            RefreshAssign();
 
             // The pane and the palette dock into the same bottom-left corner, so the corner holds
             // one of them. Opening the palette has cleared the selection since 2026-09-17; this is

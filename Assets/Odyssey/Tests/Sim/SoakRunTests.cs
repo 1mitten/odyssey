@@ -196,6 +196,11 @@ namespace Odyssey.Tests.Sim
                     continue;
                 }
 
+                // Held, not reset, while she sleeps: the bound is about reaching what she needs,
+                // and a colonist who went to bed exhausted and hungry sleeps until she is rested
+                // (the sleep driver wakes on rest alone). Counting those ticks failed the field run
+                // on the traits merge (2026-09-25) for a colonist who ate 600 ticks after waking.
+                if (pawns[p].Asleep) continue;
                 zeroStreak[slot] += step;
                 if (zeroStreak[slot] > worstStreak[n]) worstStreak[n] = zeroStreak[slot];
 

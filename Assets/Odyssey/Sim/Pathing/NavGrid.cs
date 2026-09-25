@@ -276,6 +276,25 @@ namespace Odyssey.Sim.Pathing
         /// </summary>
         public const int SlopeExtra = JumpUp - Orthogonal;
 
+        /// <summary>
+        /// Jumping a one-cell stream, bank to bank on one layer: two cells of ground for the
+        /// price of two cells of ground (design 46 §3).
+        ///
+        /// <para><b>Below the 290 it replaces</b> — <see cref="Drop"/> into the channel and
+        /// <see cref="JumpUp"/> out of it — so a colonist offered both jumps. <b>Not below 200</b>,
+        /// because the cell search's heuristic estimates <see cref="Orthogonal"/> for every cell of
+        /// distance, and a two-cell step priced under two cells would make that estimate an
+        /// over-estimate on every route through one: A* stops being admissible board-wide for the
+        /// sake of a rare edge, and says nothing. <b>Exactly 200</b> is walking pace, which is
+        /// what the owner asked for (2026-09-24), and it means no route ever prefers a stream to
+        /// the grass beside it.</para>
+        ///
+        /// <para>Cost is duration: 3.33 s at the standard walk. <c>JumpArc</c> spends the middle
+        /// half of it in the air. This file and <c>NavGraph.cs</c> are the two
+        /// <c>HopPriceHasOneOwnerTests</c> allows to name it.</para>
+        /// </summary>
+        public const int Jump = 2 * Orthogonal;
+
         public const int LiftUp = 400;
         public const int LiftDown = 400;
 
@@ -452,6 +471,11 @@ namespace Odyssey.Sim.Pathing
             ushort under = grid.Terrain[below];
             byte beneath = under < CostClassByTerrain.Length ? CostClassByTerrain[under] : (byte)0;
             if (beneath != 0) return beneath;
+
+            // A bush, which is an edifice rather than a terrain and says so with a flag (design
+            // 45 §4). After the terrain, so water keeps its own claim, and before the slope,
+            // which a bush never stands on: the undergrowth pass keeps them off a terrace foot.
+            if (grid.IsUndergrowth(index)) return Worldgen.Natural.NaturalContent.CostClassBush;
 
             // **A slope, which no terrain says and the shape of the ground does.**
             //

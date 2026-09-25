@@ -35,10 +35,13 @@ namespace Odyssey.Tests.Sim.Events
         // 2026-09-24, the bandit (design 42): Incident_BanditLeft renamed Incident_BanditLeft,
         // its label and bulletin key with it. Index 3 unchanged; the ledger keeps indices.
         //
-        // 2026-09-25, the break taxonomy (design 44 §5c): Incident_MentalBreak (Bad, Misc)
-        // appended at 4, naming the Recorded worker — written down by the world when a colonist
-        // breaks, never fired. Its subject is the break, its amount the colonist.
-        const ulong ContentFingerprint = 3217851181232517750UL;
+        // 2026-09-25, medical supplies (design 37 §5), at the merge with main: Incident_MedicalDrop
+        // appended at index 4, after the bandit's two — the supply drop's worker again, four to
+        // eight medical supplies, weight 40 (invented).
+        // And the break taxonomy (design 44 §5c) on the merge with main: Incident_MentalBreak
+        // (Bad, Misc) appended at 5, after the medical drop, naming the Recorded worker - written
+        // down by the world when a colonist breaks, never fired. Re-taken from the merged pack.
+        const ulong ContentFingerprint = 7605656342009865975UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

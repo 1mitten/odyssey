@@ -76,7 +76,7 @@ namespace Odyssey.Presentation.Ui
 
             // Categorised: the command bar is the second and last place the spec allows an icon to
             // carry a colour of its own.
-            var icon = new IconBadge(command.Key, IconBadge.BarSize, categorised: !command.Primary);
+            var icon = new IconBadge(HudCommands.IconOf(command.Key), IconBadge.BarSize, categorised: !command.Primary);
             // The primary cap's ink flips with its fill — accent on the outlined resting state,
             // the dark on-accent ink once build mode fills it. MarkBuildMode does the flipping;
             // this is only the starting value.
@@ -96,6 +96,7 @@ namespace Odyssey.Presentation.Ui
             // while the palette is.
             if (command.Key == HudCommands.InventoryKey) _inventoryItem = item;
             if (command.Key == HudCommands.ResearchKey) _researchItem = item;
+            if (command.Key == HudCommands.AssignKey) _assignItem = item;
 
             // Build is the one cap on the bar that names a binding rather than a promise: it
             // follows the binding map when the player moves the key.
@@ -135,6 +136,7 @@ namespace Odyssey.Presentation.Ui
             else if (key == HudCommands.InventoryKey) _directors?.Inventory.Toggle();
             else if (key == HudCommands.ResearchKey) _directors?.Research.Toggle();
             else if (key == HudCommands.AnimalsKey) _directors?.Animals.Toggle();
+            else if (key == HudCommands.AssignKey) _directors?.Assign.Toggle();
             else if (key == HudCommands.AlmanacKey) ToggleAlmanac();
             else if (key == HudCommands.MenuKey) ToggleMenu();
         }
@@ -171,6 +173,9 @@ namespace Odyssey.Presentation.Ui
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ResearchTab))
                 _directors?.Research.Toggle();
+
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.AssignTab))
+                _directors?.Assign.Toggle();
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Almanac))
                 ToggleAlmanac();
@@ -274,17 +279,8 @@ namespace Odyssey.Presentation.Ui
             _barDivider.style.display = DisplayStyle.Flex;
         }
 
-        const string PowerOverlayKey = "ui.overlay.power";
-
-        /// <summary>The Menu's power row, lit while the overlay is on.</summary>
-        VisualElement? _powerOverlayRow;
-
-        static readonly string[] OverlayKeys =
-        {
-            "ui.overlay.temperature", "ui.overlay.light", "ui.overlay.beauty", "ui.overlay.cleanliness",
-            "ui.overlay.roofs", "ui.overlay.zones", "ui.overlay.power", "ui.overlay.salvage",
-            "ui.overlay.support", "ui.overlay.traffic",
-        };
+        /// <summary>The Menu's live overlay rows, by key: lit from the overlay director in <c>MarkViews</c>.</summary>
+        readonly Dictionary<string, VisualElement> _overlayRows = new Dictionary<string, VisualElement>();
 
         void BuildMenuPopup()
         {
@@ -302,27 +298,36 @@ namespace Odyssey.Presentation.Ui
             // deleted: a control that exists and is disabled with its reason is the catalogue's
             // rule, and an unlabelled chip on the bar was neither.
             _menuPopup.Add(HudText.Make("Overlays", HudTextRole.PanelLabel, ussClass: "menu__section"));
-            foreach (string key in OverlayKeys)
+            foreach (string key in HudViews.MenuOverlays)
             {
                 var overlay = new VisualElement();
                 overlay.AddToClassList("menu__row");
-                var icon = new IconBadge(key, IconBadge.BarSize);
-                icon.Inherit(HudTokens.TextMeta);
-                overlay.Add(icon);
+                string? path = HudViews.PathOf(key);
+                if (path != null)
+                {
+                    // Drawn from the same path as its views-strip button (design 43 §5a).
+                    overlay.Add(new PathGlyph(path, IconBadge.BarSize, HudTokens.Convert(HudTheme.TextMeta), fill: true));
+                }
+                else
+                {
+                    var icon = new IconBadge(key, IconBadge.BarSize);
+                    icon.Inherit(HudTokens.TextMeta);
+                    overlay.Add(icon);
+                }
                 overlay.Add(HudText.Make(Registry.Label(key), HudTextRole.Row, ussClass: "menu__label"));
 
-                // Power is the first channel that renders (design 32 §9): every conduit, shown
-                // whatever is armed, until the row is pressed again. The rest stay disabled with
-                // their reason, which is the catalogue's rule for a control that is not ready.
-                if (key == PowerOverlayKey)
+                // A row is live exactly when its view is on the views strip (power, design 32 §9;
+                // home, design 43 §5a): the same switch, lit while it is on. The rest stay
+                // disabled with their reason, which is the catalogue's rule for a control that is
+                // not ready.
+                if (HudViews.IsLive(key))
                 {
-                    overlay.tooltip = Registry.Label(key) + " — show every conduit, whatever is armed";
-                    _powerOverlayRow = overlay;
+                    overlay.tooltip = Registry.Label(key) + " — show it whatever is armed; press again to hide it";
+                    _overlayRows[key] = overlay;
                     overlay.RegisterCallback<ClickEvent>(_ =>
                     {
                         if (_directors == null) return;
-                        _directors.Overlays.TogglePower();
-                        overlay.EnableInClassList("menu__row--on", _directors.Overlays.PowerVisible);
+                        HudViews.Toggle(_directors.Overlays, key);
                         MarkViews();
                     });
                 }
@@ -356,7 +361,7 @@ namespace Odyssey.Presentation.Ui
             var row = new VisualElement();
             row.AddToClassList("menu__row");
             row.AddToClassList("menu__row--off");
-            var icon = new IconBadge(command.Key, IconBadge.BarSize, categorised: true);
+            var icon = new IconBadge(HudCommands.IconOf(command.Key), IconBadge.BarSize, categorised: true);
             row.Add(icon);
             row.Add(HudText.Make(command.Label, HudTextRole.Row, ussClass: "menu__label"));
             row.Add(HudText.Make(command.Hotkey, HudTextRole.Hotkey, ussClass: "menu__key"));

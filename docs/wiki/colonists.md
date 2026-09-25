@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure. Traits, thoughts and mental breaks are design 44: a thought's description here is its tooltip on the Thoughts tab, and a trait's is its tooltip on the colonist's pane and the select screen.
 
-89 entries, 71 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+106 entries, 88 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -65,13 +65,16 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
 | **Blew off steam** | `ui.thought.catharsis` | The aftermath of a mental break that ran its course. Lighter for a while | no art | TM |
-| **Ate a meal** | `ui.thought.atemeal` | A proper meal. A second in a row counts for less than the first | no art | TM |
+| **Ate a cooked meal** | `ui.thought.atemeal` | A meal somebody cooked. A second in a row counts for less than the first | no art | TM |
 | **Slept on the ground** | `ui.thought.sleptonground` | A night in the dirt with no bed under her | no art | TM |
 | **Fell through a floor** | `ui.thought.fell` | Rode a collapsing floor down. Badly shaken, and a second fall adds to it | no art | TM |
 | **Slept cold** | `ui.thought.sleptcold` | Woke from a night colder than is comfortable | no art | TM |
 | **Slept too hot** | `ui.thought.slepthot` | Woke from a night hotter than is comfortable | no art | TM |
 | **Attacked by a colonist** | `ui.thought.attackedbycolonist` | One of the colony swung at her. Lasts a day, from the latest swing | no art | TM |
 | **A colonist died** | `ui.thought.colonistdied` | Felt by every other colonist for three days, up to three deaths at once | no art | TM |
+| **Ate a ration pack** | `ui.thought.ateration` | Filling, and nothing more. A second in a row counts for less than the first | no art | TM |
+| **Ate a burnt meal** | `ui.thought.ateburnt` | The cook let it burn | no art | TM |
+| **Ate raw food** | `ui.thought.ateraw` | Carrots from the pile, or worse. Cooking it first would have been better | no art | TM |
 | **Hunger** | `ui.thought.hunger` | Hungry costs mood; starving costs more. Eating clears it | no art | TM |
 | **Tiredness** | `ui.thought.tiredness` | Tired costs mood; exhausted costs more. Sleep clears it | no art | TM |
 | **Recreation** | `ui.thought.recreation` | Idle time lifts it and a long stretch of work without any wears it down | no art | TM |
@@ -115,6 +118,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Chopping** | `ui.status.felling` | Cutting a tree down for wood <br>**Needs:** an axe swung at a trunk | no art | M3 |
 | **Sowing** | `ui.status.sowing` | Breaking ground and planting a zone cell | no art | M3 |
 | **Harvesting** | `ui.status.harvesting` | Cutting a ripe crop and gathering it | no art | M3 |
+| **Picking** | `ui.status.foraging` | Picking the berries off a wild bush <br>**Needs:** a hand picking a berry | no art | M3 |
 | **Refuelling** | `ui.status.refuelling` | Carrying fuel to a generator and filling it | no art | M3 |
 | **Sleeping** | `ui.status.sleeping` | Asleep, and should stay that way | sheet 08 (salvage gear), high | M2 |
 | **Eating** | `ui.status.eating` | Taking a meal | sheet 02 (food), high | M2 |
@@ -132,6 +136,24 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Equipping** | `ui.status.equipping` | Fetching a weapon to hold | no art | CB |
 | **Rescuing** | `ui.status.rescuing` | Carrying the downed to a bed | no art | CB |
 | **Stealing** | `ui.status.stealing` | A bandit carrying something off the board | no art | CB |
+| **Treating** | `ui.status.treating` | Tending the hurt, or herself <br>**Needs:** hands dressing a wound. Blocked on the missing human figure | no art | M3 |
+| **Resting as a patient** | `ui.status.patient` | In bed until the wound allows getting up <br>**Needs:** a figure lying in bed. Blocked on the missing human figure | no art | M3 |
+| **Cooking** | `ui.status.cooking` | At an electric cooker or a campfire, or fetching food for the pan <br>**Needs:** a figure stirring a pan. Blocked on the missing human figure | no art | M3 |
+| **Sheltering** | `ui.status.sheltering` | An animal waiting out the rain under a roof or a tree, or walking to one | no art | WE |
+| **In the rain** | `ui.status.inrain` | A colonist under open sky while it rains, and walking slower for it. Said beside her pace | no art | WE |
+| **Shooting** | `ui.status.shooting` | Standing where the line is open and firing at a target | no art | RC |
+
+## Pace and what it is made of
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Pace** | `ui.stat.pace` | How fast a colonist walks, as a share of the standard walk. Not the tile's walk speed, which is the ground | no art | WE |
+| **Rolled** | `ui.stat.pace.rolled` | The pace a colonist was born with, between 85% and 115% of the standard walk | no art | WE |
+| **Condition** | `ui.stat.pace.condition` | What hunger, cold or heat is taking off her pace. Never above 100%, never below 70% | no art | WE |
+| **Rain** | `ui.stat.pace.rain` | What walking in the rain under open sky takes off her pace. A roof or a tree gives it back | no art | WE |
+| **Drafted** | `ui.stat.pace.drafted` | A drafted colonist runs | no art | WE |
+| **Running** | `ui.stat.pace.running` | Running to a fight or away from one | no art | WE |
+| **The standard walk** | `ui.stat.pace.standard` | The pace tooltip when nothing is making her faster or slower | no art | WE |
 
 ---
 

@@ -36,6 +36,13 @@ namespace Odyssey.Sim.Pawns
         public int ContainerId;
 
         public bool Despawned;
+
+        /// <summary>
+        /// How well it was made, a <see cref="QualityHandle"/> value, or 0 for a thing that takes no
+        /// quality (design 47 §11). Only weapons carry one today, rolled when they are made
+        /// (<see cref="WeaponQuality.Assign"/>).
+        /// </summary>
+        public byte Quality;
     }
 
     /// <summary>
@@ -327,6 +334,31 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// Take <paramref name="count"/> off a stack into a pair of hands, leaving the rest where it
+        /// lies (design 37: a doctor carries one box of supplies to a patient, not the whole
+        /// pile). Taking the whole stack or more is <see cref="PickUp"/> and returns the same thing;
+        /// otherwise the source shrinks in place — on its cell or in its container, neither of which
+        /// changes — and a new thing is made already carried, so it occupies no cell and no slot.
+        /// </summary>
+        public ColonyItem SplitOff(ColonyItem item, int count, PawnId carrier)
+        {
+            if (count >= item.Stack)
+            {
+                PickUp(item, carrier);
+                return item;
+            }
+
+            item.Stack -= count;
+            var taken = new ColonyItem
+            {
+                Id = new ThingId(_nextId++), DefIndex = item.DefIndex, Cell = -1, Stack = count,
+                CarriedBy = carrier.Value,
+            };
+            _items.Add(taken);
+            return taken;
+        }
+
+        /// <summary>
         /// Put a carried thing into a container. <see cref="Drop"/>'s twin, and it carries
         /// <see cref="Drop"/>'s contract and its trap: onto a stack of the same def with room it
         /// merges, the resident grows, and <b>the carried thing is despawned</b> — so the thing
@@ -567,8 +599,16 @@ namespace Odyssey.Sim.Pawns
         /// own <c>CellGrid</c> in, and a field kept only for this handler would be a second copy of
         /// something <see cref="PawnContext"/> already owns.</para>
         /// </summary>
-        public IntentRejection HandleGiveResource(Intent intent, CellGrid cells)
+        public IntentRejection HandleGiveResource(Intent intent, CellGrid cells) =>
+            HandleGiveResource(intent, cells, out _);
+
+        /// <inheritdoc cref="HandleGiveResource(Intent, CellGrid)"/>
+        /// <param name="given">The thing the grant went into, or <c>default</c> when refused — so the
+        /// composition can give a granted weapon its quality (design 47 §11), which this class has no
+        /// seed to roll.</param>
+        public IntentRejection HandleGiveResource(Intent intent, CellGrid cells, out ThingId given)
         {
+            given = default;
             int defIndex = intent.A;
             int amount = intent.B;
             if (defIndex < 0 || defIndex >= Content.Items.Length) return IntentRejection.OutOfBounds;
@@ -584,7 +624,7 @@ namespace Odyssey.Sim.Pawns
             int cell = NearestCellWithSpace(cells, origin, defIndex, amount, maxRadius: 3);
             if (cell < 0) return IntentRejection.NotPermitted;
 
-            Spawn(defIndex, cell, amount);
+            given = Spawn(defIndex, cell, amount);
             return IntentRejection.None;
         }
 
@@ -674,6 +714,9 @@ namespace Odyssey.Sim.Pawns
                 hash.Add(item.CarriedBy);
                 hash.Add(item.ContainerId);
                 hash.Add(item.Despawned);
+                // Only when set (design 47 §11), so the countless things that take no quality hash
+                // exactly as they did and no golden moved for it.
+                if (item.Quality != 0) hash.Add(item.Quality);
             }
 
             // The zones left this class in S1 and are hashed by `StorageZones` — cells with the
@@ -712,6 +755,7 @@ namespace Odyssey.Sim.Pawns
                 writer.Write(item.CarriedBy);
                 writer.Write(item.ContainerId);
                 writer.Write(item.Despawned);
+                writer.Write((int)item.Quality);
             }
 
             // Format 8: the zones are gone from this section and live in `odyssey.storage.zones`.
@@ -750,6 +794,8 @@ namespace Odyssey.Sim.Pawns
                 };
                 if (containers) item.ContainerId = reader.ReadInt();
                 item.Despawned = reader.ReadBool();
+                // Format 10 (design 47 §11) appended the quality; an older item has none.
+                if (reader.FormatVersion >= 10) item.Quality = (byte)reader.ReadInt();
                 _items.Add(item);
             }
 

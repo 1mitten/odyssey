@@ -47,10 +47,16 @@ namespace Odyssey.Presentation.World
         /// <summary>
         /// The computed work stroke never plays for <c>Job_AttackMelee</c> (design 33 §5j), even
         /// though its driver reports a work focus during the wind-up: that focus is for turning the
-        /// figure to face its target, and the blow is the fight's own clip or computed swing.
+        /// figure to face its target, and the blow is the fight's own clip or computed swing. Nor
+        /// for <c>Job_Treat</c> (design 37, owner: correcting the tending pose): a doctor is not
+        /// swinging a tool, so <c>WorkStyle.IndexForJob</c> falling through to the axe (or, with
+        /// nothing else near, reading as the hammer) is a mistake and not a placeholder — the work
+        /// focus there is for the figure's own kneel and stand, in <c>TreatJobDriver</c>.
+        /// Nor for <c>Job_AttackRanged</c> (design 47 §4b), whose focus is the aim's.
         /// </summary>
         public static bool PlaysWorkStroke(in PawnView pawn) =>
-            pawn.Working && pawn.JobDef != JobHandle.AttackMelee;
+            pawn.Working && pawn.JobDef != JobHandle.AttackMelee && pawn.JobDef != JobHandle.Treat
+            && pawn.JobDef != JobHandle.AttackRanged;
 
         /// <summary>
         /// Every item def's attack style, or null for an item that is not a weapon — the family a
@@ -81,6 +87,10 @@ namespace Odyssey.Presentation.World
         /// frame is drawn at. What a swing is timed on.
         /// </summary>
         float _frameTicks;
+
+        /// <summary>This frame's part-tick and the Defs' fallback pace, for <c>PawnPose.StepProgress</c> (design 46 §7).</summary>
+        float _tickAlpha;
+        int _movePerTick;
 
         /// <summary>The combat rows' usable clips by row id, read out of the catalogue once.</summary>
         Dictionary<string, List<CombatClipEntry>>? _combatRows;
@@ -183,6 +193,33 @@ namespace Odyssey.Presentation.World
                 return true;
             }
             head = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Where a pawn's figure's chest is drawn this frame, if it has a figure (design 47 §4c): the
+        /// rig's chest bone for a person, the middle of the drawn box for an animal, else
+        /// <see cref="ProjectileDirector.ChestHeight"/> over the drawn feet. What a bullet's streak
+        /// ends on, so a hit visibly connects with the body wherever the figure has walked to.
+        /// </summary>
+        public bool TryGetChest(PawnId pawn, out Vector3 chest)
+        {
+            if (_byPawn.TryGetValue(pawn.Value, out Figure? figure) && figure.Transform != null)
+            {
+                if (figure.Chest != null)
+                {
+                    chest = figure.Chest.position;
+                    return true;
+                }
+                if (TryGetAnimalBox(pawn, out Matrix4x4 place, out _))
+                {
+                    chest = place.GetColumn(3);
+                    return true;
+                }
+                chest = figure.Transform.position + Vector3.up * ProjectileDirector.ChestHeight;
+                return true;
+            }
+            chest = default;
             return false;
         }
 
@@ -322,7 +359,8 @@ namespace Odyssey.Presentation.World
         /// </summary>
         Playable BuildCombatLayer(PlayableGraph graph, AnimationMixerPlayable gaits, bool animal, CombatState fight)
         {
-            if (animal || !HasCombatClips) return gaits;
+            // A jump's clips use the same slot (design 46 §7), so the layer is built for either.
+            if (animal || !(HasCombatClips || HasJumpClips)) return gaits;
 
             bool sheath = HasSheathClips;
             fight.Layer = AnimationLayerMixerPlayable.Create(graph, sheath ? 3 : 2);
@@ -698,6 +736,14 @@ namespace Odyssey.Presentation.World
                     fight.Overlaid = true;
                     fight.Computed = fight.Computed.Plus(flinch);
                 }
+            }
+
+            // A jump over a stream takes the slot whenever the fight has nothing to show in it
+            // (design 46 §7). Timed from the step, not by the frame's seconds, so it needs no dt.
+            if (showing == null && figure.JumpClip != null)
+            {
+                showing = figure.JumpClip;
+                showingTime = figure.JumpClipTime;
             }
 
             ShowCombatClip(figure, showing, showingTime, dt);

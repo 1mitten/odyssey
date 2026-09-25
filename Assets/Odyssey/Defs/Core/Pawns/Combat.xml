@@ -66,6 +66,29 @@
     -->
     <downedRecoverAtPerMille>150</downedRecoverAtPerMille>
 
+    <!--
+      Treatment (design 37 section 4). The heal itself is the item's (Item_MedicalSupplies'
+      healPerUnit, 40); these say how far it may go and who may give it.
+      treatCapPerMille 800: a treatment never lifts a pawn past four fifths of its pool, so the
+        last fifth is bed rest's (owner).
+      selfHealPerMille 500 and selfCapPerMille 600: treating yourself heals half, never past 60 per
+        cent (owner). selfWorkFactor 3: and takes three times as long (owner).
+      bareHeal 10: a doctor with no supplies dresses the wound with what is at hand (owner's "about
+        +10"), under the same cap.
+      patientBelowPerMille 500 and patientReleasePerMille 800: a colonist under half goes to bed,
+        and gets up at the treatment cap (INVENTED).
+      treatedCooldownTicks 15000: a quarter of a day before the same pawn may be treated again, so
+        a pile of supplies cannot stand in for rest (INVENTED).
+    -->
+    <treatCapPerMille>800</treatCapPerMille>
+    <selfHealPerMille>500</selfHealPerMille>
+    <selfCapPerMille>600</selfCapPerMille>
+    <selfWorkFactor>3</selfWorkFactor>
+    <bareHeal>10</bareHeal>
+    <patientBelowPerMille>500</patientBelowPerMille>
+    <patientReleasePerMille>800</patientReleasePerMille>
+    <treatedCooldownTicks>15000</treatedCooldownTicks>
+
     <!-- A chase re-plans to a moving target once a second. INVENTED; a cost figure as much as a feel. -->
     <chaseRepathTicks>60</chaseRepathTicks>
 
@@ -107,6 +130,41 @@
     <knockbackPerMille>500</knockbackPerMille>
     <knockbackBluntPerMille>750</knockbackBluntPerMille>
     <knockedDownTicks>90</knockedDownTicks>
+
+    <!--
+      The gun (design 47 sections 2a, 2c, 3b). The hit chance is shootingPerCell at the shooter's
+      level, raised to the distance in 2.5 m cells, times the gun's own accuracy at that distance,
+      floored at hitFloorPerMille. RAISED 2026-09-25 on the owner's first play ("seemed to miss a
+      lot ... keep it more accurate"): the reference's 747 / 903 / 951 left a level-0 colonist at
+      16 per cent at 12.5 m and 2 at 25 m, and fire at will engages anything in range. Now 876 /
+      943 / 983, which with the pistol's bands gives about 45 / 64 / 79 per cent at 12.5 m and
+      17 / 36 / 55 at 25 m: skill still buys the reach. OURS, tunable here. The floor is the
+      reference's 2 per cent.
+    -->
+    <shootingPerCell>
+      <li><level>0</level><perMille>876</perMille></li>
+      <li><level>10</level><perMille>943</perMille></li>
+      <li><level>20</level><perMille>983</perMille></li>
+    </shootingPerCell>
+    <hitFloorPerMille>20</hitFloorPerMille>
+    <!-- No partial cover (owner): a wall blocks the line or it does not. The slot a cover value reads. -->
+    <coverPerMille>1000</coverPerMille>
+    <!--
+      A bystander on the bullet's line: never hit within 5 m of the shooter, the full species
+      chance from 12 m, linear between - the reference's 5 and 12 tiles, kept in metres.
+    -->
+    <interceptDeadZoneMm>5000</interceptDeadZoneMm>
+    <interceptFullMm>12000</interceptFullMm>
+    <!--
+      A miss carries on past its target along the line of fire, by r cells, r = min(3, 1 +
+      (1000 - hit) x 3 / 1000): one cell for a good shot, three for a hopeless one, and it ends
+      where the line stops - a wall, the ground (owner, 2026-09-25: misses "way off" and "not even
+      in a place a gun would fire to" were the old box round the target). Both 3s are INVENTED.
+    -->
+    <scatterMaxCells>3</scatterMaxCells>
+    <scatterPerMissPerMille>3</scatterPerMissPerMille>
+    <!-- How often a drafted gun-holder looks for something in sight to shoot. INVENTED; R5 measures it. -->
+    <rangedScanTicks>15</rangedScanTicks>
   </CombatDef>
 
 </Defs>

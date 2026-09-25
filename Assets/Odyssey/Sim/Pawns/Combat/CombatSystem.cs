@@ -61,12 +61,20 @@ namespace Odyssey.Sim.Pawns
             int tick = world.CurrentTick;
             int interval = _ctx.Content.NeedsIntervalTicks;
 
+            // The bullets due (design 47 §2c), before any shot is fired this tick.
+            LandDue(tick);
+
             var pawns = _ctx.Pawns.All;
             for (int i = 0; i < pawns.Count; i++)
             {
                 Pawn pawn = pawns[i];
 
+                // A gun-holder's reach rule (design 47 §12), before anything lands or fires: an enemy
+                // within reach is clubbed, not shot, and one that steps away is shot again.
+                SwapByReach(pawn, tick);
+
                 if (pawn.Driver is AttackMeleeJobDriver swing && swing.InWindup) LandOrLose(pawn, swing, tick);
+                else if (pawn.Driver is AttackRangedJobDriver aim && aim.InAim) FireOrLose(pawn, aim, tick);
 
                 // The clocks run out: back to nought, so a pawn over its fight carries no combat
                 // state and hashes exactly as it did before it (design 33 §6).
@@ -106,7 +114,7 @@ namespace Odyssey.Sim.Pawns
                 return;
             }
 
-            Armament armament = _ctx.WeaponRules.ArmamentOf(attacker, _ctx);
+            Armament armament = _ctx.WeaponRules.ArmamentOf(attacker, _ctx).Melee;
             if (!swing.WindupDone(armament)) return;
             bool decided = attacker.HasPendingSwing;
             SwingOutcome held = attacker.HeldSwing;

@@ -24,6 +24,7 @@ putting a file of the same name in the same folder.
 | ~~`alert.wav`~~ | **Supplied 2026-09-19** and split into five: `alert-normal`, `alert-negative`, `alert-happy`, `alert-joined`, `alert-raid`. See `docs/design/24-alert-sounds.md` — the sourcing note below still applies to any future chime. |  |  |  |
 | `draft.wav` | **Supplied 2026-09-23** (a sword drawn; Pixabay, Dragon Studio) and baked by `tools/audio/bake_draft.sh`: the sound of a colonist being drafted. 2D, Effects bus. See `docs/design/33-combat.md` §2i. | | | |
 | `carry-lift.wav`, `carry-drop.wav` | **Supplied 2026-09-19** as one recording and split into two by `tools/audio/bake_carry.sh`. See `docs/design/24-carrying.md` §12. | | | |
+| `swim-stroke.wav`, `_01`, `_02` | **Supplied 2026-09-25** (Pixabay, freesound_community, `swim-44183`; Pixabay Content License, the owner to confirm) and baked by `tools/audio/bake_swim.sh` into three takes at 0.94/1.00/1.06 speed: one arm of a swimmer's stroke, played once per arm as the hand goes in. Its loudest moment is at 0.18 s, and **that number is a timing constant** (`SwimPose.StrokeSoundPeakSeconds`). -24 LUFS max momentary. Heard within 40 m of the camera only. See `docs/design/20-swimming-and-water.md` §9. | 0.71–0.80 s | no | mono |
 | `combat-whoosh.wav` | **Supplied 2026-09-23** (Pixabay, floraphonic, `swing-whoosh-4`; Pixabay Content License, the owner to confirm) and baked by `tools/audio/bake_combat.sh`: a weapon through the air, every swing with a weapon, hit or miss. Its loudest moment is at 0.040 s, and **that number is a timing constant** (`CombatSoundTiming.WhooshPeakSeconds`): a replacement must be cut to match, or the constant moved with it. See `docs/design/33-combat.md` §9g. | 0.20 s | no | mono |
 | `combat-whoosh_01.wav` | **Supplied 2026-09-23** (Pixabay, floraphonic, `swing-whoosh-3`; the same licence): the second whoosh, cut so its loudest moment lines up with the first's at 0.040 s. | 0.18 s | no | mono |
 | `combat-crit-slice.wav` | **Supplied 2026-09-23** (Pixabay, Dragon Studio, `violent-sword-slice`; the same licence): a sharp weapon's critical, played instead of the whoosh, its loudest moment (0.065 s, `SlicePeakSeconds`) on the impact. The source's 2.2 s tail is cut to 1.1 s with a fade. | 1.10 s | no | mono |
@@ -31,6 +32,8 @@ putting a file of the same name in the same folder.
 | `water.wav` | The bed for ponds, streams and the river. Flat and eventless — nothing may *happen* in it, or the event repeats every few seconds and becomes the only thing you hear. Its level is driven by how much water is near the camera, so what is wanted is the sound of standing beside a stream, not of approaching one. | 15–90 s | **yes, seamlessly** | mono |
 | `ambience-day.wav` | The sound of the world outdoors by day, under everything else: air, distance, birds. The floor of the mix — the thing you stop hearing and would notice the absence of. Eventless, like the water. | 10–60 s | **yes, seamlessly** | stereo |
 | `ambience-night.wav` | The same after dark, and a *different world* rather than a quieter one: the day's birds gone, something else started. It plays at a lower level than the day bed. | 10–60 s | **yes, seamlessly** | stereo |
+| `rain-light.wav`, `rain-heavy.wav` | **Supplied 2026-09-25** (Pixabay: Dragon Studio's `gentle-rain-07`, boons_freak's `rain-sound`) and baked by `tools/audio/bake_rain.sh`: light rain and heavy rain, weighted against each other by the published sky (`RainMix`, design 43 §7a). 2D, Ambience bus. See "What arrived" below. | 42.5 s, 82 s | **yes, seamlessly** | stereo |
+| `combat-shot.wav`, `_01`, `_02`; `combat-shot-far.wav`, `_01` | **Supplied 2026-09-25** (Pixabay, freesound_community, `single-pistol-gunshot-33-37187`; Pixabay Content License, the owner to confirm) and baked by `tools/audio/bake_gunshot.sh`: the pistol shot, played on the frame of each shot from the shooter. The source is brick-walled (+4.3 dBTP); the bake takes it down in float, adds an outdoor space (a convolved tail and a 140 ms slapback), and makes a **near** set (three takes at 0.95–1.06 speed, −14 LUFS max momentary) and a **far** set (low-passed at 1.6 kHz, the space forward, −20 LUFS), picked by the shooter's distance from the camera (70 m). Onset within 7 ms of the first sample. **Imported with `normalize` off.** Not played until design 47's P3 wires it. See `docs/design/47-ranged-combat.md` §4c-bis. | 1.4 s, 1.8 s | no | mono |
 | `menu-bed.wav` | **Supplied 2026-09-19.** The title screen's bed, and the one sound that must never be heard in a colony. See `docs/design/17-start-flow.md` §12. | 151 s | **yes, seamlessly** | stereo |
 | `music-day.wav` | The daytime track. Plays from 06:00 to 19:00 game time, crossfading in over 3 s. | any | **yes, seamlessly** | stereo |
 | `music-night.wav` | The night-time track. 19:00 to 06:00, crossfading over 4 s. | any | **yes, seamlessly** | stereo |
@@ -77,6 +80,7 @@ the lossless master.
 | `alert-happy`, `alert-joined`, `alert-raid` | ADPCM, compressed in memory | seconds long, rare, and nothing is waiting on the frame they start |
 | menu-bed | Vorbis, streamed from disc | two and a half minutes of bed nobody should pay memory for |
 | water, ambience-day, ambience-night | ADPCM, decompress on load | Unity's own answer for noisy sounds played in quantity — 3.5× smaller than PCM, near-free to decode |
+| rain-light, rain-heavy | Vorbis, streamed from disc | long stereo loops that play together for hours, the outdoor beds' reasoning |
 | music | Vorbis, streamed from disc | decompressed Vorbis costs ~10× its compressed size in memory, and a track is long |
 
 ## Things that will sound wrong if they are not right
@@ -127,6 +131,25 @@ the lossless master.
 
 The lossless master is what is committed; the MP3 is not, per the rule above.
 
+**The rain, 2026-09-25.** Two owner-supplied recordings, one for light rain and one for heavy
+(design 43 §7a); `tools/audio/bake_rain.sh` makes both, and `tools/audio/loop_seam.py` checks them.
+
+| | `rain-light` | `rain-heavy` |
+|---|---|---|
+| Source | `dragon-studio-gentle-rain-07-437321.mp3`, 90 s, 48 kHz stereo, −28.2 LUFS, LRA 7.9 LU | `boons_freak-rain-sound-188158.mp3`, 91 s, 44.1 kHz stereo, −20.6 LUFS, LRA 2.4 LU |
+| Window | 0.5–47.0 s: the recording fades by ~7 dB over its second half, so only the steady first half loops | 1.5–88.5 s: steady end to end, ends matching to 0.2 LU; the fade-in and fade-out are cut |
+| Level | +3.6 dB to −23 LUFS, peaks limited at −3 dBFS. The limiter touched 101 samples in 4.46 million, so the drips keep their shape | −2.4 dB to −23 LUFS, peaks at −3.1 dBFS |
+| Loop | 4 s equal-power fold of its tail over its head, 42.5 s | 5 s fold, 82.0 s |
+| Seam | wrap step 330 / 1,426 against a 99th-percentile ordinary step of 2,567 / 3,834; level across the wrap 0.6 dB, inside the file's own 2.4 dB wander | wrap step 21 / 632 against 2,581 / 2,709; 0.2 dB against 2.6 dB |
+
+- **Loudness, not peak.** Every other bed is peak-normalised. Here that would have put the gentle
+  rain 7–8 LU under the heavy one, because its drips give it a crest ~8 dB higher, and the
+  crossfade between them would have jumped. At equal loudness, `RainMix`'s weights mean loudness.
+- **Equal-power folds.** Rain is noise, and two uncorrelated noises crossfaded linearly dip 3 dB in
+  the middle: an audible breath at every wrap. The fades are quarter-sine.
+- **Levelled before folding**, so the limiter's lookahead never sees the seam.
+- **Stereo, source rate kept.** A 2D bed's width is most of what makes it read as all around.
+
 ## Licensing
 
 **Open, and it has to be decided rather than discovered — `campfire.wav`.** The file the clip was
@@ -134,6 +157,12 @@ made from is `soundsforyou-campfire-crackling-fireplace-sound-119594.mp3`. The n
 Pixabay download has, and the Pixabay licence would allow this, but **nobody has confirmed where it
 came from** and the clip is committed to git. If it is not redistributable it belongs in a
 gitignored folder the way `Assets/Synty/` does, and the game already runs silent without it.
+
+**Open in the same way — `rain-light.wav` and `rain-heavy.wav`** (2026-09-25). The file names
+(`dragon-studio-gentle-rain-07-437321`, `boons_freak-rain-sound-188158`) have the shape of Pixabay
+downloads, and if that is where they came from, the Pixabay Content License allows use in a game.
+**The owner to confirm the source**, as for the combat sounds; until then this is an assumption
+from a file name, and the clips are committed.
 
 Note the licence with the files. If it forbids redistribution, say so **before** they go in —
 `Assets/Odyssey/Presentation/Audio/Clips/` is committed to git, and licensed content that cannot
@@ -146,4 +175,5 @@ than discovered.
 Only the eight above are wired. These are the obvious next ones, and each is a catalogue row plus a
 file rather than new code — worth knowing if a pack you are buying happens to contain them:
 footsteps (by surface), a tree falling, rock collapsing, hauling and dropping items, a building
-finishing, eating, sleeping, UI clicks and panel opens, and weather.
+finishing, eating, sleeping, UI clicks and panel opens, and weather beyond rain: thunder, wind,
+and rain drumming on a roof.

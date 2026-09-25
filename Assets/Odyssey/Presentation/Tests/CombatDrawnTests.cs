@@ -436,6 +436,17 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
+        /// A doctor is not swinging a tool (design 37, owner: correcting the tending pose), so the
+        /// axe never plays for <c>Job_Treat</c> either, exactly as it does not for the fight.
+        /// </summary>
+        [Test]
+        public void ATreatingFigurePlaysNoWorkStroke()
+        {
+            PawnView treating = Colonist(1, 3, 3, JobHandle.Treat, working: true, workCell: new CellRef(4, 3, 0));
+            Assert.That(PawnFigureDirector.PlaysWorkStroke(in treating), Is.False);
+        }
+
+        /// <summary>
         /// A strike on the gesture serial starts a swing, not the lift's crouch every other gesture
         /// is drawn as; the Swing event refines its timing without starting a second one.
         /// </summary>

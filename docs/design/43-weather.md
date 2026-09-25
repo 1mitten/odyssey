@@ -22,10 +22,10 @@ steps are one PR. What is built:
 - `DebugSetWeather` is the debug menu's command.
 - The clock shows the sky as a glyph with the word in its tooltip. The row has no room for a word.
 
-**§8's second step, `weather-world`, is not built**: rain slowing colonists, watering crops and
-sending animals for cover, and the sim-side column rule of §6. The render mirror's `SkyHeightMap`
-stands in for the drawing until then. `CellGrid.SkyLanding(x, z)`, the supply drop's column rule,
-is where that rule should be built (P1).
+**Built 2026-09-25: `weather-world`, §8's second step** (`claude/weather-world`, worktree
+`D:\code\odyssey-weather-world`). Rain slows whoever stands in it, waters the crops it reaches and
+sends animals for cover, and all three ask one shelter rule that the drawing now asks too. What was
+built, and the three places it departs from the letter of this design, are in §6a.
 
 **Status as designed, 2026-09-24:** design only, nothing built. Branch `claude/weather-design`, worktree
 `D:\code\odyssey-weather`. Ground: `main` at `3a39dd8d`. The owner approved the shape — three kinds
@@ -185,6 +185,111 @@ Two facts compose, and the composition is the query — nobody else re-derives e
    Cost: a column walk stops at the first thing it meets — two or three cells on the surface —
    and runs only for the columns an edit dirtied, plus the canopy reach around them.
 
+### 6a. As built (2026-09-25, `weather-world`)
+
+**The rule** is `SkyColumnRule.Compute` in `Sim/World/SkyColumns.cs`, a pure function over four
+questions (`ISkyColumnSource`: solid, water, slab, tree). The simulation asks them of the cell grid
+(`GridSkySource`), and `SkyHeightMap` asks them of the render mirror (`MirrorSkySource`). So the
+rule has one owner, and the two readers can differ only in what they are told.
+- **In layers, not metres.** A column's answer is a stop layer and a kind. Every cell below the
+  stop layer is sheltered.
+  - A solid cell's stop is the layer above it.
+  - Water and a slab are landed *on*, so a swimmer and a colonist on a roof are in the rain.
+  - A canopy covers the trunk's own layer and the one above it (`CanopyLayers` 2, `CanopyReach` 1).
+  - `SkyHeightMap.Metres` turns the answer into the drawing's heights: a slab's lift, a pond's
+    surface, and the crown 4.5 m above the trunk's floor.
+- **One consequence of layers.** A pond one layer above a trunk and within its reach now counts as
+  under the crown. Comparing metres had it above. The picture follows the simulation. The case
+  needs a pond on the terrace above a tree.
+- **Departure 1: it is built beside `SkyLanding`, not on it.** The two rules answer different
+  questions. `SkyLanding` stops at the first edifice, and a tree is an edifice. It returns −1 for
+  any column it cannot land in, and a pond is one. The column rule has to walk past a trunk and
+  record it, and has to land on water. Building one on the other would have meant a flag on
+  `SkyLanding` that changes what it means. So there are two functions, each named for its own
+  question. §6's point stands: `IsRoofed` and `HasRoof` are not used.
+
+**How the map hears about an edit.** Every edit path already tells the `ChunkGrid` which cell
+changed, so the drawing re-meshes it. The chunk grid now also keeps the *columns* touched
+(`TakeEditedColumns`), and `SkyColumns` reads them lazily on the next question. Each touched
+column is widened by the canopy's reach and recomputed. So the sim map and the mirror are fresh
+about exactly the same edits.
+- **Departure 2: every colony now has a chunk grid**, a headless one included. `ColonyWorld.Build`
+  makes one when no renderer hands one in, and `AddColony` does the same for hand-built
+  fixtures. It was null headless, which would have left a headless run with a felled tree's shade
+  for ever. `SupportSystem` falls back to the colony's chunk grid for a collapse, for the fixtures
+  that build it first.
+- A load rebuilds the whole map inside `RebuildDerived`, so the first tick does not pay for it.
+
+**Measured** (`TickBenchmarkTests.TheSkyColumnsCostWhatAnEditTouches`, Long tier, played map, one
+run on the Windows machine):
+
+| Board | Board-wide build | One slab | Columns an edit recomputes |
+|---|---|---|---|
+| Standard 120 × 120 × 16 | 1.33 ms | 7.5 µs | 9 (25 for an order's 3 × 3 × 3 marking) |
+| Large 180 × 180 × 24 | 3.16 ms | 8.7 µs | 9 (25) |
+| Huge 240 × 240 × 16 | 5.59 ms | 7.9 µs | 9 (25) |
+
+The column counts are asserted; the times are only printed. The first board build asked
+`Compute` of every column, which walks nine columns each time: 13.8 ms on Standard and 53 ms on
+Huge. `ComputeBoard` walks each column once, and both readers use it.
+
+**Pace** is `Pawn.WeatherPerMille()`, one factor in `MoveRatePerMille`'s product, before urgency.
+It is `WeatherSystem.PacePerMilleAt(cell)`: the sky's pace where the sky reaches, and exactly
+1,000 under cover, on a dry day, or with no weather.
+- The pace is each spell's `PaceOf(def, intensity)` blended across the hand-over, like every
+  other term.
+- A pawn reaches the weather through `Pawn.Context`, set by the registry on adopt and on load.
+- The planner is untouched. `WeatherWorldTests.TheRainIsARateAndNeverAPathPrice` plans one path
+  under a clear sky and a storm and gets one cost.
+
+**Growth** is one multiply in `PlantGrowthSystem`, after temperature: `GrowthPerMilleAt(cell,
+tick)`, 1,000 plus the blended `growBonusPerMilleAtFull × intensity / 1000` on an exposed crop.
+
+**Animals.** `AnimalShelterThinkNode` sits between the combat node and the idle node.
+- It acts past 400 per mille of rain, for an animal that is not leaving the board.
+- Under cover, it waits 120 ticks, the weather's own cadence, and asks again. So a felled tree or
+  a removed roof is noticed within one step of the sky.
+- In the open, `ShelterTarget.Find` scans square rings outward to the species' wander radius. It
+  takes the nearest sheltered cell by the travel estimate, first found on a tie, in the walkable
+  cell nearest the animal's layer in each column. It keeps no list of cover.
+- **Departure 3: an animal sheltering reads *Wandering* and then *Resting*.** Those are the
+  statuses of the two jobs it uses. The registry has no `ui.status.sheltering` and no colonist
+  "In the rain", so neither was invented; both are owed (§8). **Closed 2026-09-25**, below.
+
+**The statuses, as built (2026-09-25, `claude/pace-readout`).**
+- **An animal reads *Sheltering*** on the inspect pane and in the Animals tab, while it walks to
+  cover and while it waits under it.
+  - The simulation publishes `odyssey.pawn.sheltering` (1, sparse), and the activity line prefers it
+    to the borrowed job's word.
+  - **It is derived at publish time, never recorded.** `AnimalShelterThinkNode.IsSheltering` returns
+    true when the animal minds the rain and is running one of the node's own two jobs: a wait
+    standing in a sheltered cell, or a wander whose target is one.
+  - The animal minds the rain when it is raining past the gate, there is a sky, and it is not
+    leaving. That is `Minds`, which is now the node's own first question too, so the gate has one
+    owner.
+  - A job def of its own would have been one more hashed per-job tally and would have moved every
+    golden. A flag set by the node would have had to be saved, or it would be wrong for a tick after
+    a load.
+  - **One consequence, taken knowingly.** An idle rest that was already under a tree when the rain
+    came reads as *Sheltering*. While the animal minds the rain, the idle node behind this one never
+    runs, so that is what the rest has become.
+- **A colonist reads *in the rain*** on her Pace line (`Pace 90% · in the rain`, design 17 §5a).
+  It shows while `odyssey.pawn.rate.move.weather` is published, which is exactly while
+  `WeatherPerMille` is below 1,000. So it follows the one shelter rule: a roof or a crown takes it
+  away on the same step it gives the pace back.
+- Neither status moved a golden. The colony probe matches `origin/main` on all three boards.
+
+**Content** (`Weather.xml`, invented for the owner to tune). Rain and Storm both have
+`moveFloorPerMille` 900 and `growBonusPerMilleAtFull` 250. The first is RimWorld's ×0.90 anchor.
+The second makes a downpour grow a crop a quarter faster.
+
+**Goldens.** Only the ruined city's simulated hash moved, because it is the only golden board that
+rains inside its window: intensity 459 all run. The meadow and the played board roll a cloudy
+spell that lasts their whole windows. The reason, measured with each half switched off in turn, is
+in `Golden.cs`: pace moves positions and move progress, shelter moves the waits, and nothing else
+moved. **So no golden exercises rain on the played board.** A golden that does would need a
+seed chosen for it.
+
 `EnclosureGrid` keeps the indoors question — a tree is not a room, and cover grants no thermal
 enclosure, no room temperature, nothing but dry. Growth deliberately does **not** read canopy as
 shade: sky-cover and the light model are different hooks (22 §8 keeps light separate), and a
@@ -272,7 +377,41 @@ the second lever, if the grade alone reads flat. Whether heavy cloud should also
 shadow map, the largest single term in a 4K frame (d-19), is a measurement for this PR.
 
 **Sound belongs in this PR, not in a seam.** Rain with no sound reads as a screensaver: a loop
-scaled by intensity, and a drum under a roof from the same column map.
+scaled by intensity, and a drum under a roof from the same column map. **The loop is built (§7a);
+the drum under a roof is not.**
+
+### 7a. The rain's sound, as built (2026-09-25)
+
+Two recordings the owner supplied, one for light rain and one for heavy, baked into seamless
+stereo loops at equal loudness (`tools/audio/bake_rain.sh`; the measurements are in
+`docs/reference/audio-sourcing.md`). `RainMix.Of` says how much of each to play, from the published
+`WeatherView`. `AudioDirector.StepRain` eases each level toward that over three seconds and plays
+them as two 2D voices on the Ambience bus.
+
+**One continuous sound.** Both beds start together on the first rain and stop together when the
+rain has faded out. Between those two moments only their volumes move, on an equal-power
+crossfade, so rain going from light to heavy never starts a clip.
+
+**By weather type** (every number invented, for the owner to tune by ear):
+
+| Sky | What plays | The outdoor bed (birds) |
+|---|---|---|
+| Clear, Cloudy | nothing | as before |
+| Drizzle (rain under 450 per mille) | the light bed alone, quieter the lighter it is | about −2 dB |
+| Rain (450–850) | the heavy bed rises under the light one | stepping back |
+| Downpour (850+) | the heavy bed, with the light one kept at 30% for its close drips | about −8 dB |
+| Storm | a downpour whatever its intensity, about 1.6 dB louder | about −12 dB |
+
+- **A storm is recognised by its wind**, 1,300 per mille at full, because the wind is continuous
+  across a hand-over and `Kind` flips at its midpoint.
+- **Underground there is no rain to hear.** This is the outdoor bed's own rule: the slice under the
+  surface layer.
+- **Paused, the rain keeps sounding**, as the outdoor bed does. The drawn rain holds still. The
+  owner's playtest can say whether that reads wrong.
+
+**Not built:** the drum under a roof. The listener is the camera, which is always outside, so
+"under a roof" would have to mean the focus column, and it isn't clear that is what a player
+hears as being indoors. It is owed, and it should come from a playtest.
 
 **Pause, speed, slice, cut-away.**
 - The rain clock is game seconds, as `WindDirector`'s is, so a paused world holds its drops and
@@ -326,7 +465,10 @@ Three PRs, each green on both tiers and playable at the keyboard:
    reads in the corner.*
 2. **`claude/weather-world`** — `ShelteredFromSky` (roof + canopy, with eviction), the pace
    factor, the growth multiply, `AnimalShelterThinkNode`, fixture tests, TickBenchmark rows.
-   *Rain touches pawns, crops and animals.*
+   *Rain touches pawns, crops and animals.* **Built 2026-09-25 (§6a), and the rain's sound with it
+   (§7a).** A colonist's "in the rain" and an animal's "Sheltering" were owed, and are **built
+   2026-09-25** with the pace readout (`claude/pace-readout`, §6a, design 17 §5a). Still owed:
+   - the rain drumming on a roof (§7a).
 3. **`claude/weather-visuals`** — grown from `claude/rain-look`: `RainDirector` and
    `Odyssey/Rain` (streaks, splashes), the sky texture read off the column map, wetness in the
    ground and foliage shaders, `Overcast` in `DaylightDirector`, the rain loop, the density rung

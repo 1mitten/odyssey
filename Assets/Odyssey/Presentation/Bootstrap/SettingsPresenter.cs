@@ -139,6 +139,7 @@ namespace Odyssey.Presentation.Bootstrap
                         _bootstrap?.Directors?.Animals.Open == true,
                         _bootstrap?.Directors?.Inventory.Open == true,
                         _bootstrap?.Directors?.Research.Open == true,
+                        _bootstrap?.Directors?.Assign.Open == true,
                         // Null while a colony is running: the main screen and the game are the two
                         // halves of a session's life and only one of them is ever up.
                         _shell != null && _shell.Menu.Showing ? _shell.Menu.Screen : null))
@@ -181,6 +182,9 @@ namespace Odyssey.Presentation.Bootstrap
                     break;
                 case EscapeAction.CloseResearch:
                     _bootstrap?.Directors?.Research.SetOpen(false);
+                    break;
+                case EscapeAction.CloseAssign:
+                    _bootstrap?.Directors?.Assign.SetOpen(false);
                     break;
                 case EscapeAction.ClosePanel:
                     _director.SetOpen(false);
@@ -419,8 +423,11 @@ namespace Odyssey.Presentation.Bootstrap
                     if (renderer.ScatterDensity == _director.Value(ladder)) return;
                     renderer.ScatterDensity = _director.Value(ladder);
                     // Re-meshed through the meshing budget, so a board-wide change lands over a
-                    // few frames and never in one (06-rendering-and-camera.md §6c.7).
-                    Redraw(renderer);
+                    // few frames and never in one (06-rendering-and-camera.md §6c.7). The surround
+                    // re-strews its tufts only: rebuilding all of it was a 50 ms frame on the rung
+                    // press (design 38 §25).
+                    _bootstrap?.Model?.Remesh();
+                    if (renderer.Skirt.Enabled) renderer.Skirt.RebuildTufts();
                     break;
 
                 case GraphicsLadder.GrassDistance:

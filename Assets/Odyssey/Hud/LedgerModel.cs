@@ -52,7 +52,11 @@ namespace Odyssey.Hud
     /// </summary>
     public sealed class LedgerModel
     {
+        /// <summary>Cooked meals, all three kinds (design 48 §4): the food a player cooks and decides on.</summary>
         const string Meal = "ui.res.meal";
+
+        /// <summary>The ration pack, which had the Meal row to itself until the kitchen.</summary>
+        const string Rations = "ui.res.rations";
         const string Wood = "ui.res.wood";
         const string Scrap = "ui.res.scrap";
 
@@ -82,7 +86,7 @@ namespace Odyssey.Hud
         static readonly string[] Planned = { Scrap, "ui.res.medkit" };
 
         /// <summary>Every key a row can carry, so a test can prove each is a name the registry knows.</summary>
-        public static readonly string[] IconKeys = new[] { Meal, Wood, Carrots }.Concat(Planned).ToArray();
+        public static readonly string[] IconKeys = new[] { Meal, Rations, Wood, Carrots }.Concat(Planned).ToArray();
 
         public readonly List<LedgerRow> Rows = new List<LedgerRow>();
 
@@ -108,18 +112,22 @@ namespace Odyssey.Hud
         {
             Rows.Clear();
 
-            int meals = 0, salvage = 0, wood = 0, carrots = 0;
+            int meals = 0, rations = 0, salvage = 0, wood = 0, carrots = 0;
             var things = snapshot.Things;
             for (int i = 0; i < things.Length; i++)
             {
                 int stack = things[i].Stack;
-                if (things[i].DefIndex == ItemHandle.Meal) meals += stack;
+                int def = things[i].DefIndex;
+                if (def == ItemHandle.CookedMeal || def == ItemHandle.VegetableMeal || def == ItemHandle.BurntMeal)
+                    meals += stack;
+                else if (def == ItemHandle.Meal) rations += stack;
                 else if (things[i].DefIndex == ItemHandle.Salvage) salvage += stack;
                 else if (things[i].DefIndex == ItemHandle.Wood) wood += stack;
                 else if (things[i].DefIndex == ItemHandle.Carrots) carrots += stack;
             }
 
             Add(Meal, meals, real: true);
+            Add(Rations, rations, real: true);
             Add(Carrots, carrots, real: true);
             Add(Wood, wood, real: true);
             Add(Scrap, salvage, real: true);

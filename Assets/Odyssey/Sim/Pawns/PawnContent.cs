@@ -114,6 +114,18 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>A colonist died; felt by every other colonist (design 33 §12).</summary>
         public const int ColonistDied = ThoughtHandle.ColonistDied;
+
+        // The kitchen (design 48 §4). What a colonist thinks of what she ate is the food's own
+        // (`ItemDef.ateThought`); AteMeal above is the cooked meal's, and these are the rest.
+
+        /// <summary>Ate a ration pack: filling, and nothing more.</summary>
+        public const int AteRation = ThoughtHandle.AteRation;
+
+        /// <summary>Ate a meal the cook let burn.</summary>
+        public const int AteBurnt = ThoughtHandle.AteBurnt;
+
+        /// <summary>Ate food raw: carrots from the pile, or worse.</summary>
+        public const int AteRaw = ThoughtHandle.AteRaw;
         public const int Count = ThoughtHandle.Count;
     }
 
@@ -247,6 +259,11 @@ namespace Odyssey.Sim.Pawns
         public const int Equip = JobHandle.Equip;
         public const int Rescue = JobHandle.Rescue;
         public const int Steal = JobHandle.Steal;
+        public const int Treat = JobHandle.Treat;
+        public const int Patient = JobHandle.Patient;
+        public const int Forage = JobHandle.Forage;
+        public const int Cook = JobHandle.Cook;
+        public const int AttackRanged = JobHandle.AttackRanged;
         public const int Count = JobHandle.Count;
     }
 
@@ -396,6 +413,12 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int Rescue = WorkHandle.Rescue;
 
+        /// <summary>Treating the hurt (design 37). An emergency giver, like rescue's.</summary>
+        public const int Doctor = WorkHandle.Doctor;
+
+        /// <summary>Working the bills at a galley or a campfire (design 48 §5).</summary>
+        public const int Cooking = WorkHandle.Cooking;
+
         public const int Count = WorkHandle.Count;
 
         /// <summary>
@@ -409,7 +432,7 @@ namespace Odyssey.Sim.Pawns
         /// than a missing aspect — which is why growing is in both or in neither.</para>
         /// </summary>
         public static readonly string[] Names =
-            { "haul", "cutting", "mining", "construction", "growing", "rescue" };
+            { "haul", "cutting", "mining", "construction", "growing", "rescue", "doctor", "cooking" };
     }
 
     /// <summary>
@@ -434,7 +457,20 @@ namespace Odyssey.Sim.Pawns
         /// Claimed by the combat contracts step.
         /// </summary>
         public const int Melee = 5;
-        public const int Count = 6;
+
+        /// <summary>Treating the hurt (design 37): buys speed at it and nothing else.</summary>
+        public const int Medicine = 6;
+
+        /// <summary>Cooking (design 48 §5): buys speed at the stove and keeps the meal from burning.</summary>
+        public const int Cooking = 7;
+        /// <summary>
+        /// Ranged combat (design 47 §2a): the shooter's level reads the per-cell accuracy curve in
+        /// <see cref="CombatDef"/>, raised to the distance in cells, and every shot trains it, hit
+        /// or miss. Claimed by the ranged line's contracts step, 8 after medical supplies' Medicine and the kitchen's Cooking; a colonist from a save older than
+        /// format 10 is dealt it once on load (<see cref="PawnRegistry.BackfillSkills"/>).
+        /// </summary>
+        public const int Shooting = 8;
+        public const int Count = 9;
 
         /// <summary>
         /// The names skills are published under, parallel to the indices above.
@@ -444,7 +480,7 @@ namespace Odyssey.Sim.Pawns
         /// assembly or sharing an enum with it. The prefix is the project's, the middle is this
         /// feature's, and the leaf is the value — the same shape as an icon key.</para>
         /// </summary>
-        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee" };
+        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee", "medicine", "cooking", "shooting" };
     }
 
     /// <summary>
@@ -678,6 +714,13 @@ namespace Odyssey.Sim.Pawns
         public const int Crowbar = ItemHandle.Crowbar;
         public const int Machete = ItemHandle.Machete;
         public const int ArcBlade = ItemHandle.ArcBlade;
+        public const int MedicalSupplies = ItemHandle.MedicalSupplies;
+        public const int Berries = ItemHandle.Berries;
+        public const int Mushrooms = ItemHandle.Mushrooms;
+        public const int CookedMeal = ItemHandle.CookedMeal;
+        public const int VegetableMeal = ItemHandle.VegetableMeal;
+        public const int BurntMeal = ItemHandle.BurntMeal;
+        public const int Pistol = ItemHandle.Pistol;
         public const int Count = ItemHandle.Count;
     }
 
@@ -710,6 +753,126 @@ namespace Odyssey.Sim.Pawns
         /// Read through <c>IWeaponRules</c>, never directly, so the lookup has one owner.
         /// </summary>
         public AttackDef? weapon;
+
+        /// <summary>
+        /// Hit points one unit restores when a doctor treats with it (design 37 §4), in whole
+        /// points. Zero means it is not medicine. Self-treatment and the treatment cap scale and
+        /// clamp it (<c>MedicalDef</c>); the amount itself is the item's, so a weaker item is one
+        /// Def row.
+        /// </summary>
+        public int healPerUnit;
+
+        /// <summary>
+        /// Which food a hungry colonist takes first (design 48 §8): lowest first, and the nearest
+        /// within a tier, so a cooked meal across the room beats a carrot at her feet. Read only
+        /// for things with <see cref="nutrition"/>. <see cref="LastResortTier"/> and above is
+        /// eaten only when nothing better can be reached.
+        /// </summary>
+        public int foodTier;
+
+        /// <summary>A tier this deep is food only for somebody with nothing else: raw meat (design 48 §8).</summary>
+        public const int LastResortTier = 4;
+
+        /// <summary>
+        /// May a cook put this in a pan (design 48 §5)? Raw food, which is carrots now and meat
+        /// once there is any. Its <see cref="nutrition"/> is what it is worth there.
+        /// </summary>
+        public bool rawIngredient;
+
+        /// <summary>
+        /// Is this meat, for the purpose of what a meal comes out as (design 48 §5): a pan with any
+        /// meat in it makes a meal, and one with none a vegetable meal.
+        /// </summary>
+        public bool meat;
+
+        /// <summary>
+        /// Ticks at the ordinary rate until a stack of this goes off, or 0 for never (design 48 §6).
+        /// Declared with the kitchen; nothing reads it until the cold store (K2).
+        /// </summary>
+        public int ticksToRot;
+
+        /// <summary>
+        /// The <see cref="ThoughtIndex"/> eating one adds, or -1 for none (design 48 §4). What a
+        /// colonist thinks of a meal is the food's, not the eater's, so a new food is one row.
+        /// </summary>
+        public int ateThought = -1;
+    }
+
+    /// <summary>
+    /// One thing a cooking station can make (design 48 §5): raw food in, by nutrition, and one
+    /// product out — which of three is decided by what went in and whether it burnt. Loaded from
+    /// <c>Recipes.xml</c>; a <see cref="RecipeHandle"/> is its index.
+    /// </summary>
+    public class RecipeDef : Def
+    {
+        /// <summary>Work at the standard pace, in ticks, before the station's own factor and the cook's speed.</summary>
+        public int workTicks = 300;
+
+        /// <summary>Raw food it takes, by nutrition: 500 is three carrots or ten pieces of meat.</summary>
+        public int ingredientNutrition = 500;
+
+        /// <summary>What comes out when there was meat in the pan, by item def name.</summary>
+        public string product = "";
+
+        /// <summary>What comes out when there was none.</summary>
+        public string productNoMeat = "";
+
+        /// <summary>What comes out when the cook let it catch.</summary>
+        public string burntProduct = "";
+
+        /// <summary>
+        /// Chance per mille that the meal burns, by the cook's skill level: the index is the level,
+        /// and a level past the end reads the last entry (design 48 §5, the owner's shape).
+        /// </summary>
+        public int[] burnPerMilleByLevel = System.Array.Empty<int>();
+
+        /// <summary>Where it can be made, and on what terms.</summary>
+        public System.Collections.Generic.List<RecipeStation> stations =
+            new System.Collections.Generic.List<RecipeStation>();
+
+        // Resolved at load from the names above: item def indices. Not fields a Def declares, so
+        // properties, which the binder never sees.
+        public int ProductItem { get; set; } = -1;
+        public int ProductNoMeatItem { get; set; } = -1;
+        public int BurntItem { get; set; } = -1;
+
+        /// <summary>The burn chance per mille at a skill level, before the station's factor.</summary>
+        public int BurnPerMille(int level)
+        {
+            if (burnPerMilleByLevel.Length == 0) return 0;
+            if (level < 0) level = 0;
+            if (level >= burnPerMilleByLevel.Length) level = burnPerMilleByLevel.Length - 1;
+            return burnPerMilleByLevel[level];
+        }
+
+        /// <summary>The terms at a building, or null where this recipe cannot be made there.</summary>
+        public RecipeStation? At(int building)
+        {
+            for (int i = 0; i < stations.Count; i++)
+                if (stations[i].building == building) return stations[i];
+            return null;
+        }
+    }
+
+    /// <summary>One place a <see cref="RecipeDef"/> can be made (design 48 §5).</summary>
+    public class RecipeStation
+    {
+        /// <summary>A <see cref="BuildingHandle"/> value.</summary>
+        public int building;
+
+        /// <summary>The recipe's work here, per mille: a campfire is 2,000, twice the galley's time.</summary>
+        public int workFactorPerMille = 1_000;
+
+        /// <summary>The burn chance here, per mille of the recipe's: a campfire is 1,500.</summary>
+        public int burnFactorPerMille = 1_000;
+
+        /// <summary>An item this station also swallows per meal — the campfire's one wood — or -1.</summary>
+        public int fuelItem = -1;
+
+        /// <summary>How many of <see cref="fuelItem"/>.</summary>
+        public int fuelCount;
+
+        public bool NeedsFuel => fuelItem >= 0 && fuelCount > 0;
     }
 
     /// <summary>Movement tuning. One unit of cost is 1/100 of a flat orthogonal cell crossing.</summary>
@@ -753,6 +916,20 @@ namespace Odyssey.Sim.Pawns
         /// first reason to run the game has, which is what §4f held the run for.
         /// </summary>
         public int draftedPacePerMille = 2_000;
+
+        /// <summary>
+        /// How often a well, unladen person's jump over a one-cell stream falls short, per mille
+        /// (design 46 §6): 30, one in thirty-three. INVENTED. A failed jump lands in the water
+        /// and costs a soaking and a few seconds; nothing is hurt until the health model can
+        /// carry an injury.
+        /// </summary>
+        public int jumpFailPerMille = 30;
+
+        /// <summary>
+        /// What carrying does to that chance, per mille of it: 2,000 doubles it. A load in the
+        /// arms, or a person being carried to a bed. INVENTED.
+        /// </summary>
+        public int jumpFailCarryingPerMille = 2_000;
     }
 
     /// <summary>
@@ -845,6 +1022,13 @@ namespace Odyssey.Sim.Pawns
         /// of the species. Unread for a person.
         /// </summary>
         public int meleeSkill;
+
+        /// <summary>
+        /// The chance, per mille, that a bullet crossing this pawn's cell takes it (design 47 §2c),
+        /// before the dead zone near the shooter scales it. The reference's 40 % × body size,
+        /// clamped to 4–80 %.
+        /// </summary>
+        public int interceptPerMille = 400;
     }
 
     /// <summary>What a pawn starts life with.</summary>
@@ -1094,7 +1278,6 @@ namespace Odyssey.Sim.Pawns
         public int thinkLoopLimit = 10;
         public int thinkLoopWindowTicks = 60;
         public int standDownTicks = 120;
-        public int woodPerTree = 27;
         public int stonePerRock = 8;
         public int stoneChanceOneIn = 1;
         public int orePerCell = 15;
@@ -1142,6 +1325,23 @@ namespace Odyssey.Sim.Pawns
         public WorkTypeDef[] WorkTypes = System.Array.Empty<WorkTypeDef>();
         public SkillDef[] Skills = System.Array.Empty<SkillDef>();
         public ItemDef[] Items = System.Array.Empty<ItemDef>();
+
+        /// <summary>
+        /// The item table slot of a def name, or -1 if the content has no such item. What a Def
+        /// that names its yield by <c>[DefReference]</c> is resolved through — a crop, a tree, a
+        /// bush — rather than each keeping a handle of its own: an item handle is a save contract,
+        /// and deriving one at load would be a second place to keep it in step. The table is a
+        /// dozen entries long and this is asked once a harvest.
+        /// </summary>
+        public int ItemIndexOf(string defName)
+        {
+            for (int i = 0; i < Items.Length; i++)
+                if (string.Equals(Items[i].defName, defName, System.StringComparison.Ordinal))
+                    return i;
+            return -1;
+        }
+        /// <summary>What a cooking station can make, in <see cref="RecipeHandle"/> order (design 48 §5).</summary>
+        public RecipeDef[] Recipes = System.Array.Empty<RecipeDef>();
         public MoodDef Mood = new MoodDef();
         public MentalBreakDef Break = new MentalBreakDef();
 
@@ -1264,13 +1464,6 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Job starts allowed inside <see cref="ThinkLoopWindowTicks"/> before a stand-down.</summary>
         public int ThinkLoopLimit = 10;
 
-        /// <summary>
-        /// Wood a felled tree leaves on the ground: 27, the pine class's vanilla yield
-        /// (docs/research/a-08-plants-growing-food.md §1; the oak class gives 46). One stack of
-        /// 75, so a single haul clears it.
-        /// </summary>
-        public int WoodPerTree = 27;
-
         /// <summary>Stone a plain rock cell leaves. ASSUMED, like everything else here.</summary>
         public int StonePerRock = 8;
 
@@ -1360,6 +1553,7 @@ namespace Odyssey.Sim.Pawns
                 .Register<WorkTypeDef>()
                 .Register<SkillDef>()
                 .Register<ItemDef>()
+                .Register<RecipeDef>()
                 .Register<MoodDef>()
                 .Register<MentalBreakDef>()
                 .Register<MovementDef>()
@@ -1394,7 +1588,9 @@ namespace Odyssey.Sim.Pawns
                 // Appended, never inserted: a thought index rides every saved memory.
                 "Thought_SleptCold", "Thought_SleptHot",
                 // Friendly fire (design 33 §12).
-                "Thought_AttackedByColonist", "Thought_ColonistDied");
+                "Thought_AttackedByColonist", "Thought_ColonistDied",
+                // The kitchen (design 48 §4): what each food is thought of.
+                "Thought_AteRation", "Thought_AteBurnt", "Thought_AteRaw");
             // Traits (design 44 §4c). Appended, never inserted: a trait's index rides every save
             // that holds one. A pack without the table is a pack from before traits, and its
             // colonists simply have none.
@@ -1422,18 +1618,36 @@ namespace Odyssey.Sim.Pawns
                 // The combat line, claimed together by its contracts step (design 33 §5).
                 "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue",
                 // A bandit carrying something off the board (design 33 §17).
-                "Job_Steal");
+                "Job_Steal",
+                // Medical supplies (design 37).
+                "Job_Treat", "Job_Patient",
+                // Picking a berry bush (design 45 §6), appended after medical supplies.
+                "Job_Forage",
+                // The kitchen (design 48 §5).
+                "Job_Cook",
+                // The ranged attack (design 47 §2d).
+                "Job_AttackRanged");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing",
                 // Appended with the combat line (design 33 §5): a pawn's priority array is indexed
                 // by this order, so it is a save contract like the rest.
-                "Work_Rescue");
+                "Work_Rescue",
+                // Medical supplies (design 37).
+                "Work_Doctor",
+                // The kitchen (design 48 §5).
+                "Work_Cooking");
             content.Skills = ByName<SkillDef>(defs,
                 "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction",
                 "Skill_Growing",
                 // Appended with the combat line (design 33 §5).
-                "Skill_Melee");
+                "Skill_Melee",
+                // Medical supplies (design 37).
+                "Skill_Medicine",
+                // The kitchen (design 48 §5).
+                "Skill_Cooking",
+                // Appended with the ranged line (design 47 §3a).
+                "Skill_Shooting");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal",
                 // Appended, never inserted: an item handle is stored in every stack, every haul
@@ -1441,7 +1655,23 @@ namespace Odyssey.Sim.Pawns
                 // (docs/design/22-growing.md §2).
                 "Item_Carrots",
                 // The four melee weapons (design 33 §1, C3), appended together.
-                "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade");
+                "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade",
+                // What a doctor treats with (design 37), appended.
+                "Item_MedicalSupplies",
+                // The wild foods (design 45 §6), appended together after medical supplies.
+                "Item_Berries", "Item_Mushrooms",
+                // The kitchen (design 48 §4), appended: the two meals and the burnt one.
+                "Item_CookedMeal", "Item_VegetableMeal", "Item_BurntMeal",
+                // The pistol (design 47), the first ranged weapon.
+                "Item_Pistol");
+            content.Recipes = ByName<RecipeDef>(defs, "Recipe_Meal");
+            for (int r = 0; r < content.Recipes.Length; r++)
+            {
+                RecipeDef recipe = content.Recipes[r];
+                recipe.ProductItem = ItemNamed(content, recipe.product, recipe.defName);
+                recipe.ProductNoMeatItem = ItemNamed(content, recipe.productNoMeat, recipe.defName);
+                recipe.BurntItem = ItemNamed(content, recipe.burntProduct, recipe.defName);
+            }
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");
             // The kinds of break (design 44 §5c). Appended, never inserted: a break's index rides
@@ -1535,7 +1765,6 @@ namespace Odyssey.Sim.Pawns
             content.ThinkLoopLimit = tuning.thinkLoopLimit;
             content.ThinkLoopWindowTicks = tuning.thinkLoopWindowTicks;
             content.StandDownTicks = tuning.standDownTicks;
-            content.WoodPerTree = tuning.woodPerTree;
             content.StonePerRock = tuning.stonePerRock;
             content.StoneChanceOneIn = tuning.stoneChanceOneIn;
             content.OrePerCell = tuning.orePerCell;
@@ -1546,6 +1775,14 @@ namespace Odyssey.Sim.Pawns
             content.Combat = One<CombatDef>(defs, "Combat_Default");
 
             return content;
+        }
+
+        /// <summary>The index of the item def named <paramref name="name"/>, or a failed load naming who asked.</summary>
+        static int ItemNamed(PawnContent content, string name, string askedBy)
+        {
+            for (int i = 0; i < content.Items.Length; i++)
+                if (content.Items[i].defName == name) return i;
+            throw new DefLoadException($"'{askedBy}' names item '{name}', which the content does not have.");
         }
 
         /// <summary>
@@ -1786,5 +2023,38 @@ namespace Odyssey.Sim.Pawns
         /// SHA-256's tenth round constant.
         /// </summary>
         public const uint Knockback = 0x1283_5B01;
+
+        /// <summary>
+        /// Whether a jump over a stream falls short (design 46 §6). SHA-256's eleventh round
+        /// constant.
+        /// </summary>
+        public const uint Jump = 0x2431_85BE;
+
+        /// <summary>
+        /// Whether the meal in a pan will come out burnt (design 48 §5), rolled once when the
+        /// cooking starts. SHA-256's twelfth round constant.
+        /// </summary>
+        public const uint Burn = 0x550C_7DC3;
+        // The ranged line's four (design 47 §3a). SHA-256's thirteenth, fourteenth, seventeenth
+        // and eighteenth round constants: the eleventh is taken by the stream jump, the twelfth
+        // is claimed by the health line (#213), and the fifteenth and sixteenth by the weather.
+
+        /// <summary>Whether a shot hits (design 47 §2a).</summary>
+        public const uint RangedHit = 0x72BE_5D74;
+
+        /// <summary>How hard a bullet strikes, within the spread — rolled for a miss too, because a stray still carries its weight.</summary>
+        public const uint RangedDamage = 0x80DE_B1FE;
+
+        /// <summary>Where a miss goes: the scatter cell round the target (design 47 §2c).</summary>
+        public const uint RangedScatter = 0xE49B_69C1;
+
+        /// <summary>Whether a bystander on the line takes the bullet, salted by the cell as well as the shooter.</summary>
+        public const uint RangedIntercept = 0xEFBE_4786;
+
+        /// <summary>
+        /// A weapon's quality when it is made (design 47 §11), salted by the thing's id. SHA-256's
+        /// nineteenth round constant.
+        /// </summary>
+        public const uint WeaponQuality = 0x0FC1_9DC6;
     }
 }

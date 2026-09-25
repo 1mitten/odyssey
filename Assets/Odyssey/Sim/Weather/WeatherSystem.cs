@@ -22,8 +22,10 @@ namespace Odyssey.Sim.Weather
     /// temperature through the seam temperature left for it (<c>WeatherOffsetC</c>, design 28 §10).
     ///
     /// <para><b>Never per cell.</b> The same call temperature made with its per-room scalars: the
-    /// whole state is a handful of integers, and the pass is O(1). Shelter from it is the cover
-    /// map's question, not this system's (design 43 §6, the next build step).</para>
+    /// whole state is a handful of integers, and the pass is O(1). Shelter from it is the sky
+    /// map's question (<see cref="World.SkyColumns"/>, design 43 §6), which this asks and never
+    /// restates: <see cref="PacePerMilleAt"/> and <see cref="GrowthPerMilleAt"/> are the sky's
+    /// number where the sky reaches and 1000 where it does not.</para>
     ///
     /// <para><b>One writer for the offset.</b> Only this system writes <c>WeatherOffsetC</c>, each
     /// pass. The debug menu does not write the sky either: it commands this system
@@ -177,8 +179,7 @@ namespace Odyssey.Sim.Weather
             if (!_started) return WeatherView.None;
             WeatherView from = Terms(_defs[_previousKind], _previousIntensity);
             WeatherView to = Terms(_defs[_kind], _intensity);
-            int share = _blendTicks <= 0 ? 1000
-                : Math.Max(0, Math.Min(1000, (int)((long)(tick - _blendStart) * 1000 / _blendTicks)));
+            int share = ShareAt(tick);
             bool incoming = share >= 500;
             return new WeatherView(
                 incoming ? to.Kind : from.Kind,
@@ -191,6 +192,76 @@ namespace Odyssey.Sim.Weather
         }
 
         static int Mix(int a, int b, int share) => a + (b - a) * share / 1000;
+
+        /// <summary>How far the hand-over has got at a tick, per mille of the incoming spell.</summary>
+        int ShareAt(int tick) => _blendTicks <= 0 ? 1000
+            : Math.Max(0, Math.Min(1000, (int)((long)(tick - _blendStart) * 1000 / _blendTicks)));
+
+        /// <summary>
+        /// One kind's pace at an intensity: 1000 − (1000 − floor) × intensity / 1000 (design 43
+        /// §5). A dry sky's floor is 1000, so it is exactly 1000 at any intensity. Pure.
+        /// </summary>
+        public static int PaceOf(WeatherDef def, int intensity)
+        {
+            int i = Math.Max(0, Math.Min(1000, intensity));
+            return 1000 - (1000 - def.moveFloorPerMille) * i / 1000;
+        }
+
+        /// <summary>One kind's growth bonus at an intensity, per mille on top of 1000. Pure.</summary>
+        public static int GrowthBonusOf(WeatherDef def, int intensity)
+        {
+            int i = Math.Max(0, Math.Min(1000, intensity));
+            return def.growBonusPerMilleAtFull * i / 1000;
+        }
+
+        /// <summary>
+        /// The pace factor under the open sky at a tick, per mille — the two spells' paces in
+        /// proportion to the hand-over, like every other term, so a shower arriving slows people
+        /// as it arrives. 1000 before the first sky and on any dry one.
+        /// </summary>
+        public int PacePerMille(int tick)
+        {
+            if (!_started) return 1000;
+            return Mix(PaceOf(_defs[_previousKind], _previousIntensity), PaceOf(_defs[_kind], _intensity), ShareAt(tick));
+        }
+
+        /// <summary>The growth factor under the open sky at a tick, per mille: 1000 plus the rain's bonus.</summary>
+        public int GrowthPerMille(int tick)
+        {
+            if (!_started) return 1000;
+            return 1000 + Mix(GrowthBonusOf(_defs[_previousKind], _previousIntensity),
+                GrowthBonusOf(_defs[_kind], _intensity), ShareAt(tick));
+        }
+
+        /// <summary>How hard it is raining at a tick, per mille: the published view's own number.</summary>
+        public int RainPerMille(int tick) => ViewAt(tick).RainPerMille;
+
+        /// <summary>The tick the world is on: the running tick inside one, the context's otherwise.</summary>
+        public int Now => _ctx.World?.CurrentTick ?? _ctx.CurrentTick;
+
+        /// <summary>
+        /// Is this cell out in the weather? Asked of the one shelter owner (design 43 §6); a world
+        /// with no sky map has no cover, which is only ever a fixture.
+        /// </summary>
+        public bool Exposed(int cell) => cell >= 0 && (_ctx.Sky == null || !_ctx.Sky.ShelteredFromSky(cell));
+
+        /// <summary>
+        /// The pace factor for somebody standing in this cell now (design 43 §5): the sky's, if the
+        /// sky reaches the cell, else exactly 1000. A rate, never a path price — the planner does
+        /// not know it is raining, so it and the mover keep agreeing (design 17's hop-price rule).
+        /// </summary>
+        public int PacePerMilleAt(int cell)
+        {
+            if (!_started || !Exposed(cell)) return 1000;
+            return PacePerMille(Now);
+        }
+
+        /// <summary>The growth factor for a crop in this cell at a tick: the sky's if it reaches the crop, else 1000.</summary>
+        public int GrowthPerMilleAt(int cell, int tick)
+        {
+            if (!_started || !Exposed(cell)) return 1000;
+            return GrowthPerMille(tick);
+        }
 
         /// <summary>
         /// The debug menu's Weather rows (design 43 §8): set the sky now. The spell runs its rolled
@@ -256,5 +327,17 @@ namespace Odyssey.Sim.Weather
         }
 
         int Clamp(int kind) => kind < 0 || kind >= _defs.Length ? 0 : kind;
+
+        /// <summary>
+        /// Put back the offset the last pass left on the temperature, after a load. The offset is
+        /// the temperature's field and nothing saves it; <see cref="Tick"/> writes it only on an
+        /// interval, so a world loaded between two ran the rest of the interval at nought where the
+        /// world it was saved from did not. Found by the raid gate's mid-raid save (2026-09-25).
+        /// </summary>
+        public void RestoreTemperatureOffset(int tick)
+        {
+            if (_ctx.Temperature == null) return;
+            _ctx.Temperature.WeatherOffsetC = _started ? ViewAt(tick - tick % IntervalTicks).TempOffsetC : 0;
+        }
     }
 }

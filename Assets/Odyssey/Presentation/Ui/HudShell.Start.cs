@@ -981,7 +981,71 @@ namespace Odyssey.Presentation.Ui
             _hud.Add(_backdrop);
         }
 
+        /// <summary>
+        /// How many frames a new world is drawn behind the screen the player was on before it is
+        /// shown (design 38 §25, d-16's curtain frames).
+        ///
+        /// <para><b>Measured, not assumed.</b> The M10 tour pressed New game from the title screen
+        /// in a development player: the build frame took 793 ms — the session built, then the first
+        /// world frame submitted — and <b>the next frame took 102.5 ms</b>, with a submit of 6 ms, so
+        /// the rest was the driver and the GPU meeting the world's pipelines and textures for the
+        /// first time. Then 18.7 ms, then 5. Shown at once, that is the world appearing and then
+        /// stuttering.</para>
+        ///
+        /// <para><b>A cover over everything, not a delayed hand-over.</b> The first version held
+        /// the start screen up and handed over three frames late, and the tour found the reveal
+        /// frame at 43 ms: the in-game interface laid out and drawn for the first time, moved by the
+        /// delay from the hidden frame to the visible one. So the hand-over happens when the world
+        /// is built, as it always did, and <see cref="_curtainPane"/> — the start screen's own
+        /// starfield, the top-most element in the tree — covers world and interface alike while
+        /// both are paid for.</para>
+        /// </summary>
+        public const int CurtainFrames = 3;
+
+        int _curtain;
+        VisualElement _curtainPane = null!;
+
+        /// <summary>Whether a new world is being drawn behind the curtain right now.</summary>
+        public bool CurtainUp => _curtain > 0;
+
+        /// <summary>The cover: the menu's picture, opaque, over every other element. Built last.</summary>
+        void BuildCurtain()
+        {
+            _curtainPane = new VisualElement { name = "curtain", pickingMode = PickingMode.Position };
+            _curtainPane.AddToClassList("backdrop");
+            var picture = Resources.Load<Texture2D>(MenuBackdropResource);
+            if (picture != null)
+            {
+                _curtainPane.style.backgroundImage = new StyleBackground(picture);
+                _curtainPane.style.unityBackgroundScaleMode = new StyleEnum<ScaleMode>(ScaleMode.ScaleAndCrop);
+            }
+            _curtainPane.style.display = DisplayStyle.None;
+            _hud.Add(_curtainPane);
+        }
+
+        void LiftCurtain() => _curtainPane.style.display = DisplayStyle.None;
+
         void OnSessionChanged()
+        {
+            // A world arriving from the start screen is drawn behind the curtain for a few frames
+            // (CurtainFrames); Update counts them down. Anything else — a session torn down, the
+            // shell attaching to a world that is already up — shows at once.
+            bool fromStartScreen = _boot!.Directors != null && CurtainFrames > 0
+                                   && _backdrop.style.display == DisplayStyle.Flex;
+            ApplySession();
+            if (fromStartScreen)
+            {
+                _curtain = CurtainFrames;
+                _curtainPane.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+                _curtain = 0;
+                LiftCurtain();
+            }
+        }
+
+        void ApplySession()
         {
             HudDirectors? live = _boot!.Directors;
 
@@ -1197,6 +1261,8 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void OnStartNewGame(NewGameChoice choice)
         {
+            // The last world is still behind the start screen: a second press would build again.
+            if (_curtain > 0) return;
             MapSizes.Choice size = MapSizes.At(choice.Size);
             _boot!.BuildSession(choice.Seed, null, choice.Colonists, choice.Name,
                 new GridSize(size.X, size.Z, size.Y));

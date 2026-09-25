@@ -121,7 +121,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(BuildingTargets.MaxHitPointsOf(EdificeHandle.Campfire), Is.EqualTo(60));
             Assert.That(BuildingTargets.MaxHitPointsOf(EdificeHandle.Generator), Is.EqualTo(300));
             Assert.That(BuildingTargets.MaxHitPointsOf(EdificeHandle.Heater), Is.EqualTo(100));
-            foreach (int none in new[] { EdificeHandle.None, EdificeHandle.TreeConifer, EdificeHandle.TreeBroadleaf,
+            foreach (int none in new[] { EdificeHandle.None, EdificeHandle.TreeBirch, EdificeHandle.TreeMeadow,
                          EdificeHandle.Window, EdificeHandle.Pillar, EdificeHandle.StairLower })
                 Assert.That(BuildingTargets.MaxHitPointsOf((ushort)none), Is.Zero, $"edifice {none}");
         }
@@ -577,7 +577,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(frame.EdificeHitPoints(EdificeHandle.Wall), Is.EqualTo(300));
             Assert.That(frame.EdificeHitPoints(EdificeHandle.Bed), Is.EqualTo(120));
             Assert.That(frame.EdificeHitPoints(EdificeHandle.Campfire), Is.EqualTo(60));
-            Assert.That(frame.EdificeHitPoints(EdificeHandle.TreeConifer), Is.Zero);
+            Assert.That(frame.EdificeHitPoints(EdificeHandle.TreeBirch), Is.Zero);
             Assert.That(frame.EdificeHitPoints(EdificeHandle.None), Is.Zero);
             Assert.That(frame.EdificeHitPoints(999), Is.Zero);
 

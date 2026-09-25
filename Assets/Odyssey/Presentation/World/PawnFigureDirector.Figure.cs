@@ -106,6 +106,35 @@ namespace Odyssey.Presentation.World
             public GameObject? Weapon;
             public int WeaponDef = -1;
 
+            // ---- The gun (design 47 §4b, PawnFigureDirector.Aim.cs) ----------------------------
+
+            /// <summary>The weapon in hand is a gun: fitted by <c>FitPistol</c>, aimed, recoiling.</summary>
+            public bool IsGun;
+
+            /// <summary>Where the palm sits on the gun, in the prop's own frame; set by <c>FitPistol</c>.</summary>
+            public Vector3 GunGrip;
+
+            /// <summary>The gun's slide, if its prop has one by name, and where it rests; null for none.</summary>
+            public Transform? GunSlide;
+            public Vector3 GunSlideRest;
+
+            /// <summary>How far into the aim stance the figure is, eased 0 to 1.</summary>
+            public float AimWeight;
+
+            /// <summary>How far into low ready — drawn, nothing to shoot — eased 0 to 1.</summary>
+            public float LowReadyWeight;
+
+            /// <summary>The point the aim is on, followed through a critically damped spring so a walking target does not snap it.</summary>
+            public Vector3 AimPoint;
+            public Vector3 AimVelocity;
+            public bool HasAimPoint;
+
+            /// <summary>Seconds since the last shot on this figure's own clock (stops when the world does); negative for none yet.</summary>
+            public float FireClock = -1f;
+
+            /// <summary>A shot was seen this frame: a draw still playing is cut short to the hand (design 47 §4b).</summary>
+            public bool FiredThisFrame;
+
             /// <summary>
             /// Where the weapon sits in the fist and on the hip, each fitted once when the weapon
             /// changes, as a local pose under the right hand and under <see cref="Pelvis"/>
@@ -428,6 +457,22 @@ namespace Odyssey.Presentation.World
             /// the same fault as one floating on dry ground.</para>
             /// </summary>
             public float SwimWeight;
+
+            /// <summary>
+            /// How far off the ground a jumping figure is, 0 to 1 (design 46 §7): the footing
+            /// fades by it, so the feet let go at the lip and plant again on the far one. Worked
+            /// out afresh every frame from the step, never eased — <c>JumpArc.Airborne</c> is
+            /// already continuous.
+            /// </summary>
+            public float AirWeight;
+
+            /// <summary>
+            /// The jump clip due in the action slot this frame, and how far into it: the take-off or
+            /// the landing, or null. Worked out afresh every frame from the step's phase, like the
+            /// air; <c>PoseCombat</c> shows it whenever the fight has nothing to show.
+            /// </summary>
+            public CombatClipEntry? JumpClip;
+            public float JumpClipTime;
 
             /// <summary>
             /// The swim stroke's own clock, in seconds of game time.

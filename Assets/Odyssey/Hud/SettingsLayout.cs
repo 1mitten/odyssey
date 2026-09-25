@@ -149,6 +149,7 @@ namespace Odyssey.Hud
         public const string ScaleGroupKey = "ui.settings.group.scale";
         public const string CameraGroupKey = "ui.settings.group.camera";
         public const string PaletteGroupKey = "ui.settings.group.palette";
+        public const string SelectionGroupKey = "ui.settings.group.selection";
         public const string PerformanceGroupKey = "ui.settings.group.performance";
         public const string VolumeGroupKey = "ui.settings.group.volume";
         public const string CuesGroupKey = "ui.settings.group.cues";
@@ -162,7 +163,7 @@ namespace Odyssey.Hud
         /// not, so <c>RegistryTests</c> can hold it to the naming CSV.</summary>
         public static readonly string[] IconKeys =
         {
-            ScaleGroupKey, CameraGroupKey, PaletteGroupKey, PerformanceGroupKey, VolumeGroupKey,
+            ScaleGroupKey, CameraGroupKey, PaletteGroupKey, SelectionGroupKey, PerformanceGroupKey, VolumeGroupKey,
             CuesGroupKey, SavingGroupKey, GameGroupKey, ViewGroupKey, ToolsGroupKey, TimeGroupKey,
         };
 
@@ -236,7 +237,8 @@ namespace Odyssey.Hud
                 new KeyGroup(SettingsDirector.InterfaceKey, new[]
                 {
                     HotkeyAction.BuildPalette, HotkeyAction.WorkTab, HotkeyAction.InventoryTab,
-                    HotkeyAction.ResearchTab, HotkeyAction.AnimalsTab, HotkeyAction.DebugMenu,
+                    HotkeyAction.ResearchTab, HotkeyAction.AssignTab, HotkeyAction.AnimalsTab,
+                    HotkeyAction.DebugMenu,
                 }),
             },
         };

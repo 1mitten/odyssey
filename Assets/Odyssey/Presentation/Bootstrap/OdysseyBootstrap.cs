@@ -203,6 +203,9 @@ namespace Odyssey.Presentation.Bootstrap
         CorpseDirector? _corpses;
         BloodDirector? _blood;
 
+        /// <summary>Bullets in the air, their afterimages and the muzzle flashes (design 47 §4c).</summary>
+        ProjectileDirector? _projectiles;
+
         /// <summary>The one reader of the fight's events (design 33 §5).</summary>
         readonly CombatFeedback _combatFeedback = new CombatFeedback();
 
@@ -567,6 +570,12 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>Blood on the ground and in the air (design 33 §10). For the frame tests that price it.</summary>
         public BloodDirector? Blood => _blood;
 
+        /// <summary>
+        /// Bullets, drawn (design 47 §4c). For the frame tests that price it: the gunfight arm times
+        /// the same fight with <see cref="ProjectileDirector.Enabled"/> off as its control.
+        /// </summary>
+        public ProjectileDirector? Projectiles => _projectiles;
+
         /// <summary>The colony's one audio director, for the presenter that applies the
         /// settings panel's faders to it live.</summary>
         public AudioDirector? Audio => _audio;
@@ -581,6 +590,9 @@ namespace Odyssey.Presentation.Bootstrap
             // thing it will see is a world.
             _menuBed = new MenuAmbience(audioCatalogue, transform, gameObject.layer);
 
+            // The hitch tour (design 38 §25) wants the driver's shader log from the load onward, so
+            // the switch goes on before the session is built rather than when the tour starts.
+            if (PlayerBench.HitchRequested()) UnityEngine.Rendering.GraphicsSettings.logWhenShaderIsCompiled = true;
             if (buildOnPlay || StartedFromTheCommandLine()) BuildSession();
             // The player benchmark (design 38 §18e): a development player told -odyssey-bench
             // times its arms on the colony it just built, writes the table to the log and quits.
@@ -786,6 +798,10 @@ namespace Odyssey.Presentation.Bootstrap
             // density beside them: the field has to be reachable from the mesher, the picker and
             // the figures alike, and it is a property of how the world is drawn rather than of any
             // one of them.
+            // Where a new session's wait goes (design 38 §25): lap times logged at the end.
+            var buildClock = Stopwatch.StartNew();
+            var laps = new System.Text.StringBuilder();
+            void Lap(string name) { laps.Append(name).Append(' ').Append(buildClock.ElapsedMilliseconds).Append(" ms, "); }
             GroundRelief.Amplitude = groundRelief;
             GroundRelief.Period = groundReliefPeriod;
 
@@ -886,6 +902,7 @@ namespace Odyssey.Presentation.Bootstrap
                 Mirror = (grid, outcome) => new GridMirrorContributor(grid, outcome.Edifices, model),
             });
             generation.Stop();
+            Lap("generated");
 
             _colony = colony;
             _grid = colony.Grid;
@@ -984,6 +1001,7 @@ namespace Odyssey.Presentation.Bootstrap
                        randomCastEachSession ? "rolled for this session, overruling every pawn's own seed — copy it into colonistLookSeed to keep this cast" :
                        "the fallback only; every colonist is dealt from their own roll seed"));
 
+            Lap("colony ready");
             _renderer = new ChunkRenderer(_model)
             {
                 CastShadows = castShadows,
@@ -1002,6 +1020,10 @@ namespace Odyssey.Presentation.Bootstrap
             // store does.
             _powerLines = new PowerLinePass { GameObjectLayer = gameObject.layer };
             _watchingPower = false;
+            // The home's edge (design 43 §5b), the same shape of pass: outside the chunks, drawn
+            // only while the Home view is on, and unwatched at the start of a session.
+            _homeEdge = new HomeEdgePass { GameObjectLayer = gameObject.layer };
+            _watchingHome = false;
             _renderer.Skirt.Enabled = terrainSkirt;
             _renderer.Skirt.TreeDensityPercent = skirtTreeDensity;
             _renderer.Skirt.HillTrees = skirtHillTrees;
@@ -1025,6 +1047,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Live figures for the pawns on screen. Everything else keeps the baked instanced
             // form, and so does everybody if the packs are absent or the catalogue has no gaits.
+            Lap("renderer and surround");
             _figures = new PawnFigureDirector(moduleCatalogue, transform, gameObject.layer)
             {
                 Appearances = appearances,
@@ -1042,6 +1065,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Over the preferences this component has held since it woke, not over fresh ones:
             // the same settings panel and the same key bindings serve every session.
+            Lap("figures");
             FindTheSiblingPresenters();
             Directors = new HudDirectors(size.SizeY, outcome.StartCell.Y, Preferences, Keys);
             Directors.Slice.LayerChanged += OnActiveLayerChanged;
@@ -1066,6 +1090,10 @@ namespace Odyssey.Presentation.Bootstrap
                 // the figures where a fallen body lies, for the pool under it.
                 _blood = new BloodDirector(_model, FindBody);
                 _combatFeedback.Blood = _blood;
+                // Bullets (design 47 §4c): the seam hands every shot and every gun's landing on
+                // before the director draws, so a flight that fell between two frames is still seen.
+                _projectiles = new ProjectileDirector(_model);
+                _combatFeedback.Projectiles = _projectiles;
                 // The weather as drawn (design 43 §7): the simulation's sky, read from the snapshot.
                 _weather = new WeatherLook(_model, transform);
             }
@@ -1078,14 +1106,21 @@ namespace Odyssey.Presentation.Bootstrap
             // Which blows cut (design 33 §7d), read once off the same content, for the blood seam.
             _combatFeedback.BloodSides = CombatFeedback.BloodSidesOf(_pawns?.Content);
 
+            // Which weapons are guns (design 47 §4c), off the same content, so a bullet's miss throws
+            // dust and its streak is told where it landed.
+            _combatFeedback.WeaponStyles = CombatPose.StylesOf(_pawns?.Content.Items);
+
             // The fight's floating words, beneath the HUD's own tree (design 33 §1).
             UnityEngine.UIElements.VisualElement? hudRoot =
                 GetComponent<UnityEngine.UIElements.UIDocument>()?.rootVisualElement;
             if (hudRoot != null) _floaterView = new Ui.CombatFloaterView(hudRoot);
+            // The house over the hearth, beneath the HUD the same way (design 43 §5b).
+            if (hudRoot != null) _hearthMark = new Ui.HearthMarkView(hudRoot);
 
             // The light through the day. It finds the scene's own sun rather than making one,
             // because the scene builder already places it and two directional lights is a
             // doubled key nobody would think to look for.
+            Lap("directors, audio, props");
             Light? key = sun != null ? sun : FindKeyLight();
             _keyLight = key;
             if (daylightCycle && key != null)
@@ -1103,6 +1138,7 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 _figures.BlowLanded += OnBlowLanded;
                 _figures.LoadLifted += OnLoadLifted;
+                _figures.SwimStroked += OnSwimStroked;
                 _figures.LoadSet += OnLoadSet;
             }
             if (_renderer != null)
@@ -1146,9 +1182,15 @@ namespace Odyssey.Presentation.Bootstrap
             // tell apart from the wait they are already in, and it buys a first frame that is
             // whole. Everything after this frame is budgeted (6c.7).
             if (_renderer != null && cameraRig != null)
+            {
+                Lap("light and look");
                 _renderer.PrimeAll(cameraRig.ActiveLayer, cameraRig.slice);
+                Lap("meshed (PrimeAll)");
+            }
 
             SessionChanged?.Invoke();
+            Lap("listeners");
+            Debug.Log($"[Session] built in {buildClock.ElapsedMilliseconds} ms: {laps}");
 
             Debug.Log(
                 $"[Odyssey] world {size} seed {sessionSeed} generated in {generation.ElapsedMilliseconds} ms. " +
@@ -1172,6 +1214,7 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>A load came up off the ground: the lighter of the two carry sounds, from the
         /// spot it was lying on.</summary>
         void OnLoadLifted(Vector3 from) => _audio?.PlayOneShot(SoundIds.CarryLift, from);
+        void OnSwimStroked(Vector3 at) => _audio?.PlayOneShot(SoundIds.SwimStroke, at);
 
         /// <summary>And a load touched down: the heavier one, from where it landed.</summary>
         void OnLoadSet(Vector3 at) => _audio?.PlayOneShot(SoundIds.CarryDrop, at);
@@ -1397,6 +1440,12 @@ namespace Odyssey.Presentation.Bootstrap
         /// out, asked here once and written to the slice, which every pass then reads — the one
         /// place the rule is evaluated, so no two passes can disagree about it.
         /// </summary>
+        /// <summary>
+        /// The player's Walls down choice, before build mode takes it out: where the ground is
+        /// (<see cref="SliceSettings.landscapeGround"/>), not what is drawn.
+        /// </summary>
+        bool WallsChosenDown() => Directors?.Settings.IsOn(GraphicsOption.WallsDown) ?? false;
+
         bool WallsLoweredNow()
         {
             HudDirectors? directors = Directors;
@@ -1422,6 +1471,7 @@ namespace Odyssey.Presentation.Bootstrap
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
             SliceSettings slice = cameraRig != null ? cameraRig.slice : new SliceSettings();
             slice.wallsLowered = WallsLoweredNow();
+            slice.landscapeGround = WallsChosenDown();
             slice.landscapeFloor = _model.LowestOutdoorLayer;
 
             _frameTimer.Restart();
@@ -1559,6 +1609,8 @@ namespace Odyssey.Presentation.Bootstrap
                     activeLayer);
             MarkSection(FrameSection.Audio);
 
+            PrepareSelectionHighlight(_world.Views.Current);
+
             if (_actorMaterial != null)
                 _renderer.RenderActors(_world.Views.Current, activeLayer, slice, _actorMaterial,
                     _tickAlpha, movePerTick, _figures?.Drawn, _figures);
@@ -1589,6 +1641,8 @@ namespace Odyssey.Presentation.Bootstrap
             // After the plates: the lines are drawn over everything and go last among the world's
             // overlays, before the brackets that are the pointer's.
             DrawPowerLines(_world.Views.Current, activeLayer);
+            // The home's edge, on the ground under the brackets (design 43 §5b).
+            DrawHome(_world.Views.Current, activeLayer, slice);
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             DrawDraftMarks(_world.Views.Current, movePerTick);
             // The landing ring on the cell each selected colonist was sent to (design 33 §20).
@@ -1607,6 +1661,12 @@ namespace Odyssey.Presentation.Bootstrap
             _combatFeedback.Consume(_world.Views.Current, _world, _figures, _audio,
                 bloodLowest, bloodHighest, _tickAlpha, ticksPerSecond);
             if (_renderer != null) _blood?.Draw(_renderer, bloodLowest, bloodHighest, slice, activeLayer);
+            // Bullets (design 47 §4c), after the frame's shots and landings were handed on, in the
+            // same band as the blood: a streak from a hidden storey is cut at the band's edge. The
+            // afterimage fades on unscaled time, so it finishes on a pause while the bullets hang.
+            if (_renderer != null)
+                _projectiles?.Draw(_renderer, _world.Views.Current, _tickAlpha, Time.unscaledDeltaTime,
+                    bloodLowest, bloodHighest, _figures, slice, activeLayer);
             // The weather (design 43 §7): the published sky, the ground wetting behind it on game
             // time, drawn in two or three calls; counted in Overlays with what is laid over the world.
             if (_weather != null && Directors != null)
@@ -1617,6 +1677,8 @@ namespace Odyssey.Presentation.Bootstrap
                     slice.BelowSurface(activeLayer), _world.CurrentTick, ticksPerSecond,
                     _figures?.Running ?? true, Time.deltaTime, Directors.Debug.WetGlossOnly, _wind);
             _floaterView?.Draw(_combatFeedback.Floaters,
+                cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
+            _hearthMark?.Draw(_world.Views.Current, Directors?.Overlays?.HomeVisible ?? false, activeLayer,
                 cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);
             _frameTimer.Stop();
@@ -2064,6 +2126,12 @@ namespace Odyssey.Presentation.Bootstrap
                 // The two-cell mark went with them and needs no replacement: a bed's ghost spans
                 // both of its cells on its own, which is what makes the footprint legible now.
                 DrawSiteGhost(cell, sites[i].Building, sites[i].Stuff, sites[i].Facing);
+                // The grass lies flat under a waiting order until it is built (design 45 §13), as
+                // it does under an order's mark and an item: a blueprint seen through grass is a
+                // blueprint not seen.
+                PlacementClearing.Rect(cell, cell, out Vector2 low, out Vector2 high);
+                _renderer.Clearance.StampRect(low, high, PlacementClearing.Margin * 0.5f);
+                _renderer.Clearance.CutRect(low, high);
 
                 // **A slab does not rise, so it must not be drawn rising** (owner, 2026-09-17:
                 // "these little gaps or white lines appearing on the builds"). DrawCellFill grows
@@ -2205,7 +2273,8 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Power's machines, when their art resolved: once, at the middle of the footprint,
             // turned — PropShape, the mesher's own answer (design 32 §14).
-            if ((what.edifice == CoreContent.EdificeGenerator || what.edifice == CoreContent.EdificeHeater)
+            if ((what.edifice == CoreContent.EdificeGenerator || what.edifice == CoreContent.EdificeHeater
+                    || what.edifice == CoreContent.EdificeGalley)
                 && _model != null && _model.Library[module].Shape == ModuleShape.Pillar)
             {
                 int drawn = what.edifice == CoreContent.EdificeHeater
@@ -2434,8 +2503,19 @@ namespace Odyssey.Presentation.Bootstrap
             if (_renderer == null || _designate == null) return;
 
             DesignateDirector director = _designate.Director;
+            _placement.Clear();
+            bool armed = director.Tool != DesignateTool.None && PlacementClearing.Enabled;
             if (!director.TryPreview(out CellRef min, out CellRef max))
             {
+                if (armed && director.Hover is CellRef hover && _grid != null)
+                {
+                    CellRef at = hover;
+                    ConstructionGrid? sites = _colony?.Construction;
+                    if (director.Tool == DesignateTool.Build && sites != null)
+                        at = _grid.Size.FromIndex(sites.WhereItWouldLand(_grid.Index(hover), director.Building));
+                    _placement.Add((at, at));
+                }
+                ClearForPlacement(armed);
                 DrawHoverGhost(director);
                 return;
             }
@@ -2458,12 +2538,19 @@ namespace Odyssey.Presentation.Bootstrap
                 _previewLayer = min.Y;
                 _previewIsSlab = ConstructionContent.BuildingAt(director.Building).slab;
                 BuildPreview.Gather(min, max, _previewLayerAt ??= PreviewLayerAt, _previewBoxes);
+                if (armed)
+                    for (int i = 0; i < _previewBoxes.Count; i++)
+                        _placement.Add((_previewBoxes[i].Min, _previewBoxes[i].Max));
+                ClearForPlacement(armed);
 
                 for (int i = 0; i < _previewBoxes.Count; i++)
                     DrawRunGhosts(_previewBoxes[i], director.Building, director.Stuff, director.Facing);
 
                 return;
             }
+
+            if (armed) _placement.Add((min, max));
+            ClearForPlacement(armed);
 
             // The order tools' own colours, below the build branch rather than above it, because
             // build no longer has one: a ghost is tinted by its material or by its refusal, so a
@@ -2478,6 +2565,24 @@ namespace Odyssey.Presentation.Bootstrap
             for (int x = min.X; x <= max.X; x++)
                 _renderer.DrawCellMark(new CellRef(x, z, min.Y), tint);
         }
+
+        /// <summary>
+        /// While any build or order tool is armed, clear the ground and the growth over what it
+        /// would act on so the ghost can be seen (design 45 §13; owner, 2026-09-25: "the
+        /// grass/bushes/foliage is getting in the way of placing any orders — I can't see the
+        /// blueprint"): the grass lies flat under the footprint, and the bushes and trees standing
+        /// over it or in front of it fade. The footprint is the dragged box — the build's boxes
+        /// where it steps up a riser — or the cell under the pointer. Nothing while no tool is
+        /// armed, so the bushes keep their "never fade" everywhere else.
+        /// </summary>
+        void ClearForPlacement(bool armed)
+        {
+            Vector3 eye = cameraRig != null ? cameraRig.transform.position : Vector3.zero;
+            _renderer!.SetPlacement(_placement, eye);
+            PlacementClearing.Stamp(_renderer.Clearance, armed, _placement);
+        }
+
+        readonly List<(CellRef Min, CellRef Max)> _placement = new List<(CellRef Min, CellRef Max)>();
 
         /// <summary>
         /// The thing under the pointer, before any button has been pressed.
@@ -2898,6 +3003,57 @@ namespace Odyssey.Presentation.Bootstrap
             _powerLines.Draw(snapshot, visible, activeLayer);
         }
 
+        HomeEdgePass? _homeEdge;
+        Ui.HearthMarkView? _hearthMark;
+
+        /// <summary>Whether this session last told the world it was watching the home, so the
+        /// watch intent is sent on the change and not every frame.</summary>
+        bool _watchingHome;
+
+        /// <summary>The home edge's draw calls last frame: nought while the view is off, at most two while it is on.</summary>
+        public int HomeEdgeDrawCalls => _homeEdge?.LastDrawCalls ?? 0;
+
+        /// <summary>The home edge's pass, for the tests that count what it built.</summary>
+        public HomeEdgePass? HomeEdge => _homeEdge;
+
+        /// <summary>Whether the house over the hearth was drawn last frame, for the tests.</summary>
+        public bool HearthMarkShowing => _hearthMark?.Showing ?? false;
+
+        /// <summary>
+        /// Draw the home's edge (design 43 §5b) while the Home view is on, and part the grass along
+        /// it on the active layer. When the switch moves the world is told, because the border is
+        /// published only while watched; <c>WatchHome</c> applies while paused, so the edge appears
+        /// the frame after the switch is pressed, running or not. Off, nothing is submitted and
+        /// nothing is stamped.
+        /// </summary>
+        void DrawHome(WorldSnapshot snapshot, int activeLayer, SliceSettings slice)
+        {
+            if (_homeEdge == null || _world == null) return;
+
+            bool visible = Directors?.Overlays?.HomeVisible ?? false;
+            if (visible != _watchingHome)
+            {
+                _watchingHome = visible;
+                // Answered on the next publish: the next tick, or at once on a paused world, whose
+                // loop republishes for any pending paused-safe intent. Never republished from here,
+                // mid-frame, which would swap the snapshot the rest of this frame is drawing from.
+                _world.Intents.Submit(new Intent(IntentKind.WatchHome, default, visible ? 1 : 0));
+            }
+
+            if (!visible)
+            {
+                _homeEdge.Hide();
+                return;
+            }
+
+            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model?.LowestOutdoorLayer ?? int.MaxValue));
+            _homeEdge.Draw(snapshot, activeLayer, lowest);
+
+            if (_renderer == null) return;
+            IReadOnlyList<Vector3> grass = _homeEdge.GrassPoints;
+            for (int i = 0; i < grass.Count; i++) _renderer.Clearance.Stamp(grass[i], HomeEdgePass.GrassRadius);
+        }
+
         /// <summary>
         /// The draft on the board (design 33 §2g): a diamond over every drafted colonist's head, and
         /// for the <i>selected</i> ones that are walking under orders, a line to where they were
@@ -3272,13 +3428,25 @@ namespace Odyssey.Presentation.Bootstrap
                     if (!snapshot.TryGetPawn(selection.Pawns[i], out PawnView pawn)) continue;
                     Color strength = i == 0 ? colour : SecondarySelectionColour;
 
+                    // Lit at its own edges (design 44): the live figure's renderers, or the far form
+                    // the renderer captured as it drew it. Neither, and the brackets are drawn.
+                    // Every member of a group at full strength (owner, 2026-09-25: the dimmer
+                    // outline on the rest read as faded out); the pane and the cards already say
+                    // which one it is about.
+                    if (_highlighting)
+                    {
+                        if (_figures != null && SelectionHighlight.Current.AddRenderers(
+                                _figures.FigureObject(pawn.Id.Value), SelectionHighlight.Primary) > 0) continue;
+                        if (_renderer.HighlightPawnsCaptured.Contains(pawn.Id.Value)) continue;
+                    }
+
                     // An animal is bracketed as its own drawn box, turned the way it faces, with
                     // the item bracket's margin (owner, 2026-09-22: the cell-sized column round a
                     // hog highlighted the whole tile). A colonist keeps the one fixed box below.
                     if (pawn.IsAnimal && _figures != null
                         && _figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 place, out Vector3 box))
                     {
-                        _renderer.DrawSelectionBracket(place, box + Vector3.one * ItemCursorMargin, strength);
+                        _renderer.DrawSelectionBracket(place, box + Vector3.one * ItemCursorMargin, strength, seeThrough: true);
                         continue;
                     }
 
@@ -3288,13 +3456,16 @@ namespace Odyssey.Presentation.Bootstrap
                     if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
                         feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
                     _renderer.DrawSelectionBracket(
-                        feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, strength);
+                        feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, strength, seeThrough: true);
                 }
                 return;
             }
 
             // A corpse is bracketed as the body lying there (design 33 §5f), not as its cell: it
             // is a person's length along the ground and knee high.
+            if (_highlighting && _corpses != null && selection != null && selection.HasCorpse
+                && SelectionHighlight.Current.AddRenderers(_corpses.BodyObject(selection.Corpse), SelectionHighlight.Primary) > 0)
+                return;
             if (_corpses != null && _corpses.TryBracket(selection, out Matrix4x4 corpsePlace, out Vector3 corpseBox))
             {
                 _renderer.DrawSelectionBracket(corpsePlace, corpseBox, colour);
@@ -3319,6 +3490,10 @@ namespace Odyssey.Presentation.Bootstrap
                     cell = things[i].Cell;
                     break;
                 }
+
+                // Captured by the renderer as its lumps were appended, at the matrices they were
+                // drawn at (design 44 §3): on the ground, on a shelf or landing.
+                if (_highlighting && _renderer.HighlightCaptured > 0) return;
 
                 ResolvedModule item = _model.Library[
                     _model.Library.Resolve(ModuleIds.Item(selection.ThingDef), ModuleShape.Pillar)];
@@ -3345,6 +3520,7 @@ namespace Odyssey.Presentation.Bootstrap
                 int head = _model.BedHeadAt(index);
                 if (head >= 0)
                 {
+                    if (_highlighting && HighlightCell(head, terrain: false)) return;
                     CellRef at = _model.Size.FromIndex(head);
                     BedShape.WorldBounds(
                         at.X, at.Z, at.Y, _model.BedFacing(head),
@@ -3360,6 +3536,7 @@ namespace Odyssey.Presentation.Bootstrap
             // ShelfShape rather than being built from the cell here.
             if (_model.EdificeDef(index) == CoreContent.EdificeShelf)
             {
+                if (_highlighting && HighlightCell(index, terrain: false)) return;
                 ShelfShape.WorldBounds(cell.X, cell.Z, cell.Y, _model.EdificeFacing(index),
                     out Vector3 shelfCentre, out Vector3 shelfSize);
                 _renderer.DrawSelectionBracket(shelfCentre, shelfSize + Vector3.one * ItemCursorMargin, colour);
@@ -3368,6 +3545,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             if (_model.IsSolid(index) || _model.EdificeDef(index) != CoreContent.EdificeNone)
             {
+                if (_highlighting && HighlightCell(index, terrain: _model.IsSolid(index))) return;
                 _renderer.DrawCellHighlight(cell, colour);
                 return;
             }
@@ -3376,7 +3554,7 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 float lift = WaterLine.SurfaceAbove(_model, cell);
                 Matrix4x4 placement = GroundRelief.Drape(CellMetrics.FloorCentre(cell) + Vector3.up * lift);
-                _renderer.DrawFloorBracket(placement, colour);
+                FloorMark(placement, colour);
                 return;
             }
 
@@ -3391,10 +3569,10 @@ namespace Odyssey.Presentation.Bootstrap
                     _bracketRises[1] = ramp.R1 * h;
                     _bracketRises[2] = ramp.R3 * h;
                     _bracketRises[3] = ramp.R2 * h;
-                    _renderer.DrawFloorBracket(GroundRelief.Drape(CellMetrics.FloorCentre(cell)), colour, _bracketRises);
+                    FloorMark(GroundRelief.Drape(CellMetrics.FloorCentre(cell)), colour, _bracketRises);
                     return;
                 }
-                _renderer.DrawFloorBracket(cell, colour);
+                FloorMark(cell, colour);
                 return;
             }
 
@@ -3406,7 +3584,7 @@ namespace Odyssey.Presentation.Bootstrap
                     Matrix4x4 placement = GroundRelief.Drape(CellMetrics.FloorCentre(cell)) *
                                           Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[bank.Rotation], 0f)) *
                                           BankLayout.StraightBankShear();
-                    _renderer.DrawFloorBracket(placement, colour);
+                    FloorMark(placement, colour);
                 }
                 else
                 {
@@ -3419,16 +3597,98 @@ namespace Odyssey.Presentation.Bootstrap
                         float localZ = ((k & 2) == 0 ? -1f : 1f) * 0.5f;
                         cornerRises[k] = (BankMesh.HeightAt(bank.Kind, localX, localZ) + 0.5f) * CellMetrics.SizeY;
                     }
-                    _renderer.DrawFloorBracket(place, colour, cornerRises);
+                    FloorMark(place, colour, cornerRises);
                 }
                 return;
             }
 
-            _renderer.DrawFloorBracket(cell, colour);
+            FloorMark(cell, colour);
         }
 
         /// <summary>The ramp bracket's four corner rises, reused so the cursor allocates nothing a frame.</summary>
         readonly float[] _bracketRises = new float[4];
+
+        /// <summary>
+        /// Whether this frame's selection is being lit at its own edges (design 44) rather than
+        /// bracketed: the player's style, and the renderer feature there to draw it. Decided once a
+        /// frame by <see cref="PrepareSelectionHighlight"/>.
+        /// </summary>
+        bool _highlighting;
+
+        /// <summary>
+        /// Start the frame's selection highlight, before the actors are drawn: the list emptied, and
+        /// the renderer and the doors told what to catch as they draw it (design 44 §3). A selected
+        /// item or a colonist past the figure cap is captured at the matrices it is drawn at, so
+        /// nothing here has a second copy of where anything goes.
+        /// </summary>
+        void PrepareSelectionHighlight(WorldSnapshot snapshot)
+        {
+            SelectionHighlight frame = SelectionHighlight.Current;
+            frame.Clear();
+            SelectionHighlight.Camera = cameraRig != null ? cameraRig.Camera : null;
+
+            SelectionDirector? selection = Directors?.Selection;
+            _highlighting = _renderer != null && _model != null && selection != null && !selection.IsEmpty
+                            && Directors!.Settings.SelectionStyle == SelectionStyle.Highlight
+                            && SelectionHighlight.FeaturePresent;
+
+            if (_doors != null) _doors.CaptureCell = -1;
+            if (_renderer == null) return;
+            _renderer.BeginHighlight(_highlighting ? frame : null);
+            if (!_highlighting || selection == null || _model == null) return;
+
+            if (selection.HasPawn)
+            {
+                for (int i = 0; i < selection.Pawns.Count; i++)
+                    _renderer.HighlightPawns[selection.Pawns[i].Value] = SelectionHighlight.Primary;
+                // A group is outlined and not brightened (owner, 2026-09-25): the lift is for
+                // the one thing a single click picked out.
+                frame.Lifted = !selection.HasMultiple;
+                return;
+            }
+            if (selection.HasThing)
+            {
+                _renderer.HighlightThing = selection.Thing;
+                return;
+            }
+            if (selection.Cell is CellRef cell && _doors != null && _model.Size.Contains(cell.X, cell.Z, cell.Y))
+            {
+                int index = _model.Size.Index(cell.X, cell.Z, cell.Y);
+                if (_model.EdificeDef(index) == CoreContent.EdificeDoor) _doors.CaptureCell = index;
+            }
+        }
+
+        /// <summary>
+        /// One cell's building — and its ground, for a solid cell — added to the highlight as the
+        /// chunk draws it, with the door leaf where the doors drew one. False when that is nothing,
+        /// and the caller draws the brackets instead.
+        /// </summary>
+        bool HighlightCell(int index, bool terrain)
+        {
+            if (_renderer == null) return false;
+            SelectionHighlight frame = SelectionHighlight.Current;
+            int added = _renderer.CollectCell(index, frame, SelectionHighlight.Primary, terrain);
+            if (_doors != null && index == _doors.CaptureCell
+                && _doors.TryGetCapturedLeaf(out ResolvedModule? leaf, out Matrix4x4 leafAt) && leaf != null)
+            {
+                frame.AddModule(leaf, leafAt, SelectionHighlight.Primary);
+                added++;
+            }
+            return added > 0;
+        }
+
+        /// <summary>A tile's cursor: washed and outlined while the highlight is on, bracketed otherwise.</summary>
+        void FloorMark(CellRef cell, Color colour) =>
+            FloorMark(GroundRelief.Drape(CellMetrics.FloorCentre(cell)), colour);
+
+        void FloorMark(Matrix4x4 placement, Color colour, float[]? cornerRises = null)
+        {
+            if (_renderer == null) return;
+            if (_highlighting)
+                _renderer.CollectSurface(placement, SelectionHighlight.Current, SelectionHighlight.Primary, cornerRises);
+            else
+                _renderer.DrawFloorBracket(placement, colour, cornerRises);
+        }
 
         void OnGUI()
         {
@@ -3952,6 +4212,7 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 _figures.BlowLanded -= OnBlowLanded;
                 _figures.LoadLifted -= OnLoadLifted;
+                _figures.SwimStroked -= OnSwimStroked;
                 _figures.LoadSet -= OnLoadSet;
             }
             if (_renderer != null)
@@ -3968,10 +4229,15 @@ namespace Odyssey.Presentation.Bootstrap
             _corpses?.Dispose();
             _figures?.Dispose();
             _blood = null;
+            _projectiles?.Dispose();
+            _projectiles = null;
+            _combatFeedback.Projectiles = null;
             _doors?.Dispose();
             _fires?.Dispose();
             _weather?.Dispose();
             _floaterView?.Dispose();
+            _hearthMark?.Dispose();
+            _hearthMark = null;
             _combatFeedback.Floaters.Clear();
             _combatFeedback.Blood.Clear();
             _combatFeedback.Blood = NoBloodEffects.Instance;
@@ -3986,6 +4252,8 @@ namespace Odyssey.Presentation.Bootstrap
             _renderer?.Dispose();
             _powerLines?.Dispose();
             _powerLines = null;
+            _homeEdge?.Dispose();
+            _homeEdge = null;
             // The library owns every mesh it baked or merged, and a Mesh made in code is a GPU
             // allocation Unity never collects. Leaving Play mode without this leaked the whole
             // cast, every session, until the graphics device was reset out from under the editor.

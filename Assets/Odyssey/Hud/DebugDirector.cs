@@ -57,6 +57,9 @@ namespace Odyssey.Hud
         public const string GiveWoodKey = "ui.debug.givewood";
         public const string GiveStoneKey = "ui.debug.givestone";
         public const string GiveFoodKey = "ui.debug.givefood";
+
+        /// <summary>Fifty carrots: raw food for a cook to put in a pan (design 48 §14).</summary>
+        public const string GiveCarrotsKey = "ui.debug.givecarrots";
         public const string SkipDayKey = "ui.debug.skipday";
         public const string SkipMorningKey = "ui.debug.skipmorning";
         public const string RipenCropsKey = "ui.debug.ripen";
@@ -118,10 +121,11 @@ namespace Odyssey.Hud
         {
             PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey,
             SpawnBanditKey, SpawnBatKey, SpawnCrowbarKey, SpawnMacheteKey, SpawnArcBladeKey,
-            SpawnBanditsKey, ArmColonistsKey,
+            SpawnBanditsKey, ArmColonistsKey, SpawnPistolKey, SpawnGunmanKey,
             GroupColonistsKey, GroupHostilesKey, GroupAnimalsKey, GroupWeaponsKey, GroupItemsKey,
-            GiveWoodKey, GiveStoneKey, GiveFoodKey,
+            GiveWoodKey, GiveStoneKey, GiveFoodKey, GiveCarrotsKey,
             SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, FinishResearchKey, MarkTraceKey, TraceKey,
+            JumpsFailKey,
             WeatherTabKey, WeatherClearKey, WeatherOvercastKey, WeatherDrizzleKey, WeatherRainKey,
             WeatherDownpourKey, WeatherStormKey, RainParticlesKey, WetGlossKey,
         };
@@ -189,12 +193,25 @@ namespace Odyssey.Hud
                 WeatherKind.Storm, 1000),
         };
 
+        /// <summary>
+        /// Every jump over a stream falls short while this is on (design 46 §6), so a failed jump
+        /// can be watched: at one in thirty-three it is not something a playtest can wait for.
+        /// Sends <see cref="IntentKind.DebugJumpsFail"/> with <c>A</c> 1 or 0.
+        /// </summary>
+        public const string JumpsFailKey = "ui.debug.jumpsfail";
+
         /// <summary>The bandit (design 33 §1): a hostile person, the same intent as the colonist's with a kind.</summary>
         public const string SpawnBanditKey = "ui.debug.spawnbandit";
 
         /// <summary>The four weapons (design 33 §1, C3): one item each, granted as wood is.</summary>
         public const string SpawnBatKey = "ui.debug.spawnbat", SpawnCrowbarKey = "ui.debug.spawncrowbar",
             SpawnMacheteKey = "ui.debug.spawnmachete", SpawnArcBladeKey = "ui.debug.spawnarcblade";
+
+        /// <summary>
+        /// The ranged line's two rows (design 47 §4d): the pistol on the ground, and a bandit holding
+        /// one — the bandit's own kind, with the spawn intent's <c>B</c> naming the weapon plus one.
+        /// </summary>
+        public const string SpawnPistolKey = "ui.debug.spawnpistol", SpawnGunmanKey = "ui.debug.spawngunman";
 
         /// <summary>
         /// One row of the Spawn tab: its name, what its tooltip says, and the intent a click sends
@@ -271,12 +288,14 @@ namespace Odyssey.Hud
             Pawn(SpawnPawnKey, "Adds a colonist near the camera, with no scenario and no starting kit",
                 PawnKindLabels.ColonistKind, GroupColonistsKey),
             new SpawnRow(ArmColonistsKey,
-                "Every colonist standing with nothing in hand takes a random melee weapon, at once. Armed colonists keep theirs",
+                "Every colonist standing with nothing in hand takes a random weapon, a gun among them, at once. Armed colonists keep theirs",
                 IntentKind.DebugArmColonists, 0, 0, GroupColonistsKey),
             Pawn(SpawnBanditKey, "Adds a hostile bandit near the camera, armed. It hunts whoever is still standing",
                 PawnKindLabels.Bandit, GroupHostilesKey),
             Pawn(SpawnBanditsKey, "Adds three bandits near the camera, each on its own tile",
                 PawnKindLabels.Bandit, GroupHostilesKey, repeat: 3),
+            new SpawnRow(SpawnGunmanKey, "Adds a hostile bandit near the camera, holding a pistol. It shoots whoever it can see",
+                IntentKind.SpawnPawn, PawnKindLabels.Bandit, ItemHandle.Pistol + 1, GroupHostilesKey),
             Pawn(SpawnHogKey, "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
                 PawnKindLabels.MiddenHogKind, GroupAnimalsKey),
             Pawn(SpawnRatKey, "Adds a duct rat near the camera. It wanders and rests, and climbs anything",
@@ -287,9 +306,14 @@ namespace Odyssey.Hud
             Weapon(SpawnMacheteKey, "Adds a machete near the camera. Sharp and quick", ItemHandle.Machete),
             Weapon(SpawnArcBladeKey, "Adds an arc blade near the camera. The best thing a colonist can hold",
                 ItemHandle.ArcBlade),
+            Weapon(SpawnPistolKey, "Adds a pistol near the camera. It shoots, and is surest close in",
+                ItemHandle.Pistol),
             Resource(GiveWoodKey, "Adds 50 wood near the camera", ItemHandle.Wood),
             Resource(GiveStoneKey, "Adds 50 stone near the camera", ItemHandle.Stone),
-            Resource(GiveFoodKey, "Adds 50 meals near the camera", ItemHandle.Meal),
+            Resource(GiveFoodKey, "Adds 50 ration packs near the camera", ItemHandle.Meal),
+            // The kitchen (design 48 §14): something to cook, without growing a field first.
+            Resource(GiveCarrotsKey, "Adds 50 carrots near the camera: raw food a cook can put in a pan",
+                ItemHandle.Carrots),
         };
 
         public static string TabKey(DebugTab tab) =>

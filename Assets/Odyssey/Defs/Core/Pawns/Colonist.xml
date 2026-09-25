@@ -115,6 +115,15 @@
       blend draws the run clip in - design 17 section 4f's run, given its first reason.
     -->
     <draftedPacePerMille>2000</draftedPacePerMille>
+    <!--
+      Jumping a one-cell stream (design 46 section 6). A well, unladen person's jump falls short
+      30 times in a thousand and lands in the water; carrying doubles that, and a colonist in a bad
+      way (hungry, exhausted, cold) is likelier still, by the inverse of the condition both rates
+      already read. INVENTED. A short jump costs a soaking and a few seconds, nothing more, until
+      the health model can carry an injury.
+    -->
+    <jumpFailPerMille>30</jumpFailPerMille>
+    <jumpFailCarryingPerMille>2000</jumpFailCarryingPerMille>
   </MovementDef>
 
   <PawnKindDef>
@@ -185,8 +194,7 @@
 
     needsIntervalTicks 150 is the cadence a-01-pawns.md measured.
 
-    woodPerTree 27 is the pine class's vanilla yield (a-08 section 1; the oak class gives 46).
-    One stack of 75, so a single haul clears a felled tree.
+    What a felled tree yields is the species' own now, in World/WildPlants.xml (design 45).
 
     The think-loop numbers are the trap that catches a pawn starting jobs it cannot finish: more
     than thinkLoopLimit job starts inside thinkLoopWindowTicks and it stands still for
@@ -199,7 +207,6 @@
     <thinkLoopLimit>10</thinkLoopLimit>
     <thinkLoopWindowTicks>60</thinkLoopWindowTicks>
     <standDownTicks>120</standDownTicks>
-    <woodPerTree>27</woodPerTree>
 
     <!--
       What mining leaves. Both yields are ASSUMED, like the felling numbers beside them.

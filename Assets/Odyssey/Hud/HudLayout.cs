@@ -889,6 +889,22 @@ namespace Odyssey.Hud
         /// </summary>
         public const int InspectHeader = Avatar;
 
+        /// <summary>The name line's height in the header (<c>.inspect__nameline</c>).</summary>
+        public const int InspectNameLine = 22;
+
+        /// <summary>
+        /// One of the header's smaller lines (<c>.inspect__state</c>, <c>.inspect__pace</c>): the
+        /// activity line, and under it a colonist's pace (design 17 §5a).
+        /// </summary>
+        public const int InspectTextLine = 16;
+
+        /// <summary>
+        /// The header's text, all three lines: 54 px, inside the <see cref="InspectHeader"/> the
+        /// portrait sets. <b>The pace line was added into that slack</b> rather than growing the
+        /// pane, and <c>HudLayoutTests</c> fails the day a fourth line would not fit.
+        /// </summary>
+        public const int InspectHeaderText = InspectNameLine + 2 * InspectTextLine;
+
         /// <summary>
         /// The same header when the subject is a tile or a pile rather than a colonist.
         ///

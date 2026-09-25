@@ -173,6 +173,19 @@ namespace Odyssey.Sim.Pawns
         public int FinishingStepTo { get; internal set; } = -1;
 
         /// <summary>
+        /// Where the jump in hand will land, or -1 (design 46 §6): the far bank, or the water short
+        /// of it.
+        ///
+        /// <para>Set the tick a jump becomes the step in hand, by the one roll that decides it, and
+        /// <b>set on success as well as failure</b> — a save taken mid-jump resumes the same jump
+        /// and never rolls again. Cleared when the step lands and by <see cref="ClearPath"/>, so
+        /// whatever drops the step drops the landing with it. Saved in <c>CombatSection</c> and
+        /// hashed while set, for <see cref="FinishingStepTo"/>'s reason: it is a step the world
+        /// cannot re-derive.</para>
+        /// </summary>
+        public int JumpLanding { get; internal set; } = -1;
+
+        /// <summary>
         /// What she does about danger near her while undrafted (design 33 §18): fight back — the
         /// default — defend, or flee. A standing setting the player chooses on her pane, not an
         /// order. Set through <c>SetHostilityResponse</c>. Saved in <c>CombatSection</c>'s flags
@@ -180,6 +193,15 @@ namespace Odyssey.Sim.Pawns
         /// default</b>, so a colony that never touched it saves and hashes as it did before.
         /// </summary>
         public HostilityResponse Response { get; internal set; }
+
+        /// <summary>
+        /// Where she may work (design 43 §4): anywhere — the default — or only inside the colony's
+        /// home. A standing setting from the Assign tab. Set through <c>SetPawnArea</c>. Saved in
+        /// <c>AssignSection</c> and folded into the hash beside the kind, <b>both only while it
+        /// is not the default</b>, so a colony nobody restricts saves and hashes as it did before.
+        /// Read by <c>PawnContext.MayWork</c> and the walk home, and by nothing else.
+        /// </summary>
+        public PawnArea Area { get; internal set; }
 
         /// <summary>The species this pawn's kind spawns as: what walks. See <see cref="SpeciesDef"/>.</summary>
         public SpeciesDef Species => Content.SpeciesOf(Kind);
@@ -271,6 +293,14 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The <see cref="PawnId"/> value of whoever is carrying this pawn, or 0 (C4).</summary>
         public int CarriedBy { get; internal set; }
 
+        /// <summary>
+        /// Treated recently: no treatment is given to this pawn before this tick (design 37 §4), so
+        /// a pile of medical supplies cannot stand in for bed rest. Nought for a pawn never treated.
+        /// Saved in the combat section (layout 4) and hashed only while set, so a colony that has
+        /// never treated anybody saves and hashes as it did before medicine existed.
+        /// </summary>
+        public int TreatedUntilTick { get; internal set; }
+
         /// <summary>Stunned right now, at <paramref name="tick"/>.</summary>
         public bool StunnedAt(int tick) => StunnedUntilTick > tick;
 
@@ -336,7 +366,7 @@ namespace Odyssey.Sim.Pawns
         public bool HasCombatState =>
             HpMilli != HpMaxMilli || Downed || NextSwingTick != 0 || StunnedUntilTick != 0
             || RetaliateAgainst != 0 || EquippedItem != 0 || CombatTarget != 0 || CarriedBy != 0
-            || KnockedDownUntilTick != 0 || PendingSwing != 0;
+            || KnockedDownUntilTick != 0 || PendingSwing != 0 || TreatedUntilTick != 0;
 
         /// <summary>Cell index, layer included. Always layer-aware; there is no 2D form of this.</summary>
         public int Cell { get; set; }
@@ -748,7 +778,29 @@ namespace Odyssey.Sim.Pawns
                 * InnatePacePerMille() / 1_000
                 * ConditionPerMille() / 1_000
                 * Species.movePerMille / 1_000
+                * WeatherPerMille() / 1_000
                 * UrgencyPerMille() / 1_000;
+
+        /// <summary>
+        /// The rain (design 43 §5): the sky's pace factor while this pawn stands where the sky
+        /// reaches, and exactly 1,000 under a roof, under a canopy, on a dry day, or in a world
+        /// with no weather — so nobody's speed moved on a dry sky. Walking and running alike,
+        /// which is why it sits before the run in the product. Asked of the weather system at the
+        /// pawn's own cell each time, so stepping under a roof gives the pace back on that step.
+        /// Apparel will buy it back one day as one more factor here (§9).
+        /// </summary>
+        public virtual int WeatherPerMille()
+        {
+            Weather.WeatherSystem? weather = Context?.Weather;
+            return weather == null ? 1_000 : weather.PacePerMilleAt(Cell);
+        }
+
+        /// <summary>
+        /// The colony this pawn lives in, set by the registry that adopts or loads it. Read for
+        /// what is the world's rather than the pawn's — the sky over its cell. Null for a pawn
+        /// built outside a registry: a candidate on the setup screen, or a bare fixture.
+        /// </summary>
+        public PawnContext? Context { get; internal set; }
 
         /// <summary>
         /// The run (design 17 §4f, design 33 §2h): a drafted colonist moves at
@@ -761,7 +813,7 @@ namespace Odyssey.Sim.Pawns
         /// golden window fights, so no golden moved.</para>
         /// </summary>
         public virtual int UrgencyPerMille() =>
-            Drafted || (CurrentJob != null && (CurrentJob.DefIndex == JobIndex.AttackMelee || CurrentJob.DefIndex == JobIndex.Flee))
+            Drafted || (CurrentJob != null && (CombatJobs.IsAttack(CurrentJob.DefIndex) || CurrentJob.DefIndex == JobIndex.Flee))
                 ? Content.Movement.draftedPacePerMille
                 : 1_000;
 
@@ -1182,6 +1234,22 @@ namespace Odyssey.Sim.Pawns
             // exists. JobSystem.Interrupt sets it after its own clear, which is the one place it
             // is ever set.
             FinishingStepTo = -1;
+
+            // And a jump's landing, for the same reason: it is the step, and a dropped step takes
+            // its landing with it.
+            JumpLanding = -1;
+        }
+
+        /// <summary>
+        /// A jump fell short (design 46 §6): the step in hand now ends in the water under the gap,
+        /// and the path ends there too. The job's walk asks for a new one from the water on the
+        /// tick it lands, so the hop out is planned like any other.
+        /// </summary>
+        internal void LandShort(int water)
+        {
+            Path[PathIndex] = water;
+            PathLength = PathIndex + 1;
+            JumpLanding = water;
         }
 
         internal void AdoptPath(int[] cells, int length)
@@ -1225,18 +1293,23 @@ namespace Odyssey.Sim.Pawns
             // The response (design 33 §18c) is two bits of the same word, nought at the default, so
             // a colony that never set one hashes as it did before. Bits 24 and 25: 22 and 23 are
             // left free for the line building beside this one.
+            // A jump in the air (design 46 §6) is bit 26, and its landing is walked only while
+            // there is one, so a colony that never jumps hashes as it did before jumping.
+            // The area (design 43 §4a) is bit 27, nought at the default, for the same reason.
             bool combat = HasCombatState;
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
             hash.Add(Kind | (Leaving ? 1 << 16 : 0) | (Drafted ? 1 << 17 : 0)
                 | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0)
                 | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
-                | ((int)Response << 24)
-                // Bit 22, which the line beside combat left free: her traits (design 44 §3), walked
-                // only while she has any, so every pawn from before traits hashes as it did.
-                | (Traits.Count > 0 ? 1 << 22 : 0)
-                // Bit 23: the kind of break, while it is not the wander (design 44 §3), so every
-                // break from before the taxonomy hashes as it did.
-                | (BreakKind != 0 ? 1 << 23 : 0));
+                | (TreatedUntilTick != 0 ? 1 << 22 : 0)
+                | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0) | ((int)Area << 27)
+                // Bit 23, which the line beside combat left free (treatment took 22): her traits
+                // (design 44 §3), walked only while she has any, so every pawn from before traits
+                // hashes as it did.
+                | (Traits.Count > 0 ? 1 << 23 : 0)
+                // Bit 28, above the area: the kind of break, while it is not the wander (design 44
+                // §3), so every break from before the taxonomy hashes as it did.
+                | (BreakKind != 0 ? 1 << 28 : 0));
             if (BreakKind != 0) hash.Add(BreakKind);
             if (Traits.Count > 0)
             {
@@ -1245,6 +1318,7 @@ namespace Odyssey.Sim.Pawns
             }
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
+            if (JumpLanding >= 0) hash.Add(JumpLanding);
             if (combat)
             {
                 hash.Add(HpMilli);
@@ -1257,6 +1331,7 @@ namespace Odyssey.Sim.Pawns
                 hash.Add(CombatTarget);
                 hash.Add(CarriedBy);
                 if (knocked) hash.Add(KnockedDownUntilTick);
+                if (TreatedUntilTick != 0) hash.Add(TreatedUntilTick);
                 if (swinging)
                 {
                     hash.Add(PendingSwing);

@@ -74,14 +74,40 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(new[] { 17, 18, 19, 20, 21 }));
             // One more after them since design 33 §17: the thief's, appended.
             Assert.That(JobHandle.Steal, Is.EqualTo(22));
-            Assert.That(JobHandle.Count, Is.EqualTo(23));
+            // 25 since medical supplies appended Job_Treat and Job_Patient at 23 and 24 (design
+            // 37), after the thief's — bandits shipped first at the merge with main. And the
+            // forager's after them (design 45 §6): 25, where it was 23 before medical reached main;
+            // and the cook's after that (design 48): 26, where it was 25 before nature reached main.
+            Assert.That(JobHandle.Treat, Is.EqualTo(23));
+            Assert.That(JobHandle.Forage, Is.EqualTo(25));
+            Assert.That(JobHandle.Cook, Is.EqualTo(26));
+            // And the ranged line's (design 47 §3a), 27 after the kitchen's.
+            Assert.That(JobHandle.AttackRanged, Is.EqualTo(27));
+            Assert.That(JobHandle.Count, Is.EqualTo(28));
             Assert.That(new[] { ItemHandle.Bat, ItemHandle.Crowbar, ItemHandle.Machete, ItemHandle.ArcBlade },
                 Is.EqualTo(new[] { 7, 8, 9, 10 }));
-            Assert.That(ItemHandle.Count, Is.EqualTo(11));
+            // Medical supplies at 11 (design 37), the wild foods at 12 and 13 (design 45 §6), and
+            // the kitchen's three meals at 14 to 16 (design 48).
+            Assert.That(ItemHandle.MedicalSupplies, Is.EqualTo(11));
+            Assert.That(new[] { ItemHandle.Berries, ItemHandle.Mushrooms }, Is.EqualTo(new[] { 12, 13 }));
+            Assert.That(new[] { ItemHandle.CookedMeal, ItemHandle.VegetableMeal, ItemHandle.BurntMeal },
+                Is.EqualTo(new[] { 14, 15, 16 }));
+            // The pistol at 17, after the kitchen's meals (design 47).
+            Assert.That(ItemHandle.Pistol, Is.EqualTo(17));
+            Assert.That(ItemHandle.Count, Is.EqualTo(18));
             Assert.That(WorkHandle.Rescue, Is.EqualTo(5));
-            Assert.That(WorkHandle.Count, Is.EqualTo(6));
+            Assert.That(WorkHandle.Doctor, Is.EqualTo(6));
+            // 8 since the kitchen appended Work_Cooking at 7 (design 48).
+            Assert.That(WorkHandle.Cooking, Is.EqualTo(7));
+            Assert.That(WorkHandle.Count, Is.EqualTo(8));
             Assert.That(SkillIndex.Melee, Is.EqualTo(5));
-            Assert.That(SkillIndex.Count, Is.EqualTo(6));
+            // 7 since medical supplies appended Skill_Medicine at 6 (design 37), and 8 since the
+            // kitchen appended Skill_Cooking at 7 (design 48).
+            Assert.That(SkillIndex.Medicine, Is.EqualTo(6));
+            Assert.That(SkillIndex.Cooking, Is.EqualTo(7));
+            // And Shooting at 8 (design 47), after the kitchen: nine.
+            Assert.That(SkillIndex.Shooting, Is.EqualTo(8));
+            Assert.That(SkillIndex.Count, Is.EqualTo(9));
             Assert.That(PawnKindIndex.Bandit, Is.EqualTo(3));
             Assert.That(PawnKindIndex.Count, Is.EqualTo(4));
 
@@ -99,17 +125,28 @@ namespace Odyssey.Tests.Sim
         {
             PawnContent content = ContentPack.Pawns();
             Assert.That(content.Jobs.Skip(17).Select(j => j.defName), Is.EqualTo(new[]
-                { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue", "Job_Steal" }));
+                { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue", "Job_Steal",
+                  "Job_Treat", "Job_Patient", "Job_Forage", "Job_Cook", "Job_AttackRanged" }));
             for (int i = 0; i < content.Jobs.Length; i++)
                 Assert.That(content.Jobs[i].driver, Is.EqualTo(i), content.Jobs[i].defName + " names another driver");
             Assert.That(content.Jobs[JobIndex.AttackMelee].trainsSkill, Is.EqualTo(SkillIndex.Melee));
+            Assert.That(content.Jobs[JobIndex.AttackRanged].trainsSkill, Is.EqualTo(SkillIndex.Shooting));
+            Assert.That(content.Skills[SkillIndex.Shooting].defName, Is.EqualTo("Skill_Shooting"));
+            Assert.That(SkillIndex.Names[SkillIndex.Shooting], Is.EqualTo("shooting"));
 
             Assert.That(content.Skills[SkillIndex.Melee].defName, Is.EqualTo("Skill_Melee"));
             Assert.That(content.WorkTypes[WorkTypeIndex.Rescue].defName, Is.EqualTo("Work_Rescue"));
             Assert.That(WorkTypeIndex.Names[WorkTypeIndex.Rescue], Is.EqualTo("rescue"));
             Assert.That(SkillIndex.Names[SkillIndex.Melee], Is.EqualTo("melee"));
             Assert.That(content.Items.Skip(7).Select(i => i.defName), Is.EqualTo(new[]
-                { "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade" }));
+                { "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade", "Item_MedicalSupplies",
+                  "Item_Berries", "Item_Mushrooms",
+                  // The kitchen (design 48), after the wild foods.
+                  "Item_CookedMeal", "Item_VegetableMeal", "Item_BurntMeal",
+                  // The pistol (design 47), after the kitchen.
+                  "Item_Pistol" }));
+            Assert.That(content.Items[ItemIndex.Pistol].weapon!.ranged, Is.Not.Null, "the pistol is a gun");
+            Assert.That(content.Items[ItemIndex.Machete].weapon!.ranged, Is.Null, "a machete is not");
             Assert.That(content.Kinds[PawnKindIndex.Bandit].defName, Is.EqualTo("PawnKind_Bandit"));
         }
 
@@ -189,7 +226,7 @@ namespace Odyssey.Tests.Sim
         public void TheAnimalAndHostileMindsHaveTheirSeamsInOrder()
         {
             Assert.That(JobSystem.AnimalMind.Select(n => n.Name),
-                Is.EqualTo(new[] { "Downed", "AnimalCombat", "AnimalIdle" }));
+                Is.EqualTo(new[] { "Downed", "AnimalCombat", "AnimalShelter", "AnimalIdle" }));
             Assert.That(JobSystem.HostileMind.Select(n => n.Name),
                 Is.EqualTo(new[] { "Downed", "Hostile", "Idle" }));
         }
@@ -309,6 +346,7 @@ namespace Odyssey.Tests.Sim
             Moves("a weapon", () => pawn.EquippedItem = 5, () => pawn.EquippedItem = 0);
             Moves("an order's target", () => pawn.CombatTarget = 2, () => pawn.CombatTarget = 0);
             Moves("a carrier", () => pawn.CarriedBy = 2, () => pawn.CarriedBy = 0);
+            Moves("a treatment cooldown", () => pawn.TreatedUntilTick = 99, () => pawn.TreatedUntilTick = 0);
             Moves("a struck building", () => colony.Pawns.EdificeDamage.Set(123, 4_000),
                 () => colony.Pawns.EdificeDamage.Clear(123));
 
@@ -333,6 +371,7 @@ namespace Odyssey.Tests.Sim
             a.EquippedItem = 77;
             a.CombatTarget = b.Id.Value;
             a.CarriedBy = b.Id.Value;
+            a.TreatedUntilTick = 15_030; // layout 4, medical supplies (design 37)
             colony.Pawns.Corpses.Add(b, 31, 5);
             colony.Pawns.EdificeDamage.Set(1_234, 55_000);
             colony.Pawns.EdificeDamage.Set(99, 1);
@@ -350,6 +389,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(back.EquippedItem, Is.EqualTo(77));
             Assert.That(back.CombatTarget, Is.EqualTo(b.Id.Value));
             Assert.That(back.CarriedBy, Is.EqualTo(b.Id.Value));
+            Assert.That(back.TreatedUntilTick, Is.EqualTo(15_030));
 
             Assert.That(restored.Pawns.Corpses.Count, Is.EqualTo(1));
             Assert.That(restored.Pawns.Corpses[0].Pawn, Is.EqualTo(b.Id.Value));

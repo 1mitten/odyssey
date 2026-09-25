@@ -174,8 +174,10 @@ namespace Odyssey.Presentation.World
                 // **Nor a body the knock-down clip has put on its back** (design 33 §1): its boots
                 // are in the air by the clip's own authority, and planting them would drag it
                 // upright by the ankles.
+                // **Nor a body in the air over a stream** (design 46 §7): the footing would reach
+                // for the ground under the gap, which is water a layer down.
                 float planted = 1f - Mathf.Clamp01(Mathf.Max(
-                    Mathf.Max(figure.SwimWeight, figure.SleepWeight),
+                    Mathf.Max(Mathf.Max(figure.SwimWeight, figure.SleepWeight), figure.AirWeight),
                     figure.Fight.Unplanted * figure.Fight.Weight));
 
                 // A rig with no legs bound is not an error: a non-Humanoid prefab answers null to
@@ -255,6 +257,7 @@ namespace Odyssey.Presentation.World
             CarryingFigures = 0;
             MeasuredSwimPitch = 0f;
             MeasuredToolDrift = 0f;
+            AimingFigures = 0;
 
             for (int i = 0; i < _figures.Count; i++)
             {
@@ -295,8 +298,15 @@ namespace Odyssey.Presentation.World
                     // while it lasts, and the pack's clips need nothing here at all.
                     else if (ShowsComputedCombat(figure))
                         ApplyCombatPose(figure);
+                    // The gun (design 47 §4b): the aim is a stance that owns both arms while it
+                    // lasts, and low ready the right arm; after a blow or a stagger, which take the
+                    // whole body for their moment, and before the one-shot gestures.
+                    else if (figure.AimWeight > 0.001f)
+                        ApplyAimPose(figure);
                     else if (figure.Gesture != PawnGesture.None || ForceGesture.HasValue)
                         ApplyGesturePose(figure);
+                    else if (figure.LowReadyWeight > 0.001f)
+                        ApplyLowReady(figure);
                     // Last of the five, and the only one that is a stance rather than an event.
                     // Everything above it either moves the whole body somewhere else (sleep, swim,
                     // climb) or is a motion that owns the arms for a moment (the lift, the stow),
@@ -537,6 +547,17 @@ namespace Odyssey.Presentation.World
             Pitch(figure.LeftUpperArm, axis, CarryPose.ShoulderPitch * weight);
             Pitch(figure.RightLowerArm, axis, CarryPose.ElbowBend * weight);
             Pitch(figure.LeftLowerArm, axis, CarryPose.ElbowBend * weight);
+
+            // A box is gripped by its two sides, not scooped underneath (owner, 2026-09-25: the
+            // medical kit). Out from the midline, about the figure's own forward axis, after the
+            // scoop rather than instead of it — the same order SleepPose's ArmOut is laid over its
+            // own pitch, and for the same reason.
+            if (CarryPose.GrippedBySides(figure.CarryDef))
+            {
+                Vector3 outAxis = figure.Transform.forward;
+                Pitch(figure.RightUpperArm, outAxis, -CarryPose.BoxGripOut * weight);
+                Pitch(figure.LeftUpperArm, outAxis, CarryPose.BoxGripOut * weight);
+            }
 
             CarryingFigures++;
         }

@@ -79,7 +79,7 @@ namespace Odyssey.Sim.Pawns
                 case BreakHandle.Berserk:
                     Pawn? victim = NearestStanding(pawn, ctx);
                     return victim != null
-                        ? AttackJob.Fill(pawn, victim, job, pawn.OwnMode)
+                        ? AttackJob.Fill(ctx, pawn, victim, job, pawn.OwnMode)
                         : WanderTarget.Fill(pawn, ctx, job);
                 default:
                     return WanderTarget.Fill(pawn, ctx, job);
@@ -97,8 +97,11 @@ namespace Odyssey.Sim.Pawns
             {
                 case BreakHandle.Sulk: return job.DefIndex == JobIndex.Wait;
                 case BreakHandle.Binge: return job.DefIndex == JobIndex.Eat;
-                case BreakHandle.Tantrum:
-                case BreakHandle.Berserk: return job.DefIndex == JobIndex.AttackMelee;
+                case BreakHandle.Tantrum: return job.DefIndex == JobIndex.AttackMelee;
+                // A swing or a shot (design 47 §12): a berserker holding a gun shoots a victim out of
+                // reach, and combat swaps her between the two by reach, so both are hers. The ranged
+                // driver ends an unordered fight at a downing exactly as the melee one does.
+                case BreakHandle.Berserk: return CombatJobs.IsAttack(job.DefIndex);
                 default: return false;
             }
         }

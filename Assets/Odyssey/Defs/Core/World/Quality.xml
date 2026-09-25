@@ -11,6 +11,11 @@
   Uber 125, Epic 140: the owner's interview answers, 2026-09-17, provisional by design and
   tunable here without touching code.
 
+  weaponDamagePerMille and weaponAccuracyPerMille are what the tier does to a weapon (design 47
+  section 11): its damage, and its hit chance, swung or shot. The reference's shape - a tenth a
+  step, more at the top - in thousandths; INVENTED values, tunable here. None and Normal are the
+  weapon as its Def says.
+
   The roll itself is arithmetic in QualityContent.Roll, not a table here: the weight of a tier
   falls off by two a step from the tier the finishing skill has earned, so a novice can never
   reach Epic and a master can never fall to Poor. Those endpoints are what the tests pin.
@@ -20,35 +25,47 @@
     <defName>Quality_None</defName>
     <label>nothing</label>
     <restEffectiveness>100</restEffectiveness>
+    <weaponDamagePerMille>1000</weaponDamagePerMille>
+    <weaponAccuracyPerMille>1000</weaponAccuracyPerMille>
   </QualityDef>
   <QualityDef>
     <defName>Quality_Poor</defName>
     <label>poor</label>
     <restEffectiveness>85</restEffectiveness>
+    <weaponDamagePerMille>900</weaponDamagePerMille>
+    <weaponAccuracyPerMille>900</weaponAccuracyPerMille>
     <iconKey>ui.quality.poor</iconKey>
   </QualityDef>
   <QualityDef>
     <defName>Quality_Normal</defName>
     <label>normal</label>
     <restEffectiveness>100</restEffectiveness>
+    <weaponDamagePerMille>1000</weaponDamagePerMille>
+    <weaponAccuracyPerMille>1000</weaponAccuracyPerMille>
     <iconKey>ui.quality.normal</iconKey>
   </QualityDef>
   <QualityDef>
     <defName>Quality_Decent</defName>
     <label>decent</label>
     <restEffectiveness>112</restEffectiveness>
+    <weaponDamagePerMille>1100</weaponDamagePerMille>
+    <weaponAccuracyPerMille>1050</weaponAccuracyPerMille>
     <iconKey>ui.quality.decent</iconKey>
   </QualityDef>
   <QualityDef>
     <defName>Quality_Uber</defName>
     <label>uber</label>
     <restEffectiveness>125</restEffectiveness>
+    <weaponDamagePerMille>1200</weaponDamagePerMille>
+    <weaponAccuracyPerMille>1100</weaponAccuracyPerMille>
     <iconKey>ui.quality.uber</iconKey>
   </QualityDef>
   <QualityDef>
     <defName>Quality_Epic</defName>
     <label>epic</label>
     <restEffectiveness>140</restEffectiveness>
+    <weaponDamagePerMille>1350</weaponDamagePerMille>
+    <weaponAccuracyPerMille>1150</weaponAccuracyPerMille>
     <iconKey>ui.quality.epic</iconKey>
   </QualityDef>
 </Defs>

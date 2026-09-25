@@ -92,7 +92,8 @@ namespace Odyssey.Sim.World
             // on. Everything else is firm by default and slower only where worldgen says so.
             ushort cost = 0;
             if (!_grid.IsImpassableTerrain(cell) && (_grid.IsSolidTerrain(cell) || _grid.HasFloor(cell)))
-                cost = (ushort)(1000 + _costByClass[NaturalContent.CostClassOf(terrain)] * 10);
+                cost = (ushort)(1000 + _costByClass[_grid.IsUndergrowth(cell)
+                    ? NaturalContent.CostClassBush : NaturalContent.CostClassOf(terrain)] * 10);
 
             ushort workToClear = (ushort)WorldContent.Table[terrain].workToClear;
 

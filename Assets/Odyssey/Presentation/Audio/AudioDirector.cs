@@ -131,6 +131,10 @@ namespace Odyssey.Presentation.Audio
         // which sits on the same camera.
         Vector3 _listener;
 
+        /// <summary>Where the listener was at the last Sync: the camera. A gunshot measures its
+        /// distance from here to choose between the crack and the thump (design 47 §4c-bis).</summary>
+        public Vector3 ListenerPosition => _listener;
+
         // The two things the clock changes: the music, and the sound of being outdoors. Both are
         // a looping track per phase, crossfaded on a pair of ping-ponged voices, so both are one
         // class used twice rather than the same forty lines written out again.
@@ -161,6 +165,28 @@ namespace Odyssey.Presentation.Audio
         }
 
         readonly Dictionary<string, Bed> _beds = new();
+
+        // The rain (design 43 §7): two beds, light and heavy, weighted against each other by
+        // RainMix and started and stopped together, so a change of weight is never a restart.
+        readonly AudioCatalogue.AmbienceDef? _rainLightDef, _rainHeavyDef;
+        AudioSource? _rainLight, _rainHeavy;
+        bool _rainPlaying;
+
+        /// <summary>The light rain bed's smoothed weight, before its volume and the bus.</summary>
+        public float RainLightLevel { get; private set; }
+
+        /// <summary>The heavy rain bed's smoothed weight, the same.</summary>
+        public float RainHeavyLevel { get; private set; }
+
+        /// <summary>The gain the outdoor bed is held at under the rain: 1 on a dry day.</summary>
+        public float OutdoorRainGain { get; private set; } = 1f;
+
+        /// <summary>Whether the two rain beds are running. Book-kept, like <see cref="Bed.Playing"/>.</summary>
+        public bool RainSounding => _rainPlaying;
+
+        /// <summary>The live volumes of the two rain voices, after weight, catalogue and bus.</summary>
+        public float RainLightVolume => _rainLight?.volume ?? 0f;
+        public float RainHeavyVolume => _rainHeavy?.volume ?? 0f;
 
 
         /// <summary>Diagnostic counters, for the developer overlay and the tests. A test that
@@ -220,6 +246,8 @@ namespace Odyssey.Presentation.Audio
                 foreach (AudioCatalogue.SoundDef def in catalogue.Sounds)
                     _byId[def.Id] = def;
                 _waterDef = catalogue.FindAmbience(SoundIds.AmbienceWater);
+                _rainLightDef = catalogue.FindAmbience(SoundIds.AmbienceRainLight);
+                _rainHeavyDef = catalogue.FindAmbience(SoundIds.AmbienceRainHeavy);
             }
 
             _root = new GameObject("Odyssey Audio");
@@ -306,9 +334,10 @@ namespace Odyssey.Presentation.Audio
             StepDuck(deltaTime);
             StepChimeTails();
             StepAmbience(deltaTime, focus, activeLayer);
+            StepRain(deltaTime, frame.Weather, activeLayer);
             StepPhaseLoops(deltaTime, frame.Tick, activeLayer);
             StepLandings(frame);
-
+            StepSplashes(frame);
         }
 
         // ---- things landing (design 23 §6) ---------------------------------------------------
@@ -337,6 +366,32 @@ namespace Odyssey.Presentation.Audio
 
             _airborne.Clear();
             _airborne.AddRange(_airborneNow);
+        }
+
+        // ---- a jump falling short (design 46 §7) ----------------------------------------------
+
+        readonly Dictionary<int, CellRef> _fallingShort = new();
+        readonly Dictionary<int, CellRef> _fallingShortNow = new();
+
+        /// <summary>
+        /// A pawn that was falling short of a jump last frame and now stands in the water it was
+        /// falling into has landed in it. Keyed on the water cell, so a jump dropped by anything
+        /// else — an order, a load, a knock — makes no sound, because it never reached the water.
+        /// </summary>
+        void StepSplashes(WorldSnapshot frame)
+        {
+            _fallingShortNow.Clear();
+            ReadOnlySpan<PawnView> pawns = frame.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                if (pawns[i].JumpingShort) _fallingShortNow[pawns[i].Id.Value] = pawns[i].NextCell;
+                else if (_fallingShort.TryGetValue(pawns[i].Id.Value, out CellRef water) && pawns[i].Cell == water)
+                    PlayOneShot(SoundIds.Splash,
+                        CellMetrics.FloorCentre(water) + Vector3.up * (CellMetrics.SizeY * ChunkMesher.WaterSurface));
+            }
+
+            _fallingShort.Clear();
+            foreach (var entry in _fallingShortNow) _fallingShort[entry.Key] = entry.Value;
         }
 
         /// <summary>
@@ -597,6 +652,72 @@ namespace Odyssey.Presentation.Audio
         }
 
         /// <summary>
+        /// The rain (design 43 §7): <see cref="RainMix"/> says how much of each bed the published
+        /// sky wants, and each level eases towards it over the light bed's
+        /// <see cref="AudioCatalogue.AmbienceDef.FadeSeconds"/>, so a forced change of sky swells
+        /// rather than steps. The same easing carries the outdoor bed's hush.
+        ///
+        /// <para><b>Both beds run whenever either is heard.</b> They start on the same frame and
+        /// stop on the same frame, and between those only their volumes move — so the rain moving
+        /// from light to heavy is a change of weight inside one continuous sound, never a clip
+        /// starting. Each is 2D: rain is the air all round, like the outdoor bed, not a thing at
+        /// a place like the water. Underground, <see cref="RainMix"/> answers silence, and the
+        /// beds fade out on the ordinary path.</para>
+        /// </summary>
+        void StepRain(float deltaTime, in WeatherView sky, int activeLayer)
+        {
+            RainLevels target = RainMix.Of(sky, outdoors: activeLayer >= _surfaceLayer);
+
+            float fade = _rainLightDef?.FadeSeconds ?? _rainHeavyDef?.FadeSeconds ?? 3f;
+            float approach = 1f - Mathf.Exp(-deltaTime / Mathf.Max(0.01f, fade));
+            RainLightLevel += (target.Light - RainLightLevel) * approach;
+            RainHeavyLevel += (target.Heavy - RainHeavyLevel) * approach;
+            OutdoorRainGain += (target.OutdoorGain - OutdoorRainGain) * approach;
+
+            if (_rainLightDef?.Clip == null && _rainHeavyDef?.Clip == null) return;
+
+            // Kept running while either is heard or either is wanted; a bed spinning at nought for
+            // a whole dry week is a decoded stream and a real voice spent on silence.
+            bool audible = RainLightLevel > AudibleLevel || RainHeavyLevel > AudibleLevel ||
+                           target.Light > 0f || target.Heavy > 0f;
+
+            if (audible && !_rainPlaying)
+            {
+                _rainLight ??= RainVoice("Rain light", _rainLightDef);
+                _rainHeavy ??= RainVoice("Rain heavy", _rainHeavyDef);
+                if (_rainLight?.clip != null) _rainLight.Play();
+                if (_rainHeavy?.clip != null) _rainHeavy.Play();
+                _rainPlaying = true;
+            }
+            else if (!audible && _rainPlaying)
+            {
+                _rainLight?.Stop();
+                _rainHeavy?.Stop();
+                _rainPlaying = false;
+            }
+
+            float bus = AudioMath.DbToLinear(GainDb(SoundBus.Ambience));
+            if (_rainLight != null && _rainLightDef != null)
+                _rainLight.volume = Mathf.Clamp01(_rainLightDef.Volume * RainLightLevel * bus);
+            if (_rainHeavy != null && _rainHeavyDef != null)
+                _rainHeavy.volume = Mathf.Clamp01(_rainHeavyDef.Volume * RainHeavyLevel * bus);
+        }
+
+        /// <summary>One 2D looping rain voice, made on the first rain of the session.</summary>
+        AudioSource? RainVoice(string name, AudioCatalogue.AmbienceDef? def)
+        {
+            if (def?.Clip == null) return null;
+            AudioSource source = Voice(name);
+            source.loop = true;
+            source.clip = def.Clip;
+            source.spatialBlend = 0f;
+            source.priority = 200;      // with the outdoor bed: the air, and first to go virtual
+            source.dopplerLevel = 0f;
+            source.volume = 0f;
+            return source;
+        }
+
+        /// <summary>
         /// The two loops the clock drives: the music, and the sound of the world outdoors.
         ///
         /// <para>The catalogue is only consulted when the phase actually turns — twice a day —
@@ -615,9 +736,11 @@ namespace Odyssey.Presentation.Audio
             // the bed fades out on the ordinary path rather than through a case of its own.
             MusicPhase outdoorPhase = activeLayer < _surfaceLayer ? MusicPhase.None : phase;
 
+            // Under the rain the birds step back (RainMix): the hush is a gain on the bed, so it
+            // rides the same fades and the same bus, and a dry day is exactly the old mix.
             _outdoor.Step(deltaTime, outdoorPhase,
                 outdoorPhase != _outdoor.Phase ? _catalogue?.FindOutdoor(outdoorPhase) : null,
-                AudioMath.DbToLinear(GainDb(SoundBus.Ambience)));
+                OutdoorRainGain * AudioMath.DbToLinear(GainDb(SoundBus.Ambience)));
         }
 
         /// <summary>

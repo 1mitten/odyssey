@@ -474,6 +474,81 @@ namespace Odyssey.Tests.Sim
             }
         }
 
+        /// <summary>
+        /// Design 43 §3d: what the home area costs to work out again. A base of floors — a 40 x 40
+        /// block and 200 scattered cells on the surface — is written straight into the grid, then
+        /// timed two ways: every layer rebuilt (what a load costs) and one layer rebuilt (what a
+        /// placement costs, since a touch marks one layer and the growth reaches only the two
+        /// beside it). At rest the home costs nothing at all, which is not an arm: a query of a
+        /// clean home is two array reads.
+        /// </summary>
+        [Test, Explicit, Category("Benchmark")]
+        public void WhatOneHomeRebuildCosts()
+        {
+            foreach (GridSize size in new[] { BoardSizes.Standard, BoardSizes.Huge, Scale })
+            {
+                ScenarioDef scenario = ScenarioDef.Bare();
+                scenario.colonists = 1;
+                scenario.beds = 0;
+                scenario.stockpileCells = 0;
+                ColonyWorld colony = ColonyWorld.Build(size, 12345u, scenario, barren: true, wooded: false);
+                HomeArea home = colony.Pawns.Home!;
+                CellGrid cells = colony.Pawns.Cells;
+                CellRef stand = size.FromIndex(colony.Pawns.Pawns.All[0].Cell);
+
+                // The hearth (design 43 §3f), so the base is home: the flood from it is part of
+                // what a rebuild costs now.
+                Assert.That(colony.Construction.Place(new CellRef(stand.X + 3, stand.Z, stand.Y), BuildingHandle.Campfire,
+                    StuffHandle.Wood), Is.EqualTo(IntentRejection.None));
+                Assert.That(colony.Construction.Raise(colony.Pawns, colony.Construction.Sites[0]), Is.True);
+
+                for (int dx = -20; dx < 20; dx++)
+                for (int dz = -20; dz < 20; dz++)
+                {
+                    int x = stand.X + dx, z = stand.Z + dz;
+                    if (!size.Contains(x, z, stand.Y)) continue;
+                    int c = size.Index(x, z, stand.Y);
+                    cells.Floor[c] = CoreContent.SlabBuilt;
+                    cells.Footprint.Touch(c);
+                }
+                uint s = 7u;
+                for (int i = 0; i < 200; i++)
+                {
+                    int c = size.Index((int)(Next(ref s) % (uint)size.SizeX), (int)(Next(ref s) % (uint)size.SizeZ), stand.Y);
+                    cells.Floor[c] = CoreContent.SlabBuilt;
+                    cells.Footprint.Touch(c);
+                }
+                home.Rebuild();
+
+                var watch = new Stopwatch();
+                const int Whole = 5, One = 50;
+                for (int i = 0; i < Whole; i++)
+                {
+                    cells.Footprint.TouchAll();
+                    watch.Start();
+                    home.Rebuild();
+                    watch.Stop();
+                }
+                double whole = watch.Elapsed.TotalMilliseconds / Whole;
+
+                watch.Reset();
+                int one = size.Index(stand.X, stand.Z, stand.Y);
+                for (int i = 0; i < One; i++)
+                {
+                    cells.Footprint.Touch(one);
+                    watch.Start();
+                    home.Rebuild();
+                    watch.Stop();
+                }
+                double layer = watch.Elapsed.TotalMilliseconds / One;
+
+                TestContext.WriteLine(
+                    $"[Home] {size}: {home.CellCount} home cells; every layer = {whole:F3} ms, " +
+                    $"one placement = {layer:F3} ms");
+                Assert.That(home.IsEmpty, Is.False);
+            }
+        }
+
         static double TimeRebuilds(NavGraph nav, Colony colony, ref uint s, int count)
         {
             CellGrid cells = colony.Cells;
@@ -497,6 +572,76 @@ namespace Odyssey.Tests.Sim
             }
 
             return watch.Elapsed.TotalMilliseconds / done;
+        }
+
+        /// <summary>
+        /// What the sky map (design 43 §6) costs an edit, on the played map at every offered size.
+        ///
+        /// <para><b>It scales with the columns an edit touched and never with the board.</b> An
+        /// edit tells the chunk grid which cell changed; the map recomputes that column and the
+        /// ones a trunk there could shade — nine for a single cell, twenty-five for the 3 × 3 × 3
+        /// an order's chunk marking touches — and nothing else. The assertion is that count, which
+        /// must be the same on Standard and Huge; the milliseconds are printed, not asserted,
+        /// because a timing is only comparable with one taken in the same run. The board-wide
+        /// build is printed beside them: it is paid once, on the first question after a load, and
+        /// is the number that does grow with the board.</para>
+        /// </summary>
+        [Test, Category("Long")]
+        public void TheSkyColumnsCostWhatAnEditTouches()
+        {
+            var report = new StringBuilder();
+            var perEdit = new List<int>();
+            var perOrder = new List<int>();
+            foreach (GridSize size in new[] { BoardSizes.Standard, BoardSizes.Large, BoardSizes.Huge })
+            {
+                CellGrid grid = PlayedMap.Generate(size, 7u, out var result);
+                var chunks = new ChunkGrid(size);
+                var sky = new SkyColumns(grid, result.Context.Edifices, chunks);
+
+                var watch = Stopwatch.StartNew();
+                sky.Sync();
+                watch.Stop();
+                double build = watch.Elapsed.TotalMilliseconds;
+
+                // One slab at a time, over the top of a column, laid and then taken away: the
+                // cheapest edit there is and the commonest (a roof going up).
+                uint s = 43u;
+                const int Edits = 2_000;
+                int single = 0;
+                watch.Reset();
+                for (int i = 0; i < Edits; i++)
+                {
+                    int x = (int)(Next(ref s) % (uint)size.SizeX), z = (int)(Next(ref s) % (uint)size.SizeZ);
+                    int y = size.SizeY - 1;
+                    int cell = size.Index(x, z, y);
+                    grid.Floor[cell] = grid.Floor[cell] == 0 ? CoreContent.SlabBuilt : CoreContent.SlabNone;
+                    chunks.MarkDirty(x, z, y);
+                    watch.Start();
+                    sky.Sync();
+                    watch.Stop();
+                    single = Math.Max(single, sky.LastRecomputed);
+                }
+                double edit = watch.Elapsed.TotalMilliseconds / Edits;
+
+                // An order's marking: the 3 × 3 × 3 cells around the changed one, as
+                // ConstructionGrid.MarkChunksAround and MineJob do.
+                int cx = size.SizeX / 2, cz = size.SizeZ / 2, cy = size.SizeY / 2;
+                for (int dy = -1; dy <= 1; dy++)
+                for (int dz = -1; dz <= 1; dz++)
+                for (int dx = -1; dx <= 1; dx++)
+                    chunks.MarkDirty(cx + dx, cz + dz, cy + dy);
+                sky.Sync();
+                int order = sky.LastRecomputed;
+
+                perEdit.Add(single);
+                perOrder.Add(order);
+                report.AppendLine($"[Sky] {size}: board-wide build {build:F2} ms ({size.LayerStride:N0} columns); " +
+                                  $"one slab {edit * 1000:F2} us, {single} columns; an order's 3 x 3 x 3 marking {order} columns");
+            }
+            TestContext.WriteLine(report.ToString());
+
+            Assert.That(perEdit, Is.All.EqualTo(9), "one cell recomputes its column and the eight a trunk there could shade, on any board");
+            Assert.That(perOrder, Is.All.EqualTo(25), "an order's marking touches a 3 x 3 of columns, widened by the canopy's reach");
         }
 
         // ---------------------------------------------------------------- the workload

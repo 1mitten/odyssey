@@ -72,6 +72,20 @@ whole landscape keeps the x-ray, because solid rock drawn overhead would bury a 
 walls up nothing changes: the owner chose this over fixing the surface for everyone, which would
 also have drawn rock solid over a tunnel dug into a hillside.
 
+**Amended 2026-09-25: the ground follows the choice, not the walls.** The rule above was keyed on
+`wallsLowered`, which is the choice *with build mode taken out* — so opening the Build palette on a
+lower terrace raised the walls and, with them, turned the terrace back into a tunnel: the layer above
+became an x-ray and nothing on it could be clicked. The owner met it as a campfire one terrace up
+that "did nothing" when clicked, straight after building it. `SliceSettings` now carries the two
+questions apart: `wallsLowered` (what is drawn, build mode out) and `landscapeGround` (the Walls down
+choice itself), and `BelowSurface` reads the second. Walls still come up to build; the terrace stays
+ground. A player who turns Walls down off keeps the tunnel view chosen above — the owner's choice of
+this narrower fix over the lowest-terrace rule for everyone, for that reason. Measured by
+`CampfirePickTests` (PlayMode, flat fires on every terrace, clicked through the rig's pick path from
+their own layer and one and two below): while building, **96 of 150 clicks missed** before and
+**2 of 150** after, those two in front of the fire where the rolling ground hides its edge.
+`LandscapeBandTests.WithTheWallsDownEveryTerraceIsAboveGround` holds the rule on the board.
+
 **And what is hidden above narrowed** (owner's choice, same interview): not everything built, but
 only what is **stacked** — built on top of something built rather than on the ground
 (`WorldRenderModel.IsStackedAt`: built, and no solid terrain directly beneath). The first floor of

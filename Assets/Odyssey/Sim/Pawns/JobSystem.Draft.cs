@@ -91,7 +91,7 @@ namespace Odyssey.Sim.Pawns
             if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
 
             int dest = StandAt(cell.X, cell.Z, cell.Y);
-            if (dest < 0 || !_ctx.Reachable(pawn, dest, TraverseMode.Colonist)) return IntentRejection.NotPermitted;
+            if (dest < 0 || !_ctx.CanTravel(pawn, dest, TraverseMode.Colonist)) return IntentRejection.NotPermitted;
             dest = Spread(pawn, dest);
 
             int tick = IntentTick;
@@ -134,6 +134,9 @@ namespace Odyssey.Sim.Pawns
             bool midStep = pawn.HasPath && pawn.MoveProgress > 0;
             int next = midStep ? pawn.Path[pawn.PathIndex] : -1;
             int progress = pawn.MoveProgress;
+            // A jump in the air keeps where it lands (design 46 §6): without this the kept step
+            // would be taken off the bank a second time, and rolled a second time.
+            int landing = pawn.JumpLanding;
 
             EndJob(pawn, status);
             if (!midStep) return;
@@ -143,6 +146,7 @@ namespace Odyssey.Sim.Pawns
             pawn.AdoptPath(_step, 2);
             pawn.MoveProgress = progress;
             pawn.FinishingStepTo = next;
+            pawn.JumpLanding = landing;
         }
 
         // Scratch for Interrupt: copied into the pawn's own buffer by AdoptPath, never kept.
@@ -180,7 +184,7 @@ namespace Odyssey.Sim.Pawns
                 // house. The click has been lifted already; the spread is round where she stands.
                 int cell = size.Index(x, z, at.Y);
                 if (!_ctx.Cells.IsWalkable(cell) || Taken(pawn, cell)) continue;
-                if (!_ctx.Reachable(pawn, cell, TraverseMode.Colonist)) continue;
+                if (!_ctx.CanTravel(pawn, cell, TraverseMode.Colonist)) continue;
                 return cell;
             }
 

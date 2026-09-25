@@ -2,7 +2,7 @@
 
 Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.
 
-46 entries, 21 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+49 entries, 24 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Alerts
 
@@ -33,6 +33,8 @@ Three channels, and the difference is not cosmetic. Alerts are conditions that p
 | **Trapped** | `ui.alert.trapped` | Someone cannot reach the colony <br>**Needs:** a colonist cut off from the colony | no art | M2 |
 | **Store cannot be emptied** | `ui.alert.storagestuck` | A shelf is marked for removal and there is nowhere to put what is in it | no art | M3 |
 | **No bed for the wounded** | `ui.alert.norescuebed` | A downed colonist has no free bed to be carried to, so nobody can rescue her | no art | M3 |
+| **No hearth** | `ui.alert.nohearth` | Somebody is kept home, and there is no hearth: build or mark a campfire <br>**Needs:** a campfire ring with no fire | no art | M3 |
+| **Hearth marked to come down** | `ui.alert.hearthdown` | When it comes down the colony has no home <br>**Needs:** a campfire under a deconstruct mark | no art | M3 |
 
 ## Bulletins
 
@@ -40,6 +42,7 @@ Three channels, and the difference is not cosmetic. Alerts are conditions that p
 |---|---|---|---|---|
 | **Salvage found** | `ui.bulletin.salvage` | Something worthwhile in the rubble | sheet 04 (manufactured), med | M2 |
 | **Scrap drop** | `ui.bulletin.scrapdrop` | Scrap metal fell from the sky <br>**Needs:** scrap metal falling from the sky. Our own concept | no art | M3 |
+| **Medical drop** | `ui.bulletin.medicaldrop` | Medical supplies fell from the sky <br>**Needs:** medical supplies falling from the sky. Our own concept | no art | M3 |
 | **Arrival** | `ui.bulletin.arrival` | Someone new is here <br>**Needs:** someone arriving. Blocked on the missing human figure | no art | M2 |
 | **Trader** | `ui.bulletin.trader` | A trader has come to us | sheet 08 (salvage gear), med | M2 |
 | **Caravan** | `ui.bulletin.caravan` | Ours has arrived or returned | sheet 08 (salvage gear), med | M2 |

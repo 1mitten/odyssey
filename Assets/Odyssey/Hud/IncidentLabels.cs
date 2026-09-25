@@ -26,6 +26,7 @@ namespace Odyssey.Hud
             // Written down by the world when a bandit leaves the board (design 33 §17).
             "ui.bulletin.theft",
             "ui.bulletin.banditleft",
+            "ui.bulletin.medicaldrop",
             // Written down by the world when a colonist breaks (design 44 §5c).
             "ui.bulletin.mentalbreak",
         };

@@ -468,7 +468,9 @@ namespace Odyssey.Tests.Sim
             // the needs (design 33 §5): both decline for anybody standing and unhurt.
             Assert.That(order, Is.EqualTo(new[]
             {
-                "Downed", "MentalState", "Drafted", "SelfDefence", "CriticalNeeds", "Work", "Idle",
+                // Patient (design 37): after eating and sleeping, before work — the badly hurt go to
+                // bed, and treat themselves when nobody else can.
+                "Downed", "MentalState", "Drafted", "SelfDefence", "CriticalNeeds", "Patient", "Work", "Idle",
             }));
         }
 
