@@ -1276,6 +1276,7 @@ namespace Odyssey.Presentation.Ui
             _directors?.Animals.SetOpen(false);
             _directors?.Inventory.SetOpen(false);
             _directors?.Research.SetOpen(false);
+            _directors?.Assign.SetOpen(false);
             RefreshWork();
         }
 

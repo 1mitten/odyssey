@@ -568,6 +568,9 @@ namespace Odyssey.Sim.World
 
         void Collapse(int index)
         {
+            // A floor of ours falling is the colony's footprint shrinking (design 43 §3a); a
+            // cavern's natural floor is not, and must not cost the home a rebuild.
+            if (Construction.ConstructionContent.IsOurs(_grid.Floor[index])) _grid.Footprint.Touch(index);
             _grid.Floor[index] = 0;
             _grid.FloorStuff[index] = 0;
             _byConstruction[index] = false;

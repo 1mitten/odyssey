@@ -38,7 +38,7 @@ namespace Odyssey.Sim.Pawns
             Pawn? target = _ctx.Pawns.Get(new PawnId(intent.B));
             if (target == null || target == pawn || Melee.IsDead(target)) return IntentRejection.NotPermitted;
             if (!Melee.InReach(_ctx, pawn, target, TraverseMode.Colonist)
-                && !_ctx.Reachable(pawn, target.Cell, TraverseMode.Colonist))
+                && !_ctx.CanTravel(pawn, target.Cell, TraverseMode.Colonist))
                 return IntentRejection.NotPermitted;
 
             // The same order again — a confirm-click, sent for every selected drafted colonist — is

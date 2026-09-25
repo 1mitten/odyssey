@@ -206,6 +206,90 @@ namespace Odyssey.Tests.PlayMode
         const int PowerLines = 2_000;
 
         /// <summary>
+        /// What showing the home costs (design 43 §5b): a hearth and a scatter of walls joined into
+        /// one base across most of the board, the frame with the Home view off against the frame
+        /// with it on, seconds apart in one session.
+        ///
+        /// <para>The draw-call half is the gate: off, the edge submits nothing; on, it is at most
+        /// two calls — one mesh for the active layer, one for the layers below — however big home
+        /// is (<c>docs/bug-patterns.md</c> P10). The milliseconds, the strips and the grass stamps
+        /// are logged for design 43 §7 and asserted against nothing, for the reason
+        /// <c>CLAUDE.md</c> gives about frame numbers on this machine.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheHomeViewCostsWhatItSubmits()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.Colony, Is.Not.Null, "the bootstrap never built a colony");
+                var colony = boot.Colony!;
+                var grid = colony.Grid;
+                var size = grid.Size;
+
+                // The surface cell of a column: the air over its highest solid block.
+                int Surface(int x, int z)
+                {
+                    for (int y = size.SizeY - 2; y >= 0; y--)
+                        if ((grid.Flags[size.Index(x, z, y)] & CellFlags.SolidTerrain) != 0) return y + 1;
+                    return -1;
+                }
+
+                bool RaiseAt(int x, int z, int building)
+                {
+                    int y = Surface(x, z);
+                    if (y < 0 || y >= size.SizeY) return false;
+                    var before = new System.Collections.Generic.HashSet<int>(colony.Construction.Sites);
+                    if (colony.Construction.Place(new CellRef(x, z, y), building, StuffHandle.Wood) != IntentRejection.None)
+                        return false;
+                    foreach (int site in colony.Construction.Sites)
+                        if (!before.Contains(site)) return colony.Construction.Raise(colony.Pawns, site);
+                    return false;
+                }
+
+                // The hearth beside the start, then a wall every nine cells, which is inside the
+                // eleven that joins two grown squares, over most of the board.
+                CellRef start = colony.Start;
+                bool hearth = false;
+                for (int d = 3; d < 12 && !hearth; d++) hearth = RaiseAt(start.X + d, start.Z + 3, BuildingHandle.Campfire);
+                Assert.That(hearth, Is.True, "no campfire could be raised beside the start");
+                int walls = 0;
+                for (int z = 6; z < size.SizeZ - 6; z += 9)
+                for (int x = 6; x < size.SizeX - 6; x += 9)
+                    if (RaiseAt(x, z, BuildingHandle.Wall)) walls++;
+                boot.World!.Tick();
+
+                float off = 0f;
+                yield return TimeFrames("home/off", boot, WarmupFrames, x => off = x);
+                Assert.That(boot.HomeEdgeDrawCalls, Is.Zero, "the Home view is off and the edge was submitted");
+                Assert.That(boot.HearthMarkShowing, Is.False, "the house is over the hearth with the view off");
+
+                boot.Directors!.Overlays.SetHome(true);
+                // The watch goes out on the next frame and is answered on the tick after it.
+                for (int i = 0; i < 4; i++) { yield return null; boot.World!.Tick(); }
+
+                float on = 0f;
+                yield return TimeFrames("home/on", boot, WarmupFrames, x => on = x);
+                int calls = boot.HomeEdgeDrawCalls;
+                var pass = boot.HomeEdge!;
+
+                Debug.Log($"[FrameTime] home view: {walls} walls, {colony.Pawns.Home!.CellCount} home cells, " +
+                          $"{pass.StripsOn(0)} strips on the active layer and {pass.StripsOn(1)} below, " +
+                          $"{pass.GrassPoints.Count} grass stamps; off {off:0.00} ms, on {on:0.00} ms " +
+                          $"(+{on - off:0.00}), {calls} draw calls, hearth mark shown {boot.HearthMarkShowing}");
+
+                Assert.That(calls, Is.GreaterThan(0), "the view drew nothing, so this measured nothing");
+                Assert.That(calls, Is.LessThanOrEqualTo(2), "the edge must be one mesh a tier, not a call per strip");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// What a warehouse costs to draw: forty shelves holding eight stacks each, against the
         /// same three hundred and twenty stacks lying on the floor, in one world.
         ///

@@ -474,6 +474,81 @@ namespace Odyssey.Tests.Sim
             }
         }
 
+        /// <summary>
+        /// Design 43 §3d: what the home area costs to work out again. A base of floors — a 40 x 40
+        /// block and 200 scattered cells on the surface — is written straight into the grid, then
+        /// timed two ways: every layer rebuilt (what a load costs) and one layer rebuilt (what a
+        /// placement costs, since a touch marks one layer and the growth reaches only the two
+        /// beside it). At rest the home costs nothing at all, which is not an arm: a query of a
+        /// clean home is two array reads.
+        /// </summary>
+        [Test, Explicit, Category("Benchmark")]
+        public void WhatOneHomeRebuildCosts()
+        {
+            foreach (GridSize size in new[] { BoardSizes.Standard, BoardSizes.Huge, Scale })
+            {
+                ScenarioDef scenario = ScenarioDef.Bare();
+                scenario.colonists = 1;
+                scenario.beds = 0;
+                scenario.stockpileCells = 0;
+                ColonyWorld colony = ColonyWorld.Build(size, 12345u, scenario, barren: true, wooded: false);
+                HomeArea home = colony.Pawns.Home!;
+                CellGrid cells = colony.Pawns.Cells;
+                CellRef stand = size.FromIndex(colony.Pawns.Pawns.All[0].Cell);
+
+                // The hearth (design 43 §3f), so the base is home: the flood from it is part of
+                // what a rebuild costs now.
+                Assert.That(colony.Construction.Place(new CellRef(stand.X + 3, stand.Z, stand.Y), BuildingHandle.Campfire,
+                    StuffHandle.Wood), Is.EqualTo(IntentRejection.None));
+                Assert.That(colony.Construction.Raise(colony.Pawns, colony.Construction.Sites[0]), Is.True);
+
+                for (int dx = -20; dx < 20; dx++)
+                for (int dz = -20; dz < 20; dz++)
+                {
+                    int x = stand.X + dx, z = stand.Z + dz;
+                    if (!size.Contains(x, z, stand.Y)) continue;
+                    int c = size.Index(x, z, stand.Y);
+                    cells.Floor[c] = CoreContent.SlabBuilt;
+                    cells.Footprint.Touch(c);
+                }
+                uint s = 7u;
+                for (int i = 0; i < 200; i++)
+                {
+                    int c = size.Index((int)(Next(ref s) % (uint)size.SizeX), (int)(Next(ref s) % (uint)size.SizeZ), stand.Y);
+                    cells.Floor[c] = CoreContent.SlabBuilt;
+                    cells.Footprint.Touch(c);
+                }
+                home.Rebuild();
+
+                var watch = new Stopwatch();
+                const int Whole = 5, One = 50;
+                for (int i = 0; i < Whole; i++)
+                {
+                    cells.Footprint.TouchAll();
+                    watch.Start();
+                    home.Rebuild();
+                    watch.Stop();
+                }
+                double whole = watch.Elapsed.TotalMilliseconds / Whole;
+
+                watch.Reset();
+                int one = size.Index(stand.X, stand.Z, stand.Y);
+                for (int i = 0; i < One; i++)
+                {
+                    cells.Footprint.Touch(one);
+                    watch.Start();
+                    home.Rebuild();
+                    watch.Stop();
+                }
+                double layer = watch.Elapsed.TotalMilliseconds / One;
+
+                TestContext.WriteLine(
+                    $"[Home] {size}: {home.CellCount} home cells; every layer = {whole:F3} ms, " +
+                    $"one placement = {layer:F3} ms");
+                Assert.That(home.IsEmpty, Is.False);
+            }
+        }
+
         static double TimeRebuilds(NavGraph nav, Colony colony, ref uint s, int count)
         {
             CellGrid cells = colony.Cells;

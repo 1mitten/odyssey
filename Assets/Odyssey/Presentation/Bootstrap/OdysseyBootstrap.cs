@@ -1011,6 +1011,10 @@ namespace Odyssey.Presentation.Bootstrap
             // store does.
             _powerLines = new PowerLinePass { GameObjectLayer = gameObject.layer };
             _watchingPower = false;
+            // The home's edge (design 43 §5b), the same shape of pass: outside the chunks, drawn
+            // only while the Home view is on, and unwatched at the start of a session.
+            _homeEdge = new HomeEdgePass { GameObjectLayer = gameObject.layer };
+            _watchingHome = false;
             _renderer.Skirt.Enabled = terrainSkirt;
             _renderer.Skirt.TreeDensityPercent = skirtTreeDensity;
             _renderer.Skirt.HillTrees = skirtHillTrees;
@@ -1093,6 +1097,8 @@ namespace Odyssey.Presentation.Bootstrap
             UnityEngine.UIElements.VisualElement? hudRoot =
                 GetComponent<UnityEngine.UIElements.UIDocument>()?.rootVisualElement;
             if (hudRoot != null) _floaterView = new Ui.CombatFloaterView(hudRoot);
+            // The house over the hearth, beneath the HUD the same way (design 43 §5b).
+            if (hudRoot != null) _hearthMark = new Ui.HearthMarkView(hudRoot);
 
             // The light through the day. It finds the scene's own sun rather than making one,
             // because the scene builder already places it and two directional lights is a
@@ -1611,6 +1617,8 @@ namespace Odyssey.Presentation.Bootstrap
             // After the plates: the lines are drawn over everything and go last among the world's
             // overlays, before the brackets that are the pointer's.
             DrawPowerLines(_world.Views.Current, activeLayer);
+            // The home's edge, on the ground under the brackets (design 43 §5b).
+            DrawHome(_world.Views.Current, activeLayer, slice);
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             DrawDraftMarks(_world.Views.Current, movePerTick);
             // The landing ring on the cell each selected colonist was sent to (design 33 §20).
@@ -1639,6 +1647,8 @@ namespace Odyssey.Presentation.Bootstrap
                     slice.BelowSurface(activeLayer), _world.CurrentTick, ticksPerSecond,
                     _figures?.Running ?? true, Time.deltaTime, Directors.Debug.WetGlossOnly, _wind);
             _floaterView?.Draw(_combatFeedback.Floaters,
+                cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
+            _hearthMark?.Draw(_world.Views.Current, Directors?.Overlays?.HomeVisible ?? false, activeLayer,
                 cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);
             _frameTimer.Stop();
@@ -2920,6 +2930,57 @@ namespace Odyssey.Presentation.Bootstrap
             _powerLines.Draw(snapshot, visible, activeLayer);
         }
 
+        HomeEdgePass? _homeEdge;
+        Ui.HearthMarkView? _hearthMark;
+
+        /// <summary>Whether this session last told the world it was watching the home, so the
+        /// watch intent is sent on the change and not every frame.</summary>
+        bool _watchingHome;
+
+        /// <summary>The home edge's draw calls last frame: nought while the view is off, at most two while it is on.</summary>
+        public int HomeEdgeDrawCalls => _homeEdge?.LastDrawCalls ?? 0;
+
+        /// <summary>The home edge's pass, for the tests that count what it built.</summary>
+        public HomeEdgePass? HomeEdge => _homeEdge;
+
+        /// <summary>Whether the house over the hearth was drawn last frame, for the tests.</summary>
+        public bool HearthMarkShowing => _hearthMark?.Showing ?? false;
+
+        /// <summary>
+        /// Draw the home's edge (design 43 §5b) while the Home view is on, and part the grass along
+        /// it on the active layer. When the switch moves the world is told, because the border is
+        /// published only while watched; <c>WatchHome</c> applies while paused, so the edge appears
+        /// the frame after the switch is pressed, running or not. Off, nothing is submitted and
+        /// nothing is stamped.
+        /// </summary>
+        void DrawHome(WorldSnapshot snapshot, int activeLayer, SliceSettings slice)
+        {
+            if (_homeEdge == null || _world == null) return;
+
+            bool visible = Directors?.Overlays?.HomeVisible ?? false;
+            if (visible != _watchingHome)
+            {
+                _watchingHome = visible;
+                // Answered on the next publish: the next tick, or at once on a paused world, whose
+                // loop republishes for any pending paused-safe intent. Never republished from here,
+                // mid-frame, which would swap the snapshot the rest of this frame is drawing from.
+                _world.Intents.Submit(new Intent(IntentKind.WatchHome, default, visible ? 1 : 0));
+            }
+
+            if (!visible)
+            {
+                _homeEdge.Hide();
+                return;
+            }
+
+            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model?.LowestOutdoorLayer ?? int.MaxValue));
+            _homeEdge.Draw(snapshot, activeLayer, lowest);
+
+            if (_renderer == null) return;
+            IReadOnlyList<Vector3> grass = _homeEdge.GrassPoints;
+            for (int i = 0; i < grass.Count; i++) _renderer.Clearance.Stamp(grass[i], HomeEdgePass.GrassRadius);
+        }
+
         /// <summary>
         /// The draft on the board (design 33 §2g): a diamond over every drafted colonist's head, and
         /// for the <i>selected</i> ones that are walking under orders, a line to where they were
@@ -4099,6 +4160,8 @@ namespace Odyssey.Presentation.Bootstrap
             _fires?.Dispose();
             _weather?.Dispose();
             _floaterView?.Dispose();
+            _hearthMark?.Dispose();
+            _hearthMark = null;
             _combatFeedback.Floaters.Clear();
             _combatFeedback.Blood.Clear();
             _combatFeedback.Blood = NoBloodEffects.Instance;
@@ -4113,6 +4176,8 @@ namespace Odyssey.Presentation.Bootstrap
             _renderer?.Dispose();
             _powerLines?.Dispose();
             _powerLines = null;
+            _homeEdge?.Dispose();
+            _homeEdge = null;
             // The library owns every mesh it baked or merged, and a Mesh made in code is a GPU
             // allocation Unity never collects. Leaving Play mode without this leaked the whole
             // cast, every session, until the graphics device was reset out from under the editor.

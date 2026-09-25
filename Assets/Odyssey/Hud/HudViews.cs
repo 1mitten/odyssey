@@ -22,13 +22,43 @@ namespace Odyssey.Hud
         /// <summary>The power lines (design 32 §9).</summary>
         public const string Power = "ui.overlay.power";
 
+        /// <summary>The colony's home and its hearth (design 43 §5).</summary>
+        public const string Home = "ui.overlay.home";
+
         /// <summary>Every view the strip offers, top to bottom. Registry keys, as everything the HUD names is.</summary>
-        public static readonly string[] Keys = { Power };
+        public static readonly string[] Keys = { Power, Home };
+
+        /// <summary>
+        /// The path a view's button draws, filled, or null for one drawn as a <c>HudGlyph</c>
+        /// (power's bolt is the palette category's glyph, and stays it).
+        /// </summary>
+        public static string? PathOf(string key) => key switch
+        {
+            Home => HudIcons.Home,
+            _ => null,
+        };
+
+        /// <summary>
+        /// The Menu's Overlays rows, top to bottom (A12). A row is live — a switch, lit while its
+        /// view is on — exactly when its key is in <see cref="Keys"/>; the rest stay dim with their
+        /// reason until their channel renders. One list, so a view added to the strip is a live
+        /// Menu row without a second edit (design 43 §5a).
+        /// </summary>
+        public static readonly string[] MenuOverlays =
+        {
+            "ui.overlay.temperature", "ui.overlay.light", "ui.overlay.beauty", "ui.overlay.cleanliness",
+            "ui.overlay.roofs", "ui.overlay.zones", Power, Home, "ui.overlay.salvage",
+            "ui.overlay.support", "ui.overlay.traffic",
+        };
+
+        /// <summary>Is this Menu overlay row a working switch?</summary>
+        public static bool IsLive(string key) => System.Array.IndexOf(Keys, key) >= 0;
 
         /// <summary>Is this view switched on?</summary>
         public static bool IsOn(OverlayDirector overlays, string key) => key switch
         {
             Power => overlays.PowerVisible,
+            Home => overlays.HomeVisible,
             _ => false,
         };
 
@@ -38,6 +68,7 @@ namespace Odyssey.Hud
             switch (key)
             {
                 case Power: overlays.TogglePower(); break;
+                case Home: overlays.ToggleHome(); break;
             }
         }
     }

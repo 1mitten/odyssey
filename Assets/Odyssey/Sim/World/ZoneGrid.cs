@@ -49,10 +49,14 @@ namespace Odyssey.Sim.World
         /// <summary>The owner's payload per slot: a plant handle for a field, a settings id for a store.</summary>
         readonly List<int> _tags = new List<int>();
 
-        public ZoneGrid(int cellCount)
+        /// <summary>Told of every cell that joins or leaves a zone: zones are part of home (design 43 §3a).</summary>
+        readonly ColonyFootprint? _footprint;
+
+        public ZoneGrid(int cellCount, ColonyFootprint? footprint = null)
         {
             _zoneAt = new int[cellCount];
             System.Array.Fill(_zoneAt, -1);
+            _footprint = footprint;
         }
 
         /// <summary>How many zones exist. Slots are 0 to this less one.</summary>
@@ -88,6 +92,7 @@ namespace Odyssey.Sim.World
             cells.Insert(~cells.BinarySearch(cell), cell);
             _cells.Insert(~_cells.BinarySearch(cell), cell);
             _zoneAt[cell] = slot;
+            _footprint?.Touch(cell);
         }
 
         /// <summary>
@@ -103,6 +108,7 @@ namespace Odyssey.Sim.World
             cells.RemoveAt(cells.BinarySearch(cell));
             _cells.RemoveAt(_cells.BinarySearch(cell));
             _zoneAt[cell] = -1;
+            _footprint?.Touch(cell);
             if (cells.Count == 0) Dissolve(slot, -1);
             return true;
         }
@@ -137,6 +143,7 @@ namespace Odyssey.Sim.World
             _cells.Clear();
             _slots.Clear();
             _tags.Clear();
+            _footprint?.TouchAll();
         }
 
         /// <summary>
@@ -150,6 +157,7 @@ namespace Odyssey.Sim.World
             _slots[slot].Add(cell);
             _cells.Add(cell);
             _zoneAt[cell] = slot;
+            _footprint?.Touch(cell);
         }
 
         /// <summary>Sort everything <see cref="Append"/> left unsorted.</summary>

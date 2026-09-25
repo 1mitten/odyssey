@@ -66,7 +66,7 @@ namespace Odyssey.Sim.Pawns
                 if (owner != 0 && owner != me) continue;
                 if (!ctx.Reservations.CanReserve(claimant.Id, BedKey(cell))) continue;
                 if (SomebodyLiesIn(ctx, cell, patient)) continue;
-                if (!ctx.Reachable(patient, cell, Mode)) continue;
+                if (!ctx.CanTravel(patient, cell, Mode)) continue;
                 if (owner == me) return cell;
 
                 int distance = ctx.Distance(patient.Cell, cell);
