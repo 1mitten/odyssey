@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Sim.World
@@ -190,7 +191,11 @@ namespace Odyssey.Sim.World
             return at;
         }
 
-        /// <summary>Is this cell covered? A slab one layer up is what makes it roofed.</summary>
+        /// <summary>
+        /// Is this cell covered? A slab one layer up is what makes it roofed. <b>Not the rain's
+        /// rule</b>: a roof two storeys up or an overhang of rock is cover this cannot see. Whether
+        /// the sky reaches a cell is <see cref="SkyColumns.ShelteredFromSky"/> (design 43 §6).
+        /// </summary>
         public bool IsRoofed(int index)
         {
             int above = index + Size.LayerStride;
@@ -343,6 +348,7 @@ namespace Odyssey.Sim.World
             ChunksZ = (size.SizeZ + ChunkSize - 1) / ChunkSize;
             Count = ChunksX * ChunksZ * size.SizeY;
             _dirty = new bool[Count];
+            _columnEdited = new bool[size.LayerStride];
         }
 
         public GridSize Size { get; }
@@ -355,9 +361,43 @@ namespace Odyssey.Sim.World
 
         public int ChunkIndexOfCell(CellRef cell) => ChunkIndexOfCell(cell.X, cell.Z, cell.Y);
 
-        public void MarkDirty(int x, int z, int y) => _dirty[ChunkIndexOfCell(x, z, y)] = true;
+        public void MarkDirty(int x, int z, int y)
+        {
+            _dirty[ChunkIndexOfCell(x, z, y)] = true;
+
+            int column = z * Size.SizeX + x;
+            if (_columnEdited[column]) return;
+            _columnEdited[column] = true;
+            _editedColumns.Add(column);
+        }
 
         public void MarkDirty(CellRef cell) => MarkDirty(cell.X, cell.Z, cell.Y);
+
+        // The columns an edit touched, for the sky map (design 43 §6). Every edit path already
+        // tells this grid which cell changed so the drawing re-meshes it; the sky map hears the
+        // same notice, at column rather than chunk grain, so the two cannot be fresh about
+        // different edits. Kept apart from the chunk flags because the renderer clears those on
+        // its own schedule, and a headless world has no renderer to clear them at all.
+        readonly bool[] _columnEdited;
+        readonly List<int> _editedColumns = new List<int>();
+
+        /// <summary>Has any cell been edited since the last <see cref="TakeEditedColumns"/>?</summary>
+        public bool HasEditedColumns => _editedColumns.Count > 0;
+
+        /// <summary>
+        /// Every column edited since the last call, each once, in the order first touched, added
+        /// to <paramref name="into"/>; then forget them. One reader: the sky map.
+        /// </summary>
+        public void TakeEditedColumns(List<int> into)
+        {
+            for (int i = 0; i < _editedColumns.Count; i++)
+            {
+                int column = _editedColumns[i];
+                _columnEdited[column] = false;
+                into.Add(column);
+            }
+            _editedColumns.Clear();
+        }
 
         public bool IsDirty(int chunkIndex) => _dirty[chunkIndex];
 

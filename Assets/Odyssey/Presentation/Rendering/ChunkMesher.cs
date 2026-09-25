@@ -5,6 +5,7 @@ using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
 using Odyssey.Hud;
+using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Presentation.Rendering
 {
@@ -46,6 +47,48 @@ namespace Odyssey.Presentation.Rendering
         readonly WorldRenderModel _model;
 
         public ChunkMesher(WorldRenderModel model) => _model = model;
+
+        /// <summary>
+        /// One cell's building — and, with <paramref name="terrain"/>, its ground — meshed on its
+        /// own into <paramref name="batch"/>, by the same emitters <see cref="Mesh"/> runs over a
+        /// chunk (<c>docs/design/44-selection-highlight.md</c> §3).
+        ///
+        /// <para><b>For the selection highlight, which has to draw exactly what is drawn.</b> A wall
+        /// is a core and a panel per exposed face, a bed three parts, a tree a trunk and a crown in
+        /// its stand's colours; a second copy of any of those rules would drift from the first the
+        /// day either was touched. The skin is built too, so a skinned surface comes back as a
+        /// mesh. Leaves nothing behind that <see cref="Mesh"/> relies on: it resets every piece of
+        /// per-chunk state it reads.</para>
+        /// </summary>
+        public void MeshCell(ChunkBatch batch, int index, bool terrain)
+        {
+            CellRef cell = _model.Size.FromIndex(index);
+            int x = cell.X, z = cell.Z, y = cell.Y;
+
+            batch.ChunkIndex = -1;
+            batch.Layer = y;
+            _rampCacheIndex = -1;
+            _dipIndex = -1;
+            batch.Bounds = ChunkWorldBounds(x, z, y, x + 1, z + 1);
+            if (GroundSkin.Enabled) FillCornerRelief(Mathf.Max(0, x - 1), Mathf.Max(0, z - 1), x + 2, z + 2);
+            batch.Clear();
+            _bodyIndex.Clear();
+            _roofIndex.Clear();
+            _wallIndex.Clear();
+            _stumpIndex.Clear();
+            for (int i = 0; i < batch.Body.Count; i++) _bodyIndex[KeyOf(batch.Body[i])] = i;
+            for (int i = 0; i < batch.Roof.Count; i++) _roofIndex[KeyOf(batch.Roof[i])] = i;
+            for (int i = 0; i < batch.Walls.Count; i++) _wallIndex[KeyOf(batch.Walls[i])] = i;
+            for (int i = 0; i < batch.Stumps.Count; i++) _stumpIndex[KeyOf(batch.Stumps[i])] = i;
+
+            _stacked = _model.IsStackedAt(index);
+            if (terrain) EmitTerrain(batch, index, x, z, y);
+            EmitEdifice(batch, index, x, z, y);
+            if (terrain) batch.Skin.Build(batch.Bounds);
+
+            _rampCacheIndex = -1;
+            _dipIndex = -1;
+        }
 
         public void Mesh(ChunkBatch batch, int chunkIndex)
         {
