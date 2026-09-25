@@ -204,7 +204,7 @@ namespace Odyssey.Tests.Presentation
         {
             GroundRelief.Reset();
             var world = new RenderTestWorld(8, 8, 3)
-                .Edifice(2, 2, 1, NaturalContent.EdificeTreeBroadleaf, NaturalContent.StuffWood,
+                .Edifice(2, 2, 1, NaturalContent.EdificeTreeMeadow, NaturalContent.StuffWood,
                     blocking: false)
                 .Edifice(5, 5, 1, CoreContent.EdificeWall, NaturalContent.StuffWood)
                 .Publish();

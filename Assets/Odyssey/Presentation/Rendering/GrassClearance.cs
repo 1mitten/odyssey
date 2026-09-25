@@ -60,15 +60,28 @@ namespace Odyssey.Presentation.Rendering
 
         static readonly int FieldId = Shader.PropertyToID("_OdysseyClearTex");
         static readonly int WindowId = Shader.PropertyToID("_OdysseyClear");
+        static readonly int CutId = Shader.PropertyToID("_OdysseyCutTex");
 
         readonly byte[] _field = new byte[Resolution * Resolution];
         Texture2D? _texture;
+
+        // The second field (design 45 §13a): where an order stands, the grass is not laid down but
+        // taken away, to the cell's own edge. Same window, same texel, its own texture.
+        readonly byte[] _cut = new byte[Resolution * Resolution];
+        Texture2D? _cutTexture;
 
         /// <summary>World x and z of the corner of texel (0, 0).</summary>
         public Vector2 Origin { get; private set; }
 
         /// <summary>How many stamps went in this frame. For the debug readout and for tests.</summary>
         public int Stamps { get; private set; }
+
+        /// <summary>Off lays the grass flat under an order as before §13a, for the before
+        /// photograph.</summary>
+        public static bool Cutting { get; set; } = true;
+
+        /// <summary>How many cuts went in this frame. For tests.</summary>
+        public int Cuts { get; private set; }
 
         /// <summary>
         /// Start a frame: clear the field and place the window on the camera.
@@ -82,7 +95,9 @@ namespace Odyssey.Presentation.Rendering
         public void Begin(Vector3 focus)
         {
             Array.Clear(_field, 0, _field.Length);
+            Array.Clear(_cut, 0, _cut.Length);
             Stamps = 0;
+            Cuts = 0;
 
             float half = WindowMetres * 0.5f;
             Origin = new Vector2(
@@ -159,6 +174,144 @@ namespace Odyssey.Presentation.Rendering
             return wrote;
         }
 
+        /// <summary>
+        /// Lay the grass flat over a rectangle in X and Z, at full strength inside it and falling
+        /// off over <paramref name="margin"/> metres outside (design 45 §13): what a placement's
+        /// footprint clears, one stamp however many cells it covers. True if anything was written.
+        /// </summary>
+        public bool StampRect(Vector2 low, Vector2 high, float margin)
+        {
+            if (!StampRectInto(_field, Origin, low, high, margin)) return false;
+            Stamps++;
+            return true;
+        }
+
+        /// <summary>The same, into any field: the pure half, for tests.</summary>
+        public static bool StampRectInto(byte[] field, Vector2 origin, Vector2 low, Vector2 high, float margin)
+        {
+            float edge = Mathf.Max(margin, 1e-3f) / MetresPerTexel;
+            float lx = (low.x - origin.x) / MetresPerTexel, lz = (low.y - origin.y) / MetresPerTexel;
+            float hx = (high.x - origin.x) / MetresPerTexel, hz = (high.y - origin.y) / MetresPerTexel;
+
+            int x0 = Mathf.Max(Mathf.FloorToInt(lx - edge), 0), x1 = Mathf.Min(Mathf.CeilToInt(hx + edge), Resolution - 1);
+            int z0 = Mathf.Max(Mathf.FloorToInt(lz - edge), 0), z1 = Mathf.Min(Mathf.CeilToInt(hz + edge), Resolution - 1);
+            if (x0 > x1 || z0 > z1) return false;
+
+            // The inside is written flat, a row at a time, and only the margin band pays for a
+            // distance: a large drag is tens of thousands of texels, and a square root each was two
+            // milliseconds of a frame (design 45 §13, measured).
+            int ix0 = Mathf.Max(Mathf.CeilToInt(lx - 0.5f), x0), ix1 = Mathf.Min(Mathf.FloorToInt(hx - 0.5f), x1);
+            bool wrote = false;
+            for (int z = z0; z <= z1; z++)
+            {
+                float pz = z + 0.5f;
+                float dz = pz < lz ? lz - pz : pz > hz ? pz - hz : 0f;
+                if (dz > edge) continue;
+                int row = z * Resolution;
+                bool insideRow = dz == 0f;
+                for (int x = x0; x <= x1; x++)
+                {
+                    if (insideRow && x >= ix0 && x <= ix1)
+                    {
+                        for (; x <= ix1; x++)
+                            if (field[row + x] != 255) { field[row + x] = 255; wrote = true; }
+                        x = ix1;
+                        continue;
+                    }
+                    float px = x + 0.5f;
+                    float dx = px < lx ? lx - px : px > hx ? px - hx : 0f;
+                    float outside = dx == 0f ? dz : dz == 0f ? dx : Mathf.Sqrt(dx * dx + dz * dz);
+                    if (outside > edge) continue;
+                    var value = (byte)(255f * (1f - outside / edge) + 0.5f);
+                    if (value > field[row + x])
+                    {
+                        field[row + x] = value;
+                        wrote = true;
+                    }
+                }
+            }
+            return wrote;
+        }
+
+        /// <summary>
+        /// Take the grass off a rectangle altogether, to its edge (design 45 §13a; owner,
+        /// 2026-09-25: "the grass is still appearing on top of the selection tiles … can this be
+        /// clear so you can see clearer what is being targeted"). Laying it flat was not enough: a
+        /// flattened blade still lies across a plate painted on the ground, and at the play camera a
+        /// field of marked cells read as grass with pink showing through. The shader drops every
+        /// clearable fragment standing on a cut, asked where the fragment is rather than where its
+        /// clump is rooted, so the edge is the cell's and not a clump's. True if anything was
+        /// written.
+        /// </summary>
+        public bool CutRect(Vector2 low, Vector2 high)
+        {
+            if (!Cutting) return false;
+            if (!CutRectInto(_cut, Origin, low, high)) return false;
+            Cuts++;
+            return true;
+        }
+
+        /// <summary>
+        /// The same, into any field: the pure half, for tests.
+        ///
+        /// <para><b>Each texel holds how much of it the rectangle covers</b>, not a yes or a no.
+        /// The shader reads the field filtered and cuts at one half, and with coverage written that
+        /// half falls within a few centimetres of the rectangle's own edge wherever it crosses a
+        /// texel; written as a yes or a no, the edge would snap to a 0.375 m staircase that does not
+        /// line up with a 2.5 m cell.</para>
+        /// </summary>
+        public static bool CutRectInto(byte[] field, Vector2 origin, Vector2 low, Vector2 high)
+        {
+            float lx = (low.x - origin.x) / MetresPerTexel, lz = (low.y - origin.y) / MetresPerTexel;
+            float hx = (high.x - origin.x) / MetresPerTexel, hz = (high.y - origin.y) / MetresPerTexel;
+            if (hx <= lx || hz <= lz) return false;
+
+            int x0 = Mathf.Max(Mathf.FloorToInt(lx), 0), x1 = Mathf.Min(Mathf.CeilToInt(hx) - 1, Resolution - 1);
+            int z0 = Mathf.Max(Mathf.FloorToInt(lz), 0), z1 = Mathf.Min(Mathf.CeilToInt(hz) - 1, Resolution - 1);
+            if (x0 > x1 || z0 > z1) return false;
+
+            bool wrote = false;
+            for (int z = z0; z <= z1; z++)
+            {
+                float cz = Mathf.Clamp01(Mathf.Min(z + 1f, hz) - Mathf.Max(z, lz));
+                if (cz <= 0f) continue;
+                int row = z * Resolution;
+                for (int x = x0; x <= x1; x++)
+                {
+                    float cx = Mathf.Clamp01(Mathf.Min(x + 1f, hx) - Mathf.Max(x, lx));
+                    var value = (byte)(cx * cz * 255f + 0.5f);
+                    // Kept, not added, as the clearing is: two cells side by side are one cut.
+                    if (value > field[row + x])
+                    {
+                        field[row + x] = value;
+                        wrote = true;
+                    }
+                }
+            }
+            return wrote;
+        }
+
+        /// <summary>
+        /// Whether the grass is cut at a point: the shader's own read in C# — the field filtered
+        /// between texel centres, compared with one half — so a test can say where the edge falls.
+        /// </summary>
+        public bool IsCut(Vector3 world) => CutAtFiltered(_cut, Origin, world) >= 0.5f;
+
+        /// <summary>The field filtered as the GPU filters it, 0 to 1. Outside the window is uncut.</summary>
+        public static float CutAtFiltered(byte[] field, Vector2 origin, Vector3 world)
+        {
+            float u = (world.x - origin.x) / MetresPerTexel - 0.5f;
+            float v = (world.z - origin.y) / MetresPerTexel - 0.5f;
+            if (u < -0.5f || v < -0.5f || u > Resolution - 0.5f || v > Resolution - 0.5f) return 0f;
+            int x = Mathf.FloorToInt(u), z = Mathf.FloorToInt(v);
+            float fx = u - x, fz = v - z;
+            float Texel(int tx, int tz) =>
+                field[Mathf.Clamp(tz, 0, Resolution - 1) * Resolution + Mathf.Clamp(tx, 0, Resolution - 1)] / 255f;
+            float bottom = Mathf.Lerp(Texel(x, z), Texel(x + 1, z), fx);
+            float top = Mathf.Lerp(Texel(x, z + 1), Texel(x + 1, z + 1), fx);
+            return Mathf.Lerp(bottom, top, fz);
+        }
+
         /// <summary>How cleared a point is, 0 to 1. The shader's own read, in C#, for tests.</summary>
         public float At(Vector3 world)
         {
@@ -185,7 +338,22 @@ namespace Odyssey.Presentation.Rendering
             _texture.SetPixelData(_field, 0);
             _texture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
 
+            if (_cutTexture == null)
+            {
+                _cutTexture = new Texture2D(Resolution, Resolution, TextureFormat.R8, mipChain: false, linear: true)
+                {
+                    name = "Odyssey/GrassCut",
+                    filterMode = FilterMode.Bilinear,
+                    wrapMode = TextureWrapMode.Clamp,
+                    hideFlags = HideFlags.HideAndDontSave,
+                };
+            }
+
+            _cutTexture.SetPixelData(_cut, 0);
+            _cutTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+
             Shader.SetGlobalTexture(FieldId, _texture);
+            Shader.SetGlobalTexture(CutId, _cutTexture);
             Shader.SetGlobalVector(WindowId,
                 new Vector4(Origin.x, Origin.y, 1f / WindowMetres, 1f));
         }
@@ -203,11 +371,18 @@ namespace Odyssey.Presentation.Rendering
         {
             Shader.SetGlobalVector(WindowId, Vector4.zero);
             Shader.SetGlobalTexture(FieldId, Texture2D.blackTexture);
+            Shader.SetGlobalTexture(CutId, Texture2D.blackTexture);
 
-            if (_texture == null) return;
-            if (Application.isPlaying) UnityEngine.Object.Destroy(_texture);
-            else UnityEngine.Object.DestroyImmediate(_texture);
-            _texture = null;
+            Release(ref _texture);
+            Release(ref _cutTexture);
+        }
+
+        static void Release(ref Texture2D? texture)
+        {
+            if (texture == null) return;
+            if (Application.isPlaying) UnityEngine.Object.Destroy(texture);
+            else UnityEngine.Object.DestroyImmediate(texture);
+            texture = null;
         }
     }
 }

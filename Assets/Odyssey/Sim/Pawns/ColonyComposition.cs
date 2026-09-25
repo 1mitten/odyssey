@@ -142,7 +142,20 @@ namespace Odyssey.Sim.Pawns
             // it would have a Power category whose every tool silently did nothing.
             var power = new Power.PowerGrid(pawns.Cells, edifices);
             pawns.Power = power;
+            // The wild between orders (design 45 §6). It swaps edifice kinds in place, so it holds
+            // the same list the construction grid and the save section do.
+            var nature = new NatureSystem(pawns, edifices);
+            pawns.Nature = nature;
             construction.Power = power;
+
+            // The home (design 43): derived from everything above, so it is built last and is
+            // neither a system, a hashable nor a save section. It rebuilds itself when asked.
+            // The hearth first: it is state the home reads, and the construction grid tells it when
+            // a campfire goes up or comes down.
+            var hearth = new World.Hearth(pawns.Cells, edifices);
+            pawns.Hearth = hearth;
+            construction.Hearth = hearth;
+            pawns.Home = new World.HomeArea(pawns);
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
             builder
                 // The world itself, first: it is what everything below reads, and it ticks
@@ -202,12 +215,20 @@ namespace Odyssey.Sim.Pawns
                 .AddSystem(_ => power)
                 .AddSnapshotContributor(power)
                 .AddTickable(_ => new SkillSystem(pawns))
+                .AddTickable(_ => nature)
                 .AddTickable(_ => pawns.Pawns)
                 // The dead and the struck buildings (design 33 §5): hashed only while either holds
                 // anything, so their registration moves no golden. Beside the pawns because the
                 // corpses are what the pawns become.
                 .AddHashable(pawns.Corpses)
                 .AddHashable(pawns.EdificeDamage)
+                // The hearth (design 43 §3f): hashed only while there is one, so its registration
+                // moves no golden.
+                .AddHashable(hearth)
+                .AddSnapshotContributor(hearth)
+                // The home's border, published only while the Home view watches it (design 43 §5c).
+                .AddSnapshotContributor(pawns.Home!)
+                .AddIntentHandler(IntentKind.SetHearth, hearth.HandleSetHearth)
                 // The bullets in the air (design 47 §2c): hashed only while one flies, so this line
                 // moved no golden either, and published for the tracer.
                 .AddHashable(pawns.Projectiles)
@@ -243,6 +264,7 @@ namespace Odyssey.Sim.Pawns
                 // A colonist's response to danger (design 33 §18c), on the pipeline because a new
                 // setting may end a fight or a flight she started under the old one.
                 .AddIntentHandler(IntentKind.SetHostilityResponse, pipeline.HandleSetHostilityResponse)
+                .AddIntentHandler(IntentKind.SetPawnArea, pipeline.HandleSetPawnArea)
                 // The Work tab's one command (design 27). It belongs to the registry because a
                 // priority is a field on a pawn and the registry is the one owner of those; the
                 // job pipeline only ever reads it.

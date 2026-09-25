@@ -120,15 +120,83 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// A tree. Placed in the air cell above the ground it grows from, and **not** blocking:
         /// a colonist walks through woodland, the way RimWorld's plants work, so every surface
         /// cell stays walkable and a forest is a supply of wood rather than a wall.
+        ///
+        /// <para><b>The species is the simulation's</b> (design 45 §3): which tree stands in a
+        /// cell decides its wood and its work, and the art follows the id. The birch and the
+        /// meadow tree keep the conifer's and the broadleaf's ten and eleven, so an old save's
+        /// trees load as the species its art already showed; the fruit tree and the giant came
+        /// later and continue after the buildings, because edifice ids are one space.</para>
         /// </summary>
-        public const ushort EdificeTreeConifer = (ushort)(FirstEdifice + 0);
+        public const ushort EdificeTreeBirch = (ushort)(FirstEdifice + 0);
 
-        public const ushort EdificeTreeBroadleaf = (ushort)(FirstEdifice + 1);
+        /// <summary>The meadow tree, the medium broadleaf.</summary>
+        public const ushort EdificeTreeMeadow = (ushort)(FirstEdifice + 1);
 
-        public const int EdificeCount = FirstEdifice + 2;
+        /// <summary>A fruit tree. Medium; its fruit is deferred (design 45 §10).</summary>
+        public const ushort EdificeTreeFruit = 17;
+
+        /// <summary>The giant meadow tree: one broadleaf in forty, slow, a great deal of wood.</summary>
+        public const ushort EdificeTreeGiant = 18;
+
+        /// <summary>
+        /// A bush (design 45 §4). Like a tree it stands in the air cell above the grass and blocks
+        /// nothing; unlike one it is walked <em>through</em> at a price
+        /// (<see cref="CostClassBush"/>) rather than round, and it carries
+        /// <c>CellFlags.Undergrowth</c> so navigation can price its cell without the edifice list.
+        /// </summary>
+        public const ushort EdificeBush = 19;
+
+        /// <summary>A berry bush with its berries on. A kind of bush: everything a bush is, it is.</summary>
+        public const ushort EdificeBerryBush = 20;
+
+        /// <summary>A berry bush that has been picked and is growing its berries back.</summary>
+        public const ushort EdificeBerryBushPicked = 21;
+
+        /// <summary>One past the highest natural edifice id: the width of a table indexed by one.
+        /// <b>Not</b> a range to test against — ids 12 to 16 between are buildings.</summary>
+        public const int EdificeLimit = 22;
 
         public static bool IsTree(ushort edifice) =>
-            edifice == EdificeTreeConifer || edifice == EdificeTreeBroadleaf;
+            edifice == EdificeTreeBirch || edifice == EdificeTreeMeadow ||
+            edifice == EdificeTreeFruit || edifice == EdificeTreeGiant;
+
+        public static bool IsBush(ushort edifice) =>
+            edifice == EdificeBush || edifice == EdificeBerryBush || edifice == EdificeBerryBushPicked;
+
+        /// <summary>
+        /// Anything wild that stands in a cell — a tree or a bush. The question every "not a
+        /// building" test asks, and the one that replaced the id range the renderer used to
+        /// compare against: the natural ids are no longer contiguous, and a range test is how a
+        /// shelf once drew as a conifer.
+        /// </summary>
+        public static bool IsNatural(ushort edifice) => IsTree(edifice) || IsBush(edifice);
+
+        /// <summary>
+        /// The Def a wild edifice is made of, or null for anything else. The order of
+        /// <c>WorldContent.WildPlantOrder</c> is the order of the ids below, and that pairing is a
+        /// save contract like every other content order.
+        /// </summary>
+        public static WildPlantDef? WildPlantAt(ushort edifice)
+        {
+            int slot = WildPlantSlot(edifice);
+            return slot < 0 ? null : WorldContent.WildPlants[slot];
+        }
+
+        /// <summary>The slot in <c>WorldContent.WildPlantOrder</c>, or -1. Parallel to it.</summary>
+        public static int WildPlantSlot(ushort edifice)
+        {
+            switch (edifice)
+            {
+                case EdificeTreeBirch: return 0;
+                case EdificeTreeMeadow: return 1;
+                case EdificeTreeFruit: return 2;
+                case EdificeTreeGiant: return 3;
+                case EdificeBush: return 4;
+                case EdificeBerryBush: return 5;
+                case EdificeBerryBushPicked: return 5;   // the same plant with its berries off
+                default: return -1;
+            }
+        }
 
         // ---- stuffs ------------------------------------------------------------------------
         //
@@ -221,8 +289,15 @@ namespace Odyssey.Sim.Worldgen.Natural
         {
             switch (edifice)
             {
-                case EdificeTreeConifer: return ModuleTreeConifer;
-                case EdificeTreeBroadleaf: return ModuleTreeBroadleaf;
+                // The two module ids are art families, not species (design 45 §3): the birch wears
+                // the conifer slot's rows and the three broadleaves share the broadleaf slot's,
+                // each choosing among its own rows in presentation. The ids are the catalogue's
+                // keys, so they keep the names they shipped with.
+                case EdificeTreeBirch: return ModuleTreeConifer;
+                case EdificeTreeMeadow:
+                case EdificeTreeFruit:
+                case EdificeTreeGiant: return ModuleTreeBroadleaf;
+                // A bush is drawn by the Meadow dressing's own path, which resolves its art itself.
                 default: return null;
             }
         }
@@ -313,6 +388,17 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// </summary>
         public const byte CostClassSlope = 3;
 
+        /// <summary>
+        /// A cell with a bush in it (design 45 §4): walked through, a third slower than grass and
+        /// a little worse than a bog. Not a terrain either — the undergrowth is an edifice — so
+        /// navigation reads it off <c>CellFlags.Undergrowth</c>, which the bush carries and
+        /// <c>CellGrid.RemoveEdifice</c> takes away with it.
+        /// </summary>
+        public const byte CostClassBush = 4;
+
+        /// <summary>What a bush adds to a flat crossing. INVENTED (design 45 §2).</summary>
+        public const int BushExtraCost = 50;
+
         /// <summary>The cost class of a terrain, or <see cref="CostClassClear"/> for most of them.</summary>
         public static byte CostClassOf(ushort terrain)
         {
@@ -339,6 +425,7 @@ namespace Odyssey.Sim.Worldgen.Natural
             // half way up, which is what the owner saw. See MoveCost.JumpUp for where 240 comes
             // from, and docs/design/22-terrace-steps.md §4c for the arithmetic of the pair.
             costByClass[CostClassSlope] = Pathing.MoveCost.SlopeExtra;
+            costByClass[CostClassBush] = BushExtraCost;  // 150 per cell: pushing through
         }
 
         /// <summary>

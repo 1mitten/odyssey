@@ -22,7 +22,7 @@ namespace Odyssey.Presentation.Rendering
     /// Depth shading and ghosting are chosen at draw time from the same buckets, so moving the
     /// slice up or down does no meshing work whatsoever.
     /// </summary>
-    public sealed class ChunkRenderer : System.IDisposable
+    public sealed partial class ChunkRenderer : System.IDisposable
     {
         /// <summary>
         /// Instances per call. <c>RenderMeshInstanced</c> takes up to 1023, but the ceiling halves
@@ -33,6 +33,9 @@ namespace Odyssey.Presentation.Rendering
 
         readonly WorldRenderModel _model;
         readonly ChunkMesher _mesher;
+
+        /// <summary>The mesher, for the few questions only it can answer — where a drawn bush stands.</summary>
+        public ChunkMesher Mesher => _mesher;
 
         /// <summary>What the ground is at each column, for the shaders (design 38 §24).</summary>
         readonly GroundField _field;
@@ -246,6 +249,75 @@ namespace Odyssey.Presentation.Rendering
         /// mesher filled, with no copying and no extra call.</para>
         /// </summary>
         public SightLines? Sight { get; set; }
+
+        /// <summary>
+        /// The footprint of what the armed tool would place, as whole-cell rectangles, or empty
+        /// when nothing is armed (design 45 §13). Set by the composition root once a frame; drawn
+        /// against on the next. Bushes and trees standing over it fade — the one place a bush
+        /// fades — and trees between the camera and it fade by <see cref="PlacementSight"/>.
+        /// </summary>
+        public readonly System.Collections.Generic.List<(CellRef Min, CellRef Max)> Placement =
+            new System.Collections.Generic.List<(CellRef Min, CellRef Max)>();
+
+        /// <summary>Lines from the eye to the placement's footprint, for the trees in front of it.</summary>
+        public readonly SightLines PlacementSight = new SightLines();
+
+        /// <summary>
+        /// Set the footprint for the frames to come, and the lines trees in front of it fade along
+        /// (eye to the middle of each rectangle and its four corners, a metre up).
+        /// </summary>
+        public void SetPlacement(System.Collections.Generic.IReadOnlyList<(CellRef Min, CellRef Max)> footprint, Vector3 eye)
+        {
+            Placement.Clear();
+            PlacementSight.Clear();
+            for (int i = 0; i < footprint.Count; i++)
+            {
+                Placement.Add(footprint[i]);
+                PlacementClearing.Rect(footprint[i].Min, footprint[i].Max, out Vector2 low, out Vector2 high);
+                float y = Mathf.Min(footprint[i].Min.Y, footprint[i].Max.Y) * CellMetrics.SizeY + 1f;
+                PlacementSight.Add(eye, new Vector3((low.x + high.x) * 0.5f, y, (low.y + high.y) * 0.5f));
+                PlacementSight.Add(eye, new Vector3(low.x, y, low.y));
+                PlacementSight.Add(eye, new Vector3(high.x, y, low.y));
+                PlacementSight.Add(eye, new Vector3(low.x, y, high.y));
+                PlacementSight.Add(eye, new Vector3(high.x, y, high.y));
+            }
+        }
+
+        /// <summary>Instances faded this frame because they stood over or before a placement.</summary>
+        public int InstancesFadedForPlacement { get; private set; }
+
+        /// <summary>Does a chunk's box on this layer meet the placement footprint?</summary>
+        bool PlacementTouches(in Bounds bounds, int layer)
+        {
+            if (Placement.Count == 0) return false;
+            for (int i = 0; i < Placement.Count; i++)
+            {
+                (CellRef min, CellRef max) = Placement[i];
+                int y0 = Mathf.Min(min.Y, max.Y) - 1, y1 = Mathf.Max(min.Y, max.Y) + 1;
+                if (layer < y0 || layer > y1) continue;
+                PlacementClearing.Rect(min, max, out Vector2 low, out Vector2 high);
+                if (bounds.max.x + TallestOverhang < low.x || bounds.min.x - TallestOverhang > high.x) continue;
+                if (bounds.max.z + TallestOverhang < low.y || bounds.min.z - TallestOverhang > high.y) continue;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>How far past its chunk a drawn thing can reach sideways.</summary>
+        float TallestOverhang => _mesher.OverhangResolved;
+
+        /// <summary>Does this placed thing stand over the placement's footprint?</summary>
+        bool OverPlacement(in Bounds placed)
+        {
+            for (int i = 0; i < Placement.Count; i++)
+            {
+                PlacementClearing.Rect(Placement[i].Min, Placement[i].Max, out Vector2 low, out Vector2 high);
+                if (placed.max.x < low.x - PlacementClearing.Margin || placed.min.x > high.x + PlacementClearing.Margin) continue;
+                if (placed.max.z < low.y - PlacementClearing.Margin || placed.min.z > high.y + PlacementClearing.Margin) continue;
+                return true;
+            }
+            return false;
+        }
 
         /// <summary>
         /// The camera's frustum planes, six of them, or null for "draw the whole band".
@@ -511,6 +583,8 @@ namespace Odyssey.Presentation.Rendering
         // decides per segment what the chunk path decided per bucket.
         int _renderStamp;
         int[] _chunkDrawnStamp = System.Array.Empty<int>();
+        int[] _chunkPlacingStamp = System.Array.Empty<int>();
+        bool _placingHere;
         float[] _chunkDistance = System.Array.Empty<float>();
         float[] _chunkSqrDistance = System.Array.Empty<float>();
         readonly System.Collections.Generic.Dictionary<(int, int, int), bool> _indirectKinds =
@@ -900,7 +974,22 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>The same for an order mark, which covers a cell face and so wants a wider ring
         /// than a stack of logs does.</summary>
-        public float MarkClearance { get; set; } = 1.1f;
+        public float MarkClearance { get; set; } = 0.4f;
+
+        /// <summary>
+        /// The cell a plate stands in, cut bare and the grass round it laid flat over
+        /// <see cref="MarkClearance"/> metres (design 45 §13a). Whole cells, whatever the plate's
+        /// inset: the ground between two marked cells is bare too, so a marked field reads as one
+        /// patch rather than as tiles in grass.
+        /// </summary>
+        void CutUnder(Vector3 at)
+        {
+            float size = CellMetrics.SizeXZ;
+            var low = new Vector2(Mathf.Floor(at.x / size) * size, Mathf.Floor(at.z / size) * size);
+            var high = low + new Vector2(size, size);
+            Clearance.StampRect(low, high, MarkClearance);
+            Clearance.CutRect(low, high);
+        }
 
         /// <summary>
         /// How far past a thing's own footprint the grass lies flat (owner, 2026-09-24: "flatten
@@ -1086,6 +1175,8 @@ namespace Odyssey.Presentation.Rendering
             System.Array.Clear(ChunkCallsByKind, 0, ChunkCallsByKind.Length);
             TreeBuckets = 0;
             TreeInstances = 0;
+            InstancesFadedForPlacement = 0;
+            if (_chunkPlacingStamp.Length != _batches.Length) _chunkPlacingStamp = new int[_batches.Length];
             if (_chunkDrawnStamp.Length != _batches.Length)
             {
                 _chunkDrawnStamp = new int[_batches.Length];
@@ -1170,6 +1261,10 @@ namespace Odyssey.Presentation.Rendering
                     bool sight = !ghost && Sight != null && Sight.Any
                                  && Sight.Touches(batch.Bounds, TallestModuleMetres);
                     if (sight) ChunksSightTested++;
+                    // And the placement (design 45 §13): the chunk's bushes come off the indirect
+                    // path for as long as a footprint is near them, so they can fade.
+                    _placingHere = !ghost && PlacementTouches(batch.Bounds, layer);
+                    if (_placingHere) _chunkPlacingStamp[index] = _renderStamp;
 
                     // Once per chunk: every bucket's level of detail is chosen against it.
                     float sqrDistance = ViewerPosition.HasValue ? batch.Bounds.SqrDistance(ViewerPosition.Value) : 0f;
@@ -1332,6 +1427,9 @@ namespace Odyssey.Presentation.Rendering
         {
             int chunk = segment.ChunkIndex;
             if (_chunkDrawnStamp[chunk] != _renderStamp) return default;
+            // A bush beside a placement is drawn by the chunk path this frame, to fade (design 45 §13).
+            if (_chunkPlacingStamp[chunk] == _renderStamp
+                && TintCode.IsTree(group.Tint) && TintCode.IsDressing(group.Tint)) return default;
             if (TintCode.IsFoliage(group.Tint) && ViewerPosition.HasValue
                 && _chunkSqrDistance[chunk] > FoliageDrawDistance * FoliageDrawDistance)
                 return default;
@@ -1403,7 +1501,9 @@ namespace Odyssey.Presentation.Rendering
                     if (!DrawTrees) continue;
                 }
                 // Drawn by the indirect path instead (design 38 §22); a ghosted layer keeps this one.
-                if (_indirectActive && !ghost && body && IsIndirectKind(bucket)) continue;
+                // A bush near a placement is drawn here instead, so it can fade (design 45 §13).
+                bool placingBush = _placingHere && TintCode.IsTree(bucket.Tint) && TintCode.IsDressing(bucket.Tint);
+                if (_indirectActive && !ghost && body && !placingBush && IsIndirectKind(bucket)) continue;
 
                 ResolvedModule resolved = _model.Library[bucket.Module];
 
@@ -1446,7 +1546,9 @@ namespace Odyssey.Presentation.Rendering
 
                 // Once per bucket, not per part: it splits the bucket's matrices, which every part
                 // of a level shares.
-                int faded = (sight || (FadeEveryTreeForAPhotograph && TintCode.IsTree(bucket.Tint))) && !NeverFades(bucket.Tint) ? Partition(bucket) : 0;
+                bool bySight = (sight || (FadeEveryTreeForAPhotograph && TintCode.IsTree(bucket.Tint))) && !NeverFades(bucket.Tint);
+                bool byPlacement = _placingHere && !ghost && (TintCode.IsTree(bucket.Tint) || TintCode.IsDressing(bucket.Tint));
+                int faded = bySight || byPlacement ? Partition(bucket, bySight, byPlacement) : 0;
                 bool proxyCasts = false;
                 float variety = TintCode.IsDressing(bucket.Tint) ? BushStandVariety : TreeStandVariety;
 
@@ -1644,7 +1746,7 @@ namespace Odyssey.Presentation.Rendering
         /// placement is recovered once per bucket and the module's own bounds — which is what the
         /// selection cursor already fits to a thing — is placed by it.</para>
         /// </summary>
-        int Partition(InstanceBucket bucket)
+        int Partition(InstanceBucket bucket, bool bySight = true, bool byPlacement = false)
         {
             ResolvedModule module = _model.Library[bucket.Module];
             if (module.IsEmpty) return 0;
@@ -1666,7 +1768,7 @@ namespace Odyssey.Presentation.Rendering
                 return bucket.Count;
             }
 
-            if (Sight == null) return 0;
+            if (Sight == null && !byPlacement) return 0;
 
             Matrix4x4 unplace = module.Parts[bucket.Part].Local.inverse;
             Bounds local = module.Bounds;
@@ -1674,7 +1776,7 @@ namespace Odyssey.Presentation.Rendering
             // Trees and bushes fade for every line; anything else only for the primary lines
             // (the selected colonists), which is what it always did (design 38 §19).
             bool vegetation = TintCode.IsTree(bucket.Tint);
-            if (!vegetation && Sight.Primary == 0) return 0;
+            if (!byPlacement && !vegetation && Sight!.Primary == 0) return 0;
 
             if (_faded.Length < bucket.Count)
             {
@@ -1698,8 +1800,12 @@ namespace Odyssey.Presentation.Rendering
             {
                 Matrix4x4 m = bucket.Matrices[i];
                 Bounds placed = SightLines.Place(local, m * unplace);
-                if (vegetation ? Sight.Blocks(placed) : Sight.BlocksPrimary(placed))
+                bool seen = bySight && Sight != null && (vegetation ? Sight.Blocks(placed) : Sight.BlocksPrimary(placed));
+                bool placing = byPlacement && (OverPlacement(placed)
+                    || (vegetation && !TintCode.IsDressing(bucket.Tint) && PlacementSight.Blocks(placed)));
+                if (seen || placing)
                 {
+                    if (placing && !seen) InstancesFadedForPlacement++;
                     _faded[fadedCount++] = m;
                     continue;
                 }
@@ -2046,6 +2152,8 @@ namespace Odyssey.Presentation.Rendering
             System.Collections.Generic.HashSet<int>? drawnAsFigures = null,
             ICarriedLoads? carried = null)
         {
+            // Before the early return: a tree falls whether or not anybody is standing there.
+            DrawTopples(snapshot);
             if (snapshot.PawnCount == 0 && snapshot.ThingCount == 0) return;
 
             // Down to the bottom of the landscape, not merely to the depth budget — the same
@@ -2370,6 +2478,13 @@ namespace Odyssey.Presentation.Rendering
         int[] _itemCounts = System.Array.Empty<int>();
         Matrix4x4[] _itemMatrices = new Matrix4x4[16];
 
+        /// <summary>Things on the ground skipped this frame for being off screen. A measurement.</summary>
+        public int ThingsOutsideFrustum { get; private set; }
+
+        /// <summary>The box a thing is culled by: its cell, grown by a metre each way.</summary>
+        static readonly Vector3 ThingCullBox = new Vector3(
+            CellMetrics.SizeXZ + 2f, CellMetrics.SizeY + 2f, CellMetrics.SizeXZ + 2f);
+
         /// <summary>Scratch for one heap's worth of rocks. Reused, never grown: ItemHeap caps it.</summary>
         readonly Matrix4x4[] _heapPlacements = new Matrix4x4[ItemHeap.Most];
 
@@ -2391,12 +2506,29 @@ namespace Odyssey.Presentation.Rendering
             System.Array.Clear(_itemCounts, 0, _itemCounts.Length);
             bool seeking = Highlight != null && HighlightThing.HasValue;
 
+            bool cull = CullToFrustum && ActiveFrustum != null;
+            ThingsOutsideFrustum = 0;
             for (int i = 0; i < things.Length; i++)
             {
                 // The selected thing is captured by AppendItem as its lumps go in (design 44 §3).
                 _capturing = seeking && things[i].Id == HighlightThing!.Value ? SelectionHighlight.Primary : 0f;
                 CellRef cell = things[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
+
+                // **Off-screen things are not drawn**, asked before anything else is worked out for
+                // them (design 45 §9). The pass had no such test while the only things on a board
+                // were a colony's own few dozen; the map's loose stones and mushrooms made it several
+                // hundred on Standard and several thousand on Huge, and every one was scattered into
+                // its heap, lifted rock by rock onto the ground and stamped into the grass every
+                // frame wherever the camera was: measured at +1.35 ms on Huge. The box is the cell
+                // and a metre round it, so a heap's spread and a falling load stay inside it; a thing
+                // is a few centimetres tall and its shadow is short, so no sweep is needed.
+                if (cull && !GeometryUtility.TestPlanesAABB(ActiveFrustum,
+                        new Bounds(CellMetrics.Centre(cell.X, cell.Z, cell.Y), ThingCullBox)))
+                {
+                    ThingsOutsideFrustum++;
+                    continue;
+                }
                 if (slice != null && slice.HidesStandingAt(activeLayer, cell, _model)) continue;
 
                 int def = things[i].DefIndex;
@@ -3176,9 +3308,22 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         const float BracketGlow = 0.85f;
 
-        Material BracketMaterial(Color colour) =>
-            _materials.Get(_model.Library.FallbackMaterial, colour, colour * BracketGlow,
+        Material BracketMaterial(Color colour)
+        {
+            Material material = _materials.Get(_model.Library.FallbackMaterial, colour, colour * BracketGlow,
                 ghost: true, alpha: colour.a * BracketOpacity);
+            if (material.renderQueue != MarkQueue) material.renderQueue = MarkQueue;
+            return material;
+        }
+
+        /// <summary>
+        /// A mark is paint on the ground, so it is drawn ahead of every other transparent (design 45
+        /// §13a). A crown faded out of the way writes its depth before it blends; sharing its queue,
+        /// the marks were sorted against it by the centre of their whole instanced batch, and where
+        /// the batch came second the crown's depth cut leaf-shaped holes out of the plates under it —
+        /// the photograph showed ground through a faint crown where the harvest box should have been.
+        /// </summary>
+        public const int MarkQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent - 1;
 
         /// <summary>
         /// How strongly a see-through mark shows where something stands in front of it, as a share
@@ -3952,10 +4097,11 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         void GatherCellPlate(Color colour, in Matrix4x4 place)
         {
-            // Every mark on the floor comes through here — chop crosses, mine marks, build and
-            // deconstruct plates — and a mark painted flat on the ground is exactly what tall
-            // grass covers.
-            Clearance.Stamp(place.GetColumn(3), MarkClearance);
+            // Every mark on the floor comes through here — every standing order, every site and
+            // its progress, every drag and hover preview — and a mark painted flat on the ground is
+            // exactly what tall grass covers. The cell is cut bare to its edge and the grass round
+            // it laid flat, so nothing leans over the plate (design 45 §13a).
+            CutUnder(place.GetColumn(3));
 
             PlateBucket? bucket = null;
             for (int i = 0; i < _plateBucketCount; i++)

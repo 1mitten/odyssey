@@ -147,7 +147,7 @@ namespace Odyssey.Sim.Pawns
                 return JobStatus.Succeeded;
 
             // Neither in sight nor reachable — a target on a roof she can neither see nor climb to.
-            if (!ctx.Reachable(Pawn, target.Cell, mode))
+            if (!ctx.CanTravel(Pawn, target.Cell, mode))
             {
                 if (open) return JobStatus.Ongoing;
                 return JobStatus.Failed;

@@ -348,7 +348,9 @@ namespace Odyssey.Tests.Hud
             Assert.That(TerrainLabels.Label(TerrainHandle.Rock), Is.EqualTo("Rock"));
             Assert.That(TerrainLabels.Label(TerrainHandle.ShallowWater), Is.EqualTo("Shallow Water"));
             Assert.That(TerrainLabels.Label(TerrainHandle.IronOre), Is.EqualTo("Iron ore"));
-            Assert.That(EdificeLabels.Title(EdificeHandle.TreeConifer), Is.EqualTo("Conifer"));
+            Assert.That(EdificeLabels.Title(EdificeHandle.TreeBirch), Is.EqualTo("Birch"));
+            Assert.That(EdificeLabels.Title(EdificeHandle.TreeGiant), Is.EqualTo("Giant tree"));
+            Assert.That(EdificeLabels.Title(EdificeHandle.BerryBush), Is.EqualTo("Berry bush"));
         }
 
         [Test]

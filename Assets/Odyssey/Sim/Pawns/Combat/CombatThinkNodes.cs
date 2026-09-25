@@ -116,7 +116,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         internal static bool CanFight(PawnContext ctx, Pawn pawn, Pawn foe, TraverseMode mode)
         {
-            if (ctx.Reachable(pawn, foe.Cell, mode)) return true;
+            if (ctx.CanTravel(pawn, foe.Cell, mode)) return true;
             RangedDef? gun = ctx.WeaponRules.ArmamentOf(pawn, ctx).Attack.ranged;
             return gun != null && Ranged.CanHit(ctx, pawn.Cell, foe.Cell, gun);
         }
@@ -189,7 +189,7 @@ namespace Odyssey.Sim.Pawns
             if (pawn.RetaliateAgainst != 0 && ctx.CurrentTick < pawn.RetaliateUntilTick)
             {
                 Pawn? foe = ctx.Pawns.Get(new PawnId(pawn.RetaliateAgainst));
-                if (foe != null && foe.IsColonist && Melee.IsStanding(foe) && ctx.Reachable(pawn, foe.Cell, mode))
+                if (foe != null && foe.IsColonist && Melee.IsStanding(foe) && ctx.CanTravel(pawn, foe.Cell, mode))
                     return foe;
             }
 
@@ -202,7 +202,7 @@ namespace Odyssey.Sim.Pawns
                 if (!other.IsColonist || !Melee.IsStanding(other)) continue;
                 int distance = ctx.Distance(pawn.Cell, other.Cell);
                 if (distance >= bestDistance) continue;
-                if (!ctx.Reachable(pawn, other.Cell, mode)) continue;
+                if (!ctx.CanTravel(pawn, other.Cell, mode)) continue;
                 best = other;
                 bestDistance = distance;
             }
@@ -230,7 +230,7 @@ namespace Odyssey.Sim.Pawns
             if (foe == null || !Melee.IsStanding(foe)) return false;
 
             TraverseMode mode = pawn.OwnMode;
-            if (!ctx.Reachable(pawn, foe.Cell, mode)) return false;
+            if (!ctx.CanTravel(pawn, foe.Cell, mode)) return false;
             return AttackJob.Fill(ctx, pawn, foe, job, mode);
         }
     }

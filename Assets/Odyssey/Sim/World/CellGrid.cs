@@ -51,7 +51,14 @@ namespace Odyssey.Sim.World
             Support = new byte[count];
             Flags = new CellFlags[count];
             for (int i = 0; i < count; i++) Edifice[i] = -1;
+            Footprint = new ColonyFootprint(size);
         }
+
+        /// <summary>
+        /// Which layers something the colony placed has changed on (design 43 §3a). Held here so
+        /// that every writer that already holds the grid can say so; read by the home area.
+        /// </summary>
+        public ColonyFootprint Footprint { get; }
 
         public int Index(int x, int z, int y) => Size.Index(x, z, y);
         public int Index(CellRef cell) => Size.Index(cell);
@@ -94,15 +101,19 @@ namespace Odyssey.Sim.World
 
         /// <summary>
         /// Take whatever stands in the cell out of the world: the handle goes, and so does the
-        /// blocking flag. The placement list keeps its slot, so other handles stay valid. A caller
-        /// removing something that blocked must mark navigation dirty itself; a tree blocks
-        /// nothing, so felling one changes no path.
+        /// blocking flag, and the undergrowth flag a bush carries. The placement list keeps its
+        /// slot, so other handles stay valid. A caller removing something that blocked, or a bush,
+        /// must mark navigation dirty itself; a tree blocks nothing, so felling one changes no
+        /// path, but a cleared bush changes what its cell costs to cross.
         /// </summary>
         public void RemoveEdifice(int index)
         {
             Edifice[index] = -1;
-            Flags[index] &= ~CellFlags.BlockingEdifice;
+            Flags[index] &= ~(CellFlags.BlockingEdifice | CellFlags.Undergrowth);
         }
+
+        /// <summary>Is there a bush in this cell? See <see cref="CellFlags.Undergrowth"/>.</summary>
+        public bool IsUndergrowth(int index) => (Flags[index] & CellFlags.Undergrowth) != 0;
 
         /// <summary>Terrain a pawn can neither stand in nor stand on top of. Deep water.</summary>
         public bool IsImpassableTerrain(int index) =>
@@ -313,6 +324,14 @@ namespace Odyssey.Sim.World
         /// Deep water landed first and keeps the bit it shipped with; this one moves.</para>
         /// </summary>
         Discovered = 1 << 6,
+
+        /// <summary>
+        /// A bush stands in this cell (design 45 §4). What navigation prices a cell by, since the
+        /// grid holds an edifice's handle and not its kind: <c>NavGrid.ClassAt</c> reads this and
+        /// charges <c>NaturalContent.CostClassBush</c>. Set where a bush is placed, taken away by
+        /// <see cref="CellGrid.RemoveEdifice"/> with the bush, and saved and hashed with the rest.
+        /// </summary>
+        Undergrowth = 1 << 7,
     }
 
     /// <summary>

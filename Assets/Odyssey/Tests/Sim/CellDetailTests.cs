@@ -104,12 +104,19 @@ namespace Odyssey.Tests.Sim
             // and each takes the next free id rather than either family's next offset - see
             // CoreContent.EdificeBed for why 12 and not 10, EdificeShelf for 13, EdificeCampfire for
             // 14, and design 32 for the generator's 15 and the heater's 16.
-            Assert.That(EdificeHandle.Count, Is.EqualTo(CoreContent.EdificeHeater + 1));
+            // The wild things of design 45 continue after the heater: fruit tree 17, giant 18,
+            // bush 19, berry bush 20 and 21 picked.
+            Assert.That(EdificeHandle.Count, Is.EqualTo(NaturalContent.EdificeLimit));
+            Assert.That(EdificeHandle.TreeFruit, Is.EqualTo(NaturalContent.EdificeTreeFruit));
+            Assert.That(EdificeHandle.TreeGiant, Is.EqualTo(NaturalContent.EdificeTreeGiant));
+            Assert.That(EdificeHandle.Bush, Is.EqualTo(NaturalContent.EdificeBush));
+            Assert.That(EdificeHandle.BerryBush, Is.EqualTo(NaturalContent.EdificeBerryBush));
+            Assert.That(EdificeHandle.BerryBushPicked, Is.EqualTo(NaturalContent.EdificeBerryBushPicked));
             Assert.That(EdificeHandle.Wall, Is.EqualTo(CoreContent.EdificeWall));
             Assert.That(EdificeHandle.Door, Is.EqualTo(CoreContent.EdificeDoor));
             Assert.That(EdificeHandle.Ladder, Is.EqualTo(CoreContent.EdificeLadder));
-            Assert.That(EdificeHandle.TreeConifer, Is.EqualTo(NaturalContent.EdificeTreeConifer));
-            Assert.That(EdificeHandle.TreeBroadleaf, Is.EqualTo(NaturalContent.EdificeTreeBroadleaf));
+            Assert.That(EdificeHandle.TreeBirch, Is.EqualTo(NaturalContent.EdificeTreeBirch));
+            Assert.That(EdificeHandle.TreeMeadow, Is.EqualTo(NaturalContent.EdificeTreeMeadow));
             Assert.That(EdificeHandle.Bed, Is.EqualTo(CoreContent.EdificeBed));
             Assert.That(EdificeHandle.Shelf, Is.EqualTo(CoreContent.EdificeShelf));
             Assert.That(EdificeHandle.Campfire, Is.EqualTo(CoreContent.EdificeCampfire));
@@ -223,7 +230,7 @@ namespace Odyssey.Tests.Sim
             var frame = Ask(colony, Size.FromIndex(index));
 
             Assert.That(frame.TryGetCellDetail(index, out CellDetail detail), Is.True);
-            Assert.That(detail.Edifice, Is.GreaterThanOrEqualTo(EdificeHandle.TreeConifer),
+            Assert.That(detail.Edifice, Is.GreaterThanOrEqualTo(EdificeHandle.TreeBirch),
                 "the tree is the thing the player clicked");
         }
 

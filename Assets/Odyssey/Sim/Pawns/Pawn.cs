@@ -194,6 +194,15 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public HostilityResponse Response { get; internal set; }
 
+        /// <summary>
+        /// Where she may work (design 43 §4): anywhere — the default — or only inside the colony's
+        /// home. A standing setting from the Assign tab. Set through <c>SetPawnArea</c>. Saved in
+        /// <c>AssignSection</c> and folded into the hash beside the kind, <b>both only while it
+        /// is not the default</b>, so a colony nobody restricts saves and hashes as it did before.
+        /// Read by <c>PawnContext.MayWork</c> and the walk home, and by nothing else.
+        /// </summary>
+        public PawnArea Area { get; internal set; }
+
         /// <summary>The species this pawn's kind spawns as: what walks. See <see cref="SpeciesDef"/>.</summary>
         public SpeciesDef Species => Content.SpeciesOf(Kind);
 
@@ -284,6 +293,14 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The <see cref="PawnId"/> value of whoever is carrying this pawn, or 0 (C4).</summary>
         public int CarriedBy { get; internal set; }
 
+        /// <summary>
+        /// Treated recently: no treatment is given to this pawn before this tick (design 37 §4), so
+        /// a pile of medical supplies cannot stand in for bed rest. Nought for a pawn never treated.
+        /// Saved in the combat section (layout 4) and hashed only while set, so a colony that has
+        /// never treated anybody saves and hashes as it did before medicine existed.
+        /// </summary>
+        public int TreatedUntilTick { get; internal set; }
+
         /// <summary>Stunned right now, at <paramref name="tick"/>.</summary>
         public bool StunnedAt(int tick) => StunnedUntilTick > tick;
 
@@ -349,7 +366,7 @@ namespace Odyssey.Sim.Pawns
         public bool HasCombatState =>
             HpMilli != HpMaxMilli || Downed || NextSwingTick != 0 || StunnedUntilTick != 0
             || RetaliateAgainst != 0 || EquippedItem != 0 || CombatTarget != 0 || CarriedBy != 0
-            || KnockedDownUntilTick != 0 || PendingSwing != 0;
+            || KnockedDownUntilTick != 0 || PendingSwing != 0 || TreatedUntilTick != 0;
 
         /// <summary>Cell index, layer included. Always layer-aware; there is no 2D form of this.</summary>
         public int Cell { get; set; }
@@ -1104,12 +1121,14 @@ namespace Odyssey.Sim.Pawns
             // left free for the line building beside this one.
             // A jump in the air (design 46 §6) is bit 26, and its landing is walked only while
             // there is one, so a colony that never jumps hashes as it did before jumping.
+            // The area (design 43 §4a) is bit 27, nought at the default, for the same reason.
             bool combat = HasCombatState;
             bool knocked = KnockedDownUntilTick != 0, swinging = PendingSwing != 0;
             hash.Add(Kind | (Leaving ? 1 << 16 : 0) | (Drafted ? 1 << 17 : 0)
                 | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0)
                 | (knocked ? 1 << 20 : 0) | (swinging ? 1 << 21 : 0)
-                | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0));
+                | (TreatedUntilTick != 0 ? 1 << 22 : 0)
+                | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0) | ((int)Area << 27));
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             if (JumpLanding >= 0) hash.Add(JumpLanding);
@@ -1125,6 +1144,7 @@ namespace Odyssey.Sim.Pawns
                 hash.Add(CombatTarget);
                 hash.Add(CarriedBy);
                 if (knocked) hash.Add(KnockedDownUntilTick);
+                if (TreatedUntilTick != 0) hash.Add(TreatedUntilTick);
                 if (swinging)
                 {
                     hash.Add(PendingSwing);

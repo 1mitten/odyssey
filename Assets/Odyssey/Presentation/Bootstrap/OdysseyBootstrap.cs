@@ -1020,6 +1020,10 @@ namespace Odyssey.Presentation.Bootstrap
             // store does.
             _powerLines = new PowerLinePass { GameObjectLayer = gameObject.layer };
             _watchingPower = false;
+            // The home's edge (design 43 §5b), the same shape of pass: outside the chunks, drawn
+            // only while the Home view is on, and unwatched at the start of a session.
+            _homeEdge = new HomeEdgePass { GameObjectLayer = gameObject.layer };
+            _watchingHome = false;
             _renderer.Skirt.Enabled = terrainSkirt;
             _renderer.Skirt.TreeDensityPercent = skirtTreeDensity;
             _renderer.Skirt.HillTrees = skirtHillTrees;
@@ -1110,6 +1114,8 @@ namespace Odyssey.Presentation.Bootstrap
             UnityEngine.UIElements.VisualElement? hudRoot =
                 GetComponent<UnityEngine.UIElements.UIDocument>()?.rootVisualElement;
             if (hudRoot != null) _floaterView = new Ui.CombatFloaterView(hudRoot);
+            // The house over the hearth, beneath the HUD the same way (design 43 §5b).
+            if (hudRoot != null) _hearthMark = new Ui.HearthMarkView(hudRoot);
 
             // The light through the day. It finds the scene's own sun rather than making one,
             // because the scene builder already places it and two directional lights is a
@@ -1434,6 +1440,12 @@ namespace Odyssey.Presentation.Bootstrap
         /// out, asked here once and written to the slice, which every pass then reads — the one
         /// place the rule is evaluated, so no two passes can disagree about it.
         /// </summary>
+        /// <summary>
+        /// The player's Walls down choice, before build mode takes it out: where the ground is
+        /// (<see cref="SliceSettings.landscapeGround"/>), not what is drawn.
+        /// </summary>
+        bool WallsChosenDown() => Directors?.Settings.IsOn(GraphicsOption.WallsDown) ?? false;
+
         bool WallsLoweredNow()
         {
             HudDirectors? directors = Directors;
@@ -1459,6 +1471,7 @@ namespace Odyssey.Presentation.Bootstrap
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
             SliceSettings slice = cameraRig != null ? cameraRig.slice : new SliceSettings();
             slice.wallsLowered = WallsLoweredNow();
+            slice.landscapeGround = WallsChosenDown();
             slice.landscapeFloor = _model.LowestOutdoorLayer;
 
             _frameTimer.Restart();
@@ -1628,6 +1641,8 @@ namespace Odyssey.Presentation.Bootstrap
             // After the plates: the lines are drawn over everything and go last among the world's
             // overlays, before the brackets that are the pointer's.
             DrawPowerLines(_world.Views.Current, activeLayer);
+            // The home's edge, on the ground under the brackets (design 43 §5b).
+            DrawHome(_world.Views.Current, activeLayer, slice);
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             DrawDraftMarks(_world.Views.Current, movePerTick);
             // The landing ring on the cell each selected colonist was sent to (design 33 §20).
@@ -1662,6 +1677,8 @@ namespace Odyssey.Presentation.Bootstrap
                     slice.BelowSurface(activeLayer), _world.CurrentTick, ticksPerSecond,
                     _figures?.Running ?? true, Time.deltaTime, Directors.Debug.WetGlossOnly, _wind);
             _floaterView?.Draw(_combatFeedback.Floaters,
+                cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
+            _hearthMark?.Draw(_world.Views.Current, Directors?.Overlays?.HomeVisible ?? false, activeLayer,
                 cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);
             _frameTimer.Stop();
@@ -2109,6 +2126,12 @@ namespace Odyssey.Presentation.Bootstrap
                 // The two-cell mark went with them and needs no replacement: a bed's ghost spans
                 // both of its cells on its own, which is what makes the footprint legible now.
                 DrawSiteGhost(cell, sites[i].Building, sites[i].Stuff, sites[i].Facing);
+                // The grass lies flat under a waiting order until it is built (design 45 §13), as
+                // it does under an order's mark and an item: a blueprint seen through grass is a
+                // blueprint not seen.
+                PlacementClearing.Rect(cell, cell, out Vector2 low, out Vector2 high);
+                _renderer.Clearance.StampRect(low, high, PlacementClearing.Margin * 0.5f);
+                _renderer.Clearance.CutRect(low, high);
 
                 // **A slab does not rise, so it must not be drawn rising** (owner, 2026-09-17:
                 // "these little gaps or white lines appearing on the builds"). DrawCellFill grows
@@ -2479,8 +2502,19 @@ namespace Odyssey.Presentation.Bootstrap
             if (_renderer == null || _designate == null) return;
 
             DesignateDirector director = _designate.Director;
+            _placement.Clear();
+            bool armed = director.Tool != DesignateTool.None && PlacementClearing.Enabled;
             if (!director.TryPreview(out CellRef min, out CellRef max))
             {
+                if (armed && director.Hover is CellRef hover && _grid != null)
+                {
+                    CellRef at = hover;
+                    ConstructionGrid? sites = _colony?.Construction;
+                    if (director.Tool == DesignateTool.Build && sites != null)
+                        at = _grid.Size.FromIndex(sites.WhereItWouldLand(_grid.Index(hover), director.Building));
+                    _placement.Add((at, at));
+                }
+                ClearForPlacement(armed);
                 DrawHoverGhost(director);
                 return;
             }
@@ -2503,12 +2537,19 @@ namespace Odyssey.Presentation.Bootstrap
                 _previewLayer = min.Y;
                 _previewIsSlab = ConstructionContent.BuildingAt(director.Building).slab;
                 BuildPreview.Gather(min, max, _previewLayerAt ??= PreviewLayerAt, _previewBoxes);
+                if (armed)
+                    for (int i = 0; i < _previewBoxes.Count; i++)
+                        _placement.Add((_previewBoxes[i].Min, _previewBoxes[i].Max));
+                ClearForPlacement(armed);
 
                 for (int i = 0; i < _previewBoxes.Count; i++)
                     DrawRunGhosts(_previewBoxes[i], director.Building, director.Stuff, director.Facing);
 
                 return;
             }
+
+            if (armed) _placement.Add((min, max));
+            ClearForPlacement(armed);
 
             // The order tools' own colours, below the build branch rather than above it, because
             // build no longer has one: a ghost is tinted by its material or by its refusal, so a
@@ -2523,6 +2564,24 @@ namespace Odyssey.Presentation.Bootstrap
             for (int x = min.X; x <= max.X; x++)
                 _renderer.DrawCellMark(new CellRef(x, z, min.Y), tint);
         }
+
+        /// <summary>
+        /// While any build or order tool is armed, clear the ground and the growth over what it
+        /// would act on so the ghost can be seen (design 45 §13; owner, 2026-09-25: "the
+        /// grass/bushes/foliage is getting in the way of placing any orders — I can't see the
+        /// blueprint"): the grass lies flat under the footprint, and the bushes and trees standing
+        /// over it or in front of it fade. The footprint is the dragged box — the build's boxes
+        /// where it steps up a riser — or the cell under the pointer. Nothing while no tool is
+        /// armed, so the bushes keep their "never fade" everywhere else.
+        /// </summary>
+        void ClearForPlacement(bool armed)
+        {
+            Vector3 eye = cameraRig != null ? cameraRig.transform.position : Vector3.zero;
+            _renderer!.SetPlacement(_placement, eye);
+            PlacementClearing.Stamp(_renderer.Clearance, armed, _placement);
+        }
+
+        readonly List<(CellRef Min, CellRef Max)> _placement = new List<(CellRef Min, CellRef Max)>();
 
         /// <summary>
         /// The thing under the pointer, before any button has been pressed.
@@ -2941,6 +3000,57 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             _powerLines.Draw(snapshot, visible, activeLayer);
+        }
+
+        HomeEdgePass? _homeEdge;
+        Ui.HearthMarkView? _hearthMark;
+
+        /// <summary>Whether this session last told the world it was watching the home, so the
+        /// watch intent is sent on the change and not every frame.</summary>
+        bool _watchingHome;
+
+        /// <summary>The home edge's draw calls last frame: nought while the view is off, at most two while it is on.</summary>
+        public int HomeEdgeDrawCalls => _homeEdge?.LastDrawCalls ?? 0;
+
+        /// <summary>The home edge's pass, for the tests that count what it built.</summary>
+        public HomeEdgePass? HomeEdge => _homeEdge;
+
+        /// <summary>Whether the house over the hearth was drawn last frame, for the tests.</summary>
+        public bool HearthMarkShowing => _hearthMark?.Showing ?? false;
+
+        /// <summary>
+        /// Draw the home's edge (design 43 §5b) while the Home view is on, and part the grass along
+        /// it on the active layer. When the switch moves the world is told, because the border is
+        /// published only while watched; <c>WatchHome</c> applies while paused, so the edge appears
+        /// the frame after the switch is pressed, running or not. Off, nothing is submitted and
+        /// nothing is stamped.
+        /// </summary>
+        void DrawHome(WorldSnapshot snapshot, int activeLayer, SliceSettings slice)
+        {
+            if (_homeEdge == null || _world == null) return;
+
+            bool visible = Directors?.Overlays?.HomeVisible ?? false;
+            if (visible != _watchingHome)
+            {
+                _watchingHome = visible;
+                // Answered on the next publish: the next tick, or at once on a paused world, whose
+                // loop republishes for any pending paused-safe intent. Never republished from here,
+                // mid-frame, which would swap the snapshot the rest of this frame is drawing from.
+                _world.Intents.Submit(new Intent(IntentKind.WatchHome, default, visible ? 1 : 0));
+            }
+
+            if (!visible)
+            {
+                _homeEdge.Hide();
+                return;
+            }
+
+            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model?.LowestOutdoorLayer ?? int.MaxValue));
+            _homeEdge.Draw(snapshot, activeLayer, lowest);
+
+            if (_renderer == null) return;
+            IReadOnlyList<Vector3> grass = _homeEdge.GrassPoints;
+            for (int i = 0; i < grass.Count; i++) _renderer.Clearance.Stamp(grass[i], HomeEdgePass.GrassRadius);
         }
 
         /// <summary>
@@ -4125,6 +4235,8 @@ namespace Odyssey.Presentation.Bootstrap
             _fires?.Dispose();
             _weather?.Dispose();
             _floaterView?.Dispose();
+            _hearthMark?.Dispose();
+            _hearthMark = null;
             _combatFeedback.Floaters.Clear();
             _combatFeedback.Blood.Clear();
             _combatFeedback.Blood = NoBloodEffects.Instance;
@@ -4139,6 +4251,8 @@ namespace Odyssey.Presentation.Bootstrap
             _renderer?.Dispose();
             _powerLines?.Dispose();
             _powerLines = null;
+            _homeEdge?.Dispose();
+            _homeEdge = null;
             // The library owns every mesh it baked or merged, and a Mesh made in code is a GPU
             // allocation Unity never collects. Leaving Play mode without this leaked the whole
             // cast, every session, until the graphics device was reset out from under the editor.

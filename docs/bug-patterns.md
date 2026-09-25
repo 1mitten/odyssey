@@ -2788,3 +2788,70 @@ and its own line (≈ 0.25 alpha) was laid over its whole body. The owner report
 - **The check:** coverage and strength are separate channels (G = 1, A = strength), so a weaker
   strength can only make a fainter line. `SelectionHighlightPlayTests` holds a group to one
   strength. Design 44 §7.
+
+## Two branches take the same bit of a packed hash word (2026-09-25)
+
+**P12, in the hash.** The home area gave `Pawn.Area` bit 26 of the kind word in `Pawn.ContributeTo`;
+while it was in review, `main` gave the same bit to a jump in the air. The merge conflict was one line
+each side, and "keep both" compiles: `((int)Area << 26) | (JumpLanding >= 0 ? 1 << 26 : 0)`. Nothing
+fails. The hash simply stops telling a colonist kept home from one mid-jump, which a desync hunt would
+meet months later as two worlds that hash alike and are not.
+
+- **The pattern:** two branches name the same *free slot* — a bit, an enum value, a save-section key, a
+  handle number — each correctly on its own branch. The shelf and the campfire met the same way over
+  edifice 13 (design 28 §13).
+- **Where to look for the next one:** any conflict inside `ContributeTo`'s kind word, `IntentKind`,
+  `JobHandle`, `EdificeHandle` or a save section list. Read both sides' numbers before resolving.
+- **The fix:** the later branch moves (the area is bit 27), and recorded values stay where `main`
+  recorded them (`main`'s intents first, the branch's after).
+
+## A reader that caches against a version, shown a frame with nothing in it (2026-09-25)
+
+**The Home view drew nothing on its second switch-on.** The border is published only while watched, so
+the frame the switch is pressed on carries no rows. The edge pass rebuilds on showing and recorded that
+empty frame's `HomeVersion`; the next frame's rows arrived under the **same** version, because the home
+had not moved, so the pass never rebuilt. The first switch-on worked only because the rows were new.
+
+- **The pattern:** a version that moves when the *content* changes, read by a cache that also resets on
+  *visibility*. The two notions of "new" disagree for exactly one frame, and one frame is enough.
+- **The check:** `WatchHomeTests.WatchingAgainMovesTheVersionSoAReaderBuildsTheRows`, failed before
+  the fix. The version now moves whenever watching starts (design 43 §5c). Anything else published
+  only while watched — power's lines are the other one — owes the same question.
+
+## A per-frame pass sized by what the colony owns, until the map owned things too (2026-09-25)
+
+**Symptom.** Design 45 made the map's loose stones and mushrooms real items, and the first 4K
+reading of Huge against the base commit was 1.8 ms worse, all of it in `FrameSection.Actors`
+(0.089 -> 1.421 ms).
+
+**Cause.** The actor pass walked every thing in the snapshot every frame — scattered its heap,
+lifted each lump onto the ground, stamped the grass — with a layer test and no view test. That was
+free while the only things on a board were a colony's few dozen; a pass sized by the colony became
+a pass sized by the board the day the generator put things down. The chunk pass had been culled
+to the frustum since HT8; this one never was.
+
+**Fix.** A cell box against the frustum, asked before anything else about the thing
+(`ChunkRenderer.RenderThings`, `ThingsOutsideFrustum` counts what it skipped). Actors 0.096 ms on
+Huge.
+
+**The check that catches the next one.** When content moves from drawn to simulated, time the
+frame by `FrameSection` on the largest board in the same run as the base commit
+(`FrameTimeTests.TheNatureAgainstTheFrame` is written to run on both). A section that moves by the
+board's size rather than the colony's is a pass with no cull.
+
+## A rule keyed on the momentary state rather than the choice (2026-09-25)
+
+**P1, one rule with two owners, in time.** Design 42 §3a made a lower terrace count as ground while
+the walls are down, reading `SliceSettings.wallsLowered`. That field is the Walls down *choice with
+build mode taken out*, because walls come up while building so the player can see what they build.
+The two meanings agreed until the player opened the palette: then the terrace became a tunnel again,
+the layer above an x-ray, and a campfire on it could not be clicked (owner: it "did nothing").
+
+- **The pattern:** one flag answering two questions — *what is drawn* and *where the ground is* —
+  where a third input (build mode) is meant to change only the first.
+- **What made it invisible:** every test of the rule set the flag directly; none went through build
+  mode, and the report came from the one moment a player is most likely to click something new.
+- **The check:** `SliceSettings.landscapeGround` is the choice and `wallsLowered` the drawing; the
+  band test asserts a terrace stays ground with the walls raised, and `CampfirePickTests` clicks
+  fires with a build tool armed (96/150 missed before, 2/150 after, both in front of the fire).
+

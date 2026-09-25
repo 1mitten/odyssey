@@ -138,8 +138,7 @@
 
     needsIntervalTicks 150 is the cadence a-01-pawns.md measured.
 
-    woodPerTree 27 is the pine class's vanilla yield (a-08 section 1; the oak class gives 46).
-    One stack of 75, so a single haul clears a felled tree.
+    What a felled tree yields is the species' own now, in World/WildPlants.xml (design 45).
 
     The think-loop numbers are the trap that catches a pawn starting jobs it cannot finish: more
     than thinkLoopLimit job starts inside thinkLoopWindowTicks and it stands still for
@@ -152,7 +151,6 @@
     <thinkLoopLimit>10</thinkLoopLimit>
     <thinkLoopWindowTicks>60</thinkLoopWindowTicks>
     <standDownTicks>120</standDownTicks>
-    <woodPerTree>27</woodPerTree>
 
     <!--
       What mining leaves. Both yields are ASSUMED, like the felling numbers beside them.

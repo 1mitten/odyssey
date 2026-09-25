@@ -548,6 +548,17 @@ namespace Odyssey.Presentation.World
             Pitch(figure.RightLowerArm, axis, CarryPose.ElbowBend * weight);
             Pitch(figure.LeftLowerArm, axis, CarryPose.ElbowBend * weight);
 
+            // A box is gripped by its two sides, not scooped underneath (owner, 2026-09-25: the
+            // medical kit). Out from the midline, about the figure's own forward axis, after the
+            // scoop rather than instead of it — the same order SleepPose's ArmOut is laid over its
+            // own pitch, and for the same reason.
+            if (CarryPose.GrippedBySides(figure.CarryDef))
+            {
+                Vector3 outAxis = figure.Transform.forward;
+                Pitch(figure.RightUpperArm, outAxis, -CarryPose.BoxGripOut * weight);
+                Pitch(figure.LeftUpperArm, outAxis, CarryPose.BoxGripOut * weight);
+            }
+
             CarryingFigures++;
         }
 

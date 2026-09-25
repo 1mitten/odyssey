@@ -31,7 +31,11 @@ namespace Odyssey.Hud
             "ui.res.carrots",
             // The four melee weapons (design 33 §1, C3), in ItemHandle order 7 to 10.
             "ui.item.bat", "ui.item.crowbar", "ui.item.machete", "ui.item.arcblade",
-            // The pistol (design 47), ItemHandle 11.
+            // Medical supplies (design 37), handle 11. The key is the old "medkit" one, relabelled.
+            "ui.res.medkit",
+            // The wild foods (design 45 §6), ItemHandle 12 and 13, after medical supplies.
+            "ui.res.berries", "ui.res.mushrooms",
+            // The pistol (design 47), ItemHandle 14, after the wild foods.
             "ui.item.pistol",
         };
 

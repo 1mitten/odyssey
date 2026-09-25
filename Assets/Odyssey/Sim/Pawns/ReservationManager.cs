@@ -38,7 +38,8 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// A pawn, keyed on its <c>PawnId</c>: a downed colonist somebody is already coming to carry
-        /// (design 33 §11b), so two rescuers never set out for one patient.
+        /// (design 33 §11b), so two rescuers never set out for one patient, and a patient one doctor
+        /// is already treating (design 37).
         /// </summary>
         Pawn = 5,
     }

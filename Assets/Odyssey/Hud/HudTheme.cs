@@ -705,6 +705,7 @@ namespace Odyssey.Hud
         public static HudColour? PinnedActionHue(string key) => key switch
         {
             PaletteTools.Fell => OrderColours.Hue(DesignateTool.Fell),
+            PaletteTools.Harvest => OrderColours.Hue(DesignateTool.Harvest),
             PaletteTools.Mine => OrderColours.Hue(DesignateTool.Mine),
             PaletteTools.Deconstruct => OrderColours.Hue(DesignateTool.Deconstruct),
             PaletteTools.Cancel => OrderColours.Hue(DesignateTool.Cancel),
@@ -764,6 +765,7 @@ namespace Odyssey.Hud
             { "ui.tab.schedule", HudCategory.Work },
             { "ui.tab.research", HudCategory.Record },
             { "ui.tab.colonists", HudCategory.People },
+            { "ui.tab.assign", HudCategory.People },
             { "ui.tab.animals", HudCategory.People },
             { "ui.tab.wildlife", HudCategory.People },
             { "ui.tab.bills", HudCategory.Work },

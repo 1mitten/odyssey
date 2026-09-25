@@ -451,6 +451,30 @@ namespace Odyssey.Hud
             Job = JobLabels.Carrying(pawn.JobDef, carried, stack);
         }
 
+        /// <summary>
+        /// "Pace 90% · in the rain", the line under the activity line (design 17 §5a), and what
+        /// it is made of for its tooltip. Empty for anything the simulation published no pace for.
+        /// </summary>
+        public string Pace = string.Empty;
+
+        /// <summary>The factors of <see cref="Pace"/> that are not the standard walk, joined.</summary>
+        public string PaceTip = string.Empty;
+
+        // What the two pace strings were last built from. The same argument as _positionFor: they
+        // are composed, and the pane refreshes fifteen times a second.
+        PaceModel.Factors _paceFor;
+        bool _paceWritten;
+
+        void SetPace(WorldSnapshot snapshot, PawnId id)
+        {
+            PaceModel.Factors factors = PaceModel.Of(snapshot, id);
+            if (_paceWritten && factors.Equals(_paceFor)) return;
+            _paceFor = factors;
+            _paceWritten = true;
+            Pace = factors.Published ? PaceModel.Line(factors) : string.Empty;
+            PaceTip = factors.Published ? PaceModel.Tooltip(factors) : string.Empty;
+        }
+
         void SetPosition(CellRef cell)
         {
             if (_positionWritten && _positionFor == cell) return;
@@ -589,6 +613,8 @@ namespace Odyssey.Hud
             _bedUnderPane = false;
             _powerSwitchUnderPane = false;
             _orderActionUnderPane = false;
+            IsCampfire = false;
+            IsHearth = false;
             IsStore = false;
             IsBuiltStore = false;
             StoreSummary = string.Empty;
@@ -632,14 +658,19 @@ namespace Odyssey.Hud
                     {
                         Subtitle = AnimalWord;
                         // Its own mark in the carried half of the cache, so a colonist's line and
-                        // an animal's for the same job cannot be taken for each other.
-                        if (_jobFor != pawn.JobDef || _carriedFor != AnimalActivity)
+                        // an animal's for the same job cannot be taken for each other; the stack
+                        // half carries whether the rain has sent it for cover (design 43 §6a).
+                        bool sheltering = PawnKindLabels.IsSheltering(snapshot, pawn.Id);
+                        int shelterMark = sheltering ? 1 : 0;
+                        string activity = PawnKindLabels.ActivityKey(pawn.JobDef, sheltering);
+                        if (_jobFor != pawn.JobDef || _carriedFor != AnimalActivity || _stackFor != shelterMark)
                         {
                             _jobFor = pawn.JobDef;
                             _carriedFor = AnimalActivity;
-                            Job = PawnKindLabels.Activity(pawn.JobDef);
+                            _stackFor = shelterMark;
+                            Job = Registry.Label(activity);
                         }
-                        JobIconKey = PawnKindLabels.ActivityKey(pawn.JobDef);
+                        JobIconKey = activity;
                     }
                     else
                     {
@@ -661,6 +692,7 @@ namespace Odyssey.Hud
                     Subtitle = ColonistWord;
                     SetJob(snapshot, pawn);
                     JobIconKey = JobLabels.IconKey(pawn.JobDef);
+                    SetPace(snapshot, pawn.Id);
                     Food = pawn.Food;
                     Rest = pawn.Rest;
                     Mood = pawn.Mood;
@@ -1130,6 +1162,27 @@ namespace Odyssey.Hud
         /// <summary>Everything the power rows quote, folded into one number for the rebuild guard.</summary>
         int _cellRowsPower;
 
+        /// <summary>
+        /// The pane holds a campfire (design 43 §6). A campfire's pane is wide, as a store's is: the
+        /// hearth's button does not fit the 280 px tile column (owner, 2026-09-25). Cleared every
+        /// refresh and set before the cell rows' early return, as the bed's and the switch's flags
+        /// are, so neither answer can outlive the fire.
+        /// </summary>
+        public bool IsCampfire { get; private set; }
+
+        /// <summary>The pane's campfire is the hearth: the header says so, on a line under the name.</summary>
+        public bool IsHearth { get; private set; }
+
+        /// <summary>The pane's campfire is not the hearth, and one button under the header makes it so.</summary>
+        public bool OffersHearth => IsCampfire && !IsHearth;
+
+        /// <summary>A store's pane and a campfire's are the full 560; every other tile's is the narrow column.</summary>
+        public bool IsWide => IsStore || IsCampfire;
+
+        /// <summary>The header line on the hearth, and the button on any other campfire.</summary>
+        public const string HearthKey = "ui.home.hearth";
+        public const string MakeHearthKey = "ui.command.sethearth";
+
         /// <summary>The switch row's key, which the shell compares against rather than against a word.</summary>
         public const string PowerSwitchRow = "switch";
 
@@ -1237,7 +1290,10 @@ namespace Odyssey.Hud
             // Set beside the bed's flag and **above** the early return below, for the reason that
             // whole paragraph exists: a flag cleared every refresh and set only after the return
             // is a control that dies on the second refresh and goes on looking alive.
-
+            // The hearth (design 43 §3f, §6) the same way: header facts, not rows, so they are not
+            // in the rows' guard; the shell's rebuild signature carries them instead.
+            IsCampfire = detail.Edifice == EdificeHandle.Campfire;
+            IsHearth = IsCampfire && snapshot.HearthCell == detail.CellIndex;
 
             if (_cellRowsFor == detail.CellIndex
                 && _cellRowsCost == detail.MoveCostPerMille
@@ -1528,6 +1584,7 @@ namespace Odyssey.Hud
             1 => "mining",
             2 => "deconstructing",
             3 => "chopping",
+            4 => "picking",
             _ => "working",
         };
 

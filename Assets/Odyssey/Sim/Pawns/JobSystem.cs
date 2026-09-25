@@ -187,6 +187,9 @@ namespace Odyssey.Sim.Pawns
             // needs, because being struck outranks being hungry (design 33 §5).
             new SelfDefenceThinkNode(),
             new CriticalNeedsThinkNode(),
+            // After eating and sleeping, before work (design 37): the hurt treat themselves when
+            // nobody else can, and the badly hurt go to bed.
+            new PatientThinkNode(),
             new WorkThinkNode(),
             new IdleThinkNode(),
         };
@@ -715,6 +718,7 @@ namespace Odyssey.Sim.Pawns
         static bool TryEat(Pawn pawn, PawnContext ctx, Job job)
         {
             var items = ctx.Items.Items;
+            bool starving = pawn.StarvationSeverity > 0;
             int best = -1;
             int bestDistance = int.MaxValue;
 
@@ -735,7 +739,11 @@ namespace Odyssey.Sim.Pawns
 
                 long key = ReservationManager.Key(ReservationTargetKind.Item, item.Id.Value);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
-                if (!ctx.Reachable(pawn, at)) continue;
+                // Kept home, she eats only what is inside it — until she is starving, when any
+                // meal she can reach will do (design 43 §4c). Gating food outright is the genre's
+                // known trap, and the reference and Dwarf Fortress both open the gate here. The
+                // one caller that chooses between the two questions by the pawn's state.
+                if (starving ? !ctx.CanTravel(pawn, at) : !ctx.Reachable(pawn, at)) continue;
 
                 int distance = ctx.Distance(pawn.Cell, at);
                 if (distance >= bestDistance) continue;
@@ -918,6 +926,12 @@ namespace Odyssey.Sim.Pawns
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
             if (pawn.Asleep) return false;
+
+            // Kept home and standing outside it, she walks back in before anything else (design
+            // 43 §4e). The fireside and the wander below need no such check: both ask the gated
+            // Reachable, so what they offer her is inside home already.
+            if (HomeTarget.Fill(pawn, ctx, job)) return true;
+
             // The hearth first, most of the time: an idle colony gathers round the fire, which
             // is both the thing the owner asked for and the clearest signal on the board that
             // nobody has anything to do (owner, 2026-09-23).
@@ -1089,12 +1103,55 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int WaitTicks = Weather.WeatherSystem.IntervalTicks;
 
-        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        /// <summary>
+        /// Present, at 1, on an animal the rain has sent for cover: the pane's "Sheltering"
+        /// (design 43 §6a). See <see cref="IsSheltering"/> for how it is derived.
+        /// </summary>
+        public const string ShelteringName = "odyssey.pawn.sheltering";
+
+        public static readonly AspectKey Sheltering = AspectKey.Of(ShelteringName);
+
+        /// <summary>
+        /// Whether this animal minds the rain at all right now: it is raining past the gate, the
+        /// world has a sky to shelter from, and the animal is not on its way off the board. The
+        /// node's own first question, and <see cref="IsSheltering"/>'s, so the two cannot drift.
+        /// </summary>
+        public static bool Minds(Pawn pawn, PawnContext ctx)
         {
             Weather.WeatherSystem? weather = ctx.Weather;
-            World.SkyColumns? sky = ctx.Sky;
-            if (weather == null || sky == null || pawn.Leaving) return false;
-            if (weather.RainPerMille(weather.Now) < RainGatePerMille) return false;
+            return weather != null && ctx.Sky != null && !pawn.Leaving
+                && weather.RainPerMille(weather.Now) >= RainGatePerMille;
+        }
+
+        /// <summary>
+        /// Is this animal sheltering from the rain — waiting it out under cover, or walking to
+        /// cover? Asked at publish time, so the pane can say "Sheltering" rather than the
+        /// "Resting" and "Wandering" of the two jobs this node borrows (design 43 §6a).
+        ///
+        /// <para><b>Derived, not recorded.</b> A job def of its own would be one more hashed
+        /// per-job tally and would move every golden; a flag set by this node would have to be
+        /// saved or be wrong for a tick after a load. Instead it is read off what is already
+        /// true: the rain past the gate (<see cref="Minds"/>), a wait standing in a sheltered
+        /// cell or a walk ending in one. That is exactly the pair of jobs <see cref="TryGiveJob"/>
+        /// gives, and while the animal minds the rain the idle node behind it never runs — so an
+        /// idle rest that happened to be under a tree when the rain came reads as sheltering too,
+        /// which it now is.</para>
+        /// </summary>
+        public static bool IsSheltering(Pawn pawn, PawnContext ctx)
+        {
+            Job? job = pawn.CurrentJob;
+            if (job == null) return false;
+            bool wait = job.DefIndex == JobIndex.Wait;
+            if (!wait && job.DefIndex != JobIndex.Wander) return false;
+            if (!Minds(pawn, ctx)) return false;
+            int cell = wait ? pawn.Cell : job.TargetCell;
+            return cell >= 0 && ctx.Sky!.ShelteredFromSky(cell);
+        }
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            if (!Minds(pawn, ctx)) return false;
+            World.SkyColumns sky = ctx.Sky!;
 
             if (sky.ShelteredFromSky(pawn.Cell))
             {
@@ -1574,7 +1631,9 @@ namespace Odyssey.Sim.Pawns
                     dest = ctx.Items.NearestCellWithSpace(
                         ctx.Cells, at, item.DefIndex, item.Stack, maxRadius: ClearanceRadius,
                         accept: ctx.OpenGroundFor(item.DefIndex));
-                if (dest < 0) continue;
+                // Kept home, she does not carry a load out of it (design 43 §4c). The store search
+                // already passed over stores outside home, so this refuses the open-ground drop above.
+                if (dest < 0 || !ctx.MayWork(pawn, dest)) continue;
 
                 bestDistance = distance;
                 bestItem = index;
@@ -1736,6 +1795,9 @@ namespace Odyssey.Sim.Pawns
                         if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
                         if (!ctx.Nav.Grid.CanEnter(cell, Mode)) continue;
                         if (!ctx.Nav.Reachable(from, cell, Mode)) continue;
+                        // A store at an outpost is outside home (design 43 §3f): kept home, she
+                        // passes it over for the best store inside rather than for none.
+                        if (!ctx.MayWork(pawn, cell)) continue;
 
                         bestDistance = distance;
                         best = new StorageSlot(cell, 0, cell);
@@ -1772,6 +1834,7 @@ namespace Odyssey.Sim.Pawns
                     if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
                     if (!ctx.Nav.Grid.CanEnter(cell, Mode)) continue;
                     if (!ctx.Nav.Reachable(from, cell, Mode)) continue;
+                    if (!ctx.MayWork(pawn, cell)) continue;
 
                     bestDistance = distance;
                     best = new StorageSlot(-1, Storage.StorageUnits.ContainerIdOf(unit.Edifice), cell);
@@ -1818,7 +1881,7 @@ namespace Odyssey.Sim.Pawns
             {
                 int cell = cells[i];
                 if (designations.At(cell) != DesignationKind.Fell) continue;
-                if (!designations.IsTree(cell)) continue;
+                if (!designations.IsFellable(cell)) continue;
 
                 long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;

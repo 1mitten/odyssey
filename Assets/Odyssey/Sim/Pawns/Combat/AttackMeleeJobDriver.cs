@@ -151,7 +151,7 @@ namespace Odyssey.Sim.Pawns
             // A hunt, a revenge or a self-defence thinks again now and then.
             if (!Job.PlayerForced && boundary && tick - Pawn.JobStartTick >= ctx.Content.Combat.rechooseTicks) return JobStatus.Succeeded;
 
-            if (!ctx.Reachable(Pawn, target.Cell, mode)) return JobStatus.Failed;
+            if (!ctx.CanTravel(Pawn, target.Cell, mode)) return JobStatus.Failed;
 
             // Choose a side again (design 33 §7c) — the chase's own re-plan, against where the target
             // now stands. Walking: only at a step boundary (so the step in hand is never snapped

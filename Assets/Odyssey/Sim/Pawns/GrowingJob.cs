@@ -363,7 +363,7 @@ namespace Odyssey.Sim.Pawns
             // against the item table, which is seven entries long and cheap to walk once a
             // harvest; there is no handle on the def because an item handle is a save contract
             // and deriving one at load would be a second place to keep it in step.
-            int yield = ItemIndexOf(ctx, plant.yields);
+            int yield = ctx.Content.ItemIndexOf(plant.yields);
             if (yield < 0) return;
 
             int at = ctx.Items.NearestCellWithSpace(
@@ -373,16 +373,6 @@ namespace Odyssey.Sim.Pawns
                 at = ctx.Items.NearestCellWithSpace(
                     ctx.Cells, cell, yield, plant.yieldCount, maxRadius: 3);
             if (at >= 0) ctx.Items.Spawn(yield, at, plant.yieldCount);
-        }
-
-        /// <summary>The item table slot of a def name, or -1 if the content has no such item.</summary>
-        static int ItemIndexOf(PawnContext ctx, string defName)
-        {
-            ItemDef[] items = ctx.Content.Items;
-            for (int i = 0; i < items.Length; i++)
-                if (string.Equals(items[i].defName, defName, System.StringComparison.Ordinal))
-                    return i;
-            return -1;
         }
     }
 }

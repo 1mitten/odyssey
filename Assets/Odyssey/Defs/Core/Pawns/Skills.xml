@@ -129,6 +129,16 @@
   </SkillDef>
 
   <!--
+    Treating the hurt (design 37). Buys speed only: Work_Doctor's rateSkill reads it, and the heal
+    a treatment gives is the supplies' and the MedicalDef's, never the doctor's (owner, 2026-09-24).
+    Treating trains it, and so does treating yourself.
+  -->
+  <SkillDef ParentName="SkillBase">
+    <defName>Skill_Medicine</defName>
+    <label>medicine</label>
+  </SkillDef>
+
+  <!--
     Shooting (design 47 section 2a): the per-cell accuracy curve in Combat.xml reads it, and
     every shot trains it, hit or miss. Appended with the ranged line; a colonist from a save
     older than format 10 is dealt it once on load.

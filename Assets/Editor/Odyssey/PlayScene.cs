@@ -1974,6 +1974,23 @@ namespace Odyssey.EditorTools
             // own art at 0.6 is about 0.38 m across, in the band the ore lumps sit in. Pillow for
             // the reason the crop stages give — a mound is the honest fallback for a vegetable,
             // where the pillar's stake is the shape of a signpost.
+            // The wild foods (design 45 §6). A cluster of berries is the Farm pack's strawberry, the
+            // one small red fruit in the packs, and it is also what a ripe berry bush wears; a
+            // mushroom is the Meadow pack's own. Sized as one lump you could carry, like the rest.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemBerries, shape = ModuleShape.Pillow,
+                prefabName = "SM_Prop_Strawberry_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(2.5f, 2.5f, 2.5f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemMushrooms, shape = ModuleShape.Pillow,
+                prefabName = "SM_Prop_Mushroom_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.0f, 1.0f, 1.0f),
+            });
             rows.Add(new ModuleEntry
             {
                 moduleId = ModuleIds.ItemCarrots, shape = ModuleShape.Pillow,
@@ -2032,6 +2049,19 @@ namespace Odyssey.EditorTools
                 scale = new Vector3(1.5f, 1.5f, 1.5f),
             });
             rows[rows.Count - 1].prefabUnder = BattleRoyaleFolder;
+
+            // Medical supplies (design 37 §5): the Battle Royale first-aid case, 0.48 x 0.13 x 0.39
+            // at source and drawn as authored — one small box, the ore lumps' size band, so the heap
+            // pass scatters several for a stack and a shelf bay holds them without burying the rack.
+            // Chosen from MedicalBoxSheet over MedicalBox_02 and Crate_Medical_01: both are olive
+            // and vanish into the grass, where the red case reads at play distance.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemMedicalSupplies, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_MedicalBox_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1f, 1f, 1f),
+            });
 
             AddCombatRows(rows);
             AddJumpRows(rows);

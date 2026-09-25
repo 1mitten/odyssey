@@ -41,7 +41,7 @@ namespace Odyssey.Sim.Pawns
             // 47 §2d): a bandit on a roof she cannot climb to is still an order she can carry out.
             RangedDef? gun = _ctx.WeaponRules.ArmamentOf(pawn, _ctx).Attack.ranged;
             if (!Melee.InReach(_ctx, pawn, target, TraverseMode.Colonist)
-                && !_ctx.Reachable(pawn, target.Cell, TraverseMode.Colonist)
+                && !_ctx.CanTravel(pawn, target.Cell, TraverseMode.Colonist)
                 && !(gun != null && Ranged.CanHit(_ctx, pawn.Cell, target.Cell, gun)))
                 return IntentRejection.NotPermitted;
             int attack = CombatJobs.AttackJobFor(pawn, _ctx, target);

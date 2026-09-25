@@ -152,6 +152,16 @@ namespace Odyssey.Hud
         public const string NoRescueBedKey = "ui.alert.norescuebed";
 
         /// <summary>
+        /// Somebody is kept home and there is no hearth, so home does not exist and keeps nobody
+        /// (design 43 §3f, §4d). Only while it matters: with nobody kept home, no hearth is simply
+        /// a colony that has not built a fire.
+        /// </summary>
+        public const string NoHearthKey = "ui.alert.nohearth";
+
+        /// <summary>A deconstruct order stands on the hearth: home goes when it comes down (§3f's warning).</summary>
+        public const string HearthDownKey = "ui.alert.hearthdown";
+
+        /// <summary>
         /// Seconds a store must be marked for removal and still full before the panel says so.
         ///
         /// <para>Longer than the idle latch because the ordinary case looks identical for a while:
@@ -162,8 +172,15 @@ namespace Odyssey.Hud
         /// </summary>
         public const double StoreStuckSustain = 10.0;
 
+        /// <summary>
+        /// The order kind a deconstruction is published as (<c>DesignationKind.Deconstruct</c>, 2).
+        /// Restated here as <c>InspectModel.OrderVerb</c> and <c>OrderColours.ToolOf</c> restate it,
+        /// because this assembly cannot see the simulation's enum.
+        /// </summary>
+        public const byte DeconstructOrderKind = 2;
+
         /// <summary>Every key this panel can put on screen, for the registry test.</summary>
-        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey, StoreStuckKey, PowerLossKey, NoFuelKey, NoRescueBedKey };
+        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey, StoreStuckKey, PowerLossKey, NoFuelKey, NoRescueBedKey, NoHearthKey, HearthDownKey };
 
         public readonly List<AlertRow> Rows = new List<AlertRow>();
 
@@ -185,6 +202,11 @@ namespace Odyssey.Hud
         bool _wasIdle;
         int _wasColony = -1;
         int _wasNoBed;
+        // What the two hearth rows say, not only whether they are up: the count kept home while
+        // there is no hearth (0 when the row is down), and the cell ordered down (-1 when none).
+        int _wasNoHearth;
+        int _wasHearthDown = -1;
+        int _hearthDownDismissKey;
         long _wasNoBedIds;
         int _latchVersion;
         int _wasLatchVersion = -1;
@@ -230,6 +252,7 @@ namespace Odyssey.Hud
             int idle = 0;
             int noBed = 0;
             long noBedIds = 0;
+            int keptHome = 0;
 
             // Colonists only (design 33 §5d): these are the colony's alerts, and a bandit or an
             // animal is neither hungry on the colony's account nor part of whether it is idle. A
@@ -266,6 +289,8 @@ namespace Odyssey.Hud
                 }
 
                 if (pawn.JobDef < 0) idle++;
+
+                if (snapshot.TryGetPawnAspect(pawn.Id, AreaAspectNames.AreaKey, out int area) && area != 0) keptHome++;
 
                 if (snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.RescueNoBedKey, out _))
                 {
@@ -333,7 +358,19 @@ namespace Odyssey.Hud
                 if (dryCell < 0) dryCell = d.HeadCell;
             }
 
+            // The hearth (design 43 §3f): missing while somebody is kept home, or ordered down.
+            int hearth = snapshot.HearthCell;
+            bool noHearth = hearth < 0 && keptHome > 0;
+            bool hearthDown = false;
+            if (hearth >= 0)
+            {
+                System.ReadOnlySpan<OrderView> orders = snapshot.Orders;
+                for (int i = 0; i < orders.Length; i++)
+                    if (orders[i].CellIndex == hearth && orders[i].Kind == DeconstructOrderKind) { hearthDown = true; break; }
+            }
+
             if (starving == _wasStarving && breaking == _wasBreaking &&
+                (noHearth ? keptHome : 0) == _wasNoHearth && (hearthDown ? hearth : -1) == _wasHearthDown &&
                 dark == _wasDark && shortW == _wasShortW && dry == _wasDry &&
                 idleStands == _wasIdle && storeStuck == _wasStoreStuck && colonists == _wasColony &&
                 noBed == _wasNoBed && noBedIds == _wasNoBedIds &&
@@ -349,6 +386,8 @@ namespace Odyssey.Hud
             _wasStoreStuck = storeStuck;
             _wasColony = colonists;
             _wasNoBed = noBed;
+            _wasNoHearth = noHearth ? keptHome : 0;
+            _wasHearthDown = hearthDown ? hearth : -1;
             _wasNoBedIds = noBedIds;
             _wasLatchVersion = _latchVersion;
             _wasDismissVersion = _dismissVersion;
@@ -445,6 +484,47 @@ namespace Odyssey.Hud
                         cell: at));
             }
             else _dismissed.Remove(AlertRow.ComputeDismissKey(NoFuelKey, default, null));
+
+            // The hearth ordered down is Warning: nothing has happened yet, and a click goes to it.
+            // The row's dismissal key is made from the cell it points at, so the check is too.
+            if (hearthDown)
+            {
+                CellRef at = snapshot.Size.FromIndex(hearth);
+                int key = AlertRow.ComputeDismissKey(HearthDownKey, default, at);
+                // The hearth moved to another campfire that is also marked: a dismissal of the
+                // old one's warning is not a dismissal of this one's.
+                if (_hearthDownDismissKey != 0 && _hearthDownDismissKey != key) _dismissed.Remove(_hearthDownDismissKey);
+                _hearthDownDismissKey = key;
+                if (!_dismissed.Contains(_hearthDownDismissKey))
+                    Rows.Add(new AlertRow(
+                        HearthDownKey,
+                        Registry.Label(HearthDownKey),
+                        string.Empty,
+                        AlertSeverity.Warning,
+                        count: 1,
+                        cell: at));
+            }
+            else if (_hearthDownDismissKey != 0)
+            {
+                _dismissed.Remove(_hearthDownDismissKey);
+                _hearthDownDismissKey = 0;
+            }
+
+            // No hearth with somebody kept home is Warning: home does not exist, so she is kept
+            // nowhere. There is no cell to go to; the fix is building or marking a campfire.
+            if (noHearth)
+            {
+                int dismissKey = AlertRow.ComputeDismissKey(NoHearthKey, default, null);
+                if (!_dismissed.Contains(dismissKey))
+                    Rows.Add(new AlertRow(
+                        NoHearthKey,
+                        Registry.Label(NoHearthKey),
+                        string.Empty,
+                        AlertSeverity.Warning,
+                        count: keptHome,
+                        cell: null));
+            }
+            else _dismissed.Remove(AlertRow.ComputeDismissKey(NoHearthKey, default, null));
 
             if (storeStuck)
                 Rows.Add(new AlertRow(

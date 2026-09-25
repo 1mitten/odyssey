@@ -26,10 +26,13 @@ namespace Odyssey.Hud
             "",
             "ui.arch.tool.wall", "ui.arch.tool.door", "", "ui.arch.tool.pillar",
             "ui.arch.tool.stair", "ui.arch.tool.stair", "ui.arch.tool.ladder", "", "",
-            "ui.terrain.tree.conifer", "ui.terrain.tree.broadleaf",
+            "ui.terrain.tree.birch", "ui.terrain.tree.meadow",
             "ui.arch.tool.bed", "ui.arch.tool.shelf",
             "ui.arch.tool.campfire",
             "ui.arch.tool.generator", "ui.arch.tool.heater",
+            // The wild things of design 45, after the buildings: two more trees, then the bushes.
+            "ui.terrain.tree.fruit", "ui.terrain.tree.giant",
+            "ui.terrain.bush", "ui.terrain.bush.berry", "ui.terrain.bush.picked",
         };
 
         public static string IconKey(int edifice) =>

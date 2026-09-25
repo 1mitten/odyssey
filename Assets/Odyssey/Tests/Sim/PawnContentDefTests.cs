@@ -220,6 +220,14 @@ namespace Odyssey.Tests.Sim
         // had saved them). Neither side's number covers the merged pack, so it is re-taken from a
         // freshly loaded pack rather than adopted from either.
         //
+        // Moved again, 2026-09-24, by medical supplies (design 37, MD1): Item_MedicalSupplies appended
+        // at item 11 (Medicine, stackLimit 10, healPerUnit 40), and ItemDef gained healPerUnit, zero
+        // on every other item. Taken from a freshly loaded pack.
+        //
+        // And again the same day by MD2 (design 37): Skill_Medicine, Work_Doctor (rateSkill 6 on
+        // growing's curve), Job_Treat and Job_Patient, and CombatDef's eight treatment integers.
+        // Taken from a freshly loaded pack.
+        //
         // Moved a twenty-first time, 2026-09-24, by C5, friendly fire (design 33 §12): two thoughts
         // appended at indices 6 and 7 — Thought_AttackedByColonist (-80, one day, once) and
         // Thought_ColonistDied (-60, three days, three deep), the owner's -8 and -6 on our scale of
@@ -251,8 +259,30 @@ namespace Odyssey.Tests.Sim
         // renamed PawnKind_Bandit -> PawnKind_Bandit (index 3 unchanged, so no save moves), its
         // traverse mode likewise, and PawnKindDef.weapon became weapons, the bandit's being a
         // crowbar or a bat where it was a machete. No golden moved: no golden has a bandit.
+        //
+        // Moved a twenty-seventh time, 2026-09-25, at the merge of medical supplies (design 37)
+        // with main: Job_Treat and Job_Patient renumbered 22-23 -> 23-24, after Job_Steal, since
+        // bandits shipped first. Neither side's number covers the merged pack, so it is re-taken
+        // from a freshly loaded pack rather than adopted from either.
+        //
         // 2026-09-25, design 46 §6: MovementDef gained jumpFailPerMille (30) and
         // jumpFailCarryingPerMille (2,000) — the jump over a one-cell stream falling short.
+        //
+        // Moved a twenty-eighth time, 2026-09-25, at the merge with main (weather, the stream
+        // jump): neither side's number covers the merged pack, re-taken fresh.
+        // Moved again, 2026-09-25, by design 45 (the scenery made real): the tuning's woodPerTree
+        // is gone, because what a felled tree yields is its species' own now, in
+        // World/WildPlants.xml. Taken from a freshly loaded pack.
+        // 2026-09-25, design 46 §6: MovementDef gained jumpFailPerMille (30) and
+        // jumpFailCarryingPerMille (2,000) — the jump over a one-cell stream falling short.
+        // Both, 2026-09-25, on merging main into the scenery line: re-taken from the merged pack.
+        //
+        // And again the same day by M13 (design 45 §6): Job_Forage appended at 23, and
+        // Item_Berries and Item_Mushrooms at 11 and 12 (Food, 60 and 70, stacks of 75). Taken from
+        // a freshly loaded pack.
+        // M13 on the merged line, 2026-09-25: re-taken from the merged pack.
+        // The scenery line merged with medical supplies, 2026-09-25: Job_Forage renumbered 23 -> 25
+        // and Item_Berries/Item_Mushrooms 11-12 -> 12-13, after main's. Re-taken from the merged pack.
         // 2026-09-25, design 47 §3 (R0, the ranged line's contracts): Job_AttackRanged, Skill_Shooting
         // and Item_Pistol appended; AttackDef gained a ranged block, CombatDef the shooting numbers
         // (the per-cell curve, the floor, cover, the dead zone, the scatter, the scan cadence) and
@@ -261,7 +291,8 @@ namespace Odyssey.Tests.Sim
         // 876/943/983 and the pistol's bands 950/850/650/450; the pistol's label "pistol" (was sidearm).
         // 2026-09-25, design 47 §12: the pistol's ranged block gained its own melee blow (blunt, 5,
         // the fists' cadence) — an enemy within reach is clubbed, never shot.
-        const ulong ContentFingerprint = 5602294991736737376UL;
+        // The ranged line merged with main (medical supplies, the scenery), 2026-09-25: re-taken from the merged pack.
+        const ulong ContentFingerprint = 1351662570230180524UL;
 
 
         [Test]

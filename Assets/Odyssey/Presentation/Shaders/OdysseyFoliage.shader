@@ -186,6 +186,11 @@ Shader "Odyssey/Foliage"
         SAMPLER(sampler_OdysseyClearTex);
         float4 _OdysseyClear;
 
+        // The cut field from GrassClearance (design 45 §13a): where an order stands the grass is
+        // not drawn at all. Same window as the clearing; each texel holds how much of it is cut.
+        TEXTURE2D(_OdysseyCutTex);
+        SAMPLER(sampler_OdysseyCutTex);
+
         // The grass thinning from ChunkRenderer (design 38 §21): x the metres from the camera where
         // it starts, y the least fraction kept, w on. Mirrors GrassThinning.Keep.
         float4 _OdysseyThin;
@@ -233,6 +238,17 @@ Shader "Odyssey/Foliage"
             // across the rest of the board.
             if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) return 0;
             return SAMPLE_TEXTURE2D_LOD(_OdysseyClearTex, sampler_OdysseyClearTex, uv, 0).r;
+        }
+
+        // Whether a clearable fragment stands on ground an order has claimed. Asked where the
+        // fragment is, not where its clump is rooted, so the edge is the cell's own. **Mirrored by
+        // GrassClearance.IsCut** (filtered, cut at one half) — change one, change both.
+        bool FoliageCutAt(float3 positionWS)
+        {
+            if (_OdysseyClear.w < 0.5 || _Clearable < 0.5) return false;
+            float2 uv = (positionWS.xz - _OdysseyClear.xy) * _OdysseyClear.z;
+            if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) return false;
+            return SAMPLE_TEXTURE2D_LOD(_OdysseyCutTex, sampler_OdysseyCutTex, uv, 0).r >= 0.5;
         }
 
         // One while the distance shrink is off; otherwise one near the camera falling to zero.
@@ -509,6 +525,10 @@ Shader "Odyssey/Foliage"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
+                // An order's cell is bare (design 45 §13a). Only the forward pass needs it: grass
+                // reaches no depth or shadow pass (design 38 §13, §18).
+                if (FoliageCutAt(input.positionWS)) discard;
 
                 half4 art = FoliageSample(input.uv, input.leaf.x, input.positionWS, input.leaf.z);
                 FoliageClip(art.a, input.positionCS);

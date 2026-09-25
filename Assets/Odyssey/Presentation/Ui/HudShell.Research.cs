@@ -548,6 +548,7 @@ namespace Odyssey.Presentation.Ui
             _directors?.Work.SetOpen(false);
             _directors?.Inventory.SetOpen(false);
             _directors?.Animals.SetOpen(false);
+            _directors?.Assign.SetOpen(false);
             _directors?.Selection.Clear();
             RefreshResearch();
         }

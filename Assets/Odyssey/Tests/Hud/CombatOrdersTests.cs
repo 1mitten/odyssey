@@ -221,7 +221,7 @@ namespace Odyssey.Tests.Hud
             frame.AddCellDetail(new CellDetail(frame.Size.Index(FloorCell), (byte)TerrainHandle.Soil,
                 (byte)EdificeHandle.None, (byte)StuffHandle.Wood, 0, 1000, 0));
 
-            foreach (int edifice in new[] { EdificeHandle.None, EdificeHandle.TreeConifer, EdificeHandle.Campfire })
+            foreach (int edifice in new[] { EdificeHandle.None, EdificeHandle.TreeBirch, EdificeHandle.Campfire })
             {
                 List<Intent> sent = RightClick(new[] { Ada }, frame, FloorCell, PawnId.None, edifice: edifice);
                 Assert.That(sent.Count, Is.EqualTo(1));

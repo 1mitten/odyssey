@@ -74,7 +74,7 @@ namespace Odyssey.Sim.Growing
             _plants = plants ?? throw new ArgumentNullException(nameof(plants));
             _chunks = chunks;
             int count = grid.Size.CellCount;
-            _zones = new ZoneGrid(count);
+            _zones = new ZoneGrid(count, grid.Footprint);
             _cropAt = new byte[count];
             _growthAt = new int[count];
         }

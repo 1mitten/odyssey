@@ -42,6 +42,7 @@ namespace Odyssey.Hud
         F1,
         F2,
         F3,
+        F4,
         F5,
         F6,
         F9,
@@ -119,6 +120,9 @@ namespace Odyssey.Hud
         /// same question of what the player can see.
         /// </summary>
         WallsDown,
+
+        /// <summary>Open or close the Assign tab (design 43 §6), on F4. Appended, so no stored binding shifts.</summary>
+        AssignTab,
     }
 
     /// <summary>What came of offering a key to a listening slot.</summary>
@@ -210,6 +214,7 @@ namespace Odyssey.Hud
             (HotkeyAction.Almanac,          HudKey.F9,        HudKey.None),
             (HotkeyAction.InventoryTab,     HudKey.F2,        HudKey.None),
             (HotkeyAction.ResearchTab,      HudKey.F3,        HudKey.None),
+            (HotkeyAction.AssignTab,        HudKey.F4,        HudKey.None),
         };
 
         /// <summary>
@@ -395,6 +400,7 @@ namespace Odyssey.Hud
             HotkeyAction.Draft => "ui.keys.draft",
             HotkeyAction.InventoryTab => "ui.keys.inventory",
             HotkeyAction.ResearchTab => "ui.keys.research",
+            HotkeyAction.AssignTab => "ui.keys.assign",
             HotkeyAction.WallsDown => "ui.keys.wallsdown",
             _ => KeysKey,
         };

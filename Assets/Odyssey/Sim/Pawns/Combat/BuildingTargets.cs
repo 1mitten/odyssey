@@ -216,7 +216,7 @@ namespace Odyssey.Sim.Pawns
                     if (target.Covers(cell)) continue;
                     if (cell != me.Cell && !ctx.Nav.Grid.CanEnter(cell, mode)) continue;
 
-                    if (cell != me.Cell && !ctx.Reachable(me, cell, mode)) continue;
+                    if (cell != me.Cell && !ctx.CanTravel(me, cell, mode)) continue;
                     reachable = true;
 
                     int ex = x - m.X, ez = z - m.Z, ey = t.Y - m.Y;
@@ -274,7 +274,7 @@ namespace Odyssey.Sim.Pawns
                     int cell = size.Index(x, z, t.Y);
                     if (target.Covers(cell)) continue;
                     if (cell == pawn.Cell) return true;
-                    if (ctx.Nav.Grid.CanEnter(cell, mode) && ctx.Reachable(pawn, cell, mode)) return true;
+                    if (ctx.Nav.Grid.CanEnter(cell, mode) && ctx.CanTravel(pawn, cell, mode)) return true;
                 }
             }
             return false;

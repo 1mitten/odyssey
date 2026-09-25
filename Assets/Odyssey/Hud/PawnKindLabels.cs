@@ -56,5 +56,30 @@ namespace Odyssey.Hud
             : JobLabels.IconKey(jobDef);
 
         public static string Activity(int jobDef) => Registry.Label(ActivityKey(jobDef));
+
+        /// <summary>
+        /// An animal the rain has sent for cover (design 43 §6a). The shelter node borrows the
+        /// wander and the wait, so the job alone would say "Wandering" then "Resting"; the
+        /// simulation publishes this flag beside it instead of a job def of its own, which would
+        /// have moved every golden.
+        /// </summary>
+        public const string Sheltering = "ui.status.sheltering";
+
+        /// <summary>
+        /// The name the flag is published under (<c>AnimalShelterThinkNode.ShelteringName</c>), a
+        /// literal on <see cref="JobLabels.CarryingAspect"/>'s bargain. Sparse: present at 1 while
+        /// sheltering, absent otherwise.
+        /// </summary>
+        public const string ShelteringAspect = "odyssey.pawn.sheltering";
+
+        static readonly AspectKey ShelteringKey = AspectKey.Of(ShelteringAspect);
+
+        /// <summary>Is this animal sheltering from the rain on this frame? One O(1) lookup.</summary>
+        public static bool IsSheltering(WorldSnapshot snapshot, PawnId id) =>
+            snapshot.TryGetPawnAspect(id, ShelteringKey, out _);
+
+        /// <summary>The activity key, with the rain's cover taking precedence over the job it borrows.</summary>
+        public static string ActivityKey(int jobDef, bool sheltering) =>
+            sheltering ? Sheltering : ActivityKey(jobDef);
     }
 }

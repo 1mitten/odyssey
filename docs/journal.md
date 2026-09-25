@@ -11692,6 +11692,48 @@ against both parents, per combat's lesson of the same morning, and the campfire 
 main added to every row. `Seated` stayed a bool beside `Asleep` because `PawnFlags` is full and is
 the fight's. Design 31 §19.
 
+## 2026-09-24 — Medical supplies: the item, the doctor and the patient
+
+The owner asked for **Medical supplies**, taken from the Battle Royale pack and made uniformly small
+so they stack in stores and on shelves, as the thing the old *Medkit* key becomes. One unit restores
+a lot of health but not all of it, so that rest still has a purpose, and they asked what a weaker
+healing seam should be. The interview is `docs/research/medical-supplies-interview.md` and the plan
+is design 37. The owner approved option A and every recommended number.
+
+**The ground changed the plan.** Combat had merged that morning with health in it, but rescue (C4)
+is still a stub. A downed colonist therefore cannot reach a bed, and nothing sends a colonist who is
+hurt but standing to one, so "treated in bed" would have reached almost nobody. Option A treats the
+downed where they lie and sends the badly hurt to bed as patients.
+
+**Storage, shelves and carrying took no code**, which is the evidence that the S1/S2
+generalisations hold: `MedicalSuppliesTests` stores a stack in a Medicine-only stockpile, which
+refuses wood, and puts a full stack in one shelf bay. **Treatment needed three things the plan did
+not name.**
+- `ColonyItems.SplitOff`, because a lift takes the whole stack.
+- A patient who gets up when hungry, because nothing in the job system interrupts a running job for
+  a need.
+- A ground-lying patient who stays down only while a doctor could still come. Without it the
+  colonist lies down and stands up on the spot, once a tick.
+
+**The one existing test that moved was right to move.** `AColonistHealsInABedAndNowhereElse` failed
+because its third colonist, now a doctor by default, gave the downed colonist on the ground a bare
+dressing (−5 to +5). The test is about the bed, so its colonists have Doctor switched off. The
+dressing is covered by `MedicalTreatmentTests`.
+
+**The goldens moved and were measured.** The hash sees a seventh skill, a seventh priority and two
+job counters. `GoldenColonyProbe` gives identical output on `main` 52f53112 and on the branch for
+all three boards.
+
+**One instrument lesson.** `PlayScene.RebuildCatalogue`, run in a freshly imported worktree, wrote
+the catalogue with every colonist's appearance swatches missing, a 3,678-line diff for a 41-line
+change. The row was added by hand. The cause is not established. Read a catalogue rebuild's diff
+before committing it.
+
+Tiers: fast 1,338 Sim + 977 Hud, Long 41, all three content gates clean. EditMode 3,238 total, 3,207
+passed, 0 failed. PlayMode 115 total, 110 passed, 0 failed. It read 1 failed on the first run:
+`WorkTabCostTests` at 0.820 ms, with its baseline at 0.747 ms while the CI runner's Unity was busy,
+which is contention. It passed on the re-run.
+
 ## 2026-09-24 — The orange suits were the uniform past the figure cap
 
 The 2026-09-23 entry above ruled out three causes and left the report unreproduced. The cause was
@@ -12806,6 +12848,300 @@ resolved the jump clips and, in the same write, emptied every colonist row's hai
 swatch rectangles (3,026 lines), which `CharacterSwatches.Classify` fills and the recolouring
 reads — `docs/lessons.md` already says to run it after. Only the four jump links were wanted, so
 they were grafted into the committed asset by hand and the rebuild thrown away.
+
+## 2026-09-25 — The pace on the pane, and what the rain is doing to people and animals
+
+The owner, after the rain landed: *"I notice the move speed is not shown anywhere so I couldn't
+tell whether people were moving slower."* The move rate had been published every tick since `WS3`,
+and nothing read it.
+
+**What was built** (`claude/pace-readout`, design 17 §5a, 43 §6a):
+- The colonist pane has a third header line, `Pace 90% · in the rain`. Its tooltip names each
+  factor that is not 1,000.
+- An animal making for cover, or waiting under it, reads *Sheltering*.
+- The owner placed "in the rain" on the Pace line, beside the number it explains, rather than in
+  the tooltip or on the activity line.
+
+**Four choices worth keeping.**
+- **The headline is the product of the published factors, not the published rate.** The pane cannot
+  read content, so it cannot know the base walk. Composing from the factors means the number and
+  its tooltip cannot disagree. A test pins the base at one cost unit a tick, which is when the two
+  are equal.
+- **The factors are the rate's own methods, asked again.** They are not a second formula.
+  `PaceAspectTests` multiplies the published factors back to the published rate exactly, across all
+  eight combinations of starving, raining and drafted.
+- **Sparse.** A dry, fed, undrafted colonist pays one row: 64 → 65 a colonist, measured by
+  `AspectScaleTests`. Design 31's "57" was already stale; the work priorities and the schedule had
+  added seven since.
+- **Sheltering is derived, not recorded.** A job def of its own would have moved every golden, and
+  a flag would have had to be saved. The shelter node's rain gate became `Minds`, which the node and
+  the readout both ask. So the readout cannot say *Sheltering* in a drizzle that the node ignores.
+
+**The room was measured, not assumed.** The pane's header is fixed at the portrait's 60 px and its
+text was 38. The third line makes 54. That sum is now a constant with a test, as are the three line
+heights against the stylesheet, so a fourth line fails rather than drawing over the tabs.
+
+No golden moved. The colony probe matches `origin/main` on all three boards. Not yet played.
+
+## 2026-09-25 — The home area: interviewed, designed, briefed, nothing built
+
+The owner asked for a home zone: a switch beside Power that shows the colony's home, which is its
+outermost buildings and zones plus a perimeter of five, and a new tab to keep a colonist *Home* or let
+her go *Anywhere*, for safety. Nothing of it existed. The registry had reserved *Allowed area* and
+*Set area*, the panel catalogue had reserved an *Assign* tab, and combat §18h had deferred a
+colony-wide rules panel until there was a second rule. This is the second rule.
+
+Eight questions in two rounds, and every recommendation was taken. Home is **derived**, not painted:
+everything placed, grown by five cells as a square, per layer with one layer of margin. Felling and
+mining marks do not count, because the danger is the work outside and counting it would bring the
+danger in. The setting goes on an **Assign** tab on F4, beside the Response it mirrors, and the
+draft overrides it.
+
+Three things the exploration settled that the interview could not:
+
+- **A new colony has no home.** The played scenario gives no beds and no stockpile, and the loose
+  piles are items. So an empty home must restrict nobody, or a colonist set to Home on the first
+  morning has nothing she may do.
+- **The rebuild is lazy, not on a cadence.** A cadence has a phase. A save between a placement and
+  the next rebuild would load a world whose mask differs from its twin's until the cadence caught up.
+  A rebuild on the first question about a dirty layer is always the pure function of the hashed world.
+- **`Reachable` splits in two.** It is the question every giver asks, which makes it the right gate
+  for work. But the fight asks it too, and a gated fight would stop a Home colonist defending herself
+  at the edge of home. `CanTravel` is the physical question, and the combat files move to it.
+
+The research subagent could read no page: the proxy refuses the wikis. Its file is built from search
+extracts and recollection, marked, and it still earned its place. The reference gates eating as well
+as work and opens the gate at starvation, and gating food outright is the genre's known trap. So
+design 43 takes the escape hatch. It also found that forbidding things dropped outside home is a
+per-item flag in the reference, not a home rule, which corrects a line in a-03.
+
+The Claude Design brief asks for the tab, a house glyph as an SVG path, and the look on the board.
+The look is an overlay rather than a baked tint, because home's edge moves five cells with every wall
+and baking it would re-mesh chunks on every placement.
+
+## 2026-09-25 — The home area built on the simulation side, and the hearth
+
+Design 43 was approved and the two simulation units went in. The home mask is derived from everything
+the colony placed, grown by five cells as a square, and rebuilt lazily on the first question after a
+placement. Colonists can be kept at *Home* through one gate, `PawnContext.MayWork`. It sits inside the
+`Reachable` every work giver already asks, so a giver written next month is gated without knowing it.
+The fight, the flight and the walk of a job already begun ask `CanTravel` instead.
+
+Two things the tests taught:
+
+- **The fight needed a test that could fail.** The first "she still fights back outside home" test
+  passed with the self-defence node gated. An adjacent attacker is fought through a path that asks no
+  reach at all. The test now has the bandit strike and step back out of reach, so she has to chase.
+  That runs the node and the attack driver, and gating either now fails it.
+- **A build site is home by itself**, so a far site made an island of home and a colonist kept home
+  walked out to it.
+
+The owner then proposed that one campfire should be the centre of home, and was interviewed in two
+rounds. Capping campfires at one would cap heating, since Rime needs one per sealed room. So any
+campfire can be marked the **hearth**, the first raised takes the title, and home is only the piece
+of the footprint joined to it. That closed the island gap as a side effect: a far site is an outpost,
+and a forced build there is refused.
+
+The flood from the hearth has a cost that follows how much is home. On the benchmark's worst case,
+where the whole standard board is one base of 37,551 cells, a placement went from 0.23 to 0.67 ms.
+That is recorded with an incremental join named as the lever, not built.
+
+None of the three units moved a golden. The setting is hashed only when set, the hearth only while it
+exists, and the mask never.
+
+## 2026-09-25 — The Home view, the Assign tab and the hearth's header, to Claude Design's specification
+
+Claude Design answered the brief with a written specification rather than HTML. The owner pasted it
+in and it was built the same day as four commits on the same branch. Five places where it disagreed
+with the shipped HUD went to the owner first, and the answers are a table in design 43 §5. The
+pattern in them: **the spec's numbers came from the old mockup, and "match what ships" won every
+time.** The one rule the spec itself stated, "matching Power exactly", was the tie-break.
+
+Three things the work taught:
+
+- **Publishing every home cell's border would have drawn three outlines.** Home has a layer of
+  margin above and below, so on flat ground one base is home on three layers. Only cells a colonist
+  can stand in are published, and `WatchHomeTests` counts forty rows for an eleven-cell square as the
+  control.
+- **The version has to follow the rows, not the home.** Keyed on the home alone, a dig under the
+  border leaves the line drawn over a hole. Bumped on every dig, it rebuilds the edge for mining
+  anywhere on the board. It is keyed on both the home and the terrain, and it moves only when the rows actually
+  come out different. A dig outside home and a dig under the middle are the controls.
+- **A mid-frame republish is not free.** The first draft republished the views the moment the switch
+  moved, so the edge would appear on the same frame. That swaps the snapshot the rest of the frame is
+  drawing from. The switch now waits one frame, as power's does.
+
+None of the Presentation code has been compiled. This container has no Unity, and the fast tier builds
+only Sim and Hud. The edge pass, the hearth mark, the tab's shell, the pane's header and the Menu
+generalisation are all owed a Unity tier run on the owner's machine before the PR is judged.
+
+## 2026-09-25 — The home area reviewed, merged with main, five faults fixed
+
+A review of PR #214 on its own worktree, then a merge of the 70 commits `main` had taken meanwhile.
+
+**The merge was not a formality.** `main` had given bit 26 of the pawn's kind word to a jump in the air
+(design 46 §6), the bit this branch gave the area. The textual conflict invited keeping both lines,
+which compiles and OR-s two states into one bit, so the hash could not tell a colonist kept home from
+one mid-jump. The area is bit 27. `main`'s weather is also "design 43"; recorded, not renamed.
+
+Five faults, each with a test that failed first and a control:
+
+- **The walk home searched three layers.** Home reaches one layer past what was built, so a colonist two
+  layers down a quarry had no home cell within reach of the search, and everything else she might do
+  was gated too: she stood at the bottom for good. A probe dug quarries one, two and three deep; two
+  and three failed. The search is over every home cell now.
+- **Switching the Home view on a second time drew nothing.** The frame the switch is pressed on carries
+  no rows, the edge pass rebuilt against it, and the next frame's rows came under the same version
+  because the home had not moved. The first switch-on worked only because the rows were new. The
+  version now moves whenever watching starts.
+- **A name pressed in Assign opened the inspect pane over the tab**: both dock bottom-left. The Work
+  tab's "stay open" rule was copied without its reason, which is that the Work tab lives elsewhere.
+  The pane waits while Assign is open and shows the chosen colonist when it closes.
+- **The two hearth alerts watched yes/no**, so the No-hearth count and the hearth-down cell went stale
+  while the row stayed up.
+- **"A store is home by construction" stopped being true with the hearth.** A store at an outpost is
+  not home, and the store search never asked, so a colonist kept home dropped the haul whenever the
+  colony's best store was one she may not use. The search asks `MayWork` now. The first version of the
+  test failed for the wrong reason: two one-cell stores filled with the starting piles before the item
+  under test had a turn. The control caught that; the gate taken out is the check that it tests the fix.
+
+The lesson worth keeping is the first one: **a conflict in a bit-packed hash word is a semantic
+conflict**, and "keep both sides" is the wrong default there.
+
+Then the first Unity run this branch had ever had. **The Presentation half did not compile**, twice over:
+`HomeEdgePass` used `HudTokens` without its namespace, and the Assign geometry test enumerated a span
+inside an iterator. Both were written in a container with no Unity and both were green on the fast
+tier, which compiles neither assembly — the warning in CLAUDE.md's test section, met again. Fixed,
+EditMode is 3,848 / 3,814 / 0 failed and PlayMode 150 / 138 / 0, and the Home view's frame arm
+measured +0.07 ms and two draw calls. That arm logs the hearth mark as not shown and asserts nothing
+about it, so whether the house appears is still a question for Play.
+
+## 2026-09-25 — M5 and M13: the scenery becomes real things (design 45)
+
+The Meadow look pass had strewn the board with drawn bushes and stones, placed by a hash of the
+cell and simulated not at all. The owner decided which of them become real (bushes and loose
+stones at the same spots and density, mushrooms under trees, berry bushes as a kind of bush), what
+a bush does (walked through slowly, cleared before anything is built on it, yields nothing), what
+the food does (berries picked by order and regrowing over days, mushrooms foraged once and
+reappearing elsewhere), and that trees become species in the simulation so the art, the wood and
+the work agree. Design 45 holds the decisions; this entry holds the reasoning that is not in it.
+
+**The species cost no worldgen draw.** The tree pass already rolled a `species` number per column
+for conifer-or-broadleaf; the four species are that roll rescaled across the broadleaf band, with
+the look pass's own rarity (one broadleaf in forty a giant, the rest one meadow tree to three
+fruit trees). So every tree stands where it stood, and what moved in the goldens is what a tree is,
+never where the wood is. Birch and meadow keep the ids 10 and 11 so an old save's trees load as
+the species its art already drew them as; the fruit tree, the giant and the bushes take 17-21,
+after the buildings, because edifice ids are one space. That made the natural ids non-contiguous,
+and **four range tests in `WorldRenderModel` would have drawn a bush as a tree or indexed past a
+table**. They are predicates now (`IsTree`, `IsBush`, `IsNatural`), and the shelf's old comment —
+the day a range test drew every shelf as a conifer — is why nothing compares an id against a range.
+
+**A bush's price has to be readable without the edifice list.** Navigation prices a cell by a byte,
+and the grid holds an edifice's handle, not its kind. The answer is a flag bit on the cell
+(`CellFlags.Undergrowth`, bit 7), set where a bush is placed and cleared by `RemoveEdifice` with
+the bush, so the only way out for a bush is the only place the flag goes. Clearing marks
+navigation dirty, which a tree never needed.
+
+**The build and zone guard was free.** A site, a growing zone and a stockpile each already refuse a
+cell with any edifice in it, which is how trees have always been handled. Nothing new was written.
+
+**The dressing's rules were ported, not shared.** The simulation cannot see presentation and does
+not use floats, so the bush rule (even lattice, 14-cell field over 0.45, 0.7 at a wood edge, times
+0.4) and the stone rule (18 per cent beside rock, 1.2 elsewhere) are restated in 16.16 fixed point
+over the same FNV hash — keyed on the world seed this time, which the dressing's never was.
+
+**Measured, not assumed.** `GoldenColonyProbe` was run on the base commit, on M5 and on M13 and the
+outputs diffed. M5: the generated census identical, the fifteen colonists wandering 95 times in
+10,000 ticks where they wandered 105 (a bush costs +50), nothing else different. M13: 680 stone in
+136 stacks and 89 mushrooms in 22 on the generated board, one more mushroom stack after the run,
+every colonist number identical to M5's — the golden colony has no store, so nobody hauls, and
+nobody was hungry enough to walk to a mushroom. The bare meadow and the city moved in neither. The
+water test's six dry-map hashes re-based and all six barren ones held, which is the evidence that
+nothing but the new passes touched the grid. The starting placement signature is unchanged once
+the map's own items are left out of it.
+
+**The frame found a pass with no cull.** The first 4K run against the base commit read the
+Standard frame flat and Huge 1.8 ms worse, and the split put all of it in `Actors`: 0.089 to
+1.421 ms. The actor pass drew every thing on the board every frame — scattered into its heap,
+lifted rock by rock, stamped into the grass — wherever the camera pointed, which was invisible while
+a colony's few dozen things were all there were. A cell box against the frustum, asked first, took
+it to 0.096. Measured back to back on this machine (RTX 5070 Ti), base then branch: Standard 4K
+6.98 -> 6.71 ms, Huge 4K 6.62 -> 6.83 ms, batch 1.81 -> 1.82 and 2.49 -> 2.34; `World` flat
+(1.007 -> 0.979, 1.710 -> 1.697), so the bushes cost what the dressing's did; the tick 0.007 ->
+0.008 ms at Standard, 0.021 -> 0.020 at Huge (P12 holds).
+
+**One owner decision left open.** The Harvest chip is pinned beside Chop and clear, which makes the
+orders strip seven; the rule that caps it asks for a paragraph and got one, and the paragraph says
+Harvest is the one to move if seven reads long.
+
+## 2026-09-25 — Bushes you can click, and berries on the bush (design 45 §12)
+
+Two faults from the owner's first play of #222. **Clicking a bush named the grass**: measured
+through the rig's real pick path, 14 of 18 clicks on a bush's middle and 56 of 73 on its crown
+missed, because a 2–3 m bush was claimed only where the ray crossed its cell's floor, and the ray
+aimed at the crown reaches the floor a metre or two on — or, in its own column, the ground block
+below, which the solid-cell rule claims first. The bush is a box to its drawn crown now, its height
+noted by the mesher that drew it: 0 of 18 and 1 of 68, and no ground in front of a bush is taken by
+it. Shrinking and re-centring the bushes was tried as a second arm and bought nothing, so it was
+not kept. **The berries floated**: placed on a ring by the footprint's half-diagonal with neither
+the bush's turn nor its crown's shape. They go through the bush's own drawn matrix onto the upper
+dome of its bounds now, 15 % inside. Before and after photographs are `BushPickTests.TheBerryBushAtThePlayCamera`.
+
+## 2026-09-25 — Placing over growth (design 45 §13)
+
+The owner could not see a blueprint through the meadow. While any tool is armed the footprint's
+grass now lies flat (one stamp per footprint box into the existing clearance texture) and the
+bushes and trees over it fade by the colonists' see-through partition — the one place a bush
+fades; a waiting site keeps its grass flat until built. The first timing was the lesson: a 24 x 24
+box cost 2.4 ms, and the frame split put all of it in the overlays section, where the stamp runs —
+a square root for each of ~50,000 texels. Writing the inside flat and paying only in the margin
+took it to +0.47 ms over the same box without the clearing, most of that the faded trees' extra
+draws. Measured in one world, three arms (cleared, armed without, nothing armed).
+
+## 2026-09-25 — An ordered cell is bare (design 45 §13a)
+
+The owner's screenshot of a harvest box in rain: flattened blades lying across every pink plate.
+Flattening was the wrong verb for a mark — the plate is on the ground, so a blade laid on the ground
+lies over it — and the mark cleared a 1.1 m disc in a 2.5 m cell besides. The fix is a second field
+beside the clearing that the foliage shader discards against, per fragment, written as coverage so
+the cut's edge is the cell's to a few centimetres (`OrderCutTests` walks three cells across every
+texel phase). It lives in the one gatherer every plate goes through, which is how "all orders
+should be checked" is answered once rather than per order. The photograph found a second, larger
+fault the screenshot had hidden: faded crowns write depth and share the plates' transparent queue,
+so where the instanced batch sorted second, half the harvest box was simply not drawn. Marks now
+draw one queue earlier.
+
+## 2026-09-25 — A campfire a terrace up could not be clicked: the ground followed the walls
+
+The first play of the home area passed (*"it all works"*), then: *"I created another campfire and I
+couldn't select it"*. PR #214 merged first on the owner's word, because the cause turned out to be
+older than it.
+
+**Five wrong answers were ruled out by evidence before the right one**, which is the part worth
+keeping. The simulation was right (the day-2 autosave, loaded headless: two campfires, the first the
+hearth, each publishing the right detail to the pane). The house mark takes no click (`PathGlyph`
+ignores picks). The editor log held no exception. It was a new game, not an old save. The fireside
+crowd gathers at the nearest fire, not the hearth. Then a PlayMode measurement through the rig's own
+pick path, and the measurement had to be fixed three times before it measured anything: it framed
+fires off screen, it did not move the slice (`FocusOn` moves only the camera), and its first misses
+were fires behind terrace risers and at the board's edge — the picker being right.
+
+**The cause.** Walls down is on by default, but build mode raises the walls, and design 42 §3a's
+"a lower terrace is ground" was keyed on the raised-or-not state rather than the choice. So with the
+Build palette open on a lower terrace, the slice was "underground", the terrace above an x-ray, and
+a campfire standing on it could not be clicked. The owner chose the narrow fix: the ground follows
+the Walls down choice, so turning it off keeps the tunnel view they chose on 2026-09-24. A campfire
+also had no pick height, so clicks on its flames crossed its floor beyond it; it offers the flames
+now (`WorldRenderModel.StandHeight`), as a bed and a shelf offer their tops.
+
+Measured, control and fix in one sitting: while building 96/150 clicks missed before and 2/150
+after; walls down 31/150 before and 2/150 after, the two being the rolling ground in front of one
+fire. The test sorts a miss by where it went — in front of the fire is occlusion and allowed at a
+few per cent, under, behind or nothing is the ray passing through and never allowed.
+
+`SaveProbe` gained a hearth report on the way: every campfire in a save, which is the hearth, the
+ground round each, and what the pane is told when each is clicked.
 
 ## 2026-09-25 — Ranged combat: ground, interview, research and design 47
 

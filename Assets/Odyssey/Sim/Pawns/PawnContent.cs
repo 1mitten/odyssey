@@ -172,6 +172,9 @@ namespace Odyssey.Sim.Pawns
         public const int Equip = JobHandle.Equip;
         public const int Rescue = JobHandle.Rescue;
         public const int Steal = JobHandle.Steal;
+        public const int Treat = JobHandle.Treat;
+        public const int Patient = JobHandle.Patient;
+        public const int Forage = JobHandle.Forage;
         public const int AttackRanged = JobHandle.AttackRanged;
         public const int Count = JobHandle.Count;
     }
@@ -322,6 +325,9 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int Rescue = WorkHandle.Rescue;
 
+        /// <summary>Treating the hurt (design 37). An emergency giver, like rescue's.</summary>
+        public const int Doctor = WorkHandle.Doctor;
+
         public const int Count = WorkHandle.Count;
 
         /// <summary>
@@ -335,7 +341,7 @@ namespace Odyssey.Sim.Pawns
         /// than a missing aspect — which is why growing is in both or in neither.</para>
         /// </summary>
         public static readonly string[] Names =
-            { "haul", "cutting", "mining", "construction", "growing", "rescue" };
+            { "haul", "cutting", "mining", "construction", "growing", "rescue", "doctor" };
     }
 
     /// <summary>
@@ -361,14 +367,16 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int Melee = 5;
 
+        /// <summary>Treating the hurt (design 37): buys speed at it and nothing else.</summary>
+        public const int Medicine = 6;
         /// <summary>
         /// Ranged combat (design 47 §2a): the shooter's level reads the per-cell accuracy curve in
         /// <see cref="CombatDef"/>, raised to the distance in cells, and every shot trains it, hit
-        /// or miss. Claimed by the ranged line's contracts step; a colonist from a save older than
+        /// or miss. Claimed by the ranged line's contracts step, 7 after medical supplies' Medicine; a colonist from a save older than
         /// format 10 is dealt it once on load (<see cref="PawnRegistry.BackfillSkills"/>).
         /// </summary>
-        public const int Shooting = 6;
-        public const int Count = 7;
+        public const int Shooting = 7;
+        public const int Count = 8;
 
         /// <summary>
         /// The names skills are published under, parallel to the indices above.
@@ -378,7 +386,7 @@ namespace Odyssey.Sim.Pawns
         /// assembly or sharing an enum with it. The prefix is the project's, the middle is this
         /// feature's, and the leaf is the value — the same shape as an icon key.</para>
         /// </summary>
-        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee", "shooting" };
+        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee", "medicine", "shooting" };
     }
 
     /// <summary>
@@ -612,6 +620,9 @@ namespace Odyssey.Sim.Pawns
         public const int Crowbar = ItemHandle.Crowbar;
         public const int Machete = ItemHandle.Machete;
         public const int ArcBlade = ItemHandle.ArcBlade;
+        public const int MedicalSupplies = ItemHandle.MedicalSupplies;
+        public const int Berries = ItemHandle.Berries;
+        public const int Mushrooms = ItemHandle.Mushrooms;
         public const int Pistol = ItemHandle.Pistol;
         public const int Count = ItemHandle.Count;
     }
@@ -645,6 +656,14 @@ namespace Odyssey.Sim.Pawns
         /// Read through <c>IWeaponRules</c>, never directly, so the lookup has one owner.
         /// </summary>
         public AttackDef? weapon;
+
+        /// <summary>
+        /// Hit points one unit restores when a doctor treats with it (design 37 §4), in whole
+        /// points. Zero means it is not medicine. Self-treatment and the treatment cap scale and
+        /// clamp it (<c>MedicalDef</c>); the amount itself is the item's, so a weaker item is one
+        /// Def row.
+        /// </summary>
+        public int healPerUnit;
     }
 
     /// <summary>Movement tuning. One unit of cost is 1/100 of a flat orthogonal cell crossing.</summary>
@@ -1044,7 +1063,6 @@ namespace Odyssey.Sim.Pawns
         public int thinkLoopLimit = 10;
         public int thinkLoopWindowTicks = 60;
         public int standDownTicks = 120;
-        public int woodPerTree = 27;
         public int stonePerRock = 8;
         public int stoneChanceOneIn = 1;
         public int orePerCell = 15;
@@ -1080,6 +1098,21 @@ namespace Odyssey.Sim.Pawns
         public WorkTypeDef[] WorkTypes = System.Array.Empty<WorkTypeDef>();
         public SkillDef[] Skills = System.Array.Empty<SkillDef>();
         public ItemDef[] Items = System.Array.Empty<ItemDef>();
+
+        /// <summary>
+        /// The item table slot of a def name, or -1 if the content has no such item. What a Def
+        /// that names its yield by <c>[DefReference]</c> is resolved through — a crop, a tree, a
+        /// bush — rather than each keeping a handle of its own: an item handle is a save contract,
+        /// and deriving one at load would be a second place to keep it in step. The table is a
+        /// dozen entries long and this is asked once a harvest.
+        /// </summary>
+        public int ItemIndexOf(string defName)
+        {
+            for (int i = 0; i < Items.Length; i++)
+                if (string.Equals(Items[i].defName, defName, System.StringComparison.Ordinal))
+                    return i;
+            return -1;
+        }
         public MoodDef Mood = new MoodDef();
         public MentalBreakDef Break = new MentalBreakDef();
         public MovementDef Movement = new MovementDef();
@@ -1195,13 +1228,6 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Job starts allowed inside <see cref="ThinkLoopWindowTicks"/> before a stand-down.</summary>
         public int ThinkLoopLimit = 10;
-
-        /// <summary>
-        /// Wood a felled tree leaves on the ground: 27, the pine class's vanilla yield
-        /// (docs/research/a-08-plants-growing-food.md §1; the oak class gives 46). One stack of
-        /// 75, so a single haul clears it.
-        /// </summary>
-        public int WoodPerTree = 27;
 
         /// <summary>Stone a plain rock cell leaves. ASSUMED, like everything else here.</summary>
         public int StonePerRock = 8;
@@ -1340,6 +1366,10 @@ namespace Odyssey.Sim.Pawns
                 "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue",
                 // A bandit carrying something off the board (design 33 §17).
                 "Job_Steal",
+                // Medical supplies (design 37).
+                "Job_Treat", "Job_Patient",
+                // Picking a berry bush (design 45 §6), appended after medical supplies.
+                "Job_Forage",
                 // The ranged attack (design 47 §2d).
                 "Job_AttackRanged");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
@@ -1347,12 +1377,16 @@ namespace Odyssey.Sim.Pawns
                 "Work_Growing",
                 // Appended with the combat line (design 33 §5): a pawn's priority array is indexed
                 // by this order, so it is a save contract like the rest.
-                "Work_Rescue");
+                "Work_Rescue",
+                // Medical supplies (design 37).
+                "Work_Doctor");
             content.Skills = ByName<SkillDef>(defs,
                 "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction",
                 "Skill_Growing",
                 // Appended with the combat line (design 33 §5).
                 "Skill_Melee",
+                // Medical supplies (design 37).
+                "Skill_Medicine",
                 // Appended with the ranged line (design 47 §3a).
                 "Skill_Shooting");
             content.Items = ByName<ItemDef>(defs,
@@ -1363,6 +1397,10 @@ namespace Odyssey.Sim.Pawns
                 "Item_Carrots",
                 // The four melee weapons (design 33 §1, C3), appended together.
                 "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade",
+                // What a doctor treats with (design 37), appended.
+                "Item_MedicalSupplies",
+                // The wild foods (design 45 §6), appended together after medical supplies.
+                "Item_Berries", "Item_Mushrooms",
                 // The pistol (design 47), the first ranged weapon.
                 "Item_Pistol");
 
@@ -1447,7 +1485,6 @@ namespace Odyssey.Sim.Pawns
             content.ThinkLoopLimit = tuning.thinkLoopLimit;
             content.ThinkLoopWindowTicks = tuning.thinkLoopWindowTicks;
             content.StandDownTicks = tuning.standDownTicks;
-            content.WoodPerTree = tuning.woodPerTree;
             content.StonePerRock = tuning.stonePerRock;
             content.StoneChanceOneIn = tuning.stoneChanceOneIn;
             content.OrePerCell = tuning.orePerCell;

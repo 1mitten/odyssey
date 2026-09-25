@@ -48,10 +48,15 @@ namespace Odyssey.Presentation.World
         /// The computed work stroke never plays for <c>Job_AttackMelee</c> (design 33 §5j), even
         /// though its driver reports a work focus during the wind-up: that focus is for turning the
         /// figure to face its target, and the blow is the fight's own clip or computed swing. Nor
-        /// for <c>Job_AttackRanged</c> (design 47 §4b), whose focus is the aim's.
+        /// for <c>Job_Treat</c> (design 37, owner: correcting the tending pose): a doctor is not
+        /// swinging a tool, so <c>WorkStyle.IndexForJob</c> falling through to the axe (or, with
+        /// nothing else near, reading as the hammer) is a mistake and not a placeholder — the work
+        /// focus there is for the figure's own kneel and stand, in <c>TreatJobDriver</c>.
+        /// Nor for <c>Job_AttackRanged</c> (design 47 §4b), whose focus is the aim's.
         /// </summary>
         public static bool PlaysWorkStroke(in PawnView pawn) =>
-            pawn.Working && pawn.JobDef != JobHandle.AttackMelee && pawn.JobDef != JobHandle.AttackRanged;
+            pawn.Working && pawn.JobDef != JobHandle.AttackMelee && pawn.JobDef != JobHandle.Treat
+            && pawn.JobDef != JobHandle.AttackRanged;
 
         /// <summary>
         /// Every item def's attack style, or null for an item that is not a weapon — the family a

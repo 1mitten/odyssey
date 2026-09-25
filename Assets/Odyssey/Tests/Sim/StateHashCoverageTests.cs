@@ -68,7 +68,7 @@ namespace Odyssey.Tests.Sim
             ColonyWorld colony = Build();
             ulong before = Hash(colony);
 
-            colony.Grid.Edifice[SomeSolidCell(colony.Grid)] = NaturalContent.EdificeTreeConifer;
+            colony.Grid.Edifice[SomeSolidCell(colony.Grid)] = NaturalContent.EdificeTreeBirch;
 
             Assert.That(Hash(colony), Is.Not.EqualTo(before));
         }

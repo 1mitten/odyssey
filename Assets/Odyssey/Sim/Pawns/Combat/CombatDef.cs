@@ -187,6 +187,32 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int downedRecoverAtPerMille = 150;
 
+        // ---- treatment (design 37 §4) ---------------------------------------------------------
+
+        /// <summary>A treatment never lifts a pawn past this fraction of its pool, per mille (owner: 800).</summary>
+        public int treatCapPerMille = 800;
+
+        /// <summary>Treating yourself heals this fraction of what a doctor would, per mille (owner: half).</summary>
+        public int selfHealPerMille = 500;
+
+        /// <summary>And never past this fraction of the pool, per mille (owner: 600).</summary>
+        public int selfCapPerMille = 600;
+
+        /// <summary>And takes this many times as long (owner: 3).</summary>
+        public int selfWorkFactor = 3;
+
+        /// <summary>Whole hit points a doctor's dressing restores with no supplies at all (owner: about 10).</summary>
+        public int bareHeal = 10;
+
+        /// <summary>A standing colonist below this fraction of her pool goes to bed as a patient, per mille (INVENTED: 500).</summary>
+        public int patientBelowPerMille = 500;
+
+        /// <summary>A patient gets up at this fraction of her pool, per mille (INVENTED: 800, the treatment cap).</summary>
+        public int patientReleasePerMille = 800;
+
+        /// <summary>Ticks after a treatment before the same pawn may be treated again (INVENTED: a quarter of a day).</summary>
+        public int treatedCooldownTicks = 15_000;
+
         /// <summary>How often a chase re-plans its path to a moving target, in ticks.</summary>
         public int chaseRepathTicks = 60;
 

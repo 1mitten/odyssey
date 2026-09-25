@@ -68,6 +68,13 @@ namespace Odyssey.Hud
         public static readonly HudColour StoreHue = new HudColour(0x7f, 0x96, 0xa8);
 
         /// <summary>
+        /// Picking berries (design 45 §6): a berry red-violet, the colour of the thing the order is
+        /// for. Not the felling green, because both orders are given over the same bushes and the
+        /// mode must say which one is armed.
+        /// </summary>
+        public static readonly HudColour Forage = new HudColour(0xc0, 0x4f, 0x8a);
+
+        /// <summary>
         /// A drafted colonist's hue (design 33 §2g): the marker over its head, the line to where it
         /// has been sent and the bracket on the cell. <b>A deep, dark red</b> — the owner's call
         /// after the first draft playtest (2026-09-23: <i>"make the cursor a deeper dark red but
@@ -125,6 +132,7 @@ namespace Odyssey.Hud
         public static HudColour Hue(DesignateTool tool) => tool switch
         {
             DesignateTool.Fell => HudTheme.Good,
+            DesignateTool.Harvest => Forage,
             DesignateTool.Mine => Mine,
             DesignateTool.Deconstruct => HudTheme.Warn,
             DesignateTool.Cancel => HudTheme.Bad,
@@ -154,8 +162,8 @@ namespace Odyssey.Hud
         /// The same hue for a standing order read back off the world, whose kind arrives as the
         /// byte <c>OrderView.Kind</c> carries.
         ///
-        /// <para>The numbers are <c>DesignationKind</c>'s — Mine 1, Deconstruct 2, Fell 3 —
-        /// restated here for the reason <see cref="InspectModel"/> already restates them: the enum
+        /// <para>The numbers are <c>DesignationKind</c>'s — Mine 1, Deconstruct 2, Fell 3,
+        /// Harvest 4 — restated here for the reason <see cref="InspectModel"/> already restates them: the enum
         /// lives in <c>Odyssey.Sim</c>, which this assembly does not reference, and the snapshot
         /// carries the value rather than the type. Anything else is a build order.</para>
         /// </summary>
@@ -164,6 +172,7 @@ namespace Odyssey.Hud
             1 => DesignateTool.Mine,
             2 => DesignateTool.Deconstruct,
             3 => DesignateTool.Fell,
+            4 => DesignateTool.Harvest,
             _ => DesignateTool.Build,
         };
 

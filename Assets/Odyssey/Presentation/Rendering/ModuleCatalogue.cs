@@ -876,6 +876,15 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemMachete = Prefix + "item.machete";
         public const string ItemArcBlade = Prefix + "item.arcblade";
 
+        /// <summary>Medical supplies (design 37): a small box, the same art on the ground, on a shelf and in an armful.</summary>
+        public const string ItemMedicalSupplies = Prefix + "item.medicalsupplies";
+
+        /// <summary>Wild berries (design 45 §6): one berry cluster, heaped by the stack, and worn
+        /// by a ripe berry bush.</summary>
+        public const string ItemBerries = Prefix + "item.berries";
+
+        /// <summary>Mushrooms (design 45 §6): one mushroom, heaped by the stack.</summary>
+        public const string ItemMushrooms = Prefix + "item.mushrooms";
         // The pistol (design 47 §4a), claimed by the ranged line's contracts step: POLYGON Battle
         // Royale's SM_Wep_Pistol_Heavy_01, the ground item and the held prop alike.
         public const string ItemPistol = Prefix + "item.pistol";
@@ -894,6 +903,8 @@ namespace Odyssey.Presentation.Rendering
         {
             ItemMeal, ItemSalvage, ItemWood, ItemStone, ItemIronOre, ItemCoal, ItemCarrots,
             ItemBat, ItemCrowbar, ItemMachete, ItemArcBlade,
+            ItemMedicalSupplies,
+            ItemBerries, ItemMushrooms,
             ItemPistol,
         };
 

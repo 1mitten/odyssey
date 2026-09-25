@@ -77,15 +77,32 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Steal = 22;
 
+        // Medical (design 37), claimed after Steal at the merge with main (2026-09-25): bandits
+        // shipped first and a shipped handle is a save contract, so the unshipped pair moved from
+        // 22-23 to 23-24. No save with a Treat or Patient job in it has left this branch.
+
+        /// <summary>Treat a patient, with medical supplies or without, or treat yourself (design 37).</summary>
+        public const int Treat = 23;
+
+        /// <summary>A hurt colonist lying in a bed until she is well enough to get up (design 37).</summary>
+        public const int Patient = 24;
+
+
+        /// <summary>Pick a ripe berry bush (design 45 §6): the Harvest order, worked as growing.
+        /// 25, after medical supplies' Treat and Patient: they reached main first, and a shipped
+        /// handle is a save contract. It was 23 on its branch; no save with it had left.</summary>
+        public const int Forage = 25;
+
+
         /// <summary>
         /// Stand where the line to a target is open and shoot at it (design 47 §2d): the ranged
-        /// attack, claimed by the ranged line's contracts step (R0). Above
+        /// attack, claimed by the ranged line's contracts step (R0); 26, after medical supplies' Treat and Patient and the forager's Forage, which reached main first. Above
         /// <c>JobSystem.HashedAlways</c>, so its counters reach the hash only once one has run and
         /// its registration moved no golden.
         /// </summary>
-        public const int AttackRanged = 23;
+        public const int AttackRanged = 26;
 
-        public const int Count = 24;
+        public const int Count = 27;
     }
 
     /// <summary>
@@ -138,7 +155,10 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Rescue = 5;
 
-        public const int Count = 6;
+        /// <summary>Treating the hurt (design 37): the ui.work.doctor column. An emergency giver.</summary>
+        public const int Doctor = 6;
+
+        public const int Count = 7;
 
         /// <summary>What a work type the simulation does not run answers to. Never sent.</summary>
         public const int None = -1;
@@ -214,12 +234,26 @@ namespace Odyssey.Sim.Contracts
         public const int ArcBlade = 10;
 
         /// <summary>
-        /// The pistol (design 47): the first ranged weapon, appended by the ranged line's contracts
-        /// step. Code says <c>Pistol</c>; every screen says what <c>ui.item.pistol</c> says.
+        /// A box of dressings and drugs: what a doctor treats with (design 37). Category
+        /// Medicine, ten to a stack, so a stack is one shelf bay.
         /// </summary>
-        public const int Pistol = 11;
+        public const int MedicalSupplies = 11;
 
-        public const int Count = 12;
+
+        /// <summary>Wild berries, picked from a berry bush (design 45 §6). Raw food. 12, after
+        /// medical supplies at the merge with main (it was 11 on its branch).</summary>
+        public const int Berries = 12;
+
+        /// <summary>Mushrooms, found under trees (design 45 §6). Raw food.</summary>
+        public const int Mushrooms = 13;
+
+
+        /// The pistol (design 47): the first ranged weapon, appended by the ranged line's contracts
+        /// step; 14, after medical supplies and the wild foods, which reached main first. Code says <c>Pistol</c>; every screen says what <c>ui.item.pistol</c> says.
+        /// </summary>
+        public const int Pistol = 14;
+
+        public const int Count = 15;
     }
 
     /// <summary>
@@ -293,7 +327,11 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A bandit with nothing to fight, break or take walked off the board empty-handed (design 33 §17).</summary>
         public const int BanditLeft = 3;
 
-        public const int Count = 4;
+        /// <summary>Medical supplies from the sky (design 37 §5): the supply drop's worker, another cargo.
+        /// After <see cref="BanditLeft"/> at the merge with main (2026-09-25); bandits shipped first.</summary>
+        public const int MedicalDrop = 4;
+
+        public const int Count = 5;
     }
 
     /// <summary>
@@ -352,8 +390,13 @@ namespace Odyssey.Sim.Contracts
         public const int VaultWall = 8;
         public const int UtilityTap = 9;
 
-        public const int TreeConifer = 10;
-        public const int TreeBroadleaf = 11;
+        /// <summary>The birch: small, quick to fell, little wood (design 45 §2). It was the
+        /// conifer until the species became the simulation's; an old save's conifers load as
+        /// birches, which is what the art had drawn them as since the Meadow look pass.</summary>
+        public const int TreeBirch = 10;
+
+        /// <summary>The meadow tree, the medium broadleaf. Was the broadleaf (design 45 §2).</summary>
+        public const int TreeMeadow = 11;
 
         /// <summary>
         /// The bed, and the first edifice id the interface names that no generator stamps: 12,
@@ -381,7 +424,25 @@ namespace Odyssey.Sim.Contracts
         /// power. See <c>CoreContent.EdificeHeater</c>.</summary>
         public const int Heater = 16;
 
-        public const int Count = 17;
+        // The wild things (design 45 §2), after the heater because edifice ids are one space
+        // shared with the buildings: the trees' ten and eleven were never a range to extend.
+
+        /// <summary>A fruit tree: medium, its fruit deferred.</summary>
+        public const int TreeFruit = 17;
+
+        /// <summary>The giant meadow tree: rare, slow to fell, a great deal of wood.</summary>
+        public const int TreeGiant = 18;
+
+        /// <summary>A bush: walked through slowly, cleared before anything is built on it.</summary>
+        public const int Bush = 19;
+
+        /// <summary>A berry bush with its berries on.</summary>
+        public const int BerryBush = 20;
+
+        /// <summary>A berry bush that has been picked and is growing its berries back.</summary>
+        public const int BerryBushPicked = 21;
+
+        public const int Count = 22;
     }
 
     /// <summary>

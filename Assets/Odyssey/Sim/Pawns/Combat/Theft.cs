@@ -125,7 +125,7 @@ namespace Odyssey.Sim.Pawns
 
                 long key = ReservationManager.Key(ReservationTargetKind.Item, item.Id.Value);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
-                if (at != pawn.Cell && !ctx.Reachable(pawn, at, mode)) continue;
+                if (at != pawn.Cell && !ctx.CanTravel(pawn, at, mode)) continue;
 
                 best = item;
                 bestDistance = distance;

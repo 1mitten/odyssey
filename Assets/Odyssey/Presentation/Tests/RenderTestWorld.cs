@@ -190,5 +190,12 @@ namespace Odyssey.Tests.Presentation
             Model.RefreshAll(Grid, _edifices);
             return this;
         }
+
+        /// <summary>Publish only the chunks marked dirty since, as a tick's edit reaches the mirror.</summary>
+        public RenderTestWorld PublishEdits()
+        {
+            Model.RefreshDirty(Grid, _edifices);
+            return this;
+        }
     }
 }
