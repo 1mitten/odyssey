@@ -30,6 +30,24 @@ the next session learns to ignore.
   a far bandit keeps the helmet and the red. A wrong answer is hair or a beard poking through the
   helmet, a vest that is still camo, trousers that are red, a far bandit in camo or the white
   jumpsuit, or three bandits you cannot tell from colonists at play distance.
+
+- **Do the streams and ponds read as water with a natural edge?** (`claude/meadow-shorelines`,
+  design 38 §24.) New game; pan to the nearest stream and a pond, close in and pulled back.
+  **Look for** a shoreline that curves and cuts corners instead of following the cells, marsh as a
+  soft dark band rather than pale tiles, a pond's deep middle as a darker blob, and murky green-teal
+  water like the reference. Walk a colonist along a bank. **A wrong answer looks like:** a staircase
+  still visible along a diagonal stream; pale slivers or wedges at the water's edge; a colonist
+  standing in the water or floating over a bank; a waterfall missing or cut short; or the water too
+  dark to read as water at dusk.
+- **Can you click any water tile now, and does the water move?** (`claude/meadow-shorelines`,
+  design 38 §24f.) Click shallow water, deep water, a one-cell pool and the edge of a stream: each
+  should select the water tile. Click the grass beside it: that should still select the bank. Watch
+  a stream for a few seconds, then a pond, then pause. **Look for** light streaks drifting downstream,
+  gentle swells on ponds, a soft rim at the edge that slowly brightens and fades, and everything
+  holding still on pause. **A wrong answer looks like:** a click on water selecting the bank or the
+  tile beyond it; streaks flowing uphill or away from a fall; motion that reads as clouds or noise
+  rather than water; or water still moving while the game is paused.
+
 - **Does the title screen's dock read well, and does Exit ask?** (`claude/settings-frame`, design
   40.) Press Play. A dark panel down the left edge with the layered mark and ODYSSEY, four
   coloured buttons and the build line at the foot, the starfield clear to the right. New game should

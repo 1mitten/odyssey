@@ -235,6 +235,7 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>The wind the foliage reads, on the game clock (design 38 §4): a paused meadow
         /// holds still and a meadow at speed 3 hurries with everything else.</summary>
         readonly WindDirector _wind = new WindDirector();
+        readonly WaterDirector _water = new WaterDirector();
         Material? _actorMaterial;
         ColonistMaterials? _colonistMaterials;
 
@@ -1088,6 +1089,8 @@ namespace Odyssey.Presentation.Bootstrap
             // The wind, unconditionally: it is not part of the day and night cycle, and a board
             // built with the cycle off still wants its grass moving.
             _wind.Apply(_world.CurrentTick);
+            _water.TicksPerSecond = ticksPerSecond;
+            _water.Apply(_world.CurrentTick, Time.unscaledDeltaTime);
             if (_figures != null)
             {
                 _figures.BlowLanded += OnBlowLanded;
@@ -1254,6 +1257,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             // And the wind on the same clock, for the same reason: a paused meadow holds still.
             _wind.Apply(_world.CurrentTick);
+            _water.Apply(_world.CurrentTick, Time.unscaledDeltaTime);
         }
 
         /// <summary>
@@ -1278,6 +1282,7 @@ namespace Odyssey.Presentation.Bootstrap
             _world.Tick(count);
             _daylight?.Apply(_world.CurrentTick);
             _wind.Apply(_world.CurrentTick);
+            _water.Apply(_world.CurrentTick, Time.unscaledDeltaTime);
         }
 
         /// <summary>
@@ -3939,6 +3944,7 @@ namespace Odyssey.Presentation.Bootstrap
             _audio?.Dispose();
             _daylight?.Dispose();
             _wind.Dispose();
+            _water.Dispose();
             // The corpses before the figures: a body still falling hands its lent figure back as
             // it goes, and after the figures that indexed a cleared list and threw out of the
             // teardown, which a pause on a death and a load reached (review, 2026-09-23).
