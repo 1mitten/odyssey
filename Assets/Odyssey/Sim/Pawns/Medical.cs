@@ -392,8 +392,19 @@ namespace Odyssey.Sim.Pawns
                     {
                         ToilIndex = ToilGo;
                         ToilProgress = 0;
+                        // The kneel is over the moment the stance is (GrowingJob's own rule): a
+                        // displaced doctor is only walking back, not tending.
+                        Pawn.BeginGesture(PawnGesture.None);
                         return JobStatus.Ongoing;
                     }
+
+                    // Kneeling at her side to dress the wound — the sower's own kneel, re-used for
+                    // the same reason it was re-used for the lift: down where she is lying. In a
+                    // bed she is tended standing, bent over the bed rather than down at the floor
+                    // (owner, 2026-09-25: "stood up if customer in bed"). Begun once at the toil's
+                    // start and held while it runs, exactly as the sow's own kneel is.
+                    if (ToilProgress == 0 && !Medical.IsBedCell(ctx, patient.Cell))
+                        Pawn.BeginGesture(PawnGesture.Sow);
 
                     CombatDef combat = ctx.Content.Combat;
                     int work = ctx.Content.Jobs[Job.DefIndex].workTicks * (Self ? combat.selfWorkFactor : 1);
@@ -401,6 +412,7 @@ namespace Odyssey.Sim.Pawns
                     Work(ctx);
                     if ((long)ToilProgress < (long)work * Rates.Scale) return JobStatus.Ongoing;
 
+                    Pawn.BeginGesture(PawnGesture.None);
                     ColonyItem? carried = Job.CarriedItem >= 0 ? ctx.Items.Get(new ThingId(Job.CarriedItem)) : null;
                     int suppliesDef = carried != null ? carried.DefIndex : -1;
                     if (Job.TargetItem != ThingId.None && carried == null) return JobStatus.Failed;
