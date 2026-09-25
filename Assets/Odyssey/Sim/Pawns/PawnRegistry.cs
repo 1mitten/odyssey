@@ -69,7 +69,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// Build a pawn of a kind at a cell holding <paramref name="weaponDef"/> — an item def with a
         /// weapon block — in place of whatever the kind arrives holding (design 47 §3e: the debug
-        /// pistol bandit, a bandit and so still helmeted and vested, with a sidearm and no new
+        /// pistol bandit, a bandit and so still helmeted and vested, with a pistol and no new
         /// kind). -1 is the kind's own table, which is what <see cref="Spawn(int, int)"/> sends.
         /// <b>Bypasses <c>PawnContent.WeaponFor</c></b> for that one pawn; a gunman kind with its own
         /// table is the later unit that restores the one owner.
@@ -87,6 +87,8 @@ namespace Odyssey.Sim.Pawns
             // comparison. The loader never comes here — it restores the hand from the save.
             if (weaponDef >= 0) GiveWeapon(pawn, weaponDef);
             else if (_ctx.Content.ArmsOnSpawn(kind)) _ctx.WeaponRules.ArmOnSpawn(pawn, _ctx);
+            // What it arrived holding is its own gear, and a bandit's gear is poor (design 47 §11).
+            WeaponQuality.Assign(_ctx, WeaponHand.Held(pawn, _ctx), WeaponQuality.BanditSkill);
             return pawn;
         }
 
@@ -213,6 +215,8 @@ namespace Odyssey.Sim.Pawns
                 if (cell < 0) continue;
 
                 ThingId id = _ctx.Items.Spawn(def, cell);
+                // A weapon dealt is a find (design 47 §11).
+                WeaponQuality.Assign(_ctx, _ctx.Items.Get(id), WeaponQuality.FoundSkill);
                 WeaponHand.TakeUp(pawn, _ctx.Items.Get(id)!, _ctx);
                 armed++;
             }
@@ -550,6 +554,7 @@ namespace Odyssey.Sim.Pawns
                     var weapon = _ctx.Items.Get(new ThingId(pawn.EquippedItem));
                     if (weapon != null && !weapon.Despawned)
                         writer.AddPawnAspect(pawn.Id, CombatAspects.Weapon, weapon.DefIndex);
+                        if (weapon.Quality != 0) writer.AddPawnAspect(pawn.Id, CombatAspects.WeaponQuality, weapon.Quality);
                 }
 
                 // An animal publishes its kind and its pace and nothing else of what follows
@@ -662,7 +667,8 @@ namespace Odyssey.Sim.Pawns
 
                 if (item.Cell >= 0)
                 {
-                    writer.AddThing(new ThingView(item.Id, size.FromIndex(item.Cell), item.DefIndex, 0, item.Stack));
+                    writer.AddThing(new ThingView(item.Id, size.FromIndex(item.Cell), item.DefIndex, 0, item.Stack,
+                        quality: item.Quality));
                     continue;
                 }
 
@@ -691,7 +697,7 @@ namespace Odyssey.Sim.Pawns
                 }
 
                 writer.AddThing(new ThingView(item.Id, size.FromIndex(where), item.DefIndex, 0,
-                    item.Stack, item.ContainerId, (byte)slot));
+                    item.Stack, item.ContainerId, (byte)slot, item.Quality));
             }
         }
 

@@ -157,7 +157,7 @@ namespace Odyssey.Tests.Hud
         /// <summary>
         /// The ranged line's two rows (design 47 §4d). The pistol bandit is the bandit's own kind with
         /// the weapon in <c>B</c>, plus one — 0 being "the kind's own table", which every other pawn
-        /// row sends, so the plain bandit row is the control. The sidearm is one item, granted as the
+        /// row sends, so the plain bandit row is the control. The pistol is one item, granted as the
         /// other weapons are.
         /// </summary>
         [Test]

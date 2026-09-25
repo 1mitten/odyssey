@@ -16,6 +16,22 @@ namespace Odyssey.Tests.Hud
     /// </summary>
     public class RegistryTests
     {
+        /// <summary>
+        /// A weapon is named with how well it was made (design 47 §11), both words the registry's; a
+        /// thing with no tier is its bare name. And the pistol is "Pistol" (owner, 2026-09-25: rename
+        /// "sidearm" to "Pistol").
+        /// </summary>
+        [Test]
+        public void AWeaponIsNamedWithItsQuality()
+        {
+            Assert.That(ItemLabels.Label(ItemHandle.Pistol), Is.EqualTo("Pistol"));
+            Assert.That(ItemLabels.Label(ItemHandle.Pistol, QualityHandle.Decent),
+                Is.EqualTo("Pistol (" + Registry.Label("ui.quality.decent") + ")"));
+            Assert.That(ItemLabels.Label(ItemHandle.Machete, QualityHandle.Epic),
+                Is.EqualTo(Registry.Label("ui.item.machete") + " (" + Registry.Label("ui.quality.epic") + ")"));
+            Assert.That(ItemLabels.Label(ItemHandle.Wood, 0), Is.EqualTo(ItemLabels.Label(ItemHandle.Wood)), "no tier, no brackets");
+        }
+
         [Test]
         public void EveryJobKeyIsARegisteredName()
         {

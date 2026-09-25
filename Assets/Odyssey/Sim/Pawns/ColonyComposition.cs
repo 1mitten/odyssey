@@ -262,7 +262,13 @@ namespace Odyssey.Sim.Pawns
                     pawns.DebugJumpsAlwaysFail = on;
                     return IntentRejection.None;
                 })
-                .AddIntentHandler(IntentKind.GiveResource, intent => pawns.Items.HandleGiveResource(intent, pawns.Cells))
+                .AddIntentHandler(IntentKind.GiveResource, intent =>
+                {
+                    // A granted weapon is a find, and a find has a quality (design 47 §11).
+                    IntentRejection given = pawns.Items.HandleGiveResource(intent, pawns.Cells, out ThingId id);
+                    if (given == IntentRejection.None) WeaponQuality.Assign(pawns, pawns.Items.Get(id), WeaponQuality.FoundSkill);
+                    return given;
+                })
                 // The two power commands that are not a build (design 32): taking a line up, and
                 // throwing a building's switch. Both belong to the power grid, the one owner of both.
                 .AddIntentHandler(IntentKind.RemoveConduit, intent =>

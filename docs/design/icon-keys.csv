@@ -422,7 +422,7 @@ ui.item.wrench,Wrench,ui.item,M3,Machinery and repair
 ui.item.drill,Drill,ui.item,M3,Powered cutting. Fast salvage
 ui.item.axe,Axe,ui.item,M3,"Cutting, and chopping"
 ui.item.cutter,Cutting torch,ui.item,M3,Opens a hull. Opens a wall
-ui.item.pistol,Sidearm,ui.item,M3,"Short range, always to hand"
+ui.item.pistol,Pistol,ui.item,M3,"Short range, always to hand"
 ui.item.rifle,Rifle,ui.item,M3,The standard ranged weapon
 ui.item.shotgun,Scattergun,ui.item,M3,"Devastating close, useless far"
 ui.item.crossbow,Crossbow,ui.item,M3,"Silent, slow, makeable"
@@ -522,10 +522,10 @@ ui.debug.spawnbat,Spawn bat,ui.debug,CB,"Adds a bat near the camera"
 ui.debug.spawncrowbar,Spawn crowbar,ui.debug,CB,"Adds a crowbar near the camera"
 ui.debug.spawnmachete,Spawn machete,ui.debug,CB,"Adds a machete near the camera"
 ui.debug.spawnarcblade,Spawn arc blade,ui.debug,CB,"Adds an arc blade near the camera"
-ui.debug.spawnpistol,Spawn sidearm,ui.debug,RC,"Adds a sidearm near the camera"
+ui.debug.spawnpistol,Spawn pistol,ui.debug,RC,"Adds a pistol near the camera"
 ui.debug.spawnrat,Spawn duct rat,ui.debug,AN,"Adds a duct rat near the camera"
 ui.debug.spawnbandits,Spawn 3 bandits,ui.debug,CB,"Adds three bandits near the camera, each on its own tile"
-ui.debug.spawngunman,Spawn pistol bandit,ui.debug,RC,"Adds a hostile bandit near the camera, holding a sidearm. It shoots whoever it can see"
+ui.debug.spawngunman,Spawn pistol bandit,ui.debug,RC,"Adds a hostile bandit near the camera, holding a pistol. It shoots whoever it can see"
 ui.debug.armcolonists,Arm every colonist,ui.debug,CB,"Every colonist standing with nothing in hand takes a random melee weapon"
 ui.debug.jumpsfail,Jumps always fail,ui.debug,JP,"Every jump over a stream falls short into the water, so a failed jump can be watched"
 ui.debug.group.colonists,Colonists,ui.debug,CB,"The Spawn tab heading over the colonist rows"

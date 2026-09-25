@@ -177,36 +177,35 @@ namespace Odyssey.Tests.Sim
         // ---- the landing ------------------------------------------------------------------------
 
         /// <summary>
-        /// Real flight (the owner's answer 5): a shot aimed true at a target that stepped off the line
-        /// while it flew is a miss where the bullet went down — and the target that walked into it is
-        /// hit. The two together, so neither passes by accident.
+        /// A shot aimed true lands on its target wherever it stands at the impact (owner, 2026-09-25:
+        /// "make sure shots that hit actually connect with the target directly") — a step off the line
+        /// in the open does not save it. Cover does: the same step behind a wall and the wall takes
+        /// it. The two together, so neither passes by accident. (The first rule missed a target that
+        /// stepped off the line, and on the owner's first play most shots at walking targets missed.)
         /// </summary>
         [Test]
-        public void ATargetThatSteppedOffTheLineIsMissedAndOneThatSteppedOnIsHit()
+        public void AHitFollowsItsTargetAndOnlyCoverSavesIt()
         {
             var colony = Range(out Pawn shooter, out Pawn target, out _, new FixedShot());
             Stand(colony, shooter, Near(colony, 0, 0));
             Stand(colony, target, Near(colony, 10, 0));
-            var tape = new Tape();
             Projectiles.Entry bullet = Fire(colony, shooter, target);
-            int end = bullet.EndCell;
-            Stand(colony, target, Near(colony, 10, 4));
+            Stand(colony, target, Near(colony, 10, 2));
             int hp = target.HpMilli;
             TickTo(colony, bullet.ImpactTick);
-            tape.Read(colony);
-            Assert.That(target.HpMilli, Is.EqualTo(hp), "stepped off, so missed");
-            Assert.That(tape.Of(CombatEventKind.Miss).Exists(e => e.Cell == Size.FromIndex(end)), Is.True,
-                "reported where it went down, for the dust");
+            Assert.That(target.HpMilli, Is.EqualTo(hp - 6_000), "stepped off the line in the open, and still hit");
 
-            Stand(colony, target, Near(colony, 10, 0));
+            // Behind a wall: the wall takes it.
+            int cover = Near(colony, 9, 4);
+            Assert.That(colony.Construction.Place(Size.FromIndex(cover), BuildingHandle.Wall, StuffHandle.Stone, 0), Is.EqualTo(IntentRejection.None));
+            Assert.That(colony.Construction.Raise(colony.Pawns, cover), Is.True);
+            Stand(colony, target, Near(colony, 10, 2));
             bullet = Fire(colony, shooter, target);
-            Stand(colony, target, Near(colony, 5, 0));
-            var line = new SightLine();
-            LineOfSight.Walk(colony.Pawns, bullet.StartCell, bullet.EndCell, line);
-            Assert.That(line.Cells.Contains(target.Cell), Is.True, "the control: she stepped on to the line");
+            Stand(colony, target, Near(colony, 10, 5));
+            Assert.That(LineOfSight.Clear(colony.Pawns, shooter.Cell, target.Cell), Is.False, "the control: now behind the wall");
             hp = target.HpMilli;
             TickTo(colony, bullet.ImpactTick);
-            Assert.That(target.HpMilli, Is.EqualTo(hp - 6_000), "walked into it, so hit");
+            Assert.That(target.HpMilli, Is.EqualTo(hp), "behind cover, the wall took it");
         }
 
         /// <summary>A shot that missed never takes its own target on the way past: that is the near miss.</summary>

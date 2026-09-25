@@ -28,24 +28,25 @@ namespace Odyssey.Tests.Sim
         public void ThePerCellCurveIsTheDesignsThreePoints()
         {
             CombatDef combat = Content.Combat;
-            Assert.That(combat.ShootingPerCellPerMille(0), Is.EqualTo(747));
-            Assert.That(combat.ShootingPerCellPerMille(10), Is.EqualTo(903));
-            Assert.That(combat.ShootingPerCellPerMille(20), Is.EqualTo(951));
-            Assert.That(combat.ShootingPerCellPerMille(5), Is.EqualTo(747 + (903 - 747) * 5 / 10), "linear between");
-            Assert.That(combat.ShootingPerCellPerMille(25), Is.EqualTo(951), "flat past the end");
+            // Raised on the owner's first play (2026-09-25): "keep it more accurate".
+            Assert.That(combat.ShootingPerCellPerMille(0), Is.EqualTo(876));
+            Assert.That(combat.ShootingPerCellPerMille(10), Is.EqualTo(943));
+            Assert.That(combat.ShootingPerCellPerMille(20), Is.EqualTo(983));
+            Assert.That(combat.ShootingPerCellPerMille(5), Is.EqualTo(876 + (943 - 876) * 5 / 10), "linear between");
+            Assert.That(combat.ShootingPerCellPerMille(25), Is.EqualTo(983), "flat past the end");
         }
 
         [Test]
         public void ThePistolsAccuracyFallsAwayWithDistanceAndIsFlatPastTheEnds()
         {
             RangedDef pistol = Content.Items[ItemIndex.Pistol].weapon!.ranged!;
-            Assert.That(pistol.AccuracyPerMille(0), Is.EqualTo(800));
-            Assert.That(pistol.AccuracyPerMille(3_000), Is.EqualTo(800));
-            Assert.That(pistol.AccuracyPerMille(7_500), Is.EqualTo(750), "half way from 3 m to 12 m");
-            Assert.That(pistol.AccuracyPerMille(12_000), Is.EqualTo(700));
-            Assert.That(pistol.AccuracyPerMille(25_000), Is.EqualTo(400));
-            Assert.That(pistol.AccuracyPerMille(40_000), Is.EqualTo(300));
-            Assert.That(pistol.AccuracyPerMille(90_000), Is.EqualTo(300));
+            Assert.That(pistol.AccuracyPerMille(0), Is.EqualTo(950));
+            Assert.That(pistol.AccuracyPerMille(3_000), Is.EqualTo(950));
+            Assert.That(pistol.AccuracyPerMille(7_500), Is.EqualTo(900), "half way from 3 m to 12 m");
+            Assert.That(pistol.AccuracyPerMille(12_000), Is.EqualTo(850));
+            Assert.That(pistol.AccuracyPerMille(25_000), Is.EqualTo(650));
+            Assert.That(pistol.AccuracyPerMille(40_000), Is.EqualTo(450));
+            Assert.That(pistol.AccuracyPerMille(90_000), Is.EqualTo(450));
             Assert.That(pistol.rangeMm, Is.EqualTo(26_000));
             Assert.That(pistol.speedMmPerTick, Is.EqualTo(1_000));
         }
@@ -63,18 +64,18 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// The design's table (§2a), to within a percentage point: the shape it promises — a close
-        /// weapon at any skill, the skill buying the middle distance — is the number, not a claim.
+        /// The table (design 47 §2a, as raised on the owner's first play), to within a percentage
+        /// point: a pistol is good close at any skill, and the skill buys the middle distance.
         /// </summary>
-        [TestCase(0, 1, 600)]
-        [TestCase(10, 1, 720)]
-        [TestCase(20, 1, 760)]
-        [TestCase(0, 5, 160)]
-        [TestCase(10, 5, 410)]
-        [TestCase(20, 5, 540)]
-        [TestCase(0, 10, 20)]
-        [TestCase(10, 10, 140)]
-        [TestCase(20, 10, 240)]
+        [TestCase(0, 1, 832)]
+        [TestCase(10, 1, 895)]
+        [TestCase(20, 1, 933)]
+        [TestCase(0, 5, 433)]
+        [TestCase(10, 5, 627)]
+        [TestCase(20, 5, 772)]
+        [TestCase(0, 10, 171)]
+        [TestCase(10, 10, 359)]
+        [TestCase(20, 10, 544)]
         public void TheHitChanceIsTheDesignsTable(int level, int cells, int expected)
         {
             var colony = Board();
@@ -90,7 +91,7 @@ namespace Odyssey.Tests.Sim
         {
             var colony = Board();
             Pawn shooter = colony.Pawns.Pawns.All[0];
-            int chance = new AtLevel { Level = 0 }.HitChancePerMille(shooter, 40_000,
+            int chance = new AtLevel { Level = 0 }.HitChancePerMille(shooter, 100_000,
                 Weapon(colony.Pawns, ItemIndex.Pistol), colony.Pawns);
             Assert.That(chance, Is.EqualTo(colony.Pawns.Content.Combat.hitFloorPerMille));
         }
@@ -132,30 +133,59 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// A miss's cell is never the target's, never further than the radius, always in the target's
-        /// own layer, always on the board — at a corner of the board too, where the box is cut short.
+        /// A miss carries on straight past its target (owner, 2026-09-25: misses went "way off" under
+        /// the old box round the target): never the target's cell, one to <c>reach</c> cells further
+        /// along the line of fire and no more, in the target's layer on open ground, and on the
+        /// board. Along each axis and diagonally.
         /// </summary>
         [Test]
-        public void TheScatterCellIsNearTheTargetInItsLayerAndNeverOnIt()
+        public void AMissCarriesOnPastItsTargetAlongTheLine()
         {
-            var size = new GridSize(20, 20, 4);
-            foreach (int centre in new[] { size.Index(10, 10, 2), size.Index(0, 0, 1), size.Index(19, 0, 3) })
+            var colony = Board();
+            PawnContext ctx = colony.Pawns;
+            int from = Near(colony, 0, 0);
+            foreach ((int dx, int dz) in new[] { (5, 0), (0, 5), (-5, 0), (4, 4), (5, 2) })
             {
-                CellRef c = size.FromIndex(centre);
+                int target = Near(colony, dx, dz);
+                CellRef t = Size.FromIndex(target), s = Size.FromIndex(from);
                 var seen = new HashSet<int>();
-                for (int tick = 0; tick < 500; tick++)
+                for (int tick = 0; tick < 200; tick++)
                 {
                     var roll = DeterministicRandom.ForTick(7u, tick, PawnPurpose.RangedScatter);
-                    int cell = RangedRules.ScatterCell(size, centre, 3, roll);
-                    CellRef s = size.FromIndex(cell);
-                    Assert.That(cell, Is.Not.EqualTo(centre));
-                    Assert.That(s.Y, Is.EqualTo(c.Y), "in the target's own layer");
-                    Assert.That(System.Math.Abs(s.X - c.X) <= 3 && System.Math.Abs(s.Z - c.Z) <= 3, Is.True);
+                    int cell = RangedRules.MissCell(ctx, from, target, 3, roll);
+                    CellRef m = Size.FromIndex(cell);
+                    Assert.That(cell, Is.Not.EqualTo(target), $"({dx},{dz}): a miss ended on its target");
+                    Assert.That(m.Y, Is.EqualTo(t.Y), $"({dx},{dz}): not in the target's layer on flat ground");
+                    int beyond = System.Math.Max(System.Math.Abs(m.X - t.X), System.Math.Abs(m.Z - t.Z));
+                    Assert.That(beyond, Is.InRange(1, 3), $"({dx},{dz}): {beyond} cells past the target");
+                    // Further from the shooter than the target: it carried on, not off to one side.
+                    int toTarget = (t.X - s.X) * (t.X - s.X) + (t.Z - s.Z) * (t.Z - s.Z);
+                    int toMiss = (m.X - s.X) * (m.X - s.X) + (m.Z - s.Z) * (m.Z - s.Z);
+                    Assert.That(toMiss, Is.GreaterThan(toTarget), $"({dx},{dz}): the miss fell short or wide");
                     seen.Add(cell);
                 }
-                int boxX = System.Math.Min(c.X + 3, 19) - System.Math.Max(c.X - 3, 0) + 1;
-                int boxZ = System.Math.Min(c.Z + 3, 19) - System.Math.Max(c.Z - 3, 0) + 1;
-                Assert.That(seen.Count, Is.EqualTo(boxX * boxZ - 1), "every cell of the box, and only those, is drawn");
+                Assert.That(seen.Count, Is.EqualTo(3), $"({dx},{dz}): every reach from 1 to 3 was drawn");
+            }
+            // A good shot's miss lands just behind: reach one.
+            var once = DeterministicRandom.ForTick(7u, 0, PawnPurpose.RangedScatter);
+            int close = RangedRules.MissCell(ctx, from, Near(colony, 5, 0), 1, once);
+            Assert.That(Size.FromIndex(close).X - Size.FromIndex(Near(colony, 5, 0)).X, Is.EqualTo(1));
+        }
+
+        /// <summary>A miss towards a wall ends at the wall: its streak goes down where the bullet does.</summary>
+        [Test]
+        public void AMissEndsWhereItsLineFirstStops()
+        {
+            var colony = Board();
+            PawnContext ctx = colony.Pawns;
+            int from = Near(colony, 0, 0), target = Near(colony, 5, 0), wall = Near(colony, 6, 0);
+            Assert.That(colony.Construction.Place(Size.FromIndex(wall), Odyssey.Sim.Contracts.BuildingHandle.Wall,
+                Odyssey.Sim.Contracts.StuffHandle.Stone, 0), Is.EqualTo(IntentRejection.None));
+            Assert.That(colony.Construction.Raise(ctx, wall), Is.True);
+            for (int tick = 0; tick < 50; tick++)
+            {
+                int cell = RangedRules.MissCell(ctx, from, target, 3, DeterministicRandom.ForTick(7u, tick, PawnPurpose.RangedScatter));
+                Assert.That(cell, Is.EqualTo(wall), "it carried on through the wall");
             }
         }
 

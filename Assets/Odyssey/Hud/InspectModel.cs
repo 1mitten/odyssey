@@ -537,7 +537,10 @@ namespace Odyssey.Hud
             bool pooled = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpMaxKey, out int max) && max > 0;
             if (!pooled) max = 0;
             int hp = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpKey, out int published) ? published : max;
-            int weapon = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponKey, out int held) ? held : -1;
+            int weaponDef = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponKey, out int held) ? held : -1;
+            int tier = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponQualityKey, out int q) ? q : 0;
+            // The tier rides the cache key: a better weapon of the same kind is a different line.
+            int weapon = weaponDef < 0 ? -1 : weaponDef * 16 + tier;
             int condition = pawn.IsDowned ? 3 : pawn.IsStunned ? 2 : hp < max ? 1 : 0;
 
             if (hp == _healthHp && max == _healthMax && weapon == _healthWeapon && condition == _healthCondition)
@@ -567,7 +570,7 @@ namespace Odyssey.Hud
             HealthRows.Add(new InspectRow
             {
                 Name = Registry.Label(WeaponKey),
-                Value = weapon >= 0 ? ItemLabels.Label(weapon) : Registry.Label("ui.combat.barehands"),
+                Value = weaponDef >= 0 ? ItemLabels.Label(weaponDef, tier) : Registry.Label("ui.combat.barehands"),
             });
         }
 
@@ -726,7 +729,7 @@ namespace Odyssey.Hud
                     // headline is "Wood × 27" and the line below says where it is lying.
                     Title = thing.Stack > 1
                         ? ItemLabels.Label(thing.DefIndex) + " × " + thing.Stack
-                        : ItemLabels.Label(thing.DefIndex);
+                        : ItemLabels.Label(thing.DefIndex, thing.Quality);
                     Subtitle = "item";
                     Stack = thing.Stack;
                     ItemIconKey = ItemLabels.IconKey(thing.DefIndex);

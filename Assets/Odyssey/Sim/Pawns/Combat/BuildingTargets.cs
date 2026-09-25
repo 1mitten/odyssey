@@ -357,7 +357,7 @@ namespace Odyssey.Sim.Pawns
         public static SwingOutcome Resolve(Pawn attacker, in Armament armament, in BuildingTarget target, PawnContext ctx, int tick)
         {
             var roll = DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.MeleeDamage ^ (uint)attacker.Id.Value);
-            int damage = MeleeRules.DamageMilli(armament.Attack, ctx, roll);
+            int damage = WeaponQuality.Damage(MeleeRules.DamageMilli(armament.Attack, ctx, roll), armament);
             long scaled = (long)damage * DamageFactorPerMille(armament.Attack.damageKind, target.Stuff) / 1_000;
             return new SwingOutcome(CombatEventKind.Hit, scaled > int.MaxValue ? int.MaxValue : (int)scaled);
         }

@@ -257,7 +257,9 @@ namespace Odyssey.Tests.Sim
         // and Item_Pistol appended; AttackDef gained a ranged block, CombatDef the shooting numbers
         // (the per-cell curve, the floor, cover, the dead zone, the scatter, the scan cadence) and
         // SpeciesDef interceptPerMille (person 400, hog 500, rat 40).
-        const ulong ContentFingerprint = 17944873502910780801UL;
+        // 2026-09-25, design 47 on the owner's first play ("keep it more accurate"): shootingPerCell
+        // 876/943/983 and the pistol's bands 950/850/650/450; the pistol's label "pistol" (was sidearm).
+        const ulong ContentFingerprint = 6713843915009952454UL;
 
 
         [Test]

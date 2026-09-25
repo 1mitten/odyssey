@@ -59,8 +59,9 @@ namespace Odyssey.Sim.Pawns
         {
             uint who = (uint)attacker.Id.Value;
 
+            // The weapon's quality moves the hit chance and the damage (design 47 §11).
             var hit = DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.MeleeHit ^ who);
-            if (hit.NextInt(1_000) >= HitChancePerMille(attacker, ctx))
+            if (hit.NextInt(1_000) >= WeaponQuality.Accuracy(HitChancePerMille(attacker, ctx), armament))
                 return new SwingOutcome(CombatEventKind.Miss);
 
             int dodge = DodgeChancePerMille(defender, ctx);
@@ -69,7 +70,8 @@ namespace Odyssey.Sim.Pawns
                 return new SwingOutcome(CombatEventKind.Dodge);
 
             AttackDef attack = armament.Attack;
-            int damage = DamageMilli(attack, ctx, DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.MeleeDamage ^ who));
+            int damage = WeaponQuality.Damage(
+                DamageMilli(attack, ctx, DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.MeleeDamage ^ who)), armament);
 
             int stun = 0;
             if (attack.damageKind == DamageKind.Blunt && attack.stunPerMille > 0 && attack.stunTicks > 0)

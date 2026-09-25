@@ -12938,3 +12938,33 @@ their own worktrees while R0–R4 and P1/P2 were built here. Both merged without
 five places where §4c met the code differently, recorded in its §4c-ter. The most useful:
 `AudioImporter.normalize` has no scripting API, so the gunshot's normalise-off is written through
 the importer's serialised form.
+
+## 2026-09-25 — Guns after the first play: more accurate, hits that land, weapon quality
+
+The owner played the pistol: *"really decent and everything seemed to work well"*, but it missed a
+lot from a height, some shots went "way off", and hits did not connect with the target. All three
+had a cause in the code, and design 47 §10a has the table.
+
+**The misses from a height were arithmetic, not geometry.** The reference's curve, raised to the
+distance in cells, is harsh: a level-0 colonist hit 16 per cent at 12.5 m and 2 at 25. Fire at will
+engages anything in range, and a height gives clear lines to far targets, so most shots were long
+shots. The curve is raised; skill still buys the reach.
+
+**The shots going down were the old scatter.** It drew a miss's cell from a box round the target in
+the target's layer, which from a terrace often meant a cell inside the terrace. A miss now carries
+on past its target along its own line and ends where that line first stops.
+
+**Hits not connecting were the "real flight" rule working as designed.** A shot rolled to hit was
+walked to the cell the target stood in when it was fired, so a walking target was missed by most of
+them. The owner's words overrule the design: a shot aimed true now lands on its target wherever it
+stands, and only cover it stepped behind or a body that stepped in front can take it. The streak
+follows the body. Worth recording for the next time "realism" is proposed: the owner judged by what
+they saw, and a rule the player reads as a bug is a bug.
+
+**Weapon quality** was asked for in the same message. It reuses the beds' tiers and roll, with two
+new factors on each tier (damage and hit chance) for every weapon. It is rolled when a weapon is
+made, from a stand-in maker's skill until crafting exists: a find at 6, a bandit's gear at 2. It
+is saved under the format-10 bump this line already makes, and hashed only when set, so no golden
+moved (design 47 §11).
+
+*Sidearm* is *Pistol* now.

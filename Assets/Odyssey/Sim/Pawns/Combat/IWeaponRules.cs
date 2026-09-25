@@ -15,10 +15,17 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The item def index of the weapon, or -1 for bare hands or a natural attack.</summary>
         public readonly int ItemDef;
 
-        public Armament(AttackDef attack, int itemDef = -1)
+        /// <summary>
+        /// The weapon's quality, a <c>QualityHandle</c> value, or 0 for none (design 47 §11): what
+        /// <see cref="WeaponQuality"/> scales its damage and hit chance by.
+        /// </summary>
+        public readonly byte Quality;
+
+        public Armament(AttackDef attack, int itemDef = -1, byte quality = 0)
         {
             Attack = attack;
             ItemDef = itemDef;
+            Quality = quality;
         }
 
         public bool Armed => ItemDef >= 0;

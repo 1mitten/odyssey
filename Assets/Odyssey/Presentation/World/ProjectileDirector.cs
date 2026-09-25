@@ -188,6 +188,27 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public static bool HoldsEnd(in PawnView pawn, CellRef end) => pawn.Cell == end || pawn.NextCell == end;
 
+        /// <summary>How far to one side of the line a miss's streak passes its target, in metres.</summary>
+        public const float MissAside = 0.6f;
+
+        /// <summary>How high off the ground a miss's streak ends: it goes into the ground, not the air.</summary>
+        public const float MissHeight = 0.25f;
+
+        /// <summary>
+        /// Where a miss's streak ends: low in its end cell, the ground the bullet went down in, pushed
+        /// <see cref="MissAside"/> to <paramref name="side"/> of the line from <paramref name="from"/> — so
+        /// on its way it passes beside the target's body rather than through it, which is the near miss
+        /// and not a hit that failed to land (design 47 §4c, amended on the owner's first play).
+        /// </summary>
+        public static Vector3 MissPoint(CellRef end, Vector3 from, float side)
+        {
+            Vector3 ground = GroundRelief.Lift(CellMetrics.FloorCentre(end)) + Vector3.up * MissHeight;
+            Vector3 along = Vector3.ProjectOnPlane(ground - from, Vector3.up);
+            if (along.sqrMagnitude < 1e-6f) return ground;
+            Vector3 aside = Vector3.Cross(Vector3.up, along.normalized);
+            return ground + aside * (MissAside * side);
+        }
+
         /// <summary>A cell's centre at chest height, on the relief.</summary>
         public static Vector3 ChestOf(CellRef cell) =>
             GroundRelief.Lift(CellMetrics.FloorCentre(cell)) + Vector3.up * ChestHeight;
@@ -486,15 +507,23 @@ namespace Odyssey.Presentation.World
                 s.Seen = true;
                 s.Fading = false;
 
-                // Re-read every frame, so the streak arrives at the body wherever it has walked.
-                bool holds = false, hasChest = false;
-                Vector3 chest = default;
-                if (bullet.Target.IsValid && snapshot.TryGetPawn(bullet.Target, out PawnView target))
+                // Re-read every frame, so the streak arrives at the body wherever it has walked. A shot
+                // aimed true lands on its target wherever it stands (design 47 §2c, amended on the
+                // owner's first play: "make sure shots that hit actually connect with the target
+                // directly"), so its streak follows the body all the way; a miss passes beside it and
+                // goes into the ground where the bullet went down.
+                PawnView target = default;
+                bool hasTarget = bullet.Target.IsValid && snapshot.TryGetPawn(bullet.Target, out target);
+                if (bullet.Aimed && hasTarget)
                 {
-                    holds = HoldsEnd(target, bullet.End);
-                    hasChest = holds && figures != null && figures.TryGetChest(bullet.Target, out chest);
+                    Vector3 chest = default;
+                    bool hasChest = figures != null && figures.TryGetChest(bullet.Target, out chest);
+                    s.To = hasChest ? chest : ChestOf(target.Cell);
                 }
-                s.To = EndPoint(bullet.End, holds, hasChest, chest);
+                else if (hasTarget)
+                    s.To = MissPoint(bullet.End, s.From, (bullet.FireTick & 1) == 0 ? 1f : -1f);
+                else
+                    s.To = ChestOf(bullet.End);
                 _streaks[index] = s;
             }
 

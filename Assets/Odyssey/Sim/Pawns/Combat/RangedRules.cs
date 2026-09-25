@@ -18,7 +18,11 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public readonly int DamageMilli;
 
-        /// <summary>The cell the bullet ends in if nothing takes it first.</summary>
+        /// <summary>
+        /// The cell the bullet ends in if nothing takes it first: the target's on a shot aimed true
+        /// (which follows the target at the impact), and on a miss the cell the line past the target
+        /// first stops in.
+        /// </summary>
         public readonly int EndCell;
 
         /// <summary>Ticks in the air: <c>max(1, ceil(distance / speed))</c> from the shooter to <see cref="EndCell"/>.</summary>
@@ -75,10 +79,13 @@ namespace Odyssey.Sim.Pawns
     /// of a cell interpolated linearly, so a shot up a layer — longer, because a layer is 3 m —
     /// is harder than one along it by exactly its extra length, and by nothing else.</para>
     ///
-    /// <para><b>The scatter</b> is a cell drawn uniformly from the box of radius
-    /// <c>min(max, 1 + (1000 − hit‰) × k / 1000)</c> round the target's cell, the centre excluded,
-    /// in the target's own layer and on the board: a good shot's miss passes close, a hopeless
-    /// one's goes wide. A sphere was rejected — it puts miss cells in the air or under a floor.</para>
+    /// <para><b>A miss carries on past its target</b> along the line of fire, by
+    /// <c>min(max, 1 + (1000 − hit‰) × k / 1000)</c> cells, and ends where that line first stops —
+    /// a wall, a slab, the ground (<see cref="LineOfSight.StopCell"/>). A good shot's miss lands just
+    /// behind the target; a hopeless one's a little further. <b>Changed on the owner's first play
+    /// (2026-09-25)</b>: the first rule drew a cell from a box round the target in its layer, which
+    /// from a height put misses inside the terrace or off to one side, "not even in a place a gun
+    /// would fire to".</para>
     /// </summary>
     public class RangedRules : IRangedRules
     {
@@ -92,6 +99,8 @@ namespace Odyssey.Sim.Pawns
             RangedDef? ranged = armament.Attack.ranged;
             if (ranged != null) chance = chance * ranged.AccuracyPerMille(distanceMm) / 1_000;
             chance = chance * combat.coverPerMille / 1_000;
+            // The gun's quality (design 47 §11).
+            chance = WeaponQuality.Accuracy((int)chance, armament);
             int floor = combat.hitFloorPerMille;
             return chance < floor ? floor : (int)chance;
         }
@@ -123,10 +132,10 @@ namespace Odyssey.Sim.Pawns
             var hit = DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.RangedHit ^ who);
             bool aimed = hit.NextInt(1_000) < hitPerMille;
 
-            int damage = MeleeRules.DamageMilli(armament.Attack, ctx,
-                DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.RangedDamage ^ who));
+            int damage = WeaponQuality.Damage(MeleeRules.DamageMilli(armament.Attack, ctx,
+                DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.RangedDamage ^ who)), armament);
 
-            int end = aimed ? target.Cell : ScatterCell(size, target.Cell, ScatterRadius(hitPerMille, ctx),
+            int end = aimed ? target.Cell : MissCell(ctx, shooter.Cell, target.Cell, ScatterRadius(hitPerMille, ctx),
                 DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.RangedScatter ^ who));
 
             return new ShotOutcome(aimed, hitPerMille, damage, end,
@@ -145,29 +154,38 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// A cell drawn uniformly from the <c>(2r + 1)²</c> box round <paramref name="centre"/>, the
-        /// centre excluded, in its own layer, and on the board — the cells off the edge are not
-        /// drawn at all, rather than clamped onto the edge, so no edge cell is likelier than another.
+        /// Where a miss ends: the line from <paramref name="from"/> through <paramref name="target"/>
+        /// carried on by one to <paramref name="reach"/> cells (drawn on <paramref name="roll"/>), on the
+        /// board, then cut where it first stops (<see cref="LineOfSight.StopCell"/>). Never the target's
+        /// own cell. The extension keeps the shot's own direction in the ground plane and the target's
+        /// layer, so a shot fired down off a terrace carries on at the target's height and comes down
+        /// behind it.
         /// </summary>
-        public static int ScatterCell(GridSize size, int centre, int radius, DeterministicRandom roll)
+        public static int MissCell(PawnContext ctx, int from, int target, int reach, DeterministicRandom roll)
         {
-            CellRef c = size.FromIndex(centre);
-            int x0 = c.X - radius < 0 ? 0 : c.X - radius;
-            int x1 = c.X + radius >= size.SizeX ? size.SizeX - 1 : c.X + radius;
-            int z0 = c.Z - radius < 0 ? 0 : c.Z - radius;
-            int z1 = c.Z + radius >= size.SizeZ ? size.SizeZ - 1 : c.Z + radius;
-            int count = (x1 - x0 + 1) * (z1 - z0 + 1) - 1;
-            if (count <= 0) return centre;
-
-            int pick = roll.NextInt(count);
-            for (int z = z0; z <= z1; z++)
-            for (int x = x0; x <= x1; x++)
+            GridSize size = ctx.Size;
+            CellRef s = size.FromIndex(from), t = size.FromIndex(target);
+            int dx = t.X - s.X, dz = t.Z - s.Z;
+            int length = System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz));
+            int along = 1 + (reach > 1 ? roll.NextInt(reach) : 0);
+            int x = t.X, z = t.Z;
+            if (length > 0)
             {
-                if (x == c.X && z == c.Z) continue;
-                if (pick-- == 0) return size.Index(x, z, c.Y);
+                // Rounded to the nearest cell, half away from nought, in integers: the continuation of
+                // the line, not of its dominant axis.
+                x = t.X + RoundDiv(dx * along, length);
+                z = t.Z + RoundDiv(dz * along, length);
             }
-            return centre;
+            else x = t.X + along;
+            x = x < 0 ? 0 : x >= size.SizeX ? size.SizeX - 1 : x;
+            z = z < 0 ? 0 : z >= size.SizeZ ? size.SizeZ - 1 : z;
+            int end = size.Index(x, z, t.Y);
+            if (end == target) return target == from ? target : LineOfSight.StopCell(ctx, from, target);
+            return LineOfSight.StopCell(ctx, from, end);
         }
+
+        /// <summary><paramref name="n"/> / <paramref name="d"/> rounded to the nearest, half away from nought. <paramref name="d"/> is positive.</summary>
+        static int RoundDiv(int n, int d) => n >= 0 ? (2 * n + d) / (2 * d) : -((-2 * n + d) / (2 * d));
 
         /// <summary>Ticks in the air over <paramref name="distanceMm"/>: <c>ceil(distance / speed)</c>, never under one.</summary>
         public static int FlightTicks(int distanceMm, in Armament armament)

@@ -171,17 +171,19 @@
   </ItemDef>
 
   <!--
-    The pistol (design 47 section 3b), labelled Sidearm on every screen (ui.item.pistol). For a
+    The pistol (design 47 section 3b), labelled Pistol on every screen (ui.item.pistol). For a
     gun windupTicks is the AIM and cooldownTicks the cooldown, counted from the aim's start.
     Damage 10 and the one-second cooldown are the reference autopistol's. The aim is INVENTED:
     30 ticks against the reference's 18, raised so the aim is seen. Experience is a shot's,
     hit or miss, into Shooting. The range is the reference's 25.9 cells kept in metres; the
     bullet's 1,000 mm a tick (60 m/s) is INVENTED - slow enough to see and to step out of.
-    The accuracy bands are the reference autopistol's touch / short / medium / long, in metres.
+    The accuracy bands are at the reference autopistol's touch / short / medium / long distances,
+    in metres, RAISED 2026-09-25 with the per-cell curve on the owner's first play: 95 / 85 / 65 /
+    45 per cent where the reference has 80 / 70 / 40 / 30.
   -->
   <ItemDef>
     <defName>Item_Pistol</defName>
-    <label>sidearm</label>
+    <label>pistol</label>
     <category>Weapons</category>
     <weapon>
       <damage>10</damage>
@@ -194,10 +196,10 @@
         <rangeMm>26000</rangeMm>
         <speedMmPerTick>1000</speedMmPerTick>
         <accuracyByDistance>
-          <li><mm>3000</mm><perMille>800</perMille></li>
-          <li><mm>12000</mm><perMille>700</perMille></li>
-          <li><mm>25000</mm><perMille>400</perMille></li>
-          <li><mm>40000</mm><perMille>300</perMille></li>
+          <li><mm>3000</mm><perMille>950</perMille></li>
+          <li><mm>12000</mm><perMille>850</perMille></li>
+          <li><mm>25000</mm><perMille>650</perMille></li>
+          <li><mm>40000</mm><perMille>450</perMille></li>
         </accuracyByDistance>
       </ranged>
     </weapon>

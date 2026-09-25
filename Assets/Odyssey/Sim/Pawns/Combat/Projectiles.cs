@@ -129,7 +129,8 @@ namespace Odyssey.Sim.Pawns
             {
                 Entry e = _inFlight[i];
                 writer.AddProjectile(new ProjectileView(new PawnId(e.Shooter), new PawnId(e.Target),
-                    _size.FromIndex(e.StartCell), _size.FromIndex(e.EndCell), e.FireTick, e.ImpactTick, e.Weapon));
+                    _size.FromIndex(e.StartCell), _size.FromIndex(e.EndCell), e.FireTick, e.ImpactTick, e.Weapon,
+                    e.Aimed));
             }
         }
 

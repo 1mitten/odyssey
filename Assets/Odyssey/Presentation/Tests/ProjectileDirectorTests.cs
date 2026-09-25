@@ -19,6 +19,33 @@ namespace Odyssey.Tests.Presentation
     /// </summary>
     public class ProjectileDirectorTests
     {
+        /// <summary>
+        /// A miss's streak passes beside its target and goes into the ground behind it (design 47 §4c,
+        /// amended on the owner's first play): at the target the line stands off to one side by a good
+        /// part of <see cref="ProjectileDirector.MissAside"/>, the two sides are mirror images, and the
+        /// end is low — never through the body, never off into the air.
+        /// </summary>
+        [Test]
+        public void AMissPassesBesideItsTargetIntoTheGround()
+        {
+            var shooterCell = new CellRef(2, 5, 3);
+            var targetCell = new CellRef(8, 5, 3);
+            var endCell = new CellRef(10, 5, 3);
+            Vector3 from = ProjectileDirector.ChestOf(shooterCell);
+            Vector3 body = ProjectileDirector.ChestOf(targetCell);
+            foreach (float side in new[] { 1f, -1f })
+            {
+                Vector3 to = ProjectileDirector.MissPoint(endCell, from, side);
+                Assert.That(to.y - CellMetrics.FloorCentre(endCell).y, Is.LessThan(0.6f), "it ends in the air");
+                // Where the line passes the target's depth along the shot.
+                float t = (body.x - from.x) / (to.x - from.x);
+                Vector3 passing = Vector3.Lerp(from, to, t);
+                float aside = passing.z - body.z;
+                Assert.That(Mathf.Abs(aside), Is.GreaterThan(0.3f), $"side {side}: passed through the body");
+                Assert.That(Mathf.Sign(aside), Is.EqualTo(Mathf.Sign(to.z - body.z)), "the two sides are the two sides");
+            }
+        }
+
         const int Layers = 6;
 
         [SetUp]

@@ -31,7 +31,7 @@ namespace Odyssey.Hud
             "ui.res.carrots",
             // The four melee weapons (design 33 §1, C3), in ItemHandle order 7 to 10.
             "ui.item.bat", "ui.item.crowbar", "ui.item.machete", "ui.item.arcblade",
-            // The pistol (design 47), ItemHandle 11 — "Sidearm" on every screen.
+            // The pistol (design 47), ItemHandle 11.
             "ui.item.pistol",
         };
 
@@ -39,5 +39,16 @@ namespace Odyssey.Hud
             def >= 0 && def < Keys.Length ? Keys[def] : "ui.res.scrap";
 
         public static string Label(int def) => Registry.Label(IconKey(def));
+
+        /// <summary>
+        /// A thing's name with how well it was made after it — "Pistol (Decent)" — or the bare name for
+        /// a thing with no tier (design 47 §11). Both words are the registry's; only the brackets are
+        /// the layout's.
+        /// </summary>
+        public static string Label(int def, int quality)
+        {
+            string key = QualityLabels.Key(quality);
+            return key.Length == 0 ? Label(def) : Label(def) + " (" + Registry.Label(key) + ")";
+        }
     }
 }

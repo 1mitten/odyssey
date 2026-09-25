@@ -28,7 +28,7 @@ namespace Odyssey.Tests.Sim
             WeaponHand.TakeUp(pawn, colony.Pawns.Items.Get(id)!, colony.Pawns);
         }
 
-        /// <summary>A bandit at a cell, holding a sidearm or its own weapon, drafted colonists not needed.</summary>
+        /// <summary>A bandit at a cell, holding a pistol or its own weapon, drafted colonists not needed.</summary>
         static Pawn Bandit(ColonyWorld colony, int cell, int weapon = -1) =>
             colony.Pawns.Pawns.Spawn(cell, PawnKindIndex.Bandit, weapon);
 

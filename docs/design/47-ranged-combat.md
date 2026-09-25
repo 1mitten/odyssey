@@ -992,3 +992,58 @@ build. What the build did differently from the text above, each for a reason fou
 | §4b aim | spine, chest and upper chest at 0.3 / 0.4 / 0.3 | spine and chest at 0.45 / 0.55 (yaw), 0.4 / 0.6 (pitch) | the figure binds no upper-chest bone |
 | §4b recoil | 12 % of the pitch into the shoulders | 25 % of it into the chest, backwards | the chest is the bone the pose pass already moves; tune it first, as §4b says |
 | §5 driver test | an unreachable target in sight is accepted | **not yet tested**: needs a terrace fixture where a target stands out of reach but in sight | a pen of walls with a gap in it is reachable; the test was rewritten to what it could honestly check, and this case is owed |
+
+### 10a. The owner's first play, 2026-09-25
+
+*"it's really decent and everything seemed to work well - but seemed to miss a lot from just a
+height up. Also some of the shots were way off like the projectile went down or not even in a place
+a gun would fire to so keep it more accurate. Also make sure shots that hit actually connect with
+the target directly"* — and *"rename "sidearm" to "Pistol""*.
+
+| Report | Cause | Change |
+|---|---|---|
+| misses a lot from a height | a height gives clear lines to far targets, fire at will takes them, and the reference's curve left a level-0 colonist at 16 % at 12.5 m and 2 % at 25 m | **the curve raised**: per cell 876 / 943 / 983 (was 747 / 903 / 951), the pistol's bands 95 / 85 / 65 / 45 % (was 80 / 70 / 40 / 30). 1, 5 and 10 cells: level 0 83 / 43 / 17 %, level 10 90 / 63 / 36 %, level 20 93 / 77 / 54 %. Skill still buys the reach |
+| shots way off, going down | a miss drew a cell from a 7 × 7 box round the target in its layer — from a height, often inside the terrace or off to one side — and the tracer was drawn all the way there | **a miss carries on past its target** along the line of fire, one to three cells by how bad the shot was (`RangedRules.MissCell`), and **ends where that line first stops** (`LineOfSight.StopCell`). Its streak passes 0.6 m beside the body and goes into the ground there (`ProjectileDirector.MissPoint`) |
+| hits not connecting | a shot aimed true was walked to the cell the target stood in *when fired*; a walking target had usually stepped on, so the bullet missed and the tracer ended at the old cell | **a shot aimed true lands on its target wherever it stands at the impact** — cover it stepped behind, or a body that stepped in front, still takes it, and nothing else does. `ProjectileView.Aimed` is published and the streak follows the target's drawn chest the whole flight. This reverses §2c's "a target can step out of a long shot", at the owner's word |
+| "Sidearm" | — | **Pistol** on every screen (`ui.item.pistol`, the debug rows) |
+
+## 11. Weapon quality, 2026-09-25
+
+The owner, the same day: *"can you give the guns quality like you do with beds (and apply this to
+all weapons) depending on the spawn/who crafted them - make sure this is included"*.
+
+**The beds' system, not a second one.** The five tiers are `QualityHandle`'s — Poor, Normal, Decent,
+Uber, Epic — and the roll is `QualityContent.Roll`, which centres a tier on the maker's skill so a
+novice never makes Epic and a master never makes Poor. A tier's `QualityDef` gains two numbers:
+
+| Tier | Damage | Hit chance |
+|---|---|---|
+| Poor | ×0.90 | ×0.90 |
+| Normal | ×1.00 | ×1.00 |
+| Decent | ×1.10 | ×1.05 |
+| Uber | ×1.20 | ×1.10 |
+| Epic | ×1.35 | ×1.15 |
+
+The reference's shape, a tenth a step and more at the top. INVENTED values in `Quality.xml`,
+tunable there. **Every weapon** takes it: the hit chance of a swing (`MeleeRules`) and of a shot
+(`RangedRules`), and the damage of both, and of a blow at a building.
+
+**Who made it.** Nothing is crafted yet, so every weapon is a find, and the maker's skill stands in
+for how good a find is (`WeaponQuality`):
+
+| How it arrived | Maker's skill | Rolls mostly |
+|---|---|---|
+| the debug menu's grant, the Arm row | 6 (`FoundSkill`) | Normal, sometimes Poor or Decent |
+| a bandit's own gear, the pistol bandit's included | 2 (`BanditSkill`) | Poor, sometimes Normal |
+| crafted, the day there is a bench | the crafter's skill | as a bed is, by its builder |
+
+**Where it lives.** `ColonyItem.Quality`, rolled once when the item is made (on its own stream,
+`PawnPurpose.WeaponQuality`, salted by the thing's id) and kept for life. It is saved in the item
+record from format 10, the unshipped bump this line already makes, and **hashed only when set**, so
+no golden moved. It is published on `ThingView.Quality` and, for the held weapon, as
+`odyssey.pawn.weapon.quality`, and carried into a fight on `Armament.Quality`. A weapon with no tier
+(from an older save, or a path that never rolled) fights as Normal. **The interface names it**:
+*Pistol (Decent)* on the item's pane, the colonist's weapon row and the gear row.
+
+**Not built**: quality changing what a weapon looks like, and crafting. Deterioration and a
+quality floor for traders are the reference's and are not in any plan.

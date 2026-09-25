@@ -1661,5 +1661,11 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Whether a bystander on the line takes the bullet, salted by the cell as well as the shooter.</summary>
         public const uint RangedIntercept = 0xEFBE_4786;
+
+        /// <summary>
+        /// A weapon's quality when it is made (design 47 §11), salted by the thing's id. SHA-256's
+        /// nineteenth round constant.
+        /// </summary>
+        public const uint WeaponQuality = 0x0FC1_9DC6;
     }
 }

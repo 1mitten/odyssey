@@ -109,7 +109,7 @@ namespace Odyssey.Tests.Sim
 
         /// <summary>
         /// The debug gunman: <c>SpawnPawn</c> with <c>B</c> the pistol plus one makes a bandit — still a
-        /// hostile person, so still helmeted and vested — holding a sidearm; <c>B</c> nought deals from
+        /// hostile person, so still helmeted and vested — holding a pistol; <c>B</c> nought deals from
         /// the kind's own table, as it always did; <c>B</c> naming no weapon is refused.
         /// </summary>
         [Test]

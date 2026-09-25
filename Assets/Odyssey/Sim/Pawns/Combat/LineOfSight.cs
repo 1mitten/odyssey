@@ -102,6 +102,27 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// Where a bullet sent from <paramref name="from"/> towards <paramref name="to"/> first stops,
+        /// by the walls and the ground alone: the first cell it cannot pass into (a slab or a shut
+        /// corner stops it in the cell before), or the first solid cell it enters, or
+        /// <paramref name="to"/>. What a miss's end is cut to (design 47 §2c), so its streak ends where
+        /// it goes down rather than inside a terrace. Pawns are not asked: the landing does that.
+        /// </summary>
+        public static int StopCell(PawnContext ctx, int from, int to)
+        {
+            if (from == to) return to;
+            var walk = new Stepper(ctx.Size, from, to);
+            int at = from;
+            for (int axes = walk.Next(); axes != 0; axes = walk.Next())
+            {
+                if (!Round(ctx.Cells, ctx.Nav.Grid, ref walk, at, axes)) return at;
+                at = walk.Cell;
+                if (Blocks(ctx.Cells, ctx.Nav.Grid, at)) return at;
+            }
+            return to;
+        }
+
+        /// <summary>
         /// Can a shot pass from the centre of <paramref name="from"/> to the centre of
         /// <paramref name="to"/>? The walk of <see cref="Walk(GridSize, int, int, SightLine)"/>
         /// with the blocking tests and an early out, so it allocates nothing and stops at the

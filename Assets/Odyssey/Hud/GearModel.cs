@@ -85,6 +85,7 @@ namespace Odyssey.Hud
             if (!view.IsPerson) return true;
 
             bool armed = snapshot.TryGetPawnAspect(pawn, CombatAspectNames.WeaponKey, out int def) && def >= 0;
+            int tier = snapshot.TryGetPawnAspect(pawn, CombatAspectNames.WeaponQualityKey, out int q) ? q : 0;
             GearCarry carry = !armed ? GearCarry.None : view.IsWeaponDrawn ? GearCarry.Drawn : GearCarry.AtHip;
 
             Rows.Add(new GearRow
@@ -92,7 +93,7 @@ namespace Odyssey.Hud
                 Slot = GearSlot.Weapon,
                 SlotName = Registry.Label(WeaponKey),
                 ItemDef = armed ? def : -1,
-                Name = armed ? ItemLabels.Label(def) : Registry.Label(BareHandsKey),
+                Name = armed ? ItemLabels.Label(def, tier) : Registry.Label(BareHandsKey),
                 IconKey = armed ? ItemLabels.IconKey(def) : string.Empty,
                 Carry = carry,
                 CarryWord = carry switch

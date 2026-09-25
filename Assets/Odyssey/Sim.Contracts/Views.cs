@@ -789,8 +789,17 @@ namespace Odyssey.Sim.Contracts
         /// <summary>The weapon, as an <see cref="ItemHandle"/> value.</summary>
         public readonly int Weapon;
 
-        public ProjectileView(PawnId shooter, PawnId target, CellRef start, CellRef end, int fireTick, int impactTick, int weapon)
+        /// <summary>
+        /// The shot was aimed true (design 47 §2c, amended): it lands on <see cref="Target"/> wherever
+        /// it stands at the impact, so its streak follows the target's body rather than ending at
+        /// <see cref="End"/>. False for a miss, whose streak passes the target and ends at <see cref="End"/>.
+        /// </summary>
+        public readonly bool Aimed;
+
+        public ProjectileView(PawnId shooter, PawnId target, CellRef start, CellRef end, int fireTick, int impactTick, int weapon,
+            bool aimed = false)
         {
+            Aimed = aimed;
             Shooter = shooter;
             Target = target;
             Start = start;
@@ -887,9 +896,13 @@ namespace Odyssey.Sim.Contracts
 
         public bool Contained => Container != 0;
 
+        /// <summary>How well it was made, a <see cref="QualityHandle"/> value, or 0 for a thing with no quality (design 47 §11).</summary>
+        public readonly byte Quality;
+
         public ThingView(ThingId id, CellRef cell, int defIndex, int stuffIndex, int stack = 1,
-            int container = 0, byte slot = 0)
+            int container = 0, byte slot = 0, byte quality = 0)
         {
+            Quality = quality;
             Id = id;
             Cell = cell;
             DefIndex = defIndex;

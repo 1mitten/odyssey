@@ -112,7 +112,15 @@ namespace Odyssey.Sim.Pawns
             var armament = new Armament(attack, bullet.Weapon);
             var hit = new SwingOutcome(CombatEventKind.Hit, bullet.DamageMilli);
 
-            LineOfSight.Walk(_ctx, bullet.StartCell, bullet.EndCell, _line);
+            // A shot aimed true lands on its target wherever it now stands (owner, 2026-09-25: "make
+            // sure shots that hit actually connect with the target directly"): the line is walked to
+            // the target's cell at the impact, so cover it stepped behind or a body that stepped in
+            // front still takes it, and nothing else does. The first rule walked to the cell it stood
+            // in when fired, and a walking target was missed by most of the shots rolled to hit it.
+            bool homing = bullet.Aimed && target != null && !Melee.IsDead(target)
+                && (Melee.IsStanding(target) || bullet.ToTheDeath);
+            int end = homing ? target!.Cell : bullet.EndCell;
+            LineOfSight.Walk(_ctx, bullet.StartCell, end, _line);
             int previous = bullet.StartCell;
             for (int i = 1; i < _line.Count; i++)
             {
@@ -129,7 +137,7 @@ namespace Odyssey.Sim.Pawns
 
                 // Something solid in it. The end cell of a shot aimed true is the target's own, and
                 // a pawn stands only where it can — a doorway included — so it is never tested.
-                bool aimedEnd = bullet.Aimed && cell == bullet.EndCell;
+                bool aimedEnd = homing && cell == end;
                 if (!aimedEnd && LineOfSight.Blocks(_ctx.Cells, _ctx.Nav.Grid, cell))
                 {
                     if (BuildingTargets.TryFind(_ctx, cell, out BuildingTarget building))
@@ -144,8 +152,7 @@ namespace Odyssey.Sim.Pawns
                 }
 
                 // The intended target, on a shot aimed true.
-                if (target != null && bullet.Aimed && target.Cell == cell && !Melee.IsDead(target)
-                    && (Melee.IsStanding(target) || bullet.ToTheDeath))
+                if (homing && target!.Cell == cell)
                 {
                     ApplySwing(shooter, target, armament, hit, tick);
                     return;
@@ -163,7 +170,7 @@ namespace Odyssey.Sim.Pawns
             }
 
             // Nothing took it: into the ground where it was going.
-            MissAt(shooter, target, bullet.Weapon, bullet.EndCell, tick);
+            MissAt(shooter, target, bullet.Weapon, end, tick);
         }
 
         /// <summary>
