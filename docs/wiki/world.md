@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-125 entries, 99 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+127 entries, 101 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -117,6 +117,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Audio** | `ui.settings.audio` | How loud each part of the game is. Stored on the machine, in decibels | no art | M3 |
 | **Camera speed** | `ui.settings.camspeed` | How fast the camera pans and zooms, as a share of its tuned speed | no art | M3 |
 | **Build palette layout** | `ui.settings.buildlayout` | Which of the three shapes the Build palette takes: rows, rail or bar | no art | M3 |
+| **Selection style** | `ui.settings.selectionstyle` | How the selected thing is marked: a line round the thing itself, or corner brackets | no art | M3 |
 | **Developer overlay** | `ui.settings.developer` | The frame-time and draw-call readout, kept on the machine between sessions | no art | M3 |
 | **Display** | `ui.settings.display` | How the frame is paced and how large it is drawn | no art | M3 |
 | **Detail** | `ui.settings.detail` | What the board is drawn with. None of it reaches the simulation | no art | M3 |
@@ -142,6 +143,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Scale** | `ui.settings.group.scale` | How large the interface is drawn | no art | M3 |
 | **Camera** | `ui.settings.group.camera` | How the camera moves, and the keys that move it | no art | M3 |
 | **Build palette** | `ui.settings.group.palette` | The shape of the Build palette | no art | M3 |
+| **Selection** | `ui.settings.group.selection` | How a selected colonist, item, building or tile is marked in the world | no art | M3 |
 | **Performance** | `ui.settings.group.performance` | What the frame costs to draw | no art | M3 |
 | **Volume** | `ui.settings.group.volume` | The loudness of the game and its music and ambience | no art | M3 |
 | **Cues** | `ui.settings.group.cues` | The loudness of work and of what asks for attention | no art | M3 |
