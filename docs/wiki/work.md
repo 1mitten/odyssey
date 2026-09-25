@@ -14,7 +14,7 @@ The work types a colonist can be assigned, in priority order of urgency, the ski
 | **Doctor** | `ui.work.doctor` | Treat the hurt, with medical supplies or without | sheet 08 (salvage gear), high | M3 |
 | **Warden** | `ui.work.warden` | Feed, talk to and recruit prisoners | sheet 06 (action tiles), med | M7 |
 | **Handling** | `ui.work.handling` | Tame, train and feed animals | sheet 06 (action tiles), high | M7 |
-| **Cooking** | `ui.work.cooking` | Work the bills at a galley or a campfire | sheet 06 (action tiles), high | M3 |
+| **Cooking** | `ui.work.cooking` | Work the bills at an electric cooker or a campfire | sheet 06 (action tiles), high | M3 |
 | **Hunting** | `ui.work.hunting` | Kill wild animals for meat | sheet 06 (action tiles), high | M7 |
 | **Construction** | `ui.work.construction` | Build frames and blueprints | sheet 06 (action tiles), med | M7 |
 | **Growing** | `ui.work.growing` | Sow and harvest growing zones | sheet 06 (action tiles), high | M7 |
@@ -79,7 +79,7 @@ The work types a colonist can be assigned, in priority order of urgency, the ski
 | **Forever** | `ui.bill.mode.forever` | Never stop cooking <br>**Needs:** Interface words, no icon wanted | no art | M3 |
 | **Suspended** | `ui.bill.suspended` | Stopped by you. The next bill down is worked instead <br>**Needs:** a pause mark. Interface furniture drawn as a HudGlyph | no art | M3 |
 | **Done** | `ui.bill.done` | This bill's count is met. It starts again by itself when it needs to <br>**Needs:** a tick. Interface furniture drawn as a HudGlyph | no art | M3 |
-| **No power** | `ui.bill.unpowered` | The galley needs power to cook. Nothing on the hob will spoil in the meantime <br>**Needs:** a broken plug. Our own concept | no art | M3 |
+| **No power** | `ui.bill.unpowered` | The electric cooker needs power to cook. Nothing on the hob will spoil in the meantime <br>**Needs:** a broken plug. Our own concept | no art | M3 |
 
 ---
 

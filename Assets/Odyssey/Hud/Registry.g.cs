@@ -83,7 +83,7 @@ namespace Odyssey.Hud
             { "ui.arch.tool.fabricator", "Fabricator" },
             { "ui.arch.tool.fell", "Chop trees" },
             { "ui.arch.tool.forbid", "Forbid" },
-            { "ui.arch.tool.galley", "Galley" },
+            { "ui.arch.tool.galley", "Electric Cooker" },
             { "ui.arch.tool.gamestable", "Games table" },
             { "ui.arch.tool.generator", "Generator" },
             { "ui.arch.tool.geothermal", "Geothermal tap" },

@@ -23,7 +23,7 @@ ui.res.cord,Cord,ui.res,M1,"Rope and cable. Ladders, lifts, bindings"
 ui.res.insulation,Insulation,ui.res,M1,Foam batting. Slows heat through a wall
 ui.res.paper,Paper,ui.res,M1,Records and packaging. Research feedstock
 ui.res.rations,Rations,ui.res,M1,"Sealed pre-collapse food. Never spoils, nobody enjoys it"
-ui.res.meal,Meal,ui.res,M3,"Cooked at a galley or a campfire. The best food there is, and it rots in four days"
+ui.res.meal,Meal,ui.res,M3,"Cooked at an electric cooker or a campfire. The best food there is, and it rots in four days"
 ui.res.meal.veg,Vegetable meal,ui.res,M3,"A meal cooked without meat. As filling and as welcome as one with"
 ui.res.meal.burnt,Burnt meal,ui.res,M3,"A meal the cook let catch. Edible, less filling, and nobody enjoys it"
 ui.res.protein,Protein paste,ui.res,M1,Reclaimed nutrition. Edible; that is all
@@ -119,7 +119,7 @@ ui.status.rescuing,Rescuing,ui.status,CB,Carrying the downed to a bed
 ui.status.stealing,Stealing,ui.status,CB,"A bandit carrying something off the board"
 ui.status.treating,Treating,ui.status,M3,"Tending the hurt, or herself"
 ui.status.patient,Resting as a patient,ui.status,M3,In bed until the wound allows getting up
-ui.status.cooking,Cooking,ui.status,M3,"At a galley or a campfire, or fetching food for the pan"
+ui.status.cooking,Cooking,ui.status,M3,"At an electric cooker or a campfire, or fetching food for the pan"
 ui.status.sheltering,Sheltering,ui.status,WE,"An animal waiting out the rain under a roof or a tree, or walking to one"
 ui.status.inrain,In the rain,ui.status,WE,"A colonist under open sky while it rains, and walking slower for it. Said beside her pace"
 ui.stat.pace,Pace,ui.stat,WE,"How fast a colonist walks, as a share of the standard walk. Not the tile's walk speed, which is the ground"
@@ -147,7 +147,7 @@ ui.work.bedrest,Bed rest,ui.work,M7,Stay in bed while recovering
 ui.work.doctor,Doctor,ui.work,M3,"Treat the hurt, with medical supplies or without"
 ui.work.warden,Warden,ui.work,M7,"Feed, talk to and recruit prisoners"
 ui.work.handling,Handling,ui.work,M7,"Tame, train and feed animals"
-ui.work.cooking,Cooking,ui.work,M3,Work the bills at a galley or a campfire
+ui.work.cooking,Cooking,ui.work,M3,Work the bills at an electric cooker or a campfire
 ui.work.hunting,Hunting,ui.work,M7,Kill wild animals for meat
 ui.work.construction,Construction,ui.work,M7,Build frames and blueprints
 ui.work.growing,Growing,ui.work,M7,Sow and harvest growing zones
@@ -178,7 +178,7 @@ ui.bill.mode.times,Make,ui.bill,M3,"Cook this many, then stop"
 ui.bill.mode.forever,Forever,ui.bill,M3,Never stop cooking
 ui.bill.suspended,Suspended,ui.bill,M3,"Stopped by you. The next bill down is worked instead"
 ui.bill.done,Done,ui.bill,M3,"This bill's count is met. It starts again by itself when it needs to"
-ui.bill.unpowered,No power,ui.bill,M3,"The galley needs power to cook. Nothing on the hob will spoil in the meantime"
+ui.bill.unpowered,No power,ui.bill,M3,"The electric cooker needs power to cook. Nothing on the hob will spoil in the meantime"
 ui.arch.category.structure,Structure,ui.arch.category,M3,"Walls, doors, floors and vertical connectors"
 ui.arch.category.zones,Zones,ui.arch.category,M3,"Stockpiles, growing zones and allowed areas"
 ui.arch.category.orders,Orders,ui.arch.category,M3,One-off designations on existing things
@@ -225,7 +225,7 @@ ui.arch.tool.geothermal,Geothermal tap,ui.arch.tool,M3,"Deep, expensive, constan
 ui.arch.tool.switch,Power switch,ui.arch.tool,M3,Cuts a net in two
 ui.arch.tool.reactor,Reactor,ui.arch.tool,M3,"Late, enormous, dangerous"
 ui.arch.tool.fabricator,Fabricator,ui.arch.tool,M3,Makes refined materials and components
-ui.arch.tool.galley,Galley,ui.arch.tool,M3,Cooks meals
+ui.arch.tool.galley,Electric Cooker,ui.arch.tool,M3,"Cooks meals from bills. Needs power"
 ui.arch.tool.reclaimer,Reclaimer,ui.arch.tool,M3,Sorts scrap into usable material
 ui.arch.tool.hydroponics,Hydroponics basin,ui.arch.tool,M3,"Grows without soil, needs power"
 ui.arch.tool.bench,Crafting bench,ui.arch.tool,M3,General making

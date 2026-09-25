@@ -52,7 +52,7 @@ already exists in `icon-keys.csv` except the ones marked *new*.
 
 | Thing | Key | Label | Note |
 |---|---|---|---|
-| Electric cooker | `ui.arch.tool.galley` | Galley | The registry's existing name for "cooks meals". The owner has called it "the cooker"; the choice is theirs |
+| Electric cooker | `ui.arch.tool.galley` | **Electric Cooker** | The owner's name (2026-09-25), replacing the registry's "Galley". The key keeps its old spelling because keys are stable; only the label moved |
 | Fridge | `ui.arch.tool.fridge` *new* | Cold store | `cooler` already names a room chiller (moves heat out of a room), which is a different machine |
 | Table | `ui.arch.tool.table` | Table | |
 | Chair | `ui.arch.tool.chair` | Chair | |
@@ -357,7 +357,8 @@ Approved with *"go for it"*, 2026-09-25, which took every recommendation:
 
 1. **Mood numbers (§4): as proposed.** A colony on carrots loses mood until it cooks. The numbers
    were then corrected to this project's scale (§4); the intent did not change.
-2. **Names (§3): Galley and Cold store as working names.** The owner corrects them in the wiki.
+2. **Names (§3): Cold store as a working name.** The galley is **Electric Cooker**, the owner's word
+   (2026-09-25). The key stays `ui.arch.tool.galley`, and the code keeps saying galley.
 3. **Rotten food is hauled out** and disappears after a day.
 4. **An unpowered fridge rots food faster than the floor**, under storage decision 24.
 
