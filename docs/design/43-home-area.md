@@ -476,7 +476,8 @@ measure again if a placement ever shows in a frame.
 - **Flee towards home**: once home exists, a Flee colonist could prefer a flee cell inside it, or
   run to the hearth (answer 8's hook, design 33 §18d; round three, answer 7).
 - **Bandits going for the hearth** as the raid's target, and **idlers preferring it** among fires
-  (round three, answer 7).
+  (round three, answer 7). **The first half is built** (2026-09-25, design 50 §5): a raid's assault walks toward
+  `Hearth.Cell`, falling back to the colony's start.
 - **Hand paint-over**: an add-and-exclude brush over the derived home, the reference's second half —
   one saved, hashed mask OR-ed and masked in `SeedLayer`'s output.
 - **Eating and sleeping** (§4c): gated, with the starvation escape hatch, is the recommendation; say
