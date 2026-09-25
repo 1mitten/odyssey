@@ -120,11 +120,16 @@ namespace Odyssey.Sim.Pathing
         readonly List<int> _freeLinks = new List<int>();
         int _freeLinkCursor;
 
-        // ---- region adjacency, CSR, rebuilt in ascending link id -------------------------
+        // ---- region adjacency, a slotted CSR kept in ascending link id (HT1) ---------------
+        // Each region owns a run of _adjCap slots at _adjStart in _adjLinks, of which _adjCount
+        // are used. A run that fills moves to the end of the pool at twice the size; the runs left
+        // behind are counted and the pool is packed again when they are half of it.
         int[] _adjStart = new int[65];
         int[] _adjCount = new int[64];
-        int[] _adjLinks = new int[64];
-        int _adjTotal;
+        int[] _adjCap = new int[64];
+        int[] _adjLinks = new int[256];
+        int _adjUsed;
+        int _adjWaste;
 
         // ---- portal edges per cell, for the concrete search ------------------------------
         readonly Dictionary<int, int> _cellPortalHead = new Dictionary<int, int>();
@@ -370,7 +375,11 @@ namespace Odyssey.Sim.Pathing
             for (int i = 0; i < _affectedZones.Count; i++) BuildZoneLinks(_affectedZones[i]);
             for (int i = 0; i < _affectedZones.Count; i++)
                 for (int l = _zoneLinkHead[_affectedZones[i]]; l != -1; l = _linkNextInZone[l])
+                {
                     if (_linkKind[l] == LinkKind.Portal) AddPortalEdges(l);
+                    InsertAdjacent(_linkA[l], l);
+                    InsertAdjacent(_linkB[l], l);
+                }
 
             if (_freeRegionCursor > 0) _freeRegions.RemoveRange(0, _freeRegionCursor);
             if (_freeLinkCursor > 0) _freeLinks.RemoveRange(0, _freeLinkCursor);
@@ -379,7 +388,7 @@ namespace Odyssey.Sim.Pathing
             t = Lap(RebuildSegment.Links, t);
 
             t = Lap(RebuildSegment.Portals, t);
-            RebuildAdjacency();
+            if (_adjWaste > 1024 && _adjWaste * 2 > _adjUsed) PackAdjacency();
             t = Lap(RebuildSegment.Adjacency, t);
             RecomputeDistricts();
             t = Lap(RebuildSegment.Districts, t);
@@ -526,6 +535,7 @@ namespace Odyssey.Sim.Pathing
             Array.Resize(ref _regionVersion, n);
             Array.Resize(ref _regionNextInBlock, n);
             Array.Resize(ref _adjCount, n);
+            Array.Resize(ref _adjCap, n);
             Array.Resize(ref _adjStart, n + 1);
             for (int m = 0; m < TraverseModes.Count; m++) Array.Resize(ref _district[m], n);
         }
@@ -622,6 +632,8 @@ namespace Odyssey.Sim.Pathing
             {
                 int next = _linkNextInZone[l];
                 if (_linkKind[l] == LinkKind.Portal) RemovePortalEdges(l);
+                RemoveAdjacent(_linkA[l], l);
+                RemoveAdjacent(_linkB[l], l);
                 _linkAlive[l] = false;
                 _freeLinks.Add(l);
                 l = next;
@@ -1077,43 +1089,75 @@ namespace Odyssey.Sim.Pathing
             _freePortalEdges.Add(edge);
         }
 
-        void RebuildAdjacency()
-        {
-            EnsureRegionCapacity(Math.Max(1, _regionCount));
-            for (int r = 0; r < _regionCount; r++) _adjCount[r] = 0;
+        // The region adjacency is kept as links come and go (HT1, design 05 §7b): every live link in
+        // ascending id, listed at its first end and then its second — exactly the order the CSR
+        // rebuilt on every edit used to give, because the abstract search walks it in that order and
+        // a path, and every golden with it, depends on which of several equal-cost neighbours comes
+        // first. A link freed leaves both lists while its ends still name them; every link built in
+        // an affected zone joins both. Scales with the links in the affected zones and the degree of
+        // their regions; the pack below is the only walk of the whole pool, and it runs when half the
+        // pool is runs left behind.
 
-            for (int l = 0; l < _linkCount; l++)
+        void InsertAdjacent(int region, int link)
+        {
+            int count = _adjCount[region];
+            if (count == _adjCap[region])
             {
-                if (!_linkAlive[l]) continue;
-                _adjCount[_linkA[l]]++;
-                _adjCount[_linkB[l]]++;
+                int cap = Math.Max(4, count * 2);
+                if (_adjUsed + cap > _adjLinks.Length)
+                {
+                    int n = _adjLinks.Length;
+                    while (n < _adjUsed + cap) n *= 2;
+                    Array.Resize(ref _adjLinks, n);
+                }
+                Array.Copy(_adjLinks, _adjStart[region], _adjLinks, _adjUsed, count);
+                _adjWaste += _adjCap[region];
+                _adjStart[region] = _adjUsed;
+                _adjCap[region] = cap;
+                _adjUsed += cap;
             }
 
+            // Ascending link id; a link listed twice (both ends one region) sits after itself.
+            int s = _adjStart[region];
+            int i = count;
+            while (i > 0 && _adjLinks[s + i - 1] > link)
+            {
+                _adjLinks[s + i] = _adjLinks[s + i - 1];
+                i--;
+            }
+            _adjLinks[s + i] = link;
+            _adjCount[region] = count + 1;
+        }
+
+        void RemoveAdjacent(int region, int link)
+        {
+            int s = _adjStart[region];
+            int count = _adjCount[region];
+            int i = 0;
+            while (i < count && _adjLinks[s + i] != link) i++;
+            if (i == count) throw new InvalidOperationException($"link {link} is not adjacent to region {region}");
+            for (; i < count - 1; i++) _adjLinks[s + i] = _adjLinks[s + i + 1];
+            _adjCount[region] = count - 1;
+        }
+
+        /// <summary>Pack every region's run back to back, each at its own count, in region order.</summary>
+        void PackAdjacency()
+        {
             int total = 0;
+            for (int r = 0; r < _regionCount; r++) total += _adjCount[r];
+            var packed = new int[Math.Max(256, total * 2)];
+            int at = 0;
             for (int r = 0; r < _regionCount; r++)
             {
-                _adjStart[r] = total;
-                total += _adjCount[r];
-                _adjCount[r] = 0;
+                int count = _adjCount[r];
+                Array.Copy(_adjLinks, _adjStart[r], packed, at, count);
+                _adjStart[r] = at;
+                _adjCap[r] = count;
+                at += count;
             }
-
-            _adjStart[_regionCount] = total;
-            _adjTotal = total;
-            if (total > _adjLinks.Length)
-            {
-                int n = _adjLinks.Length;
-                while (n < total) n *= 2;
-                _adjLinks = new int[n];
-            }
-
-            for (int l = 0; l < _linkCount; l++)
-            {
-                if (!_linkAlive[l]) continue;
-                int a = _linkA[l];
-                int b = _linkB[l];
-                _adjLinks[_adjStart[a] + _adjCount[a]++] = l;
-                _adjLinks[_adjStart[b] + _adjCount[b]++] = l;
-            }
+            _adjLinks = packed;
+            _adjUsed = at;
+            _adjWaste = 0;
         }
 
         void RecomputeDistricts()
