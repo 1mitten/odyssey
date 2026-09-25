@@ -4,9 +4,9 @@ Branch `claude/peaceful-lamport-58fozw`. Interview 2026-09-25 (`docs/research/tr
 research the same day (`a-18-traits.md`, `a-19-mental-breaks.md`, `b-mental-health-models.md`,
 `g-04-mood-and-traits-ui.md`), built the same day on the owner's *"yes implement"*.
 
-**Status.** Plan `docs/plans/traits-and-mental-health.md`, units `TM0`–`TM6`. The trait list is a
-**placeholder set of our own, every number INVENTED**, waiting for the owner's table in the
-interview file (§4c). Nothing here has been played.
+**Status.** Built 2026-09-25, `TM0`–`TM6` (plan `docs/plans/traits-and-mental-health.md`),
+**not yet run in Unity and not yet played**. The trait list is a **placeholder set of our own,
+every number INVENTED**, waiting for the owner's table in the interview file (§4c).
 
 ## 1. Why
 
@@ -121,13 +121,16 @@ colonist, and sparse: a row is written only when it is not the default.
 |---|---|
 | `odyssey.pawn.mood.band` | 0 content, 1 strained, 2 breaking (minor), 3 breaking (major), 4 breaking (extreme), 5 broken |
 | `odyssey.pawn.mood.target` | the target the mood drifts to |
-| `odyssey.pawn.mood.minor` / `.major` / `.extreme` | this colonist's three lines, after traits |
 | `odyssey.pawn.break` | the break kind, while broken |
 | `odyssey.pawn.trait.<slot>` | the trait's handle, slots 0–2 |
 | `odyssey.pawn.trait.<slot>.mood` / `.nerve` / `.learn` / `.work` / `.cannot` | the effects, so the interface derives no number the simulation knows; `.cannot` is a work-type bit mask |
 | `odyssey.pawn.thought.<name>` | a memory's contribution, stack included |
 | `odyssey.pawn.thought.<name>.left` / `.count` | ticks until its oldest copy lapses; copies held |
 | `odyssey.pawn.mood.need.<need>` / `.temperature` | the situational offsets |
+
+**Her three lines and the base are not published** (changed during the build, §6): nothing draws
+them yet, and a channel is published only when something reads it (process §3). Threshold notches
+on the mood bar are the reader that would bring them back.
 
 **Published for every colonist, not on a query.** The alternative is a `QueryPawn` intent beside
 `QueryCell`, which needs presentation wiring the fast tier cannot compile. The rows are bounded by
@@ -214,6 +217,11 @@ the friendly-fire memory; a tantrum's broken wall is a broken wall. No "saw a br
   walks. Two, and a third on 30 per cent; each pick weighted by commonality among the traits not
   held, not in a held spectrum and not conflicting either way.
 - **Only colonists.** A bandit and an animal have none.
+- **A scenario can turn them off** (`ScenarioDef.traits`, on by default; decided during the build).
+  Fourteen existing tests about floors, crops, forced orders, work rates and experience failed the
+  day traits arrived, because their seeds dealt *Ham-fisted*, *Black thumb* or a diligence degree to
+  the colonist the test was watching. Each of those fixtures now turns traits off with a one-line
+  reason, and the goldens keep them on, so the hashed runs still exercise traits.
 - **Shown** on the inspect pane's Needs tab under the three bars (the tab's slack; the pane stays
   one height, `HudLayoutTests`), and on the select screen's detail pane under the skills: the name,
   then the effect summary (`Work +20%`, `Mood +6`, `Breaks later`, `Learns x1.75`,
@@ -224,7 +232,27 @@ the friendly-fire memory; a tantrum's broken wall is a broken wall. No "saw a br
 Everything runs on the existing 150-tick needs interval, per pawn: a trait is at most three
 additions to the mood target and three multiplications on a rate. The break choice runs once per
 break, and its requirement scans (items, edifice records) are the ones the eat and bandit givers
-already make. Publishing adds four to eight aspect rows a colonist. Measured in §8.
+already make.
+
+**Measured, 2026-09-25, in the container this was built in** (Linux, .NET 8, no Unity), with
+`TickBenchmarkTests` at 250 x 250 x 40 and fifty pawns, this branch and `main` (f0b7133) run
+alternately so each pair shares the machine's state:
+
+| Arm | Phase | `main` | this branch |
+|---|---|---|---|
+| At rest | snapshot | 0.090 – 0.108 ms | 0.128 – 0.133 ms |
+| At rest | whole tick | 0.130 – 0.156 ms | 0.173 – 0.181 ms |
+| D1 replan rate | snapshot | 0.099 – 0.106 ms | 0.131 – 0.140 ms |
+| D1 replan rate | whole tick | 0.999 – 1.188 ms | 1.093 – 1.151 ms |
+
+**The cost is the publish, about 0.03 ms a tick at fifty colonists**, and none of it is in the
+pawn phase. With the thoughts' rows switched off the snapshot read 0.115 – 0.118 ms, so the
+thoughts are about half of it and the band, target, trait slots and capability rows the other
+half. **No allocation was added**: the heap grew 16.4 bytes a tick on both sides. The replan arm's
+whole tick overlaps between the two sides; its noise is wider than the difference. The base and
+the three break lines were dropped from the publish after the first reading, because nothing read
+them. **The lever, if a later measurement asks for one**, is a `QueryPawn` intent beside
+`QueryCell`, so the thoughts and trait slots are published for the inspected colonist only.
 
 ## 7. Out of scope, recorded
 
@@ -234,9 +262,43 @@ leave, catatonic breakdown and targeted tantrum (a-19's next three); a "saw a br
 reference's recovery clock; the passion mood buff; mood faces (no art); threshold notches drawn on
 the mood bar (published, not drawn).
 
-## 8. Verified
+## 8. Verified, 2026-09-25
 
-*(Filled as the units land.)*
+Branch `claude/peaceful-lamport-58fozw`, one commit per unit. **Run in a container with no Unity**:
+the fast tier and the Long tier only. Neither compiles `Odyssey.Presentation`, so the three shell
+files this line touches (`HudShell.Mind.cs`, `HudShell.Inspect.cs`, `HudShell.Start.cs`) are
+unproven until Unity compiles them, and no player build was made.
+
+| Tier | Result |
+|---|---|
+| Fast, Sim | 1,521 passed, 0 failed (1,480 before this line) |
+| Fast, Hud | 1,110 passed, 0 failed (1,090 before) |
+| Long | 52 passed, 0 failed (48 before; the gate adds 4, `MindSoakTests`) |
+| Unity EditMode, PlayMode, player build | **not run** |
+
+**Goldens.** The three `Simulated` moved once, in TM3, and **no `Generated` moved**, as §3
+predicted. `GoldenColonyProbe` before and after differs in **total mood alone**, by the outlook
+traits the seeds dealt (+60 meadow, −120 city, −120 played board); every position, job,
+experience and progress figure is identical. TM1, TM2, TM4 and TM5 moved no golden.
+
+**The gate** (`MindSoakTests.TenDaysThroughEveryBreakLine`, three seeds, 60 x 60 x 16, five
+colonists with traits, the mood base pushed through the three lines from day three on faster
+clocks): 26 to 29 breaks a seed, **all five kinds seen on every seed**, nobody dead, the lockstep
+twin identical every hour, and a save taken mid-break resuming to the same hash a day later. About
+25 s a seed for the run and its twin.
+
+| Test | Proves |
+|---|---|
+| `MindAspectTests` | the band falls at her own lines; a rested colonist is content; thoughts sum to the memory offset; names agree across the seam |
+| `ThoughtsTabTests` | the friendly-fire memory is named with its -8 and its time left; Now before Memories, worst first; the cap; a break named on the pane and the Events row |
+| `TraitTests` | two or three from the seed; no spectrum twice, no conflict; no passion or skill moved; the card's traits are the walker's; first tick only; each of the five effects against a traitless control; the save and the hash |
+| `TraitRowsTests` | the summary words and tint; the pane's rows; a trait's mood under Now; the card's lines; the fit under the needs |
+| `MentalBreakTests` | the tier's clock and the fall-through; each of the five breaks when forced; the job filter; catharsis at the end and none on a downing; the Events record; a save mid-break |
+| `MindSoakTests` | the gate above |
+
+**Found on the way, not fixed** (outside this line): `PawnPurpose.AnimalMind` and
+`PawnPurpose.DeconstructRefund` are the same salt, `0x165667B1`, so those two streams agree —
+the fault `StoneYield`'s own comment warns against.
 
 ## 9. Do not undo by tidying
 

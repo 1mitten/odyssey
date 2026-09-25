@@ -12285,3 +12285,42 @@ moves.
 One test had been measuring swing speed without saying so. Three bandits at a one-sided wall struck
 three walls with the machete and two with the slower blunt weapons, because fewer walls fell in the
 run. The test is now pinned to the machete it was measured with. Nobody stood about either way.
+
+## 2026-09-25 — Traits and mental health, from interview to gate in a day (design 43)
+
+The owner asked to plan traits and mental health and said they would supply some traits. Grounding
+found more built than the request assumed and one thing plainly wrong. A mood system already ran
+(an integer drifting to a target, eight memories, one threshold, one break), and **a fed, rested
+colonist with nothing on her mind read "strained" for the whole game**: the interface held 600 and
+350 of its own, and the resting target is 500. Traits did not exist at all.
+
+Two interview rounds settled the scope: traits, three break lines with a small taxonomy, the
+Thoughts tab; new colonies only; two or three traits; five effect kinds; shown on the select card
+and the pane; the owner fills a table. Four research lanes ran, **every one with its page reads
+refused by the container's egress proxy**, so each file marks what came from a search snippet and
+what from memory. The one correction worth recording: a-01's mean times between breaks (10 / 3 /
+0.7 days) are the pre-1.0 figures, and the current ones are 4 / 0.8 / 0.5.
+
+The build went unit by unit behind the fast tier, installed from the system packages because the
+.NET download hosts were refused. The decisions that are not obvious from the code:
+
+- **The band crossed the seam.** Once traits move the break line, only the simulation knows where
+  a colonist's lines are, so a threshold in the interface would be two owners of one number. The
+  alert latches at breaking and clears at content, the hysteresis it had.
+- **Traits are dealt on the first tick, not at placement**, on a stream of their own. At placement
+  they would have moved every `Generated` golden for no behaviour, which is why starting skills
+  moved there too. The probe then showed the `Simulated` goldens moved in total mood alone.
+- **Fourteen existing tests failed the day traits arrived**, not because anything broke but
+  because their seeds dealt the watched colonist *Ham-fisted* or *Diligent*. The answer was a
+  scenario switch the fixtures turn off, each with a reason, rather than a trait-free default: the
+  goldens keep traits on, so the hashed runs still see them.
+- **A break's kind and length are drawn after the draw that decides it**, so which colonists break
+  is unchanged for every seed.
+- **The publish cost was measured and then cut.** About 0.03 ms a tick at fifty colonists, all in
+  the snapshot, none in the pawn phase and no allocation. The base and the three lines were
+  dropped because nothing read them. The lever left is a `QueryPawn` intent.
+
+The gate saw all five breaks on each of three seeds, 26 to 29 breaks a seed, with nobody dead, the
+lockstep twin identical and a mid-break save resuming the same. **Nothing here has run in Unity**:
+the three shell files are unproven until it compiles them. Found in passing and not fixed: two
+random purposes share a salt.

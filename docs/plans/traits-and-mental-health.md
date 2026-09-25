@@ -6,6 +6,9 @@ decision table is the contract. Research `a-18`, `a-19`, `b-mental-health-models
 
 ## Units
 
+**State, 2026-09-25: TM0–TM6 built on `claude/peaceful-lamport-58fozw`, one commit each; fast and
+Long tiers green; Unity not run; not played.** Design 43 §8 has the verification.
+
 | Unit | What | Done when | Goldens |
 |---|---|---|---|
 | **TM0** | Interview, four research lanes, design 43, this plan | written and committed | none |

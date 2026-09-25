@@ -567,17 +567,16 @@ namespace Odyssey.Sim.Pawns
                 // carries an int and a seed is a uint, and every bit of it matters.
                 writer.AddPawnAspect(pawn.Id, SkillAspects.RollSeed, unchecked((int)pawn.RollSeed));
 
-                // State of mind (design 43 §4d): the band every surface reads, the target, and her
-                // own three lines. The interface kept a copy of the threshold until this and called
-                // the resting target strained for it; the lines move with traits, so only this side
-                // can say. A colonist's, because nobody else's mood moves (Pawn.NeedsTick).
+                // State of mind (design 43 §4d): the band every surface reads and the target the
+                // Thoughts tab heads with. The interface kept a copy of the threshold until this and
+                // called the resting target strained for it; the lines move with traits, so only this
+                // side can say. A colonist's, because nobody else's mood moves (Pawn.NeedsTick).
+                // Her three lines themselves are not published: nothing draws them yet, and a channel
+                // is published only when something reads it (process §3; measured, design 43 §6).
                 if (pawn.IsColonist)
                 {
                     writer.AddPawnAspect(pawn.Id, MindAspects.Band, pawn.Band());
                     writer.AddPawnAspect(pawn.Id, MindAspects.Target, pawn.MoodTarget);
-                    writer.AddPawnAspect(pawn.Id, MindAspects.Minor, pawn.MinorBreakLine());
-                    writer.AddPawnAspect(pawn.Id, MindAspects.Major, pawn.MajorBreakLine());
-                    writer.AddPawnAspect(pawn.Id, MindAspects.Extreme, pawn.ExtremeBreakLine());
                     if (pawn.IsBroken) writer.AddPawnAspect(pawn.Id, MindAspects.Break, pawn.BreakKind);
                     PublishThoughts(writer, pawn, world.CurrentTick);
                 }
@@ -697,8 +696,7 @@ namespace Odyssey.Sim.Pawns
         /// and rides the order cell (<see cref="OrderCellOf"/>).
         /// </summary>
         /// <summary>
-        /// What is on her mind (design 43 §5b): the base, the situational offsets that are not
-        /// nought, and every memory she holds with its stack and the time until it thins. Sparse
+        /// What is on her mind (design 43 §5b): the situational offsets that are not nought, and every memory she holds with its stack and the time until it thins. Sparse
         /// and bounded by the need and thought counts — four to eight rows for a colonist on an
         /// ordinary day — and read by the Thoughts tab by name. Published for every colonist
         /// rather than on a query, for the reason design 43 §4d gives.
@@ -706,7 +704,6 @@ namespace Odyssey.Sim.Pawns
         void PublishThoughts(SnapshotWriter writer, Pawn pawn, int tick)
         {
             PawnContent content = _ctx.Content;
-            writer.AddPawnAspect(pawn.Id, MindAspects.Base, content.Mood.baseMood);
 
             for (int n = 0; n < NeedIndex.Count && n < MindAspects.Need.Length; n++)
             {

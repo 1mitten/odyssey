@@ -37,9 +37,6 @@ namespace Odyssey.Hud
             }
         }
 
-        public const string BaseName = "odyssey.pawn.mood.base";
-        public static readonly AspectKey BaseKey = AspectKey.Of(BaseName);
-
         /// <summary>The prefix a memory is published under, before its <see cref="ThoughtHandle.Names"/> entry.</summary>
         public const string ThoughtPrefix = "odyssey.pawn.thought.";
 

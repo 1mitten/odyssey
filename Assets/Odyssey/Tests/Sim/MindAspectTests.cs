@@ -85,7 +85,7 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void TheBandAndLinesArePublishedForColonistsOnly()
+        public void TheBandAndTargetArePublishedForColonistsOnly()
         {
             var colony = Colony.Build();
             Pawn person = colony.Ctx.Pawns.Spawn(colony.Cell(4, 4, 0));
@@ -100,12 +100,6 @@ namespace Odyssey.Tests.Sim
             Assert.That(band, Is.EqualTo(person.Band()));
             Assert.That(frame.TryGetPawnAspect(person.Id, MindAspects.Target, out int target), Is.True);
             Assert.That(target, Is.EqualTo(person.MoodTarget));
-            Assert.That(frame.TryGetPawnAspect(person.Id, MindAspects.Minor, out int minor), Is.True);
-            Assert.That(minor, Is.EqualTo(person.MinorBreakLine()));
-            Assert.That(frame.TryGetPawnAspect(person.Id, MindAspects.Major, out int major), Is.True);
-            Assert.That(major, Is.EqualTo(person.MajorBreakLine()));
-            Assert.That(frame.TryGetPawnAspect(person.Id, MindAspects.Extreme, out int extreme), Is.True);
-            Assert.That(extreme, Is.EqualTo(person.ExtremeBreakLine()));
 
             Assert.That(frame.TryGetPawnAspect(hog.Id, MindAspects.Band, out _), Is.False,
                 "an animal's mood never moves (design 29 §2), so it has no band to report");
@@ -156,8 +150,6 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.Need[NeedIndex.Food], out int hunger), Is.True);
             Assert.That(hunger, Is.EqualTo(colony.Ctx.Content.Needs[NeedIndex.Food].MoodOffset(pawn.Needs[NeedIndex.Food])));
-            Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.Base, out int baseMood), Is.True);
-            Assert.That(baseMood, Is.EqualTo(colony.Ctx.Content.Mood.baseMood));
 
             // The control: a thought she does not hold, and a need at no offset, publish nothing.
             Assert.That(frame.TryGetPawnAspect(pawn.Id, MindAspects.Thought[ThoughtIndex.Fell], out _), Is.False);
@@ -181,7 +173,6 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void TheAspectNamesAreTheOnesTheInterfaceSpells()
         {
-            Assert.That(MindAspects.Base, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.base")));
             Assert.That(MindAspects.Need[NeedIndex.Food], Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.need.food")));
             Assert.That(MindAspects.Need[NeedIndex.Rest], Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.need.rest")));
             Assert.That(MindAspects.Need[NeedIndex.Joy], Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.need.joy")));
@@ -192,9 +183,7 @@ namespace Odyssey.Tests.Sim
             // Odyssey.Hud spells these in MindAspectNames and cannot reference this assembly.
             Assert.That(MindAspects.Band, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.band")));
             Assert.That(MindAspects.Target, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.target")));
-            Assert.That(MindAspects.Minor, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.minor")));
-            Assert.That(MindAspects.Major, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.major")));
-            Assert.That(MindAspects.Extreme, Is.EqualTo(AspectKey.Of("odyssey.pawn.mood.extreme")));
+            Assert.That(MindAspects.Break, Is.EqualTo(AspectKey.Of("odyssey.pawn.break")));
         }
     }
 }

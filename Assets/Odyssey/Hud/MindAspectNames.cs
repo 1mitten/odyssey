@@ -17,11 +17,6 @@ namespace Odyssey.Hud
         /// <summary>The target her mood drifts toward, 0..1000.</summary>
         public const string Target = "odyssey.pawn.mood.target";
 
-        /// <summary>Her three break lines, after anything that moves them.</summary>
-        public const string Minor = "odyssey.pawn.mood.minor";
-        public const string Major = "odyssey.pawn.mood.major";
-        public const string Extreme = "odyssey.pawn.mood.extreme";
-
         /// <summary>Trait slot keys (design 43 §4d): the handle, then each effect.</summary>
         public static readonly AspectKey[] TraitKey = Slots(string.Empty);
         public static readonly AspectKey[] TraitMoodKey = Slots(".mood");
@@ -43,8 +38,5 @@ namespace Odyssey.Hud
 
         public static readonly AspectKey BandKey = AspectKey.Of(Band);
         public static readonly AspectKey TargetKey = AspectKey.Of(Target);
-        public static readonly AspectKey MinorKey = AspectKey.Of(Minor);
-        public static readonly AspectKey MajorKey = AspectKey.Of(Major);
-        public static readonly AspectKey ExtremeKey = AspectKey.Of(Extreme);
     }
 }

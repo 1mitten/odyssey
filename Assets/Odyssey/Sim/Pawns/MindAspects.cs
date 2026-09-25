@@ -4,8 +4,8 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// The names a colonist's state of mind is published under (design 43 §4d): the band, the
-    /// target and her own three break lines. Built the way <see cref="SkillAspects"/> is, and for
+    /// The names a colonist's state of mind is published under (design 43 §4d): the band and the
+    /// target, the break she is in, her traits and what is on her mind. Built the way <see cref="SkillAspects"/> is, and for
     /// its reason: the interface asks by name and <c>Sim.Contracts</c> learns nothing new.
     ///
     /// <para><b>Reports, not state.</b> Every row is derived each publish from saved, hashed state,
@@ -20,16 +20,10 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The target the mood drifts toward, 0..1000.</summary>
         public static readonly AspectKey Target = AspectKey.Of("odyssey.pawn.mood.target");
 
-        /// <summary>Her minor, major and extreme lines, after anything that moves them.</summary>
-        public static readonly AspectKey Minor = AspectKey.Of("odyssey.pawn.mood.minor");
-        public static readonly AspectKey Major = AspectKey.Of("odyssey.pawn.mood.major");
-        public static readonly AspectKey Extreme = AspectKey.Of("odyssey.pawn.mood.extreme");
 
         /// <summary>The <see cref="BreakHandle"/> she is in, while she is in one (design 43 §5c).</summary>
         public static readonly AspectKey Break = AspectKey.Of("odyssey.pawn.break");
 
-        /// <summary>The base every target starts from, so the Thoughts tab can show its sum.</summary>
-        public static readonly AspectKey Base = AspectKey.Of("odyssey.pawn.mood.base");
 
         /// <summary>
         /// A need band's situational offset, per need (<c>odyssey.pawn.mood.need.food</c>),
