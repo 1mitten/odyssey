@@ -12588,3 +12588,62 @@ when the world is built. The player now sees 5.6, 3.8, 5.3 ms.
 
 The one hitch in play was a grass rung: 58 and 38 ms, because it rebuilt the whole surround to change
 its tufts. It re-strews the tufts alone now. Design 38 §25.
+
+## 2026-09-25 — M5 and M13: the scenery becomes real things (design 45)
+
+The Meadow look pass had strewn the board with drawn bushes and stones, placed by a hash of the
+cell and simulated not at all. The owner decided which of them become real (bushes and loose
+stones at the same spots and density, mushrooms under trees, berry bushes as a kind of bush), what
+a bush does (walked through slowly, cleared before anything is built on it, yields nothing), what
+the food does (berries picked by order and regrowing over days, mushrooms foraged once and
+reappearing elsewhere), and that trees become species in the simulation so the art, the wood and
+the work agree. Design 45 holds the decisions; this entry holds the reasoning that is not in it.
+
+**The species cost no worldgen draw.** The tree pass already rolled a `species` number per column
+for conifer-or-broadleaf; the four species are that roll rescaled across the broadleaf band, with
+the look pass's own rarity (one broadleaf in forty a giant, the rest one meadow tree to three
+fruit trees). So every tree stands where it stood, and what moved in the goldens is what a tree is,
+never where the wood is. Birch and meadow keep the ids 10 and 11 so an old save's trees load as
+the species its art already drew them as; the fruit tree, the giant and the bushes take 17-21,
+after the buildings, because edifice ids are one space. That made the natural ids non-contiguous,
+and **four range tests in `WorldRenderModel` would have drawn a bush as a tree or indexed past a
+table**. They are predicates now (`IsTree`, `IsBush`, `IsNatural`), and the shelf's old comment —
+the day a range test drew every shelf as a conifer — is why nothing compares an id against a range.
+
+**A bush's price has to be readable without the edifice list.** Navigation prices a cell by a byte,
+and the grid holds an edifice's handle, not its kind. The answer is a flag bit on the cell
+(`CellFlags.Undergrowth`, bit 7), set where a bush is placed and cleared by `RemoveEdifice` with
+the bush, so the only way out for a bush is the only place the flag goes. Clearing marks
+navigation dirty, which a tree never needed.
+
+**The build and zone guard was free.** A site, a growing zone and a stockpile each already refuse a
+cell with any edifice in it, which is how trees have always been handled. Nothing new was written.
+
+**The dressing's rules were ported, not shared.** The simulation cannot see presentation and does
+not use floats, so the bush rule (even lattice, 14-cell field over 0.45, 0.7 at a wood edge, times
+0.4) and the stone rule (18 per cent beside rock, 1.2 elsewhere) are restated in 16.16 fixed point
+over the same FNV hash — keyed on the world seed this time, which the dressing's never was.
+
+**Measured, not assumed.** `GoldenColonyProbe` was run on the base commit, on M5 and on M13 and the
+outputs diffed. M5: the generated census identical, the fifteen colonists wandering 95 times in
+10,000 ticks where they wandered 105 (a bush costs +50), nothing else different. M13: 680 stone in
+136 stacks and 89 mushrooms in 22 on the generated board, one more mushroom stack after the run,
+every colonist number identical to M5's — the golden colony has no store, so nobody hauls, and
+nobody was hungry enough to walk to a mushroom. The bare meadow and the city moved in neither. The
+water test's six dry-map hashes re-based and all six barren ones held, which is the evidence that
+nothing but the new passes touched the grid. The starting placement signature is unchanged once
+the map's own items are left out of it.
+
+**The frame found a pass with no cull.** The first 4K run against the base commit read the
+Standard frame flat and Huge 1.8 ms worse, and the split put all of it in `Actors`: 0.089 to
+1.421 ms. The actor pass drew every thing on the board every frame — scattered into its heap,
+lifted rock by rock, stamped into the grass — wherever the camera pointed, which was invisible while
+a colony's few dozen things were all there were. A cell box against the frustum, asked first, took
+it to 0.096. Measured back to back on this machine (RTX 5070 Ti), base then branch: Standard 4K
+6.98 -> 6.71 ms, Huge 4K 6.62 -> 6.83 ms, batch 1.81 -> 1.82 and 2.49 -> 2.34; `World` flat
+(1.007 -> 0.979, 1.710 -> 1.697), so the bushes cost what the dressing's did; the tick 0.007 ->
+0.008 ms at Standard, 0.021 -> 0.020 at Huge (P12 holds).
+
+**One owner decision left open.** The Harvest chip is pinned beside Chop and clear, which makes the
+orders strip seven; the rule that caps it asks for a paragraph and got one, and the paragraph says
+Harvest is the one to move if seven reads long.

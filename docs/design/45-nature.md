@@ -219,3 +219,10 @@ Two stacked branches: `claude/meadow-nature` (M5, §2–§5) and `claude/meadow-
   136 stacks and 89 mushrooms in 22 on the generated board, one more mushroom stack after the run,
   and every colonist number identical to M5's. The bare meadow and the city never moved. The water
   test's six dry-map hashes re-based; all six barren ones are byte-identical.
+- **The frame, 4K, back to back against the base commit** (`FrameTimeTests.TheNatureAgainstTheFrame`,
+  RTX 5070 Ti): Standard 6.98 -> 6.71 ms, Huge 6.62 -> 6.83 ms; batch 1.81 -> 1.82 and
+  2.49 -> 2.34. `World` flat (1.007 -> 0.979, 1.710 -> 1.697), so the bushes drawn from edifices
+  cost what the dressing's did. The tick 0.007 -> 0.008 ms on Standard and 0.021 -> 0.020 on Huge
+  (P12). **The first reading was not flat**: the actor pass drew every thing on the board with no
+  view test, and the map's stones and mushrooms took `Actors` from 0.089 to 1.421 ms on Huge. It
+  culls to the frustum now (`docs/bug-patterns.md`, 2026-09-25).
