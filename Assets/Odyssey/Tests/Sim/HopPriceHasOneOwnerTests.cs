@@ -65,14 +65,15 @@ namespace Odyssey.Tests.Sim
 
                     // A comment may discuss the price; only code may not decide it.
                     string code = StripComment(line);
-                    if (Regex.IsMatch(code, @"\bMoveCost\s*\.\s*(JumpUp|Drop)\b"))
+                    if (Regex.IsMatch(code, @"\bMoveCost\s*\.\s*(JumpUp|Drop|Jump)\b"))
                         offenders.Add($"{name}:{i + 1}: {line.Trim()}");
                 }
             }
 
             Assert.That(offenders, Is.Empty,
                 "MoveCost.JumpUp and MoveCost.Drop name the price of a hop, which NavGraph.HopCost " +
-                "owns. Call it instead — a second place deciding this is the defect that left a " +
+                "owns, and MoveCost.Jump the price of a jump over a stream, which NavGraph.JumpCost " +
+                "owns (design 43). Call them instead — a second place deciding this is the defect that left a " +
                 "colonist standing on a face for 10,000 ticks. Offenders:\n  " +
                 string.Join("\n  ", offenders));
         }

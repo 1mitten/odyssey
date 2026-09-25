@@ -47,6 +47,12 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Steps taken as a hop: one block up or down, with nothing built.</summary>
         public int HopSteps { get; private set; }
+
+        /// <summary>Jumps over a stream that landed on the far bank (design 43).</summary>
+        public int JumpSteps { get; private set; }
+
+        /// <summary>Jumps over a stream that fell short, into the water (design 43 §6).</summary>
+        public int JumpsFailed { get; private set; }
         public int PathsServed { get; private set; }
         public int PathsFailed { get; private set; }
 
@@ -149,7 +155,19 @@ namespace Odyssey.Sim.Pawns
                     return;
                 }
 
-                int cost = StepCost(pawn.Cell, next, pawn.Mode) * Rates.Scale;
+                // Take-off (design 43 §6). The one roll that decides a jump is made the first
+                // tick it is the step in hand, before any of its price is paid, so the drawing
+                // knows where it lands for the whole of the step rather than finding out at the
+                // end — which would move the figure 2.5 m in a frame.
+                if (pawn.JumpLanding < 0
+                    && NavGraph.IsJump(_ctx.Size.FromIndex(pawn.Cell), _ctx.Size.FromIndex(next)))
+                    next = CommitJump(pawn, next);
+
+                // A jump in the air costs a jump whether or not it clears the water: the colonist
+                // was in the air for the same time either way. A short one is a step into the
+                // water beside the bank, which on its own would be priced as a drop.
+                int cost = (pawn.JumpLanding >= 0 ? NavGraph.JumpCost() : StepCost(pawn.Cell, next, pawn.Mode))
+                           * Rates.Scale;
 
                 // Carried so presentation can glide the figure across the WHOLE step rather than
                 // across its first hundred units. Scaled with progress, so the published ratio
@@ -169,7 +187,15 @@ namespace Odyssey.Sim.Pawns
                 // the two categories incomparable with each other as well as inflated: stairs are
                 // dearer per traversal than hops, so "hops against connectors" was reading a
                 // price difference as a frequency difference.
-                if (pawn.Cell / _ctx.Size.LayerStride != next / _ctx.Size.LayerStride)
+                if (pawn.JumpLanding >= 0)
+                {
+                    // Counted before the layer test: a short landing changes layer, and it is a
+                    // jump that failed rather than a hop.
+                    if (pawn.Cell / _ctx.Size.LayerStride == next / _ctx.Size.LayerStride) JumpSteps++;
+                    else JumpsFailed++;
+                    pawn.JumpLanding = -1;
+                }
+                else if (pawn.Cell / _ctx.Size.LayerStride != next / _ctx.Size.LayerStride)
                 {
                     if (NavGraph.IsHop(_ctx.Size.FromIndex(pawn.Cell), _ctx.Size.FromIndex(next)))
                         HopSteps++;
@@ -194,6 +220,69 @@ namespace Odyssey.Sim.Pawns
             // so a pawn cannot accumulate free movement by taking short journeys.
             // This also retires an interrupted step's mark (design 33 §2d): see Pawn.ClearPath.
             pawn.ClearPath();
+        }
+
+        /// <summary>
+        /// Roll a jump over a stream once, at take-off, and record where it lands (design 43 §6).
+        /// Returns the cell the step now ends in: the far bank, or the water short of it.
+        ///
+        /// <para>The chance is <see cref="MovementDef.jumpFailPerMille"/>, scaled up by
+        /// <see cref="MovementDef.jumpFailCarryingPerMille"/> while carrying and by the inverse of
+        /// the pawn's condition — the one scalar both rates already read, so a starving or frozen
+        /// colonist is likelier to fall in and there is one place to ask why. Rolled off
+        /// <see cref="PawnPurpose.Jump"/> keyed by tick and pawn, the melee roll's discipline, so
+        /// a lockstep twin rolls the same.</para>
+        /// </summary>
+        int CommitJump(Pawn pawn, int far)
+        {
+            int fail = _ctx.DebugJumpsAlwaysFail
+                ? Rates.Scale
+                : JumpFailPerMille(_ctx.Content.Movement, IsCarrying(pawn), pawn.ConditionPerMille());
+
+            if (!FallsShort(_ctx.Seed, _ctx.CurrentTick, pawn.Id.Value, fail))
+            {
+                pawn.JumpLanding = far;
+                return far;
+            }
+
+            int water = _ctx.Nav.ShortLanding(pawn.Cell, far);
+            pawn.LandShort(water);
+            return water;
+        }
+
+        /// <summary>
+        /// The chance a jump falls short, per mille (design 43 §6): the base, doubled (by default)
+        /// while carrying, and divided by the pawn's condition — 1.0 when well, 1.43 at the floor.
+        /// Clamped to 1,000. Public so the formula is tested as a formula and not only through a
+        /// one-in-thirty event.
+        /// </summary>
+        public static int JumpFailPerMille(MovementDef def, bool carrying, int conditionPerMille)
+        {
+            long fail = def.jumpFailPerMille;
+            if (carrying) fail = fail * def.jumpFailCarryingPerMille / Rates.Scale;
+            if (conditionPerMille > 0) fail = fail * Rates.Scale / conditionPerMille;
+            if (fail < 0) fail = 0;
+            return fail > Rates.Scale ? Rates.Scale : (int)fail;
+        }
+
+        /// <summary>
+        /// The one roll (design 43 §6), on <see cref="PawnPurpose.Jump"/> keyed by the tick and the
+        /// pawn — the melee roll's discipline — so a lockstep twin rolls the same.
+        /// </summary>
+        public static bool FallsShort(uint seed, int tick, int pawnId, int failPerMille)
+        {
+            var roll = DeterministicRandom.ForTick(seed, tick, PawnPurpose.Jump ^ (uint)pawnId);
+            return roll.NextInt(Rates.Scale) < failPerMille;
+        }
+
+        /// <summary>A load in the arms, or a person being carried to a bed.</summary>
+        bool IsCarrying(Pawn pawn)
+        {
+            if (pawn.CurrentJob != null && pawn.CurrentJob.CarriedItem >= 0) return true;
+            var all = _ctx.Pawns.All;
+            for (int i = 0; i < all.Count; i++)
+                if (all[i].CarriedBy == pawn.Id.Value) return true;
+            return false;
         }
 
         /// <summary>
@@ -233,6 +322,12 @@ namespace Odyssey.Sim.Pawns
 
             CellRef pa = _ctx.Size.FromIndex(from);
             CellRef pb = _ctx.Size.FromIndex(to);
+
+            // A jump over a one-cell stream (design 43). Without this it fell through to
+            // EnterCost and was charged as one flat cell for two cells of ground — the planner and
+            // the mover disagreeing about a price, which is the fault HopCost exists to prevent.
+            if (NavGraph.IsJump(pa, pb)) return NavGraph.JumpCost();
+
             bool diagonal = pa.X != pb.X && pa.Z != pb.Z;
             return _ctx.Nav.Grid.EnterCost(to, mode, diagonal);
         }

@@ -462,7 +462,9 @@ namespace Odyssey.Sim.Pawns
                     moveDeltaPerMille,
                     pawn.Kind,
                     flags,
-                    seated));
+                    seated,
+                    // A jump falling short lands a layer below the bank it left (design 43 §6).
+                    pawn.JumpLanding >= 0 && pawn.JumpLanding / size.LayerStride != pawn.Cell / size.LayerStride));
 
                 // The fight (design 33 §5), sparse, and for animals as much as people: the health
                 // bar is drawn over the hurt, the downed and the drafted, and a hog can be all

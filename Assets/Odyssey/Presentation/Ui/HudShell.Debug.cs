@@ -93,6 +93,11 @@ namespace Odyssey.Presentation.Ui
                     + "is how the tracer itself gets ruled out of a report about stutter",
                 ToggleTrace);
             _debugCheats.Add(_debugTraceRow);
+            _debugJumpsFailRow = DebugToggleRow(DebugDirector.JumpsFailKey,
+                "Every jump over a one-cell stream falls short into the water, and the colonist "
+                    + "climbs out on the far side. Off by default; a new colony starts with it off",
+                ToggleJumpsFail);
+            _debugCheats.Add(_debugJumpsFailRow);
             _debugCheats.Add(DebugActionRow(DebugDirector.MarkTraceKey,
                 "Writes a marker into this session's performance trace, so the seconds around "
                     + "this moment can be found afterwards - press it when something felt wrong",
@@ -154,6 +159,31 @@ namespace Odyssey.Presentation.Ui
         void MarkTrace() => _boot?.MarkTrace("debug menu");
 
         VisualElement? _debugTraceRow;
+
+        VisualElement? _debugJumpsFailRow;
+
+        /// <summary>The colony the jumps switch was last turned on in. The switch lives on that
+        /// colony's pawn context, unsaved, so a new colony starts with it off and the row has to
+        /// say so rather than remember a switch that no longer exists.</summary>
+        object? _debugJumpsFailColony;
+
+        bool DebugJumpsFailOn => _debugJumpsFailColony != null && ReferenceEquals(_debugJumpsFailColony, _boot?.Colony);
+
+        /// <summary>
+        /// Jumps always fail (design 43 §6): flips the switch on the pawn context through its
+        /// intent, which applies while paused, and shows which it is.
+        /// </summary>
+        void ToggleJumpsFail()
+        {
+            var world = _boot?.World;
+            if (world == null) return;
+            bool on = !DebugJumpsFailOn;
+            world.Intents.Submit(new Intent(IntentKind.DebugJumpsFail, default, on ? 1 : 0));
+            _debugJumpsFailColony = on ? _boot!.Colony : null;
+            RefreshJumpsFailRow();
+        }
+
+        void RefreshJumpsFailRow() => _debugJumpsFailRow?.EnableInClassList("settings__row--on", DebugJumpsFailOn);
 
         /// <summary>
         /// Turn tracing off or on, and show which it is.
@@ -268,6 +298,8 @@ namespace Odyssey.Presentation.Ui
                 // previous session, or a test, may have left either way round, and a pip showing
                 // the opposite of the truth is worse than no pip.
                 RefreshTraceRow();
+                // And the jumps switch, which a new colony has quietly turned off.
+                RefreshJumpsFailRow();
             }
         }
 

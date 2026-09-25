@@ -222,6 +222,7 @@ namespace Odyssey.Hud
             { "ui.debug.group.hostiles", "Hostiles" },
             { "ui.debug.group.items", "Items" },
             { "ui.debug.group.weapons", "Weapons" },
+            { "ui.debug.jumpsfail", "Jumps always fail" },
             { "ui.debug.marktrace", "Mark this moment" },
             { "ui.debug.panel", "Debug" },
             { "ui.debug.ripen", "Ripen crops" },
