@@ -198,7 +198,7 @@ namespace Odyssey.Sim.Pawns
             target += _ctx.Content.Temperature.MoodOffset(pawn.AmbientTempC);
             target += pawn.MemoryMoodOffset(tick);
             // Who she is: a trait's permanent offset, situational in the sense that it is
-            // recomputed here and never stored as a thought (design 44 §4e).
+            // recomputed here and never stored as a thought (design 51 §4e).
             target += pawn.TraitMoodOffset();
 
             if (target < 0) target = 0;
@@ -221,7 +221,7 @@ namespace Odyssey.Sim.Pawns
         {
             if (!pawn.CanMentalBreak()) return;
 
-            // The deepest line she is under sets the clock (design 44 §5c): four days below the
+            // The deepest line she is under sets the clock (design 51 §5c): four days below the
             // minor, 0.8 below the major, half a day below the extreme.
             var mood = _ctx.Content.Mood;
             int tier = pawn.Mood < pawn.ExtremeBreakLine() ? BreakHandle.Extreme
@@ -236,7 +236,7 @@ namespace Odyssey.Sim.Pawns
             if (rng.NextInt(mtb) >= interval) return;
 
             // Which break and how long, drawn on after the draw that decided it, so adding them
-            // changed which colonists break on no seed (design 44 §9).
+            // changed which colonists break on no seed (design 51 §9).
             int kind = MentalBreaks.Choose(pawn, _ctx, tier, ref rng);
             MentalBreakDef def = _ctx.Content.Breaks[kind];
             int span = def.maxTicks - def.minTicks;
@@ -244,7 +244,7 @@ namespace Odyssey.Sim.Pawns
             pawn.BreakKind = kind;
             BreaksTriggered++;
 
-            // A visible event (design 44 §5c): the Events panel's row, the break as its subject.
+            // A visible event (design 51 §5c): the Events panel's row, the break as its subject.
             _ctx.Incidents?.Ledger.Record(IncidentHandle.MentalBreak, pawn.Cell, tick, kind, pawn.Id.Value);
         }
 

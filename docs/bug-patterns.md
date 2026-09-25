@@ -2804,6 +2804,9 @@ meet months later as two worlds that hash alike and are not.
   `JobHandle`, `EdificeHandle` or a save section list. Read both sides' numbers before resolving.
 - **The fix:** the later branch moves (the area is bit 27), and recorded values stay where `main`
   recorded them (`main`'s intents first, the branch's after).
+- **Again the same day:** treatment took bit 22 on `main` while the traits held it in review. "Keep
+  both" compiled again, and traits moved to 23 and the break kind to 28 (design 51 §8a). Two in one day
+  means reading every conflict in `ContributeTo` as a numbering question, not a text one.
 
 ## A reader that caches against a version, shown a frame with nothing in it (2026-09-25)
 
@@ -2855,3 +2858,30 @@ the layer above an x-ray, and a campfire on it could not be clicked (owner: it "
   band test asserts a terrace stays ground with the walls raised, and `CampfirePickTests` clicks
   fires with a build tool armed (96/150 missed before, 2/150 after, both in front of the fire).
 
+## A value pushed on a cadence and restored by nothing (2026-09-25)
+
+**A world resumed from a save ran 1.06 °C colder than the one it was saved from.** `WeatherSystem`
+writes `TemperatureSystem.WeatherOffsetC` on its 120-tick pass. The weather's own state is saved, but
+the offset is a field of the temperature, and nothing wrote it on a load. So until the next pass the
+resumed world's outdoor curve had no weather in it. Every colonist's felt temperature differed on the
+first tick, and the raid gate's save-and-resume hash with it.
+
+- **The pattern:** one system *pushes* a derived value into another on a cadence. A load restores the
+  pusher's state and never re-pushes, so the receiver runs stale until the next beat. It is invisible
+  whenever a save happens to land on the beat, or before the first push.
+- **The check:** step the saved and the resumed world in lockstep from the save and hash every tick.
+  The first split names the field. `RebuildDerived` is where anything pushed has to be pushed again,
+  and `WeatherSystem.RestoreTemperatureOffset` is the example.
+
+## A hold that skips the code which repairs a load (2026-09-25)
+
+**A bandit stunned half-way through a step stood still after a load, while the saved world landed the
+step.** Paths are not saved; after a load, the walk toil sees no path and asks for one. But a stun
+*holds the driver*, and the walk toil is the driver, so a stunned pawn with progress banked never
+asked. The original had its path and moved.
+
+- **The pattern:** a load leaves derived state to be rebuilt "the next time the code runs", and some
+  state stops that code running. Stun, knock-down, a finishing step: anything in
+  `JobSystem.HoldsDriver`.
+- **The check:** the same lockstep step as above. The repair lives in the hold itself: a stunned pawn
+  with progress, no path, nothing pending and a destination re-asks, exactly as the toil would.

@@ -624,7 +624,7 @@ namespace Odyssey.Presentation.Ui
 
         /// <summary>
         /// The mood bar's colour, from the band the simulation published rather than from
-        /// <see cref="NeedBand"/>'s 60/40 (design 44 §5a): content is good, strained is warn, and
+        /// <see cref="NeedBand"/>'s 60/40 (design 51 §5a): content is good, strained is warn, and
         /// breaking or broken is bad. The mood's lines move with traits, so a fixed cut here would
         /// paint a rested colonist amber beside the word "content".
         /// </summary>

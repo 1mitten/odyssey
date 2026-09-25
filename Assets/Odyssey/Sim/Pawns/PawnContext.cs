@@ -80,7 +80,7 @@ namespace Odyssey.Sim.Pawns
         public int CurrentTick { get; internal set; }
 
         /// <summary>
-        /// Whether colonists in this world are dealt traits (design 44 §5f): the scenario's
+        /// Whether colonists in this world are dealt traits (design 51 §5f): the scenario's
         /// <see cref="ScenarioDef.traits"/>, set once when the world is built.
         /// </summary>
         public bool DealsTraits { get; set; } = true;

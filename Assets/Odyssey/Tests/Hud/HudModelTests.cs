@@ -387,7 +387,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The band is the simulation's answer (design 44 §5a). This class used to read the mood
+        /// The band is the simulation's answer (design 51 §5a). This class used to read the mood
         /// against 600 and 350 of its own, which called a colonist at the resting target of 500
         /// strained for the whole game; the lines move with traits now, so a number here would be
         /// a second owner of a line that is hers.
@@ -443,7 +443,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.Tabs[1].Name, Is.EqualTo("Skills"));
             Assert.That(pane.Tabs.Count(t => t.Enabled), Is.EqualTo(4),
                 "Needs, Skills, Thoughts and Health are live (Health since the combat contracts step, " +
-                "design 33 §5; Thoughts since design 44 §5b); Gear, Social and Log are visible with reasons");
+                "design 33 §5; Thoughts since design 51 §5b); Gear, Social and Log are visible with reasons");
             Assert.That(pane.Tabs.Single(t => t.Name == "Health").Enabled, Is.True);
             Assert.That(pane.Tabs.Single(t => t.Name == "Thoughts").Enabled, Is.True);
 

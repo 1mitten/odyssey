@@ -11,7 +11,7 @@ using static Odyssey.Tests.Sim.CombatFixture;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// Traits (design 44 §5f, TM3): dealt two or three from a colonist's own seed on a stream of
+    /// Traits (design 51 §5f, TM3): dealt two or three from a colonist's own seed on a stream of
     /// their own, never twice, and read by the five seams the owner allowed — mood, the break
     /// line, learning, work speed, and work she will not do. Every effect is tested against the
     /// same colonist with her traits taken away, which is the control.
@@ -76,7 +76,7 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void DealingTraitsMovedNoPassionAndNoSkill()
         {
-            // The trait stream is its own purpose (design 44 §3). The control is a pawn rolled the
+            // The trait stream is its own purpose (design 51 §3). The control is a pawn rolled the
             // way ColonistDraw rolled before traits: passions and skills, and nothing else.
             for (uint seed = 1; seed <= 50; seed++)
             {

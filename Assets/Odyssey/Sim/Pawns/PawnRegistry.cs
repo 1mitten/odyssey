@@ -190,7 +190,7 @@ namespace Odyssey.Sim.Pawns
             // An animal has no skills to be passionate about (design 29 §2).
             if (pawn.IsPerson) pawn.RollPassions();
             // And a colonist arriving mid-game is a new colonist: dealt her traits now, on the same
-            // stream the first tick deals them on (design 44 §5f). A bandit has none.
+            // stream the first tick deals them on (design 51 §5f). A bandit has none.
             if (pawn.IsColonist && _ctx.DealsTraits) pawn.RollTraits();
             return IntentRejection.None;
         }
@@ -293,7 +293,7 @@ namespace Odyssey.Sim.Pawns
             if (intent.B < 0 || intent.B >= WorkTypeIndex.Count) return IntentRejection.NotPermitted;
             if (intent.C < 0 || intent.C > 4) return IntentRejection.NotPermitted;
 
-            // A work type a trait forbids takes no priority but never (design 44 §4e). Refused
+            // A work type a trait forbids takes no priority but never (design 51 §4e). Refused
             // rather than stored: the cell is inert on the Work tab, so a press arriving here is a
             // caller that did not ask, and a stored number nobody can use is a number in the hash.
             if (intent.C != 0 && !pawn.CanDo(intent.B)) return IntentRejection.NotPermitted;
@@ -621,7 +621,7 @@ namespace Odyssey.Sim.Pawns
                 {
                     writer.AddPawnAspect(pawn.Id, WorkAspects.Priority[w], pawn.WorkPriorities[w]);
 
-                    // A trait can answer this with a no (design 44 §4e): the Work tab was written
+                    // A trait can answer this with a no (design 51 §4e): the Work tab was written
                     // to grey an incapable cell, and now one can be.
                     writer.AddPawnAspect(pawn.Id, WorkAspects.Capable[w], pawn.CanDo(w) ? 1 : 0);
                 }
@@ -641,12 +641,12 @@ namespace Odyssey.Sim.Pawns
                 // carries an int and a seed is a uint, and every bit of it matters.
                 writer.AddPawnAspect(pawn.Id, SkillAspects.RollSeed, unchecked((int)pawn.RollSeed));
 
-                // State of mind (design 44 §4d): the band every surface reads and the target the
+                // State of mind (design 51 §4d): the band every surface reads and the target the
                 // Thoughts tab heads with. The interface kept a copy of the threshold until this and
                 // called the resting target strained for it; the lines move with traits, so only this
                 // side can say. A colonist's, because nobody else's mood moves (Pawn.NeedsTick).
                 // Her three lines themselves are not published: nothing draws them yet, and a channel
-                // is published only when something reads it (process §3; measured, design 44 §6).
+                // is published only when something reads it (process §3; measured, design 51 §6).
                 if (pawn.IsColonist)
                 {
                     writer.AddPawnAspect(pawn.Id, MindAspects.Band, pawn.Band());
@@ -775,10 +775,10 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// What is on her mind (design 44 §5b): the situational offsets that are not nought, and every memory she holds with its stack and the time until it thins. Sparse
+        /// What is on her mind (design 51 §5b): the situational offsets that are not nought, and every memory she holds with its stack and the time until it thins. Sparse
         /// and bounded by the need and thought counts — four to eight rows for a colonist on an
         /// ordinary day — and read by the Thoughts tab by name. Published for every colonist
-        /// rather than on a query, for the reason design 44 §4d gives.
+        /// rather than on a query, for the reason design 51 §4d gives.
         /// </summary>
         void PublishThoughts(SnapshotWriter writer, Pawn pawn, int tick)
         {
@@ -790,7 +790,7 @@ namespace Odyssey.Sim.Pawns
                 if (offset != 0) writer.AddPawnAspect(pawn.Id, MindAspects.Need[n], offset);
             }
 
-            // Who she is, slot by slot (design 44 §5f), with each effect only while it is not the
+            // Who she is, slot by slot (design 51 §5f), with each effect only while it is not the
             // default. Traits never change, so this is the same handful of rows every tick; it is
             // published rather than cached on the interface's side for the reason every aspect is.
             for (int slot = 0; slot < pawn.Traits.Count && slot < MindAspects.Trait.Length; slot++)

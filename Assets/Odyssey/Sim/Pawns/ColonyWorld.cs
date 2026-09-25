@@ -205,7 +205,7 @@ namespace Odyssey.Sim.Pawns
                 // The bullets in the air (design 47 §2c): appended, no format bump. A save from
                 // before guns has no section and loads with nothing in flight.
                 pawns.Projectiles,
-                // Each colonist's traits and the kind of break she is in (design 44 §3). Appended;
+                // Each colonist's traits and the kind of break she is in (design 51 §3). Appended;
                 // absent from an older save, which loads with no traits and every break a wander —
                 // which is what that colony had.
                 new PawnMindSection(pawns.Pawns),

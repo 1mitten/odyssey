@@ -42,7 +42,7 @@ namespace Odyssey.Hud
         public readonly IReadOnlyList<SkillRow> Skills;
 
         /// <summary>
-        /// Who she is (design 44 §5f): the same rows the inspect pane draws, from
+        /// Who she is (design 51 §5f): the same rows the inspect pane draws, from
         /// <see cref="TraitSummary.Row"/>, so the card and the pane cannot word a trait two ways.
         /// Empty for a candidate built without them.
         /// </summary>

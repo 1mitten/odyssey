@@ -5,13 +5,13 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// How a trait is written on the colonist's pane and the select screen (design 44 §5f): its
+    /// How a trait is written on the colonist's pane and the select screen (design 51 §5f): its
     /// name, then what it does in a few words — "Work +20%", "Mood +6", "Breaks sooner",
     /// "Learns x1.75", "Cannot: Mining" — from the numbers the simulation published, never from a
     /// copy of the Def. <b>One owner</b> for both surfaces: the pane reads the numbers off aspects
     /// and the select screen off the rolled pawn, and both come here to be written.
     ///
-    /// <para><b>The tint is a judgement, and only the glyph-free value carries it</b> (design 44
+    /// <para><b>The tint is a judgement, and only the glyph-free value carries it</b> (design 51
     /// §5f, g-04): bad for a trait that forbids work or brings a break nearer, or costs mood,
     /// work or learning; good for one that only buys; none for a trait that is both.</para>
     /// </summary>

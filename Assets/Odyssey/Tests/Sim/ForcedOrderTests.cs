@@ -34,7 +34,7 @@ namespace Odyssey.Tests.Sim
             scenario.beds = colonists;
             scenario.startingFellRadius = 0;
             // About which site is built first, not about who does it: no traits, so a colonist dealt Ham-fisted or
-            // Tireless by her seed cannot make this test about traits (design 44 §5f).
+            // Tireless by her seed cannot make this test about traits (design 51 §5f).
             scenario.traits = false;
             ColonyWorld colony = ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: false);
             // A forced-order test times one build against another, and a botch would put a thumb
@@ -240,7 +240,7 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// A colonist whose trait forbids construction cannot be ordered to build either (design 44
+        /// A colonist whose trait forbids construction cannot be ordered to build either (design 51
         /// §4e; review, 2026-09-25): <c>CanForce</c> asked only whether the site could be built, so
         /// a Ham-fisted colonist built the wall the moment the context menu offered it. The same
         /// order to the same colonist without the trait is the control.

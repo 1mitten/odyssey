@@ -15,7 +15,7 @@ namespace Odyssey.Tests.Hud
         static PawnView Colonist(int id, int food = 800, int mood = 800, int job = 0) =>
             new PawnView(new PawnId(id), new CellRef(1, 1, 1), food, rest: 800, mood: mood, jobDef: job);
 
-        /// <summary>The band the simulation would publish for her (design 44 §5a).</summary>
+        /// <summary>The band the simulation would publish for her (design 51 §5a).</summary>
         static void Band(WorldSnapshot snapshot, int id, int band) =>
             snapshot.AddPawnAspect(new PawnAspect(new PawnId(id), MindAspectNames.BandKey, band));
 
@@ -28,7 +28,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The break alert reads the published band and keeps no threshold (design 44 §5a): it is
+        /// The break alert reads the published band and keeps no threshold (design 51 §5a): it is
         /// raised at breaking, stands through strained and clears only at content — the hysteresis
         /// the two copied numbers used to give, now against lines that are hers.
         /// </summary>

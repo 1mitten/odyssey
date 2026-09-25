@@ -358,7 +358,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// See <see cref="JobHandle"/>: the kinds of mental break (design 44 §5c). The order is
+    /// See <see cref="JobHandle"/>: the kinds of mental break (design 51 §5c). The order is
     /// <c>PawnContent.FromDefs</c>'s break list, and a break's index rides every save taken while a
     /// colonist is in one: <b>appended, never inserted</b>. The wander is nought, so every break
     /// from before the taxonomy is one.
@@ -380,7 +380,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// See <see cref="JobHandle"/>: trait indices (design 44 §4a, §4c). The order is
+    /// See <see cref="JobHandle"/>: trait indices (design 51 §4a, §4c). The order is
     /// <c>PawnContent.FromDefs</c>'s trait list, and a trait's index rides every save that holds
     /// it: <b>appended, never inserted</b>. The interface names a trait by <see cref="Names"/>
     /// (<c>ui.trait.&lt;name&gt;</c>) and never sees the Def.
@@ -413,12 +413,12 @@ namespace Odyssey.Sim.Contracts
             "quickstudy", "slowstudy", "softhands", "blackthumb", "hamfisted",
         };
 
-        /// <summary>The most traits a colonist carries: two always, a third sometimes (design 44 §5f).</summary>
+        /// <summary>The most traits a colonist carries: two always, a third sometimes (design 51 §5f).</summary>
         public const int MaxPerPawn = 3;
     }
 
     /// <summary>
-    /// See <see cref="JobHandle"/>: memory thought indices (design 44 §4a). The order is
+    /// See <see cref="JobHandle"/>: memory thought indices (design 51 §4a). The order is
     /// <c>PawnContent.FromDefs</c>'s thought list and <c>ThoughtIndex</c> aliases these, because a
     /// thought's index rides every saved memory: <b>appended, never inserted</b>. The interface
     /// names a thought by <see cref="Names"/> and never sees the Def.
@@ -451,7 +451,7 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
-    /// How a colonist's mood stands against her own break lines (design 44 §5a): the one answer the
+    /// How a colonist's mood stands against her own break lines (design 51 §5a): the one answer the
     /// roster, the inspect pane and the alert all read, <b>published by the simulation</b> as
     /// <c>odyssey.pawn.mood.band</c>. The interface used to decide it from two constants of its own,
     /// one of them a copy of the simulation's threshold, and called a colonist at the resting target
@@ -510,7 +510,7 @@ namespace Odyssey.Sim.Contracts
         /// After <see cref="BanditLeft"/> at the merge with main (2026-09-25); bandits shipped first.</summary>
         public const int MedicalDrop = 4;
         /// <summary>
-        /// A colonist broke (design 44 §5c). Written down by the world when it happens and never
+        /// A colonist broke (design 51 §5c). Written down by the world when it happens and never
         /// fired: after main's MedicalDrop at the merge (2026-09-25). The bulletin's subject is the <see cref="BreakHandle"/>, its amount the pawn.
         /// </summary>
         public const int MentalBreak = 5;

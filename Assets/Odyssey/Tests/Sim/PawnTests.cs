@@ -213,7 +213,7 @@ namespace Odyssey.Tests.Sim
             // Retuned by replacing the Def on this colony's own content, never by writing through
             // it: the MoodDef is shared by every test in the process. All three clocks, because
             // a miserable colonist is under the major line and it is the deepest that rolls
-            // (design 44 §5c).
+            // (design 51 §5c).
             MoodDef shipped = colony.Ctx.Content.Mood;
             colony.Ctx.Content.Mood = new MoodDef
             {

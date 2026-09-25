@@ -129,7 +129,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// What the row says when hovered, or null for none. The registry's description for a
-        /// thought or a trait (design 44), so correcting the wiki corrects the tooltip.
+        /// thought or a trait (design 51), so correcting the wiki corrects the tooltip.
         /// </summary>
         public string? Tooltip;
     }
@@ -223,7 +223,7 @@ namespace Odyssey.Hud
         public const string HealthKey = "ui.combat.health", ConditionKey = "ui.combat.condition",
             WeaponKey = "ui.combat.weapon";
 
-        // ---- the Thoughts tab (design 44 §5b) ------------------------------------------------
+        // ---- the Thoughts tab (design 51 §5b) ------------------------------------------------
 
         /// <summary>
         /// The line over the list: her mood and the target it is drifting to, in points out of a
@@ -241,7 +241,7 @@ namespace Odyssey.Hud
         public readonly List<InspectRow> ThoughtRows = new List<InspectRow>();
 
         /// <summary>
-        /// Who she is (design 44 §5f): one row per trait, the name then what it does, tinted by
+        /// Who she is (design 51 §5f): one row per trait, the name then what it does, tinted by
         /// <see cref="TraitSummary.Tint"/> and described by the registry. Drawn on the Needs tab
         /// under the bars, in the slack the fixed body leaves there. Empty for a colonist from
         /// before traits, and the pane then says nothing about them.
@@ -339,7 +339,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The band as a word inside a sentence, "content" to "breaking down" — and in a break, which
-        /// one: "breaking down (tantrum)" (design 44 §5c). Rebuilt only when the band or the break
+        /// one: "breaking down (tantrum)" (design 51 §5c). Rebuilt only when the band or the break
         /// changes, so a standing pane allocates nothing.
         /// </summary>
         public string MoodWord => _moodWord ?? MoodBands.Word(Band);
@@ -606,7 +606,7 @@ namespace Odyssey.Hud
         int _healthHp = int.MinValue, _healthMax = int.MinValue, _healthWeapon = int.MinValue, _healthCondition = -1;
 
         /// <summary>
-        /// Fill <see cref="TraitRows"/> from the slots the simulation published (design 44 §4d),
+        /// Fill <see cref="TraitRows"/> from the slots the simulation published (design 51 §4d),
         /// rebuilding only when a slot changed — which, since traits never change, is once per
         /// colonist the pane is opened on.
         /// </summary>
@@ -636,7 +636,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// Fill <see cref="ThoughtRows"/> and <see cref="ThoughtHeading"/> from what the simulation
-        /// published (design 44 §4d). O(1) lookups, a dozen of them, for the one pawn on the pane;
+        /// published (design 51 §4d). O(1) lookups, a dozen of them, for the one pawn on the pane;
         /// the rows are rebuilt only when a published value moved, so a standing pane allocates
         /// nothing.
         /// </summary>
@@ -658,7 +658,7 @@ namespace Odyssey.Hud
             }
 
             // A trait's permanent offset is situational: it is here now, for as long as she is
-            // who she is (design 44 §4e). Named by the trait.
+            // who she is (design 51 §4e). Named by the trait.
             for (int slot = 0; slot < TraitHandle.MaxPerPawn; slot++)
             {
                 if (!snapshot.TryGetPawnAspect(pawn.Id, MindAspectNames.TraitMoodKey[slot], out int value) || value == 0) continue;
@@ -1895,7 +1895,7 @@ namespace Odyssey.Hud
             Tabs.Add(new InspectTab { Name = "Needs", Enabled = true, Reason = string.Empty });
             Tabs.Add(new InspectTab { Name = "Skills", Enabled = true, Reason = string.Empty });
             Tabs.Add(new InspectTab { Name = "Gear", Enabled = false, Reason = "equipment arrives with the inventory" });
-            // Live since design 44 §5b: what is on her mind, and why she is where she is.
+            // Live since design 51 §5b: what is on her mind, and why she is where she is.
             Tabs.Add(new InspectTab { Name = "Thoughts", Enabled = true, Reason = string.Empty });
             Tabs.Add(new InspectTab { Name = "Social", Enabled = false, Reason = "M6" });
             // Live from the combat contracts step (design 33 §5): a colonist can be hurt now. The

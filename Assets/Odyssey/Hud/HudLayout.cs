@@ -1101,7 +1101,7 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// How many rows the Thoughts tab has room for under its heading line (design 44 §5b): the
+        /// How many rows the Thoughts tab has room for under its heading line (design 51 §5b): the
         /// tab body, less the heading, in cell rows. Derived, so it follows the body when a skill
         /// or a need moves it, and the model caps its list at it so the pane never grows.
         /// </summary>
@@ -1109,7 +1109,7 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The needs grid's height: <see cref="InspectNeedRows"/> rows of <see cref="NeedRow"/> with
-        /// a <see cref="NeedRowGap"/> between each. What the traits block sits under (design 44 §5f).
+        /// a <see cref="NeedRowGap"/> between each. What the traits block sits under (design 51 §5f).
         /// </summary>
         public static int InspectNeedsHeight => InspectNeedRows * NeedRow + (InspectNeedRows - 1) * NeedRowGap;
 

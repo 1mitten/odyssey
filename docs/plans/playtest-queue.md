@@ -179,27 +179,37 @@ the next session learns to ignore.
   run of splashes from several swimmers, or silence up close.
 
 - **Is a rested colonist content, and does the Thoughts tab say why a colonist feels as she
-  does?** (`claude/peaceful-lamport-58fozw`, design 44 §5a–§5b.) Start a colony and let it run a
+  does?** (`claude/peaceful-lamport-58fozw`, design 51 §5a–§5b.) Start a colony and let it run a
   day. A fed, rested colonist should read *content* on the pane, not *strained*. Open a colonist's
   Thoughts tab: a heading with her mood and where it is heading, then *Now* and *Memories*, worst
   first, each with its points and a memory's time left; hover a row for what it means. Have one
   colonist strike another (Ctrl-attack): the victim's tab shows *Attacked by a colonist -8* with
   about a day left. A wrong answer is text overflowing the pane, the pane changing height between
   tabs, rows you cannot read at a glance, or a mood you cannot explain from the rows.
-- **Do traits read on the select card and the pane, and do they matter?** (design 44 §5f.) On the
+- **Do traits read on the select card and the pane, and do they matter?** (design 51 §5f.) On the
   select screen, each candidate's detail pane lists two or three traits with what they do; Reroll
   changes them with the name and face; a kept card keeps them. In game, the Needs tab lists them
   under the bars, and a colonist with *Soft hands*, *Black thumb* or *Ham-fisted* has that column
   greyed on the Work tab and never does that work. The thirteen are placeholders. A wrong answer
   is traits you have to hover to understand, a card too tall for the screen, or a trait you cannot
   feel in play — say which, and fill the table in `docs/research/traits-interview.md`.
-- **Do the breaks read as breaks?** (design 44 §5c.) Debug is the fastest way: let a colony go
+- **Do the breaks read as breaks?** (design 51 §5c.) Debug is the fastest way: let a colony go
   hungry and without recreation until the band reads *breaking*. Watch for a *Mental break* row on
   the Events panel naming the break, and the pane saying *breaking down (sulk)* and so on. Sulk: she
   goes to her own bed and stands there. Binge: she eats and eats. Tantrum: she strikes a wall.
   Berserk: she attacks the nearest colonist; draft two and bring her down. A wrong answer is a break
   you cannot tell is happening, a berserker who kills, or a colonist stuck in a break after it
   should have ended.
+- **Does the mood bar agree with the word beside it, and does a break reach you?** (design 51
+  §8a.) A rested colonist's mood bar is green beside *content*; strained is amber, breaking red. Dismiss
+  a colonist's *close to breaking* alert, then push her into a break: the red *is breaking down* row
+  must still appear. Give one colonist a pistol (debug) and let her go berserk: she shoots or clubs,
+  and nobody dies. A wrong answer is an amber bar beside *content*, a break with no alert after the
+  warning was dismissed, or a berserker frozen with a gun in her hand.
+- **Does a Jumpy or Gloomy colonist read strained all the time, and is that right?** (design 51
+  §8a.) With the placeholder numbers, both read *strained* while fed and rested, and together they can
+  break on ordinary needs. Say whether that is the trait doing its job or a number to change in the
+  interview's table.
 - **Does a bandit read as a bandit, not a colonist?** (`claude/bandits`, design 42.) Debug menu >
   Spawn > Spawn 3 bandits near your colonists. Each should wear a grey welding helmet, a red vest
   over bare arms and black trousers, and carry a crowbar or a bat; click one and the pane shows a

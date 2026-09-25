@@ -635,7 +635,7 @@ namespace Odyssey.Sim.Pawns
 
             switch (jobDefIndex)
             {
-                // Work her traits forbid is forbidden to an order too (design 44 §4e): the scan
+                // Work her traits forbid is forbidden to an order too (design 51 §4e): the scan
                 // never offers it, and a player's order is the scan bypassed, not the person.
                 case JobIndex.Build:
                     return pawn.CanDo(WorkTypeIndex.Construction) && BuildWorkGiver.CanBuild(pawn, ctx, target, out stand);
@@ -701,7 +701,7 @@ namespace Odyssey.Sim.Pawns
     // =====================================================================================
 
     /// <summary>
-    /// A broken colonist does what her break does (design 44 §5c): wander, sulk at her bed, binge,
+    /// A broken colonist does what her break does (design 51 §5c): wander, sulk at her bed, binge,
     /// strike a building or strike whoever is nearest — <see cref="MentalBreaks.Fill"/>, one branch
     /// per kind, and the wander when a break has nothing to do.
     /// </summary>

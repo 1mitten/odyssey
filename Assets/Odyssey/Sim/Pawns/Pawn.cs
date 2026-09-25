@@ -516,7 +516,7 @@ namespace Odyssey.Sim.Pawns
         public List<Memory> Memories { get; } = new List<Memory>();
 
         /// <summary>
-        /// Who she is (design 44 §5f): <see cref="TraitHandle"/> indices, two or three, dealt once by
+        /// Who she is (design 51 §5f): <see cref="TraitHandle"/> indices, two or three, dealt once by
         /// <see cref="RollTraits"/> and never changed. <b>Empty for every pawn from before traits</b>
         /// and for every pawn that is not a colonist, and an empty list changes nothing: every
         /// factor below reads 1,000 and no work is disabled. Saved in
@@ -556,7 +556,7 @@ namespace Odyssey.Sim.Pawns
         public int BreakTicksLeft { get; internal set; }
 
         /// <summary>
-        /// Which break she is in, as an index into <see cref="PawnContent.Breaks"/> (design 44 §5c):
+        /// Which break she is in, as an index into <see cref="PawnContent.Breaks"/> (design 51 §5c):
         /// nought, the wander, for every break from before the taxonomy. Saved in
         /// <c>odyssey.pawn.mind</c> and hashed only while not nought.
         /// </summary>
@@ -664,7 +664,7 @@ namespace Odyssey.Sim.Pawns
         public virtual bool CanMentalBreak() => !Asleep && !IsBroken && Mood < MinorBreakLine();
 
         /// <summary>
-        /// The mood below which a minor break can be rolled (design 44 §4b): the content's line.
+        /// The mood below which a minor break can be rolled (design 51 §4b): the content's line.
         /// Virtual, because it is the one number a trait moves, and every other line is derived
         /// from it.
         /// </summary>
@@ -672,7 +672,7 @@ namespace Odyssey.Sim.Pawns
         {
             int line = Content.Mood.breakThreshold;
             for (int i = 0; i < Traits.Count; i++) line += Content.Traits[Traits[i]].breakThresholdOffset;
-            // Clamped so no trait can take the line off the scale either way (design 44 §4b). An
+            // Clamped so no trait can take the line off the scale either way (design 51 §4b). An
             // untraited colonist's 350 is inside it, so the clamp moves nothing that existed.
             return line < MinBreakLine ? MinBreakLine : line > MaxBreakLine ? MaxBreakLine : line;
         }
@@ -680,7 +680,7 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The range a trait may move the minor line within. INVENTED.</summary>
         public const int MinBreakLine = 100, MaxBreakLine = 500;
 
-        /// <summary>The traits' permanent offset to the mood target, in thousandths (design 44 §4e).</summary>
+        /// <summary>The traits' permanent offset to the mood target, in thousandths (design 51 §4e).</summary>
         public int TraitMoodOffset()
         {
             int total = 0;
@@ -699,7 +699,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// Can she do this work at all? False only for a work type one of her traits disables
-        /// (design 44 §4e). The work scan asks through <see cref="WorkPriority"/>, and the Work tab
+        /// (design 51 §4e). The work scan asks through <see cref="WorkPriority"/>, and the Work tab
         /// through the published <c>capable</c> aspect.
         /// </summary>
         public bool CanDo(int workType)
@@ -716,7 +716,7 @@ namespace Odyssey.Sim.Pawns
         public int ExtremeBreakLine() => MinorBreakLine() / 7;
 
         /// <summary>
-        /// Where her mood stands against her own lines, as a <see cref="MoodBand"/> (design 44
+        /// Where her mood stands against her own lines, as a <see cref="MoodBand"/> (design 51
         /// §5a). The one answer the interface reads; derived, never stored, so it is neither saved
         /// nor hashed.
         /// </summary>
@@ -755,7 +755,7 @@ namespace Odyssey.Sim.Pawns
             // curve said (design 28 §8). Composed here rather than in the drivers so every job
             // inherits it from the one seam, exactly as condition is.
             rate = rate * Content.Temperature.WorkPerMille(AmbientTempC) / 1_000;
-            // And who she is (design 44 §4e): the diligence spectrum, after every other factor and
+            // And who she is (design 51 §4e): the diligence spectrum, after every other factor and
             // before the floor, so no trait can price a tick of work at nothing.
             rate = rate * TraitWorkPerMille() / 1_000;
             return rate < def.workRateFloorPerMille ? def.workRateFloorPerMille : rate;
@@ -929,7 +929,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// Player priority for a work type, 0 meaning disabled — and 0 for a work type a trait
-        /// forbids, whatever is stored (design 44 §4e). The work scan is the only caller, so a
+        /// forbids, whatever is stored (design 51 §4e). The work scan is the only caller, so a
         /// forbidden type is never offered, and a priority set before is kept rather than lost.
         /// </summary>
         public virtual int WorkPriority(int workType) => CanDo(workType) ? WorkPriorities[workType] : 0;
@@ -943,7 +943,7 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// The global learning factor, per mille: the product of her traits' factors, 1,000 with
-        /// none (design 44 §4e). The seam existed for exactly this.
+        /// none (design 51 §4e). The seam existed for exactly this.
         /// </summary>
         public virtual int LearningFactorPerMille()
         {
@@ -1074,7 +1074,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Deal this colonist's traits (design 44 §5f): two, and a third on
+        /// Deal this colonist's traits (design 51 §5f): two, and a third on
         /// <see cref="PawnKindDef.thirdTraitPerCent"/>, each a weighted pick by
         /// <see cref="TraitDef.commonality"/> among the traits she does not hold, is not already a
         /// degree of the spectrum of, and does not conflict with either way. From
@@ -1190,7 +1190,7 @@ namespace Odyssey.Sim.Pawns
         /// What one thought is worth to her now, stack included, exactly as
         /// <see cref="MemoryMoodOffset"/> counts it — each live copy scaled by its place among the
         /// earlier live copies of the same thought — with how many copies are live and the tick
-        /// the soonest of them lapses (design 44 §5b). The sum over every thought is
+        /// the soonest of them lapses (design 51 §5b). The sum over every thought is
         /// <see cref="MemoryMoodOffset"/>, and <c>ThoughtsTabTests</c> holds it to that.
         /// </summary>
         public int MemoryContribution(int thoughtIndex, int currentTick, out int copies, out int soonestExpiry)
@@ -1304,10 +1304,10 @@ namespace Odyssey.Sim.Pawns
                 | (TreatedUntilTick != 0 ? 1 << 22 : 0)
                 | ((int)Response << 24) | (JumpLanding >= 0 ? 1 << 26 : 0) | ((int)Area << 27)
                 // Bit 23, which the line beside combat left free (treatment took 22): her traits
-                // (design 44 §3), walked only while she has any, so every pawn from before traits
+                // (design 51 §3), walked only while she has any, so every pawn from before traits
                 // hashes as it did.
                 | (Traits.Count > 0 ? 1 << 23 : 0)
-                // Bit 28, above the area: the kind of break, while it is not the wander (design 44
+                // Bit 28, above the area: the kind of break, while it is not the wander (design 51
                 // §3), so every break from before the taxonomy hashes as it did.
                 | (BreakKind != 0 ? 1 << 28 : 0));
             if (BreakKind != 0) hash.Add(BreakKind);

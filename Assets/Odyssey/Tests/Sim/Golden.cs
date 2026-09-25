@@ -495,7 +495,7 @@ namespace Odyssey.Tests.Sim
         /// twenty-eighth job and the pistol the eighteenth item. <b>Measured</b> the same way; the
         /// merge commit says what the probe found.</para>
         ///
-        /// <para><b>The three Simulated moved on 2026-09-25, for traits (design 44 §3, TM3); no
+        /// <para><b>The three Simulated moved on 2026-09-25, for traits (design 51 §3, TM3); no
         /// Generated moved.</b> Every colonist is dealt two or three traits on the first tick —
         /// not at placement, which is exactly why the Generated hashes stand — and the hash sees
         /// them. <b>Measured</b>: <c>GoldenColonyProbe</c> before and after, on this branch. Every

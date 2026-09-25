@@ -13469,7 +13469,7 @@ the hunk. And a catalogue rebuild is not a neutral step: it re-resolved a coloni
 name two packs share. The merged asset was already right, so the rebuild was thrown away.
 Design 47 §13.
 
-## 2026-09-25 — Traits and mental health, from interview to gate in a day (design 44)
+## 2026-09-25 — Traits and mental health, from interview to gate in a day (design 51)
 
 The owner asked to plan traits and mental health and said they would supply some traits. Grounding
 found more built than the request assumed and one thing plainly wrong. A mood system already ran
@@ -13520,3 +13520,49 @@ moved.
 The two lines meet in the goldens and nowhere else in code: the weather lowered every golden
 colony's mood by about 200 (its own probe), and traits move it again by the outlook the seeds
 deal. The goldens were re-baked on the merged code and probed against merged `main`.
+
+## 2026-09-25 — Traits reviewed, merged with main a second time, and design 51
+
+PR #215 was conflicted again: `main` had taken the kitchen, the bill list, ranged combat, medical
+supplies, the scenery and the selection highlight. That last one also took **design 44**, so the traits
+are **design 51** now; two branches in flight already hold 50. As before, only lines this branch wrote
+were renumbered.
+
+The merge was not only resolution. Treatment had taken bit 22 of the pawn's hash word, the same
+collision P12 recorded a day earlier, so traits moved to 23 and the break kind to 28. The kitchen's
+three new thoughts needed contract handles and names, or the Thoughts tab could not say what a
+colonist ate. And guns changed what an attack job is. A berserker holding a pistol is given a shot, and
+combat swaps her between shot and swing by reach, so a break that allowed only the swing would have
+ended every shot as a failure.
+
+**The Long tier failed twice, and neither failure was the traits'.** The raid gate's mid-raid save
+stopped resuming identically. Stepping the saved and the resumed world in lockstep from the save
+showed them equal at the load and split one tick later, first in a colonist's felt temperature and
+then in a bandit's move progress. So two separate faults of `main`'s own, each exposed only because
+the traits had moved the colony so a save landed on it:
+
+- The weather's temperature offset is written on its 120-tick pass and restored by nothing.
+- A stunned pawn never re-asks for the path that a load drops, because the toil that re-asks is the
+  one a stun holds.
+
+Both are fixed in the merge commit, because the gate cannot pass without them.
+
+The field soak failed a colonist for 2,100 ticks at zero food, against a bound its own comment calls
+a reachability check. She had gone to bed exhausted at 5% food and slept until rested, as the sleep
+driver says she should. The streak is now held while she sleeps, and whether a starving colonist
+should wake is the owner's decision. **Measure before reading a failure as a regression**: the
+instinct was that the merge had broken eating, and a job log showed one sleep and one walk.
+
+The review's own findings were smaller and mostly on screen:
+- The mood bar still coloured itself by a copied 60/40 cut beside the band's word.
+- One dismiss key covered both the warning and the break, so a player could miss a berserker.
+- The select card's traits overflowed their box.
+- The Thoughts headings never drew heavier.
+- An open pane allocated on every refresh.
+- A forced order ignored a trait's forbidden work.
+
+One slip to record against myself. I split the fixes out of the merge commit with a `git checkout`
+that discarded the unstaged working tree, taking the fixes with it. The `git add -A` just before it
+had written every file into the object store, and the fifteen blobs were found by their write time
+and matched by a string only the fix contained. Stage by path and commit; never follow a partial
+reset with a whole-tree checkout.

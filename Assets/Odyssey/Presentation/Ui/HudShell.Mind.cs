@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace Odyssey.Presentation.Ui
 {
     /// <summary>
-    /// <see cref="HudShell"/>: the colonist pane's Thoughts tab (design 44 §5b). Built on
+    /// <see cref="HudShell"/>: the colonist pane's Thoughts tab (design 51 §5b). Built on
     /// <c>HudShell.Combat</c>'s Health tab, method for method, so the pane has one way of drawing a
     /// list of label-and-value rows: build the body once into the fixed-height tab box, forget it
     /// when the pane is rebuilt for another subject, show it with the tab strip, and write a value
@@ -100,7 +100,7 @@ namespace Odyssey.Presentation.Ui
             SyncRowList(_thoughtRows, _thoughtsRowsGrid, _inspect.ThoughtRows);
         }
 
-        // ---- the traits, under the needs bars (design 44 §5f) -----------------------------
+        // ---- the traits, under the needs bars (design 51 §5f) -----------------------------
 
         /// <summary>The traits block: a heading and a row per trait, shown with the needs grid.</summary>
         VisualElement? _traitsBlock;

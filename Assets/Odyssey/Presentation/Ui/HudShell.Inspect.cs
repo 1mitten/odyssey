@@ -371,7 +371,7 @@ namespace Odyssey.Presentation.Ui
             // is the active tab the needs grid steps aside, as it does for Skills.
             bool health = active == "Health";
 
-            // The Thoughts tab (design 44 §5b), HudShell.Mind.cs: the needs grid steps aside for it
+            // The Thoughts tab (design 51 §5b), HudShell.Mind.cs: the needs grid steps aside for it
             // as it does for the other two.
             bool thoughts = active == "Thoughts";
 
@@ -840,7 +840,7 @@ namespace Odyssey.Presentation.Ui
                 _needsGrid = grid;
                 tabBody.Add(grid);
 
-                // Who she is, under the bars (design 44 §5f), HudShell.Mind.cs.
+                // Who she is, under the bars (design 51 §5f), HudShell.Mind.cs.
                 BuildTraitsRows(tabBody);
 
                 _skillsGrid = new VisualElement();
@@ -852,7 +852,7 @@ namespace Odyssey.Presentation.Ui
                 // The Health tab's body, in the same fixed-height box (design 33 §5).
                 BuildHealthTab(tabBody);
 
-                // The Thoughts tab's body (design 44 §5b), HudShell.Mind.cs, in the same box.
+                // The Thoughts tab's body (design 51 §5b), HudShell.Mind.cs, in the same box.
                 BuildThoughtsTab(tabBody);
 
                 _inspectBody.Add(tabBody);

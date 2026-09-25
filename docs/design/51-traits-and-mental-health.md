@@ -1,11 +1,13 @@
-# 44 — Traits and mental health: who a colonist is, and what breaks them
+# 51 — Traits and mental health: who a colonist is, and what breaks them
 
 Branch `claude/peaceful-lamport-58fozw`. Interview 2026-09-25 (`docs/research/traits-interview.md`),
 research the same day (`a-18-traits.md`, `a-19-mental-breaks.md`, `b-mental-health-models.md`,
 `g-04-mood-and-traits-ui.md`), built the same day on the owner's *"yes implement"*.
 
 **Status.** Built 2026-09-25, `TM0`–`TM6` (plan `docs/plans/traits-and-mental-health.md`),
-**not yet run in Unity and not yet played**. The trait list is a **placeholder set of our own,
+reviewed and merged with `main` again the same day (§8a), **not yet played**. Renumbered 44 → 51
+on that merge, because `main` had given 44 to the selection highlight and two branches in flight
+hold 50. The trait list is a **placeholder set of our own,
 every number INVENTED**, waiting for the owner's table in the interview file (§4c).
 
 ## 1. Why
@@ -309,8 +311,76 @@ rested colonist reading *strained* again would show (playtest queue).
 `PawnPurpose.DeconstructRefund` are the same salt, `0x165667B1`, so those two streams agree —
 the fault `StoneYield`'s own comment warns against.
 
+## 8a. Reviewed, and merged with `main` again, 2026-09-25
+
+On `D:\code\odyssey-traits`, against `main` at 372c0084: the kitchen (#227), the bill list (#228),
+ranged combat (#225), medical supplies, the scenery (#222) and the selection highlight. Two review
+passes, one on each half, then the merge, then the fixes.
+
+**What the merge had to change, not only resolve.**
+
+| Where | Was | Is | Why |
+|---|---|---|---|
+| `Pawn.ContributeTo` | traits bit 22, break kind bit 23 | traits **23**, break kind **28** | treatment took 22 on `main`: the P12 hash-bit collision a second time |
+| `IncidentHandle` | `MentalBreak` 4 | **5**, after `MedicalDrop` | `main` shipped first |
+| `ThoughtHandle` | 8 thoughts | **11**: `AteRation`, `AteBurnt`, `AteRaw` with `ui.thought.*` names | the Thoughts tab names every thought; the kitchen added three |
+| `ui.thought.atemeal` | *Ate a meal* | *Ate a cooked meal* | the kitchen made it the cooked meal's (+50) |
+| Berserk's allowed jobs | `Job_AttackMelee` | **either attack** | a pistol-holder is given a shot out of reach and combat swaps by reach; allowing only the swing ended every shot as a failure |
+
+**Two faults of `main`'s own, found by the Long tier and fixed here** because the raid gate could not
+pass without them. The traits changed the colony's course enough to put a save on each:
+
+- **A load lost the weather's pull on the outdoor curve.** `WeatherSystem` writes
+  `TemperatureSystem.WeatherOffsetC` only on its 120-tick pass, and nothing restored it on a load, so a
+  world resumed between passes ran 1.06 °C colder until the next one. `RebuildDerived` restores it.
+- **A pawn stunned mid-step stood still after a load.** Paths are not saved. The walk toil re-asks for
+  one after a load, but that toil belongs to the driver a stun holds, so the resumed pawn never asked
+  and the original landed its step. The stun hold now re-asks.
+
+Both were found by stepping the saved and the resumed world in lockstep from the raid gate's save.
+They were equal at the load and split on the next tick: first in `AmbientTempC`, then in one
+bandit's `MoveProgress`.
+
+**`SoakRunTests` no longer counts a starving colonist's sleep against her.** Its bound is a
+reachability check by its own comment. A colonist who went to bed exhausted at 5% food slept over
+9,000 ticks until rested and ate 600 ticks after waking, and was failed as unreachable. The sleep
+driver wakes on rest alone; whether a starving colonist should wake is **the owner's call** and is
+left as it is.
+
+**What the review fixed in this line.**
+
+| Finding | Was | Is |
+|---|---|---|
+| The mood bar's colour | `NeedBand`'s 60/40, so a rested colonist at 500 had an **amber bar beside "content"** | the published band: content good, strained warn, breaking or broken bad (`HudTokens.MoodBand`) |
+| Dismissing the break warning | hid the break that followed (one dismiss key, cleared only at content) | the break row is dismissed apart, and only for as long as that break lasts |
+| Two colonists swapping between at risk and broken | kept the old wording (every count unchanged) | the panel rebuilds on which colonists are broken |
+| Traits on the select card | 18 px box, so the second and third traits drew below it | `min-height`, last in a growing column |
+| *Now* and *Memories* headings | drawn at the rows' size (`Set` only cases text) | `Apply` sets the role's step and weight |
+| An open Thoughts tab | allocated every refresh: `Hex` compares, key concatenation, time left hashed as text, the signature at a thousandth of mood | channel compares, a cached key table, signatures at the drawn resolution |
+| A forced build | a Ham-fisted colonist accepted one | `CanForce` asks `CanDo` first; `WorkATraitForbidsCannotBeOrdered` |
+| `TheTraitsFitUnderTheNeeds` | cited, not written | written: 68 + 80 of a 157 px body |
+
+**Found and left, with the reason.**
+
+- *Jumpy* and *Gloomy* read **strained at rest**. Jumpy's minor line is 430, so Content starts at
+  530, above the resting 500; Gloomy's resting target is 440. Both together can tip into breaking on
+  ordinary needs. That is what those traits mean, but it breaks the interview's "a rested colonist
+  reads Content" for them. The numbers are placeholders until the owner's table.
+- A stored priority on disabled work stays in the table (and the hash); the scan refuses it. The
+  scenario's miner dealt *Soft hands* keeps Mining 1 and never mines. Deliberate in `TraitTests`.
+- The salt collision (`AnimalMind`, `DeconstructRefund`) predates this line; it is on `main`.
+
+**Verified.** Fast tier 1,789 Sim and 1,189 Hud, Long 53, the three content gates. Goldens: the
+three `Simulated` re-baked from the merged code, every `Generated` equal to `main`'s, and
+`GoldenColonyProbe` on `origin/main` against the merge differs in total mood alone (+60, −120, −120).
+The Unity tiers are in the PR's status, not here, because they ran after this was written.
+
 ## 9. Do not undo by tidying
 
+- **The mood bar reads the band, not its own cut.** `NeedBand` is right for food and rest and wrong for
+  mood, whose lines are hers.
+- **The break and the warning before it are dismissed apart.** One key hid a berserker from a player
+  who had put away the warning.
 - **The band is the simulation's.** Putting a threshold back in `RosterModel` is two owners of one
   number (P1), and the first trait that moves a line makes them disagree.
 - **Traits roll on the first tick, not at placement.** At placement they would move every

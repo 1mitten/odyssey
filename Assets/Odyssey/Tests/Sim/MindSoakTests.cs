@@ -9,7 +9,7 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The gate for traits and mental health (design 44, TM6): ten days on three seeds with traits
+    /// The gate for traits and mental health (design 51, TM6): ten days on three seeds with traits
     /// dealt, and from the third day the colony's mood pushed through all three break lines in turn,
     /// on faster clocks than the game's so every break shows inside ten days. Asked every in-game
     /// hour: nobody dead, a broken colonist running only her break's jobs and never drafted, the

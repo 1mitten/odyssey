@@ -107,7 +107,7 @@ namespace Odyssey.Sim.Events
             "Incident_Theft",
             "Incident_BanditLeft",
             "Incident_MedicalDrop",
-            // Written down by the world, never fired (design 44 §5c): a colonist broke.
+            // Written down by the world, never fired (design 51 §5c): a colonist broke.
             "Incident_MentalBreak",
         };
 
