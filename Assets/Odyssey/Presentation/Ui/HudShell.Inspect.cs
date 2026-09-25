@@ -328,7 +328,12 @@ namespace Odyssey.Presentation.Ui
                 ? DisplayStyle.Flex : DisplayStyle.None;
 
             if (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item)
+            {
                 SyncCellRows();
+                // A cooking station's bills (design 48 §5), above the tile's facts.
+                WorldSnapshot? frame = _boot?.World?.Views.Current;
+                if (frame != null) SyncBills(frame);
+            }
 
             if (!_inspect.ShowsColonistBody || _inspect.Tombstoned) return;
 
@@ -653,6 +658,9 @@ namespace Odyssey.Presentation.Ui
             _locationRow = null;
             _locationValue = null;
             _needRows = 0;
+            // The bill list belongs to the subject being replaced (design 48 §5).
+            _billsBlock = null;
+            _billRows.Clear();
 
             // Nothing selected: no panel at all (owner, 2026-09-16), and this is the HUD's resting
             // state. It was a 41 px strip reading "Nothing selected", itself already a cut-down of
@@ -897,6 +905,10 @@ namespace Odyssey.Presentation.Ui
                 // arrives and the facts change, so the pane never rebuilds its tree for a value.
                 // Items too, since 2026-09-19: a pile lying in a field carries the field's
                 // growing row, so the tile answers wherever on it the click lands.
+                // The bill list first (design 48 §5): built for every tile and shown only over a
+                // galley or a campfire, so the pane never rebuilds when the answer arrives.
+                BuildBills(_inspectBody);
+
                 _cellRowsGrid = new VisualElement();
                 _cellRowsGrid.AddToClassList("inspect__rows");
 

@@ -2237,7 +2237,8 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Power's machines, when their art resolved: once, at the middle of the footprint,
             // turned — PropShape, the mesher's own answer (design 32 §14).
-            if ((what.edifice == CoreContent.EdificeGenerator || what.edifice == CoreContent.EdificeHeater)
+            if ((what.edifice == CoreContent.EdificeGenerator || what.edifice == CoreContent.EdificeHeater
+                    || what.edifice == CoreContent.EdificeGalley)
                 && _model != null && _model.Library[module].Shape == ModuleShape.Pillar)
             {
                 int drawn = what.edifice == CoreContent.EdificeHeater

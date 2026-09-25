@@ -1,6 +1,7 @@
 # 48 — Cooking: from a hog to a meal eaten at a table
 
-**Status: designed 2026-09-25, awaiting approval. Nothing built.** Interview:
+**Status: approved 2026-09-25 (owner: *"go for it"*), §13 taken on the recommendations. K1 being
+built on `claude/cooking`.** Interview:
 `docs/research/cooking-interview.md` (twelve answers, every recommendation taken). Research:
 `a-18-cooking-hunting-butchering.md`, `a-19-food-rot.md`, `e-10-shops-pack.md`,
 `e-11-cook-and-eat-animation.md`, with `a-08` and `a-14` behind them. Plan: `docs/plans/cooking.md`.
@@ -81,22 +82,33 @@ the handle, so a new food is one XML row.
 
 | Item | Nutrition | Stack | Tier | Raw ingredient | Rots in | Ate thought |
 |---|---:|---:|---:|:-:|---:|---|
-| Meal (meat) | 900 | 10 | 0 | – | 4 days (240,000) | Ate a cooked meal **+12** |
-| Vegetable meal | 900 | 10 | 0 | – | 4 days | Ate a cooked meal **+12** |
-| Rations | 900 | 20 | 1 | – | never | Ate a ration **+4** |
-| Burnt meal | 700 | 10 | 2 | – | 4 days | Ate burnt food **−4** |
-| Carrots | 180 | 75 | 3 | yes | never (owner #2) | Ate raw food **−5** |
-| Berries, mushrooms (design 45) | as that design says | | 3 | yes | never in this unit | Ate raw food **−5** |
-| Raw meat | 50 | 75 | 4 | yes | 2 days (120,000) | Ate raw food **−5** |
+| Meal (meat) | 900 | 10 | 0 | – | 4 days (240,000) | Ate a cooked meal **+50** |
+| Vegetable meal | 900 | 10 | 0 | – | 4 days | Ate a cooked meal **+50** |
+| Rations | 900 | 20 | 1 | – | never | Ate a ration **+20** |
+| Burnt meal | 700 | 10 | 2 | – | 4 days | Ate burnt food **−40** |
+| Carrots | 180 | 75 | 3 | yes | never (owner #2) | Ate raw food **−50** |
+| Berries, mushrooms (design 45) | as that design says | | 3 | yes | never in this unit | Ate raw food **−50** |
+| Raw meat | 50 | 75 | 4 | yes | 2 days (120,000) | Ate raw food **−50** |
 | Rotten food | 0 | 75 | – | – | – | inedible |
 
-**Thoughts last a quarter of a day and do not stack**, apart from the existing +20 rule, which this
-table replaces. Eating without a table adds a separate **−3**.
+**Thoughts last a quarter of a day.** The two good ones stack twice, as the old +20 did; the bad
+ones do not, so two carrots are one grievance. Eating without a table adds a separate **−30**.
 
-The numbers are **INVENTED** around the reference's shape: raw −7 and no table −3 in `a-18`, softened
-so that a colony on carrots alone is not miserable. **Today every food gives +20.** Because a
-carrot-fed colony loses mood under this table, it is a balance change the owner should know about,
-not a detail. §13 asks the question.
+**On this project's scale, not the reference's.** Mood runs 0 to 1,000 around a base of 500, so a
+reference point is ten of ours: sleeping on the ground is −4 there and −40 here. The table was
+first written as +12 / +4 / −4 / −5 / −3, which read as smaller than today's +20 only because the
+two were in different units — found while writing `Thoughts.xml` (K1) and corrected here to the
+same intent:
+
+- the cooked meal is the reference's fine meal, **+50**;
+- the ration keeps exactly what every food gave before the kitchen, **+20**, so a colony living on
+  rations feels what it always felt;
+- burnt food is **−40**;
+- raw food is **−50**, the reference's −7 softened;
+- eating without a table is **−30**, the reference's −3.
+
+**Today every food gives +20**, so a carrot-fed colony loses mood under this table. That is the
+pressure the owner accepted (§13).
 
 A burnt meal keeps less than a whole meal's nutrition (700 against 900). That is the owner's "less
 nutrition" (#4); `a-18` recommended keeping it at 900.
@@ -339,13 +351,29 @@ Each unit is a PR, played before the next, with tests first. The plan is `docs/p
 | **K3 Hunt and butcher** | Hunting work type; the Hunt designation, giver and job; the corpse butcher mark; `CorpseRegistry.Remove`; the butcher job and yield; raw meat; the held crouch, carve stroke and knife | Mark a hog, an armed hunter kills it, a cook carves it, the meat goes to the fridge and into meals |
 | **K4 Dining** | `SeatProbe` first; table and chair; the chair search and claim; `SeatPose`; the tray hold; the bite cycle; tableware; the no-table thought | A colonist carries a plate to a chair, sits and eats with a knife and fork |
 
-## 13. For the owner at the plan review
+## 13. For the owner at the plan review — answered
 
-1. **Mood numbers (§4).** Today every food is +20. The proposal is cooked meal +12, ration +4,
-   burnt −4, raw −5, no table −3. A colony on carrots loses mood until it cooks. Is that the
-   pressure you want, or should raw food be 0 for now?
-2. **Names (§3).** Galley or Cooker? Cold store or Fridge?
-3. **Rotten food is hauled out and disappears after a day** (your #2). The reference simply deletes
-   it. Keep the haul?
-4. **An unpowered fridge rots food faster than the floor**, because it is a container under storage
-   decision 24. Keep that, or let an unpowered fridge be ×1?
+Approved with *"go for it"*, 2026-09-25, which took every recommendation:
+
+1. **Mood numbers (§4): as proposed.** A colony on carrots loses mood until it cooks. The numbers
+   were then corrected to this project's scale (§4); the intent did not change.
+2. **Names (§3): Galley and Cold store as working names.** The owner corrects them in the wiki.
+3. **Rotten food is hauled out** and disappears after a day.
+4. **An unpowered fridge rots food faster than the floor**, under storage decision 24.
+
+## 14. What K1 built, and what it did not
+
+- **The bill list is on the tile pane, not a tab.** A station's pane shows a fixed-height block —
+  a heading, *Add a bill*, a line of state and five rows — above the tile's facts, so adding a
+  bill never moves the pane. A station holds **five bills**, the rows the block is laid out for
+  (`Kitchen.MaxBills`, `BillsModel.MaxRows`). Each row: what it makes, the mode (press to go
+  round), the target with ‹ › (shift for ten), the count against it, suspend, reorder, remove.
+- **The cook holds a frying pan and tosses it** (`WorkStroke.Stir`, `WorkStyle.Cooking`). The pan
+  is Battle Royale's `SM_Wep_Pan_01`, the only one installed. The angles are proposals for a
+  contact sheet, like the pick's were.
+- **The galley draws as the Shops stove once that pack is imported**, and as the tinted block
+  until then; the meals draw as Sci-Fi City food trays (three kinds, one each). Both are one
+  catalogue row to change.
+- **Not in K1: the food in the pan going raw → cooked → burnt, and the steam.** Both want the
+  Shops food models, so they come with the import. The station already publishes what they need
+  (`StationView.CookPerMille`, `Burning`, `HasMeat`).

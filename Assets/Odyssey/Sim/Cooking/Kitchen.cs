@@ -99,8 +99,12 @@ namespace Odyssey.Sim.Cooking
         /// <summary>The most a target may be. The pane's arithmetic stops here and so does this.</summary>
         public const int MaxTarget = 999;
 
-        /// <summary>The most bills one station may hold. A pane with more rows than this is a list nobody reads.</summary>
-        public const int MaxBills = 10;
+        /// <summary>
+        /// The most bills one station may hold: five, the rows the pane is laid out for, so adding a
+        /// bill never changes the pane's height under the pointer (the storage pane's lesson). The
+        /// interface keeps the same number as <c>BillsModel.MaxRows</c>, and a test holds the two.
+        /// </summary>
+        public const int MaxBills = 5;
 
         readonly PawnContext _ctx;
         readonly IReadOnlyList<PlacedEdifice> _edifices;

@@ -1448,6 +1448,15 @@ namespace Odyssey.EditorTools
                 centreXZ = true, baseAtY = true, fitFootprint = new Vector2(2.4f, 2.4f), fitHeight = 2.2f,
                 fitAgainstBack = true,
             });
+            // The galley (design 48 §5): POLYGON Shops' stove and oven, 1.74 x 1.18 x 1.22 m at
+            // source (e-10). Fitted to the cell like the heater, the hob at about the height of a
+            // 2.5 m colonist's hands. Until the pack is imported (only its PolygonShops folder;
+            // e-10) this resolves to nothing and the galley draws as the tinted block.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.Galley, shape = ModuleShape.Pillar, prefabName = "SM_Prop_Kitchen_Stove_Oven_01",
+                centreXZ = true, baseAtY = true, fitFootprint = new Vector2(2.3f, 1.6f), fitHeight = 1.6f,
+            });
 
             // The campfire (design 31 §3). The owner's report was that it drew as a wooden block,
             // on the ghost and on the board alike, which it did: ModuleIds.Campfire had no row, so
@@ -1724,6 +1733,13 @@ namespace Odyssey.EditorTools
             {
                 moduleId = ModuleIds.ToolHammer, shape = ModuleShape.Pillar,
                 prefabName = "SM_Wep_Hammer_01",
+            });
+            // The cook's pan (design 48 §10): Battle Royale's, the only frying pan in the imported
+            // packs. Held by its handle like a haft, the pan where a blade would be.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ToolPan, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Pan_01",
             });
 
             // Colonists. A Synty character is a rigged humanoid with no MeshFilter anywhere on it,
@@ -2031,6 +2047,32 @@ namespace Odyssey.EditorTools
                 prefabName = "SM_Prop_MedicalBox_01",
                 centreXZ = true, baseAtY = true,
                 scale = new Vector3(1f, 1f, 1f),
+            });
+
+            // The kitchen's three meals (design 48 §4): Sci-Fi City's food trays, which are
+            // installed where the Shops plates are not yet. Three different trays so a meal, a
+            // vegetable meal and a burnt one can be told apart on the ground. PROPOSED: judge them
+            // on the board, and swap to the Shops plates once that pack is in.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemCookedMeal, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_FoodTray_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemVegetableMeal, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_FoodTray_02",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemBurntMeal, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_FoodTray_04",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
             });
 
             AddCombatRows(rows);

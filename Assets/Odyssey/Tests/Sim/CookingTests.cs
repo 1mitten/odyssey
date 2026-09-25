@@ -233,6 +233,21 @@ namespace Odyssey.Tests.Sim
             Assert.That(Edit(colony, galley, BillEdit.Remove, 5), Is.EqualTo(IntentRejection.NotPermitted));
         }
 
+        /// <summary>
+        /// Five bills, the rows the pane is laid out for (design 48 §14): the interface's
+        /// <c>BillsModel.MaxRows</c> is the same five, held by its own test.
+        /// </summary>
+        [Test]
+        public void AStationHoldsFiveBillsAndRefusesASixth()
+        {
+            ColonyWorld colony = Board();
+            int galley = PoweredGalley(colony);
+            Assert.That(Kitchen.MaxBills, Is.EqualTo(5));
+            for (int i = 0; i < Kitchen.MaxBills; i++)
+                Assert.That(Edit(colony, galley, BillEdit.Add, RecipeHandle.Meal), Is.EqualTo(IntentRejection.None));
+            Assert.That(Edit(colony, galley, BillEdit.Add, RecipeHandle.Meal), Is.EqualTo(IntentRejection.NotPermitted));
+        }
+
         [Test]
         public void TheBillsArePublishedWithTheirStation()
         {
