@@ -254,7 +254,7 @@ namespace Odyssey.Sim.Pawns
             // what made a mid-sleep load and the sleeping half of the hash wrong. See the eat
             // toil above for the whole of that argument.
             ToilProgress += Rates.Scale;
-            if (Pawn.Needs[NeedIndex.Rest] < ctx.Content.Kind.wakeThreshold) return JobStatus.Ongoing;
+            if (Pawn.Needs[NeedIndex.Rest] < ctx.Content.Kind.wakeThreshold && !WakesToEat(ctx)) return JobStatus.Ongoing;
 
             if (Job.TargetCell < 0) Pawn.AddMemory(ThoughtIndex.SleptOnGround, ctx.CurrentTick);
 
@@ -271,6 +271,27 @@ namespace Odyssey.Sim.Pawns
             }
             return JobStatus.Succeeded;
         }
+
+        /// <summary>
+        /// Starving, she wakes to eat (owner, 2026-09-25: <i>"if colonist is starving - yes they would
+        /// wake up"</i>) — but only when there is food she could eat. Woken with nothing to eat she
+        /// would go straight back to bed and be woken again on the next pass, all night.
+        ///
+        /// <para>Asked on the needs cadence and only at zero food, so a colony that eats costs
+        /// nothing, and a starving sleeper one food scan every needs interval. The scan is
+        /// <see cref="CriticalNeedsThinkNode.TryEat"/>'s own, into a scratch job, so "could she
+        /// eat" and "what will she eat" are one rule. Eating is asked before sleep by the think
+        /// node, so the woken colonist eats rather than lying down again.</para>
+        /// </summary>
+        bool WakesToEat(PawnContext ctx)
+        {
+            if (Pawn.Needs[NeedIndex.Food] > 0) return false;
+            if (ctx.CurrentTick % ctx.Content.NeedsIntervalTicks != 0) return false;
+            return CriticalNeedsThinkNode.TryEat(Pawn, ctx, WakeScratch);
+        }
+
+        /// <summary>Filled by <see cref="WakesToEat"/>'s question and never started.</summary>
+        static readonly Job WakeScratch = new Job();
 
         /// <summary>
         /// Arriving in a bed nobody owns makes it hers, where the colony can spare it

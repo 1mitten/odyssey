@@ -329,6 +329,54 @@ namespace Odyssey.Tests.Sim
             Assert.That(pawn.HeldReservations, Is.Empty, "the ground is not reservable");
         }
 
+        /// <summary>
+        /// A starving sleeper wakes to eat (owner, 2026-09-25: <i>"if colonist is starving - yes they
+        /// would wake up"</i>). She went to bed exhausted before she was hungry, her food ran out in
+        /// her sleep, and a meal is within reach: she gets up long before she is rested and eats it.
+        /// </summary>
+        [Test]
+        public void AStarvingSleeperWakesToEat()
+        {
+            var colony = Colony.Build();
+            var pawn = colony.Ctx.Pawns.Spawn(colony.Cell(2, 2, 0));
+            pawn.Needs[NeedIndex.Rest] = 40;
+            for (int i = 0; i < 1_000 && !pawn.Asleep; i++) colony.World.Tick();
+            Assume.That(pawn.Asleep, Is.True);
+
+            pawn.Needs[NeedIndex.Food] = 0;
+            ThingId meal = colony.Ctx.Items.Spawn(ItemIndex.Meal, colony.Cell(6, 2, 0));
+
+            for (int i = 0; i < 3_000 && colony.Ctx.Items.Get(meal) != null; i++) colony.World.Tick();
+
+            Assert.That(colony.Ctx.Items.Get(meal), Is.Null, "she woke and ate it");
+            Assert.That(pawn.Needs[NeedIndex.Rest], Is.LessThan(colony.Ctx.Content.Kind.wakeThreshold),
+                "and she did not wait to be rested first");
+        }
+
+        /// <summary>
+        /// The control, and the guard: starving with nothing to eat, she sleeps on. Waking a
+        /// colonist who can eat nothing would put her straight back to bed and wake her again on
+        /// the next pass, all night.
+        /// </summary>
+        [Test]
+        public void AStarvingSleeperWithNothingToEatSleepsOn()
+        {
+            var colony = Colony.Build();
+            var pawn = colony.Ctx.Pawns.Spawn(colony.Cell(2, 2, 0));
+            pawn.Needs[NeedIndex.Rest] = 40;
+            for (int i = 0; i < 1_000 && !pawn.Asleep; i++) colony.World.Tick();
+            Assume.That(pawn.Asleep, Is.True);
+
+            pawn.Needs[NeedIndex.Food] = 0;
+            int ended = colony.Jobs.CompletedOf(JobIndex.Sleep);
+            for (int i = 0; i < 2_000; i++)
+            {
+                colony.World.Tick();
+                Assert.That(pawn.Asleep, Is.True, $"woke at tick {i} with nothing to eat");
+            }
+            Assert.That(colony.Jobs.CompletedOf(JobIndex.Sleep), Is.EqualTo(ended), "and no sleep ended to begin again");
+        }
+
         [Test]
         public void APawnHaulsALooseThingIntoAStockpile()
         {

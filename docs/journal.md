@@ -13673,3 +13673,11 @@ that discarded the unstaged working tree, taking the fixes with it. The `git add
 had written every file into the object store, and the fifteen blobs were found by their write time
 and matched by a string only the fix contained. Stage by path and commit; never follow a partial
 reset with a whole-tree checkout.
+
+## 2026-09-25 — A starving sleeper wakes
+
+The owner answered the question the field soak raised: *"if colonist is starving - yes they would
+wake up"*. The sleep driver now ends a sleep at zero food when `TryEat` would find her something,
+asked on the needs cadence so it costs nothing until somebody is starving. The guard is the other
+half: with no food, waking her would put her back to bed and wake her on the next pass all night,
+so she sleeps on. The soak's zero-streak bound was restored to what it was, and holds.

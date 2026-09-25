@@ -343,9 +343,12 @@ bandit's `MoveProgress`.
 
 **`SoakRunTests` no longer counts a starving colonist's sleep against her.** Its bound is a
 reachability check by its own comment. A colonist who went to bed exhausted at 5% food slept over
-9,000 ticks until rested and ate 600 ticks after waking, and was failed as unreachable. The sleep
-driver wakes on rest alone; whether a starving colonist should wake is **the owner's call** and is
-left as it is.
+9,000 ticks until rested and ate 600 ticks after waking, and was failed as unreachable. **The owner
+ruled the same evening** (*"if colonist is starving - yes they would wake up"*): a sleeper at zero
+food wakes when there is food she could eat, asked on the needs cadence through `TryEat`'s own scan,
+and sleeps on when there is none, or she would be woken all night. With that rule the soak's
+original bound holds again and the hold was taken back out. `AStarvingSleeperWakesToEat` and its
+control. No golden moved.
 
 **What the review fixed in this line.**
 
