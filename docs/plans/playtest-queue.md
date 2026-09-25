@@ -23,6 +23,13 @@ the next session learns to ignore.
 
 ## Open
 
+- **Can you click a campfire a terrace above you while building?** (`claude/terrace-click`,
+  design 42 §3a amended.) On a lower terrace, open Build and raise a campfire on the terrace one step
+  up, then click it with the palette still open: its pane should open, with *Make this the hearth*.
+  Click one on your own terrace near its edge too. Then turn Walls down off in Settings and look
+  into a hillside tunnel: the layer above should still be see-through, as before. A wrong answer is
+  a fire that does nothing, a click that selects the ground beside it, or rock drawn solid over a
+  tunnel with Walls down off.
 - **Does the selection highlight make it obvious who is selected?** (`claude/selection-highlight`, design 44.)
   Click a colonist, an item, a wall, a tree and a patch of ground. Each should gain a thin white line round its own
   shape and look a touch brighter; the ground gets a pale wash. Then walk a selected colonist behind a wall: a

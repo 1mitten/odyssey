@@ -913,6 +913,12 @@ namespace Odyssey.Presentation.World
             // play camera's 48° is about a tenth of a cell of drift — in the same direction the
             // bed's own bug went.
             if (_edifice[index] == CoreContent.EdificeShelf) return ShelfShape.DeckTop;
+
+            // **The flames, which are what a player aims at** (design 43, 2026-09-25). A campfire
+            // offered only its floor, so a click on its visible body crossed that floor beyond it
+            // and a rolling neighbour in front could take the click instead — measured by
+            // CampfirePickTests. FireDirector draws the flames at this height; one number.
+            if (_edifice[index] == CoreContent.EdificeCampfire) return FireDirector.FlameHeight;
             return 0f;
         }
 

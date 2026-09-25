@@ -1423,6 +1423,12 @@ namespace Odyssey.Presentation.Bootstrap
         /// out, asked here once and written to the slice, which every pass then reads — the one
         /// place the rule is evaluated, so no two passes can disagree about it.
         /// </summary>
+        /// <summary>
+        /// The player's Walls down choice, before build mode takes it out: where the ground is
+        /// (<see cref="SliceSettings.landscapeGround"/>), not what is drawn.
+        /// </summary>
+        bool WallsChosenDown() => Directors?.Settings.IsOn(GraphicsOption.WallsDown) ?? false;
+
         bool WallsLoweredNow()
         {
             HudDirectors? directors = Directors;
@@ -1448,6 +1454,7 @@ namespace Odyssey.Presentation.Bootstrap
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
             SliceSettings slice = cameraRig != null ? cameraRig.slice : new SliceSettings();
             slice.wallsLowered = WallsLoweredNow();
+            slice.landscapeGround = WallsChosenDown();
             slice.landscapeFloor = _model.LowestOutdoorLayer;
 
             _frameTimer.Restart();
