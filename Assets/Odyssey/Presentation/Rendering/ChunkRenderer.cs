@@ -2252,6 +2252,13 @@ namespace Odyssey.Presentation.Rendering
         int[] _itemCounts = System.Array.Empty<int>();
         Matrix4x4[] _itemMatrices = new Matrix4x4[16];
 
+        /// <summary>Things on the ground skipped this frame for being off screen. A measurement.</summary>
+        public int ThingsOutsideFrustum { get; private set; }
+
+        /// <summary>The box a thing is culled by: its cell, grown by a metre each way.</summary>
+        static readonly Vector3 ThingCullBox = new Vector3(
+            CellMetrics.SizeXZ + 2f, CellMetrics.SizeY + 2f, CellMetrics.SizeXZ + 2f);
+
         /// <summary>Scratch for one heap's worth of rocks. Reused, never grown: ItemHeap caps it.</summary>
         readonly Matrix4x4[] _heapPlacements = new Matrix4x4[ItemHeap.Most];
 
@@ -2272,10 +2279,27 @@ namespace Odyssey.Presentation.Rendering
             EnsureItemModules();
             System.Array.Clear(_itemCounts, 0, _itemCounts.Length);
 
+            bool cull = CullToFrustum && ActiveFrustum != null;
+            ThingsOutsideFrustum = 0;
             for (int i = 0; i < things.Length; i++)
             {
                 CellRef cell = things[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
+
+                // **Off-screen things are not drawn**, asked before anything else is worked out for
+                // them (design 45 §9). The pass had no such test while the only things on a board
+                // were a colony's own few dozen; the map's loose stones and mushrooms made it several
+                // hundred on Standard and several thousand on Huge, and every one was scattered into
+                // its heap, lifted rock by rock onto the ground and stamped into the grass every
+                // frame wherever the camera was: measured at +1.35 ms on Huge. The box is the cell
+                // and a metre round it, so a heap's spread and a falling load stay inside it; a thing
+                // is a few centimetres tall and its shadow is short, so no sweep is needed.
+                if (cull && !GeometryUtility.TestPlanesAABB(ActiveFrustum,
+                        new Bounds(CellMetrics.Centre(cell.X, cell.Z, cell.Y), ThingCullBox)))
+                {
+                    ThingsOutsideFrustum++;
+                    continue;
+                }
                 if (slice != null && slice.HidesStandingAt(activeLayer, cell, _model)) continue;
 
                 int def = things[i].DefIndex;
