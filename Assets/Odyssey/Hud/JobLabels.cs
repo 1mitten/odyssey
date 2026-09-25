@@ -51,6 +51,9 @@ namespace Odyssey.Hud
             "ui.status.stealing",
             // Medical supplies (design 37): Job_Treat and Job_Patient, 23 and 24, after Steal.
             "ui.status.treating", "ui.status.patient",
+            // The kitchen (design 48): Job_Cook, 25 — fetching food for the pan reads as cooking,
+            // because it is the bill being worked.
+            "ui.status.cooking",
         };
 
         public static string IconKey(int jobDef) =>

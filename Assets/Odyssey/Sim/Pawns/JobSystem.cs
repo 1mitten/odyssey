@@ -720,14 +720,22 @@ namespace Odyssey.Sim.Pawns
             var items = ctx.Items.Items;
             int best = -1;
             int bestDistance = int.MaxValue;
+            int bestTier = int.MaxValue;
 
             int bestCell = -1;
 
+            // **The best food, then the nearest of it** (design 48 §8): a cooked meal across the
+            // room beats a carrot at her feet, and raw meat — the last tier — is eaten only when
+            // nothing better can be reached at all. Still one pass: a candidate in a worse tier is
+            // dropped before the distance or the reachability is asked, so this costs what the
+            // nearest-only scan did.
             for (int i = 0; i < items.Count; i++)
             {
                 var item = items[i];
                 if (item.Despawned || item.Forbidden) continue;
-                if (ctx.Content.Items[item.DefIndex].nutrition <= 0) continue;
+                ItemDef food = ctx.Content.Items[item.DefIndex];
+                if (food.nutrition <= 0) continue;
+                if (food.foodTier > bestTier) continue;
 
                 // **A meal in a shelf is a meal.** This line read `item.Cell < 0` until shelves
                 // existed, and that was right while "no cell" meant "in somebody's hands". A
@@ -736,12 +744,14 @@ namespace Odyssey.Sim.Pawns
                 int at = ctx.WhereIs(item);
                 if (at < 0) continue;
 
+                int distance = ctx.Distance(pawn.Cell, at);
+                if (food.foodTier == bestTier && distance >= bestDistance) continue;
+
                 long key = ReservationManager.Key(ReservationTargetKind.Item, item.Id.Value);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
                 if (!ctx.Reachable(pawn, at)) continue;
 
-                int distance = ctx.Distance(pawn.Cell, at);
-                if (distance >= bestDistance) continue;
+                bestTier = food.foodTier;
                 bestDistance = distance;
                 best = i;
                 bestCell = at;

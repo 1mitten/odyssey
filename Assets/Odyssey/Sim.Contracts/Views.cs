@@ -1081,6 +1081,95 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// One cooking station — a galley or a campfire — that has anything to say (design 48 §5): a
+    /// bill, or food in its pan. A station with neither is not published, so a board of campfires
+    /// nobody cooks at costs nothing here.
+    ///
+    /// <para>Its bills are the <see cref="BillCount"/> rows of <see cref="WorldSnapshot.Bills"/>
+    /// from <see cref="FirstBill"/>, top of the list first.</para>
+    /// </summary>
+    public readonly struct StationView
+    {
+        /// <summary>The cell it stands in, as a whole-world index.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>What it is: an <see cref="EdificeHandle"/> value.</summary>
+        public readonly ushort Edifice;
+
+        /// <summary>Could it cook right now — switched on and powered, or a campfire.</summary>
+        public readonly bool Ready;
+
+        /// <summary>How full the pan is, per mille of what one meal takes.</summary>
+        public readonly short PanPerMille;
+
+        /// <summary>How far the meal in the pan has cooked, per mille. Nought before anybody starts.</summary>
+        public readonly short CookPerMille;
+
+        /// <summary>The roll has been made and this one is going to come out burnt.</summary>
+        public readonly bool Burning;
+
+        /// <summary>There is meat in the pan: a meal, not a vegetable one.</summary>
+        public readonly bool HasMeat;
+
+        /// <summary>Where this station's bills start in <see cref="WorldSnapshot.Bills"/>, and how many.</summary>
+        public readonly int FirstBill, BillCount;
+
+        public StationView(int cellIndex, ushort edifice, bool ready, short panPerMille, short cookPerMille,
+            bool burning, bool hasMeat, int firstBill, int billCount)
+        {
+            CellIndex = cellIndex;
+            Edifice = edifice;
+            Ready = ready;
+            PanPerMille = panPerMille;
+            CookPerMille = cookPerMille;
+            Burning = burning;
+            HasMeat = hasMeat;
+            FirstBill = firstBill;
+            BillCount = billCount;
+        }
+    }
+
+    /// <summary>One bill on a station's list (design 48 §5). See <see cref="StationView"/>.</summary>
+    public readonly struct BillView
+    {
+        /// <summary>A <see cref="RecipeHandle"/> value.</summary>
+        public readonly int Recipe;
+
+        /// <summary>A <see cref="BillModeHandle"/> value.</summary>
+        public readonly byte Mode;
+
+        /// <summary>The number the mode counts to: meals to keep, or meals to make.</summary>
+        public readonly int Target;
+
+        /// <summary>Meals this bill has made since it was added.</summary>
+        public readonly int Done;
+
+        /// <summary>
+        /// What the mode is counting right now: the meals the colony holds for
+        /// <see cref="BillModeHandle.UntilYouHave"/>, the meals made for
+        /// <see cref="BillModeHandle.Times"/>, nought for <see cref="BillModeHandle.Forever"/>.
+        /// </summary>
+        public readonly int Count;
+
+        /// <summary>Stopped by the player.</summary>
+        public readonly bool Suspended;
+
+        /// <summary>Has nothing to do right now, because its mode says it is done.</summary>
+        public readonly bool Satisfied;
+
+        public BillView(int recipe, byte mode, int target, int done, int count, bool suspended, bool satisfied)
+        {
+            Recipe = recipe;
+            Mode = mode;
+            Target = target;
+            Done = done;
+            Count = count;
+            Suspended = suspended;
+            Satisfied = satisfied;
+        }
+    }
+
+    /// <summary>
     /// One standing crop: a planted cell, what grows there, and how far it has got.
     ///
     /// <para><b>Quantised growth, and it is not <see cref="SiteView"/>'s argument repeated.</b>
@@ -1340,6 +1429,8 @@ namespace Odyssey.Sim.Contracts
         ZoneView[] _zones = Array.Empty<ZoneView>();
         StoreView[] _stores = Array.Empty<StoreView>();
         StorageUnitView[] _units = Array.Empty<StorageUnitView>();
+        StationView[] _stations = Array.Empty<StationView>();
+        BillView[] _bills = Array.Empty<BillView>();
         PlantView[] _plants = Array.Empty<PlantView>();
 
         PawnAspect[] _aspects = Array.Empty<PawnAspect>();
@@ -1413,6 +1504,12 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>How many built stores this frame carries.</summary>
         public int StorageUnitCount { get; private set; }
+
+        /// <summary>How many cooking stations have a bill or food in the pan.</summary>
+        public int StationCount { get; private set; }
+
+        /// <summary>How many bills there are, over every station.</summary>
+        public int BillCount { get; private set; }
 
         /// <summary>How many planted cells are standing.</summary>
         public int PlantCount { get; private set; }
@@ -1571,6 +1668,12 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Every built store on the board. See <see cref="StorageUnitView"/>.</summary>
         public ReadOnlySpan<StorageUnitView> StorageUnits =>
             new ReadOnlySpan<StorageUnitView>(_units, 0, StorageUnitCount);
+
+        /// <summary>Every cooking station with a bill or a pan in use. See <see cref="StationView"/>.</summary>
+        public ReadOnlySpan<StationView> Stations => new ReadOnlySpan<StationView>(_stations, 0, StationCount);
+
+        /// <summary>Every station's bills, one station after another. See <see cref="StationView.FirstBill"/>.</summary>
+        public ReadOnlySpan<BillView> Bills => new ReadOnlySpan<BillView>(_bills, 0, BillCount);
 
         /// <summary>Every standing crop, in cell-index order. See <see cref="PlantView"/>.</summary>
         public ReadOnlySpan<PlantView> Plants => new ReadOnlySpan<PlantView>(_plants, 0, PlantCount);
@@ -1780,6 +1883,8 @@ namespace Odyssey.Sim.Contracts
             ZoneCount = 0;
             StoreCount = 0;
             StorageUnitCount = 0;
+            StationCount = 0;
+            BillCount = 0;
             PlantCount = 0;
 
             AspectCount = 0;
@@ -1912,6 +2017,18 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _units, StorageUnitCount + 1);
             _units[StorageUnitCount++] = view;
+        }
+
+        internal void AddStation(in StationView view)
+        {
+            Grow(ref _stations, StationCount + 1);
+            _stations[StationCount++] = view;
+        }
+
+        internal void AddBill(in BillView view)
+        {
+            Grow(ref _bills, BillCount + 1);
+            _bills[BillCount++] = view;
         }
 
         internal void AddPlant(in PlantView view)

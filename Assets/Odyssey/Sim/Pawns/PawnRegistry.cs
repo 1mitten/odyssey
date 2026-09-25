@@ -353,6 +353,8 @@ namespace Odyssey.Sim.Pawns
             // Medical supplies (design 37): 23 and 24, after Steal.
             new TreatJobDriver(),
             new PatientJobDriver(),
+            // The kitchen (design 48 §5), JobHandle 25.
+            new Cooking.CookJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------

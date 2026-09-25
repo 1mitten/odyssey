@@ -75,17 +75,30 @@ namespace Odyssey.Tests.Sim
             // One more after them since design 33 §17: the thief's, appended.
             Assert.That(JobHandle.Steal, Is.EqualTo(22));
             // 25 since medical supplies appended Job_Treat and Job_Patient at 23 and 24 (design
-            // 37), after the thief's — bandits shipped first at the merge with main.
-            Assert.That(JobHandle.Count, Is.EqualTo(25));
+            // 37), after the thief's — bandits shipped first at the merge with main — and 26 since
+            // the kitchen appended Job_Cook at 25 (design 48).
+            Assert.That(JobHandle.Treat, Is.EqualTo(23));
+            Assert.That(JobHandle.Cook, Is.EqualTo(25));
+            Assert.That(JobHandle.Count, Is.EqualTo(26));
             Assert.That(new[] { ItemHandle.Bat, ItemHandle.Crowbar, ItemHandle.Machete, ItemHandle.ArcBlade },
                 Is.EqualTo(new[] { 7, 8, 9, 10 }));
-            // 12 since medical supplies were appended at 11 (design 37).
-            Assert.That(ItemHandle.Count, Is.EqualTo(12));
+            // 12 since medical supplies were appended at 11 (design 37), and 15 since the
+            // kitchen's three meals were appended at 12 to 14 (design 48).
+            Assert.That(ItemHandle.MedicalSupplies, Is.EqualTo(11));
+            Assert.That(new[] { ItemHandle.CookedMeal, ItemHandle.VegetableMeal, ItemHandle.BurntMeal },
+                Is.EqualTo(new[] { 12, 13, 14 }));
+            Assert.That(ItemHandle.Count, Is.EqualTo(15));
             Assert.That(WorkHandle.Rescue, Is.EqualTo(5));
-            Assert.That(WorkHandle.Count, Is.EqualTo(7));
+            Assert.That(WorkHandle.Doctor, Is.EqualTo(6));
+            // 8 since the kitchen appended Work_Cooking at 7 (design 48).
+            Assert.That(WorkHandle.Cooking, Is.EqualTo(7));
+            Assert.That(WorkHandle.Count, Is.EqualTo(8));
             Assert.That(SkillIndex.Melee, Is.EqualTo(5));
-            // 7 since medical supplies appended Skill_Medicine at 6 (design 37).
-            Assert.That(SkillIndex.Count, Is.EqualTo(7));
+            // 7 since medical supplies appended Skill_Medicine at 6 (design 37), and 8 since the
+            // kitchen appended Skill_Cooking at 7 (design 48).
+            Assert.That(SkillIndex.Medicine, Is.EqualTo(6));
+            Assert.That(SkillIndex.Cooking, Is.EqualTo(7));
+            Assert.That(SkillIndex.Count, Is.EqualTo(8));
             Assert.That(PawnKindIndex.Bandit, Is.EqualTo(3));
             Assert.That(PawnKindIndex.Count, Is.EqualTo(4));
 
@@ -104,7 +117,7 @@ namespace Odyssey.Tests.Sim
             PawnContent content = ContentPack.Pawns();
             Assert.That(content.Jobs.Skip(17).Select(j => j.defName), Is.EqualTo(new[]
                 { "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue", "Job_Steal",
-                  "Job_Treat", "Job_Patient" }));
+                  "Job_Treat", "Job_Patient", "Job_Cook" }));
             for (int i = 0; i < content.Jobs.Length; i++)
                 Assert.That(content.Jobs[i].driver, Is.EqualTo(i), content.Jobs[i].defName + " names another driver");
             Assert.That(content.Jobs[JobIndex.AttackMelee].trainsSkill, Is.EqualTo(SkillIndex.Melee));

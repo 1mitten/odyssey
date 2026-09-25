@@ -270,7 +270,15 @@ namespace Odyssey.Tests.Sim
         //
         // Moved a twenty-eighth time, 2026-09-25, at the merge with main (weather, the stream
         // jump): neither side's number covers the merged pack, re-taken fresh.
-        const ulong ContentFingerprint = 16924157478448908115UL;
+        //
+        // Moved a twenty-ninth time, deliberately, 2026-09-25, by the kitchen (design 48 §4-§5):
+        // Skill_Cooking, Work_Cooking and Job_Cook appended; the three meals appended as items;
+        // Recipe_Meal the first RecipeDef; ItemDef gained foodTier, rawIngredient, meat, ticksToRot
+        // and ateThought, set on the ration pack and the carrots; Thought_AteMeal went from +20 to
+        // +50 as the cooked meal's, and AteRation (+20), AteBurnt (-40) and AteRaw (-50) were
+        // appended; and the work types' scan ranks moved to put cooking between growing and
+        // cutting. Every golden moves with it, measured in the same commit.
+        const ulong ContentFingerprint = 14652093262965555693UL;
 
 
         [Test]

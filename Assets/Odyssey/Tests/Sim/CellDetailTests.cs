@@ -103,8 +103,10 @@ namespace Odyssey.Tests.Sim
             // the generators' own numbering: CoreContent's ids end at 9, the trees continue from 10,
             // and each takes the next free id rather than either family's next offset - see
             // CoreContent.EdificeBed for why 12 and not 10, EdificeShelf for 13, EdificeCampfire for
-            // 14, and design 32 for the generator's 15 and the heater's 16.
-            Assert.That(EdificeHandle.Count, Is.EqualTo(CoreContent.EdificeHeater + 1));
+            // 14, design 32 for the generator's 15 and the heater's 16, and design 48 for the
+            // galley's 17.
+            Assert.That(EdificeHandle.Count, Is.EqualTo(CoreContent.EdificeGalley + 1));
+            Assert.That(EdificeHandle.Galley, Is.EqualTo(CoreContent.EdificeGalley));
             Assert.That(EdificeHandle.Wall, Is.EqualTo(CoreContent.EdificeWall));
             Assert.That(EdificeHandle.Door, Is.EqualTo(CoreContent.EdificeDoor));
             Assert.That(EdificeHandle.Ladder, Is.EqualTo(CoreContent.EdificeLadder));

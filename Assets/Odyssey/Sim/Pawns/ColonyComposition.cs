@@ -143,6 +143,10 @@ namespace Odyssey.Sim.Pawns
             var power = new Power.PowerGrid(pawns.Cells, edifices);
             pawns.Power = power;
             construction.Power = power;
+            // The kitchen (design 48 §5), for the same argument once more: a colony that forgot it
+            // would have a galley whose bill pane silently did nothing.
+            var kitchen = new Cooking.Kitchen(pawns, edifices);
+            pawns.Kitchen = kitchen;
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
             builder
                 // The world itself, first: it is what everything below reads, and it ticks
@@ -287,6 +291,7 @@ namespace Odyssey.Sim.Pawns
             growing.Attach(builder);
             storage.Attach(builder);
             units.Attach(builder);
+            kitchen.Attach(builder);
             return builder;
         }
     }

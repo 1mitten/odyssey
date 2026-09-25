@@ -306,6 +306,41 @@ namespace Odyssey.Sim.Contracts
         /// context, unsaved and unhashed. Appended last, so no recorded intent renumbers.
         /// </summary>
         DebugJumpsFail,
+
+        /// <summary>
+        /// Edit the bill list of the cooking station in <see cref="Intent.Cell"/> (design 48 §5).
+        /// <c>A</c> is the <see cref="BillEdit"/>, <c>B</c> the bill's place in the list (for
+        /// <see cref="BillEdit.Add"/>, the <see cref="RecipeHandle"/> instead), and <c>C</c> the
+        /// value a setting takes. One kind for the whole pane, because every row of it is a setting
+        /// over one station, and a kind per button would be seven entries saying the same thing.
+        /// Handler: <c>Kitchen.HandleEditBill</c>. Appended last, so no recorded intent renumbers.
+        /// </summary>
+        EditBill,
+    }
+
+    /// <summary>What an <see cref="IntentKind.EditBill"/> does, as its <c>A</c> carries it.</summary>
+    public static class BillEdit
+    {
+        /// <summary>Append a bill for recipe <c>B</c>, in the default mode.</summary>
+        public const int Add = 0;
+
+        /// <summary>Delete bill <c>B</c>.</summary>
+        public const int Remove = 1;
+
+        /// <summary>Swap bill <c>B</c> with the one above it.</summary>
+        public const int MoveUp = 2;
+
+        /// <summary>Swap bill <c>B</c> with the one below it.</summary>
+        public const int MoveDown = 3;
+
+        /// <summary>Set bill <c>B</c>'s mode to <c>C</c>, a <see cref="BillModeHandle"/>.</summary>
+        public const int SetMode = 4;
+
+        /// <summary>Set bill <c>B</c>'s target to <c>C</c>, clamped to 1..999.</summary>
+        public const int SetTarget = 5;
+
+        /// <summary>Suspend bill <c>B</c> (<c>C</c> = 1) or let it run again (<c>C</c> = 0).</summary>
+        public const int SetSuspended = 6;
     }
 
     /// <summary>
@@ -398,6 +433,9 @@ namespace Odyssey.Sim.Contracts
             // thing opened while paused; a row that read "on" while no jump had heard would be
             // the slab fault again. Nothing needs to run to make it true.
             IntentKind.DebugJumpsFail => true,
+            // A cooking station's bills (design 48 §5): settings over a building, on a pane you
+            // open while paused. The storage filter's argument exactly.
+            IntentKind.EditBill => true,
             _ => false,
         };
     }

@@ -748,6 +748,9 @@ namespace Odyssey.Hud
         {
             // stores
             { "ui.res.meal", HudCategory.Sustenance },
+            { "ui.res.meal.veg", HudCategory.Sustenance },
+            { "ui.res.meal.burnt", HudCategory.Sustenance },
+            { "ui.res.rations", HudCategory.Sustenance },
             { "ui.res.meat", HudCategory.Sustenance },
             { "ui.res.grain", HudCategory.Sustenance },
             { "ui.res.wood", HudCategory.Organic },

@@ -183,6 +183,9 @@ namespace Odyssey.Sim.Pawns
                 // The sky (design 43 §3): appended, no format bump. A save from before weather has
                 // no section and rolls a sky on its first pass, which is what a new world does.
                 pawns.Weather!,
+                // The kitchen (design 48 §5): every station's bills and pan. Appended, no format
+                // bump; a save from before the kitchen has no section and loads with no bills.
+                pawns.Kitchen!,
             };
         }
 

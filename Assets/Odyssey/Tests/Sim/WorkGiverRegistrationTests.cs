@@ -129,8 +129,10 @@ namespace Odyssey.Tests.Sim
             Assert.That(names, Is.EqualTo(new[]
             {
                 // Doctor is the second emergency (design 37), behind rescue by the work types' order.
+                // Cook sits after growing and before cutting (design 48 §5): a hungry colony cooks
+                // before it fells.
                 "Rescue", "Doctor", "Deliver", "Build", "LayConduit", "Deconstruct", "RemoveConduit",
-                "Harvest", "Sow", "Fell", "Mine", "Refuel", "Haul",
+                "Harvest", "Sow", "Cook", "Fell", "Mine", "Refuel", "Haul",
             }));
         }
 

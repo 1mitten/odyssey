@@ -465,6 +465,7 @@ namespace Odyssey.Sim.Construction
             "Building_None", "Building_Wall", "Building_Floor", "Building_DeckPlate", "Building_Ladder",
             "Building_Bed", "Building_Door", "Building_Shelf", "Building_Campfire",
             "Building_Conduit", "Building_Generator", "Building_Heater",
+            "Building_Galley",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -640,6 +641,18 @@ namespace Odyssey.Sim.Construction
                     costCount = 10, partItem = ItemHandle.Salvage, partCount = 5,
                     workToBuild = 240, minSkill = 0,
                     iconKey = "ui.arch.tool.heater", maxHitPoints = 100,
+                },
+
+                // The galley (design 48 §5): the electric cooker. a-18's 350 W, drawn whenever it is
+                // switched on, as the heater's is. One cell, blocking, rotating, wanting a clear
+                // cell; 15 stuff, 10 scrap and 300 ticks, the heater a little heavier.
+                new BuildingDef
+                {
+                    defName = "Building_Galley", label = "galley", edifice = CoreContent.EdificeGalley,
+                    blocking = true, rotates = true, needsClearCell = true, powerDrawW = 350,
+                    costCount = 15, partItem = ItemHandle.Salvage, partCount = 10,
+                    workToBuild = 300, minSkill = 0,
+                    iconKey = "ui.arch.tool.galley", maxHitPoints = 100,
                 },
             };
         }

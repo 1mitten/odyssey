@@ -87,7 +87,14 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A hurt colonist lying in a bed until she is well enough to get up (design 37).</summary>
         public const int Patient = 24;
 
-        public const int Count = 25;
+        /// <summary>
+        /// Work at a galley or a campfire (design 48 §5): either fetch one load of raw food into
+        /// the station's pan, or cook what the pan holds into a meal. One job and one driver for
+        /// both, because they are one bill being worked.
+        /// </summary>
+        public const int Cook = 25;
+
+        public const int Count = 26;
     }
 
     /// <summary>
@@ -143,7 +150,10 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Treating the hurt (design 37): the ui.work.doctor column. An emergency giver.</summary>
         public const int Doctor = 6;
 
-        public const int Count = 7;
+        /// <summary>Working the bills at a galley or a campfire (design 48 §5): the ui.work.cooking column.</summary>
+        public const int Cooking = 7;
+
+        public const int Count = 8;
 
         /// <summary>What a work type the simulation does not run answers to. Never sent.</summary>
         public const int None = -1;
@@ -224,7 +234,46 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int MedicalSupplies = 11;
 
-        public const int Count = 12;
+        // The kitchen (design 48 §4). Handle 0 stays the ration pack it always was; the cooked
+        // meal is new, and takes back the ui.res.meal name the ration pack had borrowed.
+
+        /// <summary>A cooked meal with meat in it. The best food there is.</summary>
+        public const int CookedMeal = 12;
+
+        /// <summary>A cooked meal with no meat in it: carrots and whatever else grows. As good.</summary>
+        public const int VegetableMeal = 13;
+
+        /// <summary>A meal the cook let catch: edible, less filling, and nobody enjoys it.</summary>
+        public const int BurntMeal = 14;
+
+        public const int Count = 15;
+    }
+
+    /// <summary>
+    /// See <see cref="JobHandle"/>: recipes, as a bill carries one and the bill intent names one
+    /// (design 48 §5). The order is <c>PawnContent.Recipes</c>'s.
+    /// </summary>
+    public static class RecipeHandle
+    {
+        /// <summary>Any raw food, 500 of it by nutrition, into one meal.</summary>
+        public const int Meal = 0;
+
+        public const int Count = 1;
+    }
+
+    /// <summary>How a bill decides it is finished (design 48 §5, a-14's three modes).</summary>
+    public static class BillModeHandle
+    {
+        /// <summary>Stop while the colony holds the target number of meals; start again below it. The default.</summary>
+        public const int UntilYouHave = 0;
+
+        /// <summary>Make the target number, then stop.</summary>
+        public const int Times = 1;
+
+        /// <summary>Never stop.</summary>
+        public const int Forever = 2;
+
+        public const int Count = 3;
     }
 
     /// <summary>
@@ -390,7 +439,10 @@ namespace Odyssey.Sim.Contracts
         /// power. See <c>CoreContent.EdificeHeater</c>.</summary>
         public const int Heater = 16;
 
-        public const int Count = 17;
+        /// <summary>The galley (design 48 §5): the electric cooker. See <c>CoreContent.EdificeGalley</c>.</summary>
+        public const int Galley = 17;
+
+        public const int Count = 18;
     }
 
     /// <summary>
@@ -477,7 +529,10 @@ namespace Odyssey.Sim.Contracts
         /// <summary>The electric heater (design 32 §7).</summary>
         public const int Heater = 11;
 
-        public const int Count = 12;
+        /// <summary>The galley (design 48 §5): one cell, powered, where meals are cooked from bills.</summary>
+        public const int Galley = 12;
+
+        public const int Count = 13;
     }
 
     /// <summary>

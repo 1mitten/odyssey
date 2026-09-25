@@ -461,6 +461,16 @@ namespace Odyssey.Tests.Sim
         /// which are the four animals standing under cover in the 120-tick waits
         /// <c>AnimalShelterThinkNode</c> gives them. Both together: 300 started, 74 wanders, 217
         /// waits, 341,744 progress.</para>
+        ///
+        /// <para><b>All six moved on 2026-09-25, with the kitchen (design 48, K1).</b> Every
+        /// colonist carries an eighth work priority (<c>Work_Cooking</c>) and an eighth skill
+        /// (<c>Skill_Cooking</c>), and the job system one more counter pair (<c>Job_Cook</c>); all
+        /// are hashed. The kitchen itself is hashed only once a station has been used, and none of
+        /// these colonies has one. Eating changed too — the best tier first, and a thought that is
+        /// the food's own — but nobody in these windows gets hungry enough to eat.
+        /// <b>Measured</b>: <c>GoldenColonyProbe</c> run on <c>main</c> (837c895a) and on this
+        /// branch; the outputs are identical on all three boards, food, rest, mood, experience and
+        /// every job counted included. The hash sees more; no colony does anything different.</para>
         /// </remarks>
 
         public static readonly Case Meadow = new Case
@@ -474,8 +484,8 @@ namespace Odyssey.Tests.Sim
             // Re-baked 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1), on top of the weather's own re-bake: the combined job, item,
             // skill and incident tables moved the hash the same way any content append does.
-            Generated = 9731137379822364786UL,
-            Simulated = 4414416609844227350UL,
+            Generated = 530566901186481748UL,
+            Simulated = 10523218902147163138UL,
         };
 
         /// <summary>
@@ -510,8 +520,8 @@ namespace Odyssey.Tests.Sim
             // differs in exactly the same three numbers and nothing else.
             // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
-            Generated = 13020442238468853983UL,
-            Simulated = 937054880534657713UL,
+            Generated = 13297203415180101697UL,
+            Simulated = 4861233867343888290UL,
         };
 
         /// <summary>
@@ -553,8 +563,8 @@ namespace Odyssey.Tests.Sim
             // 2026-09-25, weather-world: it rains here all run — pace and animal shelter (remarks).
             // Re-baked again 2026-09-25 at the merge of medical supplies (design 37) with main
             // (ODYSSEY_REGOLDEN=1): the combined job, item, skill and incident tables.
-            Generated = 6499961642199718646UL,
-            Simulated = 17342170182267167369UL,
+            Generated = 13777213757865155735UL,
+            Simulated = 9495214819731883809UL,
         };
     }
 }

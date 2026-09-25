@@ -30,6 +30,8 @@ namespace Odyssey.Hud
             "ui.arch.tool.bed", "ui.arch.tool.shelf",
             "ui.arch.tool.campfire",
             "ui.arch.tool.generator", "ui.arch.tool.heater",
+            // The kitchen (design 48), edifice 17.
+            "ui.arch.tool.galley",
         };
 
         public static string IconKey(int edifice) =>

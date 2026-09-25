@@ -111,7 +111,10 @@ namespace Odyssey.Tests.Sim
         // Moved once, deliberately, 2026-09-24, C6 buildings as targets (design 33 §13c): the
         // campfire 60, conduit 40, generator 300 and heater 100 `maxHitPoints`, all INVENTED,
         // in the XML and the code oracle together. Nothing else in the table moved.
-        const ulong BuildingFingerprint = 5425507577810914397UL;
+        // Moved once, deliberately, 2026-09-25, the kitchen (design 48 §5): Building_Galley
+        // appended at handle 12 — 350 W, 15 stuff and 10 scrap, 300 ticks, 100 hit points — in the
+        // XML and the code oracle together. Nothing else in the table moved.
+        const ulong BuildingFingerprint = 6523920865622285533UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone
