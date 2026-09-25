@@ -197,3 +197,61 @@ first when it was withheld.
 
 The scale-target rebuild after one mined cell is **under 0.2 ms** on this machine, with every path
 checksum, every golden and `NavGraphStatisticsTests`' region counts unchanged.
+
+### 7e. Measured after
+
+The same arm, the same machine, 2026-09-25, alone (no Unity process, CPU at 5 %):
+
+| Board | Rebuild before | **after** | Districts before | after | Local work (flood + links) |
+|---|---|---|---|---|---|
+| Standard 120 × 120 × 16 | 0.330 ms | 0.294 | 0.102 | 0.021 | 0.263 (first arm; the JIT) |
+| Large 180 × 180 × 24 | 0.733 | **0.156** | 0.330 | 0.014 | 0.125 |
+| Huge 240 × 240 × 16 | 1.233 | **0.168** | 0.623 | 0.016 | 0.132 |
+| **Scale target 250 × 250 × 40** | **1.795** | **0.184** | 1.000 | 0.005 | 0.127 |
+| Ruined city, scale target | 3.454 | **0.263** | 2.559 | 0.037 | 0.176 |
+
+**Done: 0.184 ms at the scale target, under the 0.2 ms the plan set.** Every golden, the combat
+gate's hashes and every path checksum unchanged; `NavGraphStatisticsTests`' region counts unchanged.
+What is left is the local work, and it now costs about the same on every board.
+
+**The tick benchmark's edit arm**, on its room lattice (nine times a generated map's regions, so the
+stress case, `28-map-size.md` §2), `main` against this branch in one sitting:
+
+| Edit tick, lattice | `main` | HT1 |
+|---|---|---|
+| Standard | 7.48 ms | 3.08–4.18 |
+| Large | 20.27 | 7.89–8.38 |
+| Huge | 29.09 | 12.57–13.97 |
+| Scale target | **63.77** | **11.16–17.57** |
+
+On the lattice the repair's search costs more (1.45 ms per rebuild at the scale target): its seeds sit
+in rooms whose shared district is reached round walls, through doorways, so the searches travel
+before they meet. Still a thirtieth of what the full flood cost there.
+
+### 7f. What the oracle caught
+
+- **A first draft's stopping rule was wrong.** It searched until no two live groups shared an old id
+  and every group carried one. Two groups with *different* ids can be joined through the edit itself —
+  the gap reopened between two halves of a board — and stopping left them as two districts
+  (`OpeningTheGapMergesTheTwoHalves`: "2 districts, expected 1"). The fix is the reason a merge can only
+  happen through something new: the ends of every built link are joined before any search, after which
+  distinct groups really are distinct components.
+- **A new region's id came out of `Array.Resize` at district 0**, which is somebody's district; a
+  recycled id had been reset as it was freed. On the played map, edit 1: "10 districts, expected 11".
+- **The small fixtures never reached the repair.** A rebuild dirtying a quarter of the board takes the
+  full pass, and the maze fixture and the first split and merge tests were small enough to do so every
+  time; withholding the merge relabel passed them. They were enlarged until the repair is what runs,
+  and then each withheld part failed.
+- **One part could not be made to fail**: the ends of a freed link as seeds. Dirtying the edited cell's
+  neighbouring blocks already re-floods every surviving region at the end of a link that did not come
+  back, so those regions are new and seeded anyway. Kept as a second line, and written down so it is
+  not mistaken for a tested rule.
+
+### 7g. Found on the way, and not this unit's
+
+With the navigation local, the busy tick's board-scaled cost is elsewhere. A throwaway probe timing
+every world system on the scale-target lattice, one cell mined a tick: **Enclosure 8.04 ms** (the
+temperature rooms, `28-temperature.md`), **Needs 4.16 ms**, Navigation 2.97 ms, everything else under
+0.03. At rest the whole tick is 0.15 ms, so both scale with edits. The enclosure solve arrived after
+the audit, which is why the audit's 1.19 ms edit tick was out of date by a factor of fifty on `main`.
+Recorded as **HT10** in `docs/plans/vertical-slice.md`.

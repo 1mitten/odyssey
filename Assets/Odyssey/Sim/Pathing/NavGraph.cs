@@ -1633,9 +1633,11 @@ namespace Odyssey.Sim.Pathing
         }
 
         /// <summary>
-        /// Fold the graph into the state hash. Ids and district numbers are derived, but they are
-        /// derived <em>deterministically</em>, so hashing them turns a divergence in the nav
-        /// rebuild into a gate failure at the tick it happens.
+        /// Fold the graph into a hash. <b>Not part of the world's state hash</b>: nothing calls this
+        /// (checked 2026-09-25, HT1) — the graph is derived, rebuilt on load, and no system hashes
+        /// it, so district ids, which the local repair renumbers, move no golden. It is here for a
+        /// test that wants the id-dependent picture; the id-independent one is
+        /// <see cref="StructureFingerprint"/>.
         /// </summary>
         public void ContributeTo(ref StateHash hash)
         {

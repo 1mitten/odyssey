@@ -167,6 +167,7 @@ namespace Odyssey.Tests.Sim
 
             var trace = new PhaseTrace(Ticks);
             colony.World.PhaseSink = trace;
+            colony.Nav.ResetRebuildTimes();
 
             // The allocation question the row asks, with the instrument the row settled on:
             // GC.GetTotalAllocatedBytes does not exist in this runtime, so heap growth is read
@@ -235,6 +236,15 @@ namespace Odyssey.Tests.Sim
                 // between measuring a pathfinder and measuring a list.
                 report.AppendLine($"path requests issued over the window {issued} " +
                                   $"({(double)issued / Ticks:F2} per tick), left pending {colony.Paths.Pending}");
+            }
+
+            if (colony.Nav.RebuildsTimed > 0)
+            {
+                // Where the nav rebuilds in the window went (HT1, design 05 §7a).
+                var split = new List<string>();
+                foreach (NavGraph.RebuildSegment segment in Enum.GetValues(typeof(NavGraph.RebuildSegment)))
+                    split.Add($"{segment} {colony.Nav.RebuildTicks[(int)segment] * 1000.0 / Stopwatch.Frequency / colony.Nav.RebuildsTimed:F3}");
+                report.AppendLine($"nav rebuilds {colony.Nav.RebuildsTimed}, per rebuild: {string.Join(", ", split)} ms");
             }
 
             report.AppendLine();
