@@ -372,9 +372,13 @@ Approved with *"go for it"*, 2026-09-25, which took every recommendation:
 - **The cook holds a frying pan and tosses it** (`WorkStroke.Stir`, `WorkStyle.Cooking`). The pan
   is Battle Royale's `SM_Wep_Pan_01`, the only one installed. The angles are proposals for a
   contact sheet, like the pick's were.
-- **The galley draws as the Shops stove once that pack is imported**, and as the tinted block
-  until then; the meals draw as Sci-Fi City food trays (three kinds, one each). Both are one
-  catalogue row to change.
-- **Not in K1: the food in the pan going raw → cooked → burnt, and the steam.** Both want the
-  Shops food models, so they come with the import. The station already publishes what they need
+- **The Electric Cooker draws as the Shops stove.** POLYGON Shops was imported on 2026-09-25 as
+  `Assets/Synty/PolygonShops/` only, unpacked with the pack's own GUIDs; the bundled PolygonGeneric
+  was left out (e-10). Its size and facing are for the owner's eye. The meals still draw as Sci-Fi
+  City food trays (three kinds, one each), one catalogue row each to change.
+- **A pack added later loses every name tie** (`PlayScene.FindSyntyPrefab`, `LaterPacks`). The first
+  rebuild after the import moved colonist 44 onto Shops' `SM_Chr_Hunter_Male_01`, because Shops
+  sorts before Western Frontier and the lookup took whichever path sorted first.
+- **Not in K1: the food in the pan going raw → cooked → burnt, and the steam.** The Shops food
+  models are in now, so this is the next piece of presentation. The station already publishes what they need
   (`StationView.CookPerMille`, `Burning`, `HasMeat`).

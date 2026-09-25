@@ -31,8 +31,9 @@ the next session learns to ignore.
   switch the cooker off mid-cook and back on. A campfire meal also costs one wood. A wrong answer is
   a bill that does nothing, a pane that jumps when you add a row, a cook who swings at the stove
   instead of tossing a pan, or colonists who still reach for carrots with a meal in the store.
-  **Known and waiting for the Shops import:** the cooker draws as a plain block and the pan shows no
-  food going raw → cooked; the meals are Sci-Fi food trays.
+  The cooker is the POLYGON Shops stove: say whether it is the right size, and whether it faces the
+  side the cook stands on. **Known:** the pan shows no food going raw → cooked yet, and the meals are
+  Sci-Fi food trays.
 - **Does the selection highlight make it obvious who is selected?** (`claude/selection-highlight`, design 44.)
   Click a colonist, an item, a wall, a tree and a patch of ground. Each should gain a thin white line round its own
   shape and look a touch brighter; the ground gets a pale wash. Then walk a selected colonist behind a wall: a
