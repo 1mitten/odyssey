@@ -12285,3 +12285,45 @@ moves.
 One test had been measuring swing speed without saying so. Three bandits at a one-sided wall struck
 three walls with the machete and two with the slower blunt weapons, because fewer walls fell in the
 run. The test is now pinned to the machete it was measured with. Nobody stood about either way.
+
+## 2026-09-25 — Health designed: six regions over the pool, and a brief for the tab
+
+The owner asked for the health system's basics, planned from what the repo holds, so Claude
+Design could draw the Health tab. Three read-only sweeps grounded it, and the ground was firmer
+than the status line said: `CLAUDE.md`'s "no health model" had been stale since combat C2. There
+is a hit-point pool per pawn, downed at 0 and dead at −50 %, one place that loses it, bed-only
+healing, rescue, a corpse registry and the hooks that mourn a death; two severity bars that slow
+work and never hurt; three fall sites that move a pawn and hand out a memory; twenty-eight
+`ui.health.*` keys with nothing behind them; and a Health tab that reads "73 / 100" in a pane
+whose tab body is a fixed 157 px. `a-02-health.md` had the whole reference model and a fall
+table since 2026-09-16.
+
+**The pool is already the reference's lethal line.** A pool of 100 that kills at −50 is "150
+points of damage is death"; downed at 0 is a coarse pain shock. So the design leaves the pool
+alone — nothing saved, hashed, published or drawn about it moves — and adds where the damage is.
+That was the observation that made six regions cheap: they sit *over* the pool as a checked
+invariant, not under it as a replacement.
+
+Four questions, four answers, every recommendation taken: six regions (head, torso, two arms,
+two legs) rather than a pool with a list of words or the forty-part tree the panel catalogue had
+assumed, which needs a tree control the HUD has not got; bleeding, tending and fall damage in,
+lethal cold and hunger and infection out; the brief reaches the Health tab only; documents
+before code. Design 43 holds the numbers, each cited to a line of `a-02` or marked invented.
+
+Two things worth keeping from the writing. **Afflictions merge by region and kind**, so a person
+carries at most eighteen records whatever the fight was, and the save, the hash, the snapshot
+and the tab's region-clicked state all read a bounded list — a merge rule chosen for the
+interface turned out to be the bound the simulation wanted. And **pain shock at 800 ‰ downs at
+about 64 points where the pool downs at 100**, which will shorten every fight; the soak's
+downs-per-raid before and after is the measurement, and it is the first real lever on the
+owner's open question about four colonists losing to three bandits.
+
+Two corrections came from the code after the plan was approved, and both went into the
+documents rather than being carried: the plan had proposed relabelling Rescue as Doctor to avoid
+a 23rd Work-tab column, and the 22 drawn columns already include Doctor, Rescue and Patient; and
+the plan expected the Medicine skill to bump the save format, when Melee had arrived with none.
+Nothing in the line bumps it.
+
+The brief follows the animals brief's shape and hands Claude Design the pane's real geometry —
+seven 19-px rows in two 256-px columns — with the rule that a taller tab must be a stated
+number, because `InspectTabBody` moves every tab at once. Six states, one file each.

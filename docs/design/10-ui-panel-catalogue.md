@@ -463,6 +463,10 @@ parts. Tended and infected states shown as glyphs.
 This is the densest tree in the game and is the main justification for a virtualising tree
 control. Icons: `ui.health.*`, about twenty. Milestone M6.
 
+**Superseded 2026-09-25 by `43-health.md` §10** (owner's interview): the first body is **six regions**
+drawn on the Skills tab's own grid — no tree, no tree control, no window — and the Health tab
+grows rather than being added. The tree above is what the full model would need, if it ever comes.
+
 ## B2 Work priority grid
 
 | | |
