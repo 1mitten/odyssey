@@ -930,3 +930,24 @@ and one table of every state's pose and prop (§4b); a hit that ends on the draw
 afterimage for short flights, the paused bullet, the in-flight bound, the render queue against the
 rain, and the packs' particle effects as a look experiment rather than a dependency (§4c); and the
 gunshot, supplied, baked and levelled, with its wiring and voice budget (§4c-bis).
+
+## 10. Built, 2026-09-25
+
+Approved by the owner the same day (*"approved - execute"*) and built on
+`claude/ranged-combat`, stacked on PR #220. Units R0–R4, H1 and P1–P3 are in; R5 (the soak and
+the benchmark), R6 (buildings) and P4 (the frame measurement) are not, and neither is a player
+build. What the build did differently from the text above, each for a reason found in the code:
+
+| Where | The design said | Built | Why |
+|---|---|---|---|
+| §2c landing | the intended target on any crossed cell is a certain hit | **only on a shot aimed true**; a shot that missed passes its own target | a miss's line to its scatter cell usually crosses the target's cell, so "any crossed cell" would have turned most misses into hits and the hit chance into fiction; the near miss the owner asked to see is this rule |
+| §2c reaction | a struck colonist retaliates through `React` | **not when she was a bystander hit by a colonist's stray** — she remembers it (`Thought_AttackedByColonist`), she does not turn on the shooter | a colonist in the way is not attacked; retaliating would start a fight inside the firing line every time a shot went astray |
+| §2c experience | Shooting trains in `ApplySwing` | **at the shot**, in `CombatSystem.Fire` | a bullet that strikes a wall never reaches `ApplySwing`, and every shot trains, hit or miss |
+| §2d aim pace | the condition pace, accessor named at R3 | `Pawn.ConditionPerMille()` — hunger and temperature, floored at 700 | the one condition-only rate on the pawn; `WorkRatePerMille` needs a work type |
+| §2e swimming | the swim predicate design 20 uses | the shallow-water cost class on the shooter's cell | the swim is drawn by presentation off the water line; the simulation's only water fact is the cell's cost class |
+| §2e carrying | the load goes down first | nothing to do | every driver drops its load in its own cleanup, so no attack job ever starts carrying |
+| §3a clip rows | four empty pistol rows | **none declared** | see the draw below; a row is added the day a pistol clip exists, rather than four rows nobody reads |
+| §4b draw and holster | a computed 0.45 s arc, the sword rows keyed off | **the sword pack's draw and sheathe**, cut short to the hand by a shot | the pistol holsters at the left hip, and the sword's draw from the left hip is a cross-draw — which is what a left-hip holster is drawn with. The authored clip, with its grasp moment already measured, beats a computed arc. Without the pack, it snaps, as a sword does |
+| §4b aim | spine, chest and upper chest at 0.3 / 0.4 / 0.3 | spine and chest at 0.45 / 0.55 (yaw), 0.4 / 0.6 (pitch) | the figure binds no upper-chest bone |
+| §4b recoil | 12 % of the pitch into the shoulders | 25 % of it into the chest, backwards | the chest is the bone the pose pass already moves; tune it first, as §4b says |
+| §5 driver test | an unreachable target in sight is accepted | **not yet tested**: needs a terrace fixture where a target stands out of reach but in sight | a pen of walls with a gap in it is reachable; the test was rewritten to what it could honestly check, and this case is owed |

@@ -2019,6 +2019,19 @@ namespace Odyssey.EditorTools
                 centreXZ = true, baseAtY = true, lieFlat = true,
                 scale = new Vector3(1.5f, 1.5f, 1.5f),
             });
+            // The pistol (design 47 §4a; owner, 2026-09-25: Battle Royale's pistol). The heavy
+            // semi-automatic, the one self-loader among the pack's four; its name is unique in every
+            // pack, pinned to Battle Royale anyway so a future pack cannot move it. Five parts on one
+            // material, the slide among them (the director cycles it on a shot). Ground scale as the
+            // four weapons.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemPistol, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Pistol_Heavy_01",
+                centreXZ = true, baseAtY = true, lieFlat = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+            rows[rows.Count - 1].prefabUnder = BattleRoyaleFolder;
 
             AddCombatRows(rows);
             AddJumpRows(rows);
@@ -2449,6 +2462,9 @@ namespace Odyssey.EditorTools
         /// <summary>Exact-name lookup under Assets/Synty. Absent packs give null, which is fine.</summary>
         /// <summary>Where the Meadow Forest pack's own prefabs live.</summary>
         const string MeadowFolder = "Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest";
+
+        /// <summary>POLYGON Battle Royale, which the pistol is pinned to (design 47 §4a).</summary>
+        const string BattleRoyaleFolder = "Assets/Synty/PolygonBattleRoyale";
 
         /// <summary>
         /// Exact-name prefab lookup under Assets/Synty, looking in <paramref name="under"/> first
