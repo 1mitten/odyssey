@@ -90,7 +90,7 @@ namespace Odyssey.Tests.Sim
             int[] path = finder.PathToArray();
             for (int i = 0; i < path.Length; i++)
                 Assert.That(cells.Size.FromIndex(path[i]).Y, Is.EqualTo(Bank), "the path went into the water");
-            Assert.That(path, Does.Contain(near).And.Contain(far));
+            Assert.That(path, Has.Member(near).And.Member(far));
             Assert.That(finder.ValidatePath(path, TraverseMode.Colonist), Is.True);
         }
 
@@ -458,7 +458,7 @@ namespace Odyssey.Tests.Sim
 
             List<int> stood = Walk(c);
             Assert.That(c.Pawn.Cell, Is.EqualTo(c.Goal), "she never arrived");
-            Assert.That(stood, Does.Not.Contain(c.Water), "she went into the water");
+            Assert.That(stood, Has.No.Member(c.Water), "she went into the water");
             int i = stood.IndexOf(c.Near);
             Assert.That(i, Is.GreaterThanOrEqualTo(0));
             Assert.That(stood[i + 1], Is.EqualTo(c.Far), "the step off the near bank did not land on the far one");
