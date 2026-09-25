@@ -206,6 +206,18 @@ namespace Odyssey.Tests.Sim
         /// The table grows to the colony and then stops allocating, the same rule
         /// <c>PawnCrowdIndex</c> follows: a per-frame structure that allocates per frame has moved
         /// the cost rather than removed it.
+        ///
+        /// <para><b>Three windows, judged on the quietest.</b> The window is twenty whole ticks, so
+        /// it also sees whatever the runtime allocates on this thread while it runs, and that is
+        /// not always nothing: on 2026-09-25 one window read <b>5,104 bytes</b> on the hosted
+        /// runner and <b>1,792</b> here, both inside the full suite, on a commit that reads
+        /// <b>0</b> on every other run and touched no simulation code. The simulation has no
+        /// threads, clocks or identity hashing, so the ticks cannot differ from run to run; what
+        /// differs is the runtime's own timing. What this test forbids repeats in every window — a
+        /// table rebuilt each frame is 16 KB a frame at this colony, about 330 KB a window — and a
+        /// one-off does not. So the budget stays where it was, eighty times under the bug, and
+        /// only the verdict moved to the best of three (<c>docs/lessons.md</c>, "the per-tick
+        /// allocation budget flakes": grow the window, never the threshold).</para>
         /// </summary>
         [Test]
         public void RepeatedFramesStopAllocating()
@@ -221,17 +233,24 @@ namespace Odyssey.Tests.Sim
                 colony.World.Views.Current.TryGetPawnAspect(new PawnId(1), SkillAspects.RollSeed, out _);
             }
 
-            long before = System.GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < 20; i++)
+            // Allocated before the first window opens, so recording a reading costs nothing.
+            var windows = new long[3];
+            for (int w = 0; w < windows.Length; w++)
             {
-                colony.World.Tick();
-                colony.World.Views.Current.TryGetPawnAspect(new PawnId(1), SkillAspects.RollSeed, out _);
+                long before = System.GC.GetAllocatedBytesForCurrentThread();
+                for (int i = 0; i < 20; i++)
+                {
+                    colony.World.Tick();
+                    colony.World.Views.Current.TryGetPawnAspect(new PawnId(1), SkillAspects.RollSeed, out _);
+                }
+                windows[w] = System.GC.GetAllocatedBytesForCurrentThread() - before;
             }
-            long after = System.GC.GetAllocatedBytesForCurrentThread();
 
-            TestContext.WriteLine($"twenty indexed frames allocated {after - before} bytes");
-            Assert.That(after - before, Is.LessThan(4096),
-                "the aspect index is being reallocated every frame");
+            long quietest = System.Math.Min(windows[0], System.Math.Min(windows[1], windows[2]));
+            TestContext.WriteLine(
+                $"twenty indexed frames allocated {windows[0]}, {windows[1]} and {windows[2]} bytes");
+            Assert.That(quietest, Is.LessThan(4096),
+                "the aspect index is being reallocated every frame: every window allocated");
         }
 
         /// <summary>
