@@ -23,6 +23,18 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do the cracks read, on walls and on rock?** (`claude/sat-wall-damage-levels-5eq8cn`, design 57.)
+  - Build a wall, draft two colonists and right-click it, and stop them (undraft) as its bar passes
+    three quarters, a half and a quarter. The debug menu has no way to hurt a building yet. Wrong: a stage change you cannot see at play zoom; cracks that
+    read as a pattern on the wall rather than damage to it; lines that shimmer or vanish as you zoom
+    out.
+  - Mine a rock face and watch it from start to finish. Wrong: you miss the pale slab because
+    nothing shows for the first quarter; the rock looks painted rather than cracked.
+  - Cancel a half-mined face, then order it again. Wrong: the cracks vanish on the cancel, or the
+    miner starts from nothing.
+  - Press H for walls down on a cracked wall. Wrong: the stump is not cracked, or the full-height
+    wall's cracks float in the air.
+
 - **Polish batch: trees, drops, the fire, the roster, the pane, the fade** (`claude/polish-batch`,
   designs 20 §14, 23 §11, 31 §20, 25 §10, 14 §10–§11, 38 §27).
   - Gather six or more colonists round a campfire at night. Each should be on their own tile, with

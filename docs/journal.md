@@ -13873,3 +13873,30 @@ temperature: the weather's share of the outdoor curve is written by the weather 
 and saved nowhere, so a loaded world stood in its build's sky until the next boundary. That is on
 `main` for every save, and was fixed here because the raid test cannot pass without it. The lesson
 is in `docs/bug-patterns.md`: a value one system writes into another is derived state no section owns.
+
+## 2026-09-26 — Cracks: a struck wall and a face being mined, drawn broken
+
+The owner asked for damage levels on walls, "a general effect for cracks … after there is so many
+hps left", then for rock being mined too. Everything the look needed was already published — a
+struck building's hit points since design 33 §13, a mining order's progress since the cut moved on
+to the cell — and both design 33 §13k and 53 §7d had listed "cracks, or a darker tint" as owed. Four
+answers settled it: three stages at 25/50/75 % gone, cracks only (no destroyed-wall mesh yet), walls
+and rock first, and the cracks replace the pale cut slab. Design 57.
+
+**The option chosen was the one that is general.** Decals were not switched on in the pipeline, want
+a scene object each (which the project avoids), and bleed on to whoever stands beside the wall; a
+destroyed-model swap is walls only and licensed art. Drawing the cell's own meshes again in a multiply
+shader cracks whatever `ChunkMesher.MeshCell` emits — core and panels, the walls-down stump, a rock's
+boulder — by the selection highlight's route, so it cannot drift from the chunk. It batches by mesh
+and stage, so a run of walls costs one wall's calls (P10 was named before a line was written).
+
+**The one simulation change came out of the second answer.** A cancelled mining order zeroed its
+cell's ledger, so a half-cut face healed, which nobody could see until it was drawn as cracks. The
+owner: "Keep its state." The work now moves to a sparse `PartMinedRock` on the cancel and comes back
+with the next order, keyed by the terrain it was cut from so a changed cell cannot inherit a head
+start. Hashed only while non-empty and saved as an appended section: no golden moved, and the fast
+tier passed unchanged on the first run. The control was run — with the keep disabled, three of the
+five tests fail.
+
+**Built without an editor.** The Presentation half — the pass, `Odyssey/Crack`, the wiring and
+`CrackPassTests` — is uncompiled until the next Unity run, which is the first thing owed.

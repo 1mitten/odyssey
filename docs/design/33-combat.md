@@ -3046,7 +3046,7 @@ struck cell, the swing, the thud, and the order line to the cell. Owed:
 
 - a hit-point bar over a struck building (`BuildingHealthBar` is the answer);
 - the building's hit points on the tile pane;
-- a damaged look — cracks, or a darker tint — once it is struck;
+- a damaged look — cracks, or a darker tint — once it is struck (**built for walls, design 57**);
 - a crash and dust on `Demolished`, and a sound of its own for a blow on wood and on stone;
 - the lock-on ring (§7b) round a building target.
 
