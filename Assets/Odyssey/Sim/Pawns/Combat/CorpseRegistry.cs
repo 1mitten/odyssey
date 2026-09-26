@@ -26,7 +26,14 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Which way it fell: one of eight headings, 0 is +Z, clockwise from above.</summary>
         public readonly byte Facing;
 
-        public Corpse(int id, int pawn, int kind, uint rollSeed, int cell, int tick, byte facing)
+        /// <summary>
+        /// She had joined the colony (design 59 §16 #5): her kind is a raider's but her side was
+        /// ours, and the corpse is drawn and named as the side she died on. Asked of
+        /// <see cref="Allegiance"/> at the death, never of the kind.
+        /// </summary>
+        public readonly bool Joined;
+
+        public Corpse(int id, int pawn, int kind, uint rollSeed, int cell, int tick, byte facing, bool joined = false)
         {
             Id = id;
             Pawn = pawn;
@@ -35,6 +42,7 @@ namespace Odyssey.Sim.Pawns
             Cell = cell;
             Tick = tick;
             Facing = facing;
+            Joined = joined;
         }
     }
 
@@ -75,7 +83,8 @@ namespace Odyssey.Sim.Pawns
         {
             if (pawn == null) throw new System.ArgumentNullException(nameof(pawn));
             int id = _nextId++;
-            _corpses.Add(new Corpse(id, pawn.Id.Value, pawn.Kind, pawn.RollSeed, pawn.Cell, tick, (byte)(facing & 7)));
+            _corpses.Add(new Corpse(id, pawn.Id.Value, pawn.Kind, pawn.RollSeed, pawn.Cell, tick, (byte)(facing & 7),
+                pawn.Prison != null && pawn.Prison.Joined));
             return id;
         }
 
@@ -109,7 +118,7 @@ namespace Odyssey.Sim.Pawns
                 hash.Add(unchecked((int)c.RollSeed));
                 hash.Add(c.Cell);
                 hash.Add(c.Tick);
-                hash.Add((int)c.Facing);
+                hash.Add(FacingWord(c));
             }
         }
 
@@ -122,7 +131,7 @@ namespace Odyssey.Sim.Pawns
                 if ((uint)c.Kind < (uint)System.Math.Max(1, _content.Kinds.Length))
                 {
                     if (_content.SpeciesOf(c.Kind).person) flags |= PawnFlags.Person;
-                    if (_content.KindOf(c.Kind).faction == Faction.Hostile) flags |= PawnFlags.Hostile;
+                    if (!c.Joined && _content.KindOf(c.Kind).faction == Faction.Hostile) flags |= PawnFlags.Hostile;
                 }
                 writer.AddCorpse(new CorpseView(c.Id, new PawnId(c.Pawn), c.Kind, c.RollSeed,
                     _size.FromIndex(c.Cell), c.Tick, c.Facing, flags));
@@ -144,7 +153,7 @@ namespace Odyssey.Sim.Pawns
                 writer.Write(unchecked((int)c.RollSeed));
                 writer.Write(c.Cell);
                 writer.Write(c.Tick);
-                writer.Write((int)c.Facing);
+                writer.Write(FacingWord(c));
             }
         }
 
@@ -154,8 +163,22 @@ namespace Odyssey.Sim.Pawns
             _nextId = reader.ReadInt();
             int count = reader.ReadInt();
             for (int i = 0; i < count; i++)
-                _corpses.Add(new Corpse(reader.ReadInt(), reader.ReadInt(), reader.ReadInt(),
-                    unchecked((uint)reader.ReadInt()), reader.ReadInt(), reader.ReadInt(), (byte)reader.ReadInt()));
+            {
+                int id = reader.ReadInt(), pawn = reader.ReadInt(), kind = reader.ReadInt();
+                uint seed = unchecked((uint)reader.ReadInt());
+                int cell = reader.ReadInt(), tick = reader.ReadInt(), word = reader.ReadInt();
+                _corpses.Add(new Corpse(id, pawn, kind, seed, cell, tick, (byte)(word & 7), (word & JoinedBit) != 0));
+            }
         }
+
+        /// <summary>
+        /// The facing's word also carries <see cref="Corpse.Joined"/>, above the three bits a heading
+        /// uses (design 59 §16 #5). The facing was always written as a whole int, so a save from
+        /// before reads unchanged, and a corpse that had not joined saves and hashes as it did —
+        /// no format bump, no golden moved.
+        /// </summary>
+        const int JoinedBit = 1 << 8;
+
+        static int FacingWord(Corpse c) => c.Facing | (c.Joined ? JoinedBit : 0);
     }
 }

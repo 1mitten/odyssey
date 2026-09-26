@@ -347,8 +347,8 @@
 
   <!--
     The prisoner line (design 59 section 7), claimed together by its contracts step (P3), 28 to
-    35, so that no two units append a job and both call it the same number. The drivers are stubs
-    that fail until their unit fills them; nothing starts any of these yet.
+    35, so that no two units append a job and both call it the same number. Each driver was
+    written by its own unit (P5 to P12).
 
     None may be taken away by a casual think: a body in the arms, a meal on its way to a cell, a
     warden mid-sentence, an escort, a raider walking to her surrender, a breakout and an arrest are

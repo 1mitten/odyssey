@@ -535,6 +535,8 @@ namespace Odyssey.Sim.Pawns
         public void Contribute(SimWorld world, SnapshotWriter writer)
         {
             GridSize size = world.Size;
+            // What every prisoner's rows share, found once for this publish (design 59 §16 #7).
+            var prison = new PrisonAspects.Shared();
             for (int i = 0; i < _pawns.Count; i++)
             {
                 var pawn = _pawns[i];
@@ -672,7 +674,7 @@ namespace Odyssey.Sim.Pawns
                 // record: a freshly taken prisoner's record is empty, and a load drops an empty one
                 // (review 2026-09-26). Nothing for a pawn nobody means to hold.
                 if (pawn.Custody != PawnCustody.Free || pawn.Prison != null || pawn.Downed)
-                    PrisonAspects.Publish(writer, pawn, _ctx);
+                    PrisonAspects.Publish(writer, pawn, _ctx, ref prison);
                 // The body (design 43 §9), sparse: a pawn with nothing on its ledger publishes
                 // nothing new, so a healthy colony's rows did not move.
                 if (pawn.HasHealthState) HealthAspects.Publish(writer, pawn, _ctx.Content.DayTicks);

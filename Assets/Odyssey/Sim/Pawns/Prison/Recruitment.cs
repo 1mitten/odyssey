@@ -119,9 +119,11 @@ namespace Odyssey.Sim.Pawns
         /// Game hours until she joins at the best warden's pace, rounded up to whole chats; -1 when
         /// nobody will talk to her. The number the pane says, from the arithmetic the chat runs.
         /// </summary>
-        public static int HoursToJoin(Pawn prisoner, PawnContext ctx)
+        public static int HoursToJoin(Pawn prisoner, PawnContext ctx) => HoursToJoin(prisoner, ctx, BestWarden(ctx));
+
+        /// <summary><see cref="HoursToJoin(Pawn, PawnContext)"/> with the best warden already found.</summary>
+        public static int HoursToJoin(Pawn prisoner, PawnContext ctx, Pawn? warden)
         {
-            Pawn? warden = BestWarden(ctx);
             if (warden == null || prisoner.Prison == null) return -1;
             RecruitFactors f = Factors(prisoner, warden, ctx);
             long remaining = Full - prisoner.Prison.Willingness;

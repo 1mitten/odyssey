@@ -5,8 +5,8 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Sim.Pawns
 {
     // The prisoner line's drivers (design 59 §7), JobHandle 28 to 35, claimed together by the
-    // contracts step (P3) so that every table a save depends on is extended once. Each is a stub
-    // that fails the tick it starts until its own unit writes it, so nothing can run one yet.
+    // contracts step (P3) so that every table a save depends on is extended once, and each written
+    // by its own unit (P5 to P12).
 
     /// <summary>
     /// <c>Job_Capture</c> (design 59 §7): the rescue's walk, lift, carry and lay — the same stoop,
@@ -107,9 +107,7 @@ namespace Odyssey.Sim.Pawns
                     }
                     // A free cell beside her, chosen once and kept while it is still beside her —
                     // the doctor's rule (design 43 §14c), or a warden following her never arrives.
-                    int stand = Job.DestCell;
-                    if (stand < 0 || stand == prisoner.Cell || !Beside(ctx.Size, stand, prisoner.Cell))
-                        Job.DestCell = stand = FellJobDriver.StandBeside(ctx, Pawn, prisoner.Cell);
+                    int stand = Job.DestCell = PrisonerFollow.StandFor(ctx, Pawn, Job.DestCell, prisoner.Cell);
                     if (stand < 0) return JobStatus.Failed;
                     return GotoCell(ctx, stand) == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
                 }
@@ -118,6 +116,14 @@ namespace Odyssey.Sim.Pawns
                 {
                     ColonyItem? carried = Job.CarriedItem >= 0 ? ctx.Items.Get(new ThingId(Job.CarriedItem)) : null;
                     if (carried == null) return JobStatus.Failed;
+                    // She may walk off mid-meal (design 59 §16 #8): he follows with the plate, as a
+                    // warden's visit does, and feeds her only at her side.
+                    if (!StillInReach(ctx, Pawn, prisoner.Cell, 0, 0))
+                    {
+                        Job.DestCell = PrisonerFollow.StandFor(ctx, Pawn, Job.DestCell, prisoner.Cell);
+                        if (Job.DestCell < 0) return JobStatus.Failed;
+                        return GotoCell(ctx, Job.DestCell) == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
+                    }
                     ToilProgress += Rates.Scale;
                     if (ToilProgress < FeedTicks * Rates.Scale) return JobStatus.Ongoing;
 
@@ -135,6 +141,26 @@ namespace Odyssey.Sim.Pawns
         }
 
         public override void Cleanup(PawnContext ctx, JobStatus status) => DropCarried(ctx);
+    }
+
+    /// <summary>
+    /// <b>Where to stand beside somebody who may walk on</b> (design 59 §16 #8, #10): the one rule
+    /// every job that goes to a prisoner's side follows — feeding, talking, walking her out and
+    /// arresting. Keep the place while it is still beside her; choose again only once it is not,
+    /// and then only at a step boundary or standing still, as the melee chase does. Chosen afresh
+    /// every tick she moved, each new destination snapped the step in hand back, and a warden
+    /// followed anybody walking on at half pace.
+    /// </summary>
+    public static class PrisonerFollow
+    {
+        /// <summary>The place to walk to beside <paramref name="target"/>, keeping <paramref name="stand"/> where it still serves; -1 for none.</summary>
+        public static int StandFor(PawnContext ctx, Pawn walker, int stand, int target)
+        {
+            if (stand >= 0 && stand != target && Beside(ctx.Size, stand, target)) return stand;
+            bool boundary = walker.MoveProgress < walker.MoveRatePerMille();
+            if (stand >= 0 && stand != target && !boundary && walker.Destination >= 0) return stand;
+            return FellJobDriver.StandBeside(ctx, walker, target);
+        }
 
         static bool Beside(GridSize size, int cell, int of)
         {
@@ -189,14 +215,7 @@ namespace Odyssey.Sim.Pawns
                     NextToil();
                     return JobStatus.Ongoing;
                 }
-                // A new side only at a step boundary (design 59 §16 #10), as the melee chase does:
-                // picked afresh every tick she moved, each new destination snapped the step in hand
-                // back, and an arrester crawled two cells in 400 ticks after anybody who walked on.
-                int stand = Job.TargetCell;
-                bool boundary = Pawn.MoveProgress < Pawn.MoveRatePerMille();
-                if (stand < 0 || stand == prisoner.Cell
-                    || (!Beside(ctx.Size, stand, prisoner.Cell) && (boundary || Pawn.Destination < 0)))
-                    Job.TargetCell = stand = FellJobDriver.StandBeside(ctx, Pawn, prisoner.Cell);
+                int stand = Job.TargetCell = PrisonerFollow.StandFor(ctx, Pawn, Job.TargetCell, prisoner.Cell);
                 if (stand < 0) return JobStatus.Failed;
                 return GotoCell(ctx, stand) == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
             }
@@ -204,7 +223,7 @@ namespace Odyssey.Sim.Pawns
             // She may walk off mid-visit; the warden follows rather than starting over.
             if (!StillInReach(ctx, Pawn, prisoner.Cell, 0, 0))
             {
-                Job.TargetCell = FellJobDriver.StandBeside(ctx, Pawn, prisoner.Cell);
+                Job.TargetCell = PrisonerFollow.StandFor(ctx, Pawn, Job.TargetCell, prisoner.Cell);
                 if (Job.TargetCell < 0) return JobStatus.Failed;
                 return GotoCell(ctx, Job.TargetCell) == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
             }
@@ -215,13 +234,6 @@ namespace Odyssey.Sim.Pawns
 
             Finish(prisoner, ctx);
             return JobStatus.Succeeded;
-        }
-
-        static bool Beside(GridSize size, int cell, int of)
-        {
-            if (cell == of) return false;
-            CellRef a = size.FromIndex(cell), b = size.FromIndex(of);
-            return a.Y == b.Y && System.Math.Abs(a.X - b.X) <= 1 && System.Math.Abs(a.Z - b.Z) <= 1;
         }
     }
 

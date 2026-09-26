@@ -75,9 +75,14 @@ namespace Odyssey.Sim.Pawns
         /// Her odds now. Nought for anybody who is not a held prisoner standing on her own feet:
         /// downed, carried, or already out.
         /// </summary>
-        public static EscapeOdds Odds(Pawn pawn, PawnContext ctx)
+        public static EscapeOdds Odds(Pawn pawn, PawnContext ctx) => Odds(pawn, ctx, Held(ctx));
+
+        /// <summary>
+        /// <see cref="Odds(Pawn, PawnContext)"/> with the colony's prisoner count already in hand: the
+        /// publish counts it once for every prisoner on the board (design 59 §16 #7), not once each.
+        /// </summary>
+        public static EscapeOdds Odds(Pawn pawn, PawnContext ctx, int held)
         {
-            int held = Held(ctx);
             if (pawn.Custody != PawnCustody.Prisoner || pawn.Downed || pawn.CarriedBy != 0 || Melee.IsDead(pawn))
                 return new EscapeOdds(0, EscapeReasons.None, held);
 

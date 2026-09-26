@@ -19,11 +19,11 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public static class PrisonerTrees
     {
-        /// <summary>A held prisoner: down, else her needs, else her shackles, else the cell, else wait.</summary>
+        /// <summary>A held prisoner: down, else to her cell, else a patient, else her needs, else her shackles, else the cell, else wait.</summary>
         static readonly ThinkNode[] Held =
         {
-            new DownedThinkNode(), new ToMyCellThinkNode(), new PrisonerNeedsThinkNode(), new ShackledThinkNode(),
-            new CellWanderThinkNode(), new PrisonerWaitThinkNode(),
+            new DownedThinkNode(), new ToMyCellThinkNode(), new PrisonerPatientThinkNode(), new PrisonerNeedsThinkNode(),
+            new ShackledThinkNode(), new CellWanderThinkNode(), new PrisonerWaitThinkNode(),
         };
 
         /// <summary>
@@ -175,6 +175,31 @@ namespace Odyssey.Sim.Pawns
 
         static bool Free(Pawn pawn, PawnContext ctx, int cell) =>
             ctx.Reservations.CanReserve(pawn.Id, ReservationManager.Key(ReservationTargetKind.Cell, cell));
+    }
+
+    /// <summary>
+    /// A hurt prisoner lies down for the doctor (design 59 §16 #3), as <see cref="PatientThinkNode"/>
+    /// sends a colonist: bleeding, whatever her pool, or under the patient line. A doctor walks only
+    /// to somebody lying still, and without this a raider who surrendered bleeding stood in her
+    /// cell untended until the blood loss put her down. Her own prison bed through the one bed rule,
+    /// walked in her own mode so the cell still holds her; never treating herself.
+    /// </summary>
+    public sealed class PrisonerPatientThinkNode : ThinkNode
+    {
+        public override string Name => "PrisonerPatient";
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            if (pawn.Downed || pawn.Asleep || !Medical.NeedsTreatment(pawn, ctx)) return false;
+            if (!Medical.IsBleeding(pawn) && !Medical.Below(pawn, ctx.Content.Combat.patientBelowPerMille)) return false;
+            int bed = Medical.BedFor(pawn, ctx);
+            if (bed >= 0 && !ctx.CanTravel(pawn, bed, pawn.OwnMode)) bed = -1;
+            if (!Medical.WorthLyingDown(pawn, ctx, bed)) return false;
+            job.Reset(JobIndex.Patient);
+            job.TargetCell = bed;
+            job.Mode = pawn.OwnMode;
+            return true;
+        }
     }
 
     /// <summary>

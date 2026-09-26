@@ -46,8 +46,40 @@ namespace Odyssey.Sim.Pawns
         public static readonly AspectKey Blockers = AspectKey.Of(BlockersName);
         public static readonly AspectKey Shackled = AspectKey.Of(ShackledName);
 
+        /// <summary>
+        /// What every prisoner's rows share within one publish (design 59 §16 #7): how many the
+        /// colony holds and who its best warden is. Each walks every pawn, and each was asked again
+        /// for every prisoner — fifty prisoners among four hundred pawns was some 80,000 steps a
+        /// publish. Found on first need and kept for the rest of the publish; start one per publish.
+        /// </summary>
+        public struct Shared
+        {
+            int _held;
+            Pawn? _warden;
+            bool _heldKnown, _wardenKnown;
+
+            public int Held(PawnContext ctx)
+            {
+                if (!_heldKnown) { _held = EscapeRisk.Held(ctx); _heldKnown = true; }
+                return _held;
+            }
+
+            public Pawn? Warden(PawnContext ctx)
+            {
+                if (!_wardenKnown) { _warden = Recruitment.BestWarden(ctx); _wardenKnown = true; }
+                return _warden;
+            }
+        }
+
         /// <summary>Everything the prison says about one pawn, into the publish.</summary>
         public static void Publish(SnapshotWriter writer, Pawn pawn, PawnContext ctx)
+        {
+            var shared = new Shared();
+            Publish(writer, pawn, ctx, ref shared);
+        }
+
+        /// <summary><see cref="Publish(SnapshotWriter, Pawn, PawnContext)"/> within one publish's <see cref="Shared"/>.</summary>
+        public static void Publish(SnapshotWriter writer, Pawn pawn, PawnContext ctx, ref Shared shared)
         {
             if (pawn.Prison != null && pawn.Prison.CaptureMark) writer.AddPawnAspect(pawn.Id, CaptureMark, 1);
             if (pawn.Custody == PawnCustody.Prisoner)
@@ -60,14 +92,14 @@ namespace Odyssey.Sim.Pawns
                 writer.AddPawnAspect(pawn.Id, Willing, (pawn.Prison?.Willingness ?? 0) / 1_000);
                 if (PrisonerTrees.IsShackled(pawn, ctx)) writer.AddPawnAspect(pawn.Id, Shackled, 1);
                 // The risk the hourly roll uses, from the same call (design 59 §9b).
-                EscapeOdds odds = EscapeRisk.Odds(pawn, ctx);
+                EscapeOdds odds = EscapeRisk.Odds(pawn, ctx, shared.Held(ctx));
                 writer.AddPawnAspect(pawn.Id, Escape, odds.PerDayPpm);
                 writer.AddPawnAspect(pawn.Id, EscapeWhy, (int)odds.Reasons);
                 if (mode == PrisonMode.Recruit)
                 {
-                    writer.AddPawnAspect(pawn.Id, Hours, Recruitment.HoursToJoin(pawn, ctx));
-                    writer.AddPawnAspect(pawn.Id, Blockers,
-                        (int)Recruitment.Factors(pawn, Recruitment.BestWarden(ctx), ctx).Blockers);
+                    Pawn? warden = shared.Warden(ctx);
+                    writer.AddPawnAspect(pawn.Id, Hours, Recruitment.HoursToJoin(pawn, ctx, warden));
+                    writer.AddPawnAspect(pawn.Id, Blockers, (int)Recruitment.Factors(pawn, warden, ctx).Blockers);
                 }
             }
             if (pawn.Downed && CaptureRules.WantsCapture(pawn, ctx) && CaptureRules.BedFor(pawn, pawn, ctx) < 0)

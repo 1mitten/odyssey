@@ -712,7 +712,8 @@ namespace Odyssey.Sim.Pawns
             if (ToilProgress % (RecheckTicks * Rates.Scale) == 0)
             {
                 if (!Medical.WorthLyingDown(Pawn, ctx, Job.TargetCell)) return JobStatus.Succeeded;
-                if (Medical.WouldSelfTreat(Pawn, ctx)) return JobStatus.Succeeded;
+                // A colonist's own branch; a prisoner has none, and would lie down again at once.
+                if (Pawn.IsColonist && Medical.WouldSelfTreat(Pawn, ctx)) return JobStatus.Succeeded;
             }
 
             Pawn.Asleep = true;

@@ -162,7 +162,6 @@ namespace Odyssey.Sim.Pawns
             return IntentRejection.None;
         }
 
-        /// <summary>A bed has come down: whatever it was marked, it is not any more.</summary>
         /// <summary>
         /// A bed has just been raised (review 2026-09-26). If it stands in a cell it is a prison bed
         /// by derivation, and that is written down now: otherwise it would turn back into a colony
@@ -178,6 +177,7 @@ namespace Odyssey.Sim.Pawns
             Version++;
         }
 
+        /// <summary>A bed has come down: whatever it was marked, it is not any more.</summary>
         public void Forget(int head)
         {
             if (Remove(head)) Version++;
