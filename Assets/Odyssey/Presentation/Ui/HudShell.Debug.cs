@@ -45,6 +45,9 @@ namespace Odyssey.Presentation.Ui
         /// <summary>The content the event rows were last built from, so a new colony rebuilds them and a reopen does not.</summary>
         IncidentContent? _debugEventsFrom;
 
+        /// <summary>Under the Raid row: why the last raid asked for was refused, hidden while none was.</summary>
+        Label? _raidNote;
+
         void BuildDebug()
         {
             _debugPanel = Window("debug", Registry.Label(DebugDirector.PanelKey),
@@ -297,9 +300,106 @@ namespace Odyssey.Presentation.Ui
                 // cannot be fired, so a row for it would do nothing.
                 if (!content.Workers[i].Fireable) continue;
                 int def = i;
+
+                // A raid carries its two controls under its row (design 55 §9): how many and who.
+                // The row sends what they hold; they hold it for the session.
+                if (content.Workers[i] is RaidWorker)
+                {
+                    _debugEvents.Add(DebugActionRow(IncidentLabels.IconKey(i),
+                        content.Defs[i].description ?? string.Empty, () => InvokeRaid(def)));
+                    _debugEvents.Add(DebugRaidSizeRow());
+                    _debugEvents.Add(DebugRaidMixRow());
+                    _raidNote = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "settings__note");
+                    _raidNote.style.display = DisplayStyle.None;
+                    _debugEvents.Add(_raidNote);
+                    continue;
+                }
+
                 _debugEvents.Add(DebugActionRow(IncidentLabels.IconKey(i),
                     content.Defs[i].description ?? string.Empty, () => InvokeIncident(def)));
             }
+        }
+
+        /// <summary>
+        /// The raid's size (design 55 §9): the Settings window's own fader, whole numbers from 0 to
+        /// <see cref="DebugDirector.RaidSizeMax"/>, the figure after it reading <i>Auto</i> at 0.
+        /// </summary>
+        VisualElement DebugRaidSizeRow()
+        {
+            var row = new VisualElement();
+            row.AddToClassList("settings__row");
+            var icon = new IconBadge(DebugDirector.RaidSizeKey, IconBadge.RowSize);
+            icon.Inherit(HudTokens.TextMeta);
+            row.Add(icon);
+            row.Add(HudText.Make(Registry.Label(DebugDirector.RaidSizeKey), HudTextRole.Row, ussClass: "settings__label"));
+            row.tooltip = DebugDirector.RaidSizeTooltip;
+
+            int start = _directors?.Debug.RaidSize ?? 0;
+            var control = new VisualElement();
+            control.AddToClassList("sw__slider");
+            var slider = new SliderInt(0, DebugDirector.RaidSizeMax, SliderDirection.Horizontal);
+            slider.AddToClassList("settings__fader");
+            slider.SetValueWithoutNotify(start);
+            VisualElement tracker = slider.Q(className: "unity-base-slider__tracker") ?? slider;
+            var fill = new VisualElement { pickingMode = PickingMode.Ignore };
+            fill.AddToClassList("sw__fill");
+            fill.style.width = Length.Percent(start * 100f / DebugDirector.RaidSizeMax);
+            tracker.Add(fill);
+            control.Add(slider);
+
+            Label value = HudText.Make(DebugDirector.RaidSizeText(start), HudTextRole.Row,
+                numeric: true, ussClass: "settings__value");
+            control.Add(value);
+
+            slider.RegisterValueChangedCallback(evt =>
+            {
+                if (_directors == null) return;
+                _directors.Debug.SetRaidSize(evt.newValue);
+                int size = _directors.Debug.RaidSize;
+                value.text = DebugDirector.RaidSizeText(size);
+                fill.style.width = Length.Percent(size * 100f / DebugDirector.RaidSizeMax);
+            });
+            row.Add(control);
+            return row;
+        }
+
+        /// <summary>
+        /// The raid's mix (design 55 §8): the Settings window's own select, one choice per mix in
+        /// the content's order, named by <see cref="RaidMixLabels"/>.
+        /// </summary>
+        VisualElement DebugRaidMixRow()
+        {
+            var row = new VisualElement();
+            row.AddToClassList("settings__row");
+            var icon = new IconBadge(DebugDirector.RaidMixKey, IconBadge.RowSize);
+            icon.Inherit(HudTokens.TextMeta);
+            row.Add(icon);
+            row.Add(HudText.Make(Registry.Label(DebugDirector.RaidMixKey), HudTextRole.Row, ussClass: "settings__label"));
+            row.tooltip = DebugDirector.RaidMixTooltip;
+
+            var choices = new List<string>(RaidMixLabels.Keys.Length);
+            for (int m = 0; m < RaidMixLabels.Keys.Length; m++) choices.Add(RaidMixLabels.Label(m));
+            int current = _directors?.Debug.RaidMix ?? RaidMixLabels.Default;
+
+            var dropdown = new DropdownField(choices, current);
+            dropdown.AddToClassList("sw__select");
+            if (dropdown.labelElement != null) dropdown.labelElement.style.display = DisplayStyle.None;
+            var textElem = dropdown.Q<TextElement>(className: "unity-base-popup-field__text");
+            if (textElem != null) HudText.Apply(textElem, HudTextRole.Body);
+
+            // The engine's arrow is a texture; the window draws its own marks.
+            VisualElement? input = dropdown.Q(className: "unity-base-popup-field__input");
+            VisualElement? arrow = dropdown.Q(className: "unity-base-popup-field__arrow");
+            if (arrow != null) arrow.style.display = DisplayStyle.None;
+            input?.Add(new PathGlyph(SettingsLayout.SelectArrow, 10f, 6f, Ink(HudTheme.TextMeta), 10f, fill: true));
+
+            dropdown.RegisterValueChangedCallback(evt =>
+            {
+                int picked = choices.IndexOf(evt.newValue);
+                if (picked >= 0) _directors?.Debug.SetRaidMix(picked);
+            });
+            row.Add(dropdown);
+            return row;
         }
 
         void OnDebugTabChanged(DebugTab tab)
@@ -391,6 +491,34 @@ namespace Odyssey.Presentation.Ui
             var world = _boot!.World;
             if (world == null || _directors == null) return;
             world.Intents.Submit(new Intent(IntentKind.InvokeIncident, default, def));
+        }
+
+        /// <summary>
+        /// Fire a raid of the size and mix the two controls hold (design 55 §9). The incident's own
+        /// door is asked first, so a refusal is said on the row rather than only in the console: a
+        /// second band of 200 beside the first does not fit under the ceiling, and a press that
+        /// does nothing visible reads as a broken button. The intent is sent either way; the
+        /// simulation is the judge and this is only its answer read early.
+        /// </summary>
+        void InvokeRaid(int def)
+        {
+            var world = _boot!.World;
+            if (world == null || _directors == null) return;
+            Intent intent = _directors.Debug.RaidIntent(def);
+
+            var colony = _boot.Colony;
+            if (colony != null && _raidNote != null)
+            {
+                bool fires = colony.Incidents.CanFire(new IncidentParms(def, intent.B, null, intent.C - 1));
+                RaidParams? p = colony.Incidents.Content.Defs[def].raid;
+                string note = fires || p == null ? string.Empty
+                    : DebugDirector.RaidRefusal(RaidWorker.SizeFor(colony.Pawns, p, intent.B, world.CurrentTick),
+                        RaidWorker.Room(colony.Pawns));
+                _raidNote.text = note;
+                _raidNote.style.display = note.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            world.Intents.Submit(intent);
         }
 
         /// <summary>

@@ -100,6 +100,25 @@ namespace Odyssey.Sim.Weather
         }
 
         /// <summary>
+        /// Put back the temperature's weather offset after a load. The offset is written only on
+        /// this system's own cadence and is saved nowhere, so a loaded world kept the one its build
+        /// had set until the next <see cref="IntervalTicks"/> boundary, and any colonist whose needs
+        /// fell due in that gap read another outdoor temperature from the world it was saved from
+        /// and parted from it by hash. Found by a raid's save test on 2026-09-26; nothing about it is
+        /// the raid's. The value is the one the last boundary that ran set: this system runs before
+        /// the pawn systems and the tick counts up after every system, so that boundary is the last
+        /// multiple of the interval below <paramref name="currentTick"/>. (A debug force mid-interval
+        /// set it to that instant's view instead; a save taken after one resumes on the boundary's.)
+        /// </summary>
+        public void RestoreOffset(int currentTick)
+        {
+            if (!_started || _ctx.Temperature == null || currentTick <= 0) return;
+            int last = currentTick - 1;
+            last -= last % IntervalTicks;
+            _ctx.Temperature.WeatherOffsetC = ViewAt(last).TempOffsetC;
+        }
+
+        /// <summary>
         /// The first sky, with no blend: a world does not load into a spell arriving. Rolled from
         /// the season the world starts in, like every spell after it.
         /// </summary>

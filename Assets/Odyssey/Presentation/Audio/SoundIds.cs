@@ -205,11 +205,20 @@ namespace Odyssey.Presentation.Audio
         public const string AlertJoined = SoundPrefix + "alert.joined";
 
         /// <summary>
-        /// A raid. <b>In the library, and the one unplayed chime that is already wired</b>:
-        /// <see cref="AlertChime.RaidKey"/> is declared in <c>icon-keys.csv</c>, so the moment
-        /// something raises an alert row under that key this sound plays with no code change.
+        /// A raid turning to assault the colony: the low horn (Pixabay, trading_nation,
+        /// <c>low-horn-185556</c> — the owner's <c>notification-raid</c> is the same recording,
+        /// measured sample for sample, design 55 §7). Played through <see cref="AlertChime.RaidKey"/>:
+        /// the alert row under that key is raised while a raid is assaulting.
         /// </summary>
         public const string AlertRaid = SoundPrefix + "alert.raid";
+
+        /// <summary>
+        /// A raid arriving at the edge of the board: the war horn (Pixabay, freesound_community,
+        /// <c>war-horn-horror-73771</c>, baked by <c>tools/audio/bake_raid.sh</c>). Played by the
+        /// raid's Events row (design 55 §7), not by an alert, because a raid gathering at the edge
+        /// is news rather than a standing problem.
+        /// </summary>
+        public const string AlertRaidArrive = SoundPrefix + "alert.raid.arrive";
 
         /// <summary>
         /// A campfire burning. **In the library, not yet in the game.**
@@ -314,6 +323,24 @@ namespace Odyssey.Presentation.Audio
         }
     }
 
+    /// <summary>Which chime an Events row gets when it arrives (design 55 §7).</summary>
+    public static class BulletinChime
+    {
+        /// <summary>
+        /// The sound an Events row makes when it arrives (design 55 §7): the war horn for a raid,
+        /// else by favourability — a gift sounds glad, a blow sounds like one, and anything else is
+        /// worth a glance. A raid arriving in the same refresh as anything else wins: it is the news.
+        /// </summary>
+        public static string For(bool raid, int favourability) =>
+            raid ? SoundIds.AlertRaidArrive
+            : favourability switch
+            {
+                1 => SoundIds.AlertHappy,
+                2 => SoundIds.AlertNegative,
+                _ => SoundIds.AlertNormal,
+            };
+    }
+
     /// <summary>
     /// Which chime an alert row gets.
     ///
@@ -331,8 +358,7 @@ namespace Odyssey.Presentation.Audio
     public static class AlertChime
     {
         /// <summary>The raid alert's key, as <c>docs/design/icon-keys.csv</c> declares it.
-        /// Nothing raises it yet; the row below is what makes that a seam rather than a
-        /// to-do.</summary>
+        /// Raised while a band assaults (design 55 §7); the row below gives it the assault horn.</summary>
         public const string RaidKey = "ui.alert.raid";
 
         /// <summary>Conditions whose own sound beats their severity's. Ordinal, and short

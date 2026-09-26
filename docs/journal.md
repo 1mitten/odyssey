@@ -13814,3 +13814,62 @@ brightest, and the wings are drawn to the full zoom at night, a little larger, w
 carried a far night. The research had argued the spectacle into a separate light because the wing
 could not safely cross bloom's threshold; the owner's answer was that the wing was the spectacle all
 along, and the ceiling that argument was about still holds (design 52 §5a).
+## 2026-09-25 — Raids: a band that stalks, then strikes
+
+The owner asked for a raid: 1 to 200 hostiles from a random edge, a few hours of wandering at the
+edge, then a push inward and an attack. It is fired from a debug slider and dropdown, with its own
+sound. A two-round interview settled the rest: the ceiling to 400 measured first; mixes as data;
+gather → probe → assault; the hearth as the target; withdrawal at half; one edge; no auto-draft;
+and headcount-and-days sizing at 0. Design 55.
+
+**The shape is the reference's** — a group controller the members defer to — **and the names are
+ours.** The single decision that mattered was *where the fight lives*. The raid's node only
+decides where a member walks, and hands over to the bandit's unchanged `HostileThinkNode` whenever
+there is something to fight. So design 33's tuning is the raid's tuning, and a lone bandit thinks
+exactly as it did.
+
+**Everything is drawn once, at the fire, and saved.** The slots, arrival ticks, kinds and loiter
+are all decided then, so the system's tick draws nothing, and a save mid-trickle or mid-loiter
+resumes to the same hash. That is tested, and so is a Long-tier soak with a lockstep twin. The
+group is hashed only while it exists, the pattern `Projectiles` set, and the full fast tier —
+goldens included — passed unchanged.
+
+**The owner's assault horn was already in the game.** Baked through the alert chain, the Pixabay
+`low-horn-185556` is `alert-raid.wav` sample for sample (correlation 1.0000). The owner's
+`notification-raid.mp3` of 2026-09-19 was the same file under another name. Only the war horn was
+added. The siren's source and licence are now known.
+
+**The measurement moved the ceiling, and it pointed somewhere else.** Two hundred raiders cost
+the Pawns phase 0.17 ms. The snapshot publish of 243 pawns costs 0.79, and it would cost the same
+for 243 colonists. The risk the plan named — every non-FightBack colonist scanning every pawn
+while anything hostile stands — is real at +0.51 ms, and only with the whole colony on Defend.
+Recorded, not fixed.
+
+**The soak found a balance question, not a fault.** Eight raiders downed all five armed,
+undrafted colonists in both seeds. That is design 33 §21d's finding again, now with a band.
+The playtest queue has it.
+
+## 2026-09-26 — The raids reviewed: a band that came back for ever, and the weather a load forgot
+
+PR #233 was reviewed against `main` after the birds merged. It had never been compiled in Unity
+(the container it was built in had no editor), and its Presentation half compiled at the first
+attempt. The merge itself was one journal conflict — and one collision no marker showed: the birds
+had taken design 50 on `main`, and two open PRs hold 51 and 52, so the raids became 53 — and then 55,
+when cover merged as 53 during the review and the kit PR holds 54. The second merge also found cover
+and the raid sharing three random streams (design 55 §15).
+
+**The finding worth keeping is the yo-yo.** The raid node hands every fight to the bandit's own
+mind, which is the design's best decision, but it asked again on every think: a raider that reached
+the hearth and chased a colonist forty cells away was marched back to the hearth the moment its
+chase re-chose, and handed over again on arrival. The rule "the group decides where, the member's
+mind decides the fight" was true of each think and false of the sequence. A member now remembers
+that it has turned to fight (`RaidMember.Engaged`), and the group stops steering it until the
+withdrawal. Ten other faults, each small, are tabled in design 55 §15; the only one a player would
+have met first was the *Raid* alert sending the camera to the band's layer as a depth.
+
+**The save test for that fix found something older.** It parted five ticks after its load, and a
+probe that hashed each system and then each pawn apart put it on a *colonist's* ambient
+temperature: the weather's share of the outdoor curve is written by the weather on its own cadence
+and saved nowhere, so a loaded world stood in its build's sky until the next boundary. That is on
+`main` for every save, and was fixed here because the raid test cannot pass without it. The lesson
+is in `docs/bug-patterns.md`: a value one system writes into another is derived state no section owns.

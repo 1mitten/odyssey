@@ -315,7 +315,12 @@ namespace Odyssey.Tests.Sim
         // coverInterceptPerMille 500, coverCrouchPerMille 200; WildPlantDef coverPerMille and coverTall
         // (trees 250 tall, bushes 150 low).
         // Cover merged onto health, 2026-09-25: its three streams moved to the 22nd-24th; re-taken.
-        const ulong ContentFingerprint = 4049636810623663309UL;
+        //
+        // 2026-09-25, raids (design 55 §8): PawnKind_Gunman appended at kind 4 — a hostile person
+        // armed from a table of one, Item_Pistol, with the bandit's traverse mode and motive. No
+        // golden moved: no golden spawns a hostile.
+        // Raids merged onto cover, 2026-09-26: re-taken from the merged pack.
+        const ulong ContentFingerprint = 11695732358924543688UL;
 
 
         [Test]

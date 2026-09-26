@@ -152,6 +152,20 @@ namespace Odyssey.Tests.Presentation
                 "a raid and a starving colonist are both Danger and must not sound alike");
         }
 
+        /// <summary>
+        /// A raid's Events row sounds the war horn (design 55 §7), and the Raid alert is the assault
+        /// horn, AlertKey matching the model's; every other row still sounds its favourability.
+        /// </summary>
+        [Test]
+        public void ARaidArrivingSoundsTheWarHornAndTheRestTheirFavourability()
+        {
+            Assert.That(BulletinChime.For(raid: true, favourability: 2), Is.EqualTo(SoundIds.AlertRaidArrive));
+            Assert.That(BulletinChime.For(raid: false, favourability: 2), Is.EqualTo(SoundIds.AlertNegative));
+            Assert.That(BulletinChime.For(raid: false, favourability: 1), Is.EqualTo(SoundIds.AlertHappy));
+            Assert.That(BulletinChime.For(raid: false, favourability: 0), Is.EqualTo(SoundIds.AlertNormal));
+            Assert.That(AlertModel.RaidKey, Is.EqualTo(AlertChime.RaidKey), "the model raises the key the horn is on");
+        }
+
         [Test]
         public void TheFirstStepArmsWithoutChiming()
         {

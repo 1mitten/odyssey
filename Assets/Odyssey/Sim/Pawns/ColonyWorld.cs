@@ -209,6 +209,9 @@ namespace Odyssey.Sim.Pawns
                 // The bullets in the air (design 47 §2c): appended, no format bump. A save from
                 // before guns has no section and loads with nothing in flight.
                 pawns.Projectiles,
+                // The raids on the board (design 55 §10): appended, no format bump. A save from
+                // before raids has no section and loads with no band.
+                pawns.Raids!,
             };
         }
 
@@ -338,6 +341,11 @@ namespace Odyssey.Sim.Pawns
             _nav.MarkAllDirty();
             _nav.Rebuild();
 
+            // The weather's share of the outdoor temperature is written on the weather's cadence
+            // and saved nowhere: put back the value the last boundary set, or the first needs pass
+            // after a load reads the build's sky (WeatherSystem.RestoreOffset).
+            Pawns.Weather?.RestoreOffset(World.CurrentTick);
+
             // The sky map is derived from the grid, and a load writes the grid wholesale without
             // telling the chunk grid a thing: rebuilt whole (design 43 §6). Now, so a board-wide
             // walk is paid inside the loading rather than on the first tick that asks.
@@ -454,6 +462,8 @@ namespace Odyssey.Sim.Pawns
             var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns())
             {
                 Chunks = chunks,
+                // What a raid makes for with no hearth (design 55 §5). Derived, so a load has it too.
+                ColonyStart = outcome.StartCell,
             };
             var solver = new SupportSolver(grid);
             var support = new SupportSystem(grid, solver, chunks);

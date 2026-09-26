@@ -37,6 +37,19 @@ the next session learns to ignore.
   - Fire several supply drops into woodland. Wrong: a pallet lands in a trunk.
 
 - **Is the lit-butterfly night right now?** The first look said the day was *"superb"* and the night's halos were *"big glowing saucers"*; they are gone and each butterfly is lit in its own colour instead (design 52 §5a). (`claude/ambient-butterflies`, design 52.) New game on a meadow in Larkspur or Tansy; watch the grass near the camera at the default zoom, then walk a colonist through them, then press the debug menu's new **Skip to night** (22:00, fully dark), then zoom right out. Wrong answers: a lit butterfly reads as a coloured blob rather than a wing; the colours look flat rather than glowing (the lever is `ButterflyPalette.WingGlowCeiling`, held at 1.0 against shimmer); they shimmer or vanish as they move; zoomed out, they are too small to see or too many; a colonist walking through does not scatter them.
+- **Does a raid read as a band that stalks and then strikes?** (PR #233,
+  `claude/sharp-lamport-8q5u4h`, design 55, reviewed 2026-09-26 §15.) Debug → Events → Raid:
+  size 20, Mixed, and run at top speed through the gathering (2–4 in-game hours). Wrong answers:
+  - you do not hear the war horn, or it plays over itself and feels like a cutscene (18 s);
+  - 2–4 in-game hours at the edge feel like a wait rather than suspense;
+  - clicking the red *Raid* alert does not put the camera on the band;
+  - once they reach the colony, raiders walk back and forth between the fire and a colonist rather
+    than fighting (the fault fixed in §15 #2 — say so if it is still there);
+  - a band of 150 in the far form reads as a crowd rather than a band.
+
+  Then fire 200, and 200 again while the first stands: the second press should say under the
+  row that it will not fit, with the room left. **Five armed colonists who are not drafted lost to eight raiders in both
+  soak seeds**: say whether that is the game you want.
 
 - **Does changing a graphics setting still hitch, and is the board seen catching up?**
   (`claude/mesh-cost`, design 38 §26.) Open Settings → Graphics and flick the Grass ladder, then Ground

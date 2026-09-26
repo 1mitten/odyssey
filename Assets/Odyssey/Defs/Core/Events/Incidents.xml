@@ -117,4 +117,43 @@
     <worker>Recorded</worker>
   </IncidentDef>
 
+  <!--
+    A raid (docs/design/55-raids.md): a band of hostiles walks on along one edge, gathers for two to
+    four hours, probes about halfway in for an hour, then assaults the hearth, and the rest withdraw
+    once half are down. The debug menu names a size and a mix; a caller that names neither gets the
+    headcount-and-days size below and the Mixed band. The gates are for the storyteller that will
+    read them: nothing before day 3 and four quiet days between (both INVENTED). Every number in
+    the raid block but the owner's (loiter, probe, early trigger, retreat) is INVENTED.
+  -->
+  <IncidentDef>
+    <defName>Incident_Raid</defName>
+    <label>raid</label>
+    <description>A band of hostiles walks in from one edge, gathers there for a few hours, probes closer, then attacks the hearth. The size and mix are chosen below</description>
+    <bulletinKey>ui.bulletin.raidincoming</bulletinKey>
+    <favourability>Bad</favourability>
+    <category>ThreatBig</category>
+    <worker>Raid</worker>
+    <earliestDay>3</earliestDay>
+    <minRefireDays>4</minRefireDays>
+    <weight>100</weight>
+    <minColonists>1</minColonists>
+    <maxFires>0</maxFires>
+    <raid>
+      <perColonist>1</perColonist>
+      <daysPerExtra>5</daysPerExtra>
+      <minSize>1</minSize>
+      <maxAutoSize>30</maxAutoSize>
+      <arrivalTicks>300</arrivalTicks>
+      <gatherInset>12</gatherInset>
+      <gatherRadius>5</gatherRadius>
+      <loiterHoursMin>2</loiterHoursMin>
+      <loiterHoursMax>4</loiterHoursMax>
+      <probePerMille>500</probePerMille>
+      <probeHours>1</probeHours>
+      <earlyTriggerCells>15</earlyTriggerCells>
+      <retreatPerMille>500</retreatPerMille>
+      <mix>RaidMix_Mixed</mix>
+    </raid>
+  </IncidentDef>
+
 </Defs>
