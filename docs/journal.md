@@ -13900,3 +13900,29 @@ five tests fail.
 
 **Built without an editor.** The Presentation half — the pass, `Odyssey/Crack`, the wiring and
 `CrackPassTests` — is uncompiled until the next Unity run, which is the first thing owed.
+
+## 2026-09-26 — Cracks, the first look: burst from a point, six levels for rock, and the break
+
+The owner played design 57 the same day and moved three things (§1a). **The heavy stages read as
+shapes.** The pattern was the borders of a Voronoi tiling, and a tiling closes every line into a
+cell, so a face covered in it looks like paving however it is warped. What a blow leaves is a few
+long cracks running out from one place, so the pattern now bursts from an impact point hashed per
+cell: tapering rays with their own length and wander, branches forking off them that web the face
+only late, a crushed patch and grime at the end. One severity drives it all, so the ladder could grow
+without a tuning table. **Rock got six levels** from a tenth of the cut; a wall's three stages became
+every other rung of the same ladder, so a wall and a face at one level look equally broken.
+
+**The break.** A cracked cell that comes down now shudders, halves, quarters, falls and sinks — the
+felled tree's topple is the precedent. The crack pass already held each cracked cell's own meshes, so
+a cell that stops being listed hands its batch to a watch rather than dropping it. **The first rule
+for "it came down" was wrong on paper before it ran**: fewer drawn parts than before. A wall built
+beside a cracked one hides a panel, so the cracked wall would have broken for gaining a neighbour.
+The watch asks the mirror instead — rock no longer solid, the building gone — and that is the test
+that pins it. The pieces are the cell's meshes clipped to quarters in a shader of our own, because the
+art's shaders cannot clip and the pack's meshes are not all readable for a CPU cut; the cost is a
+shading of our own for 1.6 s, which the shudder is there to hide.
+
+**Found on the way:** the first build listed `Odyssey/Crack` in `ShaderInclusion.Required` without
+the instancing keep-alive material that `EveryKeptShaderAlsoHasAnInstancingKeepAliveMaterial`
+requires of every entry, so that test would have failed. Both crack shaders have one now. No tier
+was run on this round, at the owner's word; the Hud half builds clean with `dotnet build`.

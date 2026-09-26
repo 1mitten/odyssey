@@ -23,13 +23,16 @@ the next session learns to ignore.
 
 ## Open
 
-- **Do the cracks read, on walls and on rock?** (`claude/sat-wall-damage-levels-5eq8cn`, design 57.)
+- **Do the cracks read, and does a wall or face break apart?** (`claude/sat-wall-damage-levels-5eq8cn`,
+  design 57; second round after the first look, §1a.)
   - Build a wall, draft two colonists and right-click it, and stop them (undraft) as its bar passes
-    three quarters, a half and a quarter. The debug menu has no way to hurt a building yet. Wrong: a stage change you cannot see at play zoom; cracks that
-    read as a pattern on the wall rather than damage to it; lines that shimmer or vanish as you zoom
-    out.
-  - Mine a rock face and watch it from start to finish. Wrong: you miss the pale slab because
-    nothing shows for the first quarter; the rock looks painted rather than cracked.
+    three quarters, a half and a quarter. The debug menu has no way to hurt a building yet. Wrong:
+    the cracks still read as shapes or a pattern rather than damage spreading from one spot; a
+    stage change you cannot see at play zoom; lines that shimmer or vanish as you zoom out.
+  - Let them finish the wall. Wrong: it vanishes whole; the pieces pop to a different colour or
+    brightness at the split; a piece looks hollow; the pieces hang in the air or never sink.
+  - Mine a rock face from start to finish. Wrong: six steps is still too few (or too many to tell
+    apart); the rock looks painted rather than cracked; mining it out is not satisfying.
   - Cancel a half-mined face, then order it again. Wrong: the cracks vanish on the cancel, or the
     miner starts from nothing.
   - Press H for walls down on a cracked wall. Wrong: the stump is not cracked, or the full-height
