@@ -2257,6 +2257,98 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What the butterflies cost (<c>docs/design/52-ambient-butterflies.md</c> §9), rung by rung,
+        /// by day and by night, at the batch view and at 3840 x 2160 — the reading that sets the
+        /// presets' rungs, taken on one board in one run because that is the only comparison this
+        /// machine supports (§6c).
+        ///
+        /// <para><b>Night is its own arm</b> because the lit wings are drawn to the full zoom (design 52
+        /// §5a), so the camera sees more of them than by day; priced where fill is honest, at 4K.</para>
+        ///
+        /// <para>It asserts no times. It asserts the controls: Off drew nothing and stepped
+        /// nothing; each rung drew more than the one below it; day and night alike were one call; the
+        /// 4K arm drew at 4K. The season is held full (<see cref="Odyssey.Hud.ButterflyMeadow.FullSeason"/>)
+        /// so the rung, not the first morning of Larkspur, decides the count.</para>
+        /// </summary>
+        [UnityTest, Category("Measurement")]
+        public IEnumerator TheButterfliesAgainstTheFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            bool previousSeason = Odyssey.Hud.ButterflyMeadow.FullSeason;
+            UnityEngine.Camera? cam = null;
+            RenderTexture? previousTarget = null;
+            RenderTexture? fourK = null;
+            try
+            {
+                Odyssey.Hud.ButterflyMeadow.FullSeason = true;
+                yield return TimeFrames("butterflies/warm", boot, WarmupFrames, _ => { });
+
+                Odyssey.Presentation.World.ButterflyDirector? butterflies = boot.Butterflies;
+                Assert.That(butterflies, Is.Not.Null, "the session built no butterflies");
+                if (!butterflies!.Available) Assert.Ignore("the Odyssey/Butterfly shader did not compile here");
+
+                cam = boot.cameraRig!.Camera;
+                previousTarget = cam.targetTexture;
+                fourK = new RenderTexture(3840, 2160, 24) { name = "butterflies-4k" };
+
+                int[] rungs = Odyssey.Hud.SettingsDirector.RungsOf(Odyssey.Hud.GraphicsLadder.Butterflies);
+                var lines = new List<string>();
+                var drawn = new Dictionary<string, int>();
+
+                foreach (bool night in new[] { false, true })
+                {
+                    // Twelve hours on from noon. The ticks are ordinary ones; the colony lives them.
+                    if (night) boot.DebugSkipTicks(12 * Odyssey.Sim.Contracts.Calendar.TicksPerHour);
+                    foreach (bool big in new[] { false, true })
+                    {
+                        cam.targetTexture = big ? fourK : previousTarget;
+                        string resolution = big ? "3840x2160" : $"{Screen.width}x{Screen.height}";
+                        foreach (int rung in rungs)
+                        {
+                            butterflies.Capacity = rung;
+                            float ms = 0f, gpu = 0f;
+                            double section = 0d;
+                            string label = $"{(night ? "midnight" : "noon")}/{resolution}/{rung}";
+                            yield return TimeFrames($"butterflies/{label}", boot, WarmupFrames,
+                                m => ms = m, split => section = Section(split, OdysseyBootstrap.FrameSection.Butterflies),
+                                g => gpu = g);
+
+                            if (big)
+                                Assert.That(cam.pixelWidth, Is.EqualTo(3840),
+                                    "the camera was not drawing at 4K, so this arm measured the batch view");
+                            if (rung == 0)
+                                Assert.That(butterflies.LastDrawCalls, Is.Zero, "the Off rung submitted a call");
+                            else
+                                Assert.That(butterflies.LastDrawCalls, Is.EqualTo(1),
+                                    $"{label} submitted {butterflies.LastDrawCalls} calls");
+
+                            drawn[label] = butterflies.LastDrawn;
+                            lines.Add($"{label}: frame {ms:0.00} ms, gpu " + (gpu > 0f ? $"{gpu:0.00} ms" : "unavailable") +
+                                      $", Butterflies section {section:0.000} ms, {butterflies.LastDrawn} drawn " +
+                                      $"of {butterflies.Meadow.Live} live (target {butterflies.Meadow.Target})");
+                        }
+                    }
+                }
+
+                Debug.Log($"[FrameTime] butterflies ({SystemInfo.graphicsDeviceName}, {SystemInfo.graphicsDeviceType}): " +
+                          string.Join("; ", lines));
+
+                string small = $"{Screen.width}x{Screen.height}";
+                for (int r = 1; r < rungs.Length; r++)
+                    Assert.That(drawn[$"noon/{small}/{rungs[r]}"], Is.GreaterThan(drawn[$"noon/{small}/{rungs[r - 1]}"]),
+                        $"rung {rungs[r]} drew no more than rung {rungs[r - 1]}, so its arm measured nothing new");
+            }
+            finally
+            {
+                Odyssey.Hud.ButterflyMeadow.FullSeason = previousSeason;
+                if (cam != null) cam.targetTexture = previousTarget;
+                if (fourK != null) fourK.Release();
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// What <c>Odyssey/Foliage</c> costs against the pack's own foliage shader, on the same grass
         /// in the same run (<c>docs/design/38-meadow-overhaul.md</c> §4, M3).
         ///

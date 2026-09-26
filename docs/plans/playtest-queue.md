@@ -36,6 +36,8 @@ the next session learns to ignore.
   - With nothing selected, walk a colonist behind trees. Wrong: the trees still fade.
   - Fire several supply drops into woodland. Wrong: a pallet lands in a trunk.
 
+- **Is the lit-butterfly night right now?** The first look said the day was *"superb"* and the night's halos were *"big glowing saucers"*; they are gone and each butterfly is lit in its own colour instead (design 52 §5a). (`claude/ambient-butterflies`, design 52.) New game on a meadow in Larkspur or Tansy; watch the grass near the camera at the default zoom, then walk a colonist through them, then press the debug menu's new **Skip to night** (22:00, fully dark), then zoom right out. Wrong answers: a lit butterfly reads as a coloured blob rather than a wing; the colours look flat rather than glowing (the lever is `ButterflyPalette.WingGlowCeiling`, held at 1.0 against shimmer); they shimmer or vanish as they move; zoomed out, they are too small to see or too many; a colonist walking through does not scatter them.
+
 - **Does changing a graphics setting still hitch, and is the board seen catching up?**
   (`claude/mesh-cost`, design 38 §26.) Open Settings → Graphics and flick the Grass ladder, then Ground
   relief, with the camera over thick meadow; then dig out a row of cells. A board-wide re-mesh now

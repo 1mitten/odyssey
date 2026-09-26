@@ -13771,3 +13771,46 @@ failure), which agrees with the birds entry above: it is `main`'s and still need
 **What the parallel lanes cost.** Two agents' fast-tier runs locked each other's test DLLs, and one
 agent saw the other's half-finished Sim edits fail to compile. Lanes that share a worktree should
 not share a test binary. Next time, give the Sim lane its own worktree.
+
+## 2026-09-26 — Butterflies, and a night that lights up
+
+The owner asked for procedural butterflies that look and move decently, a graphics setting if they
+cost anything, and a night made spectacular by their glowing in varying colours. Interviewed in two
+rounds (`docs/research/butterflies-interview.md`), researched in three capped subagents (`e-13`,
+`d-24`, `e-14`), built on its own worktree as the owner asked: design 52.
+
+**Grounded against `origin/main`, not the checkout.** The local `main` was 47 pull requests behind;
+weather, the flower dressing, the quality presets and the settings window had all landed since. And
+a sibling branch held **ambient birds** (design 50, PR #230) — found by checking which design numbers
+were taken on every remote branch, not just `main`. The butterflies follow the birds' shape on
+purpose: an engine-free model in `Odyssey.Hud` behind a seam the render mirror answers, a frame
+section of its own, the shader kept alive for the player build. Design numbers 50 and 51 and research
+`d-23` and `e-12` were already claimed on branches; this is 52, `d-24`, `e-13`, `e-14`.
+
+**Two research results disagreed and the design sides with the one that measured the engine.** The
+wing research wanted the pattern over bloom's 1.1 threshold for glow; the cost research found that a
+few-pixel region crossing a half-resolution bloom threshold shimmers as it moves, and bloom's clamp
+is global. So the wing stays at or under 1.0 and the spectacle is a halo and a light the pass draws
+itself — the light read off the depth texture, so it falls on a colonist or a wall as well as the
+grass, and is never a URP light (Forward+ caps a camera at 256).
+
+**The one departure from the birds is the clock.** Birds and rain run on game time; a butterfly
+beats ten times a second, so at speed 3 it would strobe. Real seconds while the world runs, none on
+a pause.
+
+**The colour-blind test earned its keep on its first run**: magenta was 17 Lab units from the night
+sky under deuteranopia, and was lifted. And **the rain test found a real bug**: the surplus margin
+that stops the count hunting kept two butterflies alive when the target was nought, so every
+downpour would have left two out in it for ever.
+
+**A debug row, Skip to night**, because Skip to morning lands at four with a minute of dark left —
+too little to judge the one thing the owner asked to be spectacular.
+
+**Then the owner looked (2026-09-26)**: *"the day effect superb, the night effect is odd, it just
+needs to colour the butterflies a illuminating colour and they move around - not those big glowing
+saucers. Also make sure it's performant."* The halo and the pool of light went, and with them the
+second call and every depth-texture read; the whole wing is now lit in its hue, the pattern
+brightest, and the wings are drawn to the full zoom at night, a little larger, where the halos had
+carried a far night. The research had argued the spectacle into a separate light because the wing
+could not safely cross bloom's threshold; the owner's answer was that the wing was the spectacle all
+along, and the ceiling that argument was about still holds (design 52 §5a).

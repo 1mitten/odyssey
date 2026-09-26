@@ -2,6 +2,7 @@
 using Odyssey.Hud;
 using Odyssey.Presentation.Audio;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.World;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -439,6 +440,13 @@ namespace Odyssey.Presentation.Bootstrap
 
                 case GraphicsLadder.GrassDistance:
                     renderer.FoliageDrawDistance = DrawDistanceOf(_director.Value(ladder));
+                    break;
+
+                // The meadow's capacity (design 52 §8): a resize of a few arrays, no re-mesh. A new
+                // session reads the rung when it builds its director, so this is only the live press.
+                case GraphicsLadder.Butterflies:
+                    ButterflyDirector? butterflies = _bootstrap?.Butterflies;
+                    if (butterflies != null) butterflies.Capacity = _director.Value(ladder);
                     break;
             }
         }
