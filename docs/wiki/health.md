@@ -13,7 +13,7 @@ Body parts, injuries and conditions. The anatomy sheet covers this better than a
 | **Nose** | `ui.health.nose` | Minor, until it is gone <br>**Needs:** a nose | no art | M6 |
 | **Jaw** | `ui.health.jaw` | Eating and talking | sheet 07 (anatomy), med | M6 |
 | **Neck** | `ui.health.neck` | A bad place to be hurt <br>**Needs:** a neck, distinguishable from a torso | no art | M6 |
-| **Torso** | `ui.health.torso` | Everything vital is in here | sheet 07 (anatomy), high | M6 |
+| **Torso** | `ui.health.torso` | Vital, with the head, and where most blows land | sheet 07 (anatomy), high | M6 |
 | **Heart** | `ui.health.heart` | Blood pumping. Fatal to lose | sheet 07 (anatomy), high | M6 |
 | **Lung** | `ui.health.lung` | Breathing, and stamina | sheet 07 (anatomy), high | M6 |
 | **Liver** | `ui.health.liver` | Filters. Slow to kill you | sheet 07 (anatomy), high | M6 |
@@ -28,7 +28,7 @@ Body parts, injuries and conditions. The anatomy sheet covers this better than a
 | **Foot** | `ui.health.foot` | Balance and pace <br>**Needs:** a foot | no art | M6 |
 | **Blood loss** | `ui.health.blood` | How much has been lost | sheet 06 (action tiles), low | M6 |
 | **Scar** | `ui.health.scar` | Permanent, and it aches <br>**Needs:** an old healed wound | no art | M6 |
-| **Wound** | `ui.health.wound` | Fresh injury | sheet 07 (anatomy), low | M6 |
+| **Wound** | `ui.health.wound` | A cut from a blade or a bullet. The only kind that bleeds | sheet 07 (anatomy), low | M6 |
 | **Burn** | `ui.health.burn` | Fire damage | sheet 06 (action tiles), low | M6 |
 | **Fracture** | `ui.health.fracture` | Broken, not severed | sheet 07 (anatomy), med | M6 |
 | **Missing part** | `ui.health.missing` | Gone. Replace or adapt <br>**Needs:** an absent limb, shown as a silhouette gap | no art | M6 |

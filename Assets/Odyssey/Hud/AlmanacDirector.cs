@@ -69,7 +69,7 @@ namespace Odyssey.Hud
             AlmanacCategory? cat = AlmanacCatalogue.GetCategory(category);
             if (cat == null) return;
 
-            AlmanacEntry? ent = AlmanacCatalogue.GetEntry(entry);
+            AlmanacEntry? ent = AlmanacCatalogue.GetEntry(cat.Name, entry);
             if (ent == null && cat.Entries.Count > 0) ent = cat.Entries[0];
             if (ent == null) return;
 
@@ -115,113 +115,46 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// Attempts to resolve the current selection from <see cref="InspectModel"/> to an Almanac
-        /// entry and category.
+        /// The entry the inspect pane's info button opens: the one keyed by what the pane is
+        /// showing — the item's, the tile's, the animal's or the person's registry key, the same
+        /// key the pane draws its avatar from. Until 2026-09-26 this guessed from the title
+        /// ("Conifer" was a pine, anything unknown was grass or the ration pack); a key either has
+        /// an entry or it has none, and <c>AlmanacCatalogueTests</c> holds every key the pane can
+        /// show to one.
         /// </summary>
         public static (string Category, string Entry)? ResolveSelection(InspectModel inspect)
         {
-            if (inspect.Subject == InspectSubject.None) return null;
-
-            if (inspect.Subject == InspectSubject.Item)
+            string key;
+            switch (inspect.Subject)
             {
-                string title = inspect.Title;
-                string iconKey = inspect.ItemIconKey;
-
-                // The four weapons (design 33 §1) have no entry yet, and falling through to the
-                // Ration Pack below would open the wrong page rather than none.
-                if (iconKey.StartsWith("ui.item.", StringComparison.Ordinal)) return null;
-
-                if (title.StartsWith(AlmanacKeys.Wood, StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, AlmanacKeys.Wood);
-                if (title.StartsWith(AlmanacKeys.Stone, StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, AlmanacKeys.Stone);
-                if (title.StartsWith("Concrete", StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, "Concrete");
-                if (title.StartsWith("Steel", StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, "Steel");
-
-                if (title.StartsWith("Ration", StringComparison.OrdinalIgnoreCase) || iconKey == "ui.res.rations")
-                    return (AlmanacKeys.Items, "Ration Pack");
-                if (title.StartsWith(AlmanacKeys.Carrots, StringComparison.OrdinalIgnoreCase) || iconKey == "ui.res.carrots")
-                    return (AlmanacKeys.Items, AlmanacKeys.Carrots);
-                if (title.StartsWith(AlmanacKeys.Scrap, StringComparison.OrdinalIgnoreCase) ||
-                    title.StartsWith(AlmanacKeys.Salvage, StringComparison.OrdinalIgnoreCase) ||
-                    iconKey == "ui.res.scrap")
-                    return (AlmanacKeys.Items, AlmanacKeys.Salvage);
-                if (title.StartsWith("Iron", StringComparison.OrdinalIgnoreCase) || iconKey == "ui.res.ironore")
-                    return (AlmanacKeys.Items, "Iron Ore");
-                if (title.StartsWith(AlmanacKeys.Coal, StringComparison.OrdinalIgnoreCase) || iconKey == "ui.res.coal")
-                    return (AlmanacKeys.Items, AlmanacKeys.Coal);
-
-                return (AlmanacKeys.Items, "Ration Pack");
+                case InspectSubject.Item:
+                    key = inspect.ItemIconKey;
+                    break;
+                case InspectSubject.Cell:
+                    key = inspect.CellIconKey;
+                    break;
+                case InspectSubject.Corpse:
+                    key = inspect.CorpseKindKey;
+                    break;
+                case InspectSubject.Colonist:
+                    if (inspect.IsAnimal || inspect.IsHostile)
+                    {
+                        key = inspect.KindIconKey;
+                        break;
+                    }
+                    // A colonist's page, or the page for the tab she is on.
+                    string tab = inspect.ActiveTabName;
+                    key = string.Equals(tab, "Skills", StringComparison.OrdinalIgnoreCase) ? "ui.skill.construction"
+                        : string.Equals(tab, "Needs", StringComparison.OrdinalIgnoreCase) ? "ui.need.food"
+                        : string.Equals(tab, "Health", StringComparison.OrdinalIgnoreCase) ? "ui.combat.health"
+                        : PawnKindLabels.Colonist;
+                    break;
+                default:
+                    return null;
             }
 
-            if (inspect.Subject == InspectSubject.Cell)
-            {
-                string title = inspect.Title;
-
-                if (title.IndexOf(AlmanacKeys.Wall, StringComparison.OrdinalIgnoreCase) >= 0) return ("Structures", AlmanacKeys.Wall);
-                if (title.IndexOf(AlmanacKeys.Door, StringComparison.OrdinalIgnoreCase) >= 0) return ("Structures", AlmanacKeys.Door);
-                if (title.IndexOf(AlmanacKeys.Ladder, StringComparison.OrdinalIgnoreCase) >= 0) return ("Structures", AlmanacKeys.Ladder);
-                if (title.IndexOf(AlmanacKeys.Bed, StringComparison.OrdinalIgnoreCase) >= 0) return ("Structures", AlmanacKeys.Bed);
-                if (title.IndexOf("Pillar", StringComparison.OrdinalIgnoreCase) >= 0) return ("Structures", AlmanacKeys.Wall);
-                if (title.IndexOf(AlmanacKeys.Stair, StringComparison.OrdinalIgnoreCase) >= 0) return ("Structures", AlmanacKeys.Ladder);
-
-                if (title.IndexOf("Conifer", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    title.IndexOf("Pine", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    title.IndexOf("Tree", StringComparison.OrdinalIgnoreCase) >= 0)
-                    return ("Flora", "Pine");
-
-                if (title.IndexOf(AlmanacKeys.Carrots, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    title.IndexOf("Plant", StringComparison.OrdinalIgnoreCase) >= 0)
-                    return ("Flora", "Carrot Plant");
-
-                if (title.IndexOf(AlmanacKeys.Wood, StringComparison.OrdinalIgnoreCase) >= 0) return (AlmanacKeys.Materials, AlmanacKeys.Wood);
-                if (title.IndexOf(AlmanacKeys.Stone, StringComparison.OrdinalIgnoreCase) >= 0) return (AlmanacKeys.Materials, AlmanacKeys.Stone);
-                if (title.IndexOf("Concrete", StringComparison.OrdinalIgnoreCase) >= 0) return (AlmanacKeys.Materials, "Concrete");
-                if (title.IndexOf("Steel", StringComparison.OrdinalIgnoreCase) >= 0) return (AlmanacKeys.Materials, "Steel");
-
-                if (title.IndexOf("Grass", StringComparison.OrdinalIgnoreCase) >= 0) return ("Terrain", "Grass");
-                if (title.IndexOf("Soil", StringComparison.OrdinalIgnoreCase) >= 0) return ("Terrain", "Soil");
-                if (title.IndexOf("Rock", StringComparison.OrdinalIgnoreCase) >= 0) return ("Terrain", "Rock");
-                if (title.IndexOf("Gravel", StringComparison.OrdinalIgnoreCase) >= 0) return ("Terrain", "Gravel");
-                if (title.IndexOf("Pavement", StringComparison.OrdinalIgnoreCase) >= 0) return ("Terrain", "Pavement");
-                if (title.IndexOf("Water", StringComparison.OrdinalIgnoreCase) >= 0) return ("Terrain", "Shallow Water");
-                if (title.IndexOf("Sand", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    title.IndexOf("Bare", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    title.IndexOf("Subsoil", StringComparison.OrdinalIgnoreCase) >= 0)
-                    return ("Terrain", "Soil");
-
-                return ("Terrain", "Grass");
-            }
-
-            // A corpse (design 33 §1): an animal's opens its kind's Fauna entry, as the living
-            // animal does; a person's has no entry to open.
-            if (inspect.Subject == InspectSubject.Corpse)
-            {
-                if (!inspect.CorpseWasAnimal) return null;
-                string kind = Registry.Label(inspect.CorpseKindKey);
-                return AlmanacCatalogue.GetEntry(kind) != null ? ("Fauna", kind) : null;
-            }
-
-            if (inspect.Subject == InspectSubject.Colonist)
-            {
-                // An animal opens its own Fauna entry (design 30; owner, 2026-09-23: "make sure
-                // the almanac is up-to-date with animals"), by the kind's registry name, which
-                // is the entry's name.
-                // A bandit (design 33 §1) is not a colonist and its skills are not the player's:
-                // its kind's entry if the Almanac has one, else none, never a colonist's page.
-                if (inspect.IsAnimal || inspect.IsHostile)
-                {
-                    string kind = Registry.Label(inspect.KindIconKey);
-                    return AlmanacCatalogue.GetEntry(kind) != null ? ("Fauna", kind) : null;
-                }
-
-                if (string.Equals(inspect.ActiveTabName, "Skills", StringComparison.OrdinalIgnoreCase))
-                    return ("Skills", "Construction");
-                if (string.Equals(inspect.ActiveTabName, "Needs", StringComparison.OrdinalIgnoreCase))
-                    return ("Needs", AlmanacKeys.Food);
-
-                return ("Skills", "Construction");
-            }
-
-            return null;
+            AlmanacEntry? entry = AlmanacCatalogue.ForKey(key);
+            return entry == null ? null : (entry.CategoryName, entry.Name);
         }
 
         public bool OpenForSelection(InspectModel inspect)

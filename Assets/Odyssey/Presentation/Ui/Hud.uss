@@ -3572,8 +3572,8 @@
 }
 
 .almanac-idx-row__sq {
-    width: 26px;
-    height: 26px;
+    width: 32px;
+    height: 32px;
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.18);
     border-radius: 3px;

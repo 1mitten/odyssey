@@ -15,7 +15,7 @@ creature.predator,City predator,girder cat,proposed,"A lean climbing predator th
 creature.synth,Feral machine,loper,proposed,"A long-legged maintenance unit still walking its rounds, now hostile to anything that moves. Not alive, not intelligent, not harmless. ui.pawn.synth points at this"
 creature.pack,Pack animal,dray hog,proposed,"A larger bred cousin of the midden hog, for caravans. Not in the original list; caravans need something to carry the load and it should not be a vehicle at prototype scale"
 creature.amphibian,Bank wildlife,culvert frog,proposed,"A big frog of the meadow's streams, ponds and lakes, and of the flooded culverts under the ruin. Keeps to the water's edge; the first animal placed by where the water is. Named in the register of the midden hog and the duct rat"
-creature.vermin,City vermin,duct rat,proposed,"The rat of the ruin: lives in the ducts and the caverns, climbs anything, eats what the colony stores. Named in the register of the midden hog and the girder cat; the first animal with a full set of movements, so the one the figure work is proven on"
+creature.vermin,City vermin,duct rat,proposed,"The rat of the ruin: keeps to the rock, climbs ladders and opens doors. Named in the register of the midden hog and the girder cat; the first animal with a full set of movements, so the one the figure work is proven on"
 calendar.structure,The calendar,"6 months of 12 days, 72-day year",proposed,"Three seasons of two months each. A short year means seasonal pressure arrives often, which a prototype wants: you see a full cycle in ten hours rather than thirty. Days stay 24 hours for legibility"
 calendar.m1,Month,Larkspur,proposed,"First month of Wash. Botanical month names are a civic nicety the city kept from before it was a city, which is the kind of detail that makes a dead place feel lived in. Invented earlier for the clock readout and kept"
 calendar.m2,Month,Tansy,proposed,Second month of Wash
@@ -23,7 +23,7 @@ calendar.m3,Month,Bramble,proposed,First month of Glare
 calendar.m4,Month,Ember,proposed,Second month of Glare
 calendar.m5,Month,Hollow,proposed,First month of Rime
 calendar.m6,Month,Candle,proposed,Second month of Rime
-calendar.s1,Season,Wash,proposed,"The rains. Growing season, and the season that puts fires out"
+calendar.s1,Season,Wash,proposed,The rains. The growing season
 calendar.s2,Season,Glare,proposed,"Dry heat. Cooling matters, crops need water, tempers go"
 calendar.s3,Season,Rime,proposed,"Cold. The season the prototype's ten-day survival run should eventually land in, because it is the one that kills you"
 research.convention,Research naming,Plain functional names,proposed,"Projects are named for what they unlock, not given proper names: Hydroponics, Powered Doors, Structural Bracing, Salvage Sorting. A research list is scanned, not read, and a clever name costs the player a guess. Proper nouns are reserved for people, places and factions"

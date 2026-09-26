@@ -233,7 +233,7 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void TheAlmanacOpensAnAnimalsCorpseOnItsKindAndNothingForABandit()
+        public void TheAlmanacOpensAnAnimalsCorpseOnItsKindAndABanditOnTheBanditsPage()
         {
             var pane = new InspectModel();
             pane.SetCorpse(7);
@@ -244,19 +244,19 @@ namespace Odyssey.Tests.Hud
 
             pane.SetColonist(Raider);
             pane.Refresh(Board());
-            Assert.That(AlmanacDirector.ResolveSelection(pane), Is.Null,
-                "a bandit opened a colonist's Skills entry");
+            Assert.That(AlmanacDirector.ResolveSelection(pane), Is.EqualTo(("People", Registry.Label("ui.pawn.bandit"))),
+                "a bandit opens its own kind's page, never a colonist's");
         }
 
         [Test]
-        public void TheAlmanacHasNoEntryForAWeaponRatherThanTheRationPack()
+        public void TheAlmanacOpensAWeaponOnItsOwnPageRatherThanTheRationPack()
         {
             WorldSnapshot frame = Board();
             frame.AddThing(new ThingView(new ThingId(30), new CellRef(2, 2, 1), ItemHandle.Crowbar, 0));
             var pane = new InspectModel();
             pane.SetItem(new ThingId(30));
             pane.Refresh(frame);
-            Assert.That(AlmanacDirector.ResolveSelection(pane), Is.Null);
+            Assert.That(AlmanacDirector.ResolveSelection(pane), Is.EqualTo((AlmanacCatalogue.Weapons, Registry.Label("ui.item.crowbar"))));
         }
     }
 }
