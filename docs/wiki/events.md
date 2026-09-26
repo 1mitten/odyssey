@@ -56,7 +56,7 @@ Three channels, and the difference is not cosmetic. Alerts are conditions that p
 | **Refugee** | `ui.bulletin.refugee` | Someone is asking for shelter <br>**Needs:** someone asking for shelter | no art | M2 |
 | **Animal joined** | `ui.bulletin.animaljoin` | A tame beast has attached itself to us | sheet 06 (action tiles), med | M2 |
 | **Crash** | `ui.bulletin.crash` | Something has come down nearby <br>**Needs:** a crashed ship or drop pod | no art | M2 |
-| **Supply drop** | `ui.bulletin.supplydrop` | Something has fallen from the sky. Fetch it before the weather does <br>**Needs:** a stack falling from the sky. Our own concept | no art | M3 |
+| **Supply drop** | `ui.bulletin.supplydrop` | Rations have fallen from the sky. Somebody has to fetch them <br>**Needs:** a stack falling from the sky. Our own concept | no art | M3 |
 | **Birth** | `ui.bulletin.birth` | A tame animal has given birth <br>**Needs:** a newborn animal | no art | M2 |
 | **Theft** | `ui.bulletin.theft` | A bandit carried something off the board <br>**Needs:** a figure carrying a sack off the edge. Our own concept | no art | CB |
 | **Bandit left** | `ui.bulletin.banditleft` | A bandit walked off the board with nothing <br>**Needs:** a figure walking off the edge. Our own concept | no art | CB |

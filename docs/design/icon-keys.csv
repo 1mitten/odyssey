@@ -1,6 +1,6 @@
 key,label,namespace,milestone,tooltip_seed
 ui.res.scrap,Scrap metal,ui.res,M1,"Salvaged metal. Power lines and machines are built from it"
-ui.res.rubble,Rubble,ui.res,M1,"Broken concrete and masonry. Cleared, not mined"
+ui.res.rubble,Rubble,ui.res,M1,Broken masonry where a floor fell in. Cleared with the Mine order before anything is built
 ui.res.girder,Girder,ui.res,M1,"Structural steel cut from a shell. Heavy, valuable"
 ui.res.panel,Hull panel,ui.res,M1,Flat salvaged plating. The cheapest wall material
 ui.res.composite,Composite,ui.res,M1,"Light high-strength laminate. Scarce, from deep salvage"
@@ -22,18 +22,18 @@ ui.res.leather,Leather,ui.res,M1,Tanned hide. Tougher apparel than fabric
 ui.res.cord,Cord,ui.res,M1,"Rope and cable. Ladders, lifts, bindings"
 ui.res.insulation,Insulation,ui.res,M1,Foam batting. Slows heat through a wall
 ui.res.paper,Paper,ui.res,M1,Records and packaging. Research feedstock
-ui.res.rations,Rations,ui.res,M1,"Sealed pre-collapse food. Never spoils, nobody enjoys it"
-ui.res.meal,Meal,ui.res,M3,"Cooked at an electric cooker or a campfire. The best food there is, and it rots in four days"
+ui.res.rations,Rations,ui.res,M1,"Sealed pre-collapse food. It keeps, it fills, and it is a little better than nothing"
+ui.res.meal,Meal,ui.res,M3,"A cooked meal with meat in it, the best food there is. There is no meat yet, so cooks make vegetable meals"
 ui.res.meal.veg,Vegetable meal,ui.res,M3,"A meal cooked without meat. As filling and as welcome as one with"
 ui.res.meal.burnt,Burnt meal,ui.res,M3,"A meal the cook let catch. Edible, less filling, and nobody enjoys it"
 ui.res.protein,Protein paste,ui.res,M1,Reclaimed nutrition. Edible; that is all
 ui.res.meat,Raw meat,ui.res,M1,Butchered. Spoils without cold
 ui.res.produce,Produce,ui.res,M1,"Grown food, uncooked"
 ui.res.wood,Wood,ui.res,M3,"Felled timber. The first thing the colony builds with"
-ui.res.stone,Stone,ui.res,M3,"Broken rock from a mined face. Heavy, and there is always more"
+ui.res.stone,Stone,ui.res,M3,"Broken rock from a mined face, or loose on the ground. Slower to build with, and it lasts"
 ui.res.ironore,Iron ore,ui.res,M3,Raw ore. Worthless until something smelts it
-ui.res.coal,Coal,ui.res,M3,"Burns hot. Found deeper than iron, and for that reason"
-ui.res.carrots,Carrots,ui.res,M3,"The first field crop. Eaten straight, no cooking and no spoilage"
+ui.res.coal,Coal,ui.res,M3,Found deeper than iron. Nothing burns it yet
+ui.res.carrots,Carrots,ui.res,M3,The first field crop. Eaten raw in a pinch; three make a meal
 ui.res.berries,Berries,ui.res,M3,"Picked from a wild berry bush. Eaten straight; the bush grows more"
 ui.res.mushrooms,Mushrooms,ui.res,M3,"Found under the trees. Eaten straight; more come up somewhere else"
 ui.res.grain,Grain,ui.res,M1,"Bulk staple. Stores well, needs cooking"
@@ -54,7 +54,7 @@ ui.res.relic,Relic,ui.res,M1,Pre-collapse curio. Trade value and a mood lift
 ui.res.smokes,Smokes,ui.res,M1,Cheap comfort with a long bill
 ui.res.curio,Curio,ui.res,M1,Sentimental object. Worth more to a colonist than a trader
 ui.need.food,Food,ui.need,M2,How hungry this colonist is
-ui.need.rest,Rest,ui.need,M2,Sleep debt
+ui.need.rest,Rest,ui.need,M2,How rested she is. She sleeps when it runs low
 ui.need.joy,Recreation,ui.need,M2,Time spent on anything enjoyable
 ui.need.comfort,Comfort,ui.need,M2,Quality of what they sit and sleep on
 ui.need.beauty,Beauty,ui.need,M2,How the surroundings look to them
@@ -67,18 +67,18 @@ ui.mood.strained,Strained,ui.mood,M2,Mood is falling. Watch this one
 ui.mood.breaking,Breaking,ui.mood,M2,At the threshold of a mental break
 ui.mood.broken,Breaking down,ui.mood,M2,In a mental break now
 ui.skill.construction,Construction,ui.skill,M2,"Building, and the quality of what is built"
-ui.skill.mining,Mining,ui.skill,M2,"Digging, rubble clearance and salvage extraction"
+ui.skill.mining,Mining,ui.skill,M2,Digging and rubble clearance: how fast
 ui.skill.salvage,Salvage,ui.skill,M2,Stripping a shell without wrecking what is in it
 ui.skill.cooking,Cooking,ui.skill,M3,"How fast a colonist cooks, and how seldom the meal burns"
-ui.skill.growing,Growing,ui.skill,M2,Yield and harvest speed
+ui.skill.growing,Growing,ui.skill,M2,"Sowing, harvesting and picking: how fast"
 ui.skill.cutting,Chopping,ui.skill,M2,"Felling trees. How fast the axe comes down, and how fast the trunk goes over"
 ui.skill.animals,Animals,ui.skill,M2,"Taming, training and husbandry"
 ui.skill.crafting,Crafting,ui.skill,M2,Bench work and item quality
 ui.skill.fabrication,Fabrication,ui.skill,M2,Advanced production. Gates the best gear
-ui.skill.medicine,Medicine,ui.skill,M2,How fast a colonist treats the hurt
+ui.skill.medicine,Medicine,ui.skill,M2,"How fast a colonist treats the hurt, and how well"
 ui.skill.social,Social,ui.skill,M2,"Negotiation, recruitment and warden work"
 ui.skill.shooting,Shooting,ui.skill,M2,Ranged accuracy
-ui.skill.melee,Melee,ui.skill,M2,"Close combat, hit and parry"
+ui.skill.melee,Melee,ui.skill,M2,"Close combat: landing a blow, and dodging one"
 ui.skill.intellect,Intellect,ui.skill,M2,Research speed
 ui.quality.poor,Poor,ui.quality,M3,"Slapdash work. A poor bed rests worse than none at all feels"
 ui.quality.normal,Normal,ui.quality,M3,What an honest day's joinery makes
@@ -92,8 +92,8 @@ ui.pawn.prisoner,Prisoner,ui.pawn,M2,"Held, and someone must feed them"
 ui.pawn.animal,Animal,ui.pawn,M2,Tame or wild creature
 ui.pawn.synth,Synth,ui.pawn,M2,"Machine intelligence. Not alive, not harmless"
 ui.pawn.corpse,Corpse,ui.pawn,M2,"Rots, upsets people, can be buried or worse"
-ui.pawn.hog,Midden hog,ui.pawn,AN,"Pig-descended, thrives on refuse heaps. Wild for now; the one you meet first"
-ui.pawn.rat,Duct rat,ui.pawn,AN,"Vermin from the ducts and the caverns. Climbs anything"
+ui.pawn.hog,Midden hog,ui.pawn,AN,"Pig-descended, thrives on refuse heaps. Keeps to the woods in sounders, and bites back"
+ui.pawn.rat,Duct rat,ui.pawn,AN,Vermin of the rock. Out at night; climbs ladders and opens doors
 ui.pawn.frog,Culvert frog,ui.pawn,AN,"A big frog of the banks. Keeps to the water's edge and hops"
 ui.pawn.bandit,Bandit,ui.pawn,CB,"Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing"
 ui.pawn.gunman,Gunman,ui.pawn,RD,"A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close"
@@ -165,12 +165,12 @@ ui.work.warden,Warden,ui.work,M7,"Feed, talk to and recruit prisoners"
 ui.work.handling,Handling,ui.work,M7,"Tame, train and feed animals"
 ui.work.cooking,Cooking,ui.work,M3,Work the bills at an electric cooker or a campfire
 ui.work.hunting,Hunting,ui.work,M7,Kill wild animals for meat
-ui.work.construction,Construction,ui.work,M7,Build frames and blueprints
-ui.work.growing,Growing,ui.work,M7,Sow and harvest growing zones
+ui.work.construction,Construction,ui.work,M7,"Deliver, build and deconstruct, and lay power lines"
+ui.work.growing,Growing,ui.work,M7,"Sow and harvest growing zones, and pick berries"
 ui.work.mining,Mining,ui.work,M7,"Dig, and clear rubble"
 ui.work.salvaging,Salvaging,ui.work,M7,Strip shells and extract salvage
 ui.work.cutting,Chopping,ui.work,M7,Fell trees and clear growth
-ui.work.hauling,Hauling,ui.work,M7,Move things to storage
+ui.work.hauling,Hauling,ui.work,M7,"Move things to storage, and refuel generators"
 ui.work.cleaning,Cleaning,ui.work,M7,Clear filth from rooms
 ui.work.research,Research,ui.work,M7,Work the research bench
 ui.work.crafting,Crafting,ui.work,M7,General bench work
@@ -221,7 +221,7 @@ ui.arch.tool.window,Window,ui.arch.tool,M3,"Light through a wall, less insulatio
 ui.arch.tool.hatch,Hatch,ui.arch.tool,M3,A door in a floor
 ui.arch.tool.airlock,Airlock,ui.arch.tool,M3,Two doors and a seal. Holds atmosphere
 ui.arch.tool.stockpile,Stockpile,ui.arch.tool,M3,Where hauled things go
-ui.arch.tool.growzone,Growing zone,ui.arch.tool,M3,Soil or hydroponics planted with one crop
+ui.arch.tool.growzone,Growing zone,ui.arch.tool,M3,"Ground planted with one crop, and sown again after each harvest"
 ui.arch.tool.allowed,Allowed area,ui.arch.tool,M3,Where colonists may go
 ui.arch.tool.dumping,Dumping zone,ui.arch.tool,M3,Where rubbish and rubble go
 ui.arch.tool.kennel,Animal area,ui.arch.tool,M3,Where tame animals may roam
@@ -265,13 +265,13 @@ ui.arch.tool.shelf,Shelf,ui.arch.tool,M3,Storage that keeps things off the floor
 ui.arch.tool.locker,Locker,ui.arch.tool,M3,Personal storage
 ui.arch.tool.brazier,Brazier,ui.arch.tool,M3,"Heat and light, no power, some risk"
 ui.arch.tool.cooler,Cooler,ui.arch.tool,M3,Moves heat out of a room
-ui.arch.tool.heater,Heater,ui.arch.tool,M3,Moves heat into a room
+ui.arch.tool.heater,Heater,ui.arch.tool,M3,"Warms the room it stands in, while it has power"
 ui.arch.tool.vent,Vent,ui.arch.tool,M3,Lets two rooms share air
 ui.arch.tool.turret,Turret,ui.arch.tool,M3,Shoots hostiles. Needs power and ammunition
 ui.arch.tool.trap,Trap,ui.arch.tool,M3,"One-shot, cheap, forgettable by your own colonists"
 ui.arch.tool.barricade,Barricade,ui.arch.tool,M3,Cover without blocking sight
 ui.arch.tool.blastdoor,Blast door,ui.arch.tool,M3,"Slow, strong, holds a breach"
-ui.arch.tool.sandbag,Sandbags,ui.arch.tool,M3,"Cheap, quick low cover. Climbed over, never stood on"
+ui.arch.tool.sandbag,Sandbags,ui.arch.tool,M3,"Low cover built of stone. Climbed over, never stood on"
 ui.arch.tool.searchlight,Searchlight,ui.arch.tool,M3,Light where you need to shoot
 ui.arch.tool.deckplate,Floor,ui.arch.tool,M3,Laid on ground you already walk on
 ui.arch.tool.grating,Grating,ui.arch.tool,M3,See and fall through. Light passes
@@ -409,14 +409,14 @@ ui.bulletin.wanderer,Wanderer,ui.bulletin,M2,Someone wants to join
 ui.bulletin.refugee,Refugee,ui.bulletin,M2,Someone is asking for shelter
 ui.bulletin.animaljoin,Animal joined,ui.bulletin,M2,A tame beast has attached itself to us
 ui.bulletin.crash,Crash,ui.bulletin,M2,Something has come down nearby
-ui.bulletin.supplydrop,Supply drop,ui.bulletin,M3,"Something has fallen from the sky. Fetch it before the weather does"
+ui.bulletin.supplydrop,Supply drop,ui.bulletin,M3,Rations have fallen from the sky. Somebody has to fetch them
 ui.bulletin.birth,Birth,ui.bulletin,M2,A tame animal has given birth
 ui.bulletin.theft,Theft,ui.bulletin,CB,"A bandit carried something off the board"
 ui.bulletin.banditleft,Bandit left,ui.bulletin,CB,"A bandit walked off the board with nothing"
 ui.weather.clear,Clear,ui.weather,M1,Open sky
-ui.weather.cloudy,Cloudy,ui.weather,M1,"Less light, no other effect"
-ui.weather.rain,Rain,ui.weather,M1,"Puts out fires, waters crops"
-ui.weather.storm,Storm,ui.weather,M1,"Rain, wind and lightning"
+ui.weather.cloudy,Cloudy,ui.weather,M1,"Less light, and a little colder"
+ui.weather.rain,Rain,ui.weather,M1,"Slows anyone under open sky a little, and waters the crops"
+ui.weather.storm,Storm,ui.weather,M1,"The heaviest rain, and the coldest weather"
 ui.weather.snow,Snow,ui.weather,M1,"Cold, and it settles"
 ui.weather.fog,Fog,ui.weather,M1,Sight and shooting suffer
 ui.weather.ashfall,Ashfall,ui.weather,M1,"Filth from the sky, and no sun"
@@ -444,7 +444,7 @@ ui.health.ear,Ear,ui.health,M6,"Hearing, and social work"
 ui.health.nose,Nose,ui.health,M6,"Minor, until it is gone"
 ui.health.jaw,Jaw,ui.health,M6,Eating and talking
 ui.health.neck,Neck,ui.health,M6,A bad place to be hurt
-ui.health.torso,Torso,ui.health,M6,Everything vital is in here
+ui.health.torso,Torso,ui.health,M6,"Vital, with the head, and where most blows land"
 ui.health.heart,Heart,ui.health,M6,Blood pumping. Fatal to lose
 ui.health.lung,Lung,ui.health,M6,"Breathing, and stamina"
 ui.health.liver,Liver,ui.health,M6,Filters. Slow to kill you
@@ -459,7 +459,7 @@ ui.health.leg,Leg,ui.health,M6,Walking speed
 ui.health.foot,Foot,ui.health,M6,Balance and pace
 ui.health.blood,Blood loss,ui.health,M6,How much has been lost
 ui.health.scar,Scar,ui.health,M6,"Permanent, and it aches"
-ui.health.wound,Wound,ui.health,M6,Fresh injury
+ui.health.wound,Wound,ui.health,M6,A cut from a blade or a bullet. The only kind that bleeds
 ui.health.burn,Burn,ui.health,M6,Fire damage
 ui.health.fracture,Fracture,ui.health,M6,"Broken, not severed"
 ui.health.missing,Missing part,ui.health,M6,Gone. Replace or adapt
@@ -510,16 +510,16 @@ ui.item.binoculars,Binoculars,ui.item,M3,See further than you can shoot
 ui.item.toolkit,Toolkit,ui.item,M3,"Better work, faster"
 ui.item.canteen,Canteen,ui.item,M3,"Water, carried"
 ui.item.bedroll,Bedroll,ui.item,M3,Sleep away from home
-ui.terrain.grass,Grass,ui.terrain,M1,"The living surface. Trees grow here and nothing else"
+ui.terrain.grass,Grass,ui.terrain,M1,"The living surface. Trees and bushes grow here, and carrots can be sown"
 ui.terrain.bareearth,Bare Earth,ui.terrain,M1,"Soil with the grass worn off it"
-ui.terrain.gravel,Gravel,ui.terrain,M1,"Stony ground. Poor soil, firm footing"
+ui.terrain.gravel,Gravel,ui.terrain,M1,Loose gravel of the ruined city. Poor soil
 ui.terrain.sand,Sand,ui.terrain,M1,"Loose and barren. What a riverbed is made of"
-ui.terrain.marsh,Marsh,ui.terrain,M1,"Wet ground fringing water. Crossed at three quarters pace"
-ui.terrain.water.shallow,Shallow Water,ui.terrain,M1,"Wadeable, at a third of walking pace. Nothing can be built on it without a bridge"
+ui.terrain.marsh,Marsh,ui.terrain,M1,"Wet ground fringing water. Crossed at seven tenths pace, and too poor to sow"
+ui.terrain.water.shallow,Shallow Water,ui.terrain,M1,"Wadeable, at a third of walking pace. Nothing can be built on it"
 ui.terrain.water.deep,Deep Water,ui.terrain,M1,"Out of your depth. Colonists will not enter it and paths go round"
 ui.terrain.rock,Rock,ui.terrain,M1,"Natural stone. Mined, not cleared"
 ui.terrain.subsoil,Subsoil,ui.terrain,M1,"The band between soil and rock. Cheap to dig"
-ui.terrain.bedrock,Bedrock,ui.terrain,M1,"The floor of the world. Deliberately punitive to mine"
+ui.terrain.bedrock,Bedrock,ui.terrain,M1,The floor of the world. It cannot be mined
 ui.terrain.packedgravel,Packed Gravel,ui.terrain,M3,"Stony ground, packed hard. Firm footing, poor soil"
 ui.terrain.tree.birch,Birch,ui.terrain,M3,"A slim white-barked tree. Quick to chop, not much wood in it"
 ui.terrain.tree.meadow,Meadow tree,ui.terrain,M3,"A broad round-crowned tree of the open meadow. Chopped for wood"
@@ -938,3 +938,53 @@ ui.assign.response,Response,ui.assign,HA,"What she does about danger. Press a ce
 ui.assign.anywhere,Anywhere,ui.assign,HA,"She takes work wherever it is"
 ui.assign.home,Home,ui.assign,HA,"She takes no work outside home, and walks home when idle. A draft overrides it"
 ui.assign.nohearth,No hearth yet,ui.assign,HA,"There is no hearth, so there is no home and Home keeps nobody in. Mark a campfire as the hearth"
+ui.hills.flat,Flat,ui.hills,WG,"Level ground. Room to build, little stone"
+ui.hills.rolling,Rolling,ui.hills,WG,Gentle rises and terraces. The board every measurement was taken on
+ui.hills.hilly,Hilly,ui.hills,WG,Steep terraces and more exposed rock
+ui.hills.mountainous,Mountainous,ui.hills,WG,High terraces over deep rock. Twenty-four layers deep
+ui.hills.sheer,Sheer,ui.hills,WG,Too steep to settle
+ui.world.title,World,ui.world,WG,"The planet, and where on it the colony lands"
+ui.world.site,Site,ui.world,WG,The tile the colony lands on
+ui.world.random,Random site,ui.world,WG,Pick another tile the colony could land on
+ui.world.next,Next,ui.world,WG,"On to the colony's name, size and people"
+ui.world.legend,Legend,ui.world,WG,What each colour and mark on the map means
+ui.world.biome,Biome,ui.world,WG,What grows there
+ui.world.hills,Hills,ui.world,WG,How hilly the ground is
+ui.world.temperature,Mean temperature,ui.world,WG,"The year's average, out of doors"
+ui.world.seasons,Seasons,ui.world,WG,"Each season's average, out of doors"
+ui.world.rainfall,Rainfall,ui.world,WG,How much rain falls in a year
+ui.world.latitude,Latitude,ui.world,WG,"How far from the equator. The further out, the harder the seasons bite"
+ui.world.depth,Board depth,ui.world,WG,"How many layers the board has, sky to bedrock"
+ui.world.unavailable,Not yet available,ui.world,WG,Only Meadow sites can be settled for now. Other biomes arrive with a later art pack.
+ui.world.water,Open water,ui.world,WG,The colony cannot land on the sea
+ui.world.steep,Too steep to settle,ui.world,WG,Sheer ground: no colony could find its footing
+ui.biome.ocean,Ocean,ui.biome,WG,Open water. Nothing can be built on it
+ui.biome.meadow,Meadow,ui.biome,WG,"Temperate grass and woodland, streams and ponds. The ground the colony knows"
+ui.biome.coldsteppe,Cold steppe,ui.biome,WG,"Cold, open grassland: long winters and little shelter"
+ui.biome.dryscrub,Dry scrub,ui.biome,WG,Warm dry ground of thorn and low bushes. Water is scarce
+ui.biome.marsh,Marsh,ui.biome,WG,"Waterlogged ground: reeds, pools and soft footing"
+ui.biome.ice,Ice,ui.biome,WG,"Ice all year round, on land and on the polar sea. Nothing grows"
+ui.world.subtitle,Pick a site to drop your colony,ui.world,WG,The World screen's subtitle
+ui.world.wraphint,The map wraps east to west,ui.world,WG,"Walk off the right edge and you come in on the left"
+ui.world.zoomhint,"Drag to pan, double-click to zoom",ui.world,WG,How to move about the map
+ui.world.settleable,Settleable,ui.world,WG,A colony can land here
+ui.world.selectedsite,Selected site,ui.world,WG,The tile the colony would land on
+ui.world.tile,Tile,ui.world,WG,"The tile's column and row on the planet"
+ui.world.foot,Click a tile to inspect it. Random site picks a temperate Meadow.,ui.world,WG,The stats panel's foot
+ui.world.zoomin,Zoom in,ui.world,WG,Closer to the ground
+ui.world.zoomout,Zoom out,ui.world,WG,Further from the ground
+ui.world.fit,Fit,ui.world,WG,The whole planet in view
+ui.world.north,N,ui.world,WG,North of the equator
+ui.world.south,S,ui.world,WG,South of the equator
+ui.world.mm,mm,ui.world,WG,Millimetres of rain a year
+ui.world.layers,layers,ui.world,WG,Layers from sky to bedrock
+ui.world.to,to,ui.world,WG,"Between the coldest and the warmest month, as in 2 to 26"
+ui.world.region.reach,{name} Reach,ui.world,WG,A land region's name in one of its frames
+ui.world.region.downs,The {name} Downs,ui.world,WG,A land region's name in one of its frames
+ui.world.region.hold,{name} Hold,ui.world,WG,A land region's name in one of its frames
+ui.world.region.greater,Greater {name},ui.world,WG,A land region's name in one of its frames
+ui.world.region.seaof,Sea of {name},ui.world,WG,A sea's name in one of its frames
+ui.world.region.deep,{name} Deep,ui.world,WG,A sea's name in one of its frames
+ui.world.region.shelf,The {name} Shelf,ui.world,WG,A sea's name in one of its frames
+ui.world.region.sound,{name} Sound,ui.world,WG,A sea's name in one of its frames
+ui.world.region.gulfof,Gulf of {name},ui.world,WG,A sea's name in one of its frames

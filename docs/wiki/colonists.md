@@ -15,8 +15,8 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Animal** | `ui.pawn.animal` | Tame or wild creature | sheet 06 (action tiles), med | M2 |
 | **Synth** | `ui.pawn.synth` | Machine intelligence. Not alive, not harmless <br>**Needs:** a machine intelligence. Nothing in the sheets is recognisably robotic | no art | M2 |
 | **Corpse** | `ui.pawn.corpse` | Rots, upsets people, can be buried or worse | sheet 07 (anatomy), high | M2 |
-| **Midden hog** | `ui.pawn.hog` | Pig-descended, thrives on refuse heaps. Wild for now; the one you meet first | no art | AN |
-| **Duct rat** | `ui.pawn.rat` | Vermin from the ducts and the caverns. Climbs anything | no art | AN |
+| **Midden hog** | `ui.pawn.hog` | Pig-descended, thrives on refuse heaps. Keeps to the woods in sounders, and bites back | no art | AN |
+| **Duct rat** | `ui.pawn.rat` | Vermin of the rock. Out at night; climbs ladders and opens doors | no art | AN |
 | **Culvert frog** | `ui.pawn.frog` | A big frog of the banks. Keeps to the water's edge and hops | no art | AN |
 | **Bandit** | `ui.pawn.bandit` | Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing | no art | CB |
 | **Gunman** | `ui.pawn.gunman` | A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close | no art | RD |
@@ -30,7 +30,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
 | **Food** | `ui.need.food` | How hungry this colonist is | sheet 07 (anatomy), high | M2 |
-| **Rest** | `ui.need.rest` | Sleep debt | sheet 08 (salvage gear), high | M2 |
+| **Rest** | `ui.need.rest` | How rested she is. She sleeps when it runs low | sheet 08 (salvage gear), high | M2 |
 | **Recreation** | `ui.need.joy` | Time spent on anything enjoyable <br>**Needs:** something unmistakably recreational: dice, cards, a games board | no art | M2 |
 | **Comfort** | `ui.need.comfort` | Quality of what they sit and sleep on <br>**Needs:** an armchair or cushion, read as comfort rather than as furniture | no art | M2 |
 | **Beauty** | `ui.need.beauty` | How the surroundings look to them | sheet 06 (action tiles), low | M2 |

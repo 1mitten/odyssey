@@ -1241,8 +1241,9 @@ namespace Odyssey.Sim.Pawns
         /// Severity per needs interval, per centi-degree of distance beyond the safe bound:
         /// distance × this / 1000. 15 makes a Candle night at −13 °C (a thousand centi-degrees
         /// past the floor) build 15 an interval — a full bar in 67 intervals, four game-hours —
-        /// and a cold snap's −33 °C fill it in an hour and a half, which is the "lethal
-        /// hypothermia within hours" the almanac already promises. It shipped as 300 for a day,
+        /// and a cold snap's −33 °C fill it in an hour and a half — hours, as design 28 asked.
+        /// (The first Almanac called that lethal; severity only slows a colonist, and the Almanac
+        /// says so since 2026-09-26.) It shipped as 300 for a day,
         /// applied per centi-degree as the formula says, and filled the bar in fourteen
         /// game-minutes while three comments promised hours (design 28 §12, F1).
         /// </summary>

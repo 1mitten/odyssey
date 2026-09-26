@@ -68,6 +68,12 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>How many times the ambient probe has been re-integrated. A cost counter.</summary>
         public int ProbeUpdates { get; private set; }
 
+        /// <summary>The light last applied, with the cover already graded over it. What the clouds are coloured from (design 63).</summary>
+        public DaylightState State { get; private set; } = Daylight.Sample(Daylight.DefaultHour);
+
+        /// <summary>Moves every time <see cref="State"/> is written, so a reader can skip a frame in which nothing did.</summary>
+        public int Version { get; private set; }
+
         float _cloud;
         float _gloom;
         float _probedCloud;
@@ -132,6 +138,8 @@ namespace Odyssey.Presentation.Rendering
             if (Daylight.MeadowLight) state = Daylight.Meadow(state);
             if (_cloud > 0f || _gloom > 0f) state = Overcast.Grade(state, _cloud, _gloom);
             Hour = hour;
+            State = state;
+            Version++;
 
             _sun.color = state.SunColour;
             _sun.intensity = state.SunIntensity;

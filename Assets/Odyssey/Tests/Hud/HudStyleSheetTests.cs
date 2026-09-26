@@ -240,6 +240,34 @@ namespace Odyssey.Tests.Hud
             (".sw__close", "width", () => SettingsLayout.CloseButton, "the close button"),
             ("#leaveprompt", "width", () => SettingsLayout.ConfirmWidth, "the leave prompt"),
 
+            // The World screen (design 59 §9): WorldLayout's numbers, which the page reads for the
+            // legend's hill marks and the painter for the map, meet the sheet here.
+            (".setup", "left", () => WorldLayout.Inset, "the World page's inset"),
+            (".setup", "top", () => WorldLayout.Inset, "the World page's inset"),
+            (".world__top .setup__field", "width", () => WorldLayout.SeedFieldWidth, "the seed box"),
+            (".world__seed", "height", () => WorldLayout.ControlHeight, "a World control"),
+            (".world__button", "height", () => WorldLayout.ControlHeight, "a World control"),
+            (".world__top", "margin-top", () => WorldLayout.BodyGap, "title to top row"),
+            (".world__body", "margin-top", () => WorldLayout.BodyGap, "top row to map"),
+            (".world__mapcolumn", "margin-right", () => WorldLayout.BodyGap, "map to site panel"),
+            (".world__footer", "margin-top", () => WorldLayout.BodyGap, "map to footer"),
+            (".world__stats", "width", () => WorldLayout.StatsWidth, "the site panel"),
+            (".world__statsswatch", "width", () => WorldLayout.StatsSwatch, "the site panel's swatch"),
+            (".world__statsswatch", "height", () => WorldLayout.StatsSwatch, "the site panel's swatch"),
+            (".world__statrow", "height", () => WorldLayout.StatsRowHeight, "a site panel row"),
+            (".world__footerbutton", "min-width", () => WorldLayout.FooterButtonMinWidth, "a footer button"),
+            (".world__zoombutton", "width", () => WorldLayout.ZoomButton, "a zoom button"),
+            (".world__zoombutton", "height", () => WorldLayout.ZoomButton, "a zoom button"),
+            // Border box: the stack is its buttons plus its own 1 px border either side.
+            (".world__zoom", "width", () => WorldLayout.ZoomButton + 2f, "the zoom stack, border included"),
+            (".world__zoom", "top", () => WorldLayout.MapInset, "the zoom stack's inset"),
+            (".world__zoom", "right", () => WorldLayout.MapInset, "the zoom stack's inset"),
+            (".world__zoomhint", "left", () => WorldLayout.MapInset, "the zoom hint's inset"),
+            (".world__zoomhint", "bottom", () => WorldLayout.MapInset, "the zoom hint's inset"),
+            (".world__zoomreadout", "height", () => WorldLayout.ZoomReadoutHeight, "the zoom readout"),
+            (".world__legendswatch", "width", () => WorldLayout.LegendSwatch, "a legend swatch"),
+            (".world__legendentry", "margin-right", () => WorldLayout.LegendGap, "between legend entries"),
+
             // The right-hand gutter, and the two panels stacked in it. The anchor is the
             // gutter's, not the rail's, since 2026-09-17: the rail and the orders strip are in a
             // column so that the strip sits under a rail whose height the world decides.
