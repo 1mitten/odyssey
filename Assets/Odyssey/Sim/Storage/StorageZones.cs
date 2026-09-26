@@ -246,6 +246,8 @@ namespace Odyssey.Sim.Storage
         public bool SiteAllows(int index)
         {
             if (!_grid.IsWalkable(index)) return false;
+            // Walkable, and inside a chamber nobody has opened: rock to the player (design 62 §6).
+            if (_grid.IsUnseen(index)) return false;
             // Wadeable water is walkable, which is exactly why it is asked apart.
             if (Worldgen.Natural.NaturalContent.IsWater(_grid.Terrain[index])) return false;
             if (_grid.Edifice[index] >= 0) return false;

@@ -52,7 +52,44 @@ namespace Odyssey.Sim.World
             Flags = new CellFlags[count];
             for (int i = 0; i < count; i++) Edifice[i] = -1;
             Footprint = new ColonyFootprint(size);
+            Unseen = new UnseenCells(size);
         }
+
+        /// <summary>
+        /// The chambers nobody has opened (design 62 §6): air to the simulation, rock to the
+        /// colony. Held here so that every writer that already holds the grid — the cavern pass,
+        /// the mine job, a load — reaches the one copy. Hashed and saved on its own terms.
+        /// </summary>
+        public UnseenCells Unseen { get; }
+
+        /// <summary>Is this cell inside a chamber nobody has opened? See <see cref="Unseen"/>.</summary>
+        public bool IsUnseen(int index) => Unseen.Contains(index);
+
+        /// <summary>
+        /// The terrain as the colony has seen it, <b>the one owner of the fog</b> (design 62 §6): an
+        /// unseen chamber is rock, and so is an ore seam nobody has exposed or prospected. The
+        /// simulation's truth is <see cref="Terrain"/> and nothing here changes it; this is what
+        /// every surface that shows the colony the world asks instead — the render mirror, the
+        /// inspect pane, the order that names a cell.
+        ///
+        /// <para>Plain rock rather than deep stone for an unseen cell even where the chamber sits
+        /// in the deep stone band: a void is told as the ordinary host, and the pane's work for it
+        /// is rock's. What the band's own rock is at that depth is a reveal the breach makes.</para>
+        /// </summary>
+        public ushort SeenTerrain(int index)
+        {
+            if (IsUnseen(index)) return Worldgen.Natural.NaturalContent.TerrainRock;
+            ushort terrain = Terrain[index];
+            if (Worldgen.Natural.NaturalContent.IsOre(terrain) && !IsDiscovered(index))
+                return Worldgen.Natural.NaturalContent.TerrainRock;
+            return terrain;
+        }
+
+        /// <summary>
+        /// Does this cell look solid to the colony: solid terrain, or an unseen chamber drawn as
+        /// rock? What a rule asks when its answer must not give a cavern away.
+        /// </summary>
+        public bool LooksSolid(int index) => IsSolidTerrain(index) || IsUnseen(index);
 
         /// <summary>
         /// Which layers something the colony placed has changed on (design 43 §3a). Held here so
@@ -114,14 +151,16 @@ namespace Odyssey.Sim.World
         {
             if (!IsSolidTerrain(index) || !IsDiscovered(index)) return false;
 
+            // An unseen chamber beside it is rock as far as the colony knows (design 62 §6), so
+            // it opens no face: a prospected cell against a cavern wall is still buried.
             int stride = Size.LayerStride;
             CellRef at = FromIndex(index);
-            if (at.X > 0 && !IsSolidTerrain(index - 1)) return true;
-            if (at.X < Size.SizeX - 1 && !IsSolidTerrain(index + 1)) return true;
-            if (at.Z > 0 && !IsSolidTerrain(index - Size.SizeX)) return true;
-            if (at.Z < Size.SizeZ - 1 && !IsSolidTerrain(index + Size.SizeX)) return true;
-            if (at.Y > 0 && !IsSolidTerrain(index - stride)) return true;
-            return at.Y < Size.SizeY - 1 && !IsSolidTerrain(index + stride);
+            if (at.X > 0 && !LooksSolid(index - 1)) return true;
+            if (at.X < Size.SizeX - 1 && !LooksSolid(index + 1)) return true;
+            if (at.Z > 0 && !LooksSolid(index - Size.SizeX)) return true;
+            if (at.Z < Size.SizeZ - 1 && !LooksSolid(index + Size.SizeX)) return true;
+            if (at.Y > 0 && !LooksSolid(index - stride)) return true;
+            return at.Y < Size.SizeY - 1 && !LooksSolid(index + stride);
         }
 
         /// <summary>

@@ -72,7 +72,8 @@ namespace Odyssey.Presentation.World
             for (int i = 0; i < slice.Length; i++)
             {
                 int index = baseIndex + i;
-                if (_grid.IsSolidTerrain(index)) slice[i] = SliceSolid;
+                // An unseen chamber is rock here as in the mirror (design 62 §6).
+                if (_grid.LooksSolid(index)) slice[i] = SliceSolid;
                 else if (_grid.IsBlockedByEdifice(index)) slice[i] = SliceBlocked;
                 else if (_grid.HasFloor(index)) slice[i] = SliceWalkable;
                 else slice[i] = SliceEmpty;

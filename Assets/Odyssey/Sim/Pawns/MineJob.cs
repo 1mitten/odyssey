@@ -402,7 +402,9 @@ namespace Odyssey.Sim.Pawns
             // ticks. The pawn pays at its own speed and the cell charges at the standard one.
             int rate = Pawn.WorkRatePerMille(WorkTypeIndex.Mining);
             ToilProgress += rate;
-            if (designations.AddWork(cell, rate) < NaturalContent.TerrainAt(terrain).workToClear * Rates.Scale)
+            // Priced by the order (WorkFor), which reads a cell nobody has seen into as the rock it
+            // is drawn as (design 62 §6); every other cell is its own terrain's price, as it was.
+            if (designations.AddWork(cell, rate) < designations.WorkFor(cell) * Rates.Scale)
                 return JobStatus.Ongoing;
 
             designations.Clear(cell);
@@ -428,6 +430,12 @@ namespace Odyssey.Sim.Pawns
 
             // 1. The colony can now see what the walls of the hole are made of.
             grid.RevealAround(cell);
+
+            // 1a. And if the cut broke into a chamber nobody had seen, all of it (design 62 §6) —
+            //     the walls' ore discovered and their chunks marked with it. A cell that was itself
+            //     unseen (worked from a diagonal stance, so no face of it was ever open) was air
+            //     already; it and its chamber come into view here and it yields nothing below.
+            CavernBreach.Open(ctx, cell);
 
             // 2. The cell and everything touching it must be re-meshed. The neighbours are not an
             //    optimisation to skip: a seam revealed by this dig draws differently now, and the

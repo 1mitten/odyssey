@@ -36,6 +36,7 @@ Every occurrence so far:
 | **When is a colonist starving?** | `AlertModel.StarveAt` (120, of 1000), `AlertWatch.StarveThreshold` (12, of a scale that does not exist) | **the alert chime fired at 1.2% food instead of 12%, which is to say never — and its three unit tests all passed, because they fed the watcher literal numbers rather than a published pawn** |
 | **What colour is this order?** | `HudTheme.PinnedActionHue` (the chip), four `Color` constants in `OdysseyBootstrap` (the board) | **deconstruct was orange on the panel and the cancel red on the ground for months; the board's copy is in an assembly the fast tier does not compile, and the Unity-tier test asserted only that the mapping was total** |
 | **How big is the board?** | `BuildSession`'s chunk grid and render model (the inspector's), the colony request (the setup page's) | **silent for as long as nothing wrote to the chunk grid during a build; the first write threw out of bounds with the bounds check passing, because it asked the cell grid** |
+| **What is this cell made of, as far as the colony knows?** | `WorldRenderModel.Seen` (drew an unexposed seam as rock), `CellDetailContributor` (published the truth) | **a click on plain-looking rock named the iron in it and quoted iron's work; now `CellGrid.SeenTerrain`, which also owns the unseen cavern (design 62 §6)** |
 
 **The fix is always the same**: name one owner, make every other site *ask* it, and write a test that
 walks both. Never restate the rule "just here"; never answer a disagreement by changing one copy.
@@ -602,6 +603,28 @@ fixture had just queued still going through. It landed on the dev machine and di
 ---
 
 ## The register
+
+### 2026-09-26 — The inspect pane named the ore the drawing hid (P1; found by the deep-mining survey)
+
+**Symptom, found reading the code before DM5 (design 62 §3, "Leak").** An ore seam nobody has
+exposed is drawn as plain rock, so finding one is worth something. Clicking the same cell opened a
+tile pane that said *Iron ore*, with iron's work to clear. Nobody had reported it; it would have
+read as a cheat the first time somebody clicked a hillside.
+
+**Cause.** The fog had two owners. `WorldRenderModel.Seen` told the lie on the way into the mirror
+("the one place", its comment said), and `CellDetailContributor` read `CellGrid.Terrain` straight
+into the published detail. The mirror's copy was right; the pane's never asked.
+
+**Fix.** `CellGrid.SeenTerrain` is the one owner — an unseen cavern cell and an undiscovered seam
+are rock — and the mirror, the pane (terrain, work, crossing price) and a rock-only Mine drag all
+ask it. An unseen cell is described as rock through and through: its support, its temperature and
+its room are rock's, since a sealed chamber is a room to the enclosure solve. `CavernFogTests.
+ThePaneNeverNamesUndiscoveredOreOrAnUnseenVoid` sweeps the real board's hidden cells and fails with
+the contributor reverted, as does the rock-for-rock comparison beside it.
+
+**The check this earns.** *A rule about what the player may know is presentation's rule, and the
+pane is presentation too.* When something is hidden in the drawing, ask every other surface that
+names a cell — the pane, the order validators, the cursor's word — whether it asks the same owner.
 
 ### 2026-09-26 — The weather a loaded world stood in was its own build's (P14-adjacent; found by a raid test)
 

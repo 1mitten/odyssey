@@ -2977,7 +2977,9 @@ namespace Odyssey.Presentation.Bootstrap
             if (_grid == null || !_grid.Contains(x, z, y) || y + 1 >= _grid.Size.SizeY) return y;
 
             int index = _grid.Index(new CellRef(x, z, y));
-            bool fills = _grid.IsSolidTerrain(index)
+            // LooksSolid: an unseen chamber is drawn as rock (design 62 §6), so the cursor lifts
+            // over it exactly as it lifts over the rock beside it.
+            bool fills = _grid.LooksSolid(index)
                 || (_previewIsSlab && _grid.Edifice[index] >= 0);
             return fills ? y + 1 : y;
         }

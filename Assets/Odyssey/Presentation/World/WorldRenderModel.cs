@@ -402,6 +402,11 @@ namespace Odyssey.Presentation.World
         /// reported the cut face gets its own bit (<c>CellFlags</c> has none free today). The
         /// simulation's own answer to "is this a face somebody can work at" is
         /// <c>CellGrid.IsExposedFace</c>, which asks for an open neighbour as well.</para>
+        ///
+        /// <para><b>The breach into a cavern (design 62 §6) is the second</b>: it marks the walls of
+        /// the chamber it reveals, which nobody cut. A chamber is carved in the rock band alone,
+        /// sealed under rock, so its walls are rock-like almost always and never under open sky —
+        /// nowhere a bank is drawn.</para>
         /// </summary>
         public bool IsCutFace(int index) => (_flags[index] & (byte)CellFlags.Discovered) != 0;
 
@@ -1626,6 +1631,12 @@ namespace Odyssey.Presentation.World
             _floorStuff[index] = grid.FloorStuff[index];
             _flags[index] = (byte)grid.Flags[index];
 
+            // A chamber nobody has opened is rock in the mirror, solid flag and all (design 62 §6),
+            // so the mesher, the picker, the landscape measure and every pass that asks IsSolid
+            // agree it is rock without any of them knowing there is a cavern. The breach marks its
+            // chunks dirty, and the next refresh copies the air it always was.
+            if (grid.IsUnseen(index)) _flags[index] |= (byte)CellFlags.SolidTerrain;
+
             int handle = grid.Edifice[index];
             if (handle >= 0 && handle < edifices.Count)
             {
@@ -1668,7 +1679,9 @@ namespace Odyssey.Presentation.World
         }
 
         /// <summary>
-        /// The terrain as the colony has seen it: an undiscovered seam is plain rock.
+        /// The terrain as the colony has seen it: an undiscovered seam is plain rock, and so is a
+        /// chamber nobody has opened (<c>CellGrid.SeenTerrain</c>, the one owner of the rule since
+        /// design 62 §6 — this used to restate the seam half of it).
         ///
         /// <para>The lie is told once, here, on the way into the mirror — so the module, the
         /// colour, the emissive trim and the inspect readout all agree about what the cell looks
@@ -1677,12 +1690,7 @@ namespace Odyssey.Presentation.World
         /// true and what has been seen, and presentation is the right side of it
         /// (<see cref="CellFlags.Discovered"/>).</para>
         /// </summary>
-        static ushort Seen(CellGrid grid, int index)
-        {
-            ushort terrain = grid.Terrain[index];
-            if (NaturalContent.IsOre(terrain) && !grid.IsDiscovered(index)) return NaturalContent.TerrainRock;
-            return terrain;
-        }
+        static ushort Seen(CellGrid grid, int index) => grid.SeenTerrain(index);
 
         /// <summary>Half-open cell bounds of a chunk, and the layer it lives on.</summary>
         public void ChunkBounds(int chunkIndex, out int x0, out int z0, out int y, out int x1, out int z1)

@@ -127,11 +127,22 @@ namespace Odyssey.Sim.Designations
             switch ((DesignationKind)_kinds[index])
             {
                 case DesignationKind.Mine:
-                    return NaturalContent.TerrainAt(_grid.Terrain[index]).workToClear;
+                    return MinePrice(index);
                 default:
                     return 0;
             }
         }
+
+        /// <summary>
+        /// What cutting this cell out costs in ticks: its terrain's work, except that a cell
+        /// inside a chamber nobody has seen is priced as the rock it is drawn as (design 62 §6) —
+        /// the player ordered rock, the miner cuts rock's time, and only the breach says it was a
+        /// void. An undiscovered seam is <b>not</b> repriced: it is really there, the cut is really
+        /// the seam's, and repricing it would change how long every unexposed seam takes to mine.
+        /// </summary>
+        int MinePrice(int index) =>
+            NaturalContent.TerrainAt(_grid.IsUnseen(index) ? NaturalContent.TerrainRock : _grid.Terrain[index])
+                .workToClear;
 
         /// <summary>Every designated cell index, ascending. Stable order is what makes a scan deterministic.</summary>
         public IReadOnlyList<int> Cells => _cells;
@@ -159,7 +170,9 @@ namespace Odyssey.Sim.Designations
 
             int index = TreeAbove(_grid.Index(cell), kind);
             if (!Allows(index, kind)) return IntentRejection.NotPermitted;
-            if (rockOnly && kind == DesignationKind.Mine && !TerrainHandle.IsRockLike(_grid.Terrain[index]))
+            // Asked of the terrain the player can see (CellGrid.SeenTerrain): an unseen chamber is
+            // rock to a drag begun on rock, or the drag would part round a cavern and draw it.
+            if (rockOnly && kind == DesignationKind.Mine && !TerrainHandle.IsRockLike(_grid.SeenTerrain(index)))
                 return IntentRejection.NotPermitted;
             if (_kinds[index] == (byte)kind) return IntentRejection.AlreadyInThatState;
 
@@ -295,6 +308,12 @@ namespace Odyssey.Sim.Designations
         /// </summary>
         public bool CanMine(int index)
         {
+            // A chamber nobody has seen is rock to the player, so it takes the order rock would
+            // (design 62 §6); refusing it would draw the cavern's outline in refusals. It is air
+            // to everybody else, so it can be reached only from a diagonal stance — and a cut
+            // there, or beside it, is what breaks in (CavernBreach), taking the order off.
+            if (_grid.IsUnseen(index)) return true;
+
             // Solid rock to cut, or a heap to clear. `clearable` is set by exactly one terrain —
             // rubble — and it is a flag rather than a rule because "any non-solid terrain with work
             // to clear" would have offered a Mine order on open water, marsh and the soil band
@@ -634,7 +653,7 @@ namespace Odyssey.Sim.Designations
                 if ((uint)index >= (uint)_kinds.Length || _kinds[index] != 0) continue;
                 ushort terrain = _grid.Terrain[index];
                 if (terrain != _partMined.TerrainAt(i)) continue;
-                int total = NaturalContent.TerrainAt(terrain).workToClear;
+                int total = MinePrice(index);
                 if (total <= 0) continue;
                 float done = (float)_partMined.WorkAt(i) / (total * Rates.Scale);
                 if (done <= 0f) continue;
