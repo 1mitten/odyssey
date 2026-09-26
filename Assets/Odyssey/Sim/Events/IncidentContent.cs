@@ -57,7 +57,7 @@ namespace Odyssey.Sim.Events
         /// <summary>The <see cref="IncidentWorker.Name"/> of the class that fires this.</summary>
         public string worker = string.Empty;
 
-        // ---- gates, for the storyteller that does not exist yet ----------------------------
+        // ---- gates, read by the storyteller (design 59 §3a) ---------------------------------
 
         /// <summary>The first colony day this may fire on, counted from 0.</summary>
         public int earliestDay;
@@ -73,6 +73,13 @@ namespace Odyssey.Sim.Events
 
         /// <summary>How many times it may ever fire, or 0 for no limit.</summary>
         public int maxFires;
+
+        /// <summary>
+        /// Whether this adds a colonist (design 59 §3c): its weight is then multiplied by the
+        /// storyteller's population intent, so joiners come when the colony is small. False for every
+        /// incident until the joiner (ST7).
+        /// </summary>
+        public bool populationGain;
 
         // ---- the worker's parameters ----------------------------------------------------------
 
@@ -143,7 +150,8 @@ namespace Odyssey.Sim.Events
         public int Count => Defs.Length;
 
         /// <summary>The Def types this content is made of, registered in one place.</summary>
-        public static DefLoader Register(DefLoader loader) => loader.Register<IncidentDef>().Register<RaidMixDef>();
+        public static DefLoader Register(DefLoader loader) =>
+            loader.Register<IncidentDef>().Register<RaidMixDef>().Register<StorytellerDef>();
 
         /// <summary>
         /// Read and bind. A missing Def, an unknown worker or an item the pawn content does not

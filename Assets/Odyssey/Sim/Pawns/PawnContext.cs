@@ -210,6 +210,12 @@ namespace Odyssey.Sim.Pawns
         public Events.Incidents? Incidents { get; set; }
 
         /// <summary>
+        /// The storyteller (design 59), when the world has one. Null in a bare pawn fixture; with no
+        /// storyteller chosen it is present and idle. A raid reads its scale from here.
+        /// </summary>
+        public Events.Storyteller? Storyteller { get; set; }
+
+        /// <summary>
         /// The growing zones, when the world has them. Null in a bare pawn fixture, exactly as
         /// <see cref="Designations"/> is, so the sowing work giver answers no rather than throwing
         /// in a test that never meant to farm anything. Built by <see cref="ColonyComposition.AddColony"/>,

@@ -364,6 +364,23 @@ namespace Odyssey.Sim.Contracts
         /// <c>ShotReportView</c> on the next publish while it stands. What the hover readout reads.
         /// </summary>
         QueryShot,
+
+        /// <summary>
+        /// Choose the colony's storyteller (design 59 §7): <c>A</c> is a
+        /// <c>StorytellerHandle</c>. The first choice records the colony's start for the grace; a
+        /// change later re-arms the pacer from now and keeps the tension. Handler:
+        /// <c>Storyteller.HandleSetStoryteller</c>. Appended.
+        /// </summary>
+        SetStoryteller,
+
+        /// <summary>
+        /// Set the difficulty's four levers (design 59 §6): <c>A</c> is the rung they came from,
+        /// <c>B</c> the threat scale percent plus the adaptation percent shifted left 16, <c>C</c>
+        /// the grace stretch in hundredths plus 1 shifted left 16 when big threats are allowed. The
+        /// rung table is the interface's, written once; the simulation keeps the numbers. Handler:
+        /// <c>Storyteller.HandleSetDifficulty</c>. Appended.
+        /// </summary>
+        SetDifficulty,
     }
 
     /// <summary>What an <see cref="IntentKind.EditBill"/> does, as its <c>A</c> carries it.</summary>
@@ -493,6 +510,9 @@ namespace Odyssey.Sim.Contracts
             IntentKind.EditBill => true,
             // A view question, like QueryCell: the readout answers paused as well as running.
             IntentKind.QueryShot => true,
+            // A settings row, pressed with the game paused as often as not (design 59 §7).
+            IntentKind.SetStoryteller => true,
+            IntentKind.SetDifficulty => true,
             _ => false,
         };
     }

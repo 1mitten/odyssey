@@ -107,6 +107,8 @@ namespace Odyssey.Sim
         /// <summary>Publish the sky. See <see cref="WorldSnapshot.Weather"/>.</summary>
         public void SetWeather(in WeatherView view) => _target.SetWeather(view);
 
+        public void SetStoryteller(in StorytellerView view) => _target.SetStoryteller(view);
+
         /// <summary>Say where the hearth is. See <see cref="WorldSnapshot.HearthCell"/>.</summary>
         public void SetHearthCell(int cell) => _target.SetHearthCell(cell);
 

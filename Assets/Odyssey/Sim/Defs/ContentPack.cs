@@ -86,6 +86,9 @@ namespace Odyssey.Sim.Defs
         /// </summary>
         public static Events.IncidentContent Incidents() => Events.IncidentContent.FromDefs(Core, Pawns());
 
+        /// <summary>The storytellers (design 59), in <c>StorytellerHandle</c> order.</summary>
+        public static Events.StorytellerContent Storytellers() => Events.StorytellerContent.FromDefs(Core);
+
         /// <summary>
         /// Forget the loaded pack and any root set by <see cref="UseRoot"/>, so the next read goes
         /// back to the repository's own content. For a test that loaded a pack of its own.

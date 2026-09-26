@@ -1801,6 +1801,9 @@ namespace Odyssey.Sim.Contracts
         /// <summary>The sky this frame (design 43 §5), or <see cref="WeatherView.None"/> with no weather system.</summary>
         public WeatherView Weather { get; private set; } = WeatherView.None;
 
+        /// <summary>The storyteller and its tension (design 59 §7), or <see cref="StorytellerView.None"/>.</summary>
+        public StorytellerView Storyteller { get; private set; } = StorytellerView.None;
+
         /// <summary>
         /// The hearth's cell, or -1 when the colony has none (design 43 §3f): the campfire home is
         /// centred on. Always published; it is one number.
@@ -2208,6 +2211,7 @@ namespace Odyssey.Sim.Contracts
             PowerNetCount = 0;
             PowerVersion = 0;
             Weather = WeatherView.None;
+            Storyteller = StorytellerView.None;
             HearthCell = -1;
             HomeCellCount = 0;
             HomeVersion = 0;
@@ -2269,6 +2273,8 @@ namespace Odyssey.Sim.Contracts
         internal void SetPowerVersion(int version) => PowerVersion = version;
 
         internal void SetWeather(in WeatherView view) => Weather = view;
+
+        internal void SetStoryteller(in StorytellerView view) => Storyteller = view;
 
         internal void SetHearthCell(int cell) => HearthCell = cell;
 

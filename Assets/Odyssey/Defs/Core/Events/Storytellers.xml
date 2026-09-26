@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The storytellers (design 59 §3): who decides when things happen to the colony. Order is
+  StorytellerContent.Order and StorytellerHandle: Jacob, Trent, Kano. The names and blurbs are the
+  registry's (ui.storyteller.*); these are the pacing.
+
+  EVERY NUMBER HERE IS INVENTED, then tuned by the harness (StorytellerPacerTests, which prints the
+  table) against the owner's targets (design 59 §2 ruling 13): about 3 big threats a 24-day season
+  for the rhythm, about half that for the calm, the same mean as the rhythm for the chaos but
+  lumpier, and good or neutral events about every 5-6 days. Units:
+    graceDays          days from the colony's start before the first big threat; difficulty
+                       stretches it
+    onDays/offDays     a cycle's phases; firesMin-firesMax fires in each on-phase, at least
+                       minSpacingHours apart
+    meanHours          a stream's or bag's mean interval; each is drawn from half to one and a half
+    weights            the bag's categories; a category with nothing to fire loses its roll
+    droughtDays        the bag: this many days with no big threat force the next roll to be one
+    budget*PerMille    the bag: a threat's size is multiplied by a draw in this range
+    populationCurve    per mille by colonist count, the last entry for every count past the table;
+                       read only by incidents marked populationGain (none until the joiner)
+-->
+<Defs>
+
+  <StorytellerDef>
+    <defName>Storyteller_Jacob</defName>
+    <label>Jacob</label>
+    <labelKey>ui.storyteller.jacob</labelKey>
+    <graceDays>12</graceDays>
+    <generators>
+      <li>
+        <kind>OnOffCycle</kind>
+        <category>ThreatBig</category>
+        <onDays>4</onDays>
+        <offDays>8</offDays>
+        <firesMin>1</firesMin>
+        <firesMax>2</firesMax>
+        <minSpacingHours>48</minSpacingHours>
+      </li>
+      <li>
+        <kind>MeanTimeBetween</kind>
+        <category>Misc</category>
+        <excludeBad>true</excludeBad>
+        <meanHours>132</meanHours>
+      </li>
+    </generators>
+    <populationCurve><li>8000</li><li>2000</li><li>1500</li><li>1000</li><li>800</li><li>650</li><li>500</li><li>350</li><li>250</li><li>150</li><li>80</li><li>0</li></populationCurve>
+  </StorytellerDef>
+
+  <StorytellerDef>
+    <defName>Storyteller_Trent</defName>
+    <label>Trent</label>
+    <labelKey>ui.storyteller.trent</labelKey>
+    <graceDays>8</graceDays>
+    <generators>
+      <li>
+        <kind>RandomBag</kind>
+        <meanHours>60</meanHours>
+        <weights>
+          <li><category>Misc</category><weight>45</weight></li>
+          <li><category>ThreatBig</category><weight>30</weight></li>
+          <li><category>ThreatSmall</category><weight>12</weight></li>
+          <li><category>Arrival</category><weight>13</weight></li>
+        </weights>
+        <droughtDays>14</droughtDays>
+        <budgetMinPerMille>500</budgetMinPerMille>
+        <budgetMaxPerMille>1500</budgetMaxPerMille>
+      </li>
+    </generators>
+    <populationCurve><li>8000</li><li>2000</li><li>1500</li><li>1000</li><li>800</li><li>650</li><li>500</li><li>350</li><li>250</li><li>150</li><li>80</li><li>0</li></populationCurve>
+  </StorytellerDef>
+
+  <StorytellerDef>
+    <defName>Storyteller_Kano</defName>
+    <label>Kano</label>
+    <labelKey>ui.storyteller.kano</labelKey>
+    <graceDays>15</graceDays>
+    <generators>
+      <li>
+        <kind>OnOffCycle</kind>
+        <category>ThreatBig</category>
+        <onDays>8</onDays>
+        <offDays>8</offDays>
+        <firesMin>1</firesMin>
+        <firesMax>1</firesMax>
+        <minSpacingHours>0</minSpacingHours>
+      </li>
+      <li>
+        <kind>MeanTimeBetween</kind>
+        <category>Misc</category>
+        <excludeBad>true</excludeBad>
+        <meanHours>132</meanHours>
+      </li>
+    </generators>
+    <populationCurve><li>8000</li><li>2000</li><li>1500</li><li>1000</li><li>800</li><li>650</li><li>500</li><li>350</li><li>250</li><li>150</li><li>80</li><li>0</li></populationCurve>
+  </StorytellerDef>
+
+</Defs>

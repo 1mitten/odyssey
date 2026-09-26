@@ -42,7 +42,11 @@ namespace Odyssey.Tests.Sim.Events
         // 2026-09-25, raids (design 55): Incident_Raid appended at index 5 — Bad, ThreatBig, worker
         // Raid, the first Def with a per-worker block (<raid>), gates earliestDay 3 and
         // minRefireDays 4 (invented). No golden moved: no golden fires an incident.
-        const ulong ContentFingerprint = 7539131593735443081UL;
+        //
+        // 2026-09-26, the storyteller (design 59 §3): every Def gains populationGain (false), and
+        // Incident_Raid's minRefireDays goes 4 -> 2 (design 59 §2 ruling 16: the storyteller paces,
+        // the Def is a floor). No golden moved: no golden chooses a storyteller.
+        const ulong ContentFingerprint = 16455487098994534184UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

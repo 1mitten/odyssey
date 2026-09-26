@@ -216,6 +216,9 @@ namespace Odyssey.Sim.Pawns
                 // no format bump. A save from before has no section and loads with none kept —
                 // which is what a cancel then left.
                 designations.PartMined,
+                // The storyteller (design 59 §8): appended, no format bump. A save from before
+                // has no section and loads with no storyteller, which Settings can then choose.
+                pawns.Storyteller!,
             };
         }
 

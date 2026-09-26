@@ -26,6 +26,16 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
+        public void TheCardsAreInTheHandleTablesOrder()
+        {
+            // The index a card sends is the index the simulation saves (StorytellerHandle).
+            Assert.That(StoryCatalogue.Tellers.Count, Is.EqualTo(Odyssey.Sim.Contracts.StorytellerHandle.Count));
+            Assert.That(StoryCatalogue.Tellers[Odyssey.Sim.Contracts.StorytellerHandle.Jacob].Key, Is.EqualTo("ui.storyteller.jacob"));
+            Assert.That(StoryCatalogue.Tellers[Odyssey.Sim.Contracts.StorytellerHandle.Trent].Key, Is.EqualTo("ui.storyteller.trent"));
+            Assert.That(StoryCatalogue.Tellers[Odyssey.Sim.Contracts.StorytellerHandle.Kano].Key, Is.EqualTo("ui.storyteller.kano"));
+        }
+
+        [Test]
         public void EveryStorytellerHasABlurbTheCardCanRead()
         {
             foreach (StoryCatalogue.Teller t in StoryCatalogue.Tellers)

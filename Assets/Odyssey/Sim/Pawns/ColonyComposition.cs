@@ -332,6 +332,18 @@ namespace Odyssey.Sim.Pawns
             var incidents = new Events.Incidents(pawns, ContentPack.Incidents());
             pawns.Incidents = incidents;
             incidents.Attach(builder);
+
+            // The storyteller (design 59): the pacer that fires the incidents above, and nothing at
+            // all until a storyteller is chosen, so a world without one — every golden and soak —
+            // ticks, publishes and hashes nothing new. An IWorldSystem that is IStateHashable is
+            // hashed by AddSystem alone.
+            var storyteller = new Events.Storyteller(pawns, ContentPack.Storytellers());
+            pawns.Storyteller = storyteller;
+            builder
+                .AddSystem(_ => storyteller)
+                .AddSnapshotContributor(storyteller)
+                .AddIntentHandler(IntentKind.SetStoryteller, storyteller.HandleSetStoryteller)
+                .AddIntentHandler(IntentKind.SetDifficulty, storyteller.HandleSetDifficulty);
             growing.Attach(builder);
             storage.Attach(builder);
             units.Attach(builder);
