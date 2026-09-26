@@ -1044,6 +1044,8 @@ namespace Odyssey.Presentation.Bootstrap
                        "the fallback only; every colonist is dealt from their own roll seed"));
 
             Lap("colony ready");
+            // Per session, so no cell of the last world is watched against this one's mirror.
+            _demolitions = new DemolitionWatch(NaturalContent.StuffWood);
             _renderer = new ChunkRenderer(_model)
             {
                 CastShadows = castShadows,
@@ -1541,13 +1543,21 @@ namespace Odyssey.Presentation.Bootstrap
             if (_renderer == null || _model == null || _world == null) return;
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
             SliceSettings slice = cameraRig != null ? cameraRig.slice : new SliceSettings();
-            slice.wallsLowered = WallsLoweredNow();
-            slice.landscapeGround = WallsChosenDown();
+            // Riding along with a colonist (design 57 §4) draws the building as it is: walls up
+            // whatever the player chose for the colony view, which comes back when the ride ends.
+            bool riding = cameraRig != null && cameraRig.Riding;
+            slice.wallsLowered = !riding && WallsLoweredNow();
+            slice.landscapeGround = !riding && WallsChosenDown();
             slice.landscapeFloor = _model.LowestOutdoorLayer;
 
             _frameTimer.Restart();
             System.Array.Clear(_sectionMs, 0, _sectionMs.Length);
             _sectionTimer.Restart();
+
+            // A ride's camera is stood here, first, because everything below reads the camera: the
+            // viewer position, the frustum and the sight lines (design 57 §3).
+            PlaceRide(_world.Views.Current);
+
             // The rig sits on the camera, so its position is the viewer's.
             if (cameraRig != null)
             {
@@ -1556,7 +1566,7 @@ namespace Odyssey.Presentation.Bootstrap
                 // field of view decides as much as the distance does.
                 if (cameraRig.Camera != null) _renderer.ViewerFieldOfView = cameraRig.Camera.fieldOfView;
                 // The clearance window follows what the camera looks at, not where it stands.
-                _renderer.ClearanceFocus = cameraRig.Focus;
+                _renderer.ClearanceFocus = cameraRig.ViewFocus;
                 // And the figure director wants it for one decision of its own: which colonists
                 // keep a live figure when there are more of them than the cap allows.
                 if (_figures != null) _figures.ViewerPosition = cameraRig.transform.position;
@@ -1676,7 +1686,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (_audio != null)
                 _audio.Sync(Time.deltaTime, _world.Views.Current,
                     cameraRig != null ? cameraRig.transform.position : transform.position,
-                    cameraRig != null ? cameraRig.Focus : transform.position,
+                    cameraRig != null ? cameraRig.ViewFocus : transform.position,
                     activeLayer);
             MarkSection(FrameSection.Audio);
 
@@ -1701,6 +1711,8 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             DrawStandingOrders(_world.Views.Current);
+            DrawCracks(_world.Views.Current);
+            HearDemolitions(_world.Views.Current);
             DrawZones(_world.Views.Current);
             DrawBuildingSites(_world.Views.Current);
             DrawToolPreview();
@@ -1744,8 +1756,8 @@ namespace Odyssey.Presentation.Bootstrap
             if (_weather != null && Directors != null)
                 _weather.Sync(_world.Views.Current.Weather, Directors.Debug.RainAsParticles, _daylight,
                     cameraRig != null ? cameraRig.GetComponent<Camera>() : null,
-                    cameraRig != null ? cameraRig.Focus : transform.position,
-                    cameraRig != null ? cameraRig.TargetDistance : 48f,
+                    cameraRig != null ? cameraRig.ViewFocus : transform.position,
+                    cameraRig != null ? cameraRig.ViewDistance : 48f,
                     slice.BelowSurface(activeLayer), _world.CurrentTick, ticksPerSecond,
                     _figures?.Running ?? true, Time.deltaTime, Directors.Debug.WetGlossOnly, _wind);
             _floaterView?.Draw(_combatFeedback.Floaters,
@@ -1758,7 +1770,7 @@ namespace Odyssey.Presentation.Bootstrap
             // the camera. Game seconds, so a paused world holds them in the air (design 50 §3).
             _birds?.Sync(Time.deltaTime * _world.GameSpeed, _world.CurrentTick, _world.Views.Current.Weather,
                 _world.Views.Current.Pawns,
-                cameraRig != null ? cameraRig.TargetDistance : 48f,
+                cameraRig != null ? cameraRig.ViewDistance : 48f,
                 slice.BelowSurface(activeLayer),
                 slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY));
             MarkSection(FrameSection.Birds);
@@ -1772,8 +1784,8 @@ namespace Odyssey.Presentation.Bootstrap
                 _butterflies.Sync(_world.Views.Current.Running ? Time.deltaTime : 0f, _world.CurrentTick, hour,
                     _weather?.Cloud ?? 0f, _weather?.Rain ?? _world.Views.Current.Weather.RainPerMille / 1000f,
                     _crowd,
-                    cameraRig != null ? cameraRig.Focus : transform.position,
-                    cameraRig != null ? cameraRig.TargetDistance : 48f,
+                    cameraRig != null ? cameraRig.ViewFocus : transform.position,
+                    cameraRig != null ? cameraRig.ViewDistance : 48f,
                     cameraRig != null ? cameraRig.transform.position : transform.position,
                     bloodLowest, bloodHighest, slice.BelowSurface(activeLayer));
             }
@@ -2004,9 +2016,59 @@ namespace Odyssey.Presentation.Bootstrap
                 // in mining", and marking the wall's top face is what mining already does to rock.
                 _renderer.DrawCellMark(cell, tint);
 
-                if (orders[i].Progress > 0)
+                // A face being mined is drawn cracked instead (design 58, owner 2026-09-26: the
+                // cracks replace the pale slab). The slab stays for a build without the shader.
+                bool cracked = kind == DesignationKind.Mine && _renderer.CracksAvailable;
+                if (orders[i].Progress > 0 && !cracked)
                     _renderer.DrawCellCut(cell, orders[i].Progress / 255f, CutColour);
             }
+        }
+
+        DemolitionWatch? _demolitions;
+        readonly List<Demolished> _demolished = new List<Demolished>();
+        readonly List<WorldRenderModel.RemovedEdifice> _removedEdifices = new List<WorldRenderModel.RemovedEdifice>();
+
+        /// <summary>
+        /// Something coming down, heard (design 58 §9): wood broken or taken apart, a mined face
+        /// collapsing. <see cref="DemolitionWatch"/> says which cells went this frame — on the same
+        /// evidence the break (§7) is drawn on, so the sound and the shudder start together — and
+        /// each is played from the middle of its cell.
+        /// </summary>
+        void HearDemolitions(WorldSnapshot snapshot)
+        {
+            if (_demolitions == null || _model == null) return;
+            // What left the mirror this frame and what it was made of, for a building broken in
+            // one blow, which nothing else remembers.
+            _removedEdifices.Clear();
+            _model.DrainRemoved(_removedEdifices);
+            for (int i = 0; i < _removedEdifices.Count; i++)
+                _demolitions.NoteRemoved(_removedEdifices[i].Cell, _removedEdifices[i].Stuff);
+            if (_demolitions.Step(snapshot, _model, _demolished) == 0 || _audio == null) return;
+            for (int i = 0; i < _demolished.Count; i++)
+            {
+                CellRef cell = _model.Size.FromIndex(_demolished[i].CellIndex);
+                string id = _demolished[i].Kind == Demolition.Rock ? SoundIds.BreakRock : SoundIds.BreakWood;
+                _audio.PlayOneShot(id, CellMetrics.Centre(cell.X, cell.Z, cell.Y));
+            }
+        }
+
+        readonly System.Collections.Generic.List<CrackedCell> _crackedCells =
+            new System.Collections.Generic.List<CrackedCell>();
+
+        /// <summary>
+        /// Struck walls and rock being mined, drawn broken (design 58): <c>CrackModel</c> says which
+        /// cells and how badly, the renderer draws each cell's own meshes over themselves in the
+        /// crack shader. Called every frame, whether or not anything is cracked, so a cell that
+        /// came down or was ordered again gives its scratch batch back. Filtered to the band a
+        /// click can reach, as the orders are: anything drawn solid, never a ghost.
+        /// </summary>
+        void DrawCracks(WorldSnapshot snapshot)
+        {
+            if (_renderer == null || cameraRig == null) return;
+            int lowest = System.Math.Max(0, cameraRig.LowestSelectableLayer);
+            int highest = cameraRig.HighestSelectableLayer;
+            CrackModel.Gather(snapshot, _crackedCells, lowest, highest);
+            _renderer.DrawCracks(_crackedCells);
         }
 
         /// <summary>The colour a growing zone's whole-tile cover is drawn in — a dark worked-soil
@@ -2955,6 +3017,56 @@ namespace Odyssey.Presentation.Bootstrap
         static readonly Color CutColour = new Color(0.86f, 0.87f, 0.90f, 0.30f);
 
         /// <summary>
+        /// Stand a ride's camera (design 57 §3) from where her figure was last drawn, and take her
+        /// head away while the camera is against it (§4). Nothing, and the head given back, when no
+        /// ride is running.
+        ///
+        /// <para>Her figure first, because that is where she is drawn: the jump's arc, the climb and
+        /// the swim are laid over <see cref="PawnPose.Of"/> by the figure director and a camera
+        /// that followed the bare pose would leave her behind on every one of them. The pose is the
+        /// fallback for the frames before her figure is leased.</para>
+        /// </summary>
+        void PlaceRide(WorldSnapshot snapshot)
+        {
+            if (cameraRig == null || !cameraRig.Riding || Directors == null)
+            {
+                if (_figures != null) _figures.HeadHidden = null;
+                return;
+            }
+
+            PawnId id = Directors.Ride.Pawn;
+            bool known = false;
+            Vector3 feet = Vector3.zero;
+            float facing = cameraRig.RideYaw;
+            float eyeLift = RideCamera.DefaultEyeLift;
+
+            if (_figures != null && _figures.TryGetFeet(id, out Vector3 drawn))
+            {
+                known = true;
+                feet = drawn;
+                if (_figures.TryGetFacing(id, out float yaw)) facing = yaw;
+                // The head bone is the base of the skull; the eyes are a hand above it on a figure
+                // drawn at 1.4 times. Smoothed by the rig, so the walk's bob does not reach the view.
+                if (_figures.TryGetHead(id, out Vector3 head))
+                    eyeLift = Mathf.Clamp(head.y - drawn.y + RideEyeAboveHeadBone, 0.3f, 3f);
+            }
+            else if (snapshot.TryGetPawn(id, out PawnView view))
+            {
+                known = true;
+                feet = PawnPose.Of(view, _tickAlpha, MovePerTick, out Vector3 heading, _model);
+                if (heading.sqrMagnitude > 1e-6f) facing = Mathf.Atan2(heading.x, heading.z) * Mathf.Rad2Deg;
+            }
+
+            cameraRig.PlaceRide(known, feet, facing, eyeLift, Time.unscaledDeltaTime);
+
+            if (_figures != null)
+                _figures.HeadHidden = cameraRig.RideFromEyes < SliceCameraRig.HeadClearMetres ? id : (PawnId?)null;
+        }
+
+        /// <summary>How far above the head bone a figure's eyes are, in metres, at the figures' 1.4 scale.</summary>
+        const float RideEyeAboveHeadBone = 0.12f;
+
+        /// <summary>
         /// The lines the renderer fades along: eye to chest, one per selected colonist.
         ///
         /// <para><b>The same point the bracket is drawn at and the same point the hit-test aims
@@ -2980,7 +3092,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (!seeThroughToSelection || cameraRig == null) return;
 
             Vector3 eye = cameraRig.transform.position;
-            Vector3 focus = cameraRig.Focus;
+            Vector3 focus = cameraRig.ViewFocus;
             float lift = colonistCursor.y * 0.5f;
 
             // Selected colonists first: they are who the player is watching, and they must never
@@ -3000,6 +3112,17 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Lines past this point fade only trees and bushes (SightLines.Primary).
             _sight.Primary = _sight.Count;
+
+            // The colonist a ride is watching (design 57 §4): trees and bushes between the camera
+            // and her fade, as they do for the selection. Past the primaries, because a wall beside
+            // her must not fade — the ride's camera is kept out of walls rather than seeing through
+            // them — and a ride clears the selection, so she is never both.
+            if (cameraRig.Riding && Directors != null
+                && snapshot.TryGetPawn(Directors.Ride.Pawn, out PawnView ridden) && lines < MaxSightLines)
+            {
+                _sight.Add(eye, FeetOf(ridden, snapshot.Pawns, movePerTick) + Vector3.up * lift);
+                lines++;
+            }
 
             // Then every other colonist on screen, nearest the focus first, up to a fixed count
             // (owner, 2026-09-24: trees fade for every colonist). Bounded so the cost does not
@@ -4464,6 +4587,7 @@ namespace Odyssey.Presentation.Bootstrap
             _floaterView = null;
             _colonistMaterials = null;
             _renderer = null;
+            _demolitions = null;
             _actorMaterial = null;
             _model = null;
             _colony = null;
