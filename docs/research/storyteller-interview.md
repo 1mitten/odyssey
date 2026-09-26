@@ -14,7 +14,7 @@ but base it around this. https://rimworldwiki.com/wiki/AI_Storytellers - we'll i
 tellers later and refine it for us, refine, explore and plan. Interview me for all the details"*
 
 **Read next:**
-- `docs/design/58-storyteller.md`: the design these answers decide.
+- `docs/design/59-storyteller.md`: the design these answers decide.
 - `docs/plans/storyteller.md`
 - `docs/research/a-11-storyteller-incidents.md` (2026-09-20) and `a-11-storyteller-pacing.md` (this
   session)
@@ -96,7 +96,7 @@ Three more were asked after the plan agent read the code, because the code force
 ## 4. Tensions chosen into
 
 - **Strength-based budgets invite the inverse meta: disarm before a raid.** If raid size follows
-  what the colony holds at the instant it fires, stowing weapons shrinks raids. Design 58 §4c
+  what the colony holds at the instant it fires, stowing weapons shrinks raids. Design 59 §4c
   answers this with a **remembered peak**: strength is read as a slowly decaying maximum, so
   disarming buys nothing for days.
 - **Visible rubber-banding is still rubber-banding.** A player can read "reeling" and know the next
@@ -106,7 +106,7 @@ Three more were asked after the plan agent read the code, because the code force
 - **Pacer only, with population intent.** The curve is designed and saved now but moves nothing
   until the joiner exists (ST7). A test with a stub is its only proof until then.
 - **Our threat budget cannot be checked against the reference's numbers.** Its curves are built on
-  wealth. Ours start invented and are tuned by the soak (design 58 §9), which is the instrument.
+  wealth. Ours start invented and are tuned by the soak (design 59 §9), which is the instrument.
 
 ## 5. What this does not settle
 
@@ -114,7 +114,7 @@ Three more were asked after the plan agent read the code, because the code force
   keys go in the registry; the owner names them later, and "inviting our own storytellers" is
   writing a Def and a registry row.
 - **The five band names** (placeholders: reeling, easing, even, building, peak; "steady" was renamed so it cannot be read as the storyteller of that name).
-- **Every number in design 58** is invented until the Long-tier soak has run.
+- **Every number in design 59** is invented until the Long-tier soak has run.
 - **Conditions** (a timed, map-wide event with no entities: cold snap, eclipse), **quests**, the
   **History screen** (F9) and a **reactive director** are recorded, not planned here.
 - **Whether a mockup brief is wanted** for the setup page's picker and the gauge, before ST5.

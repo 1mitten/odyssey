@@ -14106,7 +14106,7 @@ split across a comment break), and no ride-along file. Commit messages keep the 
 
 The owner asked to explore the storytelling layer on the reference's AI storytellers, with names left
 for later, and to be interviewed for every detail. Twenty-two questions in five rounds. Every
-recommendation was taken. The result is design 58 (57 went to First Person the same day), a plan
+recommendation was taken. The result is design 59 (57 went to First Person and 58 to cracks the same day), a plan
 of seven units, and an interview record. **Nothing is built**; the plan waits for approval.
 
 The decision that shapes everything is **strength, not wealth**. The reference budgets a threat from
@@ -14126,11 +14126,11 @@ Two things came out of reading the code rather than the reference:
   big threat.
 
 The exploit a strength budget invites (stow the guns before a raid) is answered by reading a
-**remembered peak** that decays over days, not the value at the instant of firing (design 58 §4c).
+**remembered peak** that decays over days, not the value at the instant of firing (design 59 §4c).
 And a category with nothing that can fire **loses its roll** rather than passing it on, so adding a
 small threat later cannot change how often raids come.
 
 The research subagent could not reach the wiki: every page was refused by the proxy. Its numbers are
-from extracts and recall, and it marks each one. Nothing in design 58 depends on a reference number
+from extracts and recall, and it marks each one. Nothing in design 59 depends on a reference number
 the soak cannot re-derive. Every number there is marked invented, and the tuning harness plus the
 72-day soak are the instrument.

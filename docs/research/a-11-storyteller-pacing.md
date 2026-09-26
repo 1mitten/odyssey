@@ -4,7 +4,7 @@
 size budgeted (the points formula and its curves), how does adaptation rise and fall, what does
 difficulty scale, how does population intent work, and what do players criticise?
 
-Asked 2026-09-26 for the storyteller line (`docs/design/58-storyteller.md`), as a companion to
+Asked 2026-09-26 for the storyteller line (`docs/design/59-storyteller.md`), as a companion to
 `a-11-storyteller-incidents.md` (2026-09-20), which covered the taxonomy and the incident definition.
 One subagent, capped at six fetches or searches. **Every wiki page was refused by the network proxy**,
 so the findings come from search-result extracts, marked [extract], and from general knowledge of
@@ -75,7 +75,7 @@ the twentieth colonist, and prisoners count as half a colonist [extract].
 the world. Wealth and headcount stand in for how strong the colony is, and adaptation makes recovery
 windows after a tragedy.
 
-## Recommendation (taken into design 58)
+## Recommendation (taken into design 59)
 Keep the reference's generator shapes and its cadence numbers, scaled ×1.2 to our 72-day year. Do
 not use its budget: **measure fighting strength directly**, which is what its players install mods
 to see. Keep adaptation's recovery window, but **show it**.

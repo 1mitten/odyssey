@@ -183,8 +183,8 @@ values moved together, including the barren meadow's, which no gameplay change h
 
 | Deferred | Attaches at |
 |---|---|
-| A storyteller: generators (mean-time-between, cycle, random-bag, triggered; `scheduled` reserved) and a Def naming them | an `IWorldSystem` in the world phase that reads the Defs' gates and `IncidentLedger.LastFiredTick`, and calls `Incidents.TryFire`. **Designed 2026-09-26: `docs/design/58-storyteller.md`, plan `docs/plans/storyteller.md`** |
-| A points budget, adaptation, population intent | **Superseded by design 58 §4:** `Points` stays a raid *size* (design 55 §9); the budget is colony strength × tension × difficulty inside `RaidBudget` |
+| A storyteller: generators (mean-time-between, cycle, random-bag, triggered; `scheduled` reserved) and a Def naming them | an `IWorldSystem` in the world phase that reads the Defs' gates and `IncidentLedger.LastFiredTick`, and calls `Incidents.TryFire`. **Designed 2026-09-26: `docs/design/59-storyteller.md`, plan `docs/plans/storyteller.md`** |
+| A points budget, adaptation, population intent | **Superseded by design 59 §4:** `Points` stays a raid *size* (design 55 §9); the budget is colony strength × tension × difficulty inside `RaidBudget` |
 | Conditions (timed, map-wide, no entities) | a second worker family; the ledger already records them |
 | Quests (reward on completion) | a wrapper that calls incident workers; not an incident |
 | The History screen (F9, B16) | reads the ledger; needs a paged channel and a virtualised list |

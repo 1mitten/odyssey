@@ -1,6 +1,6 @@
 # The storyteller — the plan
 
-The design is `docs/design/58-storyteller.md`, and the interview is
+The design is `docs/design/59-storyteller.md`, and the interview is
 `docs/research/storyteller-interview.md` (2026-09-26). ST0 is documents only, on
 `claude/sweet-cerf-wzfxgs`. **Phase gate: this plan waits for the owner's approval; no unit after
 ST0 is started.** From ST1 on, the work goes one commit per unit on its own `claude/storyteller-*`
@@ -8,7 +8,7 @@ branch, with a PR per two or three units.
 
 | Unit | What | Save / hash | Gate |
 |---|---|---|---|
-| **ST0** | The interview, `a-11-storyteller-pacing.md`, design 58, this plan, and notes in designs 23 §8, 55 §9/§14 and 03 §11 | — | docs only |
+| **ST0** | The interview, `a-11-storyteller-pacing.md`, design 59, this plan, and notes in designs 23 §8, 55 §9/§14 and 03 §11 | — | docs only |
 | **ST1** | The kit and the system (below) | new `odyssey.storyteller`, hashed only while set | fast tier; goldens untouched; the tuning harness |
 | **ST2** | Colony strength and the remembered peak; `RaidBudget.AutoSize` from strength | derived, except the peak, which goes in ST1's section | fast tier; Long tier re-baselined |
 | **ST3** | Tension | ST1's section | fast tier |
@@ -35,7 +35,7 @@ branch, with a PR per two or three units.
   - `IntentKind.SetStoryteller`, appended last.
   - `ColonyRequest.Storyteller`, default −1.
 - **Content:**
-  - `Defs/Core/Events/Storytellers.xml` with the three Defs (design 58 §3b).
+  - `Defs/Core/Events/Storytellers.xml` with the three Defs (design 59 §3b).
   - `Incident_Raid.minRefireDays` 4 → 2.
   - A `populationGain` flag on `IncidentDef`, false everywhere.
 - **Wiring:**
@@ -52,13 +52,13 @@ branch, with a PR per two or three units.
     ThreatSmall is added.
   - Population intent multiplies a stub `populationGain` incident's weight and nothing else.
   - **The goldens do not move** (the default is −1).
-  - The tuning harness (design 58 §9) prints its table.
+  - The tuning harness (design 59 §9) prints its table.
 - **Risk.** Firing from the world phase rather than the intent phase: the raid schedules its
   arrivals from `Tick + 1`. One test fires the same raid from both and compares.
 
 ## ST2 — strength
 
-- **`ColonyStrength.Of(PawnContext)`** and `RaiderStrength.Of(kind, mix)`, as design 58 §4a. The
+- **`ColonyStrength.Of(PawnContext)`** and `RaiderStrength.Of(kind, mix)`, as design 59 §4a. The
   inputs are `Vitals.Of`, `IWeaponRules.ArmamentOf`, `WeaponQuality.DamagePerMille` and
   `AccuracyPerMille`, and `Pawn.SkillLevel` (Melee 5, Shooting 8).
 - **The remembered peak** is updated in the hourly check.
@@ -85,7 +85,7 @@ branch, with a PR per two or three units.
 
 ## ST4 — difficulty
 
-- **`DifficultyDef`**, six rungs (design 58 §6), plus Custom as a sentinel with four saved values.
+- **`DifficultyDef`**, six rungs (design 59 §6), plus Custom as a sentinel with four saved values.
 - **`DifficultyHandle`**, and the intents `SetDifficulty` and `SetDifficultyValue`.
 - **Tests:**
   - "Big threats off" gives none in 72 days.

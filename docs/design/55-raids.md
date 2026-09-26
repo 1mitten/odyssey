@@ -195,7 +195,7 @@ its long-declared, never-read `Points` carries the size.
 The owner chose headcount and days because nothing in the game has a value to total. A wealth
 measure replaces this function and nothing else.
 
-**Amended 2026-09-26 (design 58 §4):** not wealth but **colony strength**, the fighting power of
+**Amended 2026-09-26 (design 59 §4):** not wealth but **colony strength**, the fighting power of
 standing colonists and their weapons, read as a remembered peak and multiplied by a day ramp,
 tension and difficulty. It replaces this function's *input*; `Points` stays a size, 0 still means
 Auto, and a storyteller's raid is a debug *Auto* raid.
@@ -285,10 +285,10 @@ died.
 
 ## 14. Later, and recorded
 
-- A **storyteller** that reads the gates. **Designed: design 58**, which also lowers
+- A **storyteller** that reads the gates. **Designed: design 59**, which also lowers
   `Incident_Raid.minRefireDays` from 4 to 2.
 - The **choice event** (tribute).
-- ~~A real **wealth** measure behind `RaidBudget`.~~ Colony **strength** instead (design 58 §4).
+- ~~A real **wealth** measure behind `RaidBudget`.~~ Colony **strength** instead (design 59 §4).
 - **Sappers**, **sieges** and arrival by **drop pod**.
 - **Kidnap** on withdrawal (design 33 §17f).
 - Merging a band's theft rows into one.
