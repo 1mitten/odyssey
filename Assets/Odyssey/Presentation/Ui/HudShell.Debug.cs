@@ -182,7 +182,7 @@ namespace Odyssey.Presentation.Ui
             _debugWeather.Add(_debugGlossRow);
             _debugPanel.Add(_debugWeather);
 
-            // Faces and talking (design 59 §7): drawing only, straight to the figure director. The
+            // Faces and talking (design 65 §7): drawing only, straight to the figure director. The
             // rows and what each holds are DebugDirector.FaceRows, held by the fast tier.
             _debugFaces = new VisualElement();
             _debugFaces.AddToClassList("settings__body");
@@ -445,7 +445,7 @@ namespace Odyssey.Presentation.Ui
         readonly List<VisualElement> _debugFaceRows = new();
 
         /// <summary>
-        /// Talk (design 59 §7): the chosen colonist talks with the nearest colonist within reach, or
+        /// Talk (design 65 §7): the chosen colonist talks with the nearest colonist within reach, or
         /// to nobody; pressed while anybody is talking, every conversation stops.
         /// </summary>
         void ToggleTalk()
@@ -453,7 +453,7 @@ namespace Odyssey.Presentation.Ui
             var figures = _boot?.Figures;
             var world = _boot?.World;
             if (figures == null || world == null) return;
-            // Only what this row started: the colony's own chatter (design 59 §5c) is not its to stop.
+            // Only what this row started: the colony's own chatter (design 65 §5c) is not its to stop.
             if (figures.AskedConversationCount > 0)
             {
                 figures.EndAskedConversations();

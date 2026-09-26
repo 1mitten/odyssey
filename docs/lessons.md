@@ -2773,3 +2773,12 @@ that differs only in line endings is the same case.
 **Hub's headless install fails without saying so.** Twice on that machine: once at a UAC prompt
 nobody saw (the log ends at *"Install … started"*), once because the installer unpacks into
 `%TEMP%` on C: whatever the destination. `docs/setup/local-dev.md` §8a.
+
+**A test failing with "Start built no world" is the start flow, not the art** (2026-09-26). World
+generation (#246) put a World screen in front of the setup page, so choosing New game now lands there
+and `Menu.Start()` refuses until `Menu.NextFromWorld()` has been pressed; #246 added that line to every
+test that starts a colony. Two tests written on other branches meanwhile — `FaceLiveTests` and
+`ButcherSpawnTests` — merged without it and failed on the next local PlayMode run, and the CI runner's
+failure of the same test was first misread as the runner's missing packs. **Read which assertion fired
+before blaming the machine**, and when a merge brings in a changed shared flow, grep the tests for the
+old call (`Choose(SessionCommands.NewGameKey)` without `NextFromWorld`).

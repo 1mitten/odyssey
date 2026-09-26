@@ -15,7 +15,7 @@ using UnityEngine.TestTools;
 namespace Odyssey.Tests.PlayMode
 {
     /// <summary>
-    /// Faces under the real player loop (design 59): the pieces are each tested alone, and this is
+    /// Faces under the real player loop (design 65): the pieces are each tested alone, and this is
     /// the test that they are joined — that the figure director binds a live colonist's face,
     /// writes an expression onto her bones, nods a talker, turns two talkers to each other and
     /// blinks them, frame after frame, with nothing but the game driving it.
@@ -51,6 +51,7 @@ namespace Odyssey.Tests.PlayMode
 
                 for (int i = 0; i < 8; i++) yield return null;
                 shell.Menu.Choose(SessionCommands.NewGameKey);
+                shell.Menu.NextFromWorld(); // on to the setup page at the planet's suggested site (design 59 §9)
                 for (int i = 0; i < 10; i++) yield return null;
                 Assert.That(shell.Menu.Start(), Is.True, "Start built no world");
                 for (int i = 0; i < 20; i++) yield return null;
@@ -90,7 +91,7 @@ namespace Odyssey.Tests.PlayMode
                 figures.TryGetFace(a, out float raised, out _, out _, out _, out _, out _);
                 Assert.That(raised, Is.EqualTo(FacePose.Of(FaceExpression.Raised).BrowLift).Within(0.001f),
                     "the brows sit where Raised puts them");
-                // ---- context (design 59 §3a): drafted, her own face goes stern with nothing forced.
+                // ---- context (design 65 §3a): drafted, her own face goes stern with nothing forced.
                 figures.SetEveryoneExpression(null);
                 world.Intents.Submit(new Intent(IntentKind.SetDrafted, default, a, 1));
                 world.Tick();

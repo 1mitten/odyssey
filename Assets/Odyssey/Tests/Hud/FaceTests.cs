@@ -8,7 +8,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// Faces and talking (design 59): the six expressions, the blink, the speaker's and the
+    /// Faces and talking (design 65): the six expressions, the blink, the speaker's and the
     /// listener's head, and the turns of a conversation — stepped at sixty frames a second for as
     /// long as a person would have to watch, in milliseconds.
     /// </summary>
@@ -543,7 +543,7 @@ namespace Odyssey.Tests.Hud
             double perFrame = clock.Elapsed.TotalMilliseconds / frames;
             TestContext.WriteLine($"64 faces stepped: {perFrame * 1000.0:F2} us a frame");
             // A hundredfold margin on what was measured: this is a ceiling against a mistake, not a
-            // timing (design 59 §9 has the number).
+            // timing (design 65 §9 has the number).
             Assert.That(perFrame, Is.LessThan(0.5), $"{perFrame:F4} ms a frame");
         }
 

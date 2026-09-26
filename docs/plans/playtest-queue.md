@@ -61,7 +61,7 @@ the next session learns to ignore.
     or comic; the cleaver's whoosh is not clearly deeper than a sword's.
 
 - **Faces and talking: do the expressions and the talking read, and at what zoom?**
-  (`claude/face-expressions`, design 59.) Debug menu (backtick) > **Faces**. Zoom right in on two
+  (`claude/face-expressions`, design 65.) Debug menu (backtick) > **Faces**. Zoom right in on two
   colonists standing near each other, select one, press **Talk**; then, with nobody selected, try
   each expression row on the whole colony.
   - Wrong: you can only tell who is talking by the head turning, not by the nodding; or the

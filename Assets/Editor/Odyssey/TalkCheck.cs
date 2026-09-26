@@ -19,7 +19,7 @@ using UnityEngine.Rendering;
 namespace Odyssey.EditorTools
 {
     /// <summary>
-    /// Two colonists talking, photographed through the real figure director (design 59 §5b): the
+    /// Two colonists talking, photographed through the real figure director (design 65 §5b): the
     /// talking hands are angles laid over a live clip, and this project tunes angles by picture.
     ///
     /// <para>Writes <c>Logs/talk-*.png</c> — the speaker each time a hand is up, from the front and a

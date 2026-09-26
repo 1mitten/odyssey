@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Odyssey.Presentation.Tests
 {
     /// <summary>
-    /// The one thing that writes a face onto bones (design 59 §6). The rule under test is that a
+    /// The one thing that writes a face onto bones (design 65 §6). The rule under test is that a
     /// pose is written <b>absolutely from rest</b>, in the root's authored units, whatever the
     /// bones' own axes and scales happen to be — so the synthetic rig here is built deliberately
     /// awkward: a head turned on its side, brows under a scaled parent, eyes whose "up" is their

@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Odyssey.Presentation.World
 {
     /// <summary>
-    /// Faces and talking (design 59): what each colonist's face holds, who is talking with whom,
+    /// Faces and talking (design 65): what each colonist's face holds, who is talking with whom,
     /// and the pass that writes both onto the live figures.
     ///
     /// <para><b>A face follows its context unless told otherwise</b> (§3a; owner, 2026-09-26:
@@ -37,7 +37,7 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public static bool AmbientConversations { get; set; } = true;
 
-        /// <summary>How far a debug conversation looks for somebody to talk to (design 59 §7).</summary>
+        /// <summary>How far a debug conversation looks for somebody to talk to (design 65 §7).</summary>
         public const float TalkReach = 8f;
 
         // Struck-up conversations (§5c).
@@ -264,7 +264,7 @@ namespace Odyssey.Presentation.World
 
         /// <summary>
         /// At leisure, not already talking, rested from the last conversation — and <b>standing
-        /// still</b>. Measured with <c>TalkCheck</c> (design 59 §5c): idle colonists wander, and a
+        /// still</b>. Measured with <c>TalkCheck</c> (design 65 §5c): idle colonists wander, and a
         /// pair who met in passing had walked six metres apart within seconds, so a conversation
         /// struck up on the move ended before it began. Standing still is a pause between legs of
         /// a wander, waiting, or a meal.

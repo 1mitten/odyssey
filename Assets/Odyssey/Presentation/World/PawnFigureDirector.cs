@@ -1335,7 +1335,7 @@ namespace Odyssey.Presentation.World
             ApplyWorkPose();
             CheckSocialGreetings();
             ApplyGazePose(deltaTime);
-            // After the gaze, which has just set the head absolutely: the nod goes on top (design 59 §6).
+            // After the gaze, which has just set the head absolutely: the nod goes on top (design 65 §6).
             ApplyFaces(deltaTime, stepConversations: true);
             // Last, after every pass that turns the head: what is shrunk is the pose as drawn.
             ApplyHeadHidden();
@@ -2374,7 +2374,7 @@ namespace Odyssey.Presentation.World
                 return;
             }
 
-            // Tier 3.5: Conversation — each looks at the other's head (design 59 §5).
+            // Tier 3.5: Conversation — each looks at the other's head (design 65 §5).
             if (TalkPartnerHead(figure.Pawn, out Vector3 partnerHead))
             {
                 figure.Gaze.ActivePriority = GazePriority.Conversation;
@@ -2480,7 +2480,7 @@ namespace Odyssey.Presentation.World
                         a.Gaze.StateTimer = 0f;
                         a.Gaze.StateDuration = 1.3f;
                         a.Gaze.SocialCooldown = 20f;
-                        // And the brows go up and down again: the eyebrow flash of a greeting (design 59 §5d).
+                        // And the brows go up and down again: the eyebrow flash of a greeting (design 65 §5d).
                         if (FacesEnabled) a.Face.Flash();
                         break;
                     }
@@ -2664,7 +2664,7 @@ namespace Odyssey.Presentation.World
             // And somebody else's fight: a body lent to a colonist walking into view must not open
             // with the last tenant's stagger (design 33 §5f).
             figure.Fight.Forget();
-            // And somebody else's blink: seeded by this pawn, so her rhythm is her own (design 59 §4).
+            // And somebody else's blink: seeded by this pawn, so her rhythm is her own (design 65 §4).
             figure.Face = Odyssey.Hud.FaceMotion.Start(pawn.Value);
             figure.ContextFace = Odyssey.Hud.FaceExpression.Neutral;
             figure.CanChat = false;

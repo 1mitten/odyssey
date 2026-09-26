@@ -269,13 +269,13 @@ namespace Odyssey.Presentation.World
             /// <summary>Runtime procedural gaze and head-look state for this figure.</summary>
             public LookGazeState Gaze;
 
-            /// <summary>The eyes and brows, bound at rest with the other bones; null on a rig with neither (design 59).</summary>
+            /// <summary>The eyes and brows, bound at rest with the other bones; null on a rig with neither (design 65).</summary>
             public FaceRig? FaceRig;
 
             /// <summary>The blink and the talking rhythm. Restarted on every lease; the expression and the conversation are the director's.</summary>
             public Odyssey.Hud.FaceMotion Face;
 
-            /// <summary>The face this pawn's own state calls for this frame (design 59 §3a), read in <c>NoteFace</c>.</summary>
+            /// <summary>The face this pawn's own state calls for this frame (design 65 §3a), read in <c>NoteFace</c>.</summary>
             public Odyssey.Hud.FaceExpression ContextFace;
 
             /// <summary>At leisure enough to strike up a conversation (§5c).</summary>

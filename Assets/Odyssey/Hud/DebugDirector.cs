@@ -23,7 +23,7 @@ namespace Odyssey.Hud
         Weather,
 
         /// <summary>
-        /// A colonist's face and talking (design 59 §7; owner, 2026-09-26: "we are just looking at
+        /// A colonist's face and talking (design 65 §7; owner, 2026-09-26: "we are just looking at
         /// animation/mechanism now"). Drawing only: nothing reaches the simulation.
         /// </summary>
         Faces,
@@ -387,7 +387,7 @@ namespace Odyssey.Hud
 
         public const string FacesTabKey = "ui.debug.tab.faces", TalkKey = "ui.debug.face.talk";
 
-        /// <summary>How long a conversation the Talk row starts runs, in seconds (design 59 §7).</summary>
+        /// <summary>How long a conversation the Talk row starts runs, in seconds (design 65 §7).</summary>
         public const float TalkSeconds = 30f;
 
         public const string TalkTooltip =
@@ -395,7 +395,7 @@ namespace Odyssey.Hud
             + "eight metres for thirty seconds - or to nobody if there is none. Pressed again, it stops; "
             + "the conversations colonists strike up by themselves carry on";
 
-        /// <summary>One expression the Faces tab sets (design 59 §3).</summary>
+        /// <summary>One expression the Faces tab sets (design 65 §3).</summary>
         public readonly struct FaceRow
         {
             public readonly string Key;
@@ -412,7 +412,7 @@ namespace Odyssey.Hud
 
         const string FaceWho = " Held by the selected colonist, or by every colonist when nobody is selected";
 
-        /// <summary>The row that hands a face back to its context (design 59 §3a): the one lit by default.</summary>
+        /// <summary>The row that hands a face back to its context (design 65 §3a): the one lit by default.</summary>
         public const string AutoFaceKey = "ui.debug.face.auto";
 
         public const string AutoFaceTooltip =

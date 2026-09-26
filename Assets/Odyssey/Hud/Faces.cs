@@ -5,7 +5,7 @@ using Odyssey.Sim.Contracts;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// What a colonist's face is holding (design 59 §3). Drawn only; never saved. Appended to, never
+    /// What a colonist's face is holding (design 65 §3). Drawn only; never saved. Appended to, never
     /// reordered: the debug tab's rows are in this order.
     /// </summary>
     public enum FaceExpression : byte
@@ -21,7 +21,7 @@ namespace Odyssey.Hud
         Asleep,
     }
 
-    /// <summary>A colonist's part in a conversation this frame (design 59 §5).</summary>
+    /// <summary>A colonist's part in a conversation this frame (design 65 §5).</summary>
     public enum TalkRole : byte
     {
         None,
@@ -29,7 +29,7 @@ namespace Odyssey.Hud
         Listening,
     }
 
-    /// <summary>How a speaker delivers one phrase (design 59 §5a). Rolled per phrase.</summary>
+    /// <summary>How a speaker delivers one phrase (design 65 §5a). Rolled per phrase.</summary>
     public enum TalkManner : byte
     {
         /// <summary>Beats, and every few beats an emphasis: a bigger nod and a brow lift.</summary>
@@ -48,7 +48,7 @@ namespace Odyssey.Hud
         Tilt,
     }
 
-    /// <summary>Which hand a speaker talks with (design 59 §5b).</summary>
+    /// <summary>Which hand a speaker talks with (design 65 §5b).</summary>
     public enum TalkArm : byte
     {
         None,
@@ -124,7 +124,7 @@ namespace Odyssey.Hud
             $"brows {BrowLift * 1000f:F1} mm {BrowRoll:F1} deg, eyes {EyeOpen:F2} x {EyeSize:F2}";
     }
 
-    /// <summary>What the frame says about one colonist that a face should answer to (design 59 §3a).</summary>
+    /// <summary>What the frame says about one colonist that a face should answer to (design 65 §3a).</summary>
     public readonly struct FaceSignals
     {
         public FaceSignals(bool asleep, bool downed, bool stunned, bool fleeing, bool fighting, bool drafted,
@@ -155,7 +155,7 @@ namespace Odyssey.Hud
     }
 
     /// <summary>
-    /// What face a colonist wears when nobody has told her one (design 59 §3a; owner, 2026-09-26:
+    /// What face a colonist wears when nobody has told her one (design 65 §3a; owner, 2026-09-26:
     /// <i>"stern should happen when fighting/in draft, obviously when you tired"</i>). First match
     /// wins, so the order is the ranking: what she is doing to survive beats how she feels.
     /// </summary>
@@ -188,7 +188,7 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// Whether a colonist is at leisure enough to strike up a conversation (design 59 §5c): idle,
+        /// Whether a colonist is at leisure enough to strike up a conversation (design 65 §5c): idle,
         /// wandering, waiting or eating, and not drafted, asleep, downed or at work.
         /// </summary>
         public static bool CanChat(in PawnView pawn) =>
@@ -198,7 +198,7 @@ namespace Odyssey.Hud
     }
 
     /// <summary>
-    /// One face's motion (design 59): the expression eased in, the blink, and the head and hands a
+    /// One face's motion (design 65): the expression eased in, the blink, and the head and hands a
     /// talker moves. Engine-free and allocation-free; the figure director steps one per live figure
     /// and writes <see cref="Pose"/>, the nod and the arm onto the rig.
     ///
@@ -599,7 +599,7 @@ namespace Odyssey.Hud
     }
 
     /// <summary>
-    /// Two colonists talking, or one talking to nobody, for so many seconds, in turns (design 59
+    /// Two colonists talking, or one talking to nobody, for so many seconds, in turns (design 65
     /// §5). Engine-free: the figure director holds a list of these keyed by pawn id, so a
     /// conversation outlives either colonist's figure being pooled.
     /// </summary>

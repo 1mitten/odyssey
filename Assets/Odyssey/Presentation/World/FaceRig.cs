@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Odyssey.Presentation.World
 {
     /// <summary>
-    /// The two facial bones of one rig, and the one way they are written (design 59 §6).
+    /// The two facial bones of one rig, and the one way they are written (design 65 §6).
     ///
     /// <para>Every colonist body carries one <c>Eyes</c> and one <c>Eyebrows</c> bone under the
     /// head, each moving both of its pair (<c>docs/research/e-15</c>). Everything a pose needs is

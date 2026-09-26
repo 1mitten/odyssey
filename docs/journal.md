@@ -14583,7 +14583,7 @@ portrait and at the closest zoom, and nothing on a face reads at 20 m at 1080p.*
 
 **Owner, on the three questions that raised:** conversation triggers *"later — we are just looking at
 animation/mechanism now"*; the mouth *"whatever you recommend"* (so none); portraits by mood *"not for
-now"*. So design 59 builds the mechanism and a debug tab to drive it, and nothing that decides when.
+now"*. So design 65 builds the mechanism and a debug tab to drive it, and nothing that decides when.
 
 **What was decided and why** (the design has the numbers):
 
@@ -14603,7 +14603,7 @@ now"*. So design 59 builds the mechanism and a debug tab to drive it, and nothin
 
 **Then the owner looked at the sheets** — *"these are good - stern should happen when fighting/in
 draft, obviously when you tired, a variety of motions when talking etc - give it context where we
-can for now"* — and the face was given its context the same day (design 59 §3a): stern drafted or
+can for now"* — and the face was given its context the same day (design 65 §3a): stern drafted or
 fighting, pained, tired from the game's own sleep line, glum, eyes shut asleep, all read off the
 frame. Talking got five manners, listener replies, an eyebrow flash on a greeting, and **hands**,
 which the board-angle photograph showed are the one part of talking visible at play zoom. The

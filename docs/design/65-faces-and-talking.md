@@ -1,4 +1,4 @@
-# 59 — Faces and talking
+# 65 — Faces and talking
 
 Status: **built 2026-09-26, not yet played — PR #247.** Branch `claude/face-expressions`. The
 context, the talking variety and the hands (§3a, §5a–§5d) were added the same day on the owner's
@@ -202,7 +202,7 @@ means the same thing by "this colonist".
 
 | Row | Does |
 |---|---|
-| Talk | That colonist talks with the nearest awake colonist within 8 m for 30 s, or to nobody if there is none. Lit while any conversation runs; pressed again, stops them all |
+| Talk | That colonist talks with the nearest awake colonist within 8 m for 30 s, or to nobody if there is none. Lit while a conversation it started runs; pressed again, stops those. **The conversations colonists strike up by themselves (§5c) are not its to stop**: the review found the first build counting them, so once colonists chatted on their own the row lit for no reason and silenced them all |
 | From context | Hands the face back to §3a — lit by default |
 | Neutral · Raised · Alarmed · Stern · Sceptical · Tired · Pained · Glum · Eyes shut | That colonist is **forced** to the expression until another is chosen or From context. **With nobody selected it is every colonist**, so the whole colony can be compared at a distance |
 
