@@ -645,6 +645,9 @@ namespace Odyssey.Sim.Pawns
                 // Crouched behind cover (design 53 §8a), derived here and never kept.
                 int crouch = CoverCrouchOf(pawn);
                 if (crouch > 0) writer.AddPawnAspect(pawn.Id, CombatAspects.CoverCrouch, crouch);
+                // A sweep in the air (design 62 §8): the arc the telegraph draws.
+                int sweep = pawn.HeldFacing;
+                if (sweep != 0) writer.AddPawnAspect(pawn.Id, CombatAspects.SweepFacing, sweep);
                 // Where she may work (design 43 §4a), at anything but the default.
                 if (pawn.Area != PawnArea.Anywhere)
                     writer.AddPawnAspect(pawn.Id, AreaAspects.Area, (int)pawn.Area);

@@ -34,7 +34,7 @@ Everything on the architect menu: what can be built, and the one-off orders that
 | **Hatch** | `ui.arch.tool.hatch` | A door in a floor <br>**Needs:** a hatch in a floor | no art | M3 |
 | **Airlock** | `ui.arch.tool.airlock` | Two doors and a seal. Holds atmosphere <br>**Needs:** a sealed double door | no art | M3 |
 | **Stockpile** | `ui.arch.tool.stockpile` | Where hauled things go | sheet 08 (salvage gear), high | M3 |
-| **Growing zone** | `ui.arch.tool.growzone` | Soil or hydroponics planted with one crop | sheet 06 (action tiles), high | M3 |
+| **Growing zone** | `ui.arch.tool.growzone` | Ground planted with one crop, and sown again after each harvest | sheet 06 (action tiles), high | M3 |
 | **Allowed area** | `ui.arch.tool.allowed` | Where colonists may go | sheet 08 (salvage gear), med | M3 |
 | **Dumping zone** | `ui.arch.tool.dumping` | Where rubbish and rubble go | sheet 08 (salvage gear), low | M3 |
 | **Animal area** | `ui.arch.tool.kennel` | Where tame animals may roam | sheet 06 (action tiles), high | M3 |
@@ -78,13 +78,13 @@ Everything on the architect menu: what can be built, and the one-off orders that
 | **Locker** | `ui.arch.tool.locker` | Personal storage | sheet 08 (salvage gear), med | M3 |
 | **Brazier** | `ui.arch.tool.brazier` | Heat and light, no power, some risk | no art | M3 |
 | **Cooler** | `ui.arch.tool.cooler` | Moves heat out of a room <br>**Needs:** a cooling unit | no art | M3 |
-| **Heater** | `ui.arch.tool.heater` | Moves heat into a room <br>**Needs:** a heating unit, distinct from the brazier | no art | M3 |
+| **Heater** | `ui.arch.tool.heater` | Warms the room it stands in, while it has power <br>**Needs:** a heating unit, distinct from the brazier | no art | M3 |
 | **Vent** | `ui.arch.tool.vent` | Lets two rooms share air | sheet 04 (manufactured), med | M3 |
 | **Turret** | `ui.arch.tool.turret` | Shoots hostiles. Needs power and ammunition <br>**Needs:** an automated gun. M6 needs it | no art | M3 |
 | **Trap** | `ui.arch.tool.trap` | One-shot, cheap, forgettable by your own colonists | sheet 03 (camp and crafting), high | M3 |
 | **Barricade** | `ui.arch.tool.barricade` | Cover without blocking sight | sheet 08 (salvage gear), high | M3 |
 | **Blast door** | `ui.arch.tool.blastdoor` | Slow, strong, holds a breach <br>**Needs:** a heavy blast door, distinct from a normal door | no art | M3 |
-| **Sandbags** | `ui.arch.tool.sandbag` | Cheap, quick low cover. Climbed over, never stood on | sheet 08 (salvage gear), high | M3 |
+| **Sandbags** | `ui.arch.tool.sandbag` | Low cover built of stone. Climbed over, never stood on | sheet 08 (salvage gear), high | M3 |
 | **Searchlight** | `ui.arch.tool.searchlight` | Light where you need to shoot | sheet 08 (salvage gear), med | M3 |
 | **Floor** | `ui.arch.tool.deckplate` | Laid on ground you already walk on | sheet 04 (manufactured), high | M3 |
 | **Grating** | `ui.arch.tool.grating` | See and fall through. Light passes | sheet 04 (manufactured), med | M3 |

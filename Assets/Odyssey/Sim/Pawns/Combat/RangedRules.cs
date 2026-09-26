@@ -123,7 +123,13 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class RangedRules : IRangedRules
     {
-        public virtual int ShootingLevel(Pawn pawn) => pawn.IsPerson ? pawn.SkillLevel(SkillIndex.Shooting) : 0;
+        /// <summary>
+        /// A person's Shooting skill — and a species that names a melee level throws at it, fixed,
+        /// as it swings at it (the butcher's rock, design 62 §7a). Nobody else's level moved.
+        /// </summary>
+        public virtual int ShootingLevel(Pawn pawn) =>
+            pawn.Species.meleeSkill > 0 && pawn.Species.hurl != null ? pawn.Species.meleeSkill
+            : pawn.IsPerson ? pawn.SkillLevel(SkillIndex.Shooting) : 0;
 
         public virtual int HitChancePerMille(Pawn shooter, int distanceMm, in Armament armament, PawnContext ctx)
         {

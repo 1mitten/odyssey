@@ -157,6 +157,78 @@ MonoBehaviour:
     MaxDistance: 200
     Priority: 110
     Cooldown: 0
+  - Id: odyssey.sound.combat.swing-heavy
+    Clips:
+    - {fileID: 8300000, guid: ac88039d4762c104d8861edda8ac5300, type: 3}
+    - {fileID: 8300000, guid: 4912bb075f13cc04293cd098f870b18f, type: 3}
+    Bus: 3
+    Volume: 0.75
+    VolumeVariance: 0.1
+    PitchVariance: 0.05
+    SpatialBlend: 1
+    MinDistance: 20
+    MaxDistance: 200
+    Priority: 130
+    Cooldown: 0
+  - Id: odyssey.sound.voice.butcher.strike
+    Clips:
+    - {fileID: 8300000, guid: baf6ec777fca9d041b36ca81639d3832, type: 3}
+    - {fileID: 8300000, guid: 6022d3bf87573c842ae52e260ec273cc, type: 3}
+    - {fileID: 8300000, guid: 5f77f33071bd9cf41b476e405b83bf96, type: 3}
+    - {fileID: 8300000, guid: 04de635bcee97c64cbb94759dd21d75b, type: 3}
+    Bus: 3
+    Volume: 0.55
+    VolumeVariance: 0.25
+    PitchVariance: 0.06
+    SpatialBlend: 1
+    MinDistance: 20
+    MaxDistance: 200
+    Priority: 150
+    Cooldown: 0.8
+  - Id: odyssey.sound.voice.butcher.hurt
+    Clips:
+    - {fileID: 8300000, guid: 0ef6e983aff40434ab547129c70944ad, type: 3}
+    - {fileID: 8300000, guid: b2f004ef0769ea74abd1309f4292a43b, type: 3}
+    - {fileID: 8300000, guid: dd866bbb6b940304da28bf9ad4ebbc8f, type: 3}
+    - {fileID: 8300000, guid: 10a8bee22e5c8b74bb21ca44c7ded968, type: 3}
+    Bus: 3
+    Volume: 0.8
+    VolumeVariance: 0.18
+    PitchVariance: 0.06
+    SpatialBlend: 1
+    MinDistance: 20
+    MaxDistance: 200
+    Priority: 115
+    Cooldown: 0.6
+  - Id: odyssey.sound.voice.butcher.fling
+    Clips:
+    - {fileID: 8300000, guid: 522b925ee7fe6574087a4185fbf0052b, type: 3}
+    - {fileID: 8300000, guid: cf801a9192c4f4848a4c13c47d55563b, type: 3}
+    - {fileID: 8300000, guid: 6e41e705874c5644fa9af7a838084356, type: 3}
+    - {fileID: 8300000, guid: 1701bc391f6c6694e988cdf3f9fc33b0, type: 3}
+    Bus: 3
+    Volume: 1
+    VolumeVariance: 0.08
+    PitchVariance: 0.06
+    SpatialBlend: 1
+    MinDistance: 20
+    MaxDistance: 200
+    Priority: 95
+    Cooldown: 0.5
+  - Id: odyssey.sound.voice.butcher.down
+    Clips:
+    - {fileID: 8300000, guid: d777add8d787c3f4588cf8875c977f85, type: 3}
+    - {fileID: 8300000, guid: 7c995352a856cfb47813709e9881d561, type: 3}
+    - {fileID: 8300000, guid: bbe42a955aaa4314497c1d5dec5350c8, type: 3}
+    Bus: 3
+    Volume: 1
+    VolumeVariance: 0.05
+    PitchVariance: 0.06
+    SpatialBlend: 1
+    MinDistance: 20
+    MaxDistance: 200
+    Priority: 95
+    Cooldown: 0.3
   - Id: odyssey.sound.combat.shot
     Clips:
     - {fileID: 8300000, guid: 51f7e36874ce4798872acee77ee531b2, type: 3}

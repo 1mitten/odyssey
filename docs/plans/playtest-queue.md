@@ -44,6 +44,21 @@ the next session learns to ignore.
   Meadow and skip a few months (Debug → Skip one month): Rime should bite harder than on the suggested
   site. A wrong answer looks like: the map a patchwork nobody would call a planet, Meadow lost in the
   colours, names over the zoom buttons, or a mountainous board indistinguishable from today's.
+- **The Pig Butcher, second round: the cleaver, the card and four levels** (`claude/pig-butcher`,
+  PR #248, design 62 §4b, §8c). Debug → Spawn → the four butcher rows, near drafted colonists.
+  - Watch a swing. Wrong: the cleaver still hangs at its hip, or the blow does not read as the
+    cleaver striking.
+  - Click one. Wrong: the card shows anything but the pig-headed butcher in that level's colours.
+  - Spawn all four side by side. Wrong: you cannot tell the levels apart, or the step in size
+    (4.4 to 5.6 m) is too small or too large.
+  - Fight level 1 with three or four colonists. Wrong: it is not the *easiest* you had in mind. The
+    probe says it still beats four bats every time (§4b).
+  - Stand a drafted gunman on a rock or a roof and shoot it (design 62 §3a, §7a). Wrong: it still
+    wanders below; the rock it throws is not seen coming; it throws so often it is a gunman; being
+    knocked off the perch feels unfair rather than earned.
+  - Listen to a fight (design 62 §8d). Wrong: the grunt on its swing is as loud as the bellow when
+    it throws somebody; the squeal when hit is lost under the thud; the oink as it dies is missing
+    or comic; the cleaver's whoosh is not clearly deeper than a sword's.
 
 - **Faces and talking: do the expressions and the talking read, and at what zoom?**
   (`claude/face-expressions`, design 59.) Debug menu (backtick) > **Faces**. Zoom right in on two
@@ -1441,6 +1456,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-26 | **The Almanac, true to the game, and one picture per key** (PR #252, `docs/design/64-almanac.md`): 110 pages keyed by registry key, the facts pinned to the Defs, and `IconGlyphs` drawn by every icon slot | working — owner, after asking for the pane and the Almanac to share their icons: *"yep it's all good"* | the icon request moved the line art into one table (design 64 §2a); the issues found along the way are rows 1–13 of `docs/plans/todo.md`. Ready to merge |
 | 2026-09-26 | **The inspect header's two toggles** (PR #245, `docs/design/61-inspect-header.md`): Draft and First Person as icon toggles, the mixed draft, First Person on Z, Close over Info | working — owner: *"it's great - happy to get this resolved and get it ready for a merge"* | none; ready to merge. Z for First Person and the 40 px tile stand |
 | 2026-09-26 | **Cracks, the break and the demolition sounds, two rounds** (PR #243, `docs/design/58-cracks.md`): walls and mined rock cracking, the break into quarters, rock's six levels, the wood smash and the boulder impact | working — owner, after the second round and the sounds: *"happy to get ready to merge into main"* | the first look moved three things (cracks from an impact point, six rock levels, the break, §1a); the sounds' one-blow gap was closed (§9). Ready to merge |
 | 2026-09-26 | **Waking into the world** (PR #241 on PR #240, `docs/design/56-wake-up.md`): the fade to black, the build behind it, the five-second dream, the held clock, the skip and the setting | working — owner: *"perfect"* | none; ready to merge after PR #240. The Unity tier found the blur's keep-alive material missing (design 56 §11) |

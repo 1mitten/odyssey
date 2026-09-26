@@ -129,9 +129,23 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public bool KnockBack(Pawn target, Pawn attacker, int weapon, int tick)
         {
+            // Not while a sweep's fling still protects it (design 62 §7), which only a butcher sets.
+            if (target.KnockbackImmuneAt(tick)) return false;
             int land = KnockbackCell(_ctx, attacker, target);
             if (land < 0) return false;
+            Displace(target, attacker, land, _ctx.Content.Combat.knockedDownTicks, weapon, tick);
+            return true;
+        }
 
+        /// <summary>
+        /// Move a struck pawn to <paramref name="land"/> and lay it down there for
+        /// <paramref name="downTicks"/> — the body of a knockback, shared by the one-tile critical
+        /// (<see cref="KnockBack"/>) and a sweep's fling (<see cref="Fling"/>, design 62 §7), so the
+        /// two cannot disagree about what being knocked down is. <paramref name="land"/> may be the
+        /// cell it is already on: a fling stopped at its first step.
+        /// </summary>
+        void Displace(Pawn target, Pawn attacker, int land, int downTicks, int weapon, int tick)
+        {
             // The player's attack order outlives the fall: a drafted colonist ordered on to a foe
             // gets up and goes back at it, rather than standing drafted and idle one tile off while
             // the foe she was sent at walks up to her (measured: the ordered duel in
@@ -148,7 +162,7 @@ namespace Odyssey.Sim.Pawns
             target.ClearPath();
             target.Destination = -1;
             target.Cell = land;
-            target.KnockedDownUntilTick = tick + _ctx.Content.Combat.knockedDownTicks;
+            target.KnockedDownUntilTick = tick + downTicks;
 
             // Given again, held with the rest of it until it stands (JobSystem.TickPawn).
             Pawn? still = ordered ? _ctx.Pawns.Get(new PawnId(foe)) : null;
@@ -178,7 +192,6 @@ namespace Odyssey.Sim.Pawns
 
             _ctx.CombatLog.Report(CombatEventKind.KnockedBack, attacker.Id, target.Id, _ctx.Size.FromIndex(land), tick,
                 from, weapon);
-            return true;
         }
     }
 }

@@ -27,6 +27,10 @@ namespace Odyssey.Presentation.Ui
     /// the other. So the interface is correct at every stage between no art and all of it, which
     /// is what lets a single icon be judged in the running game before the set is drawn.</para>
     ///
+    /// <para><b>Between the art and the square is the key's line art</b> (<see cref="IconGlyphs"/>,
+    /// 2026-09-26): one table by key, drawn here, so a thing is the same picture in the inspect
+    /// pane, a list and its Almanac page, and changing it is one edit. Order: art, line art, square.</para>
+    ///
     /// <para><b>Three sizes exist and no others</b> (spec): <see cref="RowSize"/> in a list row,
     /// <see cref="BarSize"/> in the command bar, <see cref="AvatarSize"/> for the selected
     /// thing.</para>
@@ -86,7 +90,28 @@ namespace Odyssey.Presentation.Ui
         void Dress()
         {
             Texture2D? art = IconArt.For(Key);
-            PaintSuppressed = art != null;
+
+            // Without art, the key's line art (IconGlyphs, the one table of them) stands in for the
+            // placeholder square, so a thing is the same picture on every surface that names it —
+            // the Almanac and the inspect pane read this one element (owner, 2026-09-26).
+            string glyph = art == null ? IconGlyphs.For(Key) : string.Empty;
+            if (_line != null && _linePath != glyph)
+            {
+                _line.RemoveFromHierarchy();
+                _line = null;
+            }
+            if (_line == null && glyph.Length > 0)
+            {
+                _line = new PathGlyph(glyph, 1f, Tint);
+                _line.style.position = Position.Absolute;
+                _line.style.left = 0;
+                _line.style.top = 0;
+                _line.style.width = Length.Percent(100);
+                _line.style.height = Length.Percent(100);
+                Add(_line);
+            }
+            _linePath = glyph;
+            PaintSuppressed = art != null || glyph.Length > 0;
 
             if (art == null)
             {
@@ -115,7 +140,13 @@ namespace Odyssey.Presentation.Ui
             Recolour();
         }
 
-        void Recolour() =>
+        void Recolour()
+        {
             Tint = Categorised ? HudTokens.Category(HudTheme.CategoryOf(Key)) : _inherited;
+            if (_line != null) _line.Tint = Tint;
+        }
+
+        PathGlyph? _line;
+        string _linePath = string.Empty;
     }
 }

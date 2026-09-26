@@ -14418,6 +14418,150 @@ flatten, which puts them edge-on — nothing left to see — and a jump in the h
 real seconds instead of taken. A pixel diff against clouds-off at 2% presence found nothing looking
 away from the sun and 39 pixels in 1.44 million looking up. Design 63 §4e.
 
+## 2026-09-26 — the Almanac rewritten against the code
+
+The owner asked for the in-game Almanac to be *"completely up-to-date with everything in game. The
+information is correct and links are good"*, and how far icons could go. It was worse than
+out of date: apart from Fauna it was the mock-up's text. Steel, concrete, pines, silver prices,
+smelting, three traits and a cold-snap event, none of them in the game; a wall at "240 ticks";
+live counts that were constants; related links to entries that did not exist; an info button
+that guessed from the title; a Find on map that closed the page on a skill and did nothing; and
+not one icon drawn.
+
+**Five fact passes, one per domain, every fact with a file and line**, came back before any page
+was written, and found as much outside the Almanac as in it: thirty false registry descriptions
+(bedrock "punitive to mine" cannot be mined; coal "burns hot" is burned by nothing; marsh is 71%
+pace, not three quarters; rain puts out no fires and storms throw no lightning), a meat meal no
+cook can make, a pace readout that leaves out the Moving capacity, and a quality-roll comment that
+contradicts its own code. Design 64 §5 lists them.
+
+**The catalogue is keyed by registry key now**, so a page's name and its index line are the
+registry's (`emit_labels.py` emits descriptions for the Almanac's namespaces), a link is a key,
+and the info button opens the page for the key the pane is drawing. 110 pages in 19 categories.
+
+**Three tests keep it that way.** One walks the HUD's own tables of what the game can show and
+fails on any key without a page; one resolves every link; one reads the Def XML and holds 93 quoted
+numbers to it. The registry guard caught about fifty of my own labels on the first run —
+"Structure", "Mine", "Power", "Harvest" — which were each a registry name typed a second time.
+
+**Icons**: 16 pages draw the owner's pixel art, and the rest a line icon of their own. Eight more
+are on sheet 06 and unexported; twenty-six more are on the six sheets never committed; fifty-seven
+have no source. Photographing the 3D ones in the game (a studio beside `PortraitStudio`, never
+committed, because a Synty render is still Synty) covers about forty-five of those (design 64 §4).
+
+**The same day, the owner on the icons**: *"these icons used need to match (and come from the same
+place if possible so we don't have to update several places) the panel info when you are clicking
+around"* — a bush had a picture on its page and a placeholder square when clicked. The Almanac's
+paths moved into one table, `IconGlyphs`, keyed by registry key, and `IconBadge` — every icon slot
+in the game — falls back to it where there is no pixel art. The Almanac now draws an `IconBadge`
+like everything else, so there is one place to change a picture (design 64 §2a).
+
+## 2026-09-26 — The Pig Butcher: a boss in one cell (design 62)
+
+The owner supplied POLYGON Fantasy Rivals and asked for its Pig Butcher as a raid enemy: large,
+possibly more than one tile, very hard to kill, a wide swing that usually knocks colonists back.
+
+**Why one cell.** RimWorld and Dwarf Fortress keep every creature to one cell. XCOM 2's true 2×2
+units have to smash walls, because doors cannot admit them. A footprint here would have been a
+clearance map, a second region graph and four-cell occupancy, for a bulk the traverse mode already
+gives. So the butcher is one cell, drawn 3.64 m tall, on `TraverseMode.Animal`: no ladder, and a
+closed door is a wall it breaks down by the bandit's own fallback. Reusing that mode costs no sixth
+district flood. The owner took this, a front arc of three, a two-cell fling with a slam, and debug
+spawn only (research `b-large-enemies-and-knockback`).
+
+**What was already there.** A one-tile critical knockback, stun and knock-down, the blow decided
+at the wind-up, and one owner of damage. The sweep and the fling are built on those, not beside
+them:
+- the facing rides in four spare bits of `PendingSwing`, which is already saved and hashed;
+- the flanks roll on their own streams;
+- `KnockBack`'s body became `Displace`, shared with the fling;
+- immunity is the only new saved field (`CombatSection` layout 6, hash bit 28).
+
+**Two departures from the plan, both smaller:**
+- **The cleaver is the species' natural attack, not an item.** An item would have been a new item
+  handle, a store filter row, an Inventory entry and an icon, for a weapon nobody else should swing.
+- **The critical knockback was not rewritten as the fling's distance-1 call.** The two rules differ
+  on purpose — a bystander is slept beside, or slammed; a two-layer drop is refused, or fallen — and
+  one method carrying both would be two rules with a flag. `KnockbackTests` pass unedited.
+
+**The package.** All 1,299 of its bundled PolygonGeneric entries were already here under identical
+GUIDs, so only `PolygonFantasyRivals/` was unpacked (research `e-16`). The character is Humanoid
+with Battle Royale's bones, so the person clips and the Sword Combat heavy swings drive it. It
+ships no clips of its own.
+
+**Measured, not guessed.** The giant is 1.822 m sole to crown against a colonist body's 1.791, but
+two and a half times as deep. Scale 2.0 stands it 3.64 m, 1.45 times a colonist.
+
+The catalogue rebuild reordered four item rows and wrote default fields, so the two new rows were
+spliced into the committed asset: 128 lines added, none removed (the 2026-09-18 lesson).
+
+**The balance, before any play:** one butcher beats four drafted colonists with bats on all three
+seeds, keeping 58–77 % of its pool, and nobody dies (design 62 §4a). That is "really difficult"
+taken literally, and it is the owner's to tune.
+
+**Found on the way.** A person holding no item always punched in presentation, whatever its species
+carried. `CombatPose.StyleFor` now takes the kind's natural style, which changes nothing for anybody
+before the butcher.
+
+## 2026-09-26 — The butcher's first play: the cleaver at the hip, a bandit's face, and four levels
+
+The owner played it: *"I expected him to be bigger and he wasn't using a weapon to strike people
+... it showed a bandit portrait when it's a pig butcher"*, then asked for levels *"based on their
+appearance ... a bit bigger each level"*.
+
+**Measured before fixed.** The owner's editor held the worktree, so a second checkout
+(`D:\code\odyssey-butcher-lab`, detached, junctioned, main's Library copied) ran the batch work.
+The photograph test logged the first swing frame by frame. The heavy clip was at full weight, and
+the cleaver pointed straight down and did not move. The mid-swing pictures showed the arm up and
+the cleaver hanging at the left hip. `FitWeaponBothWays` parks every new prop at the hip for the
+sheath to draw, and the natural weapon skips the sheath. That is a third fault of the same shape as
+the two the spawn test found before it: the weapon path assumes an item, and a natural weapon is
+not one.
+
+**The portrait** was the colonist lottery in the gang's outfit. `PortraitStudio.ForKind`
+photographs a kind's own row instead.
+
+**The levels** are the pack's four colourways of one atlas, kinds 6 to 9. They share an abstract
+species and an abstract body through the loader's inheritance. Each level needs its own body,
+because a vital region at nought downs whatever the pool, and shock is a count of points.
+
+The balance probe says the ladder is steep: the king ends a fight with 97 % of its pool.
+
+## 2026-09-26 — The butcher's voice, and its cleaver's whoosh
+
+Three pig recordings, each one call under a second, so the variations had to be made rather than
+cut. Resampling lower (pitch and pace together) gives a bigger animal, not a chipmunk slowed down.
+
+The first bake held the −3 dBFS ceiling by turning each take down, and it left the fling at −20
+LUFS, no louder than the hurt. The owner had asked for exactly the opposite. A pig's call peaks
+about 17 dB over its loudness, so the takes now go through a lookahead limiter, as the combat thud
+did, and the ladder is 7 dB from the grunt to the bellow.
+
+The cleaver was silent on the same grounds a bite is: a natural attack. Its whoosh is the sword's,
+eight semitones down and re-cut so its peak sits at the whoosh's own 40 ms, so the swing schedule
+needed no new number.
+
+Proved by listening through the code: the fight test now tallies `AudioDirector.Played` and hears
+all four moments.
+
+## 2026-09-26 — No safe perch: the butcher climbs, and throws
+
+The owner stood on a rock one layer up and shot two butchers dead while they wandered below. The
+cause was one line of content. The butcher moved as the hog does, and the hog may not hop on to
+stone, a rule the owner asked for when a pig climbed a mine face. The rule was right for a hog and
+wrong for a boss. The bandit never had the weakness, and a test now says so: a colonist on a stone
+outcrop, and the bandit, the butcher and the king each have to reach her.
+
+Asked how it should answer a perch, the owner chose climb and throw. The climb is TraverseMode.Bandit
+rather than a sixth mode, because a mode is a district flood on every nav rebuild of every colony
+and every district is in the state hash. That is a price every colony would pay to keep one boss
+off ladders, and the throw makes a ladder no refuge anyway.
+
+The throw is the pistol's machinery with a species field, a weapon id below every item, and a clock
+of its own. The item-only landing would have made a rock vanish on arrival. It is thrown only up at
+a perch, or at whoever it cannot reach, so on open ground it is still a thing that walks at you with
+a cleaver.
+
 ## 2026-09-26 — The art came back, then faces
 
 **The packs went missing for the second time.** `D:\code\odyssey\Assets\Synty` was an empty folder

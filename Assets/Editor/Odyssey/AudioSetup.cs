@@ -198,6 +198,20 @@ namespace Odyssey.EditorTools
                 mono: true, loadInBackground: false, placeholder: null),
             new("combat-hit", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: true, loadInBackground: false, placeholder: null),
+            // The butcher (design 62 §8d), baked by tools/audio/bake_butcher.sh: its cleaver's deep
+            // whoosh and its voice, four moments. The blows' class for the blows' reason, and **not
+            // normalised**: the bake sets each moment's loudness (strike -21, hurt -18, fling -15,
+            // down -14 LUFS), and the importer's normalise would raise every take to one peak.
+            new("combat-whoosh-heavy", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            new("butcher-strike", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            new("butcher-hurt", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            new("butcher-fling", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
+            new("butcher-down", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null, normalize: false),
             // The gunshot (design 47 §4c-bis), baked by tools/audio/bake_gunshot.sh: three near
             // takes and two far. The blows' class for the blows' reason — it plays on the Shot's
             // own frame — and **not normalised**: the bake sets the near takes at -14 LUFS and the
@@ -614,6 +628,17 @@ namespace Odyssey.EditorTools
                     Priority = 150, Cooldown = 0.1f,
                 };
 
+            AudioCatalogue.SoundDef VoiceSound(string id, string clip, float volume, float variance, float cooldown, int priority) =>
+                new AudioCatalogue.SoundDef
+                {
+                    Id = id,
+                    Clips = Variants(clip),
+                    Bus = SoundBus.Effects,
+                    Volume = volume, VolumeVariance = variance, PitchVariance = 0.06f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = priority, Cooldown = cooldown,
+                };
+
             AudioCatalogue.SoundDef AlertSound(string id, string clip, float volume,
                 float cooldown = 2f) =>
                 new AudioCatalogue.SoundDef
@@ -739,6 +764,27 @@ namespace Odyssey.EditorTools
                     SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
                     Priority = 110, Cooldown = 0f,
                 },
+                // The butcher's cleaver (design 62 §8d): the whoosh's timing and place, a little louder
+                // (the bake's -19 against -21) and a heavier blade.
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.CombatSwingHeavy,
+                    Clips = Variants("combat-whoosh-heavy"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.75f, VolumeVariance = 0.10f, PitchVariance = 0.05f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
+                    Priority = 130, Cooldown = 0f,
+                },
+                // The butcher's voice (design 62 §8d; owner, 2026-09-26: "varying volumes - loud when
+                // he knocks people back or even when hit"). Four moments, four loudnesses — the bake's
+                // ladder is 7 dB from the grunt to the bellow — and each play moved by its variance
+                // so no two are alike. A cooldown per moment, so a sweep that flings three people is
+                // one bellow and a flurry of hits one squeal at a time. Heard as far as the blows,
+                // and a bellow or a death wins a voice before a thud does.
+                VoiceSound(SoundIds.Voice("butcher", Odyssey.Hud.VoiceCue.Strike)!, "butcher-strike", 0.55f, 0.25f, 0.8f, 150),
+                VoiceSound(SoundIds.Voice("butcher", Odyssey.Hud.VoiceCue.Hurt)!, "butcher-hurt", 0.8f, 0.18f, 0.6f, 115),
+                VoiceSound(SoundIds.Voice("butcher", Odyssey.Hud.VoiceCue.Fling)!, "butcher-fling", 1.0f, 0.08f, 0.5f, 95),
+                VoiceSound(SoundIds.Voice("butcher", Odyssey.Hud.VoiceCue.Down)!, "butcher-down", 1.0f, 0.05f, 0.3f, 95),
                 // The gunshot (design 47 §4c-bis), two sounds by distance: CombatFeedback plays the
                 // crack when the shooter is within 70 m of the listener and the thump beyond, so a
                 // player zoomed in on a fight hears the one and one pulled back over the colony the

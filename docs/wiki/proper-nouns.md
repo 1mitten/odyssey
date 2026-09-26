@@ -20,7 +20,7 @@ Names that are not interface keys: people, places, factions, creatures, the cale
 | Feral machine | **loper** | proposed  | A long-legged maintenance unit still walking its rounds, now hostile to anything that moves. Not alive, not intelligent, not harmless. ui.pawn.synth points at this |
 | Pack animal | **dray hog** | proposed  | A larger bred cousin of the midden hog, for caravans. Not in the original list; caravans need something to carry the load and it should not be a vehicle at prototype scale |
 | Bank wildlife | **culvert frog** | proposed  | A big frog of the meadow's streams, ponds and lakes, and of the flooded culverts under the ruin. Keeps to the water's edge; the first animal placed by where the water is. Named in the register of the midden hog and the duct rat |
-| City vermin | **duct rat** | proposed  | The rat of the ruin: lives in the ducts and the caverns, climbs anything, eats what the colony stores. Named in the register of the midden hog and the girder cat; the first animal with a full set of movements, so the one the figure work is proven on |
+| City vermin | **duct rat** | proposed  | The rat of the ruin: keeps to the rock, climbs ladders and opens doors. Named in the register of the midden hog and the girder cat; the first animal with a full set of movements, so the one the figure work is proven on |
 | The calendar | **6 months of 12 days, 72-day year** | proposed  | Three seasons of two months each. A short year means seasonal pressure arrives often, which a prototype wants: you see a full cycle in ten hours rather than thirty. Days stay 24 hours for legibility |
 | Month | **Larkspur** | proposed  | First month of Wash. Botanical month names are a civic nicety the city kept from before it was a city, which is the kind of detail that makes a dead place feel lived in. Invented earlier for the clock readout and kept |
 | Month | **Tansy** | proposed  | Second month of Wash |
@@ -28,7 +28,7 @@ Names that are not interface keys: people, places, factions, creatures, the cale
 | Month | **Ember** | proposed  | Second month of Glare |
 | Month | **Hollow** | proposed  | First month of Rime |
 | Month | **Candle** | proposed  | Second month of Rime |
-| Season | **Wash** | proposed  | The rains. Growing season, and the season that puts fires out |
+| Season | **Wash** | proposed  | The rains. The growing season |
 | Season | **Glare** | proposed  | Dry heat. Cooling matters, crops need water, tempers go |
 | Season | **Rime** | proposed  | Cold. The season the prototype's ten-day survival run should eventually land in, because it is the one that kills you |
 | Research naming | **Plain functional names** | proposed  | Projects are named for what they unlock, not given proper names: Hydroponics, Powered Doors, Structural Bracing, Salvage Sorting. A research list is scanned, not read, and a clever name costs the player a guess. Proper nouns are reserved for people, places and factions |
