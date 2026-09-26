@@ -273,8 +273,54 @@ namespace Odyssey.Hud
             _wide = false;
             Dragging = true;
             Hover = null;
+
+            // What a Mine drag marks is decided here, once, from the cell it was begun on, and
+            // nowhere else (design 62 §4, P4): begun on rock it marks only rock, begun on soft
+            // ground it marks everything. DragTo never asks again, so a drag that wanders across
+            // grass and back on to rock is still the run it was when it began.
+            _anchorTerrain = TerrainOf(_anchor);
+            _run = _tool == DesignateTool.Mine ? DigOrMine.RunFor(_anchorTerrain) : DesignateRun.Everything;
             return true;
         }
+
+        /// <summary>
+        /// What the world is made of at a cell, as a <see cref="TerrainHandle"/> value, or -1 where
+        /// it cannot say.
+        ///
+        /// <para>Set by the presenter from the render mirror, on <see cref="WorkingLayer"/>'s
+        /// bargain: this assembly cannot see the world, and the one question it needs answered —
+        /// is the cell a drag begins on rock? — is a number the presenter can hand over. Null (a
+        /// test, a scene with no world) reads every cell as unknown, which is a drag that marks
+        /// everything and a banner that says Mine: exactly what the tool did before it knew.</para>
+        /// </summary>
+        public Func<CellRef, int>? TerrainAt { get; set; }
+
+        int TerrainOf(CellRef cell) => TerrainAt?.Invoke(cell) ?? -1;
+
+        int _anchorTerrain = -1;
+        int _run = DesignateRun.Everything;
+
+        /// <summary>
+        /// The running drag's answer to "what does it mark", as a <see cref="DesignateRun"/> value.
+        /// Only a Mine drag begun on rock is ever <see cref="DesignateRun.RockOnly"/>.
+        /// </summary>
+        public int Run => _run;
+
+        /// <summary>
+        /// The run of the last committed gesture, written by <see cref="Commit"/> beside
+        /// <see cref="LastAnchor"/> for the same reason: the box is thrown away before the
+        /// presenter turns its cells into intents, and every one of them carries this.
+        /// </summary>
+        public int LastRun { get; private set; } = DesignateRun.Everything;
+
+        /// <summary>
+        /// The terrain the order is being given on right now, or -1: the start cell while a drag
+        /// runs — the cell its run was decided from, so the word and what is marked agree for the
+        /// whole drag — and the cell under the pointer otherwise. What the armed banner reads its
+        /// word from (<see cref="BuildPaletteModel.ArmedWordKey"/>).
+        /// </summary>
+        public int PointerTerrain =>
+            Dragging ? _anchorTerrain : Hover is CellRef hover ? TerrainOf(hover) : -1;
 
         /// <summary>
         /// Is the box waiting for a second click rather than for a button to be let go?
@@ -548,6 +594,7 @@ namespace Odyssey.Hud
             }
 
             LastAnchor = _anchor;
+            LastRun = _run;
             Abandon();
             return cells;
         }
@@ -604,6 +651,8 @@ namespace Odyssey.Hud
             _wide = false;
             _anchor = default;
             _head = default;
+            _anchorTerrain = -1;
+            _run = DesignateRun.Everything;
         }
 
         /// <summary>

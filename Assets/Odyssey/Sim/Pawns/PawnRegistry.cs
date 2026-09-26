@@ -676,6 +676,11 @@ namespace Odyssey.Sim.Pawns
                     continue;
                 }
 
+                // Digging soft ground rather than mining rock (design 62 §4), sparse: read off the
+                // cell being cut, so the activity line can say so without a job def.
+                if (MineJobDriver.IsDigging(pawn, _ctx.Cells))
+                    writer.AddPawnAspect(pawn.Id, MineJobDriver.Digging, 1);
+
                 // Skills go out as pawn aspects rather than as fields on the view, which is what
                 // that mechanism is for: nothing in Sim.Contracts had to learn that skills exist.
                 // Every colonist, not only whoever is selected — the snapshot has no notion of

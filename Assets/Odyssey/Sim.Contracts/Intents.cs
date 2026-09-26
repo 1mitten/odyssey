@@ -10,6 +10,14 @@ namespace Odyssey.Sim.Contracts
         None = 0,
         SetGameSpeed,
         SetSliceLayer,
+
+        /// <summary>
+        /// Put a standing order on a cell: <c>A</c> is a <c>DesignationKind</c> value. <c>B</c> is
+        /// <see cref="DesignateRun"/>: for a Mine order, <see cref="DesignateRun.RockOnly"/> says
+        /// the drag this cell belongs to was begun on rock, so a soft cell in it is refused
+        /// (design 62 §4). Zero — a click, a scenario, an old caller — marks whatever the order
+        /// can take.
+        /// </summary>
         Designate,
         CancelDesignation,
         SetForbidden,
@@ -509,6 +517,26 @@ namespace Odyssey.Sim.Contracts
         NotPermitted,
         AlreadyInThatState,
         QueueFull,
+    }
+
+    /// <summary>
+    /// What a <see cref="IntentKind.Designate"/> intent's <c>B</c> says about the drag its cell
+    /// came from (design 62 §4).
+    ///
+    /// <para><b>Decided once per drag, from the cell the drag was begun on, and carried on every
+    /// intent of it</b> — never asked of each cell as it comes (<c>docs/bug-patterns.md</c> P4).
+    /// A quarry dragged from a rock face over the meadow at its foot marks the face and leaves
+    /// the grass; a pit dragged from the grass marks everything in the box. The interface decides
+    /// it (<c>DesignateDirector.Begin</c>) because that is where the drag is; the simulation
+    /// applies it, one rule to every cell, against its own terrain.</para>
+    /// </summary>
+    public static class DesignateRun
+    {
+        /// <summary>Mark every cell the order can take. The default, and what a click is.</summary>
+        public const int Everything = 0;
+
+        /// <summary>A Mine drag begun on rock: refuse every cell that is not rock-like.</summary>
+        public const int RockOnly = 1;
     }
 
     /// <summary>

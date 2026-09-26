@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-63 entries, 45 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+64 entries, 46 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -51,7 +51,8 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Hauling** | `ui.status.hauling` | Carrying something to storage | sheet 08 (salvage gear), low | M2 |
 | **Building** | `ui.status.building` | Working a frame or blueprint | sheet 06 (action tiles), med | M2 |
 | **Deconstructing** | `ui.status.deconstructing` | Taking one of our own buildings apart | no art | M3 |
-| **Mining** | `ui.status.mining` | Cutting into rubble, concrete or rock | sheet 05 (tools and weapons), high | M2 |
+| **Mining** | `ui.status.mining` | Cutting into rock, ore or rubble | sheet 05 (tools and weapons), high | M2 |
+| **Digging** | `ui.status.digging` | Cutting out a cell of soft ground: grass, earth, sand, gravel or subsoil | no art | DM |
 | **Chopping** | `ui.status.felling` | Cutting a tree down for wood <br>**Needs:** an axe swung at a trunk | no art | M3 |
 | **Sowing** | `ui.status.sowing` | Breaking ground and planting a zone cell | no art | M3 |
 | **Harvesting** | `ui.status.harvesting` | Cutting a ripe crop and gathering it | no art | M3 |
