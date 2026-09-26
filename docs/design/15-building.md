@@ -67,6 +67,13 @@ and offering them would be offering an order that can never be filled. They keep
 because every stamped wall carries one. A salvage line that turned rubble into steel would give one
 an item and put it on the menu, with no other change anywhere.
 
+**Steel is buildable since 2026-09-26** (the smelter, design 62 §9, DM8): not a salvage line but a
+smelter gave it its item, the **iron bar**, and the promise above held — `Stuff_Steel.item` became
+22 and the palette's material band gained a third tile, with no other change to the construction
+pipeline. Its own row is INVENTED: work ×1.4 plus 20 ticks (between wood and stone), hit points ×2
+(the strongest), sharp ×0.4 and blunt ×0.75. Anything built of wood or stone can be built of steel;
+it reads dim on the palette until the colony holds a bar. Concrete and composite stay the city's.
+
 **Note added 2026-09-17.** Every tick figure below is **work at the standard rate**, and it has
 been an exact statement of elapsed time only because every colonist works at that rate. `U42`–`U44`
 (`17-rates-and-stats.md`) make it a rate-relative figure: a skilled builder beats these numbers and

@@ -329,3 +329,19 @@ FBX files rather than guessed:
   without the packs) and the three facing cases.
 - **Not done:** the heater's facing is not re-drawn when a wall is built beside it in a
   *neighbouring chunk* — the ladder's facing has the same limit and nobody has met it.
+
+## 15. Copper bars (the smelter, 2026-09-26)
+
+Design 62 §9 (DM8) gives the colony **copper bars**, and a power line takes one **in place of** its
+scrap metal: `Building_Conduit.partAltItem` is `Item_CopperBar`, and `LayConduitWorkGiver.LineLoad`
+fetches the nearer of the nearest scrap metal and the nearest copper bar, scrap on a tie. A colony
+with no copper asks exactly what it asked before. **Only the line layer honours the alternative**:
+a line is all part and laid one unit at a time, so which item paid is never banked, whereas a
+building site banks its parts by count and gives back `partItem` on a cancel — so generators,
+heaters and the galley still take scrap metal alone (`SmelterTests.OnlyAPowerLineTakesACopperBarInPlaceOfScrap`
+holds it there). **Taking a line up gives back scrap metal whichever paid**, because the line does
+not remember; a copper bar can so become a scrap metal half the time. Recorded, not fixed: it would
+need a bit per line in the save.
+
+Iron bars reach power by another road: a generator, heater or galley can be **built of steel**
+(design 15), because steel is a material and not a part.
