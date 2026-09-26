@@ -31,7 +31,7 @@ namespace Odyssey.Tests.Sim
             public Tape Tape = new Tape();
         }
 
-        static Fight Stage(uint seed)
+        static Fight Stage(uint seed, int kind)
         {
             ScenarioDef scenario = ScenarioDef.Bare();
             scenario.colonists = 4;
@@ -45,7 +45,7 @@ namespace Odyssey.Tests.Sim
 
             CellRef s = colony.Start;
             int at = colony.Pawns.Cells.NearestWalkableInColumn(s.X + 8, s.Z + 8, s.Y);
-            Pawn butcher = Spawn(colony, PawnKindIndex.Butcher, at);
+            Pawn butcher = Spawn(colony, kind, at);
             foreach (Pawn p in people)
             {
                 Assert.That(Draft(colony, p), Is.EqualTo(IntentRejection.None));
@@ -55,12 +55,15 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test, Category("Long")]
-        [TestCase(1u)]
-        [TestCase(2u)]
-        [TestCase(3u)]
-        public void OneButcherAgainstFourBats(uint seed)
+        [TestCase(1u, PawnKindIndex.Butcher)]
+        [TestCase(2u, PawnKindIndex.Butcher)]
+        [TestCase(3u, PawnKindIndex.Butcher)]
+        [TestCase(1u, PawnKindIndex.ButcherScarred)]
+        [TestCase(1u, PawnKindIndex.ButcherBlood)]
+        [TestCase(1u, PawnKindIndex.ButcherKing)]
+        public void OneButcherAgainstFourBats(uint seed, int kind)
         {
-            Fight fight = Stage(seed), twin = Stage(seed);
+            Fight fight = Stage(seed, kind), twin = Stage(seed, kind);
             int fell = -1;
             for (int t = 0; t < Ticks; t++)
             {
@@ -89,7 +92,7 @@ namespace Odyssey.Tests.Sim
             int down = fight.People.Count(p => p.Downed);
             int dead = fight.People.Count(p => Melee.IsDead(p) || fight.Colony.Pawns.Pawns.Get(p.Id) == null);
             TestContext.WriteLine(
-                $"seed {seed}: {swings} swings, {blows} blows landed, {flings} flings, {slams} slams; " +
+                $"kind {kind}, seed {seed}: {swings} swings, {blows} blows landed, {flings} flings, {slams} slams; " +
                 $"colonists down {down}, dead {dead}; butcher {fight.Butcher.HpMilli / 1000}/{fight.Butcher.HpMaxMilli / 1000} hp, " +
                 (fell >= 0 ? $"fell at tick {fell}" : "still standing"));
             Assert.That(swings, Is.GreaterThan(0), "the butcher never swung: the probe measured nothing");

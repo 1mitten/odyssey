@@ -14214,3 +14214,27 @@ taken literally, and it is the owner's to tune.
 carried. `CombatPose.StyleFor` now takes the kind's natural style, which changes nothing for anybody
 before the butcher.
 
+## 2026-09-26 — The butcher's first play: the cleaver at the hip, a bandit's face, and four levels
+
+The owner played it: *"I expected him to be bigger and he wasn't using a weapon to strike people
+... it showed a bandit portrait when it's a pig butcher"*, then asked for levels *"based on their
+appearance ... a bit bigger each level"*.
+
+**Measured before fixed.** The owner's editor held the worktree, so a second checkout
+(`D:\code\odyssey-butcher-lab`, detached, junctioned, main's Library copied) ran the batch work.
+The photograph test logged the first swing frame by frame. The heavy clip was at full weight, and
+the cleaver pointed straight down and did not move. The mid-swing pictures showed the arm up and
+the cleaver hanging at the left hip. `FitWeaponBothWays` parks every new prop at the hip for the
+sheath to draw, and the natural weapon skips the sheath. That is a third fault of the same shape as
+the two the spawn test found before it: the weapon path assumes an item, and a natural weapon is
+not one.
+
+**The portrait** was the colonist lottery in the gang's outfit. `PortraitStudio.ForKind`
+photographs a kind's own row instead.
+
+**The levels** are the pack's four colourways of one atlas, kinds 6 to 9. They share an abstract
+species and an abstract body through the loader's inheritance. Each level needs its own body,
+because a vital region at nought downs whatever the pool, and shock is a count of points.
+
+The balance probe says the ladder is steep: the king ends a fight with 97 % of its pool.
+

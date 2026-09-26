@@ -105,6 +105,53 @@ fling chance are each one XML line (§4). Four bats are not the colony's best an
 range (the butcher's intercept is the reference's ceiling) and a line of sandbags are, and neither
 was in this probe.
 
+### 4b. Four levels (owner, 2026-09-26)
+
+> *"it might make sense to make different levels based on their appearance as there are variations
+> and maybe the current one is easiest with much tougher ones with the varied ones (maybe make them
+> a bit bigger each level)"* — the owner, after the first play
+
+The pack paints the giant's atlas four ways: `FantasyRivals_01_A` to `_D`. So there are **four
+levels**, one colourway each. Every level is bigger, tougher, surer, harder hitting and flings
+more often than the one before, and `ButcherTests.EachLevelIsBiggerAndTougherThanTheLast` holds
+that each is strictly greater, never equal. All the numbers are INVENTED, the first tuning.
+
+| Level | Kind | Colourway | Drawn | Pool | Melee | Cleaver dmg / wind-up / cooldown | Fling | Distance | Slam | Move |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **Butcher** | 6 | 01_A | 4.4 m | 500 | 14 | 14 / 54 / 170 | 750 ‰ | 2 | 8 | 800 |
+| **Scarred butcher** | 7 | 01_B | 4.7 m | 750 | 16 | 17 / 54 / 165 | 800 ‰ | 2 | 10 | 800 |
+| **Blood butcher** | 8 | 01_C | 5.2 m | 1,000 | 18 | 20 / 50 / 160 | 850 ‰ | 2 | 12 | 760 |
+| **Butcher king** | 9 | 01_D | 5.6 m | 1,400 | 20 | 24 / 48 / 150 | 900 ‰ | **3** | 15 | 720 |
+
+**One abstract parent each, not four copies.** The loader's inheritance (a child restates whole
+elements) carries what the levels share:
+- `ButcherBase` (species) holds the person, the mode, the intercept and the immunities;
+- `BruteBody` (health) holds tending, blood and falls.
+
+**A level needs its own body, not just its pool**, for two reasons:
+- a vital region at nought downs, so a king with a person's five-times head (125 points) would fall
+  to a head wound long before its pool;
+- pain shock is a count of points, not a share of the pool.
+
+So `Health_Brute` to `Health_Brute4` scale the regions ×5, ×7.5, ×10 and ×14, put shock at about
+two-thirds of the pool (320, 470, 615 and 888 points), and bleed less as the body grows (12, 8, 6
+and 4).
+
+**The kinds are appended** (7 to 9) and every level has its own Spawn row. The raid mixes still
+name none of them (§2).
+
+**Measured** (`ButcherBalanceProbe`, four bats, a game minute and a half):
+
+| Level | What it had left | Swings to down all four |
+|---|---|---|
+| Butcher | 58–77 % over three seeds | 13–18 |
+| Scarred butcher | 84 % | 12 |
+| Blood butcher | 88 % | 13 |
+| Butcher king | 97 % | 7, and two slams |
+
+The ladder is steep and even level 1 wins outright. Whether the first level is right as the
+*easiest* is the first play's question.
+
 ## 5. The sweep
 
 **A property of the species, not of the weapon.** The sweep, the fling and the cleaver itself are
@@ -313,6 +360,37 @@ camera; `docs/reference/screenshots/2026-09-26-butcher-windup.png` is the first.
   per cent, and reads the orange-red the draft's own marks read in this light.
 - **The fling does not show in a still.** Whether it reads as a throw is the first play's question.
 
+### 8c. The second play (owner, 2026-09-26): bigger, the cleaver, the card
+
+> *"I expected him to be bigger and he wasn't using a weapon to strike people - was not using his
+> cleaver. Also the info was wrong on the card for the butcher - it showed a bandit portrait when
+> it's a pig butcher."*
+
+**The cleaver hung at the hip through every swing.** A frame-by-frame log of the first swing (the
+photograph test) showed:
+- the heavy clip at full weight;
+- the cleaver's axis pointing straight down all the way through;
+- its height moving by centimetres.
+
+`FitWeaponBothWays` fits every new prop to the hand and then **parks it at the hip** for the sheath
+to draw. The natural weapon never runs the sheath, so it stayed parked. `ShowWeapon` now puts it in
+the hand every frame (`PlaceWeapon`, a no-op once there). After the fix the cleaver's axis sweeps
+from down to up and it rises four metres through the blow. The spawn test holds its parent to the
+hand bone.
+
+**The card's portrait** came from the colonist lottery in the gang's outfit, because every hostile
+person is dressed as a bandit. `PortraitStudio.ForKind` now photographs a kind drawn as itself from
+its own row, in its level's colourway, with the pack's other giants removed. `For(snapshot, id)`
+routes a butcher there. The spawn test asserts the card's picture is that one.
+
+**Bigger:**
+- level 1 is **4.4 m** (scale 2.4), and the levels climb to 5.6 m (§4b);
+- `FigureBuild`'s height window rose from 5 m to **8 m**, since a failed bake is out by a factor of
+  a hundred and still cannot reach it.
+
+The photographs (`Logs/look/butcher-levels.png`, the four portraits) show the four colourways and
+the step in size.
+
 ## 9. Content and the registry
 
 New keys in `icon-keys.csv`, none with art, so they fall through to a generated placeholder as
@@ -320,6 +398,8 @@ most keys do:
 - `ui.pawn.butcher`, *Butcher*;
 - `ui.debug.spawnbutcher`, *Spawn butcher*: the Spawn tab's row, under Hostiles;
 - `ui.combat.slam`, *Slam*: the floater a slam raises, with its damage.
+- The levels (§4b): `ui.pawn.butcher.scarred`, `.blood` and `.king`, and a
+  `ui.debug.spawnbutcher.*` row for each.
 
 **Kind 6** is appended, since kind order is a save contract, and **the species is 4**. There is
 **no item**: the cleaver is the species' natural attack (§5).
