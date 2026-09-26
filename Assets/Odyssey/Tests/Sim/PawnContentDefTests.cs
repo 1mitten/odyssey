@@ -329,7 +329,10 @@ namespace Odyssey.Tests.Sim
         // The frog merged with cover, 2026-09-26: re-taken from the merged pack.
         // The frog merged with raids, 2026-09-26: the gunman keeps kind 4 and the frog moves to 5;
         // re-taken from the merged pack.
-        const ulong ContentFingerprint = 11744128507824195914UL;
+        // 2026-09-26, prospecting (design 62 §7, DM6): Job_Prospect appended at 28 (workTicks 140,
+        // Mining at 55 a tick, revealRadius 3 and bands 6/12/18), and JobDef gained revealRadius and
+        // revealRadiusBands, nought and empty on every other job. Taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 13999022846201537044UL;
 
 
         [Test]

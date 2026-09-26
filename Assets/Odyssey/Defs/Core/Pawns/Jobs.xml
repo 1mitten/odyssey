@@ -345,4 +345,32 @@
     <trainsSkill>8</trainsSkill>
   </JobDef>
 
+  <!--
+    Prospecting (design 62 section 7), driver 28: a miner taps an exposed face and reads the rock
+    round it. workTicks 140 is a fifth of cutting a cell of rock (700), at mining's pace, so a
+    prospect is a few seconds at a face rather than a cell's work. It trains mining at half every
+    working job's rate: it is looking at rock, not cutting it, and a colony that prospected
+    everything would otherwise grow miners who had never swung a pick.
+    revealRadius is the square round the face, in cells, that becomes known at level 0, on the
+    face's own layer and one above and below; each entry of revealRadiusBands is a Mining level at
+    which it grows by one (INVENTED: 3, then 4 at 6, 5 at 12 and 6 at 18, the research's "one
+    per band" read against our own ladder of twenty levels). Expiry is mining's generous one, for
+    mining's reason: a face can be a long walk from the colony.
+  -->
+  <JobDef>
+    <defName>Job_Prospect</defName>
+    <driver>28</driver>
+    <workTicks>140</workTicks>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>2</trainsSkill>
+    <experiencePerWorkTick>55</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+    <revealRadius>3</revealRadius>
+    <revealRadiusBands>
+      <li>6</li>
+      <li>12</li>
+      <li>18</li>
+    </revealRadiusBands>
+  </JobDef>
+
 </Defs>

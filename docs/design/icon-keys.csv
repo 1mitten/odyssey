@@ -102,6 +102,7 @@ ui.status.building,Building,ui.status,M2,Working a frame or blueprint
 ui.status.deconstructing,Deconstructing,ui.status,M3,Taking one of our own buildings apart
 ui.status.mining,Mining,ui.status,M2,"Cutting into rock, ore or rubble"
 ui.status.digging,Digging,ui.status,DM,"Cutting out a cell of soft ground: grass, earth, sand, gravel or subsoil"
+ui.status.prospecting,Prospecting,ui.status,DM,"Tapping an exposed rock face to learn what the rock round it holds"
 ui.status.felling,Chopping,ui.status,M3,Cutting a tree down for wood
 ui.status.sowing,Sowing,ui.status,M3,Breaking ground and planting a zone cell
 ui.status.harvesting,Harvesting,ui.status,M3,Cutting a ripe crop and gathering it

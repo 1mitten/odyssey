@@ -870,6 +870,7 @@ namespace Odyssey.Hud
             { "ui.status.inrain", "In the rain" },
             { "ui.status.mining", "Mining" },
             { "ui.status.patient", "Resting as a patient" },
+            { "ui.status.prospecting", "Prospecting" },
             { "ui.status.recreating", "Recreating" },
             { "ui.status.refuelling", "Refuelling" },
             { "ui.status.rescuing", "Rescuing" },

@@ -389,6 +389,17 @@ namespace Odyssey.Presentation.World
         /// hillsides quarries. If that day comes, the cut face wants a bit of its own and this
         /// method is the one place that changes. <c>BankMeshTests.AQuarryInEarthKeepsItsSheerFace</c>
         /// is what fails.</para>
+        ///
+        /// <para><b>Prospecting (design 62 §7) is the first such way, and it stays clear of every
+        /// reader.</b> A prospect sets the flag on <i>rock-like</i> cells only
+        /// (<c>CellGrid.RevealRockWithin</c>), and three of <c>BankLayout</c>'s four readers ask
+        /// <c>IsEarth</c> of the same cell first, so a prospected cell never reaches them. The
+        /// fourth asks it of the floor under a bank cell, which is the top of the lower terrace —
+        /// grass, never rock, on the generated board. A rock floor under a natural bank that a
+        /// prospect reached would lose its bank; that is the one residue, and the day it is
+        /// reported the cut face gets its own bit (<c>CellFlags</c> has none free today). The
+        /// simulation's own answer to "is this a face somebody can work at" is
+        /// <c>CellGrid.IsExposedFace</c>, which asks for an open neighbour as well.</para>
         /// </summary>
         public bool IsCutFace(int index) => (_flags[index] & (byte)CellFlags.Discovered) != 0;
 

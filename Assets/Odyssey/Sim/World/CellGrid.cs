@@ -100,6 +100,69 @@ namespace Odyssey.Sim.World
         }
 
         /// <summary>
+        /// An exposed face: a solid cell the colony knows and can get at, because at least one of
+        /// its six face neighbours is open. What a Prospect order may be given on (design 62 §7).
+        ///
+        /// <para><b>Both halves, because prospecting pulled them apart.</b> Until prospecting a
+        /// solid cell carried <see cref="CellFlags.Discovered"/> only when the cell beside it had
+        /// been cut out, so "known" and "a cut face" were one fact. A prospect makes rock known
+        /// three cells deep without opening anything, and an order on one of those buried cells
+        /// would be an order nobody could stand at. So the open neighbour is asked here, once,
+        /// rather than left to every caller to remember.</para>
+        /// </summary>
+        public bool IsExposedFace(int index)
+        {
+            if (!IsSolidTerrain(index) || !IsDiscovered(index)) return false;
+
+            int stride = Size.LayerStride;
+            CellRef at = FromIndex(index);
+            if (at.X > 0 && !IsSolidTerrain(index - 1)) return true;
+            if (at.X < Size.SizeX - 1 && !IsSolidTerrain(index + 1)) return true;
+            if (at.Z > 0 && !IsSolidTerrain(index - Size.SizeX)) return true;
+            if (at.Z < Size.SizeZ - 1 && !IsSolidTerrain(index + Size.SizeX)) return true;
+            if (at.Y > 0 && !IsSolidTerrain(index - stride)) return true;
+            return at.Y < Size.SizeY - 1 && !IsSolidTerrain(index + stride);
+        }
+
+        /// <summary>
+        /// A prospect's reveal (design 62 §7): every rock-like solid cell within
+        /// <paramref name="radius"/> of <paramref name="index"/> in X and Z (a square, not a
+        /// diamond), on its layer and <paramref name="layersEachWay"/> above and below, becomes
+        /// known. Returns how many were not known before, and tells <paramref name="chunks"/>
+        /// about each one so the drawing re-meshes it — exactly the chunks a dig's
+        /// <see cref="RevealAround"/> dirties for the same change of flag.
+        ///
+        /// <para><b>Rock only, and never a void.</b> Soft ground has nothing to find in it and air
+        /// has nothing to know, so neither is touched: an unseen cavern in the radius stays unseen
+        /// (the breach is what opens one, DM5), and the terrain of no cell changes. Rock-like is
+        /// <see cref="TerrainHandle.IsRockLike"/>, the one rule the Mine order's drag and the tile
+        /// pane already ask.</para>
+        /// </summary>
+        public int RevealRockWithin(int index, int radius, int layersEachWay, ChunkGrid? chunks)
+        {
+            CellRef at = FromIndex(index);
+            int x0 = Math.Max(0, at.X - radius), x1 = Math.Min(Size.SizeX - 1, at.X + radius);
+            int z0 = Math.Max(0, at.Z - radius), z1 = Math.Min(Size.SizeZ - 1, at.Z + radius);
+            int y0 = Math.Max(0, at.Y - layersEachWay), y1 = Math.Min(Size.SizeY - 1, at.Y + layersEachWay);
+
+            int revealed = 0;
+            for (int y = y0; y <= y1; y++)
+            for (int z = z0; z <= z1; z++)
+            for (int x = x0; x <= x1; x++)
+            {
+                int cell = Index(x, z, y);
+                if (!IsSolidTerrain(cell) || IsDiscovered(cell)) continue;
+                if (!TerrainHandle.IsRockLike(Terrain[cell])) continue;
+
+                Flags[cell] |= CellFlags.Discovered;
+                chunks?.MarkDirty(x, z, y);
+                revealed++;
+            }
+
+            return revealed;
+        }
+
+        /// <summary>
         /// Take whatever stands in the cell out of the world: the handle goes, and so does the
         /// blocking flag, and the undergrowth flag a bush carries. The placement list keeps its
         /// slot, so other handles stay valid. A caller removing something that blocked, or a bush,
@@ -308,7 +371,9 @@ namespace Odyssey.Sim.World
 
         /// <summary>
         /// The colony has seen what this cell is made of. Set on every solid neighbour of a cell
-        /// that is mined out, and never cleared.
+        /// that is mined out, and on the rock round a face somebody prospected (design 62 §7,
+        /// <see cref="CellGrid.RevealRockWithin"/>), and never cleared. Since prospecting, known
+        /// is no longer the same as cut: <see cref="CellGrid.IsExposedFace"/> asks for both.
         ///
         /// <para>It exists for ore: a seam is drawn as plain rock until a face of it is exposed,
         /// so finding one is worth something and a tunnel is a free look at a lot of rock

@@ -29,6 +29,14 @@ namespace Odyssey.Sim.Designations
         /// its berries back and waits for the next.
         /// </summary>
         Harvest = 4,
+
+        /// <summary>
+        /// Read the rock round an exposed face (design 62 §7). A miner taps the face for a few
+        /// seconds and every rock-like cell within a few cells of it becomes known; the face
+        /// itself is left standing. Only on a face the colony has cut and can get at
+        /// (<see cref="DesignationGrid.CanProspect"/>).
+        /// </summary>
+        Prospect = 5,
     }
 
     /// <summary>
@@ -265,6 +273,8 @@ namespace Odyssey.Sim.Designations
                     return IsFellable(index);
                 case DesignationKind.Harvest:
                     return IsRipeBerryBush(index);
+                case DesignationKind.Prospect:
+                    return CanProspect(index);
                 default:
                     return false;
             }
@@ -344,6 +354,26 @@ namespace Odyssey.Sim.Designations
                 if (NaturalContent.IsWater(grid.Terrain[n])) return false;
                 return grid.HasFloor(n);
             }
+        }
+
+        /// <summary>
+        /// Can a prospect be ordered here? Rock or ore — anything
+        /// <see cref="TerrainHandle.IsRockLike"/> but bedrock, which has nothing behind it to
+        /// find — on an exposed face: known, and with open air beside it
+        /// (<see cref="CellGrid.IsExposedFace"/>, the one owner of that).
+        ///
+        /// <para><b>Soft ground refuses it</b>: grass, earth and subsoil carry no ore (design 62
+        /// §4), so reading them would be a few seconds spent learning nothing. <b>So does a face
+        /// nobody has cut</b>: the order is for looking further along a working, and a hillside
+        /// the colony has never opened is not one. A player who wants to know what is in a hill
+        /// digs into it first, which is the loop the ore sight was built for.</para>
+        /// </summary>
+        public bool CanProspect(int index)
+        {
+            if (!_grid.IsSolidTerrain(index)) return false;
+            ushort terrain = _grid.Terrain[index];
+            if (!TerrainHandle.IsRockLike(terrain) || terrain == NaturalContent.TerrainBedrock) return false;
+            return _grid.IsExposedFace(index);
         }
 
         /// <summary>Rock or ore that can be dug out — what a scenario means by "an outcrop".</summary>
@@ -490,7 +520,7 @@ namespace Odyssey.Sim.Designations
         /// <summary><c>Designate(cell, A = kind)</c>.</summary>
         public IntentRejection HandleDesignate(Intent intent)
         {
-            if (intent.A <= 0 || intent.A > (int)DesignationKind.Harvest) return IntentRejection.NotPermitted;
+            if (intent.A <= 0 || intent.A > (int)DesignationKind.Prospect) return IntentRejection.NotPermitted;
             return Designate(intent.Cell, (DesignationKind)intent.A, intent.B == DesignateRun.RockOnly);
         }
 

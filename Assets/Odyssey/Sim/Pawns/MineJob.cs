@@ -119,7 +119,20 @@ namespace Odyssey.Sim.Pawns
         /// stroke aimed downward rather than level — and <c>WorkStyle.Dip</c> is where that
         /// lives.</para>
         /// </summary>
-        public static int StandToMine(PawnContext ctx, Pawn pawn, int cell)
+        public static int StandToMine(PawnContext ctx, Pawn pawn, int cell) =>
+            StandAtFace(ctx, pawn, cell, cutting: true);
+
+        /// <summary>
+        /// Where a colonist stands to work at this rock face: <see cref="StandToMine"/>'s four
+        /// stances in its order, for any job done at a face.
+        ///
+        /// <para><paramref name="cutting"/> is whether the work takes the cell out. Only then does
+        /// the on-top stance drop the worker into the hole, so only then must that hole be one she
+        /// can jump out of (<see cref="DesignationGrid.CanBeLeftAfterCutting"/>). A prospect
+        /// (design 62 §7) leaves the face standing, so standing on it strands nobody; the
+        /// stances and their order are otherwise one rule for both, written once here.</para>
+        /// </summary>
+        public static int StandAtFace(PawnContext ctx, Pawn pawn, int cell, bool cutting)
         {
             // The rock itself must be hers to work (design 43 §4c), not only the stance: the
             // stances above and below may be home through the vertical margin when the rock is not.
@@ -177,7 +190,7 @@ namespace Odyssey.Sim.Pawns
             // buried cell — a cell in the middle of rock has no standable neighbour at all — which
             // made the first cut of a tunnel impossible and stopped mining almost dead: measured,
             // 143 of 8,885 marked cells survived the test.
-            if (!DesignationGrid.CanBeLeftAfterCutting(ctx.Cells, cell)) return -1;
+            if (cutting && !DesignationGrid.CanBeLeftAfterCutting(ctx.Cells, cell)) return -1;
 
             return above;
         }

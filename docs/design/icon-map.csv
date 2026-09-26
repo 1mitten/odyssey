@@ -87,6 +87,7 @@ ui.pawn.corpse,07,,,skull,high,mapped
 ui.status.hauling,08,,,duffel bag,low,mapped
 ui.status.building,06,,,hammer and tools tile,med,shared
 ui.status.mining,05,,,pickaxe,high,shared
+ui.status.prospecting,-,,,"a hand lens held to a rock face",-,gap
 ui.status.felling,-,,,"an axe swung at a trunk",-,gap
 ui.status.sleeping,08,,,mattress,high,shared
 ui.status.eating,02,,,bowl of cooked food,high,shared
