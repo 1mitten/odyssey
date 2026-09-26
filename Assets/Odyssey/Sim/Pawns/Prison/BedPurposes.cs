@@ -218,7 +218,18 @@ namespace Odyssey.Sim.Pawns
             int count = reader.ReadInt();
             for (int i = 0; i < count; i++) Add(reader.ReadInt());
             Version++;
+            Loaded = true;
         }
+
+        /// <summary>
+        /// Set by <see cref="Load"/> until the owner sweep has looked once (design 59 §16 #1): the
+        /// marks it read back are the ones the sweep had already acted on before the save, so the
+        /// sweep primes its memory from them rather than taking them for a change.
+        /// </summary>
+        public bool Loaded { get; private set; }
+
+        /// <summary>The owner sweep has primed itself from the loaded marks.</summary>
+        public void ClearLoaded() => Loaded = false;
 
         /// <summary>The marked beds, walked only while there are any: a colony with none hashes as before.</summary>
         public void ContributeTo(ref StateHash hash)

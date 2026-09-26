@@ -128,7 +128,7 @@ namespace Odyssey.Sim.Pawns
                 if (food.foodTier == bestTier && distance >= bestDistance) continue;
                 long key = ReservationManager.Key(ReservationTargetKind.Item, item.Id.Value);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
-                if (!ctx.CanTravel(pawn, at)) continue;
+                if (!ctx.CanTravel(pawn, at, pawn.OwnMode)) continue;
                 bestTier = food.foodTier;
                 bestDistance = distance;
                 best = i;
@@ -138,6 +138,9 @@ namespace Odyssey.Sim.Pawns
             job.Reset(JobIndex.Eat);
             job.TargetItem = items[best].Id;
             job.TargetCell = bestCell;
+            // In her own mode, never a colonist's (design 59 §16 #2): Reset leaves Colonist, which
+            // opens doors, and a route out of one door and in at another raised her own escape risk.
+            job.Mode = pawn.OwnMode;
             return true;
         }
 
@@ -148,7 +151,7 @@ namespace Odyssey.Sim.Pawns
         static bool TrySleepInCell(Pawn pawn, PawnContext ctx, Job job, int room)
         {
             int own = PrisonerTrees.OwnBed(pawn, ctx);
-            int bed = own >= 0 && ctx.CanTravel(pawn, own) && Free(pawn, ctx, own) ? own : -1;
+            int bed = own >= 0 && ctx.CanTravel(pawn, own, pawn.OwnMode) && Free(pawn, ctx, own) ? own : -1;
             if (bed < 0 && room != 0)
             {
                 var beds = ctx.Items.Beds;
@@ -157,7 +160,7 @@ namespace Odyssey.Sim.Pawns
                 {
                     int cell = beds[i];
                     if (!BedRules.CanUse(pawn, cell, ctx) || ctx.Enclosure!.RoomAt(cell) != room) continue;
-                    if (!Free(pawn, ctx, cell) || !ctx.CanTravel(pawn, cell)) continue;
+                    if (!Free(pawn, ctx, cell) || !ctx.CanTravel(pawn, cell, pawn.OwnMode)) continue;
                     int distance = ctx.Distance(pawn.Cell, cell);
                     if (distance >= bestDistance) continue;
                     bestDistance = distance;
@@ -166,6 +169,7 @@ namespace Odyssey.Sim.Pawns
             }
             job.Reset(JobIndex.Sleep);
             job.TargetCell = bed;
+            job.Mode = pawn.OwnMode;
             return true;
         }
 
@@ -188,11 +192,14 @@ namespace Odyssey.Sim.Pawns
         {
             if (!PrisonerTrees.IsShackled(pawn, ctx)) return false;
             int bed = PrisonerTrees.OwnBed(pawn, ctx);
-            if (pawn.Cell != bed && ctx.CanTravel(pawn, bed))
+            // Through a door as ToMyCell walks her into a cell (design 59 §16 #6): a shackle bed in
+            // a yard with a gate was out of reach in her own mode, and she waited where she
+            // surrendered for good, at the shackled risk.
+            if (pawn.Cell != bed && ctx.CanTravel(pawn, bed, TraverseMode.Colonist))
             {
                 job.Reset(JobIndex.Goto);
                 job.TargetCell = bed;
-                job.Mode = pawn.OwnMode;
+                job.Mode = TraverseMode.Colonist;
                 return true;
             }
             job.Reset(JobIndex.Wait);

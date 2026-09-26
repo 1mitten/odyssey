@@ -189,8 +189,13 @@ namespace Odyssey.Sim.Pawns
                     NextToil();
                     return JobStatus.Ongoing;
                 }
+                // A new side only at a step boundary (design 59 §16 #10), as the melee chase does:
+                // picked afresh every tick she moved, each new destination snapped the step in hand
+                // back, and an arrester crawled two cells in 400 ticks after anybody who walked on.
                 int stand = Job.TargetCell;
-                if (stand < 0 || stand == prisoner.Cell || !Beside(ctx.Size, stand, prisoner.Cell))
+                bool boundary = Pawn.MoveProgress < Pawn.MoveRatePerMille();
+                if (stand < 0 || stand == prisoner.Cell
+                    || (!Beside(ctx.Size, stand, prisoner.Cell) && (boundary || Pawn.Destination < 0)))
                     Job.TargetCell = stand = FellJobDriver.StandBeside(ctx, Pawn, prisoner.Cell);
                 if (stand < 0) return JobStatus.Failed;
                 return GotoCell(ctx, stand) == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;

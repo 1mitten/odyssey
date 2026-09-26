@@ -33,6 +33,10 @@ namespace Odyssey.Sim.Pawns
         public static void Contact(Pawn arrester, Pawn target, PawnContext ctx)
         {
             if (!CanBeArrested(target) || ctx.Combat == null) return;
+            // The bed is asked again at the touch (design 59 §16 #4). It was asked only when the
+            // order was given, and a capture that filled the last one on the way left her a
+            // prisoner with no bed, loose in the colony: nothing else ever gives her one.
+            if (CaptureRules.BedFor(target, arrester, ctx) < 0) return;
             int tick = ctx.CurrentTick;
             var rng = DeterministicRandom.ForTick(ctx.Seed, tick, PrisonPurpose.ArrestResist ^ (uint)target.Id.Value);
             bool resists = rng.NextInt(1_000) < ResistPerMille(target);

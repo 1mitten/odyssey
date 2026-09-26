@@ -1955,6 +1955,19 @@ namespace Odyssey.Sim.Construction
         public void SweepBedPurposes()
         {
             if (Purposes == null) return;
+            // **A load is not a change** (design 59 §16 #1). What the sweep last saw is not saved,
+            // so the first sweep after a load used to find the key moved and raise
+            // BedOwnershipChanged, waking a sleeper the twin that never saved left asleep. Owners
+            // were stripped before the save, so priming from what was loaded is what that twin
+            // holds: the key it last swept at, and whether there were any marks.
+            if (Purposes.Loaded)
+            {
+                Purposes.ClearLoaded();
+                _sweptNone = !Purposes.Any;
+                _everMarked |= Purposes.Any;
+                if (Purposes.Any) _sweptPurposes = Purposes.StateKey;
+                return;
+            }
             // A board with no prison bed, having been swept once with none, has nothing to find:
             // the only thing that can make a colonist's bed wrong for her is a mark.
             bool none = !Purposes.Any;
