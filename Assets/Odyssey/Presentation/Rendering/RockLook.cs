@@ -24,14 +24,15 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>
         /// Is this terrain stone, and so drawn as a lump rather than as a cube?
         ///
-        /// Rock, bedrock and both ore seams: the things a pick goes through. Soil, subsoil, sand
-        /// and grass stay flat-topped cubes on purpose — they are the ground a colony stands and
-        /// builds on, and a chipped, uneven floor would read as damage rather than as earth.
+        /// Rock, deep stone, bedrock and every ore: the things a pick goes through. Soil, subsoil,
+        /// sand and grass stay flat-topped cubes on purpose — they are the ground a colony stands
+        /// and builds on, and a chipped, uneven floor would read as damage rather than as earth.
+        /// The simulation's <see cref="NaturalContent.IsStone"/> plus bedrock, so a new ore or a
+        /// new rock-like stone is drawn as a lump without this line changing.
         /// </summary>
         public static bool IsStone(ushort terrain) =>
-            terrain == CoreContent.TerrainRock ||
             terrain == NaturalContent.TerrainBedrock ||
-            NaturalContent.IsOre(terrain);
+            NaturalContent.IsStone(terrain);
 
         /// <summary>Which of <see cref="RockMesh.Variants"/> lumps this cell wears.</summary>
         public static int Variant(int x, int z, int y) =>

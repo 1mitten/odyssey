@@ -107,6 +107,15 @@ namespace Odyssey.Presentation.Rendering
             new Color(0.21f, 0.41f, 0.39f, 0.62f),     // 18 shallow water — the bed reads through
             new Color(0.08f, 0.21f, 0.24f, 0.90f),     // 19 deep water — almost nothing does
             new Color(0.44f, 0.46f, 0.34f),            // 20 marsh — wet ground, not shadow
+
+            // Deep mining (design 62 §5). Deep stone is rock gone colder and denser, so a player
+            // can see where the slow cutting starts; the four ores reach this table only once
+            // discovered (WorldRenderModel.Seen draws them as rock until then).
+            new Color(0.17f, 0.19f, 0.24f),            // 21 deep stone — rock, bluer and darker
+            new Color(0.27f, 0.40f, 0.33f),            // 22 copper ore — verdigris
+            new Color(0.52f, 0.44f, 0.26f),            // 23 gold ore — pale rock threaded with gold
+            new Color(0.33f, 0.22f, 0.42f),            // 24 gems — a violet pocket
+            new Color(0.64f, 0.31f, 0.13f),            // 25 Emberquartz — warm orange crystal
         };
 
         /// <summary>
@@ -280,6 +289,17 @@ namespace Odyssey.Presentation.Rendering
             // against a dark grey and has nothing but the trim to be seen by.
             new Color(0.08f, 0.38f, 0.43f),            // 16 iron ore
             new Color(0.11f, 0.56f, 0.63f),            // 17 coal seam
+            Color.black,                               // 18 shallow water
+            Color.black,                               // 19 deep water
+            Color.black,                               // 20 marsh
+            Color.black,                               // 21 deep stone — stone, not a find
+            // The three new ores wear the same cyan trim as iron and coal: "there is something in
+            // there". Emberquartz is the one exception, and the point of it (design 62 §5c): it
+            // glows in its own warm hue, bright enough to read as a light down an unlit shaft.
+            new Color(0.08f, 0.40f, 0.44f),            // 22 copper ore
+            new Color(0.09f, 0.44f, 0.49f),            // 23 gold ore
+            new Color(0.11f, 0.52f, 0.58f),            // 24 gems
+            new Color(0.95f, 0.42f, 0.10f),            // 25 Emberquartz — its own warm glow
         };
 
         public static readonly Color TrimEmission = new Color(0.10f, 0.62f, 0.70f);

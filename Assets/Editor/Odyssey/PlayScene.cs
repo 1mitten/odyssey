@@ -1560,6 +1560,14 @@ namespace Odyssey.EditorTools
             StoneVariants(ModuleIds.Terrain("Bedrock"), "Mat_Rock_Rough_01");
             StoneVariants(ModuleIds.Terrain("IronOre"), string.Empty);
             StoneVariants(ModuleIds.Terrain("CoalSeam"), string.Empty);
+            // Deep mining (design 62 §5): deep stone wears the rough face like rock, and takes its
+            // colder colour from the tint; the four ores keep their flat colour and trim, as iron
+            // and coal do, so a find stays findable at a glance.
+            StoneVariants(ModuleIds.Terrain("DeepStone"), "Mat_Rock_Rough_01");
+            StoneVariants(ModuleIds.Terrain("CopperOre"), string.Empty);
+            StoneVariants(ModuleIds.Terrain("GoldOre"), string.Empty);
+            StoneVariants(ModuleIds.Terrain("Gems"), string.Empty);
+            StoneVariants(ModuleIds.Terrain("Emberquartz"), string.Empty);
 
             // Tufts of grass strewn over the ground. Chosen on triangles per square metre of
             // cover, because there is one of these on nearly every one of fourteen thousand
@@ -2007,6 +2015,37 @@ namespace Odyssey.EditorTools
                 prefabName = "SM_Gen_Env_Rock_Pebbles_02",
                 centreXZ = true, baseAtY = true,
                 scale = new Vector3(0.5f, 0.5f, 0.5f),
+            });
+            // Deep mining's four finds (design 62 §5c): placeholders on the same two rocks, told
+            // apart by size until each has art of its own — shards for the two ores and
+            // Emberquartz, a small low scatter for gems.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemCopperOre, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Env_Rock_08",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(0.14f, 0.14f, 0.14f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemGoldOre, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Env_Rock_08",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(0.12f, 0.12f, 0.12f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemGems, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Env_Rock_Pebbles_02",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(0.3f, 0.3f, 0.3f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemEmberquartz, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Env_Rock_08",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(0.18f, 0.18f, 0.18f),
             });
             // A harvest dropped on the field. The heap pass scatters one lump per few carrots in
             // the stack, so the row is one carrot you could carry, not a pile: the mature crop's

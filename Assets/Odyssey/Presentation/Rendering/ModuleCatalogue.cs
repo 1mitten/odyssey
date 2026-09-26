@@ -926,6 +926,14 @@ namespace Odyssey.Presentation.Rendering
         // Royale's SM_Wep_Pistol_Heavy_01, the ground item and the held prop alike.
         public const string ItemPistol = Prefix + "item.pistol";
 
+        // Deep mining's finds (design 62 §5c), handles 18 to 21. Rows for them are written by
+        // PlayScene and arrive when the catalogue is next rebuilt with the packs; until then they
+        // draw as the fallback box.
+        public const string ItemCopperOre = Prefix + "item.copperore";
+        public const string ItemGoldOre = Prefix + "item.goldore";
+        public const string ItemGems = Prefix + "item.gems";
+        public const string ItemEmberquartz = Prefix + "item.emberquartz";
+
 
         /// <summary>
         /// Module ids for item def indices, in <c>ItemIndex</c> order.
@@ -945,6 +953,8 @@ namespace Odyssey.Presentation.Rendering
             // The kitchen (design 48 §4), handles 14 to 16.
             ItemCookedMeal, ItemVegetableMeal, ItemBurntMeal,
             ItemPistol,
+            // Deep mining (design 62 §5c), handles 18 to 21.
+            ItemCopperOre, ItemGoldOre, ItemGems, ItemEmberquartz,
         };
 
         /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>
