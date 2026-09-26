@@ -1028,6 +1028,8 @@ namespace Odyssey.Presentation.Ui
             // which read as the game being open behind a dialog it was not open behind.
             bool playing = live != null;
             _worldUi.style.display = playing ? DisplayStyle.Flex : DisplayStyle.None;
+            // A ride belongs to the colony it was begun in (design 56 §5).
+            ResetRideUi();
             _backdrop.style.display = playing ? DisplayStyle.None : DisplayStyle.Flex;
 
             // The toast stack belongs to a colony and goes away with it (SK4). Not for the rows —

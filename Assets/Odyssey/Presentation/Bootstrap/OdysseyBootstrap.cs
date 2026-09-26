@@ -1524,13 +1524,21 @@ namespace Odyssey.Presentation.Bootstrap
             if (_renderer == null || _model == null || _world == null) return;
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
             SliceSettings slice = cameraRig != null ? cameraRig.slice : new SliceSettings();
-            slice.wallsLowered = WallsLoweredNow();
-            slice.landscapeGround = WallsChosenDown();
+            // Riding along with a colonist (design 56 §4) draws the building as it is: walls up
+            // whatever the player chose for the colony view, which comes back when the ride ends.
+            bool riding = cameraRig != null && cameraRig.Riding;
+            slice.wallsLowered = !riding && WallsLoweredNow();
+            slice.landscapeGround = !riding && WallsChosenDown();
             slice.landscapeFloor = _model.LowestOutdoorLayer;
 
             _frameTimer.Restart();
             System.Array.Clear(_sectionMs, 0, _sectionMs.Length);
             _sectionTimer.Restart();
+
+            // A ride's camera is stood here, first, because everything below reads the camera: the
+            // viewer position, the frustum and the sight lines (design 56 §3).
+            PlaceRide(_world.Views.Current);
+
             // The rig sits on the camera, so its position is the viewer's.
             if (cameraRig != null)
             {
@@ -1539,7 +1547,7 @@ namespace Odyssey.Presentation.Bootstrap
                 // field of view decides as much as the distance does.
                 if (cameraRig.Camera != null) _renderer.ViewerFieldOfView = cameraRig.Camera.fieldOfView;
                 // The clearance window follows what the camera looks at, not where it stands.
-                _renderer.ClearanceFocus = cameraRig.Focus;
+                _renderer.ClearanceFocus = cameraRig.ViewFocus;
                 // And the figure director wants it for one decision of its own: which colonists
                 // keep a live figure when there are more of them than the cap allows.
                 if (_figures != null) _figures.ViewerPosition = cameraRig.transform.position;
@@ -1659,7 +1667,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (_audio != null)
                 _audio.Sync(Time.deltaTime, _world.Views.Current,
                     cameraRig != null ? cameraRig.transform.position : transform.position,
-                    cameraRig != null ? cameraRig.Focus : transform.position,
+                    cameraRig != null ? cameraRig.ViewFocus : transform.position,
                     activeLayer);
             MarkSection(FrameSection.Audio);
 
@@ -1727,8 +1735,8 @@ namespace Odyssey.Presentation.Bootstrap
             if (_weather != null && Directors != null)
                 _weather.Sync(_world.Views.Current.Weather, Directors.Debug.RainAsParticles, _daylight,
                     cameraRig != null ? cameraRig.GetComponent<Camera>() : null,
-                    cameraRig != null ? cameraRig.Focus : transform.position,
-                    cameraRig != null ? cameraRig.TargetDistance : 48f,
+                    cameraRig != null ? cameraRig.ViewFocus : transform.position,
+                    cameraRig != null ? cameraRig.ViewDistance : 48f,
                     slice.BelowSurface(activeLayer), _world.CurrentTick, ticksPerSecond,
                     _figures?.Running ?? true, Time.deltaTime, Directors.Debug.WetGlossOnly, _wind);
             _floaterView?.Draw(_combatFeedback.Floaters,
@@ -1741,7 +1749,7 @@ namespace Odyssey.Presentation.Bootstrap
             // the camera. Game seconds, so a paused world holds them in the air (design 50 §3).
             _birds?.Sync(Time.deltaTime * _world.GameSpeed, _world.CurrentTick, _world.Views.Current.Weather,
                 _world.Views.Current.Pawns,
-                cameraRig != null ? cameraRig.TargetDistance : 48f,
+                cameraRig != null ? cameraRig.ViewDistance : 48f,
                 slice.BelowSurface(activeLayer),
                 slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY));
             MarkSection(FrameSection.Birds);
@@ -1755,8 +1763,8 @@ namespace Odyssey.Presentation.Bootstrap
                 _butterflies.Sync(_world.Views.Current.Running ? Time.deltaTime : 0f, _world.CurrentTick, hour,
                     _weather?.Cloud ?? 0f, _weather?.Rain ?? _world.Views.Current.Weather.RainPerMille / 1000f,
                     _crowd,
-                    cameraRig != null ? cameraRig.Focus : transform.position,
-                    cameraRig != null ? cameraRig.TargetDistance : 48f,
+                    cameraRig != null ? cameraRig.ViewFocus : transform.position,
+                    cameraRig != null ? cameraRig.ViewDistance : 48f,
                     cameraRig != null ? cameraRig.transform.position : transform.position,
                     bloodLowest, bloodHighest, slice.BelowSurface(activeLayer));
             }
@@ -2938,6 +2946,56 @@ namespace Odyssey.Presentation.Bootstrap
         static readonly Color CutColour = new Color(0.86f, 0.87f, 0.90f, 0.30f);
 
         /// <summary>
+        /// Stand a ride's camera (design 56 §3) from where her figure was last drawn, and take her
+        /// head away while the camera is against it (§4). Nothing, and the head given back, when no
+        /// ride is running.
+        ///
+        /// <para>Her figure first, because that is where she is drawn: the jump's arc, the climb and
+        /// the swim are laid over <see cref="PawnPose.Of"/> by the figure director and a camera
+        /// that followed the bare pose would leave her behind on every one of them. The pose is the
+        /// fallback for the frames before her figure is leased.</para>
+        /// </summary>
+        void PlaceRide(WorldSnapshot snapshot)
+        {
+            if (cameraRig == null || !cameraRig.Riding || Directors == null)
+            {
+                if (_figures != null) _figures.HeadHidden = null;
+                return;
+            }
+
+            PawnId id = Directors.Ride.Pawn;
+            bool known = false;
+            Vector3 feet = Vector3.zero;
+            float facing = cameraRig.RideYaw;
+            float eyeLift = RideCamera.DefaultEyeLift;
+
+            if (_figures != null && _figures.TryGetFeet(id, out Vector3 drawn))
+            {
+                known = true;
+                feet = drawn;
+                if (_figures.TryGetFacing(id, out float yaw)) facing = yaw;
+                // The head bone is the base of the skull; the eyes are a hand above it on a figure
+                // drawn at 1.4 times. Smoothed by the rig, so the walk's bob does not reach the view.
+                if (_figures.TryGetHead(id, out Vector3 head))
+                    eyeLift = Mathf.Clamp(head.y - drawn.y + RideEyeAboveHeadBone, 0.3f, 3f);
+            }
+            else if (snapshot.TryGetPawn(id, out PawnView view))
+            {
+                known = true;
+                feet = PawnPose.Of(view, _tickAlpha, MovePerTick, out Vector3 heading, _model);
+                if (heading.sqrMagnitude > 1e-6f) facing = Mathf.Atan2(heading.x, heading.z) * Mathf.Rad2Deg;
+            }
+
+            cameraRig.PlaceRide(known, feet, facing, eyeLift, Time.unscaledDeltaTime);
+
+            if (_figures != null)
+                _figures.HeadHidden = cameraRig.RideFromEyes < SliceCameraRig.HeadClearMetres ? id : (PawnId?)null;
+        }
+
+        /// <summary>How far above the head bone a figure's eyes are, in metres, at the figures' 1.4 scale.</summary>
+        const float RideEyeAboveHeadBone = 0.12f;
+
+        /// <summary>
         /// The lines the renderer fades along: eye to chest, one per selected colonist.
         ///
         /// <para><b>The same point the bracket is drawn at and the same point the hit-test aims
@@ -2963,7 +3021,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (!seeThroughToSelection || cameraRig == null) return;
 
             Vector3 eye = cameraRig.transform.position;
-            Vector3 focus = cameraRig.Focus;
+            Vector3 focus = cameraRig.ViewFocus;
             float lift = colonistCursor.y * 0.5f;
 
             // Selected colonists first: they are who the player is watching, and they must never
@@ -2983,6 +3041,17 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Lines past this point fade only trees and bushes (SightLines.Primary).
             _sight.Primary = _sight.Count;
+
+            // The colonist a ride is watching (design 56 §4): trees and bushes between the camera
+            // and her fade, as they do for the selection. Past the primaries, because a wall beside
+            // her must not fade — the ride's camera is kept out of walls rather than seeing through
+            // them — and a ride clears the selection, so she is never both.
+            if (cameraRig.Riding && Directors != null
+                && snapshot.TryGetPawn(Directors.Ride.Pawn, out PawnView ridden) && lines < MaxSightLines)
+            {
+                _sight.Add(eye, FeetOf(ridden, snapshot.Pawns, movePerTick) + Vector3.up * lift);
+                lines++;
+            }
 
             // Then every other colonist on screen, nearest the focus first, up to a fixed count
             // (owner, 2026-09-24: trees fade for every colonist). Bounded so the cost does not

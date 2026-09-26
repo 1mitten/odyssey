@@ -34,7 +34,7 @@ namespace Odyssey.Presentation.CameraRig
     /// setting.
     /// </summary>
     [RequireComponent(typeof(UnityEngine.Camera))]
-    public sealed class SliceCameraRig : MonoBehaviour
+    public sealed partial class SliceCameraRig : MonoBehaviour
     {
         [Header("Slice")]
         public SliceSettings slice = new SliceSettings();
@@ -287,6 +287,9 @@ namespace Odyssey.Presentation.CameraRig
 
         public void Bind(WorldRenderModel model, ChunkRenderer renderer, HudDirectors directors)
         {
+            // A session that ended mid-ride hands the next one the colony view's drawing and the
+            // pointer back, not the ride's (design 56 §5).
+            RestoreFromRide();
             _model = model;
             _renderer = renderer;
             _directors = directors;
@@ -303,6 +306,15 @@ namespace Odyssey.Presentation.CameraRig
         {
             if (_model == null || _directors == null) return;
             float dt = Mathf.Max(Time.unscaledDeltaTime, 1e-4f);
+
+            // Riding along with a colonist (design 56): the view is hers until Escape, so none of
+            // the colony view's input is read and nothing is picked. The camera is stood in
+            // LateUpdate by the composition root, where her figure has a position (PlaceRide).
+            if (SyncRide())
+            {
+                ReadRide();
+                return;
+            }
 
             ReadKeyboard(dt);
             ReadMouse(dt);

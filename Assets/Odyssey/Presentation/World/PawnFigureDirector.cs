@@ -1204,6 +1204,53 @@ namespace Odyssey.Presentation.World
             ApplyWorkPose();
             CheckSocialGreetings();
             ApplyGazePose(deltaTime);
+            // Last, after every pass that turns the head: what is shrunk is the pose as drawn.
+            ApplyHeadHidden();
+        }
+
+        /// <summary>
+        /// The colonist whose head is taken out of the picture, or none: set by a ride whose camera
+        /// is at, or pushed up against, her eyes (design 56 §4).
+        ///
+        /// <para><b>Why the head goes rather than being looked past.</b> The face is part of the one
+        /// skinned body and its ink hull is drawn with front faces culled, so a camera inside the
+        /// head sees the hull's inside as solid black; and there is no separate head renderer to
+        /// switch off. Shrinking the head bone to nothing takes the face, the hull and the hair,
+        /// beard and headgear slots parented on it all at once, and nothing else. The shadow's head
+        /// goes with it, which from behind her own eyes nobody sees.</para>
+        /// </summary>
+        public PawnId? HeadHidden { get; set; }
+
+        /// <summary>The head bone currently shrunk, and the scale it had, to give back.</summary>
+        Transform? _shrunkHead;
+        Vector3 _shrunkHeadScale = Vector3.one;
+
+        /// <summary>The scale a hidden head is drawn at: small enough to be nothing, not zero, so no matrix degenerates.</summary>
+        const float HiddenHeadScale = 0.001f;
+
+        /// <summary>
+        /// Shrink the hidden colonist's head bone and restore any other. Every frame, because the
+        /// figure a head was hidden on can be retired and leased to somebody else between two
+        /// frames, and that somebody must not arrive headless.
+        /// </summary>
+        void ApplyHeadHidden()
+        {
+            Transform? want = null;
+            if (HeadHidden is PawnId id && _byPawn.TryGetValue(id.Value, out Figure? figure))
+                want = figure.Head;
+
+            if (_shrunkHead != null && _shrunkHead != want)
+            {
+                _shrunkHead.localScale = _shrunkHeadScale;
+                _shrunkHead = null;
+            }
+            if (want == null) return;
+            if (_shrunkHead != want)
+            {
+                _shrunkHeadScale = want.localScale;
+                _shrunkHead = want;
+            }
+            want.localScale = _shrunkHeadScale * HiddenHeadScale;
         }
 
         /// <summary>
