@@ -613,6 +613,9 @@ namespace Odyssey.Presentation.Ui
             BuildResearch();
             BuildAssign();
             BuildAlmanac();
+            // The ride's strip (design 57 §6): outside the in-game container, since it is what shows
+            // while that container is put away, and under the start screen and the modals.
+            BuildRide();
 
             // B18, last, so it is the top-most element in the tree and its scrim covers everything
             // above. Built whether or not a session exists, because the state it belongs to is the
@@ -858,6 +861,10 @@ namespace Odyssey.Presentation.Ui
             }
 
             _directors!.Refresh(world.Views.Current);
+            // The ride (design 57): noticed going, the slice kept on her layer, and the interface
+            // swapped for the strip on the frame one begins or ends.
+            _directors.AdvanceRide(world.Views.Current, Time.unscaledDeltaTime);
+            SyncRideUi();
 
             if (!_surfaceCaptured)
             {
@@ -883,6 +890,7 @@ namespace Odyssey.Presentation.Ui
                 _fast = 0f;
                 RefreshStrip();
                 RefreshInspect();
+                RefreshRide();
             }
             if (_mid >= MidBucketSeconds)
             {

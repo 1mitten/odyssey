@@ -23,6 +23,19 @@ the next session learns to ignore.
 
 ## Open
 
+- **First Person: does the shoulder camera show a colonist's day and a fight clearly?**
+  (`claude/planning-session-fok6wm`, design 57.) Select a colonist, press **First Person** on her
+  card, and let her work, walk up a terrace and go through a door.
+  - Draft her into a melee fight and watch it. Wrong: her body hides the blow, or the camera swings
+    about as she turns.
+  - Wheel in to the eyes. Wrong: a black smear or a hollow face in view, or it makes you queasy.
+  - Walk her along a wall and into a small room. Wrong: the camera goes through the wall or jumps
+    in and out.
+  - Press Escape. Wrong: the camera does not come back where it was, walls-down does not come back,
+    or the pointer stays hidden.
+  - Read the strip at the bottom. Wrong: a missing fact you wanted, or it covers the action.
+  - Check the card's buttons now Prioritise is gone. Wrong: her name runs under them.
+
 - **Do the frogs read as frogs, and are they where the water is?** (`claude/frog`, design 30 §8.)
   New game on the meadow and look along a stream or a pond: there should be groups of three to five
   bright emerald, red-eyed frogs on the banks (about 0.9 m long since the owner's first ask), and none
