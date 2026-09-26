@@ -62,6 +62,25 @@ namespace Odyssey.Presentation.Ui
             }
         }
 
+        bool _solid;
+
+        /// <summary>
+        /// Fill the closed shapes in the tint <b>and</b> stroke the outline over them: the inspect
+        /// header's toggles when on (design 61 §2), so the same icon reads as an outline off and a
+        /// solid on without swapping. The fill is even-odd across every subpath at once, which is
+        /// what keeps the eye's pupil a hole. Ignored for a glyph built with <c>fill</c>.
+        /// </summary>
+        public bool Solid
+        {
+            get => _solid;
+            set
+            {
+                if (_solid == value) return;
+                _solid = value;
+                MarkDirtyRepaint();
+            }
+        }
+
         void Paint(MeshGenerationContext context)
         {
             Rect r = contentRect;
@@ -79,6 +98,22 @@ namespace Odyssey.Presentation.Ui
             painter.lineCap = LineCap.Round;
             painter.lineJoin = LineJoin.Round;
             painter.lineWidth = Mathf.Max(1f, _stroke * scale);
+
+            // One path holding every closed subpath, so even-odd sees the pupil inside the lid.
+            if (_solid && !_fill)
+            {
+                painter.BeginPath();
+                for (int p = 0; p < _paths.Count; p++)
+                {
+                    if (!_paths[p].Closed) continue;
+                    float[] pts = _paths[p].Points;
+                    painter.MoveTo(new Vector2(ox + pts[0] * scale, oy + pts[1] * scale));
+                    for (int i = 2; i < pts.Length; i += 2)
+                        painter.LineTo(new Vector2(ox + pts[i] * scale, oy + pts[i + 1] * scale));
+                    painter.ClosePath();
+                }
+                painter.Fill(FillRule.OddEven);
+            }
 
             for (int p = 0; p < _paths.Count; p++)
             {

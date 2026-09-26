@@ -14266,3 +14266,30 @@ judgement with her worn range against the outdoor reading, so the bare colonist'
 clock always agree. The blend is the default because the owner's words were "more towards red if
 not good"; the bands are one switch away if it reads worse. Tests that asserted a band now ask the
 table for the ink, so retuning a scale moves only `StatInksTests`.
+
+### 2026-09-26 — the inspect header: two toggles, and the response leaves it
+
+Claude Design's mockup 24c replaced the colonist header's four checkbox buttons with two large
+icon toggles, Draft and First Person, and a Close over an Info (design 61). Three things came out of
+fitting it to the pane that exists rather than the one drawn.
+
+**The tile is 40, not 44.** The mockup's header is 88 high round a 64 px portrait; ours is 60 round
+a 60 px one, and the brief says not to touch the rest of the pane. A 44 px tile, its gap and a label
+stand 65 high. The tile is derived from the header now, and a test holds the sum, so the next person
+to grow the portrait moves the tile with it rather than finding it overflowing.
+
+**R and V were both taken.** R is slice-up, which the owner kept on 2026-09-23, so Draft stays on T.
+V is the cutaway cycle, so First Person became a new action on **Z**, which also settles design
+57's owed key. `HotkeyDirectorTests` had been using Z as its spare unbound key, which is why five
+tests failed on the first run; they use J now.
+
+**The draft no longer rebuilds the header.** It was in the rebuild signature, because the old button
+changed face by being rebuilt. The face is the whole selection's now (on only when everyone is
+drafted, a red line when some are), and it is set in place. Taking `:drafted` out of the signature
+is what makes that safe: nothing else in the header depended on it.
+
+The response (Fight back, Defend, Flee) left the header. It is a setting rather than an action, and
+the Assign tab's column holds it for every colonist at once.
+
+The owner played it the same day: *"it's great - happy to get this resolved and get it ready for a
+merge"*. Nothing moved, so Z for First Person and the 40 px tile stand.

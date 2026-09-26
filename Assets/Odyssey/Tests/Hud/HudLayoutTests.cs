@@ -151,6 +151,23 @@ namespace Odyssey.Tests.Hud
                 "the header's lines of text no longer fit beside the portrait");
         }
 
+        /// <summary>
+        /// The header's actions stand inside the header (design 61): a toggle's tile, gap and label
+        /// are exactly its height, and Close over Info fit in it with room between. The mockup's
+        /// 44 px tile would have stood 65 high in this 60 px header and pushed the tab strip down.
+        /// </summary>
+        [Test]
+        public void TheHeaderActionsFitTheHeader()
+        {
+            Assert.That(HudLayout.InspectToggleTile + HudLayout.InspectToggleGap + HudLayout.InspectToggleLabel,
+                Is.EqualTo(HudLayout.InspectHeader), "a toggle is not the header's height");
+            Assert.That(HudLayout.InspectToggleIcon, Is.LessThan(HudLayout.InspectToggleTile - 2 * HudTheme.BorderWidth),
+                "the toggle's icon touches its tile's border");
+            Assert.That(HudLayout.InspectToggleTile, Is.LessThanOrEqualTo(HudLayout.InspectToggleWidth));
+            Assert.That(2 * HudLayout.InspectStackButton, Is.LessThan(HudLayout.InspectHeader),
+                "Close and Info no longer fit one over the other");
+        }
+
         [Test]
         public void NoTwoPanelsOverlapAtAnyOfTheThreeResolutions()
         {
