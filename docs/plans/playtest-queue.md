@@ -23,6 +23,17 @@ the next session learns to ignore.
 
 ## Open
 
+- **The Pig Butcher: does it read as huge and dangerous, and is it too hard?** (`claude/pig-butcher`,
+  design 62.) Debug → Spawn → **Spawn butcher** near two or three drafted colonists, and order them
+  on to it.
+  - Watch one swing. Wrong: you cannot tell which three cells it will hit before it lands. The red
+    plates should give you time to step aside.
+  - Watch a fling. Wrong: it reads as a teleport or a shove, not a throw two cells back.
+  - Fight it in a doorway or under a roof. Wrong: its head through the ceiling bothers you. It is
+    3.6 m tall against a 3 m storey (§8a).
+  - Let it win or lose. The probe says it beats four bats every time (§4a). Wrong: that is not the
+    difficulty you want.
+
 - **First Person: does the shoulder camera show a colonist's day and a fight clearly?**
   (`claude/planning-session-fok6wm`, design 57.) Select a colonist, press **First Person** on her
   card, and let her work, walk up a terrace and go through a door.

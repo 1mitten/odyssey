@@ -14139,3 +14139,51 @@ box" is the per-label figure, the only quantity `docs/lessons.md` (2026-09-23) f
 unchanged; 3 × 17.0 / 30.9 ≈ 1.65 here, a 2.12 ms budget), and an unknown machine keeps the strict
 3. The label goes on after the fix is merged, or every PR branched from the old `main` could fail
 on whichever runner picked it up.
+
+## 2026-09-26 — The Pig Butcher: a boss in one cell (design 62)
+
+The owner supplied POLYGON Fantasy Rivals and asked for its Pig Butcher as a raid enemy: large,
+possibly more than one tile, very hard to kill, a wide swing that usually knocks colonists back.
+
+**Why one cell.** RimWorld and Dwarf Fortress keep every creature to one cell. XCOM 2's true 2×2
+units have to smash walls, because doors cannot admit them. A footprint here would have been a
+clearance map, a second region graph and four-cell occupancy, for a bulk the traverse mode already
+gives. So the butcher is one cell, drawn 3.64 m tall, on `TraverseMode.Animal`: no ladder, and a
+closed door is a wall it breaks down by the bandit's own fallback. Reusing that mode costs no sixth
+district flood. The owner took this, a front arc of three, a two-cell fling with a slam, and debug
+spawn only (research `b-large-enemies-and-knockback`).
+
+**What was already there.** A one-tile critical knockback, stun and knock-down, the blow decided
+at the wind-up, and one owner of damage. The sweep and the fling are built on those, not beside
+them:
+- the facing rides in four spare bits of `PendingSwing`, which is already saved and hashed;
+- the flanks roll on their own streams;
+- `KnockBack`'s body became `Displace`, shared with the fling;
+- immunity is the only new saved field (`CombatSection` layout 6, hash bit 28).
+
+**Two departures from the plan, both smaller:**
+- **The cleaver is the species' natural attack, not an item.** An item would have been a new item
+  handle, a store filter row, an Inventory entry and an icon, for a weapon nobody else should swing.
+- **The critical knockback was not rewritten as the fling's distance-1 call.** The two rules differ
+  on purpose — a bystander is slept beside, or slammed; a two-layer drop is refused, or fallen — and
+  one method carrying both would be two rules with a flag. `KnockbackTests` pass unedited.
+
+**The package.** All 1,299 of its bundled PolygonGeneric entries were already here under identical
+GUIDs, so only `PolygonFantasyRivals/` was unpacked (research `e-16`). The character is Humanoid
+with Battle Royale's bones, so the person clips and the Sword Combat heavy swings drive it. It
+ships no clips of its own.
+
+**Measured, not guessed.** The giant is 1.822 m sole to crown against a colonist body's 1.791, but
+two and a half times as deep. Scale 2.0 stands it 3.64 m, 1.45 times a colonist.
+
+The catalogue rebuild reordered four item rows and wrote default fields, so the two new rows were
+spliced into the committed asset: 128 lines added, none removed (the 2026-09-18 lesson).
+
+**The balance, before any play:** one butcher beats four drafted colonists with bats on all three
+seeds, keeping 58–77 % of its pool, and nobody dies (design 62 §4a). That is "really difficult"
+taken literally, and it is the owner's to tune.
+
+**Found on the way.** A person holding no item always punched in presentation, whatever its species
+carried. `CombatPose.StyleFor` now takes the kind's natural style, which changes nothing for anybody
+before the butcher.
+

@@ -16,9 +16,9 @@ not a bigger number on one blow. It is a **swing that sweeps three cells** and u
 whoever it lands on two cells back**, into a wall, into a neighbour or off a ledge. Its size is in
 how it fights and how it is drawn, **not in how many cells it fills**.
 
-The names are ours: the **butcher** (`PawnKind_Butcher`, `Species_Butcher`), the **cleaver**
-(`Item_Cleaver`), the **sweep** (`SweepDef`), the **fling**, the **slam**, the **brute's body**
-(`Health_Brute`).
+The names are ours: the **butcher** (`PawnKind_Butcher`, `Species_Butcher`), the **cleaver** (its
+species' natural attack), the **sweep** (`SweepDef`, `SweepArc`), the **fling** (`FlingCell`,
+`FlingStop`), the **slam**, the **brute's body** (`Health_Brute`).
 
 **What existed and is reused, not rebuilt:**
 - the hostile person and its mind (design 33 §5, `HostileThinkNode`), including breaking a closed
@@ -73,9 +73,8 @@ of a heavy thing, not a fault; the first play says whether it strands one.
 | | `bodyLengthMm` | **3600** | drawing only; the figure's scale is measured (§8) |
 | | `health` | `Health_Brute` | its own body (§6) |
 | | `unstoppable` | **true** | never stunned, never knocked back (§7) |
-| `Item_Cleaver` | damage / wind-up / cooldown | **14 / 54 / 170** ticks | sharp; the wind-up is the telegraph, about 0.9 s |
-| `SweepDef` | `flankCells` | **2** | the front arc of three: target plus two |
-| | `knockbackPerMille` | **750** | "in most cases" |
+| | `naturalAttack` (the cleaver) | damage **14**, wind-up **54**, cooldown **170** ticks | sharp, Heavy; the wind-up is the telegraph, about 0.9 s |
+| `SweepDef` | `knockbackPerMille` | **750** | "in most cases" |
 | | `distance` | **2** | owner |
 | | `slamDamage` | **8** points | blunt, through `Hurt`; to both on a pawn slam |
 | | `knockedDownTicks` | **120** | about 2 s (owner) |
@@ -85,13 +84,38 @@ A colonist has 100 points and pain shock at 64 (design 43 §3).
 - **A cleaver blow is 14 ± 20 %**, and a critical is 21. So **four or five landed blows down a
   colonist**, and a slam adds 8.
 - **Four colonists with bats need about 70 landed blows** to down the butcher. The balance probe
-  (§10) measures how it actually goes.
+  (§10) measures how it actually goes, and §4a has what it found.
+
+### 4a. Measured: one butcher against four bats (2026-09-26)
+
+`ButcherBalanceProbe.OneButcherAgainstFourBats`: four colonists drafted, armed with bats, ordered
+on to it from eight cells away, 5,400 ticks (a game minute and a half), a lockstep twin beside each
+run. The simulation's own numbers, before any play:
+
+| Seed | Its swings | Blows landed (target + flanks) | Flings | Slams | Colonists down | Butcher left |
+|---|---|---|---|---|---|---|
+| 1 | 18 | 18 | 7 | 0 | **4 of 4** | 326 / 500 |
+| 2 | 17 | 20 | 12 | 0 | **4 of 4** | 291 / 500 |
+| 3 | 13 | 19 | 9 | 0 | **4 of 4** | 384 / 500 |
+
+**The butcher wins, every time, with two-thirds of its pool left.** Nobody died: an ordered fight
+may kill, and this one ends in downs. That is the owner's "really difficult" taken literally, and
+it is the number to tune against at the first play: a pool of 300, a cooldown of 200, or a lower
+fling chance are each one XML line (§4). Four bats are not the colony's best answer. Pistols from
+range (the butcher's intercept is the reference's ceiling) and a line of sandbags are, and neither
+was in this probe.
 
 ## 5. The sweep
 
-**A property of the species, not of the weapon.** The cleaver is an ordinary heavy blade: it
-drops when the butcher dies, and a colonist who picks it up gets a good weapon, not the butcher's
-moves. This follows what a species already carries (`naturalAttack`, `meleeSkill`).
+**A property of the species, not of the weapon.** The sweep, the fling and the cleaver itself are
+the butcher's, carried as a species carries a hog's tusks (`naturalAttack`, `meleeSkill`, `sweep`,
+`unstoppable` on `SpeciesDef`).
+
+**The cleaver is not an item** (a departure from the plan, 2026-09-26). An item would have been a
+new item handle (a save contract), a row in every store's filter, an Inventory entry, an icon and
+a Spawn row, all to hold a weapon nobody else should swing. As the species' natural attack it does
+not drop, nobody picks it up, and `WeaponRules.ArmamentOf` already reaches for it when the hand is
+empty. Presentation draws it in the fist as the row's `HandProp` (§8).
 
 **The primary blow is unchanged.** At the wind-up the target's blow is decided exactly as now
 (design 33 §9g) and kept on the pawn. **The facing is kept with it**: the direction from the
@@ -135,11 +159,22 @@ stages, falls) is the person's.
 
 ## 7. The fling
 
-`KnockbackCell` is generalised to **`FlingCell(origin, target, distance)`**. It walks away from
-`origin`, one step at a time, up to `distance`, and returns what stopped it. **The critical
-knockback is its distance-1 call**, so there is one owner and `KnockbackTests` stays unedited.
+**`CombatSystem.FlingCell(ctx, attacker, target, distance)`** walks straight away from the attacker,
+one step at a time, up to `distance`, and returns a `FlingPath`: where it lands and what stopped it
+(`FlingStop`). **What moves the pawn is shared**: `KnockBack`'s body became
+`CombatSystem.Displace` — end the job, move, knock down, re-issue a player's order, report
+`KnockedBack` — and the critical knockback and the fling both go through it, so the two cannot
+disagree about what being knocked down is.
 
-Each step obeys today's one-step rule:
+**The one-tile rule itself was not rewritten** (a departure from the plan). `KnockbackCell` is
+untouched and `KnockbackTests` pass unedited. The two rules differ on purpose:
+- the critical lays its target beside a bystander, where the fling slams into one;
+- the critical refuses a two-layer drop, where the fling falls down it.
+
+A shared step with flags for both would have been two rules in one method. The fling reuses the
+knockback's pieces instead: `IsWater`, `Passable`, `Melee.Holds` and `OnWhoItFights`.
+
+Each step obeys the one-step rule's ground:
 - a step the target could take, or one terrace step down;
 - never water;
 - never a cell another fighter holds;
@@ -168,6 +203,9 @@ hard enough to fly, and something stopped it.
   but never set it, so bandit fights are unchanged.
 - It lives on the pawn, is saved in `CombatSection` **layout 6**, and is hashed only while set.
   Hashing is under bit 28 of the pawn word, since bits 28–31 were free.
+- The random purposes are SHA-256's 33rd and 34th round constants, `PawnPurpose.Sweep` and
+  `SweepKnock`. The 25th to the 32nd were already taken on `main` or on branches in flight: raids,
+  weather, prisons and trade.
 - It counts in `HasCombatState`, and is put back to nought when it runs out, as the other clocks
   are.
 
@@ -181,89 +219,142 @@ hard enough to fly, and something stopped it.
 **The art** is `SM_Chr_BR_PigButcher_01` from POLYGON Fantasy Rivals, imported as its own folder
 only (research `e-16`). It is licensed, gitignored, and absent on the runner.
 
-**The row** is a catalogue row appended after the gang rows, out of the colonist lottery.
-- Its prefab is pinned under `Assets/Synty/PolygonFantasyRivals`, a later pack that loses every
+**The row** is `odyssey.module.pawn.hostile.butcher` (`ModuleIds.Hostile(6)`), with the cleaver
+beside it at `….butcher.weapon`. It is out of the colonist family, so there is no lottery, no
+swatches, and no look index of anybody else's moves.
+- Its prefab is pinned under `Assets/Synty/PolygonFantasyRivals`, now a later pack that loses every
   name tie (`PlayScene.LaterPacks`).
 - The Masc person clips drive it (idle, walk, run), with the Sword Combat `swing.heavy` role
   (`HeavyCombo01A/B/C`). The swing's impact is timed to the cleaver's 54-tick wind-up by the
   mechanism every swing already uses.
-- **Scale is measured, not guessed.** The target is about 1.45× a colonist's drawn height. The
-  measurement goes in §8a.
-- The look is chosen **by kind**: `PawnOutfits` gains the butcher before its "hostile person →
-  bandit" rule, so the butcher keeps the pack's own clothes, head and face. The hair, beard and
-  headgear slots are off.
+- **Its swing is heavy because its species' attack is**: `CombatPose.StyleFor` takes the kind's
+  natural style (`PawnFigureDirector.KindStyles`, built from the content) when the hand holds no
+  item. Before this, a person with no item always punched.
+- **Scale 2.0, measured** (§8a).
 
-**The cleaver** in the hand is `SM_Wep_PigButcher_01`, seated as the cleaver item's row.
+**The look is chosen by kind.** The figure director's per-kind looks — the animals' table until now
+— hold the butcher too (`HasKindRow`, `HostileLookFrom`). The look is a person's, so it gets the
+combat layer, the work bones and a person's height window, and it is marked **`OwnPaint`**:
+- the head is not bared;
+- no overlay is switched on;
+- there are no hair, beard or headgear slots;
+- `Repaint` puts the art's own materials back rather than dressing it.
 
-**The fling** is drawn by `KnockbackSlide`, whose refusal above 1.5 cells rises to **2.5**, with a
-low arc. A fall past a ledge is drawn as today's one-step drop continued. The landing plays the
-KnockDown Begin, Loop and End clips already mapped. A slam shows an impact floater.
+A corpse wears the same row.
 
-**The telegraph.** For the length of the wind-up, the three cells of the arc carry a dim red plate:
-presentation only, one instanced call, like the order marks.
+**Its own box.** The butcher carries a drawn box as an animal does. `PawnFigureDirector.HasOwnBox`
+is the one question the health bar, the selection ring and bracket, the click box, the wound
+height and the floater height ask, so all of them stand at 3.6 m and not at a colonist's 2.5.
 
-**Past the figure cap** the butcher is not drawn at all, as an animal is (design 29 §8a), because
-the baked far form would deal it a colonist's face. This is recorded as a gap.
+**The cleaver** is the row's `HandProp`, seated in the right fist by the weapon code's own fitting
+(`NaturalWeaponDef`, −2). It is **never sheathed**, since the sheath rule is for items and the
+simulation publishes no hand for a natural attack, and it is hidden only lying down.
+
+**The fling** is drawn by `KnockbackSlide`.
+- Its refusal rises from 1.5 cells to 3.5 across and 4.5 layers down.
+- A slide further than the one-tile knockback can go is a fling (`KnockbackSlide.IsFling`). It is
+  drawn over **0.45 s** instead of 0.25, **lifted 0.6 m** at its middle, and thrown rather than
+  shoved.
+- The landing plays the KnockDown Begin, Loop and End clips already mapped.
+
+**A slam** raises a *Slam −8* floater (`CombatEventKind.Slam`, appended as 15), in the bad red.
+
+**The telegraph.** While a sweep is in the air, the simulation publishes its facing as
+`odyssey.pawn.sweep.facing`. It is derived from the swing already saved on the pawn, and neither
+saved nor hashed itself. `OdysseyBootstrap.DrawSweepTelegraphs` turns that facing into three dim
+red cell plates, gathered with the order marks into their one instanced call. It shows in a paused
+frame and after a load with nothing of its own to keep.
+
+**Past the figure cap** the butcher is not drawn at all, as an animal is not (design 29 §8a),
+because the baked far form would deal it a colonist's face (`ChunkRenderer`). This is recorded as a
+gap. With one butcher and the nearest-first cap it is on screen whenever it is near.
 
 **Without the art** the row resolves to nothing and the butcher is the capsule every missing
 figure is. Tests that need the art ask whether **the butcher's row resolved**, never whether a
 catalogue exists (`docs/lessons.md`).
 
-### 8a. Measured
+### 8a. Measured (2026-09-26, `ButcherProbe`)
 
-*(Filled in when the art is imported and measured.)*
+| | Sole to crown, scale 1 | Width × depth (as posed) |
+|---|---|---|
+| `SM_Gen_Chr_Street_Male_02` (a colonist body) | 1.791 m | 2.048 × 0.307 m |
+| `SM_Chr_BR_PigButcher_01` | **1.822 m** | 2.889 × **0.767** m |
+| `SM_Wep_PigButcher_01` (cleaver) | longest side **1.503 m** | |
+
+**The pack's giant is a colonist's height with two and a half times the girth.** At a colonist's
+1.4 it would stand 2.55 m, a stout colonist. **Scale 2.0** stands it **3.64 m**, 1.45 times a
+colonist's 2.51 m, which is the design's target, and the cleaver in its fist is about 3 m long.
+3.64 m is taller than a 3 m storey: indoors, under a roof, its head goes through the ceiling. That
+is the first play's question, and the lever is the one constant `PlayScene.ButcherScale`.
+
+The catalogue was rebuilt with `RebuildCatalogue` and `CharacterSwatches.Classify`, then **spliced**
+(docs/lessons.md): the rebuild reordered four item rows and wrote default `hopGait` fields, so only
+the two new rows were lifted into the committed asset. The diff is 128 lines added and none
+removed.
 
 ## 9. Content and the registry
 
-New keys, all in `icon-keys.csv` with an `icon-map.csv` gap row:
-- `ui.pawn.butcher`, *Butcher*: "A hulking raider with a cleaver. Its swing sweeps three cells and
-  flings whoever it lands on."
-- `ui.item.cleaver`, *Cleaver*: "A heavy butcher's blade. Slow, and it cuts deep."
-- `ui.debug.spawnbutcher`, *Spawn butcher*: the Spawn tab's row.
+New keys in `icon-keys.csv`, none with art, so they fall through to a generated placeholder as
+most keys do:
+- `ui.pawn.butcher`, *Butcher*;
+- `ui.debug.spawnbutcher`, *Spawn butcher*: the Spawn tab's row, under Hostiles;
+- `ui.combat.slam`, *Slam*: the floater a slam raises, with its damage.
 
-**Kind 6** is appended, since kind order is a save contract. **The species is 4** and the **item is
-the next handle**.
+**Kind 6** is appended, since kind order is a save contract, and **the species is 4**. There is
+**no item**: the cleaver is the species' natural attack (§5).
 
 The content fingerprint moves once. **No golden should move**: no golden fights, and the new
 fields are nought for every pawn in them. Confirm with `GoldenColonyProbe`.
 
 ## 10. Tests
 
-**Fast tier, test first:**
-- `FlingTests`:
-  - two cells straight back, orthogonal and diagonal;
+**Fast tier** (`ButcherTests`, 30 cases; written first, and the sweep's control run to prove it:
+with the flank call taken out, `InAFightItsSwingReachesMoreThanOne` fails):
+- **what it is**: kind 6, species 4, a hostile person, `Animal` mode, `Health_Brute`, a sharp
+  natural attack, and nobody else sweeping or unstoppable; its pool, its cleaver and its fixed level
+  14, with a colonist's level still her skill;
+- **the body**: seventy points down a colonist and not the butcher;
+- **unstoppable**: a critical blunt blow neither stuns nor moves it;
+- **the fling**:
+  - two cells straight back in six directions;
+  - a roll that did not fling;
+  - a wall behind, which slams where she stands, still knocked down;
   - one cell then a wall;
-  - a wall at once, which slams without moving;
-  - a pawn in the way slams both;
-  - water stops with no slam;
-  - a two-layer ledge falls and takes `Fall(2)`;
-  - an immune pawn is struck but not moved;
-  - the critical knockback is untouched, with `KnockbackTests` unedited.
-- `SweepTests`:
-  - both flanks struck, and behind and beside the butcher untouched;
-  - a hostile in the arc spared;
-  - a downed pawn spared;
-  - each victim's roll independent of the others', by permuting ids;
-  - nobody in the arc behaves as a single blow;
-  - the facing survives a save taken mid-wind-up;
-  - determinism across a lockstep twin.
-- `ButcherTests`:
-  - the kind's content (kind 6, species, mode `Animal`, the cleaver dealt);
-  - `Health_Brute` downs at 320 and not at 64;
-  - never stunned, never knocked back;
-  - it breaks a closed door rather than opening it, and never takes a ladder.
-- `CombatSection` layout 6 round trip, and a layout-5 save reads with no immunity.
+  - a body in the way, which slams both;
+  - water, which stops short with no slam;
+  - a two-layer ledge falls; a one-layer step does not;
+  - an immune pawn is struck but not moved, by a fling or by a critical;
+  - the immunity runs back to nought;
+- **the sweep**:
+  - flanks struck, and target, behind, beside and two out not struck by it;
+  - the eight facings and their flanks;
+  - a bandit and a downed colonist spared;
+  - each victim's dice its own;
+  - three in four landed blows fling;
+  - a bandit's swing keeps no facing;
+- **the real fight**: its own mind's first swing reaches at least two colonists;
+- **save and hash**: the facing and the immunity survive a save mid-wind-up, the two worlds hash
+  the same after the swing lands, and the hash sees the immunity.
 
-**Long tier:** `ButcherBalanceProbe`, one butcher against four colonists with bats on the played
-map. It logs downs, flings, slams and ticks-to-down, and asserts only invariants, not balance.
+**Also in the fast tier:**
+- `BanditDoorTests.TheButcherBreaksTheDoorDownToo`;
+- the immunity in `CombatContractTests`' hash and round trip;
+- both spellings of `odyssey.pawn.sweep.facing`.
 
-**Unity:** a PlayMode spawn test (intent → pawn → figure → swing clip), guarded on the butcher's
-row resolving.
+`KnockbackTests` pass unedited.
+
+**Long tier:** `ButcherBalanceProbe`, three seeds, each with a lockstep twin (§4a).
+
+**Unity:** `ButcherSpawnTests` (PlayMode) takes the intent through the real bootstrap to a figure,
+its own box over 3 m tall, and the cleaver in its hand. It ignores itself where the butcher's row
+resolved to no art. `ButcherProbe` is the editor measurement behind §8a.
 
 ## 11. Open, recorded
 
 - **A raid mix with the butcher.** It waits for the owner's first play (§2).
 - **An overhead two-handed slam.** No owned pack has one. The one-handed heavy combo is the stand-in.
 - **Past the figure cap it is not drawn** (§8).
+- **Taller than a storey** (§8a): 3.64 m under a 3 m roof puts its head through the ceiling.
+- **The balance** (§4a): as tuned, it beats four bats every time.
 - **Camera shake on a slam.** Nothing in the game shakes the camera yet.
 - **A slam into a wall does not damage the wall.**

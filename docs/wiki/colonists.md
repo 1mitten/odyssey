@@ -20,7 +20,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Culvert frog** | `ui.pawn.frog` | A big frog of the banks. Keeps to the water's edge and hops | no art | AN |
 | **Bandit** | `ui.pawn.bandit` | Masked in a welding helmet and a red vest, with a crowbar or a bat. Hunts whoever is still standing | no art | CB |
 | **Gunman** | `ui.pawn.gunman` | A bandit with a pistol, dressed as the rest. Shoots whoever it can see, and clubs whoever comes close | no art | RD |
-| **Butcher** | `ui.pawn.butcher` | Huge, slow and very hard to kill. Its cleaver sweeps three cells at once and flings whoever it lands on two cells back | no art | PB |
+| **Butcher** | `ui.pawn.butcher` | Huge, slow and very hard to kill. Its cleaver sweeps three cells at once and flings whoever it lands on two cells back | no art | BU |
 
 ## Needs
 
