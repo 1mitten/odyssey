@@ -80,7 +80,7 @@ A row, left to right:
 | trader qty | how many the trader has, e.g. "8"; blank if none | mono |
 
 **The transfer control** is the heart of the window. The figure is **signed from the colony's
-side**: **+3** means three come to us and **−120** means 120 go to the trader; the empty state is
+side**: **+3** means three come to us and **-120** means 120 go to the trader; the empty state is
 **0** in dim ink. It is changed by:
 - one press of either side button (a unit, or ten with Shift);
 - a "move all" press at each end.
@@ -146,9 +146,9 @@ Draw these, at 1920 × 1080, over the HUD with the board behind the scrim:
 1. **Opened.** Every transfer at 0, the balance "Balance 0", and Confirm disabled with "Nothing to
    trade".
 2. **A deal.** The colony sells 120 wood and 40 carrots (+160) and buys 3 medical supplies and one
-   pistol (−294). The balance reads "You pay 134"; colony gold is 312 and trader gold 640. Confirm
+   pistol (-294). The balance reads "You pay 134"; colony gold is 312 and trader gold 640. Confirm
    is enabled.
-3. **The colony cannot pay.** State 2 with a second pistol (−210 more), so the balance is
+3. **The colony cannot pay.** State 2 with a second pistol (-210 more), so the balance is
    "You pay 344" against 312 of gold. Confirm is disabled with "Not enough gold", and the balance
    is in Bad.
 4. **The trader cannot pay.** The colony sells all 240 wood, all 180 stone and both bats (+450)
