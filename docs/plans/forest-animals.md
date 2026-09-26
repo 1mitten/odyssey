@@ -1,6 +1,6 @@
 # Forest animals — the plan
 
-**Status (2026-09-26): written, waiting for approval. Nothing is built.** Branch
+**Status (2026-09-26): written, every open question answered (§6), waiting for approval to start FA1. Nothing is built.** Branch
 `claude/forest-animals`, worktree `D:\code\odyssey-forest`. The interview is
 `docs/research/forest-animals-interview.md` (sixteen answers); research `e-15`, `a-20`,
 `b-wild-animal-behaviour`; designs **64** temperament, **65** predators, **66** art and far form,
@@ -19,7 +19,7 @@ window, four signature behaviours, activity hours, 32/48/64/80 animals by board,
 |---|---|
 | **Merge #248 (the butcher) first**, or agree that it rebases on us | It takes kinds 6–9 and species 4–7 and adds `CanDrawKind` and a per-kind look table; appending after it is one rebase, racing it is three hand-kept tables in conflict. This plan assumes kinds **10–18** and species **8–16**. |
 | **Import the pack once, in the main checkout** (design 66 §2) | Every worktree's `Assets/Synty` is a junction to `D:\code\odyssey\Assets\Synty`. The import must not run while an editor holds that checkout. |
-| The owner answers §6 below and approves the names | Names are content: they go in the CSVs in FA1's first content commit. |
+| ~~The owner answers §6 below and approves the names~~ **Done 2026-09-26** | Names are content: they go in the CSVs in FA1's first content commit. |
 
 ## 1. Seams between the four designs — decided here
 
@@ -98,12 +98,12 @@ ledger line; registry, wiki, Almanac, goldens, `SignaturesCost` (Measurement, ta
 **Playtest**: is the spray funny or merely a penalty, is the rut visible before it bites, does
 grazing make you wall a field, is a raccoon raid noticed.
 
-## 6. Open for the owner
+## 6. Decided with the owner
 
-From the four designs; each has a recommendation, and "go with the recommendations" is a complete
-answer.
+From the four designs. **Answered 2026-09-26: the owner took every recommendation**, so each
+design's recommended branch is now its decision.
 
-| # | From | Question | Recommended |
+| # | From | Question | Decided |
 |---|---|---|---|
 | 1 | 64 §12 | Do bandits startle animals, and can an animal charge a bandit? | Yes to both; a bandit never gives way |
 | 2 | 64 §12 | The *Warning* floater on every display, or only one facing a colonist? | Only a colonist's |

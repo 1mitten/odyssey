@@ -145,9 +145,9 @@ Routine calls the answers imply; any can be overturned at the plan.
 - **Stale lines found on the way are fixed in FA1**: the frog's "kind 4" comment, design 30's
   density and "nothing flees", design 29's hog pace, and `WildlifeSystem`'s "no death" comment.
 
-## 8. Proposed names — for the owner to correct
+## 8. Names — approved by the owner 2026-09-26
 
-Flavoured as the hog, rat and frog are. None is a reference-game animal name.
+Flavoured as the hog, rat and frog are. None is a reference-game animal name. **Approved as proposed.**
 
 | Species | Proposed | Forms |
 |---|---|---|
@@ -161,7 +161,26 @@ Flavoured as the hog, rat and frog are. None is a reference-game animal name.
 | Wolf | **Ridge wolf** | — |
 | Bear | **Quarry bear** | — |
 
-## 9. Next
+## 9. The second round — the designs' open questions, 2026-09-26
 
-Phase 3, the plan: `docs/plans/forest-animals.md` and a design document for the temperament model,
-written and put to the owner before any code.
+The plan (`docs/plans/forest-animals.md`) and designs 64–67 left ten questions and the names. The
+owner took **every recommendation** and approved the names:
+
+| # | Question | Answer |
+|---|---|---|
+| 17 | Do bandits startle animals and get charged? | **Yes to both**; a bandit never gives way (64 §12) |
+| 18 | The *Warning* floater | **Only facing a colonist** (64 §12) |
+| 19 | Does a man-eater feed on the colonist it kills? | **Yes, and her body is unchanged** (65 §10) |
+| 20 | Does carrying her away drive the predator off? | **Yes** (65 §10) |
+| 21 | Wolf prey limit | **1,300: wolves take deer**, not moose or bears (65 §10) |
+| 22 | The rut month | **Ember**, the month before Rime (67 §14) |
+| 23 | The bear's winter | **Off the board**; a den is a later unit if winter feels empty (67 §14) |
+| 24 | A grazed crop | **Uprooted**, the zone re-sows (67 §14) |
+| 25 | The skunk smell on neighbours | **Yes, −10 within 2 cells**; −45 on the sprayed (67 §14) |
+| 26 | A raccoon's haul | **Leaves the board**; dropped if startled (67 §14) |
+| 27 | The names | **Approved as proposed** (§8) |
+
+## 10. Next
+
+Phase 4 waits for the owner's approval of the plan. FA1 starts after #248 merges and with the pack
+imported once in the main checkout (plan §0).
